@@ -112,29 +112,11 @@ int SynDhub::Thread() {
       uint32_t channel_id = __builtin_ctz(interrupt_status);
       Ack(channel_id);
       interrupt_.ack();
-      zxlogf(TRACE, "dhub: done channel id %u\n", channel_id);
-
-      {
-        fbl::AutoLock lock(&position_lock_);
-        dma_current_[channel_id] += channel_info_[channel_id].dma_mtus * kMtuSize;
-        if (dma_current_[channel_id] == dma_base_[channel_id] + dma_size_[channel_id]) {
-          zxlogf(TRACE, "dhub: dma wraparound id %u  from 0x%lX  amount 0x%X\n", channel_id,
-                 dma_base_[channel_id], dma_size_[channel_id]);
-          dma_current_[channel_id] = dma_base_[channel_id];
-        } else if (dma_current_[channel_id] > dma_base_[channel_id] + dma_size_[channel_id]) {
-          zxlogf(ERROR, "dhub: dma exceeded 0x%lX  0x%lX\n", dma_current_[channel_id],
-                 dma_base_[channel_id] + dma_size_[channel_id]);
-        }
+      if (channel_id == kDmaIdPdmW0) {
+        ProcessIrq(kDmaIdPdmW1);  // PDM1 piggybacks on PDM0 interrupt.
       }
-      if (enabled_[channel_id]) {
-        if (type_[channel_id] == DMA_TYPE_CYCLIC) {
-          StartDma(channel_id, true);
-        }
-        if (channel_id != std::numeric_limits<uint32_t>::max() && callback_[channel_id].callback) {
-          zxlogf(TRACE, "dhub: Callback channel id %u\n", channel_id);
-          callback_[channel_id].callback(callback_[channel_id].ctx, DMA_STATE_COMPLETED);
-        }
-      }
+      ProcessIrq(channel_id);
+      zxlogf(TRACE, "dhub: done channel id %u  status 0x%08X\n", channel_id, interrupt_status);
     }
   }
 }
@@ -197,6 +179,9 @@ zx_status_t SynDhub::SharedDmaInitializeAndGetBuffer(uint32_t channel_id, dma_ty
     zxlogf(ERROR, "%s failed to duplicate buffer vmo %d\n", __FILE__, status);
     return status;
   }
+
+  // PDM1 piggybacks on PDM0 interrupt.
+  triggers_interrupt_[channel_id] = channel_id != kDmaIdPdmW1;
   return ZX_OK;
 }
 
@@ -289,7 +274,7 @@ void SynDhub::Enable(uint32_t channel_id, bool enable) {
 
   if (enable) {
     for (size_t i = 0; i < kConcurrentDmas; ++i) {
-      StartDma(channel_id, true);
+      StartDma(channel_id, triggers_interrupt_[channel_id]);
       if (i != kConcurrentDmas - 1) {
         fbl::AutoLock lock(&position_lock_);
         dma_current_[channel_id] += channel_info_[channel_id].dma_mtus * kMtuSize;
@@ -321,7 +306,7 @@ void SynDhub::StartDma(uint32_t channel_id, bool trigger_interrupt) {
     current = static_cast<uint32_t>(dma_current_[channel_id]);
   }
 
-  zxlogf(TRACE, "dhub: start dma id %u from 0x%X  amount 0x%X  ptr %u\n", channel_id, current,
+  zxlogf(TRACE, "dhub: start channel id %u from 0x%X  amount 0x%X  ptr %u\n", channel_id, current,
          channel_info_[channel_id].dma_mtus * kMtuSize, ptr);
 
   // Write to SRAM.
@@ -336,6 +321,9 @@ void SynDhub::StartDma(uint32_t channel_id, bool trigger_interrupt) {
 }
 
 void SynDhub::Ack(uint32_t channel_id) {
+  if (channel_id >= DmaId::kDmaIdMax) {
+    return;
+  }
   auto interrupt_status = full::Get(true).ReadFrom(&mmio_).reg_value();
   if (!(interrupt_status & (1 << channel_id))) {
     zxlogf(TRACE, "dhub: ack interrupt wrong channel id %u  status 0x%X\n", channel_id,
@@ -345,6 +333,33 @@ void SynDhub::Ack(uint32_t channel_id) {
 
   POP::Get(true).FromValue(0).set_delta(1).set_ID(channel_id).WriteTo(&mmio_);
   full::Get(true).ReadFrom(&mmio_).set_ST(1 << channel_id).WriteTo(&mmio_);
+}
+
+void SynDhub::ProcessIrq(uint32_t channel_id) {
+  if (channel_id >= DmaId::kDmaIdMax) {
+    return;
+  }
+  if (enabled_[channel_id]) {
+    {
+      fbl::AutoLock lock(&position_lock_);
+      dma_current_[channel_id] += channel_info_[channel_id].dma_mtus * kMtuSize;
+      if (dma_current_[channel_id] == dma_base_[channel_id] + dma_size_[channel_id]) {
+        zxlogf(TRACE, "dhub: dma channel id %u  wraparound current 0x%lX  limit 0x%lX\n",
+               channel_id, dma_current_[channel_id], dma_base_[channel_id] + dma_size_[channel_id]);
+        dma_current_[channel_id] = dma_base_[channel_id];
+      } else if (dma_current_[channel_id] > dma_base_[channel_id] + dma_size_[channel_id]) {
+        zxlogf(ERROR, "dhub: dma channel id %u  current 0x%lX  exceeded 0x%lX\n", channel_id,
+               dma_current_[channel_id], dma_base_[channel_id] + dma_size_[channel_id]);
+      }
+    }
+    if (type_[channel_id] == DMA_TYPE_CYCLIC) {
+      StartDma(channel_id, triggers_interrupt_[channel_id]);
+    }
+    if (callback_[channel_id].callback) {
+      zxlogf(TRACE, "dhub: callback channel id %u\n", channel_id);
+      callback_[channel_id].callback(callback_[channel_id].ctx, DMA_STATE_COMPLETED);
+    }
+  }
 }
 
 void SynDhub::SetBuffer(uint32_t channel_id, zx_paddr_t buf, size_t len) {

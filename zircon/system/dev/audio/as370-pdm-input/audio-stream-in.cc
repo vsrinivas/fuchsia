@@ -26,9 +26,6 @@ enum {
 namespace audio {
 namespace as370 {
 
-// TODO(andresoportus) capture from all 3 mics we have.
-constexpr size_t kNumberOfChannels = 2;
-
 As370AudioStreamIn::As370AudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */) {}
 
@@ -129,15 +126,17 @@ zx_status_t As370AudioStreamIn::InitPDev() {
   }
 
   // Calculate ring buffer size for 1 second of 16-bit at kMaxRate.
-  const size_t kRingBufferSize =
-      fbl::round_up<size_t, size_t>(kMaxRate * sizeof(uint16_t) * kNumberOfChannels, ZX_PAGE_SIZE);
+  const size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
+      kMaxRate * sizeof(uint16_t) * SynAudioInDevice::kNumberOfChannels, ZX_PAGE_SIZE);
   status = lib_->GetBuffer(kRingBufferSize, &ring_buffer_vmo_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to Init buffer %d\n", __FILE__, status);
     return status;
   }
 
-  zxlogf(INFO, "audio: as370 audio input initialized\n");
+  size_t size;
+  status = ring_buffer_vmo_.get_size(&size);
+  zxlogf(INFO, "audio: as370 audio input initialized %lX\n", size);
   return ZX_OK;
 }
 
@@ -227,8 +226,8 @@ zx_status_t As370AudioStreamIn::AddFormats() {
   }
 
   audio_stream_format_range_t range;
-  range.min_channels = kNumberOfChannels;
-  range.max_channels = kNumberOfChannels;
+  range.min_channels = SynAudioInDevice::kNumberOfChannels;
+  range.max_channels = SynAudioInDevice::kNumberOfChannels;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   range.min_frames_per_second = kMaxRate;
   range.max_frames_per_second = kMaxRate;

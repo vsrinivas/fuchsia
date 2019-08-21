@@ -21,6 +21,14 @@
 
 class SynAudioInDevice {
  public:
+// In DEMO_MODE we can record only 2 mics so we can play it back as a 2 channel input to audio play.
+//#define DEMO_MODE
+#ifdef DEMO_MODE
+  static constexpr size_t kNumberOfChannels = 2;
+#else
+  static constexpr size_t kNumberOfChannels = 3;
+#endif
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(SynAudioInDevice);
 
   static std::unique_ptr<SynAudioInDevice> Create(ddk::MmioBuffer mmio_global,
@@ -34,7 +42,7 @@ class SynAudioInDevice {
   uint32_t GetRingPosition();
 
   zx_status_t Init();
-  void ProcessDma();
+  void ProcessDma(uint32_t index);
 
   // Starts clocking data with data fetched from the beginning of the buffer.
   uint64_t Start();
@@ -48,12 +56,15 @@ class SynAudioInDevice {
   uint32_t fifo_depth() const;
 
  protected:
+  // We need one DMA every 2 channels.
+  static constexpr uint32_t kNumberOfDmas = (kNumberOfChannels + 1) / 2;
+
   // TODO(andresoportus): Add more configuration options.
   SynAudioInDevice(ddk::MmioBuffer mmio_global, ddk::MmioBuffer mmio_avio_global,
                    ddk::MmioBuffer mmio_i2s,
                    ddk::SharedDmaProtocolClient dma);  // protected for unit testing.
   std::unique_ptr<CicFilter> cic_filter_;              // protected for unit testing.
-  uint32_t dma_buffer_size_ = 0;                       // protected for unit testing.
+  uint32_t dma_buffer_size_[kNumberOfDmas] = {};       // protected for unit testing.
 
  private:
   ddk::MmioBuffer global_;
@@ -62,15 +73,15 @@ class SynAudioInDevice {
   const ddk::SharedDmaProtocolClient dma_;
   zx::port port_;
   zx::vmo ring_buffer_;
-  zx::vmo dma_buffer_;
+  zx::vmo dma_buffer_[kNumberOfDmas];
   thrd_t thread_;
   bool enabled_ = false;
   // clang-format off
-  uint32_t  ring_buffer_size_     = 0;
-  uint32_t  ring_buffer_current_  = 0;
-  uintptr_t ring_buffer_base_     = 0;
-  uint32_t  dma_buffer_current_   = 0;
-  uintptr_t dma_base_             = 0;
+  uint32_t  ring_buffer_size_             = 0;
+  uint32_t  ring_buffer_current_          = 0;
+  uintptr_t ring_buffer_base_             = 0;
+  uint32_t  dma_buffer_current_[kNumberOfDmas] = {};
+  uintptr_t dma_base_          [kNumberOfDmas] = {};
   // clang-format on
   uint32_t overflows_ = 0;
 

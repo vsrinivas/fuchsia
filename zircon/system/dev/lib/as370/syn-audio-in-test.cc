@@ -46,8 +46,12 @@ class SynAudioInDeviceTest : public SynAudioInDevice {
       : SynAudioInDevice(std::move(mmio_global), std::move(mmio_avio), std::move(mmio_i2s),
                          std::move(dma)) {
     cic_filter_ = std::make_unique<CicFilterTest>();
-    dma_buffer_size_ = 16;
+    dma_buffer_size_[0] = 0x10;
+    if (kNumberOfDmas > 1) {
+      dma_buffer_size_[1] = 0x20;
+    }
   }
+  bool HasAtLeastTwoDmas() { return kNumberOfDmas >= 2; }
 };
 
 namespace audio {
@@ -63,7 +67,7 @@ TEST(SynapticsAudioInTest, ProcessDmaSimple) {
   dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
   dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
 
-  dev->ProcessDma();
+  dev->ProcessDma(0);
   dma.VerifyAndClear();
 }
 
@@ -82,7 +86,7 @@ TEST(SynapticsAudioInTest, ProcessDmaWarp) {
   dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
   dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
 
-  dev->ProcessDma();
+  dev->ProcessDma(0);
   dma.VerifyAndClear();
 }
 
@@ -97,7 +101,7 @@ TEST(SynapticsAudioInTest, ProcessDmaIrregular) {
   dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
   dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
 
-  dev->ProcessDma();
+  dev->ProcessDma(0);
   dma.VerifyAndClear();
 }
 
@@ -111,7 +115,49 @@ TEST(SynapticsAudioInTest, ProcessDmaOverflow) {
   dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
   dma.ExpectGetBufferPosition(0x4, DmaId::kDmaIdPdmW0);
 
-  dev->ProcessDma();
+  dev->ProcessDma(0);
+  dma.VerifyAndClear();
+}
+
+TEST(SynapticsAudioInTest, ProcessDmaPdm0AndPdm1) {
+  ddk::MockSharedDma dma;
+  auto dev = SynAudioInDeviceTest::Create(&dma);
+
+  if (!dev->HasAtLeastTwoDmas()) {
+    return;
+  }
+
+  // every call to ProcessDma gets transfer size from PDM0.
+  dma.ExpectGetTransferSize(4, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetTransferSize(4, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetTransferSize(4, DmaId::kDmaIdPdmW0);
+
+  dma.ExpectGetBufferPosition(0x4, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetBufferPosition(0x8, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetBufferPosition(0x0, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetBufferPosition(0x4, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetBufferPosition(0x4, DmaId::kDmaIdPdmW0);
+
+  dma.ExpectGetBufferPosition(0x4, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x8, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x10, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x14, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x18, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x1c, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x0, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x4, DmaId::kDmaIdPdmW1);
+  dma.ExpectGetBufferPosition(0x4, DmaId::kDmaIdPdmW1);
+
+  dma.ExpectGetBufferPosition(0x8, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
+  dma.ExpectGetBufferPosition(0xc, DmaId::kDmaIdPdmW0);
+
+  dev->ProcessDma(0);
+  dev->ProcessDma(1);
+  dev->ProcessDma(0);
+
   dma.VerifyAndClear();
 }
 

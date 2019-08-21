@@ -89,6 +89,7 @@ class SynDhub : public DeviceType, public ddk::SharedDmaProtocol<SynDhub, ddk::b
   int Thread();
   void Shutdown();
   void Ack(uint32_t channel_id);
+  void ProcessIrq(uint32_t channel_id);
 
   ddk::MmioBuffer mmio_;
   zx::port port_;
@@ -105,6 +106,7 @@ class SynDhub : public DeviceType, public ddk::SharedDmaProtocol<SynDhub, ddk::b
   zx_paddr_t dma_base_             [DmaId::kDmaIdMax] = {};
   zx_paddr_t dma_current_          [DmaId::kDmaIdMax] TA_GUARDED(position_lock_);
   dma_type_t type_                 [DmaId::kDmaIdMax] = {};
+  bool       triggers_interrupt_   [DmaId::kDmaIdMax] = {};
   // clang-format on
 };
 
