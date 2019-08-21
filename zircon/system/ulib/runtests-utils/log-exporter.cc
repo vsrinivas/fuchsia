@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtests-utils/log-exporter.h>
-
 #include <errno.h>
-#include <stdint.h>
-#include <stdio.h>
-
 #include <fuchsia/logger/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <zircon/status.h>
 
 #include <utility>
+
+#include <runtests-utils/log-exporter.h>
 
 namespace runtests {
 namespace {
@@ -72,6 +71,12 @@ void LogExporter::OnHandleReady(async_dispatcher_t* dispatcher, async::WaitBase*
         NotifyError(status);
         return;
       }
+    }
+    // make sure nothing else invalidated the channel
+    if (!channel_.is_valid()) {
+      // no need to return error as someone would have already done that before invalidating
+      // channel.
+      return;
     }
     status = wait_.Begin(dispatcher);
     if (status != ZX_OK) {

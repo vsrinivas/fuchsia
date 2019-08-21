@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <runtests-utils/log-exporter.h>
-
-#include <fbl/string.h>
-#include <fbl/vector.h>
 #include <fuchsia/logger/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/message_buffer.h>
-#include <unittest/unittest.h>
 
 #include <utility>
+
+#include <fbl/string.h>
+#include <fbl/vector.h>
+#include <runtests-utils/log-exporter.h>
+#include <unittest/unittest.h>
 
 namespace runtests {
 namespace {
@@ -278,10 +278,34 @@ bool TestDroppedLogs() {
   END_TEST;
 }
 
+bool TestBadOutputFile() {
+  BEGIN_TEST;
+  zx::channel listener, listener_request;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &listener, &listener_request));
+
+  char buf[1024];
+  memset(buf, 0, sizeof(buf));
+  FILE* buf_file = fmemopen(buf, sizeof(buf), "r");
+
+  // start listener
+  auto log_listener = std::make_unique<LogExporter>(std::move(listener_request), buf_file);
+  log_listener->set_error_handler(
+      [](zx_status_t status) { EXPECT_EQ(ZX_ERR_ACCESS_DENIED, status); });
+
+  LogMessage msg1("my message");
+  ASSERT_EQ(ZX_OK, SendLogMessage(listener, std::move(msg1)));
+
+  ASSERT_EQ(ZX_OK, log_listener->RunUntilIdle());
+  ASSERT_STR_EQ("", buf);
+
+  END_TEST;
+}
+
 BEGIN_TEST_CASE(LogListenerTests)
 RUN_TEST(TestLog)
 RUN_TEST(TestLogMany)
 RUN_TEST(TestDroppedLogs)
+RUN_TEST(TestBadOutputFile)
 END_TEST_CASE(LogListenerTests)
 
 }  // namespace
