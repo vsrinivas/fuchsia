@@ -21,9 +21,6 @@ struct InterruptControllerInfo {
 
 [Layout = "Simple"]
 protocol Device {
-    // Return the root job handle.
-    GetRootJob() -> (zx.status status, handle<job>? job);
-
     // Return the hypervisor resource (with only ZX_RIGHT_TRANSFER).
     GetHypervisorResource() -> (zx.status status, handle<resource>? resource);
 

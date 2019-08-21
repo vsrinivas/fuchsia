@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,27 +26,6 @@ typedef struct {
   mtx_t lock;
   char board_name[ZBI_BOARD_NAME_LEN];
 } sysinfo_t;
-
-static zx_handle_t get_sysinfo_root_job(sysinfo_t* sysinfo) {
-  mtx_lock(&sysinfo->lock);
-  if (sysinfo->root_job_svc == ZX_HANDLE_INVALID) {
-    sysinfo->root_job_svc = zx_take_startup_handle(PA_HND(PA_USER0, ID_HJOBROOT));
-  }
-  mtx_unlock(&sysinfo->lock);
-
-  zx_handle_t h = ZX_HANDLE_INVALID;
-  fuchsia_boot_RootJobGet(sysinfo->root_job_svc, &h);
-  return h;
-}
-
-static zx_status_t fidl_get_root_job(void* ctx, fidl_txn_t* txn) {
-  sysinfo_t* sysinfo = ctx;
-
-  zx_handle_t h = get_sysinfo_root_job(sysinfo);
-  zx_status_t status = h == ZX_HANDLE_INVALID ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
-
-  return fuchsia_sysinfo_DeviceGetRootJob_reply(txn, status, h);
-}
 
 static zx_status_t fidl_get_hypervisor_resource(void* ctx, fidl_txn_t* txn) {
   zx_handle_t h;
@@ -94,7 +72,6 @@ static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn
 }
 
 static fuchsia_sysinfo_Device_ops_t fidl_ops = {
-    .GetRootJob = fidl_get_root_job,
     .GetHypervisorResource = fidl_get_hypervisor_resource,
     .GetBoardName = fidl_get_board_name,
     .GetInterruptControllerInfo = fidl_get_interrupt_controller_info,

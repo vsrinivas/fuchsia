@@ -11,9 +11,6 @@ namespace sysinfo {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kDevice_GetRootJob_Ordinal = 0x650877d700000000lu;
-extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetRootJobResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kDevice_GetHypervisorResource_Ordinal = 0x3868a16b00000000lu;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
 [[maybe_unused]]
@@ -24,68 +21,6 @@ constexpr uint64_t kDevice_GetInterruptControllerInfo_Ordinal = 0x5f8bb9e4000000
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
 
 }  // namespace
-template <>
-Device::ResultOf::GetRootJob_Impl<Device::GetRootJobResponse>::GetRootJob_Impl(zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, GetRootJobRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRootJobRequest));
-  ::fidl::DecodedMessage<GetRootJobRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Device::InPlace::GetRootJob(std::move(_client_end), Super::response_buffer()));
-}
-
-Device::ResultOf::GetRootJob Device::SyncClient::GetRootJob() {
-  return ResultOf::GetRootJob(zx::unowned_channel(this->channel_));
-}
-
-Device::ResultOf::GetRootJob Device::Call::GetRootJob(zx::unowned_channel _client_end) {
-  return ResultOf::GetRootJob(std::move(_client_end));
-}
-
-template <>
-Device::UnownedResultOf::GetRootJob_Impl<Device::GetRootJobResponse>::GetRootJob_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRootJobRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, GetRootJobRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(GetRootJobRequest));
-  ::fidl::DecodedMessage<GetRootJobRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Device::InPlace::GetRootJob(std::move(_client_end), std::move(_response_buffer)));
-}
-
-Device::UnownedResultOf::GetRootJob Device::SyncClient::GetRootJob(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetRootJob(zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-Device::UnownedResultOf::GetRootJob Device::Call::GetRootJob(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::GetRootJob(std::move(_client_end), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Device::GetRootJobResponse> Device::InPlace::GetRootJob(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(GetRootJobRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<GetRootJobRequest> params(std::move(_request_buffer));
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetRootJob_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Device::GetRootJobResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<GetRootJobRequest, GetRootJobResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Device::GetRootJobResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
 template <>
 Device::ResultOf::GetHypervisorResource_Impl<Device::GetHypervisorResourceResponse>::GetHypervisorResource_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetHypervisorResourceRequest, ::fidl::MessageDirection::kSending>();
@@ -281,17 +216,6 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kDevice_GetRootJob_Ordinal:
-    {
-      auto result = ::fidl::DecodeAs<GetRootJobRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->GetRootJob(
-        Interface::GetRootJobCompleter::Sync(txn));
-      return true;
-    }
     case kDevice_GetHypervisorResource_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetHypervisorResourceRequest>(msg);
@@ -338,37 +262,6 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
     txn->Close(ZX_ERR_NOT_SUPPORTED);
   }
   return found;
-}
-
-
-void Device::Interface::GetRootJobCompleterBase::Reply(int32_t status, ::zx::job job) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRootJobResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetRootJobResponse*>(_write_bytes);
-  _response._hdr.ordinal = kDevice_GetRootJob_Ordinal;
-  _response.status = std::move(status);
-  _response.job = std::move(job);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRootJobResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetRootJobResponse>(std::move(_response_bytes)));
-}
-
-void Device::Interface::GetRootJobCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::zx::job job) {
-  if (_buffer.capacity() < GetRootJobResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<GetRootJobResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_GetRootJob_Ordinal;
-  _response.status = std::move(status);
-  _response.job = std::move(job);
-  _buffer.set_actual(sizeof(GetRootJobResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetRootJobResponse>(std::move(_buffer)));
-}
-
-void Device::Interface::GetRootJobCompleterBase::Reply(::fidl::DecodedMessage<GetRootJobResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_GetRootJob_Ordinal;
-  CompleterBase::SendReply(std::move(params));
 }
 
 
