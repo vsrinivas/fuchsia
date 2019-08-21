@@ -10,6 +10,7 @@ test("virtio") {
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/virtio",

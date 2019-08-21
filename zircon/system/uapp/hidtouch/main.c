@@ -576,7 +576,6 @@ int main(int argc, char* argv[]) {
     if (is_eyoyo_touch_report_desc(rpt_desc, rpt_desc_len)) {
       panel = TOUCH_PANEL_EYOYO;
       printf("touchscreen: %s is eyoyo\n", devname);
-      setup_eyoyo_touch(touchfd);
       break;
     }
 

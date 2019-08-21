@@ -106,9 +106,6 @@ driver("platform-bus-x86") {
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
   ]
-
-  # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
-  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 test("x86-battery-test") {
@@ -131,6 +128,7 @@ test("x86-battery-test") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/pci",
     "$zx/system/ulib/region-alloc",
@@ -184,6 +182,7 @@ test("x86-pwrsrc-test") {
     "$zx/system/fidl/fuchsia-hardware-power:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",

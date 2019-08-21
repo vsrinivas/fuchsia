@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/input/c/fidl.h>
-#include <lib/fdio/unsafe.h>
 #include <string.h>
 #include <zircon/errors.h>
 
@@ -448,30 +447,4 @@ bool is_samsung_touch_report_desc(const uint8_t* data, size_t len) {
     return false;
 
   return (memcmp(data, samsung_touch_report_desc, len) == 0);
-}
-
-zx_status_t setup_samsung_touch(int fd) {
-  if (fd < 0)
-    return ZX_ERR_INVALID_ARGS;
-
-  const uint8_t report_id = 67;
-  const uint8_t enable_multitouch[3] = {67, 2, 0};
-
-  fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  if (io == NULL) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx_handle_t svc = fdio_unsafe_borrow_channel(io);
-  zx_status_t call_status;
-  zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-      svc, fuchsia_hardware_input_ReportType_FEATURE, report_id, enable_multitouch,
-      sizeof(enable_multitouch), &call_status);
-  fdio_unsafe_release(io);
-  if (status != ZX_OK) {
-    return status;
-  } else if (call_status != ZX_OK) {
-    return call_status;
-  }
-  return ZX_OK;
 }
