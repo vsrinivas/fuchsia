@@ -4,8 +4,7 @@
 
 use {
     crate::model::moniker::RelativeMoniker,
-    crate::model::testing::mocks::*,
-    crate::model::testing::routing_test_helpers::*,
+    crate::model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*},
     cm_rust::{
         self, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, OfferDecl,
         OfferDirectoryDecl, OfferDirectorySource, OfferStorage, OfferStorageDecl,

@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::testing::mocks::*,
-    crate::model::testing::routing_test_helpers::*,
-    crate::model::testing::test_hook::TestHook,
+    crate::model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
     crate::model::*,
     cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,

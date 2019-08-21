@@ -9,12 +9,14 @@ use {
 };
 
 /// Errors produced by `Model`.
-#[derive(Debug, Clone, Fail)]
+#[derive(Debug, Fail, Clone)]
 pub enum ModelError {
     #[fail(display = "component instance not found with moniker {}", moniker)]
     InstanceNotFound { moniker: AbsoluteMoniker },
     #[fail(display = "component instance with moniker {} already exists", moniker)]
     InstanceAlreadyExists { moniker: AbsoluteMoniker },
+    #[fail(display = "component instance with moniker {} has shut down", moniker)]
+    InstanceShutDown { moniker: AbsoluteMoniker },
     #[fail(display = "component collection not found with name {}", name)]
     CollectionNotFound { name: String },
     #[fail(display = "{} is not supported", feature)]
@@ -70,6 +72,10 @@ impl ModelError {
 
     pub fn instance_already_exists(moniker: AbsoluteMoniker) -> ModelError {
         ModelError::InstanceAlreadyExists { moniker }
+    }
+
+    pub fn instance_shut_down(moniker: AbsoluteMoniker) -> ModelError {
+        ModelError::InstanceShutDown { moniker }
     }
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {

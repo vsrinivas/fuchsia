@@ -5,7 +5,7 @@
 use {
     crate::{
         framework::RealFrameworkServiceHost,
-        model::testing::{mocks::*, routing_test_helpers::*},
+        model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,

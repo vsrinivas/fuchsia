@@ -131,6 +131,14 @@ impl Hook for FrameworkServicesHook {
         Box::pin(async { Ok(()) })
     }
 
+    fn on_stop_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_destroy_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
     fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async { Ok(()) })
     }
@@ -363,9 +371,7 @@ impl RealFrameworkServiceHost {
 mod tests {
     use super::*;
     use {
-        crate::model::testing::mocks::*,
-        crate::model::testing::routing_test_helpers::*,
-        crate::model::testing::test_hook::*,
+        crate::model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*, test_hook::*},
         cm_rust::{
             self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
             ExposeLegacyServiceDecl, ExposeSource, NativeIntoFidl,

@@ -158,6 +158,14 @@ impl Hook for WorkSchedulerHook {
         Box::pin(async { Ok(()) })
     }
 
+    fn on_stop_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_destroy_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
     fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async { Ok(()) })
     }
@@ -210,8 +218,8 @@ mod tests {
         crate::{
             model::{AbsoluteMoniker, ChildMoniker},
             work_scheduler::{
-                work::{WorkStatus, test as work_test},
                 time::test::{FakeTimeSource, SECOND},
+                work::{test as work_test, WorkStatus},
             },
         },
     };
@@ -268,10 +276,7 @@ mod tests {
 
         // TODO(markdittmer): Create macro(s) to make this more terse but still explicit.
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic(),
-                period: None,
-            }),
+            Ok(WorkStatus { next_run_monotonic_time: time_source.get_monotonic(), period: None }),
             get_work_by_id(&work_scheduler, &a, "NOW_ONCE").await
         );
         assert_eq!(
@@ -306,10 +311,7 @@ mod tests {
         );
 
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic(),
-                period: None,
-            }),
+            Ok(WorkStatus { next_run_monotonic_time: time_source.get_monotonic(), period: None }),
             get_work_by_id(&work_scheduler, &c, "NOW_ONCE").await
         );
         assert_eq!(
@@ -364,10 +366,7 @@ mod tests {
         );
 
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic(),
-                period: None,
-            }),
+            Ok(WorkStatus { next_run_monotonic_time: time_source.get_monotonic(), period: None }),
             get_work_by_id(&work_scheduler, &c, "NOW_ONCE").await
         );
         assert_eq!(

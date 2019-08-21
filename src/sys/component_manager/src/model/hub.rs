@@ -401,6 +401,16 @@ impl model::Hook for Hub {
         Box::pin(self.on_bind_instance_async(realm, realm_state, routing_facade))
     }
 
+    fn on_stop_instance(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        // TODO: Update the hub to reflect that the component is no longer running
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_destroy_instance(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        // TODO: Update the hub to reflect that the instance no longer exists
+        Box::pin(async { Ok(()) })
+    }
+
     fn on_add_dynamic_child(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
         // TODO: Update the hub with the new child
         Box::pin(async { Ok(()) })
@@ -410,7 +420,7 @@ impl model::Hook for Hub {
         &self,
         _realm: Arc<model::Realm>,
     ) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub with the deleted child
+        // TODO: Update the hub to reflect that the instance was deleted
         Box::pin(async { Ok(()) })
     }
 
@@ -433,7 +443,7 @@ mod tests {
             hub::Hub,
             testing::mocks,
             testing::{
-                routing_test_helpers::default_component_decl,
+                test_helpers::*,
                 test_hook::HubInjectionTestHook,
                 test_utils::{dir_contains, list_directory, list_directory_recursive, read_file},
             },

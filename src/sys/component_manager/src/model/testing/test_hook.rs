@@ -77,8 +77,26 @@ impl ComponentInstance {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Lifecycle {
+    Bind(AbsoluteMoniker),
+    Stop(AbsoluteMoniker),
+    Destroy(AbsoluteMoniker),
+}
+
+impl fmt::Display for Lifecycle {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Lifecycle::Bind(m) => write!(f, "bind({})", m),
+            Lifecycle::Stop(m) => write!(f, "stop({})", m),
+            Lifecycle::Destroy(m) => write!(f, "destroy({})", m),
+        }
+    }
+}
+
 pub struct TestHook {
     instances: Mutex<HashMap<AbsoluteMoniker, Arc<ComponentInstance>>>,
+    lifecycle_events: Mutex<Vec<Lifecycle>>,
 }
 
 impl fmt::Display for TestHook {
@@ -97,17 +115,22 @@ impl TestHook {
             ComponentInstance { abs_moniker: abs_moniker.clone(), children: Mutex::new(vec![]) };
         let mut instances = HashMap::new();
         instances.insert(abs_moniker, Arc::new(instance));
-        TestHook { instances: Mutex::new(instances) }
+        TestHook { instances: Mutex::new(instances), lifecycle_events: Mutex::new(vec![]) }
     }
 
-    // Recursively traverse the Instance tree to generate a string representing the component
-    // topology.
+    /// Recursively traverse the Instance tree to generate a string representing the component
+    /// topology.
     pub fn print(&self) -> String {
         let instances = block_on(self.instances.lock());
         let abs_moniker = AbsoluteMoniker::root();
         let root_instance =
             instances.get(&abs_moniker).map(|x| x.clone()).expect("Unable to find root instance.");
         block_on(root_instance.print())
+    }
+
+    /// Return the sequence of lifecycle events.
+    pub fn lifecycle(&self) -> Vec<Lifecycle> {
+        block_on(self.lifecycle_events.lock()).clone()
     }
 
     pub async fn on_bind_instance_async<'a>(
@@ -120,6 +143,23 @@ impl TestHook {
         for child_realm in realm_state.live_child_realms().values() {
             self.create_instance_if_necessary(child_realm.abs_moniker.clone()).await?;
         }
+        let mut events = self.lifecycle_events.lock().await;
+        events.push(Lifecycle::Bind(realm.abs_moniker.clone()));
+        Ok(())
+    }
+
+    pub async fn on_stop_instance_async<'a>(&'a self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        let mut events = self.lifecycle_events.lock().await;
+        events.push(Lifecycle::Stop(realm.abs_moniker.clone()));
+        Ok(())
+    }
+
+    pub async fn on_destroy_instance_async<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+    ) -> Result<(), ModelError> {
+        let mut events = self.lifecycle_events.lock().await;
+        events.push(Lifecycle::Destroy(realm.abs_moniker.clone()));
         Ok(())
     }
 
@@ -181,6 +221,14 @@ impl Hook for TestHook {
         Box::pin(self.on_bind_instance_async(realm, &realm_state, routing_facade))
     }
 
+    fn on_stop_instance(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_stop_instance_async(realm))
+    }
+
+    fn on_destroy_instance(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_destroy_instance_async(realm))
+    }
+
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
     }
@@ -238,6 +286,14 @@ impl Hook for HubInjectionTestHook {
         _realm_state: &'a RealmState,
         _routing_facade: RoutingFacade,
     ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_stop_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_destroy_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async { Ok(()) })
     }
 

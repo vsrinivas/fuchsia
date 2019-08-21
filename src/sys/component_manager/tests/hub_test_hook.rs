@@ -89,6 +89,14 @@ impl Hook for HubTestHook {
         Box::pin(async { Ok(()) })
     }
 
+    fn on_stop_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn on_destroy_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
+    }
+
     fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async { Ok(()) })
     }

@@ -196,36 +196,36 @@ impl Realm {
         }
         Ok(())
     }
-}
 
-/// Register and wait for an action on a realm.
-pub async fn execute_action(
-    model: Model,
-    realm: Arc<Realm>,
-    action: Action,
-) -> Result<(), ModelError> {
-    let nf = register_action(model, realm, action).await?;
-    nf.await
-}
+    /// Performs the shutdown protocol for this component instance.
+    /// REQUIRES: All dependents have already been shut down.
+    // TODO: This is a stub because currently the shutdown protocol is not implemented.
+    pub async fn shut_down_instance(realm: Arc<Realm>, hooks: &Hooks) -> Result<(), ModelError> {
+        {
+            let mut state = realm.lock_state().await;
+            let state = state.get_mut();
+            state.execution = None;
+            state.shut_down = true;
+        }
+        // TODO: Once dedicated logic exists to stop components, this hook should live there;
+        // it's not exclusive to shutdown.
+        for hook in hooks.iter() {
+            hook.on_stop_instance(realm.clone()).await?;
+        }
+        Ok(())
+    }
 
-/// Register an action on a realm.
-pub async fn register_action(
-    model: Model,
-    realm: Arc<Realm>,
-    action: Action,
-) -> Result<Notification, ModelError> {
-    // `register_action()` assumes component is resolved.
-    realm.resolve_decl().await?;
-    let mut state = realm.lock_state().await;
-    let state = state.get_mut();
-    state.register_action(model, realm.clone(), action).await
-}
-
-/// Finish an action on a realm.
-pub async fn finish_action(realm: Arc<Realm>, action: &Action, res: Result<(), ModelError>) {
-    let mut state = realm.lock_state().await;
-    let state = state.get_mut();
-    state.finish_action(action, res).await
+    /// Destroys this component instance.
+    /// REQUIRES: All children have already been destroyed.
+    // TODO: This is a stub. Still need to:
+    // - Delete the instance's persistent marker, if it was a persistent dynamic instance
+    // - Delete the instance's isolated storage
+    pub async fn destroy_instance(realm: Arc<Realm>, hooks: &Hooks) -> Result<(), ModelError> {
+        for hook in hooks.iter() {
+            hook.on_destroy_instance(realm.clone()).await?;
+        }
+        Ok(())
+    }
 }
 
 /// The mutable state of a component.
@@ -241,6 +241,9 @@ pub struct RealmState {
     /// The component's meta directory. Evaluated on demand by the `resolve_meta_dir`
     /// getter.
     meta_dir: Option<Arc<DirectoryProxy>>,
+    /// True if the component instance has shut down. This means that the component is stopped
+    /// and cannot be restarted.
+    shut_down: bool,
     /// Actions on the realm that must eventually be completed.
     actions: ActionSet,
     /// The next unique identifier for a dynamic component instance created in the realm.
@@ -263,8 +266,9 @@ impl RealmState {
             live_child_realms: HashMap::new(),
             decl: decl.clone(),
             meta_dir: None,
-            next_dynamic_instance_id: 1,
+            shut_down: false,
             actions: ActionSet::new(),
+            next_dynamic_instance_id: 1,
         };
         state.add_static_child_realms(realm, &decl);
         Ok(state)
@@ -278,6 +282,11 @@ impl RealmState {
     /// Sets the `Execution`.
     pub fn set_execution(&mut self, e: Execution) {
         self.execution = Some(e);
+    }
+
+    /// Returns whether the realm has shut down.
+    pub fn is_shut_down(&self) -> bool {
+        self.shut_down
     }
 
     /// Returns a reference to the list of live child realms.
@@ -369,41 +378,24 @@ impl RealmState {
     /// future to allow recursive calls.
     ///
     /// REQUIRES: Component has been resolved.
-    fn register_action<'a>(
+    pub fn register_action<'a>(
         &'a mut self,
         model: Model,
         realm: Arc<Realm>,
         action: Action,
     ) -> BoxFuture<Result<Notification, ModelError>> {
         Box::pin(async move {
-            let (nf, needs_roll) = self.actions.register(action.clone());
-            if needs_roll {
-                self.roll_action(model, realm.clone(), &action).await?;
+            let (nf, needs_handle) = self.actions.register(action.clone());
+            if needs_handle {
+                self.handle_action(model, realm.clone(), &action).await?;
             }
             Ok(nf)
         })
     }
 
     /// Finish an action on this realm, which will cause its notifications to be completed.
-    async fn finish_action<'a>(&'a mut self, action: &'a Action, res: Result<(), ModelError>) {
+    pub async fn finish_action<'a>(&'a mut self, action: &'a Action, res: Result<(), ModelError>) {
         self.actions.finish(action, res).await;
-    }
-
-    /// Take any necessary actions for the new action on the given realm ("roll" it forward).
-    /// Should be called after a new action was registered.
-    ///
-    /// The work to fulfill these actions should be scheduled asynchronously, so this method
-    /// should not use `await` for long-running work.
-    ///
-    /// REQUIRES: Component has been resolved.
-    async fn roll_action<'a>(
-        &'a mut self,
-        _model: Model,
-        _realm: Arc<Realm>,
-        _action: &'a Action,
-    ) -> Result<(), ModelError> {
-        // TODO: Implement
-        Ok(())
     }
 }
 

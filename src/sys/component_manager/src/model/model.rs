@@ -33,6 +33,12 @@ pub trait Hook {
         routing_facade: RoutingFacade,
     ) -> BoxFuture<Result<(), ModelError>>;
 
+    // Called when a component instance is stopped.
+    fn on_stop_instance<'a>(&'a self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
+
+    // Called when component manager destroys an instance (including cleanup).
+    fn on_destroy_instance<'a>(&'a self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
+
     // Called when a dynamic instance is added with `realm`.
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
 
@@ -137,7 +143,16 @@ impl Model {
     /// eagerly started.
     pub async fn bind_instance(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
         let eager_children = self.bind_single_instance(realm).await?;
-        self.bind_eager_children_recursive(eager_children).await?;
+        // If the bind to this realm's instance succeeded but the child is shut down, allow
+        // the call to succeed. We don't want the fact that the child is shut down to cause the
+        // client to think the bind to this instance failed.
+        //
+        // TODO: Have a more general strategy for dealing with errors from eager binding. Should
+        // we ever pass along the error?
+        self.bind_eager_children_recursive(eager_children).await.or_else(|e| match e {
+            ModelError::InstanceShutDown { .. } => Ok(()),
+            _ => Err(e),
+        })?;
         Ok(())
     }
 
@@ -287,11 +302,15 @@ impl Model {
             if !state.is_resolved() {
                 state.set(RealmState::new(&*realm, component.decl)?);
             }
-            if state.get().execution().is_some() {
+            let state = state.get();
+            if state.is_shut_down() {
+                return Err(ModelError::instance_shut_down(realm.abs_moniker.clone()));
+            }
+            if state.execution().is_some() {
                 // TODO: Add binding to the execution once we track bindings.
                 return Ok(vec![]);
             }
-            let decl = state.get().decl().clone();
+            let decl = state.decl().clone();
             let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, decl.clone())?;
             (decl, exposed_dir)
         };

@@ -13,7 +13,6 @@ use {
     },
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
-    fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo,
         NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
@@ -38,21 +37,6 @@ use {
     },
 };
 
-/// Return the child of the given realm.
-pub async fn get_child<'a>(realm: &'a Realm, moniker: &'a str) -> Arc<Realm> {
-    realm.lock_state().await.get().live_child_realms()[&moniker.into()].clone()
-}
-
-/// Return all monikers of the children of the given `realm`.
-pub async fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
-    realm.lock_state().await.get().live_child_realms().keys().cloned().collect()
-}
-
-/// Return the child realm of the given `realm` with moniker `child`.
-pub async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> {
-    realm.lock_state().await.get().live_child_realms()[&child.into()].clone()
-}
-
 /// Construct a capability path for the hippo service.
 pub fn default_service_capability() -> CapabilityPath {
     "/svc/hippo".try_into().unwrap()
@@ -61,20 +45,6 @@ pub fn default_service_capability() -> CapabilityPath {
 /// Construct a capability path for the hippo directory.
 pub fn default_directory_capability() -> CapabilityPath {
     "/data/hippo".try_into().unwrap()
-}
-
-/// Returns an empty component decl for an executable component.
-pub fn default_component_decl() -> ComponentDecl {
-    ComponentDecl {
-        program: Some(fdata::Dictionary { entries: vec![] }),
-        uses: Vec::new(),
-        exposes: Vec::new(),
-        offers: Vec::new(),
-        children: Vec::new(),
-        collections: Vec::new(),
-        facets: None,
-        storage: Vec::new(),
-    }
 }
 
 pub enum CheckUse {

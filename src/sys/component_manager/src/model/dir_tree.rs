@@ -124,7 +124,7 @@ impl DirTree {
 mod tests {
     use {
         super::*,
-        crate::model::testing::{mocks, routing_test_helpers::default_component_decl, test_utils},
+        crate::model::testing::{mocks, test_helpers::*, test_utils},
         cm_rust::{
             CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource,
             UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource, UseStorageDecl,
