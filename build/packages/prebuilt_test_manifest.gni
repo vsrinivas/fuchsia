@@ -25,19 +25,20 @@ import("//build/packages/prebuilt_test_package.gni")
 #
 template("prebuilt_test_manifest") {
   assert(defined(invoker.archive_dir), "archive_dir must be defined.")
-  assert(defined(invoker.package_name_prefix), "package_name_prefix must be defined.")
+  assert(defined(invoker.package_name_prefix),
+         "package_name_prefix must be defined.")
 
   manifest_path = "${invoker.archive_dir}/test_manifest.json"
   manifest = read_file(manifest_path, "json")
   test_targets = []
   foreach(test, manifest) {
-    package_target_name = "${invoker.package_name_prefix}-${test.package}"
+    prefixed_test_package = "${invoker.package_name_prefix}_${test.package}"
     test_package = test.package
     component_name = test.component_name
 
-    prebuilt_test_package(package_target_name) {
+    prebuilt_test_package(prefixed_test_package) {
       archive = "${invoker.archive_dir}/${test_package}.far"
-      package = test_package
+      package = prefixed_test_package
       tests = [
         {
           component_name = component_name
@@ -46,7 +47,7 @@ template("prebuilt_test_manifest") {
       ]
     }
 
-    test_targets += [ ":${package_target_name}" ]
+    test_targets += [ ":${prefixed_test_package}" ]
   }
 
   group(target_name) {
