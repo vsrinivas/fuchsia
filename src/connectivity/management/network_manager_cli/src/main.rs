@@ -103,13 +103,12 @@ fn main() -> Result<(), Error> {
     let fut = async {
         let (router_admin, router_state) = match overnet {
             true => {
-                connect_overnet().on_timeout(
-                    fasync::Time::after(OVERNET_TIMEOUT_SEC.seconds()),
-                    || {
+                connect_overnet()
+                    .on_timeout(fasync::Time::after(OVERNET_TIMEOUT_SEC.seconds()), || {
                         syslog::fx_log_err!("no suitable overnet peers found");
                         Err(format_err!("could not find a suitable overnet peer"))
-                    },
-                ).await?
+                    })
+                    .await?
             }
             false => connect()?,
         };
@@ -201,9 +200,13 @@ async fn do_add<T: Write>(
     match cmd {
         Add::Wan { wan, ports, vlan } => {
             let response = match vlan {
-                None => router_admin.create_wan(&wan, 0, &mut ports.into_iter()).await
+                None => router_admin
+                    .create_wan(&wan, 0, &mut ports.into_iter())
+                    .await
                     .context("error getting response")?,
-                Some(vlan) => router_admin.create_wan(&wan, vlan, &mut ports.into_iter()).await
+                Some(vlan) => router_admin
+                    .create_wan(&wan, vlan, &mut ports.into_iter())
+                    .await
                     .context("error getting response")?,
             };
             printer.println(format!("Response: {:?}", response));
@@ -212,9 +215,13 @@ async fn do_add<T: Write>(
 
         Add::Lan { lan, vlan, ports } => {
             let response = match vlan {
-                None => router_admin.create_lan(&lan, 0, &mut ports.into_iter()).await
+                None => router_admin
+                    .create_lan(&lan, 0, &mut ports.into_iter())
+                    .await
                     .context("error getting response")?,
-                Some(vlan) => router_admin.create_lan(&lan, vlan, &mut ports.into_iter()).await
+                Some(vlan) => router_admin
+                    .create_lan(&lan, vlan, &mut ports.into_iter())
+                    .await
                     .context("error getting response")?,
             };
             printer.println(format!("Response: {:?}", response));
@@ -268,7 +275,9 @@ async fn do_show<T: Write>(
         }
 
         Show::WanConfig { mut wan } => {
-            let response = router_state.get_wan_properties(&mut wan).await
+            let response = router_state
+                .get_wan_properties(&mut wan)
+                .await
                 .context("error getting response")?;
             printer.println(format!("{:?} Response: {:?}", wan, response));
             Ok(())
@@ -281,7 +290,9 @@ async fn do_show<T: Write>(
         }
 
         Show::LanConfig { mut lan } => {
-            let response = router_state.get_lan_properties(&mut lan).await
+            let response = router_state
+                .get_lan_properties(&mut lan)
+                .await
                 .context("error getting response")?;
             printer.println(format!("{:?} Response: {:?}", lan, response));
             Ok(())
@@ -353,8 +364,7 @@ async fn do_show<T: Write>(
 
         // TODO: Implement pretty_print
         Show::Ports {} => {
-            let mut response =
-                router_state.get_ports().await.context("error getting response")?;
+            let mut response = router_state.get_ports().await.context("error getting response")?;
             response.sort_by_key(|a| a.path.clone());
             for port in response {
                 printer.println(format!("{:?}", port));
@@ -417,7 +427,9 @@ async fn do_set<T: Write>(
             // Sending the request to the FIDL server and receiving the response
             // This can eventually be its own function with a "pretty print" feature
             printer.println(format!("Sending: {:?}", wan_properties));
-            let response = router_admin.set_wan_properties(&mut wan_id, wan_properties).await
+            let response = router_admin
+                .set_wan_properties(&mut wan_id, wan_properties)
+                .await
                 .context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -538,7 +550,9 @@ async fn do_set<T: Write>(
             }
 
             printer.println(format!("Sending: {:?}", wan_properties));
-            let response = router_admin.set_wan_properties(&mut wan_id, wan_properties).await
+            let response = router_admin
+                .set_wan_properties(&mut wan_id, wan_properties)
+                .await
                 .context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -613,7 +627,9 @@ async fn do_set<T: Write>(
             // Setting the hostname in case this was provided
             wan_properties.hostname = hostname;
             printer.println(format!("Sending: {:?}", wan_properties));
-            let response = router_admin.set_wan_properties(&mut wan_id, wan_properties).await
+            let response = router_admin
+                .set_wan_properties(&mut wan_id, wan_properties)
+                .await
                 .context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -623,7 +639,9 @@ async fn do_set<T: Write>(
         Set::WanCloneMac { mut wan_id, mac } => {
             wan_properties.clone_mac = Some(MacAddress { octets: mac.to_array() });
             printer.println(format!("Sending: {:?}", wan_properties));
-            let response = router_admin.set_wan_properties(&mut wan_id, wan_properties).await
+            let response = router_admin
+                .set_wan_properties(&mut wan_id, wan_properties)
+                .await
                 .context("error getting response")?;
             printer.println(format!("{:?}", response));
             Ok(())
@@ -643,7 +661,9 @@ async fn do_set<T: Write>(
                 _ => return Err(format_err!("Please provide a valid state: up or down")),
             }
             printer.println(format!("Sending: {:?} ID: {:?}", lan_properties, lan_id));
-            let response = router_admin.set_lan_properties(&mut lan_id, lan_properties).await
+            let response = router_admin
+                .set_lan_properties(&mut lan_id, lan_properties)
+                .await
                 .context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -662,7 +682,9 @@ async fn do_set<T: Write>(
             });
 
             printer.println(format!("Sending: {:?} ID: {:?}", lan_properties, lan_id));
-            let response = router_admin.set_lan_properties(&mut lan_id, lan_properties).await
+            let response = router_admin
+                .set_lan_properties(&mut lan_id, lan_properties)
+                .await
                 .context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -686,7 +708,9 @@ async fn do_set<T: Write>(
             if !gateway.is_none() {}
 
             printer.println(format!("Sending: {:?} ID: {:?}", lan_properties, lan_id));
-            let response = router_admin.set_lan_properties(&mut lan_id, lan_properties).await
+            let response = router_admin
+                .set_lan_properties(&mut lan_id, lan_properties)
+                .await
                 .context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -776,7 +800,9 @@ async fn do_set<T: Write>(
                     },
                 },
             };
-            let response = router_admin.set_filter(&mut filter_rule).await
+            let response = router_admin
+                .set_filter(&mut filter_rule)
+                .await
                 .context("error getting response")?;
             printer.println(format!("Response: {:?}", response));
             Ok(())
@@ -830,7 +856,6 @@ mod tests {
         let names_and_urls = vec![
             ("fuchsia.net.stack.Stack", component_url!("netstack")),
             ("fuchsia.netstack.Netstack", component_url!("netstack")),
-            ("fuchsia.net.SocketProvider", component_url!("netstack")),
             ("fuchsia.net.NameLookup", component_url!("netstack")),
             ("fuchsia.posix.socket.Provider", component_url!("netstack")),
             ("fuchsia.net.filter.Filter", component_url!("netstack")),
@@ -869,14 +894,16 @@ mod tests {
         name: &'static str,
         endpoint_manager: &'a EndpointManagerProxy,
     ) -> std::result::Result<EndpointProxy, failure::Error> {
-        let (status, endpoint) = endpoint_manager.create_endpoint(
-            name,
-            &mut EndpointConfig {
-                mtu: 1500,
-                mac: None,
-                backing: fidl_fuchsia_netemul_network::EndpointBacking::Ethertap,
-            },
-        ).await
+        let (status, endpoint) = endpoint_manager
+            .create_endpoint(
+                name,
+                &mut EndpointConfig {
+                    mtu: 1500,
+                    mac: None,
+                    backing: fidl_fuchsia_netemul_network::EndpointBacking::Ethertap,
+                },
+            )
+            .await
             .context("failed to create endpoint")?;
         let () = fuchsia_zircon::Status::ok(status).context("failed to create endpoint")?;
         let endpoint = endpoint
@@ -933,21 +960,25 @@ mod tests {
         device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
     ) -> Result<(), Error> {
         let name = "/mock_device";
-        let id = netstack_proxy.add_ethernet_device(
-            name,
-            &mut fidl_fuchsia_netstack::InterfaceConfig {
-                name: name.to_string(),
-                filepath: "/fake/filepath/for_test".to_string(),
-                metric: 0,
-                ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
-            },
-            device,
-        ).await
+        let id = netstack_proxy
+            .add_ethernet_device(
+                name,
+                &mut fidl_fuchsia_netstack::InterfaceConfig {
+                    name: name.to_string(),
+                    filepath: "/fake/filepath/for_test".to_string(),
+                    metric: 0,
+                    ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
+                },
+                device,
+            )
+            .await
             .context("failed to add ethernet device")?;
 
         // Check that the newly added ethernet interface is present before continuing with the
         // actual tests.
-        let interface = netstack_proxy.get_interfaces2().await
+        let interface = netstack_proxy
+            .get_interfaces2()
+            .await
             .expect("failed to get interfaces")
             .into_iter()
             .find(|interface| interface.id == id)
@@ -994,7 +1025,8 @@ mod tests {
                 get_network_context(&sandbox).expect("failed to get network context");
             let endpoint_manager =
                 get_endpoint_manager(&network_context).expect("failed to get endpoint manager");
-            let endpoint = create_endpoint(stringify!(test_interface), &endpoint_manager).await
+            let endpoint = create_endpoint(stringify!(test_interface), &endpoint_manager)
+                .await
                 .expect("failed to create endpoint");
             let device =
                 endpoint.get_ethernet_device().await.expect("failed to get ethernet device");

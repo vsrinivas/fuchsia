@@ -114,7 +114,6 @@ enable this workaround you need to allow some system services:
     "system-services": [
       "fuchsia.device.NameProvider",
       "fuchsia.net.Connectivity",
-      "fuchsia.net.SocketProvider",
       "fuchsia.net.stack.Stack",
       "fuchsia.netstack.Netstack",
       "fuchsia.net.NameLookup",

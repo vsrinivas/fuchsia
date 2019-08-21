@@ -231,7 +231,6 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
     "fuchsia.test": {
       "system-services": [
         "fuchsia.net.Connectivity",
-        "fuchsia.net.SocketProvider",
         "fuchsia.net.stack.Stack",
         "fuchsia.netstack.Netstack",
         "fuchsia.ui.scenic.Scenic",
@@ -243,12 +242,12 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_EQ(tm.system_services().size(), 6u);
+    EXPECT_EQ(tm.system_services().size(), 5u);
     EXPECT_THAT(tm.system_services(),
                 ::testing::ElementsAre(
-                    fuchsia::net::Connectivity::Name_, fuchsia::net::SocketProvider::Name_,
-                    fuchsia::net::stack::Stack::Name_, fuchsia::netstack::Netstack::Name_,
-                    fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::policy::Presenter::Name_));
+                    fuchsia::net::Connectivity::Name_, fuchsia::net::stack::Stack::Name_,
+                    fuchsia::netstack::Netstack::Name_, fuchsia::ui::scenic::Scenic::Name_,
+                    fuchsia::ui::policy::Presenter::Name_));
   }
 
   json = CreateManifestJson(R"(
@@ -256,7 +255,6 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
     "fuchsia.test": {
       "system-services": [
         "fuchsia.net.Connectivity",
-        "fuchsia.net.SocketProvider",
         "fuchsia.netstack.Netstack"
       ]
     }
@@ -264,9 +262,8 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_EQ(tm.system_services().size(), 3u);
+    EXPECT_EQ(tm.system_services().size(), 2u);
     EXPECT_THAT(tm.system_services(), ::testing::ElementsAre(fuchsia::net::Connectivity::Name_,
-                                                             fuchsia::net::SocketProvider::Name_,
                                                              fuchsia::netstack::Netstack::Name_));
   }
 }

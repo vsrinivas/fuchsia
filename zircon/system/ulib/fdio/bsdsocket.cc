@@ -346,30 +346,6 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
   return nfd;
 }
 
-static int addrinfo_status_to_eai(fnet::AddrInfoStatus status) {
-  switch (status) {
-    case fnet::AddrInfoStatus::ok:
-      return 0;
-    case fnet::AddrInfoStatus::bad_flags:
-      return EAI_BADFLAGS;
-    case fnet::AddrInfoStatus::no_name:
-      return EAI_NONAME;
-    case fnet::AddrInfoStatus::again:
-      return EAI_AGAIN;
-    case fnet::AddrInfoStatus::fail:
-      return EAI_FAIL;
-    case fnet::AddrInfoStatus::no_data:
-      return EAI_NONAME;
-    case fnet::AddrInfoStatus::buffer_overflow:
-      return EAI_OVERFLOW;
-    case fnet::AddrInfoStatus::system_error:
-      return EAI_SYSTEM;
-    default:
-      // unknown status
-      return EAI_SYSTEM;
-  }
-}
-
 __EXPORT
 int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const char* name,
                           int family) {

@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <crashsvc/crashsvc.h>
-#include <fbl/algorithm.h>
-#include <fbl/string_printf.h>
-#include <fs/remote-dir.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
@@ -29,6 +25,11 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+
+#include <crashsvc/crashsvc.h>
+#include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
+#include <fs/remote-dir.h>
 
 #include "sysmem.h"
 
@@ -117,7 +118,7 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.devicesettings.DeviceSettingsManager", "fuchsia.logger.Log", "fuchsia.logger.LogSink",
     // Interface to resolve shell commands.
     "fuchsia.process.Resolver", ::llcpp::fuchsia::net::NameLookup::Name,
-    ::llcpp::fuchsia::net::SocketProvider::Name, ::llcpp::fuchsia::posix::socket::Provider::Name,
+    ::llcpp::fuchsia::posix::socket::Provider::Name,
     // Legacy interface for netstack, defined in //garnet
     "fuchsia.netstack.Netstack",
     // New interface for netstack (WIP), defined in //zircon
@@ -152,12 +153,8 @@ static constexpr const char* miscsvc_services[] = {
 
 // List of services which are re-routed to bootsvc.
 static constexpr const char* bootsvc_services[] = {
-    fuchsia_boot_FactoryItems_Name,
-    fuchsia_boot_Items_Name,
-    fuchsia_boot_Log_Name,
-    fuchsia_boot_RootJob_Name,
-    fuchsia_boot_RootResource_Name,
-    nullptr,
+    fuchsia_boot_FactoryItems_Name, fuchsia_boot_Items_Name,        fuchsia_boot_Log_Name,
+    fuchsia_boot_RootJob_Name,      fuchsia_boot_RootResource_Name, nullptr,
 };
 
 // List of services which are re-routed to devmgr.

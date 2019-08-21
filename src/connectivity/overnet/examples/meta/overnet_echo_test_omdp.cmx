@@ -35,7 +35,6 @@
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/mock_device_settings.cmx"
                     },
-                    "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                     "fuchsia.overnet.Overnet": {
                         "arguments": [

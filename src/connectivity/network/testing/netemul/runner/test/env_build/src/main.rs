@@ -155,7 +155,6 @@ fn run_root(opt: &Opt) -> Result<(), Error> {
     fx_log_info!("Running main test: {}", opt.name);
     let () = check_netemul_environment()?;
     let () = check_path_present(&service_path("fuchsia.netstack.Netstack"))?;
-    let () = check_path_present(&service_path("fuchsia.net.SocketProvider"))?;
     let () = check_path_present(&device_path("class/ethernet/ep0"))?;
     let () = check_path_present(&device_path("class/ethernet/ep1"))?;
 
@@ -180,7 +179,6 @@ fn run_test_1(opt: &Opt) -> Result<(), Error> {
     fx_log_info!("Running test 1: {}", opt.name);
     let () = check_netemul_environment()?;
     let () = check_path_present(&service_path("fuchsia.netstack.Netstack"))?;
-    let () = check_path_present(&service_path("fuchsia.net.SocketProvider"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep0"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep1"))?;
 
@@ -194,7 +192,6 @@ fn run_test_2(opt: &Opt) -> Result<(), Error> {
     fx_log_info!("Running test 2: {}", opt.name);
     let () = check_netemul_environment()?;
     let () = check_path_absent(&service_path("fuchsia.netstack.Netstack"))?;
-    let () = check_path_absent(&service_path("fuchsia.net.SocketProvider"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep0"))?;
     let () = check_path_absent(&device_path("class/ethernet/ep1"))?;
 

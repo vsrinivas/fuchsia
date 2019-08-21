@@ -97,7 +97,6 @@ TEST_F(ModelTest, ParseTest) {
           }
         ],
         "services": {
-          "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
           "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
           "fuchsia.some.Service" : {
             "url" : "fuchsia-pkg://fuchsia.com/some_service#meta/some_service.cmx",
@@ -143,7 +142,7 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_EQ(root_env.inherit_services(), true);
   EXPECT_EQ(root_env.children().size(), 2ul);
   EXPECT_EQ(root_env.devices().size(), 2ul);
-  EXPECT_EQ(root_env.services().size(), 3ul);
+  EXPECT_EQ(root_env.services().size(), 2ul);
   EXPECT_TRUE(root_env.test().empty());
   EXPECT_TRUE(root_env.apps().empty());
   EXPECT_EQ(root_env.setup().size(), 1ul);
@@ -153,18 +152,17 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_EQ(root_env.devices()[1], "ep1");
 
   // check the services
-  EXPECT_EQ(root_env.services()[0].name(), "fuchsia.net.SocketProvider");
   EXPECT_EQ(root_env.services()[0].launch().url(),
             "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx");
   EXPECT_TRUE(root_env.services()[0].launch().arguments().empty());
-  EXPECT_EQ(root_env.services()[1].name(), "fuchsia.netstack.Netstack");
-  EXPECT_EQ(root_env.services()[1].launch().url(),
+  EXPECT_EQ(root_env.services()[0].name(), "fuchsia.netstack.Netstack");
+  EXPECT_EQ(root_env.services()[0].launch().url(),
             "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx");
-  EXPECT_TRUE(root_env.services()[1].launch().arguments().empty());
-  EXPECT_EQ(root_env.services()[2].name(), "fuchsia.some.Service");
-  EXPECT_EQ(root_env.services()[2].launch().url(),
+  EXPECT_TRUE(root_env.services()[0].launch().arguments().empty());
+  EXPECT_EQ(root_env.services()[1].name(), "fuchsia.some.Service");
+  EXPECT_EQ(root_env.services()[1].launch().url(),
             "fuchsia-pkg://fuchsia.com/some_service#meta/some_service.cmx");
-  EXPECT_EQ(root_env.services()[2].launch().arguments().size(), 2ul);
+  EXPECT_EQ(root_env.services()[1].launch().arguments().size(), 2ul);
 
   // check the logger_options
   EXPECT_TRUE(root_env.logger_options().enabled());

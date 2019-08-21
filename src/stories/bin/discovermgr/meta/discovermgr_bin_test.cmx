@@ -59,7 +59,6 @@
             "system-services": [
                 "fuchsia.device.NameProvider",
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.net.SocketProvider",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.net.stack.Stack"
             ]

@@ -206,7 +206,6 @@ The component manifest for our tests is
             },
             "system-services": [
                 "fuchsia.net.NameLookup",
-                "fuchsia.net.SocketProvider",
                 "fuchsia.posix.socket.Provider"
             ]
         }
@@ -224,7 +223,6 @@ The component manifest for our tests is
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.fonts.Provider",
             "fuchsia.net.NameLookup",
-            "fuchsia.net.SocketProvider",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
@@ -240,9 +238,9 @@ The component manifest for our tests is
 The
 [injected-services](/docs/development/testing/test_component.md#run-external-services)
 entry starts the hermetic services our mod will need, mostly related to
-graphics. In addition, the `fuchsia.net.SocketProvider` system service and
-`deprecated-shell` feature are needed to allow Flutter Driver to interact with the Dart
-Observatory.
+graphics. In addition, the `fuchsia.posix.socket.Provider` system service and
+`deprecated-shell` feature are needed to allow Flutter Driver to interact with
+the Dart Observatory.
 
 ### BUILD.gn target {:#build-gn-target}
 

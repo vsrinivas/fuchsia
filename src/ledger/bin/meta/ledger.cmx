@@ -7,7 +7,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
-            "fuchsia.net.SocketProvider",
             "fuchsia.overnet.Overnet",
             "fuchsia.tracing.provider.Registry"
         ]

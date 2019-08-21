@@ -10,7 +10,6 @@
             "fuchsia.logger.LogSink",
             "fuchsia.net.Connectivity",
             "fuchsia.net.NameLookup",
-            "fuchsia.net.SocketProvider",
             "fuchsia.posix.socket.Provider",
             "fuchsia.timezone.TimeService"
         ]

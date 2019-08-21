@@ -73,8 +73,7 @@ impl TestEnv {
         .expect("/pkgfs to mount");
 
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_net::SocketProviderMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
+        fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
             .add_proxy_service_to::<AmberMarker, _>(amber.directory_request().unwrap().clone())
             .add_proxy_service_to::<PackageCacheMarker, _>(
