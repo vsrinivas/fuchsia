@@ -47,6 +47,7 @@ pub(crate) fn new(
                             break;
                         }
                     },
+                    Some(Command::Disconnect) => break,
                     None => break,
                 },
                 _ = recv_msg => {
@@ -113,10 +114,26 @@ impl Controller {
 
         return true;
     }
+
+    /// Initiates disconnection between the watcher and this controller.  `disconnect` exits
+    /// immediately, after sending a command that still need to be processed by the watcher task.
+    /// It is the resposibility of the watcher task to remove the controller from the list of
+    /// controllers in the [`DirectoryEntryContainer`] this controller was added to.
+    pub(crate) fn disconnect(&mut self) {
+        if self.commands.unbounded_send(Command::Disconnect).is_ok() {
+            return;
+        }
+
+        // An error to send indicates the execution task has been disconnected.  Controller should
+        // always be removed from the watchers list before it is destroyed.  So this is some
+        // logical bug.
+        debug_assert!(false, "Watcher controller failed to send a command to the watcher.");
+    }
 }
 
 enum Command {
     Send(Vec<u8>),
+    Disconnect,
 }
 
 fn handle_send(channel: &Channel, buffer: Vec<u8>) -> bool {

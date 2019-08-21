@@ -19,3 +19,6 @@ pub mod read_dirents;
 
 pub mod simple;
 pub use simple::simple;
+
+pub mod lazy;
+pub use lazy::lazy;

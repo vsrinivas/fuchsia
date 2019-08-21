@@ -9,9 +9,9 @@
 
 use {
     fidl_fuchsia_io::{
-        MAX_FILENAME, WATCH_EVENT_ADDED, WATCH_EVENT_EXISTING, WATCH_EVENT_IDLE,
-        WATCH_EVENT_REMOVED, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
-        WATCH_MASK_REMOVED,
+        MAX_FILENAME, WATCH_EVENT_ADDED, WATCH_EVENT_DELETED, WATCH_EVENT_EXISTING,
+        WATCH_EVENT_IDLE, WATCH_EVENT_REMOVED, WATCH_MASK_ADDED, WATCH_MASK_DELETED,
+        WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
     static_assertions::assert_eq_size,
 };
@@ -98,6 +98,18 @@ pub struct StaticVecEventProducer {
 
 impl StaticVecEventProducer {
     /// Constructs a new [`EventProducer`] that is producing names form the specified list,
+    /// building events of type `WATCH_EVENT_ADDED`.  `names` is not allowed to be empty.
+    pub fn added(names: Vec<String>) -> Self {
+        Self::new(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, names)
+    }
+
+    /// Constructs a new [`EventProducer`] that is producing names form the specified list,
+    /// building events of type `WATCH_EVENT_REMOVED`.  `names` is not allowed to be empty.
+    pub fn removed(names: Vec<String>) -> Self {
+        Self::new(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, names)
+    }
+
+    /// Constructs a new [`EventProducer`] that is producing names form the specified list,
     /// building events of type `WATCH_EVENT_EXISTING`.  `names` is not allowed to be empty.
     pub fn existing(names: Vec<String>) -> Self {
         Self::new(WATCH_MASK_EXISTING, WATCH_EVENT_EXISTING, names)
@@ -154,6 +166,12 @@ pub struct SingleNameEventProducer {
 }
 
 impl SingleNameEventProducer {
+    /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
+    /// type `WATCH_EVENT_DELETED`.
+    pub fn deleted(name: &str) -> Self {
+        Self::new(WATCH_MASK_DELETED, WATCH_EVENT_DELETED, name)
+    }
+
     /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
     /// type `WATCH_EVENT_ADDED`.
     pub fn added(name: &str) -> Self {
@@ -226,6 +244,14 @@ pub struct SingleBufferEventProducer {
 }
 
 impl SingleBufferEventProducer {
+    /// Constructs a new [`SingleBufferEventProducer`] that will produce an event for one name of
+    /// type `WATCH_EVENT_EXISTING`.
+    pub fn existing(buffer: Vec<u8>) -> Self {
+        assert_eq_size!(usize, u64);
+        debug_assert!(buffer.len() as u64 <= fidl_fuchsia_io::MAX_BUF);
+        Self::new(WATCH_MASK_EXISTING, WATCH_EVENT_EXISTING, buffer)
+    }
+
     fn new(mask: u32, event: u8, buffer: Vec<u8>) -> Self {
         assert_eq_size!(usize, u64);
         debug_assert!(buffer.len() as u64 <= fidl_fuchsia_io::MAX_BUF);

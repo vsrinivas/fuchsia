@@ -38,7 +38,6 @@ pub type ReadDirentsResult = Result<Box<dyn dirents_sink::Sealed>, Status>;
 
 pub enum AsyncReadDirents {
     Immediate(ReadDirentsResult),
-    #[allow(dead_code)]
     Future(BoxFuture<'static, ReadDirentsResult>),
 }
 

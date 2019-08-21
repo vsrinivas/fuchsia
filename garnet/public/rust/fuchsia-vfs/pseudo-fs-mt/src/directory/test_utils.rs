@@ -179,7 +179,11 @@ macro_rules! assert_watcher_one_message_watched_events {
             expected.extend_from_slice(&name);
         })*
 
-        assert_eq!(bytes, *expected, "Received buffer does not match the expected");
+        assert!(bytes == *expected,
+                "Received buffer does not match the expectation.\n\
+                 Expected: {:X?}\n\
+                 Received: {:X?}",
+                *expected, bytes);
     }};
 
     (@expand_event_type EXISTING) => { WATCH_EVENT_EXISTING };
