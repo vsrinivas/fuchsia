@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
@@ -76,4 +77,32 @@ metrics_registry("mos_metrics_registry") {
   project_name = "managed_os"
   generate_rust = true
   generate_binarypb = false
+}
+
+declare_args() {
+  # Default app id will always return no update.
+  omaha_app_id = "fuchsia-test:no-update"
+}
+omaha_app_id_file = "$root_gen_dir/omaha-app-id.txt"
+write_file(omaha_app_id_file, omaha_app_id)
+
+config_data("omaha_client_config") {
+  for_pkg = "omaha_client"
+  outputs = [
+    "omaha_app_id",
+  ]
+  sources = [
+    omaha_app_id_file,
+  ]
+}
+
+config_data("omaha_client_test_config") {
+  testonly = true
+  for_pkg = "omaha_client_service_bin_tests"
+  outputs = [
+    "omaha_app_id",
+  ]
+  sources = [
+    rebase_path("test_data/omaha_test_app_id"),
+  ]
 }

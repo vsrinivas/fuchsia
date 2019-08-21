@@ -32,9 +32,10 @@ fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new().context("Error creating executor")?;
 
     executor.run_singlethreaded(async {
-        let app_set = configuration::get_app_set()?;
-        info!("Omaha app set: {:?}", app_set);
-        let config = configuration::get_config();
+        let version = configuration::get_version().context("Failed to get version")?;
+        let app_set = configuration::get_app_set(&version).context("Failed to get app set")?;
+        info!("Omaha app set: {:?}", app_set.to_vec().await);
+        let config = configuration::get_config(&version);
         info!("Update config: {:?}", config);
 
         let (metrics_reporter, cobalt_fut) = metrics::CobaltMetricsReporter::new();

@@ -3,8 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
-                "fuchsia.update.ChannelControl": "fuchsia-pkg://fuchsia.com/fake_channel_writer#meta/fake_channel_writer.cmx",
-                "fuchsia.update.ChannelWriter": "fuchsia-pkg://fuchsia.com/fake_channel_writer#meta/fake_channel_writer.cmx"
+                "fuchsia.update.ChannelControl": "fuchsia-pkg://fuchsia.com/fake_channel_writer#meta/fake_channel_writer.cmx"
             }
         }
     },
@@ -12,11 +11,13 @@
         "binary": "test/omaha_client_service_bin_test"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.stash.Store",
-            "fuchsia.update.ChannelControl",
-            "fuchsia.update.ChannelWriter"
+            "fuchsia.update.ChannelControl"
         ]
     }
 }

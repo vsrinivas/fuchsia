@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
-use log::warn;
+use failure::{Error, ResultExt};
 use omaha_client::{
     common::{App, AppSet, UserCounting, Version},
     configuration::{Config, Updater},
@@ -12,10 +11,11 @@ use omaha_client::{
 use std::fs;
 use std::io;
 
-pub fn get_app_set() -> Result<AppSet, Error> {
-    let id = fs::read_to_string("/config/build-info/omaha_product_id")?;
-    // We use the console build id as the version.
-    let version: Version = fs::read_to_string("/config/build-info/omaha_build_id")?.parse()?;
+pub fn get_app_set(version: &str) -> Result<AppSet, Error> {
+    let id = fs::read_to_string("/config/data/omaha_app_id")?;
+    let version = version
+        .parse::<Version>()
+        .context(format!("Unable to parse '{}' as Omaha version format", version))?;
     // Fuchsia only has a single app.
     Ok(AppSet::new(vec![App {
         id,
@@ -26,24 +26,13 @@ pub fn get_app_set() -> Result<AppSet, Error> {
     }]))
 }
 
-pub fn get_config() -> Config {
-    // This OS version is for metrics purpose only, so it's ok if we can't read it.
-    let path = "/config/build-info/version";
-    let version = fs::read_to_string(path).unwrap_or_else(|err| {
-        if err.kind() != io::ErrorKind::NotFound {
-            warn!("error reading {}: {}", path, err);
-        }
-        "".to_string()
-    });
-    // trim_end() removes extra new line at the end of the file.
-    let version = version.trim_end().to_string();
-
+pub fn get_config(version: &str) -> Config {
     Config {
         updater: Updater { name: "Fuchsia".to_string(), version: Version::from([0, 0, 1, 0]) },
 
         os: OS {
             platform: "Fuchsia".to_string(),
-            version,
+            version: version.to_string(),
             service_pack: "".to_string(),
             arch: std::env::consts::ARCH.to_string(),
         },
@@ -52,17 +41,37 @@ pub fn get_config() -> Config {
     }
 }
 
+pub fn get_version() -> Result<String, io::Error> {
+    fs::read_to_string("/config/build-info/version").map(|s| s.trim_end().to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_async as fasync;
 
     #[test]
     fn test_get_config() {
-        let config = get_config();
+        let config = get_config("1.2.3.4");
         assert_eq!(config.updater.name, "Fuchsia");
         let os = config.os;
         assert_eq!(os.platform, "Fuchsia");
+        assert_eq!(os.version, "1.2.3.4");
         assert_eq!(os.arch, std::env::consts::ARCH);
         assert_eq!(config.service_url, "https://clients2.google.com/service/update2/fuchsia/json");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_app_set() {
+        let app_set = get_app_set("1.2.3.4").unwrap();
+        let apps = app_set.to_vec().await;
+        assert_eq!(apps.len(), 1);
+        assert_eq!(apps[0].id, "fuchsia:test-app-id");
+        assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn test_get_app_set_invalid_version() {
+        assert!(get_app_set("invalid version").is_err());
     }
 }

@@ -293,7 +293,7 @@ mod tests {
         StubMetricsReporter,
         MemStorage,
     > {
-        let config = configuration::get_config();
+        let config = configuration::get_config("0.1.2");
         let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
         let app_set = AppSet::new(apps);
         let state_machine = StateMachine::new(
