@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 #define ZX_PAGE_SHIFT ((uint32_t)12u)
-#define ZX_PAGE_SIZE ((uint32_t)(1u << ZX_PAGE_SHIFT))
+#define ZX_PAGE_SIZE ((uintptr_t)(1u << ZX_PAGE_SHIFT))
 #define ZX_PAGE_MASK (ZX_PAGE_SIZE - 1u)
 
 #endif  // SYSROOT_ZIRCON_LIMITS_H_

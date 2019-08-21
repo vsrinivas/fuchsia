@@ -109,12 +109,12 @@ class VmoClone2TestCase : public zxtest::Test {
 
 zx::unowned_resource VmoClone2TestCase::root_resource_;
 
-void VmoWrite(const zx::vmo& vmo, uint32_t data, uint32_t offset = 0) {
+void VmoWrite(const zx::vmo& vmo, uint32_t data, uint64_t offset = 0) {
   zx_status_t status = vmo.write(static_cast<void*>(&data), offset, sizeof(data));
   ASSERT_OK(status, "write failed");
 }
 
-void VmoCheck(const zx::vmo& vmo, uint32_t expected, uint32_t offset = 0) {
+void VmoCheck(const zx::vmo& vmo, uint32_t expected, uint64_t offset = 0) {
   uint32_t data;
   zx_status_t status = vmo.read(static_cast<void*>(&data), offset, sizeof(data));
   ASSERT_OK(status, "read failed");
