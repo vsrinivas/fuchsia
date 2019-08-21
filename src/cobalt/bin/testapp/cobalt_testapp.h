@@ -60,7 +60,7 @@ class CobaltTestApp {
   fuchsia::cobalt::SystemDataUpdaterSyncPtr system_data_updater_;
   CobaltTestAppLogger logger_;
   bool test_for_prober_;
-  std::unique_ptr<util::ClockInterface> clock_;
+  std::unique_ptr<util::SystemClockInterface> clock_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltTestApp);
 };

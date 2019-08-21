@@ -64,15 +64,18 @@ bool TestDebugMetric(CobaltTestAppLogger* logger, bool should_succeed,
 //
 // In addition, TestLogEventWithAggregation attempts to log an event with an
 // invalid event code and checks for failure.
-bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, util::ClockInterface* clock,
+bool TestLogEventWithAggregation(CobaltTestAppLogger* logger,
+                                 util::SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                  const size_t backfill_days);
 
-bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, util::ClockInterface* clock,
+bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
+                                      util::SystemClockInterface* clock,
                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                       const size_t backfill_days);
 
-bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, util::ClockInterface* clock,
+bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
+                                       util::SystemClockInterface* clock,
                                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                        const size_t backfill_days);
 

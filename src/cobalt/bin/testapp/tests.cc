@@ -15,7 +15,7 @@ namespace cobalt {
 
 using crypto::Base64Decode;
 
-using util::ClockInterface;
+using util::SystemClockInterface;
 using util::TimeToDayIndex;
 
 namespace testapp {
@@ -24,7 +24,7 @@ using fidl::VectorPtr;
 using fuchsia::cobalt::Status;
 
 namespace {
-uint32_t CurrentDayIndex(ClockInterface* clock) {
+uint32_t CurrentDayIndex(SystemClockInterface* clock) {
   return TimeToDayIndex(std::chrono::system_clock::to_time_t(clock->now()), MetricDefinition::UTC);
 }
 
@@ -359,7 +359,8 @@ bool GenerateObsAndCheckCount(uint32_t day_index,
   return true;
 }
 
-bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, ClockInterface* clock,
+bool TestLogEventWithAggregation(CobaltTestAppLogger* logger,
+                                 SystemClockInterface* clock,
                                  fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                  const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
@@ -398,7 +399,8 @@ bool TestLogEventWithAggregation(CobaltTestAppLogger* logger, ClockInterface* cl
   return SendAndCheckSuccess("TestLogEventWithAggregation", logger);
 }
 
-bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, ClockInterface* clock,
+bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger,
+                                      SystemClockInterface* clock,
                                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                       const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
@@ -437,7 +439,8 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, ClockInterfac
   return SendAndCheckSuccess("TestLogEventCountWithAggregation", logger);
 }
 
-bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, ClockInterface* clock,
+bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger,
+                                       SystemClockInterface* clock,
                                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                                        const size_t backfill_days) {
   FX_LOGS(INFO) << "========================";
