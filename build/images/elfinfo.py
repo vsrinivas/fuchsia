@@ -33,6 +33,7 @@ DT_STRTAB = 5
 DT_SONAME = 14
 NT_GNU_BUILD_ID = 3
 SHT_SYMTAB = 2
+SHF_ALLOC = 2
 
 
 class elf_note(
@@ -455,7 +456,9 @@ def get_elf_info(filename, match_notes=False):
 
     def get_stripped():
         return all(
-            shdr.sh_type != SHT_SYMTAB and not name.startswith('.debug_')
+            (shdr.sh_flags & SHF_ALLOC) != 0 or (
+                shdr.sh_type != SHT_SYMTAB and not name.startswith('.debug_')
+            )
             for shdr, name in gen_sections())
 
     def get_cpu():
