@@ -34,7 +34,7 @@ class SessionTest : public ErrorReportingTest {
 
   // Apply the specified Command.  Return true if it was applied successfully,
   // and false if an error occurred.
-  bool Apply(::fuchsia::ui::gfx::Command command);
+  bool Apply(fuchsia::ui::gfx::Command command);
 
   template <class ResourceT>
   fxl::RefPtr<ResourceT> FindResource(ResourceId id) {
@@ -42,8 +42,6 @@ class SessionTest : public ErrorReportingTest {
   }
 
   Session* session() { return session_.get(); }
-
-  DisplayManager* display_manager() { return display_manager_.get(); }
 
  protected:
   // Creates a SessionContext with only a SessionManager and a
@@ -56,8 +54,7 @@ class SessionTest : public ErrorReportingTest {
  private:
   SessionContext session_context_;
 
-  std::unique_ptr<Sysmem> sysmem_;
-  std::unique_ptr<DisplayManager> display_manager_;
+  std::unique_ptr<Display> display_;
   std::shared_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;
 };

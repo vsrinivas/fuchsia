@@ -77,12 +77,24 @@ vk::MemoryRequirements VkSessionTest::GetBufferRequirements(vk::Device device, v
   return retval;
 }
 
+void VkSessionTest::SetUp() {
+  SessionTest::SetUp();
+
+  sysmem_ = std::make_unique<Sysmem>();
+  display_manager_ = std::make_unique<DisplayManager>();
+  constexpr float display_width = 1024;
+  constexpr float display_height = 768;
+  display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
+      /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
+}
 void VkSessionTest::TearDown() {
   SessionTest::TearDown();
 
   image_factory_.reset();
   release_fence_signaller_.reset();
   escher_.reset();
+  sysmem_.reset();
+  display_manager_.reset();
 }
 
 SessionContext VkSessionTest::CreateSessionContext() {
@@ -110,7 +122,8 @@ SessionContext VkSessionTest::CreateSessionContext() {
 }
 
 CommandContext VkSessionTest::CreateCommandContext() {
-  return CommandContext(escher::BatchGpuUploader::New(escher_->GetWeakPtr(), /* trace_id = */ 0));
+  return CommandContext(escher::BatchGpuUploader::New(escher_->GetWeakPtr(), /* trace_id = */ 0),
+                        sysmem_.get(), display_manager_.get());
 }
 
 }  // namespace test

@@ -66,8 +66,11 @@ constexpr std::array<fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
 
 }  // anonymous namespace
 
-CommandContext::CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader)
-    : batch_gpu_uploader_(std::move(uploader)) {}
+CommandContext::CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
+                               DisplayManager* display_manager)
+    : batch_gpu_uploader_(std::move(uploader)),
+      sysmem_(sysmem),
+      display_manager_(display_manager) {}
 
 void CommandContext::Flush() {
   if (batch_gpu_uploader_) {
@@ -305,7 +308,7 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
     case fuchsia::ui::gfx::ResourceArgs::Tag::kCompositor:
       return ApplyCreateCompositor(session, id, std::move(command.resource.compositor()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kDisplayCompositor:
-      return ApplyCreateDisplayCompositor(session, id,
+      return ApplyCreateDisplayCompositor(session, command_context, id,
                                           std::move(command.resource.display_compositor()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipeCompositor:
       return ApplyCreateImagePipeCompositor(session, id,
@@ -1254,9 +1257,10 @@ bool GfxCommandApplier::ApplyCreateCompositor(Session* session, ResourceId id,
   return compositor ? session->resources()->AddResource(id, std::move(compositor)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateDisplayCompositor(Session* session, ResourceId id,
+bool GfxCommandApplier::ApplyCreateDisplayCompositor(Session* session, CommandContext* context,
+                                                     ResourceId id,
                                                      fuchsia::ui::gfx::DisplayCompositorArgs args) {
-  auto compositor = CreateDisplayCompositor(session, id, std::move(args));
+  auto compositor = CreateDisplayCompositor(session, context, id, std::move(args));
   return compositor ? session->resources()->AddResource(id, std::move(compositor)) : false;
 }
 
@@ -1441,9 +1445,10 @@ ResourcePtr GfxCommandApplier::CreateCompositor(Session* session, ResourceId id,
 }
 
 ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
-    Session* session, ResourceId id, fuchsia::ui::gfx::DisplayCompositorArgs args) {
-  FXL_DCHECK(session->session_context().display_manager);
-  Display* display = session->session_context().display_manager->default_display();
+    Session* session, CommandContext* command_context, ResourceId id,
+    fuchsia::ui::gfx::DisplayCompositorArgs args) {
+  FXL_DCHECK(command_context->display_manager());
+  Display* display = command_context->display_manager()->default_display();
   if (!display) {
     session->error_reporter()->ERROR() << "There is no default display available.";
     return nullptr;
@@ -1457,8 +1462,8 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
 
   return fxl::AdoptRef(new DisplayCompositor(
       session, id, session->session_context().scene_graph, display,
-      SwapchainFactory::CreateDisplaySwapchain(display, session->session_context().sysmem,
-                                               session->session_context().display_manager,
+      SwapchainFactory::CreateDisplaySwapchain(display, command_context->sysmem(),
+                                               command_context->display_manager(),
                                                session->session_context().escher)));
 }
 

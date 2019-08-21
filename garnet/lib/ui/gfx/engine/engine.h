@@ -55,13 +55,11 @@ using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 // producing output when prompted through the FrameRenderer interface.
 class Engine : public FrameRenderer {
  public:
-  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
-         DisplayManager* display_manager, escher::EscherWeakPtr escher,
+  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, escher::EscherWeakPtr escher,
          inspect_deprecated::Node inspect_node);
 
   // Only used for testing.
-  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
-         DisplayManager* display_manager,
+  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          escher::EscherWeakPtr escher);
 
@@ -89,8 +87,6 @@ class Engine : public FrameRenderer {
                           escher_rounded_rect_factory(),
                           release_fence_signaller(),
                           frame_scheduler_,
-                          sysmem_,
-                          display_manager_,
                           scene_graph(),
                           &resource_linker_,
                           &view_linker_};
@@ -140,8 +136,6 @@ class Engine : public FrameRenderer {
   void UpdateMetrics(Node* node, const ::fuchsia::ui::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
-  Sysmem* const sysmem_;
-  DisplayManager* const display_manager_;
   const escher::EscherWeakPtr escher_;
 
   std::unique_ptr<EngineRenderer> engine_renderer_;

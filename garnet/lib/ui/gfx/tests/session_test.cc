@@ -14,12 +14,11 @@ namespace test {
 
 void SessionTest::SetUp() {
   ErrorReportingTest::SetUp();
-  sysmem_ = std::make_unique<Sysmem>();
-  display_manager_ = std::make_unique<DisplayManager>();
-  display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
-      /*id*/ 0, /*px-width*/ 0, /*px-height*/ 0));
+
+  display_ = std::make_unique<Display>(
+      /*id*/ 0, /* width */ 0, /* height */ 0);
   frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
-      display_manager_->default_display(),
+      display_.get(),
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
 
@@ -28,37 +27,34 @@ void SessionTest::SetUp() {
 }
 
 void SessionTest::TearDown() {
+  display_.reset();
   session_.reset();
   frame_scheduler_.reset();
-  display_manager_.reset();
 
   ErrorReportingTest::TearDown();
 }
 
 SessionContext SessionTest::CreateSessionContext() {
   FXL_DCHECK(frame_scheduler_);
-  FXL_DCHECK(display_manager_);
 
   SessionContext session_context{
       vk::Device(),
-      nullptr,                 // escher::Escher*
-      nullptr,                 // escher::ResourceRecycler
-      nullptr,                 // escher::ImageFactory*
-      nullptr,                 // escher::RoundedRectFactory*
-      nullptr,                 // escher::ReleaseFenceSignaller*
-      frame_scheduler_,        // shared_ptr<FrameScheduler>
-      sysmem_.get(),           // Sysmem*
-      display_manager_.get(),  // DisplayManager*
-      SceneGraphWeakPtr(),     // SceneGraphWeakPtr
-      nullptr,                 // ResourceLinker*
-      nullptr                  // ViewLinker*
+      nullptr,              // escher::Escher*
+      nullptr,              // escher::ResourceRecycler
+      nullptr,              // escher::ImageFactory*
+      nullptr,              // escher::RoundedRectFactory*
+      nullptr,              // escher::ReleaseFenceSignaller*
+      frame_scheduler_,     // shared_ptr<FrameScheduler>
+      SceneGraphWeakPtr(),  // SceneGraphWeakPtr
+      nullptr,              // ResourceLinker*
+      nullptr               // ViewLinker*
   };
   return session_context;
 }
 
 CommandContext SessionTest::CreateCommandContext() {
   // By default, return the empty command context.
-  return CommandContext(nullptr);
+  return CommandContext();
 }
 
 std::unique_ptr<Session> SessionTest::CreateSession() {

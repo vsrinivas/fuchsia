@@ -37,17 +37,23 @@ class Session;
 class CommandContext {
  public:
   // Creates an empty command context.
-  CommandContext();
+  CommandContext() = default;
 
-  CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader);
+  CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
+                 DisplayManager* display_manager);
 
   escher::BatchGpuUploader* batch_gpu_uploader() const { return batch_gpu_uploader_.get(); }
+
+  Sysmem* sysmem() const { return sysmem_; };
+  DisplayManager* display_manager() const { return display_manager_; };
 
   // Flush any work accumulated during command processing.
   void Flush();
 
  private:
   std::unique_ptr<escher::BatchGpuUploader> batch_gpu_uploader_;
+  Sysmem* sysmem_ = nullptr;
+  DisplayManager* display_manager_ = nullptr;
 };
 
 // Responsible for applying gfx commands to sessions.
@@ -189,7 +195,7 @@ class GfxCommandApplier {
                                    fuchsia::ui::gfx::ShapeNodeArgs args);
   static bool ApplyCreateCompositor(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::CompositorArgs args);
-  static bool ApplyCreateDisplayCompositor(Session* session, ResourceId id,
+  static bool ApplyCreateDisplayCompositor(Session* session, CommandContext* context, ResourceId id,
                                            fuchsia::ui::gfx::DisplayCompositorArgs args);
   static bool ApplyCreateImagePipeCompositor(Session* session, ResourceId id,
                                              fuchsia::ui::gfx::ImagePipeCompositorArgs args);
@@ -248,7 +254,8 @@ class GfxCommandApplier {
 
   static ResourcePtr CreateCompositor(Session* session, ResourceId id,
                                       fuchsia::ui::gfx::CompositorArgs args);
-  static ResourcePtr CreateDisplayCompositor(Session* session, ResourceId id,
+  static ResourcePtr CreateDisplayCompositor(Session* session, CommandContext* context,
+                                             ResourceId id,
                                              fuchsia::ui::gfx::DisplayCompositorArgs args);
   static ResourcePtr CreateImagePipeCompositor(Session* session, ResourceId id,
                                                fuchsia::ui::gfx::ImagePipeCompositorArgs args);

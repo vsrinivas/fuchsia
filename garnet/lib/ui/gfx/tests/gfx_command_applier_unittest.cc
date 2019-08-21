@@ -15,7 +15,7 @@ namespace test {
 using GfxCommandApplierTest = SessionTest;
 
 TEST_F(GfxCommandApplierTest, NewCreateEntityNodeCmd) {
-  CommandContext empty_command_context(nullptr);
+  CommandContext empty_command_context;
 
   // Valid id passes
   EXPECT_TRUE(GfxCommandApplier::ApplyCommand(session(), &empty_command_context,
@@ -27,7 +27,7 @@ TEST_F(GfxCommandApplierTest, NewCreateEntityNodeCmd) {
 }
 
 TEST_F(GfxCommandApplierTest, EraseResource) {
-  CommandContext empty_command_context(nullptr);
+  CommandContext empty_command_context;
   EXPECT_TRUE(GfxCommandApplier::ApplyCommand(session(), &empty_command_context,
                                               scenic::NewCreateEntityNodeCmd(/*id*/ 3)));
   // Erasing non-existent resource fails
@@ -42,7 +42,7 @@ TEST_F(GfxCommandApplierTest, EraseResource) {
 TEST_F(GfxCommandApplierTest, SeparateSessionsAreIndependent) {
   auto session2 = CreateSession();
 
-  CommandContext empty_command_context(nullptr);
+  CommandContext empty_command_context;
 
   EXPECT_TRUE(GfxCommandApplier::ApplyCommand(session(), &empty_command_context,
                                               scenic::NewCreateEntityNodeCmd(/*id*/ 3)));

@@ -85,12 +85,12 @@ void InputSystemTest::InitializeScenic(Scenic* scenic) {
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
 
-  engine_ = std::make_unique<Engine>(frame_scheduler, /* sysmem */ nullptr,
-                                     /* display_manager */ nullptr, std::move(signaller),
-                                     escher::EscherWeakPtr());
+  engine_ =
+      std::make_unique<Engine>(frame_scheduler, std::move(signaller), escher::EscherWeakPtr());
   frame_scheduler->SetFrameRenderer(engine_->GetWeakPtr());
-  auto gfx =
-      scenic->RegisterSystem<GfxSystem>(display_.get(), engine_.get(), escher::EscherWeakPtr());
+  auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(), escher::EscherWeakPtr(),
+                                               /* sysmem */ nullptr,
+                                               /* display_manager */ nullptr, display_.get());
   frame_scheduler->AddSessionUpdater(gfx->GetWeakPtr());
   input_ = scenic->RegisterSystem<InputSystem>(engine_.get());
   scenic->SetInitialized();

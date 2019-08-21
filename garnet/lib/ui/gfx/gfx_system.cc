@@ -28,11 +28,13 @@ namespace gfx {
 static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
-GfxSystem::GfxSystem(SystemContext context, Display* display, Engine* engine,
-                     escher::EscherWeakPtr escher)
+GfxSystem::GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher,
+                     Sysmem* sysmem, DisplayManager* display_manager, Display* display)
     : System(std::move(context)),
-      escher_(std::move(escher)),
       display_(display),
+      display_manager_(display_manager),
+      sysmem_(sysmem),
+      escher_(std::move(escher)),
       engine_(engine),
       session_manager_(this->context()->inspect_node()->CreateChild("SessionManager")),
       weak_factory_(this) {
@@ -264,7 +266,8 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
 
   if (!command_context_) {
     command_context_ = std::make_optional<CommandContext>(
-        escher_ ? escher::BatchGpuUploader::New(escher_->GetWeakPtr(), trace_id) : nullptr);
+        escher_ ? escher::BatchGpuUploader::New(escher_->GetWeakPtr(), trace_id) : nullptr, sysmem_,
+        display_manager_);
   }
 
   for (auto session_id : sessions_to_update) {

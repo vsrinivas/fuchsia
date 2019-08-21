@@ -30,12 +30,9 @@
 namespace scenic_impl {
 namespace gfx {
 
-Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
-               DisplayManager* display_manager, escher::EscherWeakPtr weak_escher,
-               inspect_deprecated::Node inspect_node)
-    : sysmem_(sysmem),
-      display_manager_(display_manager),
-      escher_(std::move(weak_escher)),
+Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
+               escher::EscherWeakPtr weak_escher, inspect_deprecated::Node inspect_node)
+    : escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
           escher_, escher_->device()->caps().GetMatchingDepthStencilFormat(
                        {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}))),
@@ -52,13 +49,10 @@ Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* s
   InitializeInspectObjects();
 }
 
-Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, Sysmem* sysmem,
-               DisplayManager* display_manager,
+Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
                std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
                escher::EscherWeakPtr weak_escher)
-    : sysmem_(sysmem),
-      display_manager_(display_manager),
-      escher_(std::move(weak_escher)),
+    : escher_(std::move(weak_escher)),
       release_fence_signaller_(std::move(release_fence_signaller)),
       frame_scheduler_(frame_scheduler),
       weak_factory_(this) {

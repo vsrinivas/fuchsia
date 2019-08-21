@@ -19,12 +19,25 @@ class CompositorTest : public SessionTest {
  public:
   CompositorTest() {}
 
+  void SetUp() {
+    SessionTest::SetUp();
+    display_manager_ = std::make_unique<DisplayManager>();
+
+    constexpr float display_width = 1024;
+    constexpr float display_height = 768;
+    display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
+        /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
+    sysmem_ = std::make_unique<Sysmem>();
+  }
+
   void TearDown() override {
     SessionTest::TearDown();
 
     view_linker_.reset();
     resource_linker_.reset();
     scene_graph_.reset();
+    display_manager_.reset();
+    sysmem_.reset();
   }
 
   SessionContext CreateSessionContext() override {
@@ -53,7 +66,16 @@ class CompositorTest : public SessionTest {
     return session_context;
   }
 
+  CommandContext CreateCommandContext() {
+    return CommandContext(/* batch_gpu_uploader */ nullptr, sysmem_.get(), display_manager_.get());
+  }
+
+  DisplayManager* display_manager() const { return display_manager_.get(); }
+
  private:
+  std::unique_ptr<Sysmem> sysmem_;
+  std::unique_ptr<DisplayManager> display_manager_;
+
   std::unique_ptr<SceneGraph> scene_graph_;
 
   std::unique_ptr<ViewLinker> view_linker_;

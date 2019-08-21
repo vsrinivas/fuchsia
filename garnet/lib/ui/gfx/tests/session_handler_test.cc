@@ -62,7 +62,6 @@ void SessionHandlerTest::InitializeDisplayManager() {
 
 void SessionHandlerTest::InitializeEngine() {
   command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
-  sysmem_ = std::make_unique<Sysmem>();
 
   auto mock_release_fence_signaller =
       std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
@@ -71,9 +70,8 @@ void SessionHandlerTest::InitializeEngine() {
       display_manager_->default_display(),
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
-  engine_ =
-      std::make_unique<Engine>(frame_scheduler_, sysmem_.get(), display_manager_.get(),
-                               std::move(mock_release_fence_signaller), escher::EscherWeakPtr());
+  engine_ = std::make_unique<Engine>(frame_scheduler_, std::move(mock_release_fence_signaller),
+                                     escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   frame_scheduler_->AddSessionUpdater(weak_factory_.GetWeakPtr());
 }
@@ -87,7 +85,7 @@ SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
     uint64_t trace_id) {
   UpdateResults update_results;
-  CommandContext context(nullptr);
+  CommandContext empty_command_context;
 
   for (auto session_id : sessions_to_update) {
     auto session_handler = session_manager_->FindSessionHandler(session_id);
@@ -102,11 +100,11 @@ SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
 
     auto session = session_handler->session();
 
-    auto apply_results = session->ApplyScheduledUpdates(&context, presentation_time);
+    auto apply_results = session->ApplyScheduledUpdates(&empty_command_context, presentation_time);
   }
 
   // Flush work to the GPU.
-  context.Flush();
+  empty_command_context.Flush();
 
   return update_results;
 }

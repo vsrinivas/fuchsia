@@ -23,6 +23,7 @@ class VkSessionTest : public SessionTest {
   static vk::MemoryRequirements GetBufferRequirements(vk::Device device, vk::DeviceSize size,
                                                       vk::BufferUsageFlags usage_flags);
 
+  void SetUp() override;
   void TearDown() override;
 
   escher::Escher* escher() { return escher_.get(); }
@@ -34,6 +35,8 @@ class VkSessionTest : public SessionTest {
   CommandContext CreateCommandContext() override;
 
  private:
+  std::unique_ptr<Sysmem> sysmem_;
+  std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;

@@ -12,13 +12,11 @@
 #include <string>
 #include <vector>
 
-#include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "garnet/lib/ui/gfx/engine/hit.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
 #include "garnet/lib/ui/gfx/resources/compositor/compositor.h"
 #include "garnet/lib/ui/gfx/resources/compositor/layer_stack.h"
-#include "garnet/lib/ui/gfx/sysmem.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
@@ -56,7 +54,7 @@ class CustomSession {
   ~CustomSession() {}
 
   void Apply(::fuchsia::ui::gfx::Command command) {
-    CommandContext empty_command_context(nullptr);
+    CommandContext empty_command_context;
     bool result = session_->ApplyCommand(&empty_command_context, std::move(command));
     ASSERT_TRUE(result) << "Failed to apply: " << command;  // Fail fast.
   }
@@ -93,12 +91,8 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
-  DisplayManager display_manager;
-  Sysmem sysmem;
-  display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
-      /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr, &sysmem, &display_manager,
+      /*frame_scheduler*/ nullptr,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
@@ -215,12 +209,8 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
-  DisplayManager display_manager;
-  Sysmem sysmem;
-  display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
-      /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr, &sysmem, &display_manager,
+      /*frame_scheduler*/ nullptr,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
@@ -365,12 +355,8 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
-  DisplayManager display_manager;
-  Sysmem sysmem;
-  display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
-      /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr, &sysmem, &display_manager,
+      /*frame_scheduler*/ nullptr,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
@@ -501,12 +487,8 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
 // View/ViewHolder pairs, and checks if global hit testing has access to
 // hittable nodes across all sessions.
 TEST_F(MultiSessionHitTestTest, GlobalHits) {
-  DisplayManager display_manager;
-  Sysmem sysmem;
-  display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
-      /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));
   std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr, &sysmem, &display_manager,
+      /*frame_scheduler*/ nullptr,
       /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.

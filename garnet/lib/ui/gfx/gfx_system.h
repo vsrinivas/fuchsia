@@ -26,7 +26,8 @@ class GfxSystem : public System, public TempScenicDelegate, public SessionUpdate
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
 
-  GfxSystem(SystemContext context, Display* display, Engine* engine, escher::EscherWeakPtr escher);
+  GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher, Sysmem* sysmem,
+            DisplayManager* display_manager, Display* display);
 
   GfxSystemWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
@@ -60,8 +61,12 @@ class GfxSystem : public System, public TempScenicDelegate, public SessionUpdate
   void DumpSessionMapResources(std::ostream& output,
                                std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources);
 
-  escher::EscherWeakPtr escher_;
   Display* const display_;
+  DisplayManager* const display_manager_;
+
+  Sysmem* const sysmem_;
+  escher::EscherWeakPtr escher_;
+
   Engine* const engine_;
   SessionManager session_manager_;
 
