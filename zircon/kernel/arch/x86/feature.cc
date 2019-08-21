@@ -200,7 +200,9 @@ static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
       case 0x4c: /* Airmont "Braswell" */
       case 0x5a: /* Airmont */
         return X86_MICROARCH_INTEL_SILVERMONT;
-      case 0x5c: /* Goldmont */
+      case 0x5c: /* Goldmont (Apollo Lake) */
+      case 0x5f: /* Goldmont (Denverton) */
+      case 0x7a: /* Goldmont Plus (Gemini Lake) */
         return X86_MICROARCH_INTEL_GOLDMONT;
     }
   } else if (x86_vendor == X86_VENDOR_AMD && info->family == 0xf) {
@@ -638,6 +640,18 @@ static const x86_microarch_config_t smt_config{
             .states = {X86_CSTATE_C1(0)},
         },
 };
+static const x86_microarch_config_t glm_config{
+    // Goldmont, Goldmont+
+    .get_apic_freq = default_apic_freq,
+    .get_tsc_freq = intel_tsc_freq,
+    .reboot_system = unknown_reboot_system,
+    .reboot_reason = unknown_reboot_reason,
+    .disable_c1e = false,
+    .idle_states =
+        {
+            .states = {X86_CSTATE_C1(0)},
+        },
+};
 static const x86_microarch_config_t intel_default_config{
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
@@ -730,8 +744,7 @@ const x86_microarch_config_t* select_microarch_config(enum x86_microarch_list in
     case X86_MICROARCH_INTEL_SILVERMONT:
       return &smt_config;
     case X86_MICROARCH_INTEL_GOLDMONT:
-      // Placeholder; TODO(ZX-4201): Separate Goldmont/Goldmont Plus config from Silvermont.
-      return &smt_config;
+      return &glm_config;
     case X86_MICROARCH_AMD_BULLDOZER:
       return &bulldozer_config;
     case X86_MICROARCH_AMD_JAGUAR:
