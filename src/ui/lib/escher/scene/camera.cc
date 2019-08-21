@@ -67,15 +67,7 @@ static std::pair<float, float> ComputeNearAndFarPlanes(const ViewingVolume& volu
 Camera::Camera(const mat4& transform, const mat4& projection)
     : transform_(transform), projection_(projection) {}
 
-Camera Camera::NewOrtho(const ViewingVolume& volume) {
-  // The floor of the stage has (x, y) coordinates ranging from (0,0) to
-  // (volume.width(), volume.height()); move the camera so that it is above the
-  // center of the stage.  Also, move the camera "upward"; since the Vulkan
-  // camera points into the screen along the negative-Z axis, this is equivalent
-  // to moving the entire stage by a negative amount in Z.
-  mat4 transform =
-      glm::translate(vec3(-volume.width() / 2, -volume.height() / 2, volume.top() - 10.f));
-
+Camera Camera::NewOrtho(const ViewingVolume& volume, const mat4* clip_space_transform) {
   // This method does not take the transform of the camera as input so there is
   // no way to reorient the view matrix outside of this method, so we point it
   // down the -Z axis here. The reason we mirror here instead of rotating is
@@ -83,12 +75,24 @@ Camera Camera::NewOrtho(const ViewingVolume& volume) {
   // that it projects a right handed view space into OpenGL's left handed NDC
   // space, and thus it also projects a left handed view space into Vulkan's
   // right handed NDC space.
-  transform = glm::scale(transform, glm::vec3(1.f, 1.f, -1.f));
+  mat4 transform = glm::scale(glm::vec3(1.f, 1.f, -1.f));
+
+  // The floor of the stage has (x, y) coordinates ranging from (0,0) to
+  // (volume.width(), volume.height()); move the camera so that it is above the
+  // center of the stage.  Also, move the camera "upward"; since the Vulkan
+  // camera points into the screen along the negative-Z axis, this is equivalent
+  // to moving the entire stage by a negative amount in Z.
+  transform = glm::translate(transform,
+                             -vec3(volume.width() / 2, volume.height() / 2, volume.top() - 10.f));
 
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
   mat4 projection =
       glm::orthoRH(-0.5f * volume.width(), 0.5f * volume.width(), -0.5f * volume.height(),
                    0.5f * volume.height(), near_and_far.first, near_and_far.second);
+
+  if (clip_space_transform) {
+    projection = *clip_space_transform * projection;
+  }
 
   return Camera(transform, projection);
 }
@@ -108,7 +112,8 @@ Camera Camera::NewForDirectionalShadowMap(const ViewingVolume& volume, const glm
   return Camera(transform, projection);
 }
 
-Camera Camera::NewPerspective(const ViewingVolume& volume, const mat4& transform, float fovy) {
+Camera Camera::NewPerspective(const ViewingVolume& volume, const mat4& transform, float fovy,
+                              const mat4* clip_space_transform) {
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
   float aspect = volume.width() / volume.height();
   mat4 projection = glm::perspectiveRH(fovy, aspect, near_and_far.first, near_and_far.second);
@@ -121,6 +126,10 @@ Camera Camera::NewPerspective(const ViewingVolume& volume, const mat4& transform
   // to calling glm::perspectiveLH with the same arguments and rotating the
   // resulting matrix 180 degrees around the X axis.
   projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
+
+  if (clip_space_transform) {
+    projection = *clip_space_transform * projection;
+  }
 
   return Camera(transform, projection);
 }

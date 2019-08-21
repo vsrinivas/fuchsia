@@ -396,6 +396,10 @@ void CameraBase::SetTransform(const float eye_position[3], const float eye_look_
   session()->Enqueue(NewSetCameraTransformCmd(id(), eye_position, eye_look_at, eye_up));
 }
 
+void CameraBase::SetClipSpaceTransform(float x, float y, float scale) {
+  session()->Enqueue(NewSetCameraClipSpaceTransformCmd(id(), x, y, scale));
+}
+
 void CameraBase::SetPoseBuffer(const Buffer& buffer, uint32_t num_entries, int64_t base_time,
                                uint64_t time_interval) {
   session()->Enqueue(

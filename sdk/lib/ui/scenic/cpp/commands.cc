@@ -1034,6 +1034,19 @@ fuchsia::ui::gfx::Command NewSetStereoCameraProjectionCmd(uint32_t camera_id,
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSetCameraClipSpaceTransformCmd(uint32_t camera_id, float x, float y,
+                                                            float scale) {
+  fuchsia::ui::gfx::SetCameraClipSpaceTransformCmd set_command;
+  set_command.camera_id = camera_id;
+  set_command.translation = {x, y};
+  set_command.scale = scale;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_camera_clip_space_transform(std::move(set_command));
+
+  return command;
+}
+
 fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t buffer_id,
                                                     uint32_t num_entries, int64_t base_time,
                                                     uint64_t time_interval) {

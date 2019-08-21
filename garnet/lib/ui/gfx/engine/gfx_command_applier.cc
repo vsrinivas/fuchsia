@@ -166,6 +166,9 @@ bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_c
     case fuchsia::ui::gfx::Command::Tag::kSetStereoCameraProjection:
       return ApplySetStereoCameraProjectionCmd(session,
                                                std::move(command.set_stereo_camera_projection()));
+    case fuchsia::ui::gfx::Command::Tag::kSetCameraClipSpaceTransform:
+      return ApplySetCameraClipSpaceTransformCmd(
+          session, std::move(command.set_camera_clip_space_transform()));
     case fuchsia::ui::gfx::Command::Tag::kSetCameraPoseBuffer:
       return ApplySetCameraPoseBufferCmd(session, std::move(command.set_camera_pose_buffer()));
     case fuchsia::ui::gfx::Command::Tag::kSetLightColor:
@@ -811,6 +814,15 @@ bool GfxCommandApplier::ApplySetStereoCameraProjectionCmd(
                  session->resources()->FindResource<StereoCamera>(command.camera_id)) {
     stereo_camera->SetStereoProjection(Unwrap(command.left_projection.value),
                                        Unwrap(command.right_projection.value));
+    return true;
+  }
+  return false;
+}
+
+bool GfxCommandApplier::ApplySetCameraClipSpaceTransformCmd(
+    Session* session, fuchsia::ui::gfx::SetCameraClipSpaceTransformCmd command) {
+  if (auto camera = session->resources()->FindResource<Camera>(command.camera_id)) {
+    camera->SetClipSpaceTransform(Unwrap(command.translation), command.scale);
     return true;
   }
   return false;

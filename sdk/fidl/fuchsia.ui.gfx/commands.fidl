@@ -94,6 +94,8 @@ union Command {
 
     SetEnableDebugViewBoundsCmd set_enable_view_debug_bounds;
     SetViewHolderBoundsColorCmd set_view_holder_bounds_color;
+
+    SetCameraClipSpaceTransformCmd set_camera_clip_space_transform;
 };
 
 /// Instructs the compositor to create the specified `Resource`, and to register
@@ -444,6 +446,18 @@ struct SetStereoCameraProjectionCmd {
     uint32 camera_id;
     Matrix4Value left_projection;
     Matrix4Value right_projection;
+};
+
+/// Sets a camera's clip-space transform.
+///
+/// Constraints:
+/// - `camera_id` refs a `Camera`.
+/// - `translation` is the desired translation, in Vulkan NDC.
+/// - `scale` is the scale factor to apply before translation.
+struct SetCameraClipSpaceTransformCmd {
+    uint32 camera_id;
+    vec2 translation;
+    float32 scale;
 };
 
 /// Sets the "pose buffer" for the camera identified by `camera_id`.

@@ -171,6 +171,8 @@ fuchsia::ui::gfx::Command NewSetCameraTransformCmd(uint32_t camera_id, const flo
                                                    const float eye_look_at[3],
                                                    const float eye_up[3]);
 fuchsia::ui::gfx::Command NewSetCameraProjectionCmd(uint32_t camera_id, const float fovy);
+fuchsia::ui::gfx::Command NewSetCameraClipSpaceTransformCmd(uint32_t camera_id, float x, float y,
+                                                            float scale);
 
 fuchsia::ui::gfx::Command NewSetCameraPoseBufferCmd(uint32_t camera_id, uint32_t buffer_id,
                                                     uint32_t num_entries, int64_t base_time,

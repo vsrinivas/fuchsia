@@ -90,6 +90,7 @@ executable("unittests") {
 
   testonly = true
   sources = [
+    "camera_unittest.cc",
     "compositor_unittest.cc",
     "default_frame_scheduler_unittest.cc",
     "duration_predictor_unittest.cc",

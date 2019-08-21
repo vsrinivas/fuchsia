@@ -31,6 +31,8 @@ class Camera : public Resource {
 
   void SetProjection(const float fovy);
 
+  void SetClipSpaceTransform(const glm::vec2& translation, float scale);
+
   // Sets the buffer for this camera. For details see SetCameraPoseBufferCmd
   // in //sdk/fidl/fuchsia.ui.gfx/commands.fidl
   void SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, zx::time base_time,
@@ -63,6 +65,8 @@ class Camera : public Resource {
   glm::vec3 eye_look_at_ = glm::vec3();
   glm::vec3 eye_up_ = glm::vec3(0.0f, 1.0f, 0.0f);
   float fovy_ = 0;
+  bool has_clip_space_transform_ = false;
+  glm::mat4 clip_space_transform_;
 
   // PoseBuffer parameters
   fxl::RefPtr<Buffer> pose_buffer_;

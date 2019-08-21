@@ -118,6 +118,8 @@ class GfxCommandApplier {
                                           fuchsia::ui::gfx::SetCameraProjectionCmd command);
   static bool ApplySetStereoCameraProjectionCmd(
       Session* session, fuchsia::ui::gfx::SetStereoCameraProjectionCmd command);
+  static bool ApplySetCameraClipSpaceTransformCmd(
+      Session* session, fuchsia::ui::gfx::SetCameraClipSpaceTransformCmd command);
   static bool ApplySetCameraPoseBufferCmd(Session* session,
                                           fuchsia::ui::gfx::SetCameraPoseBufferCmd command);
   static bool ApplySetLightColorCmd(Session* session, fuchsia::ui::gfx::SetLightColorCmd command);

@@ -50,6 +50,8 @@ constexpr zx::duration kTimeout = zx::sec(15);
 // TODO(SCN-1387): This number needs to be queried via sysmem or vulkan.
 constexpr uint32_t kYuvSize = 64;
 
+const float kPi = glm::pi<float>();
+
 // These tests need Scenic and RootPresenter at minimum, which expand to the
 // dependencies below. Using |TestWithEnvironment|, we use
 // |fuchsia.sys.Environment| and |fuchsia.sys.Loader| from the system (declared
@@ -589,14 +591,13 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
       eye + glm::vec3(0, kPaneOffset, 0),   // Below Camera
   };
 
-  static const float pi = glm::pi<float>();
   glm::quat orientations[num_panes] = {
       glm::quat(),  // identity quaternion
-      glm::angleAxis(pi, glm::vec3(1, 0, 0)),
-      glm::angleAxis(-pi / 2, glm::vec3(0, 1, 0)),
-      glm::angleAxis(pi / 2, glm::vec3(0, 1, 0)),
-      glm::angleAxis(pi / 2, glm::vec3(1, 0, 0)),
-      glm::angleAxis(-pi / 2, glm::vec3(1, 0, 0)),
+      glm::angleAxis(kPi, glm::vec3(1, 0, 0)),
+      glm::angleAxis(-kPi / 2, glm::vec3(0, 1, 0)),
+      glm::angleAxis(kPi / 2, glm::vec3(0, 1, 0)),
+      glm::angleAxis(kPi / 2, glm::vec3(1, 0, 0)),
+      glm::angleAxis(-kPi / 2, glm::vec3(1, 0, 0)),
   };
 
   for (int i = 0; i < num_panes; i++) {
@@ -620,14 +621,14 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   static const int num_quaternions = 8;
 
   glm::quat quaternions[num_quaternions] = {
-      glm::quat(),                                  // dead ahead
-      glm::angleAxis(pi, glm::vec3(0, 0, 1)),       // dead ahead but upside down
-      glm::angleAxis(pi, glm::vec3(1, 0, 0)),       // behind around X
-      glm::angleAxis(pi, glm::vec3(0, 1, 0)),       // behind around Y
-      glm::angleAxis(pi / 2, glm::vec3(0, 1, 0)),   // left
-      glm::angleAxis(-pi / 2, glm::vec3(0, 1, 0)),  // right
-      glm::angleAxis(pi / 2, glm::vec3(1, 0, 0)),   // up
-      glm::angleAxis(-pi / 2, glm::vec3(1, 0, 0)),  // down
+      glm::quat(),                                   // dead ahead
+      glm::angleAxis(kPi, glm::vec3(0, 0, 1)),       // dead ahead but upside down
+      glm::angleAxis(kPi, glm::vec3(1, 0, 0)),       // behind around X
+      glm::angleAxis(kPi, glm::vec3(0, 1, 0)),       // behind around Y
+      glm::angleAxis(kPi / 2, glm::vec3(0, 1, 0)),   // left
+      glm::angleAxis(-kPi / 2, glm::vec3(0, 1, 0)),  // right
+      glm::angleAxis(kPi / 2, glm::vec3(1, 0, 0)),   // up
+      glm::angleAxis(-kPi / 2, glm::vec3(1, 0, 0)),  // down
   };
 
   int expected_color_index[num_quaternions] = {0, 0, 1, 1, 2, 3, 4, 5};
@@ -1168,6 +1169,149 @@ TEST_F(ScenicPixelTest, BasicShapeTest) {
   Present(session);
   scenic::Screenshot screenshot = TakeScreenshot();
   EXPECT_EQ(screenshot.ColorAt(0.5, 0.5), scenic::Color(255, 0, 255, 255));
+}
+
+// This test zooms in on the lower-right quadrant and verifies that only that is
+// shown.
+TEST_F(ScenicPixelTest, ClipSpaceTransformOrtho) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  scenic::EntityNode* const root_node = &test_session->root_node;
+
+  struct Shape {
+    float scale;
+    scenic::Color color;
+    glm::vec3 translation;
+  };
+
+  // clang-format off
+  static const std::array<Shape, 3> shapes {
+    Shape {
+      .scale = 1,
+      .color = {255, 0, 0, 255},
+      .translation = {.5f, .5f, -10}
+    },
+    Shape {
+      .scale = .5f,
+      .color = {0, 255, 0, 255},
+      .translation = {.75f, .75f, -20}
+    },
+    Shape {
+      .scale = .4f,
+      .color = {0, 0, 255, 255},
+      .translation = {.75f, .75f, -30}
+    }
+  };
+  // clang-format on
+
+  for (const auto& shape : shapes) {
+    scenic::Rectangle rectangle(session, shape.scale * display_width, shape.scale * display_height);
+    scenic::Material material(session);
+    material.SetColor(shape.color.r, shape.color.g, shape.color.b, shape.color.a);
+
+    scenic::ShapeNode node(session);
+    node.SetShape(rectangle);
+    node.SetMaterial(material);
+    node.SetTranslation(shape.translation.x * display_width, shape.translation.y * display_height,
+                        shape.translation.z);
+    root_node->AddChild(node);
+  }
+
+  auto camera = test_session->SetUpCamera();
+  camera.SetProjection(0);
+  camera.SetClipSpaceTransform(-1, -1, 2);
+
+  Present(session);
+  scenic::Screenshot screenshot = TakeScreenshot();
+
+  std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+  EXPECT_EQ(histogram[shapes[0].color], 0u);
+  EXPECT_GT(histogram[shapes[1].color], 0u);
+  EXPECT_GT(histogram[shapes[2].color], histogram[shapes[1].color]);
+}
+
+// This test ensures that clip-space transforms do not distort the projection
+// matrix by setting up a scene that contains a splitting plane that should not
+// show up in perspective (aligned with the view vector, centered) but would if
+// the camera were naively translated.
+//
+// Viewed from above, the scene looks like this:
+//  bad good
+//  \  b  /
+//  ?\ a /?
+//  ??\d/??
+//    cam
+//      zoom (2x, right side)
+TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  scenic::EntityNode* const root_node = &test_session->root_node;
+
+  static const glm::quat face_right = glm::angleAxis(kPi / 2, glm::vec3(0, -1, 0));
+  static const float kFovy = kPi / 4;
+  static const float background_height = 2 * tan(kFovy / 2) * TestSession::kDefaultCameraOffset;
+  const float background_width = background_height / display_height * display_width;
+
+  struct Shape {
+    scenic::Color color;
+    glm::vec2 size;
+    glm::vec3 translation;
+    const glm::quat* rotation;
+  };
+
+  // clang-format off
+  static const std::array<Shape, 3> shapes {
+    Shape {
+      .color = {255, 0, 0, 255},
+      .size = {background_width / 2, background_height},
+      .translation = {-background_width / 4, 0, -10},
+      .rotation = nullptr
+    },
+    Shape {
+      .color = {0, 255, 0, 255},
+      .size = {background_width / 2, background_height},
+      .translation = {background_width / 4, 0, -10},
+      .rotation = nullptr
+    },
+    Shape {
+      .color = {0, 0, 255, 255},
+      // SCN-1276: The depth of the viewing volume is 1000.
+      .size = {1000, background_height},
+      .translation = {0, 0, -500},
+      .rotation = &face_right
+    }
+  };
+  // clang-format on
+
+  for (const auto& shape : shapes) {
+    scenic::Rectangle rectangle(session, shape.size.x, shape.size.y);
+    scenic::Material material(session);
+    material.SetColor(shape.color.r, shape.color.g, shape.color.b, shape.color.a);
+
+    scenic::ShapeNode node(session);
+    node.SetShape(rectangle);
+    node.SetMaterial(material);
+    node.SetTranslation(shape.translation.x + display_width / 2,
+                        shape.translation.y + display_height / 2, shape.translation.z);
+    if (shape.rotation) {
+      node.SetRotation(shape.rotation->x, shape.rotation->y, shape.rotation->z, shape.rotation->w);
+    }
+    root_node->AddChild(node);
+  }
+
+  auto camera = test_session->SetUpCamera();
+  camera.SetProjection(kFovy);
+  camera.SetClipSpaceTransform(-1, 0, 2);
+
+  Present(session);
+  scenic::Screenshot screenshot = TakeScreenshot();
+
+  std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
+  EXPECT_EQ(histogram[shapes[0].color], 0u);
+  EXPECT_EQ(histogram[shapes[2].color], 0u);
+  EXPECT_GT(histogram[shapes[1].color], 0u);
 }
 
 }  // namespace

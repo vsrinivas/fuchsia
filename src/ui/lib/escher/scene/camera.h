@@ -5,11 +5,11 @@
 #ifndef SRC_UI_LIB_ESCHER_SCENE_CAMERA_H_
 #define SRC_UI_LIB_ESCHER_SCENE_CAMERA_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -28,14 +28,15 @@ class Camera {
 
   // Create an camera in the default position for a full-screen orthographic
   // projection.
-  static Camera NewOrtho(const ViewingVolume& volume);
+  static Camera NewOrtho(const ViewingVolume& volume, const mat4* clip_space_transform = nullptr);
 
   // Create an orthographic camera looking at the viewing volume in the
   // specified direction.
   static Camera NewForDirectionalShadowMap(const ViewingVolume& volume, const glm::vec3& direction);
 
   // Create a camera with a perspective projection.
-  static Camera NewPerspective(const ViewingVolume& volume, const mat4& transform, float fovy);
+  static Camera NewPerspective(const ViewingVolume& volume, const mat4& transform, float fovy,
+                               const mat4* clip_space_transform = nullptr);
 
   const mat4& transform() const { return transform_; }
   const mat4& projection() const { return projection_; }

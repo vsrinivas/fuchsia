@@ -27,6 +27,23 @@ void Camera::SetTransform(const glm::vec3& eye_position, const glm::vec3& eye_lo
 
 void Camera::SetProjection(const float fovy) { fovy_ = fovy; }
 
+void Camera::SetClipSpaceTransform(const glm::vec2& translation, float scale) {
+  if (translation == glm::vec2() && scale == 1) {
+    has_clip_space_transform_ = false;
+  } else {
+    has_clip_space_transform_ = true;
+
+    // clang-format off
+    clip_space_transform_ = {
+      scale, 0, 0, 0,
+      0, scale, 0, 0,
+      0, 0, 1, 0,
+      translation.x, translation.y, 0, 1
+    };
+    // clang-format on
+  }
+}
+
 void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, zx::time base_time,
                            zx::duration time_interval) {
   pose_buffer_ = buffer;
@@ -38,10 +55,12 @@ void Camera::SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, zx:
 escher::Camera Camera::GetEscherCamera(const escher::ViewingVolume& volume) const {
   escher::Camera camera(glm::mat4(1), glm::mat4(1));
   if (fovy_ == 0.f) {
-    camera = escher::Camera::NewOrtho(volume);
+    camera = escher::Camera::NewOrtho(volume,
+                                      has_clip_space_transform_ ? &clip_space_transform_ : nullptr);
   } else {
     camera = escher::Camera::NewPerspective(
-        volume, glm::lookAt(eye_position_, eye_look_at_, eye_up_), fovy_);
+        volume, glm::lookAt(eye_position_, eye_look_at_, eye_up_), fovy_,
+        has_clip_space_transform_ ? &clip_space_transform_ : nullptr);
   }
   return camera;
 }
