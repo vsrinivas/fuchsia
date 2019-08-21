@@ -92,6 +92,13 @@ protocol AudioCore {
     // and control AudioCapturers.
     CreateAudioCapturer(bool loopback, request<AudioCapturer> audio_in_request);
 
+    // TODO(34948): remove these systemwide settings, once device-centric
+    // settings are plumbed into the system UI. Also, device-centric and
+    // systemwide settings should be moved out of this accessible-to-all public
+    // audio interface and relocated to a more restrictive interface that is
+    // only accessible by clients with the appropriate privileges (such as
+    // system configuration API, or the governor of audio policy).
+
     /// System Gain and Mute
     ///
     /// Fuchsia clients control the volume of individual audio streams via the
@@ -101,14 +108,7 @@ protocol AudioCore {
     /// notifications. Setting System Mute to true leads to the same outcome as
     /// setting System Gain to MUTED_GAIN_DB: all audio output across the system
     /// is silenced.
-    //
-    // TODO(34948): remove these systemwide settings, once device-centric
-    // settings are plumbed into the system UI. Also, device-centric and
-    // systemwide settings should be moved out of this accessible-to-all public
-    // audio interface and relocated to a more restrictive interface that is
-    // only accessible by clients with the appropriate privileges (such as
-    // system configuration API, or the governor of audio policy).
-
+    ///
     /// Sets the systemwide gain in decibels. `gain_db` values are clamped to
     /// the range -160 db to 0 db, inclusive. This setting is applied to all
     /// audio output devices. Audio input devices are unaffected.
