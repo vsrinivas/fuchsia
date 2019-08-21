@@ -14,7 +14,6 @@
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 #include <utility>
 
@@ -265,5 +264,7 @@ static constexpr zx_driver_ops_t proxy_driver_ops = []() {
 
 }  // namespace platform_bus
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(platform_bus_proxy, platform_bus::proxy_driver_ops, "zircon", "0.1", 1)
-BI_ABORT_IF_AUTOBIND, ZIRCON_DRIVER_END(platform_bus_proxy)
+  BI_ABORT_IF_AUTOBIND,
+ZIRCON_DRIVER_END(platform_bus_proxy)

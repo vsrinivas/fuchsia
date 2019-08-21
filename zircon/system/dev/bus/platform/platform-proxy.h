@@ -6,7 +6,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/device.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/zx/channel.h>
 

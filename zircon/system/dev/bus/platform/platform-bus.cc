@@ -18,7 +18,6 @@
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <zircon/boot/driver-config.h>
@@ -26,7 +25,6 @@
 #include <zircon/syscalls/iommu.h>
 
 #include "cpu-trace.h"
-#include "platform-composite-device.h"
 
 namespace platform_bus {
 
@@ -92,8 +90,8 @@ zx_status_t PlatformBus::PBusDeviceAdd(const pbus_dev_t* pdev) {
     parent_dev = zxdev();
   }
 
-  fbl::unique_ptr<platform_bus::PlatformDevice> dev;
-  auto status = PlatformDevice::Create(pdev, parent_dev, this, &dev);
+  std::unique_ptr<platform_bus::PlatformDevice> dev;
+  auto status = PlatformDevice::Create(pdev, parent_dev, this, PlatformDevice::Isolated, &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -113,13 +111,12 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::unique_ptr<platform_bus::ProtocolDevice> dev;
-  auto status = ProtocolDevice::Create(pdev, zxdev(), this, &dev);
+  std::unique_ptr<platform_bus::PlatformDevice> dev;
+  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Protocol, &dev);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Protocol devices run in our devhost.
   status = dev->Start();
   if (status != ZX_OK) {
     return status;
@@ -173,13 +170,16 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
   if (!pdev || !pdev->name) {
     return ZX_ERR_INVALID_ARGS;
   }
+  // Do not allow adding composite devices in our devhost.
+  // The index must be greater than zero to specify one of the other components, or UINT32_MAX
+  // to create a new devhost.
   if (coresident_device_index == 0) {
     zxlogf(ERROR, "%s: coresident_device_index cannot be zero\n", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::unique_ptr<platform_bus::CompositeDevice> dev;
-  auto status = CompositeDevice::Create(pdev, zxdev(), this, &dev);
+  std::unique_ptr<platform_bus::PlatformDevice> dev;
+  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Component, &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -358,7 +358,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   // to allow us to update the PBus instance in the device context after creating
   // the device.
   fbl::AllocChecker ac;
-  fbl::unique_ptr<uint8_t[]> ptr(new (&ac) uint8_t[sizeof(sysdev_suspend_t)]);
+  std::unique_ptr<uint8_t[]> ptr(new (&ac) uint8_t[sizeof(sysdev_suspend_t)]);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -382,7 +382,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   }
 
   // Add child of sys for the board driver to bind to.
-  fbl::unique_ptr<platform_bus::PlatformBus> bus(
+  std::unique_ptr<platform_bus::PlatformBus> bus(
       new (&ac) platform_bus::PlatformBus(sys_root, std::move(items_svc)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -545,6 +545,8 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace platform_bus
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(platform_bus, platform_bus::driver_ops, "zircon", "0.1", 1)
-// devmgr loads us directly, so we need no binding information here
-BI_ABORT_IF_AUTOBIND, ZIRCON_DRIVER_END(platform_bus)
+  // devmgr loads us directly, so we need no binding information here
+  BI_ABORT_IF_AUTOBIND,
+ZIRCON_DRIVER_END(platform_bus)

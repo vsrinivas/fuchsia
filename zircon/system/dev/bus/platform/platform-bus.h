@@ -14,7 +14,6 @@
 #include <ddktl/protocol/sysmem.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -28,7 +27,6 @@
 #include <optional>
 
 #include "platform-device.h"
-#include "platform-protocol-device.h"
 #include "proxy-protocol.h"
 
 namespace platform_bus {

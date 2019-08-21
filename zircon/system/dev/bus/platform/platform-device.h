@@ -5,8 +5,10 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <fbl/unique_ptr.h>
+#include <ddktl/protocol/platform/bus.h>
+#include <ddktl/protocol/platform/device.h>
 #include <fbl/vector.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 
 #include "device-resources.h"
@@ -28,33 +30,57 @@ namespace platform_bus {
 class PlatformBus;
 
 class PlatformDevice;
-using PlatformDeviceType = ddk::Device<PlatformDevice, ddk::Rxrpcable>;
+using PlatformDeviceType = ddk::Device<PlatformDevice, ddk::GetProtocolable, ddk::Rxrpcable>;
 
 // This class represents a platform device attached to the platform bus.
 // Instances of this class are created by PlatformBus at boot time when the board driver
 // calls the platform bus protocol method pbus_device_add().
 
-class PlatformDevice : public PlatformDeviceType {
+class PlatformDevice : public PlatformDeviceType,
+                       public ddk::PDevProtocol<PlatformDevice, ddk::base_protocol> {
  public:
+  enum Type {
+    // This platform device is started in a new devhost.
+    // The PDEV protocol is proxied to the PlatformProxy driver in the new devhost.
+    Isolated,
+    // This platform device is run in the same process as platform bus and provides
+    // its protocol to the platform bus.
+    Protocol,
+    // This platform device is a component for a composite device.
+    // The PDEV protocol is proxied by the devmgr "component" driver.
+    Component,
+  };
+
+
   // Creates a new PlatformDevice instance.
   // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
   static zx_status_t Create(const pbus_dev_t* pdev, zx_device_t* parent, PlatformBus* bus,
-                            fbl::unique_ptr<platform_bus::PlatformDevice>* out);
+                            Type type, std::unique_ptr<platform_bus::PlatformDevice>* out);
 
   inline uint32_t vid() const { return vid_; }
   inline uint32_t pid() const { return pid_; }
   inline uint32_t did() const { return did_; }
 
   // Device protocol implementation.
-  void DdkRelease();
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_status_t DdkRxrpc(zx_handle_t channel);
+  void DdkRelease();
+
+  // Platform device protocol implementation, for devices that run in-process.
+  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
+  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
+  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_handle);
+  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource);
+  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
+  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
+  zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args, zx_device_t** device);
 
   // Starts the underlying devmgr device.
   zx_status_t Start();
 
  private:
   // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
-  explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, const pbus_dev_t* pdev);
+  explicit PlatformDevice(zx_device_t* parent, PlatformBus* bus, Type type, const pbus_dev_t* pdev);
   zx_status_t Init(const pbus_dev_t* pdev);
 
   // Handlers for RPCs from PlatformProxy.
@@ -70,12 +96,18 @@ class PlatformDevice : public PlatformDeviceType {
 
   PlatformBus* bus_;
   char name_[ZX_DEVICE_NAME_MAX + 1];
+  Type type_;
   const uint32_t vid_;
   const uint32_t pid_;
   const uint32_t did_;
 
   // Platform bus resources for this device
   DeviceResources resources_;
+
+  // Restricted subset of the platform bus protocol.
+  // We do not allow protocol devices call pbus_device_add() or pbus_protocol_device_add()
+  pbus_protocol_ops_t pbus_ops_;
+  void* pbus_ctx_;
 };
 
 }  // namespace platform_bus

@@ -14,9 +14,7 @@ driver("platform-bus") {
     "cpu-trace.cc",
     "device-resources.cc",
     "platform-bus.cc",
-    "platform-composite-device.cc",
     "platform-device.cc",
-    "platform-protocol-device.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",
