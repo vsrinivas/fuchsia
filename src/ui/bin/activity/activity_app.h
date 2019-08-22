@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_ACTIVITY_SERVICE_ACTIVITY_SERVICE_APP_H_
-#define GARNET_BIN_UI_ACTIVITY_SERVICE_ACTIVITY_SERVICE_APP_H_
+#ifndef SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
+#define SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -14,21 +14,21 @@
 
 #include <src/lib/fxl/macros.h>
 
-#include "garnet/bin/ui/activity_service/activity_service_tracker_connection.h"
+#include "src/ui/bin/activity/activity_tracker_connection.h"
 
-namespace activity_service {
+namespace activity {
 
-class ActivityServiceApp {
+class ActivityApp {
  public:
-  explicit ActivityServiceApp(std::unique_ptr<StateMachineDriver> state_machine_driver,
-                              async_dispatcher_t* dispatcher)
+  explicit ActivityApp(std::unique_ptr<StateMachineDriver> state_machine_driver,
+                       async_dispatcher_t* dispatcher)
       : state_machine_driver_(std::move(state_machine_driver)), dispatcher_(dispatcher) {}
 
   void AddTrackerBinding(fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request);
 
   // Exposed for testing.
-  std::vector<const ActivityServiceTrackerConnection*> tracker_bindings() const {
-    std::vector<const ActivityServiceTrackerConnection*> vec;
+  std::vector<const ActivityTrackerConnection*> tracker_bindings() const {
+    std::vector<const ActivityTrackerConnection*> vec;
     vec.reserve(tracker_bindings_.size());
     for (const auto& entry : tracker_bindings_) {
       vec.push_back(entry.second.get());
@@ -40,10 +40,9 @@ class ActivityServiceApp {
   std::unique_ptr<StateMachineDriver> state_machine_driver_;
   async_dispatcher_t* dispatcher_;
 
-  std::map<zx::unowned_channel, std::unique_ptr<ActivityServiceTrackerConnection>>
-      tracker_bindings_;
+  std::map<zx::unowned_channel, std::unique_ptr<ActivityTrackerConnection>> tracker_bindings_;
 };
 
-}  // namespace activity_service
+}  // namespace activity
 
-#endif  // GARNET_BIN_UI_ACTIVITY_SERVICE_ACTIVITY_SERVICE_APP_H_
+#endif  // SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_

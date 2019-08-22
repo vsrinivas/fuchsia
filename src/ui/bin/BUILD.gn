@@ -4,6 +4,7 @@
 
 group("bin") {
   deps = [
+    "activity",
     "brightness_manager",
     "ime:ime_service",
     "shortcut",

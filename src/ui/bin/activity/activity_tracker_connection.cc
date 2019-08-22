@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/activity_service/activity_service_tracker_connection.h"
+#include "src/ui/bin/activity/activity_tracker_connection.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
@@ -12,9 +12,9 @@
 
 #include <src/lib/fxl/logging.h>
 
-namespace activity_service {
+namespace activity {
 
-void ActivityServiceTrackerConnection::Stop() {
+void ActivityTrackerConnection::Stop() {
   for (const auto& id : ongoing_activities_) {
     zx_status_t status = state_machine_driver_->EndOngoingActivity(id, async::Now(dispatcher_));
     // Assert here since failing silently may result in a leaked activity which would stall the
@@ -25,7 +25,7 @@ void ActivityServiceTrackerConnection::Stop() {
   ongoing_activities_.clear();
 }
 
-void ActivityServiceTrackerConnection::ReportDiscreteActivity(
+void ActivityTrackerConnection::ReportDiscreteActivity(
     fuchsia::ui::activity::DiscreteActivity activity, zx_time_t time) {
   zx_status_t status = state_machine_driver_->ReceiveDiscreteActivity(activity, zx::time(time));
   if (status != ZX_OK) {
@@ -35,7 +35,7 @@ void ActivityServiceTrackerConnection::ReportDiscreteActivity(
   }
 }
 
-void ActivityServiceTrackerConnection::StartOngoingActivity(
+void ActivityTrackerConnection::StartOngoingActivity(
     fuchsia::ui::activity::OngoingActivity activity, zx_time_t time,
     StartOngoingActivityCallback callback) {
   auto id = GenerateActivityId();
@@ -50,7 +50,7 @@ void ActivityServiceTrackerConnection::StartOngoingActivity(
   callback(id);
 }
 
-void ActivityServiceTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time_t time) {
+void ActivityTrackerConnection::EndOngoingActivity(OngoingActivityId id, zx_time_t time) {
   auto iter = ongoing_activities_.find(id);
   if (iter == ongoing_activities_.end()) {
     FXL_LOG(ERROR) << "activity-service: Invalid activity ID: " << id;
@@ -66,4 +66,4 @@ void ActivityServiceTrackerConnection::EndOngoingActivity(OngoingActivityId id, 
   ongoing_activities_.erase(iter);
 }
 
-}  // namespace activity_service
+}  // namespace activity

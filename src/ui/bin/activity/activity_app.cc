@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/activity_service/activity_service_app.h"
+#include "src/ui/bin/activity/activity_app.h"
 
 #include <lib/zx/clock.h>
 #include <src/lib/fxl/logging.h>
 
-namespace activity_service {
+namespace activity {
 
-void ActivityServiceApp::AddTrackerBinding(
+void ActivityApp::AddTrackerBinding(
     fidl::InterfaceRequest<fuchsia::ui::activity::Tracker> request) {
   zx::unowned_channel unowned(request.channel());
-  auto conn = std::make_unique<ActivityServiceTrackerConnection>(state_machine_driver_.get(),
+  auto conn = std::make_unique<ActivityTrackerConnection>(state_machine_driver_.get(),
                                                                  dispatcher_, std::move(request),
                                                                  zx::clock::get_monotonic().get());
   conn->set_error_handler([this, unowned, cp = conn.get()](zx_status_t status) {
@@ -27,4 +27,4 @@ void ActivityServiceApp::AddTrackerBinding(
   tracker_bindings_.emplace(std::move(unowned), std::move(conn));
 }
 
-}  // namespace activity_service
+}  // namespace activity

@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/activity_service/activity_state_machine.h"
+#include "src/ui/bin/activity/activity_state_machine.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/zx/time.h>
 
 #include <optional>
 
-namespace activity_service {
+namespace activity {
 
 namespace fua = fuchsia::ui::activity;
 
 // TODO(jfsulliv): Handle other input types (e.g. lid close/open)
 const ActivityStateMachine::StateTable ActivityStateMachine::kStateTable{
-    {{fua::State::IDLE, activity_service::Event::USER_INPUT}, fua::State::ACTIVE},
-    {{fua::State::ACTIVE, activity_service::Event::TIMEOUT}, fua::State::IDLE},
+    {{fua::State::IDLE, activity::Event::USER_INPUT}, fua::State::ACTIVE},
+    {{fua::State::ACTIVE, activity::Event::TIMEOUT}, fua::State::IDLE},
 };
 
 // TODO(jfsulliv): Make this configurable.
@@ -39,4 +39,4 @@ std::optional<zx::duration> ActivityStateMachine::TimeoutFor(
   }
 }
 
-}  // namespace activity_service
+}  // namespace activity

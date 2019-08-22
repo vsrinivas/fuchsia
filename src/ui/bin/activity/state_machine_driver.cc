@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/activity_service/state_machine_driver.h"
+#include "src/ui/bin/activity/state_machine_driver.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -16,12 +16,12 @@
 
 #include <map>
 
-#include "garnet/bin/ui/activity_service/activity_state_machine.h"
-#include "garnet/bin/ui/activity_service/common.h"
+#include "src/ui/bin/activity/activity_state_machine.h"
+#include "src/ui/bin/activity/common.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
-namespace activity_service {
+namespace activity {
 
 zx_status_t StateMachineDriver::ReceiveDiscreteActivity(
     const fuchsia::ui::activity::DiscreteActivity& activity, zx::time time) {
@@ -139,4 +139,4 @@ void StateMachineDriver::HandleTimeout() {
   }
 }
 
-}  // namespace activity_service
+}  // namespace activity

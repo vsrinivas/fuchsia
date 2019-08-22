@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/activity_service/activity_service_app.h"
+#include "src/ui/bin/activity/activity_app.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
 #include <memory>
 
-#include "garnet/bin/ui/activity_service/state_machine_driver.h"
+#include "src/ui/bin/activity/state_machine_driver.h"
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
 
 namespace {
@@ -50,26 +50,26 @@ class FakeListener : public fuchsia::ui::activity::Listener {
 
 }  // namespace
 
-namespace activity_service {
+namespace activity {
 
-class ActivityServiceAppTest : public ::gtest::TestLoopFixture {
+class ActivityAppTest : public ::gtest::TestLoopFixture {
  public:
-  ActivityServiceAppTest() = default;
+  ActivityAppTest() = default;
 
   void SetUp() override {
     auto driver = std::make_unique<StateMachineDriver>(dispatcher());
     driver_ = driver.get();
-    app_ = std::make_unique<ActivityServiceApp>(std::move(driver), dispatcher());
+    app_ = std::make_unique<ActivityApp>(std::move(driver), dispatcher());
   }
 
  protected:
-  std::unique_ptr<ActivityServiceApp> app_;
+  std::unique_ptr<ActivityApp> app_;
   const StateMachineDriver* driver_;
 };
 
 namespace {
 
-TEST_F(ActivityServiceAppTest, Tracker_ConnectDisconnect) {
+TEST_F(ActivityAppTest, Tracker_ConnectDisconnect) {
   {
     fuchsia::ui::activity::TrackerPtr tracker;
     app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
@@ -79,7 +79,7 @@ TEST_F(ActivityServiceAppTest, Tracker_ConnectDisconnect) {
   EXPECT_EQ(app_->tracker_bindings().size(), 0u);
 }
 
-TEST_F(ActivityServiceAppTest, Tracker_Multiple_ConnectDisconnect) {
+TEST_F(ActivityAppTest, Tracker_Multiple_ConnectDisconnect) {
   {
     fuchsia::ui::activity::TrackerPtr tracker1, tracker2;
     app_->AddTrackerBinding(tracker1.NewRequest(dispatcher()));
@@ -92,7 +92,7 @@ TEST_F(ActivityServiceAppTest, Tracker_Multiple_ConnectDisconnect) {
   EXPECT_EQ(app_->tracker_bindings().size(), 0u);
 }
 
-TEST_F(ActivityServiceAppTest, Tracker_SendActivity) {
+TEST_F(ActivityAppTest, Tracker_SendActivity) {
   fuchsia::ui::activity::TrackerPtr tracker;
   app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
 
@@ -102,7 +102,7 @@ TEST_F(ActivityServiceAppTest, Tracker_SendActivity) {
   EXPECT_EQ(driver_->state(), fuchsia::ui::activity::State::ACTIVE);
 }
 
-TEST_F(ActivityServiceAppTest, Tracker_OngoingActivity) {
+TEST_F(ActivityAppTest, Tracker_OngoingActivity) {
   fuchsia::ui::activity::TrackerPtr tracker;
   app_->AddTrackerBinding(tracker.NewRequest(dispatcher()));
   ASSERT_EQ(driver_->state(), fuchsia::ui::activity::State::IDLE);
@@ -126,4 +126,4 @@ TEST_F(ActivityServiceAppTest, Tracker_OngoingActivity) {
 
 }  // namespace
 
-}  // namespace activity_service
+}  // namespace activity

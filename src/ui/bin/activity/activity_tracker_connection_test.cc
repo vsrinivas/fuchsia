@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/ui/activity_service/activity_service_tracker_connection.h"
+#include "src/ui/bin/activity/activity_tracker_connection.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
 #include <memory>
 
-#include "garnet/bin/ui/activity_service/state_machine_driver.h"
+#include "src/ui/bin/activity/state_machine_driver.h"
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
 
 namespace {
@@ -29,31 +29,31 @@ fuchsia::ui::activity::OngoingActivity OngoingActivity() {
 
 }  // namespace
 
-namespace activity_service {
+namespace activity {
 
-class ActivityServiceTrackerConnectionTest : public ::gtest::TestLoopFixture {
+class ActivityTrackerConnectionTest : public ::gtest::TestLoopFixture {
  public:
-  ActivityServiceTrackerConnectionTest() : driver_(dispatcher()) {}
+  ActivityTrackerConnectionTest() : driver_(dispatcher()) {}
 
   void SetUp() override {
-    conn_ = std::make_unique<ActivityServiceTrackerConnection>(
+    conn_ = std::make_unique<ActivityTrackerConnection>(
         &driver_, dispatcher(), client_.NewRequest(dispatcher()),
         testing::UnitTest::GetInstance()->random_seed());
   }
 
  private:
   StateMachineDriver driver_;
-  std::unique_ptr<ActivityServiceTrackerConnection> conn_;
+  std::unique_ptr<ActivityTrackerConnection> conn_;
   fuchsia::ui::activity::TrackerPtr client_;
 };
 
-TEST_F(ActivityServiceTrackerConnectionTest, ReportActivity) {
+TEST_F(ActivityTrackerConnectionTest, ReportActivity) {
   client_->ReportDiscreteActivity(DiscreteActivity(), Now().get());
   RunLoopUntilIdle();
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::ACTIVE);
 }
 
-TEST_F(ActivityServiceTrackerConnectionTest, ReportActivity_Failed) {
+TEST_F(ActivityTrackerConnectionTest, ReportActivity_Failed) {
   std::optional<zx_status_t> epitaph;
   client_.set_error_handler([&epitaph](zx_status_t status) { epitaph = status; });
 
@@ -66,7 +66,7 @@ TEST_F(ActivityServiceTrackerConnectionTest, ReportActivity_Failed) {
   EXPECT_EQ(*epitaph, ZX_ERR_OUT_OF_RANGE);
 }
 
-TEST_F(ActivityServiceTrackerConnectionTest, StartStopOngoingActivity) {
+TEST_F(ActivityTrackerConnectionTest, StartStopOngoingActivity) {
   std::optional<OngoingActivityId> activity_id;
   client_->StartOngoingActivity(OngoingActivity(), Now().get(),
                                 [&activity_id](OngoingActivityId id) { activity_id = id; });
@@ -89,7 +89,7 @@ TEST_F(ActivityServiceTrackerConnectionTest, StartStopOngoingActivity) {
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
 }
 
-TEST_F(ActivityServiceTrackerConnectionTest, StartOngoingActivity_Failed) {
+TEST_F(ActivityTrackerConnectionTest, StartOngoingActivity_Failed) {
   // Send a discrete activity to bring the state machine to ACTIVE
   client_->ReportDiscreteActivity(DiscreteActivity(), Now().get());
   RunLoopUntilIdle();
@@ -115,7 +115,7 @@ TEST_F(ActivityServiceTrackerConnectionTest, StartOngoingActivity_Failed) {
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
 }
 
-TEST_F(ActivityServiceTrackerConnectionTest, CleansUpOngoingActivitiesOnStop) {
+TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnStop) {
   bool callback_invoked = false;
   client_->StartOngoingActivity(
       OngoingActivity(), Now().get(),
@@ -135,7 +135,7 @@ TEST_F(ActivityServiceTrackerConnectionTest, CleansUpOngoingActivitiesOnStop) {
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
 }
 
-TEST_F(ActivityServiceTrackerConnectionTest, CleansUpOngoingActivitiesOnDestruction) {
+TEST_F(ActivityTrackerConnectionTest, CleansUpOngoingActivitiesOnDestruction) {
   bool callback_invoked = false;
   client_->StartOngoingActivity(
       OngoingActivity(), Now().get(),
@@ -155,4 +155,4 @@ TEST_F(ActivityServiceTrackerConnectionTest, CleansUpOngoingActivitiesOnDestruct
   EXPECT_EQ(driver_.state(), fuchsia::ui::activity::State::IDLE);
 }
 
-}  // namespace activity_service
+}  // namespace activity

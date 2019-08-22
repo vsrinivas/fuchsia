@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_ACTIVITY_SERVICE_STATE_MACHINE_DRIVER_H_
-#define GARNET_BIN_UI_ACTIVITY_SERVICE_STATE_MACHINE_DRIVER_H_
+#ifndef SRC_UI_BIN_ACTIVITY_STATE_MACHINE_DRIVER_H_
+#define SRC_UI_BIN_ACTIVITY_STATE_MACHINE_DRIVER_H_
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -14,12 +14,12 @@
 
 #include <set>
 
-#include "garnet/bin/ui/activity_service/activity_state_machine.h"
-#include "garnet/bin/ui/activity_service/common.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/bin/activity/activity_state_machine.h"
+#include "src/ui/bin/activity/common.h"
 
-namespace activity_service {
+namespace activity {
 
 using StateChangedCallback =
     fit::function<void(fuchsia::ui::activity::State state, zx::time transition_time)>;
@@ -99,6 +99,6 @@ class StateMachineDriver {
   FXL_DISALLOW_COPY_AND_ASSIGN(StateMachineDriver);
 };
 
-}  // namespace activity_service
+}  // namespace activity
 
-#endif  // GARNET_BIN_UI_ACTIVITY_SERVICE_STATE_MACHINE_DRIVER_H_
+#endif  // SRC_UI_BIN_ACTIVITY_STATE_MACHINE_DRIVER_H_

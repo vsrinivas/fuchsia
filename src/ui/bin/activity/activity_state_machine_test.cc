@@ -1,10 +1,10 @@
-#include "garnet/bin/ui/activity_service/activity_state_machine.h"
+#include "src/ui/bin/activity/activity_state_machine.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
 #include "gtest/gtest.h"
 
-namespace activity_service {
+namespace activity {
 
 TEST(ActivityStateMachine, BaseStateIdle) {
   ActivityStateMachine state_machine;
@@ -28,4 +28,4 @@ TEST(ActivityStateMachine, ActiveToInactive) {
   EXPECT_EQ(state_machine.state(), fuchsia::ui::activity::State::IDLE);
 }
 
-}  // namespace activity_service
+}  // namespace activity

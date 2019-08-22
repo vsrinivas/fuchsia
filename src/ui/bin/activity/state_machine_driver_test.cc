@@ -1,4 +1,4 @@
-#include "garnet/bin/ui/activity_service/state_machine_driver.h"
+#include "src/ui/bin/activity/state_machine_driver.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
@@ -6,7 +6,7 @@
 #include <memory>
 #include <optional>
 
-#include "garnet/bin/ui/activity_service/activity_state_machine.h"
+#include "src/ui/bin/activity/activity_state_machine.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace {
@@ -18,11 +18,11 @@ fuchsia::ui::activity::DiscreteActivity DiscreteActivity() {
   return activity;
 };
 
-constexpr activity_service::OngoingActivityId kActivityId = 1234u;
+constexpr activity::OngoingActivityId kActivityId = 1234u;
 
 }  // namespace
 
-namespace activity_service {
+namespace activity {
 
 class StateMachineDriverTest : public ::gtest::TestLoopFixture {
  public:
@@ -203,4 +203,4 @@ TEST_F(StateMachineDriverTest, TimeoutsIgnoredIfObjectDestroyedBeforeExpiry) {
   EXPECT_EQ(calls, 0);
 }
 
-}  // namespace activity_service
+}  // namespace activity

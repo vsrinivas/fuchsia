@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_UI_ACTIVITY_SERVICE_ACTIVITY_STATE_MACHINE_H_
-#define GARNET_BIN_UI_ACTIVITY_SERVICE_ACTIVITY_STATE_MACHINE_H_
+#ifndef SRC_UI_BIN_ACTIVITY_ACTIVITY_STATE_MACHINE_H_
+#define SRC_UI_BIN_ACTIVITY_ACTIVITY_STATE_MACHINE_H_
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/zx/time.h>
@@ -14,7 +14,7 @@
 
 #include "src/lib/fxl/macros.h"
 
-namespace activity_service {
+namespace activity {
 
 inline std::ostream& operator<<(std::ostream& os, fuchsia::ui::activity::State s) {
   switch (s) {
@@ -88,6 +88,6 @@ class ActivityStateMachine {
   FXL_DISALLOW_COPY_AND_ASSIGN(ActivityStateMachine);
 };
 
-}  // namespace activity_service
+}  // namespace activity
 
-#endif  // GARNET_BIN_UI_ACTIVITY_SERVICE_ACTIVITY_STATE_MACHINE_H_
+#endif  // SRC_UI_BIN_ACTIVITY_ACTIVITY_STATE_MACHINE_H_

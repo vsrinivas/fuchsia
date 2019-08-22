@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/activity_service_test"
+        "binary": "test/activity_test"
     },
     "sandbox": {
         "services": []
