@@ -35,15 +35,15 @@ receiving process' handle table. On failure, the channel retains
 ownership unless the **ZX_CHANNEL_READ_MAY_DISCARD** option
 is specified, then they are dropped.
 
-Unlike many other kernel object types, channels are not duplicatable. Thus there
-is only ever one handle associated to a handle endpoint and the process holding
-that handle is considered the owner. Only the owner can write messages or send
+Unlike many other kernel object types, channels are not duplicatable. Thus, there
+is only ever one handle associated with a channel endpoint, and the process holding
+that handle is considered the owner. Only the owner can read or write messages or send
 the channel endpoint to another process.
 
 Furthermore, when ownership of a channel endpoint goes from one process to
 another, even if a write was in progress, the ordering of messages is guaranteed
-to be parsimonious; packets before the transfer event originate from the
-previous owner and packets after the transfer belong to the new owner. The same
+to be parsimonious; messages before the transfer event originate from the
+previous owner and messages after the transfer belong to the new owner. The same
 applies if a read was in progress when the endpoint was transferred.
 
 The above sequential guarantee is not provided for other kernel objects, even if
