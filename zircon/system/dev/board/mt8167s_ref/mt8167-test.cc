@@ -6,6 +6,10 @@
 
 #include <zxtest/zxtest.h>
 
+#include "soc/mt8167/mt8167-clk-regs.h"
+#include "soc/mt8167/mt8167-hw.h"
+#include "zircon/types.h"
+
 namespace board_mt8167 {
 
 class Mt8167Test : public Mt8167, public ddk::PBusProtocol<Mt8167Test> {
@@ -32,6 +36,8 @@ class Mt8167Test : public Mt8167, public ddk::PBusProtocol<Mt8167Test> {
                                      size_t components_count, uint32_t t_coresident_device_index) {
     return ZX_OK;
   }
+
+  void TestInitMmPll();
 
  private:
   zx_status_t Vgp1Enable() override {
@@ -66,6 +72,33 @@ TEST(Mt8167Test, PmicInitOrder) {
   Mt8167Test dut;
   EXPECT_EQ(0, dut.Thread());
   EXPECT_TRUE(dut.Ok());
+}
+
+void Mt8167Test::TestInitMmPll() {
+  constexpr size_t kClkRegCount = ZX_PAGE_SIZE / sizeof(uint32_t);
+  constexpr size_t kPllRegCount = MT8167_AP_MIXED_SYS_SIZE / sizeof(uint32_t);
+
+  uint32_t clock_reg_array[kClkRegCount] = {};
+  uint32_t pll_reg_array[kPllRegCount] = {};
+  ddk::MmioBuffer clock_mmio(mmio_buffer_t{
+      .vaddr = clock_reg_array, .offset = 0, .size = ZX_PAGE_SIZE, .vmo = ZX_HANDLE_INVALID});
+  ddk::MmioBuffer pll_mmio(mmio_buffer_t{.vaddr = pll_reg_array,
+                                         .offset = 0,
+                                         .size = MT8167_AP_MIXED_SYS_SIZE,
+                                         .vmo = ZX_HANDLE_INVALID});
+
+  InitMmPll(&clock_mmio, &pll_mmio);
+  EXPECT_EQ(CLK_MUX_SEL0::kMsdc0ClkMmPllDiv3 << 11,
+            clock_reg_array[CLK_MUX_SEL0::Get().addr() / 4]);
+  MmPllCon1 pll = MmPllCon1::Get().FromValue(pll_reg_array[MmPllCon1::Get().addr() / 4]);
+  EXPECT_TRUE(pll.change());
+  // Just ignore the fractional part to make this simpler to check.
+  EXPECT_EQ(pll.pcw() >> 16, 600'000'000 / 26'000'000);
+}
+
+TEST(Mt8167Test, InitMmPll) {
+  Mt8167Test dut;
+  dut.TestInitMmPll();
 }
 
 }  // namespace board_mt8167

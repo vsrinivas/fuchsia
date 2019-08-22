@@ -2,18 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_MT8167_INCLUDE_SOC_MT8167_MT8167_CLK_REGS_H_
+#define ZIRCON_SYSTEM_DEV_LIB_MT8167_INCLUDE_SOC_MT8167_MT8167_CLK_REGS_H_
+
+#include <zircon/types.h>
 
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <zircon/types.h>
 
 // XO.
 // Clock Mux Selection 0.
 class CLK_MUX_SEL0 : public hwreg::RegisterBase<CLK_MUX_SEL0, uint32_t> {
  public:
+  static constexpr uint32_t kMsdc0ClkMmPllDiv3 = 5;
+  static constexpr uint32_t kMsdc0ClkMmPllDiv2 = 7;
+
   DEF_FIELD(29, 27, rg_aud_intbus_sel);
   DEF_BIT(26, rg_aud_hf_26m_sel);
+  DEF_FIELD(13, 11, msdc0_mux_sel);
   static auto Get() { return hwreg::RegisterAddr<CLK_MUX_SEL0>(0x000); }
 };
 
@@ -108,3 +114,22 @@ class APLL2_CON0 : public hwreg::RegisterBase<APLL2_CON0, uint32_t> {
   DEF_BIT(0, APLL2_EN);
   static auto Get() { return hwreg::RegisterAddr<APLL2_CON0>(0x1A0); }
 };
+
+class MmPllCon1 : public hwreg::RegisterBase<MmPllCon1, uint32_t> {
+ public:
+  static constexpr uint32_t kDiv1 = 0;
+  static constexpr uint32_t kDiv2 = 1;
+  static constexpr uint32_t kDiv4 = 2;
+  static constexpr uint32_t kDiv8 = 3;
+  static constexpr uint32_t kDiv16 = 4;
+
+  static constexpr uint32_t kPcwFracBits = 14;
+
+  static auto Get() { return hwreg::RegisterAddr<MmPllCon1>(0x164); }
+
+  DEF_BIT(31, change);
+  DEF_FIELD(26, 24, div);
+  DEF_FIELD(20, 0, pcw);
+};
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_MT8167_INCLUDE_SOC_MT8167_MT8167_CLK_REGS_H_

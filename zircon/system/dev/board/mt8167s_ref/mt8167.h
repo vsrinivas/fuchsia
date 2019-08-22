@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_DEV_BOARD_MT8167S_REF_MT8167_H_
 #define ZIRCON_SYSTEM_DEV_BOARD_MT8167S_REF_MT8167_H_
 
+#include <lib/mmio/mmio.h>
 #include <threads.h>
 
 #include <ddk/device.h>
@@ -69,6 +70,8 @@ class Mt8167 : public Mt8167Type {
   virtual zx_status_t TouchInit();
   virtual zx_status_t BacklightInit();
   virtual zx_status_t AudioInit();
+
+  void InitMmPll(ddk::MmioBuffer* clk_mmio, ddk::MmioBuffer* pll_mmio);
 
   ddk::PBusProtocolClient pbus_;
 

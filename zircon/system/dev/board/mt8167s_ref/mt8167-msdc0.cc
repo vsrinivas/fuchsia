@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/mmio/mmio.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -11,7 +13,7 @@
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
+#include <soc/mt8167/mt8167-clk-regs.h>
 #include <soc/mt8167/mt8167-hw.h>
 #include <soc/mt8167/mt8167-sdmmc.h>
 
@@ -22,12 +24,14 @@ namespace {
 constexpr uintptr_t kClkBaseAligned =
     fbl::round_down<uintptr_t, uintptr_t>(MT8167_XO_BASE, PAGE_SIZE);
 constexpr size_t kClkOffset = MT8167_XO_BASE - kClkBaseAligned;
+static_assert(kClkOffset == 0, "Unaligned clock address");
 constexpr size_t kClkSizeAligned =
     fbl::round_up<size_t, size_t>(kClkOffset + MT8167_XO_SIZE, PAGE_SIZE);
 
 constexpr uintptr_t kPllBaseAligned =
     fbl::round_down<uintptr_t, uintptr_t>(MT8167_AP_MIXED_SYS_BASE, PAGE_SIZE);
 constexpr size_t kPllOffset = MT8167_AP_MIXED_SYS_BASE - kPllBaseAligned;
+static_assert(kPllOffset == 0, "Unaligned PLL address");
 constexpr size_t kPllSizeAligned =
     fbl::round_up<size_t, size_t>(kPllOffset + MT8167_AP_MIXED_SYS_SIZE, PAGE_SIZE);
 
@@ -41,31 +45,25 @@ constexpr uint32_t kSrcClkFreq = 200000000;
 
 namespace board_mt8167 {
 
-class ClkMuxSel0 : public hwreg::RegisterBase<ClkMuxSel0, uint32_t> {
- public:
-  static constexpr uint32_t kClkMmPllDiv2 = 7;
+void Mt8167::InitMmPll(ddk::MmioBuffer* clk_mmio, ddk::MmioBuffer* pll_mmio) {
+  constexpr uint32_t div_value = MmPllCon1::kDiv4;
+  constexpr uint32_t src_clk_shift = MmPllCon1::kPcwFracBits + div_value;
+  // The MSDC0 clock will be set to MMPLL/3, so multiply by 3 to get 600 MHz.
+  // MMPLL is also used to generate the GPU clock.
+  constexpr uint64_t pcw =
+      (static_cast<uint64_t>(kSrcClkFreq) << src_clk_shift) * 3 / kMmPllSrcClkFreq;
+  MmPllCon1::Get()
+      .ReadFrom(&(*pll_mmio))
+      .set_change(1)
+      .set_div(div_value)
+      .set_pcw(pcw)
+      .WriteTo(&(*pll_mmio));
 
-  static auto Get() { return hwreg::RegisterAddr<ClkMuxSel0>(kClkOffset); }
-
-  DEF_FIELD(13, 11, msdc0_mux_sel);
-};
-
-class MmPllCon1 : public hwreg::RegisterBase<MmPllCon1, uint32_t> {
- public:
-  static constexpr uint32_t kDiv1 = 0;
-  static constexpr uint32_t kDiv2 = 1;
-  static constexpr uint32_t kDiv4 = 2;
-  static constexpr uint32_t kDiv8 = 3;
-  static constexpr uint32_t kDiv16 = 4;
-
-  static constexpr uint32_t kPcwFracBits = 14;
-
-  static auto Get() { return hwreg::RegisterAddr<MmPllCon1>(kPllOffset + 0x164); }
-
-  DEF_BIT(31, change);
-  DEF_FIELD(26, 24, div);
-  DEF_FIELD(20, 0, pcw);
-};
+  CLK_MUX_SEL0::Get()
+      .ReadFrom(&(*clk_mmio))
+      .set_msdc0_mux_sel(CLK_MUX_SEL0::kMsdc0ClkMmPllDiv3)
+      .WriteTo(&(*clk_mmio));
+}
 
 zx_status_t Mt8167::Msdc0Init() {
   static const pbus_mmio_t msdc0_mmios[] = {{
@@ -135,21 +133,7 @@ zx_status_t Mt8167::Msdc0Init() {
     return status;
   }
 
-  constexpr uint32_t div_value = MmPllCon1::kDiv4;
-  // The MSDC0 clock will be set to MMPLL/2, so shift an extra bit to get 400 MHz.
-  constexpr uint32_t src_clk_shift = 1 + MmPllCon1::kPcwFracBits + div_value;
-  constexpr uint64_t pcw = (static_cast<uint64_t>(kSrcClkFreq) << src_clk_shift) / kMmPllSrcClkFreq;
-  MmPllCon1::Get()
-      .ReadFrom(&(*pll_mmio))
-      .set_change(1)
-      .set_div(div_value)
-      .set_pcw(pcw)
-      .WriteTo(&(*pll_mmio));
-
-  ClkMuxSel0::Get()
-      .ReadFrom(&(*clk_mmio))
-      .set_msdc0_mux_sel(ClkMuxSel0::kClkMmPllDiv2)
-      .WriteTo(&(*clk_mmio));
+  InitMmPll(&*clk_mmio, &*pll_mmio);
 
   static constexpr zx_bind_inst_t root_match[] = {
       BI_MATCH(),

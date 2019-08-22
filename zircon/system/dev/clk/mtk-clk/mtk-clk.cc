@@ -4,6 +4,9 @@
 
 #include "mtk-clk.h"
 
+#include <fuchsia/hardware/clock/c/fidl.h>
+#include <lib/device-protocol/pdev.h>
+
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
@@ -11,9 +14,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/clock/c/fidl.h>
 #include <hwreg/bitfields.h>
-#include <lib/device-protocol/pdev.h>
 #include <soc/mt8167/mt8167-clk.h>
 
 namespace clk {
@@ -156,6 +157,7 @@ static struct clock_info clks[] = {
     {.idx = 7, .name = "univpll_div24"}, {.idx = 8, .name = "nfix2"},
     {.idx = 9, .name = "whpll"},         {.idx = 10, .name = "wpll"},
     {.idx = 11, .name = "26mhz"},        {.idx = 18, .name = "mfg"},
+    {.idx = 19, .name = "msdc0"},        {.idx = 20, .name = "msdc1"},
     {.idx = 45, .name = "axi_mfg"},      {.idx = 46, .name = "slow_mfg"},
     {.idx = 47, .name = "aud1"},         {.idx = 48, .name = "aud2"},
     {.idx = 49, .name = "aud engen1"},   {.idx = 50, .name = "aud engen2"},
