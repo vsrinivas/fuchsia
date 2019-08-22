@@ -3729,9 +3729,9 @@ mod tests {
             vec![("local", local.build()), ("remote", remote.build())].into_iter(),
             |ctx, dev| {
                 if *ctx == "local" {
-                    ("remote", device_id, None)
+                    vec![("remote", device_id, None)]
                 } else {
-                    ("local", device_id, None)
+                    vec![("local", device_id, None)]
                 }
             },
         );
@@ -3907,9 +3907,9 @@ mod tests {
             .into_iter(),
             |ctx, dev| {
                 if *ctx == "local" {
-                    ("remote", device_id, None)
+                    vec![("remote", device_id, None)]
                 } else {
-                    ("local", device_id, None)
+                    vec![("local", device_id, None)]
                 }
             },
         );
@@ -3972,9 +3972,9 @@ mod tests {
             .into_iter(),
             |ctx, dev| {
                 if *ctx == "local" {
-                    ("remote", device_id, None)
+                    vec![("remote", device_id, None)]
                 } else {
-                    ("local", device_id, None)
+                    vec![("local", device_id, None)]
                 }
             },
         );
@@ -4087,9 +4087,9 @@ mod tests {
             vec![("local", local.build()), ("remote", remote.build())].into_iter(),
             |ctx, dev| {
                 if *ctx == "local" {
-                    ("remote", device_id, None)
+                    vec![("remote", device_id, None)]
                 } else {
-                    ("local", device_id, None)
+                    vec![("local", device_id, None)]
                 }
             },
         );
@@ -6026,9 +6026,9 @@ mod tests {
         let mut net =
             DummyNetwork::new(vec![("host", host), ("router", router)].into_iter(), |ctx, dev| {
                 if *ctx == "host" {
-                    ("router", device, None)
+                    vec![("router", device, None)]
                 } else {
-                    ("host", device, None)
+                    vec![("host", device, None)]
                 }
             });
 

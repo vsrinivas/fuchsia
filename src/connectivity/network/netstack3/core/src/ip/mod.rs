@@ -2448,9 +2448,9 @@ mod tests {
         let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
         let mut net = DummyNetwork::new(contexts, move |net, device_id| {
             if *net == a {
-                (b.clone(), device, None)
+                vec![(b.clone(), device, None)]
             } else {
-                (a.clone(), device, None)
+                vec![(a.clone(), device, None)]
             }
         });
         let fragment_id = 5;

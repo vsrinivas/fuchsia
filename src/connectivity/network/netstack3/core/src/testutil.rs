@@ -1032,7 +1032,7 @@ type PendingFrame<N> = InstantAndData<PendingFrameData<N>>;
 /// interpreted as a delivery latency for a given packet.
 pub(crate) struct DummyNetwork<
     N: Eq + Hash + Clone,
-    F: Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>),
+    F: Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>,
 > {
     contexts: HashMap<N, Context<DummyEventDispatcher>>,
     mapper: F,
@@ -1087,7 +1087,7 @@ pub(crate) struct LoopLimitReachedError;
 impl<N, F> DummyNetwork<N, F>
 where
     N: Eq + Hash + Clone + std::fmt::Debug,
-    F: Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>),
+    F: Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>,
 {
     /// Creates a new `DummyNetwork`.
     ///
@@ -1251,11 +1251,12 @@ where
 
         for (n, frames) in all_frames.into_iter() {
             for (device_id, mut frame) in frames.into_iter() {
-                let (dst_context, dst_device, latency) = (self.mapper)(&n, device_id);
-                self.pending_frames.push(PendingFrame::new(
-                    self.current_time + latency.unwrap_or(Duration::from_millis(0)),
-                    PendingFrameData::<N> { data: frame, dst_context, dst_device },
-                ));
+                for (dst_context, dst_device, latency) in (self.mapper)(&n, device_id) {
+                    self.pending_frames.push(PendingFrame::new(
+                        self.current_time + latency.unwrap_or(Duration::from_millis(0)),
+                        PendingFrameData::<N> { data: frame.clone(), dst_context, dst_device },
+                    ));
+                }
             }
         }
     }
@@ -1374,7 +1375,7 @@ pub(crate) fn new_dummy_network_from_config_with_latency<A: IpAddress, N>(
     b: N,
     cfg: DummyEventDispatcherConfig<A>,
     latency: Option<Duration>,
-) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>)>
+) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>>
 where
     N: Eq + Hash + Clone + std::fmt::Debug,
 {
@@ -1383,9 +1384,9 @@ where
     let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
     DummyNetwork::<N, _>::new(contexts, move |net, device_id| {
         if *net == a {
-            (b.clone(), DeviceId::new_ethernet(0), latency)
+            vec![(b.clone(), DeviceId::new_ethernet(0), latency)]
         } else {
-            (a.clone(), DeviceId::new_ethernet(0), latency)
+            vec![(a.clone(), DeviceId::new_ethernet(0), latency)]
         }
     })
 }
@@ -1398,7 +1399,7 @@ pub(crate) fn new_dummy_network_from_config<A: IpAddress, N>(
     a: N,
     b: N,
     cfg: DummyEventDispatcherConfig<A>,
-) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>)>
+) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> Vec<(N, DeviceId, Option<Duration>)>>
 where
     N: Eq + Hash + Clone + std::fmt::Debug,
 {
@@ -1685,7 +1686,7 @@ mod tests {
             bob_echo_request: usize,
             alice_echo_response: usize,
         ) where
-            F: Fn(&&'static str, DeviceId) -> (&'static str, DeviceId, Option<Duration>),
+            F: Fn(&&'static str, DeviceId) -> Vec<(&'static str, DeviceId, Option<Duration>)>,
         {
             let alice = net.context("alice");
             assert_eq!(*alice.state.test_counters.get("timer::nop"), alice_nop);
@@ -1715,5 +1716,139 @@ mod tests {
 
         // should've starved all events:
         assert!(net.step().is_idle());
+    }
+
+    fn test_send_to_many<I: Ip>() {
+        fn send_packet<A: IpAddress>(
+            ctx: &mut Context<DummyEventDispatcher>,
+            src_ip: SpecifiedAddr<A>,
+            dst_ip: SpecifiedAddr<A>,
+            device: DeviceId,
+        ) {
+            crate::ip::send_ip_packet_from_device(
+                ctx,
+                device,
+                src_ip.get(),
+                dst_ip.get(),
+                dst_ip,
+                crate::ip::IpProto::Udp,
+                Buf::new(vec![1, 2, 3, 4], ..),
+                None,
+            );
+        }
+
+        let device = DeviceId::new_ethernet(0);
+        let a = "alice";
+        let b = "bob";
+        let c = "calvin";
+        let mac_a = Mac::new([1, 2, 3, 4, 5, 6]);
+        let mac_b = Mac::new([1, 2, 3, 4, 5, 7]);
+        let mac_c = Mac::new([1, 2, 3, 4, 5, 8]);
+        let ip_a = get_other_ip_address::<I::Addr>(1);
+        let ip_b = get_other_ip_address::<I::Addr>(2);
+        let ip_c = get_other_ip_address::<I::Addr>(3);
+        let subnet =
+            Subnet::new(get_other_ip_address::<I::Addr>(0).get(), I::Addr::BYTES * 8 - 8).unwrap();
+        let mut alice = DummyEventDispatcherBuilder::default();
+        alice.add_device_with_ip(mac_a, ip_a.get(), subnet);
+        let mut bob = DummyEventDispatcherBuilder::default();
+        bob.add_device_with_ip(mac_b, ip_b.get(), subnet);
+        let mut calvin = DummyEventDispatcherBuilder::default();
+        calvin.add_device_with_ip(mac_c, ip_c.get(), subnet);
+        add_arp_or_ndp_table_entry(&mut alice, device.id(), ip_b.get(), mac_b);
+        add_arp_or_ndp_table_entry(&mut alice, device.id(), ip_c.get(), mac_c);
+        add_arp_or_ndp_table_entry(&mut bob, device.id(), ip_a.get(), mac_a);
+        add_arp_or_ndp_table_entry(&mut bob, device.id(), ip_c.get(), mac_c);
+        add_arp_or_ndp_table_entry(&mut calvin, device.id(), ip_a.get(), mac_a);
+        add_arp_or_ndp_table_entry(&mut calvin, device.id(), ip_b.get(), mac_b);
+        let contexts =
+            vec![(a.clone(), alice.build()), (b.clone(), bob.build()), (c.clone(), calvin.build())]
+                .into_iter();
+        let mut net = DummyNetwork::new(contexts, move |net, device_id| {
+            let ret = match *net {
+                "alice" => vec![(b.clone(), device, None), (c.clone(), device, None)],
+                "bob" => vec![(a.clone(), device, None)],
+                "calvin" => vec![],
+                _ => unreachable!(),
+            };
+
+            println!("{:?}", ret);
+            ret
+        });
+
+        net.collect_frames();
+        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.pending_frames.len(), 0);
+
+        //
+        // bob and calvin should get any packet sent by alice.
+        //
+
+        send_packet(net.context("alice"), ip_a, ip_b, device);
+        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 1);
+        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.pending_frames.len(), 0);
+        net.collect_frames();
+        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.pending_frames.len(), 2);
+        assert!(net
+            .pending_frames
+            .iter()
+            .any(|InstantAndData(_, x)| (x.dst_context == b) && (x.dst_device == device)));
+        assert!(net
+            .pending_frames
+            .iter()
+            .any(|InstantAndData(_, x)| (x.dst_context == c) && (x.dst_device == device)));
+
+        //
+        // Only alice should get packets sent by bob.
+        //
+
+        net.pending_frames = BinaryHeap::new();
+        send_packet(net.context("bob"), ip_b, ip_a, device);
+        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 1);
+        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.pending_frames.len(), 0);
+        net.collect_frames();
+        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.pending_frames.len(), 1);
+        assert!(net
+            .pending_frames
+            .iter()
+            .any(|InstantAndData(_, x)| (x.dst_context == a) && (x.dst_device == device)));
+
+        //
+        // No one gets packets sent by calvin.
+        //
+
+        net.pending_frames = BinaryHeap::new();
+        send_packet(net.context("calvin"), ip_c, ip_a, device);
+        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 1);
+        assert_eq!(net.pending_frames.len(), 0);
+        net.collect_frames();
+        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 0);
+        assert_eq!(net.pending_frames.len(), 0);
+    }
+
+    #[test]
+    fn test_send_to_many_ipv4() {
+        test_send_to_many::<Ipv4>();
+    }
+
+    #[test]
+    fn test_send_to_many_ipv6() {
+        test_send_to_many::<Ipv6>();
     }
 }
