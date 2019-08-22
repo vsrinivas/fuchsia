@@ -77,7 +77,6 @@ library("blobfs") {
       "write-txn.cc",  # Journal V1
       "writeback-queue.cc",  # Journal V1
       "writeback-work.cc",  # Journal V1
-      "writeback.cc",
     ]
     public_deps += [
       "$zx/system/ulib/block-client:headers",

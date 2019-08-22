@@ -14,7 +14,6 @@
 #include <blobfs/background-executor.h>
 #include <blobfs/format.h>
 #include <blobfs/journal/superblock.h>
-#include <blobfs/writeback.h>
 #include <fbl/vector.h>
 #include <fs/buffer/blocking_ring_buffer.h>
 #include <fs/buffer/ring_buffer.h>

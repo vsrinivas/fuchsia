@@ -9,8 +9,8 @@
 #include <blobfs/format.h>
 #include <blobfs/journal/replay.h>
 #include <blobfs/journal/superblock.h>
-#include <blobfs/writeback.h>
 #include <fbl/vector.h>
+#include <fs/transaction/writeback.h>
 
 #include "entry-view.h"
 
@@ -18,6 +18,7 @@ namespace blobfs {
 namespace {
 
 using fs::BlockBufferView;
+using fs::FlushWriteRequests;
 using fs::OperationType;
 
 // Reads and validates the length of the entry from a header.

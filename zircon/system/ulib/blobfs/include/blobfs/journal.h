@@ -19,7 +19,6 @@ static_assert(false, "Fuchsia only header");
 #include <blobfs/transaction-manager.h>
 #include <blobfs/writeback-queue.h>
 #include <blobfs/writeback-work.h>
-#include <blobfs/writeback.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>

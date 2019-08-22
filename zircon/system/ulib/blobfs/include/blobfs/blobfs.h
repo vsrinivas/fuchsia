@@ -43,7 +43,6 @@
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
 #include <blobfs/transaction-manager.h>
-#include <blobfs/writeback.h>
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
 #include <digest/digest.h>
@@ -56,6 +55,7 @@
 #include <fbl/vector.h>
 #include <fs/managed-vfs.h>
 #include <fs/metrics/cobalt-metrics.h>
+#include <fs/operation/unbuffered_operations_builder.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>

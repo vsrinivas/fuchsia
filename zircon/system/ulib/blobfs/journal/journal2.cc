@@ -7,12 +7,14 @@
 
 #include <blobfs/journal/journal2.h>
 #include <fs/trace.h>
+#include <fs/transaction/writeback.h>
 
 #include "entry-view.h"
 
 namespace blobfs {
 namespace {
 
+using fs::FlushWriteRequests;
 using fs::OperationType;
 
 zx_status_t CheckAllWriteOperations(const fbl::Vector<UnbufferedOperation>& operations) {

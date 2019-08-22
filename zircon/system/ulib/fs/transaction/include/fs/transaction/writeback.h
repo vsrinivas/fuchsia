@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_WRITEBACK_H_
-#define BLOBFS_WRITEBACK_H_
+#ifndef FS_TRANSACTION_WRITEBACK_H_
+#define FS_TRANSACTION_WRITEBACK_H_
 
 #include <lib/fit/optional.h>
 #include <lib/fit/promise.h>
@@ -11,15 +11,14 @@
 
 #include <utility>
 
-#include <blobfs/journal/journal2.h>
+// #include <blobfs/journal/journal2.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
 #include <fs/operation/buffered_operation.h>
 #include <fs/operation/unbuffered_operations_builder.h>
 #include <fs/transaction/block_transaction.h>
 
-namespace blobfs {
-
-using fs::BufferedOperation;
+namespace fs {
 
 // Wraps a promise with a reference to a ref-counted object.
 //
@@ -32,9 +31,9 @@ decltype(auto) wrap_reference(Promise promise, fbl::RefPtr<T> object) {
 
 // Flushes |operations| to persistent storage using a transaction created by |transaction_handler|,
 // sending through the disk-registered |vmoid| object.
-zx_status_t FlushWriteRequests(fs::TransactionHandler* transaction_handler,
+zx_status_t FlushWriteRequests(TransactionHandler* transaction_handler,
                                const fbl::Vector<BufferedOperation>& operations);
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_WRITEBACK_H_
+#endif  // FS_TRANSACTION_WRITEBACK_H_

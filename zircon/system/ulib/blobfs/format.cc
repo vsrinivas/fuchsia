@@ -8,7 +8,6 @@
 
 #include <blobfs/blobfs.h>
 #include <blobfs/fsck.h>
-#include <blobfs/writeback.h>
 #include <fbl/ref_ptr.h>
 #include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>

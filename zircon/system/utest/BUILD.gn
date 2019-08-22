@@ -124,6 +124,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/fs/metrics/test:metrics",
       "$zx/system/ulib/fs/operation:test",
       "$zx/system/ulib/fs/test",
+      "$zx/system/ulib/fs/transaction:test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/fzl/test",
       "$zx/system/ulib/gpt/test",

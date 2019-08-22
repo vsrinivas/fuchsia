@@ -6,7 +6,7 @@
 
 #include <blobfs/data-streamer.h>
 #include <blobfs/journal/journal2.h>
-#include <blobfs/writeback.h>
+#include <fs/transaction/writeback.h>
 #include <zxtest/zxtest.h>
 
 #include "utils.h"

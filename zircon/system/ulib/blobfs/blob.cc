@@ -26,13 +26,13 @@
 #include <blobfs/iterator/node-populator.h>
 #include <blobfs/iterator/vector-extent-iterator.h>
 #include <blobfs/metrics.h>
-#include <blobfs/writeback.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fs/metrics/events.h>
+#include <fs/transaction/writeback.h>
 
 namespace blobfs {
 namespace {
@@ -621,7 +621,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 
     // Wrap all pending writes with a strong reference to this Blob, so that it stays
     // alive while there are writes in progress acting on it.
-    auto task = wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::WrapRefPtr(this));
+    auto task = fs::wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::WrapRefPtr(this));
     blobfs_->journal()->schedule_task(std::move(task));
     blobfs_->Metrics().UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
     set_error.cancel();
@@ -971,8 +971,8 @@ zx_status_t Blob::Purge() {
     UnbufferedOperationsBuilder operations;
     blobfs_->FreeInode(GetMapIndex(), &operations);
 
-    auto task = wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),
-                               fbl::WrapRefPtr(this));
+    auto task = fs::wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),
+                                   fbl::WrapRefPtr(this));
     blobfs_->journal()->schedule_task(std::move(task));
   }
   ZX_ASSERT(Cache().Evict(fbl::WrapRefPtr(this)) == ZX_OK);

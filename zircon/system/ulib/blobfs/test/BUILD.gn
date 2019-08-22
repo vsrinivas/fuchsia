@@ -33,7 +33,6 @@ test("blobfs-unit") {
     "replay-test.cc",
     "utils.cc",
     "vector-extent-iterator-test.cc",
-    "writeback-test.cc",
   ]
   deps = [
     "$zx/system/ulib/async-loop",

@@ -27,7 +27,6 @@
 #include <blobfs/journal/replay.h>
 #include <blobfs/journal/superblock.h>
 #include <blobfs/node-reserver.h>
-#include <blobfs/writeback.h>
 #include <cobalt-client/cpp/collector.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
