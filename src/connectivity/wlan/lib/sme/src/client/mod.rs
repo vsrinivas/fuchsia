@@ -919,6 +919,7 @@ mod tests {
             assert!(stats.connect_time().into_nanos() > 0);
             assert_eq!(stats.result, ConnectResult::Success);
             assert!(stats.candidate_network.is_some());
+            assert!(stats.previous_disconnect_info.is_none());
         });
         assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionMilestone(info))) => {
             assert_eq!(info.milestone, ConnectionMilestone::Connected);

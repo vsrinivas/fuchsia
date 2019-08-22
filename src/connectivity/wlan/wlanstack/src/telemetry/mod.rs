@@ -1243,6 +1243,7 @@ mod tests {
             candidate_network: Some(fake_bss_description()),
             attempts: 1,
             last_ten_failures: vec![],
+            previous_disconnect_info: None,
         }
     }
 

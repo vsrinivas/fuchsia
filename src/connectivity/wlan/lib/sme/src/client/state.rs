@@ -217,6 +217,7 @@ impl State {
                                 connected_duration,
                                 last_rssi,
                                 bss.bssid,
+                                bss.ssid.clone(),
                             );
                             (None, protection)
                         }
@@ -247,6 +248,7 @@ impl State {
                                 connected_duration,
                                 last_rssi,
                                 bss.bssid,
+                                bss.ssid,
                             );
                         }
                     }
@@ -522,6 +524,9 @@ impl State {
             to: IDLE_STATE,
             ctx: "disconnect command",
         });
+        if let State::Associated { bss, .. } = &self {
+            context.info.report_manual_disconnect(bss.ssid.clone());
+        }
         State::Idle { cfg: self.disconnect_internal(context) }
     }
 

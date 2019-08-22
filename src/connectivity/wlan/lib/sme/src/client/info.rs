@@ -113,6 +113,15 @@ pub struct ConnectStats {
     /// Note that this only tracks consecutive attempts to the same SSID. This means that
     /// connection attempt to another SSID would clear out previous history.
     pub last_ten_failures: Vec<ConnectFailure>,
+
+    /// Information about previous disconnection. Only included when connection attempt
+    /// succeeds and previous disconnect was manual or due to a connection drop. That is,
+    /// this field is not included if SME disconnects in order to fulfill a connection
+    /// attempt.
+    ///
+    /// Intended to be used for client to compute time it takes from when user last
+    /// disconnects to when client is reconnected.
+    pub previous_disconnect_info: Option<PreviousDisconnectInfo>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -258,6 +267,21 @@ pub struct ConnectionLostInfo {
     pub bssid: [u8; 6],
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PreviousDisconnectInfo {
+    ssid: Ssid,
+    disconnect_cause: DisconnectCause,
+    disconnect_at: zx::Time,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DisconnectCause {
+    /// Disconnect happens due to manual request.
+    Manual,
+    /// Disconnect happens due to deauth or diassociate indication from MLME.
+    Drop,
+}
+
 macro_rules! warn_if_err {
     ($expr:expr) => {{
         if let Err(e) = &$expr {
@@ -376,12 +400,18 @@ impl InfoReporter {
         connected_duration: zx::Duration,
         last_rssi: i8,
         bssid: [u8; 6],
+        ssid: Ssid,
     ) {
         self.info_sink.send(InfoEvent::ConnectionLost(ConnectionLostInfo {
             connected_duration,
             last_rssi,
             bssid,
         }));
+        self.stats_collector.report_disconnect(ssid, DisconnectCause::Drop);
+    }
+
+    pub fn report_manual_disconnect(&mut self, ssid: Ssid) {
+        self.stats_collector.report_disconnect(ssid, DisconnectCause::Manual);
     }
 }
 
@@ -399,6 +429,10 @@ pub(crate) struct StatsCollector {
     /// Track successive connect attempts to the same SSID. This resets when attempt succeeds
     /// or when attempting to connect to a different SSID from a previous attempt.
     connect_attempts: Option<ConnectAttempts>,
+    /// Track the most recent disconnection. Intended to be sent out on connection success
+    /// so that client can compute time gap between last disconnect until reconnect.
+    /// This is cleared out as soon as a connection attempt succeeds.
+    previous_disconnect_info: Option<PreviousDisconnectInfo>,
 }
 
 impl StatsCollector {
@@ -542,6 +576,10 @@ impl StatsCollector {
     ) -> Result<ConnectStats, StatsError> {
         let now = now();
         let pending_stats = connect_attempts.handle_result(&result, now)?;
+        let previous_disconnect_info = match &result {
+            ConnectResult::Success => self.previous_disconnect_info.take(),
+            _ => None,
+        };
 
         Ok(ConnectStats {
             connect_start_at: pending_stats.connect_start_at,
@@ -562,7 +600,16 @@ impl StatsCollector {
             candidate_network: pending_stats.candidate_network,
             attempts: connect_attempts.attempts,
             last_ten_failures: connect_attempts.last_ten_failures.iter().cloned().collect(),
+            previous_disconnect_info,
         })
+    }
+
+    pub fn report_disconnect(&mut self, ssid: Ssid, cause: DisconnectCause) {
+        self.previous_disconnect_info.replace(PreviousDisconnectInfo {
+            ssid,
+            disconnect_cause: cause,
+            disconnect_at: now(),
+        });
     }
 }
 
@@ -732,27 +779,14 @@ mod tests {
     #[test]
     fn test_connect_stats_lifecycle() {
         let mut stats_collector = StatsCollector::default();
-
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let scan_req = fake_scan_request();
-        let is_connected = false;
-        assert!(stats_collector.report_join_scan_started(scan_req, is_connected).is_ok());
-        assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
-        let bss_desc = fake_protected_bss_description(b"foo".to_vec());
-        assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
-        assert!(stats_collector.report_auth_started().is_ok());
-        assert!(stats_collector.report_assoc_started().is_ok());
-        assert!(stats_collector.report_assoc_success().is_ok());
-        assert!(stats_collector.report_rsna_started().is_ok());
-        assert!(stats_collector.report_rsna_established().is_ok());
-        let stats = stats_collector.report_connect_finished(ConnectResult::Success);
+        let stats = simulate_connect_lifecycle(&mut stats_collector);
 
         assert_variant!(stats, Ok(stats) => {
             assert!(stats.connect_time().into_nanos() > 0);
             assert_variant!(stats.join_scan_stats(), Some(scan_stats) => {
                 assert!(scan_stats.scan_time().into_nanos() > 0);
                 assert_eq!(scan_stats.scan_type, fidl_mlme::ScanTypes::Active);
-                assert_eq!(scan_stats.scan_start_while_connected, is_connected);
+                assert_eq!(scan_stats.scan_start_while_connected, false);
                 assert_eq!(scan_stats.result, ScanResult::Success);
                 assert_eq!(scan_stats.bss_count, 1);
             });
@@ -771,8 +805,7 @@ mod tests {
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
         let scan_req = fake_scan_request();
-        let is_connected = false;
-        assert!(stats_collector.report_join_scan_started(scan_req, is_connected).is_ok());
+        assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
         assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
         assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
@@ -861,6 +894,49 @@ mod tests {
     }
 
     #[test]
+    fn test_disconnect_then_reconnect() {
+        let mut stats_collector = StatsCollector::default();
+        let stats = simulate_connect_lifecycle(&mut stats_collector);
+        assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
+
+        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectCause::Manual);
+        let stats = simulate_connect_lifecycle(&mut stats_collector);
+        assert_variant!(stats, Ok(stats) => {
+            assert_variant!(stats.previous_disconnect_info, Some(info) => {
+                assert_eq!(info.disconnect_cause, DisconnectCause::Manual);
+            })
+        });
+    }
+
+    #[test]
+    fn test_disconnect_then_connect_fails_before_succeeding() {
+        let mut stats_collector = StatsCollector::default();
+
+        // Connects then disconnect
+        let stats = simulate_connect_lifecycle(&mut stats_collector);
+        assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
+        stats_collector.report_disconnect(b"foo".to_vec(), DisconnectCause::Manual);
+
+        // Attempt to connect but fails
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        let scan_req = fake_scan_request();
+        assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
+        let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InternalError).into();
+        let stats = stats_collector.report_connect_finished(failure);
+
+        // Previous disconnect info should not be reported on fail attempt
+        assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
+
+        // Connect now succeeds, hence previous disconnect info is reported
+        let stats = simulate_connect_lifecycle(&mut stats_collector);
+        assert_variant!(stats, Ok(stats) => {
+            assert_variant!(stats.previous_disconnect_info, Some(info) => {
+                assert_eq!(info.disconnect_cause, DisconnectCause::Manual);
+            })
+        });
+    }
+
+    #[test]
     fn test_no_pending_discovery_scan_stats() {
         let mut stats_collector = StatsCollector::default();
         let bss_desc = fake_protected_bss_description(b"foo".to_vec());
@@ -925,6 +1001,23 @@ mod tests {
         let milestone = expect_next_milestone(milestone, TwelveHours, 43_200_000000003);
         let milestone = expect_next_milestone(milestone, OneDay, 86_400_000000003);
         assert_eq!(milestone.next_milestone(), None);
+    }
+
+    fn simulate_connect_lifecycle(
+        stats_collector: &mut StatsCollector,
+    ) -> Result<ConnectStats, StatsError> {
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        let scan_req = fake_scan_request();
+        assert!(stats_collector.report_join_scan_started(scan_req, false).is_ok());
+        assert!(stats_collector.report_join_scan_ended(ScanResult::Success, 1).is_ok());
+        let bss_desc = fake_protected_bss_description(b"foo".to_vec());
+        assert!(stats_collector.report_candidate_network(bss_desc).is_ok());
+        assert!(stats_collector.report_auth_started().is_ok());
+        assert!(stats_collector.report_assoc_started().is_ok());
+        assert!(stats_collector.report_assoc_success().is_ok());
+        assert!(stats_collector.report_rsna_started().is_ok());
+        assert!(stats_collector.report_rsna_established().is_ok());
+        stats_collector.report_connect_finished(ConnectResult::Success)
     }
 
     fn expect_next_milestone(
