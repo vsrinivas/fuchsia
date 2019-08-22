@@ -85,7 +85,9 @@ func (s *Service) Close() (int32, error) {
 }
 
 func (s *Service) Describe() (fidlio.NodeInfo, error) {
-	return fidlio.NodeInfo{NodeInfoTag: fidlio.NodeInfoService}, nil
+	var nodeInfo fidlio.NodeInfo
+	nodeInfo.SetService(fidlio.Service{})
+	return nodeInfo, nil
 }
 
 func (s *Service) Sync() (int32, error) {
@@ -173,7 +175,9 @@ func (dirState *directoryState) Close() (int32, error) {
 }
 
 func (dirState *directoryState) Describe() (fidlio.NodeInfo, error) {
-	return fidlio.NodeInfo{NodeInfoTag: fidlio.NodeInfoDirectory}, nil
+	var nodeInfo fidlio.NodeInfo
+	nodeInfo.SetDirectory(fidlio.DirectoryObject{})
+	return nodeInfo, nil
 }
 
 func (dirState *directoryState) Sync() (int32, error) {
@@ -362,7 +366,9 @@ func (fState *fileState) Close() (int32, error) {
 }
 
 func (fState *fileState) Describe() (fidlio.NodeInfo, error) {
-	return fidlio.NodeInfo{NodeInfoTag: fidlio.NodeInfoFile}, nil
+	var nodeInfo fidlio.NodeInfo
+	nodeInfo.SetFile(fidlio.FileObject{})
+	return nodeInfo, nil
 }
 
 func (fState *fileState) Sync() (int32, error) {
