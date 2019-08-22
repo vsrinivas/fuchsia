@@ -101,12 +101,7 @@ void LoggerFactoryImpl::CreateAndBindLogger(
     callback(Status::INVALID_ARGUMENTS);
     return;
   }
-  if (factory->is_single_legacy_project()) {
-    FX_LOGS(ERROR) << "The provided ProjectProfile contained an older type of "
-                      "project that is no longer supported.";
-    callback(Status::INVALID_ARGUMENTS);
-    return;
-  } else if (factory->is_single_project()) {
+  if (factory->is_single_project()) {
     BindNewLogger(factory->TakeSingleProjectContext(release_stage), std::move(request),
                   binding_set);
     callback(Status::OK);
