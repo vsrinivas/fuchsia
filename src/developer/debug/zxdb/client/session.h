@@ -204,8 +204,7 @@ class Session : public SettingStoreObserver {
   // it should know about.
   void SendAgentConfiguration();
 
-  // Notifies the agent that it should quit upon connection closing.
-  // Will no-op if not connected.
+  // Pushes the quit agent config action into |actions|.
   void ConfigQuitAgent(bool quit, std::vector<debug_ipc::ConfigAction>* actions);
 
   // Whether we have opened a core dump. Makes much of the connection-related

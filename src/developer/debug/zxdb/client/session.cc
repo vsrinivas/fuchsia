@@ -861,9 +861,11 @@ void Session::ListenForSystemSettings() {
 }
 
 void Session::SendAgentConfiguration() {
+  if (!IsConnected())
+    return;
+
   // We bungle the actions and send them in one go.
   std::vector<debug_ipc::ConfigAction> actions;
-
   ConfigQuitAgent(system_.settings().GetBool(ClientSettings::System::kQuitAgentOnExit), &actions);
 
   debug_ipc::ConfigAgentRequest request;
@@ -890,11 +892,7 @@ void Session::SendAgentConfiguration() {
 }
 
 void Session::ConfigQuitAgent(bool quit, std::vector<debug_ipc::ConfigAction>* actions) {
-  DEBUG_LOG(RemoteAPI) << "Sending quit agent config: " << quit;
-
-  if (!IsConnected())
-    return;
-
+  DEBUG_LOG(RemoteAPI) << "Sending quit agent config: " << std::boolalpha << quit;
   std::string value = quit ? "true" : "false";
   actions->push_back({debug_ipc::ConfigAction::Type::kQuitOnExit, value});
 }
