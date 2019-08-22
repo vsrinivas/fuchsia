@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/router_manager_core_lib_test"
+        "binary": "test/network_manager_core_lib_test"
     },
     "sandbox": {
         "services": [

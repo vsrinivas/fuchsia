@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/router_manager_cli"
+        "binary": "bin/network_manager_cli"
     },
     "sandbox": {
         "services": [

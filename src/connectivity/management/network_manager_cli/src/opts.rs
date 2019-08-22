@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// opts.rs contains the definition of the Router Manager CLI
-///
-/// This file defines all the commands and subcommands that are implemented
-/// for the CLI. This is done using the StructOpt crate.
+//! This modules contains the definition of the Network Manager CLI
+//!
+//! This module defines all the commands and subcommands that are implemented
+//! for the CLI. This is done using the `structopt` crate.
 use eui48::MacAddress;
 use failure::{format_err, Error};
 use fidl_fuchsia_router_config::{CidrAddress, Id};
@@ -80,8 +80,8 @@ pub struct Opt {
 
 #[derive(StructOpt, Debug)]
 #[structopt(
-    name = "Router Manager CLI",
-    about = "This CLI is used to invoke the FIDL interface for the router manager app",
+    name = "Network Manager CLI",
+    about = "This CLI is used to invoke the FIDL interface for the network manager app",
     version = "1.0"
 )]
 pub enum Command {
@@ -92,10 +92,10 @@ pub enum Command {
     /// Remove a LAN or WAN interface
     REMOVE(Remove),
     #[structopt(name = "show")]
-    /// Read router configuration
+    /// Read device configuration
     SHOW(Show),
     #[structopt(name = "set")]
-    /// Write router configuration
+    /// Write device configuration
     SET(Set),
 }
 

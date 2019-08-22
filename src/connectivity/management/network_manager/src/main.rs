@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The router manager allows clients to manage router device properties.
+//! The network manager allows clients to manage router device properties.
 
 #![feature(async_await)]
 #![deny(missing_docs)]
@@ -24,7 +24,7 @@ fn main() -> Result<(), failure::Error> {
     // Severity is set to debug during development.
     fuchsia_syslog::set_severity(-2);
 
-    info!("Starting Router Manager!");
+    info!("Starting Network Manager!");
     let mut executor = fuchsia_async::Executor::new()?;
 
     let eventloop = EventLoop::new()?;

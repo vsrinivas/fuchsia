@@ -1,11 +1,12 @@
 {
     "program": {
-        "binary": "test/router_manager_bin_test"
+        "binary": "bin/network_manager"
     },
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.filter.Filter",
+            "fuchsia.net.policy.Observer",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.overnet.Overnet"

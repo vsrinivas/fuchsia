@@ -25,7 +25,7 @@ use crate::portmgr::PortId;
 use fidl_fuchsia_router_config::LifProperties;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-/// DeviceState holds the device state.
+/// `DeviceState` holds the device state.
 pub struct DeviceState {
     version: Version, // state version.
     port_manager: portmgr::PortManager,
@@ -35,7 +35,7 @@ pub struct DeviceState {
 }
 
 impl DeviceState {
-    /// Create an empty DeviceState.
+    //! Create an empty DeviceState.
     pub fn new(hal: hal::NetCfg) -> Self {
         let v = 0;
         DeviceState {
@@ -64,7 +64,7 @@ impl DeviceState {
         }
     }
 
-    /// populate_state populates the state based on lower layers state.
+    /// `populate_state` populates the state based on lower layers state.
     pub async fn populate_state(&mut self) -> error::Result<()> {
         for p in self.hal.ports().await?.iter() {
             self.add_port(p.id, &p.path, self.version());
@@ -98,7 +98,7 @@ impl DeviceState {
         Ok(())
     }
 
-    /// add_port adds a new port.
+    /// `add_port` adds a new port.
     pub fn add_port(&mut self, id: PortId, path: &str, v: Version) {
         self.port_manager.add_port(portmgr::Port::new(id, path, v));
         // This is a response to an event, not a configuration change. Version should not be
@@ -112,7 +112,7 @@ impl DeviceState {
         });
     }
 
-    /// create_lif creates a LIF of the indicated type.
+    /// `create_lif` creates a LIF of the indicated type.
     pub async fn create_lif(
         &mut self,
         lif_type: LIFType,
@@ -124,7 +124,7 @@ impl DeviceState {
         let x = ports.iter().find(|p| !self.port_manager.use_port(p));
         if x.is_some() {
             self.release_ports(&ports);
-            return Err(error::RouterManager::LIF(error::Lif::InvalidPort));
+            return Err(error::NetworkManager::LIF(error::Lif::InvalidPort));
         }
         let mut l = lifmgr::LIF::new(
             self.version,
@@ -163,14 +163,14 @@ impl DeviceState {
         Ok(l)
     }
 
-    /// delete_lif creates a LIF of the indicated type.
-    pub async fn delete_lif(&mut self, lif_id: UUID) -> Result<(), error::RouterManager> {
+    /// `delete_lif` creates a LIF of the indicated type.
+    pub async fn delete_lif(&mut self, lif_id: UUID) -> Result<(), error::NetworkManager> {
         // Locate the lif to delete.
         let lif = self.lif_manager.lif_mut(&lif_id);
         let lif = match lif {
             None => {
                 info!("delete_lif: lif not found {:?} ", lif_id);
-                return Err(error::RouterManager::LIF(error::Lif::NotFound));
+                return Err(error::NetworkManager::LIF(error::Lif::NotFound));
             }
             Some(x) => x.clone(),
         };
@@ -191,12 +191,12 @@ impl DeviceState {
         self.release_ports(&ports.collect());
         // delete from database
         if self.lif_manager.remove_lif(lif_id).is_none() {
-            return Err(error::RouterManager::LIF(error::Lif::NotFound));
+            return Err(error::NetworkManager::LIF(error::Lif::NotFound));
         }
         Ok(())
     }
 
-    /// update_lif_properties configures an interface as indicated and updates the LIF information.
+    /// `update_lif_properties` configures an interface as indicated and updates the LIF information.
     pub async fn update_lif_properties(
         &mut self,
         lif_id: UUID,
@@ -206,7 +206,7 @@ impl DeviceState {
         let lif = match l {
             None => {
                 info!("update_lif_properties: lif not found {:?} ", lif_id);
-                return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
             }
             Some(x) => x,
         };
@@ -230,42 +230,42 @@ impl DeviceState {
                     }
                     Some(cfg) => {
                         info!("connection_type {:?}", cfg);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.connection_parameters {
                     None => {}
                     Some(cfg) => {
                         info!("connection parameters {:?}", cfg);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.hostname {
                     None => {}
                     Some(cfg) => {
                         info!("hostname {:?}", cfg);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.clone_mac {
                     None => {}
                     Some(cfg) => {
                         info!("clone mac {:?}", cfg);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.mtu {
                     None => {}
                     Some(cfg) => {
                         info!("mtu  {:?}", cfg);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.metric {
                     None => {}
                     Some(cfg) => {
                         info!("metric {:?}", cfg);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.address_method {
@@ -289,7 +289,7 @@ impl DeviceState {
                                 "Setting a static ip is not allowed when \
                                  a dhcp client is configured"
                             );
-                            return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                            return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                         }
                         info!("setting ip to {:?} {:?}", address, prefix_length);
                         let a = LifIpAddr::from(p.address_v4.as_ref().unwrap());
@@ -297,7 +297,7 @@ impl DeviceState {
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v4);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.gateway_v4 {
@@ -311,7 +311,7 @@ impl DeviceState {
                     None => {}
                     Some(cfg) => {
                         info!("v6 mode {:?}", cfg);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.address_v6 {
@@ -325,7 +325,7 @@ impl DeviceState {
                                 "Setting a static ip is not allowed when \
                                  a dhcp client is configured"
                             );
-                            return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                            return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                         }
                         info!("setting ip to {:?} {:?}", address, prefix_length);
                         let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
@@ -333,7 +333,7 @@ impl DeviceState {
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v6);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.gateway_v6 {
@@ -381,7 +381,7 @@ impl DeviceState {
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v4);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.address_v6 {
@@ -396,7 +396,7 @@ impl DeviceState {
                     }
                     _ => {
                         warn!("invalid address {:?}", p.address_v6);
-                        return Err(error::RouterManager::LIF(error::Lif::NotSupported));
+                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
                     }
                 };
                 match &p.enable {
@@ -414,20 +414,20 @@ impl DeviceState {
         }
     }
 
-    /// lif returns the LIF with the given uuid.
+    /// `lif` returns the LIF with the given uuid.
     pub fn lif(&self, lif_id: UUID) -> Option<&lifmgr::LIF> {
         self.lif_manager.lif(&lif_id)
     }
-    /// lifs returns all the LIFs of the given type.
+    /// `lifs` returns all the LIFs of the given type.
     pub fn lifs(&self, t: LIFType) -> impl Iterator<Item = &lifmgr::LIF> {
         self.lif_manager.lifs(t)
     }
-    /// ports returns all ports managed by configuration manager.
+    /// `ports` returns all ports managed by configuration manager.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = &portmgr::Port> {
         self.port_manager.ports()
     }
 
-    /// version returns the current configuration version.
+    /// `version` returns the current configuration version.
     /// The configuration version is monotonically increased every time there is a configuration
     /// change.
     pub fn version(&self) -> Version {

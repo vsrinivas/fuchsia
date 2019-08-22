@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The special-purpose event loop used by the router manager.
+//! The special-purpose event loop used by the network manager.
 //!
 //! This event loop takes in events from Admin and State FIDL,
 //! and implements handlers for FIDL calls.
@@ -40,7 +40,7 @@ use fidl_fuchsia_router_config::{Id, Lif, Port};
 use fidl_fuchsia_router_config::{RouterStateGetPortsResponder, RouterStateRequest};
 use futures::channel::mpsc;
 use futures::prelude::*;
-use router_manager_core::{hal::NetCfg, lifmgr::LIFType, portmgr::PortId, DeviceState};
+use network_manager_core::{hal::NetCfg, lifmgr::LIFType, portmgr::PortId, DeviceState};
 
 macro_rules! router_error {
     ($code:ident, $desc:expr) => {
@@ -92,8 +92,9 @@ impl EventLoop {
         let overnet_worker = crate::overnet_worker::OvernetWorker;
         let _r = overnet_worker.spawn(event_send.clone());
         let netcfg = NetCfg::new()?;
-        let packet_filter =
-            PacketFilter::start().context("router_manager failed to start packet filter!").unwrap();
+        let packet_filter = PacketFilter::start()
+            .context("network_manager failed to start packet filter!")
+            .unwrap();
         Ok(EventLoop {
             event_recv: Some(event_recv),
             device: DeviceState::new(netcfg),

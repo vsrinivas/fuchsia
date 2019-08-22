@@ -97,7 +97,7 @@ fn to_port_ranges(input_ranges: &str) -> Result<Vec<PortRange>, Error> {
 }
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["router_manager_cli"]).expect("initialising logging");
+    syslog::init_with_tags(&["network_manager_cli"]).expect("initialising logging");
     let Opt { overnet, cmd } = Opt::from_args();
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let fut = async {
@@ -120,9 +120,9 @@ fn main() -> Result<(), Error> {
 
 fn connect() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
     let router_admin = connect_to_service::<RouterAdminMarker>()
-        .context("failed to connect to router manager admin interface")?;
+        .context("failed to connect to network manager admin interface")?;
     let router_state = connect_to_service::<RouterStateMarker>()
-        .context("failed to connect to router manager interface")?;
+        .context("failed to connect to network manager interface")?;
     Ok((router_admin, router_state))
 }
 
@@ -136,7 +136,7 @@ fn connect_overnet_node(
     fasync::Channel::from_channel(ch1).map_err(|e| e.into())
 }
 
-fn supports_router_manager(peer: &Peer) -> bool {
+fn supports_network_manager(peer: &Peer) -> bool {
     match peer.description.services {
         None => false,
         Some(ref services) => [RouterAdminMarker::NAME, RouterStateMarker::NAME]
@@ -155,7 +155,7 @@ async fn connect_overnet() -> Result<(RouterAdminProxy, RouterStateProxy), Error
         let (v, peers) = svc.list_peers(version).await?;
         version = v;
         for mut peer in peers {
-            if !supports_router_manager(&peer) {
+            if !supports_network_manager(&peer) {
                 continue;
             }
             match (
@@ -859,8 +859,8 @@ mod tests {
             ("fuchsia.net.NameLookup", component_url!("netstack")),
             ("fuchsia.posix.socket.Provider", component_url!("netstack")),
             ("fuchsia.net.filter.Filter", component_url!("netstack")),
-            ("fuchsia.router.config.RouterAdmin", component_url!("router_manager")),
-            ("fuchsia.router.config.RouterState", component_url!("router_manager")),
+            ("fuchsia.router.config.RouterAdmin", component_url!("network_manager")),
+            ("fuchsia.router.config.RouterState", component_url!("network_manager")),
         ];
         names_and_urls
             .into_iter()
@@ -919,7 +919,7 @@ mod tests {
         sandbox.create_environment(
             env_server_end,
             EnvironmentOptions {
-                name: Some(String::from("router_manager_env")),
+                name: Some(String::from("network_manager_env")),
                 services: Some(services),
                 devices: None,
                 inherit_parent_launch_services: None,
@@ -943,15 +943,15 @@ mod tests {
         Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
     }
 
-    fn connect_router_manager(
+    fn connect_network_manager(
         env: &ManagedEnvironmentProxy,
     ) -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
         let (router_admin, router_admin_server_end) = create_proxy::<RouterAdminMarker>()?;
         env.connect_to_service(RouterAdminMarker::NAME, router_admin_server_end.into_channel())
-            .context("Can't connect to router_manager admin endpoint")?;
+            .context("Can't connect to network_manager admin endpoint")?;
         let (router_state, router_state_server_end) = create_proxy::<RouterStateMarker>()?;
         env.connect_to_service(RouterStateMarker::NAME, router_state_server_end.into_channel())
-            .context("Can't connect to router_manager state endpoint")?;
+            .context("Can't connect to network_manager state endpoint")?;
         Ok((router_admin, router_state))
     }
 
@@ -1037,7 +1037,7 @@ mod tests {
                     .expect("failed to connect to netstack");
             let _ = add_ethernet_device(netstack_proxy, device).await;
             let (router_admin, router_state) =
-                connect_router_manager(&env).expect("Failed to connect from managed environment");
+                connect_network_manager(&env).expect("Failed to connect from managed environment");
 
             let mut printer = Printer::new(Vec::new());
             let cmd = match make_cmd(&test.command) {
@@ -1074,7 +1074,7 @@ mod tests {
         let env = create_managed_env(&sandbox).expect("Failed to create environment with services");
         for test in commands.tests {
             let (router_admin, router_state) =
-                connect_router_manager(&env).expect("Failed to connect from managed environment");
+                connect_network_manager(&env).expect("Failed to connect from managed environment");
             let mut printer = Printer::new(Vec::new());
             let cmd = match make_cmd(&test.command) {
                 Ok(cmd) => cmd,

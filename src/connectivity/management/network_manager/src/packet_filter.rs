@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Handles packet filtering requests for Router Manager.
+//! Handles packet filtering requests for Network Manager.
 
 use failure::{format_err, Error};
 use fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status};
@@ -38,7 +38,7 @@ fn to_filter_action(action: netfilter::Action) -> router_config::FilterAction {
     match action {
         netfilter::Action::Pass => router_config::FilterAction::Allow,
         // TODO(cgibson): What is our default drop policy? Should we gloss over the difference
-        // to users of the Router Manager or should it become a parse error?
+        // to users of the Network Manager or should it become a parse error?
         netfilter::Action::Drop => router_config::FilterAction::Drop,
         netfilter::Action::DropReset => router_config::FilterAction::Drop,
     }
@@ -164,7 +164,7 @@ fn from_filter_action(action: &router_config::FilterAction) -> netfilter::Action
     match action {
         router_config::FilterAction::Allow => netfilter::Action::Pass,
         // TODO(cgibson): What is our default drop policy? Should we gloss over the difference
-        // to users of the Router Manager or should it become a parse error?
+        // to users of the Network Manager or should it become a parse error?
         router_config::FilterAction::Drop => netfilter::Action::Drop,
     }
 }
@@ -203,9 +203,9 @@ fn from_cidr_address(
 
 /// Manages a Packet Filter connection to netstack filter service (netfilter).
 ///
-/// Mainly serves as a wrapper around the netfilter service. Converts Router Manager FIDL APIs into
+/// Mainly serves as a wrapper around the netfilter service. Converts Network Manager FIDL APIs into
 /// something that the netfilter service can understand. Finally converts the netfilter response
-/// back into a Router Manager FIDL for consumption by the caller.
+/// back into a Network Manager FIDL for consumption by the caller.
 impl PacketFilter {
     /// Starts a new instance of a PacketFilter.
     pub fn start() -> Result<Self, Error> {

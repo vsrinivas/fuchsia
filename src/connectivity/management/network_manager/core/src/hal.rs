@@ -147,9 +147,9 @@ impl Into<LIFProperties> for Interface {
 impl NetCfg {
     pub fn new() -> Result<Self, Error> {
         let stack = connect_to_service::<StackMarker>()
-            .context("router_manager failed to connect to netstack")?;
+            .context("network_manager failed to connect to netstack")?;
         let netstack = connect_to_service::<NetstackMarker>()
-            .context("router_manager failed to connect to netstack")?;
+            .context("network_manager failed to connect to netstack")?;
         Ok(NetCfg { stack, netstack, id_in_use: HashSet::new() })
     }
 
@@ -175,7 +175,7 @@ impl NetCfg {
         Ok(p)
     }
 
-    /// interfaces returns all L3 interfaces with valid, non-local IPs in the system.
+    /// `interfaces` returns all L3 interfaces with valid, non-local IPs in the system.
     pub async fn interfaces(&mut self) -> error::Result<Vec<Interface>> {
         let ifs = self
             .stack
@@ -197,18 +197,18 @@ impl NetCfg {
         if let Some(i) = ifs.iter().find(|x| self.id_in_use.insert(StackPortId::from(x.id))) {
             Ok(i.into())
         } else {
-            Err(error::RouterManager::HAL(error::Hal::BridgeNotFound))
+            Err(error::NetworkManager::HAL(error::Hal::BridgeNotFound))
         }
     }
 
-    /// delete_bridge deletes a bridge.
+    /// `delete_bridge` deletes a bridge.
     pub async fn delete_bridge(&mut self, id: PortId) -> error::Result<()> {
         // TODO(dpradilla): what is the API for deleting a bridge? Call it
         info!("delete_bridge {:?} - Noop for now", id);
         Ok(())
     }
 
-    /// set_ip_address configures an IP address.
+    /// `set_ip_address` configures an IP address.
     pub async fn set_ip_address<'a>(
         &'a mut self,
         pid: PortId,
@@ -222,18 +222,18 @@ impl NetCfg {
             )
             .await;
         match r {
-            Err(_) => Err(error::RouterManager::HAL(error::Hal::OperationFailed)),
+            Err(_) => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
             Ok(r) => match r {
                 None => Ok(()),
                 Some(e) => {
                     println!("could not set interface address: ${:?}", e);
-                    Err(error::RouterManager::HAL(error::Hal::OperationFailed))
+                    Err(error::NetworkManager::HAL(error::Hal::OperationFailed))
                 }
             },
         }
     }
 
-    /// unset_ip_address removes an IP address from the interface configuration.
+    /// `unset_ip_address` removes an IP address from the interface configuration.
     pub async fn unset_ip_address<'a>(
         &'a mut self,
         pid: PortId,
@@ -255,7 +255,7 @@ impl NetCfg {
                 status: fidl_fuchsia_netstack::Status::Ok,
                 message: _,
             }) => Ok(()),
-            _ => Err(error::RouterManager::HAL(error::Hal::OperationFailed)),
+            _ => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
         }
     }
 
@@ -267,7 +267,7 @@ impl NetCfg {
         };
         match r.await {
             Ok(_) => Ok(()),
-            _ => Err(error::RouterManager::HAL(error::Hal::OperationFailed)),
+            _ => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
         }
     }
 
@@ -278,7 +278,7 @@ impl NetCfg {
                 status: fidl_fuchsia_netstack::Status::Ok,
                 message: _,
             }) => Ok(()),
-            _ => Err(error::RouterManager::HAL(error::Hal::OperationFailed)),
+            _ => Err(error::NetworkManager::HAL(error::Hal::OperationFailed)),
         }
     }
 
@@ -310,7 +310,7 @@ impl NetCfg {
         Ok(())
     }
 
-    /// apply_properties applies the indicated LIF properties.
+    /// `apply_properties` applies the indicated LIF properties.
     pub async fn apply_properties<'a>(
         &'a mut self,
         pid: PortId,

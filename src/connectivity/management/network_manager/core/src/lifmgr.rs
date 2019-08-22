@@ -14,7 +14,7 @@ use fidl_fuchsia_router_config;
 use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
 
-// LIFType denotes the supported types of Logical Interfaces.
+/// `LIFType` denotes the supported types of Logical Interfaces.
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum LIFType {
     INVALID,
@@ -25,7 +25,7 @@ pub enum LIFType {
     GRE,
 }
 
-/// LIF implements a logical interface object.
+/// `LIF` implements a logical interface object.
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct LIF {
     id: ElementId,
@@ -56,15 +56,15 @@ impl LIF {
         match l_type {
             LIFType::WAN => {
                 if port_list.len() != 1 {
-                    return Err(error::RouterManager::LIF(error::Lif::InvalidNumberOfPorts));
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts));
                 }
             }
             LIFType::LAN => {
                 if port_list.len() < 1 {
-                    return Err(error::RouterManager::LIF(error::Lif::InvalidNumberOfPorts));
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts));
                 }
             }
-            _ => return Err(error::RouterManager::LIF(error::Lif::TypeNotSupported)),
+            _ => return Err(error::NetworkManager::LIF(error::Lif::TypeNotSupported)),
         };
         let ports: HashSet<PortId> = port_list.iter().cloned().collect();
         let id = ElementId::new(v);
@@ -96,13 +96,13 @@ impl LIF {
         match self.l_type {
             LIFType::LAN => {
                 if self.ports.len() <= 1 {
-                    return Err(error::RouterManager::LIF(error::Lif::InvalidNumberOfPorts));
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts));
                 }
             }
             LIFType::WAN => {
-                return Err(error::RouterManager::LIF(error::Lif::InvalidNumberOfPorts))
+                return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts))
             }
-            _ => return Err(error::RouterManager::LIF(error::Lif::TypeNotSupported)),
+            _ => return Err(error::NetworkManager::LIF(error::Lif::TypeNotSupported)),
         }
         if !self.ports.contains(&p) {
             return Ok(());
@@ -112,7 +112,7 @@ impl LIF {
         Ok(())
     }
     fn set_vlan(&mut self, _v: Version, _vlan: u16) -> error::Result<()> {
-        Err(error::RouterManager::LIF(error::Lif::NotSupported))
+        Err(error::NetworkManager::LIF(error::Lif::NotSupported))
     }
     pub fn set_properties(&mut self, v: Version, p: LIFProperties) -> error::Result<()> {
         self.id.version = v;
@@ -292,7 +292,7 @@ impl LIFProperties {
     }
 }
 
-/// LIFManager keeps track of Logical interfaces.
+/// `LIFManager` keeps track of Logical interfaces.
 pub struct LIFManager {
     lifs: HashMap<UUID, LIF>,
     lif_names: HashSet<String>,
@@ -300,21 +300,21 @@ pub struct LIFManager {
 }
 
 impl LIFManager {
-    /// Create a new LIF database.
+    //! Create a new LIF database.
     pub fn new() -> Self {
         LIFManager { lifs: HashMap::new(), lif_names: HashSet::new(), lif_vlans: HashSet::new() }
     }
-    /// add_lif adds a lif to be managed by router manager.
+    /// `add_lif` adds a lif to be managed by network manager.
     /// It verifies LIF is valid and does not colide with an exisiting one.
     pub fn add_lif(&mut self, l: &LIF) -> error::Result<()> {
         if self.lifs.contains_key(&l.id.uuid) {
-            return Err(error::RouterManager::LIF(error::Lif::DuplicateLIF));
+            return Err(error::NetworkManager::LIF(error::Lif::DuplicateLIF));
         }
         if self.lif_names.contains(&l.name) {
-            return Err(error::RouterManager::LIF(error::Lif::InvalidName));
+            return Err(error::NetworkManager::LIF(error::Lif::InvalidName));
         }
         if l.vlan != 0 && self.lif_vlans.contains(&l.vlan) {
-            return Err(error::RouterManager::LIF(error::Lif::InvalidVlan));
+            return Err(error::NetworkManager::LIF(error::Lif::InvalidVlan));
         }
         // TODO(dpradilla): Verify ports not in use by other lif and ports actually exist.
         // This will change if switch trunk ports are supported, in that case, a trunk port can be
@@ -325,7 +325,7 @@ impl LIFManager {
         self.lifs.insert(l.id.uuid, l.clone());
         Ok(())
     }
-    /// remove_lif removes a lif from lif manager.
+    /// `remove_lif` removes a lif from lif manager.
     pub fn remove_lif(&mut self, id: UUID) -> Option<LIF> {
         let l = self.lifs.remove(&id)?;
         self.lif_vlans.remove(&l.vlan);
@@ -333,22 +333,22 @@ impl LIFManager {
         Some(l)
     }
 
-    /// lif gets a reference to a lif in lif manager.
+    /// `lif` gets a reference to a lif in lif manager.
     pub fn lif(&self, id: &UUID) -> Option<&LIF> {
         self.lifs.get(id)
     }
 
-    /// lif_mut gets a mutable reference to a lif in lif manager.
+    /// `lif_mut` gets a mutable reference to a lif in lif manager.
     pub fn lif_mut(&mut self, id: &UUID) -> Option<&mut LIF> {
         self.lifs.get_mut(id)
     }
 
-    /// lifs gets all LIFs of a given type.
+    /// `lifs` gets all LIFs of a given type.
     pub fn lifs(&self, lt: LIFType) -> impl Iterator<Item = &LIF> {
         self.lifs.iter().filter_map(move |(_, l)| if l.l_type == lt { Some(l) } else { None })
     }
 
-    /// lifs gets all LIFs.
+    /// `all_lifs` gets all LIFs.
     pub fn all_lifs(&self) -> impl Iterator<Item = &LIF> {
         self.lifs.iter().map(|(_, l)| l)
     }

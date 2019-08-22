@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Custom error types for the router manager.
+//! Custom error types for the network manager.
 
 use failure::Fail;
 
-pub type Result<T> = std::result::Result<T, RouterManager>;
+pub type Result<T> = std::result::Result<T, NetworkManager>;
 
-/// Top-level error type the router manager.
+/// Top-level error type the network manager.
 #[derive(Fail, Debug)]
-pub enum RouterManager {
+pub enum NetworkManager {
     /// Errors related to LIF and LIFManager
     #[fail(display = "{}", _0)]
     LIF(#[cause] Lif),
@@ -26,19 +26,19 @@ pub enum RouterManager {
     // Add error types here.
 }
 
-impl From<Lif> for RouterManager {
+impl From<Lif> for NetworkManager {
     fn from(e: Lif) -> Self {
-        RouterManager::LIF(e)
+        NetworkManager::LIF(e)
     }
 }
-impl From<Port> for RouterManager {
+impl From<Port> for NetworkManager {
     fn from(e: Port) -> Self {
-        RouterManager::PORT(e)
+        NetworkManager::PORT(e)
     }
 }
-impl From<Hal> for RouterManager {
+impl From<Hal> for NetworkManager {
     fn from(e: Hal) -> Self {
-        RouterManager::HAL(e)
+        NetworkManager::HAL(e)
     }
 }
 

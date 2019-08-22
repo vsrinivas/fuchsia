@@ -18,25 +18,25 @@ pub struct Port {
 }
 
 impl Port {
-    /// new creates a physical port to be managed by the router manager.
+    //! new creates a physical port to be managed by the network manager.
     pub fn new(port_id: PortId, path: &str, v: Version) -> Self {
         //TODO(dpradilla) this has to check port actually exists and reference to it.
         Port { e_id: ElementId::new(v), port_id, path: path.to_string() }
     }
 }
 
-/// PortManager keeps track of physical ports in the system.
+/// `PortManager` keeps track of physical ports in the system.
 pub struct PortManager {
     // ports keeps track of ports in the system and if they are available or not.
     ports: std::collections::HashMap<PortId, (Port, bool)>,
 }
 
 impl PortManager {
-    /// Creates a new PortManager.
+    //! Creates a new PortManager.
     pub fn new() -> Self {
         PortManager { ports: HashMap::new() }
     }
-    /// add_ports adds a physical port to be manager by router manager.
+    /// `add_ports` adds a physical port to be manager by network manager.
     pub fn add_port(&mut self, p: Port) {
         // When adding a new port, is is considered available as no one has yet used it.
         // If the port already exists, update the port, but keep availability unchanged.
@@ -44,20 +44,20 @@ impl PortManager {
             if let Some((_, available)) = self.ports.get(&p.port_id) { *available } else { true };
         self.ports.insert(p.port_id, (p, available));
     }
-    /// remove_ports removes a port from port manager.
+    /// `remove_ports` removes a port from port manager.
     pub fn remove_port(&mut self, id: PortId) -> Option<Port> {
         self.ports.remove(&id).map(|(p, _)| p)
     }
-    /// port gets information about a port in port manager.
+    /// `port` gets information about a port in port manager.
     pub fn port(&self, id: PortId) -> Option<&Port> {
         let (p, _) = self.ports.get(&id)?;
         Some(&p)
     }
-    /// ports returns all ports known by port manager.
+    /// `ports` returns all ports known by port manager.
     pub fn ports(&self) -> impl ExactSizeIterator<Item = &Port> {
         self.ports.iter().map(|(_, (p, _))| p)
     }
-    /// use_port marks a port as in use, and returns true in that case.
+    /// `use_port` marks a port as in use, and returns true in that case.
     /// It returns false if the port is already in use or doesnt exist.
     pub fn use_port(&mut self, id: &PortId) -> bool {
         if let Some((_, available)) = self.ports.get_mut(id) {
@@ -69,7 +69,7 @@ impl PortManager {
         }
         false
     }
-    /// release_port makes a port available if in use.
+    /// `release_port` makes a port available if in use.
     /// it does nothing if the port does not exist.
     pub fn release_port(&mut self, id: &PortId) {
         if let Some((_, available)) = self.ports.get_mut(id) {

@@ -17,7 +17,7 @@ use crate::lifmgr::LIF;
 use crate::{error, UUID};
 use std::collections::HashSet;
 
-/// Manager keeps track of interfaces where a service is enabled
+/// `Manager` keeps track of interfaces where a service is enabled
 /// and verifies conflicting services are not enabled.
 pub struct Manager {
     // dhcp_server has collection of interfaces where DHCP dhcp_server is enabled.
@@ -27,37 +27,37 @@ pub struct Manager {
 }
 
 impl Manager {
-    /// Creates a new Manager.
+    //! Creates a new Manager.
     pub fn new() -> Self {
         Manager { dhcp_server: HashSet::new(), dhcp_client: HashSet::new() }
     }
-    /// enable_server sets dhcp dhcp_server as enabled on indicated interface.
+    /// `enable_server` sets dhcp dhcp_server as enabled on indicated interface.
     pub fn enable_server(&mut self, lif: &LIF) -> error::Result<bool> {
         if self.dhcp_client.contains(&lif.id().uuid) {
-            return Err(error::RouterManager::SERVICE(error::Service::NotEnabled));
+            return Err(error::NetworkManager::SERVICE(error::Service::NotEnabled));
         }
         Ok(self.dhcp_server.insert(lif.id().uuid))
     }
-    /// disable_server sets dhcp dhcp_server as disable on indicated interface.
+    /// `disable_server` sets dhcp dhcp_server as disable on indicated interface.
     pub fn disable_server(&mut self, lif: &LIF) -> bool {
         self.dhcp_server.remove(&lif.id().uuid)
     }
-    /// is_server_enabled returns true if the DHCP dhcp_server is enabled on indicated interface.
+    /// `is_server_enabled` returns true if the DHCP dhcp_server is enabled on indicated interface.
     pub fn is_server_enabled(&mut self, lif: &LIF) -> bool {
         self.dhcp_server.contains(&lif.id().uuid)
     }
-    /// enable_client sets dhcp dhcp_client as enabled on indicated interface.
+    /// `enable_client` sets dhcp dhcp_client as enabled on indicated interface.
     pub fn enable_client(&mut self, lif: &LIF) -> error::Result<bool> {
         if self.dhcp_server.contains(&lif.id().uuid) {
-            return Err(error::RouterManager::SERVICE(error::Service::NotEnabled));
+            return Err(error::NetworkManager::SERVICE(error::Service::NotEnabled));
         }
         Ok(self.dhcp_client.insert(lif.id().uuid))
     }
-    /// disable_client sets dhcp dhcp_client as disable on indicated interface.
+    /// `disable_client` sets dhcp dhcp_client as disable on indicated interface.
     pub fn disable_client(&mut self, lif: &LIF) -> bool {
         self.dhcp_client.remove(&lif.id().uuid)
     }
-    /// is_client_enabled returns true if the DHCP dhcp_client is enabled on indicated interface.
+    /// `is_client_enabled` returns true if the DHCP dhcp_client is enabled on indicated interface.
     pub fn is_client_enabled(&mut self, lif: &LIF) -> bool {
         self.dhcp_client.contains(&lif.id().uuid)
     }
