@@ -15,7 +15,8 @@ TODO(fxbug.dev/32938)
 
 zx_status_t zx_debug_read(zx_handle_t handle,
                           char* buffer,
-                          size_t* buffer_size);
+                          size_t buffer_size,
+                          size_t* actual);
 ```
 
 ## DESCRIPTION

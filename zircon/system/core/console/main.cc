@@ -44,8 +44,9 @@ int main(int argc, const char** argv) {
   zx::resource root_resource(GetRootResource());
   // Provide a RxSource that grabs the data from the kernel serial connection
   Console::RxSource rx_source = [root_resource = std::move(root_resource)](uint8_t* byte) {
-    size_t length = 1;
-    zx_status_t status = zx_debug_read(root_resource.get(), reinterpret_cast<char*>(byte), &length);
+    size_t length = 0;
+    zx_status_t status =
+        zx_debug_read(root_resource.get(), reinterpret_cast<char*>(byte), sizeof(*byte), &length);
     if (status == ZX_ERR_NOT_SUPPORTED) {
       // Suppress the error print in this case.  No console on this machine.
       return status;

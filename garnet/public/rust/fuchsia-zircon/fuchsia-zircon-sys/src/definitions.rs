@@ -601,7 +601,8 @@ extern {
     pub fn zx_debug_read(
         handle: zx_handle_t,
         buffer: *mut u8,
-        buffer_size: *mut usize
+        buffer_size: usize,
+        actual: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_debug_write(

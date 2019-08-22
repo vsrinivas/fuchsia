@@ -31,7 +31,8 @@
 constexpr uint32_t kMaxDebugWriteSize = 256u;
 
 // zx_status_t zx_debug_read
-zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, user_inout_ptr<size_t> len) {
+zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t max_len,
+                           user_out_ptr<size_t> len) {
   LTRACEF("ptr %p\n", ptr.get());
 
   // TODO(ZX-971): finer grained validation
@@ -40,15 +41,8 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, user_inou
     return status;
   }
 
-  // get the number of bytes the user wants us to read
-  size_t readlen;
-  status = len.copy_from_user(&readlen);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   size_t idx = 0;
-  for (; idx < readlen; ++idx) {
+  for (; idx < max_len; ++idx) {
     int intc = getchar();
     if (intc < 0) {
       return intc;

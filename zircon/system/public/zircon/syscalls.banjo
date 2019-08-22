@@ -879,12 +879,9 @@ protocol Api {
     //
 
     [rights="handle must have resource kind ZX_RSRC_KIND_ROOT.",
-     argtype="buffer OUT",
-     argtype="buffer_size INOUT"]
-    // TODO(banjo): size of buffer being buffer_size sems odd, but that's what
-    // that abigen says, maybe it's special cased to dereference.
-    debug_read(handle<resource> handle, string:buffer_size buffer, array<usize>:1 buffer_size) ->
-        (zx.status status);
+     argtype="buffer OUT"]
+    debug_read(handle<resource> handle, string:buffer_size buffer, usize buffer_size) ->
+        (zx.status status, usize actual);
 
     [argtype="buffer IN"]
     debug_write(string:buffer_size buffer, usize buffer_size) -> (zx.status status);

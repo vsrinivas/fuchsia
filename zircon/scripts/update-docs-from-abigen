@@ -631,7 +631,7 @@ def build_if_out_of_date(abigen, json):
         print('%s out of date vs %s, running `fx build`\n'
               'This will only work if using out/default and configured for x64.'
               % (json, abigen))
-        subprocess.check_call('fx', 'build')
+        subprocess.check_call(['fx', 'build'])
         if not is_up_to_date(abigen, json):
             print '%s still out of date relative to %s!' % (json, abigen)
             raise SystemExit()
