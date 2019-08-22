@@ -4,24 +4,23 @@
 
 #include "netsvc.h"
 
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-
-#include <inet6/inet6.h>
-#include <inet6/netifc.h>
-
-#include <lib/fdio/io.h>
-#include <lib/fdio/spawn.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/time.h>
+
+#include <inet6/inet6.h>
+#include <inet6/netifc.h>
 
 #include "args.h"
 #include "debuglog.h"
@@ -106,6 +105,12 @@ int main(int argc, char** argv) {
     printf("netsvc: looking for interface %s\n", interface);
   }
 
+  printf("netsvc: nodename='%s'\n", g_nodename);
+  if (!should_advertise) {
+    printf("netsvc: will not advertise\n");
+    return 0;
+  }
+
   for (;;) {
     if (netifc_open(interface) != 0) {
       printf("netsvc: fatal error initializing network\n");
@@ -116,10 +121,6 @@ int main(int argc, char** argv) {
       printf("%szedboot: version: %s\n\n", zedboot_banner, BOOTLOADER_VERSION);
     }
 
-    printf("netsvc: nodename='%s'\n", g_nodename);
-    if (!should_advertise) {
-      printf("netsvc: will not advertise\n");
-    }
     printf("netsvc: start\n");
     for (;;) {
       if (g_netbootloader && should_advertise) {

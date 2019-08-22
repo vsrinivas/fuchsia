@@ -9,6 +9,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -136,21 +137,22 @@ TEST(AtExit, ExitInAccept) {
   };
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  EXPECT_OK(fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr,
+  ASSERT_OK(fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr,
                            sizeof(actions) / sizeof(fdio_spawn_action_t), actions,
-                           process.reset_and_get_address(), err_msg));
+                           process.reset_and_get_address(), err_msg),
+            "%s", err_msg);
 
   // Wait until the child has let us know that it is exiting.
-  EXPECT_OK(zx_object_wait_one(server_handle, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr));
+  ASSERT_OK(zx_object_wait_one(server_handle, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, nullptr));
   // Close the channel to unblock the child's Close call.
-  EXPECT_OK(zx_handle_close(server_handle));
+  ASSERT_OK(zx_handle_close(server_handle));
 
   // Verify that the child didn't crash.
-  EXPECT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr), "%s", err_msg);
+  ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
   sync_completion_signal(&server.accept_end_);
   zx_info_process_t proc_info;
   ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
-  EXPECT_EQ(proc_info.return_code, 0);
+  ASSERT_EQ(proc_info.return_code, 0);
 }
 
 }  // namespace

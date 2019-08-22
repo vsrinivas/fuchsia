@@ -3,12 +3,37 @@
 // found in the LICENSE file.
 
 #include "../args.h"
+
+#include <lib/fdio/spawn.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/process.h>
+#include <zircon/processargs.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
 constexpr char kInterface[] = "/dev/whatever/whatever";
 constexpr char kNodename[] = "some-four-word-name";
 constexpr char kEthDir[] = "/dev";
+
+TEST(ArgsTest, NetsvcNoArgsExits) {
+  const char* root_dir = getenv("TEST_ROOT_DIR");
+  if (root_dir == nullptr) {
+    root_dir = "";
+  }
+  const std::string path = std::string(root_dir) + "/bin/netsvc";
+  const char* argv[] = {path.c_str(), nullptr};
+  zx::process process;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  ASSERT_OK(fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr, 0,
+                           nullptr, process.reset_and_get_address(), err_msg),
+            "%s", err_msg);
+
+  ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
+  zx_info_process_t proc_info;
+  ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_EQ(proc_info.return_code, 0);
+}
 
 TEST(ArgsTest, NetsvcNoneProvided) {
   int argc = 1;
