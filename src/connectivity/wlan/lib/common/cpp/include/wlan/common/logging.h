@@ -32,7 +32,6 @@ LOG_CATEGORY(kLogDataHeaderTrace, 18);
 LOG_CATEGORY(kLogDataPacketTrace, 19);
 LOG_CATEGORY(kLogDataBeaconTrace, 20);
 LOG_CATEGORY(kLogWlanFrameTrace, 21);
-LOG_CATEGORY(kLogFinspect, 22);  // Packet decoder log
 LOG_CATEGORY(kLogBss, 23);
 LOG_CATEGORY(kLogPs, 24);
 LOG_CATEGORY(kLogClt, 25);
@@ -44,10 +43,7 @@ LOG_CATEGORY(kLogMinstrel, 28);
 
 // Set this to tune log output
 constexpr uint64_t kLogLevel = kLogInfos | kLogBuffer;
-constexpr bool kFinspectEnabled = kLogLevel & kLogFinspect;
 constexpr bool kBufferDebugEnabled = kLogLevel & kLogBuffer;
-
-#define finspect(args...) wlogf(wlan::kLogFinspect, "[finspect] ", args)
 
 #define wlogf(level, level_prefix, args...)    \
   do {                                         \

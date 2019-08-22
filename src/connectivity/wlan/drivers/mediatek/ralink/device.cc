@@ -4,14 +4,22 @@
 
 #include "device.h"
 
-#include "ralink.h"
-
-#include <ddk/protocol/usb.h>
-#include <fbl/algorithm.h>
+#include <endian.h>
+#include <inttypes.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/vmo.h>
+#include <zircon/assert.h>
+#include <zircon/hw/usb.h>
+#include <zircon/status.h>
+
+#include <algorithm>
+#include <cstdio>
+#include <iterator>
+
+#include <ddk/protocol/usb.h>
+#include <fbl/algorithm.h>
 #include <usb/usb-request.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/cipher.h>
@@ -21,16 +29,8 @@
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/assert.h>
-#include <zircon/hw/usb.h>
-#include <zircon/status.h>
 
-#include <endian.h>
-#include <inttypes.h>
-
-#include <algorithm>
-#include <cstdio>
-#include <iterator>
+#include "ralink.h"
 
 #define RALINK_DUMP_EEPROM 0
 #define RALINK_DUMP_RX 0
@@ -3209,9 +3209,6 @@ static void dump_rx(usb_request_t* request, RxInfo rx_info, RxDesc rx_desc, Rxwi
          rxwi1.seq(), rxwi1.mcs(), rxwi1.bw(), rxwi1.sgi(), rxwi1.stbc(), rxwi1.phy_mode());
   debugf("  rxwi2 : rssi0=%u rssi1=%u rssi2=%u\n", rxwi2.rssi0(), rxwi2.rssi1(), rxwi2.rssi2());
   debugf("  rxwi3 : snr0=%u snr1=%u\n", rxwi3.snr0(), rxwi3.snr1());
-
-  finspect("[Ralink] Inbound USB request:\n");
-  finspect("  Dump: %s\n", wlan::debug::HexDump(data, request->response.actual).c_str());
 #endif  // RALINK_DUMP_RX
 }
 
@@ -4249,12 +4246,6 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
   std::memset(dest + payload_len, 0, extra_pad_len);
   payload_len += extra_pad_len;
 
-  finspect(
-      "[ralink] WriteBulkout mpdu_len:%zu head_len:%zu tail_len_eff:%u frame_hdr_len:%u "
-      "l2pad_len:%u aggr_pad_len:%zu extra_pad_len:%zu payload_len:%zu\n",
-      GetMpduLen(wlan_pkt), head_len, tail_len_eff, frame_hdr_len, l2pad_len, aggregate_pad_len,
-      extra_pad_len, payload_len);
-
   return payload_len;
 }
 
@@ -5255,10 +5246,6 @@ size_t Device::GetBulkoutAggrPayloadLen(const wlan_tx_packet_t& wlan_pkt) {
   auto aggr_payload_len = GetTxwiLen() + mpdu_hdr_len + l2pad_len + msdu_len;
   aggr_payload_len = ROUNDUP(aggr_payload_len, 4);
 
-  finspect(
-      "[ralink] head:%zu tail_eff:%u mpdu_hdr:%u msdu_len:%zu l2pad_len:%zu txwi:%zu "
-      "aggr_payload_len:%zu\n",
-      head_len, tail_len_eff, mpdu_hdr_len, msdu_len, l2pad_len, GetTxwiLen(), aggr_payload_len);
   return aggr_payload_len;
 }
 
@@ -5303,7 +5290,6 @@ size_t Device::GetL2PadLen(const wlan_tx_packet_t& wlan_pkt) {
   auto frame_hdr_len = GetMacHdrLength(head_data, head_len);
   auto l2pad_len = ROUNDUP(frame_hdr_len, 4) - frame_hdr_len;
 
-  finspect("[ralink] L2padding frame_hdr:%u l2pad:%u\n", frame_hdr_len, l2pad_len);
   return l2pad_len;
 }
 

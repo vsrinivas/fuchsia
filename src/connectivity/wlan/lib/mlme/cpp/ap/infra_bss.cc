@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/channel.h>
 #include <wlan/mlme/ap/infra_bss.h>
@@ -12,8 +15,6 @@
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 namespace wlan {
 
@@ -467,11 +468,6 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
   w.Write(eth_frame.body_data());
 
   packet->set_len(w.WrittenBytes());
-
-  finspect("Outbound data frame: len %zu\n", w.WrittenBytes());
-  finspect("  wlan hdr: %s\n", debug::Describe(*data_hdr).c_str());
-  finspect("  llc  hdr: %s\n", debug::Describe(*llc_hdr).c_str());
-  finspect("  frame   : %s\n", debug::HexDump(packet->data(), packet->len()).c_str());
 
   // Ralink appears to setup BlockAck session AND AMPDU handling
   // TODO(porce): Use a separate sequence number space in that case

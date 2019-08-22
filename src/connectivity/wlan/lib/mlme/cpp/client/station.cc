@@ -143,9 +143,6 @@ zx_status_t Station::HandleMgmtFrame(MgmtFrame<>&& frame) {
 
 zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
   auto data_frame = frame.View();
-  if (kFinspectEnabled) {
-    DumpDataFrame(data_frame);
-  }
 
   WLAN_STATS_INC(data_frame.in);
   if (ShouldDropDataFrame(data_frame)) {
@@ -348,7 +345,6 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  finspect("Outbound Mgmt Frame (AssocReq): %s\n", debug::Describe(*mgmt_hdr).c_str());
   zx_status_t status = SendMgmtFrame(std::move(packet));
   if (status != ZX_OK) {
     errorf("could not send assoc packet: %d\n", status);
@@ -557,15 +553,9 @@ zx_status_t Station::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
   auto action_frame = frame.View().NextFrame();
   if (auto action_ba_frame = action_frame.CheckBodyType<ActionFrameBlockAck>().CheckLength()) {
     auto ba_frame = action_ba_frame.NextFrame();
-    if (auto add_ba_resp_frame = ba_frame.CheckBodyType<AddBaResponseFrame>().CheckLength()) {
-      finspect("Inbound ADDBA Resp frame: len %zu\n", add_ba_resp_frame.body_len());
-      finspect("  addba resp: %s\n", debug::Describe(*add_ba_resp_frame.body()).c_str());
-
+    if (auto _add_ba_resp_frame = ba_frame.CheckBodyType<AddBaResponseFrame>().CheckLength()) {
       // TODO(porce): Handle AddBaResponses and keep the result of negotiation.
     } else if (auto add_ba_req_frame = ba_frame.CheckBodyType<AddBaRequestFrame>().CheckLength()) {
-      finspect("Inbound ADDBA Req frame: len %zu\n", add_ba_req_frame.body_len());
-      finspect("  addba req: %s\n", debug::Describe(*add_ba_req_frame.body()).c_str());
-
       return HandleAddBaRequest(*add_ba_req_frame.body());
     }
   }
@@ -620,9 +610,6 @@ zx_status_t Station::HandleAddBaRequest(const AddBaRequestFrame& addbareq) {
   addbaresp_hdr->timeout = addbareq.timeout;
 
   packet->set_len(w.WrittenBytes());
-
-  finspect("Outbound ADDBA Resp frame: len %zu\n", w.WrittenBytes());
-  finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp_hdr).c_str());
 
   auto status = SendMgmtFrame(std::move(packet));
   if (status != ZX_OK) {
@@ -766,9 +753,6 @@ zx_status_t Station::SendAddBaRequestFrame() {
 
   packet->set_len(w.WrittenBytes());
 
-  finspect("Outbound ADDBA Req frame: len %zu\n", w.WrittenBytes());
-  finspect("  addba req: %s\n", debug::Describe(*addbareq_hdr).c_str());
-
   auto status = SendMgmtFrame(std::move(packet));
   if (status != ZX_OK) {
     errorf("could not send AddBaRequest: %d\n", status);
@@ -863,28 +847,6 @@ void Station::BackToMainChannel() {
     timer_mgr_.Schedule(deadline, {}, &auto_deauth_timeout_);
     auto_deauth_last_accounted_ = now;
   }
-}
-
-void Station::DumpDataFrame(const DataFrameView<>& frame) {
-  // TODO(porce): Should change the API signature to MSDU
-  auto hdr = frame.hdr();
-
-  bool is_ucast_to_self = self_addr() == hdr->addr1;
-  bool is_mcast = hdr->addr1.IsBcast();
-  bool is_bcast = hdr->addr1.IsMcast();
-  bool is_interesting = is_ucast_to_self || is_mcast || is_bcast;
-  if (!is_interesting) {
-    return;
-  }
-
-  bool from_bss = (join_ctx_->bssid() == hdr->addr2);
-  if (state_ == WlanState::kAssociated && !from_bss) {
-    return;
-  }
-
-  finspect("Inbound data frame: len %zu\n", frame.len());
-  finspect("  wlan hdr: %s\n", debug::Describe(*hdr).c_str());
-  finspect("  msdu    : %s\n", debug::HexDump(frame.body_data()).c_str());
 }
 
 zx_status_t Station::SendCtrlFrame(fbl::unique_ptr<Packet> packet) {

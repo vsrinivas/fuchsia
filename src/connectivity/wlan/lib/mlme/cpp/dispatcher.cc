@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/minstrel/cpp/fidl.h>
+#include <fuchsia/wlan/mlme/c/fidl.h>
+#include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <zircon/fidl.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
+
 #include <atomic>
 #include <cinttypes>
 #include <cstring>
@@ -9,9 +16,6 @@
 
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/wlan/minstrel/cpp/fidl.h>
-#include <fuchsia/wlan/mlme/c/fidl.h>
-#include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/mac_frame.h>
@@ -25,9 +29,6 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/fidl.h>
-#include <zircon/status.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -49,8 +50,6 @@ zx_status_t Dispatcher::HandlePacket(fbl::unique_ptr<Packet> packet) {
 
   ZX_DEBUG_ASSERT(packet != nullptr);
   ZX_DEBUG_ASSERT(packet->peer() != Packet::Peer::kUnknown);
-
-  finspect("Packet: %s\n", debug::Describe(*packet).c_str());
 
   WLAN_STATS_INC(any_packet.in);
 

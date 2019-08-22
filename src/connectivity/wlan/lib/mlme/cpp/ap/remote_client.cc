@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/status.h>
+
 #include <type_traits>
 
 #include <ddk/hw/wlan/wlaninfo.h>
@@ -17,7 +19,6 @@
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/service.h>
 #include <wlan/protocol/info.h>
-#include <zircon/status.h>
 
 namespace wlan {
 
@@ -676,13 +677,9 @@ void AssociatedState::HandleActionFrame(MgmtFrame<ActionFrame>&& frame) {
   auto action_frame = frame.View().NextFrame();
   if (auto action_ba_frame = action_frame.CheckBodyType<ActionFrameBlockAck>().CheckLength()) {
     auto ba_frame = action_ba_frame.NextFrame();
-    if (auto add_ba_resp_frame = ba_frame.CheckBodyType<AddBaResponseFrame>().CheckLength()) {
-      finspect("Inbound ADDBA Resp frame: len %zu\n", add_ba_resp_frame.body_len());
-      finspect("  addba resp: %s\n", debug::Describe(*add_ba_resp_frame.body()).c_str());
+    if (auto _add_ba_resp_frame = ba_frame.CheckBodyType<AddBaResponseFrame>().CheckLength()) {
       // TODO(porce): Handle AddBaResponses and keep the result of negotiation.
     } else if (auto add_ba_req_frame = ba_frame.CheckBodyType<AddBaRequestFrame>().CheckLength()) {
-      finspect("Inbound ADDBA Req frame: len %zu\n", add_ba_req_frame.body_len());
-      finspect("  addba req: %s\n", debug::Describe(*add_ba_req_frame.body()).c_str());
       client_->SendAddBaResponse(*add_ba_req_frame.body());
     }
   }
@@ -969,9 +966,6 @@ zx_status_t RemoteClient::SendAddBaRequest() {
 
   packet->set_len(w.WrittenBytes());
 
-  finspect("Outbound ADDBA Req frame: len %zu\n", w.WrittenBytes());
-  finspect("  addba req: %s\n", debug::Describe(*addbareq_hdr).c_str());
-
   auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
   if (status != ZX_OK) {
     errorf("[client] [%s] could not send AddbaRequest: %d\n", addr_.ToString().c_str(), status);
@@ -1016,9 +1010,6 @@ zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
   addbaresp_hdr->timeout = req.timeout;
 
   packet->set_len(w.WrittenBytes());
-
-  finspect("Outbound ADDBA Resp frame: len %zu\n", w.WrittenBytes());
-  finspect("Outbound Mgmt Frame(ADDBA Resp): %s\n", debug::Describe(*addbaresp_hdr).c_str());
 
   auto status = bss_->SendMgmtFrame(MgmtFrame<>(std::move(packet)));
   if (status != ZX_OK) {
