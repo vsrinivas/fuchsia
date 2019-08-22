@@ -613,12 +613,12 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   return ZX_OK;
 }
 
-// Number of pages required to identity map 4GiB of memory.
-const size_t kBytesToIdentityMap = 4ull * GB;
-const size_t kNumL2PageTables = kBytesToIdentityMap / (2ull * MB * NO_OF_PT_ENTRIES);
-const size_t kNumL3PageTables = 1;
-const size_t kNumL4PageTables = 1;
-const size_t kTotalPageTableCount = kNumL2PageTables + kNumL3PageTables + kNumL4PageTables;
+// Number of pages required to identity map 8GiB of memory.
+constexpr size_t kBytesToIdentityMap = 8ull * GB;
+constexpr size_t kNumL2PageTables = kBytesToIdentityMap / (2ull * MB * NO_OF_PT_ENTRIES);
+constexpr size_t kNumL3PageTables = 1;
+constexpr size_t kNumL4PageTables = 1;
+constexpr size_t kTotalPageTableCount = kNumL2PageTables + kNumL3PageTables + kNumL4PageTables;
 
 // Allocate `count` pages where no page has a physical address less than
 // `lower_bound`
@@ -639,9 +639,9 @@ static void alloc_pages_greater_than(paddr_t lower_bound, size_t count, paddr_t*
     count -= actual;
     lower_bound += PAGE_SIZE * (actual + 1);
 
-    // If we're past the 4GiB mark and still trying to allocate, just give
+    // If we're past the 8GiB mark and still trying to allocate, just give
     // up.
-    if (lower_bound >= (4 * GB)) {
+    if (lower_bound >= (kBytesToIdentityMap)) {
       panic("failed to allocate page tables for mexec");
     }
   }
@@ -680,7 +680,7 @@ void platform_mexec_prep(uintptr_t new_bootimage_addr, size_t new_bootimage_len)
   static_assert(kNumL3PageTables == 1, "Only 1 L3 page table is supported at this time.");
   static_assert(kNumL4PageTables == 1, "Only 1 L4 page table is supported at this time.");
 
-  // Identity map the first 4GiB of RAM
+  // Identity map the first 8GiB of RAM
   mexec_identity_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "x86-64 mexec 1:1");
   DEBUG_ASSERT(mexec_identity_aspace);
 
