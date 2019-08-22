@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{proxies::player::*, services::publisher::*};
+use crate::{proxies::player::*, services::discovery::*};
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media_sessions2::*;
 

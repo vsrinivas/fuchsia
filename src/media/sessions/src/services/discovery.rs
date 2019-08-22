@@ -6,17 +6,22 @@ mod player_event;
 mod watcher;
 
 use self::{player_event::PlayerEvent, watcher::*};
-use crate::{
-    mpmc,
-    proxies::player::Player,
-    services::publisher::{NewPlayer, ValidPlayerRegistration},
-    spawn_log_error, Ref, Result,
-};
+use crate::{proxies::player::Player, spawn_log_error, Ref, Result};
+use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_media_sessions2::*;
+use fidl_table_validation::*;
 use fuchsia_syslog::fx_log_info;
 use futures::{self, channel::mpsc, prelude::*, stream::FuturesUnordered};
+use mpmc;
 use rand::prelude::*;
 use std::collections::hash_map::*;
+use std::convert::TryFrom;
+
+#[derive(Debug, Clone, ValidFidlTable)]
+#[fidl_table_src(PlayerRegistration)]
+pub struct ValidPlayerRegistration {
+    pub domain: String,
+}
 
 #[derive(Debug)]
 pub struct RegisteredPlayer {
@@ -25,14 +30,28 @@ pub struct RegisteredPlayer {
     active: bool,
 }
 
+impl RegisteredPlayer {
+    pub fn new(
+        client_end: ClientEnd<PlayerMarker>,
+        registration: PlayerRegistration,
+    ) -> Result<Self> {
+        let proxy = client_end.into_proxy()?;
+        Ok(Self {
+            player: Player::new(proxy),
+            registration: ValidPlayerRegistration::try_from(registration)?,
+            active: false,
+        })
+    }
+}
+
 /// Implements `fuchsia.media.session2.Discovery`.
 pub struct Discovery {
-    player_stream: mpsc::Receiver<NewPlayer>,
+    player_stream: mpsc::Receiver<RegisteredPlayer>,
     players: Ref<HashMap<u64, RegisteredPlayer>>,
 }
 
 impl Discovery {
-    pub fn new(player_stream: mpsc::Receiver<NewPlayer>) -> Self {
+    pub fn new(player_stream: mpsc::Receiver<RegisteredPlayer>) -> Self {
         Self { player_stream, players: Ref::default() }
     }
 
@@ -89,18 +108,13 @@ impl Discovery {
                 new_player = self.player_stream.select_next_some() => {
                     // TODO(turnage): Care about collisions.
                     let id = random();
-                    let registered_player = RegisteredPlayer {
-                        player: Player::new(new_player.proxy),
-                        registration: new_player.registration,
-                        active: false,
-                    };
-                    player_updates.push(registered_player.player.poll(id));
+                    player_updates.push(new_player.player.poll(id));
                     sender.send((id, PlayerEvent::Updated{
-                        delta: registered_player.player.state().clone(),
-                        registration: Some(registered_player.registration.clone()),
+                        delta: new_player.player.state().clone(),
+                        registration: Some(new_player.registration.clone()),
                         active: None,
                     })).await;
-                    self.players.lock().await.insert(id, registered_player);
+                    self.players.lock().await.insert(id, new_player);
                 }
                 // A player answered a hanging get for its status.
                 player_update = player_updates.select_next_some() => {

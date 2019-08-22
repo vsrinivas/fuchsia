@@ -144,7 +144,9 @@ impl Player {
         async move {
             (
                 id,
-                proxy.watch_info_change().await
+                proxy
+                    .watch_info_change()
+                    .await
                     .map_err(Into::into)
                     .and_then(|delta| ValidPlayerInfoDelta::try_from(delta).map_err(Into::into)),
             )
