@@ -23,6 +23,10 @@ class {{ .Name }} final {
   {{ .Name }}({{ .Name }}&&);
   {{ .Name }}& operator=({{ .Name }}&&);
 
+  {{ range .Members }}
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.Identifier }}&&);
+  {{- end }}
+
   {{/* There are two different tag types here:
 
     * fidl_xunion_tag_t: This is an "open" enum that encompasses all possible ordinal values
@@ -200,6 +204,14 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   }
   return *this;
 }
+
+{{ range .Members -}}
+{{ $.Name }} {{ $.Name }}::With{{ .UpperCamelCaseName }}({{ .Type.Identifier }}&& val) {
+  {{ $.Name }} result;
+  result.set_{{ .Name }}(std::move(val));
+  return result;
+}
+{{ end }}
 
 void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();

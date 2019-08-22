@@ -157,6 +157,10 @@ type XUnionMember struct {
 	Offset      int
 }
 
+func (xum XUnionMember) UpperCamelCaseName() string {
+	return common.ToUpperCamelCase(xum.Name)
+}
+
 type Table struct {
 	types.Attributes
 	Namespace      string

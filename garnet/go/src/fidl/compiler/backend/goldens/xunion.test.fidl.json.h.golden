@@ -40,6 +40,11 @@ class StrictSimpleXUnion final {
   StrictSimpleXUnion(StrictSimpleXUnion&&);
   StrictSimpleXUnion& operator=(StrictSimpleXUnion&&);
 
+  
+  static StrictSimpleXUnion WithI(int32_t&&);
+  static StrictSimpleXUnion WithF(float&&);
+  static StrictSimpleXUnion WithS(::std::string&&);
+
   enum : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
@@ -134,6 +139,9 @@ class StrictBoundedXUnion final {
   StrictBoundedXUnion(StrictBoundedXUnion&&);
   StrictBoundedXUnion& operator=(StrictBoundedXUnion&&);
 
+  
+  static StrictBoundedXUnion WithV(::std::vector<uint8_t>&&);
+
   enum : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
@@ -203,6 +211,10 @@ class OlderSimpleUnion final {
 
   OlderSimpleUnion(OlderSimpleUnion&&);
   OlderSimpleUnion& operator=(OlderSimpleUnion&&);
+
+  
+  static OlderSimpleUnion WithI(int64_t&&);
+  static OlderSimpleUnion WithF(float&&);
 
   enum : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
@@ -478,6 +490,11 @@ class NewerSimpleUnion final {
   NewerSimpleUnion(NewerSimpleUnion&&);
   NewerSimpleUnion& operator=(NewerSimpleUnion&&);
 
+  
+  static NewerSimpleUnion WithI(int64_t&&);
+  static NewerSimpleUnion WithS(::std::string&&);
+  static NewerSimpleUnion WithV(::std::vector<::std::string>&&);
+
   enum : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,
   };
@@ -605,6 +622,9 @@ class XUnionContainingEmptyStruct final {
 
   XUnionContainingEmptyStruct(XUnionContainingEmptyStruct&&);
   XUnionContainingEmptyStruct& operator=(XUnionContainingEmptyStruct&&);
+
+  
+  static XUnionContainingEmptyStruct WithEmpty(class Empty&&);
 
   enum : fidl_xunion_tag_t {
     kEmpty = kFidlXUnionEmptyTag,

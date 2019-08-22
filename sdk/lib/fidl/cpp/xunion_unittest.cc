@@ -117,5 +117,26 @@ TEST(XUnion, FlexibleXUnionsEquality) {
   EXPECT_FALSE(fidl::Equals(xu, xu4));
 }
 
+TEST(XUnion, XUnionFactoryFunctions) {
+  using test::misc::SampleXUnion;
+  using test::misc::SimpleTable;
+
+  SampleXUnion prim_xu = SampleXUnion::WithI(123);
+
+  EXPECT_EQ(prim_xu.i(), 123);
+  EXPECT_EQ(prim_xu.Which(), SampleXUnion::Tag::kI);
+  EXPECT_EQ(prim_xu.Ordinal(), SampleXUnion::Tag::kI);
+  EXPECT_EQ(prim_xu.UnknownData(), nullptr);
+
+  // Test passing an object with no copy constructor (only move) to the
+  // factory function.
+  SimpleTable tbl;
+  SampleXUnion tbl_xu = SampleXUnion::WithSt(std::move(tbl));
+
+  EXPECT_EQ(tbl_xu.Which(), SampleXUnion::Tag::kSt);
+  EXPECT_EQ(tbl_xu.Ordinal(), SampleXUnion::Tag::kSt);
+  EXPECT_EQ(tbl_xu.UnknownData(), nullptr);
+}
+
 }  // namespace
 }  // namespace fidl

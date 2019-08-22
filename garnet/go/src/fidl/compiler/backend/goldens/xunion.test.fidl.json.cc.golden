@@ -54,6 +54,23 @@ StrictSimpleXUnion& StrictSimpleXUnion::operator=(StrictSimpleXUnion&& other) {
   return *this;
 }
 
+StrictSimpleXUnion StrictSimpleXUnion::WithI(int32_t&& val) {
+  StrictSimpleXUnion result;
+  result.set_i(std::move(val));
+  return result;
+}
+StrictSimpleXUnion StrictSimpleXUnion::WithF(float&& val) {
+  StrictSimpleXUnion result;
+  result.set_f(std::move(val));
+  return result;
+}
+StrictSimpleXUnion StrictSimpleXUnion::WithS(::std::string&& val) {
+  StrictSimpleXUnion result;
+  result.set_s(std::move(val));
+  return result;
+}
+
+
 void StrictSimpleXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
@@ -221,6 +238,13 @@ StrictBoundedXUnion& StrictBoundedXUnion::operator=(StrictBoundedXUnion&& other)
   return *this;
 }
 
+StrictBoundedXUnion StrictBoundedXUnion::WithV(::std::vector<uint8_t>&& val) {
+  StrictBoundedXUnion result;
+  result.set_v(std::move(val));
+  return result;
+}
+
+
 void StrictBoundedXUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
@@ -363,6 +387,18 @@ OlderSimpleUnion& OlderSimpleUnion::operator=(OlderSimpleUnion&& other) {
   }
   return *this;
 }
+
+OlderSimpleUnion OlderSimpleUnion::WithI(int64_t&& val) {
+  OlderSimpleUnion result;
+  result.set_i(std::move(val));
+  return result;
+}
+OlderSimpleUnion OlderSimpleUnion::WithF(float&& val) {
+  OlderSimpleUnion result;
+  result.set_f(std::move(val));
+  return result;
+}
+
 
 void OlderSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -781,6 +817,23 @@ NewerSimpleUnion& NewerSimpleUnion::operator=(NewerSimpleUnion&& other) {
   return *this;
 }
 
+NewerSimpleUnion NewerSimpleUnion::WithI(int64_t&& val) {
+  NewerSimpleUnion result;
+  result.set_i(std::move(val));
+  return result;
+}
+NewerSimpleUnion NewerSimpleUnion::WithS(::std::string&& val) {
+  NewerSimpleUnion result;
+  result.set_s(std::move(val));
+  return result;
+}
+NewerSimpleUnion NewerSimpleUnion::WithV(::std::vector<::std::string>&& val) {
+  NewerSimpleUnion result;
+  result.set_v(std::move(val));
+  return result;
+}
+
+
 void NewerSimpleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
   const size_t handles_before = encoder->CurrentHandleCount();
@@ -987,6 +1040,13 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(XUnionContai
   }
   return *this;
 }
+
+XUnionContainingEmptyStruct XUnionContainingEmptyStruct::WithEmpty(class Empty&& val) {
+  XUnionContainingEmptyStruct result;
+  result.set_empty(std::move(val));
+  return result;
+}
+
 
 void XUnionContainingEmptyStruct::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
