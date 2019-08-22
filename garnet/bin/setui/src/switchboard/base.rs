@@ -17,6 +17,7 @@ pub enum SettingType {
     Unknown,
     Display,
     Intl,
+    System,
 }
 
 /// Returns all known setting types. New additions to SettingType should also
@@ -25,6 +26,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     let mut set = HashSet::new();
     set.insert(SettingType::Display);
     set.insert(SettingType::Intl);
+    set.insert(SettingType::System);
 
     set
 }
@@ -36,6 +38,7 @@ pub enum SettingRequest {
     Get,
     SetBrightness(f32),
     SetAutoBrightness(bool),
+    SetLoginOverrideMode(SystemLoginOverrideMode),
     SetTimeZone(String),
 }
 
@@ -50,6 +53,18 @@ pub struct IntlInfo {
     pub time_zone_id: String,
 }
 
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum SystemLoginOverrideMode {
+    None,
+    AutologinGuest,
+    AuthProvider,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct SystemInfo {
+    pub login_override_mode: SystemLoginOverrideMode,
+}
+
 /// The possible responses to a SettingRequest.
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingResponse {
@@ -57,6 +72,7 @@ pub enum SettingResponse {
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(BrightnessInfo),
     Intl(IntlInfo),
+    System(SystemInfo),
 }
 
 /// Description of an action request on a setting. This wraps a

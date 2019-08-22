@@ -19,6 +19,8 @@ use {
     crate::setting_adapter::{MutationHandler, SettingAdapter},
     crate::switchboard::base::{get_all_setting_types, SettingAction, SettingType},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
+    crate::system::spawn_system_controller,
+    crate::system::spawn_system_fidl_handler,
     failure::Error,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::*,
@@ -30,7 +32,6 @@ use {
     setui_handler::SetUIHandler,
     std::collections::HashSet,
     std::sync::{Arc, RwLock},
-    system_handler::SystemStreamHandler,
 };
 
 mod common;
@@ -44,7 +45,7 @@ mod registry;
 mod setting_adapter;
 mod setui_handler;
 mod switchboard;
-mod system_handler;
+mod system;
 
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["setui-service"]).expect("Can't init logger");
@@ -83,7 +84,6 @@ fn create_fidl_service<'a>(
     let registry_handle = RegistryImpl::create(event_tx, action_rx);
 
     let handler = Arc::new(SetUIHandler::new());
-    let system_handler = Arc::new(SystemStreamHandler::new(handler.clone()));
 
     // TODO(SU-210): Remove once other adapters are ready.
     handler.register_adapter(Box::new(SettingAdapter::new(
@@ -112,19 +112,6 @@ fn create_fidl_service<'a>(
         fasync::spawn(async move {
             handler_clone
                 .handle_stream(stream)
-                .await
-                .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
-        });
-    });
-
-    // Register for the new settings APIs as well.
-
-    service_dir.add_fidl_service(move |stream: SystemRequestStream| {
-        let system_handler_clone = system_handler.clone();
-        fx_log_info!("Connecting to System");
-        fasync::spawn(async move {
-            system_handler_clone
-                .handle_system_stream(stream)
                 .await
                 .unwrap_or_else(|e| error!("Failed to spawn {:?}", e))
         });
@@ -159,6 +146,19 @@ fn create_fidl_service<'a>(
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: IntlRequestStream| {
             IntlFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
+    if components.contains(&SettingType::System) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(switchboard::base::SettingType::System, spawn_system_controller())
+            .unwrap();
+
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: SystemRequestStream| {
+            spawn_system_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
 }
@@ -320,5 +320,39 @@ mod tests {
             settings.time_zone_id,
             Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() })
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_system() {
+        const STARTING_LOGIN_MODE: fidl_fuchsia_settings::LoginOverride =
+            fidl_fuchsia_settings::LoginOverride::None;
+        const CHANGED_LOGIN_MODE: fidl_fuchsia_settings::LoginOverride =
+            fidl_fuchsia_settings::LoginOverride::AuthProvider;
+        let mut fs = ServiceFs::new();
+
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::System].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(None))),
+        );
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
+
+        let system_proxy = env.connect_to_service::<SystemMarker>().unwrap();
+
+        let settings =
+            system_proxy.watch().await.expect("watch completed").expect("watch successful");
+
+        assert_eq!(settings.mode, Some(STARTING_LOGIN_MODE));
+
+        let mut system_settings = SystemSettings::empty();
+        system_settings.mode = Some(CHANGED_LOGIN_MODE);
+        system_proxy.set(system_settings).await.expect("set completed").expect("set successful");
+
+        let settings =
+            system_proxy.watch().await.expect("watch completed").expect("watch successful");
+
+        assert_eq!(settings.mode, Some(CHANGED_LOGIN_MODE));
     }
 }
