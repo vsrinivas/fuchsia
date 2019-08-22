@@ -106,16 +106,21 @@ void FakeEncryptionService::GetChunkingPermutation(
 }
 
 std::string FakeEncryptionService::GetEntryId() {
-  std::string entry_id(kEntryIdSize, '0');
-  return entry_id;
+  std::string counter_str = std::to_string(entry_id_counter_++);
+  std::string padding(kEntryIdSize - counter_str.size(), 0);
+  return fxl::Concatenate({std::move(padding), std::move(counter_str)});
 }
 
 std::string FakeEncryptionService::GetEntryIdForMerge(fxl::StringView entry_name,
                                                       storage::CommitId left_parent_id,
                                                       storage::CommitId right_parent_id,
                                                       fxl::StringView operation_list) {
-  std::string entry_id(kEntryIdSize, '0');
-  return entry_id;
+  std::string inputs =
+      fxl::Concatenate({entry_name, left_parent_id, right_parent_id, operation_list});
+  if (merge_entry_ids_.find(inputs) == merge_entry_ids_.end()) {
+    merge_entry_ids_[inputs] = GetEntryId();
+  }
+  return merge_entry_ids_[inputs];
 }
 
 std::string FakeEncryptionService::EncryptCommitSynchronous(

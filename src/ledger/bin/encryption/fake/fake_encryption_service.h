@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 
 #include <functional>
+#include <map>
 #include <string>
 
 #include "peridot/lib/convert/convert.h"
@@ -76,6 +77,8 @@ class FakeEncryptionService : public EncryptionService {
 
  private:
   async_dispatcher_t* dispatcher_;
+  std::map<std::string, std::string> merge_entry_ids_;
+  uint32_t entry_id_counter_;
 };
 
 }  // namespace encryption
