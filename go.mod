@@ -1,6 +1,7 @@
 module go.fuchsia.dev/tools
 
 require (
+	cloud.google.com/go v0.44.3
 	github.com/google/go-cmp v0.3.1
 	github.com/google/subcommands v1.0.1
 	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
