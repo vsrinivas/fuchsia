@@ -29,20 +29,20 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
 
+#include <lib/zx/time.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
-#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <list>
 
+#include <wlan/common/macaddr.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/info.h>
 
 #include "sim-sta-ifc.h"
 
-namespace wlan {
-namespace simulation {
+namespace wlan::simulation {
 
 // To simulate the physical environment.
 //
@@ -57,22 +57,26 @@ class Environment {
   // Remove a station from the environment.
   void RemoveStation(StationIfc* sta) { stations_.remove(sta); }
 
-  // Begin simulation. Simulation will end when there are no more events pending.
-  void Start();
+  // Begin simulation. Function will return when there are no more events pending.
+  void Run();
 
   // Send a packet into the simulated environment.
   void Tx();
 
-  // Send a beacon. Note that this will (likely) someday be deprecated in favor of Tx().
-  void TxBeacon();
+  // Send a beacon from sender to the rest of the stations. Note that this will (likely) someday
+  // be deprecated in favor of Tx().
+  void TxBeacon(StationIfc* sender, const wlan_channel_t& chan, const wlan_ssid_t& ssid,
+                const common::MacAddr& bssid);
 
-  // Ask for a future notification. Specify sender so we can omit them from the Rx notifications.
-  zx_status_t RequestNotification(StationIfc* sta, uint64_t msec);
+  // Ask for a future notification, time is relative to current time.
+  zx_status_t ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload);
+
+  // Get simulation absolute time
+  zx::time GetTime() { return time_; }
 
  private:
   struct EnvironmentEvent {
-    zx_time_t msec;  // The absolute time to fire
-    enum EnvironmentEventType type;
+    zx::time time;  // The absolute time to fire
     StationIfc* requester;
     void* payload;
   };
@@ -81,13 +85,12 @@ class Environment {
   std::list<StationIfc*> stations_;
 
   // Current time
-  zx_time_t msec_;
+  zx::time time_;
 
   // Future events, sorted by time
   std::list<std::unique_ptr<EnvironmentEvent>> events_;
 };
 
-}  // namespace simulation
-}  // namespace wlan
+}  // namespace wlan::simulation
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_

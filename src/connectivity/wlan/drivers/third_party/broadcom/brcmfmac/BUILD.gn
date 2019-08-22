@@ -132,7 +132,7 @@ source_set("core") {
     "//garnet/lib/wlan/protocol",
 
     # TODO: we should try to refactor Device so this isn't required outside of the :sim target
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env:simenv",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//zircon/public/banjo/ddk.protocol.ethernet",
     "//zircon/public/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async",

@@ -5,14 +5,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_STA_IFC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_STA_IFC_H_
 
+#include <net/ethernet.h>
+
+#include <wlan/common/macaddr.h>
 #include <wlan/protocol/info.h>
 
 namespace wlan::simulation {
-
-enum EnvironmentEventType {
-  kEventDone,    // Simulation has ended -- no more events
-  kEventStaReq,  // Station-requested event
-};
 
 class StationIfc {
  public:
@@ -20,10 +18,11 @@ class StationIfc {
   virtual void Rx(void* pkt) = 0;
 
   // Simplified beacon handler, eventually to be incorporated into Rx() functionality
-  virtual void RxBeacon(wlan_channel_t* channel, wlan_ssid_t* ssid) = 0;
+  virtual void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                        const common::MacAddr& bssid) = 0;
 
   // Receive notification of a simulation event
-  virtual void ReceiveNotification(enum EnvironmentEventType notification_type, void* payload) = 0;
+  virtual void ReceiveNotification(void* payload) = 0;
 };
 
 }  // namespace wlan::simulation

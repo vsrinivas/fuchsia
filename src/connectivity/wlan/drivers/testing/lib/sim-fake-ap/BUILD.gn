@@ -13,7 +13,7 @@ static_library("sim-fake-ap") {
 
   public_deps = [
     "//garnet/lib/wlan/protocol:protocol",
-    "//src/connectivity/wlan/drivers/testing/lib/sim-env:simenv",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//zircon/public/banjo/ddk.hw.wlan.ieee80211",
     "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
   ]

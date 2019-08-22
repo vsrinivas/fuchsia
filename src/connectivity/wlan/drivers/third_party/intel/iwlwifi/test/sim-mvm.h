@@ -28,9 +28,9 @@ class SimMvm : public ::wlan::simulation::StationIfc {
 
   // StationIfc operations
   void Rx(void* pkt) override {}
-  void RxBeacon(wlan_channel_t* channel, wlan_ssid_t* ssid) override {}
-  void ReceiveNotification(enum ::wlan::simulation::EnvironmentEventType notification_type,
-                           void* payload) override {}
+  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
+                const common::MacAddr& bssid) override {}
+  void ReceiveNotification(void* payload) override {}
 
  private:
   ::wlan::simulation::Environment* env_;

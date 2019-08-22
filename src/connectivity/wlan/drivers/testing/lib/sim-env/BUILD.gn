@@ -2,8 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-static_library("simenv") {
+static_library("sim-env") {
   sources = [
+    "sim-env.cc",
     "sim-env.h",
     "sim-sta-ifc.h",
   ]
@@ -14,6 +15,7 @@ static_library("simenv") {
 
   public_deps = [
     "//garnet/lib/wlan/protocol:protocol",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/banjo/ddk.hw.wlan.ieee80211",
     "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
   ]
