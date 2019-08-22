@@ -45,7 +45,11 @@ package("build-info") {
 }
 
 action("latest-commit-date") {
-  visibility = [ ":*", "//build/images:devmgr_config.txt" ]
+  visibility = [
+    ":*",
+    "//build/images:devmgr_config.txt",
+    "//build/images:devmgr_config_prime.txt",
+  ]
 
   # The script at tools/gen-latest-commit-date.sh script runs the following
   # command to compute the latest commit date:

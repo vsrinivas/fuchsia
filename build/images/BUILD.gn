@@ -253,6 +253,7 @@ if (!bootfs_only) {
   action("pkgsvr_index") {
     visibility = [
       ":system_image.manifest",
+      ":system_image_prime.manifest",
       ":update_packages.manifest",
     ]
     testonly = true
@@ -381,7 +382,6 @@ generate_manifest("system_image.manifest") {
               rebase_path(pkgsvr_index, root_build_dir) ]
   }
 }
-
 system_manifest_outputs = get_target_outputs(":system_image.manifest")
 if (bootfs_only) {
   assert(boot_manifest == system_manifest_outputs[0])
@@ -389,6 +389,39 @@ if (bootfs_only) {
   assert(boot_manifest == system_manifest_outputs[2])
 }
 system_build_id_map = system_manifest_outputs[1]
+
+# The prime version of the system_image has an extra "dummy" file.
+# The prime images are used to have an alternate known-compatible OTA
+# target for integration testing.
+action("system_image_prime.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+  script = "manifest.py"
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+
+  deps = [
+    ":system_image.manifest",
+  ]
+  sources = system_manifest_outputs + [
+              "system_image_prime_meta_package.json",
+              "dummy/example.txt",
+            ]
+  args = [
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+    "--rewrite",
+    "meta/package={target}=" +
+        rebase_path("system_image_prime_meta_package.json", root_build_dir),
+    "--manifest",
+    rebase_path(system_manifest_outputs[0], root_build_dir),
+    "--reset-rewrite",
+    "--entry",
+    "data/dummy/example.txt=" +
+        rebase_path("dummy/example.txt", root_build_dir),
+  ]
+}
 
 if (!bootfs_only) {
   # Generate, sign, and seal the system_image package file.
@@ -469,6 +502,17 @@ if (!bootfs_only) {
   ]
 }
 
+# The prime images are used to have an alternate known-compatible OTA
+# target for integration testing.
+if (!bootfs_only) {
+  pm_build_package("system_image_prime.meta") {
+    package_name = "system_image_prime"
+    visibility = [ ":*" ]
+    testonly = true
+    manifest = ":system_image_prime.manifest"
+  }
+}
+
 ###
 ### Zircon Boot Images
 ###
@@ -542,6 +586,7 @@ action("devmgr_config.txt") {
     ":fuchsia.vbmeta",
     ":fuchsia.vbmeta__zbi_props",
     ":fuchsia.vbmeta__vb_desc",
+    ":devmgr_config_prime.txt",
   ]
   testonly = true
 
@@ -624,6 +669,57 @@ action("devmgr_config.txt") {
   ]
 }
 
+# Generate the prime /boot/config/devmgr file. Points to system_image_prime
+# instead of system_image
+# The prime images are used to have an alternate known-compatible OTA
+# target for integration testing.
+action("devmgr_config_prime.txt") {
+  visibility = [
+    ":fuchsia_prime",
+    ":fuchsia_prime.vbmeta",
+    ":fuchsia_prime.vbmeta__zbi_props",
+    ":fuchsia_prime.vbmeta__vb_desc",
+  ]
+  testonly = true
+
+  script = "manifest.py"
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  deps = [
+    ":devmgr_config.txt",
+  ]
+  devmgr_config_outputs = get_target_outputs(":devmgr_config.txt")
+  sources = devmgr_config_outputs
+  args += [
+    "--exclude",
+    "zircon.system.pkgfs.cmd",
+    "--manifest",
+    rebase_path(devmgr_config_outputs[0], root_build_dir),
+    "--reset-exclude",
+  ]
+
+  if (!bootfs_only) {
+    pkgfs = "bin/" + pkgfs_binary_name
+    system_image_merkleroot =
+        "$target_out_dir/system_image_prime.meta/meta.far.merkle"
+
+    deps += [ ":system_image_prime.meta" ]
+    sources += [ system_image_merkleroot ]
+
+    # Add the pkgfs command line, embedding the merkleroot of the system image.
+    args += [
+      "--contents",
+      "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
+      "--entry=${pkgfs}=" +
+          rebase_path(system_image_merkleroot, root_build_dir),
+      "--no-contents",
+      "--reset-rewrite",
+    ]
+  }
+}
+
 generated_file("zxcrypt_config.txt") {
   outputs = [
     "$target_out_dir/$target_name",
@@ -690,6 +786,33 @@ zbi("fuchsia") {
   cmdline_inputs = kernel_cmdline_files
   manifest += bootfs_extra
 }
+
+# Generate the prime fuchsia.zbi.
+# The prime images are used to have an alternate known-compatible OTA
+# target for integration testing.
+zbi("fuchsia_prime") {
+  testonly = true
+
+  deps = [
+    ":devmgr_config_prime.txt",
+    ":fuchsia",
+  ]
+  inputs = get_target_outputs(":fuchsia")
+
+  manifest = []
+  if (!include_devmgr_config_in_vbmeta) {
+    replace = true
+    manifest += [
+      {
+        outputs = [
+          "config/devmgr",
+        ]
+        sources = get_target_outputs(":devmgr_config_prime.txt")
+      },
+    ]
+  }
+}
+
 images += [
   {
     deps = [
@@ -731,6 +854,11 @@ images += [
     ]
   },
 ]
+
+unsigned_zbi_prime = {
+  dep = ":fuchsia_prime"
+  updater = "zbi"
+}
 
 if (custom_signing_script != "") {
   custom_signed_zbi("signed") {
@@ -782,6 +910,42 @@ if (custom_signing_script != "") {
       ]
     },
   ]
+}
+
+# Sign fuchsia_prime.zbi, if neccessary.
+# The prime images are used to have an alternate known-compatible OTA
+# target for integration testing.
+if (custom_signing_script != "") {
+  custom_signed_zbi("fuchsia_prime_signed") {
+    output_name = "fuchsia_prime.zbi"
+    testonly = true
+    deps = [
+      ":fuchsia_prime",
+    ]
+    zbi = get_target_outputs(":fuchsia_prime")
+  }
+  zbi_prime = {
+    dep = ":fuchsia_prime_signed"
+    updater = "zbi.signed"
+  }
+  not_needed([ "unsigned_zbi_prime" ])
+} else if (use_vboot) {
+  # ChromeOS vboot images.
+  vboot("fuchsia_prime_signed") {
+    testonly = true
+    output_name = "fuchsia_prime.zbi"
+    deps = [
+      ":fuchsia_prime",
+    ]
+  }
+
+  zbi_prime = {
+    dep = ":fuchsia_prime_signed"
+    updater = "zbi.signed"
+  }
+  not_needed([ "unsigned_zbi_prime" ])
+} else {
+  zbi_prime = unsigned_zbi_prime
 }
 
 if (use_vbmeta) {
@@ -1626,6 +1790,96 @@ pm_build_package("update.meta") {
   package_name = "update"
 }
 
+###
+### Generate an update package with system_image_prime and fuchsia_prime.
+###
+
+# The prime images are used to have an alternate known-compatible OTA
+# target for integration testing.
+
+update_prime_meta_far_merkle_index =
+    "$target_out_dir/update_prime_meta_far_merkle_index"
+package_metadata_list("update_prime_meta_far_merkle_index") {
+  testonly = true
+  outputs = [
+    update_prime_meta_far_merkle_index,
+  ]
+  data_keys = [ "meta_far_merkle_index_entries" ]
+  deps = [
+    ":base_packages",
+    ":meta_packages",
+  ]
+  if (!bootfs_only) {
+    deps += [ ":system_image_prime.meta" ]
+  }
+}
+
+action("update_prime_packages.manifest") {
+  visibility = [ ":update_prime.manifest" ]
+  testonly = true
+
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  deps = [
+    ":update_prime_meta_far_merkle_index",
+  ]
+  inputs = [
+    update_prime_meta_far_merkle_index,
+  ]
+
+  script = "manifest_content_expand.sh"
+  args = [
+    rebase_path(update_prime_meta_far_merkle_index, root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+action("update_prime.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  script = "manifest.py"
+
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+
+  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+
+  deps = [
+    ":update.manifest",
+    ":update_prime_packages.manifest",
+    zbi_prime.dep,
+  ]
+  update_manifest_outputs = get_target_outputs(":update.manifest")
+  update_prime_packages_manifest_outputs =
+      get_target_outputs(":update_prime_packages.manifest")
+  zbi_outputs = get_target_outputs(zbi_prime.dep)
+
+  sources = update_manifest_outputs
+  args += [
+    "--rewrite",
+    "meta/package={target}=" +
+        rebase_path("update_prime_package.json", root_build_dir),
+    "--rewrite",
+    "packages={target}=" +
+        rebase_path(update_prime_packages_manifest_outputs[0], root_build_dir),
+    "--rewrite",
+    zbi_prime.updater + "={target}=" +
+        rebase_path(zbi_outputs[0], root_build_dir),
+    "--manifest",
+    rebase_path(update_manifest_outputs[0], root_build_dir),
+  ]
+}
+
+pm_build_package("update_prime.meta") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = ":update_prime.manifest"
+  package_name = "update_prime"
+}
+
 # XXX(raggi): The following manifests retain the "meta/" files, resulting in
 # them being added as blobs, which they should not be. A likely better solution
 # here is to teach pm_build_package to produce either a blob manifest or a
@@ -1663,9 +1917,13 @@ package_metadata_list("all_package_manifests.list") {
   deps = [
     ":packages",
     ":update.meta",
+    ":update_prime.meta",
   ]
   if (!bootfs_only) {
-    deps += [ ":system_image.meta" ]
+    deps += [
+      ":system_image.meta",
+      ":system_image_prime.meta",
+    ]
   }
 }
 

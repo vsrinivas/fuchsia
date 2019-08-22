@@ -100,6 +100,10 @@ template("zbi") {
       "--depfile=" + rebase_path(depfile, root_build_dir),
     ]
 
+    if (defined(invoker.replace) && invoker.replace) {
+      args += [ "--replace" ]
+    }
+
     if (!defined(invoker.complete) || invoker.complete) {
       args += [ "--complete=" + current_cpu ]
     }
