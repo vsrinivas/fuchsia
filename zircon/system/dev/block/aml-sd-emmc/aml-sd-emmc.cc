@@ -322,7 +322,8 @@ zx_status_t AmlSdEmmc::SdmmcSetBusFreq(uint32_t freq) {
     clk_src = AmlSdEmmcClock::kFClkDiv2Src;
     clk = AmlSdEmmcClock::kFClkDiv2Freq;
   }
-  clk_div = clk / freq;
+  // Round the divider up so the frequency is rounded down.
+  clk_div = (clk + freq - 1) / freq;
   AmlSdEmmcClock::Get().ReadFrom(&mmio_).set_cfg_div(clk_div).set_cfg_src(clk_src).WriteTo(&mmio_);
   return ZX_OK;
 }

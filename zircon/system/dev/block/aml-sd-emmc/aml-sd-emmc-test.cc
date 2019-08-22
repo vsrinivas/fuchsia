@@ -9,6 +9,8 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zxtest/zxtest.h>
 
+#include "aml-sd-emmc-regs.h"
+
 namespace {
 static constexpr uint32_t kMmioRegCount = 768;
 }  // namespace
@@ -22,8 +24,8 @@ class AmlSdEmmcTest : public AmlSdEmmc {
                   ddk::MmioPinnedBuffer(pinned_mmio),
                   aml_sd_emmc_config_t{
                       .supports_dma = false,
-                      .min_freq = 400000,
-                      .max_freq = 120000000,
+                      .min_freq = 400'000,
+                      .max_freq = 250'000'000,
                       .clock_phases =
                           {
                               .init = {.core_phase = 3, .tx_phase = 0},
@@ -77,6 +79,41 @@ TEST(AmlSdEmmcTest, SetClockPhase) {
   EXPECT_OK(dut.SdmmcSetTiming(SDMMC_TIMING_LEGACY));
 
   ASSERT_NO_FATAL_FAILURES(reg_array[0].VerifyAndClear());
+}
+
+TEST(AmlSdEmmcTest, RoundBusClockDown) {
+  ddk_mock::MockMmioReg reg_array[kMmioRegCount];
+  ddk_mock::MockMmioRegRegion regs(reg_array, sizeof(uint32_t), kMmioRegCount);
+
+  mmio_buffer_t buff = regs.GetMmioBuffer();
+  mmio_pinned_buffer_t pinned_mmio = {
+      .mmio = &buff,
+      .pmt = ZX_HANDLE_INVALID,
+      .paddr = 0x100,
+  };
+
+  AmlSdEmmcTest dut(buff, pinned_mmio);
+
+  EXPECT_OK(dut.SdmmcSetBusFreq(200'000'000));
+  EXPECT_EQ(reg_array[0].Read(), AmlSdEmmcClock::Get()
+                                     .FromValue(0)
+                                     .set_cfg_div(5)
+                                     .set_cfg_src(AmlSdEmmcClock::kFClkDiv2Src)
+                                     .reg_value());
+
+  EXPECT_OK(dut.SdmmcSetBusFreq(100'000'000));
+  EXPECT_EQ(reg_array[0].Read(), AmlSdEmmcClock::Get()
+                                     .FromValue(0)
+                                     .set_cfg_div(10)
+                                     .set_cfg_src(AmlSdEmmcClock::kFClkDiv2Src)
+                                     .reg_value());
+
+  EXPECT_OK(dut.SdmmcSetBusFreq(208'000'000));
+  EXPECT_EQ(reg_array[0].Read(), AmlSdEmmcClock::Get()
+                                     .FromValue(0)
+                                     .set_cfg_div(5)
+                                     .set_cfg_src(AmlSdEmmcClock::kFClkDiv2Src)
+                                     .reg_value());
 }
 
 }  // namespace sdmmc
