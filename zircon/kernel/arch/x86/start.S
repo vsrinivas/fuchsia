@@ -45,7 +45,7 @@ FUNCTION_LABEL(_start)
     mov $PHYS(_kstack_end), %rsp
 
     // Save off the bootdata pointer in a register that won't get clobbered.
-    mov %esi, %ebx
+    mov %rsi, %rbx
 
     // The fixup code in image.S runs in 64-bit mode with paging enabled,
     // so we can't run it too early.  But it overlaps the bss, so we move
@@ -67,7 +67,7 @@ FUNCTION_LABEL(_start)
     rep stosb // while (ecx-- > 0) *edi++ = al;
 
     // _zbi_base is in bss, so now it's safe to set it.
-    mov %ebx, PHYS(_zbi_base)
+    mov %rbx, PHYS(_zbi_base)
 
     /* give the boot allocator a chance to compute the physical address of the kernel */
     call boot_alloc_init
