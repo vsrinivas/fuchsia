@@ -4,7 +4,6 @@
 
 use {
     failure::{format_err, Error},
-    fidl_fuchsia_bluetooth as bt,
     fidl_fuchsia_bluetooth_bredr::{
         DataElement, DataElementData, DataElementType, ProtocolDescriptor, ProtocolIdentifier,
         SecurityLevel, ServiceDefinition, PSM_AVDTP,
@@ -15,7 +14,7 @@ use {
 use crate::harness::profile::ProfileHarness;
 
 /// This makes a custom BR/EDR service definition that runs over L2CAP.
-fn test_service_def() -> ServiceDefinition {
+fn service_definition_for_testing() -> ServiceDefinition {
     ServiceDefinition {
         service_class_uuids: vec![String::from("f0c451a0-7e57-1111-2222-123456789ABC")],
         protocol_descriptors: vec![ProtocolDescriptor {
@@ -33,42 +32,42 @@ fn test_service_def() -> ServiceDefinition {
     }
 }
 
-async fn add_service(profile: &ProfileHarness) -> Result<(bt::Status, u64), failure::Error> {
-    let mut service_def = test_service_def();
-    profile
+async fn add_service(profile: &ProfileHarness) -> Result<u64, failure::Error> {
+    let mut service_def = service_definition_for_testing();
+    let (status, id) = profile
         .aux()
         .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false)
-        .await
-        .map_err(Into::into)
-}
-
-pub async fn add_fake_profile(profile: ProfileHarness) -> Result<(), Error> {
-    let (status, _) = add_service(&profile).await?;
+        .await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }
+    Ok(id)
+}
+
+async fn test_add_profile(profile: ProfileHarness) -> Result<(), Error> {
+    let _ = add_service(&profile).await?;
     Ok(())
 }
 
-pub async fn same_psm_twice_fails(profile: ProfileHarness) -> Result<(), Error> {
-    add_fake_profile(profile.clone()).await?;
-    let err = add_fake_profile(profile).await;
-    if err.is_ok() {
+async fn test_same_psm_twice_fails(profile: ProfileHarness) -> Result<(), Error> {
+    let _ = add_service(&profile).await?;
+    let result = add_service(&profile).await;
+    if result.is_ok() {
         return Err(format_err!("Should not be able to add the same profile twice"));
     }
     Ok(())
 }
 
-pub async fn add_remove_profile(profile: ProfileHarness) -> Result<(), Error> {
-    let (status, service_id) = add_service(&profile).await?;
-    if let Some(e) = status.error {
-        return Err(BTError::from(*e).into());
-    }
-    profile.aux().remove_service(service_id)?;
-    add_fake_profile(profile).await
+async fn test_add_and_remove_profile(profile: ProfileHarness) -> Result<(), Error> {
+    let id = add_service(&profile).await?;
+    profile.aux().remove_service(id)?;
+
+    // Adding the profile a second time after removing it should succeed.
+    let _ = add_service(&profile).await;
+    Ok(())
 }
 
-pub async fn connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
+async fn test_connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> {
     let (status, socket) = profile.aux().connect_l2cap("unknown_peer", PSM_AVDTP as u16).await?;
     // Should be an error
     if status.error.is_none() {
@@ -82,3 +81,16 @@ pub async fn connect_unknown_peer(profile: ProfileHarness) -> Result<(), Error> 
 
 // TODO(BT-659): the rest of connect_l2cap tests (that acutally succeed)
 // TODO(BT-759): add_search / on_service_found
+
+/// Run all test cases.
+pub fn run_all() -> Result<(), Error> {
+    run_suite!(
+        "bredr.Profile",
+        [
+            test_add_profile,
+            test_same_psm_twice_fails,
+            test_add_and_remove_profile,
+            test_connect_unknown_peer
+        ]
+    )
+}

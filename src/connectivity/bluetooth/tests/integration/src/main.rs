@@ -4,93 +4,29 @@
 
 #![feature(async_await)]
 
-use {failure::Error, std::io::Write};
-
-use crate::{
-    harness::run_test,
-    tests::{
-        bonding::{
-            test_add_bonded_devices_duplicate_entry, test_add_bonded_devices_invalid_entry,
-            test_add_bonded_devices_no_ltk_fails, test_add_bonded_devices_success,
-        },
-        control::{disconnect, set_active_host},
-        host_driver::{
-            disconnect_connected_device, disconnect_unconnected_device, disconnect_unknown_device,
-            test_bd_addr, test_close, test_connect, test_discoverable, test_discovery, test_forget,
-            test_list_devices, test_set_local_name,
-        },
-        lifecycle::lifecycle_test,
-        low_energy_central::{enable_and_disable_scan, enable_scan},
-        low_energy_peripheral::{
-            test_advertising_data, test_advertising_handle_closed_while_pending,
-            test_advertising_modes, test_advertising_types, test_enable_advertising,
-            test_enable_and_disable_advertising, test_scan_response, test_update_advertising,
-        },
-        profile::{
-            add_fake_profile, add_remove_profile, connect_unknown_peer, same_psm_twice_fails,
-        },
-    },
-};
+use failure::Error;
 
 #[macro_use]
 mod harness;
 #[macro_use]
 mod tests;
 
-/// Collect a Vector of Results into a Result of a Vector. If all results are
-/// `Ok`, then return `Ok` of the results. Otherwise return the first `Err`.
-fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, E> {
-    results.into_iter().collect()
-}
-
 fn main() -> Result<(), Error> {
-    println!("TEST BEGIN");
-
     // TODO(BT-805): Add test cases for LE privacy
     // TODO(BT-806): Add test cases for LE auto-connect/background-scan
     // TODO(BT-20): Add test cases for GATT client role
     // TODO(BT-20): Add test cases for GATT server role
     // TODO(BT-20): Add test cases for BR/EDR and dual-mode connections
-
-    collect_results(vec![
-        run_test!(lifecycle_test),
-        // Host Driver tests
-        run_test!(test_bd_addr),
-        run_test!(test_set_local_name),
-        run_test!(test_discoverable),
-        run_test!(test_discovery),
-        run_test!(test_close),
-        run_test!(test_list_devices),
-        run_test!(test_connect),
-        run_test!(test_forget),
-        run_test!(disconnect_unknown_device),
-        run_test!(disconnect_unconnected_device),
-        run_test!(disconnect_connected_device),
-        // Bonding tests
-        run_test!(test_add_bonded_devices_success),
-        run_test!(test_add_bonded_devices_no_ltk_fails),
-        run_test!(test_add_bonded_devices_duplicate_entry),
-        run_test!(test_add_bonded_devices_invalid_entry),
-        // Control tests
-        run_test!(set_active_host),
-        run_test!(disconnect),
-        // le.Central tests
-        run_test!(enable_scan),
-        run_test!(enable_and_disable_scan),
-        // le.Peripheral tests
-        run_test!(test_enable_advertising),
-        run_test!(test_enable_and_disable_advertising),
-        run_test!(test_advertising_handle_closed_while_pending),
-        run_test!(test_update_advertising),
-        run_test!(test_advertising_types),
-        run_test!(test_advertising_modes),
-        run_test!(test_advertising_data),
-        run_test!(test_scan_response),
-        // Profile tests
-        run_test!(add_fake_profile),
-        run_test!(same_psm_twice_fails),
-        run_test!(add_remove_profile),
-        run_test!(connect_unknown_peer),
+    harness::collect_results(vec![
+        // Tests that require bt-gap.cmx to not be running. Run these tests first as bt-gap
+        // interferes with their operation.
+        tests::host_driver::run_all(),
+        tests::bonding::run_all(),
+        // Tests that trigger bt-gap.cmx.
+        tests::control::run_all(),
+        tests::profile::run_all(),
+        tests::low_energy_central::run_all(),
+        tests::low_energy_peripheral::run_all(),
     ])?;
     Ok(())
 }

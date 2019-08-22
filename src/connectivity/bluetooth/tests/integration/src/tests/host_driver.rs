@@ -3,12 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    failure::{err_msg, Error, ResultExt},
+    fidl_fuchsia_bluetooth::{Address, AddressType},
     fidl_fuchsia_bluetooth_control::TechnologyType,
+    fidl_fuchsia_bluetooth_host::HostProxy,
+    fidl_fuchsia_bluetooth_test::EmulatorSettings,
+    fuchsia_async as fasync,
     fuchsia_bluetooth::{
+        constants::HOST_DEVICE_DIR,
+        device_watcher::{DeviceWatcher, WatchFilter},
         error::Error as BtError,
         expectation::{self, peer},
+        hci_emulator::Emulator,
+        host,
     },
+    fuchsia_zircon as zx,
+    std::path::PathBuf,
 };
 
 use crate::harness::{
@@ -26,8 +36,47 @@ const FAKE_BREDR_DEVICE_ADDR: &str = "00:00:00:00:00:02";
 const FAKE_LE_CONN_ERROR_DEVICE_ADDR: &str = "00:00:00:00:00:03";
 const FAKE_DEVICE_COUNT: usize = 3;
 
+// Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
+async fn test_lifecycle(_: ()) -> Result<(), Error> {
+    let addr_bytes = Address { type_: AddressType::Public, bytes: [1, 2, 3, 4, 5, 6] };
+    let addr_str = "06:05:04:03:02:01";
+    let settings = EmulatorSettings {
+        address: Some(addr_bytes),
+        hci_config: None,
+        extended_advertising: None,
+        acl_buffer_settings: None,
+        le_acl_buffer_settings: None,
+    };
+
+    let emulator = Emulator::create("bt-hci-integration-lifecycle").await?;
+    let hci_topo = PathBuf::from(fdio::device_get_topo_path(emulator.file())?);
+
+    // Publish the bt-hci device and verify that a bt-host appears under its topology within a
+    // reasonable timeout.
+    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, zx::Duration::from_seconds(10)).await?;
+    let _ = emulator.publish(settings).await?;
+    let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;;
+
+    // Open a host channel using a fidl call and check the device is responsive
+    let handle = host::open_host_channel(bthost.file())?;
+    let host = HostProxy::new(fasync::Channel::from_channel(handle.into())?);
+    let info = host
+        .get_info()
+        .await
+        .context("Is bt-gap running? If so, try stopping it and re-running these tests")?;
+
+    // The bt-host should have been initialized with the address that we initially configured.
+    assert_eq!(addr_str, info.address);
+
+    // Remove the bt-hci device
+    drop(emulator);
+
+    // Check that the bt-host device is also destroyed.
+    watcher.watch_removed(bthost.path()).await
+}
+
 // Tests that the local host driver address is 0.
-pub async fn test_bd_addr(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_bd_addr(test_state: HostDriverHarness) -> Result<(), Error> {
     let info = test_state
         .aux()
         .0
@@ -39,7 +88,7 @@ pub async fn test_bd_addr(test_state: HostDriverHarness) -> Result<(), Error> {
 
 // Tests that setting the local name succeeds.
 // TODO(armansito): Test for FakeHciDevice state changes.
-pub async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Error> {
     let name = "test1234";
     test_state.aux().0.set_local_name(&name).await?;
     expect_adapter_state(&test_state, expectation::host_driver::name(name)).await?;
@@ -49,7 +98,7 @@ pub async fn test_set_local_name(test_state: HostDriverHarness) -> Result<(), Er
 
 // Tests that host state updates when discoverable mode is turned on.
 // TODO(armansito): Test for FakeHciDevice state changes.
-pub async fn test_discoverable(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_discoverable(test_state: HostDriverHarness) -> Result<(), Error> {
     // Enable discoverable mode.
     test_state.aux().0.set_discoverable(true).await?;
     expect_adapter_state(&test_state, expectation::host_driver::discoverable(true)).await?;
@@ -63,7 +112,7 @@ pub async fn test_discoverable(test_state: HostDriverHarness) -> Result<(), Erro
 
 // Tests that host state updates when discovery is started and stopped.
 // TODO(armansito): Test for FakeHciDevice state changes.
-pub async fn test_discovery(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_discovery(test_state: HostDriverHarness) -> Result<(), Error> {
     // Start discovery. "discovering" should get set to true.
     test_state.aux().0.start_discovery().await?;
     expect_adapter_state(&test_state, expectation::host_driver::discovering(true)).await?;
@@ -83,7 +132,7 @@ pub async fn test_discovery(test_state: HostDriverHarness) -> Result<(), Error> 
 
 // Tests that "close" cancels all operations.
 // TODO(armansito): Test for FakeHciDevice state changes.
-pub async fn test_close(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_close(test_state: HostDriverHarness) -> Result<(), Error> {
     // Enable all procedures.
     test_state.aux().0.start_discovery().await?;
     test_state.aux().0.set_discoverable(true).await?;
@@ -103,7 +152,7 @@ pub async fn test_close(test_state: HostDriverHarness) -> Result<(), Error> {
 }
 
 // Tests that "list_devices" returns devices from a host's cache.
-pub async fn test_list_devices(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_list_devices(test_state: HostDriverHarness) -> Result<(), Error> {
     // Devices should be initially empty.
     let devices = test_state.aux().0.list_devices().await?;
     expect_eq!(vec![], devices)?;
@@ -136,7 +185,7 @@ pub async fn test_list_devices(test_state: HostDriverHarness) -> Result<(), Erro
     Ok(())
 }
 
-pub async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
     // Start discovery and let bt-host process the fake devices.
     test_state.aux().0.start_discovery().await?;
 
@@ -172,7 +221,7 @@ pub async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn wait_for_test_device(test_state: HostDriverHarness) -> Result<String, Error> {
+async fn wait_for_test_device(test_state: HostDriverHarness) -> Result<String, Error> {
     // Start discovery and let bt-host process the fake LE devices.
     test_state.aux().0.start_discovery().await?;
     let le_dev = expectation::peer::address(FAKE_LE_DEVICE_ADDR);
@@ -192,21 +241,21 @@ pub async fn wait_for_test_device(test_state: HostDriverHarness) -> Result<Strin
 // that we can provide a manner of doing so that will not flake.
 
 /// Disconnecting from an unknown device should succeed
-pub async fn disconnect_unknown_device(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_disconnect_unknown_device(test_state: HostDriverHarness) -> Result<(), Error> {
     let unknown_id = "0123401234";
     let status = test_state.aux().0.disconnect(unknown_id).await?;
     expect_eq!(status.error, None)
 }
 
 /// Disconnecting from a known, unconnected device should succeed
-pub async fn disconnect_unconnected_device(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_disconnect_unconnected_device(test_state: HostDriverHarness) -> Result<(), Error> {
     let success_dev = wait_for_test_device(test_state.clone()).await?;
     let status = test_state.aux().0.disconnect(&success_dev).await?;
     expect_eq!(status.error, None)
 }
 
 /// Disconnecting from a connected device should succeed and result in the device being disconnected
-pub async fn disconnect_connected_device(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_disconnect_connected_device(test_state: HostDriverHarness) -> Result<(), Error> {
     let success_dev = wait_for_test_device(test_state.clone()).await?;
 
     let status = test_state.aux().0.connect(&success_dev).await?;
@@ -222,7 +271,7 @@ pub async fn disconnect_connected_device(test_state: HostDriverHarness) -> Resul
     Ok(())
 }
 
-pub async fn test_forget(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_forget(test_state: HostDriverHarness) -> Result<(), Error> {
     // Start discovery and let bt-host process the fake peers.
     test_state.aux().0.start_discovery().await?;
 
@@ -252,4 +301,25 @@ pub async fn test_forget(test_state: HostDriverHarness) -> Result<(), Error> {
     // TODO(BT-879): Test that the link closes by querying fake HCI.
 
     Ok(())
+}
+
+/// Run all test cases.
+pub fn run_all() -> Result<(), Error> {
+    run_suite!(
+        "bt-host driver",
+        [
+            test_lifecycle,
+            test_bd_addr,
+            test_set_local_name,
+            test_discoverable,
+            test_discovery,
+            test_close,
+            test_list_devices,
+            test_connect,
+            test_forget,
+            test_disconnect_unknown_device,
+            test_disconnect_unconnected_device,
+            test_disconnect_connected_device
+        ]
+    )
 }

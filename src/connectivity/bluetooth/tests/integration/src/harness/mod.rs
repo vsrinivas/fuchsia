@@ -6,6 +6,7 @@ use {
     failure::{Error, ResultExt},
     fuchsia_async as fasync,
     futures::Future,
+    std::io::Write,
 };
 
 #[macro_use]
@@ -54,11 +55,30 @@ impl TestHarness for () {
     }
 }
 
+pub fn print_test_name(name: &str) {
+    print!("  {}...", name);
+    std::io::stdout().flush().unwrap();
+}
+
 // Prints out the test name and runs the test.
 macro_rules! run_test {
     ($name:ident) => {{
-        print!("{}...", stringify!($name));
-        std::io::stdout().flush().unwrap();
-        run_test($name)
+        crate::harness::print_test_name(stringify!($name));
+        crate::harness::run_test($name)
     }};
+}
+
+/// Collect a Vector of Results into a Result of a Vector. If all results are
+/// `Ok`, then return `Ok` of the results. Otherwise return the first `Err`.
+pub fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, E> {
+    results.into_iter().collect()
+}
+
+macro_rules! run_suite {
+    ($name:tt, [$($test:ident),+]) => {{
+        println!(">>> Running {} tests:", $name);
+        crate::harness::collect_results(vec![$( run_test!($test), )*])?;
+        println!();
+        Ok(())
+    }}
 }

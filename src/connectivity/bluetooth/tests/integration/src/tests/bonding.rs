@@ -68,7 +68,7 @@ const TEST_NAME1: &str = "Name1";
 const TEST_NAME2: &str = "Name2";
 
 // Tests initializing bonded LE devices.
-pub async fn test_add_bonded_devices_success(test_state: HostDriverHarness) -> Result<(), Error> {
+async fn test_add_bonded_devices_success(test_state: HostDriverHarness) -> Result<(), Error> {
     // Devices should be initially empty.
     let devices = test_state.aux().0.list_devices().await?;
     expect_eq!(vec![], devices)?;
@@ -101,9 +101,7 @@ pub async fn test_add_bonded_devices_success(test_state: HostDriverHarness) -> R
     Ok(())
 }
 
-pub async fn test_add_bonded_devices_no_ltk_fails(
-    test_state: HostDriverHarness,
-) -> Result<(), Error> {
+async fn test_add_bonded_devices_no_ltk_fails(test_state: HostDriverHarness) -> Result<(), Error> {
     // Devices should be initially empty.
     let devices = test_state.aux().0.list_devices().await?;
     expect_eq!(vec![], devices)?;
@@ -119,7 +117,7 @@ pub async fn test_add_bonded_devices_no_ltk_fails(
     Ok(())
 }
 
-pub async fn test_add_bonded_devices_duplicate_entry(
+async fn test_add_bonded_devices_duplicate_entry(
     test_state: HostDriverHarness,
 ) -> Result<(), Error> {
     // Devices should be initially empty.
@@ -155,9 +153,7 @@ pub async fn test_add_bonded_devices_duplicate_entry(
 
 // Tests that adding a list of bonding data with malformed content succeeds for the valid entries
 // but reports an error.
-pub async fn test_add_bonded_devices_invalid_entry(
-    test_state: HostDriverHarness,
-) -> Result<(), Error> {
+async fn test_add_bonded_devices_invalid_entry(test_state: HostDriverHarness) -> Result<(), Error> {
     // Devices should be initially empty.
     let devices = test_state.aux().0.list_devices().await?;
     expect_eq!(vec![], devices)?;
@@ -179,4 +175,17 @@ pub async fn test_add_bonded_devices_invalid_entry(
     expect_remote_device(&test_state, TEST_ADDR2, &expected)?;
 
     Ok(())
+}
+
+/// Run all test cases.
+pub fn run_all() -> Result<(), Error> {
+    run_suite!(
+        "bt-host driver bonding",
+        [
+            test_add_bonded_devices_success,
+            test_add_bonded_devices_no_ltk_fails,
+            test_add_bonded_devices_duplicate_entry,
+            test_add_bonded_devices_invalid_entry
+        ]
+    )
 }

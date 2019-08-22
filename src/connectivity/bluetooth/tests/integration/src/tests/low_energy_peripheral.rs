@@ -175,7 +175,7 @@ fn default_parameters() -> AdvertisingParameters {
     AdvertisingParameters { data: None, scan_response: None, mode_hint: None, connectable: None }
 }
 
-pub async fn test_enable_advertising(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_enable_advertising(harness: PeripheralHarness) -> Result<(), Error> {
     let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
     let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
@@ -186,7 +186,7 @@ pub async fn test_enable_advertising(harness: PeripheralHarness) -> Result<(), E
     Ok(())
 }
 
-pub async fn test_enable_and_disable_advertising(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_enable_and_disable_advertising(harness: PeripheralHarness) -> Result<(), Error> {
     let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
     let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
@@ -202,7 +202,7 @@ pub async fn test_enable_and_disable_advertising(harness: PeripheralHarness) -> 
     Ok(())
 }
 
-pub async fn test_advertising_handle_closed_while_pending(
+async fn test_advertising_handle_closed_while_pending(
     harness: PeripheralHarness,
 ) -> Result<(), Error> {
     let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
@@ -223,7 +223,7 @@ pub async fn test_advertising_handle_closed_while_pending(
     Ok(())
 }
 
-pub async fn test_update_advertising(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_update_advertising(harness: PeripheralHarness) -> Result<(), Error> {
     let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
     let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
@@ -263,7 +263,7 @@ pub async fn test_update_advertising(harness: PeripheralHarness) -> Result<(), E
     Ok(())
 }
 
-pub async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error> {
     // Non-connectable
     let params = AdvertisingParameters { connectable: Some(false), ..default_parameters() };
     let (_handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
@@ -329,7 +329,7 @@ pub async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Er
     Ok(())
 }
 
-pub async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error> {
     // Very fast advertising interval (<= 60 ms)
     let params = AdvertisingParameters {
         mode_hint: Some(AdvertisingModeHint::VeryFast),
@@ -375,7 +375,7 @@ pub async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Er
     Ok(())
 }
 
-pub async fn test_advertising_data(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_advertising_data(harness: PeripheralHarness) -> Result<(), Error> {
     // Test that encoding one field works. The serialization of other fields is unit tested elsewhere.
     let params = AdvertisingParameters {
         data: Some(AdvertisingData { name: Some("hello".to_string()), ..empty_advertising_data() }),
@@ -410,7 +410,7 @@ pub async fn test_advertising_data(harness: PeripheralHarness) -> Result<(), Err
     Ok(())
 }
 
-pub async fn test_scan_response(harness: PeripheralHarness) -> Result<(), Error> {
+async fn test_scan_response(harness: PeripheralHarness) -> Result<(), Error> {
     // Test that encoding one field works. The serialization of other fields is unit tested elsewhere.
     let params = AdvertisingParameters {
         data: Some(AdvertisingData {
@@ -455,4 +455,21 @@ pub async fn test_scan_response(harness: PeripheralHarness) -> Result<(), Error>
         .await?;
 
     Ok(())
+}
+
+/// Run all test cases.
+pub fn run_all() -> Result<(), Error> {
+    run_suite!(
+        "le.Peripheral",
+        [
+            test_enable_advertising,
+            test_enable_and_disable_advertising,
+            test_advertising_handle_closed_while_pending,
+            test_update_advertising,
+            test_advertising_types,
+            test_advertising_modes,
+            test_advertising_data,
+            test_scan_response
+        ]
+    )
 }

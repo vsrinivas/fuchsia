@@ -23,7 +23,7 @@ use crate::harness::control::{
 // HCI driver. Remove these once it is possible to set up mock devices programmatically.
 const FAKE_LE_DEVICE_ADDR: &str = "00:00:00:00:00:01";
 
-pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {
+async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
@@ -70,7 +70,7 @@ pub async fn set_active_host(control: ControlHarness) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn disconnect(control: ControlHarness) -> Result<(), Error> {
+async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
     let (_host, _hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
 
     control.aux().request_discovery(true).await?;
@@ -95,4 +95,9 @@ pub async fn disconnect(control: ControlHarness) -> Result<(), Error> {
         .when_satisfied(control_expectation::peer_connected(peer, false), control_timeout())
         .await?;
     Ok(())
+}
+
+/// Run all test cases.
+pub fn run_all() -> Result<(), Error> {
+    run_suite!("control.Control", [test_set_active_host, test_disconnect])
 }

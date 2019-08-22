@@ -74,7 +74,7 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn enable_scan(central: CentralHarness) -> Result<(), Error> {
+async fn test_enable_scan(central: CentralHarness) -> Result<(), Error> {
     start_scan(&central).await?;
     let _ = central
         .when_satisfied(
@@ -85,10 +85,15 @@ pub async fn enable_scan(central: CentralHarness) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn enable_and_disable_scan(central: CentralHarness) -> Result<(), Error> {
+async fn test_enable_and_disable_scan(central: CentralHarness) -> Result<(), Error> {
     start_scan(&central).await?;
     let _ = central.when_satisfied(central_expectation::scan_enabled(), scan_timeout()).await?;
     let _ = central.aux().stop_scan()?;
     let _ = central.when_satisfied(central_expectation::scan_disabled(), scan_timeout()).await?;
     Ok(())
+}
+
+/// Run all test cases.
+pub fn run_all() -> Result<(), Error> {
+    run_suite!("le.Central", [test_enable_scan, test_enable_and_disable_scan])
 }
