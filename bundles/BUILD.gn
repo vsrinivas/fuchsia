@@ -24,7 +24,7 @@ group("tests") {
     "//peridot/packages/tests:all",
     "//src:tests",
     "//tools:tests",
-    "//topaz/packages/tests:all",
+    "//topaz:tests",
   ]
 }
 
@@ -32,7 +32,8 @@ group("kitchen_sink") {
   testonly = true
   public_deps = [
     "//bundles:tests",
-    "//src/connectivity/telephony",
-    "//topaz/packages:kitchen_sink",
+    "//peridot/packages:kitchen_sink",
+    "//src",
+    "//topaz",
   ]
 }
