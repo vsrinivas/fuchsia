@@ -31,7 +31,7 @@ class BindingSet final {
  public:
   using Binding = ::fidl::Binding<Interface, ImplPtr>;
   using StorageType = std::vector<std::unique_ptr<Binding>>;
-  //TODO(FIDL-761) Use fit::function here instead of std::function.
+  // TODO(FIDL-761) Use fit::function here instead of std::function.
   using ErrorHandler = std::function<void(zx_status_t)>;
 
   using iterator = typename StorageType::iterator;
@@ -104,8 +104,11 @@ class BindingSet final {
   //
   // Returns true iff the binding was successfully found and removed.
   // Upon removal, the server endpoint of the channel is closed.
-  bool RemoveBinding(const ImplPtr& impl) {
-    return RemoveBinding([&impl](const std::unique_ptr<Binding>& b) { return impl == b->impl(); });
+  template <class T>
+  bool RemoveBinding(const T& impl) {
+    return RemoveMatchedBinding([&impl](const std::unique_ptr<Binding>& b) {
+      return ResolvePtr(impl) == ResolvePtr(b->impl());
+    });
   }
 
   // Returns an InterfaceRequestHandler that binds the incoming
@@ -147,14 +150,26 @@ class BindingSet final {
   const StorageType& bindings() const { return bindings_; }
 
  private:
+  // Resolve smart pointers with get methods (e.g. shared_ptr, unique_ptr, etc).
+  template <class T, std::enable_if_t<!std::is_pointer<T>::value>* = nullptr>
+  static void* ResolvePtr(T& p) {
+    return reinterpret_cast<void*>(p.get());
+  }
+
+  // Resolve raw pointers.
+  template <class T, std::enable_if_t<std::is_pointer<T>::value>* = nullptr>
+  static void* ResolvePtr(T p) {
+    return reinterpret_cast<void*>(p);
+  }
+
   // Called when a binding has an error to remove the binding from the set.
   void RemoveOnError(Binding* binding) {
-    bool found =
-        RemoveBinding([binding](const std::unique_ptr<Binding>& b) { return b.get() == binding; });
+    bool found = RemoveMatchedBinding(
+        [binding](const std::unique_ptr<Binding>& b) { return b.get() == binding; });
     ZX_DEBUG_ASSERT(found);
   }
 
-  bool RemoveBinding(std::function<bool(const std::unique_ptr<Binding>&)> binding_matcher) {
+  bool RemoveMatchedBinding(std::function<bool(const std::unique_ptr<Binding>&)> binding_matcher) {
     auto it = std::find_if(bindings_.begin(), bindings_.end(), binding_matcher);
     if (it == bindings_.end())
       return false;

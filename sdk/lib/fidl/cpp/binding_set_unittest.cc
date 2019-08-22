@@ -297,5 +297,34 @@ TEST(BindingSet, ErrorHandlerDestroysBindingSetAndBindings) {
   EXPECT_TRUE(handler_called);
 }
 
+TEST(BindingSet, ErrorHandlerDestroysBindingSetAndBindingsWithUniquePtr) {
+  fidl::test::AsyncLoopForTest loop;
+
+  BindingSet<fidl::test::frobinator::Frobinator, std::unique_ptr<test::FrobinatorImpl>> binding_set;
+  auto check_binding_set_empty_on_destroy = [&binding_set] {
+    EXPECT_TRUE(binding_set.bindings().empty());
+  };
+
+  auto frobinator = std::make_unique<test::FrobinatorImpl>(check_binding_set_empty_on_destroy);
+  test::FrobinatorImpl* frobinator_raw_ptr = frobinator.get();
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  bool handler_called = false;
+
+  // Add the binding.
+  binding_set.AddBinding(std::move(frobinator), ptr.NewRequest(), nullptr,
+                         [&handler_called, &binding_set, frobinator_raw_ptr](zx_status_t) {
+                           binding_set.RemoveBinding(frobinator_raw_ptr);
+                           binding_set.CloseAll();
+                           handler_called = true;
+                         });
+  EXPECT_FALSE(handler_called);
+
+  // Trigger error.
+  ptr.Unbind();
+  loop.RunUntilIdle();
+
+  EXPECT_TRUE(handler_called);
+}
+
 }  // namespace
 }  // namespace fidl
