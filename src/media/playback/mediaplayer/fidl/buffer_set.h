@@ -5,9 +5,10 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_BUFFER_SET_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_BUFFER_SET_H_
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"

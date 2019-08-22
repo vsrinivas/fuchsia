@@ -17,10 +17,6 @@ class LocalMemoryPayloadAllocator : public PayloadAllocator,
  public:
   static fbl::RefPtr<LocalMemoryPayloadAllocator> Create();
 
-  LocalMemoryPayloadAllocator() = default;
-
-  ~LocalMemoryPayloadAllocator() override = default;
-
   // Dumps this |LocalMemoryPayloadAllocator|'s state to |os|.
   void Dump(std::ostream& os) const;
 

@@ -21,10 +21,6 @@ namespace test {
 // Implements Audio for testing.
 class FakeAudio : public fuchsia::media::Audio {
  public:
-  FakeAudio() = default;
-
-  ~FakeAudio() override = default;
-
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::media::Audio> GetRequestHandler() {
     return bindings_.GetHandler(this);

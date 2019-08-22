@@ -122,7 +122,6 @@ class CommandQueue {
 
  private:
   struct Command {
-    Command() = default;
     virtual ~Command() = default;
     virtual void Execute(CommandQueue* command_queue) = 0;
   };

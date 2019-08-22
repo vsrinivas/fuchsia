@@ -45,7 +45,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
     RingBuffer,
   };
 
-  virtual ~AudioLink();
+  virtual ~AudioLink() = default;
 
   const fbl::RefPtr<AudioObject>& GetSource() const { return source_; }
   const fbl::RefPtr<AudioObject>& GetDest() const { return dest_; }

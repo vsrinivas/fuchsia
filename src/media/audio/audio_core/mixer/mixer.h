@@ -21,7 +21,7 @@ class Mixer {
  public:
   static constexpr uint32_t FRAC_ONE = 1u << kPtsFractionalBits;
   static constexpr uint32_t FRAC_MASK = FRAC_ONE - 1u;
-  virtual ~Mixer();
+  virtual ~Mixer() = default;
 
   //
   // Resampler enum
@@ -234,9 +234,6 @@ class Mixer {
 // the current generation (which version), so any change can be detected.
 //
 struct Bookkeeping {
-  Bookkeeping() = default;
-  ~Bookkeeping() = default;
-
   std::unique_ptr<Mixer> mixer;
   Gain gain;
 

@@ -65,10 +65,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
 
 // A simple extension to the libfzl VmoMapper which mixes in ref counting state
 // to allow for shared VmoMapper semantics.
-class RefCountedVmoMapper : public fzl::VmoMapper, public fbl::RefCounted<fzl::VmoMapper> {
- public:
-  RefCountedVmoMapper() = default;
-};
+class RefCountedVmoMapper : public fzl::VmoMapper, public fbl::RefCounted<fzl::VmoMapper> {};
 
 zx_status_t AcquireHighPriorityProfile(zx::profile* profile);
 

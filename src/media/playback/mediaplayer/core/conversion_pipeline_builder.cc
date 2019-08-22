@@ -70,8 +70,6 @@ class Builder {
           DecoderFactory* decoder_factory, OutputRef output,
           fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback);
 
-  ~Builder() = default;
-
   void Build();
 
  private:

@@ -5,15 +5,16 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_BUFFER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_BUFFER_H_
 
-#include <fbl/recycler.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/unique_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
+
+#include <fbl/recycler.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/unique_ptr.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/payloads/fifo_allocator.h"
@@ -35,8 +36,6 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
 
   PayloadVmo(zx::vmo vmo, uint64_t vmo_size, zx_vm_option_t map_flags, const zx::handle* bti_handle,
              zx_status_t* status_out);
-
-  ~PayloadVmo() = default;
 
   // Returns the size of the VMO in bytes.
   uint64_t size() const { return size_; }

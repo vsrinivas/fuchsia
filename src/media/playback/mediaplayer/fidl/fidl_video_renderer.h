@@ -87,8 +87,6 @@ class FidlVideoRenderer : public VideoRenderer {
   struct Image {
     Image();
 
-    ~Image() = default;
-
     // Called when |release_fence_| is released.
     void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal);

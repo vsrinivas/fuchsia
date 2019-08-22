@@ -17,6 +17,4 @@ AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
              (dest_->type() == AudioObject::Type::AudioCapturer));
 }
 
-AudioLink::~AudioLink() = default;
-
 }  // namespace media::audio

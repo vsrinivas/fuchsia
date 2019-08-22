@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_VMO_PAYLOAD_ALLOCATOR_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_VMO_PAYLOAD_ALLOCATOR_H_
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-
 #include <mutex>
 #include <vector>
+
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
@@ -37,10 +37,6 @@ class VmoPayloadAllocator : public PayloadAllocator,
                             public fbl::RefCounted<VmoPayloadAllocator> {
  public:
   static fbl::RefPtr<VmoPayloadAllocator> Create();
-
-  VmoPayloadAllocator() = default;
-
-  ~VmoPayloadAllocator() override = default;
 
   // Dumps this |VmoPayloadAllocator|'s state to |os|.
   void Dump(std::ostream& os) const;

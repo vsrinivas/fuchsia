@@ -21,10 +21,6 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
     ZX_ASSERT(dev_host_dispatcher_ != nullptr);
   }
 
-  // Always called after DdkRelease unless object is prematurely freed. This would be a reference
-  // error: DevHost holds a reference until DdkRelease.
-  ~VirtualAudioControlImpl() = default;
-
   // TODO(mpuryear): Move the three static methods and table over to DDKTL.
   //
   // Always called after DdkUnbind.

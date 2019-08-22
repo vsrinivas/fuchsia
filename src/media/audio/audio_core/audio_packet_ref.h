@@ -74,8 +74,6 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
   friend class fbl::Recyclable<AudioPacketRef>;
   friend class std::default_delete<AudioPacketRef>;
 
-  ~AudioPacketRef() = default;
-
   // Check to see if this packet has a valid callback.  If so, when it gets
   // recycled for the first time, it needs to be kept alive and posted to the
   // service's cleanup queue so that the user's callback gets called on the main
