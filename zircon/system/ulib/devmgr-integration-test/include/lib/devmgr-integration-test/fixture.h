@@ -83,6 +83,7 @@ class DirWatcher {
   explicit DirWatcher(zx::channel client) : client_(std::move(client)) {}
 
   // Returns ZX_OK if |filename| is removed from the directory before the given timeout elapses.
+  // If no filename is specified, this will wait for any file in the directory to be removed.
   zx_status_t WaitForRemoval(const fbl::String& filename, zx::duration timeout);
 
  private:

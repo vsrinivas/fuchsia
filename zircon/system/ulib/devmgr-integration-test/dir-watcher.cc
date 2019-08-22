@@ -21,8 +21,12 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
     return status;
   }
   fzl::FdioCaller caller(std::move(dir_fd));
+  zx_status_t status2;
   status = fuchsia_io_DirectoryWatch(caller.borrow_channel(), fuchsia_io_WATCH_MASK_REMOVED, 0,
-                                     server.release(), &status);
+                                     server.release(), &status2);
+  if (status == ZX_OK) {
+    status = status2;
+  }
   if (status != ZX_OK) {
     return status;
   }
@@ -53,7 +57,14 @@ zx_status_t DirWatcher::WaitForRemoval(const fbl::String& filename, zx::duration
     if (status != ZX_OK) {
       return status;
     }
-    if ((buf[0] == fuchsia_io_WATCH_EVENT_REMOVED) && (buf[1] == filename.length()) &&
+    if (buf[0] != fuchsia_io_WATCH_EVENT_REMOVED) {
+      continue;
+    }
+    if (filename.length() == 0) {
+      // Waiting on any file.
+      return ZX_OK;
+    }
+    if ((buf[1] == filename.length()) &&
         (memcmp(buf + 2, filename.c_str(), filename.length()) == 0)) {
       return ZX_OK;
     }

@@ -98,6 +98,8 @@ class DeviceRef {
   // File descriptor used to communicate with the device.
   int fd() const { return fd_.get(); }
 
+  int devfs_root_fd() const { return devfs_root_; }
+
   // Closes the current connection to |device_| and opens a new one based on the path.
   virtual void Reconnect();
 

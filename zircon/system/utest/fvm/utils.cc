@@ -9,6 +9,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/cpp/vector_view.h>
@@ -31,9 +32,18 @@ namespace fvm {
 namespace {
 
 constexpr char kRamdiskCtlPath[] = "misc/ramctl";
+constexpr zx::duration kDeviceWaitTime = zx::sec(3);
 
 zx_status_t RebindBlockDevice(DeviceRef* device) {
-  zx_status_t status;
+  // We need to create a DirWatcher to wait for the block device's child to disappear.
+  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+  fbl::unique_fd dir_fd(openat(device->devfs_root_fd(), device->path(), O_RDONLY));
+  zx_status_t status = devmgr_integration_test::DirWatcher::Create(std::move(dir_fd), &watcher);
+  if (status != ZX_OK) {
+    ADD_FAILURE("DirWatcher create failed. Path: %s", device->path());
+    return status;
+  }
+
   zx_status_t fidl_status =
       fuchsia_hardware_block_BlockRebindDevice(device->channel()->get(), &status);
 
@@ -43,6 +53,11 @@ zx_status_t RebindBlockDevice(DeviceRef* device) {
       return status;
     }
     return fidl_status;
+  }
+  status = watcher->WaitForRemoval(fbl::String() /* any file */, kDeviceWaitTime);
+  if (status != ZX_OK) {
+    ADD_FAILURE("Wait for removal failed.Path: %s", device->path());
+    return status;
   }
   device->Reconnect();
   return status;
@@ -57,8 +72,6 @@ fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
 }
 
 using FidlGuid = fuchsia_hardware_block_partition_GUID;
-
-constexpr zx::duration kDeviceWaitTime = zx::sec(3);
 
 zx::unowned_channel GetChannel(int fd) {
   if (fd < 0) {
