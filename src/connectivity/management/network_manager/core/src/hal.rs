@@ -93,7 +93,7 @@ pub struct Port {
     pub path: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Interface {
     pub id: PortId,
     pub name: String,
@@ -184,6 +184,7 @@ impl NetCfg {
             .map_err(|_| error::Hal::OperationFailed)?
             .iter()
             .map(|i| i.into())
+            .filter(|i: &Interface| i.addr.is_some())
             .collect();
         Ok(ifs)
     }
@@ -351,46 +352,12 @@ mod tests {
     use fidl_fuchsia_net as net;
     use fidl_fuchsia_net_stack as stack;
 
-    #[test]
-    fn test_net_interface_info_into_hal_interface() {
-        let info = InterfaceInfo {
+    fn interface_info_with_addrs(addrs: Vec<stack::InterfaceAddress>) -> InterfaceInfo {
+        InterfaceInfo {
             id: 42,
             properties: stack::InterfaceProperties {
                 topopath: "test/interface/info".to_string(),
-                addresses: vec![
-                    // Unspecified addresses are skipped.
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [0, 0, 0, 0] }),
-                        prefix_len: 24,
-                    },
-                    // Multicast addresses are skipped.
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [224, 0, 0, 5] }),
-                        prefix_len: 24,
-                    },
-                    // Loopback addresses are skipped.
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [127, 0, 0, 1] }),
-                        prefix_len: 24,
-                    },
-                    // IPv6 addresses are skipped.
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
-                            addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
-                        }),
-                        prefix_len: 8,
-                    },
-                    // First valid address, should be picked.
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [4, 3, 2, 1] }),
-                        prefix_len: 24,
-                    },
-                    // A valid address is already available, so this address should be skipped.
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
-                        prefix_len: 24,
-                    },
-                ],
+                addresses: addrs,
                 administrative_status: stack::AdministrativeStatus::Enabled,
 
                 // Unused fields
@@ -401,12 +368,108 @@ mod tests {
                 features: 0,
                 physical_status: stack::PhysicalStatus::Down,
             },
-        };
+        }
+    }
 
+    fn interface_with_addr(addr: Option<LifIpAddr>) -> Interface {
+        Interface {
+            id: 42.into(),
+            name: "test/interface/info".to_string(),
+            addr: addr,
+            enabled: true,
+        }
+    }
+
+    fn sample_addresses() -> Vec<stack::InterfaceAddress> {
+        vec![
+            // Unspecified addresses are skipped.
+            stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                prefix_len: 24,
+            },
+            // Multicast addresses are skipped.
+            stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [224, 0, 0, 5] }),
+                prefix_len: 24,
+            },
+            // Loopback addresses are skipped.
+            stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [127, 0, 0, 1] }),
+                prefix_len: 24,
+            },
+            // IPv6 addresses are skipped.
+            stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+                    addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+                }),
+                prefix_len: 8,
+            },
+            // First valid address, should be picked.
+            stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [4, 3, 2, 1] }),
+                prefix_len: 24,
+            },
+            // A valid address is already available, so this address should be skipped.
+            stack::InterfaceAddress {
+                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+                prefix_len: 24,
+            },
+        ]
+    }
+
+    #[test]
+    fn test_net_interface_info_into_hal_interface() {
+        let info = interface_info_with_addrs(sample_addresses());
         let iface: Interface = (&info).into();
         assert_eq!(iface.name, "test/interface/info");
         assert_eq!(iface.enabled, true);
         assert_eq!(iface.addr, Some(LifIpAddr { address: IpAddr::from([4, 3, 2, 1]), prefix: 24 }));
         assert_eq!(iface.id.to_u64(), 42);
+    }
+
+    async fn handle_list_interfaces(request: stack::StackRequest) {
+        match request {
+            stack::StackRequest::ListInterfaces { responder } => {
+                responder
+                    .send(
+                        &mut sample_addresses()
+                            .into_iter()
+                            .map(|addr| interface_info_with_addrs(vec![addr]))
+                            .collect::<Vec<InterfaceInfo>>()
+                            .iter_mut(),
+                    )
+                    .unwrap();
+            }
+            _ => {
+                panic!("unexpected stack request: {:?}", request);
+            }
+        }
+    }
+
+    async fn handle_with_panic<Request: std::fmt::Debug>(request: Request) {
+        panic!("unexpected request: {:?}", request);
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_ignore_interface_without_ip() {
+        let stack: StackProxy =
+            fidl::endpoints::spawn_stream_handler(handle_list_interfaces).unwrap();
+        let netstack: NetstackProxy =
+            fidl::endpoints::spawn_stream_handler(handle_with_panic).unwrap();
+        let mut netcfg = NetCfg { stack, netstack, id_in_use: HashSet::new() };
+        assert_eq!(
+            netcfg.interfaces().await.unwrap(),
+            // Should return only interfaces with a valid address.
+            vec![
+                interface_with_addr(Some(LifIpAddr {
+                    address: IpAddr::from([4, 3, 2, 1]),
+                    prefix: 24
+                })),
+                interface_with_addr(Some(LifIpAddr {
+                    address: IpAddr::from([1, 2, 3, 4]),
+                    prefix: 24
+                })),
+            ]
+        );
     }
 }

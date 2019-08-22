@@ -22,4 +22,6 @@ rustc_library("lib") {
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
+
+  test_deps = [ "//garnet/public/lib/fidl/rust/fidl" ]
 }
