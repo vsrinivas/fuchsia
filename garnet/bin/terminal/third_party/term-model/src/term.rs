@@ -76,10 +76,7 @@ impl selection::SemanticSearch for Term {
 
 impl selection::Dimensions for Term {
     fn dimensions(&self) -> Point {
-        Point {
-            col: self.grid.num_cols(),
-            line: self.grid.num_lines(),
-        }
+        Point { col: self.grid.num_cols(), line: self.grid.num_lines() }
     }
 }
 
@@ -110,8 +107,12 @@ impl<'a> RenderableCellsIter<'a> {
     /// The cursor and terminal mode are required for properly displaying the
     /// cursor.
     fn new<'b>(
-        grid: &'b Grid<Cell>, cursor: &'b Point, colors: &'b color::List, mode: TermMode,
-        config: &'b Config, selection: Option<RangeInclusive<index::Linear>>,
+        grid: &'b Grid<Cell>,
+        cursor: &'b Point,
+        colors: &'b color::List,
+        mode: TermMode,
+        config: &'b Config,
+        selection: Option<RangeInclusive<index::Linear>>,
         cursor_style: CursorStyle,
     ) -> RenderableCellsIter<'b> {
         let cursor_index = Linear(cursor.line.0 * grid.num_cols().0 + cursor.col.0);
@@ -127,7 +128,8 @@ impl<'a> RenderableCellsIter<'a> {
             config,
             colors,
             cursor_cells: VecDeque::with_capacity(3),
-        }.initialize(cursor_style)
+        }
+        .initialize(cursor_style)
     }
 
     fn push_cursor_cells(&mut self, original_cell: Cell, cursor_cell: Cell, wide_cell: Cell) {
@@ -158,10 +160,7 @@ impl<'a> RenderableCellsIter<'a> {
 
     fn populate_block_cursor(&mut self) {
         let (text_color, cursor_color) = if self.config.custom_cursor_colors() {
-            (
-                Color::Named(NamedColor::CursorText),
-                Color::Named(NamedColor::Cursor),
-            )
+            (Color::Named(NamedColor::CursorText), Color::Named(NamedColor::Cursor))
         } else {
             // Swap fg, bg
             let cell = &self.grid[self.cursor];
@@ -767,10 +766,7 @@ impl SizeInfo {
         let col = Column((x - self.padding_x as usize) / (self.cell_width as usize));
         let line = Line((y - self.padding_y as usize) / (self.cell_height as usize));
 
-        Some(Point {
-            line: min(line, self.lines() - 1),
-            col: min(col, self.cols() - 1),
-        })
+        Some(Point { line: min(line, self.lines() - 1), col: min(col, self.cols() - 1) })
     }
 }
 
@@ -878,13 +874,19 @@ impl Term {
 
         trait Append: PushChar {
             fn append(
-                &mut self, grid: &Grid<Cell>, line: Line, cols: Range<Column>,
+                &mut self,
+                grid: &Grid<Cell>,
+                line: Line,
+                cols: Range<Column>,
             ) -> Option<Range<Column>>;
         }
 
         impl Append for String {
             fn append(
-                &mut self, grid: &Grid<Cell>, line: Line, cols: Range<Column>,
+                &mut self,
+                grid: &Grid<Cell>,
+                line: Line,
+                cols: Range<Column>,
             ) -> Option<Range<Column>> {
                 let grid_line = &grid[line];
                 let line_length = grid_line.line_length();
@@ -974,11 +976,12 @@ impl Term {
     /// background color.  Cells with an alternate background color are
     /// considered renderable as are cells with any text content.
     pub fn renderable_cells<'b>(
-        &'b self, config: &'b Config, selection: Option<&'b Selection>, window_focused: bool,
+        &'b self,
+        config: &'b Config,
+        selection: Option<&'b Selection>,
+        window_focused: bool,
     ) -> RenderableCellsIter {
-        let selection = selection
-            .and_then(|s| s.to_span(self))
-            .map(|span| span.to_range());
+        let selection = selection.and_then(|s| s.to_span(self)).map(|span| span.to_range());
         let cursor = if window_focused {
             self.cursor_style.unwrap_or(self.default_cursor_style)
         } else {
@@ -1071,12 +1074,9 @@ impl Term {
         if num_lines > old_lines {
             // Make sure bottom of terminal is clear
             let template = self.cursor.template;
-            self.grid
-                .clear_region((self.cursor.point.line + 1).., |c| c.reset(&template));
+            self.grid.clear_region((self.cursor.point.line + 1).., |c| c.reset(&template));
             self.alt_grid
-                .clear_region((self.cursor_save_alt.point.line + 1).., |c| {
-                    c.reset(&template)
-                });
+                .clear_region((self.cursor_save_alt.point.line + 1).., |c| c.reset(&template));
         }
     }
 
@@ -1119,17 +1119,12 @@ impl Term {
 
         // Clear `lines` lines at bottom of area
         {
-            let start = max(
-                origin,
-                Line(self.scroll_region.end.0.saturating_sub(lines.0)),
-            );
-            self.grid
-                .clear_region(start..self.scroll_region.end, |c| c.reset(&template));
+            let start = max(origin, Line(self.scroll_region.end.0.saturating_sub(lines.0)));
+            self.grid.clear_region(start..self.scroll_region.end, |c| c.reset(&template));
         }
 
         // Scroll between origin and bottom
-        self.grid
-            .scroll_down(&(origin..self.scroll_region.end), lines);
+        self.grid.scroll_down(&(origin..self.scroll_region.end), lines);
     }
 
     /// Scroll screen up
@@ -1151,8 +1146,7 @@ impl Term {
         }
 
         // Scroll from origin to bottom less number of lines
-        self.grid
-            .scroll_up(&(origin..self.scroll_region.end), lines);
+        self.grid.scroll_up(&(origin..self.scroll_region.end), lines);
     }
 
     fn deccolm(&mut self) {
@@ -1204,10 +1198,7 @@ impl ansi::Handler for Term {
             trace!("wrapping");
 
             {
-                let location = Point {
-                    line: self.cursor.point.line,
-                    col: self.cursor.point.col,
-                };
+                let location = Point { line: self.cursor.point.line, col: self.cursor.point.col };
 
                 let cell = &mut self.grid[&location];
                 cell.flags.insert(cell::Flags::WRAPLINE);
@@ -1602,11 +1593,7 @@ impl ansi::Handler for Term {
     #[inline]
     fn save_cursor_position(&mut self) {
         trace!("CursorSave");
-        let cursor = if self.alt {
-            &mut self.cursor_save_alt
-        } else {
-            &mut self.cursor_save
-        };
+        let cursor = if self.alt { &mut self.cursor_save_alt } else { &mut self.cursor_save };
 
         *cursor = self.cursor;
     }
@@ -1614,11 +1601,7 @@ impl ansi::Handler for Term {
     #[inline]
     fn restore_cursor_position(&mut self) {
         trace!("CursorRestore");
-        let source = if self.alt {
-            &self.cursor_save_alt
-        } else {
-            &self.cursor_save
-        };
+        let source = if self.alt { &self.cursor_save_alt } else { &self.cursor_save };
 
         self.cursor = *source;
         self.cursor.point.line = min(self.cursor.point.line, self.grid.num_lines() - 1);
@@ -1779,11 +1762,9 @@ impl ansi::Handler for Term {
             Attr::Bold => self.cursor.template.flags.insert(cell::Flags::BOLD),
             Attr::CancelBold => self.cursor.template.flags.remove(cell::Flags::BOLD),
             Attr::Dim => self.cursor.template.flags.insert(cell::Flags::DIM),
-            Attr::CancelBoldDim => self
-                .cursor
-                .template
-                .flags
-                .remove(cell::Flags::BOLD | cell::Flags::DIM),
+            Attr::CancelBoldDim => {
+                self.cursor.template.flags.remove(cell::Flags::BOLD | cell::Flags::DIM)
+            }
             Attr::Italic => self.cursor.template.flags.insert(cell::Flags::ITALIC),
             Attr::CancelItalic => self.cursor.template.flags.remove(cell::Flags::ITALIC),
             Attr::Underscore => self.cursor.template.flags.insert(cell::Flags::UNDERLINE),
@@ -1948,45 +1929,18 @@ mod tests {
         mem::swap(&mut term.semantic_escape_chars, &mut escape_chars);
 
         {
-            let selection = Selection::semantic(
-                Point {
-                    line: Line(0),
-                    col: Column(1),
-                },
-                &term,
-            );
-            assert_eq!(
-                term.string_from_selection(&selection.to_span(&term).unwrap()),
-                "aa"
-            );
+            let selection = Selection::semantic(Point { line: Line(0), col: Column(1) }, &term);
+            assert_eq!(term.string_from_selection(&selection.to_span(&term).unwrap()), "aa");
         }
 
         {
-            let selection = Selection::semantic(
-                Point {
-                    line: Line(0),
-                    col: Column(4),
-                },
-                &term,
-            );
-            assert_eq!(
-                term.string_from_selection(&selection.to_span(&term).unwrap()),
-                "aaa"
-            );
+            let selection = Selection::semantic(Point { line: Line(0), col: Column(4) }, &term);
+            assert_eq!(term.string_from_selection(&selection.to_span(&term).unwrap()), "aaa");
         }
 
         {
-            let selection = Selection::semantic(
-                Point {
-                    line: Line(1),
-                    col: Column(1),
-                },
-                &term,
-            );
-            assert_eq!(
-                term.string_from_selection(&selection.to_span(&term).unwrap()),
-                "aaa"
-            );
+            let selection = Selection::semantic(Point { line: Line(1), col: Column(1) }, &term);
+            assert_eq!(term.string_from_selection(&selection.to_span(&term).unwrap()), "aaa");
         }
     }
 
@@ -2010,10 +1964,7 @@ mod tests {
 
         mem::swap(&mut term.grid, &mut grid);
 
-        let selection = Selection::lines(Point {
-            line: Line(0),
-            col: Column(3),
-        });
+        let selection = Selection::lines(Point { line: Line(0), col: Column(3) });
         if let Some(span) = selection.to_span(&term) {
             assert_eq!(term.string_from_selection(&span), "\"aa\"a\n");
         }
@@ -2031,10 +1982,7 @@ mod tests {
         };
         let mut term = Term::new(&Default::default(), size);
         let cursor = Point::new(Line(0), Column(0));
-        term.configure_charset(
-            CharsetIndex::G0,
-            StandardCharset::SpecialCharacterAndLineDrawing,
-        );
+        term.configure_charset(CharsetIndex::G0, StandardCharset::SpecialCharacterAndLineDrawing);
         term.input('a');
 
         assert_eq!(term.grid()[&cursor].c, '▒');
@@ -2128,10 +2076,7 @@ mod benches {
         P: AsRef<Path>,
     {
         let mut res = String::new();
-        File::open(path.as_ref())
-            .unwrap()
-            .read_to_string(&mut res)
-            .unwrap();
+        File::open(path.as_ref()).unwrap().read_to_string(&mut res).unwrap();
 
         res
     }
