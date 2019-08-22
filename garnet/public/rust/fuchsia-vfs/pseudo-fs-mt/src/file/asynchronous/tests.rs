@@ -37,6 +37,7 @@ use {
         FutureExt,
     },
     libc::{S_IRUSR, S_IWUSR},
+    parking_lot::Mutex,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -435,6 +436,31 @@ fn write_error() {
                 assert_write!(proxy, "Wrong");
                 assert_write!(proxy, " format");
                 assert_close_err!(proxy, Status::INVALID_ARGS);
+            }
+        },
+    );
+}
+
+#[test]
+fn write_and_drop_connection() {
+    let (write_call_sender, write_call_receiver) = oneshot::channel::<()>();
+    let write_call_sender = Mutex::new(Some(write_call_sender));
+    run_server_client(
+        OPEN_RIGHT_WRITABLE,
+        write_only(100, move |content| {
+            let mut lock = write_call_sender.lock();
+            let write_call_sender = lock.take().unwrap();
+            async move {
+                assert_eq!(*&content, b"Updated content");
+                write_call_sender.send(()).unwrap();
+                Ok(())
+            }
+        }),
+        move |proxy| {
+            async move {
+                assert_write!(proxy, "Updated content");
+                drop(proxy);
+                write_call_receiver.await.unwrap();
             }
         },
     );

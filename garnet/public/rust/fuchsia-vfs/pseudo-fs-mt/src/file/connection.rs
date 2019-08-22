@@ -116,8 +116,14 @@ pub struct FileConnection {
 
 /// Return type for [`handle_request()`] functions.
 enum ConnectionState {
+    /// Connection is still alive.
     Alive,
+    /// Connection have received Node::Close message and the [`handle_close`] method has been
+    /// already called for this connection.
     Closed,
+    /// Connection has been dropped by the peer or an error has occured.  [`handle_close`] still
+    /// need to be called (though it would not be able to report the status to the peer).
+    Dropped,
 }
 
 impl FileConnection {
@@ -229,24 +235,36 @@ impl FileConnection {
 
     async fn handle_requests(mut self) {
         while let Some(request_or_err) = self.requests.next().await {
-            match request_or_err {
+            let state = match request_or_err {
                 Err(_) => {
                     // FIDL level error, such as invalid message format and alike.  Close the
                     // connection on any unexpected error.
                     // TODO: Send an epitaph.
-                    break;
+                    ConnectionState::Dropped
                 }
-                Ok(request) => match self.handle_request(request).await {
-                    Ok(ConnectionState::Alive) => (),
-                    Ok(ConnectionState::Closed) => break,
-                    Err(_) => {
+                Ok(request) => {
+                    self.handle_request(request)
+                        .await
                         // Protocol level error.  Close the connection on any unexpected error.
                         // TODO: Send an epitaph.
-                        break;
-                    }
-                },
+                        .unwrap_or(ConnectionState::Dropped)
+                }
+            };
+
+            match state {
+                ConnectionState::Alive => (),
+                ConnectionState::Closed => {
+                    // We have already called `handle_close`, do not call it again.
+                    return;
+                }
+                ConnectionState::Dropped => break,
             }
         }
+
+        // If the connection has been closed by the peer or due some error we still need to call
+        // the `updated` callback, unless the `Close` message have been used.
+        // `ConnectionState::Closed` is handled above.
+        let _ = self.handle_close(|_status| Ok(())).await;
     }
 
     /// POSIX protection attributes are hard coded, as we are expecting them to be removed from the
