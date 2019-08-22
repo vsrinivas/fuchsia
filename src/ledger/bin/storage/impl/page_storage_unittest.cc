@@ -2225,9 +2225,9 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     storage_->SetSyncDelegate(&sync);
 
     // Build the commit Tree with:
-    //         0
+    //     0   1
     //         |
-    //         1  2
+    //         2
     std::vector<ObjectIdentifier> object_identifiers;
     object_identifiers.resize(3);
     for (size_t i = 0; i < object_identifiers.size(); ++i) {
@@ -2285,6 +2285,76 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     EXPECT_EQ(sync.object_requests.size(), 4u);
     EXPECT_NE(sync.object_requests.find(object_identifiers[0]), sync.object_requests.end());
     EXPECT_EQ(sync.object_requests.end(), sync.object_requests.find(object_identifiers[1]));
+    EXPECT_NE(sync.object_requests.find(object_identifiers[2]), sync.object_requests.end());
+  });
+}
+
+TEST_F(PageStorageTest, AddMultipleCommitsFromP2P) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    FakeSyncDelegate sync;
+    storage_->SetSyncDelegate(&sync);
+
+    // Build the commit Tree with:
+    //     0   1
+    //         |
+    //         2
+    std::vector<ObjectIdentifier> object_identifiers;
+    object_identifiers.resize(3);
+    for (size_t i = 0; i < object_identifiers.size(); ++i) {
+      ObjectData value = MakeObject("value" + std::to_string(i), InlineBehavior::PREVENT);
+      std::vector<Entry> entries = {
+          Entry{"key" + std::to_string(i), value.object_identifier, KeyPriority::EAGER, EntryId()}};
+      std::unique_ptr<const btree::TreeNode> node;
+      ASSERT_TRUE(CreateNodeFromEntries(entries, {}, &node));
+      object_identifiers[i] = node->GetIdentifier();
+      sync.AddObject(value.object_identifier, value.value);
+      std::unique_ptr<const Object> root_object =
+          TryGetObject(object_identifiers[i], PageStorage::Location::Local());
+      fxl::StringView root_data;
+      ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
+      sync.AddObject(object_identifiers[i], root_data.ToString());
+    }
+
+    // Reset and clear the storage.
+    ResetStorage();
+    storage_->SetSyncDelegate(&sync);
+    for (auto& identifier : object_identifiers) {
+      RetrackIdentifier(&identifier);
+    }
+
+    std::vector<std::unique_ptr<const Commit>> parent;
+    parent.emplace_back(GetFirstHead());
+    std::unique_ptr<const Commit> commit0 = storage_->GetCommitFactory()->FromContentAndParents(
+        environment_.clock(), object_identifiers[0], std::move(parent));
+    parent.clear();
+
+    parent.emplace_back(GetFirstHead());
+    std::unique_ptr<const Commit> commit1 = storage_->GetCommitFactory()->FromContentAndParents(
+        environment_.clock(), object_identifiers[1], std::move(parent));
+    parent.clear();
+
+    parent.emplace_back(commit1->Clone());
+    std::unique_ptr<const Commit> commit2 = storage_->GetCommitFactory()->FromContentAndParents(
+        environment_.clock(), object_identifiers[2], std::move(parent));
+
+    std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
+    commits_and_bytes.emplace_back(commit0->GetId(), commit0->GetStorageBytes().ToString());
+    commits_and_bytes.emplace_back(commit1->GetId(), commit1->GetStorageBytes().ToString());
+    commits_and_bytes.emplace_back(commit2->GetId(), commit2->GetStorageBytes().ToString());
+
+    bool called;
+    Status status;
+    std::vector<CommitId> missing_ids;
+    storage_->AddCommitsFromSync(
+        std::move(commits_and_bytes), ChangeSource::P2P,
+        callback::Capture(callback::SetWhenCalled(&called), &status, &missing_ids));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    EXPECT_EQ(sync.object_requests.size(), 6u);
+    EXPECT_NE(sync.object_requests.find(object_identifiers[0]), sync.object_requests.end());
+    EXPECT_NE(sync.object_requests.find(object_identifiers[1]), sync.object_requests.end());
     EXPECT_NE(sync.object_requests.find(object_identifiers[2]), sync.object_requests.end());
   });
 }

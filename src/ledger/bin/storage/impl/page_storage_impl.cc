@@ -1190,6 +1190,9 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
                                                       std::vector<CommitId>* missing_ids) {
   std::vector<std::unique_ptr<const Commit>> commits;
 
+  // The set of commit whose objects we have to download. If |source| is |ChangeSource::CLOUD|, we
+  // only need to get the heads. If |source| is |ChangeSource::P2P|, we must get all objects from
+  // unsynced commits, because we might have to upload them to the cloud.
   std::map<const CommitId*, const Commit*, StringPointerComparator> leaves;
   commits.reserve(ids_and_bytes.size());
 
@@ -1230,11 +1233,15 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
       return status;
     }
 
-    // Remove parents from leaves.
-    for (const auto& parent_id : commit->GetParentIds()) {
-      auto it = leaves.find(&parent_id);
-      if (it != leaves.end()) {
-        leaves.erase(it);
+    // For commits from the cloud, remove parents from leaves.
+    // TODO(35279): send sync information with P2P commits so we can remove all synced parents from
+    // the leaves.
+    if (source == ChangeSource::CLOUD) {
+      for (const auto& parent_id : commit->GetParentIds()) {
+        auto it = leaves.find(&parent_id);
+        if (it != leaves.end()) {
+          leaves.erase(it);
+        }
       }
     }
     leaves[&commit->GetId()] = commit.get();
