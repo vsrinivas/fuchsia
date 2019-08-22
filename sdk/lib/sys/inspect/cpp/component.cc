@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 #include <lib/sys/inspect/cpp/component.h>
+#include <lib/vfs/cpp/vmo_file.h>
 
 #include <memory>
-
-#include <sdk/lib/vfs/cpp/vmo_file.h>
 
 using inspect::NodeHealth;
 

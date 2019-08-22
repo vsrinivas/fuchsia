@@ -64,8 +64,8 @@ WrapperType State::InnerCreateArray(const std::string& name, BlockIndex parent, 
     return WrapperType();
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   BlockIndex name_index, value_index;
   zx_status_t status;
@@ -86,8 +86,8 @@ WrapperType State::InnerCreateArray(const std::string& name, BlockIndex parent, 
 template <typename NumericType, typename WrapperType, BlockType BlockTypeValue>
 void State::InnerSetArray(WrapperType* metric, size_t index, NumericType value) {
   ZX_ASSERT(metric->state_.get() == this);
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_ASSERT(GetType(block) == BlockType::kArrayValue);
@@ -102,8 +102,8 @@ void State::InnerSetArray(WrapperType* metric, size_t index, NumericType value) 
 template <typename NumericType, typename WrapperType, BlockType BlockTypeValue, typename Operation>
 void State::InnerOperationArray(WrapperType* metric, size_t index, NumericType value) {
   ZX_ASSERT(metric->state_.get() == this);
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_ASSERT(GetType(block) == BlockType::kArrayValue);
@@ -122,8 +122,8 @@ void State::InnerFreeArray(WrapperType* value) {
     return;
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   DecrementParentRefcount(value->value_index_);
 
@@ -166,12 +166,12 @@ std::shared_ptr<State> State::CreateWithSize(size_t size) {
 State::~State() { heap_->Free(header_); }
 
 const zx::vmo& State::GetVmo() const {
-  std::lock_guard lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
   return heap_->GetVmo();
 }
 
 bool State::Copy(zx::vmo* vmo) const {
-  std::lock_guard lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
   size_t size = heap_->size();
   if (zx::vmo::create(size, 0, vmo) != ZX_OK) {
@@ -186,8 +186,8 @@ bool State::Copy(zx::vmo* vmo) const {
 }
 
 IntProperty State::CreateIntProperty(const std::string& name, BlockIndex parent, int64_t value) {
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   BlockIndex name_index, value_index;
   zx_status_t status;
@@ -203,8 +203,8 @@ IntProperty State::CreateIntProperty(const std::string& name, BlockIndex parent,
 }
 
 UintProperty State::CreateUintProperty(const std::string& name, BlockIndex parent, uint64_t value) {
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   BlockIndex name_index, value_index;
   zx_status_t status;
@@ -221,8 +221,8 @@ UintProperty State::CreateUintProperty(const std::string& name, BlockIndex paren
 
 DoubleProperty State::CreateDoubleProperty(const std::string& name, BlockIndex parent,
                                            double value) {
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   BlockIndex name_index, value_index;
   zx_status_t status;
@@ -257,8 +257,8 @@ template <typename WrapperType, typename ValueType>
 WrapperType State::InnerCreateProperty(const std::string& name, BlockIndex parent,
                                        const char* value, size_t length,
                                        PropertyBlockFormat format) {
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   BlockIndex name_index, value_index;
   zx_status_t status;
@@ -293,8 +293,8 @@ ByteVectorProperty State::CreateByteVectorProperty(const std::string& name, Bloc
 
 Link State::CreateLink(const std::string& name, BlockIndex parent, const std::string& content,
                        LinkBlockDisposition disposition) {
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   BlockIndex name_index, value_index, content_index;
   zx_status_t status;
@@ -320,8 +320,8 @@ Link State::CreateLink(const std::string& name, BlockIndex parent, const std::st
 }
 
 Node State::CreateNode(const std::string& name, BlockIndex parent) {
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   BlockIndex name_index, value_index;
   zx_status_t status;
@@ -335,8 +335,8 @@ Node State::CreateNode(const std::string& name, BlockIndex parent) {
 
 void State::SetIntProperty(IntProperty* metric, int64_t value) {
   ZX_ASSERT(metric->state_.get() == this);
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kIntValue, "Expected int metric, got %d",
@@ -347,8 +347,8 @@ void State::SetIntProperty(IntProperty* metric, int64_t value) {
 void State::SetUintProperty(UintProperty* metric, uint64_t value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kUintValue, "Expected uint metric, got %d",
@@ -359,8 +359,8 @@ void State::SetUintProperty(UintProperty* metric, uint64_t value) {
 void State::SetDoubleProperty(DoubleProperty* metric, double value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kDoubleValue, "Expected double metric, got %d",
@@ -383,8 +383,8 @@ void State::SetDoubleArray(DoubleArray* array, size_t index, double value) {
 void State::AddIntProperty(IntProperty* metric, int64_t value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kIntValue, "Expected int metric, got %d",
@@ -395,8 +395,8 @@ void State::AddIntProperty(IntProperty* metric, int64_t value) {
 void State::AddUintProperty(UintProperty* metric, uint64_t value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kUintValue, "Expected uint metric, got %d",
@@ -407,8 +407,8 @@ void State::AddUintProperty(UintProperty* metric, uint64_t value) {
 void State::AddDoubleProperty(DoubleProperty* metric, double value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kDoubleValue, "Expected double metric, got %d",
@@ -419,8 +419,8 @@ void State::AddDoubleProperty(DoubleProperty* metric, double value) {
 void State::SubtractIntProperty(IntProperty* metric, int64_t value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kIntValue, "Expected int metric, got %d",
@@ -431,8 +431,8 @@ void State::SubtractIntProperty(IntProperty* metric, int64_t value) {
 void State::SubtractUintProperty(UintProperty* metric, uint64_t value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kUintValue, "Expected uint metric, got %d",
@@ -443,8 +443,8 @@ void State::SubtractUintProperty(UintProperty* metric, uint64_t value) {
 void State::SubtractDoubleProperty(DoubleProperty* metric, double value) {
   ZX_ASSERT(metric->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(metric->value_index_);
   ZX_DEBUG_ASSERT_MSG(GetType(block) == BlockType::kDoubleValue, "Expected double metric, got %d",
@@ -486,8 +486,8 @@ template <typename WrapperType>
 void State::InnerSetProperty(WrapperType* property, const char* value, size_t length) {
   ZX_ASSERT(property->state_.get() == this);
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   InnerSetStringExtents(property->value_index_, value, length);
 }
@@ -540,8 +540,8 @@ void State::FreeIntProperty(IntProperty* metric) {
     return;
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   DecrementParentRefcount(metric->value_index_);
 
@@ -556,8 +556,8 @@ void State::FreeUintProperty(UintProperty* metric) {
     return;
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   DecrementParentRefcount(metric->value_index_);
 
@@ -572,8 +572,8 @@ void State::FreeDoubleProperty(DoubleProperty* metric) {
     return;
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   DecrementParentRefcount(metric->value_index_);
 
@@ -595,8 +595,8 @@ void State::InnerFreePropertyWithExtents(WrapperType* property) {
     return;
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   DecrementParentRefcount(property->value_index_);
 
@@ -619,8 +619,8 @@ void State::FreeLink(Link* link) {
     return;
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   DecrementParentRefcount(link->value_index_);
 
@@ -636,8 +636,8 @@ void State::FreeNode(Node* object) {
     return;
   }
 
-  std::lock_guard lock(mutex_);
-  auto gen = AutoGenerationIncrement(header_, heap_.get());
+  std::lock_guard<std::mutex> lock(mutex_);
+  AutoGenerationIncrement gen(header_, heap_.get());
 
   auto* block = heap_->GetBlock(object->value_index_);
   if (block) {
