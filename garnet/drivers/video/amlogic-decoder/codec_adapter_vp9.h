@@ -63,6 +63,8 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   bool HasMoreInputData() override;
 
  private:
+  friend class CodecAdapterVp9Test;
+
   void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run);
   void PostToInputProcessingThread(fit::closure to_run);
   void QueueInputItem(CodecInputItem input_item);
