@@ -21,7 +21,6 @@
 #include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hid/boot.h>
 
 namespace hid_driver {
 
@@ -30,8 +29,9 @@ namespace hid_driver {
 // ddk/protocol/input.h for the format). This macro sets FIDL return values for
 // boot mouse devices to reflect the boot protocol, rather than what the device
 // itself reports.
+// TODO: update this to include keyboards if we find a keyboard in the wild that
+// needs a hack as well.
 #define BOOT_MOUSE_HACK 1
-#define BOOT_KBD_HACK 1
 
 static constexpr uint32_t kHidFlagsDead = (1 << 0);
 static constexpr uint32_t kHidFlagsWriteFailed = (1 << 1);
@@ -287,12 +287,32 @@ zx_status_t HidDevice::ProcessReportDescriptor() {
   reports.has_rpt_id = false;
 
   zx_status_t status = hid_lib_parse_reports(hid_report_desc_, hid_report_desc_len_, &reports);
-  if (status != ZX_OK) {
-    return status;
+  if (status == ZX_OK) {
+#if BOOT_MOUSE_HACK
+    // Ignore the HID report descriptor from the device, since we're putting
+    // the device into boot protocol mode.
+    if (info_.device_class == HID_DEVICE_CLASS_POINTER) {
+      if (info_.boot_device) {
+        zxlogf(INFO,
+               "hid: boot mouse hack for \"%s\":  "
+               "report count (%zu->1), "
+               "inp sz (%d->24), "
+               "out sz (%d->0), "
+               "feat sz (%d->0)\n",
+               name_.data(), num_reports_, sizes_[0].in_size, sizes_[0].out_size,
+               sizes_[0].feat_size);
+        hid_reports_set_boot_mode(&reports);
+      } else {
+        zxlogf(INFO, "hid: boot mouse hack skipped for \"%s\": does not support protocol.\n",
+               name_.data());
+      }
+    }
+#endif
+
+    num_reports_ = reports.num_reports;
+    ZX_DEBUG_ASSERT(num_reports_ <= countof(sizes_));
   }
 
-  num_reports_ = reports.num_reports;
-  ZX_DEBUG_ASSERT(num_reports_ <= countof(sizes_));
   return status;
 }
 
@@ -484,66 +504,6 @@ hidbus_ifc_protocol_ops_t hid_ifc_ops = {
     .io_queue = HidDevice::IoQueue,
 };
 
-zx_status_t HidDevice::SetReportDescriptor() {
-  zx_status_t status = hidbus_.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT,
-                                             reinterpret_cast<void**>(&hid_report_desc_),
-                                             &hid_report_desc_len_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if (!info_.boot_device) {
-    return ZX_OK;
-  }
-
-  hid_protocol_t protocol;
-  status = hidbus_.GetProtocol(&protocol);
-  if (status != ZX_OK) {
-    if (status == ZX_ERR_NOT_SUPPORTED) {
-      status = ZX_OK;
-    }
-    return status;
-  }
-
-  // Only continue if the device was put into the boot protocol.
-  if (protocol != HID_PROTOCOL_BOOT) {
-    return ZX_OK;
-  }
-
-  // If we are a boot protocol kbd, we need to use the right HID descriptor.
-  if (info_.device_class == HID_DEVICE_CLASS_KBD) {
-    const uint8_t* boot_kbd_desc = get_boot_kbd_report_desc(&hid_report_desc_len_);
-
-    free(hid_report_desc_);
-    hid_report_desc_ = static_cast<uint8_t*>(malloc(hid_report_desc_len_));
-    if (!hid_report_desc_) {
-      status = ZX_ERR_NO_MEMORY;
-      return status;
-    }
-    memcpy(hid_report_desc_, boot_kbd_desc, hid_report_desc_len_);
-
-    // Disable numlock
-    uint8_t zero = 0;
-    hidbus_.SetReport(HID_REPORT_TYPE_OUTPUT, 0, &zero, sizeof(zero));
-    // ignore failure for now
-  }
-
-  // If we are a boot protocol pointer, we need to use the right HID descriptor.
-  if (info_.device_class == HID_DEVICE_CLASS_POINTER) {
-    const uint8_t* boot_mouse_desc = get_boot_mouse_report_desc(&hid_report_desc_len_);
-
-    free(hid_report_desc_);
-    hid_report_desc_ = static_cast<uint8_t*>(malloc(hid_report_desc_len_));
-    if (!hid_report_desc_) {
-      status = ZX_ERR_NO_MEMORY;
-      return status;
-    }
-    memcpy(hid_report_desc_, boot_mouse_desc, hid_report_desc_len_);
-  }
-
-  return ZX_OK;
-}
-
 zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
   hidbus_ = std::move(hidbus_proto);
   zx_status_t status = ZX_OK;
@@ -557,27 +517,22 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
   name_[ZX_DEVICE_NAME_MAX] = 0;
 
   if (info_.boot_device) {
-#if BOOT_KBD_HACK
+    status = hidbus_.SetProtocol(HID_PROTOCOL_BOOT);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
+      return status;
+    }
+
+    // Disable numlock
     if (info_.device_class == HID_DEVICE_CLASS_KBD) {
-      status = hidbus_.SetProtocol(HID_PROTOCOL_BOOT);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
-        return status;
-      }
+      uint8_t zero = 0;
+      hidbus_.SetReport(HID_REPORT_TYPE_OUTPUT, 0, &zero, sizeof(zero));
+      // ignore failure for now
     }
-#endif
-#if BOOT_MOUSE_HACK
-    if (info_.device_class == HID_DEVICE_CLASS_POINTER) {
-      status = hidbus_.SetProtocol(HID_PROTOCOL_BOOT);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "hid: could not put HID device into boot protocol: %d\n", status);
-        return status;
-      }
-    }
-#endif
   }
 
-  status = SetReportDescriptor();
+  status = hidbus_.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT, (void**)&hid_report_desc_,
+                                 &hid_report_desc_len_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "hid: could not retrieve HID report descriptor: %d\n", status);
     return status;

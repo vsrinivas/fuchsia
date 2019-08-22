@@ -13,7 +13,6 @@ driver("hid") {
     "$zx/system/fidl/fuchsia-hardware-input:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hid",
     "$zx/system/ulib/hid-parser",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
