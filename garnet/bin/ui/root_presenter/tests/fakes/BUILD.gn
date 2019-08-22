@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("fakes") {
+  testonly = true
+
+  sources = [
+    "fake_scenic.cc",
+    "fake_scenic.h",
+    "fake_session.cc",
+    "fake_session.h",
+    "fake_settings_service.cc",
+    "fake_settings_service.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//sdk/fidl/fuchsia.accessibility",
+  ]
+}

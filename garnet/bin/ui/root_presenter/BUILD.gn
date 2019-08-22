@@ -38,6 +38,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/input",
+    "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -51,6 +52,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":accessibility",
     ":displays",
     ":factory_reset_manager",
     ":key_util",
@@ -60,6 +62,7 @@ source_set("lib") {
     "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/input",
+    "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -128,5 +131,19 @@ source_set("factory_reset_manager") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/sys/cpp",
+  ]
+}
+
+source_set("accessibility") {
+  sources = [
+    "a11y_settings_watcher.cc",
+    "a11y_settings_watcher.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.scenic",
   ]
 }
