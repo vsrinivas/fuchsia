@@ -15,6 +15,7 @@ fidl("fuchsia.settings") {
     "intl.fidl",
     "privacy.fidl",
     "settings.fidl",
+    "setup.fidl",
     "system.fidl",
   ]
 

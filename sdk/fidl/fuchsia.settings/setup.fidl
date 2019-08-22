@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+/// Settings that influence the device's setup behavior.
+[Discoverable]
+protocol Setup {
+    /// Gets the current [SetupSettings]. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    Watch() -> (SetupSettings settings);
+
+    /// Changes the settings specified in [SetupSettings]. Any field not set in
+    /// the table will not perform any system operation. An error will be
+    /// returned if the provided settings is an invalid change (for example, if
+    /// it is empty).
+    Set(SetupSettings settings) -> () error Error;
+};
+
+table SetupSettings {
+    /// Specifies the network interfaces that the device can be configured
+    /// over during setup.
+    1: ConfigurationInterfaces enabled_configuration_interfaces;
+};
+
+bits ConfigurationInterfaces : uint32 {
+    // Configuration over ethernet.
+    ETHERNET = 0x1;
+    // Configuration over WiFi.
+    WIFI = 0x2;
+};

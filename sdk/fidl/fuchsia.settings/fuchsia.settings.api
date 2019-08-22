@@ -6,5 +6,6 @@
   "fidl/fuchsia.settings/intl.fidl": "2981c300e3fcdb9ee2460ad4bd504e90",
   "fidl/fuchsia.settings/privacy.fidl": "400c3fbe38e7252e0cbbf5cf4580d7b5",
   "fidl/fuchsia.settings/settings.fidl": "8005babad1700cbf2eb0359f5e6ab6e4",
+  "fidl/fuchsia.settings/setup.fidl": "4930a5baeb2ce45c3aec1a6669ebb86e",
   "fidl/fuchsia.settings/system.fidl": "5fdfc633665314cbd217b6835105428f"
 }
