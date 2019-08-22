@@ -206,9 +206,9 @@ typedef struct {
 //     TODO(SEC-31): Perhaps this will change??
 //     The processor is in 64-bit mode with direct virtual to physical
 //     mapping covering the physical memory where the kernel and
-//     bootloader-constructed ZBI were loaded, which must be below 4GB.
-//     The %rsi register (or %esi, since the high 32 bits must be zero)
-//     holds the physical address of the bootloader-constructed ZBI.
+//     bootloader-constructed ZBI were loaded.
+//     The %rsi register holds the physical address of the
+//     bootloader-constructed ZBI.
 //     All other registers are unspecified.
 //
 //  ARM64
