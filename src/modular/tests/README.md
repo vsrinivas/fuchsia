@@ -24,4 +24,10 @@ NOTE: You only need to run `fx set` once.
 
 ### Running all tests
 
-`fx shell "run-test-component modular_integration_tests"`
+`fx run-test modular_integration_tests`
+
+### Running one test
+
+Add the following to the above command:
+
+`-- --gtest_filter="{ClassName}.{TestName}"`
