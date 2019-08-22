@@ -42,11 +42,30 @@ async fn main() -> Result<(), Error> {
     validate_account_mutate("none".to_string(), fidl_fuchsia_setui::LoginOverride::None).await?;
 
     println!("accessibility service tests");
+    println!("  client calls set accessibility watch");
+    validate_accessibility(None, None, None, None, None).await?;
+
     println!("  client calls set audio_description");
-    validate_accessibility(Some(true), None).await?;
+    validate_accessibility(Some(true), None, None, None, None).await?;
+
+    println!("  client calls set screen_reader");
+    validate_accessibility(None, Some(true), None, None, None).await?;
+
+    println!("  client calls set color_inversion");
+    validate_accessibility(None, None, Some(true), None, None).await?;
+
+    println!("  client calls set enable_magnification");
+    validate_accessibility(None, None, None, Some(true), None).await?;
+
     println!("  client calls set color_correction");
-    validate_accessibility(None, Some(fidl_fuchsia_settings::ColorBlindnessType::Protanomaly))
-        .await?;
+    validate_accessibility(
+        None,
+        None,
+        None,
+        None,
+        Some(fidl_fuchsia_settings::ColorBlindnessType::Protanomaly),
+    )
+    .await?;
 
     println!("display service tests");
     println!("  client calls display watch");
@@ -190,13 +209,28 @@ async fn validate_display(
 
 async fn validate_accessibility(
     expected_audio_description: Option<bool>,
+    expected_screen_reader: Option<bool>,
+    expected_color_inversion: Option<bool>,
+    expected_enable_magnification: Option<bool>,
     expected_color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
 ) -> Result<(), Error> {
     let env = create_service!(
         Services::Accessibility, AccessibilityRequest::Set { settings, responder, } => {
             if let (Some(audio_description), Some(expected_audio_description_value)) =
-              (settings.audio_description, expected_audio_description) {
+                (settings.audio_description, expected_audio_description) {
                 assert_eq!(audio_description, expected_audio_description_value);
+                responder.send(&mut Ok(()))?;
+            } else if let (Some(screen_reader), Some(expected_screen_reader_value)) =
+                (settings.screen_reader, expected_screen_reader) {
+                assert_eq!(screen_reader, expected_screen_reader_value);
+                responder.send(&mut Ok(()))?;
+            } else if let (Some(color_inversion), Some(expected_color_inversion_value)) =
+                (settings.color_inversion, expected_color_inversion) {
+                assert_eq!(color_inversion, expected_color_inversion_value);
+                responder.send(&mut Ok(()))?;
+            } else if let (Some(enable_magnification), Some(expected_enable_magnification_value)) =
+                (settings.enable_magnification, expected_enable_magnification) {
+                assert_eq!(enable_magnification, expected_enable_magnification_value);
                 responder.send(&mut Ok(()))?;
             } else if let (Some(color_correction), Some(expected_color_correction_value)) =
                 (settings.color_correction, expected_color_correction) {
@@ -209,9 +243,9 @@ async fn validate_accessibility(
         AccessibilityRequest::Watch { responder } => {
             responder.send(&mut Ok(AccessibilitySettings {
                 audio_description: Some(false),
-                screen_reader: None,
-                color_inversion: None,
-                enable_magnification: None,
+                screen_reader: Some(false),
+                color_inversion: Some(false),
+                enable_magnification: Some(false),
                 color_correction: Some(fidl_fuchsia_settings::ColorBlindnessType::None),
                 captions_settings: None,
             }))?;
@@ -225,6 +259,9 @@ async fn validate_accessibility(
     accessibility::command(
         accessibility_service,
         expected_audio_description,
+        expected_screen_reader,
+        expected_color_inversion,
+        expected_enable_magnification,
         expected_color_correction,
     )
     .await?;

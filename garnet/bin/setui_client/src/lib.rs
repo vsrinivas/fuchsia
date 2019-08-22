@@ -48,14 +48,19 @@ pub enum SettingClient {
 
     #[structopt(name = "accessibility")]
     Accessibility {
-        #[structopt(short = "a", long = "audio_description")]
+        #[structopt(short = "a", long)]
         audio_description: Option<bool>,
 
-        #[structopt(
-            short = "c",
-            long = "color_correction",
-            parse(try_from_str = "str_to_color_blindness_type")
-        )]
+        #[structopt(short = "s", long)]
+        screen_reader: Option<bool>,
+
+        #[structopt(short = "i", long)]
+        color_inversion: Option<bool>,
+
+        #[structopt(short = "m", long)]
+        enable_magnification: Option<bool>,
+
+        #[structopt(short = "c", long, parse(try_from_str = "str_to_color_blindness_type"))]
         color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
     },
 
@@ -128,13 +133,25 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = intl::command(intl_service, time_zone, temperature_unit, locales).await?;
             println!("Intl: {}", output);
         }
-        SettingClient::Accessibility { audio_description, color_correction } => {
+        SettingClient::Accessibility {
+            audio_description,
+            screen_reader,
+            color_inversion,
+            enable_magnification,
+            color_correction,
+        } => {
             let accessibility_service =
                 connect_to_service::<fidl_fuchsia_settings::AccessibilityMarker>()
                     .context("Failed to connect to accessibility service")?;
-            let output =
-                accessibility::command(accessibility_service, audio_description, color_correction)
-                    .await?;
+            let output = accessibility::command(
+                accessibility_service,
+                audio_description,
+                screen_reader,
+                color_inversion,
+                enable_magnification,
+                color_correction,
+            )
+            .await?;
             println!("Accessibility: {}", output);
         }
     }
