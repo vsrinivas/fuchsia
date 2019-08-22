@@ -6,6 +6,27 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 
+declare_args() {
+  # Set to |true| to enable collecting execution traces of audio_core.
+  #
+  # Ex:
+  #   $ fx set $TARGET \
+  #       --args="audio_core_trace_enabled=true" \
+  #       --with-base=//garnet/packages/prod:tracing
+  #   ... build and deploy ...
+  #   $ fx traceutil record \
+  #       -categories audio \
+  #       -duration 10s \
+  #       -buffer-size 64
+  audio_core_trace_enabled = false
+}
+
+config("audio_core_config") {
+  if (!audio_core_trace_enabled) {
+    defines = [ "NTRACE" ]
+  }
+}
+
 config_data("default_audio_policy") {
   for_pkg = "audio_core"
   sources = [
@@ -73,6 +94,7 @@ package("audio_core") {
 }
 
 source_set("audio_core_lib") {
+  public_configs = [ ":audio_core_config" ]
   sources = [
     "audio_admin.cc",
     "audio_admin.h",
@@ -133,6 +155,7 @@ source_set("audio_core_lib") {
     "//third_party/rapidjson",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fzl",
+    "//zircon/public/lib/trace",
   ]
 
   deps = [
@@ -170,6 +193,9 @@ executable("audio_core_bin") {
     "//garnet/public/lib/inspect_deprecated:component",
     "//zircon/public/lib/async-loop-cpp",
   ]
+  if (audio_core_trace_enabled) {
+    deps += [ "//zircon/public/lib/trace-provider-with-fdio" ]
+  }
 }
 
 executable("unittest_bin") {

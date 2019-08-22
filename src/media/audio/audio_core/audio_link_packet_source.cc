@@ -3,6 +3,8 @@
 
 #include "src/media/audio/audio_core/audio_link_packet_source.h"
 
+#include <trace/event.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/audio_renderer_format_info.h"
@@ -26,6 +28,7 @@ AudioLinkPacketSource::~AudioLinkPacketSource() {
 fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
     fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
     fbl::RefPtr<AudioRendererFormatInfo> format) {
+  TRACE_DURATION("audio", "AudioLinkPacketSource::Create");
   FXL_DCHECK(source);
   FXL_DCHECK(dest);
 
@@ -40,11 +43,13 @@ fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
 }
 
 void AudioLinkPacketSource::PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet) {
+  TRACE_DURATION("audio", "AudioLinkPacketSource::PushToPendingQueue");
   std::lock_guard<std::mutex> locker(pending_mutex_);
   pending_packet_queue_.emplace_back(std::move(packet));
 }
 
 void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token) {
+  TRACE_DURATION("audio", "AudioLinkPacketSource::FlushPendingQueue");
   std::deque<fbl::RefPtr<AudioPacketRef>> flushed_packets;
 
   {
@@ -85,6 +90,7 @@ void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToke
 }
 
 void AudioLinkPacketSource::CopyPendingQueue(const fbl::RefPtr<AudioLinkPacketSource>& other) {
+  TRACE_DURATION("audio", "AudioLinkPacketSource::CopyPendingQueue");
   FXL_DCHECK(other != nullptr);
   FXL_DCHECK(this != other.get());
 
@@ -115,6 +121,7 @@ fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(bool* w
 }
 
 void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
+  TRACE_DURATION("audio", "AudioLinkPacketSource::UnlockPendingQueueFront");
   {
     std::lock_guard<std::mutex> locker(pending_mutex_);
     FXL_DCHECK(processing_in_progress_);

@@ -14,6 +14,7 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
+#include <trace/event.h>
 
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
@@ -112,7 +113,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   void NotifyGainMuteChanged();
   void PublishServices();
   void Shutdown();
-  void DoPacketCleanup();
+  void DoPacketCleanup(trace_async_id_t nonce);
 
   fidl::BindingSet<fuchsia::media::AudioCore> bindings_;
 

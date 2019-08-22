@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <limits>
 
+#include <trace/event.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
@@ -70,6 +72,7 @@ template <ScalerType ScaleType, bool DoAccumulate, bool HasModulo>
 inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src_void,
     uint32_t frac_src_frames, int32_t* frac_src_offset, Bookkeeping* info) {
+  TRACE_DURATION("audio", "LinearSamplerImpl::MixInternal");
   static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
@@ -274,6 +277,7 @@ template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
     float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
     uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate, Bookkeeping* info) {
+  TRACE_DURATION("audio", "LinearSamplerImpl::Mix");
   FXL_DCHECK(info != nullptr);
 
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
@@ -338,6 +342,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_
                                                      uint32_t frac_src_frames,
                                                      int32_t* frac_src_offset, Bookkeeping* info,
                                                      size_t chan_count) {
+  TRACE_DURATION("audio", "NxNLinearSamplerImpl::MixInternal");
   static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
 
@@ -540,6 +545,7 @@ bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
                                               uint32_t* dest_offset, const void* src,
                                               uint32_t frac_src_frames, int32_t* frac_src_offset,
                                               bool accumulate, Bookkeeping* info) {
+  TRACE_DURATION("audio", "NxNLinearSamplerImpl::Mix");
   FXL_DCHECK(info != nullptr);
 
   bool hasModulo = (info->denominator > 0 && info->rate_modulo > 0);
@@ -597,12 +603,14 @@ bool NxNLinearSamplerImpl<SrcSampleType>::Mix(float* dest, uint32_t dest_frames,
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
+  TRACE_DURATION("audio", "SelectLSM(dChan,sType,sChan)");
   return std::make_unique<LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>>();
 }
 
 template <size_t DestChanCount, typename SrcSampleType>
 static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
+  TRACE_DURATION("audio", "SelectLSM(dChan,sType)");
   switch (src_format.channels) {
     case 1:
       return SelectLSM<DestChanCount, SrcSampleType, 1>(src_format, dest_format);
@@ -621,6 +629,7 @@ static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStream
 template <size_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStreamType& src_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
+  TRACE_DURATION("audio", "SelectLSM(dChan)");
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return SelectLSM<DestChanCount, uint8_t>(src_format, dest_format);
@@ -637,6 +646,7 @@ static inline std::unique_ptr<Mixer> SelectLSM(const fuchsia::media::AudioStream
 
 static inline std::unique_ptr<Mixer> SelectNxNLSM(
     const fuchsia::media::AudioStreamType& src_format) {
+  TRACE_DURATION("audio", "SelectNxNLSM");
   switch (src_format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return std::make_unique<NxNLinearSamplerImpl<uint8_t>>(src_format.channels);
@@ -653,6 +663,7 @@ static inline std::unique_ptr<Mixer> SelectNxNLSM(
 
 std::unique_ptr<Mixer> LinearSampler::Select(const fuchsia::media::AudioStreamType& src_format,
                                              const fuchsia::media::AudioStreamType& dest_format) {
+  TRACE_DURATION("audio", "LinearSampler::Select");
   // If num_channels for src and dest are equal and > 2, directly map these one-to-one.
   // TODO(MTWN-75): eliminate the NxN mixers, replacing with flexible rechannelization (see below).
   if (src_format.channels == dest_format.channels && src_format.channels > 2) {

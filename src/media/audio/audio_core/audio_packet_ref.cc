@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_packet_ref.h"
 
+#include <trace/event.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio {
@@ -19,11 +21,15 @@ AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
       start_pts_(start_pts),
       end_pts_(start_pts + frac_frame_len),
       release_handler_(std::move(release_handler)) {
+  TRACE_DURATION("audio", "AudioPacketRef::AudioPacketRef");
+  TRACE_FLOW_BEGIN("audio", "ProcessPacket", nonce_);
   FXL_DCHECK(release_handler_);
   FXL_DCHECK(vmo_ref_ != nullptr);
 }
 
 void AudioPacketRef::fbl_recycle() {
+  TRACE_DURATION("audio", "AudioPacketRef::fbl_recycle");
+  TRACE_FLOW_END("audio", "ProcessPacket", nonce_);
   // If the packet is dying for the first time, and we successfully queue it for
   // cleanup, allow it to live on until the cleanup actually runs.  Otherwise
   // the object is at its end of life.

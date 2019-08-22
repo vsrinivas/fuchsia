@@ -9,6 +9,7 @@
 #include <limits>
 
 #include <fbl/auto_lock.h>
+#include <trace/event.h>
 
 #include "src/lib/fxl/time/time_delta.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
@@ -27,6 +28,7 @@ AudioOutput::AudioOutput(AudioDeviceManager* manager) : AudioDevice(Type::Output
 }
 
 zx_status_t AudioOutput::Init() {
+  TRACE_DURATION("audio", "AudioOutput::Init");
   zx_status_t res = AudioDevice::Init();
   if (res != ZX_OK) {
     return res;
@@ -53,6 +55,7 @@ zx_status_t AudioOutput::Init() {
 }
 
 void AudioOutput::Process() {
+  TRACE_DURATION("audio", "AudioOutput::Process");
   bool mixed = false;
   fxl::TimePoint now = fxl::TimePoint::Now();
 
@@ -130,6 +133,7 @@ void AudioOutput::Process() {
 }
 
 zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
+  TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
   auto mix_bookkeeping = std::make_unique<Bookkeeping>();
 
   // For now, refuse to link to anything but a packet source. This code does not currently know how
@@ -183,6 +187,7 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
 
 // Create our intermediate accumulation buffer.
 void AudioOutput::SetupMixBuffer(uint32_t max_mix_frames) {
+  TRACE_DURATION("audio", "AudioOutput::SetupMixBuffer");
   FXL_DCHECK(output_producer_->channels() > 0u);
   FXL_DCHECK(max_mix_frames > 0u);
   FXL_DCHECK(static_cast<uint64_t>(max_mix_frames) * output_producer_->channels() <=
@@ -193,6 +198,7 @@ void AudioOutput::SetupMixBuffer(uint32_t max_mix_frames) {
 }
 
 void AudioOutput::ForEachLink(TaskType task_type) {
+  TRACE_DURATION("audio", "AudioOutput::ForEachLink");
   // Make a copy of our currently active set of links so that we don't have to hold onto mutex_ for
   // the entire mix operation.
   {
@@ -300,6 +306,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
 
 bool AudioOutput::SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                            Bookkeeping* info) {
+  TRACE_DURATION("audio", "AudioOutput::SetupMix");
   // If we need to recompose our transformation from destination frame space to source fractional
   // frames, do so now.
   FXL_DCHECK(info);
@@ -311,6 +318,7 @@ bool AudioOutput::SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
 
 bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                              Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& packet) {
+  TRACE_DURATION("audio", "AudioOutput::ProcessMix");
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
   // Sanity check our parameters.
@@ -503,6 +511,7 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_rendere
 
 bool AudioOutput::SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                             Bookkeeping* info) {
+  TRACE_DURATION("audio", "AudioOutput::SetupTrim");
   // Compute the cutoff time used to decide whether to trim packets. ForEachLink has already updated
   // our transformation, no need for us to do so here.
   FXL_DCHECK(info);
@@ -520,6 +529,7 @@ bool AudioOutput::SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer
 
 bool AudioOutput::ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                               Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
+  TRACE_DURATION("audio", "AudioOutput::ProcessTrim");
   FXL_DCHECK(pkt_ref);
 
   // If the presentation end of this packet is in the future, stop trimming.
@@ -532,6 +542,7 @@ bool AudioOutput::ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_render
 
 void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
                                     Bookkeeping* bk) {
+  TRACE_DURATION("audio", "AudioOutput::UpdateSourceTrans");
   FXL_DCHECK(audio_renderer != nullptr);
   uint32_t gen = bk->source_trans_gen_id;
 
@@ -549,6 +560,7 @@ void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_
 }
 
 void AudioOutput::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
+  TRACE_DURATION("audio", "AudioOutput::UpdateDestTrans");
   // We should only be here if we have a valid mix job. This means a job which supplies a valid
   // transformation from local time to output frames.
   FXL_DCHECK(job.local_to_output);

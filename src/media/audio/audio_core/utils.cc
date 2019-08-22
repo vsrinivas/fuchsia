@@ -8,6 +8,7 @@
 #include <lib/zx/channel.h>
 
 #include <audio-proto-utils/format-utils.h>
+#include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/driver_utils.h"
@@ -17,6 +18,7 @@ namespace media::audio {
 zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmts,
                              uint32_t* frames_per_second_inout, uint32_t* channels_inout,
                              fuchsia::media::AudioSampleFormat* sample_format_inout) {
+  TRACE_DURATION("audio", "SelectBestFormat");
   if ((frames_per_second_inout == nullptr) || (channels_inout == nullptr) ||
       (sample_format_inout == nullptr)) {
     return ZX_ERR_INVALID_ARGS;
@@ -225,6 +227,7 @@ zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmt
 }
 
 zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
+  TRACE_DURATION("audio", "AcquireHighPriorityProfile");
   // Use threadsafe static initialization to get our one-and-only copy of this profile object. Each
   // subsequent call will return a duplicate of that profile handle to ensure sharing of thread
   // pools.
@@ -273,13 +276,18 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
 
 void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
                                  fit::function<void(zx::profile)> callback) {
+  auto nonce = TRACE_NONCE();
+  TRACE_DURATION("audio", "AcquireAudioCoreImplProfile");
+  TRACE_FLOW_BEGIN("audio", "GetProfile", nonce);
   auto profile_provider = context->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   profile_provider->GetProfile(
       24 /* HIGH_PRIORITY in LK */, "src/media/audio/audio_core/audio_core_impl",
       // Note we move the FIDL ptr into the closure to ensure we keep the channel open until we
       // receive the callback, otherwise it will be impossible to get a response.
-      [profile_provider = std::move(profile_provider), callback = std::move(callback)](
+      [profile_provider = std::move(profile_provider), callback = std::move(callback), nonce](
           zx_status_t status, zx::profile profile) {
+        TRACE_DURATION("audio", "GetProfile callback");
+        TRACE_FLOW_END("audio", "GetProfile", nonce);
         if (status == ZX_OK) {
           callback(std::move(profile));
         } else {

@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/driver_ring_buffer.h"
 
+#include <trace/event.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio {
@@ -11,6 +13,7 @@ namespace media::audio {
 // static
 fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo, uint32_t frame_size,
                                                        uint32_t frame_count, bool input) {
+  TRACE_DURATION("audio", "DriverRingBuffer::Create");
   auto ret = fbl::AdoptRef(new DriverRingBuffer());
 
   if (ret->Init(std::move(vmo), frame_size, frame_count, input) != ZX_OK) {
@@ -22,6 +25,7 @@ fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo, uint32_t fra
 
 zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
                                    bool input) {
+  TRACE_DURATION("audio", "DriverRingBuffer::Init");
   if (!vmo.is_valid()) {
     FXL_LOG(ERROR) << "Invalid VMO!";
     return ZX_ERR_INVALID_ARGS;

@@ -98,13 +98,15 @@ void AudioCoreImpl::PublishServices() {
 }
 
 void AudioCoreImpl::Shutdown() {
+  TRACE_DURATION("audio", "AudioCoreImpl::Shutdown");
   shutting_down_ = true;
   device_manager_.Shutdown();
-  DoPacketCleanup();
+  DoPacketCleanup(0);
 }
 
 void AudioCoreImpl::CreateAudioRenderer(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) {
+  TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioRenderer");
   AUD_VLOG(TRACE);
   device_manager_.AddAudioRenderer(
       AudioRendererImpl::Create(std::move(audio_renderer_request), this));
@@ -112,12 +114,14 @@ void AudioCoreImpl::CreateAudioRenderer(
 
 void AudioCoreImpl::CreateAudioCapturer(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
+  TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioCapturer");
   AUD_VLOG(TRACE);
   device_manager_.AddAudioCapturer(
       AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
 }
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetSystemGain");
   // NAN is undefined and "signless". We cannot simply clamp it into range.
   AUD_VLOG(TRACE) << " (" << gain_db << " dB)";
   if (isnan(gain_db)) {
@@ -143,6 +147,7 @@ void AudioCoreImpl::SetSystemGain(float gain_db) {
 }
 
 void AudioCoreImpl::SetSystemMute(bool muted) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetSystemMute");
   AUD_VLOG(TRACE) << " (mute: " << muted << ")";
   if (system_muted_ == muted) {
     // A device might have received a SetDeviceMute call since we last set this.
@@ -159,6 +164,7 @@ void AudioCoreImpl::SetSystemMute(bool muted) {
 }
 
 void AudioCoreImpl::NotifyGainMuteChanged() {
+  TRACE_DURATION("audio", "AudioCoreImpl::NotifyGainMuteChanged");
   AUD_VLOG(TRACE) << " (" << system_gain_db_ << " dB, mute: " << system_muted_ << ")";
   for (auto& binding : bindings_.bindings()) {
     binding->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
@@ -166,6 +172,7 @@ void AudioCoreImpl::NotifyGainMuteChanged() {
 }
 
 float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
+  TRACE_DURATION("audio", "AudioCoreImpl::GetRenderUsageGain");
   auto usage_index = fidl::ToUnderlying(usage);
 
   if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
@@ -176,6 +183,7 @@ float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) 
 }
 
 float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
+  TRACE_DURATION("audio", "AudioCoreImpl::GetCaptureUsageGain");
   auto usage_index = fidl::ToUnderlying(usage);
 
   if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
@@ -186,6 +194,7 @@ float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
   AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
 
   auto usage_index = fidl::ToUnderlying(usage);
@@ -197,6 +206,7 @@ void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, f
 }
 
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
   AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
 
   auto usage_index = fidl::ToUnderlying(usage);
@@ -209,6 +219,7 @@ void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage,
 
 void AudioCoreImpl::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
                                                  float db_gain) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGainAdjustment");
   auto usage_index = fidl::ToUnderlying(usage);
   if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
     FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
@@ -219,6 +230,7 @@ void AudioCoreImpl::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsag
 
 void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
                                                   float db_gain) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGainAdjustment");
   auto usage_index = fidl::ToUnderlying(usage);
   if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
     FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
@@ -228,39 +240,51 @@ void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUs
 }
 
 void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetRoutingPolicy");
   AUD_VLOG(TRACE) << " (policy: " << static_cast<int>(policy) << ")";
   device_manager_.SetRoutingPolicy(policy);
 }
 
 void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
+  TRACE_DURATION("audio", "AudioCoreImpl::EnableDeviceSettings");
   AUD_VLOG(TRACE) << " (enabled: " << enabled << ")";
   AudioDeviceSettings::EnableDeviceSettings(enabled);
 }
 
 void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                                    fuchsia::media::Behavior behavior) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SetInteraction");
   audio_admin_.SetInteraction(std::move(active), std::move(affected), behavior);
 }
 
-void AudioCoreImpl::LoadDefaults() { audio_admin_.LoadDefaults(); }
+void AudioCoreImpl::LoadDefaults() {
+  TRACE_DURATION("audio", "AudioCoreImpl::LoadDefaults");
+  audio_admin_.LoadDefaults();
+}
 
-void AudioCoreImpl::ResetInteractions() { audio_admin_.ResetInteractions(); }
+void AudioCoreImpl::ResetInteractions() {
+  TRACE_DURATION("audio", "AudioCoreImpl::ResetInteractions");
+  audio_admin_.ResetInteractions();
+}
 
 void AudioCoreImpl::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
                                         fuchsia::media::AudioRenderer* renderer) {
+  TRACE_DURATION("audio", "AudioCoreImpl::UpdateRendererState");
   audio_admin_.UpdateRendererState(usage, active, renderer);
 }
 
 void AudioCoreImpl::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
                                         fuchsia::media::AudioCapturer* capturer) {
+  TRACE_DURATION("audio", "AudioCoreImpl::UpdateCapturerState");
   audio_admin_.UpdateCapturerState(usage, active, capturer);
 }
 
-void AudioCoreImpl::DoPacketCleanup() {
-  // In order to minimize the time we spend in the lock we obtain the lock, swap
-  // the contents of the cleanup queue with a local queue and clear the sched
-  // flag, and finally unlock clean out the queue (which has the side effect of
-  // triggering all of the send packet callbacks).
+void AudioCoreImpl::DoPacketCleanup(trace_async_id_t nonce) {
+  TRACE_DURATION("audio", "AudioCoreImpl::DoPacketCleanup");
+  TRACE_FLOW_END("audio", "DoPacketCleanup", nonce);
+  // In order to minimize the time we spend in the lock we obtain the lock, swap // the contents of
+  // the cleanup queue with a local queue and clear the sched flag, and finally unlock clean out the
+  // queue (which has the side effect of triggering all of the send packet callbacks).
   //
   // Note: this is only safe because we know that we are executing on a single
   // threaded task runner.  Without this guarantee, it might be possible call
@@ -293,25 +317,31 @@ void AudioCoreImpl::DoPacketCleanup() {
 }
 
 void AudioCoreImpl::SchedulePacketCleanup(std::unique_ptr<AudioPacketRef> packet) {
+  TRACE_DURATION("audio", "AudioCoreImpl::SchedulePacketCleanup");
   std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   packet_cleanup_queue_.push_back(std::move(packet));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
     FXL_DCHECK(dispatcher_);
-    async::PostTask(dispatcher_, [this]() { DoPacketCleanup(); });
+    auto nonce = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("audio", "DoPacketCleanup", nonce);
+    async::PostTask(dispatcher_, [this, nonce]() { DoPacketCleanup(nonce); });
     cleanup_scheduled_ = true;
   }
 }
 
 void AudioCoreImpl::ScheduleFlushCleanup(std::unique_ptr<PendingFlushToken> token) {
+  TRACE_DURATION("audio", "AudioCoreImpl::ScheduleFlushCleanup");
   std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   flush_cleanup_queue_.push_back(std::move(token));
 
   if (!cleanup_scheduled_ && !shutting_down_) {
     FXL_DCHECK(dispatcher_);
-    async::PostTask(dispatcher_, [this]() { DoPacketCleanup(); });
+    auto nonce = TRACE_NONCE();
+    TRACE_FLOW_BEGIN("audio", "DoPacketCleanup", nonce);
+    async::PostTask(dispatcher_, [this, nonce]() { DoPacketCleanup(nonce); });
     cleanup_scheduled_ = true;
   }
 }

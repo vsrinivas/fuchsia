@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include <fbl/algorithm.h>
+#include <trace/event.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "src/lib/fxl/logging.h"
@@ -97,6 +98,7 @@ class OutputProducerImpl : public OutputProducer {
       : OutputProducer(format, sizeof(DType)) {}
 
   void ProduceOutput(const float* source, void* dest_void, uint32_t frames) const override {
+    TRACE_DURATION("audio", "OutputProducerImpl::ProduceOutput");
     using DC = DestConverter<DType>;
     auto* dest = static_cast<DType*>(dest_void);
 
@@ -108,6 +110,7 @@ class OutputProducerImpl : public OutputProducer {
   }
 
   void FillWithSilence(void* dest, uint32_t frames) const override {
+    TRACE_DURATION("audio", "OutputProducerImpl::FillWithSilence");
     SilenceMaker<DType>::Fill(dest, frames * channels_);
   }
 };
@@ -124,6 +127,7 @@ OutputProducer::OutputProducer(const fuchsia::media::AudioStreamTypePtr& format,
 // Selection routine which will instantiate a particular templatized version of the output producer.
 std::unique_ptr<OutputProducer> OutputProducer::Select(
     const fuchsia::media::AudioStreamTypePtr& format) {
+  TRACE_DURATION("audio", "OutputProducer::Select");
   if (!format || format->channels == 0u) {
     FXL_LOG(ERROR) << "Invalid output format";
     return nullptr;

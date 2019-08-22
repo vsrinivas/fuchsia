@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/mixer/gain.h"
 
 #include <fbl/algorithm.h>
+#include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -25,6 +26,7 @@ std::atomic<float> Gain::render_usage_gain_adjustment_[fuchsia::media::RENDER_US
 std::atomic<float> Gain::capture_usage_gain_adjustment_[fuchsia::media::CAPTURE_USAGE_COUNT];
 
 void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
+  TRACE_DURATION("audio", "Gain::GetRenderUsageGain");
   auto usage_index = fidl::ToUnderlying(usage);
   FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
       << "Unexpected Render Usage: " << usage_index;
@@ -35,6 +37,7 @@ void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain
 }
 
 void Gain::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
+  TRACE_DURATION("audio", "Gain::GetCaptureUsageGain");
   auto usage_index = fidl::ToUnderlying(usage);
   FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
       << "Unexpected Capture Usage: " << usage_index;
@@ -45,6 +48,7 @@ void Gain::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float ga
 }
 
 void Gain::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) {
+  TRACE_DURATION("audio", "Gain::SetRenderUsageGainAdjustment");
   auto usage_index = fidl::ToUnderlying(usage);
   FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
       << "Unexpected Render Usage: " << usage_index;
@@ -55,6 +59,7 @@ void Gain::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, 
 }
 
 void Gain::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
+  TRACE_DURATION("audio", "Gain::SetCaptureUsageGainAdjustment");
   auto usage_index = fidl::ToUnderlying(usage);
   FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
       << "Unexpected Capture Usage: " << usage_index;
@@ -70,6 +75,7 @@ void Gain::SetUsage(fuchsia::media::Usage usage) { usage_ = std::move(usage); }
 // stage), refactor to accept a stage index or a pointer to a ramp-struct.
 void Gain::SetSourceGainWithRamp(float source_gain_db, zx_duration_t duration_ns,
                                  __UNUSED fuchsia::media::audio::RampType ramp_type) {
+  TRACE_DURATION("audio", "Gain::SetSourceGainWithRamp");
   FXL_DCHECK(source_gain_db <= kMaxGainDb);
   FXL_DCHECK(duration_ns >= 0) << "Ramp duration cannot be negative";
 
@@ -97,6 +103,7 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx_duration_t duration_ns
 }
 
 void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
+  TRACE_DURATION("audio", "Gain::Advance");
   if (!IsRamping() || num_frames == 0) {
     return;
   }
@@ -134,6 +141,7 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
 // Populate an array of gain scales. Currently we handle only SCALE_LINEAR ramps
 void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
                          const TimelineRate& local_to_output) {
+  TRACE_DURATION("audio", "Gain::GetScaleArray");
   if (num_frames == 0) {
     return;
   }
@@ -173,6 +181,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
 // Calculate a stream's gain-scale multiplier from source and dest gains in
 // dB. Optimize to avoid doing the full calculation unless we must.
 Gain::AScale Gain::GetGainScale(float src_gain_db, float usage_gain_db, float dest_gain_db) {
+  TRACE_DURATION("audio", "Gain::GetGainScale");
   if (src_mute_ || dest_mute_) {
     return kMuteScale;
   }

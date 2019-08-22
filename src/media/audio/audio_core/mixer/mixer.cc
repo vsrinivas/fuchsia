@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/mixer/mixer.h"
 
+#include <trace/event.h>
+
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/linear_sampler.h"
@@ -30,6 +32,7 @@ Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
 std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
                                      const fuchsia::media::AudioStreamType& dest_format,
                                      Resampler resampler) {
+  TRACE_DURATION("audio", "Mixer::Select");
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:

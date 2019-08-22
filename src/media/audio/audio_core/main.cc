@@ -5,12 +5,19 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 
+#ifndef NTRACE
+#include <trace-provider/provider.h>
+#endif
+
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/command_line_options.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+#ifndef NTRACE
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+#endif
   auto component_context = sys::ComponentContext::Create();
   REP(Init(component_context.get()));
 

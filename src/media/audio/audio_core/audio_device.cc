@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 
+#include <trace/event.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
@@ -38,6 +40,7 @@ AudioDevice::~AudioDevice() {
 }
 
 void AudioDevice::Wakeup() {
+  TRACE_DURATION("audio", "AudioDevice::Wakeup");
   FXL_DCHECK(mix_wakeup_ != nullptr);
   mix_wakeup_->Signal();
 }
@@ -48,6 +51,7 @@ uint64_t AudioDevice::token() const {
 
 // Change a device's gain, propagating the change to the affected links.
 void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_t set_flags) {
+  TRACE_DURATION("audio", "AudioDevice::SetGainInfo");
   // Limit the request to what the hardware can support
   fuchsia::media::AudioGainInfo limited = info;
   ApplyGainLimits(&limited, set_flags);
@@ -82,6 +86,7 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 }
 
 zx_status_t AudioDevice::Init() {
+  TRACE_DURATION("audio", "AudioDevice::Init");
   zx::profile profile;
   zx_status_t res = AcquireHighPriorityProfile(&profile);
   if (res != ZX_OK) {
@@ -112,6 +117,7 @@ zx_status_t AudioDevice::Init() {
 }
 
 void AudioDevice::Cleanup() {
+  TRACE_DURATION("audio", "AudioDevice::Cleanup");
   // ThrottleOutput devices have no driver, so check for that.
   if (driver_ != nullptr) {
     // Instruct the driver to release all its resources (channels, timer).
@@ -120,6 +126,7 @@ void AudioDevice::Cleanup() {
 }
 
 void AudioDevice::ActivateSelf() {
+  TRACE_DURATION("audio", "AudioDevice::ActivateSelf");
   // If we aren't shutting down, tell DeviceManager we are ready for work.
   if (!is_shutting_down()) {
     // Create default settings. The device manager will restore these settings
@@ -137,6 +144,7 @@ void AudioDevice::ActivateSelf() {
 }
 
 void AudioDevice::ShutdownSelf() {
+  TRACE_DURATION("audio", "AudioDevice::ShutdownSelf");
   // If we are not already in the process of shutting down, send a message to
   // the main message loop telling it to complete the shutdown process.
   if (!is_shutting_down()) {
@@ -153,12 +161,14 @@ void AudioDevice::ShutdownSelf() {
 }
 
 void AudioDevice::DeactivateDomain() {
+  TRACE_DURATION("audio", "AudioDevice::DeactivateDomain");
   if (mix_domain_ != nullptr) {
     mix_domain_->Deactivate();
   }
 }
 
 zx_status_t AudioDevice::Startup() {
+  TRACE_DURATION("audio", "AudioDevice::Startup");
   // If our derived class failed to initialize, Just get out.  We are being
   // called by the output manager, and they will remove us from the set of
   // active outputs as a result of us failing to initialize.
@@ -175,6 +185,7 @@ zx_status_t AudioDevice::Startup() {
 }
 
 void AudioDevice::Shutdown() {
+  TRACE_DURATION("audio", "AudioDevice::Shutdown");
   if (shut_down_) {
     return;
   }
@@ -195,6 +206,7 @@ void AudioDevice::Shutdown() {
 }
 
 bool AudioDevice::UpdatePlugState(bool plugged, zx_time_t plug_time) {
+  TRACE_DURATION("audio", "AudioDevice::UpdatePlugState");
   if ((plugged != plugged_) && (plug_time >= plug_time_)) {
     plugged_ = plugged;
     plug_time_ = plug_time;
@@ -213,6 +225,7 @@ const TimelineFunction& AudioDevice::driver_clock_mono_to_ring_pos_bytes() const
 };
 
 void AudioDevice::GetDeviceInfo(fuchsia::media::AudioDeviceInfo* out_info) const {
+  TRACE_DURATION("audio", "AudioDevice::GetDeviceInfo");
   const auto& drv = *driver();
   out_info->name = drv.manufacturer_name() + ' ' + drv.product_name();
   out_info->unique_id = AudioDeviceUniqueIdToString(drv.persistent_unique_id());

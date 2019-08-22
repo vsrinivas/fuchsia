@@ -56,6 +56,7 @@ AudioRendererImpl::AudioRendererImpl(
       ref_clock_to_frac_frames_(0, 0, {0, 1}),
       underflow_count_(0u),
       partial_underflow_count_(0u) {
+  TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -90,6 +91,7 @@ void AudioRendererImpl::ReportStart() { owner_->UpdateRendererState(usage_, true
 void AudioRendererImpl::ReportStop() { owner_->UpdateRendererState(usage_, false, this); }
 
 void AudioRendererImpl::Shutdown() {
+  TRACE_DURATION("audio", "AudioRendererImpl::Shutdown");
   AUD_VLOG_OBJ(TRACE, this);
 
   ReportStop();
@@ -125,6 +127,7 @@ void AudioRendererImpl::Shutdown() {
 void AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time,
                                                         TimelineFunction* out,
                                                         uint32_t* generation) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SnapshotCurrentTimelineFunction");
   FXL_DCHECK(out != nullptr);
   FXL_DCHECK(generation != nullptr);
 
@@ -134,12 +137,14 @@ void AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time,
 }
 
 void AudioRendererImpl::SetThrottleOutput(fbl::RefPtr<AudioLinkPacketSource> throttle_output_link) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetThrottleOutput");
   FXL_DCHECK(throttle_output_link != nullptr);
   FXL_DCHECK(throttle_output_link_ == nullptr);
   throttle_output_link_ = std::move(throttle_output_link);
 }
 
 void AudioRendererImpl::RecomputeMinClockLeadTime() {
+  TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinClockLeadTime");
   int64_t cur_lead_time = 0;
 
   ForEachDestLink([throttle_ptr = throttle_output_link_.get(), &cur_lead_time](auto& link) {
@@ -158,6 +163,7 @@ void AudioRendererImpl::RecomputeMinClockLeadTime() {
 }
 
 void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetUsage");
   if (usage == usage_) {
     return;
   }
@@ -184,6 +190,7 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
 // IsOperating is true any time we have any packets in flight. Configuration functions cannot be
 // called any time we are operational.
 bool AudioRendererImpl::IsOperating() {
+  TRACE_DURATION("audio", "AudioRendererImpl::IsOperating");
   if (throttle_output_link_ && !throttle_output_link_->pending_queue_empty()) {
     return true;
   }
@@ -196,6 +203,7 @@ bool AudioRendererImpl::IsOperating() {
 }
 
 bool AudioRendererImpl::ValidateConfig() {
+  TRACE_DURATION("audio", "AudioRendererImpl::ValidateConfig");
   if (config_validated_) {
     return true;
   }
@@ -244,6 +252,7 @@ bool AudioRendererImpl::ValidateConfig() {
 }
 
 void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
+  TRACE_DURATION("audio", "AudioRendererImpl::ComputePtsToFracFrames");
   // We should not be calling this, if transformation is already valid.
   FXL_DCHECK(!pts_to_frac_frames_valid_);
   pts_to_frac_frames_ =
@@ -258,6 +267,7 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
 }
 
 void AudioRendererImpl::UnlinkThrottle() {
+  TRACE_DURATION("audio", "AudioRendererImpl::UnlinkThrottle");
   if (throttle_output_link_ != nullptr) {
     RemoveLink(throttle_output_link_);
     throttle_output_link_.reset();
@@ -266,6 +276,7 @@ void AudioRendererImpl::UnlinkThrottle() {
 
 void AudioRendererImpl::UnderflowOccurred(int64_t source_start, int64_t mix_point,
                                           zx_duration_t underflow_duration) {
+  TRACE_INSTANT("audio", "AudioRendererImpl::UnderflowOccurred", TRACE_SCOPE_GLOBAL);
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
   if constexpr (kLogRenderUnderflow) {
@@ -294,6 +305,7 @@ void AudioRendererImpl::UnderflowOccurred(int64_t source_start, int64_t mix_poin
 }
 
 void AudioRendererImpl::PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) {
+  TRACE_INSTANT("audio", "AudioRendererImpl::PartialUnderflowOccurred", TRACE_SCOPE_GLOBAL);
   if (source_offset >= (Mixer::FRAC_ONE >> 1)) {
     auto partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
     if constexpr (kLogRenderUnderflow) {
@@ -327,6 +339,7 @@ void AudioRendererImpl::PartialUnderflowOccurred(int64_t source_offset, int64_t 
 // AudioRenderer Interface
 //
 void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetPcmStreamType");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   AUD_VLOG_OBJ(TRACE, this);
@@ -407,6 +420,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
 }
 
 void AudioRendererImpl::SetStreamType(fuchsia::media::StreamType stream_type) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetStreamType");
   AUD_VLOG_OBJ(TRACE, this);
 
   FXL_LOG(ERROR) << "SetStreamType is not currently supported.";
@@ -416,6 +430,7 @@ void AudioRendererImpl::SetStreamType(fuchsia::media::StreamType stream_type) {
 }
 
 void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
+  TRACE_DURATION("audio", "AudioRendererImpl::AddPayloadBuffer");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
@@ -446,6 +461,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 }
 
 void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
+  TRACE_DURATION("audio", "AudioRendererImpl::RemovePayloadBuffer");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (id: " << id << ")";
@@ -467,6 +483,7 @@ void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
 
 void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
                                     uint32_t tick_per_second_denominator) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetPtsUnits");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (pts ticks per sec: " << std::dec << tick_per_second_numerator
@@ -492,6 +509,7 @@ void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
 }
 
 void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetPtsContinuityThreshold");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   AUD_VLOG_OBJ(TRACE, this) << " (" << threshold_seconds << " sec)";
@@ -518,6 +536,7 @@ void AudioRendererImpl::SetPtsContinuityThreshold(float threshold_seconds) {
 }
 
 void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetReferenceClock");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   AUD_VLOG_OBJ(TRACE, this);
@@ -532,6 +551,7 @@ void AudioRendererImpl::SetReferenceClock(zx::handle ref_clock) {
 
 void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SendPacket");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   // It is an error to attempt to send a packet before we have established at least a minimum valid
@@ -645,12 +665,14 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 }
 
 void AudioRendererImpl::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SendPacketNoReply");
   AUD_VLOG_OBJ(SPEW, this);
 
   SendPacket(packet, nullptr);
 }
 
 void AudioRendererImpl::EndOfStream() {
+  TRACE_DURATION("audio", "AudioRendererImpl::EndOfStream");
   AUD_VLOG_OBJ(TRACE, this);
 
   ReportStop();
@@ -658,6 +680,7 @@ void AudioRendererImpl::EndOfStream() {
 }
 
 void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
+  TRACE_DURATION("audio", "AudioRendererImpl::DiscardAllPackets");
   AUD_VLOG_OBJ(TRACE, this);
 
   // If the user has requested a callback, create the flush token we will use to invoke the callback
@@ -695,12 +718,14 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
 }
 
 void AudioRendererImpl::DiscardAllPacketsNoReply() {
+  TRACE_DURATION("audio", "AudioRendererImpl::DiscardAllPacketsNoReply");
   AUD_VLOG_OBJ(TRACE, this);
 
   DiscardAllPackets(nullptr);
 }
 
 void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCallback callback) {
+  TRACE_DURATION("audio", "AudioRendererImpl::Play");
   AUD_VLOG_OBJ(TRACE, this)
       << " (ref: " << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
@@ -789,6 +814,7 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time, PlayCal
 }
 
 void AudioRendererImpl::PlayNoReply(int64_t reference_time, int64_t media_time) {
+  TRACE_DURATION("audio", "AudioRendererImpl::PlayNoReply");
   AUD_VLOG_OBJ(TRACE, this)
       << " (ref: " << (reference_time == fuchsia::media::NO_TIMESTAMP ? -1 : reference_time)
       << ", media: " << (media_time == fuchsia::media::NO_TIMESTAMP ? -1 : media_time) << ")";
@@ -801,6 +827,7 @@ void AudioRendererImpl::PlayNoReply(int64_t reference_time, int64_t media_time) 
 }
 
 void AudioRendererImpl::Pause(PauseCallback callback) {
+  TRACE_DURATION("audio", "AudioRendererImpl::Pause");
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
   if (!ValidateConfig()) {
@@ -844,6 +871,7 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
 }
 
 void AudioRendererImpl::PauseNoReply() {
+  TRACE_DURATION("audio", "AudioRendererImpl::PauseNoReply");
   AUD_VLOG_OBJ(TRACE, this);
   Pause(nullptr);
 }
@@ -852,6 +880,7 @@ void AudioRendererImpl::PauseNoReply() {
 // stages. In playback, renderer gain is pre-mix and hence is "source" gain; the Output device (or
 // master) gain is "dest" gain.
 void AudioRendererImpl::SetGain(float gain_db) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetGain");
   AUD_VLOG_OBJ(TRACE, this) << " (" << gain_db << " dB)";
 
   // Anywhere we set stream_gain_db_, we should perform this range check.
@@ -884,6 +913,7 @@ void AudioRendererImpl::SetGain(float gain_db) {
 // is the Source component in the Gain object.
 void AudioRendererImpl::SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
                                         fuchsia::media::audio::RampType ramp_type) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetGainWithRamp");
   AUD_VLOG_OBJ(TRACE, this) << " (" << gain_db << " dB, " << (duration_ns / 1000) << " usec)";
 
   if (gain_db > fuchsia::media::audio::MAX_GAIN_DB ||
@@ -909,6 +939,7 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db, zx_duration_t duration_ns
 // gain to a value guaranteed to be silent, but going forward we may pass this thru to the Gain
 // object. Renderer gain/mute is pre-mix and hence is the Source component in the Gain object.
 void AudioRendererImpl::SetMute(bool mute) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetMute");
   // Only do the work if the request represents a change in state.
   if (mute_ == mute) {
     return;
@@ -929,12 +960,14 @@ void AudioRendererImpl::SetMute(bool mute) {
 
 void AudioRendererImpl::BindGainControl(
     fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) {
+  TRACE_DURATION("audio", "AudioRendererImpl::BindGainControl");
   AUD_VLOG_OBJ(TRACE, this);
 
   gain_control_bindings_.AddBinding(GainControlBinding::Create(this), std::move(request));
 }
 
 void AudioRendererImpl::EnableMinLeadTimeEvents(bool enabled) {
+  TRACE_DURATION("audio", "AudioRendererImpl::EnableMinLeadTimeEvents");
   AUD_VLOG_OBJ(TRACE, this);
 
   min_clock_lead_time_events_enabled_ = enabled;
@@ -946,6 +979,7 @@ void AudioRendererImpl::EnableMinLeadTimeEvents(bool enabled) {
 // For now, we pad what we report for min lead time. We don't simply increase the minleadtime by
 // this amount -- we don't also need mixing to occur early.
 void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
+  TRACE_DURATION("audio", "AudioRendererImpl::GetMinLeadTime");
   AUD_VLOG_OBJ(TRACE, this);
 
   callback((min_clock_lead_nsec_ > 0) ? (min_clock_lead_nsec_ + kPaddingForMinLeadTimeReporting)
@@ -955,6 +989,7 @@ void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
 // For now, we pad what we report for min lead time. We don't simply increase the minleadtime by
 // this amount -- we don't also need mixing to occur early.
 void AudioRendererImpl::ReportNewMinClockLeadTime() {
+  TRACE_DURATION("audio", "AudioRendererImpl::ReportNewMinClockLeadTime");
   if (min_clock_lead_time_events_enabled_) {
     AUD_VLOG_OBJ(TRACE, this);
 
@@ -966,6 +1001,7 @@ void AudioRendererImpl::ReportNewMinClockLeadTime() {
 }
 
 void AudioRendererImpl::NotifyGainMuteChanged() {
+  TRACE_DURATION("audio", "AudioRendererImpl::NotifyGainMuteChanged");
   // TODO(mpuryear): consider whether GainControl events should be disable-able, like MinLeadTime.
   AUD_VLOG_OBJ(TRACE, this) << " (" << stream_gain_db_ << " dB, mute: " << mute_ << ")";
 
@@ -974,14 +1010,20 @@ void AudioRendererImpl::NotifyGainMuteChanged() {
   }
 }
 
-// Shorthand to save horizontal space for the thunks which follow.
-void AudioRendererImpl::GainControlBinding::SetGain(float gain_db) { owner_->SetGain(gain_db); }
+void AudioRendererImpl::GainControlBinding::SetGain(float gain_db) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetGain");
+  owner_->SetGain(gain_db);
+}
 
 void AudioRendererImpl::GainControlBinding::SetGainWithRamp(
     float gain_db, zx_duration_t duration_ns, fuchsia::media::audio::RampType ramp_type) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetSourceGainWithRamp");
   owner_->SetGainWithRamp(gain_db, duration_ns, ramp_type);
 }
 
-void AudioRendererImpl::GainControlBinding::SetMute(bool mute) { owner_->SetMute(mute); }
+void AudioRendererImpl::GainControlBinding::SetMute(bool mute) {
+  TRACE_DURATION("audio", "AudioRendererImpl::SetMute");
+  owner_->SetMute(mute);
+}
 
 }  // namespace media::audio

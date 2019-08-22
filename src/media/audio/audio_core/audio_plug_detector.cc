@@ -19,6 +19,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
+#include <trace/event.h>
 
 #include "src/lib/files/unique_fd.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
@@ -40,6 +41,7 @@ static const struct {
 AudioPlugDetector::~AudioPlugDetector() { FXL_DCHECK(manager_ == nullptr); }
 
 zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
+  TRACE_DURATION("audio", "AudioPlugDetector::Start");
   FXL_DCHECK(manager != nullptr);
 
   // If we fail to set up monitoring for any of our target directories,
@@ -79,11 +81,13 @@ zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
 }
 
 void AudioPlugDetector::Stop() {
+  TRACE_DURATION("audio", "AudioPlugDetector::Stop");
   manager_ = nullptr;
   watchers_.clear();
 }
 
 void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name, bool is_input) {
+  TRACE_DURATION("audio", "AudioPlugDetector::AddAudioDevice");
   if (manager_ == nullptr)
     return;
 

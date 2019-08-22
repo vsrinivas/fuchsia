@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 
+#include <trace/event.h>
+
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_link.h"
@@ -16,6 +18,7 @@ namespace media::audio {
 // static
 fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& source,
                                                 const fbl::RefPtr<AudioObject>& dest) {
+  TRACE_DURATION("audio", "AudioObject::LinkObjects");
   // Assert this source is valid (AudioCapturers are disallowed).
   FXL_DCHECK(source != nullptr);
   FXL_DCHECK((source->type() == AudioObject::Type::AudioRenderer) ||
@@ -73,6 +76,7 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
 
 // static
 void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
+  TRACE_DURATION("audio", "AudioObject::RemoveLink");
   FXL_DCHECK(link != nullptr);
 
   link->Invalidate();
@@ -101,6 +105,7 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
 // Call the provided function for each source link (passing the link as param). This distributes
 // calls such as SetGain to every AudioCapturer path.
 void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
+  TRACE_DURATION("audio", "AudioObject::ForEachSourceLink");
   fbl::AutoLock links_lock(&links_lock_);
 
   // Callers (generally AudioCapturers) should never be linked to destinations.
@@ -114,6 +119,7 @@ void AudioObject::ForEachSourceLink(const LinkFunction& source_task) {
 // Call the provided function for each dest link (passing the link as a param). This distributes
 // calls such as SetGain to every AudioRenderer output path.
 void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
+  TRACE_DURATION("audio", "AudioObject::ForEachDestLink");
   fbl::AutoLock links_lock(&links_lock_);
 
   // Callers (generally AudioRenderers) should never be linked to sources.
@@ -126,6 +132,7 @@ void AudioObject::ForEachDestLink(const LinkFunction& dest_task) {
 
 // Call the provided function for each destination link, until one returns true.
 bool AudioObject::ForAnyDestLink(const LinkBoolFunction& dest_task) {
+  TRACE_DURATION("audio", "AudioObject::ForAnyDestLink");
   fbl::AutoLock links_lock(&links_lock_);
 
   FXL_DCHECK(source_links_.is_empty());
@@ -140,6 +147,7 @@ bool AudioObject::ForAnyDestLink(const LinkBoolFunction& dest_task) {
 }
 
 void AudioObject::UnlinkSources() {
+  TRACE_DURATION("audio", "AudioObject::UnlinkSources");
   typename AudioLink::Set<AudioLink::Source> old_links;
   {
     fbl::AutoLock lock(&links_lock_);
@@ -149,6 +157,7 @@ void AudioObject::UnlinkSources() {
 }
 
 void AudioObject::UnlinkDestinations() {
+  TRACE_DURATION("audio", "AudioObject::UnlinkDestinations");
   typename AudioLink::Set<AudioLink::Dest> old_links;
   {
     fbl::AutoLock lock(&links_lock_);
@@ -163,6 +172,7 @@ zx_status_t AudioObject::InitializeDestLink(const fbl::RefPtr<AudioLink>&) { ret
 
 template <typename TagType>
 void AudioObject::UnlinkCleanup(typename AudioLink::Set<TagType>* links) {
+  TRACE_DURATION("audio", "AudioObject::UnlinkCleanup");
   FXL_DCHECK(links != nullptr);
 
   // Note: we could just range-based for-loop over this set and call RemoveLink on each member.

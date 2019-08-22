@@ -9,7 +9,8 @@
             "system-temp"
         ],
         "services": [
-            "fuchsia.scheduler.ProfileProvider"
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

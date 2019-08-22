@@ -8,6 +8,8 @@
 
 #include <iomanip>
 
+#include <trace/event.h>
+
 #include "src/media/audio/audio_core/audio_device_manager.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
@@ -49,6 +51,7 @@ DriverOutput::DriverOutput(AudioDeviceManager* manager, zx::channel initial_stre
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
 zx_status_t DriverOutput::Init() {
+  TRACE_DURATION("audio", "DriverOutput::Init");
   FXL_DCHECK(state_ == State::Uninitialized);
 
   zx_status_t res = AudioOutput::Init();
@@ -67,6 +70,7 @@ zx_status_t DriverOutput::Init() {
 }
 
 void DriverOutput::OnWakeup() {
+  TRACE_DURATION("audio", "DriverOutput::OnWakeup");
   // If we are not in the FormatsUnknown state, then we have already started the
   // state machine.  There is (currently) nothing else to do here.
   FXL_DCHECK(state_ != State::Uninitialized);
@@ -81,6 +85,7 @@ void DriverOutput::OnWakeup() {
 }
 
 bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
+  TRACE_DURATION("audio", "DriverOutput::StartMixJob");
   if (state_ != State::Started) {
     FXL_LOG(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
     state_ = State::Shutdown;
@@ -218,6 +223,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
 }
 
 bool DriverOutput::FinishMixJob(const MixJob& job) {
+  TRACE_DURATION("audio", "DriverOutput::FinishMixJob");
   const auto& rb = driver_ring_buffer();
   FXL_DCHECK(rb != nullptr);
   size_t buf_len = job.buf_frames * rb->frame_size();
@@ -254,6 +260,7 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
 }
 
 void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {
+  TRACE_DURATION("audio", "DriverOutput::ApplyGainLimits");
   // See the comment at the start of StartMixJob.  The actual limits we set here
   // are going to eventually depend on what our HW gain control capabilities
   // are, and how we choose to apply them (based on policy)
@@ -269,6 +276,7 @@ void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, u
 }
 
 void DriverOutput::ScheduleNextLowWaterWakeup() {
+  TRACE_DURATION("audio", "DriverOutput::ScheduleNextLowWaterWakeup");
   // Schedule next callback for the low water mark behind the write pointer.
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
@@ -277,6 +285,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
 }
 
 void DriverOutput::OnDriverInfoFetched() {
+  TRACE_DURATION("audio", "DriverOutput::OnDriverInfoFetched");
   auto cleanup = fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS {
     state_ = State::Shutdown;
     ShutdownSelf();
@@ -354,6 +363,7 @@ void DriverOutput::OnDriverInfoFetched() {
 }
 
 void DriverOutput::OnDriverConfigComplete() {
+  TRACE_DURATION("audio", "DriverOutput::OnDriverConfigComplete");
   auto cleanup = fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS {
     state_ = State::Shutdown;
     ShutdownSelf();
@@ -409,6 +419,7 @@ void DriverOutput::OnDriverConfigComplete() {
 }
 
 void DriverOutput::OnDriverStartComplete() {
+  TRACE_DURATION("audio", "DriverOutput::OnDriverStartComplete");
   if (state_ != State::Starting) {
     FXL_LOG(ERROR) << "Unexpected StartComplete while in state " << static_cast<uint32_t>(state_);
     return;
@@ -445,6 +456,7 @@ void DriverOutput::OnDriverStartComplete() {
 }
 
 void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
+  TRACE_DURATION("audio", "DriverOutput::OnDriverPlugStateChange");
   // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.
   manager_->ScheduleMainThreadTask(

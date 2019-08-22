@@ -13,6 +13,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/utils.h"
@@ -92,6 +93,7 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
  private:
   void fbl_recycle();
   ReleaseHandler release_handler_;
+  trace_async_id_t nonce_ = TRACE_NONCE();
 };
 
 }  // namespace media::audio

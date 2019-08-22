@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_input.h"
 
+#include <trace/event.h>
+
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 
@@ -21,6 +23,7 @@ AudioInput::AudioInput(zx::channel channel, AudioDeviceManager* manager)
     : AudioDevice(Type::Input, manager), initial_stream_channel_(std::move(channel)) {}
 
 zx_status_t AudioInput::Init() {
+  TRACE_DURATION("audio", "AudioInput::Init");
   zx_status_t res = AudioDevice::Init();
   if (res != ZX_OK) {
     return res;
@@ -35,6 +38,7 @@ zx_status_t AudioInput::Init() {
 }
 
 void AudioInput::OnWakeup() {
+  TRACE_DURATION("audio", "AudioInput::OnWakeup");
   // We were poked.  Are we just starting up?
   if (state_ == State::Initialized) {
     if (driver_->GetDriverInfo() != ZX_OK) {
@@ -49,6 +53,7 @@ void AudioInput::OnWakeup() {
 }
 
 void AudioInput::OnDriverInfoFetched() {
+  TRACE_DURATION("audio", "AudioInput::OnDriverInfoFetched");
   state_ = State::Idle;
 
   uint32_t pref_fps = 48000;
@@ -85,9 +90,13 @@ void AudioInput::OnDriverInfoFetched() {
   ActivateSelf();
 }
 
-void AudioInput::OnDriverConfigComplete() { driver_->SetPlugDetectEnabled(true); }
+void AudioInput::OnDriverConfigComplete() {
+  TRACE_DURATION("audio", "AudioInput::OnDriverConfigComplete");
+  driver_->SetPlugDetectEnabled(true);
+}
 
 void AudioInput::OnDriverStartComplete() {
+  TRACE_DURATION("audio", "AudioInput::OnDriverStartComplete");
   // If we were unplugged while starting, stop now.
   if (!driver_->plugged()) {
     driver_->Stop();
@@ -95,6 +104,7 @@ void AudioInput::OnDriverStartComplete() {
 }
 
 void AudioInput::OnDriverStopComplete() {
+  TRACE_DURATION("audio", "AudioInput::OnDriverStopComplete");
   // If we were plugged while stopping, start now.
   if (driver_->plugged()) {
     driver_->Start();
@@ -102,6 +112,7 @@ void AudioInput::OnDriverStopComplete() {
 }
 
 void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
+  TRACE_DURATION("audio", "AudioInput::OnDriverPlugStateChange");
   if (plugged && (driver_->state() == AudioDriver::State::Configured)) {
     driver_->Start();
   } else if (!plugged && (driver_->state() == AudioDriver::State::Started)) {
@@ -117,6 +128,7 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
 }
 
 void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {
+  TRACE_DURATION("audio", "AudioInput::ApplyGainLimits");
   // By the time anyone is calling "ApplyGainLimits", we need to have our basic
   // audio gain control capabilities established.
   ZX_DEBUG_ASSERT(driver()->state() != AudioDriver::State::Uninitialized);
@@ -159,6 +171,7 @@ void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uin
 }
 
 void AudioInput::UpdateDriverGainState() {
+  TRACE_DURATION("audio", "AudioInput::UpdateDriverGainState");
   if ((state_ != State::Idle) || (device_settings_ == nullptr)) {
     return;
   }

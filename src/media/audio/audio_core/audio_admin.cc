@@ -8,6 +8,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
+#include <trace/event.h>
+
 #include "src/media/audio/audio_core/audio_core_impl.h"
 
 namespace media {
@@ -17,6 +19,7 @@ AudioAdmin::AudioAdmin(AudioCoreImpl* service) : service_(service) {}
 
 void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                                 fuchsia::media::Behavior behavior) {
+  TRACE_DURATION("audio", "AudioAdmin::SetInteraction");
   if (active.Which() == fuchsia::media::Usage::Tag::kCaptureUsage &&
       affected.Which() == fuchsia::media::Usage::Tag::kCaptureUsage) {
     active_rules_.SetRule(active.capture_usage(), affected.capture_usage(), behavior);
@@ -37,45 +40,55 @@ void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Us
 AudioAdmin::~AudioAdmin() { Shutdown(); }
 
 zx_status_t AudioAdmin::Init() {
+  TRACE_DURATION("audio", "AudioAdmin::Init");
   LoadDefaults();
   return ZX_OK;
 }
 
 bool AudioAdmin::IsActive(fuchsia::media::AudioRenderUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::IsActive(Render)");
   auto usage_index = fidl::ToUnderlying(usage);
   return active_streams_playback_[usage_index].size() > 0;
 }
 
 bool AudioAdmin::IsActive(fuchsia::media::AudioCaptureUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::IsActive(Capture)");
   auto usage_index = fidl::ToUnderlying(usage);
   return active_streams_capture_[usage_index].size() > 0;
 }
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioRenderUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Render)");
   service_->SetRenderUsageGainAdjustment(usage, none_gain_db_);
 }
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioCaptureUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Capture)");
   service_->SetCaptureUsageGainAdjustment(usage, none_gain_db_);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioRenderUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Render)");
   service_->SetRenderUsageGainAdjustment(usage, mute_gain_db_);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioCaptureUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Capture)");
   service_->SetCaptureUsageGainAdjustment(usage, mute_gain_db_);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioRenderUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Render)");
   service_->SetRenderUsageGainAdjustment(usage, duck_gain_db_);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioCaptureUsage usage) {
+  TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Capture)");
   service_->SetCaptureUsageGainAdjustment(usage, duck_gain_db_);
 }
 
 void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
+  TRACE_DURATION("audio", "AudioAdmin::ApplyPolicies(Capture)");
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
@@ -107,6 +120,7 @@ void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
 }
 
 void AudioAdmin::ApplyPolicies(fuchsia::media::AudioRenderUsage active) {
+  TRACE_DURATION("audio", "AudioAdmin::ApplyPolicies(Render)");
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     auto affected = static_cast<fuchsia::media::AudioRenderUsage>(i);
     switch (active_rules_.GetPolicy(active, affected)) {
@@ -138,6 +152,7 @@ void AudioAdmin::ApplyPolicies(fuchsia::media::AudioRenderUsage active) {
 }
 
 void AudioAdmin::UpdatePolicy() {
+  TRACE_DURATION("audio", "AudioAdmin::UpdatePolicy");
   // TODO(perley): convert this to an array of Usage unions or something else
   //               that makes it at least a little flexible.
   // The processing order of this represents the 'priorities' of the streams
@@ -165,6 +180,7 @@ void AudioAdmin::UpdatePolicy() {
 
 void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
                                      fuchsia::media::AudioRenderer* renderer) {
+  TRACE_DURATION("audio", "AudioAdmin::UpdateRendererState");
   auto usage_index = fidl::ToUnderlying(usage);
   FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT);
   if (active) {
@@ -178,6 +194,7 @@ void AudioAdmin::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, boo
 
 void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
                                      fuchsia::media::AudioCapturer* capturer) {
+  TRACE_DURATION("audio", "AudioAdmin::UpdateCapturerState");
   auto usage_index = fidl::ToUnderlying(usage);
   FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT);
   if (active) {
@@ -192,6 +209,7 @@ void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bo
 void AudioAdmin::Shutdown() {}
 
 void AudioAdmin::PolicyRules::ResetInteractions() {
+  TRACE_DURATION("audio", "AudioAdmin::ResetInteractions");
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
     auto active = static_cast<fuchsia::media::AudioRenderUsage>(i);
     for (int j = 0; j < fuchsia::media::RENDER_USAGE_COUNT; j++) {

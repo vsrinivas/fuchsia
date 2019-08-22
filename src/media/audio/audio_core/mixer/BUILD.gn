@@ -12,6 +12,7 @@ group("mixer") {
 }
 
 source_set("audio_mixer_lib") {
+  public_configs = [ "..:audio_core_config" ]
   sources = [
     "constants.h",
     "gain.cc",
@@ -38,6 +39,7 @@ source_set("audio_mixer_lib") {
     "//sdk/lib/media/cpp:no_converters",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/trace",
   ]
 }
 

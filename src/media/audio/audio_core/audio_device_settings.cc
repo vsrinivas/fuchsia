@@ -16,6 +16,7 @@
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <trace/event.h>
 
 #include "src/lib/files/directory.h"
 #include "src/media/audio/audio_core/audio_driver.h"
@@ -95,6 +96,7 @@ AudioDeviceSettings::AudioDeviceSettings(const AudioDriver& drv, bool is_input)
 
 // static
 void AudioDeviceSettings::Initialize() {
+  TRACE_DURATION("audio", "AudioDeviceSettings::Initialize");
   FXL_DCHECK(!initialized_);
   if (!writes_enabled_) {
     FXL_LOG(WARNING) << "Device settings persistence is disabled; so device settings files will be "
@@ -120,6 +122,7 @@ void AudioDeviceSettings::Initialize() {
 }
 
 zx_status_t AudioDeviceSettings::InitFromDisk() {
+  TRACE_DURATION("audio", "AudioDeviceSettings::InitFromDisk");
   // Don't bother to do any of this unless we were able to successfully
   // initialize our storage subsystem.
   if (!initialized_) {
@@ -208,6 +211,7 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
 }
 
 void AudioDeviceSettings::InitFromClone(const AudioDeviceSettings& other) {
+  TRACE_DURATION("audio", "AudioDeviceSettings::InitFromClone");
   FXL_DCHECK(memcmp(&uid_, &other.uid_, sizeof(uid_)) == 0);
 
   // Clone the gain settings.
@@ -222,6 +226,7 @@ void AudioDeviceSettings::InitFromClone(const AudioDeviceSettings& other) {
 
 bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
                                       uint32_t set_flags) {
+  TRACE_DURATION("audio", "AudioDeviceSettings::SetGainInfo");
   fbl::AutoLock lock(&settings_lock_);
   audio_set_gain_flags_t dirtied = gain_state_dirty_flags_;
   namespace fm = ::fuchsia::media;
@@ -254,6 +259,7 @@ bool AudioDeviceSettings::SetGainInfo(const fuchsia::media::AudioGainInfo& req,
 }
 
 zx::time AudioDeviceSettings::Commit(bool force) {
+  TRACE_DURATION("audio", "AudioDeviceSettings::Commit");
   // If 1) we aren't backed by storage, or 2) device settings persistence is
   // disabled, or 3) the cache is clean, then there is nothing to commit.
   if (!static_cast<bool>(storage_ || !writes_enabled_) ||
@@ -272,6 +278,7 @@ zx::time AudioDeviceSettings::Commit(bool force) {
 }
 
 void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) const {
+  TRACE_DURATION("audio", "AudioDeviceSettings::GetGainInfo");
   FXL_DCHECK(out_info != nullptr);
 
   // TODO(johngro): consider eliminating the acquisition of this lock.  In
@@ -303,6 +310,7 @@ void AudioDeviceSettings::GetGainInfo(fuchsia::media::AudioGainInfo* out_info) c
 }
 
 audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(GainState* out_state) {
+  TRACE_DURATION("audio", "AudioDeviceSettings::SnapshotGainState");
   FXL_DCHECK(out_state != nullptr);
   audio_set_gain_flags_t ret;
 
@@ -317,6 +325,7 @@ audio_set_gain_flags_t AudioDeviceSettings::SnapshotGainState(GainState* out_sta
 }
 
 zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
+  TRACE_DURATION("audio", "AudioDeviceSettings::Deserialize");
   FXL_DCHECK(static_cast<bool>(storage));
 
   if (!writes_enabled_) {
@@ -384,6 +393,7 @@ zx_status_t AudioDeviceSettings::Deserialize(const fbl::unique_fd& storage) {
 }
 
 zx_status_t AudioDeviceSettings::Serialize() {
+  TRACE_DURATION("audio", "AudioDeviceSettings::Serialize");
   CancelCommitTimeouts();
 
   if (!writes_enabled_) {
@@ -436,6 +446,7 @@ zx_status_t AudioDeviceSettings::Serialize() {
 }
 
 void AudioDeviceSettings::UpdateCommitTimeouts() {
+  TRACE_DURATION("audio", "AudioDeviceSettings::UpdateCommitTimeouts");
   if (!writes_enabled_) {
     FXL_LOG(DFATAL) << "Device settings files disabled; we should not be here.";
   }
@@ -459,6 +470,7 @@ void AudioDeviceSettings::CancelCommitTimeouts() {
 
 void AudioDeviceSettings::CreateSettingsPath(const std::string& prefix, char* out_path,
                                              size_t out_path_len) {
+  TRACE_DURATION("audio", "AudioDeviceSettings::CreateSettingsPath");
   const uint8_t* x = uid_.data;
   snprintf(out_path, out_path_len,
            "%s/%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x-%s.json",
