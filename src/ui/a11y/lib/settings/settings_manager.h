@@ -20,7 +20,6 @@ class SettingsManager : public fuchsia::accessibility::SettingsManager {
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request);
 
- private:
   // |fuchsia::accessibility::SettingsManager|:
   void RegisterSettingProvider(fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider>
                                    settings_provider_request) override;
@@ -28,8 +27,8 @@ class SettingsManager : public fuchsia::accessibility::SettingsManager {
   // |fuchsia::accessibility::SettingsManager|:
   void Watch(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher) override;
 
+ private:
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> bindings_;
-
   SettingsProvider settings_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SettingsManager);

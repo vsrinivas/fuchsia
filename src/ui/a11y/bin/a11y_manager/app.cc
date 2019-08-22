@@ -17,7 +17,8 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
       tts_manager_(startup_context_.get()),
       // For now, we use a simple Tts Engine which only logs the output.
       // On initialization, it registers itself with the Tts manager.
-      log_engine_(startup_context_.get()) {
+      log_engine_(startup_context_.get()),
+      settings_watcher_binding_(this) {
   Initialize();
 }
 
@@ -39,15 +40,8 @@ void App::Initialize() {
             semantics_manager_.AddBinding(std::move(request));
           });
 
-  // Connect to Settings manager service and register a watcher.
-  settings_manager_.AddBinding(settings_manager_ptr_.NewRequest());
-  settings_manager_ptr_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Cannot connect to SettingsManager with status:"
-                   << zx_status_get_string(status);
-  });
-  fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher_handle;
-  settings_watcher_bindings_.AddBinding(this, watcher_handle.NewRequest());
-  settings_manager_ptr_->Watch(std::move(watcher_handle));
+  // Register ourselves as a settings watcher.
+  settings_manager_.Watch(settings_watcher_binding_.NewBinding());
 }
 
 fuchsia::accessibility::SettingsPtr App::GetSettings() {

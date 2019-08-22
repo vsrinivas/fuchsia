@@ -7,11 +7,11 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 
-#include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
@@ -53,13 +53,9 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   // A simple Tts engine which logs output.
   a11y::LogEngine log_engine_;
 
-  fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> settings_watcher_bindings_;
+  fidl::Binding<fuchsia::accessibility::SettingsWatcher> settings_watcher_binding_;
 
   fuchsia::accessibility::Settings settings_;
-
-  // Pointer to SettingsManager service, which will be used for connecting App
-  // to settings manager as a Watcher.
-  fuchsia::accessibility::SettingsManagerPtr settings_manager_ptr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
