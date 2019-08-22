@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//peridot/build/executable_package.gni")
-import("//peridot/build/tests_package.gni")
+import("//src/modular/build/executable_package.gni")
+import("//src/modular/build/tests_package.gni")
 
 group("story") {
   testonly = true

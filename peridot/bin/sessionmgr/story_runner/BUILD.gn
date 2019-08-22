@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/testing/environments.gni")
-import("//peridot/build/executable_package.gni")
-import("//peridot/build/tests_package.gni")
+import("//src/modular/build/executable_package.gni")
+import("//src/modular/build/tests_package.gni")
 
 hermetic_tests_package("story_runner_unittests") {
   deps = [
