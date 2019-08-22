@@ -1,7 +1,11 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 /// Tests for Bonding procedures
 pub mod bonding;
 
-/// Tests for the fuchsia.bluetooth.control.Control interface
+/// Tests for the fuchsia.bluetooth.control.Control protocol
 pub mod control;
 
 /// Tests for the Bluetooth Host driver behavior
@@ -10,8 +14,11 @@ pub mod host_driver;
 /// Tests for the lifecycle of the Bluetooth driver
 pub mod lifecycle;
 
-/// Tests for the fuchsia.bluetooth.le.Central interface
+/// Tests for the fuchsia.bluetooth.le.Central protocol
 pub mod low_energy_central;
 
-/// Tests for the fuchsia.bluetotoh.bredr.Profile interface
+/// Tests for the fuchsia.bluetooth.le.Peripheral protocol
+pub mod low_energy_peripheral;
+
+/// Tests for the fuchsia.bluetooth.bredr.Profile protocol
 pub mod profile;

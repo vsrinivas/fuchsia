@@ -15,7 +15,7 @@ pub mod expect;
 pub mod control;
 pub mod host_driver;
 pub mod low_energy_central;
-
+pub mod low_energy_peripheral;
 pub mod profile;
 
 /// Trait for a Harness that we can run tests with

@@ -10,6 +10,7 @@ fidl("fuchsia.bluetooth.test") {
   sources = [
     "hci_emulator.fidl",
     "hci_errors.fidl",
+    "le_procedures.fidl",
   ]
 
   public_deps = [

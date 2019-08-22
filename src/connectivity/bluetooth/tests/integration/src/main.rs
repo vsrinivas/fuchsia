@@ -21,6 +21,11 @@ use crate::{
         },
         lifecycle::lifecycle_test,
         low_energy_central::{enable_and_disable_scan, enable_scan},
+        low_energy_peripheral::{
+            test_advertising_data, test_advertising_handle_closed_while_pending,
+            test_advertising_modes, test_advertising_types, test_enable_advertising,
+            test_enable_and_disable_advertising, test_scan_response, test_update_advertising,
+        },
         profile::{
             add_fake_profile, add_remove_profile, connect_unknown_peer, same_psm_twice_fails,
         },
@@ -46,7 +51,6 @@ fn main() -> Result<(), Error> {
     // TODO(BT-20): Add test cases for GATT client role
     // TODO(BT-20): Add test cases for GATT server role
     // TODO(BT-20): Add test cases for BR/EDR and dual-mode connections
-    // TODO(BT-20): Add test cases for BR/EDR Profiles
 
     collect_results(vec![
         run_test!(lifecycle_test),
@@ -73,6 +77,15 @@ fn main() -> Result<(), Error> {
         // le.Central tests
         run_test!(enable_scan),
         run_test!(enable_and_disable_scan),
+        // le.Peripheral tests
+        run_test!(test_enable_advertising),
+        run_test!(test_enable_and_disable_advertising),
+        run_test!(test_advertising_handle_closed_while_pending),
+        run_test!(test_update_advertising),
+        run_test!(test_advertising_types),
+        run_test!(test_advertising_modes),
+        run_test!(test_advertising_data),
+        run_test!(test_scan_response),
         // Profile tests
         run_test!(add_fake_profile),
         run_test!(same_psm_twice_fails),

@@ -57,6 +57,20 @@ FakeController::Settings SettingsFromFidl(const ftest::EmulatorSettings& input) 
   return settings;
 }
 
+fuchsia::bluetooth::AddressType LeOwnAddressTypeToFidl(bt::hci::LEOwnAddressType type) {
+  switch (type) {
+    case bt::hci::LEOwnAddressType::kPublic:
+    case bt::hci::LEOwnAddressType::kPrivateDefaultToPublic:
+      return fuchsia::bluetooth::AddressType::PUBLIC;
+    case bt::hci::LEOwnAddressType::kRandom:
+    case bt::hci::LEOwnAddressType::kPrivateDefaultToRandom:
+      return fuchsia::bluetooth::AddressType::RANDOM;
+  }
+
+  ZX_PANIC("unsupported own address type");
+  return fuchsia::bluetooth::AddressType::PUBLIC;
+}
+
 }  // namespace
 
 Device::Device(zx_device_t* device)
@@ -107,8 +121,6 @@ static bt_hci_protocol_ops_t hci_protocol_ops = {
 zx_status_t Device::Bind() {
   logf(TRACE, "bind\n");
 
-  std::lock_guard<std::mutex> lock(device_lock_);
-
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
       .name = "bt_hci_emulator",
@@ -154,6 +166,9 @@ zx_status_t Device::Bind() {
   peer->set_connect_response(bt::hci::StatusCode::kConnectionTimeout);
   fake_device_->AddPeer(std::move(peer));
 
+  fake_device_->SetAdvertisingStateCallback(
+      fit::bind_member(this, &Device::OnLegacyAdvertisingStateChanged), loop_.dispatcher());
+
   loop_.StartThread("bt_hci_emulator");
 
   return status;
@@ -167,36 +182,23 @@ void Device::Release() {
 void Device::Unbind() {
   logf(TRACE, "unbind\n");
 
-  bool remove_hci_dev = false;
-  {
-    std::lock_guard<std::mutex> lock(device_lock_);
+  // Clean up all FIDL channels and the underlying FakeController on the
+  // dispatcher thread, due to the FakeController object's thread-safety
+  // requirements. It is OK to capture references to members in the task since
+  // this function will block until the dispatcher loop has terminated.
+  async::PostTask(loop_.dispatcher(), [binding = &binding_, dev = fake_device_, loop = &loop_] {
+    binding->Unbind();
+    dev->Stop();
+    loop->Quit();
+  });
 
-    // Clean up all FIDL channels and the underlying FakeController on the
-    // dispatcher thread, due to the FakeController object's thread-safety
-    // requirements. It is OK to capture references to members in the task since
-    // this function will block until the dispatcher loop has terminated.
-    async::PostTask(loop_.dispatcher(), [binding = &binding_, dev = fake_device_, loop = &loop_] {
-      binding->Unbind();
-      dev->Stop();
-      loop->Quit();
-    });
+  // Block here until all the shutdown tasks we just posted are completed on the FIDL/emulator
+  // dispatcher thread to guarantee that the operations below don't happen concurrently with them.
+  loop_.JoinThreads();
+  logf(TRACE, "emulator dispatcher shut down\n");
 
-    loop_.JoinThreads();
-
-    logf(TRACE, "emulator dispatcher shut down\n");
-
-    remove_hci_dev = (hci_dev_ != nullptr);
-
-    // Destroy the FakeController here. Since |loop_| has been shutdown, we
-    // don't expect it to be dereferenced again.
-    fake_device_ = nullptr;
-  }
-
-  if (remove_hci_dev) {
-    device_remove(hci_dev_);
-    hci_dev_ = nullptr;
-  }
-
+  fake_device_ = nullptr;
+  UnpublishHci();
   device_remove(emulator_dev_);
   emulator_dev_ = nullptr;
 }
@@ -211,11 +213,23 @@ zx_status_t Device::EmulatorMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_bluetooth_Emulator_dispatch(this, txn, msg, &emul_fidl_ops_);
 }
 
+zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {
+  // The bt-emulator device doesn't support a non-FIDL protocol.
+  if (proto_id != ZX_PROTOCOL_BT_HCI) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  bt_hci_protocol_t* hci_proto = static_cast<bt_hci_protocol_t*>(out_proto);
+  hci_proto->ctx = this;
+  hci_proto->ops = &hci_protocol_ops;
+
+  return ZX_OK;
+}
+
 zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
   logf(TRACE, "open HCI channel\n");
 
   zx::channel in(in_h);
-  std::lock_guard<std::mutex> lock(device_lock_);
 
   if (chan_type == Channel::COMMAND) {
     async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
@@ -242,8 +256,6 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
 void Device::StartEmulatorInterface(zx::channel chan) {
   logf(TRACE, "start HciEmulator interface\n");
 
-  std::lock_guard<std::mutex> lock(device_lock_);
-
   if (binding_.is_bound()) {
     logf(TRACE, "HciEmulator channel already bound\n");
     return;
@@ -251,22 +263,16 @@ void Device::StartEmulatorInterface(zx::channel chan) {
 
   // Process HciEmulator messages on a thread that can safely access the
   // FakeController, which is thread-hostile.
-  // TODO(BT-229): Remove the bt-hci device if the channel gets closed and close
-  // the FakeController's HCI channels.
   binding_.Bind(std::move(chan), loop_.dispatcher());
   binding_.set_error_handler([this](zx_status_t status) {
     logf(TRACE, "emulator channel closed (status: %s); unpublish device\n",
          zx_status_get_string(status));
-
-    std::lock_guard<std::mutex> lock(device_lock_);
-    fake_device_->Stop();
+    UnpublishHci();
   });
 }
 
 void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callback) {
   logf(TRACE, "HciEmulator.Publish\n");
-
-  std::lock_guard<std::mutex> lock(device_lock_);
 
   ftest::HciEmulator_Publish_Result result;
   if (hci_dev_) {
@@ -304,21 +310,82 @@ void Device::RemovePeer(::fuchsia::bluetooth::PeerId id, RemovePeerCallback call
   // TODO(BT-229): Implement
 }
 
-void Device::WatchLeScanState(WatchLeScanStateCallback callback) {
+void Device::WatchLeScanStates(WatchLeScanStatesCallback callback) {
   // TODO(BT-229): Implement
 }
 
-zx_status_t Device::GetProtocol(uint32_t proto_id, void* out_proto) {
-  // The bt-emulator device doesn't support a non-FIDL protocol.
-  if (proto_id != ZX_PROTOCOL_BT_HCI) {
-    return ZX_ERR_NOT_SUPPORTED;
+void Device::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) {
+  logf(TRACE, "HciEmulator.WatchLegacyAdvertisingState\n");
+
+  // As documented in //sdk/fidl/fuchsia.bluetooth.test/hci_emulator.fidl, we don't allow multiple
+  // outstanding requests to watch for state changes. Close the emulator channel
+  if (legacy_adv_watcher_) {
+    binding_.Unbind();
+    UnpublishHci();
+    return;
   }
 
-  bt_hci_protocol_t* hci_proto = static_cast<bt_hci_protocol_t*>(out_proto);
-  hci_proto->ctx = this;
-  hci_proto->ops = &hci_protocol_ops;
+  legacy_adv_watcher_ = std::move(callback);
+  NotifyLegacyAdvertisingStateWatchers();
+}
 
-  return ZX_OK;
+void Device::OnLegacyAdvertisingStateChanged() {
+  logf(TRACE, "HciEmulator.OnLegacyAdvertisingStateChanged\n");
+
+  // We have requests to resolve. Construct the FIDL table for the current state.
+  ftest::LegacyAdvertisingState fidl_state;
+  FakeController::LEAdvertisingState adv_state = fake_device_->le_advertising_state();
+  fidl_state.set_enabled(adv_state.enabled);
+
+  // Populate the rest only if advertising is enabled.
+  fidl_state.set_type(static_cast<ftest::LegacyAdvertisingType>(adv_state.adv_type));
+  fidl_state.set_address_type(LeOwnAddressTypeToFidl(adv_state.own_address_type));
+
+  if (adv_state.interval_min) {
+    fidl_state.set_interval_min(adv_state.interval_min);
+  }
+  if (adv_state.interval_max) {
+    fidl_state.set_interval_max(adv_state.interval_max);
+  }
+
+  if (adv_state.data_length) {
+    std::vector<uint8_t> output(adv_state.data_length);
+    bt::MutableBufferView output_view(output.data(), output.size());
+    output_view.Write(adv_state.data, adv_state.data_length);
+    fidl_state.set_advertising_data(std::move(output));
+  }
+  if (adv_state.scan_rsp_length) {
+    std::vector<uint8_t> output(adv_state.scan_rsp_length);
+    bt::MutableBufferView output_view(output.data(), output.size());
+    output_view.Write(adv_state.scan_rsp_data, adv_state.scan_rsp_length);
+    fidl_state.set_scan_response(std::move(output));
+  }
+
+  legacy_adv_states_.push_back(std::move(fidl_state));
+
+  NotifyLegacyAdvertisingStateWatchers();
+}
+
+void Device::NotifyLegacyAdvertisingStateWatchers() {
+  WatchLegacyAdvertisingStatesCallback f;
+  std::vector<ftest::LegacyAdvertisingState> states;
+
+  if (!legacy_adv_watcher_ || legacy_adv_states_.empty()) {
+    // No watcher; nothing to do.
+    return;
+  }
+
+  f = std::move(legacy_adv_watcher_);
+  states = std::move(legacy_adv_states_);
+
+  f(std::move(states));
+}
+
+void Device::UnpublishHci() {
+  if (hci_dev_) {
+    device_remove(hci_dev_);
+    hci_dev_ = nullptr;
+  }
 }
 
 zx_status_t Device::OpenCommandChannel(void* ctx, zx_handle_t channel) {

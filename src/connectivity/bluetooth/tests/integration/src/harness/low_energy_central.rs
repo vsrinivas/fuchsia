@@ -18,12 +18,12 @@ use crate::harness::{control::ActivatedFakeHost, TestHarness};
 /// Sets up the test environment and the given test case.
 /// Each integration test case is asynchronous and must return a Future that completes with the
 /// result of the test run.
-pub async fn run_central_test_async<F, Fut>(test: F) -> Result<(), Error>
+async fn run_central_test_async<F, Fut>(test: F) -> Result<(), Error>
 where
     F: FnOnce(CentralHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
-    // Don't drop the FakeHciDevice until the end of this function
+    // Don't drop the ActivatedFakeHost until the end of this function
     let fake_host = ActivatedFakeHost::new("bt-hci-integration-le-0").await?;
 
     let proxy = fuchsia_component::client::connect_to_service::<CentralMarker>()
@@ -77,7 +77,7 @@ impl Default for CentralState {
 
 pub type CentralHarness = ExpectationHarness<CentralState, CentralProxy>;
 
-pub async fn handle_central_events(harness: CentralHarness) -> Result<(), Error> {
+async fn handle_central_events(harness: CentralHarness) -> Result<(), Error> {
     let mut events = harness.aux().take_event_stream();
 
     while let Some(e) = events.try_next().await? {

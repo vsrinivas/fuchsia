@@ -5,12 +5,6 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/bt/hci.h>
-#include <ddk/protocol/test.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -18,6 +12,15 @@
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <queue>
+
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/bt/hci.h>
+#include <ddk/protocol/test.h>
+#include <fbl/unique_ptr.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 
@@ -56,7 +59,14 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
                PublishCallback callback) override;
   void AddPeer(fuchsia::bluetooth::test::FakePeer peer, AddPeerCallback callback) override;
   void RemovePeer(fuchsia::bluetooth::PeerId id, RemovePeerCallback callback) override;
-  void WatchLeScanState(WatchLeScanStateCallback callback) override;
+  void WatchLeScanStates(WatchLeScanStatesCallback callback) override;
+  void WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) override;
+
+  void OnLegacyAdvertisingStateChanged();
+  void NotifyLegacyAdvertisingStateWatchers();
+
+  // Remove the bt-hci device.
+  void UnpublishHci();
 
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t hci_fidl_ops_ = {
       .OpenCommandChannel = OpenCommandChannel,
@@ -68,21 +78,32 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
       .Open = OpenEmulatorChannel,
   };
 
-  std::mutex device_lock_;
+  async::Loop loop_;
 
-  async::Loop loop_ __TA_GUARDED(device_lock_);
-  fbl::RefPtr<bt::testing::FakeController> fake_device_ __TA_GUARDED(device_lock_);
+  zx_device_t* const parent_;
 
-  zx_device_t* parent_;
-
-  // The device that implements the bt-hci protocol.
+  // The device that implements the bt-hci protocol. |hci_dev_| will only be accessed and modified
+  // on the following threads/conditions:
+  //   1. It only gets initialized on the |loop_| dispatcher during Publish().
+  //   2. Unpublished when the HciEmulator FIDL channel (i.e. |binding_|) gets closed, which gets
+  //      processed on the |loop_| dispatcher.
+  //   3. Unpublished in the DDK Unbind() call which runs on a devhost thread. This is guaranteed
+  //      not to happen concurrently with #1 and #2 as Unbind always drains and joins the |loop_|
+  //      threads before removing devices.
   zx_device_t* hci_dev_;
 
   // The device that implements the bt-emulator protocol.
   zx_device_t* emulator_dev_;
 
-  // Binding for fuchsia.bluetooth.test.HciEmulator channel.
-  fidl::Binding<fuchsia::bluetooth::test::HciEmulator> binding_ __TA_GUARDED(device_lock_);
+  // All objects below are only accessed on the |loop_| dispatcher.
+  fbl::RefPtr<bt::testing::FakeController> fake_device_;
+
+  // Binding for fuchsia.bluetooth.test.HciEmulator channel. |binding_| is only accessed on
+  // |loop_|'s dispatcher.
+  fidl::Binding<fuchsia::bluetooth::test::HciEmulator> binding_;
+
+  WatchLegacyAdvertisingStatesCallback legacy_adv_watcher_;
+  std::vector<fuchsia::bluetooth::test::LegacyAdvertisingState> legacy_adv_states_;
 };
 
 }  // namespace bt_hci_emulator

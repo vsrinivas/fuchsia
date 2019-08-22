@@ -8,6 +8,8 @@ use {fidl_fuchsia_bluetooth, std::fmt};
 pub use {adapter_info::*, bonding_data::*, peer::*};
 mod adapter_info;
 mod bonding_data;
+/// Bluetooth HCI emulator protocol types
+pub mod emulator;
 /// Bluetooth LowEnergy types
 pub mod le;
 mod peer;

@@ -1,0 +1,73 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.test;
+
+using fuchsia.bluetooth as bt;
+
+const uint8 MAX_LEGACY_ADVERTISING_DATA_LENGTH = 31;
+const uint8 MAX_EXTENDED_ADVERTISING_DATA_LENGTH = 251;
+
+/// LE legacy advertising types from Bluetooth Core Specification 5.1 Vol 2, Part E, Section 7.8.5.
+enum LegacyAdvertisingType : uint8 {
+    /// Connectable and scannable.
+    ADV_IND = 0;
+
+    /// Connectable, high-duty cycle, directed.
+    ADV_DIRECT_IND = 1;
+
+    /// Scannable, undirected.
+    ADV_SCAN_IND = 2;
+
+    /// Non-connectable, undirected
+    ADV_NONCONN_IND = 3;
+
+    /// Scan response
+    SCAN_RSP = 4;
+};
+
+/// Controller parameters for legacy advertising.
+table LegacyAdvertisingState {
+    /// True if advertising has been enabled using the HCI_LE_Set_Advertising_Enable command.
+    /// This field is always present.
+    1: bool enabled;
+
+    /// The most recently configured advertising type. This field is always present. Defaults to
+    /// [`fuchsia.bluetooth.test/LegacyAdvertisingType.ADV_IND`].
+    2: LegacyAdvertisingType type;
+
+    /// The LE address type being used for advertising. This field is always present. Defaults to
+    /// [`fuchsia.bluetooth/AddressType.PUBLIC`].
+    3: bt.AddressType address_type;
+
+    /// The host-specified advertising interval range parameters. Present only if configured.
+    4: uint16 interval_min;
+    5: uint16 interval_max;
+
+    /// Any configured advertising and scan response data. Present only if either field is non-zero.
+    6: bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH advertising_data;
+    7: bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH scan_response;
+};
+
+/// Represents the LE scan state. The fields are present if scan parameters have been
+/// configured.
+table LeScanState {
+    /// True if a scan is enabled.
+    1: bool enabled;
+
+    /// True if an active scan is enabled. Otherwise the scan is passive.
+    2: bool active;
+
+    /// The scan interval and window parameters. These are defined in Bluetooth controller
+    /// "timeslices" where 1 slice = 0.625 ms. Valid values range from 0x4 (2.5 ms) to 0x4000 (10.24
+    /// ms).
+    3: uint16 interval;
+    4: uint16 window;
+
+    /// True if duplicate filtering has been enabled.
+    5: bool filter_duplicates;
+
+    /// The type of local device address used.
+    6: bt.AddressType address_type;
+};

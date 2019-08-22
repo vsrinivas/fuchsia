@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{err_msg, Error};
+use failure::{err_msg, format_err, Error};
 
 pub fn expect_eq<T>(expected: &T, actual: &T) -> Result<(), Error>
 where
@@ -13,6 +13,15 @@ where
     } else {
         Err(err_msg(format!("failed - expected '{:#?}', found: '{:#?}'", expected, actual)))
     }
+}
+
+/// Converts any Result type into a Result that returns an Error type that can be tried. This is
+/// useful for many FIDL messages that have error reply types that don't derive Fail.
+pub fn expect_ok<T, E>(result: Result<T, E>, msg: &str) -> Result<T, Error>
+where
+    E: std::fmt::Debug,
+{
+    result.map_err(|e| format_err!("{}: {:?}", msg, e))
 }
 
 macro_rules! expect_eq {

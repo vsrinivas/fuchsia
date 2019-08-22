@@ -6,9 +6,6 @@ library fuchsia.bluetooth.test;
 
 using fuchsia.bluetooth as bt;
 
-const uint8 MAX_LEGACY_ADVERTISING_DATA_LENGTH = 31;
-const uint8 MAX_EXTENDED_ADVERTISING_DATA_LENGTH = 251;
-
 /// Error codes that can be generated for emulator-wide configurations.
 enum EmulatorError {
     FAILED = 1;
@@ -20,12 +17,6 @@ enum EmulatorPeerError {
     ADDRESS_REPEATED = 1;
     PARAMETERS_INVALID = 2;
     NOT_FOUND = 3;
-};
-
-/// The Bluetooth device address type used with link layer procedures.
-enum LeAddressType {
-    PUBLIC = 1;
-    RANDOM = 2;
 };
 
 /// Represents a peer that a FakeController can be configured to emulate.
@@ -69,28 +60,6 @@ table LeParameters {
 /// Parameters used to emulate a peer's behavior over the BR/EDR transport.
 table BrEdrParameters {
     // TODO(armansito): add inquiry response data and other parameters
-};
-
-/// Represents the LE scan state. The fields are present if scan parameters have been
-/// configured.
-table LeScanState {
-    /// True if a scan is enabled.
-    1: bool enabled;
-
-    /// True if an active scan is enabled. Otherwise the scan is passive.
-    2: bool active;
-
-    /// The scan interval and window parameters. These are defined in Bluetotoh controller
-    /// "timeslices" where 1 slice = 0.625 ms. Valid values range from 0x4 (2.5 ms) to 0x4000 (10.24
-    /// ms).
-    3: uint16 interval;
-    4: uint16 window;
-
-    /// True if duplicate filtering has been enabled.
-    5: bool filter_duplicates;
-
-    /// The type of local device address used.
-    6: LeAddressType own_address_type;
 };
 
 // TODO(BT-229): Add state structures for other LE and BR/EDR operations.
@@ -156,8 +125,23 @@ protocol HciEmulator {
     /// recognized.
     RemovePeer(bt.PeerId id) -> () error EmulatorPeerError;
 
-    /// Returns the latest state of the link layer LE scan procedure. This method returns when there
-    /// is a state change since the last invocation of this method by this client
-    /// (see [hanging get pattern](/docs/development/api/fidl.md#delay_responses_using_hanging_gets)).
-    WatchLeScanState() -> (LeScanState state);
+    /// Returns the most recent set of state transitions for the link layer LE scan procedure. This
+    /// method returns when there has been a state change since the last invocation of this method
+    /// by this client.
+    ///
+    /// Only one call to this method can be outstanding at a given time. The
+    /// [`fuchsia.bluetooth.test/HciEmulator`] channel will be closed if a call received when one is
+    /// already pending.
+    /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
+    WatchLeScanStates() -> (vector<LeScanState> states);
+
+    /// Returns the most recent set of state transitions for the link layer LE legacy advertising
+    /// procedure. This method returns when there has been a state change since the last invocation
+    /// of this method by this client.
+    ///
+    /// Only one call to this method can be outstanding at a given time. The
+    /// [`fuchsia.bluetooth.test/HciEmulator`] channel will be closed if a call received when one is
+    /// already pending.
+    /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
+    WatchLegacyAdvertisingStates() -> (vector<LegacyAdvertisingState> states);
 };

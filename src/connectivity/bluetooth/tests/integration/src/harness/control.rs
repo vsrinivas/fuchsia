@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_bluetooth_control::{
         AdapterInfo, ControlEvent, ControlMarker, ControlProxy, RemoteDevice,
     },
+    fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectableStateExt, ExpectationHarness},
@@ -230,6 +231,10 @@ impl ActivatedFakeHost {
             )
             .await?;
         Ok(())
+    }
+
+    pub fn emulator(&self) -> &HciEmulatorProxy {
+        self.hci.as_ref().expect("emulator proxy requested after shut down").emulator()
     }
 }
 
