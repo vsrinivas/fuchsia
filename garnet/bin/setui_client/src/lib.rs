@@ -12,6 +12,7 @@ use {
 mod accessibility;
 mod client;
 mod display;
+mod do_not_disturb;
 mod intl;
 mod system;
 
@@ -75,6 +76,16 @@ pub enum SettingClient {
     },
 
     // Operations that use the new interfaces.
+    #[structopt(name = "do_not_disturb")]
+    DoNotDisturb {
+        #[structopt(short = "u", long = "user_dnd")]
+        user_dnd: Option<bool>,
+
+        #[structopt(short = "n", long = "night_mode_dnd")]
+        night_mode_dnd: Option<bool>,
+    },
+
+    // Operations that use the new interfaces.
     #[structopt(name = "intl")]
     Intl {
         #[structopt(short = "z", long = "time_zone", parse(from_str = "str_to_time_zone"))]
@@ -125,6 +136,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
             let output = display::command(display_service, brightness, auto_brightness).await?;
+            println!("Display: {}", output);
+        }
+        SettingClient::DoNotDisturb { user_dnd, night_mode_dnd} => {
+            let dnd_service = connect_to_service::<fidl_fuchsia_settings::DoNotDisturbMarker>()
+                .context("Failed to connect to do_not_disturb service")?;
+            let output = do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await?;
             println!("Display: {}", output);
         }
         SettingClient::Intl { time_zone, temperature_unit, locales } => {

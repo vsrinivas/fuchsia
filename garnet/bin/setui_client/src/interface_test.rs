@@ -16,6 +16,7 @@ use {
 mod accessibility;
 mod client;
 mod display;
+mod do_not_disturb;
 mod intl;
 mod system;
 
@@ -23,6 +24,7 @@ enum Services {
     SetUi(fidl_fuchsia_setui::SetUiServiceRequestStream),
     Accessibility(AccessibilityRequestStream),
     Display(DisplayRequestStream),
+    DoNotDisturb(DoNotDisturbRequestStream),
     System(SystemRequestStream),
     Intl(IntlRequestStream),
 }
@@ -76,6 +78,16 @@ async fn main() -> Result<(), Error> {
 
     println!("  client calls set auto brightness");
     validate_display(None, Some(true)).await?;
+
+    println!("do not disturb service tests");
+    println!("  client calls dnd watch");
+    validate_dnd(Some(false), Some(false)).await?;
+
+    println!("  client calls set user initiated do not disturb");
+    validate_dnd(Some(true), Some(false)).await?;
+
+    println!("  client calls set night mode initiated do not disturb");
+    validate_dnd(Some(false), Some(true)).await?;
 
     println!("intl service tests");
     println!("  client calls set temperature unit");
@@ -265,6 +277,43 @@ async fn validate_accessibility(
         expected_color_correction,
     )
     .await?;
+
+    Ok(())
+}
+
+async fn validate_dnd(
+    expected_user_dnd: Option<bool>,
+    expected_night_mode_dnd: Option<bool>,
+) -> Result<(), Error> {
+    let env = create_service!(Services::DoNotDisturb,
+        DoNotDisturbRequest::Set { settings, responder } => {
+            if let(Some(user_dnd), Some(expected_user_dnd)) =
+                (settings.user_initiated_do_not_disturb, expected_user_dnd) {
+                assert_eq!(user_dnd, expected_user_dnd);
+                responder.send(&mut Ok(()))?;
+            } else if let (Some(night_mode_dnd), Some(expected_night_mode_dnd)) =
+                (settings.night_mode_initiated_do_not_disturb, expected_night_mode_dnd) {
+                assert_eq!(night_mode_dnd, expected_night_mode_dnd);
+                responder.send(&mut (Ok(())))?;
+            } else {
+                panic!("Unexpected call to set");
+            }
+        },
+        DoNotDisturbRequest::Watch { responder } => {
+            responder.send(DoNotDisturbSettings {
+                user_initiated_do_not_disturb: Some(false),
+                night_mode_initiated_do_not_disturb: Some(false),
+            })?;
+        }
+    );
+
+    let do_not_disturb_service = env
+        .connect_to_service::<DoNotDisturbMarker>()
+        .context("Failed to connect to do not disturb service")?;
+
+    do_not_disturb::command(do_not_disturb_service,
+                            expected_user_dnd,
+                            expected_night_mode_dnd).await?;
 
     Ok(())
 }

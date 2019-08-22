@@ -13,6 +13,7 @@
             "fuchsia.setui.SetUiService",
             "fuchsia.settings.Accessibility",
             "fuchsia.settings.Display",
+            "fuchsia.settings.DoNotDisturb",
             "fuchsia.settings.Intl",
             "fuchsia.settings.System",
             "fuchsia.sys.Launcher"
