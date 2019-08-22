@@ -411,8 +411,10 @@
 
 extern crate zerocopy;
 
+mod fragmented;
 pub mod serialize;
 
+pub use crate::fragmented::*;
 pub use crate::serialize::*;
 
 use std::cmp;
