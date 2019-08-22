@@ -1902,12 +1902,12 @@ bool json_generator_test_bits() {
     EXPECT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
-bits FlexibleBits : uint64 {
+experimental_flexible bits FlexibleBits : uint64 {
     SMALLEST = 1;
     BIGGEST = 0x8000000000000000;
 };
 
-strict bits StrictBits: uint64 {
+bits StrictBits: uint64 {
     SMALLEST = 1;
     BIGGEST = 0x8000000000000000;
 };
@@ -1924,7 +1924,7 @@ strict bits StrictBits: uint64 {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 6
+        "column": 28
       },
       "type": {
         "kind": "primitive",
@@ -1972,7 +1972,7 @@ strict bits StrictBits: uint64 {
       "location": {
         "filename": "json.fidl",
         "line": 9,
-        "column": 13
+        "column": 6
       },
       "type": {
         "kind": "primitive",
@@ -2142,7 +2142,7 @@ struct Struct {
           }
         }
       ],
-      "strict": false
+      "strict": true
     }
   ],
   "const_declarations": [
@@ -2480,7 +2480,7 @@ struct Struct {
           }
         }
       ],
-      "strict": false
+      "strict": true
     },
     {
       "name": "values/BitsType",
@@ -2508,7 +2508,7 @@ struct Struct {
           }
         }
       ],
-      "strict": false
+      "strict": true
     },
     {
       "name": "values/Enum",
@@ -2536,7 +2536,7 @@ struct Struct {
           }
         }
       ],
-      "strict": false
+      "strict": true
     }
   ],
   "interface_declarations": [],
@@ -3264,7 +3264,7 @@ xunion ExampleXUnion {
           ]
         }
       ],
-      "strict": false
+      "strict": true
     }
   ],
   "const_declarations": [
@@ -3334,7 +3334,7 @@ xunion ExampleXUnion {
           ]
         }
       ],
-      "strict": false
+      "strict": true
     }
   ],
   "interface_declarations": [

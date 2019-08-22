@@ -401,13 +401,13 @@ bool doc_comment_blank_line_test() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
-  library example;
+library example;
 
-  /// start
+/// start
 
-  /// end
-  struct Empty{};
-  )FIDL");
+/// end
+struct Empty{};
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
@@ -423,13 +423,13 @@ bool comment_inside_doc_comment_test() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
-  library example;
+library example;
 
-  /// start
-  // middle
-  /// end
-  struct Empty{};
-  )FIDL");
+/// start
+// middle
+/// end
+struct Empty{};
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);
@@ -444,14 +444,14 @@ bool doc_comment_with_comment_blank_line_test() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
-  library example;
+library example;
 
-  /// start
-  // middle
+/// start
+// middle
 
-  /// end
-  struct Empty{};
-  )FIDL");
+/// end
+struct Empty{};
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);
@@ -467,16 +467,16 @@ bool comments_surrounding_doc_comment_test() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
-  library example;
+library example;
 
-  // some comments above,
-  // maybe about the doc comment
-  /// A
-  /// multiline
-  /// comment!
-  // another comment about the struct
-  struct Empty{};
-  )FIDL");
+// some comments above,
+// maybe about the doc comment
+/// A
+/// multiline
+/// comment!
+// another comment about the struct
+struct Empty{};
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
@@ -489,14 +489,14 @@ bool blank_lines_after_doc_comment_test() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
-  library example;
+library example;
 
-  /// doc comment
+/// doc comment
 
 
 
-  struct Empty{};
-  )FIDL");
+struct Empty{};
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
@@ -509,15 +509,15 @@ bool blank_lines_after_doc_comment_with_comment_test() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
-  library example;
+library example;
 
-  /// doc comment
+/// doc comment
 
 
-  // regular comment
+// regular comment
 
-  struct Empty{};
-  )FIDL");
+struct Empty{};
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
@@ -530,11 +530,11 @@ bool trailing_doc_comment_test() {
   BEGIN_TEST;
 
   TestLibrary library("example.fidl", R"FIDL(
-  library example;
+library example;
 
-  struct Empty{};
-  /// bad
-  )FIDL");
+struct Empty{};
+/// bad
+)FIDL");
 
   std::unique_ptr<fidl::raw::File> ast;
   library.Parse(&ast);

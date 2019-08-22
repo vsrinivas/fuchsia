@@ -9,6 +9,7 @@
 #include <regex>
 
 #include "fidl/attributes.h"
+#include "fidl/types.h"
 
 namespace fidl {
 
@@ -118,14 +119,18 @@ decltype(nullptr) Parser::Fail(Token token, std::string_view message) {
   return nullptr;
 }
 
-types::Strictness Parser::MaybeParseStrictness() {
+std::optional<types::Strictness> Parser::MaybeParseStrictness() {
   switch (Peek().combined()) {
     case CASE_IDENTIFIER(Token::Subkind::kStrict):
       ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStrict));
       assert(Ok() && "we should have just seen a strict token");
-      return types::Strictness::kStrict;
+      return std::optional{types::Strictness::kStrict};
+    case CASE_IDENTIFIER(Token::Subkind::kFlexible):
+      ConsumeToken(IdentifierOfSubkind(Token::Subkind::kFlexible));
+      assert(Ok() && "we should have just seen a flexible token");
+      return std::optional{types::Strictness::kFlexible};
     default:
-      return types::Strictness::kFlexible;
+      return std::nullopt;
   }
 }
 
@@ -1213,18 +1218,30 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
     if (!Ok())
       return More;
 
-    types::Strictness strictness = MaybeParseStrictness();
+    auto maybe_strictness = MaybeParseStrictness();
     if (!Ok())
       return More;
-    if (strictness == types::Strictness::kStrict) {
+
+    if (maybe_strictness) {
       switch (Peek().combined()) {
         case CASE_IDENTIFIER(Token::Subkind::kBits):
+          [[fallthrough]];
         case CASE_IDENTIFIER(Token::Subkind::kEnum):
-        case CASE_IDENTIFIER(Token::Subkind::kTable):
+          if (maybe_strictness.value() == types::Strictness::kStrict) {
+            Fail(previous_token_,
+                 "enums and bits are strict by default, please remove the \"strict\" qualifier");
+            return More;
+          }
+          break;
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
+          if (maybe_strictness.value() == types::Strictness::kFlexible) {
+            Fail(previous_token_,
+                 "xunions are flexible by default, please remove the \"flexible\" qualifier");
+            return More;
+          }
           break;
         default:
-          std::string msg = std::string(Token::Name(Peek())) + " cannot be strict";
+          std::string msg = "cannot specify strictness for " + std::string(Token::Name(Peek()));
           Fail(msg);
           return More;
       }
@@ -1236,8 +1253,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kBits):
         done_with_library_imports = true;
-        bits_declaration_list.emplace_back(
-            ParseBitsDeclaration(std::move(attributes), scope, strictness));
+        bits_declaration_list.emplace_back(ParseBitsDeclaration(
+            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict)));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kConst):
@@ -1247,8 +1264,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kEnum):
         done_with_library_imports = true;
-        enum_declaration_list.emplace_back(
-            ParseEnumDeclaration(std::move(attributes), scope, strictness));
+        enum_declaration_list.emplace_back(ParseEnumDeclaration(
+            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict)));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kProtocol):
@@ -1271,7 +1288,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       case CASE_IDENTIFIER(Token::Subkind::kTable):
         done_with_library_imports = true;
         table_declaration_list.emplace_back(
-            ParseTableDeclaration(std::move(attributes), scope, strictness));
+            ParseTableDeclaration(std::move(attributes), scope, types::Strictness::kFlexible));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
@@ -1295,8 +1312,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kXUnion):
         done_with_library_imports = true;
-        xunion_declaration_list.emplace_back(
-            ParseXUnionDeclaration(std::move(attributes), scope, strictness));
+        xunion_declaration_list.emplace_back(ParseXUnionDeclaration(
+            std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kFlexible)));
         return More;
     }
   };

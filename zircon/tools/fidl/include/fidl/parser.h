@@ -207,7 +207,7 @@ class Parser {
   decltype(nullptr) Fail(std::string_view message);
   decltype(nullptr) Fail(Token token, std::string_view message);
 
-  types::Strictness MaybeParseStrictness();
+  std::optional<types::Strictness> MaybeParseStrictness();
 
   std::unique_ptr<raw::Identifier> ParseIdentifier(bool is_discarded = false);
   std::unique_ptr<raw::CompoundIdentifier> ParseCompoundIdentifier();
