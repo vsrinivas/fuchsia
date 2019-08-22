@@ -3,32 +3,61 @@
 # found in the LICENSE file.
 
 import("$zx/kernel/syscalls/abigen.gni")
+import("$zx/public/gn/config/standard.gni")
+import("$zx/public/gn/toolchain/environment.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 
-# The vDSO can't be built with instrumentation.
-exclude_tags = [ "instrumented" ]
+# The vDSO is built in its own special environment because it has special
+# constraints.  If all the code going into the vDSO were built entirely in
+# this BUILD.gn file, then a separate environment would not be necessary.
+# But the vDSO needs to be able to use some other library code defined
+# elsewhere.
 
-# References from instrumented variants just redirect.  This prevents extra
-# abigen runs in other toolchains just to get identical generated headers.
-if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
-    toolchain.environment != "user") {
+if (current_toolchain == default_toolchain) {
+  # Define the special toolchain itself only in the default toolchain.
+  foreach(cpu, standard_fuchsia_cpus) {
+    environment("user.vdso") {
+      cpu = cpu
+      shlib = true
+      strip = "--strip-sections"
+
+      configs += standard_fuchsia_configs
+      configs += [
+        # This is mostly like other user code.
+        "$zx/public/gn/config:user",
+
+        # But it can't rely on full Fuchsia ABI like SafeStack/ShadowCallStack.
+        "$zx/public/gn/config:no_sanitizers",
+
+        # And it can't rely on libc.
+        "$zx/public/gn/config:freestanding",
+
+        "$zx/public/gn/config:rodso",
+      ]
+
+      # The vDSO can't use instrumentation runtimes.
+      exclude_variant_tags = [ "instrumented" ]
+
+      tags = [ "vdso" ]
+    }
+  }
+} else if (toolchain.environment != "user.vdso") {
+  # Even non-user environments can see the headers.
   environment_redirect("headers") {
-    environment_label = "$zx/public/gn/toolchain:user"
+    environment_label = ":user.vdso"
     direct = true
     shlib = true
-    exclude_variant_tags = exclude_tags
     deps = [
       ":headers",
     ]
   }
+
   if (toolchain.base_environment == "user") {
-    # Instrumented variants, and all variants of derived environments,
-    # link against the uninstrumented library.
+    # Other userland environments redirect to pick up the real library.
     environment_redirect("zircon") {
-      environment_label = "$zx/public/gn/toolchain:user"
+      environment_label = ":user.vdso"
       direct = true
       shlib = true
-      exclude_variant_tags = exclude_tags
       deps = [
         ":zircon",
       ]
@@ -91,18 +120,13 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
     # Note, "./" makes GN realize this is a file rather than a -l switch.
     libs = [ "./alternates.ld" ]
 
-    # Set e_entry so _zx_process_exit is easy to find without reading .dynsym.
-    ldflags = [ "-Wl,-e,_zx_process_exit" ]
+    ldflags = [
+      # Make sure libc++ is not linked into the vDSO.  Header-only use is OK.
+      "-nostdlib++",
 
-    # This doesn't get normal default deps on libc.
-    no_implicit_deps = true
-
-    # This doesn't actually use libc++ at all, really (only header-only use
-    # would be safe).  But the compiler driver implicitly links it in, and by
-    # default with dynamic linking.  So it's crucial to tell it to link it in
-    # statically instead even though really we shouldn't get it at all.  We
-    # don't just use `-nostdlib++` because we still want the header access.
-    configs += [ "$zx/public/gn/config:static-libc++" ]
+      # Set e_entry so _zx_process_exit is easy to find without reading .dynsym.
+      "-Wl,-e,_zx_process_exit",
+    ]
 
     # TODO(BLD-353): The SDK exports this as part of the sysroot rather
     # than as an independent library.  Legacy integration likewise does not
@@ -193,14 +217,6 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
   # Everything with ":config" in configs needs ":generate" in deps.
   config("config") {
     visibility = [ ":*" ]
-
-    # This library should not depend on libc.
-    configs = [
-      "$zx/public/gn/config:freestanding",
-      "$zx/public/gn/config:no_sanitizers",
-      "$zx/public/gn/config:rodso",
-    ]
-
     include_dirs = [ target_gen_dir ]
   }
 
