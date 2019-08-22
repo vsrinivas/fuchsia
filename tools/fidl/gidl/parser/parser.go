@@ -377,6 +377,9 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		return p.newParseError(tok, "duplicate %s found", kind)
 	}
 	all[kind] = true
+	if tok, ok := p.consumeToken(tComma); !ok {
+		return p.failExpectedToken(tComma, tok)
+	}
 	return nil
 }
 
@@ -515,11 +518,11 @@ func (p *Parser) parseTextSlice() ([]string, error) {
 }
 
 func (p *Parser) parseBytes() ([]byte, error) {
-	if tok, ok := p.consumeToken(tLacco); !ok {
-		return nil, p.failExpectedToken(tLacco, tok)
+	if tok, ok := p.consumeToken(tLsquare); !ok {
+		return nil, p.failExpectedToken(tLsquare, tok)
 	}
 	var bytes []byte
-	for !p.peekToken(tRacco) {
+	for !p.peekToken(tRsquare) {
 		lit, err := p.parseByte()
 		if err != nil {
 			return nil, err
@@ -529,8 +532,8 @@ func (p *Parser) parseBytes() ([]byte, error) {
 			return nil, p.failExpectedToken(tComma, tok)
 		}
 	}
-	if tok, ok := p.consumeToken(tRacco); !ok {
-		return nil, p.failExpectedToken(tRacco, tok)
+	if tok, ok := p.consumeToken(tRsquare); !ok {
+		return nil, p.failExpectedToken(tRsquare, tok)
 	}
 	return bytes, nil
 }

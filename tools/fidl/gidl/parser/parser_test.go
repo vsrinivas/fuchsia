@@ -81,10 +81,10 @@ func TestParseBytes(t *testing.T) {
 	testCases := []testCase{
 		{
 			gidl: `
-		{
+		[
 			0, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-		}`,
+		]`,
 			expectedValue: []byte{
 				0, 0, 0, 0, 0, 0, 0, 0,
 				255, 255, 255, 255, 255, 255, 255, 255,
@@ -92,18 +92,18 @@ func TestParseBytes(t *testing.T) {
 		},
 		{
 			gidl: `
-		{
+		[
 			0x0, 0xff, 0xA, 0x0a, 7,
-		}`,
+		]`,
 			expectedValue: []byte{
 				0, 255, 10, 10, 7,
 			},
 		},
 		{
 			gidl: `
-	{
+	[
 		'h', 'e', 'l', 'l', 'o',
-	}`,
+	]`,
 			expectedValue: []byte{
 				'h', 'e', 'l', 'l', 'o',
 			},
@@ -122,11 +122,11 @@ func TestParseSuccessCase(t *testing.T) {
 	success("OneStringOfMaxLengthFive-empty") {
 		value = OneStringOfMaxLengthFive {
 			first: "four",
-		}
-		bytes = {
+		},
+		bytes = [
 			0, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-		}
+		],
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
@@ -189,11 +189,11 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 	encode_success("OneStringOfMaxLengthFive-empty") {
 		value = OneStringOfMaxLengthFive {
 			first: "four",
-		}
-		bytes = {
+		},
+		bytes = [
 			0, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-		}
+		],
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
@@ -223,11 +223,11 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 	decode_success("OneStringOfMaxLengthFive-empty") {
 		value = OneStringOfMaxLengthFive {
 			first: "four",
-		}
-		bytes = {
+		},
+		bytes = [
 			0, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-		}
+		],
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
@@ -256,8 +256,8 @@ func TestParseEncodeFailureCase(t *testing.T) {
 	encode_failure("OneStringOfMaxLengthFive-too-long") {
 		value = OneStringOfMaxLengthFive {
 			the_string: "bonjour", // 6 characters
-		}
-		err = STRING_TOO_LONG
+		},
+		err = STRING_TOO_LONG,
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
@@ -281,13 +281,13 @@ func TestParseEncodeFailureCase(t *testing.T) {
 func TestParseDecodeFailureCase(t *testing.T) {
 	gidl := `
 	decode_failure("OneStringOfMaxLengthFive-wrong-length") {
-		type = TypeName
-		bytes = {
+		type = TypeName,
+		bytes = [
 			1, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			// one character missing
-		}
-		err = STRING_TOO_LONG
+		],
+		err = STRING_TOO_LONG,
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{DecodeFailure: []ir.DecodeFailure{{
@@ -309,13 +309,13 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	success("OneStringOfMaxLengthFive-empty") {
 		value = OneStringOfMaxLengthFive {
 			first: "four",
-		}
-		bytes = {
+		},
+		bytes = [
 			0, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-		}
-		bindings_allowlist = [go, rust,]
-		bindings_denylist = [go,]
+		],
+		bindings_allowlist = [go, rust,],
+		bindings_denylist = [go,],
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
@@ -385,14 +385,14 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 func TestParseFailsExtraKind(t *testing.T) {
 	gidl := `
 	success("OneStringOfMaxLengthFive-empty") {
-		type = Type
+		type = Type,
 		value = OneStringOfMaxLengthFive {
 			first: "four",
-		}
-		bytes = {
+		},
+		bytes = [
 			0, 0, 0, 0, 0, 0, 0, 0, // length
 			255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-		}
+		],
 	}`
 	_, err := parse(gidl)
 	checkFailure(t, err, "'type' does not apply")
@@ -402,7 +402,7 @@ func TestParseFailsMissingKind(t *testing.T) {
 	success("OneStringOfMaxLengthFive-empty") {
 		value = OneStringOfMaxLengthFive {
 			first: "four",
-		}
+		},
 	}`
 	_, err := parse(gidl)
 	checkFailure(t, err, "missing required parameter 'bytes'")
@@ -412,8 +412,8 @@ func TestParseFailsUnknownErrorCode(t *testing.T) {
 	encode_failure("OneStringOfMaxLengthFive-too-long") {
 		value = OneStringOfMaxLengthFive {
 			the_string: "bonjour",
-		}
-		err = UNKNOWN_ERROR_CODE
+		},
+		err = UNKNOWN_ERROR_CODE,
 	}`
 	p := NewParser("", strings.NewReader(input))
 	var all ir.All
