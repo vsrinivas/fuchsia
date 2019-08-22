@@ -437,7 +437,12 @@ void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
     reply->status = ZX_ERR_INVALID_ARGS;
     return;
   }
-  job->SetFilters(std::move(request.filters));
+
+  auto matches = job->SetFilters(std::move(request.filters));
+  for (zx_koid_t process_koid : matches) {
+    reply->matched_processes.push_back(process_koid);
+  }
+
   reply->status = ZX_OK;
 }
 

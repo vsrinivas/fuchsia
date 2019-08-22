@@ -431,6 +431,7 @@ bool ReadRequest(MessageReader* reader, JobFilterRequest* request, uint32_t* tra
 void WriteReply(const JobFilterReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kJobFilter, transaction_id);
   writer->WriteUint32(reply.status);
+  Serialize(reply.matched_processes, writer);
 }
 
 // WriteMemory -----------------------------------------------------------------

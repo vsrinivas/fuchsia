@@ -55,6 +55,9 @@ class JobContextImpl : public JobContext, public SettingStoreObserver, public Fi
   void Attach(uint64_t koid, Callback callback) override;
   void AttachToSystemRoot(Callback callback) override;
   void AttachToComponentRoot(Callback callback) override;
+
+  void AddJobImplForTesting(uint64_t koid, const std::string& name);
+
   void Detach(Callback callback) override;
 
   // SettingStoreObserver implementation
@@ -73,7 +76,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver, public Fi
   // Associated job if there is one.
   std::unique_ptr<JobImpl> job_;
   std::vector<std::string> filters_;
-  bool is_implicit_root_;
+  bool is_implicit_root_ = false;
   bool last_filter_set_failed_ = false;
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;

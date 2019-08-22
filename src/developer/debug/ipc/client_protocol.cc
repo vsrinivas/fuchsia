@@ -512,7 +512,9 @@ bool ReadReply(MessageReader* reader, JobFilterReply* reply, uint32_t* transacti
     return false;
   *transaction_id = header.transaction_id;
 
-  return reader->ReadInt32(&reply->status);
+  if (!reader->ReadInt32(&reply->status))
+    return false;
+  return Deserialize(reader, &reply->matched_processes);
 }
 
 // WriteMemory -----------------------------------------------------------------

@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 12;
+constexpr uint32_t kProtocolVersion = 13;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -292,6 +292,10 @@ struct JobFilterRequest {
 
 struct JobFilterReply {
   zx_status_t status = 0;  // zx_status for filter request
+
+  // List of koids for currently running processes that match any of the filters.
+  // Guaranteed that each koid is unique.
+  std::vector<uint64_t> matched_processes;
 };
 
 struct WriteMemoryRequest {

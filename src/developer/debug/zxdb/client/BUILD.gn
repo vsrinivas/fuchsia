@@ -225,6 +225,7 @@ source_set("tests") {
     "frame_impl_unittest.cc",
     "inline_thread_controller_test.cc",
     "inline_thread_controller_test.h",
+    "job_context_impl_unittest.cc",
     "memory_dump_unittest.cc",
     "minidump_unittest.cc",
     "process_impl_unittest.cc",

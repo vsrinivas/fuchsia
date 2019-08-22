@@ -599,10 +599,14 @@ TEST(Protocol, JobFilterRequest) {
 TEST(Protocol, JobFilterReply) {
   JobFilterReply initial;
   initial.status = 67;
+  initial.matched_processes = {1234, 5678};
 
   JobFilterReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(initial.status, second.status);
+  ASSERT_EQ(second.matched_processes.size(), 2u);
+  EXPECT_EQ(second.matched_processes[0], initial.matched_processes[0]);
+  EXPECT_EQ(second.matched_processes[1], initial.matched_processes[1]);
 }
 
 // WriteMemory -----------------------------------------------------------------

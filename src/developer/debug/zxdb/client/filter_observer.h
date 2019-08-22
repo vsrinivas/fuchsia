@@ -25,6 +25,10 @@ class FilterObserver {
 
   // Called when a filter has been deactivated and is about to be destroyed.
   virtual void WillDestroyFilter(Filter* filter) {}
+
+  // Called when a filter request comes back with a the list of processes currently running in the
+  // agent that match the filter request.
+  virtual void OnFilterMatches(JobContext* job, const std::vector<uint64_t>& matched_pids) {}
 };
 
 }  // namespace zxdb

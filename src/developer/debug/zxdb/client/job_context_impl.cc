@@ -129,6 +129,10 @@ void JobContextImpl::AttachToComponentRoot(Callback callback) {
   AttachInternal(debug_ipc::TaskType::kComponentRoot, 0, std::move(callback));
 }
 
+void JobContextImpl::AddJobImplForTesting(uint64_t koid, const std::string& name) {
+  job_ = std::make_unique<JobImpl>(this, koid, name);
+}
+
 void JobContextImpl::Detach(Callback callback) {
   if (!job_.get()) {
     debug_ipc::MessageLoop::Current()->PostTask(
@@ -184,15 +188,21 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters, bool
                    const Err& err, debug_ipc::JobFilterReply reply) {
         if (reply.status != 0) {
           FXL_LOG(ERROR) << "Error adding filter: " << debug_ipc::ZxStatusToString(reply.status);
-          if (weak_job_context) {
-            // Agent failed, mark that we had trouble setting filters and
-            // return.
+
+          // Agent failed, mark that we had trouble setting filters and return.
+          if (weak_job_context)
             weak_job_context->last_filter_set_failed_ = true;
-          }
           return;
         }
-        if (weak_job_context) {
+
+        if (weak_job_context)
           weak_job_context->filters_ = std::move(filters);
+
+        // Let the observers know that we had some matches.
+        if (!reply.matched_processes.empty()) {
+          for (FilterObserver& filter_observer : weak_job_context->session()->filter_observers()) {
+            filter_observer.OnFilterMatches(weak_job_context.get(), reply.matched_processes);
+          }
         }
       });
 }
