@@ -24,12 +24,14 @@ static const std::string kPacked24FormatOption = "packed24";
 static const std::string kGainOption = "gain";
 static const std::string kMuteOption = "mute";
 static const std::string kAsyncModeOption = "async";
+static const std::string kPayloadBufferOption = "buffer-ms";
 static const std::string kVerboseOption = "v";
 static const std::string kShowUsageOption1 = "help";
 static const std::string kShowUsageOption2 = "?";
 
-constexpr zx_duration_t kCaptureChunkDuration = ZX_MSEC(100);
+constexpr float kDefaultCaptureGainDb = 0.0f;
 constexpr size_t kCaptureChunkCount = 10;
+constexpr float kMinBufferSizeMsec = 1.0f;  // 1msec payload buffer!
 
 WavRecorder::~WavRecorder() {
   if (payload_buf_virt_ != nullptr) {
@@ -109,15 +111,20 @@ void WavRecorder::Usage() {
 
   printf("\n   By default, don't set AudioCapturer gain and mute (unity 0 dB, unmuted)\n");
   printf(
-      " --%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, +%.1f]; 0.0 if only '--%s' is provided)\n",
+      " --%s[=<GAIN_DB>]\tSet stream gain (dB in [%.1f, +%.1f]; %.1f if only '--%s' is provided)\n",
       kGainOption.c_str(), fuchsia::media::audio::MUTED_GAIN_DB, fuchsia::media::audio::MAX_GAIN_DB,
-      kGainOption.c_str());
+      kDefaultCaptureGainDb, kGainOption.c_str());
   printf(" --%s[=<0|1>]\t\tSet stream mute (0=Unmute or 1=Mute; Mute if only '--%s' is provided)\n",
          kMuteOption.c_str(), kMuteOption.c_str());
 
   printf("\n   By default, use packet-by-packet ('synchronous') mode\n");
   printf(" --%s\t\tCapture using sequential-buffer ('asynchronous') mode\n",
          kAsyncModeOption.c_str());
+
+  printf("\n   By default, use a cross-process shared buffer of 1 second (1000.0 msec)\n");
+  printf(" --%s=<MSECS>\tSpecify the duration (in milliseconds) of this payload buffer\n",
+         kPayloadBufferOption.c_str());
+  printf("\t\t\tMinimum duration is %.1f milliseconds\n", kMinBufferSizeMsec);
 
   printf("\n --%s\t\t\tBe verbose; display per-packet info\n", kVerboseOption.c_str());
   printf(" --%s, --%s\t\tShow this message\n", kShowUsageOption1.c_str(),
@@ -151,7 +158,8 @@ void WavRecorder::Shutdown() {
 }
 
 bool WavRecorder::SetupPayloadBuffer() {
-  capture_frames_per_chunk_ = (kCaptureChunkDuration * frames_per_second_) / ZX_SEC(1);
+  auto chunk_duration_nsec = buffer_duration_nsec_ / kCaptureChunkCount;
+  capture_frames_per_chunk_ = (chunk_duration_nsec * frames_per_second_) / ZX_SEC(1);
   payload_buf_frames_ = capture_frames_per_chunk_ * kCaptureChunkCount;
   payload_buf_size_ = payload_buf_frames_ * bytes_per_frame_;
 
@@ -256,17 +264,19 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
   }
 
   if (cmd_line_.HasOption(kGainOption)) {
-    stream_gain_db_ = 0.0f;
+    stream_gain_db_ = kDefaultCaptureGainDb;
+
     if (cmd_line_.GetOptionValue(kGainOption, &opt)) {
-      if (sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
+      if (opt == "") {
+        printf("Setting gain to the default %.3f dB\n", stream_gain_db_);
+      } else if (sscanf(opt.c_str(), "%f", &stream_gain_db_) != 1) {
         Usage();
         return;
-      }
-
-      if ((stream_gain_db_ < fuchsia::media::audio::MUTED_GAIN_DB) ||
-          (stream_gain_db_ > fuchsia::media::audio::MAX_GAIN_DB)) {
+      } else if ((stream_gain_db_ < fuchsia::media::audio::MUTED_GAIN_DB) ||
+                 (stream_gain_db_ > fuchsia::media::audio::MAX_GAIN_DB)) {
         printf("Gain (%.3f dB) must be within range [%.1f, %.1f]\n", stream_gain_db_,
                fuchsia::media::audio::MUTED_GAIN_DB, fuchsia::media::audio::MAX_GAIN_DB);
+
         return;
       }
     }
@@ -339,6 +349,17 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
     gain_control_->SetMute(stream_mute_);
   }
 
+  // Check whether the user wanted a specific duration for the capture payload buffer.
+  if (cmd_line_.GetOptionValue(kPayloadBufferOption, &opt)) {
+    float buffer_size_msec;
+    if (sscanf(opt.c_str(), "%f", &buffer_size_msec) != 1 ||
+        buffer_size_msec < kMinBufferSizeMsec) {
+      Usage();
+      return;
+    }
+    buffer_duration_nsec_ = buffer_size_msec * ZX_MSEC(1);
+  }
+
   // Create our shared payload buffer, map it into place, then dup the handle
   // and pass it on to the capturer to fill.
   if (!SetupPayloadBuffer()) {
@@ -386,7 +407,9 @@ void WavRecorder::OnDefaultFormatFetched(fuchsia::media::StreamType type) {
                 ? (pack_24bit_samples_ ? "packed 24-bit signed int" : "24-bit-in-32-bit signed int")
                 : "16-bit signed int",
       frames_per_second_, channel_count_);
-  printf("from %s into '%s'", loopback_ ? "loopback" : "default input", filename_);
+  printf("from %s into '%s', using a payload buffer of %.3lf msec",
+         loopback_ ? "loopback" : "default input", filename_,
+         static_cast<double>(buffer_duration_nsec_) / ZX_MSEC(1));
   if (change_gain) {
     printf(", applying gain of %.2f dB", stream_gain_db_);
   }

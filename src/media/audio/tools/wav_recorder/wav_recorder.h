@@ -45,6 +45,7 @@ class WavRecorder {
   bool verbose_ = false;
   bool loopback_ = false;
 
+  zx_duration_t buffer_duration_nsec_ = ZX_SEC(1);
   zx::vmo payload_buf_vmo_;
   void* payload_buf_virt_ = nullptr;
   size_t payload_buf_size_ = 0;
