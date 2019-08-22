@@ -22,7 +22,7 @@ using fuchsia::cobalt::SystemDataUpdaterPtr;
 class CobaltAppForTest {
  public:
   CobaltAppForTest(std::unique_ptr<sys::ComponentContext> context)
-      : system_data_("test", "test"), context_(std::move(context)) {
+      : system_data_("test", "test", ReleaseStage::DEBUG), context_(std::move(context)) {
     system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_, "/tmp/test_"));
 
     context_->outgoing()->AddPublicService(
@@ -145,7 +145,7 @@ TEST_F(SystemDataUpdaterImplTests, SetChannel) {
 
 namespace {
 
-std::unique_ptr<SystemData> make_data() { return std::make_unique<SystemData>("test", "test"); }
+std::unique_ptr<SystemData> make_data() { return std::make_unique<SystemData>("test", "test", ReleaseStage::DEBUG); }
 
 std::unique_ptr<SystemDataUpdaterImpl> make_updater(SystemData* data) {
   return std::make_unique<SystemDataUpdaterImpl>(data, "/tmp/test_");
