@@ -34,17 +34,10 @@ impl ActionSuggestionsProvider {
             .action_display
             .as_ref()
             .and_then(|action_display| action_display.display_info.as_ref())
+            // requires a display_info and a title
+            .filter(|display_info| display_info.title.is_some())
             .map(|display_info| {
-                Suggestion::new(
-                    AddModInfo::new_intent(intent),
-                    display_info.clone().with_title(
-                        &format!(
-                            "open {}",
-                            display_info.title.as_ref().unwrap_or(&"Unnamed".to_string())
-                        )
-                        .to_string(),
-                    ),
-                )
+                Suggestion::new(AddModInfo::new_intent(intent), display_info.clone())
             })
     }
 }
@@ -94,7 +87,7 @@ mod tests {
             "ACTION_MAIN",
             "fuchsia-pkg://fuchsia.com/collections#meta/collections.cmx",
             "https://example.com/weather-icon",
-            "open Nouns of the world",
+            "Nouns of the world",
         )];
 
         // Ensure the suggestion matches.
