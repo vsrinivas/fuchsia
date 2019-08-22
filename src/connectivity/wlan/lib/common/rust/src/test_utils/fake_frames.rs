@@ -4,6 +4,8 @@
 
 use crate::mac::*;
 
+pub const EAPOL_PDU: &[u8] = &[5, 5, 5, 5, 5, 5, 5, 5];
+
 pub fn make_mgmt_frame(ht_ctrl: bool) -> Vec<u8> {
     #[rustfmt::skip]
         let mut bytes = vec![
@@ -177,6 +179,28 @@ pub fn make_data_frame_amsdu() -> Vec<u8> {
     amsdu_data_frame.extend(MSDU_2_LLC_HDR);
     amsdu_data_frame.extend(MSDU_2_PAYLOAD);
     amsdu_data_frame
+}
+
+pub fn make_eapol_frame() -> (MacAddr, MacAddr, Vec<u8>) {
+    #[rustfmt::skip]
+    let mut frame = vec![
+        // Data header:
+        0b0000_10_00, 0b000000_1_0, // FC
+        0, 0, // Duration
+        6, 6, 6, 6, 6, 6, // addr1
+        7, 7, 7, 7, 7, 7, // addr2
+        7, 7, 7, 7, 7, 7, // addr3
+        0x10, 0, // Sequence Control
+        // LLC header:
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x88, 0x8E, // protocol id (EAPOL)
+    ];
+    // EAPOL frame:
+    frame.extend(EAPOL_PDU);
+
+    // (src, dst, data frame)
+    ([7; 6], [6; 6], frame)
 }
 
 pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {

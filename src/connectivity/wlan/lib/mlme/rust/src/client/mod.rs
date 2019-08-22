@@ -58,23 +58,52 @@ impl ClientStation {
         &mut self.seq_mgr
     }
 
-    /// Extracts aggregated and non-aggregated MSDUs from the data frame,
-    /// converts those into Ethernet II frames and delivers the resulting frames via the given
-    /// device.
-    /// Handles NULL data frames by responding with NULL data frames (sometimes called Keep Alive
-    /// frames).
-    pub fn handle_data_frame<B: ByteSlice>(&mut self, bytes: B, has_padding: bool) {
+    /// Extracts aggregated and non-aggregated MSDUs from the data frame.
+    /// Handles all data subtypes.
+    /// EAPoL MSDUs are forwarded to SME via an MLME-EAPOL.indication message independent of the
+    /// STA's current controlled port status.
+    /// All other MSDUs are converted into Ethernet II frames and forwarded via the device to
+    /// Fuchsia's Netstack if the STA's controlled port is open.
+    /// NULL-Data frames are interpreted as "Keep Alive" requests and responded with NULL data
+    /// frames if the STA's controlled port is open.
+    pub fn handle_data_frame<B: ByteSlice>(
+        &mut self,
+        bytes: B,
+        has_padding: bool,
+        is_controlled_port_open: bool,
+    ) {
         if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(bytes, has_padding) {
             match msdus {
+                // Handle NULL data frames independent of the controlled port's status.
                 mac::MsduIterator::Null => {
                     if let Err(e) = self.send_keep_alive_resp_frame() {
                         error!("error sending keep alive frame: {}", e);
                     }
                 }
+                // Handle aggregated and non-aggregated MSDUs.
                 _ => {
                     for msdu in msdus {
-                        if let Err(e) = self.deliver_msdu(msdu) {
-                            error!("error while handling data frame: {}", e);
+                        let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
+                        match llc_frame.hdr.protocol_id.to_native() {
+                            // Forward EAPoL frames to SME independent of the controlled port's
+                            // status.
+                            mac::ETHER_TYPE_EAPOL => {
+                                if let Err(e) = self.send_eapol_indication(
+                                    *src_addr,
+                                    *dst_addr,
+                                    &llc_frame.body[..],
+                                ) {
+                                    error!("error sending MLME-EAPOL.indication: {}", e);
+                                }
+                            }
+                            // Deliver non-EAPoL MSDUs only if the controlled port is open.
+                            _ if is_controlled_port_open => {
+                                if let Err(e) = self.deliver_msdu(msdu) {
+                                    error!("error while handling data frame: {}", e);
+                                }
+                            }
+                            // Drop all non-EAPoL MSDUs if the controlled port is closed.
+                            _ => (),
                         }
                     }
                 }
@@ -185,7 +214,7 @@ impl ClientStation {
 
     /// Sends an MLME-EAPOL.indication to MLME's SME peer.
     /// Note: MLME-EAPOL.indication is a custom Fuchsia primitive and not defined in IEEE 802.11.
-    pub fn send_eapol_indication(
+    fn send_eapol_indication(
         &mut self,
         src_addr: MacAddr,
         dst_addr: MacAddr,
@@ -325,7 +354,7 @@ mod tests {
         ];
         let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
-        client.handle_data_frame(&data_frame[..], false);
+        client.handle_data_frame(&data_frame[..], false, true);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
             // Data header:
@@ -343,7 +372,7 @@ mod tests {
         let data_frame = make_data_frame_single_llc(None, None);
         let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
-        client.handle_data_frame(&data_frame[..], false);
+        client.handle_data_frame(&data_frame[..], false, true);
         assert_eq!(fake_device.eth_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(fake_device.eth_queue[0], [
@@ -359,7 +388,7 @@ mod tests {
         let data_frame = make_data_frame_amsdu();
         let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
-        client.handle_data_frame(&data_frame[..], false);
+        client.handle_data_frame(&data_frame[..], false, true);
         let queue = &fake_device.eth_queue;
         assert_eq!(queue.len(), 2);
         #[rustfmt::skip]
@@ -385,7 +414,7 @@ mod tests {
         let data_frame = make_data_frame_amsdu_padding_too_short();
         let mut fake_device = FakeDevice::new();
         let mut client = make_client_station(fake_device.as_device());
-        client.handle_data_frame(&data_frame[..], false);
+        client.handle_data_frame(&data_frame[..], false, true);
         let queue = &fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
         #[rustfmt::skip]
@@ -396,6 +425,57 @@ mod tests {
         ];
         expected_first_eth_frame.extend_from_slice(MSDU_1_PAYLOAD);
         assert_eq!(queue[0], &expected_first_eth_frame[..]);
+    }
+
+    #[test]
+    fn data_frame_controlled_port_closed() {
+        let data_frame = make_data_frame_single_llc(None, None);
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device());
+        client.handle_data_frame(&data_frame[..], false, false);
+
+        // Verify frame was not sent to netstack.
+        assert_eq!(fake_device.eth_queue.len(), 0);
+    }
+
+    #[test]
+    fn eapol_frame_controlled_port_closed() {
+        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device());
+        client.handle_data_frame(&eapol_frame[..], false, false);
+
+        // Verify EAPoL frame was not sent to netstack.
+        assert_eq!(fake_device.eth_queue.len(), 0);
+
+        // Verify EAPoL frame was sent to SME.
+        let eapol_ind = fake_device
+            .next_mlme_msg::<fidl_mlme::EapolIndication>()
+            .expect("error reading EAPOL.indication");
+        assert_eq!(
+            eapol_ind,
+            fidl_mlme::EapolIndication { src_addr, dst_addr, data: EAPOL_PDU.to_vec() }
+        );
+    }
+
+    #[test]
+    fn eapol_frame_is_controlled_port_open() {
+        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device());
+        client.handle_data_frame(&eapol_frame[..], false, true);
+
+        // Verify EAPoL frame was not sent to netstack.
+        assert_eq!(fake_device.eth_queue.len(), 0);
+
+        // Verify EAPoL frame was sent to SME.
+        let eapol_ind = fake_device
+            .next_mlme_msg::<fidl_mlme::EapolIndication>()
+            .expect("error reading EAPOL.indication");
+        assert_eq!(
+            eapol_ind,
+            fidl_mlme::EapolIndication { src_addr, dst_addr, data: EAPOL_PDU.to_vec() }
+        );
     }
 
     #[test]

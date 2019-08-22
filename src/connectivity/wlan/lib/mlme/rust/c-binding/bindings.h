@@ -94,7 +94,8 @@ typedef struct {
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 
 extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, const uint8_t *data_frame,
-                                                uintptr_t data_frame_len, bool has_padding);
+                                                uintptr_t data_frame_len, bool has_padding,
+                                                bool controlled_port_open);
 
 extern "C" wlan_client_sta_t *client_sta_new(mlme_device_ops_t device,
                                              mlme_buffer_provider_ops_t buf_provider,
@@ -107,11 +108,6 @@ extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, const uint
                                               const uint8_t *payload, uintptr_t payload_len);
 
 extern "C" int32_t client_sta_send_deauth_frame(wlan_client_sta_t *sta, uint16_t reason_code);
-
-extern "C" int32_t client_sta_send_eapol_indication(wlan_client_sta_t *sta, const uint8_t (*src)[6],
-                                                    const uint8_t (*dest)[6],
-                                                    const uint8_t *eapol_frame,
-                                                    uintptr_t eapol_frame_len);
 
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);
 

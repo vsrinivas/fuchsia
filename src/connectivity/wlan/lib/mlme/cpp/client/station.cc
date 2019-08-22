@@ -141,13 +141,6 @@ zx_status_t Station::HandleMgmtFrame(MgmtFrame<>&& frame) {
   return ZX_OK;
 }
 
-void HandleDataFrameInRust(wlan_client_sta_t* sta, fbl::unique_ptr<Packet> pkt) {
-  const auto rx_info = pkt->ctrl_data<wlan_rx_info>();
-  const bool has_padding =
-      rx_info != nullptr && rx_info->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
-  client_sta_handle_data_frame(sta, pkt->data(), pkt->len(), has_padding);
-}
-
 zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
   auto data_frame = frame.View();
   if (kFinspectEnabled) {
@@ -158,6 +151,7 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
   if (ShouldDropDataFrame(data_frame)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+  ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
 
   auto rx_info = frame.View().rx_info();
   if (rx_info->valid_fields & WLAN_RX_INFO_VALID_DATA_RATE) {
@@ -167,14 +161,22 @@ zx_status_t Station::HandleDataFrame(DataFrame<>&& frame) {
     avg_rssi_dbm_.add(dBm(rssi_dbm));
   }
 
-  if (data_frame.CheckBodyType<AmsduSubframeHeader>().CheckLength() &&
-      controlled_port_ == eapol::PortState::kOpen) {
-    HandleDataFrameInRust(rust_client_.get(), frame.Take());
-  } else if (auto llc_frame = data_frame.CheckBodyType<LlcHeader>().CheckLength()) {
-    HandleDataFrame(llc_frame.IntoOwned(frame.Take()));
-  } else if (auto null_frame = data_frame.CheckBodyType<NullDataHdr>().CheckLength()) {
-    HandleDataFrameInRust(rust_client_.get(), frame.Take());
+  // Ignore "more_data" bit if RSNA was not yet established.
+  // TODO(29886): Handle PS-POLL in Rust.
+  if (controlled_port_ == eapol::PortState::kOpen) {
+    // PS-POLL if there are more buffered unicast frames.
+    auto data_hdr = frame.View().hdr();
+    if (data_hdr->fc.more_data() && data_hdr->addr1.IsUcast()) {
+      SendPsPoll();
+    }
   }
+
+  auto pkt = frame.Take();
+  const bool has_padding =
+      rx_info != nullptr && rx_info->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
+  bool is_controlled_port_open = controlled_port_ == eapol::PortState::kOpen;
+  client_sta_handle_data_frame(rust_client_.get(), pkt->data(), pkt->len(), has_padding,
+                               is_controlled_port_open);
 
   return ZX_OK;
 }
@@ -635,40 +637,6 @@ bool Station::ShouldDropDataFrame(const DataFrameView<>& frame) {
   }
 
   return join_ctx_->bssid() != frame.hdr()->addr2;
-}
-
-zx_status_t Station::HandleDataFrame(DataFrame<LlcHeader>&& frame) {
-  debugfn();
-  ZX_DEBUG_ASSERT(state_ == WlanState::kAssociated);
-
-  auto data_llc_frame = frame.View();
-  auto data_hdr = data_llc_frame.hdr();
-
-  // Forward EAPOL frames to SME.
-  auto llc_frame = data_llc_frame.SkipHeader();
-  if (auto eapol_frame = llc_frame.CheckBodyType<EapolHdr>().CheckLength().SkipHeader()) {
-    if (eapol_frame.body_len() == eapol_frame.hdr()->get_packet_body_length()) {
-      return client_sta_send_eapol_indication(rust_client_.get(), &data_hdr->addr3.byte,
-                                              &data_hdr->addr1.byte, eapol_frame.data(),
-                                              eapol_frame.len());
-    } else {
-      errorf("received invalid EAPOL frame\n");
-    }
-    return ZX_OK;
-  }
-
-  // Drop packets if RSNA was not yet established.
-  if (controlled_port_ == eapol::PortState::kBlocked) {
-    return ZX_OK;
-  }
-
-  // PS-POLL if there are more buffered unicast frames.
-  if (data_hdr->fc.more_data() && data_hdr->addr1.IsUcast()) {
-    SendPsPoll();
-  }
-
-  HandleDataFrameInRust(rust_client_.get(), frame.Take());
-  return ZX_OK;
 }
 
 zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {

@@ -53,27 +53,16 @@ pub extern "C" fn client_sta_send_deauth_frame(sta: &mut ClientStation, reason_c
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_send_eapol_indication(
-    sta: &mut ClientStation,
-    src: &[u8; 6],
-    dest: &[u8; 6],
-    eapol_frame: *const u8,
-    eapol_frame_len: usize,
-) -> i32 {
-    let eapol_frame = unsafe { utils::as_slice(eapol_frame, eapol_frame_len) };
-    sta.send_eapol_indication(*src, *dest, eapol_frame).into_raw_zx_status()
-}
-
-#[no_mangle]
 pub extern "C" fn client_sta_handle_data_frame(
     sta: &mut ClientStation,
     data_frame: *const u8,
     data_frame_len: usize,
     has_padding: bool,
+    controlled_port_open: bool,
 ) -> i32 {
     // Safe here because |data_frame_slice| does not outlive |data_frame|.
     let data_frame_slice = unsafe { utils::as_slice(data_frame, data_frame_len) };
-    sta.handle_data_frame(data_frame_slice, has_padding);
+    sta.handle_data_frame(data_frame_slice, has_padding, controlled_port_open);
     zx::sys::ZX_OK
 }
 
