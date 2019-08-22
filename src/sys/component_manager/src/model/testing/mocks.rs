@@ -206,7 +206,8 @@ impl FrameworkServiceHost for MockFrameworkServiceHost {
         stream: fsys::RealmRequestStream,
     ) -> BoxFuture<Result<(), FrameworkServiceError>> {
         Box::pin(async move {
-            self.do_serve_realm_service(realm, stream).await
+            self.do_serve_realm_service(realm, stream)
+                .await
                 .expect(&format!("serving {} failed", REALM_SERVICE.to_string()));
             Ok(())
         })

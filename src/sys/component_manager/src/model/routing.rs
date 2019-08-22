@@ -147,10 +147,10 @@ async fn open_framework_capability<'a>(
 ) -> Result<(), ModelError> {
     let mut capability = None;
 
-    for hook in model.hooks.iter() {
-        capability =
-            hook.on_route_framework_capability(realm.clone(), &capability_decl, capability).await?;
-    }
+    capability = model
+        .hooks
+        .on_route_framework_capability(realm.clone(), &capability_decl, capability)
+        .await?;
 
     if let Some(capability) = capability {
         capability.open(flags, open_mode, relative_path, server_chan).await?;

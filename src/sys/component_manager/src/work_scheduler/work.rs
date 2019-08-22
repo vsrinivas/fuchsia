@@ -5,7 +5,7 @@
 use {
     crate::work_scheduler::time::TimeSource,
     fidl_fuchsia_sys2 as fsys,
-    std::{convert::TryFrom, collections::HashMap, sync::Arc},
+    std::{collections::HashMap, convert::TryFrom, sync::Arc},
 };
 
 /// Internal representation of a one-shot or repeating unit of work.
@@ -22,17 +22,13 @@ struct Work {
 impl TryFrom<(&str, &fsys::WorkRequest)> for Work {
     type Error = fsys::Error;
 
-    fn try_from((id, work_request): (&str, &fsys::WorkRequest))
-        -> Result<Self, fsys::Error>
-    {
+    fn try_from((id, work_request): (&str, &fsys::WorkRequest)) -> Result<Self, fsys::Error> {
         let next_deadline_monotonic = match &work_request.start {
             None => Err(fsys::Error::InvalidArguments),
-            Some(start) => {
-                match start {
-                    fsys::Start::MonotonicTime(monotonic_time) => Ok(monotonic_time),
-                    _ => Err(fsys::Error::InvalidArguments),
-                }
-            }
+            Some(start) => match start {
+                fsys::Start::MonotonicTime(monotonic_time) => Ok(monotonic_time),
+                _ => Err(fsys::Error::InvalidArguments),
+            },
         }?;
         Ok(Work {
             id: id.to_string(),
@@ -53,10 +49,7 @@ pub struct WorkStatus {
 
 impl From<&Work> for WorkStatus {
     fn from(work: &Work) -> Self {
-        WorkStatus {
-            next_run_monotonic_time: work.next_deadline_monotonic,
-            period: work.period,
-        }
+        WorkStatus { next_run_monotonic_time: work.next_deadline_monotonic, period: work.period }
     }
 }
 
@@ -119,7 +112,7 @@ pub mod test {
             Some(work) => {
                 let work: &Work = &*work;
                 Ok(WorkStatus::from(work))
-            },
+            }
         }
     }
 }

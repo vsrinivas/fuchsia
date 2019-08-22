@@ -68,7 +68,8 @@ impl FuchsiaBootResolver {
         // Read component manifest from resource into a component decl.
         let cm_file = io_util::open_file(&self.boot_proxy, &res_path, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
-        let cm_str = io_util::read_file(&cm_file).await
+        let cm_str = io_util::read_file(&cm_file)
+            .await
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let component_decl = translate(&cm_str)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;

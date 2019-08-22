@@ -55,9 +55,7 @@ pub mod test {
 
     impl FakeTimeSource {
         pub fn new() -> Self {
-            FakeTimeSource {
-                monotonic_time: FAKE_TIME_MONOTONIC_TIME,
-            }
+            FakeTimeSource { monotonic_time: FAKE_TIME_MONOTONIC_TIME }
         }
     }
 }

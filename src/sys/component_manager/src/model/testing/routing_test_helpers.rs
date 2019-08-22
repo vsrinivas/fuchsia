@@ -4,8 +4,9 @@
 
 use {
     crate::{
-        directory_broker, klog, model::routing::generate_storage_path,
-        model::testing::memfs::Memfs, model::testing::mocks::*, model::*,
+        directory_broker, framework::FrameworkServicesHook, klog,
+        model::routing::generate_storage_path, model::testing::memfs::Memfs,
+        model::testing::mocks::*, model::*,
     },
     cm_rust::{
         CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
@@ -74,17 +75,17 @@ pub enum CheckUse {
 /// "test:///a_resolved".
 pub struct RoutingTest {
     components: Vec<(&'static str, ComponentDecl)>,
-    model: Model,
+    pub model: Model,
     namespaces: Namespaces,
     memfs: Memfs,
 }
 
 impl RoutingTest {
     /// Initializes a new test.
-    pub fn new(
+    pub async fn new(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        framework_services: Box<dyn FrameworkServiceHost>,
+        framework_services: Arc<dyn FrameworkServiceHost>,
     ) -> Self {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
@@ -103,13 +104,15 @@ impl RoutingTest {
 
         let namespaces = runner.namespaces.clone();
         let model = Model::new(ModelParams {
-            framework_services: framework_services.into(),
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),
-            hooks: Vec::new(),
             config: ModelConfig::default(),
         });
+
+        let framework_services_hook =
+            Arc::new(FrameworkServicesHook::new(model.clone(), framework_services));
+        model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services_hook)]).await;
         Self { components, model, namespaces, memfs }
     }
 
@@ -147,28 +150,23 @@ impl RoutingTest {
     ) {
         let component_name = Self::bind_instance(&self.model, &moniker).await;
         let component_resolved_url = Self::resolved_url(&component_name);
-        Self::check_namespace(
-            component_name,
-            self.namespaces.clone(),
-            self.components.clone(),
-        ).await;
+        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
+            .await;
         capability_util::call_create_child(
             component_resolved_url,
             self.namespaces.clone(),
             collection,
             decl,
-        ).await;
+        )
+        .await;
     }
 
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
     pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let component_name = Self::bind_instance(&self.model, &moniker).await;
         let component_resolved_url = Self::resolved_url(&component_name);
-        Self::check_namespace(
-            component_name,
-            self.namespaces.clone(),
-            self.components.clone(),
-        ).await;
+        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
+            .await;
         match check {
             CheckUse::Service { .. } => panic!("service capability unsupported"),
             CheckUse::LegacyService { path, should_succeed } => {
@@ -177,7 +175,8 @@ impl RoutingTest {
                     component_resolved_url,
                     self.namespaces.clone(),
                     should_succeed,
-                ).await;
+                )
+                .await;
             }
             CheckUse::Directory { path, should_succeed } => {
                 capability_util::read_data_from_namespace(
@@ -185,20 +184,23 @@ impl RoutingTest {
                     component_resolved_url,
                     self.namespaces.clone(),
                     should_succeed,
-                ).await
+                )
+                .await
             }
             CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation } => {
                 capability_util::write_file_to_meta_storage(
                     &self.model,
                     moniker,
                     storage_relation.is_some(),
-                ).await;
+                )
+                .await;
                 if let Some(relative_moniker) = storage_relation {
                     capability_util::check_file_in_storage(
                         fsys::StorageType::Meta,
                         relative_moniker,
                         &self.memfs,
-                    ).await;
+                    )
+                    .await;
                 }
             }
             CheckUse::Storage { type_, storage_relation } => {
@@ -207,13 +209,11 @@ impl RoutingTest {
                     component_resolved_url,
                     self.namespaces.clone(),
                     storage_relation.is_some(),
-                ).await;
+                )
+                .await;
                 if let Some(relative_moniker) = storage_relation {
-                    capability_util::check_file_in_storage(
-                        type_,
-                        relative_moniker,
-                        &self.memfs,
-                    ).await;
+                    capability_util::check_file_in_storage(type_, relative_moniker, &self.memfs)
+                        .await;
                 }
             }
         }
@@ -229,7 +229,8 @@ impl RoutingTest {
                     &moniker,
                     &self.model,
                     should_succeed,
-                ).await;
+                )
+                .await;
             }
             CheckUse::Directory { path, should_succeed } => {
                 capability_util::read_data_from_exposed_dir(
@@ -237,7 +238,8 @@ impl RoutingTest {
                     &moniker,
                     &self.model,
                     should_succeed,
-                ).await;
+                )
+                .await;
             }
             CheckUse::Storage { .. } => {
                 panic!("storage capabilities can't be exposed");
@@ -294,17 +296,15 @@ impl RoutingTest {
         let component_name = Self::bind_instance(&self.model, &moniker).await;
         let component_resolved_url = Self::resolved_url(&component_name);
         let path = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
-        Self::check_namespace(
-            component_name,
-            self.namespaces.clone(),
-            self.components.clone(),
-        ).await;
+        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
+            .await;
         capability_util::call_realm_svc(
             path,
             component_resolved_url,
             self.namespaces.clone(),
             bind_calls.clone(),
-        ).await;
+        )
+        .await;
     }
 
     /// Checks that a use declaration of `path` at `moniker` can be opened with
@@ -312,16 +312,14 @@ impl RoutingTest {
     pub async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
         let component_name = Self::bind_instance(&self.model, &moniker).await;
         let component_resolved_url = Self::resolved_url(&component_name);
-        Self::check_namespace(
-            component_name,
-            self.namespaces.clone(),
-            self.components.clone(),
-        ).await;
+        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
+            .await;
         capability_util::call_file_svc_from_namespace(
             path,
             component_resolved_url,
             self.namespaces.clone(),
-        ).await;
+        )
+        .await;
     }
 
     /// Host all capabilities in `decl` that come from `self`.
@@ -420,8 +418,7 @@ mod capability_util {
         should_succeed: bool,
     ) {
         let dir_string = path.to_string();
-        let dir_proxy =
-            get_dir_from_namespace(dir_string.as_str(), resolved_url, namespaces).await;
+        let dir_proxy = get_dir_from_namespace(dir_string.as_str(), resolved_url, namespaces).await;
         write_hippo_file_to_directory(&dir_proxy, should_succeed).await;
     }
 
@@ -679,14 +676,20 @@ mod capability_util {
         open_mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let realm = model.look_up_realm(abs_moniker).await
+        let realm = model
+            .look_up_realm(abs_moniker)
+            .await
             .expect(&format!("realm not found {}", abs_moniker));
         model.bind_instance(realm.clone()).await.expect("failed to bind instance");
         let state = realm.lock_state().await;
         let state = state.get();
         let execution = state.execution().expect("no execution");
         let flags = OPEN_RIGHT_READABLE;
-        execution.exposed_dir.root_dir.open(flags, open_mode, path.split(), server_end).await
+        execution
+            .exposed_dir
+            .root_dir
+            .open(flags, open_mode, path.split(), server_end)
+            .await
             .expect("failed to open exposed dir");
     }
 }
@@ -794,7 +797,9 @@ impl OutDir {
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .unwrap();
-        let (s, _) = hippo_proxy.write(&mut b"hippo".to_vec().drain(..)).await
+        let (s, _) = hippo_proxy
+            .write(&mut b"hippo".to_vec().drain(..))
+            .await
             .expect("failed to write to file");
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
     }

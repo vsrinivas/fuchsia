@@ -188,9 +188,10 @@ mod tests {
         let file_proxy =
             io_util::open_file(&root_of_memfs, &file_name, OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE)
                 .expect("failed to open file");
-        let (s, _) =
-            file_proxy.write(&mut file_contents.clone().as_bytes().to_vec().drain(..)).await
-                .expect("failed to write to file");
+        let (s, _) = file_proxy
+            .write(&mut file_contents.clone().as_bytes().to_vec().drain(..))
+            .await
+            .expect("failed to write to file");
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
         let s = file_proxy.close().await.expect("failed to close file");
         assert_eq!(zx::Status::OK, zx::Status::from_raw(s));

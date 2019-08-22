@@ -7,9 +7,9 @@
 use {
     component_manager_lib::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::RealFrameworkServiceHost,
+        framework::{FrameworkServicesHook, RealFrameworkServiceHost},
         klog,
-        model::{AbsoluteMoniker, Model, ModelConfig, ModelParams},
+        model::{hooks::*, AbsoluteMoniker, Model, ModelConfig, ModelParams},
         startup,
     },
     failure::{self, Error, ResultExt},
@@ -38,15 +38,12 @@ fn main() -> Result<(), Error> {
     let resolver_registry = startup::available_resolvers()?;
     let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
     let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
-    let mut params = ModelParams {
-        framework_services: Arc::new(RealFrameworkServiceHost::new()),
+    let params = ModelParams {
         root_component_url: args.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(ElfRunner::new(launcher_connector)),
-        hooks: Vec::new(),
         config: ModelConfig::default(),
     };
-    startup::install_hub_if_possible(&mut params)?;
 
     let model = Arc::new(Model::new(params));
 
@@ -56,6 +53,17 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_root(model: Arc<Model>) {
+    if let Err(error) = startup::install_hub_if_possible(&*model).await {
+        error!("Failed to install hub: {:?}", error);
+        process::exit(1)
+    }
+
+    let framework_services = Arc::new(FrameworkServicesHook::new(
+        (*model).clone(),
+        Arc::new(RealFrameworkServiceHost::new()),
+    ));
+    model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
+
     match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
         Ok(()) => {
             // TODO: Exit the component manager when the root component's binding is lost

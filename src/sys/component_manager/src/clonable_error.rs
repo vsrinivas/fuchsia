@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{self, AsFail, Fail, Error},
+    failure::{self, AsFail, Error, Fail},
     std::fmt,
     std::sync::Arc,
 };
@@ -41,9 +41,7 @@ impl fmt::Debug for ClonableError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        failure::format_err,
-    };
+    use failure::format_err;
 
     #[derive(Debug, Fail, Clone)]
     #[fail(display = "\"{}\" happened: {}", msg, cause)]
@@ -56,10 +54,7 @@ mod tests {
     #[test]
     fn clone() {
         let cause = format_err!("root cause").into();
-        let err = FooError {
-            msg: "something bad happened".to_string(),
-            cause,
-        };
+        let err = FooError { msg: "something bad happened".to_string(), cause };
         let cloned_err = err.clone();
         assert_eq!(format!("{:?}", err), format!("{:?}", cloned_err));
     }

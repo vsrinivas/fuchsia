@@ -118,6 +118,18 @@ impl TestHook {
         TestHook { instances: Mutex::new(instances), lifecycle_events: Mutex::new(vec![]) }
     }
 
+    /// Returns the set of hooks into the component manager that TestHook is interested in.
+    pub fn hooks(hook: Arc<TestHook>) -> Vec<Hook> {
+        vec![
+            Hook::AddDynamicChild(hook.clone()),
+            Hook::RemoveDynamicChild(hook.clone()),
+            Hook::BindInstance(hook.clone()),
+            Hook::RouteFrameworkCapability(hook.clone()),
+            Hook::StopInstance(hook.clone()),
+            Hook::DestroyInstance(hook.clone()),
+        ]
+    }
+
     /// Recursively traverse the Instance tree to generate a string representing the component
     /// topology.
     pub fn print(&self) -> String {
@@ -211,8 +223,8 @@ impl TestHook {
     }
 }
 
-impl Hook for TestHook {
-    fn on_bind_instance<'a>(
+impl BindInstanceHook for TestHook {
+    fn on<'a>(
         &'a self,
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
@@ -220,30 +232,40 @@ impl Hook for TestHook {
     ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.on_bind_instance_async(realm, &realm_state, routing_facade))
     }
+}
 
-    fn on_stop_instance(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_stop_instance_async(realm))
-    }
-
-    fn on_destroy_instance(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_destroy_instance_async(realm))
-    }
-
-    fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+impl AddDynamicChildHook for TestHook {
+    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
     }
+}
 
-    fn on_remove_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+impl RemoveDynamicChildHook for TestHook {
+    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.remove_instance(realm.abs_moniker.clone()))
     }
+}
 
-    fn on_route_framework_capability<'a>(
+impl RouteFrameworkCapabilityHook for TestHook {
+    fn on<'a>(
         &'a self,
         _realm: Arc<Realm>,
         _capability_decl: &'a FrameworkCapabilityDecl,
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
         Box::pin(async move { Ok(capability) })
+    }
+}
+
+impl StopInstanceHook for TestHook {
+    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_stop_instance_async(realm))
+    }
+}
+
+impl DestroyInstanceHook for TestHook {
+    fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_destroy_instance_async(realm))
     }
 }
 
@@ -279,33 +301,8 @@ impl HubInjectionTestHook {
     }
 }
 
-impl Hook for HubInjectionTestHook {
-    fn on_bind_instance<'a>(
-        &'a self,
-        _realm: Arc<Realm>,
-        _realm_state: &'a RealmState,
-        _routing_facade: RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_stop_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_destroy_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_remove_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_route_framework_capability<'a>(
+impl RouteFrameworkCapabilityHook for HubInjectionTestHook {
+    fn on<'a>(
         &'a self,
         realm: Arc<Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,

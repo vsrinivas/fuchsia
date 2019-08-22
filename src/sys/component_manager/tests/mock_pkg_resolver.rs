@@ -31,7 +31,8 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |stream| {
         let packages_to_mock = packages_to_mock.clone();
         fasync::spawn_local(async move {
-            run_resolver_service(stream, packages_to_mock).await
+            run_resolver_service(stream, packages_to_mock)
+                .await
                 .expect("failed to run resolver service")
         });
     });

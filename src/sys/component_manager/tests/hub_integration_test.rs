@@ -7,9 +7,10 @@
 use {
     component_manager_lib::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::RealFrameworkServiceHost,
+        framework::{FrameworkServicesHook, RealFrameworkServiceHost},
         model::{
             self,
+            hooks::*,
             testing::test_utils::{list_directory, read_file},
             Hub, Model, ModelParams,
         },
@@ -67,22 +68,24 @@ async fn test() -> Result<(), Error> {
         &mut iter::empty(),
         ServerEnd::<NodeMarker>::new(server_chan.into()),
     );
-    let mut hooks: model::Hooks = Vec::new();
     let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
     let hub_test_hook = Arc::new(HubTestHook::new());
-    hooks.push(hub.clone());
-    hooks.push(hub_test_hook.clone());
 
     let params = ModelParams {
-        framework_services: Arc::new(RealFrameworkServiceHost::new()),
         root_component_url: root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(runner),
-        hooks,
         config: model::ModelConfig::default(),
     };
 
     let model = Arc::new(Model::new(params));
+    let framework_services = Arc::new(FrameworkServicesHook::new(
+        (*model).clone(),
+        Arc::new(RealFrameworkServiceHost::new()),
+    ));
+    model.hooks.install(Hub::hooks(hub)).await;
+    model.hooks.install(vec![Hook::RouteFrameworkCapability(hub_test_hook.clone())]).await;
+    model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
 
     let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
     let expected_res: Result<(), model::ModelError> = Ok(());

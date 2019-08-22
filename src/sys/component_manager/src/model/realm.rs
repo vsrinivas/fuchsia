@@ -164,9 +164,7 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        for hook in hooks.iter() {
-            hook.on_add_dynamic_child(child_realm.clone()).await?;
-        }
+        hooks.on_add_dynamic_child(child_realm.clone()).await?;
         Ok(())
     }
 
@@ -191,9 +189,7 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        for hook in hooks.iter() {
-            hook.on_remove_dynamic_child(child_realm.clone()).await?;
-        }
+        hooks.on_remove_dynamic_child(child_realm.clone()).await?;
         Ok(())
     }
 
@@ -209,9 +205,7 @@ impl Realm {
         }
         // TODO: Once dedicated logic exists to stop components, this hook should live there;
         // it's not exclusive to shutdown.
-        for hook in hooks.iter() {
-            hook.on_stop_instance(realm.clone()).await?;
-        }
+        hooks.on_stop_instance(realm.clone()).await?;
         Ok(())
     }
 
@@ -221,9 +215,7 @@ impl Realm {
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
     // - Delete the instance's isolated storage
     pub async fn destroy_instance(realm: Arc<Realm>, hooks: &Hooks) -> Result<(), ModelError> {
-        for hook in hooks.iter() {
-            hook.on_destroy_instance(realm.clone()).await?;
-        }
+        hooks.on_destroy_instance(realm.clone()).await?;
         Ok(())
     }
 }

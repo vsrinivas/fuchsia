@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::framework::*,
     crate::model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
     crate::model::*,
     cm_rust::{self, ChildDecl, ComponentDecl},
@@ -11,21 +12,30 @@ use {
     std::sync::Arc,
 };
 
-fn new_model(mock_resolver: MockResolver, mock_runner: MockRunner) -> Model {
-    new_model_with(mock_resolver, mock_runner, vec![])
+async fn new_model(mock_resolver: MockResolver, mock_runner: MockRunner) -> Model {
+    new_model_with(mock_resolver, mock_runner, vec![]).await
 }
 
-fn new_model_with(mock_resolver: MockResolver, mock_runner: MockRunner, hooks: Hooks) -> Model {
+async fn new_model_with(
+    mock_resolver: MockResolver,
+    mock_runner: MockRunner,
+    additional_hooks: Vec<Hook>,
+) -> Model {
     let mut resolver = ResolverRegistry::new();
     resolver.register("test".to_string(), Box::new(mock_resolver));
-    Model::new(ModelParams {
-        framework_services: Arc::new(MockFrameworkServiceHost::new()),
+    let model = Model::new(ModelParams {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Arc::new(mock_runner),
-        hooks,
         config: ModelConfig::default(),
-    })
+    });
+    let framework_services = Arc::new(FrameworkServicesHook::new(
+        model.clone(),
+        Arc::new(MockFrameworkServiceHost::new()),
+    ));
+    model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
+    model.hooks.install(additional_hooks).await;
+    model
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -34,7 +44,7 @@ async fn bind_instance_root() {
     let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component("root", default_component_decl());
-    let model = new_model(mock_resolver, mock_runner);
+    let model = new_model(mock_resolver, mock_runner).await;
     let res = model.look_up_and_bind_instance(AbsoluteMoniker::root()).await;
     let expected_res: Result<(), ModelError> = Ok(());
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
@@ -51,7 +61,7 @@ async fn bind_instance_root_non_existent() {
     let urls_run = mock_runner.urls_run.clone();
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component("root", default_component_decl());
-    let model = new_model(mock_resolver, mock_runner);
+    let model = new_model(mock_resolver, mock_runner).await;
     let res = model.look_up_and_bind_instance(vec!["no-such-instance"].into()).await;
     let expected_res: Result<(), ModelError> =
         Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
@@ -87,8 +97,7 @@ async fn bind_instance_child() {
     mock_resolver.add_component("system", default_component_decl());
     mock_resolver.add_component("echo", default_component_decl());
     let hook = Arc::new(TestHook::new());
-    let hooks: Hooks = vec![hook.clone()];
-    let model = new_model_with(mock_resolver, mock_runner, hooks);
+    let model = new_model_with(mock_resolver, mock_runner, TestHook::hooks(hook.clone())).await;
     // bind to system
     assert!(model.look_up_and_bind_instance(vec!["system"].into()).await.is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
@@ -138,7 +147,7 @@ async fn bind_instance_child_non_existent() {
         },
     );
     mock_resolver.add_component("system", default_component_decl());
-    let model = new_model(mock_resolver, mock_runner);
+    let model = new_model(mock_resolver, mock_runner).await;
     // bind to system
     assert!(model.look_up_and_bind_instance(vec!["system"].into()).await.is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
@@ -224,8 +233,7 @@ async fn bind_instance_eager_children() {
     );
     mock_resolver.add_component("e", default_component_decl());
     let hook = Arc::new(TestHook::new());
-    let hooks: Hooks = vec![hook.clone()];
-    let model = new_model_with(mock_resolver, mock_runner, hooks);
+    let model = new_model_with(mock_resolver, mock_runner, TestHook::hooks(hook.clone())).await;
 
     // Bind to the top component, and check that it and the eager components were started.
     {
@@ -286,7 +294,7 @@ async fn bind_instance_no_execute() {
         },
     );
     mock_resolver.add_component("b", default_component_decl());
-    let model = new_model(mock_resolver, mock_runner);
+    let model = new_model(mock_resolver, mock_runner).await;
 
     // Bind to the parent component. The child should be started. However, the parent component
     // is non-executable so it is not run.
@@ -333,8 +341,7 @@ async fn bind_instance_recursive_child() {
     mock_resolver.add_component("logger", default_component_decl());
     mock_resolver.add_component("netstack", default_component_decl());
     let hook = Arc::new(TestHook::new());
-    let hooks: Hooks = vec![hook.clone()];
-    let model = new_model_with(mock_resolver, mock_runner, hooks);
+    let model = new_model_with(mock_resolver, mock_runner, TestHook::hooks(hook.clone())).await;
 
     // bind to logger (before ever binding to system)
     assert!(model.look_up_and_bind_instance(vec!["system", "logger"].into()).await.is_ok());

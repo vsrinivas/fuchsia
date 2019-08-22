@@ -47,12 +47,15 @@ impl FuchsiaPkgResolver {
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let selectors: [&str; 0] = [];
         let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
-        let status = self.pkg_resolver.resolve(
-            &package_url,
-            &mut selectors.iter().map(|s| *s),
-            &mut update_policy,
-            ServerEnd::new(package_dir_s),
-        ).await
+        let status = self
+            .pkg_resolver
+            .resolve(
+                &package_url,
+                &mut selectors.iter().map(|s| *s),
+                &mut update_policy,
+                ServerEnd::new(package_dir_s),
+            )
+            .await
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let status = zx::Status::from_raw(status);
         if status != zx::Status::OK {
@@ -68,7 +71,8 @@ impl FuchsiaPkgResolver {
             .expect("failed to create directory proxy");
         let file = io_util::open_file(&dir, cm_path, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
-        let cm_str = io_util::read_file(&file).await
+        let cm_str = io_util::read_file(&file)
+            .await
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
         let component_decl = cm_fidl_translator::translate(&cm_str)
             .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;

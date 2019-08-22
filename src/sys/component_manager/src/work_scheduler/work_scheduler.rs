@@ -7,7 +7,7 @@ use {
         framework::FrameworkCapability,
         model::{
             error::ModelError, framework_services::FrameworkServiceError,
-            routing_facade::RoutingFacade, AbsoluteMoniker, Hook, Realm, RealmState,
+            hooks::RouteFrameworkCapabilityHook, AbsoluteMoniker, Realm,
         },
         work_scheduler::{
             time::{RealTime, TimeSource},
@@ -148,33 +148,8 @@ pub struct WorkSchedulerHook {
 
 /// Passthrough all ops unconditionally, except `on_route_framework_capability`. (See docs for
 /// `on_route_capability_async` for details.)
-impl Hook for WorkSchedulerHook {
-    fn on_bind_instance<'a>(
-        &'a self,
-        _realm: Arc<Realm>,
-        _realm_state: &'a RealmState,
-        _routing_facade: RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_stop_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_destroy_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_remove_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_route_framework_capability<'a>(
+impl RouteFrameworkCapabilityHook for WorkSchedulerHook {
+    fn on<'a>(
         &'a self,
         realm: Arc<Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,

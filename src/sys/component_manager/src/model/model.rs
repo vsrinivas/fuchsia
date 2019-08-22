@@ -3,65 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        framework::{FrameworkCapability, FrameworkServicesHook},
-        model::*,
-    },
-    cm_rust::{data, CapabilityPath, FrameworkCapabilityDecl},
+    crate::model::*,
+    cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::{join_all, BoxFuture},
+    futures::future::join_all,
     std::sync::Arc,
 };
-
-// Hooks into the component model implement this trait.
-// TODO(fsamuel): It's conceivable that as we add clients and event types,
-// many clients may be interested in just a small subset of events but they'd
-// have to implement all the functions in this trait. Alternatively, we can
-// break down each event type into a separate trait so that clients can pick
-// and choose which events they'd like to monitor.
-pub trait Hook {
-    // Called when a component instance is bound to the given `realm`.
-    fn on_bind_instance<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        realm_state: &'a RealmState,
-        routing_facade: RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>>;
-
-    // Called when a component instance is stopped.
-    fn on_stop_instance<'a>(&'a self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
-
-    // Called when component manager destroys an instance (including cleanup).
-    fn on_destroy_instance<'a>(&'a self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
-
-    // Called when a dynamic instance is added with `realm`.
-    fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
-
-    // Called when a dynamic instance is removed from `realm`.
-    fn on_remove_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
-
-    // Called when the component specified by |abs_moniker| requests a capability provided
-    // by the framework.
-    fn on_route_framework_capability<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>>;
-}
-
-pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;
 
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
-    /// The host for services provided by the framework.
-    pub framework_services: Arc<dyn FrameworkServiceHost>,
     /// The URL of the root component.
     pub root_component_url: String,
     /// The component resolver registry used in the root realm.
@@ -69,8 +25,6 @@ pub struct ModelParams {
     pub root_resolver_registry: ResolverRegistry,
     /// The default runner used in the root realm (nominally runs ELF binaries).
     pub root_default_runner: Arc<dyn Runner + Send + Sync + 'static>,
-    /// A set of hooks into key events of the Model.
-    pub hooks: Hooks,
     /// Configuration options for the model.
     pub config: ModelConfig,
 }
@@ -86,8 +40,8 @@ pub struct ModelParams {
 #[derive(Clone)]
 pub struct Model {
     pub root_realm: Arc<Realm>,
-    pub hooks: Arc<Hooks>,
     pub config: ModelConfig,
+    pub hooks: Hooks,
 }
 
 /// Holds configuration options for the model.
@@ -109,22 +63,17 @@ impl ModelConfig {
 
 impl Model {
     /// Creates a new component model and initializes its topology.
-    pub fn new(mut params: ModelParams) -> Model {
+    pub fn new(params: ModelParams) -> Model {
         params.config.validate();
-        let mut model = Model {
+        Model {
             root_realm: Arc::new(Realm::new_root_realm(
                 params.root_resolver_registry,
                 params.root_default_runner,
                 params.root_component_url,
             )),
-            hooks: Arc::new(vec![]),
+            hooks: Hooks::new(),
             config: params.config,
-        };
-        params
-            .hooks
-            .push(Arc::new(FrameworkServicesHook::new(model.clone(), params.framework_services)));
-        model.hooks = Arc::new(params.hooks);
-        model
+        }
     }
 
     /// Binds to the component instance with the specified moniker, causing it to start if it is
@@ -258,11 +207,9 @@ impl Model {
             let eager_children = self.bind_inner(realm.clone()).await?;
             let routing_facade = RoutingFacade::new(self.clone());
             // TODO: Don't hold the lock while calling the hooks.
-            for hook in self.hooks.iter() {
-                let mut state = realm.lock_state().await;
-                let mut state = state.get_mut();
-                hook.on_bind_instance(realm.clone(), &mut state, routing_facade.clone()).await?;
-            }
+            let mut state = realm.lock_state().await;
+            let mut state = state.get_mut();
+            self.hooks.on_bind_instance(realm.clone(), &mut state, routing_facade.clone()).await?;
             eager_children
         };
         Ok(eager_children)

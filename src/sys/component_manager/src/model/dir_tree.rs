@@ -254,10 +254,7 @@ mod tests {
 
         // Expect that calls on the directory nodes reach the mock directory/service.
         assert_eq!("friend", test_utils::read_file(&expose_dir_proxy, "in/data/bar/hello").await);
-        assert_eq!(
-            "friend",
-            test_utils::read_file(&expose_dir_proxy, "in/data/hippo/hello").await
-        );
+        assert_eq!("friend", test_utils::read_file(&expose_dir_proxy, "in/data/hippo/hello").await);
         assert_eq!(
             "hippos".to_string(),
             test_utils::call_echo(&expose_dir_proxy, "in/svc/hippo").await

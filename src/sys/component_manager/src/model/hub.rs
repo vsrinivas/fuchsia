@@ -10,6 +10,7 @@ use {
             self,
             addable_directory::{AddableDirectory, AddableDirectoryWithResult},
             error::ModelError,
+            hooks::*,
         },
     },
     cm_rust::FrameworkCapabilityDecl,
@@ -64,13 +65,16 @@ impl HubCapability {
                 self.abs_moniker
             )));
         }
-        instances_map[&self.abs_moniker].directory.open_node(
-            flags,
-            open_mode,
-            dir_path,
-            ServerEnd::<NodeMarker>::new(server_end),
-            &self.abs_moniker,
-        ).await?;
+        instances_map[&self.abs_moniker]
+            .directory
+            .open_node(
+                flags,
+                open_mode,
+                dir_path,
+                ServerEnd::<NodeMarker>::new(server_end),
+                &self.abs_moniker,
+            )
+            .await?;
 
         Ok(())
     }
@@ -139,6 +143,18 @@ impl Hub {
         Ok(Hub { instances: Arc::new(Mutex::new(instances_map)), abort_handle })
     }
 
+    pub fn hooks(hub: Arc<Hub>) -> Vec<Hook> {
+        // List the hooks the Hub implements here.
+        vec![
+            Hook::AddDynamicChild(hub.clone()),
+            Hook::RemoveDynamicChild(hub.clone()),
+            Hook::BindInstance(hub.clone()),
+            Hook::RouteFrameworkCapability(hub.clone()),
+            Hook::StopInstance(hub.clone()),
+            Hook::DestroyInstance(hub.clone()),
+        ]
+    }
+
     fn add_instance_if_necessary(
         abs_moniker: &model::AbsoluteMoniker,
         component_url: String,
@@ -189,11 +205,10 @@ impl Hub {
             Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
             if let (Some(name), Some(parent_moniker)) = (abs_moniker.name(), abs_moniker.parent()) {
-                instances_map[&parent_moniker].children_directory.add_node(
-                    &name,
-                    controlled,
-                    &abs_moniker,
-                ).await?;
+                instances_map[&parent_moniker]
+                    .children_directory
+                    .add_node(&name, controlled, &abs_moniker)
+                    .await?;
             }
         }
         Ok(())
@@ -297,11 +312,8 @@ impl Hub {
         let abs_moniker = realm.abs_moniker.clone();
         let mut instances_map = self.instances.lock().await;
 
-        Self::add_instance_to_parent_if_necessary(
-            &abs_moniker,
-            component_url,
-            &mut instances_map,
-        ).await?;
+        Self::add_instance_to_parent_if_necessary(&abs_moniker, component_url, &mut instances_map)
+            .await?;
 
         let instance = instances_map
             .get_mut(&abs_moniker)
@@ -353,7 +365,8 @@ impl Hub {
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),
                 &mut instances_map,
-            ).await?;
+            )
+            .await?;
         }
 
         Ok(())
@@ -391,8 +404,8 @@ impl Hub {
     }
 }
 
-impl model::Hook for Hub {
-    fn on_bind_instance<'a>(
+impl model::BindInstanceHook for Hub {
+    fn on<'a>(
         &'a self,
         realm: Arc<model::Realm>,
         realm_state: &'a model::RealmState,
@@ -400,31 +413,24 @@ impl model::Hook for Hub {
     ) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.on_bind_instance_async(realm, realm_state, routing_facade))
     }
+}
 
-    fn on_stop_instance(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub to reflect that the component is no longer running
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_destroy_instance(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub to reflect that the instance no longer exists
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_add_dynamic_child(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+impl model::AddDynamicChildHook for Hub {
+    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
         // TODO: Update the hub with the new child
         Box::pin(async { Ok(()) })
     }
+}
 
-    fn on_remove_dynamic_child(
-        &self,
-        _realm: Arc<model::Realm>,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        // TODO: Update the hub to reflect that the instance was deleted
+impl model::RemoveDynamicChildHook for Hub {
+    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        // TODO: Update the hub with the deleted child
         Box::pin(async { Ok(()) })
     }
+}
 
-    fn on_route_framework_capability<'a>(
+impl model::RouteFrameworkCapabilityHook for Hub {
+    fn on<'a>(
         &'a self,
         realm: Arc<model::Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,
@@ -434,18 +440,37 @@ impl model::Hook for Hub {
     }
 }
 
+impl model::StopInstanceHook for Hub {
+    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        // TODO: Update the hub to reflect that the component is no longer running
+        Box::pin(async { Ok(()) })
+    }
+}
+
+impl model::DestroyInstanceHook for Hub {
+    fn on(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
+        // TODO: Update the hub to reflect that the instance no longer exists
+        Box::pin(async { Ok(()) })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::model::{
-            self,
-            hub::Hub,
-            testing::mocks,
-            testing::{
-                test_helpers::*,
-                test_hook::HubInjectionTestHook,
-                test_utils::{dir_contains, list_directory, list_directory_recursive, read_file},
+        crate::{
+            framework::FrameworkServicesHook,
+            model::{
+                self,
+                hub::Hub,
+                testing::mocks,
+                testing::{
+                    test_helpers::*,
+                    test_hook::HubInjectionTestHook,
+                    test_utils::{
+                        dir_contains, list_directory, list_directory_recursive, read_file,
+                    },
+                },
             },
         },
         cm_rust::{
@@ -538,7 +563,7 @@ mod tests {
     async fn start_component_manager_with_hub_and_hooks(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-        mut additional_hooks: model::Hooks,
+        additional_hooks: Vec<Hook>,
     ) -> (Arc<model::Model>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = model::ResolverRegistry::new();
@@ -569,17 +594,20 @@ mod tests {
         );
 
         let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
-        let mut hooks: model::Hooks = Vec::new();
-        hooks.push(hub);
-        hooks.append(&mut additional_hooks);
+
         let model = Arc::new(model::Model::new(model::ModelParams {
-            framework_services: Arc::new(mocks::MockFrameworkServiceHost::new()),
             root_component_url,
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),
-            hooks,
             config: model::ModelConfig::default(),
         }));
+        let framework_services = Arc::new(FrameworkServicesHook::new(
+            (*model).clone(),
+            Arc::new(mocks::MockFrameworkServiceHost::new()),
+        ));
+        model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
+        model.hooks.install(Hub::hooks(hub)).await;
+        model.hooks.install(additional_hooks).await;
 
         let res = model.look_up_and_bind_instance(model::AbsoluteMoniker::root()).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
@@ -618,7 +646,8 @@ mod tests {
                     runtime_host_fn: None,
                 },
             ],
-        ).await;
+        )
+        .await;
 
         assert_eq!(root_component_url, read_file(&hub_proxy, "self/url").await);
         assert_eq!(
@@ -646,7 +675,8 @@ mod tests {
                 host_fn: Some(foo_out_dir_fn()),
                 runtime_host_fn: None,
             }],
-        ).await;
+        )
+        .await;
 
         assert!(dir_contains(&hub_proxy, "self/exec", "out").await);
         assert!(dir_contains(&hub_proxy, "self/exec/out", "foo").await);
@@ -673,7 +703,8 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: Some(bleep_runtime_dir_fn()),
             }],
-        ).await;
+        )
+        .await;
 
         assert_eq!("blah", read_file(&hub_proxy, "self/exec/runtime/bleep").await);
     }
@@ -701,8 +732,9 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-            vec![Arc::new(HubInjectionTestHook::new())],
-        ).await;
+            vec![Hook::RouteFrameworkCapability(Arc::new(HubInjectionTestHook::new()))],
+        )
+        .await;
 
         let in_dir = io_util::open_directory(
             &hub_proxy,
@@ -728,10 +760,7 @@ mod tests {
         )
         .expect("Failed to open directory");
         // There are no out or runtime directories because there is no program running.
-        assert_eq!(
-            vec!["expose", "in", "resolved_url"],
-            list_directory(&old_hub_dir_proxy).await
-        );
+        assert_eq!(vec!["expose", "in", "resolved_url"], list_directory(&old_hub_dir_proxy).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -769,7 +798,8 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-        ).await;
+        )
+        .await;
 
         let in_dir = io_util::open_directory(
             &hub_proxy,
@@ -822,7 +852,8 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-        ).await;
+        )
+        .await;
 
         let expose_dir = io_util::open_directory(
             &hub_proxy,

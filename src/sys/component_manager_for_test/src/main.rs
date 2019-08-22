@@ -7,9 +7,9 @@
 use {
     component_manager_lib::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::RealFrameworkServiceHost,
+        framework::{FrameworkServicesHook, RealFrameworkServiceHost},
         model::{
-            self,
+            hooks::*,
             testing::test_utils::list_directory,
             AbsoluteMoniker, //self,AbsoluteMoniker
             Hub,
@@ -30,7 +30,7 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     log::*,
-    std::{iter, path::PathBuf, process, sync::Arc, vec::Vec},
+    std::{iter, path::PathBuf, process, sync::Arc},
 };
 
 /// This is a prototype used with ftf to launch v2 tests.
@@ -63,20 +63,22 @@ async fn main() -> Result<(), Error> {
         &mut iter::empty(),
         ServerEnd::<NodeMarker>::new(server_chan.into()),
     );
-    let mut hooks: model::Hooks = Vec::new();
     let hub = Arc::new(Hub::new(args.root_component_url.clone(), root_directory).unwrap());
-    hooks.push(hub.clone());
-
+    // TODO(fsamuel): It would be nice to refactor some of this code into a helper
+    // function to create a Model and install a bunch of default hooks.
     let params = ModelParams {
-        framework_services: Arc::new(RealFrameworkServiceHost::new()),
         root_component_url: args.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(ElfRunner::new(launcher_connector)),
         config: ModelConfig::default(),
-        hooks,
     };
-
     let model = Arc::new(Model::new(params));
+    let framework_services = Arc::new(FrameworkServicesHook::new(
+        (*model).clone(),
+        Arc::new(RealFrameworkServiceHost::new()),
+    ));
+    model.hooks.install(Hub::hooks(hub)).await;
+    model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
 
     match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
         Ok(()) => {

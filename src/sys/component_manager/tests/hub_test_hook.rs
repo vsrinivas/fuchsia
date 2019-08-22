@@ -79,33 +79,8 @@ impl HubTestHook {
     }
 }
 
-impl Hook for HubTestHook {
-    fn on_bind_instance<'a>(
-        &'a self,
-        _realm: Arc<Realm>,
-        _realm_state: &'a RealmState,
-        _routing_facade: RoutingFacade,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_stop_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_destroy_instance(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_add_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_remove_dynamic_child(&self, _realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async { Ok(()) })
-    }
-
-    fn on_route_framework_capability<'a>(
+impl RouteFrameworkCapabilityHook for HubTestHook {
+    fn on<'a>(
         &'a self,
         _realm: Arc<Realm>,
         capability_decl: &'a FrameworkCapabilityDecl,

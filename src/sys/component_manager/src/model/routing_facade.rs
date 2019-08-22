@@ -59,7 +59,8 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
                     &use_,
                     abs_moniker.clone(),
                     server_end.into_channel(),
-                ).await;
+                )
+                .await;
                 if let Err(e) = res {
                     error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
                 }
@@ -82,7 +83,8 @@ fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDec
                     &expose,
                     abs_moniker.clone(),
                     server_end.into_channel(),
-                ).await;
+                )
+                .await;
                 if let Err(e) = res {
                     error!("failed to route service for exposed dir {}: {:?}", abs_moniker, e);
                 }

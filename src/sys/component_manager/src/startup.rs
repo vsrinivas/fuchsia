@@ -6,7 +6,7 @@ use {
     crate::{
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver::{self, FuchsiaPkgResolver},
-        model::{error::ModelError, hub::Hub, ModelParams, ResolverRegistry},
+        model::{error::ModelError, hub::Hub, Model, ResolverRegistry},
         process_launcher::ProcessLauncherService,
     },
     failure::{format_err, Error, ResultExt},
@@ -129,21 +129,21 @@ fn connect_pkg_resolver() -> Result<Option<PackageResolverProxy>, Error> {
 }
 
 /// Installs a Hub if possible.
-pub fn install_hub_if_possible(model_params: &mut ModelParams) -> Result<(), ModelError> {
+pub async fn install_hub_if_possible(model: &Model) -> Result<(), ModelError> {
+    let mut root_directory = directory::simple::empty();
     if let Some(out_dir_handle) =
         fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
     {
-        let mut root_directory = directory::simple::empty();
         root_directory.open(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
             &mut iter::empty(),
             ServerEnd::<NodeMarker>::new(out_dir_handle.into()),
         );
-        model_params
-            .hooks
-            .push(Arc::new(Hub::new(model_params.root_component_url.clone(), root_directory)?));
     };
+    let hub = Arc::new(Hub::new(model.root_realm.component_url.clone(), root_directory)?);
+    model.hooks.install(Hub::hooks(hub)).await;
+
     Ok(())
 }
 

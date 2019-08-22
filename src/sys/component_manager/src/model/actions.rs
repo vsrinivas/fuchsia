@@ -341,7 +341,7 @@ fn ok_or_first_error(results: Vec<Result<(), ModelError>>) -> Result<(), ModelEr
 mod tests {
     use super::*;
     use {
-        crate::framework::RealFrameworkServiceHost,
+        crate::framework::*,
         crate::klog,
         crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
@@ -439,13 +439,18 @@ mod tests {
             let hook = Arc::new(TestHook::new());
             let framework_services = Arc::new(RealFrameworkServiceHost::new());
             let model = Model::new(ModelParams {
-                framework_services: framework_services.clone(),
                 root_component_url: format!("test:///{}", root_component),
                 root_resolver_registry: resolver,
                 root_default_runner: Arc::new(runner),
-                hooks: vec![hook.clone()],
                 config: ModelConfig::default(),
             });
+            let framework_services_hook =
+                Arc::new(FrameworkServicesHook::new(model.clone(), framework_services.clone()));
+            model
+                .hooks
+                .install(vec![Hook::RouteFrameworkCapability(framework_services_hook)])
+                .await;
+            model.hooks.install(TestHook::hooks(hook.clone())).await;
 
             // Host framework service for root realm, if requested.
             let realm_proxy = if let Some(realm_moniker) = realm_moniker {

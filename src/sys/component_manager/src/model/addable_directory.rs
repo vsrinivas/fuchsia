@@ -91,7 +91,8 @@ impl<'entries> AddableDirectoryWithResult<'entries>
         Entry: DirectoryEntry + 'entries,
     {
         Box::pin(async move {
-            self.add_entry_res(String::from(name), entry).await
+            self.add_entry_res(String::from(name), entry)
+                .await
                 .map_err(|_| ModelError::add_entry_error(moniker.clone(), name))
         })
     }
@@ -106,7 +107,8 @@ impl<'entries> AddableDirectoryWithResult<'entries>
     ) -> BoxFuture<Result<(), ModelError>> {
         let relative_path = path.join("/");
         Box::pin(async move {
-            self.open(flags, mode, path, server_end).await
+            self.open(flags, mode, path, server_end)
+                .await
                 .map_err(|_| ModelError::open_directory_error(moniker.clone(), relative_path))
         })
     }
