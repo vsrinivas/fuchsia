@@ -4,6 +4,8 @@
 
 library fidl.test.example.codingtables;
 
+using fidl.test.example.codingtablesdeps as deplib;
+
 struct SomeStruct {
     bool foo;
     int32 bar;
@@ -38,15 +40,19 @@ enum MyEnum : uint32 {
 };
 
 // Types defined to detect collisions in the mangled coding table output.
-struct A {};
-struct A1 {};
+struct A {
+};
+
+struct A1 {
+};
+
 struct NumberCollision {
-  array<A>:11 a;
-  array<A1>:1 b;
-  vector<A>:11 c;
-  vector<A1>:1 d;
-  string:11 e;
-  string:1 f;
+    array<A>:11 a;
+    array<A1>:1 b;
+    vector<A>:11 c;
+    vector<A1>:1 d;
+    string:11 e;
+    string:1 f;
 };
 
 // fidlc will only expose coding tables for message types.
@@ -72,4 +78,6 @@ protocol Coding {
     MyEnum(MyEnum e);
 
     NumberCollision(NumberCollision x);
+
+    ForeignXUnions(deplib.MyXUnionA tx) -> (deplib.MyXUnionA? rx);
 };

@@ -199,6 +199,9 @@ protocol UseOfRequestOfProtocol {
   END_TEST;
 }
 
+// The code between |CodedTypesOfXUnions| and |CodedTypesOfNullableXUnions| is now very similar
+// because the compiler emits both the non-nullable and nullable xunion types regardless of whether
+// it is used in the library in which it was defined.
 bool CodedTypesOfXUnions() {
   BEGIN_TEST;
 
@@ -214,41 +217,48 @@ xunion MyXUnion {
   fidl::CodedTypesGenerator gen(library.library());
   gen.CompileCodedTypes();
 
-  ASSERT_EQ(2, gen.coded_types().size());
+  ASSERT_EQ(3, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
-  ASSERT_STR_EQ("int32", type0->coded_name.c_str());
+  ASSERT_STR_EQ("example_MyXUnionNullableRef", type0->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
-  auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type0_primitive->subtype);
+  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
+  auto nullable_xunion = static_cast<const fidl::coded::XUnionType*>(type0);
+  ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
-  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
+  ASSERT_STR_EQ("int32", type1->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type1_primitive->subtype);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
-  auto name_xunion = fidl::flat::Name(library.library(), "MyXUnion");
-  auto type_xunion = gen.CodedTypeFor(&name_xunion);
-  ASSERT_NONNULL(type_xunion);
-  ASSERT_STR_EQ("example_MyXUnion", type_xunion->coded_name.c_str());
-  ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type_xunion->coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_xunion->kind);
-  auto type_xunion_xunion = static_cast<const fidl::coded::XUnionType*>(type_xunion);
-  ASSERT_EQ(2, type_xunion_xunion->fields.size());
-  auto xunion_field0 = type_xunion_xunion->fields.at(0);
+  auto type2 = gen.coded_types().at(2).get();
+  ASSERT_STR_EQ("bool", type2->coded_name.c_str());
+  ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type2->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
+  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
+
+  auto name = fidl::flat::Name(library.library(), "MyXUnion");
+  auto type = gen.CodedTypeFor(&name);
+  ASSERT_NONNULL(type);
+  ASSERT_STR_EQ("example_MyXUnion", type->coded_name.c_str());
+  ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
+  auto coded_xunion = static_cast<const fidl::coded::XUnionType*>(type);
+  ASSERT_EQ(2, coded_xunion->fields.size());
+  auto xunion_field0 = coded_xunion->fields.at(0);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field0.type->kind);
   auto xunion_field0_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field0.type);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, xunion_field0_primitive->subtype);
-  auto xunion_field1 = type_xunion_xunion->fields.at(1);
+  auto xunion_field1 = coded_xunion->fields.at(1);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field1.type->kind);
   auto xunion_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field1.type);
   ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, xunion_field1_primitive->subtype);
-  ASSERT_STR_EQ("example/MyXUnion", type_xunion_xunion->qname.c_str());
-  ASSERT_EQ(fidl::types::Nullability::kNonnullable, type_xunion_xunion->nullability);
-  ASSERT_NULL(type_xunion_xunion->maybe_reference_type);
+  ASSERT_STR_EQ("example/MyXUnion", coded_xunion->qname.c_str());
+  ASSERT_EQ(fidl::types::Nullability::kNonnullable, coded_xunion->nullability);
+  ASSERT_NONNULL(coded_xunion->maybe_reference_type);
 
   END_TEST;
 }
@@ -370,6 +380,9 @@ struct Complex {
   END_TEST;
 }
 
+// The code between |CodedTypesOfXUnions| and |CodedTypesOfNullableXUnions| is now very similar
+// because the compiler emits both the non-nullable and nullable xunion types regardless of whether
+// it is used in the library in which it was defined.
 bool CodedTypesOfNullableXUnions() {
   BEGIN_TEST;
 
@@ -400,43 +413,25 @@ struct Wrapper2 {
   ASSERT_EQ(3, gen.coded_types().size());
 
   auto type0 = gen.coded_types().at(0).get();
-  ASSERT_STR_EQ("int32", type0->coded_name.c_str());
+  ASSERT_STR_EQ("example_MyXUnionNullableRef", type0->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
-  auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type0_primitive->subtype);
+  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type0->kind);
+  auto nullable_xunion = static_cast<const fidl::coded::XUnionType*>(type0);
+  ASSERT_EQ(fidl::types::Nullability::kNullable, nullable_xunion->nullability);
 
   auto type1 = gen.coded_types().at(1).get();
-  ASSERT_STR_EQ("bool", type1->coded_name.c_str());
+  ASSERT_STR_EQ("int32", type1->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
   ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
   auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
-  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type1_primitive->subtype);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
 
   auto type2 = gen.coded_types().at(2).get();
-  ASSERT_STR_EQ("example_MyXUnionNullableRef", type2->coded_name.c_str());
+  ASSERT_STR_EQ("bool", type2->coded_name.c_str());
   ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type2->coding_needed);
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type2->kind);
-  auto type_nullable_xunion_xunion = static_cast<const fidl::coded::XUnionType*>(type2);
-  ASSERT_EQ(fidl::types::Nullability::kNullable, type_nullable_xunion_xunion->nullability);
-
-  auto name_xunion = fidl::flat::Name(library.library(), "MyXUnion");
-  auto type_xunion = gen.CodedTypeFor(&name_xunion);
-  ASSERT_NONNULL(type_xunion);
-  ASSERT_STR_EQ("example_MyXUnion", type_xunion->coded_name.c_str());
-  ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_xunion->kind);
-  auto type_xunion_xunion = static_cast<const fidl::coded::XUnionType*>(type_xunion);
-  ASSERT_EQ(type_xunion_xunion->maybe_reference_type, type_nullable_xunion_xunion);
-  ASSERT_TRUE(type_nullable_xunion_xunion->qname == type_xunion_xunion->qname);
-  ASSERT_EQ(fidl::types::Nullability::kNonnullable, type_xunion_xunion->nullability);
-
-  const auto& fields_nullable = type_nullable_xunion_xunion->fields;
-  const auto& fields = type_xunion_xunion->fields;
-  ASSERT_EQ(fields_nullable.size(), fields.size());
-  for (size_t i = 0; i < fields_nullable.size(); i++) {
-    ASSERT_EQ(fields_nullable[i].ordinal, fields[i].ordinal);
-    ASSERT_EQ(fields_nullable[i].type, fields[i].type);
-  }
+  ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type2->kind);
+  auto type2_primitive = static_cast<const fidl::coded::PrimitiveType*>(type2);
+  ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type2_primitive->subtype);
 
   END_TEST;
 }

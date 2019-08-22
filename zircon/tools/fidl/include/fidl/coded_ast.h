@@ -248,8 +248,8 @@ struct XUnionType : public Type {
   std::vector<XUnionField> fields;
   const std::string qname;
   types::Nullability nullability;
-  XUnionType* maybe_reference_type = nullptr;
   types::Strictness strictness;
+  XUnionType* maybe_reference_type = nullptr;
 };
 
 struct MessageType : public Type {

@@ -479,9 +479,15 @@ std::ostringstream TablesGenerator::Produce() {
       case coded::Type::Kind::kUnion:
         GenerateForward(*static_cast<const coded::UnionType*>(coded_type));
         break;
-      case coded::Type::Kind::kXUnion:
-        GenerateForward(*static_cast<const coded::XUnionType*>(coded_type));
+      case coded::Type::Kind::kXUnion: {
+        // Generate forward declarations for both the non-nullable and nullable variants
+        const auto& xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
+        GenerateForward(xunion_type);
+        assert(xunion_type.maybe_reference_type != nullptr &&
+               "Named coded xunion must have a reference type!");
+        GenerateForward(*xunion_type.maybe_reference_type);
         break;
+      }
       default:
         break;
     }
@@ -537,16 +543,9 @@ std::ostringstream TablesGenerator::Produce() {
       case coded::Type::Kind::kTable:
       case coded::Type::Kind::kUnion:
       case coded::Type::Kind::kPointer:
+      case coded::Type::Kind::kXUnion:
         // These are generated in the next phase.
         break;
-      case coded::Type::Kind::kXUnion: {
-        auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type.get());
-        if (xunion_type.nullability != types::Nullability::kNullable) {
-          break;  // Non-nullable xunions are generated in the next phase.
-        }
-        Generate(xunion_type);
-        break;
-      }
       case coded::Type::Kind::kProtocol:
         // Nothing to generate for protocols. We've already moved the
         // messages from the protocol into coded_types_ directly.
@@ -607,10 +606,11 @@ std::ostringstream TablesGenerator::Produce() {
         Generate(*static_cast<const coded::UnionType*>(coded_type));
         break;
       case coded::Type::Kind::kXUnion: {
-        auto xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
-        if (xunion_type.nullability == types::Nullability::kNonnullable) {
-          Generate(xunion_type);
-        }
+        const auto& xunion_type = *static_cast<const coded::XUnionType*>(coded_type);
+        Generate(xunion_type);
+        assert(xunion_type.maybe_reference_type != nullptr &&
+               "Named coded xunion must have a reference type!");
+        Generate(*xunion_type.maybe_reference_type);
         break;
       }
       default:

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/test/example/codingtables/c/fidl.h>
 #include <lib/fidl/internal.h>
+
+#include <fidl/test/example/codingtables/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 TEST(SomeStruct, CodingTable) {
@@ -212,4 +213,33 @@ TEST(NumberCollision, CodingTable) {
   const fidl::FidlCodedStruct& number_collision_table = number_collision_type.coded_struct;
   ASSERT_STR_EQ("fidl.test.example.codingtables/NumberCollision", number_collision_table.name);
   ASSERT_EQ(6, number_collision_table.field_count);
+}
+
+TEST(ForeignXUnions, CodingTable) {
+  const fidl_type& req_type = fidl_test_example_codingtables_CodingForeignXUnionsRequestTable;
+  ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, req_type.type_tag);
+  const fidl::FidlCodedStruct& request_struct = req_type.coded_struct;
+  ASSERT_EQ(1, request_struct.field_count);
+  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingForeignXUnionsRequest", request_struct.name);
+  const fidl::FidlStructField& tx_field = request_struct.fields[0];
+  const fidl_type& tx_type = *tx_field.type;
+  ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, tx_type.type_tag);
+  const fidl::FidlCodedXUnion& tx_table = tx_type.coded_xunion;
+  ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", tx_table.name);
+  ASSERT_EQ(fidl::FidlNullability::kNonnullable, tx_table.nullable);
+  ASSERT_EQ(2, tx_table.field_count);
+
+  const fidl_type& resp_type = fidl_test_example_codingtables_CodingForeignXUnionsResponseTable;
+  ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, resp_type.type_tag);
+  const fidl::FidlCodedStruct& response_struct = resp_type.coded_struct;
+  ASSERT_EQ(1, response_struct.field_count);
+  ASSERT_STR_EQ("fidl.test.example.codingtables/CodingForeignXUnionsResponse",
+                response_struct.name);
+  const fidl::FidlStructField& rx_field = response_struct.fields[0];
+  const fidl_type& rx_type = *rx_field.type;
+  ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, rx_type.type_tag);
+  const fidl::FidlCodedXUnion& rx_table = rx_type.coded_xunion;
+  ASSERT_STR_EQ("fidl.test.example.codingtablesdeps/MyXUnionA", rx_table.name);
+  ASSERT_EQ(fidl::FidlNullability::kNullable, rx_table.nullable);
+  ASSERT_EQ(2, rx_table.field_count);
 }

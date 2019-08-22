@@ -1,0 +1,11 @@
+library fidl.test.example.codingtablesdeps;
+
+xunion MyXUnionA {
+    uint64 a;
+    MyXUnionB b;
+};
+
+xunion MyXUnionB {
+    uint32 foo;
+    bool bar;
+};

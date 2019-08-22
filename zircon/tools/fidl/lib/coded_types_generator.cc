@@ -143,24 +143,13 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
           return coded_types_.back().get();
         }
         case coded::Type::Kind::kXUnion: {
-          // XUnions were compiled as part of decl compilation,
-          // but we may now need to generate a nullable counterpart.
-          if (identifier_type->nullability != types::Nullability::kNullable)
+          if (identifier_type->nullability != types::Nullability::kNullable) {
             return coded_type;
-          auto coded_xunion_type = static_cast<coded::XUnionType*>(coded_type);
-          assert(coded_xunion_type->nullability != types::Nullability::kNullable);
-          auto iter = xunion_type_map_.find(identifier_type);
-          if (iter != xunion_type_map_.end()) {
-            return iter->second;
           }
-          auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
-              coded_xunion_type->coded_name + "NullableRef", coded_xunion_type->fields,
-              coded_xunion_type->qname, types::Nullability::kNullable,
-              coded_xunion_type->strictness);
-          coded_xunion_type->maybe_reference_type = nullable_xunion_type.get();
-          xunion_type_map_[identifier_type] = nullable_xunion_type.get();
-          coded_types_.push_back(std::move(nullable_xunion_type));
-          return coded_types_.back().get();
+          auto coded_xunion_type = static_cast<coded::XUnionType*>(coded_type);
+          assert(coded_xunion_type->maybe_reference_type != nullptr &&
+                 "Named coded xunion must have a reference type!");
+          return coded_xunion_type->maybe_reference_type;
         }
         case coded::Type::Kind::kProtocol: {
           auto iter = protocol_type_map_.find(identifier_type);
@@ -281,6 +270,11 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
     case flat::Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const flat::XUnion*>(decl);
       auto coded_xunion = static_cast<coded::XUnionType*>(named_coded_types_[&decl->name].get());
+      coded::XUnionType* nullable_coded_xunion = coded_xunion->maybe_reference_type;
+
+      assert(nullable_coded_xunion != nullptr && "Named coded xunion must have a reference type!");
+      assert(coded_xunion->fields.size() == 0 &&
+             "The coded xunion fields are being compiled twice!");
 
       std::map<uint32_t, const flat::XUnion::Member*> members;
       for (const auto& member : xunion_decl->members) {
@@ -294,6 +288,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         auto coded_member_type =
             CompileType(member.type_ctor->type, coded::CodingContext::kInsideEnvelope);
         coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
+        nullable_coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
       }
       break;
     }
@@ -429,11 +424,22 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kXUnion: {
       auto xunion_decl = static_cast<const flat::XUnion*>(decl);
       std::string xunion_name = NameCodedName(xunion_decl->name);
-      named_coded_types_.emplace(
-          &decl->name, std::make_unique<coded::XUnionType>(
-                           std::move(xunion_name), std::vector<coded::XUnionField>(),
-                           NameFlatName(xunion_decl->name), types::Nullability::kNonnullable,
-                           xunion_decl->strictness));
+      std::string nullable_xunion_name = NameNullableXUnion(xunion_name);
+
+      // Always create the reference type
+      auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
+          std::move(nullable_xunion_name), std::vector<coded::XUnionField>(),
+          NameFlatName(xunion_decl->name), types::Nullability::kNullable, xunion_decl->strictness);
+      coded::XUnionType* nullable_xunion_ptr = nullable_xunion_type.get();
+      coded_types_.push_back(std::move(nullable_xunion_type));
+
+      auto xunion_type = std::make_unique<coded::XUnionType>(
+          std::move(xunion_name), std::vector<coded::XUnionField>(),
+          NameFlatName(xunion_decl->name), types::Nullability::kNonnullable,
+          xunion_decl->strictness);
+      xunion_type->maybe_reference_type = nullable_xunion_ptr;
+
+      named_coded_types_.emplace(&decl->name, std::move(xunion_type));
       break;
     }
     case flat::Decl::Kind::kConst:

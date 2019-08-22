@@ -517,6 +517,8 @@ std::string NameFields(std::string_view name) {
   return fields_name;
 }
 
+std::string NameNullableXUnion(std::string_view name) { return std::string(name) + "NullableRef"; }
+
 std::string NameCodedName(const flat::Name& name) { return FormatName(name, "_", "_"); }
 
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability) {

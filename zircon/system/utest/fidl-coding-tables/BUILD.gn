@@ -24,9 +24,19 @@ if (current_toolchain != default_toolchain) {
   }
 }
 
+fidl_library("fidl.test.example.codingtablesdeps") {
+  visibility = [ ":*" ]
+  sources = [
+    "coding_tables_deps.test.fidl",
+  ]
+}
+
 fidl_library("fidl.test.example.codingtables") {
   visibility = [ ":*" ]
   sources = [
     "coding_tables.test.fidl",
+  ]
+  public_deps = [
+    ":fidl.test.example.codingtablesdeps",
   ]
 }

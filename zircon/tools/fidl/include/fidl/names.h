@@ -50,6 +50,8 @@ std::string NamePointer(std::string_view name);
 std::string NameMembers(std::string_view name);
 std::string NameFields(std::string_view name);
 
+std::string NameNullableXUnion(std::string_view name);
+
 std::string NameCodedName(const flat::Name& name);
 std::string NameCodedHandle(types::HandleSubtype subtype, types::Nullability nullability);
 std::string NameCodedProtocolHandle(std::string_view protocol_name, types::Nullability nullability);
