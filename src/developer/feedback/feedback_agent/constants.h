@@ -20,6 +20,8 @@ constexpr char kAttachmentInspect[] = "inspect.json";
 constexpr char kAttachmentLogKernel[] = "log.kernel.txt";
 constexpr char kAttachmentLogSystem[] = "log.system.txt";
 
+constexpr char kAttachmentBundle[] = "fuchsia_feedback_data.zip";
+
 }  // namespace feedback
 }  // namespace fuchsia
 

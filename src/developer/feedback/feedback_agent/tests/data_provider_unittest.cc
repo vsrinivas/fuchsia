@@ -31,6 +31,7 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
@@ -46,6 +47,7 @@ namespace {
 
 using ::feedback::MatchesAnnotation;
 using ::feedback::MatchesAttachment;
+using ::feedback::MatchesKey;
 
 const std::set<std::string> kDefaultAnnotations = {
     kAnnotationBuildBoard,   kAnnotationBuildLatestCommitDate,
@@ -221,6 +223,14 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
     return out_result;
   }
 
+  void UnpackAttachmentBundle(const Data& data, std::vector<Attachment>* unpacked_attachments) {
+    ASSERT_TRUE(data.has_attachment_bundle());
+    const auto& attachment_bundle = data.attachment_bundle();
+    EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
+    ASSERT_TRUE(::feedback::Unpack(attachment_bundle.value, unpacked_attachments));
+    EXPECT_EQ(unpacked_attachments->size(), data.attachments().size());
+  }
+
   uint64_t total_num_scenic_bindings() { return stub_scenic_->total_num_bindings(); }
   size_t current_num_scenic_bindings() { return stub_scenic_->current_num_bindings(); }
   const std::vector<TakeScreenshotResponse>& get_scenic_responses() const {
@@ -378,30 +388,45 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   DataProvider_GetData_Result result = GetData();
 
   ASSERT_TRUE(result.is_response());
-  // There is nothing else we can assert here as no missing annotation nor attachment is fatal.
+
+  // There is not much we can assert here as no missing annotation nor attachment is fatal and we
+  // cannot expect annotations or attachments to be present.
+
+  // If there are annotations, there should be at least one attachment.
+  if (result.response().data.has_annotations()) {
+    ASSERT_TRUE(result.response().data.has_attachments());
+  }
+
+  // If there are attachments, there should be an attachment bundle with the same number of
+  // attachments once unpacked.
+  if (result.response().data.has_attachments()) {
+    std::vector<Attachment> unpacked_attachments;
+    UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  }
 }
 
 TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
   DataProvider_GetData_Result result = GetData();
 
   ASSERT_TRUE(result.is_response());
-  ASSERT_TRUE(result.response().data.has_attachments());
 
+  // There should be an "annotations.json" attachment.
+  ASSERT_TRUE(result.response().data.has_attachments());
   bool found_annotations_attachment = false;
+  std::string annotations_json;
   for (const auto& attachment : result.response().data.attachments()) {
     if (attachment.key.compare(kAttachmentAnnotations) != 0) {
       continue;
     }
     found_annotations_attachment = true;
 
-    std::string json_str;
-    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &json_str));
-    ASSERT_FALSE(json_str.empty());
+    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &annotations_json));
+    ASSERT_FALSE(annotations_json.empty());
 
     // JSON verification.
     // We check that the output is a valid JSON and that it matches the schema.
     rapidjson::Document json;
-    ASSERT_FALSE(json.Parse(json_str.c_str()).HasParseError());
+    ASSERT_FALSE(json.Parse(annotations_json.c_str()).HasParseError());
     rapidjson::Document schema_json;
     ASSERT_FALSE(schema_json
                      .Parse(fxl::Substitute(R"({
@@ -437,6 +462,12 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
     EXPECT_TRUE(json.Accept(validator));
   }
   EXPECT_TRUE(found_annotations_attachment);
+
+  // That same "annotations.json" attachment should be present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments,
+              testing::Contains(MatchesAttachment(kAttachmentAnnotations, annotations_json)));
 }
 
 TEST_F(DataProviderImplTest, GetData_SysLog) {
@@ -446,14 +477,22 @@ TEST_F(DataProviderImplTest, GetData_SysLog) {
       BuildLogMessage(FX_LOG_INFO, "log message",
                       /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
+  const std::string expected_syslog = "[15604.000][07559][07687][foo] INFO: log message\n";
 
   DataProvider_GetData_Result result = GetData();
 
   ASSERT_TRUE(result.is_response());
+
+  // There should be a "log.system.txt" attachment.
   ASSERT_TRUE(result.response().data.has_attachments());
   EXPECT_THAT(result.response().data.attachments(),
-              testing::Contains(MatchesAttachment(
-                  kAttachmentLogSystem, "[15604.000][07559][07687][foo] INFO: log message\n")));
+              testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
+
+  // That same "log.system.txt" attachment should be present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments,
+              testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
 }
 
 constexpr char kInspectJsonSchema[] = R"({
@@ -483,32 +522,33 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
   DataProvider_GetData_Result result = GetData();
 
   ASSERT_TRUE(result.is_response());
-  ASSERT_TRUE(result.response().data.has_attachments());
 
+  // There should be an "inspect.json" attachment.
+  ASSERT_TRUE(result.response().data.has_attachments());
   bool found_inspect_attachment = false;
+  std::string inspect_json;
   for (const auto& attachment : result.response().data.attachments()) {
     if (attachment.key.compare(kAttachmentInspect) != 0) {
       continue;
     }
     found_inspect_attachment = true;
 
-    std::string inspect_str;
-    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_str));
-    ASSERT_FALSE(inspect_str.empty());
+    ASSERT_TRUE(fsl::StringFromVmo(attachment.value, &inspect_json));
+    ASSERT_FALSE(inspect_json.empty());
 
     // JSON verification.
     // We check that the output is a valid JSON and that it matches the schema.
-    rapidjson::Document inspect_json;
-    ASSERT_FALSE(inspect_json.Parse(inspect_str.c_str()).HasParseError());
-    rapidjson::Document inspect_schema_json;
-    ASSERT_FALSE(inspect_schema_json.Parse(kInspectJsonSchema).HasParseError());
-    rapidjson::SchemaDocument schema(inspect_schema_json);
+    rapidjson::Document json;
+    ASSERT_FALSE(json.Parse(inspect_json.c_str()).HasParseError());
+    rapidjson::Document schema_json;
+    ASSERT_FALSE(schema_json.Parse(kInspectJsonSchema).HasParseError());
+    rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
-    EXPECT_TRUE(inspect_json.Accept(validator));
+    EXPECT_TRUE(json.Accept(validator));
 
     // We then check that we get the expected Inspect data for the injected test app.
     bool has_entry_for_test_app = false;
-    for (const auto& obj : inspect_json.GetArray()) {
+    for (const auto& obj : json.GetArray()) {
       const std::string path = obj["path"].GetString();
       if (path.find("inspect_test_app.cmx") != std::string::npos) {
         has_entry_for_test_app = true;
@@ -532,6 +572,12 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
     EXPECT_TRUE(has_entry_for_test_app);
   }
   EXPECT_TRUE(found_inspect_attachment);
+
+  // That same "inspect.json" attachment should be present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments,
+              testing::Contains(MatchesAttachment(kAttachmentInspect, inspect_json)));
 }
 
 TEST_F(DataProviderImplTest, GetData_Channel) {
@@ -560,7 +606,10 @@ TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
   ASSERT_TRUE(result.is_response());
   EXPECT_TRUE(result.response().data.has_attachments());
   ASSERT_EQ(result.response().data.attachments().size(), 1u);
-  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
+  EXPECT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
@@ -570,6 +619,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
   ASSERT_TRUE(result.is_response());
   EXPECT_FALSE(result.response().data.has_annotations());
   EXPECT_FALSE(result.response().data.has_attachments());
+  EXPECT_FALSE(result.response().data.has_attachment_bundle());
 }
 
 TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
@@ -587,8 +637,11 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
   DataProvider_GetData_Result result = GetData();
   ASSERT_TRUE(result.is_response());
   EXPECT_TRUE(result.response().data.has_attachments());
-  EXPECT_EQ(result.response().data.attachments().size(), 1u);
-  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
+  ASSERT_EQ(result.response().data.attachments().size(), 1u);
+  EXPECT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(result.response().data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesKey(kAttachmentAnnotations)));
 }
 
 }  // namespace

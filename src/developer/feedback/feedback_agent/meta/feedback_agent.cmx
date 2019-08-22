@@ -10,7 +10,8 @@
             "build-info",
             "config-data",
             "deprecated-shell",
-            "deprecated-ambient-replace-as-executable"
+            "deprecated-ambient-replace-as-executable",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.logger.Log",

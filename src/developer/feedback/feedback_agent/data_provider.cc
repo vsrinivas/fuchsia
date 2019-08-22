@@ -137,6 +137,15 @@ void DataProviderImpl::GetData(GetDataCallback callback) {
                                                   response.data.mutable_attachments());
                 }
 
+                // We bundle the attachments into a single attachment.
+                // This is useful for most clients that want to pass around a single bundle.
+                if (response.data.has_attachments()) {
+                  Attachment bundle;
+                  if (BundleAttachments(response.data.attachments(), &bundle)) {
+                    response.data.set_attachment_bundle(std::move(bundle));
+                  }
+                }
+
                 DataProvider_GetData_Result result;
                 result.set_response(std::move(response));
                 callback(std::move(result));

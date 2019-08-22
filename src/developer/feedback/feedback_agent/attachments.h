@@ -30,6 +30,9 @@ std::vector<fit::promise<Attachment>> GetAttachments(
 void AddAnnotationsAsExtraAttachment(const std::vector<Annotation>& annotations,
                                      std::vector<Attachment>* attachments);
 
+// Bundles the attachments into a single attachment.
+bool BundleAttachments(const std::vector<Attachment>& attachments, Attachment* bundle);
+
 }  // namespace feedback
 }  // namespace fuchsia
 

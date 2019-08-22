@@ -132,6 +132,7 @@ source_set("src") {
     "//garnet/public/lib/inspect_deprecated/query:json_formatter",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
+    "//src/developer/feedback/utils:archive",
     "//src/lib/files",
     "//third_party/libpng",
     "//third_party/rapidjson",

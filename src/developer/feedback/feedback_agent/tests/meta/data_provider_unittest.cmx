@@ -8,7 +8,8 @@
         ],
         "features": [
             "build-info",
-            "deprecated-shell"
+            "deprecated-shell",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.logger.LogSink",

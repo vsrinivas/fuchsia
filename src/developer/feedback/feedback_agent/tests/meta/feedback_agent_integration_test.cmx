@@ -18,6 +18,7 @@
     "sandbox": {
         "features": [
             "deprecated-shell",
+            "isolated-temp",
             "vulkan"
         ],
         "services": [

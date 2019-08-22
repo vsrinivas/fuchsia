@@ -22,6 +22,7 @@
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
 #include "src/developer/feedback/testing/gmatchers.h"
+#include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -172,6 +173,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                   MatchesKey(kAnnotationChannel),
                   MatchesKey(kAnnotationDeviceBoardName),
               }));
+
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
                                                             MatchesKey(kAttachmentAnnotations),
@@ -180,6 +182,19 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                                             MatchesKey(kAttachmentLogKernel),
                                                             MatchesKey(kAttachmentLogSystem),
                                                         }));
+
+  ASSERT_TRUE(out_result.response().data.has_attachment_bundle());
+  const auto& attachment_bundle = out_result.response().data.attachment_bundle();
+  EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
+  std::vector<Attachment> unpacked_attachments;
+  ASSERT_TRUE(::feedback::Unpack(attachment_bundle.value, &unpacked_attachments));
+  EXPECT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
+                                        MatchesKey(kAttachmentAnnotations),
+                                        MatchesKey(kAttachmentBuildSnapshot),
+                                        MatchesKey(kAttachmentInspect),
+                                        MatchesKey(kAttachmentLogKernel),
+                                        MatchesKey(kAttachmentLogSystem),
+                                    }));
 }
 
 // EXPECTs that there is a feedback_agent.cmx process running in a child job of the test environment

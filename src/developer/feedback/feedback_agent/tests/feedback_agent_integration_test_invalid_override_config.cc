@@ -10,6 +10,7 @@
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/testing/gmatchers.h"
+#include "src/developer/feedback/utils/archive.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -53,12 +54,24 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
                   MatchesKey(kAnnotationBuildVersion),
                   MatchesKey(kAnnotationDeviceBoardName),
               }));
+
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
                                                             MatchesKey(kAttachmentAnnotations),
                                                             MatchesKey(kAttachmentBuildSnapshot),
                                                             MatchesKey(kAttachmentLogKernel),
                                                         }));
+
+  ASSERT_TRUE(out_result.response().data.has_attachment_bundle());
+  const auto& attachment_bundle = out_result.response().data.attachment_bundle();
+  EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
+  std::vector<Attachment> unpacked_attachments;
+  ASSERT_TRUE(::feedback::Unpack(attachment_bundle.value, &unpacked_attachments));
+  EXPECT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
+                                        MatchesKey(kAttachmentAnnotations),
+                                        MatchesKey(kAttachmentBuildSnapshot),
+                                        MatchesKey(kAttachmentLogKernel),
+                                    }));
 }
 
 }  // namespace

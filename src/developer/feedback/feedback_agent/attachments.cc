@@ -21,6 +21,7 @@
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
 #include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
+#include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
@@ -150,6 +151,15 @@ void AddAnnotationsAsExtraAttachment(const std::vector<Annotation>& annotations,
     return;
   }
   attachments->push_back(std::move(extra_attachment));
+}
+
+bool BundleAttachments(const std::vector<Attachment>& attachments, Attachment* bundle) {
+  if (!::feedback::Archive(attachments, &(bundle->value))) {
+    FX_LOGS(ERROR) << "failed to archive attachments into one bundle";
+    return false;
+  }
+  bundle->key = kAttachmentBundle;
+  return true;
 }
 
 }  // namespace feedback

@@ -10,6 +10,9 @@
         "binary": "test/feedback_agent_integration_test_invalid_override_config"
     },
     "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.feedback.DataProvider"
         ]
