@@ -25,6 +25,7 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "tools/fidlcat/lib/decode_options.h"
 #include "tools/fidlcat/lib/display_options.h"
+#include "tools/fidlcat/lib/exception_decoder.h"
 #include "tools/fidlcat/lib/message_decoder.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
@@ -621,6 +622,9 @@ class SyscallDecoderDispatcher {
   void DecodeSyscall(InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
                      Syscall* syscall);
 
+  // Decode an exception received by a thread.
+  void DecodeException(InterceptionWorkflow* workflow, zxdb::Thread* thread);
+
   // Called when we are watching a process we launched.
   virtual void AddLaunchedProcess(uint64_t process_koid) {}
 
@@ -632,6 +636,15 @@ class SyscallDecoderDispatcher {
   // Delete a decoder created by DecodeSyscall. Called when the syscall is
   // fully decoded and displayed or the syscalls had an error.
   virtual void DeleteDecoder(SyscallDecoder* decoder);
+
+  // Create the object which will decode the exception.
+  virtual std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
+                                                          zxdb::Thread* thread,
+                                                          uint64_t thread_id) = 0;
+
+  // Delete a decoder created by DecodeException. Called when the exception is fully decoded and
+  // displayed or the exception had an error.
+  virtual void DeleteDecoder(ExceptionDecoder* decoder);
 
  private:
   // Feeds syscalls_ with all the syscalls we can decode.
@@ -653,6 +666,9 @@ class SyscallDecoderDispatcher {
 
   // The intercepted syscalls we are currently decoding.
   std::map<uint64_t, std::unique_ptr<SyscallDecoder>> syscall_decoders_;
+
+  // The intercepted exceptions we are currently decoding.
+  std::map<uint64_t, std::unique_ptr<ExceptionDecoder>> exception_decoders_;
 };
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
@@ -681,6 +697,10 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
                                                 zxdb::Thread* thread, uint64_t thread_id,
                                                 const Syscall* syscall) override;
+
+  std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
+                                                  zxdb::Thread* thread,
+                                                  uint64_t thread_id) override;
 
  private:
   // Class which can decode a FIDL message.

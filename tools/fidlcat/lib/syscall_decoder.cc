@@ -22,7 +22,7 @@
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/lib/fxl/logging.h"
 
-// TODO: Look into this.  Removing the hack that led to this (in
+// TODO(fidlcat): Look into this.  Removing the hack that led to this (in
 // debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
 // on CQ in a way I can't repro locally.
 #undef __TA_REQUIRES
@@ -32,12 +32,14 @@
 
 namespace fidlcat {
 
+constexpr int kBitsPerByte = 8;
+
 // Helper function to convert a vector of bytes to a T.
 template <typename T>
 T GetValueFromBytes(const std::vector<uint8_t>& bytes, size_t offset) {
   T ret = 0;
   for (size_t i = 0; (i < sizeof(ret)) && (offset < bytes.size()); i++) {
-    ret |= ((uint64_t)(bytes[offset++])) << (i * 8);
+    ret |= static_cast<uint64_t>(bytes[offset++]) << (i * kBitsPerByte);
   }
   return ret;
 }
@@ -62,13 +64,13 @@ void MemoryDumpToVector(const zxdb::MemoryDump& dump, std::vector<uint8_t>* outp
   }
 }
 
-void SyscallUse::SyscallInputsDecoded(SyscallDecoder* syscall) {}
+void SyscallUse::SyscallInputsDecoded(SyscallDecoder* decoder) {}
 
-void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* syscall) { syscall->Destroy(); }
+void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* decoder) { decoder->Destroy(); }
 
-void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall) {
+void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
   FXL_LOG(ERROR) << error.message();
-  syscall->Destroy();
+  decoder->Destroy();
 }
 
 void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination) {
@@ -121,7 +123,7 @@ void SyscallDecoder::LoadBuffer(uint64_t address, size_t size) {
 
 void SyscallDecoder::Decode() {
   if (dispatcher_->decode_options().stack_level >= kFullStack) {
-    thread_->GetStack().SyncFrames([this](const zxdb::Err& err) { DoDecode(); });
+    thread_->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { DoDecode(); });
   } else {
     DoDecode();
   }
@@ -129,6 +131,7 @@ void SyscallDecoder::Decode() {
 
 void SyscallDecoder::DoDecode() {
   const zxdb::Stack& stack = thread_->GetStack();
+  // Don't keep the inner frame which is the syscall and is not useful.
   for (size_t i = stack.size() - 1; i > 0; --i) {
     const zxdb::Frame* caller = stack[i];
     caller_locations_.push_back(caller->GetLocation());
@@ -140,28 +143,25 @@ void SyscallDecoder::DoDecode() {
 
   // The order of parameters in the System V AMD64 ABI we use, according to
   // Wikipedia:
-  static debug_ipc::RegisterID amd64_abi[] = {
+  static std::vector<debug_ipc::RegisterID> amd64_abi = {
       debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
       debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
       debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
 
   // The order of parameters in the System V AArch64 ABI we use, according to
   // Wikipedia:
-  static debug_ipc::RegisterID aarch64_abi[] = {
+  static std::vector<debug_ipc::RegisterID> aarch64_abi = {
       debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
       debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
       debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
       debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
 
-  debug_ipc::RegisterID* abi;
-  size_t register_count;
+  const std::vector<debug_ipc::RegisterID>* abi;
   if (arch_ == debug_ipc::Arch::kX64) {
-    abi = amd64_abi;
-    register_count = sizeof(amd64_abi) / sizeof(debug_ipc::RegisterID);
+    abi = &amd64_abi;
     entry_sp_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kX64_rsp);
   } else if (arch_ == debug_ipc::Arch::kArm64) {
-    abi = aarch64_abi;
-    register_count = sizeof(aarch64_abi) / sizeof(debug_ipc::RegisterID);
+    abi = &aarch64_abi;
     entry_sp_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_sp);
     return_address_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_lr);
   } else {
@@ -172,9 +172,9 @@ void SyscallDecoder::DoDecode() {
 
   size_t argument_count = syscall_->arguments().size();
   decoded_arguments_.reserve(argument_count);
-  register_count = std::min(argument_count, register_count);
+  size_t register_count = std::min(argument_count, abi->size());
   for (size_t i = 0; i < register_count; i++) {
-    decoded_arguments_.emplace_back(GetRegisterValue(general_registers, abi[i]));
+    decoded_arguments_.emplace_back(GetRegisterValue(general_registers, (*abi)[i]));
   }
 
   LoadStack();
@@ -248,6 +248,8 @@ void SyscallDecoder::StepToReturnAddress() {
     return;
   }
 
+  thread_observer_->Register(thread_->GetKoid(), this);
+
   zxdb::BreakpointSettings settings;
   settings.enabled = true;
   settings.name = syscall_->name() + "-return";
@@ -259,11 +261,12 @@ void SyscallDecoder::StepToReturnAddress() {
   settings.scope_thread = thread_.get();
   settings.scope_target = thread_->GetProcess()->GetTarget();
   settings.one_shot = true;
-  thread_observer_->CreateNewBreakpoint(settings);
+
+  // Registers a one time breakpoint for this decoder.
   FXL_VLOG(2) << "Thread " << thread_->GetKoid() << ": creating return value breakpoint for "
               << syscall_->name() << " at address " << std::hex << return_address_ << std::dec;
-  // Registers a one time breakpoint for this decoder.
-  thread_observer_->Register(thread_->GetKoid(), this);
+  thread_observer_->CreateNewBreakpoint(settings);
+
   // Restarts the stopped thread. When the breakpoint will be reached (at the
   // end of the syscall), LoadSyscallReturnValue will be called.
   thread_->Continue();
@@ -312,11 +315,11 @@ void SyscallDecoder::DecodeAndDisplay() {
 
 void SyscallDecoder::Destroy() { dispatcher_->DeleteDecoder(this); }
 
-void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* syscall) {
+void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
   const Colors& colors = dispatcher_->colors();
-  line_header_ = syscall->thread()->GetProcess()->GetName() + ' ' + colors.red +
-                 std::to_string(syscall->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
-                 colors.red + std::to_string(syscall->thread_id()) + colors.reset + ' ';
+  line_header_ = decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
+                 std::to_string(decoder->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
+                 colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
 
   if (dispatcher_->with_process_info()) {
     os_ << line_header_ << '\n';
@@ -326,14 +329,14 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* syscall) {
 
   if (dispatcher_->decode_options().stack_level != kNoStack) {
     // Display caller locations.
-    DisplayStackFrame(dispatcher_->colors(), line_header_, syscall->caller_locations(), os_);
+    DisplayStackFrame(dispatcher_->colors(), line_header_, decoder->caller_locations(), os_);
   }
 
   // Displays the header and the inline input arguments.
-  os_ << line_header_ << syscall->syscall()->name() << '(';
+  os_ << line_header_ << decoder->syscall()->name() << '(';
   const char* separator = "";
-  for (const auto& input : syscall->syscall()->inputs()) {
-    separator = input->DisplayInline(dispatcher_, syscall, separator, os_);
+  for (const auto& input : decoder->syscall()->inputs()) {
+    separator = input->DisplayInline(dispatcher_, decoder, separator, os_);
   }
   os_ << ")\n";
 
@@ -342,13 +345,13 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* syscall) {
   }
 
   // Displays the outline input arguments.
-  for (const auto& input : syscall->syscall()->inputs()) {
-    input->DisplayOutline(dispatcher_, syscall, line_header_, /*tabs=*/1, os_);
+  for (const auto& input : decoder->syscall()->inputs()) {
+    input->DisplayOutline(dispatcher_, decoder, line_header_, /*tabs=*/1, os_);
   }
   dispatcher_->set_last_displayed_syscall(this);
 }
 
-void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
+void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   const Colors& colors = dispatcher_->colors();
   // Displays the returned value.
   if (dispatcher_->last_displayed_syscall() != this) {
@@ -357,40 +360,40 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
     os_ << "\n";
     // Then always display the process info to be able able to know for which thread
     // we are displaying the output.
-    std::string first_line_header = syscall->thread()->GetProcess()->GetName() + ' ' + colors.red +
-                                    std::to_string(syscall->thread()->GetProcess()->GetKoid()) +
+    std::string first_line_header = decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
+                                    std::to_string(decoder->thread()->GetProcess()->GetKoid()) +
                                     colors.reset + ':' + colors.red +
-                                    std::to_string(syscall->thread_id()) + colors.reset + ' ';
+                                    std::to_string(decoder->thread_id()) + colors.reset + ' ';
     os_ << first_line_header << "  -> ";
   } else {
     os_ << line_header_ << "  -> ";
   }
-  switch (syscall->syscall()->return_type()) {
+  switch (decoder->syscall()->return_type()) {
     case SyscallReturnType::kVoid:
       break;
     case SyscallReturnType::kStatus:
-      StatusName(colors, static_cast<zx_status_t>(syscall->syscall_return_value()), os_);
+      StatusName(colors, static_cast<zx_status_t>(decoder->syscall_return_value()), os_);
       break;
     case SyscallReturnType::kTicks:
       os_ << colors.green << "ticks" << colors.reset << ": " << colors.blue
-          << static_cast<uint64_t>(syscall->syscall_return_value()) << colors.reset;
+          << static_cast<uint64_t>(decoder->syscall_return_value()) << colors.reset;
       break;
     case SyscallReturnType::kTime:
       os_ << colors.green << "time" << colors.reset << ": "
-          << DisplayTime(colors, static_cast<zx_time_t>(syscall->syscall_return_value()));
+          << DisplayTime(colors, static_cast<zx_time_t>(decoder->syscall_return_value()));
       break;
     case SyscallReturnType::kUint32:
-      os_ << colors.blue << static_cast<uint32_t>(syscall->syscall_return_value()) << colors.reset;
+      os_ << colors.blue << static_cast<uint32_t>(decoder->syscall_return_value()) << colors.reset;
       break;
     case SyscallReturnType::kUint64:
-      os_ << colors.blue << static_cast<uint64_t>(syscall->syscall_return_value()) << colors.reset;
+      os_ << colors.blue << static_cast<uint64_t>(decoder->syscall_return_value()) << colors.reset;
       break;
   }
   // And the inline output arguments (if any).
   const char* separator = " (";
-  for (const auto& output : syscall->syscall()->outputs()) {
-    if (output->error_code() == static_cast<zx_status_t>(syscall->syscall_return_value())) {
-      separator = output->DisplayInline(dispatcher_, syscall, separator, os_);
+  for (const auto& output : decoder->syscall()->outputs()) {
+    if (output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) {
+      separator = output->DisplayInline(dispatcher_, decoder, separator, os_);
     }
   }
   if (std::string(" (") != separator) {
@@ -398,27 +401,27 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* syscall) {
   }
   os_ << '\n';
   // Displays the outline output arguments.
-  for (const auto& output : syscall->syscall()->outputs()) {
-    if (output->error_code() == static_cast<zx_status_t>(syscall->syscall_return_value())) {
-      output->DisplayOutline(dispatcher_, syscall, line_header_, /*tabs=*/2, os_);
+  for (const auto& output : decoder->syscall()->outputs()) {
+    if (output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) {
+      output->DisplayOutline(dispatcher_, decoder, line_header_, /*tabs=*/2, os_);
     }
   }
 
   dispatcher_->set_last_displayed_syscall(this);
 
   // Now our job is done, we can destroy the object.
-  syscall->Destroy();
+  decoder->Destroy();
 }
 
-void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall) {
+void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
   std::string message = error.message();
   size_t pos = 0;
   for (;;) {
     size_t end = message.find('\n', pos);
     const Colors& colors = dispatcher_->colors();
-    os_ << syscall->thread()->GetProcess()->GetName() << ' ' << colors.red
-        << syscall->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
-        << syscall->thread_id() << colors.reset << ' ' << syscall->syscall()->name() << ": "
+    os_ << decoder->thread()->GetProcess()->GetName() << ' ' << colors.red
+        << decoder->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
+        << decoder->thread_id() << colors.reset << ' ' << decoder->syscall()->name() << ": "
         << colors.red << error.message().substr(pos, end) << colors.reset << '\n';
     if (end == std::string::npos) {
       break;
@@ -426,7 +429,7 @@ void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDeco
     pos = end + 1;
   }
   os_ << '\n';
-  syscall->Destroy();
+  decoder->Destroy();
 }
 
 }  // namespace fidlcat

@@ -72,8 +72,8 @@ class DataForSyscallTest {
 
   void load_syscall_data() {
     size_t argument_count = syscall_->inputs().size();
-    if (argument_count > param_regs_count_) {
-      argument_count -= param_regs_count_;
+    if (argument_count > param_regs_->size()) {
+      argument_count -= param_regs_->size();
       for (auto input = syscall_->inputs().crbegin();
            (input != syscall_->inputs().crend()) && (argument_count > 0);
            ++input, --argument_count) {
@@ -141,16 +141,18 @@ class DataForSyscallTest {
   }
 
   void PopulateRegisters(uint64_t process_koid, std::vector<debug_ipc::Register>* registers) {
-    if (stepped_processes_.find(process_koid) == stepped_processes_.end()) {
-      size_t count = std::min(param_regs_count_, syscall_->inputs().size());
-      for (size_t i = 0; i < count; ++i) {
-        PopulateRegister(param_regs_[i], syscall_->inputs()[i], registers);
-      }
-    } else {
-      if (arch_ == debug_ipc::Arch::kArm64) {
-        PopulateRegister(debug_ipc::RegisterID::kARMv8_x0, syscall_->result(), registers);
+    if (syscall_ != nullptr) {
+      if (stepped_processes_.find(process_koid) == stepped_processes_.end()) {
+        size_t count = std::min(param_regs_->size(), syscall_->inputs().size());
+        for (size_t i = 0; i < count; ++i) {
+          PopulateRegister((*param_regs_)[i], syscall_->inputs()[i], registers);
+        }
       } else {
-        PopulateRegister(debug_ipc::RegisterID::kX64_rax, syscall_->result(), registers);
+        if (arch_ == debug_ipc::Arch::kArm64) {
+          PopulateRegister(debug_ipc::RegisterID::kARMv8_x0, syscall_->result(), registers);
+        } else {
+          PopulateRegister(debug_ipc::RegisterID::kX64_rax, syscall_->result(), registers);
+        }
       }
     }
 
@@ -201,8 +203,7 @@ class DataForSyscallTest {
   static constexpr char kElfSymbolBuildID[] = "123412341234";
 
  private:
-  debug_ipc::RegisterID* param_regs_;
-  size_t param_regs_count_;
+  const std::vector<debug_ipc::RegisterID>* param_regs_;
   std::unique_ptr<SystemCallTest> syscall_;
   bool use_alternate_data_ = false;
   uint64_t stack_[kMaxStackSizeInWords];
@@ -335,6 +336,11 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
                        bool interleaved_test);
   void TriggerSyscallBreakpoint(uint64_t process_koid, uint64_t thread_koid);
   void TriggerCallerBreakpoint(uint64_t process_koid, uint64_t thread_koid);
+
+  void PerformExceptionDisplayTest(const char* expected);
+  void PerformExceptionTest(ProcessController* controller,
+                            std::unique_ptr<SyscallDecoderDispatcher> dispatcher);
+  void TriggerException(uint64_t process_koid, uint64_t thread_koid);
 
  protected:
   DataForSyscallTest data_;
@@ -494,7 +500,18 @@ class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
                                             std::make_unique<SyscallCheck>(controller_));
   }
 
+  std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
+                                                  zxdb::Thread* thread,
+                                                  uint64_t thread_id) override {
+    return nullptr;
+  }
+
   void DeleteDecoder(SyscallDecoder* decoder) override {
+    SyscallDecoderDispatcher::DeleteDecoder(decoder);
+    AlwaysQuit aq(controller_);
+  }
+
+  void DeleteDecoder(ExceptionDecoder* decoder) override {
     SyscallDecoderDispatcher::DeleteDecoder(decoder);
     AlwaysQuit aq(controller_);
   }
@@ -515,6 +532,11 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
 
   void DeleteDecoder(SyscallDecoder* decoder) override {
     SyscallDisplayDispatcher::DeleteDecoder(decoder);
+    AlwaysQuit aq(controller_);
+  }
+
+  void DeleteDecoder(ExceptionDecoder* decoder) override {
+    SyscallDecoderDispatcher::DeleteDecoder(decoder);
     AlwaysQuit aq(controller_);
   }
 

@@ -10,28 +10,32 @@ namespace fidlcat {
 
 // We only test one syscall at a time. We always use the same address for all the syscalls.
 constexpr uint64_t kSyscallAddress = 0x100060;
+// Address used to generate an exception.
+constexpr uint64_t kExceptionAddress = 0x12345678;
 
-static debug_ipc::RegisterID aarch64_regs[] = {
+constexpr int kFrame1Line = 25;
+constexpr int kFrame1Column = 8;
+constexpr int kFrame2Line = 50;
+constexpr int kFrame2Column = 4;
+constexpr int kFrame3Line = 10;
+constexpr int kFrame3Column = 2;
+
+constexpr int kFrame2Sp = 0x126790;
+constexpr int kFrame3Sp = 0x346712;
+
+static std::vector<debug_ipc::RegisterID> aarch64_regs = {
     debug_ipc::RegisterID::kARMv8_x0, debug_ipc::RegisterID::kARMv8_x1,
     debug_ipc::RegisterID::kARMv8_x2, debug_ipc::RegisterID::kARMv8_x3,
     debug_ipc::RegisterID::kARMv8_x4, debug_ipc::RegisterID::kARMv8_x5,
     debug_ipc::RegisterID::kARMv8_x6, debug_ipc::RegisterID::kARMv8_x7};
-constexpr size_t aarch64_regs_count = sizeof(aarch64_regs) / sizeof(debug_ipc::RegisterID);
 
-static debug_ipc::RegisterID amd64_regs[] = {
+static std::vector<debug_ipc::RegisterID> amd64_regs = {
     debug_ipc::RegisterID::kX64_rdi, debug_ipc::RegisterID::kX64_rsi,
     debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
     debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
-constexpr size_t amd64_regs_count = sizeof(amd64_regs) / sizeof(debug_ipc::RegisterID);
 
 DataForSyscallTest::DataForSyscallTest(debug_ipc::Arch arch) : arch_(arch) {
-  if (arch_ == debug_ipc::Arch::kArm64) {
-    param_regs_ = aarch64_regs;
-    param_regs_count_ = aarch64_regs_count;
-  } else {
-    param_regs_ = amd64_regs;
-    param_regs_count_ = amd64_regs_count;
-  }
+  param_regs_ = (arch_ == debug_ipc::Arch::kArm64) ? &aarch64_regs : &amd64_regs;
   header_.txid = kTxId;
   header_.reserved0 = kReserved;
   header_.ordinal = kOrdinal;
@@ -155,15 +159,15 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
                                                         uint64_t thread_koid) {
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
-  notification.type = debug_ipc::NotifyException::Type::kGeneral;
+  notification.type = debug_ipc::NotifyException::Type::kSoftware;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
 
   debug_ipc::StackFrame frame1(kSyscallAddress, reinterpret_cast<uint64_t>(data_.sp()));
-  debug_ipc::StackFrame frame2(kSyscallAddress, 0x126790);
-  debug_ipc::StackFrame frame3(kSyscallAddress, 0x346712);
+  debug_ipc::StackFrame frame2(kSyscallAddress, kFrame2Sp);
+  debug_ipc::StackFrame frame3(kSyscallAddress, kFrame3Sp);
 
   data_.PopulateRegisters(process_koid, &frame1.regs);
   notification.thread.frames.push_back(frame1);
@@ -174,13 +178,16 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
   std::vector<std::unique_ptr<zxdb::Frame>> frames;
   frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
       threads_[thread_koid], frame1,
-      zxdb::Location(kSyscallAddress, zxdb::FileLine("fidlcat/foo.cc", 25), 8, context)));
+      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame1Line),
+                     kFrame1Column, context)));
   frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
       threads_[thread_koid], frame2,
-      zxdb::Location(kSyscallAddress, zxdb::FileLine("fidlcat/foo.cc", 50), 4, context)));
+      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame2Line),
+                     kFrame2Column, context)));
   frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
       threads_[thread_koid], frame2,
-      zxdb::Location(kSyscallAddress, zxdb::FileLine("fidlcat/main.cc", 10), 2, context)));
+      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/main.cc", kFrame3Line),
+                     kFrame3Column, context)));
 
   InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
 
@@ -191,18 +198,77 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
                                                        uint64_t thread_koid) {
   // Trigger next breakpoint, when the syscall has completed.
   debug_ipc::NotifyException notification;
+  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.thread.process_koid = process_koid;
+  notification.thread.thread_koid = thread_koid;
+  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
+
+  debug_ipc::StackFrame frame(DataForSyscallTest::kReturnAddress,
+                              reinterpret_cast<uint64_t>(data_.sp()));
+
+  data_.PopulateRegisters(process_koid, &frame.regs);
+  notification.thread.frames.push_back(frame);
+
+  mock_remote_api().PopulateBreakpointIds(DataForSyscallTest::kReturnAddress, notification);
+
+  InjectException(notification);
+
+  debug_ipc::MessageLoop::Current()->Run();
+}
+
+void InterceptionWorkflowTest::PerformExceptionDisplayTest(const char* expected) {
+  ProcessController controller(this, session(), loop());
+
+  PerformExceptionTest(&controller,
+                       std::make_unique<SyscallDisplayDispatcherTest>(
+                           nullptr, decode_options_, display_options_, result_, &controller));
+  ASSERT_EQ(result_.str(), expected);
+}
+
+void InterceptionWorkflowTest::PerformExceptionTest(
+    ProcessController* controller, std::unique_ptr<SyscallDecoderDispatcher> dispatcher) {
+  controller->Initialize(session(), std::move(dispatcher), "");
+
+  TriggerException(kFirstPid, kFirstThreadKoid);
+
+  debug_ipc::MessageLoop::Current()->Run();
+}
+
+void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t thread_koid) {
+  // Trigger breakpoint.
+  debug_ipc::NotifyException notification;
   notification.type = debug_ipc::NotifyException::Type::kGeneral;
   notification.thread.process_koid = process_koid;
   notification.thread.thread_koid = thread_koid;
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
-  debug_ipc::StackFrame frame(DataForSyscallTest::kReturnAddress,
-                              reinterpret_cast<uint64_t>(data_.sp()));
-  data_.PopulateRegisters(process_koid, &frame.regs);
-  notification.thread.frames.push_back(frame);
-  InjectException(notification);
 
-  debug_ipc::MessageLoop::Current()->Run();
+  debug_ipc::StackFrame frame1(kExceptionAddress, reinterpret_cast<uint64_t>(data_.sp()));
+  debug_ipc::StackFrame frame2(kExceptionAddress, kFrame2Sp);
+  debug_ipc::StackFrame frame3(kExceptionAddress, kFrame3Sp);
+
+  data_.PopulateRegisters(process_koid, &frame1.regs);
+  notification.thread.frames.push_back(frame1);
+
+  mock_remote_api().PopulateBreakpointIds(kExceptionAddress, notification);
+
+  zxdb::SymbolContext context(0);
+  std::vector<std::unique_ptr<zxdb::Frame>> frames;
+  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+      threads_[thread_koid], frame1,
+      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame1Line),
+                     kFrame1Column, context)));
+  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+      threads_[thread_koid], frame2,
+      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/foo.cc", kFrame2Line),
+                     kFrame2Column, context)));
+  frames.emplace_back(std::make_unique<zxdb::FrameImpl>(
+      threads_[thread_koid], frame2,
+      zxdb::Location(kExceptionAddress, zxdb::FileLine("fidlcat/main.cc", kFrame3Line),
+                     kFrame3Column, context)));
+
+  InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
 }
 
 ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
@@ -288,9 +354,10 @@ void ProcessController::Initialize(zxdb::Session& session,
     std::vector<debug_ipc::Module> modules;
     // Force system to load modules.  Callback doesn't need to do anything
     // interesting.
-    target->GetProcess()->GetModules([](const zxdb::Err&, std::vector<debug_ipc::Module>) {
-      debug_ipc::MessageLoop::Current()->QuitNow();
-    });
+    target->GetProcess()->GetModules(
+        [](const zxdb::Err& /*err*/, std::vector<debug_ipc::Module> /*modules*/) {
+          debug_ipc::MessageLoop::Current()->QuitNow();
+        });
     debug_ipc::MessageLoop::Current()->Run();
   }
 }

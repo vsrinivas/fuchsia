@@ -223,3 +223,34 @@ echo_client_cpp <font color="#CC0000">5234749</font>:<font color="#CC0000">52347
 This option adds some overhead because we need to ask zxdb for the full stack
 for each system call (and fidlcat becomes even more verbose). You should use it
 only when you need to understand what part of your code called the system calls.
+
+## Exceptions
+
+Sometimes, your program crashes. If it's monitored by **fidlcat** you
+automatically have a stack where it crashed.
+
+For example:
+
+<pre>echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> zx_channel_read(handle:<font color="#4E9A06">handle</font>: <font color="#CC0000">ca322b6f</font>, options:<font color="#4E9A06">uint32</font>: <font color="#3465A4">0</font>, num_bytes:<font color="#4E9A06">uint32</font>: <font color="#3465A4">65536</font>, num_handles:<font color="#4E9A06">uint32</font>: <font color="#3465A4">64</font>)
+  -&gt; <font color="#4E9A06">ZX_OK</font>
+    <span style="background-color:#75507B"><font color="#D3D7CF">received request</font></span> <font color="#4E9A06">fidl.examples.echo/Echo.EchoString</font> = {
+      value: <font color="#4E9A06">string</font> = <font color="#CC0000">&quot;hello world&quot;</font>
+    }
+
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/third_party/ulib/musl/src/env/__libc_start_main.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">93</font></span> start_main
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">garnet/examples/fidl/echo_server_cpp/echo_server.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">15</font></span> main
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop_wrapper.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">21</font></span> async::Loop::Run
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">194</font></span> async_loop_run
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">236</font></span> async_loop_run_once
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">zircon/system/ulib/async-loop/loop.c</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">277</font></span> async_loop_dispatch_wait
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">sdk/lib/fidl/cpp/internal/message_reader.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">165</font></span> fidl::internal::MessageReader::CallHandler
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">sdk/lib/fidl/cpp/internal/message_reader.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">177</font></span> fidl::internal::MessageReader::OnHandleReady
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">sdk/lib/fidl/cpp/internal/message_reader.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">228</font></span> fidl::internal::MessageReader::ReadAndDispatchMessage
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">sdk/lib/fidl/cpp/internal/stub_controller.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">32</font></span> fidl::internal::StubController::OnMessage
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">fidling/gen/garnet/examples/fidl/services/fidl/examples/echo/cpp/fidl.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">152</font></span> fidl::examples::echo::Echo_Stub::Dispatch_
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <span style="background-color:#FCE94F">at </span><span style="background-color:#FCE94F"><font color="#CC0000">garnet/examples/fidl/echo_server_cpp/echo_server_app.cc</font></span><span style="background-color:#FCE94F">:</span><span style="background-color:#FCE94F"><font color="#3465A4">22</font></span> echo::EchoServerApp::EchoString
+echo_server_cpp.cmx <font color="#CC0000">1707964</font>:<font color="#CC0000">1707977</font> <font color="#CC0000">thread stopped on exception</font>
+</pre>
+
+You have the stack frames for the exception even if you didn't ask for the stack
+frames with the **--stack** options.

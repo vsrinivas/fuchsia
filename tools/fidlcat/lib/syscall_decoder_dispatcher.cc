@@ -4,11 +4,11 @@
 
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
-#include <cstdint>
-#include <memory>
-
 #include <zircon/system/public/zircon/errors.h>
 #include <zircon/system/public/zircon/types.h>
+
+#include <cstdint>
+#include <memory>
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -16,13 +16,16 @@
 
 namespace fidlcat {
 
-void CantDecode(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t* handles,
-                uint32_t num_handles, SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                std::string_view line_header, int tabs, std::ostream& os) {
+constexpr int kPatternColorSize = 4;
+constexpr int kPatternSize = 8;
+
+void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
+                SyscallDisplayDispatcher* dispatcher, std::string_view line_header, int tabs,
+                std::ostream& os) {
   os << line_header << std::string(tabs * kTabSize, ' ') << dispatcher->colors().red
      << "Can't decode message num_bytes=" << num_bytes << " num_handles=" << num_handles;
   if ((bytes != nullptr) && (num_bytes >= sizeof(fidl_message_header_t))) {
-    const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);
+    auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
     os << " ordinal=" << std::hex << header->ordinal << std::dec;
     if (dispatcher->message_decoder_dispatcher().loader() != nullptr) {
       const std::vector<const InterfaceMethod*>* methods =
@@ -38,14 +41,14 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_info_t
   const char* separator = " ";
   for (uint32_t i = 0; i < num_bytes; ++i) {
     // Display 4 bytes in red then four bytes in black ...
-    if (i % 8 == 0) {
+    if (i % kPatternSize == 0) {
       os << dispatcher->colors().red;
-    } else if (i % 4 == 0) {
+    } else if (i % kPatternColorSize == 0) {
       os << dispatcher->colors().reset;
     }
-    char buffer[3];
-    snprintf(buffer, sizeof(buffer), "%02x", bytes[i]);
-    os << separator << buffer;
+    std::vector<char> buffer(3);
+    snprintf(buffer.data(), buffer.size(), "%02x", bytes[i]);
+    os << separator << buffer.data();
     separator = ", ";
   }
   os << dispatcher->colors().reset << '\n';
@@ -71,8 +74,7 @@ void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatch
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->thread()->GetProcess()->GetKoid(), handle, bytes, num_bytes, handle_infos,
           num_handles, type_, os, line_header, tabs)) {
-    CantDecode(bytes, num_bytes, handle_infos, num_handles, dispatcher, decoder, line_header, tabs,
-               os);
+    CantDecode(bytes, num_bytes, num_handles, dispatcher, line_header, tabs, os);
   }
   delete[] handle_infos;
 }
@@ -89,8 +91,7 @@ void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* disp
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->thread()->GetProcess()->GetKoid(), handle, bytes, num_bytes, handle_infos,
           num_handles, type_, os, line_header, tabs)) {
-    CantDecode(bytes, num_bytes, handle_infos, num_handles, dispatcher, decoder, line_header, tabs,
-               os);
+    CantDecode(bytes, num_bytes, num_handles, dispatcher, line_header, tabs, os);
   }
 }
 
@@ -108,9 +109,28 @@ void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_
   tmp->Decode();
 }
 
+void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
+                                               zxdb::Thread* thread) {
+  uint64_t thread_id = thread->GetKoid();
+  auto current = exception_decoders_.find(thread_id);
+  if (current != exception_decoders_.end()) {
+    FXL_LOG(INFO) << "internal error: already decoding an exception for thread " << thread_id;
+    return;
+  }
+  auto decoder = CreateDecoder(workflow, thread, thread_id);
+  auto tmp = decoder.get();
+  exception_decoders_[thread_id] = std::move(decoder);
+  tmp->Decode();
+}
+
 void SyscallDecoderDispatcher::DeleteDecoder(SyscallDecoder* decoder) {
   decoder->thread()->Continue();
   syscall_decoders_.erase(decoder->thread_id());
+}
+
+void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
+  decoder->thread()->Continue();
+  exception_decoders_.erase(decoder->thread_id());
 }
 
 std::unique_ptr<SyscallDecoder> SyscallDisplayDispatcher::CreateDecoder(
@@ -118,6 +138,13 @@ std::unique_ptr<SyscallDecoder> SyscallDisplayDispatcher::CreateDecoder(
     const Syscall* syscall) {
   return std::make_unique<SyscallDecoder>(this, thread_observer, thread, thread_id, syscall,
                                           std::make_unique<SyscallDisplay>(this, os_));
+}
+
+std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
+    InterceptionWorkflow* workflow, zxdb::Thread* thread, uint64_t thread_id) {
+  return std::make_unique<ExceptionDecoder>(workflow, this, thread->GetProcess()->GetKoid(), thread,
+                                            thread_id,
+                                            std::make_unique<ExceptionDisplay>(this, os_));
 }
 
 }  // namespace fidlcat

@@ -36,9 +36,9 @@ class SyscallUse {
   SyscallUse() = default;
   virtual ~SyscallUse() = default;
 
-  virtual void SyscallInputsDecoded(SyscallDecoder* syscall);
-  virtual void SyscallOutputsDecoded(SyscallDecoder* syscall);
-  virtual void SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall);
+  virtual void SyscallInputsDecoded(SyscallDecoder* decoder);
+  virtual void SyscallOutputsDecoded(SyscallDecoder* decoder);
+  virtual void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder);
 };
 
 // Handles the decoding of a syscall argument. At the end, it holds the value
@@ -223,9 +223,9 @@ class SyscallDisplay : public SyscallUse {
   SyscallDisplay(SyscallDisplayDispatcher* dispatcher, std::ostream& os)
       : dispatcher_(dispatcher), os_(os) {}
 
-  void SyscallInputsDecoded(SyscallDecoder* syscall) override;
-  void SyscallOutputsDecoded(SyscallDecoder* syscall) override;
-  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* syscall) override;
+  void SyscallInputsDecoded(SyscallDecoder* decoder) override;
+  void SyscallOutputsDecoded(SyscallDecoder* decoder) override;
+  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override;
 
  private:
   SyscallDisplayDispatcher* const dispatcher_;

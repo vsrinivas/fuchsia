@@ -17,7 +17,7 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 
-// TODO: Look into this.  Removing the hack that led to this (in
+// TODO(fidlcat): Look into this.  Removing the hack that led to this (in
 // debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
 // on CQ in a way I can't repro locally.
 #undef __TA_REQUIRES
@@ -31,6 +31,24 @@ void InterceptingThreadObserver::OnThreadStopped(
     zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
     const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) {
   FXL_CHECK(thread) << "Internal error: Stopped in a breakpoint without a thread?";
+
+  if (type == debug_ipc::NotifyException::Type::kGeneral) {
+    FXL_CHECK(hit_breakpoints.empty());
+    if (threads_in_error_.find(thread->GetKoid()) == threads_in_error_.end()) {
+      threads_in_error_.emplace(thread->GetKoid());
+      workflow_->syscall_decoder_dispatcher()->DecodeException(workflow_, thread);
+    }
+    return;
+  }
+
+  if (hit_breakpoints.empty()) {
+    // This can happen when we are shutting down fidlcat.
+    // There is nothing to do => we just return.
+    return;
+  }
+
+  FXL_CHECK(hit_breakpoints.size() == 1)
+      << "Internal error: more than one simultaneous breakpoint for thread " << thread->GetKoid();
 
   // There a two possible breakpoints we can hit:
   //  - A breakpoint right before a system call (zx_channel_read,
@@ -94,7 +112,7 @@ void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::BreakpointSettings& s
 }
 
 void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
-                                                  bool autoattached_to_new_process) {
+                                                  bool /*autoattached_to_new_process*/) {
   process->AddObserver(&dispatcher_);
   workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
   workflow_->SetBreakpoints(target);
@@ -103,9 +121,9 @@ void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Pr
   workflow_->AddObserver(next_target);
 }
 
-void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target, zxdb::Process* process,
-                                                    DestroyReason reason, int exit_code) {
-  workflow_->configured_processes().erase(process->GetKoid());
+void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* /*target*/,
+                                                    zxdb::Process* process, DestroyReason reason,
+                                                    int /*exit_code*/) {
   std::string action;
   switch (reason) {
     case zxdb::TargetObserver::DestroyReason::kExit:
@@ -122,7 +140,7 @@ void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target, zxdb::
       break;
   }
   FXL_LOG(INFO) << "Process " << process->GetKoid() << " " << action;
-  workflow_->Detach();
+  workflow_->ProcessDetached(process->GetKoid());
 }
 
 InterceptionWorkflow::InterceptionWorkflow()
@@ -186,7 +204,7 @@ void InterceptionWorkflow::Initialize(
 }
 
 void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
-                                   SimpleErrorFunction and_then) {
+                                   const SimpleErrorFunction& and_then) {
   session_->Connect(host, port, [and_then](const zxdb::Err& err) { and_then(err); });
 }
 
@@ -225,18 +243,23 @@ void InterceptionWorkflow::Attach(const std::vector<uint64_t>& process_koids) {
     }
 
     // The debugger is not yet attached to the process.  Attach to it.
-    target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target>,
+    target->Attach(process_koid, [this, target, process_koid](fxl::WeakPtr<zxdb::Target> /*target*/,
                                                               const zxdb::Err& err) {
       if (!err.ok()) {
         FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": " << err.msg();
         return;
-      } else {
-        FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
       }
+
+      FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
       target->GetProcess()->AddObserver(&observer_.process_observer());
       SetBreakpoints(target);
     });
   }
+}
+
+void InterceptionWorkflow::ProcessDetached(uint64_t koid) {
+  configured_processes_.erase(koid);
+  Detach();
 }
 
 void InterceptionWorkflow::Detach() {
@@ -248,7 +271,7 @@ void InterceptionWorkflow::Detach() {
   }
 }
 
-void InterceptionWorkflow::Filter(zxdb::Target* target, const std::vector<std::string>& filter) {
+void InterceptionWorkflow::Filter(const std::vector<std::string>& filter) {
   std::set<std::string> filter_set(filter.begin(), filter.end());
 
   for (auto it = filters_.begin(); it != filters_.end();) {
@@ -293,8 +316,8 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
     request.inferior_type = debug_ipc::InferiorType::kComponent;
     request.argv = std::vector<std::string>(command.begin() + 1, command.end());
     session_->remote_api()->Launch(
-        std::move(request), [this, target = target->GetWeakPtr(), on_err = std::move(on_err)](
-                                const zxdb::Err& err, debug_ipc::LaunchReply reply) {
+        request, [this, target = target->GetWeakPtr(), on_err = std::move(on_err)](
+                     const zxdb::Err& err, debug_ipc::LaunchReply reply) {
           if (!on_err(err)) {
             return;
           }
@@ -381,7 +404,7 @@ namespace {
 // Makes sure we never get stuck in the workflow at a breakpoint.
 class AlwaysContinue {
  public:
-  AlwaysContinue(zxdb::Thread* thread) : thread_(thread) {}
+  explicit AlwaysContinue(zxdb::Thread* thread) : thread_(thread) {}
   ~AlwaysContinue() { thread_->Continue(); }
 
  private:
