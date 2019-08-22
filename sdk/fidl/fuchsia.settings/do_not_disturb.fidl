@@ -17,7 +17,7 @@ protocol DoNotDisturb {
 
     /// Sets [`DoNotDisturbSettings`] settings. Any field not explicitly set in
     /// the table performs a no-op, and will not make any changes.
-    Set(DoNotDisturbSettings settings) -> ();
+    Set(DoNotDisturbSettings settings) -> () error Error;
 };
 
 /// Settings related to do-not-disturb (DND) mode.
