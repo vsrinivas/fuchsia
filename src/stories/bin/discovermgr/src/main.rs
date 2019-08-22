@@ -9,6 +9,7 @@ use {
         cloud_action_provider::get_cloud_actions,
         local_action_provider::get_local_actions,
         mod_manager::ModManager,
+        models::Action,
         story_context_store::StoryContextStore,
         story_manager::StoryManager,
         story_storage::{LedgerStorage, MemoryStorage, StoryStorage},
@@ -32,6 +33,8 @@ use {
     fuchsia_syslog::{self as syslog, macros::*},
     futures::prelude::*,
     parking_lot::Mutex,
+    std::collections::HashSet,
+    std::iter::FromIterator,
     std::sync::Arc,
 };
 
@@ -119,19 +122,21 @@ async fn main() -> Result<(), Error> {
     )));
     suggestions_manager.register_suggestions_provider(Box::new(PackageSuggestionsProvider::new()));
 
-    let mut actions = get_cloud_actions().await.unwrap_or_else(|e| {
+    let cloud_actions = get_cloud_actions().await.unwrap_or_else(|e| {
         fx_log_err!("Error fetching cloud actions index: {}", e);
         vec![]
     });
-    // If no cloud action, use local action.
-    // Note: can't await! in the closure above because async_block! isn't yet ported
-    if actions.is_empty() {
-        actions = get_local_actions().await.unwrap_or_else(|e| {
-            fx_log_err!("Error fetching local actions index: {}", e);
-            vec![]
-        });
-    }
-    let actions_arc = Arc::new(actions.clone());
+    let local_actions = get_local_actions().await.unwrap_or_else(|e| {
+        fx_log_err!("Error fetching local actions index: {}", e);
+        vec![]
+    });
+    // Remove duplicates by moving both collections through a HashSet
+    let actions_arc = Arc::new(
+        HashSet::<Action>::from_iter(cloud_actions.into_iter().chain(local_actions.into_iter()))
+            .into_iter()
+            .collect::<Vec<Action>>(),
+    );
+
     suggestions_manager.register_suggestions_provider(Box::new(
         ContextualSuggestionsProvider::new(actions_arc.clone()),
     ));
@@ -168,4 +173,32 @@ async fn main() -> Result<(), Error> {
 
     fut.await;
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use {super::*, fuchsia_async as fasync};
+
+    // Verify the logic for removing duplicates
+    #[fasync::run_singlethreaded(test)]
+    async fn test_duplicates() -> Result<(), Error> {
+        let cloud_actions: Vec<Action> =
+            serde_json::from_str(include_str!("../test_data/test_actions.json")).unwrap();
+        // test_actions_dupes contains 1 duplicate and 1 new
+        let local_actions: Vec<Action> =
+            serde_json::from_str(include_str!("../test_data/test_actions_dupes.json")).unwrap();
+
+        let cloud_actions_len = cloud_actions.len();
+        // This is the logic used above
+        let actions: Vec<Action> = HashSet::<Action>::from_iter(
+            cloud_actions.into_iter().chain(local_actions.into_iter()),
+        )
+        .into_iter()
+        .collect::<Vec<Action>>();
+
+        // check if the new and duplicated are added/filtered
+        assert_eq!(cloud_actions_len + 1, actions.len());
+
+        Ok(())
+    }
 }

@@ -17,7 +17,7 @@ use {
     uuid::Uuid,
 };
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct Action {
     pub name: String,
     #[serde(default)]
@@ -27,34 +27,34 @@ pub struct Action {
     pub fuchsia_fulfillment: Option<FuchsiaFulfillment>,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct Parameter {
     #[serde(rename = "type")]
     pub parameter_type: String,
     pub name: String,
 }
 
-#[derive(Clone, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct ActionDisplayInfo {
     pub display_info: Option<DisplayInfo>,
     #[serde(default)]
     pub parameter_mapping: Vec<ParameterMapping>,
 }
 
-#[derive(Clone, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct DisplayInfo {
     pub icon: Option<String>,
     pub title: Option<String>,
     pub subtitle: Option<String>,
 }
 
-#[derive(Clone, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct ParameterMapping {
     name: String,
     parameter_property: String,
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct WebFulfillment {
     url_template: String,
     #[serde(default)]
@@ -339,7 +339,7 @@ impl Intent {
     }
 }
 
-#[derive(Clone, Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct FuchsiaFulfillment {
     pub component_url: String,
 }
