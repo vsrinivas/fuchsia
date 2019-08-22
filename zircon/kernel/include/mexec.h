@@ -10,6 +10,8 @@
 #define MEMMOV_OPS_DST_OFFSET (0)
 #define MEMMOV_OPS_SRC_OFFSET (8)
 #define MEMMOV_OPS_LEN_OFFSET (16)
+#define MEMMOV_OPS_STRUCT_LEN (24)
+#define MAX_OPS_PER_PAGE      (169)    // Calculated below
 
 #ifndef __ASSEMBLER__
 
@@ -28,6 +30,13 @@ typedef struct __PACKED {
   void* src;
   size_t len;
 } memmov_ops_t;
+
+static_assert(sizeof(memmov_ops_t) == MEMMOV_OPS_STRUCT_LEN,
+              "sizeof memmov_ops_t must match MEMMOV_OPS_STRUCT_LEN");
+
+#define MAX_OPS_PER_PAGE_DEF ((PAGE_SIZE / MEMMOV_OPS_STRUCT_LEN) - 1)
+static_assert(MAX_OPS_PER_PAGE_DEF == MAX_OPS_PER_PAGE,
+              "Calculated max ops per page must match literal value");
 
 // Implemented in assembly. Copies the new kernel into place and branches to it.
 typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t aux,

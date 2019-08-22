@@ -15,11 +15,15 @@ bootarg1                .req x26
 bootarg2                .req x27
 boot_el                 .req x28
 
+// This is the address to branch to once the copy is completed.
+new_kernel_addr         .req x24
+
 // This is a null terminated list of memory regions to copy.
 copy_list               .req x23
 
-// This is the address to branch to once the copy is completed.
-new_kernel_addr         .req x24
+// This many more entires in the current page to copy before we should
+// interpret the entry as a pointer to the next page in the linked list.
+page_remaining_entries  .req x22
 
 tmp                     .req x9
 
@@ -63,6 +67,10 @@ FUNCTION(mexec_asm)
     // the state of the system so we clean/invalidate them up front.
     bl      mexec_arch_clean_invalidate_cache_all
 
+// Outer loop: Execute all the memmove ops in a given page.
+.Lcopypage:
+    ldr page_remaining_entries, =(MAX_OPS_PER_PAGE)
+
 /* Mempy the new kernel over the old kernel. Keep in mind that since the MMU
  * is disabled, unaligned accesses are no longer legal. All accesses must be
  * word aligned.
@@ -74,16 +82,27 @@ FUNCTION(mexec_asm)
     ldr     x2, [copy_list, MEMMOV_OPS_LEN_OFFSET]
 
     // Determine if this is the end of the list by checking if all three elems
-    // in the copy list are null
+    // in the copy list are null.
     orr     tmp, x0, x1
     orr     tmp, tmp, x2
     cbz     tmp, .Lfinish_copy
+
+    // A page may contain up to 169* memmove ops, the 170th op is actually a
+    // pointer to the next page full of memmove ops.
+    cbnz    page_remaining_entries, .Lcontinue_page     // Have we processed 169 entries yet, branch if we haven't.
+    mov     copy_list, x0   // If we've followed all the entries on the current page, follow the next pointer of the linked list.
+    b       .Lcopypage      // And execute the list of copies on the page that we just advanced to.
+.Lcontinue_page:
 
     // The copy operation is not null, go ahead and memmove
     bl      memmove_mexec
 
     // Advance the pointer to the next copy operation.
-    add     copy_list, copy_list, 24
+    add     copy_list, copy_list, MEMMOV_OPS_STRUCT_LEN
+
+    // Decrement the number of entries remaining in this page, if this reaches 0
+    // we must follow the linked list to the next page.
+    sub     page_remaining_entries, page_remaining_entries, 1
 
     b       .Lcopy
 

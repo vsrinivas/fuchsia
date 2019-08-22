@@ -20,6 +20,7 @@
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <dev/interrupt.h>
+#include <fbl/auto_call.h>
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
 #include <kernel/thread.h>
@@ -50,42 +51,99 @@ extern void mexec_asm(void);
 extern void mexec_asm_end(void);
 __END_CDECLS
 
-/* Allocates a page of memory that has the same physical and virtual addresses.
- */
-static zx_status_t identity_page_allocate(fbl::RefPtr<VmAspace>* new_aspace, void** result_addr) {
-  zx_status_t result;
+class IdentityPageAllocator {
+  public:
+    IdentityPageAllocator()
+        : aspace_(nullptr)
+        , mapping_id_(0) {
+        allocated_ = LIST_INITIAL_VALUE(allocated_);
+    }
+    ~IdentityPageAllocator() {
+        pmm_free(&allocated_);
+    }
 
-  // Start by obtaining an unused physical page. This address will eventually
-  // be the physical/virtual address of our identity mapped page.
-  paddr_t pa;
-  result = pmm_alloc_page(0, &pa);
-  if (result != ZX_OK) {
-    return ZX_ERR_NO_MEMORY;
-  }
+    /* Allocates a page of memory that has the same physical and virtual
+    addresses. */
+    zx_status_t Allocate(void** result);
 
-  // The kernel address space may be in high memory which cannot be identity
-  // mapped since all Kernel Virtual Addresses might be out of range of the
-  // physical address space. For this reason, we need to make a new address
-  // space.
-  fbl::RefPtr<VmAspace> identity_aspace =
-      VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "mexec identity");
-  if (!identity_aspace)
-    return ZX_ERR_INTERNAL;
+    // Activate the 1:1 address space. P
+    void Activate();
 
-  // Create a new allocation in the new address space that identity maps the
-  // target page.
-  const uint perm_flags_rwx =
-      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE;
-  void* identity_address = (void*)pa;
-  result = identity_aspace->AllocPhysical("identity mapping", PAGE_SIZE, &identity_address, 0, pa,
-                                          VmAspace::VMM_FLAG_VALLOC_SPECIFIC, perm_flags_rwx);
-  if (result != ZX_OK)
-    return result;
+  private:
+    zx_status_t InitializeAspace();
+    fbl::RefPtr<VmAspace> aspace_;
+    size_t mapping_id_;
+    list_node allocated_;
+};
 
-  *new_aspace = ktl::move(identity_aspace);
-  *result_addr = identity_address;
+zx_status_t IdentityPageAllocator::InitializeAspace() {
+    // The Aspace has already been initialized, nothing to do.
+    if (aspace_) {
+        return ZX_OK;
+    }
 
-  return ZX_OK;
+    aspace_ = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "identity");
+    if (!aspace_) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t IdentityPageAllocator::Allocate(void** result) {
+    zx_status_t st;
+
+    // Start by obtaining an unused physical page. This address will eventually
+    // be the physical/virtual address of our identity mapped page.
+    paddr_t pa;
+    vm_page_t* page;
+    st = pmm_alloc_page(0, &page, &pa);
+    auto pmm_cleanup = fbl::MakeAutoCall([page]() { pmm_free_page(page); });
+
+    // The kernel address space may be in high memory which cannot be identity
+    // mapped since all Kernel Virtual Addresses might be out of range of the
+    // physical address space. For this reason, we need to make a new address
+    // space.
+    st = InitializeAspace();
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    // Create a new allocation in the new address space that identity maps the
+    // target page.
+    constexpr uint kPermissionFlagsRWX = (ARCH_MMU_FLAG_PERM_READ |
+                                          ARCH_MMU_FLAG_PERM_WRITE |
+                                          ARCH_MMU_FLAG_PERM_EXECUTE);
+
+    void* addr = reinterpret_cast<void*>(pa);
+
+    // 2 ** 64 = 18446744073709551616
+    // len("identity 18446744073709551616\n") == 30, round to sizeof(word) = 32
+    char mapping_name[32];
+    snprintf(mapping_name, sizeof(mapping_name), "identity %lu", mapping_id_++);
+
+    st = aspace_->AllocPhysical(mapping_name, PAGE_SIZE, &addr, 0, pa,
+                                VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
+                                kPermissionFlagsRWX);
+    if (st != ZX_OK) {
+        return st;
+    }
+
+
+    // Add this to the list of allocated pages so that we can free them if the
+    // IdentityPageAllocator destructor.
+    list_add_tail(&allocated_, &page->queue_node);
+    pmm_cleanup.cancel();
+
+    *result = addr;
+    return st;
+}
+
+void IdentityPageAllocator::Activate() {
+    if (!aspace_) {
+        panic("Cannot Activate 1:1 Aspace with no 1:1 mappings!");
+    }
+    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace_.get()));
 }
 
 /* Takes all the pages in a VMO and creates a copy of them where all the pages
@@ -234,9 +292,9 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
     return result;
   }
 
+  IdentityPageAllocator id_alloc;
   void* id_page_addr = 0x0;
-  fbl::RefPtr<VmAspace> aspace;
-  result = identity_page_allocate(&aspace, &id_page_addr);
+  result = id_alloc.Allocate(&id_page_addr);
   if (result != ZX_OK) {
     return result;
   }
@@ -261,7 +319,7 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   // It is unsafe to return from this function beyond this point.
   // This is because we have swapped out the user address space and halted the
   // secondary cores and there is no trivial way to bring both of these back.
-  vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
+  id_alloc.Activate();
 
   // We're going to copy this into our identity page, make sure it's not
   // longer than a single page.
@@ -274,13 +332,16 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   // We must pass in an arg that represents a list of memory regions to
   // shuffle around. We put this args list immediately after the mexec
   // assembly.
-  uintptr_t ops_ptr = ((((uintptr_t)id_page_addr) + mexec_asm_length + 8) | 0x7) + 1;
+  // Put the args list in a separate page.
+  void* ops_ptr;
+  result = id_alloc.Allocate(&ops_ptr);
+  DEBUG_ASSERT(result == ZX_OK);
   memmov_ops_t* ops = (memmov_ops_t*)(ops_ptr);
 
   const size_t num_ops = 2;
   // Make sure that we can also pack the arguments in the same page as the
   // final mexec assembly shutdown code.
-  DEBUG_ASSERT(((sizeof(*ops) * num_ops + ops_ptr) - (uintptr_t)id_page_addr) < PAGE_SIZE);
+  DEBUG_ASSERT(((sizeof(*ops) * num_ops)) < PAGE_SIZE);
 
   // Op to move the new kernel into place.
   ops[0].src = (void*)new_kernel_addr;

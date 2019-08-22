@@ -62,10 +62,30 @@ FUNCTION_LABEL(mexec_asm)
     ljmp *mexec_ljmp_descriptor(%rip)
 .Lnew_cs:
 
+.Lstart_copy_page:
+    movq $MAX_OPS_PER_PAGE, %r14
+
+.Lload_and_copy:
     /* Load the kernel relocation op into ram */
     mov MEMMOV_OPS_DST_OFFSET (%r12), %rdi
     mov MEMMOV_OPS_SRC_OFFSET (%r12), %rsi
     mov MEMMOV_OPS_LEN_OFFSET (%r12), %rcx
+
+    /* If src == dst == len == 0, we're at the end of the list and we can quit */
+    xorq %rdx, %rdx
+    orq  %rdi, %rdx
+    orq  %rsi, %rdx
+    orq  %rcx, %rdx
+    jz   .Lfinished     /* (SRC | DST | COUNT) == 0? Jump to finished. */
+
+    /* Test to see if we've reached the end of the page of memmov entries. */
+    /* If so advance to the next page. */
+    testq %r14, %r14
+    jnz   .Lmore_entries_in_current_page
+    movq  %rdi, %r12        /* Advance the linked list */
+    jmp   .Lstart_copy_page
+.Lmore_entries_in_current_page:
+
 
     /* Move RCX bytes from RSI to RDI */
     cld               /* Clear the direction flag so that we're copying forward */
@@ -91,6 +111,12 @@ FUNCTION_LABEL(mexec_asm)
 
     cld               /* Clear the direction flag since we may have polluted it */
                       /* if we did a copy backwards */
+
+    addq $(MEMMOV_OPS_STRUCT_LEN), %r12
+    subq $1, %r14     /* Decrement the number of entires remaining on the current page */
+    jmp  .Lload_and_copy
+
+.Lfinished:
 
     /* Move the address of the bootdata into the appropriate register */
     mov %r8, %rsi
