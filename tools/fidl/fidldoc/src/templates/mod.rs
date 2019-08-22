@@ -23,7 +23,7 @@ pub type HandlebarsHelper = fn(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError>;
 
 pub fn get_link_helper(
@@ -31,7 +31,7 @@ pub fn get_link_helper(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let param =
@@ -50,7 +50,7 @@ pub fn remove_package_name(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let param = h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for rpn helper"))?;
@@ -71,7 +71,7 @@ pub fn eq(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let param_a = h
@@ -96,7 +96,7 @@ fn package_link(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let package =
@@ -138,7 +138,7 @@ fn doc_link(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let docs =
@@ -168,7 +168,7 @@ pub fn remove_parent_folders(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let param = h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for rpf helper"))?;
@@ -189,7 +189,7 @@ fn source_link(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     let fidl_json =
         h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for sl helper"))?;
@@ -231,7 +231,7 @@ pub fn one_line(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let param =

@@ -97,7 +97,7 @@ fn package_hash(
     _: &Handlebars,
     _: &Context,
     _: &mut RenderContext,
-    out: &mut Output,
+    out: &mut dyn Output,
 ) -> Result<(), RenderError> {
     // get parameter from helper or throw an error
     let package = h.param(0).ok_or(RenderError::new("Param 0 is required for ph helper"))?;
