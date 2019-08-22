@@ -135,9 +135,9 @@ protocol Netstack {
     GetInterfaces() -> (vector<NetInterface> interfaces);
     GetInterfaces2() -> (vector<NetInterface2> interfaces);
 
-    /// DEPRECATED: see devicesettings.fidl
-    /// Returns the netstack's node name.
-    /// 5: GetNodeName() -> (string node_name);
+    // DEPRECATED: see devicesettings.fidl
+    // Returns the netstack's node name.
+    // 5: GetNodeName() -> (string node_name);
 
     /// Returns current route table.
     GetRouteTable() -> (vector<RouteTableEntry> rt);
