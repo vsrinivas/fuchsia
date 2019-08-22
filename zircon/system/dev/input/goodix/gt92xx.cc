@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gt92xx.h"
+
+#include <utility>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
@@ -10,10 +14,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-
-#include <utility>
-
-#include "gt92xx.h"
+#include <fbl/vector.h>
 
 namespace goodix {
 enum {
@@ -26,8 +27,8 @@ enum {
 // clang-format off
 // Configuration data
 // first two bytes contain starting register address (part of i2c transaction)
-static uint8_t conf_data[] =
-              {GT_REG_CONFIG_DATA >> 8,
+fbl::Vector<uint8_t> Gt92xxDevice::GetConfData() {
+  return {GT_REG_CONFIG_DATA >> 8,
               GT_REG_CONFIG_DATA & 0xff,
               0x5f, 0x00, 0x04, 0x58, 0x02, 0x05, 0xbd, 0xc0,
               0x00, 0x08, 0x1e, 0x05, 0x50, 0x32, 0x00, 0x0b,
@@ -58,6 +59,7 @@ static uint8_t conf_data[] =
               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
               0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
               0x00, 0x00, 0x6e, 0x01 };
+}
 // clang-format on
 
 int Gt92xxDevice::Thread() {
@@ -199,16 +201,19 @@ zx_status_t Gt92xxDevice::Init() {
   // Device requires 50ms delay after this check (per datasheet)
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
+  // Get the config data
+  fbl::Vector<uint8_t> Conf(GetConfData());
+
   // Configuration data should span specific set of registers
   // last register has flag to latch in new configuration, second
   // to last register holds checksum of register values.
   // Note: first two bytes of conf_data hold the 16-bit register address where
   // the write will start.
-  ZX_DEBUG_ASSERT((countof(conf_data) - sizeof(uint16_t)) ==
+  ZX_DEBUG_ASSERT((Conf.size() - sizeof(uint16_t)) ==
                   (GT_REG_CONFIG_REFRESH - GT_REG_CONFIG_DATA + 1));
 
   // Write conf data to registers
-  zx_status_t status = i2c_.WriteReadSync(conf_data, sizeof(conf_data), NULL, 0);
+  zx_status_t status = i2c_.WriteReadSync(&Conf[0], Conf.size(), NULL, 0);
   if (status != ZX_OK) {
     return status;
   }

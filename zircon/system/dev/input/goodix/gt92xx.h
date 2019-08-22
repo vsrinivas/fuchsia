@@ -2,20 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_INPUT_GOODIX_GT92XX_H_
+#define ZIRCON_SYSTEM_DEV_INPUT_GOODIX_GT92XX_H_
+
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/zx/interrupt.h>
+#include <threads.h>
+#include <zircon/types.h>
 
 #include <atomic>
+#include <utility>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <lib/device-protocol/i2c-channel.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/mutex.h>
+#include <fbl/vector.h>
 #include <hid/gt92xx.h>
-#include <lib/zx/interrupt.h>
-#include <threads.h>
-#include <utility>
-#include <zircon/types.h>
 
 // clang-format off
 #define GT_REG_SLEEP            0x8040
@@ -50,6 +54,8 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
         int_gpio_(std::move(intr)),
         reset_gpio_(std::move(reset)) {}
 
+  static fbl::Vector<uint8_t> GetConfData();
+
   static zx_status_t Create(zx_device_t* device);
 
   void DdkRelease();
@@ -68,6 +74,12 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) __TA_EXCLUDES(client_lock_);
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
 
+ protected:
+  zx_status_t Init();
+  std::atomic<bool> running_;
+  zx::interrupt irq_;
+  int Thread();
+
  private:
   // Format of data as it is read from the device
   struct FingerReport {
@@ -83,23 +95,20 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   zx_status_t ShutDown() __TA_EXCLUDES(client_lock_);
   // performs hardware reset using gpio
   void HWReset();
-  zx_status_t Init();
 
   uint8_t Read(uint16_t addr);
   zx_status_t Read(uint16_t addr, uint8_t* buf, uint8_t len);
   zx_status_t Write(uint16_t addr, uint8_t val);
-
-  int Thread();
 
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient int_gpio_;
   ddk::GpioProtocolClient reset_gpio_;
 
   gt92xx_touch_t gt_rpt_ __TA_GUARDED(client_lock_);
-  zx::interrupt irq_;
   thrd_t thread_;
-  std::atomic<bool> running_;
   fbl::Mutex client_lock_;
   ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(client_lock_);
 };
 }  // namespace goodix
+
+#endif  // ZIRCON_SYSTEM_DEV_INPUT_GOODIX_GT92XX_H_

@@ -28,3 +28,38 @@ driver("goodix") {
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
 }
+
+group("test") {
+  testonly = true
+  deps = [
+    ":gt92xx-test",
+  ]
+}
+
+test("gt92xx-test") {
+  output_name = "gt92xx-test"
+  sources = [
+    "gt92xx-test.cc",
+    "gt92xx.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-hidbus-ifc",
+    "$zx/system/dev/lib/mock-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
