@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/a11y/lib/tts/tts_manager.h"
+
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -9,7 +11,6 @@
 #include <vector>
 
 #include "src/ui/a11y/lib/tts/log_engine.h"
-#include "src/ui/a11y/lib/tts/tts_manager_impl.h"
 
 namespace a11y {
 namespace {

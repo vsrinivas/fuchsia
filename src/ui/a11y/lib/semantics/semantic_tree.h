@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_IMPL_H_
-#define SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_IMPL_H_
+#ifndef SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_H_
+#define SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
@@ -21,19 +21,13 @@
 
 namespace a11y {
 
-class SemanticTreeImpl : public fuchsia::accessibility::semantics::SemanticTree {
+class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
  public:
-  explicit SemanticTreeImpl(
-      fuchsia::ui::views::ViewRef view_ref,
-      fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
-      vfs::PseudoDir* debug_dir)
-      : view_ref_(std::move(view_ref)),
-        client_action_listener_(std::move(client_action_listener)),
-        debug_dir_(debug_dir) {
-    InitializeDebugEntry(debug_dir_);
-  }
+  SemanticTree(fuchsia::ui::views::ViewRef view_ref,
+               fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
+               vfs::PseudoDir* debug_dir);
 
-  ~SemanticTreeImpl() override = default;
+  ~SemanticTree() override;
 
   // Provides a way to query a node with node id. This method returns
   // a copy of the queried node. It may return a nullptr if no node is found.
@@ -119,8 +113,8 @@ class SemanticTreeImpl : public fuchsia::accessibility::semantics::SemanticTree 
   fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener_;
   vfs::PseudoDir* const debug_dir_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTreeImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTree);
 };
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_IMPL_H_
+#endif  // SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_H_

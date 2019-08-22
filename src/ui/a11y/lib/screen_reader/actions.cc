@@ -1,0 +1,12 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "src/ui/a11y/lib/screen_reader/actions.h"
+
+namespace a11y {
+
+ScreenReaderAction::ScreenReaderAction() = default;
+ScreenReaderAction::~ScreenReaderAction() = default;
+
+}  // namespace a11y

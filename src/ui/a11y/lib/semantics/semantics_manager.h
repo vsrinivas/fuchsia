@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
-#define SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
+#ifndef SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_H_
+#define SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -11,13 +11,13 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 
-#include "src/ui/a11y/lib/semantics/semantic_tree_impl.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
 namespace a11y {
-class SemanticsManagerImpl : public fuchsia::accessibility::semantics::SemanticsManager {
+class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
-  SemanticsManagerImpl();
-  ~SemanticsManagerImpl() = default;
+  SemanticsManager();
+  ~SemanticsManager() override;
 
   void AddBinding(
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request);
@@ -59,14 +59,13 @@ class SemanticsManagerImpl : public fuchsia::accessibility::semantics::Semantics
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> bindings_;
 
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree,
-                   std::unique_ptr<SemanticTreeImpl>>
+  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree, std::unique_ptr<SemanticTree>>
       semantic_tree_bindings_;
 
-  bool enabled_;
+  bool enabled_ = false;
 
   vfs::PseudoDir* debug_dir_ = nullptr;
 };
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
+#endif  // SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_H_

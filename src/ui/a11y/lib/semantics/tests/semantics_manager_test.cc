@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/a11y/lib/semantics/semantics_manager.h"
+
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -16,7 +18,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/ui/a11y/lib/semantics/semantics_manager_impl.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -55,8 +56,8 @@ const std::string kSemanticTreeEvenNodesPath = "/pkg/data/semantic_tree_even_nod
 const std::string kCyclicSemanticTreePath = "/pkg/data/cyclic_semantic_tree.json";
 const std::string kDeletedSemanticSubtreePath = "/pkg/data/deleted_subtree_even_nodes.json";
 
-// Unit tests for src/ui/a11y/lib/semantics_manager_impl.h and
-// semantic_tree_impl.h
+// Unit tests for src/ui/a11y/lib/semantics_manager.h and
+// semantic_tree.h
 class SemanticsManagerTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
@@ -69,11 +70,11 @@ class SemanticsManagerTest : public gtest::RealLoopFixture {
         .reference = std::move(a),
     });
 
-    semantics_manager_impl_.SetDebugDirectory(context_provider_.context()->outgoing()->debug_dir());
+    semantics_manager_.SetDebugDirectory(context_provider_.context()->outgoing()->debug_dir());
 
     context_provider_.service_directory_provider()->AddService<SemanticsManager>(
         [this](fidl::InterfaceRequest<SemanticsManager> request) {
-          semantics_manager_impl_.AddBinding(std::move(request));
+          semantics_manager_.AddBinding(std::move(request));
         });
     RunLoopUntilIdle();
   }
@@ -85,7 +86,7 @@ class SemanticsManagerTest : public gtest::RealLoopFixture {
   char *ReadFile(vfs::internal::Node *node, int length, char *buffer);
 
   fuchsia::ui::views::ViewRef view_ref_;
-  a11y::SemanticsManagerImpl semantics_manager_impl_;
+  a11y::SemanticsManager semantics_manager_;
   sys::testing::ComponentContextProvider context_provider_;
   SemanticTreeParser semantic_tree_parser_;
 };
@@ -169,7 +170,7 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithoutCommit) {
   RunLoopUntilIdle();
 
   // Check that the node is not present in the tree.
-  EXPECT_EQ(nullptr, semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0));
+  EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0));
 }
 
 // Basic test to check that a node update with commit will result in
@@ -203,7 +204,7 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithCommit) {
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
-  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
@@ -246,7 +247,7 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithoutCommit) {
   RunLoopUntilIdle();
 
   // Node should still be present.
-  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
@@ -290,7 +291,7 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithCommit) {
   RunLoopUntilIdle();
 
   // Check that the node is not present in the tree.
-  EXPECT_EQ(nullptr, semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0));
+  EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0));
 }
 
 // Commit() should ensure that there are no cycles in the tree after
@@ -328,8 +329,8 @@ TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
   // Check that nodes are not present in the semantic tree.
   for (const Node &node : nodes_list_copy) {
     // Check that the node is not present in the tree.
-    EXPECT_EQ(nullptr, semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy,
-                                                                    node.node_id()));
+    EXPECT_EQ(nullptr,
+              semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, node.node_id()));
   }
 }
 
@@ -369,7 +370,7 @@ TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
   RunLoopUntilIdle();
 
   // Check root node is present.
-  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
   EXPECT_NE(returned_node, nullptr);
 
   // Check subtree rooted at delete_node_id doesn't exist.
@@ -377,8 +378,8 @@ TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
   ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(kDeletedSemanticSubtreePath, &subtree_list));
   for (const Node &node : subtree_list) {
     // Check that the node is not present in the tree.
-    EXPECT_EQ(nullptr, semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy,
-                                                                    node.node_id()));
+    EXPECT_EQ(nullptr,
+              semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, node.node_id()));
   }
 }
 
@@ -428,7 +429,7 @@ TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
   RunLoopUntilIdle();
 
   // Check Node 0 is present and has Label-B.
-  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node2.node_id(), returned_node->node_id());
   EXPECT_STREQ(node2.attributes().label().data(), returned_node->attributes().label().data());
@@ -522,7 +523,7 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
 
   // Enable Semantics Manager.
   // Note: Enable has no effect on the behavior of semantics manager.
-  semantics_manager_impl_.SetSemanticsManagerEnabled(true);
+  semantics_manager_.SetSemanticsManagerEnabled(true);
 
   // Create ActionListener.
   accessibility_test::MockSemanticProvider semantic_provider(context_provider_.context(),
@@ -547,17 +548,17 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
-  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
 
   // Disable Semantics Manager.
   // This should delete all the registered semantic tree so far.
-  semantics_manager_impl_.SetSemanticsManagerEnabled(false);
+  semantics_manager_.SetSemanticsManagerEnabled(false);
 
   // Check that previously committed node is not present in the semantic tree.
-  returned_node = semantics_manager_impl_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
   EXPECT_EQ(returned_node, nullptr);
 }
 
@@ -584,7 +585,7 @@ TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
   zx_koid_t koid = a11y::GetKoid(view_ref_);
   ::fuchsia::math::PointF local_point;
   bool done = false;
-  semantics_manager_impl_.PerformHitTesting(
+  semantics_manager_.PerformHitTesting(
       koid, local_point, [expected_result, &done](::fuchsia::accessibility::semantics::Hit hit) {
         EXPECT_EQ(expected_result, hit.node_id());
         EXPECT_EQ(1ul, hit.path_from_root().size());
@@ -625,7 +626,7 @@ TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoid) {
 
   // Check that the committed node is present in the semantic tree.
   zx_koid_t koid = a11y::GetKoid(view_ref_);
-  NodePtr returned_node = semantics_manager_impl_.GetAccessibilityNodeByKoid(koid, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNodeByKoid(koid, 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());

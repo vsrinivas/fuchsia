@@ -18,7 +18,7 @@ namespace a11y {
 class ExploreAction : public ScreenReaderAction {
  public:
   explicit ExploreAction(std::shared_ptr<ActionContext> context);
-  ~ExploreAction() = default;
+  ~ExploreAction() override;
 
   // This method will be implementing the actual sequence of events that should
   // happen when an element is "explored".
@@ -32,6 +32,7 @@ class ExploreAction : public ScreenReaderAction {
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   std::shared_ptr<ActionContext> action_context_;
 };
+
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_SCREEN_READER_EXPLORE_ACTION_H_

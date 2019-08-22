@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/settings/settings_manager_impl.h"
+#include "src/ui/a11y/lib/settings/settings_manager.h"
 
 #include <lib/syslog/cpp/logger.h>
 
@@ -10,19 +10,22 @@
 
 namespace a11y {
 
-void SettingsManagerImpl::AddBinding(
+SettingsManager::SettingsManager() = default;
+SettingsManager::~SettingsManager() = default;
+
+void SettingsManager::AddBinding(
     fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void SettingsManagerImpl::RegisterSettingProvider(
+void SettingsManager::RegisterSettingProvider(
     fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request) {
-  settings_provider_impl_.Bind(std::move(settings_provider_request));
+  settings_provider_.Bind(std::move(settings_provider_request));
 }
 
-void SettingsManagerImpl::Watch(
+void SettingsManager::Watch(
     fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher) {
-  settings_provider_impl_.AddWatcher(std::move(watcher));
+  settings_provider_.AddWatcher(std::move(watcher));
 }
 
 }  // namespace a11y

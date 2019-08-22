@@ -4,16 +4,17 @@
 
 source_set("settings") {
   sources = [
-    "settings_manager_impl.cc",
-    "settings_manager_impl.h",
-    "settings_provider_impl.cc",
-    "settings_provider_impl.h",
+    "settings_manager.cc",
+    "settings_manager.h",
+    "settings_provider.cc",
+    "settings_provider.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.math",
+    "//sdk/lib/fidl/cpp",
     "//src/ui/a11y/lib/util",
   ]
 
@@ -24,7 +25,6 @@ source_set("settings") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]

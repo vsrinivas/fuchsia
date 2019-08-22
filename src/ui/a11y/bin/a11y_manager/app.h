@@ -12,13 +12,12 @@
 #include <memory>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
-#include "src/ui/a11y/lib/semantics/semantics_manager_impl.h"
-#include "src/ui/a11y/lib/settings/settings_manager_impl.h"
+#include "src/ui/a11y/lib/semantics/semantics_manager.h"
+#include "src/ui/a11y/lib/settings/settings_manager.h"
 #include "src/ui/a11y/lib/tts/log_engine.h"
-#include "src/ui/a11y/lib/tts/tts_manager_impl.h"
+#include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y_manager {
 
@@ -26,16 +25,15 @@ namespace a11y_manager {
 class App : public fuchsia::accessibility::SettingsWatcher {
  public:
   explicit App(std::unique_ptr<sys::ComponentContext> context);
-  ~App() = default;
+  ~App() override;
 
   // |fuchsia::accessibility::SettingsWatcher|
   void OnSettingsChange(fuchsia::accessibility::Settings provided_settings) override;
 
-  // Returns copy of current set of settings owned by A11y Manager.
+  // Returns a copy of current set of settings owned by A11y Manager.
   fuchsia::accessibility::SettingsPtr GetSettings();
 
  private:
-  // Initialize function for the App.
   void Initialize();
 
   // Helper function to copy given settings to member variable.
@@ -47,25 +45,16 @@ class App : public fuchsia::accessibility::SettingsWatcher {
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
-  // Pointer to Settings Manager Implementation.
-  std::unique_ptr<a11y::SettingsManagerImpl> settings_manager_;
-
-  // Pointer to Semantics Manager Implementation.
-  std::unique_ptr<a11y::SemanticsManagerImpl> semantics_manager_;
-
-  // Pointer to Screen Reader.
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
-
-  // Pointer to TTS Manager.
-  std::unique_ptr<a11y::TtsManager> tts_manager_;
+  a11y::SemanticsManager semantics_manager_;
+  a11y::SettingsManager settings_manager_;
+  a11y::TtsManager tts_manager_;
 
   // A simple Tts engine which logs output.
-  // this object is constructed when Init() is called.
-  std::unique_ptr<a11y::LogEngine> log_engine_;
+  a11y::LogEngine log_engine_;
 
   fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> settings_watcher_bindings_;
 
-  // Private variable for storing A11y Settings.
   fuchsia::accessibility::Settings settings_;
 
   // Pointer to SettingsManager service, which will be used for connecting App

@@ -6,8 +6,8 @@ source_set("tts") {
   sources = [
     "log_engine.cc",
     "log_engine.h",
-    "tts_manager_impl.cc",
-    "tts_manager_impl.h",
+    "tts_manager.cc",
+    "tts_manager.h",
   ]
 
   public_deps = [

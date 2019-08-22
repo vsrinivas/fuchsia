@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/semantics/semantic_tree_impl.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
@@ -11,13 +11,30 @@
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace a11y {
+
+namespace {
+
 // Max file size of semantic tree log file is 1MB.
 constexpr size_t kMaxDebugFileSize = 1024 * 1024;
 const std::string kNewLine = "\n";
-const std::string::size_type kIndentSize = 4;
-const int kRootNode = 0;
+constexpr std::string::size_type kIndentSize = 4;
+constexpr int kRootNode = 0;
 
-void SemanticTreeImpl::OnAccessibilityActionRequested(
+}  // namespace
+
+SemanticTree::SemanticTree(
+    fuchsia::ui::views::ViewRef view_ref,
+    fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
+    vfs::PseudoDir* debug_dir)
+    : view_ref_(std::move(view_ref)),
+      client_action_listener_(std::move(client_action_listener)),
+      debug_dir_(debug_dir) {
+  InitializeDebugEntry(debug_dir_);
+}
+
+SemanticTree::~SemanticTree() = default;
+
+void SemanticTree::OnAccessibilityActionRequested(
     uint32_t node_id, fuchsia::accessibility::semantics::Action action,
     fuchsia::accessibility::semantics::SemanticActionListener::
         OnAccessibilityActionRequestedCallback callback) {
@@ -25,14 +42,13 @@ void SemanticTreeImpl::OnAccessibilityActionRequested(
 }
 
 // Internal helper function to check if a point is within a bounding box.
-bool SemanticTreeImpl::BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
-                                        const escher::vec2& point) const {
+bool SemanticTree::BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
+                                    const escher::vec2& point) const {
   return box.min.x <= point.x && box.max.x >= point.x && box.min.y <= point.y &&
          box.max.y >= point.y;
 }
 
-fuchsia::accessibility::semantics::NodePtr SemanticTreeImpl::GetAccessibilityNode(
-    uint32_t node_id) {
+fuchsia::accessibility::semantics::NodePtr SemanticTree::GetAccessibilityNode(uint32_t node_id) {
   auto node_it = nodes_.find(node_id);
   if (node_it == nodes_.end()) {
     return nullptr;
@@ -42,13 +58,13 @@ fuchsia::accessibility::semantics::NodePtr SemanticTreeImpl::GetAccessibilityNod
   return node_ptr;
 }
 
-bool SemanticTreeImpl::IsSameView(const fuchsia::ui::views::ViewRef& view_ref) {
+bool SemanticTree::IsSameView(const fuchsia::ui::views::ViewRef& view_ref) {
   return GetKoid(view_ref) == GetKoid(view_ref_);
 }
 
-bool SemanticTreeImpl::IsSameKoid(const zx_koid_t koid) { return koid == GetKoid(view_ref_); }
+bool SemanticTree::IsSameKoid(const zx_koid_t koid) { return koid == GetKoid(view_ref_); }
 
-void SemanticTreeImpl::Commit() {
+void SemanticTree::Commit() {
   // TODO(MI4-2038): Commit should ensure that there is only 1 tree rooted at
   // node_id 0.
 
@@ -82,8 +98,7 @@ void SemanticTreeImpl::Commit() {
   }
 }
 
-void SemanticTreeImpl::UpdateSemanticNodes(
-    std::vector<fuchsia::accessibility::semantics::Node> nodes) {
+void SemanticTree::UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes) {
   for (auto& node : nodes) {
     SemanticTreeTransaction transaction;
     transaction.delete_node = false;
@@ -93,7 +108,7 @@ void SemanticTreeImpl::UpdateSemanticNodes(
   }
 }
 
-void SemanticTreeImpl::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
+void SemanticTree::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
   for (const auto& node_id : node_ids) {
     SemanticTreeTransaction transaction;
     transaction.delete_node = true;
@@ -103,8 +118,8 @@ void SemanticTreeImpl::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
 }
 
 // Helper function to traverse semantic tree and create log message.
-void SemanticTreeImpl::LogSemanticTreeHelper(fuchsia::accessibility::semantics::NodePtr root_node,
-                                             int current_level, std::string* tree_log) {
+void SemanticTree::LogSemanticTreeHelper(fuchsia::accessibility::semantics::NodePtr root_node,
+                                         int current_level, std::string* tree_log) {
   if (!root_node) {
     return;
   }
@@ -128,7 +143,7 @@ void SemanticTreeImpl::LogSemanticTreeHelper(fuchsia::accessibility::semantics::
   }
 }
 
-std::string SemanticTreeImpl::LogSemanticTree() {
+std::string SemanticTree::LogSemanticTree() {
   // Get the root node.
   fuchsia::accessibility::semantics::NodePtr node_ptr = GetAccessibilityNode(kRootNode);
   std::string tree_log;
@@ -144,8 +159,8 @@ std::string SemanticTreeImpl::LogSemanticTree() {
   return tree_log;
 }
 
-bool SemanticTreeImpl::IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
-                                std::unordered_set<uint32_t>* visited) {
+bool SemanticTree::IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
+                            std::unordered_set<uint32_t>* visited) {
   FXL_CHECK(node);
   FXL_CHECK(visited);
 
@@ -171,7 +186,7 @@ bool SemanticTreeImpl::IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
   return false;
 }
 
-void SemanticTreeImpl::DeleteSubtree(uint32_t node_id) {
+void SemanticTree::DeleteSubtree(uint32_t node_id) {
   // Recursively delete the entire subtree at given node_id.
   fuchsia::accessibility::semantics::NodePtr node = GetAccessibilityNode(node_id);
   if (!node) {
@@ -186,7 +201,7 @@ void SemanticTreeImpl::DeleteSubtree(uint32_t node_id) {
   nodes_.erase(node_id);
 }
 
-void SemanticTreeImpl::DeletePointerFromParent(uint32_t node_id) {
+void SemanticTree::DeletePointerFromParent(uint32_t node_id) {
   // Assumption: There is only 1 parent per node.
   // In future, we would like to delete trees not rooted at root node.
   // Loop through all the nodes in the tree, since there can be trees not rooted
@@ -207,7 +222,7 @@ void SemanticTreeImpl::DeletePointerFromParent(uint32_t node_id) {
   }
 }
 
-void SemanticTreeImpl::InitializeDebugEntry(vfs::PseudoDir* debug_dir) {
+void SemanticTree::InitializeDebugEntry(vfs::PseudoDir* debug_dir) {
   if (debug_dir_) {
     // Add Semantic Tree log file in Hub-Debug directory.
     debug_dir_->AddEntry(
@@ -229,7 +244,7 @@ void SemanticTreeImpl::InitializeDebugEntry(vfs::PseudoDir* debug_dir) {
   }
 }
 
-void SemanticTreeImpl::PerformHitTesting(
+void SemanticTree::PerformHitTesting(
     ::fuchsia::math::PointF local_point,
     fuchsia::accessibility::semantics::SemanticActionListener::HitTestCallback callback) {
   client_action_listener_->HitTest(local_point, std::move(callback));

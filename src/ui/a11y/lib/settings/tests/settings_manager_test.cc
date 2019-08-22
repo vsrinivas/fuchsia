@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/a11y/lib/settings/settings_manager.h"
+
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -9,7 +11,6 @@
 #include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
-#include "src/ui/a11y/lib/settings/settings_manager_impl.h"
 #include "src/ui/a11y/lib/settings/tests/mocks/mock_settings_service.h"
 #include "src/ui/a11y/lib/settings/tests/mocks/mock_settings_watcher.h"
 
@@ -50,16 +51,15 @@ const std::array<float, 9> kDeuteranomalyAndInversion = {
 
 class SettingsManagerTest : public gtest::TestLoopFixture {
  public:
-  explicit SettingsManagerTest() = default;
-
-  ~SettingsManagerTest() = default;
+  SettingsManagerTest() = default;
+  ~SettingsManagerTest() override = default;
 
   void SetUp() override {
     TestLoopFixture::SetUp();
     context_provider_.service_directory_provider()
         ->AddService<fuchsia::accessibility::SettingsManager>(
             [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
-              settings_manager_impl_.AddBinding(std::move(request));
+              settings_manager_.AddBinding(std::move(request));
             });
 
     RunLoopUntilIdle();
@@ -83,7 +83,7 @@ class SettingsManagerTest : public gtest::TestLoopFixture {
   }
 
   sys::testing::ComponentContextProvider context_provider_;
-  a11y::SettingsManagerImpl settings_manager_impl_;
+  a11y::SettingsManager settings_manager_;
 };
 
 const fuchsia::accessibility::Settings SettingsManagerTest::default_settings_ = InitSettings();

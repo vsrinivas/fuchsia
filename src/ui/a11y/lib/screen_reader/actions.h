@@ -8,7 +8,8 @@
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 
-#include "src/ui/a11y/lib/semantics/semantics_manager_impl.h"
+#include "src/ui/a11y/lib/semantics/semantics_manager.h"
+
 namespace a11y {
 
 // Base class to implement Screen Reader actions.
@@ -30,17 +31,18 @@ class ScreenReaderAction {
   // Struct to hold pointers to various services, which will be required to
   // complete an action.
   struct ActionContext {
-    std::shared_ptr<a11y::SemanticsManagerImpl> semantics_manager;
+    std::shared_ptr<a11y::SemanticsManager> semantics_manager;
     fuchsia::accessibility::tts::EnginePtr tts_engine_ptr;
   };
 
-  ScreenReaderAction() = default;
-  virtual ~ScreenReaderAction() = default;
+  ScreenReaderAction();
+  virtual ~ScreenReaderAction();
 
   // Action implementations override this method with the necessary method parameters to perform
   // that action.
   virtual void Run(ActionData process_data) = 0;
 };
+
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_SCREEN_READER_ACTIONS_H_

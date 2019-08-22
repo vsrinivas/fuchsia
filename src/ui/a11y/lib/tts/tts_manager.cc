@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/tts/tts_manager_impl.h"
+#include "src/ui/a11y/lib/tts/tts_manager.h"
 
 #include <src/lib/fxl/logging.h>
 
@@ -14,6 +14,8 @@ TtsManager::TtsManager(sys::ComponentContext* startup_context) : engine_binding_
   startup_context->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
   startup_context->outgoing()->AddPublicService(registry_bindings_.GetHandler(this));
 }
+
+TtsManager::~TtsManager() = default;
 
 void TtsManager::OpenEngine(
     fidl::InterfaceRequest<fuchsia::accessibility::tts::Engine> engine_request,

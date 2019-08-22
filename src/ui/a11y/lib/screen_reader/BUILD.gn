@@ -4,6 +4,7 @@
 
 source_set("screen_reader") {
   sources = [
+    "actions.cc",
     "actions.h",
     "explore_action.cc",
     "explore_action.h",

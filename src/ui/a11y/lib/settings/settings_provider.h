@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_SETTINGS_SETTINGS_PROVIDER_IMPL_H_
-#define SRC_UI_A11Y_LIB_SETTINGS_SETTINGS_PROVIDER_IMPL_H_
+#ifndef SRC_UI_A11Y_LIB_SETTINGS_SETTINGS_PROVIDER_H_
+#define SRC_UI_A11Y_LIB_SETTINGS_SETTINGS_PROVIDER_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -15,10 +15,10 @@
 
 namespace a11y {
 
-class SettingsProviderImpl : public fuchsia::accessibility::SettingsProvider {
+class SettingsProvider : public fuchsia::accessibility::SettingsProvider {
  public:
-  explicit SettingsProviderImpl();
-  ~SettingsProviderImpl() = default;
+  SettingsProvider();
+  ~SettingsProvider() override;
 
   void Bind(
       fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request);
@@ -62,8 +62,9 @@ class SettingsProviderImpl : public fuchsia::accessibility::SettingsProvider {
 
   fuchsia::accessibility::Settings settings_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(SettingsProviderImpl);
+  FXL_DISALLOW_COPY_AND_ASSIGN(SettingsProvider);
 };
 
 }  // namespace a11y
-#endif  // SRC_UI_A11Y_LIB_SETTINGS_SETTINGS_PROVIDER_IMPL_H_
+
+#endif  // SRC_UI_A11Y_LIB_SETTINGS_SETTINGS_PROVIDER_H_

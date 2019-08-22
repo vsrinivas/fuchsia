@@ -13,11 +13,12 @@
 #include <src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
-#include "src/ui/a11y/lib/tts/tts_manager_impl.h"
+#include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accesibility_test {
 namespace {
+
 using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Hit;
 using fuchsia::accessibility::semantics::Node;
@@ -34,7 +35,7 @@ class ExploreActionTest : public gtest::RealLoopFixture {
 
     // Initialize ActionContext.
     action_context_ = std::make_shared<a11y::ExploreAction::ActionContext>();
-    action_context_->semantics_manager = std::make_shared<a11y::SemanticsManagerImpl>();
+    action_context_->semantics_manager = std::make_shared<a11y::SemanticsManager>();
     // Enabled Semantics Manager.
     action_context_->semantics_manager->SetSemanticsManagerEnabled(true);
 

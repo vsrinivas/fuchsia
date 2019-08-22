@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_TTS_TTS_MANAGER_IMPL_H_
-#define SRC_UI_A11Y_LIB_TTS_TTS_MANAGER_IMPL_H_
+#ifndef SRC_UI_A11Y_LIB_TTS_TTS_MANAGER_H_
+#define SRC_UI_A11Y_LIB_TTS_TTS_MANAGER_H_
 
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -26,7 +26,7 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
   // On initialization, this class exposes the services defined in
   // |fuchsia.accessibility.tts.(TtsManager|EngineRegistry|Engine)|
   explicit TtsManager(sys::ComponentContext* startup_context);
-  ~TtsManager() = default;
+  ~TtsManager() override;
 
   // |fuchsia.accessibility.tts.TtsManager|
   void OpenEngine(fidl::InterfaceRequest<fuchsia::accessibility::tts::Engine> engine_request,
@@ -58,4 +58,4 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
 
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_LIB_TTS_TTS_MANAGER_IMPL_H_
+#endif  // SRC_UI_A11Y_LIB_TTS_TTS_MANAGER_H_

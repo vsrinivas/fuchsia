@@ -4,10 +4,10 @@
 
 source_set("semantics") {
   sources = [
-    "semantic_tree_impl.cc",
-    "semantic_tree_impl.h",
-    "semantics_manager_impl.cc",
-    "semantics_manager_impl.h",
+    "semantic_tree.cc",
+    "semantic_tree.h",
+    "semantics_manager.cc",
+    "semantics_manager.h",
   ]
 
   public_deps = [

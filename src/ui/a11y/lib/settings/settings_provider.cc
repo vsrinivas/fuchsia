@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/settings/settings_provider_impl.h"
+#include "src/ui/a11y/lib/settings/settings_provider.h"
 
 #include <lib/syslog/cpp/logger.h>
 
@@ -38,7 +38,7 @@ const std::array<float, 9> kCorrectTritanomaly = {
     0.805712f,  0.621162f, 0.895177f};
 // clang-format on
 
-SettingsProviderImpl::SettingsProviderImpl() : binding_(this), settings_() {
+SettingsProvider::SettingsProvider() : binding_(this) {
   settings_.set_magnification_enabled(false);
   settings_.set_magnification_zoom_factor(1.0);
   settings_.set_screen_reader_enabled(false);
@@ -47,16 +47,18 @@ SettingsProviderImpl::SettingsProviderImpl() : binding_(this), settings_() {
   settings_.set_color_adjustment_matrix(kIdentityMatrix);
 }
 
-void SettingsProviderImpl::Bind(
+SettingsProvider::~SettingsProvider() = default;
+
+void SettingsProvider::Bind(
     fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request) {
   binding_.Close(ZX_ERR_PEER_CLOSED);
   binding_.Bind(std::move(settings_provider_request));
 }
 
-std::string SettingsProviderImpl::BoolToString(bool value) { return value ? "true" : "false"; }
+std::string SettingsProvider::BoolToString(bool value) { return value ? "true" : "false"; }
 
-void SettingsProviderImpl::SetMagnificationEnabled(bool magnification_enabled,
-                                                   SetMagnificationEnabledCallback callback) {
+void SettingsProvider::SetMagnificationEnabled(bool magnification_enabled,
+                                               SetMagnificationEnabledCallback callback) {
   // Attempting to enable magnification when it's already enabled OR disable
   // magnification when it's already disabled has no effect.
   if (settings_.has_magnification_enabled() &&
@@ -83,8 +85,8 @@ void SettingsProviderImpl::SetMagnificationEnabled(bool magnification_enabled,
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }
 
-void SettingsProviderImpl::SetMagnificationZoomFactor(float magnification_zoom_factor,
-                                                      SetMagnificationZoomFactorCallback callback) {
+void SettingsProvider::SetMagnificationZoomFactor(float magnification_zoom_factor,
+                                                  SetMagnificationZoomFactorCallback callback) {
   if (!settings_.has_magnification_enabled() || !(settings_.magnification_enabled())) {
     callback(fuchsia::accessibility::SettingsManagerStatus::ERROR);
     return;
@@ -106,8 +108,8 @@ void SettingsProviderImpl::SetMagnificationZoomFactor(float magnification_zoom_f
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }
 
-void SettingsProviderImpl::SetScreenReaderEnabled(bool screen_reader_enabled,
-                                                  SetScreenReaderEnabledCallback callback) {
+void SettingsProvider::SetScreenReaderEnabled(bool screen_reader_enabled,
+                                              SetScreenReaderEnabledCallback callback) {
   settings_.set_screen_reader_enabled(screen_reader_enabled);
 
   NotifyWatchers(settings_);
@@ -117,8 +119,8 @@ void SettingsProviderImpl::SetScreenReaderEnabled(bool screen_reader_enabled,
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }
 
-void SettingsProviderImpl::SetColorInversionEnabled(bool color_inversion_enabled,
-                                                    SetColorInversionEnabledCallback callback) {
+void SettingsProvider::SetColorInversionEnabled(bool color_inversion_enabled,
+                                                SetColorInversionEnabledCallback callback) {
   settings_.set_color_inversion_enabled(color_inversion_enabled);
   settings_.set_color_adjustment_matrix(GetColorAdjustmentMatrix());
 
@@ -130,8 +132,8 @@ void SettingsProviderImpl::SetColorInversionEnabled(bool color_inversion_enabled
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }
 
-void SettingsProviderImpl::SetColorCorrection(
-    fuchsia::accessibility::ColorCorrection color_correction, SetColorCorrectionCallback callback) {
+void SettingsProvider::SetColorCorrection(fuchsia::accessibility::ColorCorrection color_correction,
+                                          SetColorCorrectionCallback callback) {
   settings_.set_color_correction(color_correction);
   settings_.set_color_adjustment_matrix(GetColorAdjustmentMatrix());
 
@@ -140,20 +142,20 @@ void SettingsProviderImpl::SetColorCorrection(
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }
 
-void SettingsProviderImpl::NotifyWatchers(const fuchsia::accessibility::Settings& new_settings) {
+void SettingsProvider::NotifyWatchers(const fuchsia::accessibility::Settings& new_settings) {
   for (auto& watcher : watchers_) {
     auto setting = fidl::Clone(new_settings);
     watcher->OnSettingsChange(std::move(setting));
   }
 }
 
-void SettingsProviderImpl::ReleaseWatcher(fuchsia::accessibility::SettingsWatcher* watcher) {
+void SettingsProvider::ReleaseWatcher(fuchsia::accessibility::SettingsWatcher* watcher) {
   auto predicate = [watcher](const auto& target) { return target.get() == watcher; };
 
   watchers_.erase(std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
-void SettingsProviderImpl::AddWatcher(
+void SettingsProvider::AddWatcher(
     fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher) {
   fuchsia::accessibility::SettingsWatcherPtr watcher_proxy = watcher.Bind();
   fuchsia::accessibility::SettingsWatcher* proxy_raw_ptr = watcher_proxy.get();
@@ -167,7 +169,7 @@ void SettingsProviderImpl::AddWatcher(
   watchers_.push_back(std::move(watcher_proxy));
 }
 
-std::array<float, 9> SettingsProviderImpl::GetColorAdjustmentMatrix() {
+std::array<float, 9> SettingsProvider::GetColorAdjustmentMatrix() {
   std::array<float, 9> color_inversion_matrix = kIdentityMatrix;
   std::array<float, 9> color_correction_matrix = kIdentityMatrix;
 
