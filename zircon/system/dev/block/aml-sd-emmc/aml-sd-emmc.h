@@ -33,9 +33,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
         pinned_mmio_(std::move(pinned_mmio)),
         reset_gpio_(gpio),
         irq_(std::move(irq)),
-        board_config_(config),
-        max_freq_(config.max_freq),
-        min_freq_(config.min_freq) {}
+        board_config_(config) {}
 
   ~AmlSdEmmc() {}
   static zx_status_t Create(void* ctx, zx_device_t* parent);
