@@ -12,8 +12,24 @@ group("fuzzer") {
 }
 
 fuzzers_package("example_fuzzers") {
-  fuzzers = [ ":baz_fuzzer" ]
+  fuzzers = [
+    ":baz_fuzzer",
+    ":overflow_fuzzer",
+    ":trap_fuzzer",
+  ]
   fuzz_host = true
+}
+
+fuzzer("overflow_fuzzer") {
+  sources = [
+    "overflow.cc",
+  ]
+}
+
+fuzzer("trap_fuzzer") {
+  sources = [
+    "trap.cc",
+  ]
 }
 
 fuzzer("baz_fuzzer") {
