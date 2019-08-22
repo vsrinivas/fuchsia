@@ -308,7 +308,7 @@ group("tool_paths.metadata") {
 
 # This collects all the top-level targets that should contribute to the
 # "everything" target, which is the root of build_api_module() metadata walks.
-_everything_deps = []
+_everything_deps = [ "tools:all-hosts" ]
 
 # Just building this constitutes a useful test that the build system and
 # compiler configurations work as intended.  It may also entail building a
@@ -321,52 +321,6 @@ group("build-tests") {
   ]
 }
 _everything_deps += [ ":build-tests" ]
-
-# Build the host tools intended for developer use.  Install the tools for
-# the running host platform in the "$root_build_dir/tools/" directory.
-# Cross-built tools can be installed in "$root_build_dir/tools-$os-$cpu".
-_tools_targets = [ "tools" ]
-foreach(host, standard_build_hosts) {
-  _tools_targets += [ "tools-${host.os}-${host.cpu}" ]
-  environment_redirect("tools-${host.os}-${host.cpu}.redirect") {
-    visibility = [ ":*" ]
-    testonly = true
-    environment_label = "$zx/public/gn/toolchain:host"
-    cpu = host.cpu
-    os = host.os
-    direct = true
-    deps = [
-      "$zx/tools",
-    ]
-  }
-}
-
-group("tools.redirect") {
-  visibility = [ ":*" ]
-  testonly = true
-  public_deps = [
-    ":tools-${host_os}-${host_cpu}",
-  ]
-}
-
-group("tools.all") {
-  testonly = true
-  deps = []
-  foreach(tools_target, _tools_targets) {
-    deps += [ ":$tools_target" ]
-  }
-}
-
-foreach(tools_target, _tools_targets) {
-  _everything_deps += [ ":$tools_target" ]
-  copied_files_dir(tools_target) {
-    testonly = true
-    data_keys = [ "tool_executables" ]
-    deps = [
-      ":$tools_target.redirect",
-    ]
-  }
-}
 
 # This is used in the top-level build_api_module() deps to reach "everything".
 # Note that "all" is a magical target name to Ninja, hence this name instead.
