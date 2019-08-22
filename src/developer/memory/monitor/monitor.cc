@@ -39,8 +39,8 @@ using namespace memory;
 const char Monitor::kTraceName[] = "memory_monitor";
 
 namespace {
-const zx::duration kPollFrequency = zx::sec(1);
-const uint64_t kThreshold = 256 * 1024;
+const zx::duration kPollFrequency = zx::sec(10);
+const uint64_t kThreshold = 10 * 1024 * 1024;
 }  // namespace
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
