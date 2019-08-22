@@ -101,6 +101,7 @@ zx_status_t suspend_thread(void* raw_arg) {
 }
 
 zx_status_t x86_set_pkg_pl1(const zx_system_powerctl_arg_t* arg, MsrAccess* msr) {
+  auto x86_microarch = x86_get_microarch_config()->x86_microarch;
   if ((x86_microarch != X86_MICROARCH_INTEL_SANDY_BRIDGE) &&
       (x86_microarch != X86_MICROARCH_INTEL_SILVERMONT) &&
       (x86_microarch != X86_MICROARCH_INTEL_BROADWELL) &&

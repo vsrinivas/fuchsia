@@ -404,7 +404,7 @@ static unsigned x86_perfmon_lbr_stack_size() {
   }
 
   for (const auto& chip : supported_chips) {
-    if (chip.microarch == x86_microarch)
+    if (chip.microarch == x86_get_microarch_config()->x86_microarch)
       return chip.stack_size;
   }
 

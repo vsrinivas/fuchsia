@@ -102,13 +102,39 @@ namespace {
     ktl::array<FakeMsr, 3> msrs_;
   };
 
+  static bool test_x64_cpu_uarch_config_selection() {
+    BEGIN_TEST;
+
+    // Intel Xeon E5-2690 V4 is Broadwell
+    EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdXeon2690v4)->x86_microarch,
+              X86_MICROARCH_INTEL_BROADWELL, "");
+
+    // Intel Celeron J3455 is Goldmont
+    EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdCeleronJ3455)->x86_microarch,
+              X86_MICROARCH_INTEL_GOLDMONT, "");
+
+    // AMD A4-9120C is Bulldozer
+    EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdAmdA49120C)->x86_microarch,
+              X86_MICROARCH_AMD_BULLDOZER, "");
+
+    // AMD Ryzen Threadripper 2970WX is Zen
+    EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdThreadRipper2970wx)->x86_microarch,
+              X86_MICROARCH_AMD_ZEN, "");
+
+    END_TEST;
+  }
+
   static bool test_x64_meltdown_enumeration() {
     BEGIN_TEST;
 
     {
       // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
-      FakeMsrAccess fake_msrs;
-      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu_id::kCpuIdXeon2690v4, &fake_msrs), "");
+      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
+      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
+          ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+      cpu_id::FakeCpuId cpu(data);
+      FakeMsrAccess fake_msrs = {};
+      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
     }
 
     {
@@ -149,18 +175,31 @@ namespace {
     }
 
     {
-      // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have L1TF, reports via RDCL_NO
+      // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, old microcode lacks RDCL_NO
       cpu_id::TestDataSet data = {};
       data.leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
       data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
       data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
       data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
+      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
+          ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
 
-      cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
+      {
+        cpu_id::FakeCpuId cpu(data);
+        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      }
+
+      // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, reports via RDCL_NO
+      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+          (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+
       // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
-      EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      {
+        cpu_id::FakeCpuId cpu(data);
+        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      }
     }
 
     END_TEST;
@@ -171,8 +210,12 @@ namespace {
 
     {
       // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
-      FakeMsrAccess fake_msrs;
-      EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu_id::kCpuIdXeon2690v4, &fake_msrs), "");
+      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
+      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
+          ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+      cpu_id::FakeCpuId cpu(data);
+      FakeMsrAccess fake_msrs = {};
+      EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
     }
 
     {
@@ -207,6 +250,8 @@ namespace {
       data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
       data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
       data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
+      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+          (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
 
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
@@ -368,7 +413,6 @@ namespace {
 
   static bool test_x64_power_limits() {
     BEGIN_TEST;
-
     FakeMsrAccess fake_msrs = {};
 
     // defaults on Ava/Eve. They both use the same Intel chipset
@@ -400,7 +444,6 @@ namespace {
   power_limit *= power_unit;
 
   EXPECT_EQ(new_power_limit, power_limit, "Set power limit failed");
-
   END_TEST;
 }
 }  // anonymous namespace
@@ -408,6 +451,7 @@ namespace {
 UNITTEST_START_TESTCASE(x64_platform_tests)
 UNITTEST("basic test of read/write MSR variants", test_x64_msrs)
 UNITTEST("test k cpu rdmsr commands", test_x64_msrs_k_commands)
+UNITTEST("test uarch_config is correctly selected", test_x64_cpu_uarch_config_selection)
 UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
 UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)

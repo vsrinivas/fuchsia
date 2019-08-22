@@ -27,7 +27,6 @@ uint32_t max_hyp_cpuid = 0;
 uint32_t max_ext_cpuid = 0;
 
 enum x86_vendor_list x86_vendor;
-enum x86_microarch_list x86_microarch;
 const x86_microarch_config_t* x86_microarch_config;
 
 static struct x86_model_info model_info;
@@ -42,9 +41,6 @@ bool g_has_mds;
 enum x86_hypervisor_list x86_hypervisor;
 
 static int initialized = 0;
-
-static enum x86_microarch_list get_microarch(struct x86_model_info* info);
-static const x86_microarch_config_t* select_microarch_config(enum x86_microarch_list info);
 
 static enum x86_hypervisor_list get_hypervisor();
 
@@ -126,9 +122,10 @@ void x86_feature_init(void) {
     if (model_info.family == 0xf || model_info.family == 0x6) {
       model_info.display_model += BITS_SHIFT(leaf->a, 19, 16) << 4;
     }
-
-    x86_microarch = get_microarch(&model_info);
   }
+  cpu_id::CpuId cpuid;
+  x86_microarch_config = get_microarch_config(&cpuid);
+
   // Get microcode patch level
   switch (x86_vendor) {
     case X86_VENDOR_INTEL:
@@ -140,7 +137,6 @@ void x86_feature_init(void) {
     default:
       break;
   }
-  x86_microarch_config = select_microarch_config(x86_microarch);
 
   g_x86_feature_fsgsbase = x86_feature_test(X86_FEATURE_FSGSBASE);
   g_x86_feature_pcid_good =
@@ -157,65 +153,6 @@ void x86_feature_init(void) {
   }
 
   g_x86_feature_has_smap = x86_feature_test(X86_FEATURE_SMAP);
-}
-
-static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
-  if (x86_vendor == X86_VENDOR_INTEL && info->family == 0x6) {
-    switch (info->display_model) {
-      case 0x1a: /* Nehalem */
-      case 0x1e: /* Nehalem */
-      case 0x1f: /* Nehalem */
-      case 0x2e: /* Nehalem */
-        return X86_MICROARCH_INTEL_NEHALEM;
-      case 0x25: /* Westmere */
-      case 0x2c: /* Westmere */
-      case 0x2f: /* Westmere */
-        return X86_MICROARCH_INTEL_WESTMERE;
-      case 0x2a: /* Sandy Bridge */
-      case 0x2d: /* Sandy Bridge EP */
-        return X86_MICROARCH_INTEL_SANDY_BRIDGE;
-      case 0x3a: /* Ivy Bridge */
-      case 0x3e: /* Ivy Bridge EP */
-        return X86_MICROARCH_INTEL_IVY_BRIDGE;
-      case 0x3c: /* Haswell DT */
-      case 0x3f: /* Haswell MB */
-      case 0x45: /* Haswell ULT */
-      case 0x46: /* Haswell ULX */
-        return X86_MICROARCH_INTEL_HASWELL;
-      case 0x3d: /* Broadwell */
-      case 0x47: /* Broadwell H */
-      case 0x56: /* Broadwell EP */
-      case 0x4f: /* Broadwell EX */
-        return X86_MICROARCH_INTEL_BROADWELL;
-      case 0x4e: /* Skylake Y/U */
-      case 0x5e: /* Skylake H/S */
-      case 0x55: /* Skylake E */
-        return X86_MICROARCH_INTEL_SKYLAKE;
-      case 0x8e: /* Kabylake Y/U */
-      case 0x9e: /* Kabylake H/S */
-        return X86_MICROARCH_INTEL_KABYLAKE;
-      case 0x37: /* Silvermont */
-      case 0x4a: /* Silvermont "Cherry View" */
-      case 0x4d: /* Silvermont "Avoton" */
-      case 0x4c: /* Airmont "Braswell" */
-      case 0x5a: /* Airmont */
-        return X86_MICROARCH_INTEL_SILVERMONT;
-      case 0x5c: /* Goldmont (Apollo Lake) */
-      case 0x5f: /* Goldmont (Denverton) */
-      case 0x7a: /* Goldmont Plus (Gemini Lake) */
-        return X86_MICROARCH_INTEL_GOLDMONT;
-    }
-  } else if (x86_vendor == X86_VENDOR_AMD && info->family == 0xf) {
-    switch (info->display_family) {  // zen
-      case 0x15:                     /* Bulldozer */
-        return X86_MICROARCH_AMD_BULLDOZER;
-      case 0x16: /* Jaguar */
-        return X86_MICROARCH_AMD_JAGUAR;
-      case 0x17: /* Zen */
-        return X86_MICROARCH_AMD_ZEN;
-    }
-  }
-  return X86_MICROARCH_UNKNOWN;
 }
 
 static enum x86_hypervisor_list get_hypervisor() {
@@ -329,7 +266,7 @@ void x86_feature_debug(void) {
   printf("Vendor: %s\n", vendor_string);
 
   const char* microarch_string = nullptr;
-  switch (x86_microarch) {
+  switch (x86_microarch_config->x86_microarch) {
     case X86_MICROARCH_UNKNOWN:
       microarch_string = "unknown";
       break;
@@ -486,7 +423,7 @@ static uint64_t amd_compute_p_state_clock(uint64_t p_state_msr) {
   // different AMD microarchitectures use slightly different formulas to compute
   // the effective clock rate of a P state
   uint64_t clock = 0;
-  switch (x86_microarch) {
+  switch (x86_microarch_config->x86_microarch) {
     case X86_MICROARCH_AMD_BULLDOZER:
     case X86_MICROARCH_AMD_JAGUAR: {
       uint64_t did = BITS_SHIFT(p_state_msr, 8, 6);
@@ -542,99 +479,135 @@ static void hsw_reboot_reason(uint64_t reason) {
 
 // Intel microarches
 static const x86_microarch_config_t kbl_config{
+    .x86_microarch = X86_MICROARCH_INTEL_KABYLAKE,
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t skl_config{
+    .x86_microarch = X86_MICROARCH_INTEL_SKYLAKE,
     .get_apic_freq = kbl_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t bdw_config{
+    .x86_microarch = X86_MICROARCH_INTEL_BROADWELL,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t hsw_config{
+    .x86_microarch = X86_MICROARCH_INTEL_HASWELL,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = hsw_reboot_system,
     .reboot_reason = hsw_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t ivb_config{
+    .x86_microarch = X86_MICROARCH_INTEL_IVY_BRIDGE,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t snb_config{
+    .x86_microarch = X86_MICROARCH_INTEL_SANDY_BRIDGE,
     .get_apic_freq = bdw_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t westmere_config{
+    .x86_microarch = X86_MICROARCH_INTEL_WESTMERE,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t nehalem_config{
+    .x86_microarch = X86_MICROARCH_INTEL_NEHALEM,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = true,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t smt_config{
+    .x86_microarch = X86_MICROARCH_INTEL_SILVERMONT,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = false,
+    .has_l1tf = false,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -642,22 +615,30 @@ static const x86_microarch_config_t smt_config{
 };
 static const x86_microarch_config_t glm_config{
     // Goldmont, Goldmont+
+    .x86_microarch = X86_MICROARCH_INTEL_GOLDMONT,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = false,
+    .has_l1tf = false,
+    .has_mds = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t intel_default_config{
+    .x86_microarch = X86_MICROARCH_UNKNOWN,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = intel_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -666,44 +647,60 @@ static const x86_microarch_config_t intel_default_config{
 
 // AMD microarches
 static const x86_microarch_config_t zen_config{
+    .x86_microarch = X86_MICROARCH_AMD_ZEN,
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = zen_tsc_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = false,
+    .has_l1tf = false,
+    .has_mds = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t jaguar_config{
+    .x86_microarch = X86_MICROARCH_AMD_JAGUAR,
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = false,
+    .has_l1tf = false,
+    .has_mds = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t bulldozer_config{
+    .x86_microarch = X86_MICROARCH_AMD_BULLDOZER,
     .get_apic_freq = bulldozer_apic_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = false,
+    .has_l1tf = false,
+    .has_mds = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 static const x86_microarch_config_t amd_default_config{
+    .x86_microarch = X86_MICROARCH_UNKNOWN,
     .get_apic_freq = default_apic_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = false,
+    .has_l1tf = false,
+    .has_mds = false,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
@@ -712,55 +709,84 @@ static const x86_microarch_config_t amd_default_config{
 
 // Unknown vendor config
 static const x86_microarch_config_t unknown_vendor_config{
+    .x86_microarch = X86_MICROARCH_UNKNOWN,
     .get_apic_freq = unknown_freq,
     .get_tsc_freq = unknown_freq,
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
+    .has_meltdown = true,
+    .has_l1tf = true,
+    .has_mds = true,
     .idle_states =
         {
             .states = {X86_CSTATE_C1(0)},
         },
 };
 
-const x86_microarch_config_t* select_microarch_config(enum x86_microarch_list info) {
-  switch (info) {
-    case X86_MICROARCH_INTEL_NEHALEM:
-      return &nehalem_config;
-    case X86_MICROARCH_INTEL_WESTMERE:
-      return &westmere_config;
-    case X86_MICROARCH_INTEL_SANDY_BRIDGE:
-      return &snb_config;
-    case X86_MICROARCH_INTEL_IVY_BRIDGE:
-      return &ivb_config;
-    case X86_MICROARCH_INTEL_BROADWELL:
-      return &bdw_config;
-    case X86_MICROARCH_INTEL_HASWELL:
-      return &hsw_config;
-    case X86_MICROARCH_INTEL_SKYLAKE:
-      return &skl_config;
-    case X86_MICROARCH_INTEL_KABYLAKE:
-      return &kbl_config;
-    case X86_MICROARCH_INTEL_SILVERMONT:
-      return &smt_config;
-    case X86_MICROARCH_INTEL_GOLDMONT:
-      return &glm_config;
-    case X86_MICROARCH_AMD_BULLDOZER:
-      return &bulldozer_config;
-    case X86_MICROARCH_AMD_JAGUAR:
-      return &jaguar_config;
-    case X86_MICROARCH_AMD_ZEN:
-      return &zen_config;
-    case X86_MICROARCH_UNKNOWN: {
-      switch (x86_vendor) {
-        case X86_VENDOR_INTEL:
-          return &intel_default_config;
-        case X86_VENDOR_AMD:
-          return &amd_default_config;
-        case X86_VENDOR_UNKNOWN:
-          return &unknown_vendor_config;
-      }
+const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
+  auto vendor = cpuid->ReadManufacturerInfo();
+  auto processor_id = cpuid->ReadProcessorId();
+
+  if (vendor.manufacturer() == cpu_id::ManufacturerInfo::INTEL && processor_id.family() == 0x6) {
+    switch (processor_id.model()) {
+      case 0x1a: /* Nehalem */
+      case 0x1e: /* Nehalem */
+      case 0x1f: /* Nehalem */
+      case 0x2e: /* Nehalem */
+        return &nehalem_config;
+      case 0x25: /* Westmere */
+      case 0x2c: /* Westmere */
+      case 0x2f: /* Westmere */
+        return &westmere_config;
+      case 0x2a: /* Sandy Bridge */
+      case 0x2d: /* Sandy Bridge EP */
+        return &snb_config;
+      case 0x3a: /* Ivy Bridge */
+      case 0x3e: /* Ivy Bridge EP */
+        return &ivb_config;
+      case 0x3c: /* Haswell DT */
+      case 0x3f: /* Haswell MB */
+      case 0x45: /* Haswell ULT */
+      case 0x46: /* Haswell ULX */
+        return &hsw_config;
+      case 0x3d: /* Broadwell */
+      case 0x47: /* Broadwell H */
+      case 0x56: /* Broadwell EP */
+      case 0x4f: /* Broadwell EX */
+        return &bdw_config;
+      case 0x4e: /* Skylake Y/U */
+      case 0x5e: /* Skylake H/S */
+      case 0x55: /* Skylake E */
+        return &skl_config;
+      case 0x8e: /* Kabylake Y/U */
+      case 0x9e: /* Kabylake H/S */
+        return &kbl_config;
+      case 0x37: /* Silvermont */
+      case 0x4a: /* Silvermont "Cherry View" */
+      case 0x4d: /* Silvermont "Avoton" */
+      case 0x4c: /* Airmont "Braswell" */
+      case 0x5a: /* Airmont */
+        return &smt_config;
+      case 0x5c: /* Goldmont (Apollo Lake) */
+      case 0x5f: /* Goldmont (Denverton) */
+      case 0x7a: /* Goldmont+ (Gemini Lake) */
+        return &glm_config;
+      default:
+        return &intel_default_config;
+    }
+  } else if (vendor.manufacturer() == cpu_id::ManufacturerInfo::AMD) {
+    switch (processor_id.family()) {
+      case 0x15:
+        return &bulldozer_config;
+      case 0x16:
+        return &jaguar_config;
+      case 0x17:
+        return &zen_config;
+      default:
+        return &amd_default_config;
     }
   }
+
   return &unknown_vendor_config;
 }

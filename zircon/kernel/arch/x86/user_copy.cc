@@ -57,7 +57,8 @@ void x86_usercopy_select(const CodePatchInfo* patch) {
   DEBUG_ASSERT(patch->dest_size == kSize);
 
   memset(patch->dest_addr, kNopInstruction, kSize);
-  if (x86_feature_test(X86_FEATURE_ERMS) || (x86_microarch == X86_MICROARCH_AMD_ZEN)) {
+  if (x86_feature_test(X86_FEATURE_ERMS) ||
+      (x86_get_microarch_config()->x86_microarch == X86_MICROARCH_AMD_ZEN)) {
     patch->dest_addr[0] = 0xf3;  // rep movsb %ds:(%rsi),%es:(%rdi)
     patch->dest_addr[1] = 0xa4;
   } else {

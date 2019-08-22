@@ -119,22 +119,12 @@ bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     }
   }
 
-  return true;
+  auto* const microarch_config = get_microarch_config(cpuid);
+  return microarch_config->has_meltdown;
 }
 
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  // Silvermont/Airmont/Goldmont are not affected by L1TF.
-  auto info = cpuid->ReadProcessorId();
-  if (info.family() == 6) {
-    switch (info.model()) {
-      case 0x4c:  // Silvermont
-      case 0x4d:  // Silvermont
-      case 0x5c:  // Goldmont
-                  // TODO(ZX-4201): Switch to using the microarch functions.
-        return false;
-    }
-  }
-
+  // IA32_ARCH_CAPABILITIES MSR enumerates fixes for L1TF, if available. 
   if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
     uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
     if (arch_capabilities & X86_ARCH_CAPABILITIES_RDCL_NO) {
@@ -142,7 +132,8 @@ bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     }
   }
 
-  return true;
+  auto* const microarch_config = get_microarch_config(cpuid);
+  return microarch_config->has_l1tf;
 }
 
 // Returns true iff the CPU is susceptible to any variant of MDS.
@@ -151,24 +142,6 @@ bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   // many CPUs.
   // https://www.intel.com/content/www/us/en/architecture-and-technology/mds.html
 
-  auto info = cpuid->ReadProcessorId();
-  if (info.family() == 6) {
-    switch (info.model()) {
-      // Bonnell, Saltwell, Goldmont, GoldmontPlus, Tremont are not affected by any variant.
-      case 0x1c:  // Bonnell
-      case 0x26:  // Bonnell
-      case 0x27:  // Saltwell
-      case 0x35:  // Saltwell
-      case 0x36:  // Saltwell
-      case 0x5c:  // Goldmont (Apollo Lake)
-      case 0x7a:  // Goldmont Plus (Gemini Lake)
-      case 0x86:  // Tremont
-        return false;
-        // Cascade Lake steppings 6, 7 and Whiskey Lake steppings C and D
-        // are unaffected by any variant but enumerate MDS_NO.
-    }
-  }
-
   if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
     uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
     if (arch_capabilities & X86_ARCH_CAPABILITIES_MDS_NO) {
@@ -176,7 +149,8 @@ bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     }
   }
 
-  return true;
+  auto* const microarch_config = get_microarch_config(cpuid);
+  return microarch_config->has_mds;
 }
 
 void x86_intel_init_percpu(void) {

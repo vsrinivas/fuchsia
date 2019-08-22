@@ -291,7 +291,6 @@ enum x86_microarch_list {
   X86_MICROARCH_AMD_JAGUAR,
   X86_MICROARCH_AMD_ZEN,
 };
-extern enum x86_microarch_list x86_microarch;
 
 extern bool g_x86_feature_fsgsbase;
 extern bool g_x86_feature_pcid_good;
@@ -316,12 +315,20 @@ typedef void (*x86_reboot_reason_func_t)(uint64_t reason);
 
 /* Structure for supporting per-microarchitecture kernel configuration */
 typedef struct {
+  enum x86_microarch_list x86_microarch;
   x86_get_timer_freq_func_t get_apic_freq;
   x86_get_timer_freq_func_t get_tsc_freq;
   x86_reboot_system_func_t reboot_system;
   x86_reboot_reason_func_t reboot_reason;
 
   bool disable_c1e;
+
+  // Speculative execution information leak vulnerabilities
+  // True iff a microarchitecture is known to have a particular vulnerability. May
+  // be overriden by a more specific enumeration mechanism (ex: IA32_ARCH_CAPABILITIES)
+  bool has_meltdown;
+  bool has_l1tf;
+  bool has_mds;
 
   x86_idle_states_t idle_states;
 } x86_microarch_config_t;
@@ -346,6 +353,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid);
 bool x86_intel_check_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch);
 void x86_intel_load_microcode_patch(cpu_id::CpuId* cpuid, MsrAccess* msr, struct iovec patch);
 
