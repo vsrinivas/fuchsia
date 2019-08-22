@@ -4,6 +4,7 @@
 
 group("power") {
   deps = [
+    "as370-power",
     "msm8x53-power",
     "mtk-power",
     "power",

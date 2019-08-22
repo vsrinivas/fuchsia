@@ -74,6 +74,14 @@ zx_status_t As370::I2cInit() {
           .pid = 0,
           .did = 0,
       },
+      // For power regulator
+      {
+          .bus_id = 0,
+          .address = 0x66,
+          .vid = 0,
+          .pid = 0,
+          .did = 0,
+      },
   };
 
   // I2C channels for as370 visalia
@@ -90,6 +98,14 @@ zx_status_t As370::I2cInit() {
       {
           .bus_id = 0,
           .address = 0x29,
+          .vid = 0,
+          .pid = 0,
+          .did = 0,
+      },
+      // For power regulator
+      {
+          .bus_id = 0,
+          .address = 0x66,
           .vid = 0,
           .pid = 0,
           .did = 0,

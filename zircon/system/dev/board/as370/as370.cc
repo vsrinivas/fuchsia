@@ -72,9 +72,11 @@ int As370::Thread() {
     zxlogf(ERROR, "%s: I2cInit() failed: %s\n", __func__, zx_status_get_string(status));
     return thrd_error;
   }
+
   if (UsbInit() != ZX_OK) {
     zxlogf(ERROR, "%s: UsbInit() failed\n", __func__);
   }
+
   if (AudioInit() != ZX_OK) {
     zxlogf(ERROR, "%s: AudioInit() failed\n", __func__);
     // In case of error report it and keep going.
@@ -85,6 +87,11 @@ int As370::Thread() {
   }
   if (NandInit() != ZX_OK) {
     zxlogf(ERROR, "%s: NandInit() failed\n", __func__);
+  }
+
+  if (PowerInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: PowerInit() failed\n", __func__);
+    // In case of error report it and keep going.
   }
 
   return 0;

@@ -4,18 +4,18 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <zircon/status.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/zxtest.h>
 
@@ -353,6 +353,8 @@ TEST_F(DeviceEnumerationTest, As370Test) {
       "sys/platform/00:00:22/cadence-hpnfc/nand/key_2nd/skip-block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
+      "power/as370-power",
+      "power/as370-power/power-0",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
@@ -381,6 +383,8 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "sys/platform/00:00:22/cadence-hpnfc/nand/key_2nd/skip-block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
+      "power/as370-power",
+      "power/as370-power/power-0",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

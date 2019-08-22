@@ -79,6 +79,7 @@ if (current_cpu != "") {
       "$zx/system/dev/nand/nandpart:nandpart-test",
       "$zx/system/dev/nand/ram-nand:ram-nand-test",
       "$zx/system/dev/nand/skip-block:skip-block-test",
+      "$zx/system/dev/power/as370-power:as370-power-test",
       "$zx/system/dev/power/msm8x53-power:msm8x53-power-test",
       "$zx/system/dev/power/mtk-power:mtk-power-test",
       "$zx/system/dev/serial/ftdi/test:ftdi-i2c-test",
