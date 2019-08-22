@@ -11,6 +11,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -70,17 +71,17 @@ func Untar(dst string, src string) error {
 				return err
 			}
 
-			f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, info.Mode())
+			if _, err = os.Stat(path); err == nil {
+				continue
+			}
+
+			err := AtomicallyWriteFile(path, info.Mode(), func(f *os.File) error {
+				_, err := io.Copy(f, tr)
+				return err
+			})
 			if err != nil {
 				return err
 			}
-
-			if _, err := io.Copy(f, tr); err != nil {
-				f.Close()
-				return err
-			}
-
-			f.Close()
 		}
 	}
 }
@@ -101,4 +102,32 @@ func ParsePackageList(rd io.Reader) (map[string]string, error) {
 	}
 
 	return packages, nil
+}
+
+func AtomicallyWriteFile(path string, mode os.FileMode, writeFileFunc func(*os.File) error) error {
+	dir := filepath.Dir(path)
+	basename := filepath.Base(path)
+
+	tmpfile, err := ioutil.TempFile(dir, basename)
+	defer func() {
+		if tmpfile != nil {
+			os.Remove(tmpfile.Name())
+		}
+	}()
+
+	if err = writeFileFunc(tmpfile); err != nil {
+		return err
+	}
+
+	if err = os.Chmod(tmpfile.Name(), mode); err != nil {
+		return err
+	}
+
+	// Now that we've written the file, do an atomic swap of the filename into place.
+	if err := os.Rename(tmpfile.Name(), path); err != nil {
+		return err
+	}
+	tmpfile = nil
+
+	return nil
 }

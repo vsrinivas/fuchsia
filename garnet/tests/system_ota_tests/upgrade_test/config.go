@@ -15,13 +15,16 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
+	"fuchsia.googlesource.com/host_target_testing/paver"
 	"fuchsia.googlesource.com/host_target_testing/util"
+
+	"golang.org/x/crypto/ssh"
 )
 
 type Config struct {
 	OutputDir              string
 	FuchsiaDir             string
-	SshKeyFile             string
+	sshKeyFile             string
 	netaddrPath            string
 	DeviceName             string
 	deviceHostname         string
@@ -31,25 +34,23 @@ type Config struct {
 	downgradeBuilderName   string
 	downgradeBuildID       string
 	downgradeAmberFilesDir string
+	downgradePaver         string
 	upgradeBuilderName     string
 	upgradeBuildID         string
 	upgradeAmberFilesDir   string
+	cleanupOutputDir       bool
 	archive                *artifacts.Archive
+	sshPrivateKey          ssh.Signer
 }
 
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
-	outputDir, err := ioutil.TempDir("", "system_ota_tests")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create a temporary directory: %s", err)
-	}
-	c := &Config{
-		OutputDir: outputDir,
-	}
+	c := &Config{}
 
 	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system_ota_tests")
 
+	fs.StringVar(&c.OutputDir, "output-dir", "", "save temporary files to this directory, defaults to a tempdir")
 	fs.StringVar(&c.FuchsiaDir, "fuchsia-dir", os.Getenv("FUCHSIA_DIR"), "fuchsia dir")
-	fs.StringVar(&c.SshKeyFile, "ssh-private-key", os.Getenv("FUCHSIA_SSH_KEY"), "SSH private key file that can access the device")
+	fs.StringVar(&c.sshKeyFile, "ssh-private-key", os.Getenv("FUCHSIA_SSH_KEY"), "SSH private key file that can access the device")
 	fs.StringVar(&c.netaddrPath, "netaddr-path", filepath.Join(testDataPath, "netaddr"), "zircon netaddr tool path")
 	fs.StringVar(&c.DeviceName, "device", os.Getenv("FUCHSIA_NODENAME"), "device name")
 	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_IPV4_ADDR"), "device hostname or IPv4/IPv6 address")
@@ -58,9 +59,19 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
 	fs.StringVar(&c.downgradeBuildID, "downgrade-build-id", "", "downgrade to this specific build id")
 	fs.StringVar(&c.downgradeAmberFilesDir, "downgrade-amber-files", "", "Path to the downgrade amber-files repository")
+	fs.StringVar(&c.downgradePaver, "downgrade-paver", "", "Path to the downgrade paver.sh script")
 	fs.StringVar(&c.upgradeBuilderName, "upgrade-builder-name", "", "upgrade to the latest version of this builder")
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
+
+	if c.OutputDir == "" {
+		outputDir, err := ioutil.TempDir("", "system_ota_tests")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create a temporary directory: %s", err)
+		}
+		c.OutputDir = outputDir
+		c.cleanupOutputDir = true
+	}
 
 	return c, nil
 }
@@ -90,7 +101,30 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) Close() {
-	os.RemoveAll(c.OutputDir)
+	if c.cleanupOutputDir {
+		os.RemoveAll(c.OutputDir)
+	}
+}
+
+func (c *Config) SshPrivateKey() (ssh.Signer, error) {
+	if c.sshPrivateKey == nil {
+		if c.sshKeyFile == "" {
+			return nil, fmt.Errorf("ssh private key cannot be empty")
+		}
+
+		key, err := ioutil.ReadFile(c.sshKeyFile)
+		if err != nil {
+			return nil, err
+		}
+
+		privateKey, err := ssh.ParsePrivateKey(key)
+		if err != nil {
+			return nil, err
+		}
+		c.sshPrivateKey = privateKey
+	}
+
+	return c.sshPrivateKey, nil
 }
 
 func (c *Config) NewDeviceClient() (*device.Client, error) {
@@ -98,11 +132,13 @@ func (c *Config) NewDeviceClient() (*device.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if c.SshKeyFile == "" {
-		return nil, fmt.Errorf("ssh private key cannot be empty")
+
+	sshPrivateKey, err := c.SshPrivateKey()
+	if err != nil {
+		return nil, err
 	}
 
-	return device.NewClient(deviceHostname, c.SshKeyFile)
+	return device.NewClient(deviceHostname, sshPrivateKey)
 }
 
 func (c *Config) BuildArchive() *artifacts.Archive {
@@ -114,18 +150,40 @@ func (c *Config) BuildArchive() *artifacts.Archive {
 	return c.archive
 }
 
-func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
+func (c *Config) GetDowngradeBuildID() (string, error) {
 	if c.downgradeBuilderName != "" && c.downgradeBuildID == "" {
 		a := c.BuildArchive()
 		id, err := a.LookupBuildID(c.downgradeBuilderName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to lookup build id: %s", err)
+			return "", fmt.Errorf("failed to lookup build id: %s", err)
 		}
 		c.downgradeBuildID = id
 	}
 
-	if c.downgradeBuildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(c.downgradeBuildID)
+	return c.downgradeBuildID, nil
+}
+
+func (c *Config) GetUpgradeBuildID() (string, error) {
+	if c.upgradeBuilderName != "" && c.upgradeBuildID == "" {
+		a := c.BuildArchive()
+		id, err := a.LookupBuildID(c.upgradeBuilderName)
+		if err != nil {
+			return "", fmt.Errorf("failed to lookup build id: %s", err)
+		}
+		c.upgradeBuildID = id
+	}
+
+	return c.upgradeBuildID, nil
+}
+
+func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
+	buildID, err := c.GetDowngradeBuildID()
+	if err != nil {
+		return nil, err
+	}
+
+	if buildID != "" {
+		build, err := c.BuildArchive().GetBuildByID(buildID)
 		if err != nil {
 			return nil, err
 		}
@@ -137,17 +195,13 @@ func (c *Config) GetDowngradeRepository() (*packages.Repository, error) {
 }
 
 func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
-	if c.upgradeBuilderName != "" && c.upgradeBuildID == "" {
-		a := c.BuildArchive()
-		id, err := a.LookupBuildID(c.upgradeBuilderName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to lookup build id: %s", err)
-		}
-		c.upgradeBuildID = id
+	buildID, err := c.GetUpgradeBuildID()
+	if err != nil {
+		return nil, err
 	}
 
-	if c.upgradeBuildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(c.upgradeBuildID)
+	if buildID != "" {
+		build, err := c.BuildArchive().GetBuildByID(buildID)
 		if err != nil {
 			return nil, err
 		}
@@ -156,6 +210,30 @@ func (c *Config) GetUpgradeRepository() (*packages.Repository, error) {
 	}
 
 	return packages.NewRepository(c.upgradeAmberFilesDir)
+}
+
+func (c *Config) GetDowngradePaver() (*paver.Paver, error) {
+	sshPrivateKey, err := c.SshPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	sshPublicKey := sshPrivateKey.PublicKey()
+
+	buildID, err := c.GetDowngradeBuildID()
+	if err != nil {
+		return nil, err
+	}
+
+	if buildID != "" {
+		build, err := c.BuildArchive().GetBuildByID(buildID)
+		if err != nil {
+			return nil, err
+		}
+
+		return build.GetPaver(sshPublicKey)
+	}
+
+	return paver.NewPaver(c.downgradePaver, sshPublicKey), nil
 }
 
 func (c *Config) DeviceHostname() (string, error) {

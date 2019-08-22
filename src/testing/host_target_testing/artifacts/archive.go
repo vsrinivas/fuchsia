@@ -6,7 +6,6 @@ package artifacts
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -83,33 +82,26 @@ func (a *Archive) download(buildID string, src string) (string, error) {
 	// We don't want to leak files if we are interrupted during a download.
 	// So we'll initally download into a temporary file, and only once it
 	// succeeds do we rename it into the real destination.
-	tmpfile, err := ioutil.TempFile(a.dir, basename)
-	defer func() {
-		if tmpfile != nil {
-			os.Remove(tmpfile.Name())
+	err := util.AtomicallyWriteFile(path, 0644, func(tmpfile *os.File) error {
+		args := []string{
+			"cp",
+			"-build", buildID,
+			"-src", src,
+			"-dst", tmpfile.Name(),
 		}
-	}()
 
-	args := []string{
-		"cp",
-		"-build", buildID,
-		"-src", src,
-		"-dst", tmpfile.Name(),
-	}
-
-	_, stderr, err := util.RunCommand(a.artifactsPath, args...)
+		_, stderr, err := util.RunCommand(a.artifactsPath, args...)
+		if err != nil {
+			if len(stderr) != 0 {
+				return fmt.Errorf("artifacts failed: %s: %s", err, string(stderr))
+			}
+			return fmt.Errorf("artifacts failed: %s", err)
+		}
+		return nil
+	})
 	if err != nil {
-		if len(stderr) != 0 {
-			return "", fmt.Errorf("artifacts failed: %s: %s", err, string(stderr))
-		}
-		return "", fmt.Errorf("artifacts failed: %s", err)
-	}
-
-	// Now that we've downloaded the file, do an atomic swap of the filename into place.
-	if err := os.Rename(tmpfile.Name(), path); err != nil {
 		return "", err
 	}
-	tmpfile = nil
 
 	return path, nil
 }

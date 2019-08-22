@@ -70,16 +70,20 @@ func connect(addr string, config *ssh.ClientConfig) (*ssh.Client, net.Conn, erro
 // Run a command to completion on the remote device and write STDOUT and STDERR
 // to the passed in io.Writers.
 func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
+	// Temporarily grab the lock and make a copy of the client. This
+	// prevents a long running `Run` command from blocking the keep-alive
+	// goroutine.
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	client := c.client
+	c.mu.Unlock()
 
 	log.Printf("running: %s", command)
 
-	if c.client == nil {
+	if client == nil {
 		return fmt.Errorf("ssh is disconnected")
 	}
 
-	session, err := c.client.NewSession()
+	session, err := client.NewSession()
 	if err != nil {
 		return err
 	}
@@ -120,6 +124,10 @@ func (c *Client) disconnect() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	c.disconnectLocked()
+}
+
+func (c *Client) disconnectLocked() {
 	if c.client != nil {
 		c.client.Close()
 		c.client = nil
@@ -132,10 +140,7 @@ func (c *Client) disconnect() {
 }
 
 // Make a single attempt to reconnect to the ssh server.
-func (c *Client) reconnect() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+func (c *Client) reconnectLocked() {
 	// We can exit early if we are shutting down, or we already have a client.
 	if c.shuttingDown || c.client != nil {
 		return
@@ -169,8 +174,11 @@ func (c *Client) keepalive() {
 func (c *Client) emitKeepalive() {
 	// If the client is disconnected from the server, attempt to reconnect.
 	// Otherwise, emit a heartbeat.
-	if !c.IsConnected() {
-		c.reconnect()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.client == nil {
+		c.reconnectLocked()
 		return
 	}
 
@@ -184,6 +192,6 @@ func (c *Client) emitKeepalive() {
 		if !c.shuttingDown {
 			log.Printf("disconnected from %s: %s", c.addr, err)
 		}
-		c.disconnect()
+		c.disconnectLocked()
 	}
 }

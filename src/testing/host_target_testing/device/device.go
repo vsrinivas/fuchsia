@@ -31,8 +31,8 @@ type Client struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(deviceHostname, keyFile string) (*Client, error) {
-	sshConfig, err := newSSHConfig(keyFile)
+func NewClient(deviceHostname string, privateKey ssh.Signer) (*Client, error) {
+	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -49,17 +49,7 @@ func NewClient(deviceHostname, keyFile string) (*Client, error) {
 
 // Construct a new `ssh.ClientConfig` for a given key file, or return an error if
 // the key is invalid.
-func newSSHConfig(keyFile string) (*ssh.ClientConfig, error) {
-	key, err := ioutil.ReadFile(keyFile)
-	if err != nil {
-		return nil, err
-	}
-
-	privateKey, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		return nil, err
-	}
-
+func newSSHConfig(privateKey ssh.Signer) (*ssh.ClientConfig, error) {
 	config := &ssh.ClientConfig{
 		User: "fuchsia",
 		Auth: []ssh.AuthMethod{
@@ -145,6 +135,25 @@ func (c *Client) GetBuildSnapshot(t *testing.T) []byte {
 	}
 
 	return snapshot
+}
+
+// RebootToRecovery asks the device to reboot into the recovery partition. It
+// waits until the device disconnects before returning.
+func (c *Client) RebootToRecovery(t *testing.T) {
+	log.Printf("rebooting to recovery")
+
+	var wg sync.WaitGroup
+	c.RegisterDisconnectListener(&wg)
+
+	err := c.Run("dm reboot-recovery", os.Stdout, os.Stderr)
+	if err != nil {
+		if _, ok := err.(*ssh.ExitMissingError); !ok {
+			t.Fatalf("failed to reboot into recovery: %s", err)
+		}
+	}
+
+	// Wait until we get a signal that we have disconnected
+	wg.Wait()
 }
 
 // TriggerSystemOTA gets the device to perform a system update.

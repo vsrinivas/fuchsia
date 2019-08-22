@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 
 	"fuchsia.googlesource.com/host_target_testing/packages"
+	"fuchsia.googlesource.com/host_target_testing/paver"
 	"fuchsia.googlesource.com/host_target_testing/util"
+	"golang.org/x/crypto/ssh"
 )
 
 type Build struct {
@@ -67,6 +69,18 @@ func (b *Build) GetBuildArchive() (string, error) {
 	}
 
 	return buildArchiveDir, nil
+}
+
+// GetPaver downloads and returns a paver for the build.
+func (b *Build) GetPaver(publicKey ssh.PublicKey) (*paver.Paver, error) {
+	buildArchiveDir, err := b.GetBuildArchive()
+	if err != nil {
+		return nil, err
+	}
+
+	script := filepath.Join(buildArchiveDir, "pave.sh")
+
+	return paver.NewPaver(script, publicKey), nil
 }
 
 // SystemSnapshot describes the data in the system.snapshot.json file.
