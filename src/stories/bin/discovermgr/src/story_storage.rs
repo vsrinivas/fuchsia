@@ -36,7 +36,7 @@ pub trait StoryStorage: Send + Sync {
     ) -> LocalFutureObj<'a, Result<(), Error>>;
 
     // load a story graph from storage according to its name
-    fn get_graph<'a>(&'a self, story_name: &'a StoryName)
+    fn get_graph<'a>(&'a self, story_name: &'a str)
         -> LocalFutureObj<'a, Option<StoryGraph>>;
 
     // return the number of saved stories
@@ -77,7 +77,7 @@ impl StoryStorage for MemoryStorage {
 
     fn get_graph<'a>(
         &'a self,
-        story_name: &'a StoryName,
+        story_name: &'a str,
     ) -> LocalFutureObj<'a, Option<StoryGraph>> {
         LocalFutureObj::new(Box::new(async move {
             if self.graph.contains_key(story_name) {
@@ -232,7 +232,7 @@ impl StoryStorage for LedgerStorage {
 
     fn get_graph<'a>(
         &'a self,
-        story_name: &'a StoryName,
+        story_name: &'a str,
     ) -> LocalFutureObj<'a, Option<StoryGraph>> {
         LocalFutureObj::new(Box::new(async move {
             let key = format!("{}{}", GRAPH_PREFIX, story_name);

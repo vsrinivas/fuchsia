@@ -62,7 +62,6 @@ impl StoryGraph {
         self.modules.insert(module_id_str.clone(), ModuleData::new(intent));
     }
 
-    #[cfg(test)]
     /// Returns the module data associated to the given |module_id|.
     pub fn get_module_data(&self, module_id: &str) -> Option<&ModuleData> {
         self.modules.get(module_id)

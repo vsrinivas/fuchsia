@@ -20,7 +20,10 @@ use {
         suggestions_service::SuggestionsService,
     },
     failure::{Error, ResultExt},
-    fidl_fuchsia_app_discover::{DiscoverRegistryRequestStream, SuggestionsRequestStream},
+    fidl_fuchsia_app_discover::{
+        DiscoverRegistryRequestStream, SessionDiscoverContextRequestStream,
+        SuggestionsRequestStream,
+    },
     fidl_fuchsia_modular::{
         EntityResolverMarker, LifecycleRequest, LifecycleRequestStream, PuppetMasterMarker,
     },
@@ -42,6 +45,7 @@ mod local_action_provider;
 mod mod_manager;
 mod models;
 mod module_output;
+mod session_context;
 mod story_context_store;
 mod story_graph;
 mod story_manager;
@@ -58,6 +62,7 @@ enum IncomingServices {
     DiscoverRegistry(DiscoverRegistryRequestStream),
     Suggestions(SuggestionsRequestStream),
     Lifecycle(LifecycleRequestStream),
+    SessionDiscoverContext(SessionDiscoverContextRequestStream),
 }
 
 async fn run_lifecycle_server(mut stream: LifecycleRequestStream) -> Result<(), Error> {
@@ -76,6 +81,7 @@ async fn run_fidl_service(
     story_context_store: Arc<Mutex<StoryContextStore>>,
     suggestions_manager: Arc<Mutex<SuggestionsManager>>,
     mod_manager: Arc<Mutex<ModManager>>,
+    story_manager: Arc<Mutex<StoryManager>>,
     incoming_service_stream: IncomingServices,
 ) -> Result<(), Error> {
     match incoming_service_stream {
@@ -87,6 +93,9 @@ async fn run_fidl_service(
             service.handle_client(stream).await
         }
         IncomingServices::Lifecycle(stream) => run_lifecycle_server(stream).await,
+        IncomingServices::SessionDiscoverContext(stream) => {
+            session_context::run_server(stream, story_manager).await
+        }
     }
 }
 
@@ -140,7 +149,8 @@ async fn main() -> Result<(), Error> {
     fs.dir(SERVICE_DIRECTORY)
         .add_fidl_service(IncomingServices::DiscoverRegistry)
         .add_fidl_service(IncomingServices::Suggestions)
-        .add_fidl_service(IncomingServices::Lifecycle);
+        .add_fidl_service(IncomingServices::Lifecycle)
+        .add_fidl_service(IncomingServices::SessionDiscoverContext);
 
     fs.take_and_serve_directory_handle()?;
 
@@ -150,6 +160,7 @@ async fn main() -> Result<(), Error> {
             story_context_store.clone(),
             suggestions_manager_ref.clone(),
             mod_manager.clone(),
+            story_manager.clone(),
             incoming_service_stream,
         )
         .unwrap_or_else(|e| fx_log_err!("{:?}", e))

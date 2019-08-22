@@ -781,6 +781,16 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::AppConfig session_shell_c
     discovermgr_app_->services().ConnectToService(std::move(request));
   });
 
+  service_list->names.push_back(fuchsia::app::discover::SessionDiscoverContext::Name_);
+  session_shell_services_.AddService<fuchsia::app::discover::SessionDiscoverContext>(
+      [this](auto request) {
+        if (terminating_) {
+          return;
+        }
+        finish_initialization_();
+        discovermgr_app_->services().ConnectToService(std::move(request));
+      });
+
   // The services in |session_shell_services_| are provided through the
   // connection held in |session_shell_service_provider| connected to
   // |session_shell_services_|.

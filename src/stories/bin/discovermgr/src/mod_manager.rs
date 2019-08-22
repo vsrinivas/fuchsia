@@ -40,9 +40,9 @@ impl ModManager {
         match suggestion.action() {
             SuggestedAction::AddMod(action) => {
                 // execute a mod suggestion
-                self.execute_actions(vec![&action], /*focus=*/ true).await?;
                 let mut story_manager = self.story_manager.lock();
                 story_manager.add_to_story_graph(&action).await?;
+                self.execute_actions(vec![&action], /*focus=*/ true).await?;
                 for param in action.intent().parameters() {
                     self.actions
                         .entry(param.entity_reference().to_string())

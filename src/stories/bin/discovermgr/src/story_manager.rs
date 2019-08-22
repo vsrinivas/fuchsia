@@ -30,6 +30,19 @@ impl StoryManager {
         }
     }
 
+    pub async fn get_story_graph(&self, story_name: &str) -> Option<StoryGraph> {
+        if self.current_story_name.is_some() {
+            let name = self.current_story_name.as_ref().unwrap();
+            if story_name == name {
+                Some(self.current_story_graph.clone())
+            } else {
+                self.story_storage.get_graph(story_name).await
+            }
+        } else {
+            None
+        }
+    }
+
     // Save the current story graph to storage
     async fn save_current_story_graph(&mut self) -> Result<(), Error> {
         if self.current_story_graph.get_module_count() > 0 && self.current_story_name.is_some() {
@@ -106,7 +119,11 @@ impl StoryManager {
                 self.current_story_graph = loaded_graph.unwrap_or(StoryGraph::new());
             }
         }
-        self.current_story_graph.add_module(action.mod_name(), action.intent().clone());
+        let mut intent = action.intent().clone();
+        if intent.action.is_none() {
+            intent.action = Some("NONE".to_string());
+        }
+        self.current_story_graph.add_module(action.mod_name(), intent);
         Ok(())
     }
 
