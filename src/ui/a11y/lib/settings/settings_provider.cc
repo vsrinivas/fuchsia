@@ -143,30 +143,21 @@ void SettingsProvider::SetColorCorrection(fuchsia::accessibility::ColorCorrectio
 }
 
 void SettingsProvider::NotifyWatchers(const fuchsia::accessibility::Settings& new_settings) {
-  for (auto& watcher : watchers_) {
+  for (const auto& watcher : watchers_.ptrs()) {
     auto setting = fidl::Clone(new_settings);
-    watcher->OnSettingsChange(std::move(setting));
+    (*watcher)->OnSettingsChange(std::move(setting));
   }
-}
-
-void SettingsProvider::ReleaseWatcher(fuchsia::accessibility::SettingsWatcher* watcher) {
-  auto predicate = [watcher](const auto& target) { return target.get() == watcher; };
-
-  watchers_.erase(std::remove_if(watchers_.begin(), watchers_.end(), predicate));
 }
 
 void SettingsProvider::AddWatcher(
     fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher) {
   fuchsia::accessibility::SettingsWatcherPtr watcher_proxy = watcher.Bind();
-  fuchsia::accessibility::SettingsWatcher* proxy_raw_ptr = watcher_proxy.get();
 
-  watcher_proxy.set_error_handler(
-      [this, proxy_raw_ptr](zx_status_t status) { ReleaseWatcher(proxy_raw_ptr); });
   // Send Current Settings to watcher, so that they have the initial copy of the
   // Settings.
   auto setting = fidl::Clone(settings_);
   watcher_proxy->OnSettingsChange(std::move(setting));
-  watchers_.push_back(std::move(watcher_proxy));
+  watchers_.AddInterfacePtr(std::move(watcher_proxy));
 }
 
 std::array<float, 9> SettingsProvider::GetColorAdjustmentMatrix() {

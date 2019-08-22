@@ -7,6 +7,7 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/interface_ptr_set.h>
 #include <math.h>
 
 #include <array>
@@ -48,9 +49,6 @@ class SettingsProvider : public fuchsia::accessibility::SettingsProvider {
 
   std::array<float, 9> GetColorAdjustmentMatrix();
 
-  // Destroys a watcher proxy (called upon a connection error).
-  void ReleaseWatcher(fuchsia::accessibility::SettingsWatcher* watcher);
-
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const fuchsia::accessibility::Settings& new_settings);
 
@@ -58,7 +56,7 @@ class SettingsProvider : public fuchsia::accessibility::SettingsProvider {
 
   fidl::Binding<fuchsia::accessibility::SettingsProvider> binding_;
 
-  std::vector<fuchsia::accessibility::SettingsWatcherPtr> watchers_;
+  fidl::InterfacePtrSet<fuchsia::accessibility::SettingsWatcher> watchers_;
 
   fuchsia::accessibility::Settings settings_;
 
