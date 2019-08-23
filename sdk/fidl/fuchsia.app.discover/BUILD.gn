@@ -11,6 +11,7 @@ fidl("fuchsia.app.discover") {
     "discover_registry.fidl",
     "module_output.fidl",
     "story_discover_context.fidl",
+    "story_module.fidl",
     "suggestions_service.fidl",
   ]
 

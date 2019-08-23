@@ -31,6 +31,9 @@ pub async fn run_server(
                 )?
                 .spawn(module_output_stream);
             }
+            DiscoverRegistryRequest::RegisterStoryModule { .. } => {
+                // TODO: not implemented
+            }
         }
     }
     Ok(())
