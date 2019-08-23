@@ -730,7 +730,6 @@ exit:
 static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, wlanif_scan_req_t* req) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   zx_status_t err;
-  struct brcmf_scan_results* results;
   struct escan_info* escan = &cfg->escan_info;
 
   BRCMF_DBG(SCAN, "Enter\n");
@@ -739,10 +738,6 @@ static zx_status_t brcmf_do_escan(struct brcmf_if* ifp, wlanif_scan_req_t* req) 
   escan->escan_state = WL_ESCAN_STATE_SCANNING;
 
   brcmf_scan_config_mpc(ifp, 0);
-  results = (struct brcmf_scan_results*)cfg->escan_info.escan_buf;
-  results->version = 0;
-  results->count = 0;
-  results->buflen = WL_ESCAN_RESULTS_FIXED_SIZE;
 
   err = escan->run(cfg, ifp, req);
   if (err != ZX_OK) {
@@ -1196,7 +1191,7 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
     goto done;
   }
 
-  brcmf_timer_init(&cfg->disconnect_timeout, ifp->drvr->dispatcher,  brcmf_disconnect_timeout, cfg);
+  brcmf_timer_init(&cfg->disconnect_timeout, ifp->drvr->dispatcher, brcmf_disconnect_timeout, cfg);
   brcmf_timer_set(&cfg->disconnect_timeout, BRCMF_DISCONNECT_TIMEOUT);
 
 done:
@@ -1519,36 +1514,6 @@ static zx_status_t brcmf_inform_single_bss(struct brcmf_cfg80211_info* cfg,
   return ZX_OK;
 }
 
-static struct brcmf_bss_info_le* next_bss_le(struct brcmf_scan_results* list,
-                                             struct brcmf_bss_info_le* bss) {
-  if (bss == NULL) {
-    return list->bss_info_le;
-  }
-  return (struct brcmf_bss_info_le*)((unsigned long)bss + bss->length);
-}
-
-static zx_status_t brcmf_inform_bss(struct brcmf_cfg80211_info* cfg) {
-  struct brcmf_scan_results* bss_list;
-  struct brcmf_bss_info_le* bi = NULL; /* must be initialized */
-  zx_status_t err = ZX_OK;
-  int i;
-
-  bss_list = (struct brcmf_scan_results*)cfg->escan_info.escan_buf;
-  if (bss_list->count != 0 && bss_list->version != BRCMF_BSS_INFO_VERSION) {
-    BRCMF_ERR("Version %d != WL_BSS_INFO_VERSION\n", bss_list->version);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  BRCMF_DBG(SCAN, "scanned AP count (%d), wiphy %p", bss_list->count, cfg_to_wiphy(cfg));
-  for (i = 0; i < (int32_t)bss_list->count; i++) {
-    bi = next_bss_le(bss_list, bi);
-    err = brcmf_inform_single_bss(cfg, bi);
-    if (err != ZX_OK) {
-      break;
-    }
-  }
-  return err;
-}
-
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg) {
   struct escan_info* escan = &cfg->escan_info;
 
@@ -1565,7 +1530,6 @@ static void brcmf_cfg80211_escan_timeout_worker(struct work_struct* work) {
   struct brcmf_cfg80211_info* cfg =
       containerof(work, struct brcmf_cfg80211_info, escan_timeout_work);
 
-  brcmf_inform_bss(cfg);
   brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, true, true);
 }
 
@@ -1580,43 +1544,6 @@ static void brcmf_escan_timeout(void* data) {
   cfg->pub->irq_callback_lock.unlock();
 }
 
-static bool brcmf_compare_update_same_bss(struct brcmf_cfg80211_info* cfg,
-                                          struct brcmf_bss_info_le* bss,
-                                          struct brcmf_bss_info_le* bss_info_le) {
-  struct brcmu_chan ch_bss, ch_bss_info_le;
-
-  ch_bss.chspec = bss->chanspec;
-  cfg->d11inf.decchspec(&ch_bss);
-  ch_bss_info_le.chspec = bss_info_le->chanspec;
-  cfg->d11inf.decchspec(&ch_bss_info_le);
-
-  if (!memcmp(&bss_info_le->BSSID, &bss->BSSID, ETH_ALEN) && ch_bss.band == ch_bss_info_le.band &&
-      bss_info_le->SSID_len == bss->SSID_len &&
-      !memcmp(bss_info_le->SSID, bss->SSID, bss_info_le->SSID_len)) {
-    if ((bss->flags & BRCMF_BSS_RSSI_ON_CHANNEL) ==
-        (bss_info_le->flags & BRCMF_BSS_RSSI_ON_CHANNEL)) {
-      int16_t bss_rssi = bss->RSSI;
-      int16_t bss_info_rssi = bss_info_le->RSSI;
-
-      /* preserve max RSSI if the measurements are
-       * both on-channel or both off-channel
-       */
-      if (bss_info_rssi > bss_rssi) {
-        bss->RSSI = bss_info_le->RSSI;
-      }
-    } else if ((bss->flags & BRCMF_BSS_RSSI_ON_CHANNEL) &&
-               (bss_info_le->flags & BRCMF_BSS_RSSI_ON_CHANNEL) == 0) {
-      /* preserve the on-channel rssi measurement
-       * if the new measurement is off channel
-       */
-      bss->RSSI = bss_info_le->RSSI;
-      bss->flags |= BRCMF_BSS_RSSI_ON_CHANNEL;
-    }
-    return true;
-  }
-  return false;
-}
-
 static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
                                                 const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
@@ -1624,16 +1551,12 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
   struct brcmf_escan_result_le* escan_result_le;
   uint32_t escan_buflen;
   struct brcmf_bss_info_le* bss_info_le;
-  struct brcmf_bss_info_le* bss = NULL;
-  uint32_t bi_length = 0;
-  struct brcmf_scan_results* list = NULL;
-  uint32_t i;
   bool aborted;
 
   status = e->status;
 
   if (status == BRCMF_E_STATUS_ABORT) {
-    goto exit;
+    goto chk_scan_end;
   }
 
   if (!brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
@@ -1641,75 +1564,68 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
     return ZX_ERR_UNAVAILABLE;
   }
 
+  escan_result_le = static_cast<decltype(escan_result_le)>(data);
+  if (!escan_result_le) {
+    BRCMF_ERR("Invalid escan result (NULL pointer)\n");
+    goto chk_scan_end;
+  }
+
+  bss_info_le = &escan_result_le->bss_info_le;
+
+  if (e->datalen < sizeof(*escan_result_le)) {
+    BRCMF_ERR("invalid event data length\n");
+    goto chk_scan_end;
+  }
+
+  escan_buflen = escan_result_le->buflen;
+  if (escan_buflen > BRCMF_ESCAN_BUF_SIZE || escan_buflen > e->datalen ||
+      escan_buflen < sizeof(*escan_result_le)) {
+    BRCMF_ERR("Invalid escan buffer length: %d\n", escan_buflen);
+    goto chk_scan_end;
+  }
+
+  if (escan_result_le->bss_count != 1) {
+    BRCMF_ERR("Invalid bss_count %d: ignoring\n", escan_result_le->bss_count);
+    goto chk_scan_end;
+  }
+
+  if (brcmf_p2p_scan_finding_common_channel(cfg, bss_info_le)) {
+    goto chk_scan_end;
+  }
+
+  if (!cfg->int_escan_map && !cfg->scan_request) {
+    BRCMF_DBG(SCAN, "result without cfg80211 request\n");
+    goto chk_scan_end;
+  }
+
+  if (bss_info_le->length != escan_buflen - WL_ESCAN_RESULTS_FIXED_SIZE) {
+    BRCMF_ERR("Ignoring invalid bss_info length: %d\n", bss_info_le->length);
+    goto chk_scan_end;
+  }
+
+  brcmf_inform_single_bss(cfg, bss_info_le);
+
   if (status == BRCMF_E_STATUS_PARTIAL) {
     BRCMF_DBG(SCAN, "ESCAN Partial result\n");
-    if (e->datalen < sizeof(*escan_result_le)) {
-      BRCMF_ERR("invalid event data length\n");
-      goto exit;
-    }
-    escan_result_le = (struct brcmf_escan_result_le*)data;
-    if (!escan_result_le) {
-      BRCMF_ERR("Invalid escan result (NULL pointer)\n");
-      goto exit;
-    }
-    escan_buflen = escan_result_le->buflen;
-    if (escan_buflen > BRCMF_ESCAN_BUF_SIZE || escan_buflen > e->datalen ||
-        escan_buflen < sizeof(*escan_result_le)) {
-      BRCMF_ERR("Invalid escan buffer length: %d\n", escan_buflen);
-      goto exit;
-    }
-    if (escan_result_le->bss_count != 1) {
-      BRCMF_ERR("Invalid bss_count %d: ignoring\n", escan_result_le->bss_count);
-      goto exit;
-    }
-    bss_info_le = &escan_result_le->bss_info_le;
+    goto done;
+  }
 
-    if (brcmf_p2p_scan_finding_common_channel(cfg, bss_info_le)) {
-      goto exit;
-    }
-
-    if (!cfg->int_escan_map && !cfg->scan_request) {
-      BRCMF_DBG(SCAN, "result without cfg80211 request\n");
-      goto exit;
-    }
-
-    bi_length = bss_info_le->length;
-    if (bi_length != escan_buflen - WL_ESCAN_RESULTS_FIXED_SIZE) {
-      BRCMF_ERR("Ignoring invalid bss_info length: %d\n", bi_length);
-      goto exit;
-    }
-
-    list = (struct brcmf_scan_results*)cfg->escan_info.escan_buf;
-    if (bi_length > BRCMF_ESCAN_BUF_SIZE - list->buflen) {
-      BRCMF_ERR("Buffer is too small: ignoring\n");
-      goto exit;
-    }
-
-    for (i = 0; i < list->count; i++) {
-      bss =
-          bss ? (struct brcmf_bss_info_le*)((unsigned char*)bss + bss->length) : list->bss_info_le;
-      if (brcmf_compare_update_same_bss(cfg, bss, bss_info_le)) {
-        goto exit;
-      }
-    }
-    memcpy(&cfg->escan_info.escan_buf[list->buflen], bss_info_le, bi_length);
-    list->version = bss_info_le->version;
-    list->buflen += bi_length;
-    list->count++;
-  } else {
+chk_scan_end:
+  // If this is not a partial notification, indicate scan complete to wlanstack
+  if (status != BRCMF_E_STATUS_PARTIAL) {
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
     if (brcmf_p2p_scan_finding_common_channel(cfg, NULL)) {
-      goto exit;
+      goto done;
     }
     if (cfg->int_escan_map || cfg->scan_request) {
-      brcmf_inform_bss(cfg);
       aborted = status != BRCMF_E_STATUS_SUCCESS;
       brcmf_notify_escan_complete(cfg, ifp, aborted, false);
     } else {
       BRCMF_DBG(SCAN, "Ignored scan complete result 0x%x\n", status);
     }
   }
-exit:
+
+done:
   return ZX_OK;
 }
 
@@ -4103,8 +4019,6 @@ static void brcmf_deinit_priv_mem(struct brcmf_cfg80211_info* cfg) {
   cfg->wowl.nd = NULL;
   free(cfg->wowl.nd_info);
   cfg->wowl.nd_info = NULL;
-  free(cfg->escan_info.escan_buf);
-  cfg->escan_info.escan_buf = NULL;
 }
 
 static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
@@ -4126,12 +4040,6 @@ static zx_status_t brcmf_init_priv_mem(struct brcmf_cfg80211_info* cfg) {
   if (!cfg->wowl.nd_info) {
     goto init_priv_mem_out;
   }
-  cfg->escan_info.escan_buf =
-      static_cast<decltype(cfg->escan_info.escan_buf)>(calloc(1, BRCMF_ESCAN_BUF_SIZE));
-  if (!cfg->escan_info.escan_buf) {
-    goto init_priv_mem_out;
-  }
-
   return ZX_OK;
 
 init_priv_mem_out:

@@ -17,12 +17,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_
 
+#include <lib/sync/completion.h>
 #include <threads.h>
+#include <zircon/listnode.h>
+
 #include <atomic>
 
 #include <ddk/protocol/wlanphyimpl.h>
-#include <lib/sync/completion.h>
-#include <zircon/listnode.h>
 
 /* for brcmu_d11inf */
 #include "brcmu_d11.h"
@@ -236,7 +237,6 @@ enum wl_escan_state { WL_ESCAN_STATE_IDLE, WL_ESCAN_STATE_SCANNING };
 
 struct escan_info {
   uint32_t escan_state;
-  uint8_t* escan_buf;
   struct wiphy* wiphy;
   struct brcmf_if* ifp;
   zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
