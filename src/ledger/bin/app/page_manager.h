@@ -14,6 +14,8 @@
 #include <vector>
 
 #include "src/ledger/bin/app/active_page_manager_container.h"
+#include "src/ledger/bin/app/heads_children_manager.h"
+#include "src/ledger/bin/app/inspectable_page.h"
 #include "src/ledger/bin/app/ledger_impl.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/page_availability_manager.h"
@@ -35,13 +37,13 @@ namespace ledger {
 //
 // When a PageManager becomes empty, client is notified through
 // |on_empty_callback|.
-class PageManager {
+class PageManager : InspectablePage {
  public:
   PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
               std::vector<PageUsageListener*> page_usage_listeners,
               storage::LedgerStorage* ledger_storage, sync_coordinator::LedgerSync* ledger_sync,
               LedgerMergeManager* ledger_merge_manager, inspect_deprecated::Node inspect_node);
-  ~PageManager();
+  ~PageManager() override;
 
   // Checks whether the given page is closed and synced. The result returned in
   // the callback will be |PAGE_OPENED| if the page is opened after calling this
@@ -75,42 +77,17 @@ class PageManager {
   // |PageManager|'s on_empty_callback_ to be called).
   fit::closure CreateDetacher();
 
+  // InspectablePage:
+  void NewInspection(fit::function<void(storage::Status status, ExpiringToken token,
+                                        ActivePageManager* active_page_manager)>
+                         callback) override;
+
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
  private:
   using PageTracker = fit::function<bool()>;
-
-  class InspectedHead;
-
-  // An |inspect_deprecated::ChildrenManager| that exposes to Inspect the commit IDs of this page's
-  // heads.
-  class HeadsChildrenManager final : public inspect_deprecated::ChildrenManager {
-   public:
-    explicit HeadsChildrenManager(inspect_deprecated::Node* heads_node, PageManager* page_manager);
-    ~HeadsChildrenManager() override;
-
-    void set_on_empty(fit::closure on_empty_callback);
-    bool IsEmpty();
-
-   private:
-    // inspect_deprecated::ChildrenManager
-    void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
-    void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
-
-    void CheckEmpty();
-
-    inspect_deprecated::Node* heads_node_;
-    PageManager* page_manager_;
-    fit::closure on_empty_callback_;
-    callback::AutoCleanableMap<storage::CommitId, InspectedHead> inspected_heads_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(HeadsChildrenManager);
-  };
-
-  // Ensures that the ActivePageManagerContainer is up (or creates and inits it if it isn't).
-  void EnsureActivePageManagerContainerForInspect();
 
   // Requests a PageStorage object for the given |container|. If the page is not
   // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
