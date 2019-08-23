@@ -12,17 +12,19 @@ import 'package:fidl_fuchsia_modular/fidl_async.dart'
         StoryController,
         StoryState,
         StoryVisibilityState;
+import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
+    show StoryDiscoverContext, SurfaceData;
 import 'package:fuchsia_modular_flutter/session_shell.dart'
     show SessionShell, Story;
 import 'package:fuchsia_modular_flutter/story_shell.dart'
-    show StoryShell, Surface;
+    show StoryShell, StoryShellTransitional, Surface;
 import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:story_shell_labs_lib/layout/deja_layout.dart';
 
 import 'cluster_model.dart';
 
 /// Defines a concrete implementation for [Story] for Ermine.
-class ErmineStory implements Story, StoryShell {
+class ErmineStory implements Story, StoryShell, StoryShellTransitional {
   @override
   final StoryInfo info;
 
@@ -40,6 +42,7 @@ class ErmineStory implements Story, StoryShell {
     this.controller,
     this.clustersModel,
   });
+
   @override
   String get id => info.id;
 
@@ -121,11 +124,21 @@ class ErmineStory implements Story, StoryShell {
 
   @override
   void onSurfaceAdded(Surface surface) {
+    if (discoverContext != null) {
+      discoverContext.getSurfaceData(surface.id).then((surfaceData) {
+        _addSurface(surface, surfaceData);
+      });
+    } else {
+      _addSurface(surface, null);
+    }
+  }
+
+  void _addSurface(Surface surface, SurfaceData surfaceData) {
     _surfaces.add(surface);
+    final parameterTypes = surfaceData?.parameterTypes ?? [];
     layoutManager.addSurface(
-      // TODO: get the intent and parameters from the addSurface call.
-      intent: 'no action yet',
-      parameters: UnmodifiableListView<String>([]),
+      intent: surfaceData?.action ?? 'NONE',
+      parameters: UnmodifiableListView<String>(parameterTypes),
       surfaceId: surface.id,
       view: surface.childViewConnection,
     );
@@ -150,6 +163,9 @@ class ErmineStory implements Story, StoryShell {
   @override
   // TODO: implement surfaces
   Iterable<Surface> get surfaces => _surfaces;
+
+  @override
+  StoryDiscoverContext discoverContext;
 }
 
 String _sanitizeSurfaceId(String surfaceId) => surfaceId.replaceAll('\\', '');
