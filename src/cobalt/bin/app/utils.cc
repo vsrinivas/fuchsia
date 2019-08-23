@@ -8,8 +8,8 @@
 
 namespace cobalt {
 
-using encoder::ObservationStore;
 using fuchsia::cobalt::Status;
+using observation_store::ObservationStore;
 
 Status ToCobaltStatus(ObservationStore::StoreStatus s) {
   switch (s) {

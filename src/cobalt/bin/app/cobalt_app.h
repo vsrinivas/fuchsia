@@ -120,7 +120,7 @@ class CobaltApp {
   FuchsiaSystemClock system_clock_;
 
   network_wrapper::NetworkWrapperImpl network_wrapper_;
-  std::unique_ptr<encoder::ObservationStore> observation_store_;
+  std::unique_ptr<observation_store::ObservationStore> observation_store_;
   std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_analyzer_;
   std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_shuffler_;
   encoder::ClearcutV1ShippingManager clearcut_shipping_manager_;

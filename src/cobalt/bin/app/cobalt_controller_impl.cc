@@ -15,7 +15,7 @@ using encoder::ShippingManager;
 CobaltControllerImpl::CobaltControllerImpl(async_dispatcher_t* dispatcher,
                                            std::vector<encoder::ShippingManager*> shipping_managers,
                                            logger::EventAggregator* event_aggregator,
-                                           encoder::ObservationStore* observation_store)
+                                           observation_store::ObservationStore* observation_store)
     : dispatcher_(dispatcher),
       shipping_managers_(std::move(shipping_managers)),
       event_aggregator_(event_aggregator),

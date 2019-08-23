@@ -21,12 +21,12 @@ namespace http = ::fuchsia::net::oldhttp;
 using clearcut::ClearcutUploader;
 using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
-using encoder::FileObservationStore;
-using encoder::MemoryObservationStore;
-using encoder::ObservationStore;
 using encoder::ShippingManager;
 using encoder::UploadScheduler;
 using logger::ProjectContextFactory;
+using observation_store::FileObservationStore;
+using observation_store::MemoryObservationStore;
+using observation_store::ObservationStore;
 using util::PosixFileSystem;
 using utils::FuchsiaHTTPClient;
 
@@ -130,13 +130,11 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher, std::chrono::seconds target
   observation_store_->ResetInternalMetrics(internal_logger_.get());
   clearcut_shipping_manager_.ResetInternalMetrics(internal_logger_.get());
 
-  auto current_time =
-      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
                 << std::put_time(std::localtime(&current_time), "%F %T %z");
   system_clock_.AwaitExternalSource([this, start_event_aggregator_worker]() {
-    auto current_time =
-        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     FX_LOGS(INFO) << "The system clock has become accurate, now at: "
                   << std::put_time(std::localtime(&current_time), "%F %T %z");
 

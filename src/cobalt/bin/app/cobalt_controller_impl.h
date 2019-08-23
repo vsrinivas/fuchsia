@@ -27,7 +27,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
   CobaltControllerImpl(async_dispatcher_t* dispatcher,
                        std::vector<encoder::ShippingManager*> shipping_managers,
                        logger::EventAggregator* event_aggregator,
-                       encoder::ObservationStore* observation_store);
+                       observation_store::ObservationStore* observation_store);
 
  private:
   void RequestSendSoon(RequestSendSoonCallback callback) override;
@@ -46,7 +46,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
   async_dispatcher_t* const dispatcher_;
   std::vector<encoder::ShippingManager*> shipping_managers_;
   logger::EventAggregator* event_aggregator_;
-  encoder::ObservationStore* observation_store_;
+  observation_store::ObservationStore* observation_store_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
 };
