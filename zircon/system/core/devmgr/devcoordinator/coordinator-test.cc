@@ -7,6 +7,7 @@
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/driver/test/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message.h>
@@ -108,7 +109,7 @@ TEST(CoordinatorTestCase, LoadDriver) {
 }
 
 TEST(CoordinatorTestCase, BindDrivers) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
@@ -128,7 +129,7 @@ TEST(CoordinatorTestCase, BindDrivers) {
 
 // Test binding drivers against the root/test/misc devices
 TEST(CoordinatorTestCase, BindDriversForBuiltins) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
@@ -287,7 +288,7 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
 }
 
 TEST(CoordinatorTestCase, BindDevices) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
@@ -455,7 +456,7 @@ class TestDriverTestReporter : public devmgr::DriverTestReporter {
 };
 
 TEST(CoordinatorTestCase, TestOutput) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher(), nullptr));
 
   ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
@@ -878,7 +879,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   // These should be listed after devhost/sys_proxy as it needs to be
   // destroyed before them.
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   devmgr::BootArgs boot_args_;
   devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher(), &boot_args_)};
 

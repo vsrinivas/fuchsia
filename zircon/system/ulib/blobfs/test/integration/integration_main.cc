@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
 #include <zxtest/zxtest.h>
 
@@ -75,7 +76,7 @@ int main(int argc, char** argv) {
   g_environment = parent.get();
 
   // Initialize a tmpfs instance to "hold" the mounted blobfs.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   if (loop.StartThread() != ZX_OK) {
     printf("Unable to initialize local tmpfs loop\n");
     return -1;

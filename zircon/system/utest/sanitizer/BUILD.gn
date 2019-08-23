@@ -11,6 +11,7 @@ test("sanitizer") {
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/ldmsg",
     "$zx/system/ulib/loader-service",

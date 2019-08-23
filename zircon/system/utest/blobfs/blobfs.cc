@@ -11,6 +11,7 @@
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
@@ -2633,7 +2634,7 @@ int main(int argc, char** argv) {
   }
 
   // Initialize tmpfs.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   if (loop.StartThread() != ZX_OK) {
     fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
     return -1;

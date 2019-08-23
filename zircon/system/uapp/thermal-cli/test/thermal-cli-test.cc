@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mock-function/mock-function.h>
 #include <zxtest/zxtest.h>
@@ -12,7 +13,7 @@
 
 class ThermalCliTest : public zxtest::Test {
  public:
-  ThermalCliTest() : loop_(&kAsyncLoopConfigAttachToThread) {
+  ThermalCliTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &client_, &server));
     fidl_bind(loop_.dispatcher(), server.release(),

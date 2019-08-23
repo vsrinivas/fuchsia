@@ -13,6 +13,7 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
@@ -29,7 +30,7 @@ namespace {
 bool test_vmofile_basic() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 

@@ -6,6 +6,7 @@
 
 #include <fbl/auto_lock.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zxtest/zxtest.h>
 
 #include "zx-device.h"
@@ -13,7 +14,7 @@
 namespace {
 
 TEST(ProxyIostateTestCase, Creation) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -39,7 +40,7 @@ TEST(ProxyIostateTestCase, Creation) {
 // gets queued, but before the channel close is processed.  If the bug is
 // present, and we're running with ASAN, this will crash 100% of the time.
 TEST(ProxyIostateTestCase, ChannelCloseThenCancel) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));

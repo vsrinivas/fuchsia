@@ -53,6 +53,7 @@ executable("bin") {
     "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

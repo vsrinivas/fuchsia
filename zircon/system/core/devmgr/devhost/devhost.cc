@@ -10,6 +10,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/fdio.h>
@@ -67,7 +68,7 @@ static fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> dh_drivers;
 
 // Access the devhost's async event loop
 async::Loop* DevhostAsyncLoop() {
-  static async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  static async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   return &loop;
 }
 

@@ -7,6 +7,7 @@
 #include <fbl/auto_lock.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
 
@@ -18,7 +19,7 @@
 namespace {
 
 TEST(DeviceControllerConnectionTestCase, Creation) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -37,7 +38,7 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
 }
 
 TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -117,7 +118,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
 
 // Verify we do not abort when an expected PEER_CLOSED comes in.
 TEST(DeviceControllerConnectionTestCase, PeerClosed) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));
@@ -141,7 +142,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
 }
 
 TEST(DeviceControllerConnectionTestCase, UnbindHook) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&dev));

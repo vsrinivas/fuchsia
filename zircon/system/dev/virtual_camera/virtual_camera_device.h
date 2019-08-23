@@ -14,6 +14,7 @@
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <fuchsia/camera/common/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/async/wait.h>
 #include <lib/fidl-utils/bind.h>

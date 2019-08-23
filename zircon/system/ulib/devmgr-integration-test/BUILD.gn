@@ -23,6 +23,7 @@ library("devmgr-integration-test") {
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fdio",

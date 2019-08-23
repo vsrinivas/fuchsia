@@ -18,6 +18,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/event.h>
 #include <trace-provider/handler.h>
 #include <trace-reader/reader.h>
@@ -31,8 +32,8 @@ class Fixture : private trace::TraceHandler {
  public:
   Fixture(attach_to_thread_t attach_to_thread, trace_buffering_mode_t mode, size_t buffer_size)
       : attach_to_thread_(attach_to_thread),
-        loop_(attach_to_thread == kAttachToThread ? &kAsyncLoopConfigAttachToThread
-                                                  : &kAsyncLoopConfigNoAttachToThread),
+        loop_(attach_to_thread == kAttachToThread ? &kAsyncLoopConfigAttachToCurrentThread
+                                                  : &kAsyncLoopConfigNoAttachToCurrentThread),
         buffering_mode_(mode),
         buffer_(new uint8_t[buffer_size], buffer_size) {
     zx_status_t status = zx::event::create(0u, &trace_stopped_);

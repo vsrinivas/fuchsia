@@ -9,6 +9,7 @@
 #include <fcntl.h>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -21,7 +22,7 @@ TEST(PayloadStreamerTest, TrivialLifetime) {
 
 class PayloadStreamerTest : public zxtest::Test {
  public:
-  PayloadStreamerTest() : loop_(&kAsyncLoopConfigAttachToThread) {
+  PayloadStreamerTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     mktemp(tempfile_name_);
     ASSERT_NE(strlen(tempfile_name_), 0);
 

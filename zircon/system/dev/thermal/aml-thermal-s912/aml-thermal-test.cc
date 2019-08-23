@@ -5,6 +5,7 @@
 #include "aml-thermal.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <mock/ddktl/protocol/scpi.h>
@@ -59,7 +60,7 @@ class MockScpi : public ddk::MockScpi {
 
 class AmlThermalTest : public zxtest::Test {
  public:
-  AmlThermalTest() : loop_(&kAsyncLoopConfigAttachToThread) {}
+  AmlThermalTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   void StartFidlServer(AmlThermal* device) {
     zx::channel server;

@@ -8,6 +8,7 @@
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -127,7 +128,7 @@ bool sync_start(sync_completion_t* completions, async::Loop* loop,
 bool TestUnpostedTeardown() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
   fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -156,7 +157,7 @@ bool TestUnpostedTeardown() {
 bool TestPostedTeardown() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
   fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -189,7 +190,7 @@ bool TestPostedTeardown() {
 bool TestTeardownDeleteThis() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
   fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -219,7 +220,7 @@ bool TestTeardownDeleteThis() {
 bool TestTeardownSlowAsyncCallback() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
   fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -253,7 +254,7 @@ bool TestTeardownSlowAsyncCallback() {
 bool TestTeardownSlowClone() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sync_completion_t completions[3];
   auto vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
   ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -307,7 +308,7 @@ bool TestTeardownSlowClone() {
 
 bool TestSynchronousTeardown() {
   BEGIN_TEST;
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   zx::channel client;
 

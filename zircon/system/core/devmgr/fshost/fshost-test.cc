@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -28,7 +29,7 @@ std::unique_ptr<cobalt_client::Collector> MakeCollector() {
 // Test that when no filesystems have been added to the fshost vnode, it
 // stays empty.
 TEST(VnodeTestCase, NoFilesystems) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
   auto fshost_vn =
@@ -41,7 +42,7 @@ TEST(VnodeTestCase, NoFilesystems) {
 // Test that when filesystem has been added to the fshost vnode, it appears
 // in the supplied remote tracking directory.
 TEST(VnodeTestCase, AddFilesystem) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
   auto fshost_vn =

@@ -9,6 +9,7 @@
 #include <fs/vmo-file.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/cpp/message.h>
@@ -51,7 +52,7 @@ constexpr char kEchoString[] = "echo";
 constexpr char kProxyEchoString[] = "proxy_echo";
 
 TEST(ServiceProxyDirTest, Simple) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
 
   vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());

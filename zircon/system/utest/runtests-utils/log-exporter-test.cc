@@ -4,6 +4,7 @@
 
 #include <fuchsia/logger/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/message_buffer.h>
 
 #include <utility>

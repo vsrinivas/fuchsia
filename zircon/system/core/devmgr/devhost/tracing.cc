@@ -4,6 +4,7 @@
 
 #include "tracing.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <trace-provider/fdio_connect.h>
 #include <trace-provider/provider.h>
@@ -14,7 +15,7 @@ namespace devmgr {
 
 zx_status_t devhost_start_trace_provider() {
   async_loop_t* loop;
-  zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop);
+  zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop);
   if (status != ZX_OK) {
     log(ERROR, "devhost: error creating async loop: %d\n", status);
     return status;

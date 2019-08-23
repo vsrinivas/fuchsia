@@ -16,6 +16,7 @@
 #include <fs-test-utils/fixture.h>
 #include <fuchsia/device/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/memfs/memfs.h>
@@ -472,7 +473,7 @@ zx_status_t Fixture::TearDownTestCase() {
 }
 
 int RunWithMemFs(const fbl::Function<int()>& main_fn) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   if (MountMemFs(&loop) != ZX_OK) {
     return -1;
   }

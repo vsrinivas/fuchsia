@@ -17,6 +17,7 @@
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/edid/edid.h>
 #include <lib/fidl-utils/bind.h>

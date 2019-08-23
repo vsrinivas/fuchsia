@@ -5,6 +5,7 @@
 #include <fuchsia/crash/c/fidl.h>
 #include <fuchsia/exception/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/event.h>
@@ -221,7 +222,7 @@ void GetTestJobs(Jobs* jobs) {
 }
 
 TEST(crashsvc, ExceptionHandlerSuccess) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   FakeService test_svc(loop.dispatcher());
 
   Jobs jobs;
@@ -240,7 +241,7 @@ TEST(crashsvc, ExceptionHandlerSuccess) {
 }
 
 TEST(crashsvc, MultipleThreadExceptionHandler) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   FakeService test_svc(loop.dispatcher());
 
   Jobs jobs;
@@ -263,7 +264,7 @@ TEST(crashsvc, MultipleThreadExceptionHandler) {
 }
 
 TEST(crashsvc, ThreadBacktraceExceptionHandler) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   FakeService test_svc(loop.dispatcher());
 
   Jobs jobs;

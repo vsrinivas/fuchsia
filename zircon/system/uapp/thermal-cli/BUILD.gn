@@ -39,6 +39,7 @@ test("thermal-cli-test") {
     ":common",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/mock-function",

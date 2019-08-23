@@ -6,6 +6,7 @@
 
 #include <fbl/macros.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <memory>
 #include <stdio.h>
 #include <trace-engine/types.h>

@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -75,7 +76,7 @@ cobalt_client::CollectorOptions FsManager::CollectorOptions() {
 
 FsManager::FsManager(zx::event fshost_event, FsHostMetrics metrics)
     : event_(std::move(fshost_event)),
-      global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToThread)),
+      global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       registry_(global_loop_.get()),
       metrics_(std::move(metrics)) {
   ZX_ASSERT(global_root_ == nullptr);

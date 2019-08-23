@@ -12,6 +12,7 @@
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -242,7 +243,7 @@ int main(int argc, char** argv) {
   if (argc > 1) {
     require_system = strcmp(argv[1], "--require-system") == 0 ? true : false;
   }
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
   svc::Outgoing outgoing(dispatcher);
 

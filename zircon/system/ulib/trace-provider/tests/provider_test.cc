@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/trace-provider/provider.h>
 #include <zxtest/zxtest.h>
 
@@ -13,7 +14,7 @@ namespace {
 
 // Test handling of early loop cancel by having the loop be destructed before the provider.
 TEST(ProviderTest, EarlyLoopCancel) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   std::unique_ptr<trace::test::FakeTraceManager> manager;
   zx::channel channel;

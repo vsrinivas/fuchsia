@@ -4,6 +4,8 @@
 
 #include <fidl/test/llcpp/basictypes/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -113,7 +115,7 @@ namespace {
 
 void SpinUpAsyncCServerHelper(zx::channel server, async_loop_t** out_loop) {
   async_loop_t* loop = nullptr;
-  ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
+  ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop), "");
   ASSERT_OK(async_loop_start_thread(loop, "basictypes-dispatcher", NULL), "");
 
   async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
@@ -405,7 +407,7 @@ class Server : public gen::TestInterface::Interface {
 }  // namespace
 
 void SpinUp(zx::channel server, Server* impl, std::unique_ptr<async::Loop>* out_loop) {
-  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
+  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   zx_status_t status = fidl::Bind(loop->dispatcher(), std::move(server), impl);
   ASSERT_OK(status);
   ASSERT_OK(loop->StartThread("test_llcpp_basictypes_server"));

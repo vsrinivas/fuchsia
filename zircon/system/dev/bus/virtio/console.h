@@ -5,6 +5,7 @@
 
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddk/device.h>
@@ -102,7 +103,7 @@ class ConsoleDevice : public Device,
   TransferQueue port0_transmit_descriptors_ TA_GUARDED(request_lock_);
   Ring port0_transmit_queue_ TA_GUARDED(request_lock_) = {this};
 
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   fs::ManagedVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::Vnode> console_vnode_;
   zx::eventpair event_, event_remote_;

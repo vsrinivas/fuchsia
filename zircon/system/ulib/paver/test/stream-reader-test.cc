@@ -8,6 +8,7 @@
 
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <zxtest/zxtest.h>
 
@@ -22,7 +23,7 @@ TEST(StreamReaderTest, InvalidChannel) {
 
 class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interface {
  public:
-  FakePayloadStream() : loop_(&kAsyncLoopConfigAttachToThread) {
+  FakePayloadStream() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &client_, &server));
     fidl::Bind(loop_.dispatcher(), std::move(server), this);

@@ -35,6 +35,7 @@ test("kernel-mexec-test") {
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fidl-async",
     "$zx/system/ulib/fs",

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <trace-engine/context.h>
 #include <trace-engine/handler.h>
 #include <trace-engine/types.h>
@@ -53,7 +54,7 @@ class TraceFixture : private trace::TraceHandler {
   }
 
  private:
-  async::Loop loop_{&kAsyncLoopConfigAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
 
   std::unique_ptr<std::array<uint8_t, kBufferSize>> buffer_;
 };

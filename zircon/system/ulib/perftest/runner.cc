@@ -13,6 +13,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <trace-engine/context.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
@@ -427,7 +428,7 @@ void ParseCommandArgs(int argc, char** argv, CommandArgs* dest) {
 }  // namespace internal
 
 static void* TraceProviderThread(void* thread_arg) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
   loop.Run();
   return nullptr;

@@ -24,6 +24,7 @@ unless you need something more specialized.
 See [async/loop.h](include/async/loop.h) for details.
 
 ```c
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/task.h>      // for async_post_task()
 #include <lib/async/time.h>      // for async_now()

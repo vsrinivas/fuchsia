@@ -22,6 +22,7 @@ test("usb-virtual-bus-ums") {
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral-block:llcpp",
     "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

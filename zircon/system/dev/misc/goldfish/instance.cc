@@ -7,6 +7,7 @@
 #include <ddk/debug.h>
 #include <fuchsia/hardware/goldfish/pipe/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/bti.h>
@@ -22,7 +23,7 @@ const char kTag[] = "goldfish-pipe";
 }  // namespace
 
 Instance::Instance(zx_device_t* parent)
-    : InstanceType(parent), client_loop_(&kAsyncLoopConfigNoAttachToThread) {}
+    : InstanceType(parent), client_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 Instance::~Instance() {
   client_loop_.Quit();

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/spaceship/c/fidl.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/channel.h>
@@ -112,7 +113,7 @@ bool spaceship_test(void) {
   ASSERT_EQ(ZX_OK, status, "");
 
   async_loop_t* loop = NULL;
-  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
+  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop), "");
   ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "spaceship-dispatcher", NULL), "");
 
   async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);
@@ -304,7 +305,7 @@ bool spaceship_async_test(void) {
   ASSERT_EQ(ZX_OK, status, "");
 
   async_loop_t* loop = NULL;
-  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
+  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop), "");
   ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "spaceship-dispatcher", NULL), "");
 
   async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);

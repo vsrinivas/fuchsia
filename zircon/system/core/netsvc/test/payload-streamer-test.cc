@@ -7,11 +7,12 @@
 #include <optional>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zxtest/zxtest.h>
 
 class PayloadStreamerTest : public zxtest::Test {
  protected:
-  PayloadStreamerTest() : loop_(&kAsyncLoopConfigAttachToThread) {}
+  PayloadStreamerTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   static zx_status_t DefaultCallback(void* buf, size_t offset, size_t size, size_t* actual) {
     *actual = size;

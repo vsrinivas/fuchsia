@@ -5,6 +5,7 @@
 #include "task.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -111,7 +112,7 @@ class TaskTestCase : public zxtest::Test {
   async::Loop& loop() { return loop_; }
 
  private:
-  async::Loop loop_{&kAsyncLoopConfigAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
 };
 
 TEST_F(TaskTestCase, NoDependenciesDeferred) {

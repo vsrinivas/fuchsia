@@ -32,6 +32,7 @@ library("trace-test-utils") {
     # trace-engine dependency here.
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/trace-provider:trace-handler",
     "$zx/system/ulib/trace-reader",

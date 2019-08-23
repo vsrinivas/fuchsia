@@ -12,6 +12,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -375,7 +376,7 @@ class CobaltLoggerTestBase {
   // and methods for setting them up.
   struct Context {
     Context() {
-      services.loop = std::move(std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread));
+      services.loop = std::move(std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread));
     }
 
     struct ReturnValues {

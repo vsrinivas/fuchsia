@@ -14,6 +14,7 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
@@ -31,7 +32,7 @@ namespace {
 bool TestFidlBasic() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp"), ZX_OK);
@@ -67,7 +68,7 @@ bool TestFidlBasic() {
 bool TestFidlOpenReadOnly() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-ro"), ZX_OK);
@@ -122,7 +123,7 @@ bool TestFidlQueryFilesystem() {
   BEGIN_TEST;
 
   {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-basic"), ZX_OK);
@@ -143,7 +144,7 @@ bool TestFidlQueryFilesystem() {
 
   // Query disk pressure in a page-limited scenario
   {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     size_t max_num_pages = 3;

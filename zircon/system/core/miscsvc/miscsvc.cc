@@ -4,6 +4,7 @@
 
 #include <fbl/algorithm.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/kcounter/provider.h>
 #include <lib/paver/provider.h>
 #include <lib/svc/outgoing.h>
@@ -83,7 +84,7 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
 }
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
   svc::Outgoing outgoing(dispatcher);
 

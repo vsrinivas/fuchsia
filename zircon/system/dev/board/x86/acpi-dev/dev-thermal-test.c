@@ -4,6 +4,7 @@
 
 #include "dev-thermal.c"
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-async/bind.h>
 #include <zircon/syscalls.h>
@@ -44,7 +45,7 @@ static void setup(struct thermal_test_context* ctx) {
   ctx->dev.event = ZX_HANDLE_INVALID;
   ctx->dev.trip_point_count = 0;
 
-  ASSERT_OK(async_loop_create(&kAsyncLoopConfigAttachToThread, &ctx->loop));
+  ASSERT_OK(async_loop_create(&kAsyncLoopConfigAttachToCurrentThread, &ctx->loop));
 
   zx_handle_t server;
   ASSERT_OK(zx_channel_create(0, &ctx->client, &server));

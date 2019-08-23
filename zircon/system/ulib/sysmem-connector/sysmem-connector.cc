@@ -11,6 +11,7 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -85,7 +86,7 @@ class SysmemConnector : public sysmem_connector {
 
 SysmemConnector::SysmemConnector(const char* sysmem_device_path)
     : sysmem_device_path_(sysmem_device_path),
-      process_queue_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      process_queue_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(sysmem_device_path_);
 }
 

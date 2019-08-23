@@ -11,6 +11,7 @@
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/netboot.h>
@@ -197,7 +198,7 @@ class FakeSvc {
 class PaverTest : public zxtest::Test {
  protected:
   PaverTest()
-      : loop_(&kAsyncLoopConfigNoAttachToThread),
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         fake_svc_(loop_.dispatcher()),
         paver_(std::move(fake_svc_.svc_chan())) {
     paver_.set_timeout(zx::msec(500));

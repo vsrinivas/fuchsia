@@ -6,6 +6,7 @@
 
 #include <fuchsia/debugdata/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
@@ -104,7 +105,7 @@ void RunHelper(const char* mode, zx::channel svc_handle, int return_code) {
 }
 
 TEST(DebugDataTests, PublishData) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
   zx::channel client;
   DebugData svc;
@@ -126,7 +127,7 @@ TEST(DebugDataTests, PublishData) {
 }
 
 TEST(DebugDataTests, LoadConfig) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
   zx::channel client;
   DebugData svc;
@@ -146,7 +147,7 @@ TEST(DebugDataTests, LoadConfig) {
 }
 
 TEST(DebugDataTests, LoadConfigNotFound) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
   zx::channel client;
   DebugData svc;

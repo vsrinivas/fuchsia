@@ -6,6 +6,7 @@
 
 #include <fuchsia/logger/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/syslog/global.h>
 #include <unittest/unittest.h>
 
@@ -34,7 +35,7 @@ bool ends_with(const char* str, const char* suffix) {
 
 class Fixture {
  public:
-  Fixture() : fds_valid_(false), loop_(&kAsyncLoopConfigNoAttachToThread), error_status_(0) {}
+  Fixture() : fds_valid_(false), loop_(&kAsyncLoopConfigNoAttachToCurrentThread), error_status_(0) {}
   ~Fixture() {
     fx_log_reset_global_for_testing();
     if (fds_valid_) {

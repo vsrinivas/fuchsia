@@ -37,6 +37,7 @@ test("blobfs-unit") {
   deps = [
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/blobfs",
     "$zx/system/ulib/block-client:fake-device",
     "$zx/system/ulib/fidl-utils",
@@ -74,6 +75,7 @@ test("blobfs-integration") {
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/blobfs",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",

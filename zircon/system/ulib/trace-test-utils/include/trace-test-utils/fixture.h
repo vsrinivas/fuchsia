@@ -19,6 +19,7 @@
 #include <trace-reader/records.h>
 #endif
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <trace-engine/types.h>
 #include <zircon/compiler.h>

@@ -8,6 +8,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
@@ -256,7 +257,7 @@ int main(int argc, char** argv) {
   // We won't use it any more (no dlopen calls in this process).
   zx_handle_close(dl_set_loader_service(ZX_HANDLE_INVALID));
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
   ZX_ASSERT(bootfs_vmo.is_valid());

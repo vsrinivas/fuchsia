@@ -41,6 +41,7 @@
 #include <fvm/format.h>
 #include <fvm/fvm-check.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fzl/fdio.h>
@@ -3435,7 +3436,7 @@ int main(int argc, char** argv) {
   }
 
   // Initialize tmpfs.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   if (loop.StartThread() != ZX_OK) {
     fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
     return -1;

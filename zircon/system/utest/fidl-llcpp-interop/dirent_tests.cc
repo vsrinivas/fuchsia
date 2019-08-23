@@ -4,6 +4,8 @@
 
 #include <fidl/test/llcpp/dirent/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -63,7 +65,7 @@ namespace manual_server {
 
 class Server {
  public:
-  Server(zx::channel chan) : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToThread) {}
+  Server(zx::channel chan) : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   zx_status_t Start() {
     zx_status_t status = loop_.StartThread("llcpp_manual_server");
@@ -221,7 +223,7 @@ namespace llcpp_server {
 
 class ServerBase : public gen::DirEntTestInterface::Interface {
  public:
-  ServerBase(zx::channel chan) : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToThread) {}
+  ServerBase(zx::channel chan) : chan_(std::move(chan)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   zx_status_t Start() {
     zx_status_t status = loop_.StartThread("llcpp_bindings_server");

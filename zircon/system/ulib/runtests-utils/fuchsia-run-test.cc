@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/debugdata/debugdata.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
@@ -237,7 +238,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
   zx_status_t status;
   zx::channel svc_proxy_req;
   fbl::RefPtr<ServiceProxyDir> proxy_dir;
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
   std::unique_ptr<debugdata::DebugData> debug_data;
 

@@ -22,8 +22,10 @@ source_set("common") {
     "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/trace",
+
     # The engine is chosen by the binary, we just need engine headers here.
     "$zx/system/ulib/trace-engine:headers",
     "$zx/system/ulib/trace-reader",

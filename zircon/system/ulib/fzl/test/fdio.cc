@@ -8,6 +8,7 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/memfs/memfs.h>
 #include <lib/fzl/fdio.h>
@@ -71,7 +72,7 @@ class Harness {
   fbl::unique_fd fd() { return std::move(fd_); }
 
  private:
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   memfs_filesystem_t* memfs_ = nullptr;
   fbl::unique_fd fd_;
 };

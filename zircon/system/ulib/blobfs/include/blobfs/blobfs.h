@@ -16,6 +16,7 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -297,7 +298,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   fbl::Closure on_unmount_ = {};
 
   // Loop for flushing the collector periodically.
-  async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop flush_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
 // Begins serving requests to the filesystem using |dispatch|, by parsing

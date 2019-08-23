@@ -12,6 +12,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async-2/fidl_server.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
@@ -164,7 +165,7 @@ zx_status_t Control::Create(void* ctx, zx_device_t* device) {
 }
 
 Control::Control(zx_device_t* parent)
-    : ControlType(parent), pipe_(parent), heap_loop_(&kAsyncLoopConfigNoAttachToThread) {
+    : ControlType(parent), pipe_(parent), heap_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   goldfish_control_protocol_t self{&goldfish_control_protocol_ops_, this};
   control_ = ddk::GoldfishControlProtocolClient(&self);
 }

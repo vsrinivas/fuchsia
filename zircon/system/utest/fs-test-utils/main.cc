@@ -4,6 +4,7 @@
 
 #include <fs-test-utils/fixture.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>
 

@@ -7,13 +7,14 @@
 #include <stdio.h>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
   puts("Doing work for 30 seconds...");

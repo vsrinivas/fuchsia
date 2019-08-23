@@ -35,7 +35,7 @@ TEST(ConsoleTestCase, Read) {
 
   Console::TxSink tx_sink = [](const uint8_t* buffer, size_t length) { return ZX_OK; };
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<Console> console;
   ASSERT_OK(Console::Create(loop.dispatcher(), std::move(rx_source), std::move(tx_sink), &console));
   ASSERT_OK(sync_completion_wait_deadline(&rx_source_done, ZX_TIME_INFINITE));
@@ -62,7 +62,7 @@ TEST(ConsoleTestCase, Write) {
     return ZX_OK;
   };
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fbl::RefPtr<Console> console;
   ASSERT_OK(Console::Create(loop.dispatcher(), std::move(rx_source), std::move(tx_sink), &console));
 

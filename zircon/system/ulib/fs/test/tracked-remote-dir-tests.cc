@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <fs/tracked-remote-dir.h>
 
 #include <unittest/unittest.h>
@@ -27,7 +28,7 @@ class TestRemoteDir final : public fs::TrackedRemoteDir {
 bool TestAddingTrackedDirectory() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
@@ -62,7 +63,7 @@ bool TestAddingTrackedDirectory() {
 bool TestAddingTrackedDirectoryMultiple() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 
@@ -94,7 +95,7 @@ bool TestAddingTrackedDirectoryMultiple() {
 bool TestTrackAddingDifferentVnode() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx::channel server, client;
   ASSERT_EQ(ZX_OK, zx::channel::create(0u, &server, &client));
 

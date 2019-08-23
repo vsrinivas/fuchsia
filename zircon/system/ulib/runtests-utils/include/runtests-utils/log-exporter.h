@@ -14,6 +14,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/zx/channel.h>

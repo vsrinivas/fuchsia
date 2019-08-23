@@ -9,6 +9,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <threads.h>
 #include <zircon/types.h>
 

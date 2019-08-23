@@ -10,6 +10,7 @@
 
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <zxtest/zxtest.h>
 
@@ -99,7 +100,7 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::Device::Interface {
 class FileApiTest : public zxtest::Test {
  protected:
   FileApiTest()
-      : loop_(&kAsyncLoopConfigNoAttachToThread),
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         fake_sysinfo_(loop_.dispatcher()),
         file_api_(true, std::make_unique<FakeNetCopy>(), std::move(fake_sysinfo_.svc_chan()),
                   &fake_paver_) {

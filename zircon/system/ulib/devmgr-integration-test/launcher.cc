@@ -15,6 +15,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -85,7 +86,7 @@ fbl::RefPtr<fs::Service> MakeNode(async_dispatcher_t* dispatcher, fidl_dispatch_
 
 zx_status_t bootsvc_main(zx::channel bootsvc_server, GetBootItemFunction get_boot_item,
                          GetArgumentsFunction get_arguments, zx::unowned_job root_job) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   // Quit the loop when the channel is closed.
   async::Wait wait(bootsvc_server.get(), ZX_CHANNEL_PEER_CLOSED, 0, [&loop](...) { loop.Quit(); });

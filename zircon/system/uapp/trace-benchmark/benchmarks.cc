@@ -34,7 +34,7 @@ class Runner {
       // if the engine thread is not scheduled frequently enough. This
       // is a stress test so all the app is doing is filling the trace
       // buffer. :-)
-      async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+      async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
       BenchmarkHandler handler(&loop, spec_->mode, spec_->buffer_size);
 
       loop.StartThread("trace-engine loop", nullptr);

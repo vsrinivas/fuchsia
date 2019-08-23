@@ -99,6 +99,7 @@ library("blobfs") {
       "$zx/system/ulib/async:async-default",
       "$zx/system/ulib/async-loop",
       "$zx/system/ulib/async-loop:async-loop-cpp",
+      "$zx/system/ulib/async-loop:async-loop-default.static",
       "$zx/system/ulib/block-client",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl-utils",

@@ -5,6 +5,7 @@
 #include "lib/usb-peripheral-utils/event-watcher.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 
 namespace usb_peripheral_utils {

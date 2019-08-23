@@ -13,6 +13,7 @@
 #include <fs/vmo-file.h>
 #include <fuchsia/debugdata/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/debugdata/debugdata.h>
 #include <lib/fdio/io.h>
@@ -33,7 +34,7 @@ constexpr char kTestSink[] = "test";
 constexpr uint8_t kTestData[] = {0x00, 0x11, 0x22, 0x33};
 
 TEST(DebugDataTest, PublishData) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
   debugdata::DebugData svc(fbl::unique_fd{open("/", O_RDONLY)});
@@ -63,7 +64,7 @@ TEST(DebugDataTest, PublishData) {
 }
 
 TEST(DebugDataTest, LoadConfig) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<fs::SynchronousVfs> vfs;
 
   zx::vmo data;

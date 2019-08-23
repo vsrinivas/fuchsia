@@ -14,6 +14,7 @@
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <gpt/gpt.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/boot/image.h>

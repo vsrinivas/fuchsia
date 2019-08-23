@@ -14,6 +14,7 @@ driver("goldfish") {
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-goldfish-pipe:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

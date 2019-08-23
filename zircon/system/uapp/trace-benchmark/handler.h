@@ -11,6 +11,7 @@
 
 #include <fbl/array.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/event.h>
 #include <trace-provider/handler.h>
 

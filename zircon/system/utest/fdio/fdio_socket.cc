@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zxs/protocol.h>
@@ -126,7 +127,7 @@ TEST(SocketTest, CloseZXSocketOnTransfer) {
     // of the socket, we need to destroy the server before asserting that the socket's peer is
     // closed.
     Server server(std::move(client_socket));
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
     ASSERT_OK(loop.StartThread("fake-socket-server"));
 
@@ -156,7 +157,7 @@ TEST(SocketTest, RecvmsgNonblockBoundary) {
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
 
   Server server(std::move(client_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 
@@ -205,7 +206,7 @@ TEST(SocketTest, SendmsgNonblockBoundary) {
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &client_socket, &server_socket));
 
   Server server(std::move(client_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 
@@ -256,7 +257,7 @@ TEST(SocketTest, DatagramSendMsg) {
   ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &client_socket, &server_socket));
 
   Server server(std::move(client_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 

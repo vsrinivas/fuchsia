@@ -5,6 +5,7 @@
 #include <lib/kernel-mexec/kernel-mexec.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zircon/assert.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/svc/outgoing.h>
@@ -70,7 +71,7 @@ class MexecTest : public zxtest::Test {
   }
 
   static void SetUpTestCase() {
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ZX_ASSERT(ZX_OK == loop_->StartThread("MexecTestLoop"));
   }
 

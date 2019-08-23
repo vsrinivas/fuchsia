@@ -9,6 +9,7 @@
 
 #include <fbl/auto_call.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/clock.h>
 #include <zircon/boot/netboot.h>
@@ -103,7 +104,7 @@ int Paver::StreamBuffer() {
     return 0;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   PayloadStreamer streamer(std::move(server), std::move(callback));
   loop.StartThread("payload-streamer");
 

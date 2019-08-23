@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/eventpair.h>
 

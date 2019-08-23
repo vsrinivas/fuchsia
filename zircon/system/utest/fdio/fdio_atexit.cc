@@ -4,6 +4,7 @@
 
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
@@ -115,7 +116,7 @@ TEST(AtExit, ExitInAccept) {
   zx_handle_t server_handle = server_channel.get();
 
   Server server(server_handle, std::move(server_socket));
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(fidl::Bind(loop.dispatcher(), std::move(server_channel), &server));
   ASSERT_OK(loop.StartThread("fake-socket-server"));
 

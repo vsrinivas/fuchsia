@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
@@ -144,7 +145,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
 
 class PaverServiceTest : public zxtest::Test {
  public:
-  PaverServiceTest() : loop_(&kAsyncLoopConfigAttachToThread) {
+  PaverServiceTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
 

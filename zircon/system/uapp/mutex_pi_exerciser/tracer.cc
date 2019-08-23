@@ -11,7 +11,7 @@
 zx_status_t Tracer::Start() {
   zx_status_t res;
 
-  loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   res = loop_->StartThread();
   if (res != ZX_OK) {

@@ -19,6 +19,7 @@
 #include <fs/vfs.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
@@ -38,7 +39,7 @@ int Mount(std::unique_ptr<BlockDevice> device, blobfs::MountOptions* options) {
     return -1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
   auto loop_quit = [&loop]() {
     loop.Quit();

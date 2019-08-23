@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 
@@ -31,7 +32,7 @@ class Server : public ::llcpp::fidl::test::simple::Simple::Interface {
 TEST(BindTestCase, UniquePtrDestroyOnClientClose) {
   sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -48,7 +49,7 @@ TEST(BindTestCase, UniquePtrDestroyOnClientClose) {
 TEST(BindTestCase, UniquePtrDestroyOnServerClose) {
   sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // Launch a thread so we can make a blocking client call
   ASSERT_OK(loop.StartThread());
 
@@ -68,7 +69,7 @@ TEST(BindTestCase, UniquePtrDestroyOnServerClose) {
 TEST(BindTestCase, CallbackDestroyOnClientClose) {
   sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -87,7 +88,7 @@ TEST(BindTestCase, CallbackDestroyOnClientClose) {
 TEST(BindTestCase, CallbackDestroyOnServerClose) {
   sync_completion_t destroyed;
   auto server = std::make_unique<Server>(&destroyed);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // Launch a thread so we can make a blocking client call
   ASSERT_OK(loop.StartThread());
 

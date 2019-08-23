@@ -20,6 +20,7 @@ if (is_fuchsia) {
       ":fidl.test.echo.c",
       "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/ulib/async-loop:async-loop-cpp",
+      "$zx/system/ulib/async-loop:async-loop-default.static",
       "$zx/system/ulib/fidl",
       "$zx/system/ulib/fidl-async:fidl-async-cpp",
       "$zx/system/ulib/fidl-utils",

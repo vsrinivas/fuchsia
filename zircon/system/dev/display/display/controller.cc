@@ -897,7 +897,7 @@ void Controller::DdkUnbind() {
 void Controller::DdkRelease() { delete this; }
 
 Controller::Controller(zx_device_t* parent)
-    : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToThread) {
+    : ControllerParent(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   mtx_init(&mtx_, mtx_plain);
 }
 

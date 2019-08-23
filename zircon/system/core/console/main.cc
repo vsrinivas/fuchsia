@@ -65,7 +65,7 @@ int main(int argc, const char** argv) {
     return zx_debug_write(reinterpret_cast<const char*>(buffer), length);
   };
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   fbl::RefPtr<Console> console;

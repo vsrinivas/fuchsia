@@ -17,6 +17,7 @@ test("libfs-pty-test") {
     "$zx/system/fidl/fuchsia-hardware-pty:llcpp",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/fs-pty",

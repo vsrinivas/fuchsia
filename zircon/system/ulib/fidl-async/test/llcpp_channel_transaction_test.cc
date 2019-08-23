@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-async/cpp/channel_transaction.h>
 
@@ -11,7 +12,7 @@
 namespace {
 
 TEST(ChannelTransactionTestCase, CloseAfterFailedReply) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fidl::internal::TypeErasedDispatchFn dispatch = [](void*, fidl_msg_t*, ::fidl::Transaction*) {
     return true;

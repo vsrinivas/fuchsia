@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/pty/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/fs-pty/service.h>
 #include <lib/sync/completion.h>
@@ -85,7 +86,7 @@ class PtyTestCase : public zxtest::Test {
   }
 
  private:
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   fs::ManagedVfs vfs_{loop_.dispatcher()};
 
   TestConsoleState state_;

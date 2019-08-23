@@ -5,6 +5,8 @@
 #include <fbl/vector.h>
 #include <fidl/test/llcpp/controlflow/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/wait.h>
@@ -67,7 +69,7 @@ void WaitUntilNextIteration(async_dispatcher_t* dispatcher) {
 }  // namespace
 
 TEST(ControlFlowTest, ServerShutdown) {
-  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
+  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_OK(loop->StartThread("test_llcpp_controlflow_server"));
   Server server_impl;
 
@@ -112,7 +114,7 @@ TEST(ControlFlowTest, ServerShutdown) {
 
 TEST(ControlFlowTest, NoReplyMustSendEpitaph) {
   // Send epitaph from a call with no reply.
-  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
+  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_OK(loop->StartThread("test_llcpp_controlflow_server"));
   Server server_impl;
 
@@ -159,7 +161,7 @@ TEST(ControlFlowTest, NoReplyMustSendEpitaph) {
 
 TEST(ControlFlowTest, MustSendEpitaph) {
   // Send epitaph from a call with reply.
-  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
+  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_OK(loop->StartThread("test_llcpp_controlflow_server"));
   Server server_impl;
 

@@ -7,6 +7,7 @@
 #include <future>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <unittest/unittest.h>
 
@@ -15,7 +16,7 @@ namespace {
 bool running_tasks() {
     BEGIN_TEST;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::Executor executor(loop.dispatcher());
     uint64_t run_count[3] = {};
 
@@ -46,7 +47,7 @@ bool running_tasks() {
 bool suspending_and_resuming_tasks() {
     BEGIN_TEST;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::Executor executor(loop.dispatcher());
 
     uint64_t run_count[5] = {};
@@ -135,7 +136,7 @@ bool suspending_and_resuming_tasks() {
 bool abandoning_tasks() {
     BEGIN_TEST;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::Executor executor(loop.dispatcher());
     uint64_t run_count[4] = {};
     uint64_t destruction[4] = {};
@@ -197,7 +198,7 @@ bool abandoning_tasks() {
 bool dispatcher_property() {
     BEGIN_TEST;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::Executor executor(loop.dispatcher());
     EXPECT_EQ(loop.dispatcher(), executor.dispatcher());
 
@@ -219,7 +220,7 @@ bool dispatcher_property() {
 bool tasks_scheduled_after_loop_shutdown_are_immediately_destroyed() {
     BEGIN_TEST;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::Executor executor(loop.dispatcher());
 
     // Shutdown the loop then schedule a task.
@@ -236,7 +237,7 @@ bool tasks_scheduled_after_loop_shutdown_are_immediately_destroyed() {
 bool when_loop_is_shutdown_all_remaining_tasks_are_immediately_destroyed() {
     BEGIN_TEST;
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::Executor executor(loop.dispatcher());
 
     // Schedule a task and let it be suspended.

@@ -29,6 +29,7 @@ source_set("common") {
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-pty:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs",

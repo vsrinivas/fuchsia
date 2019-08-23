@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
@@ -92,7 +93,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_des
   ASSERT_OK(set_config.status());
   ASSERT_FALSE(set_config->result.is_err());
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), function_descs.size());
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_registered());

@@ -7,6 +7,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/synchronous-vfs.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 

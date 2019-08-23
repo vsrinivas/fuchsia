@@ -16,6 +16,7 @@
 #include <fbl/unique_ptr.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>

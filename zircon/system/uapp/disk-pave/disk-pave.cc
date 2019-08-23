@@ -16,6 +16,7 @@
 #include <lib/fdio/directory.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/channel.h>
@@ -233,7 +234,7 @@ zx_status_t RealMain(Flags flags) {
       }
 
       // Launch thread which implements interface.
-      async::Loop loop(&kAsyncLoopConfigAttachToThread);
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
       disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
       loop.StartThread("payload-stream");
 

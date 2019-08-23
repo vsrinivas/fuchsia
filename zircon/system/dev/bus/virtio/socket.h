@@ -16,6 +16,7 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/ref_counted.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>

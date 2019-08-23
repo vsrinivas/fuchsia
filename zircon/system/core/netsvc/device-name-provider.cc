@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -87,7 +88,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   async_dispatcher_t* dispatcher = loop.dispatcher();
   if (dispatcher == nullptr) {

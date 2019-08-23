@@ -7,6 +7,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
@@ -78,7 +79,7 @@ class FidlMessenger {
   // Channel to mimic RPC
   zx::channel local_;
   // Dispatcher for fidl messages
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
 
 }  // namespace fake_ddk

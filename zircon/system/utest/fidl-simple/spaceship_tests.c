@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fidl-async/bind.h>
 #include <string.h>
@@ -94,7 +95,7 @@ static bool spaceship_test(void) {
   ASSERT_EQ(ZX_OK, status, "");
 
   async_loop_t* loop = NULL;
-  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
+  ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop), "");
   ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "spaceship-dispatcher", NULL), "");
 
   async_dispatcher_t* dispatcher = async_loop_get_dispatcher(loop);

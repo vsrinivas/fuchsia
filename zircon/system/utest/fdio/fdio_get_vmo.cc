@@ -6,6 +6,7 @@
 #include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl-async/bind.h>
@@ -195,7 +196,7 @@ bool vmo_starts_with(const zx::vmo& vmo, const char* string) {
 }
 
 TEST(GetVMOTest, Remote) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("fake-filesystem"));
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
@@ -252,7 +253,7 @@ TEST(GetVMOTest, Remote) {
 }
 
 TEST(GetVMOTest, VMOFile) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("fake-filesystem"));
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
@@ -292,7 +293,7 @@ TEST(GetVMOTest, VMOFile) {
 }
 
 TEST(GetVMOTest, VMOFilePage) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("fake-filesystem"));
   async_dispatcher_t* dispatcher = loop.dispatcher();
 

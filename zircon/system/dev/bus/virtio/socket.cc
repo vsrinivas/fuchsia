@@ -138,7 +138,7 @@ static virtio_vsock_hdr_t make_hdr(const SocketDevice::ConnectionKey& key, uint1
 
 SocketDevice::SocketDevice(zx_device_t* bus_device, zx::bti bti, fbl::unique_ptr<Backend> backend)
     : Device(bus_device, std::move(bti), std::move(backend)),
-      dispatch_loop_(&kAsyncLoopConfigNoAttachToThread),
+      dispatch_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       rx_(this, kDataBacklog, kFrameSize),
       tx_(this, kDataBacklog, kFrameSize),
       event_(this, kEventBacklog, sizeof(virtio_vsock_event_t)),

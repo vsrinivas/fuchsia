@@ -18,6 +18,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>
 #include <zircon/processargs.h>
@@ -28,7 +29,7 @@ namespace {
 bool TestMemfsNull() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   memfs_filesystem_t* vfs;
   zx_handle_t root;
@@ -45,7 +46,7 @@ bool TestMemfsNull() {
 bool TestMemfsBasic() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   // Create a memfs filesystem, acquire a file descriptor
@@ -92,7 +93,7 @@ bool TestMemfsLimitPages() {
   constexpr ssize_t kPageSize = static_cast<ssize_t>(PAGE_SIZE);
   fbl::Vector<ssize_t> page_limits = {1, 2, 5, 50};
   for (const auto& page_limit : page_limits) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     // Create a memfs filesystem, acquire a file descriptor
@@ -171,7 +172,7 @@ bool TestMemfsLimitPages() {
 bool TestMemfsInstall() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/mytmp"), ZX_OK);
@@ -216,7 +217,7 @@ bool TestMemfsCloseDuringAccess() {
   BEGIN_TEST;
 
   for (int i = 0; i < 100; i++) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
 
     // Create a memfs filesystem, acquire a file descriptor
@@ -284,7 +285,7 @@ bool TestMemfsCloseDuringAccess() {
 bool TestMemfsOverflow() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   // Create a memfs filesystem, acquire a file descriptor
@@ -320,7 +321,7 @@ bool TestMemfsOverflow() {
 bool TestMemfsDetachLinkedFilesystem() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   // Create a memfs filesystem, acquire a file descriptor

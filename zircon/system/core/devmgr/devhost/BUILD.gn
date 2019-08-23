@@ -39,6 +39,7 @@ source_set("common") {
     "$zx/system/ulib/async:async-default.static",
     "$zx/system/ulib/async:static",
     "$zx/system/ulib/async-loop:async-loop-cpp.static",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

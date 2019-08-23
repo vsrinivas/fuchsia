@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/wait.h>
 #include <lib/fdio/io.h>
@@ -283,7 +284,7 @@ zx_status_t loader_service_create(async_dispatcher_t* dispatcher, const loader_s
 
   if (!dispatcher) {
     async_loop_t* loop;
-    zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop);
+    zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &loop);
     if (status != ZX_OK) {
       free(svc);
       return status;

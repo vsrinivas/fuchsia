@@ -9,6 +9,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/fifo.h>
 #include <lib/zx/vmo.h>
@@ -125,7 +126,7 @@ TEST(RemoteBlockDeviceTest, Constructor) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   MockBlockDevice mock_device;
@@ -141,7 +142,7 @@ TEST(RemoteBlockDeviceTest, FifoClosedOnDestruction) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   MockBlockDevice mock_device;
@@ -162,7 +163,7 @@ TEST(RemoteBlockDeviceTest, WriteTransactionReadResponse) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   MockBlockDevice mock_device;
@@ -210,7 +211,7 @@ TEST(RemoteBlockDeviceTest, VolumeManagerOrdinals) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   MockBlockDevice mock_device;

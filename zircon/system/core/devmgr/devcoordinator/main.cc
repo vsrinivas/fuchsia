@@ -9,6 +9,7 @@
 #include <fuchsia/ldsvc/llcpp/fidl.h>
 #include <getopt.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -1143,7 +1144,7 @@ int main(int argc, char** argv) {
 
   bool require_system = boot_args.GetBool("devmgr.require-system", false);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   devmgr::CoordinatorConfig config{};
   config.dispatcher = loop.dispatcher();
   config.boot_args = &boot_args;
