@@ -20,15 +20,14 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fs-test-utils/fixture.h>
-#include <fs-test-utils/unittest.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/fdio.h>
-#include <unittest/unittest.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
@@ -53,8 +52,7 @@ fs_test_utils::FixtureOptions MinfsRamdiskOptions() {
   return options;
 }
 
-bool CheckMountedFs(const char* path, const char* fs_name, size_t len) {
-  BEGIN_HELPER;
+void CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   fbl::unique_fd fd(open(path, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
 
@@ -68,48 +66,40 @@ bool CheckMountedFs(const char* path, const char* fs_name, size_t len) {
   ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
   ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
   // TODO(planders): eventually check that total/used counts are > 0
-  END_HELPER;
 }
 
-bool MountUnmountShared(size_t block_size) {
-  BEGIN_HELPER;
-
+void MountUnmountShared(size_t block_size) {
   ramdisk_client_t* ramdisk = nullptr;
   const char* mount_path = "/tmp/mount_unmount";
 
   ASSERT_EQ(ramdisk_create(block_size, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
+  LOG_INFO("ramdisk path: %s\n", ramdisk_path);
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
   ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
             ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
   ASSERT_EQ(umount(mount_path), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_HELPER;
 }
 
-bool MountUnmount() {
-  BEGIN_TEST;
-  ASSERT_TRUE(MountUnmountShared(512));
-  END_TEST;
+TEST(MountUnmountCase, MountUnmount) {
+  ASSERT_NO_FATAL_FAILURES(MountUnmountShared(512));
 }
 
-bool MountUnmountLargeBlock() {
-  BEGIN_TEST;
-  ASSERT_TRUE(MountUnmountShared(8192));
-  END_TEST;
+TEST(MountUnmountLargeBlockCase, MountUnmountLargeBlock) {
+  ASSERT_NO_FATAL_FAILURES(MountUnmountShared(8192));
 }
 
-bool MountMkdirUnmount() {
+TEST(MountMkdirUnmountCase, MountMkdirUnmount) {
   const char* mount_path = "/tmp/mount_mkdir_unmount";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
@@ -119,24 +109,22 @@ bool MountMkdirUnmount() {
   mount_options_t options = default_mount_options;
   options.create_mountpoint = true;
   ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &options, launch_stdio_async), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
   ASSERT_EQ(umount(mount_path), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
-bool FmountFunmount() {
+TEST(FmountFunmountCase, FmountFunmount) {
   const char* mount_path = "/tmp/mount_unmount";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
 
@@ -144,13 +132,12 @@ bool FmountFunmount() {
   ASSERT_GT(mountfd, 0, "Couldn't open mount point");
   ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
             ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
   ASSERT_EQ(fumount(mountfd), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(close(mountfd), 0, "Couldn't close ex-mount point");
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
 // All "parent" filesystems attempt to mount a MinFS ramdisk under malicious
@@ -158,8 +145,7 @@ bool FmountFunmount() {
 //
 // Note: For cases where "fmount" fails, we briefly sleep to allow the
 // filesystem to unmount itself and relinquish control of the block device.
-bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
-  BEGIN_HELPER;
+void DoMountEvil(const char* parentfs_name, const char* mount_path) {
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
@@ -221,7 +207,7 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
   ASSERT_EQ(fmount(fd, mountfd, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
             ZX_ERR_BAD_STATE);
   usleep(10000);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
   // Let's try removing the mount point (we shouldn't be allowed to do so)
   ASSERT_EQ(rmdir(mount_path), -1);
@@ -250,24 +236,20 @@ bool DoMountEvil(const char* parentfs_name, const char* mount_path) {
 
   // When we unmount with an O_ADMIN handle, it should successfully detach.
   ASSERT_EQ(fumount(mountfd), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, parentfs_name, strlen(parentfs_name)));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, parentfs_name, strlen(parentfs_name)));
   ASSERT_EQ(close(mountfd), 0);
   ASSERT_EQ(rmdir(mount_path), 0);
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
-  END_HELPER;
 }
 
-bool MountEvilMemfs() {
-  BEGIN_TEST;
-  const char* mount_path = "/tmp/mount_evil";
-  ASSERT_TRUE(DoMountEvil("memfs", mount_path));
-  END_TEST;
-}
+// TODO(FLK-371): Re-enable once deflaked.
+// TEST(MountEvilMemfsCase, MountEvilMemfs) {
+//   const char* mount_path = "/tmp/mount_evil";
+//   ASSERT_NO_FATAL_FAILURES(DoMountEvil("memfs", mount_path));
+// }
 
-bool UmountTestEvil() {
+TEST(UnmountTestEvilCase, UnmountTestEvil) {
   const char* mount_path = "/tmp/umount_test_evil";
-
-  BEGIN_TEST;
 
   // Create a ramdisk, mount minfs
   ramdisk_client_t* ramdisk = nullptr;
@@ -275,12 +257,12 @@ bool UmountTestEvil() {
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
   ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
             ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
   // Try re-opening the root without O_ADMIN. We shouldn't be able to umount.
   fbl::unique_fd weak_root_fd(open(mount_path, O_RDONLY | O_DIRECTORY));
@@ -307,16 +289,13 @@ bool UmountTestEvil() {
   // Finally, umount using O_NOREMOTE and acquiring the connection
   // that has "O_ADMIN" set.
   ASSERT_EQ(umount(mount_path), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
-bool DoubleMountRoot() {
+TEST(DoubleMountRootCase, DoubleMountRoot) {
   const char* mount_path = "/tmp/double_mount_root";
-
-  BEGIN_TEST;
 
   // Create a ramdisk, mount minfs
   ramdisk_client_t* ramdisk = nullptr;
@@ -324,12 +303,12 @@ bool DoubleMountRoot() {
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GE(fd, 0);
   ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
             ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
   // Create ANOTHER ramdisk, ready to be mounted...
   // Try mounting again on top Minfs' remote root.
@@ -359,17 +338,15 @@ bool DoubleMountRoot() {
   ASSERT_EQ(close(mount_fd), 0);
 
   ASSERT_EQ(umount(mount_path), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(ramdisk_destroy(ramdisk2), 0);
   ASSERT_EQ(rmdir(mount_path), 0);
-  END_TEST;
 }
 
-bool MountRemount() {
+TEST(MountRemountCase, MountRemount) {
   const char* mount_path = "/tmp/mount_remount";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
@@ -386,13 +363,11 @@ bool MountRemount() {
   }
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
-bool MountFsck() {
+TEST(MountFsckCase, MountFsck) {
   const char* mount_path = "/tmp/mount_fsck";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
@@ -407,19 +382,17 @@ bool MountFsck() {
   ASSERT_EQ(fsck(ramdisk_path, DISK_FORMAT_MINFS, &default_fsck_options, launch_stdio_sync), ZX_OK);
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
-bool MountGetDevice() {
+TEST(MountGetDeviceCase, MountGetDevice) {
   const char* mount_path = "/tmp/mount_get_device";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
 
   fbl::unique_fd mountfd(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
@@ -437,7 +410,7 @@ bool MountGetDevice() {
   ASSERT_GT(fd, 0);
   ASSERT_EQ(mount(fd, mount_path, DISK_FORMAT_MINFS, &default_mount_options, launch_stdio_async),
             ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 
   mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
@@ -458,7 +431,7 @@ bool MountGetDevice() {
   ASSERT_EQ(status, ZX_ERR_ACCESS_DENIED);
 
   ASSERT_EQ(umount(mount_path), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
 
   mountfd.reset(open(mount_path, O_RDONLY | O_ADMIN));
   ASSERT_TRUE(mountfd);
@@ -470,30 +443,26 @@ bool MountGetDevice() {
 
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
 // Mounts a minfs formatted partition to the desired point.
-bool MountMinfs(int block_fd, bool read_only, const char* mount_path) {
-  BEGIN_HELPER;
+void MountMinfs(int block_fd, bool read_only, const char* mount_path) {
   mount_options_t options;
   memcpy(&options, &default_mount_options, sizeof(mount_options_t));
   options.readonly = read_only;
 
   ASSERT_EQ(mount(block_fd, mount_path, DISK_FORMAT_MINFS, &options, launch_stdio_async), ZX_OK);
-  ASSERT_TRUE(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
-  END_HELPER;
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "minfs", strlen("minfs")));
 }
 
 // Formats the ramdisk with minfs, and writes a small file to it.
-bool CreateTestFile(const char* ramdisk_path, const char* mount_path, const char* file_name) {
-  BEGIN_HELPER;
+void CreateTestFile(const char* ramdisk_path, const char* mount_path, const char* file_name) {
   ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
   ASSERT_EQ(mkdir(mount_path, 0666), 0);
 
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
-  ASSERT_TRUE(MountMinfs(fd, false, mount_path));
+  ASSERT_NO_FATAL_FAILURES(MountMinfs(fd, false, mount_path));
 
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
   ASSERT_GE(root_fd, 0);
@@ -504,25 +473,23 @@ bool CreateTestFile(const char* ramdisk_path, const char* mount_path, const char
   ASSERT_EQ(close(fd), 0);
   ASSERT_EQ(close(root_fd), 0);
   ASSERT_EQ(umount(mount_path), ZX_OK);
-  END_HELPER;
 }
 
 // Tests that setting read-only on the mount options works as expected.
-bool MountReadonly() {
+TEST(MountReadonlyCase, MountReadonly) {
   const char* mount_path = "/tmp/mount_readonly";
   const char file_name[] = "some_file";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
-  ASSERT_TRUE(CreateTestFile(ramdisk_path, mount_path, file_name));
+  ASSERT_NO_FATAL_FAILURES(CreateTestFile(ramdisk_path, mount_path, file_name));
 
   int fd = open(ramdisk_path, O_RDWR);
   ASSERT_GT(fd, 0);
 
   bool read_only = true;
-  ASSERT_TRUE(MountMinfs(fd, read_only, mount_path));
+  ASSERT_NO_FATAL_FAILURES(MountMinfs(fd, read_only, mount_path));
 
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
   ASSERT_GE(root_fd, 0);
@@ -548,27 +515,23 @@ bool MountReadonly() {
 
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-
-  END_TEST;
 }
 
 // Test that when a block device claims to be read-only, the filesystem is mounted as read-only.
-bool MountBlockReadonly() {
+TEST(MountBlockReadonlyCase, MountBlockReadonly) {
   const char* mount_path = "/tmp/mount_readonly";
   const char file_name[] = "some_file";
-
-  BEGIN_TEST;
 
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
-  ASSERT_TRUE(CreateTestFile(ramdisk_path, mount_path, file_name));
+  ASSERT_NO_FATAL_FAILURES(CreateTestFile(ramdisk_path, mount_path, file_name));
 
   uint32_t flags = BLOCK_FLAG_READONLY;
   ASSERT_EQ(ramdisk_set_flags(ramdisk, flags), ZX_OK);
 
   bool read_only = false;
-  ASSERT_TRUE(MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, mount_path));
+  ASSERT_NO_FATAL_FAILURES(MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, mount_path));
 
   // We can't modify the file.
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
@@ -585,14 +548,11 @@ bool MountBlockReadonly() {
 
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-
-  END_TEST;
 }
 
-bool StatfsTest() {
+TEST(StatfsTestCase, StatfsTest) {
   const char* mount_path = "/tmp/mount_unmount";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
@@ -623,13 +583,11 @@ bool StatfsTest() {
   ASSERT_EQ(umount(mount_path), ZX_OK);
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
-bool StatvfsTest() {
+TEST(StatvfsTestCase, StatvfsTest) {
   const char* mount_path = "/tmp/mount_unmount";
 
-  BEGIN_TEST;
   ramdisk_client_t* ramdisk = nullptr;
   ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
   const char* ramdisk_path = ramdisk_get_path(ramdisk);
@@ -661,12 +619,9 @@ bool StatvfsTest() {
   ASSERT_EQ(umount(mount_path), ZX_OK);
   ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
   ASSERT_EQ(unlink(mount_path), 0);
-  END_TEST;
 }
 
-bool GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_count) {
-  BEGIN_HELPER;
-
+void GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_count) {
   fuchsia_hardware_block_volume_VolumeInfo fvm_info;
   zx_status_t status;
   ASSERT_OK(fuchsia_hardware_block_volume_VolumeQuery(channel->get(), &status, &fvm_info));
@@ -691,60 +646,51 @@ bool GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_coun
   }
 
   *out_count = allocated_slices;
-  END_HELPER;
 }
+
+class PartitionOverFvmWithRamdiskFixture : public zxtest::Test {
+public:
+  const char* partition_path() const { return fixture_->partition_path().c_str(); }
+  static void SetUpTestCase() {}
+  static void TearDownTestCase() {}
+protected:
+  void SetUp() override {
+    fixture_ = new fs_test_utils::Fixture(PartitionOverFvmWithRamdisk());
+    ASSERT_EQ(fixture_->SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture_->SetUp(), ZX_OK);
+  }
+  void TearDown() override {
+    ASSERT_EQ(fixture_->TearDown(), ZX_OK);
+    ASSERT_EQ(fixture_->TearDownTestCase(), ZX_OK);
+  }
+private:
+  fs_test_utils::Fixture* fixture_;
+};
+
+using PartitionOverFvmWithRamdiskCase = PartitionOverFvmWithRamdiskFixture;
 
 // Reformat the partition using a number of slices and verify that there are as many slices as
 // originally pre-allocated.
-bool MkfsMinfsWithMinFvmSlices(fs_test_utils::Fixture* fixture) {
-  BEGIN_TEST;
+TEST_F(PartitionOverFvmWithRamdiskCase, MkfsMinfsWithMinFvmSlices) {
   mkfs_options_t options = default_mkfs_options;
   size_t base_slices = 0;
-  ASSERT_OK(mkfs(fixture->partition_path().c_str(), DISK_FORMAT_MINFS, launch_stdio_sync,
+  ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync,
                  &default_mkfs_options));
-  fbl::unique_fd partition_fd(open(fixture->partition_path().c_str(), O_RDONLY));
+  fbl::unique_fd partition_fd(open(partition_path(), O_RDONLY));
   ASSERT_TRUE(partition_fd);
   fzl::UnownedFdioCaller caller(partition_fd.get());
-  ASSERT_TRUE(GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
+  ASSERT_NO_FATAL_FAILURES(
+      GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &base_slices));
   options.fvm_data_slices += 10;
 
-  ASSERT_OK(
-      mkfs(fixture->partition_path().c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, &options));
+  ASSERT_OK(mkfs(partition_path(), DISK_FORMAT_MINFS, launch_stdio_sync, &options));
   size_t allocated_slices = 0;
-  ASSERT_TRUE(
+  ASSERT_NO_FATAL_FAILURES(
       GetPartitionSliceCount(zx::unowned_channel(caller.borrow_channel()), &allocated_slices));
   EXPECT_GE(allocated_slices, base_slices + 10);
 
   disk_format_t actual_format = detect_disk_format(partition_fd.get());
   ASSERT_EQ(actual_format, DISK_FORMAT_MINFS);
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(fs_management_tests)
-RUN_TEST_MEDIUM(MountUnmount)
-RUN_TEST_MEDIUM(MountUnmountLargeBlock)
-RUN_TEST_MEDIUM(MountMkdirUnmount)
-RUN_TEST_MEDIUM(FmountFunmount)
-// TODO(FLK-371): Re-enable once deflaked.
-// RUN_TEST_MEDIUM(MountEvilMemfs)
-RUN_TEST_MEDIUM(UmountTestEvil)
-RUN_TEST_MEDIUM(DoubleMountRoot)
-RUN_TEST_MEDIUM(MountRemount)
-RUN_TEST_MEDIUM(MountFsck)
-RUN_TEST_MEDIUM(MountGetDevice)
-RUN_TEST_MEDIUM(MountReadonly)
-RUN_TEST_MEDIUM(MountBlockReadonly)
-RUN_TEST_MEDIUM(StatfsTest)
-RUN_TEST_MEDIUM(StatvfsTest)
-END_TEST_CASE(fs_management_tests)
-
-BEGIN_FS_TEST_CASE(fs_management_mkfs_tests, PartitionOverFvmWithRamdisk)
-RUN_FS_TEST_F(MkfsMinfsWithMinFvmSlices)
-END_FS_TEST_CASE(fs_management_mkfs_tests, PartitionOverFvmWithRamdisk)
-
-int main(int argc, char** argv) {
-  return fs_test_utils::RunWithMemFs(
-      [argc, argv]() { return unittest_run_all_tests(argc, argv) ? 0 : -1; });
-}

@@ -29,8 +29,8 @@ test("fs-management") {
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace",
     "$zx/system/ulib/trace-engine",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
