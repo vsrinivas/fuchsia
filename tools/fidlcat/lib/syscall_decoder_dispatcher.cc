@@ -46,7 +46,7 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
     } else if (i % kPatternColorSize == 0) {
       os << dispatcher->colors().reset;
     }
-    std::vector<char> buffer(3);
+    std::vector<char> buffer(sizeof(uint8_t) * kCharatersPerByte + 1);
     snprintf(buffer.data(), buffer.size(), "%02x", bytes[i]);
     os << separator << buffer.data();
     separator = ", ";

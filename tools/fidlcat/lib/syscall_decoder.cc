@@ -336,7 +336,9 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
   os_ << line_header_ << decoder->syscall()->name() << '(';
   const char* separator = "";
   for (const auto& input : decoder->syscall()->inputs()) {
-    separator = input->DisplayInline(dispatcher_, decoder, separator, os_);
+    if (input->ConditionsAreTrue(decoder)) {
+      separator = input->DisplayInline(dispatcher_, decoder, separator, os_);
+    }
   }
   os_ << ")\n";
 
@@ -346,7 +348,9 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 
   // Displays the outline input arguments.
   for (const auto& input : decoder->syscall()->inputs()) {
-    input->DisplayOutline(dispatcher_, decoder, line_header_, /*tabs=*/1, os_);
+    if (input->ConditionsAreTrue(decoder)) {
+      input->DisplayOutline(dispatcher_, decoder, line_header_, /*tabs=*/1, os_);
+    }
   }
   dispatcher_->set_last_displayed_syscall(this);
 }
@@ -392,7 +396,8 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   // And the inline output arguments (if any).
   const char* separator = " (";
   for (const auto& output : decoder->syscall()->outputs()) {
-    if (output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) {
+    if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
+        output->ConditionsAreTrue(decoder)) {
       separator = output->DisplayInline(dispatcher_, decoder, separator, os_);
     }
   }
@@ -402,7 +407,8 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   os_ << '\n';
   // Displays the outline output arguments.
   for (const auto& output : decoder->syscall()->outputs()) {
-    if (output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) {
+    if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
+        output->ConditionsAreTrue(decoder)) {
       output->DisplayOutline(dispatcher_, decoder, line_header_, /*tabs=*/2, os_);
     }
   }

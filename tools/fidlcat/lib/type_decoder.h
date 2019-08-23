@@ -20,8 +20,28 @@ namespace fidlcat {
 #define kMinutesPerHour 60
 #define kHoursPerDay 24
 
+constexpr int kCharatersPerByte = 2;
+
 // Types for syscall arguments.
-enum class SyscallType { kInt64, kUint8, kUint32, kClock, kDuration, kHandle, kTime, kStruct };
+enum class SyscallType {
+  kInt64,
+  kUint8,
+  kUint8Array,
+  kUint16,
+  kUint16Array,
+  kUint32,
+  kUint32Array,
+  kUint64,
+  kUint64Array,
+  kClock,
+  kDuration,
+  kHandle,
+  kPortPacketType,
+  kSignals,
+  kStatus,
+  kTime,
+  kStruct
+};
 
 enum class SyscallReturnType {
   kVoid,
@@ -52,9 +72,11 @@ struct Colors {
 
 void ClockName(zx_clock_t clock, std::ostream& os);
 void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
+void PortPacketTypeName(uint32_t type, std::ostream& os);
 void RightsName(zx_rights_t rights, std::ostream& os);
 void StatusName(zx_status_t status, std::ostream& os);
 void StatusName(const Colors& colors, zx_status_t status, std::ostream& os);
+void SignalName(zx_signals_t signals, std::ostream& os);
 void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os);
 void DisplayType(const Colors& colors, SyscallType type, std::ostream& os);
 

@@ -32,16 +32,35 @@
 
 namespace fidlcat {
 
+template <typename ClassType, typename Type>
+class ClassField;
+
+template <typename ClassType>
+class Class;
+
 // Display a value on a stream.
 template <typename ValueType>
-void DisplayValue(const Colors& colors, SyscallType type, ValueType value, bool hexa,
+void DisplayValue(const Colors& /*colors*/, SyscallType type, ValueType /*value*/, bool /*hexa*/,
                   std::ostream& os) {
   os << "unimplemented generic value " << static_cast<uint32_t>(type);
 }
 
 template <>
-inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_t value, bool hexa,
-                                  std::ostream& os) {
+inline void DisplayValue<int32_t>(const Colors& colors, SyscallType type, int32_t value,
+                                  bool /*hexa*/, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kStatus:
+      StatusName(colors, value, os);
+      break;
+    default:
+      os << "unimplemented int32_t value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
+inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_t value,
+                                  bool /*hexa*/, std::ostream& os) {
   switch (type) {
     case SyscallType::kInt64:
       os << colors.blue << value << colors.reset;
@@ -59,11 +78,95 @@ inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_
 }
 
 template <>
+inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_t value, bool hexa,
+                                  std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint8:
+      if (hexa) {
+        std::vector<char> buffer(sizeof(uint8_t) * kCharatersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%02x", value);
+        os << colors.blue << buffer.data() << colors.reset;
+      } else {
+        os << colors.blue << value << colors.reset;
+      }
+      break;
+    default:
+      os << "unimplemented uint8_t value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
+inline void DisplayValue<std::pair<const uint8_t*, int>>(const Colors& colors, SyscallType type,
+                                                         std::pair<const uint8_t*, int> value,
+                                                         bool /*hexa*/, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint8Array: {
+      const char* separator = "";
+      for (int i = 0; i < value.second; ++i) {
+        os << separator;
+        DisplayValue(colors, SyscallType::kUint8, value.first[i], /*hexa=*/true, os);
+        separator = ", ";
+      }
+      break;
+    }
+    default:
+      os << "unimplemented uint8_t array value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
+inline void DisplayValue<uint16_t>(const Colors& colors, SyscallType type, uint16_t value,
+                                   bool hexa, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint16:
+      if (hexa) {
+        std::vector<char> buffer(sizeof(uint16_t) * kCharatersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%04x", value);
+        os << colors.blue << buffer.data() << colors.reset;
+      } else {
+        os << colors.blue << value << colors.reset;
+      }
+      break;
+    default:
+      os << "unimplemented uint16_t value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
+inline void DisplayValue<std::pair<const uint16_t*, int>>(const Colors& colors, SyscallType type,
+                                                          std::pair<const uint16_t*, int> value,
+                                                          bool /*hexa*/, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint16Array: {
+      const char* separator = "";
+      for (int i = 0; i < value.second; ++i) {
+        os << separator;
+        DisplayValue(colors, SyscallType::kUint16, value.first[i], /*hexa=*/true, os);
+        separator = ", ";
+      }
+      break;
+    }
+    default:
+      os << "unimplemented uint16_t array value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
 inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint32_t value,
                                    bool hexa, std::ostream& os) {
   switch (type) {
     case SyscallType::kUint32:
-      os << colors.blue << value << colors.reset;
+      if (hexa) {
+        std::vector<char> buffer(sizeof(uint32_t) * kCharatersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%08x", value);
+        os << colors.blue << buffer.data() << colors.reset;
+      } else {
+        os << colors.blue << value << colors.reset;
+      }
       break;
     case SyscallType::kClock:
       os << colors.red;
@@ -78,8 +181,38 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       DisplayHandle(colors, handle_info, os);
       break;
     }
+    case SyscallType::kPortPacketType:
+      os << colors.blue;
+      PortPacketTypeName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kSignals:
+      os << colors.blue;
+      SignalName(value, os);
+      os << colors.reset;
+      break;
     default:
       os << "unimplemented uint32_t value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
+inline void DisplayValue<std::pair<const uint32_t*, int>>(const Colors& colors, SyscallType type,
+                                                          std::pair<const uint32_t*, int> value,
+                                                          bool /*hexa*/, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint32Array: {
+      const char* separator = "";
+      for (int i = 0; i < value.second; ++i) {
+        os << separator;
+        DisplayValue(colors, SyscallType::kUint32, value.first[i], /*hexa=*/true, os);
+        separator = ", ";
+      }
+      break;
+    }
+    default:
+      os << "unimplemented uint32_t array value " << static_cast<uint32_t>(type);
       break;
   }
 }
@@ -88,6 +221,15 @@ template <>
 inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint64_t value,
                                    bool hexa, std::ostream& os) {
   switch (type) {
+    case SyscallType::kUint64:
+      if (hexa) {
+        std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+        snprintf(buffer.data(), buffer.size(), "%016lx", value);
+        os << colors.blue << buffer.data() << colors.reset;
+      } else {
+        os << colors.blue << value << colors.reset;
+      }
+      break;
     case SyscallType::kTime:
       os << DisplayTime(colors, value);
       break;
@@ -95,6 +237,193 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
       os << "unimplemented uint64_t value " << static_cast<uint32_t>(type);
       break;
   }
+}
+
+template <>
+inline void DisplayValue<std::pair<const uint64_t*, int>>(const Colors& colors, SyscallType type,
+                                                          std::pair<const uint64_t*, int> value,
+                                                          bool /*hexa*/, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint64Array: {
+      const char* separator = "";
+      for (int i = 0; i < value.second; ++i) {
+        os << separator;
+        DisplayValue(colors, SyscallType::kUint64, value.first[i], /*hexa=*/true, os);
+        separator = ", ";
+      }
+      break;
+    }
+    default:
+      os << "unimplemented uint64_t array value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+// Base class for all conditions on fields.
+template <typename ClassType>
+class ClassFieldConditionBase {
+ public:
+  ClassFieldConditionBase() = default;
+  virtual ~ClassFieldConditionBase() = default;
+
+  // Returns true if the condition is true.
+  virtual bool True(const ClassType* object) = 0;
+};
+
+// Condition which checks that the field has an expected value.
+template <typename ClassType, typename Type>
+class ClassFieldCondition : public ClassFieldConditionBase<ClassType> {
+ public:
+  ClassFieldCondition(const ClassField<ClassType, Type>* field, Type value)
+      : field_(field), value_(value) {}
+
+  bool True(const ClassType* object) override;
+
+ private:
+  // The field we check.
+  const ClassField<ClassType, Type>* const field_;
+  // The value we expect.
+  const Type value_;
+};
+
+// Base class for all class fields.
+template <typename ClassType>
+class ClassFieldBase {
+ public:
+  ClassFieldBase(std::string_view name, SyscallType syscall_type)
+      : name_(name), syscall_type_(syscall_type) {}
+  virtual ~ClassFieldBase() = default;
+
+  const std::string& name() const { return name_; }
+  SyscallType syscall_type() const { return syscall_type_; }
+
+  // Add a condition which must be true to display the input/output.
+  template <typename Type>
+  ClassFieldBase<ClassType>* DisplayIfEqual(const ClassField<ClassType, Type>* field, Type value) {
+    conditions_.push_back(std::make_unique<ClassFieldCondition<ClassType, Type>>(field, value));
+    return this;
+  }
+
+  bool ConditionsAreTrue(const ClassType* object) {
+    for (const auto& condition : conditions_) {
+      if (!condition->True(object)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  virtual void Display(const ClassType* object, const Colors& colors, std::string_view line_header,
+                       int tabs, std::ostream& os) const = 0;
+
+ private:
+  std::string name_;
+  const SyscallType syscall_type_;
+  std::vector<std::unique_ptr<ClassFieldConditionBase<ClassType>>> conditions_;
+};
+
+// Define a class field for basic types.
+template <typename ClassType, typename Type>
+class ClassField : public ClassFieldBase<ClassType> {
+ public:
+  ClassField(std::string_view name, SyscallType syscall_type, Type (*get)(const ClassType* from))
+      : ClassFieldBase<ClassType>(name, syscall_type), get_(get) {}
+
+  Type (*get() const)(const ClassType* from) { return get_; }
+
+  void Display(const ClassType* object, const Colors& colors, std::string_view line_header,
+               int tabs, std::ostream& os) const override {
+    os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name();
+    DisplayType(colors, ClassFieldBase<ClassType>::syscall_type(), os);
+    DisplayValue<Type>(colors, ClassFieldBase<ClassType>::syscall_type(), get_(object),
+                       /*hex=*/false, os);
+    os << '\n';
+  }
+
+ private:
+  // Function which can extract the value of the field for a given object.
+  Type (*get_)(const ClassType* from);
+};
+
+// Define a class field which is a class.
+template <typename ClassType, typename Type>
+class ClassClassField : public ClassFieldBase<ClassType> {
+ public:
+  ClassClassField(std::string_view name, const Type* (*get)(const ClassType* from),
+                  const Class<Type>* field_class)
+      : ClassFieldBase<ClassType>(name, SyscallType::kStruct),
+        get_(get),
+        field_class_(field_class) {}
+
+  void Display(const ClassType* object, const Colors& colors, std::string_view line_header,
+               int tabs, std::ostream& os) const override;
+
+ private:
+  // Function which can extract the address of the field for a given object.
+  const Type* (*get_)(const ClassType* from);
+  // Definition of the field's class.
+  const Class<Type>* const field_class_;
+};
+
+// Define a class.
+template <typename ClassType>
+class Class {
+ public:
+  const std::string& name() const { return name_; }
+
+  void DisplayObject(const ClassType* object, const Colors& colors, std::string_view line_header,
+                     int tabs, std::ostream& os) const {
+    os << "{\n";
+    for (const auto& field : fields_) {
+      if (field->ConditionsAreTrue(object)) {
+        field->Display(object, colors, line_header, tabs + 1, os);
+      }
+    }
+    os << line_header << std::string(tabs * kTabSize, ' ') << "}";
+  }
+
+  template <typename Type>
+  ClassField<ClassType, Type>* AddField(std::unique_ptr<ClassField<ClassType, Type>> field) {
+    auto result = field.get();
+    fields_.push_back(std::move(field));
+    return result;
+  }
+
+  template <typename Type>
+  ClassClassField<ClassType, Type>* AddField(
+      std::unique_ptr<ClassClassField<ClassType, Type>> field) {
+    auto result = field.get();
+    fields_.push_back(std::move(field));
+    return result;
+  }
+
+ protected:
+  explicit Class(std::string_view name) : name_(name) {}
+  Class(const Class&) = delete;
+  Class& operator=(const Class&) = delete;
+
+ private:
+  // Name of the class.
+  std::string name_;
+  // List of all fields in the class. Some fields can be specified several times
+  // with different conditions.
+  std::vector<std::unique_ptr<ClassFieldBase<ClassType>>> fields_;
+};
+
+template <typename ClassType, typename Type>
+bool ClassFieldCondition<ClassType, Type>::True(const ClassType* object) {
+  return field_->get()(object) == value_;
+}
+
+template <typename ClassType, typename Type>
+void ClassClassField<ClassType, Type>::Display(const ClassType* object, const Colors& colors,
+                                               std::string_view line_header, int tabs,
+                                               std::ostream& os) const {
+  os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name() << ':'
+     << colors.green << field_class_->name() << colors.reset << ": ";
+  const Type* sub_object = get_(object);
+  field_class_->DisplayObject(sub_object, colors, line_header, tabs, os);
+  os << '\n';
 }
 
 // Base class (not templated) for system call arguments.
@@ -205,16 +534,31 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
   }
 };
 
-// Use to access data for an input or an output.
-template <typename Type>
-class Access {
+// Base class for all data accesses.
+class AccessBase {
  public:
-  Access() = default;
-  virtual ~Access() = default;
+  AccessBase() = default;
+  virtual ~AccessBase() = default;
 
   // Returns the real type of the data (because, for example, handles are
   // implemented as uint32_t).
   virtual SyscallType GetSyscallType() const = 0;
+
+  // For buffers, ensures that the buffer will be in memory.
+  virtual void LoadArray(SyscallDecoder* decoder, size_t size) = 0;
+
+  // For buffers, true if the buffer is available.
+  virtual bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const = 0;
+
+  // For buffers, get a pointer on the buffer data.
+  virtual const uint8_t* Uint8Content(SyscallDecoder* decoder) const = 0;
+};
+
+// Use to access data for an input or an output.
+template <typename Type>
+class Access : public AccessBase {
+ public:
+  Access() = default;
 
   // Ensures that the data will be in memory.
   virtual void Load(SyscallDecoder* decoder) const = 0;
@@ -228,14 +572,12 @@ class Access {
   // The data.
   virtual Type Value(SyscallDecoder* decoder) const = 0;
 
-  // For buffers, ensures that the buffer will be in memory.
-  virtual void LoadArray(SyscallDecoder* decoder, size_t size) = 0;
-
-  // For buffers, true if the buffer is available.
-  virtual bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const = 0;
-
   // For buffers, get a pointer on the buffer data.
   virtual const Type* Content(SyscallDecoder* decoder) const = 0;
+
+  const uint8_t* Uint8Content(SyscallDecoder* decoder) const override {
+    return reinterpret_cast<const uint8_t*>(Content(decoder));
+  }
 
   // Display the data on a stream (with name and type).
   void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, std::string_view name,
@@ -361,6 +703,42 @@ class PointerFieldAccess : public Access<Type> {
   const SyscallType syscall_type_;
 };
 
+// Base class for the syscall arguments' conditions.
+class SyscallInputOutputConditionBase {
+ public:
+  SyscallInputOutputConditionBase() = default;
+  virtual ~SyscallInputOutputConditionBase() = default;
+
+  // Ensures that the data will be in memory.
+  virtual void Load(SyscallDecoder* decoder) const = 0;
+
+  // True if the data is valid (not a null pointer).
+  virtual bool ValueValid(SyscallDecoder* decoder) const = 0;
+
+  // True if the condition is satisfied.
+  virtual bool True(SyscallDecoder* decoder) const = 0;
+};
+
+// Condition that a syscall argument must meet.
+template <typename Type>
+class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
+ public:
+  SyscallInputOutputCondition(std::unique_ptr<Access<Type>> access, Type value)
+      : access_(std::move(access)), value_(value) {}
+
+  void Load(SyscallDecoder* decoder) const override { access_->Load(decoder); }
+
+  bool ValueValid(SyscallDecoder* decoder) const override { return access_->ValueValid(decoder); }
+
+  bool True(SyscallDecoder* decoder) const override { return access_->Value(decoder) == value_; }
+
+ private:
+  // Access to the syscall argument.
+  const std::unique_ptr<Access<Type>> access_;
+  // Value which is expected.
+  Type value_;
+};
+
 // Base class for the inputs/outputs we want to display for a system call.
 class SyscallInputOutputBase {
  public:
@@ -375,8 +753,20 @@ class SyscallInputOutputBase {
   // Name of the input/output.
   const std::string& name() const { return name_; }
 
+  // Add a condition which must be true to display the input/output.
+  template <typename Type>
+  SyscallInputOutputBase* DisplayIfEqual(std::unique_ptr<Access<Type>> access, Type value) {
+    conditions_.push_back(
+        std::make_unique<SyscallInputOutputCondition<Type>>(std::move(access), value));
+    return this;
+  }
+
   // Ensures that all the data needed to display the input/output is available.
-  virtual void Load(SyscallDecoder* decoder) const = 0;
+  virtual void Load(SyscallDecoder* decoder) const {
+    for (const auto& condition : conditions_) {
+      condition->Load(decoder);
+    }
+  }
 
   // Displays small inputs or outputs.
   virtual const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
@@ -388,13 +778,27 @@ class SyscallInputOutputBase {
   virtual void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
                               std::string_view line_header, int tabs, std::ostream& os) const {}
 
+  // True if all the conditions are met.
+  bool ConditionsAreTrue(SyscallDecoder* decoder) {
+    for (const auto& condition : conditions_) {
+      if (!condition->True(decoder)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
  private:
+  // For ouput arguments, condition the error code must meet.
   const int64_t error_code_;
+  // Name of the displayed value.
   const std::string name_;
+  // Conditions which must be met to display this input/output.
+  std::vector<std::unique_ptr<SyscallInputOutputConditionBase>> conditions_;
 };
 
 // An input/output which only displays an expression (for example, the value of
-// an argument). This is always decoded inline.
+// an argument). This is always displayed inline.
 template <typename Type>
 class SyscallInputOutput : public SyscallInputOutputBase {
  public:
@@ -402,7 +806,10 @@ class SyscallInputOutput : public SyscallInputOutputBase {
                      std::unique_ptr<Access<Type>> access)
       : SyscallInputOutputBase(error_code, name), access_(std::move(access)) {}
 
-  void Load(SyscallDecoder* decoder) const override { access_->Load(decoder); }
+  void Load(SyscallDecoder* decoder) const override {
+    SyscallInputOutputBase::Load(decoder);
+    access_->Load(decoder);
+  }
 
   const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
                             const char* separator, std::ostream& os) const override {
@@ -413,6 +820,32 @@ class SyscallInputOutput : public SyscallInputOutputBase {
 
  private:
   const std::unique_ptr<Access<Type>> access_;
+};
+
+// An input/output which is an object. This is always displayed outline.
+template <typename ClassType>
+class SyscallInputOutputObject : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputObject(int64_t error_code, std::string_view name,
+                           std::unique_ptr<AccessBase> buffer,
+                           const Class<ClassType>* class_definition)
+      : SyscallInputOutputBase(error_code, name),
+        buffer_(std::move(buffer)),
+        class_definition_(class_definition) {}
+
+  void Load(SyscallDecoder* decoder) const override {
+    SyscallInputOutputBase::Load(decoder);
+    buffer_->LoadArray(decoder, sizeof(ClassType));
+  }
+
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                      std::string_view line_header, int tabs, std::ostream& os) const override;
+
+ private:
+  // Access to the buffer (raw data) which contains the object.
+  const std::unique_ptr<AccessBase> buffer_;
+  // Class definition for the displayed object.
+  const Class<ClassType>* class_definition_;
 };
 
 // An input/output which is a FIDL message. This is always displayed outline.
@@ -434,6 +867,7 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
         num_handles_(std::move(num_handles)) {}
 
   void Load(SyscallDecoder* decoder) const override {
+    SyscallInputOutputBase::Load(decoder);
     handle_->Load(decoder);
     num_bytes_->Load(decoder);
     num_handles_->Load(decoder);
@@ -567,6 +1001,18 @@ class Syscall {
   void Output(int64_t error_code, std::string_view name, std::unique_ptr<Access<Type>> access) {
     outputs_.push_back(
         std::make_unique<SyscallInputOutput<Type>>(error_code, name, std::move(access)));
+  }
+
+  // Adds an object output to display.
+  template <typename ClassType>
+  SyscallInputOutputObject<ClassType>* OutputObject(int64_t error_code, std::string_view name,
+                                                    std::unique_ptr<AccessBase> buffer,
+                                                    const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObject<ClassType>>(
+        error_code, name, std::move(buffer), class_definition);
+    auto result = object.get();
+    outputs_.push_back(std::move(object));
+    return result;
   }
 
   // Add an output FIDL message to display.
@@ -722,6 +1168,23 @@ void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder*
   } else {
     os << colors.red << "(nullptr)" << colors.reset;
   }
+}
+
+template <typename ClassType>
+void SyscallInputOutputObject<ClassType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
+                                                         SyscallDecoder* decoder,
+                                                         std::string_view line_header, int tabs,
+                                                         std::ostream& os) const {
+  const Colors& colors = dispatcher->colors();
+  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name() << ":" << colors.green
+     << class_definition_->name() << colors.reset << ": ";
+  auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder));
+  if (object == nullptr) {
+    os << colors.red << "nullptr" << colors.reset;
+  } else {
+    class_definition_->DisplayObject(object, colors, line_header, tabs + 1, os);
+  }
+  os << '\n';
 }
 
 }  // namespace fidlcat

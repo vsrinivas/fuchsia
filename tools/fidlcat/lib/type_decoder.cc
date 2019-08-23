@@ -6,6 +6,7 @@
 
 #include <zircon/system/public/zircon/rights.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
+#include <zircon/system/public/zircon/syscalls/port.h>
 #include <zircon/system/public/zircon/types.h>
 
 #include <cstdint>
@@ -69,10 +70,41 @@ void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os) {
   }
 }
 
-#define RightsNameCase(name)  \
-  if ((rights & name) != 0) { \
-    os << separator << #name; \
-    separator = " | ";        \
+constexpr uint32_t kExceptionMask = 0xff;
+constexpr int kExceptionNumberShift = 8;
+constexpr uint32_t kExceptionNumberMask = 0xff;
+
+#define PortPacketTypeNameCase(name) \
+  case name:                         \
+    os << #name;                     \
+    return
+
+void PortPacketTypeName(uint32_t type, std::ostream& os) {
+  switch (type) {
+    PortPacketTypeNameCase(ZX_PKT_TYPE_USER);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_SIGNAL_ONE);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_SIGNAL_REP);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_BELL);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_MEM);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_IO);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_GUEST_VCPU);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_INTERRUPT);
+    PortPacketTypeNameCase(ZX_PKT_TYPE_PAGE_REQUEST);
+    default:
+      if ((type & kExceptionMask) == ZX_PKT_TYPE_EXCEPTION(0)) {
+        os << "ZX_PKT_TYPE_EXCEPTION(" << ((type >> kExceptionNumberShift) & kExceptionNumberMask)
+           << ')';
+        return;
+      }
+      os << "port_packet_type=" << type;
+      return;
+  }
+}
+
+#define RightsNameCase(name)    \
+  if ((rights & (name)) != 0) { \
+    os << separator << #name;   \
+    separator = " | ";          \
   }
 
 void RightsName(zx_rights_t rights, std::ostream& os) {
@@ -109,7 +141,6 @@ void RightsName(zx_rights_t rights, std::ostream& os) {
     os << #name;             \
     return
 
-// TODO: (use zx_status_get_string when it will be available).
 void StatusName(zx_status_t status, std::ostream& os) {
   switch (status) {
     StatusNameCase(ZX_OK);
@@ -174,13 +205,66 @@ void StatusName(const Colors& colors, zx_status_t status, std::ostream& os) {
   os << colors.reset;
 }
 
+#define SignalNameCase(name)          \
+  if ((signals & (name)) == (name)) { \
+    os << separator << #name;         \
+    separator = " | ";                \
+  }
+
+void SignalName(zx_signals_t signals, std::ostream& os) {
+  if (signals == 0) {
+    os << "0";
+    return;
+  }
+  if (signals == __ZX_OBJECT_SIGNAL_ALL) {
+    os << "__ZX_OBJECT_SIGNAL_ALL";
+    return;
+  }
+  const char* separator = "";
+  SignalNameCase(__ZX_OBJECT_READABLE);
+  SignalNameCase(__ZX_OBJECT_WRITABLE);
+  SignalNameCase(__ZX_OBJECT_PEER_CLOSED);
+  SignalNameCase(__ZX_OBJECT_SIGNALED);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_4);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_5);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_6);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_7);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_8);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_9);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_10);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_11);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_12);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_13);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_14);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_15);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_16);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_17);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_18);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_19);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_20);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_21);
+  SignalNameCase(__ZX_OBJECT_SIGNAL_22);
+  SignalNameCase(__ZX_OBJECT_HANDLE_CLOSED);
+  SignalNameCase(ZX_USER_SIGNAL_0);
+  SignalNameCase(ZX_USER_SIGNAL_1);
+  SignalNameCase(ZX_USER_SIGNAL_2);
+  SignalNameCase(ZX_USER_SIGNAL_3);
+  SignalNameCase(ZX_USER_SIGNAL_4);
+  SignalNameCase(ZX_USER_SIGNAL_5);
+  SignalNameCase(ZX_USER_SIGNAL_6);
+  SignalNameCase(ZX_USER_SIGNAL_7);
+}
+
+constexpr int kUint32Precision = 8;
+
 void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os) {
   os << colors.red;
   if (handle.type != ZX_OBJ_TYPE_NONE) {
     ObjTypeName(handle.type, os);
     os << ':';
   }
-  os << std::hex << std::setfill('0') << std::setw(8) << handle.handle << std::dec << std::setw(0);
+  os << std::hex << std::setfill('0') << std::setw(kUint32Precision) << handle.handle << std::dec
+     << std::setw(0);
   if (handle.rights != 0) {
     os << colors.blue << '(';
     RightsName(handle.rights, os);
@@ -197,8 +281,26 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kUint8:
       os << ":" << colors.green << "uint8" << colors.reset << ": ";
       break;
+    case SyscallType::kUint8Array:
+      os << ":" << colors.green << "uint8[]" << colors.reset << ": ";
+      break;
+    case SyscallType::kUint16:
+      os << ":" << colors.green << "uint16" << colors.reset << ": ";
+      break;
+    case SyscallType::kUint16Array:
+      os << ":" << colors.green << "uint16[]" << colors.reset << ": ";
+      break;
     case SyscallType::kUint32:
       os << ":" << colors.green << "uint32" << colors.reset << ": ";
+      break;
+    case SyscallType::kUint32Array:
+      os << ":" << colors.green << "uint32[]" << colors.reset << ": ";
+      break;
+    case SyscallType::kUint64:
+      os << ":" << colors.green << "uint64" << colors.reset << ": ";
+      break;
+    case SyscallType::kUint64Array:
+      os << ":" << colors.green << "uint64[]" << colors.reset << ": ";
       break;
     case SyscallType::kClock:
       os << ":" << colors.green << "clock" << colors.reset << ": ";
@@ -208,6 +310,15 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kHandle:
       os << ":" << colors.green << "handle" << colors.reset << ": ";
+      break;
+    case SyscallType::kPortPacketType:
+      os << ":" << colors.green << "zx_port_packet_t::type" << colors.reset << ": ";
+      break;
+    case SyscallType::kSignals:
+      os << ":" << colors.green << "signals" << colors.reset << ": ";
+      break;
+    case SyscallType::kStatus:
+      os << ":" << colors.green << "status_t" << colors.reset << ": ";
       break;
     case SyscallType::kTime:
       os << ":" << colors.green << "time" << colors.reset << ": ";
