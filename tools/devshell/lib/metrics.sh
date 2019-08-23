@@ -221,7 +221,7 @@ function send-analytics-event {
   curl_args=()
   for a in "${analytics_args[@]}"; do
     curl_args+=(--data-urlencode)
-    curl_args+=("\"$a\"")
+    curl_args+=("$a")
   done
 
   local user_agent="Fuchsia-fx $(_os_data)"
