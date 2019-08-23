@@ -334,11 +334,6 @@ type TestProtocolStub struct {
 	Impl TestProtocol
 }
 
-func (s_ *TestProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
-	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
-	return msg, err
-}
-
 func (s_ *TestProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal:

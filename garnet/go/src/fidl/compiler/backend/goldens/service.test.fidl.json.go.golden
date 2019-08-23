@@ -43,11 +43,6 @@ type FirstProtocolStub struct {
 	Impl FirstProtocol
 }
 
-func (s_ *FirstProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
-	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
-	return msg, err
-}
-
 func (s_ *FirstProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case FirstProtocolMethodOnFirstOrdinal:
@@ -103,11 +98,6 @@ func NewSecondProtocolInterfaceRequest() (SecondProtocolInterfaceRequest, *Secon
 
 type SecondProtocolStub struct {
 	Impl SecondProtocol
-}
-
-func (s_ *SecondProtocolStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
-	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
-	return msg, err
 }
 
 func (s_ *SecondProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

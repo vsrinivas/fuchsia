@@ -35,11 +35,6 @@ type ChildStub struct {
 	Impl Child
 }
 
-func (s_ *ChildStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
-	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
-	return msg, err
-}
-
 func (s_ *ChildStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	}
@@ -166,11 +161,6 @@ func NewParentInterfaceRequest() (ParentInterfaceRequest, *ParentInterface, erro
 
 type ParentStub struct {
 	Impl Parent
-}
-
-func (s_ *ParentStub) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
-	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
-	return msg, err
 }
 
 func (s_ *ParentStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

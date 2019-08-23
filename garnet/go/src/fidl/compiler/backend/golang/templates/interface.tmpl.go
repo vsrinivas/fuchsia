@@ -180,11 +180,6 @@ type {{ .StubName }} struct {
 	Impl {{ .Name }}
 }
 
-func (s_ *{{ .StubName }}) Dispatch(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, error) {
-	msg, _, err := s_.DispatchImpl(ordinal_, data_, handles_)
-	return msg, err
-}
-
 func (s_ *{{ .StubName }}) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	{{- range .Methods }}
