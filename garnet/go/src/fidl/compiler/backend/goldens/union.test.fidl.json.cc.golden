@@ -117,6 +117,71 @@ void Union::set_StringNeedsConstructor(::std::string value) {
 void Union::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
   value_.emplace<static_cast<size_t>(Tag::kVectorStringAlsoNeedsConstructor) + 1>(std::move(value));
 }
+FieldCollision::FieldCollision() : value_() {}
+
+FieldCollision::~FieldCollision() {
+}
+
+FieldCollision::FieldCollision(FieldCollision&& other) : value_(std::move(other.value_)) {
+}
+
+FieldCollision& FieldCollision::operator=(FieldCollision&& other) {
+  if (this != &other) {
+    value_ = std::move(other.value_);
+  }
+  return *this;
+}
+
+void FieldCollision::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(_encoder, &_tag, _offset);
+  switch (_tag) {
+   case 0:
+    ::fidl::Encode(_encoder, &field_collision_tag(), _offset + 4);
+    break;
+   default:
+    break;
+  }
+}
+
+void FieldCollision::Decode(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset) {
+  fidl_union_tag_t _tag;
+  ::fidl::Decode(_decoder, &_tag, _offset);
+  switch (_tag) {
+   case 0:
+    {
+      int32_t _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 4);
+      _value->set_field_collision_tag(std::move(_member));
+      break;
+    }
+   default:
+    _value->value_.emplace<0>();
+  }
+}
+
+zx_status_t FieldCollision::Clone(FieldCollision* _result) const {
+  zx_status_t _status = ZX_OK;
+  switch (Which()) {
+    case Tag::kFieldCollisionTag:
+      {
+        int32_t _member{};
+        _status = ::fidl::Clone(field_collision_tag(), &_member);
+        if (_status == ZX_OK) {
+          _result->set_field_collision_tag(std::move(_member));
+        }
+      }
+      break;
+    case Tag::Invalid:
+      _result->value_.emplace<0>();
+      break;
+  }
+  return _status;
+}
+
+void FieldCollision::set_field_collision_tag(int32_t value) {
+  value_.emplace<static_cast<size_t>(Tag::kFieldCollisionTag) + 1>(std::move(value));
+}
 }  // namespace name
 }  // namespace test
 

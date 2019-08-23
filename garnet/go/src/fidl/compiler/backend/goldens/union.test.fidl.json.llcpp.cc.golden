@@ -77,6 +77,49 @@ int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
 }
 
 
+::llcpp::test::name::FieldCollision::FieldCollision() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::test::name::FieldCollision::~FieldCollision() {
+  Destroy();
+}
+
+void ::llcpp::test::name::FieldCollision::Destroy() {
+  switch (which()) {
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::test::name::FieldCollision::MoveImpl_(FieldCollision&& other) {
+  switch (other.which()) {
+  case Tag::kFieldCollisionTag:
+    mutable_field_collision_tag() = std::move(other.mutable_field_collision_tag());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::test::name::FieldCollision::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::name::FieldCollision, field_collision_tag_) == 4);
+  static_assert(sizeof(::llcpp::test::name::FieldCollision) == ::llcpp::test::name::FieldCollision::PrimarySize);
+}
+
+
+int32_t& ::llcpp::test::name::FieldCollision::mutable_field_collision_tag() {
+  if (which() != Tag::kFieldCollisionTag) {
+    Destroy();
+    new (&field_collision_tag_) int32_t;
+  }
+  tag_ = Tag::kFieldCollisionTag;
+  return field_collision_tag_;
+}
+
+
 }  // namespace name
 }  // namespace test
 }  // namespace llcpp

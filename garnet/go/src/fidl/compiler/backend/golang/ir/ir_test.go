@@ -776,7 +776,7 @@ func TestCompileXUnion(t *testing.T) {
 		},
 		XUnion{
 			Name:      "MyExtensibleUnion",
-			TagName:   "MyExtensibleUnionTag",
+			TagName:   "I_myExtensibleUnionTag",
 			Size:      123,
 			Alignment: 456,
 			Members: []XUnionMember{

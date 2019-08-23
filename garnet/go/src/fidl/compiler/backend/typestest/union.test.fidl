@@ -5,3 +5,7 @@ union Union {
     string StringNeedsConstructor;
     vector<string> VectorStringAlsoNeedsConstructor;
 };
+
+union FieldCollision {
+    int32 field_collision_tag;
+};

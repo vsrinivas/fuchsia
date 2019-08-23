@@ -16,4 +16,13 @@ test_name_UnionOutOfLine [
 test_name_UnionHandles [
        void void
 ][varlen]
+test_name_FieldCollisionInLine [
+       field_collision_tag fidl_union_member[test_name_FieldCollisionTag_field_collision_tag, int32]
+]
+test_name_FieldCollisionOutOfLine [
+       void void
+][varlen]
+test_name_FieldCollisionHandles [
+       void void
+][varlen]
 

@@ -46,26 +46,26 @@ var _mWithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(WithErr
 func (msg *WithErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
 	return _mWithErrorSyntaxErrorAsEnumResponse
 }
-type WithErrorSyntaxErrorAsPrimitiveResultTag uint32
+type I_withErrorSyntaxErrorAsPrimitiveResultTag uint32
 const (
-	_ WithErrorSyntaxErrorAsPrimitiveResultTag = iota
+	_ I_withErrorSyntaxErrorAsPrimitiveResultTag = iota
 	WithErrorSyntaxErrorAsPrimitiveResultResponse
 	WithErrorSyntaxErrorAsPrimitiveResultErr
 )
 
 
 type WithErrorSyntaxErrorAsPrimitiveResult struct {
-	WithErrorSyntaxErrorAsPrimitiveResultTag `fidl:"tag" fidl2:"u,8,4"`
+	I_withErrorSyntaxErrorAsPrimitiveResultTag `fidl:"tag" fidl2:"u,8,4"`
 	Response WithErrorSyntaxErrorAsPrimitiveResponse 
 	Err uint32 
 }
 
-func (u *WithErrorSyntaxErrorAsPrimitiveResult) Which() WithErrorSyntaxErrorAsPrimitiveResultTag {
-	return u.WithErrorSyntaxErrorAsPrimitiveResultTag
+func (u *WithErrorSyntaxErrorAsPrimitiveResult) Which() I_withErrorSyntaxErrorAsPrimitiveResultTag {
+	return u.I_withErrorSyntaxErrorAsPrimitiveResultTag
 }
 
 func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetResponse(response WithErrorSyntaxErrorAsPrimitiveResponse) {
-	u.WithErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultResponse
+	u.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultResponse
 	u.Response = response
 }
 
@@ -76,7 +76,7 @@ func WithErrorSyntaxErrorAsPrimitiveResultWithResponse(response WithErrorSyntaxE
 }
 
 func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetErr(err uint32) {
-	u.WithErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultErr
+	u.I_withErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultErr
 	u.Err = err
 }
 
@@ -85,26 +85,26 @@ func WithErrorSyntaxErrorAsPrimitiveResultWithErr(err uint32) WithErrorSyntaxErr
 	_u.SetErr(err)
 	return _u
 }
-type WithErrorSyntaxErrorAsEnumResultTag uint32
+type I_withErrorSyntaxErrorAsEnumResultTag uint32
 const (
-	_ WithErrorSyntaxErrorAsEnumResultTag = iota
+	_ I_withErrorSyntaxErrorAsEnumResultTag = iota
 	WithErrorSyntaxErrorAsEnumResultResponse
 	WithErrorSyntaxErrorAsEnumResultErr
 )
 
 
 type WithErrorSyntaxErrorAsEnumResult struct {
-	WithErrorSyntaxErrorAsEnumResultTag `fidl:"tag" fidl2:"u,8,4"`
+	I_withErrorSyntaxErrorAsEnumResultTag `fidl:"tag" fidl2:"u,8,4"`
 	Response WithErrorSyntaxErrorAsEnumResponse 
 	Err ErrorEnun 
 }
 
-func (u *WithErrorSyntaxErrorAsEnumResult) Which() WithErrorSyntaxErrorAsEnumResultTag {
-	return u.WithErrorSyntaxErrorAsEnumResultTag
+func (u *WithErrorSyntaxErrorAsEnumResult) Which() I_withErrorSyntaxErrorAsEnumResultTag {
+	return u.I_withErrorSyntaxErrorAsEnumResultTag
 }
 
 func (u *WithErrorSyntaxErrorAsEnumResult) SetResponse(response WithErrorSyntaxErrorAsEnumResponse) {
-	u.WithErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultResponse
+	u.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultResponse
 	u.Response = response
 }
 
@@ -115,7 +115,7 @@ func WithErrorSyntaxErrorAsEnumResultWithResponse(response WithErrorSyntaxErrorA
 }
 
 func (u *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
-	u.WithErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultErr
+	u.I_withErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultErr
 	u.Err = err
 }
 

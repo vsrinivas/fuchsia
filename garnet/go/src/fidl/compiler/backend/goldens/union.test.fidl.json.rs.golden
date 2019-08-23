@@ -42,3 +42,16 @@ fidl_union! {
   size: 24,
   align: 8,
 }
+
+fidl_union! {
+  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+  name: FieldCollision,
+  members: [
+    FieldCollisionTag {
+      ty: i32,
+      offset: 4,
+    },
+  ],
+  size: 8,
+  align: 4,
+}

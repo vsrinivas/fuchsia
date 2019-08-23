@@ -9,6 +9,7 @@ namespace test {
 namespace name {
 
 class Union;
+class FieldCollision;
 
 class Union final {
  public:
@@ -90,6 +91,61 @@ inline zx_status_t Clone(const ::test::name::Union& value,
 }
 
 using UnionPtr = ::std::unique_ptr<Union>;
+
+class FieldCollision final {
+ public:
+  FieldCollision();
+  ~FieldCollision();
+
+  FieldCollision(FieldCollision&&);
+  FieldCollision& operator=(FieldCollision&&);
+
+  enum class Tag : fidl_union_tag_t {
+    kFieldCollisionTag = 0,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<FieldCollision> New() { return ::std::make_unique<FieldCollision>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset);
+  zx_status_t Clone(FieldCollision* result) const;
+
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+
+  bool is_field_collision_tag() const { return Which() == Tag(0); }
+  
+  int32_t& field_collision_tag() {
+    if (!is_field_collision_tag()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
+  }
+  
+  const int32_t& field_collision_tag() const { return value_.template get<0 + 1>(); }
+  void set_field_collision_tag(int32_t value);
+
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
+
+ private:
+
+  using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
+  Variant value_;
+};
+
+inline zx_status_t Clone(const ::test::name::FieldCollision& value,
+                         ::test::name::FieldCollision* result) {
+  return value.Clone(result);
+}
+
+using FieldCollisionPtr = ::std::unique_ptr<FieldCollision>;
 }  // namespace name
 }  // namespace test
 namespace fidl {
@@ -117,6 +173,31 @@ struct Equality<::test::name::Union> {
       case ::test::name::Union::Tag::kVectorStringAlsoNeedsConstructor:
 	return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor(), _rhs.VectorStringAlsoNeedsConstructor());
       case ::test::name::Union::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::name::FieldCollision>
+    : public EncodableCodingTraits<::test::name::FieldCollision, 8> {};
+
+inline zx_status_t Clone(const ::test::name::FieldCollision& value,
+                         ::test::name::FieldCollision* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::FieldCollision> {
+  static inline bool Equals(const ::test::name::FieldCollision& _lhs, const ::test::name::FieldCollision& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::FieldCollision::Tag::kFieldCollisionTag:
+	return ::fidl::Equals(_lhs.field_collision_tag(), _rhs.field_collision_tag());
+      case ::test::name::FieldCollision::Tag::Invalid:
 	return true;
       default:
 	return false;

@@ -75,14 +75,46 @@
       "max_out_of_line": 4294967295,
       "alignment": 8,
       "max_handles": 0
+    },
+    {
+      "name": "test.name/FieldCollision",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+        "line": 9,
+        "column": 7
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "field_collision_tag",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 10,
+            "column": 11
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 4
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0
     }
   ],
   "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "test.name/Union"
+    "test.name/Union",
+    "test.name/FieldCollision"
   ],
   "declarations": {
-    "test.name/Union": "union"
+    "test.name/Union": "union",
+    "test.name/FieldCollision": "union"
   }
 }

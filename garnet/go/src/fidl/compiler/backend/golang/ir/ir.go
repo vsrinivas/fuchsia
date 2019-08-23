@@ -860,7 +860,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		TagName:    c.compileCompoundIdentifier(val.Name, true, TagSuffix),
+		TagName:    "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 	}
@@ -888,7 +888,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	return XUnion{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		TagName:    c.compileCompoundIdentifier(val.Name, true, TagSuffix),
+		TagName:    "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 		Members:    members,

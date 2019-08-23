@@ -6,9 +6,9 @@ package name
 
 
 
-type UnionTag uint32
+type I_unionTag uint32
 const (
-	_ UnionTag = iota
+	_ I_unionTag = iota
 	UnionPrimitive
 	UnionStringNeedsConstructor
 	UnionVectorStringAlsoNeedsConstructor
@@ -16,18 +16,18 @@ const (
 
 
 type Union struct {
-	UnionTag `fidl:"tag" fidl2:"u,24,8"`
+	I_unionTag `fidl:"tag" fidl2:"u,24,8"`
 	Primitive int32 
 	StringNeedsConstructor string 
 	VectorStringAlsoNeedsConstructor []string 
 }
 
-func (u *Union) Which() UnionTag {
-	return u.UnionTag
+func (u *Union) Which() I_unionTag {
+	return u.I_unionTag
 }
 
 func (u *Union) SetPrimitive(primitive int32) {
-	u.UnionTag = UnionPrimitive
+	u.I_unionTag = UnionPrimitive
 	u.Primitive = primitive
 }
 
@@ -38,7 +38,7 @@ func UnionWithPrimitive(primitive int32) Union {
 }
 
 func (u *Union) SetStringNeedsConstructor(stringNeedsConstructor string) {
-	u.UnionTag = UnionStringNeedsConstructor
+	u.I_unionTag = UnionStringNeedsConstructor
 	u.StringNeedsConstructor = stringNeedsConstructor
 }
 
@@ -49,12 +49,38 @@ func UnionWithStringNeedsConstructor(stringNeedsConstructor string) Union {
 }
 
 func (u *Union) SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) {
-	u.UnionTag = UnionVectorStringAlsoNeedsConstructor
+	u.I_unionTag = UnionVectorStringAlsoNeedsConstructor
 	u.VectorStringAlsoNeedsConstructor = vectorStringAlsoNeedsConstructor
 }
 
 func UnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) Union {
 	var _u Union
 	_u.SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor)
+	return _u
+}
+type I_fieldCollisionTag uint32
+const (
+	_ I_fieldCollisionTag = iota
+	FieldCollisionFieldCollisionTag
+)
+
+
+type FieldCollision struct {
+	I_fieldCollisionTag `fidl:"tag" fidl2:"u,8,4"`
+	FieldCollisionTag int32 
+}
+
+func (u *FieldCollision) Which() I_fieldCollisionTag {
+	return u.I_fieldCollisionTag
+}
+
+func (u *FieldCollision) SetFieldCollisionTag(fieldCollisionTag int32) {
+	u.I_fieldCollisionTag = FieldCollisionFieldCollisionTag
+	u.FieldCollisionTag = fieldCollisionTag
+}
+
+func FieldCollisionWithFieldCollisionTag(fieldCollisionTag int32) FieldCollision {
+	var _u FieldCollision
+	_u.SetFieldCollisionTag(fieldCollisionTag)
 	return _u
 }

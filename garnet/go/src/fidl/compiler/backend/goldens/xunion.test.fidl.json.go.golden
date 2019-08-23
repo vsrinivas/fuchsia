@@ -21,7 +21,7 @@ var _mEmpty = _bindings.CreateLazyMarshaler(Empty{})
 func (msg *Empty) Marshaler() _bindings.Marshaler {
 	return _mEmpty
 }
-type OlderSimpleUnionTag uint32
+type I_olderSimpleUnionTag uint32
 const (
 	OlderSimpleUnion_unknownData = 0  // 0x00000000
 	OlderSimpleUnionI = 1026732503 // 0x3d32b1d7
@@ -30,14 +30,14 @@ const (
 
 
 type OlderSimpleUnion struct {
-	OlderSimpleUnionTag `fidl2:"x,24,8"`
+	I_olderSimpleUnionTag `fidl2:"x,24,8"`
 	I_unknownData []byte
 	I int64 `fidl:"1026732503" fidl2:"1026732503"`
 	F float32 `fidl:"1362546558" fidl2:"1362546558"`
 }
 
-func (_m *OlderSimpleUnion) Which() OlderSimpleUnionTag {
-	switch _m.OlderSimpleUnionTag {
+func (_m *OlderSimpleUnion) Which() I_olderSimpleUnionTag {
+	switch _m.I_olderSimpleUnionTag {
 	case 1026732503:
 		return OlderSimpleUnionI
 	case 1362546558:
@@ -48,11 +48,11 @@ func (_m *OlderSimpleUnion) Which() OlderSimpleUnionTag {
 }
 
 func (_m *OlderSimpleUnion) Ordinal() uint32 {
-	return uint32(_m.OlderSimpleUnionTag)
+	return uint32(_m.I_olderSimpleUnionTag)
 }
 
 func (_m *OlderSimpleUnion) SetI(i int64) {
-	_m.OlderSimpleUnionTag = OlderSimpleUnionI
+	_m.I_olderSimpleUnionTag = OlderSimpleUnionI
 	_m.I = i
 }
 
@@ -63,7 +63,7 @@ func OlderSimpleUnionWithI(i int64) OlderSimpleUnion {
 }
 
 func (_m *OlderSimpleUnion) SetF(f float32) {
-	_m.OlderSimpleUnionTag = OlderSimpleUnionF
+	_m.I_olderSimpleUnionTag = OlderSimpleUnionF
 	_m.F = f
 }
 
@@ -74,7 +74,7 @@ func OlderSimpleUnionWithF(f float32) OlderSimpleUnion {
 }
 
 
-type NewerSimpleUnionTag uint32
+type I_newerSimpleUnionTag uint32
 const (
 	NewerSimpleUnion_unknownData = 0  // 0x00000000
 	NewerSimpleUnionI = 693944286 // 0x295cbfde
@@ -84,15 +84,15 @@ const (
 
 
 type NewerSimpleUnion struct {
-	NewerSimpleUnionTag `fidl2:"x,24,8"`
+	I_newerSimpleUnionTag `fidl2:"x,24,8"`
 	I_unknownData []byte
 	I int64 `fidl:"693944286" fidl2:"693944286"`
 	S string `fidl:",473666119" fidl2:"473666119,"`
 	V []string `fidl:",,1815655055" fidl2:"1815655055,,"`
 }
 
-func (_m *NewerSimpleUnion) Which() NewerSimpleUnionTag {
-	switch _m.NewerSimpleUnionTag {
+func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
+	switch _m.I_newerSimpleUnionTag {
 	case 693944286:
 		return NewerSimpleUnionI
 	case 473666119:
@@ -105,11 +105,11 @@ func (_m *NewerSimpleUnion) Which() NewerSimpleUnionTag {
 }
 
 func (_m *NewerSimpleUnion) Ordinal() uint32 {
-	return uint32(_m.NewerSimpleUnionTag)
+	return uint32(_m.I_newerSimpleUnionTag)
 }
 
 func (_m *NewerSimpleUnion) SetI(i int64) {
-	_m.NewerSimpleUnionTag = NewerSimpleUnionI
+	_m.I_newerSimpleUnionTag = NewerSimpleUnionI
 	_m.I = i
 }
 
@@ -120,7 +120,7 @@ func NewerSimpleUnionWithI(i int64) NewerSimpleUnion {
 }
 
 func (_m *NewerSimpleUnion) SetS(s string) {
-	_m.NewerSimpleUnionTag = NewerSimpleUnionS
+	_m.I_newerSimpleUnionTag = NewerSimpleUnionS
 	_m.S = s
 }
 
@@ -131,7 +131,7 @@ func NewerSimpleUnionWithS(s string) NewerSimpleUnion {
 }
 
 func (_m *NewerSimpleUnion) SetV(v []string) {
-	_m.NewerSimpleUnionTag = NewerSimpleUnionV
+	_m.I_newerSimpleUnionTag = NewerSimpleUnionV
 	_m.V = v
 }
 
@@ -142,7 +142,7 @@ func NewerSimpleUnionWithV(v []string) NewerSimpleUnion {
 }
 
 
-type StrictSimpleXUnionTag uint32
+type I_strictSimpleXUnionTag uint32
 const (
 	StrictSimpleXUnionI = 1851697276 // 0x6e5ea87c
 	StrictSimpleXUnionF = 855207063 // 0x32f96c97
@@ -151,23 +151,23 @@ const (
 
 
 type StrictSimpleXUnion struct {
-	StrictSimpleXUnionTag `fidl2:"x!,24,8"`
+	I_strictSimpleXUnionTag `fidl2:"x!,24,8"`
 	I_unknownData []byte
 	I int32 `fidl:"1851697276" fidl2:"1851697276"`
 	F float32 `fidl:"855207063" fidl2:"855207063"`
 	S string `fidl:",850602487" fidl2:"850602487,"`
 }
 
-func (_m *StrictSimpleXUnion) Which() StrictSimpleXUnionTag {
-	return _m.StrictSimpleXUnionTag
+func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
+	return _m.I_strictSimpleXUnionTag
 }
 
 func (_m *StrictSimpleXUnion) Ordinal() uint32 {
-	return uint32(_m.StrictSimpleXUnionTag)
+	return uint32(_m.I_strictSimpleXUnionTag)
 }
 
 func (_m *StrictSimpleXUnion) SetI(i int32) {
-	_m.StrictSimpleXUnionTag = StrictSimpleXUnionI
+	_m.I_strictSimpleXUnionTag = StrictSimpleXUnionI
 	_m.I = i
 }
 
@@ -178,7 +178,7 @@ func StrictSimpleXUnionWithI(i int32) StrictSimpleXUnion {
 }
 
 func (_m *StrictSimpleXUnion) SetF(f float32) {
-	_m.StrictSimpleXUnionTag = StrictSimpleXUnionF
+	_m.I_strictSimpleXUnionTag = StrictSimpleXUnionF
 	_m.F = f
 }
 
@@ -189,7 +189,7 @@ func StrictSimpleXUnionWithF(f float32) StrictSimpleXUnion {
 }
 
 func (_m *StrictSimpleXUnion) SetS(s string) {
-	_m.StrictSimpleXUnionTag = StrictSimpleXUnionS
+	_m.I_strictSimpleXUnionTag = StrictSimpleXUnionS
 	_m.S = s
 }
 
@@ -200,7 +200,7 @@ func StrictSimpleXUnionWithS(s string) StrictSimpleXUnion {
 }
 
 
-type XUnionContainingEmptyStructTag uint32
+type I_xUnionContainingEmptyStructTag uint32
 const (
 	XUnionContainingEmptyStruct_unknownData = 0  // 0x00000000
 	XUnionContainingEmptyStructEmpty = 424858069 // 0x1952d1d5
@@ -208,13 +208,13 @@ const (
 
 
 type XUnionContainingEmptyStruct struct {
-	XUnionContainingEmptyStructTag `fidl2:"x,24,8"`
+	I_xUnionContainingEmptyStructTag `fidl2:"x,24,8"`
 	I_unknownData []byte
 	Empty Empty `fidl:"424858069" fidl2:"424858069"`
 }
 
-func (_m *XUnionContainingEmptyStruct) Which() XUnionContainingEmptyStructTag {
-	switch _m.XUnionContainingEmptyStructTag {
+func (_m *XUnionContainingEmptyStruct) Which() I_xUnionContainingEmptyStructTag {
+	switch _m.I_xUnionContainingEmptyStructTag {
 	case 424858069:
 		return XUnionContainingEmptyStructEmpty
 	default:
@@ -223,11 +223,11 @@ func (_m *XUnionContainingEmptyStruct) Which() XUnionContainingEmptyStructTag {
 }
 
 func (_m *XUnionContainingEmptyStruct) Ordinal() uint32 {
-	return uint32(_m.XUnionContainingEmptyStructTag)
+	return uint32(_m.I_xUnionContainingEmptyStructTag)
 }
 
 func (_m *XUnionContainingEmptyStruct) SetEmpty(empty Empty) {
-	_m.XUnionContainingEmptyStructTag = XUnionContainingEmptyStructEmpty
+	_m.I_xUnionContainingEmptyStructTag = XUnionContainingEmptyStructEmpty
 	_m.Empty = empty
 }
 
@@ -238,28 +238,28 @@ func XUnionContainingEmptyStructWithEmpty(empty Empty) XUnionContainingEmptyStru
 }
 
 
-type StrictBoundedXUnionTag uint32
+type I_strictBoundedXUnionTag uint32
 const (
 	StrictBoundedXUnionV = 2024555624 // 0x78ac4468
 )
 
 
 type StrictBoundedXUnion struct {
-	StrictBoundedXUnionTag `fidl2:"x!,24,8"`
+	I_strictBoundedXUnionTag `fidl2:"x!,24,8"`
 	I_unknownData []byte
 	V []uint8 `fidl:"10,2024555624" fidl2:"2024555624,10"`
 }
 
-func (_m *StrictBoundedXUnion) Which() StrictBoundedXUnionTag {
-	return _m.StrictBoundedXUnionTag
+func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
+	return _m.I_strictBoundedXUnionTag
 }
 
 func (_m *StrictBoundedXUnion) Ordinal() uint32 {
-	return uint32(_m.StrictBoundedXUnionTag)
+	return uint32(_m.I_strictBoundedXUnionTag)
 }
 
 func (_m *StrictBoundedXUnion) SetV(v []uint8) {
-	_m.StrictBoundedXUnionTag = StrictBoundedXUnionV
+	_m.I_strictBoundedXUnionTag = StrictBoundedXUnionV
 	_m.V = v
 }
 
