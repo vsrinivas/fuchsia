@@ -14,7 +14,7 @@ development machine (or alternately from the OS on the flash drive itself).
     boot into Zedboot.
   + Creates a ChromeOS bootable partition with a developer key signed Zedboot
     kernel partition.
-+ On your host, run `fx full-build` (if you haven't already).
++ On your host, run `fx build` (if you haven't already).
 + If you wish to install Fuchsia to the target device (modifying the target
   device harddisk), run `fx pave` on the host. IF you only wish to "netboot"
   the target device, and avoid modifying any disk state, run `fx netboot` on
