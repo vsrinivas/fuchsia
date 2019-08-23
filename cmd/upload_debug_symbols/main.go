@@ -78,7 +78,7 @@ func execute(ctx context.Context, paths []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to collect symbol files: %v", err)
 	}
-	bfrs = filterEmptyDebugSymbolFiles(bfrs)
+	bfrs = filterInvalidDebugSymbolFiles(bfrs)
 	jobs, err := queueJobs(bfrs)
 	if err != nil {
 		return fmt.Errorf("failed to queue jobs: %v", err)
@@ -100,8 +100,8 @@ func execute(ctx context.Context, paths []string) error {
 	return nil
 }
 
-// Returns filtered input of BinaryFileRefs, skipping files without .debug_info header.
-func filterEmptyDebugSymbolFiles(bfrs []elflib.BinaryFileRef) []elflib.BinaryFileRef {
+// Returns filtered input of BinaryFileRefs, skipping files without .debug_info header or valid build ID.
+func filterInvalidDebugSymbolFiles(bfrs []elflib.BinaryFileRef) []elflib.BinaryFileRef {
 	var filteredBfrs []elflib.BinaryFileRef
 	for _, bfr := range bfrs {
 		hasDebugInfo, err := bfr.HasDebugInfo()
@@ -109,6 +109,8 @@ func filterEmptyDebugSymbolFiles(bfrs []elflib.BinaryFileRef) []elflib.BinaryFil
 			log.Printf("WARNING: cannot read file %s: %v, skipping\n", bfr.Filepath, err)
 		} else if !hasDebugInfo {
 			log.Printf("WARNING: file %s missing .debug_info section, skipping\n", bfr.Filepath)
+		} else if err := bfr.Verify(); err != nil {
+			log.Printf("WARNING: validation failed for %s: %v, skipping\n", bfr.Filepath, err)
 		} else {
 			filteredBfrs = append(filteredBfrs, bfr)
 		}

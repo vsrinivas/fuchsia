@@ -50,9 +50,6 @@ func name(bfr elflib.BinaryFileRef, gcsPath string) string {
 }
 
 func (j *job) execute(ctx context.Context, bkt *GCSBucket) error {
-	if err := j.bfr.Verify(); err != nil {
-		return fmt.Errorf("validation failed for %q: %v", j.bfr.Filepath, err)
-	}
 	object := j.bfr.BuildID + elflib.DebugFileSuffix
 	filepath := j.bfr.Filepath
 	reader, err := os.Open(filepath)
