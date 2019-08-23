@@ -9,10 +9,6 @@ use {
             error::ModelError, framework_services::FrameworkServiceError,
             hooks::RouteFrameworkCapabilityHook, AbsoluteMoniker, Realm,
         },
-        work_scheduler::{
-            time::{RealTime, TimeSource},
-            work::Works,
-        },
     },
     cm_rust::{CapabilityPath, FrameworkCapabilityDecl},
     fidl::{endpoints::ServerEnd, Error},
@@ -20,7 +16,11 @@ use {
     futures::{future::BoxFuture, lock::Mutex, TryStreamExt},
     lazy_static::lazy_static,
     log::warn,
-    std::{collections::HashMap, convert::TryInto, sync::Arc},
+    std::{
+        cmp::Ordering,
+        convert::TryInto,
+        sync::Arc,
+    },
 };
 
 lazy_static! {
@@ -28,17 +28,83 @@ lazy_static! {
         "/svc/fuchsia.sys2.WorkScheduler".try_into().unwrap();
 }
 
-/// Provides a common facility for scheduling, inspecting, and canceling work. Each component
-/// instance manages its work items in isolation from each other, but the `WorkScheduler` maintains
-/// a collection of all items to make global scheduling decisions.
+/// `WorkItem` is a single item in the ordered-by-deadline collection maintained by `WorkScheduler`.
+#[derive(Clone, Debug, Eq)]
+struct WorkItem {
+    /// The `AbsoluteMoniker` of the realm/component instance that owns this `WorkItem`.
+    abs_moniker: AbsoluteMoniker,
+    /// Unique identifier for this unit of work **relative to others with the same `abs_moniker`**.
+    id: String,
+    /// Next deadline for this unit of work, in monotonic time.
+    next_deadline_monotonic: i64,
+    /// Period between repeating this unit of work (if any), measure in nanoseconds.
+    period: Option<i64>,
+}
+
+/// WorkItem default equality: identical `abs_moniker` and `id`.
+impl PartialEq for WorkItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.abs_moniker == other.abs_moniker
+    }
+}
+
+impl WorkItem {
+    fn new(
+        abs_moniker: &AbsoluteMoniker,
+        id: &str,
+        next_deadline_monotonic: i64,
+        period: Option<i64>,
+    ) -> Self {
+        WorkItem {
+            abs_moniker: abs_moniker.clone(),
+            id: id.to_string(),
+            next_deadline_monotonic,
+            period,
+        }
+    }
+
+    /// Produce a canonical `WorkItem` from its identifying information: `abs_moniker` + `id`. Note
+    /// that other fields are ignored in equality testing.
+    fn new_by_identity(abs_moniker: &AbsoluteMoniker, id: &str) -> Self {
+        WorkItem {
+            abs_moniker: abs_moniker.clone(),
+            id: id.to_string(),
+            next_deadline_monotonic: 0,
+            period: None,
+        }
+    }
+
+    /// Attempt to unpack identifying info (`abs_moniker`, `id`) + `WorkRequest` into a `WorkItem`.
+    /// Errors:
+    /// - INVALID_ARGUMENTS: Missing or invalid `work_request.start` value.
+    fn try_new(abs_moniker: &AbsoluteMoniker, id: &str, work_request: &fsys::WorkRequest)
+        -> Result<Self, fsys::Error>
+    {
+        let next_deadline_monotonic = match &work_request.start {
+            None => Err(fsys::Error::InvalidArguments),
+            Some(start) => match start {
+                fsys::Start::MonotonicTime(monotonic_time) => Ok(monotonic_time),
+                _ => Err(fsys::Error::InvalidArguments),
+            },
+        }?;
+        Ok(WorkItem::new(abs_moniker, id, *next_deadline_monotonic, work_request.period))
+    }
+
+    fn deadline_order(left: &Self, right: &Self) -> Ordering {
+        left.next_deadline_monotonic.cmp(&right.next_deadline_monotonic)
+    }
+}
+
+/// Provides a common facility for scheduling canceling work. Each component instance manages its
+/// work items in isolation from each other, but the `WorkScheduler` maintains a collection of all
+/// items to make global scheduling decisions.
 struct WorkScheduler {
-    works: Mutex<HashMap<AbsoluteMoniker, Works>>,
-    time_source: Arc<dyn TimeSource>,
+    work_items: Mutex<Vec<WorkItem>>,
 }
 
 impl WorkScheduler {
-    pub fn new(time_source: Arc<dyn TimeSource>) -> Self {
-        WorkScheduler { works: Mutex::new(HashMap::new()), time_source: time_source }
+    pub fn new() -> Self {
+        WorkScheduler { work_items: Mutex::new(Vec::new()) }
     }
 
     pub async fn schedule_work(
@@ -47,11 +113,16 @@ impl WorkScheduler {
         work_id: &str,
         work_request: &fsys::WorkRequest,
     ) -> Result<(), fsys::Error> {
-        let mut works_by_abs_moniker = self.works.lock().await;
-        let works = works_by_abs_moniker
-            .entry(abs_moniker.clone())
-            .or_insert_with(|| Works::new(self.time_source.clone()));
-        works.insert(work_id, work_request)
+        let mut work_items = self.work_items.lock().await;
+        let work_item = WorkItem::try_new(abs_moniker, work_id, work_request)?;
+
+        if work_items.contains(&work_item) {
+            return Err(fsys::Error::InstanceAlreadyExists);
+        }
+
+        work_items.push(work_item);
+        work_items.sort_by(WorkItem::deadline_order);
+        Ok(())
     }
 
     pub async fn cancel_work(
@@ -59,11 +130,22 @@ impl WorkScheduler {
         abs_moniker: &AbsoluteMoniker,
         work_id: &str,
     ) -> Result<(), fsys::Error> {
-        let mut works_by_abs_moniker = self.works.lock().await;
-        let works = works_by_abs_moniker
-            .entry(abs_moniker.clone())
-            .or_insert_with(|| Works::new(self.time_source.clone()));
-        works.delete(work_id)
+        let mut work_items = self.work_items.lock().await;
+        let work_item = WorkItem::new_by_identity(abs_moniker, work_id);
+
+        // TODO(markdittmer): Use `work_items.remove_item(work_item)` if/when it becomes stable.
+        let mut found = false;
+        work_items.retain(|item| {
+            let matches = &work_item == item;
+            found = found || matches;
+            !matches
+        });
+
+        if !found {
+            return Err(fsys::Error::InstanceNotFound);
+        }
+
+        Ok(())
     }
 }
 
@@ -161,9 +243,7 @@ impl RouteFrameworkCapabilityHook for WorkSchedulerHook {
 
 impl WorkSchedulerHook {
     pub fn new() -> Self {
-        WorkSchedulerHook {
-            work_scheduler: Arc::new(WorkScheduler::new(Arc::new(RealTime::new()))),
-        }
+        WorkSchedulerHook { work_scheduler: Arc::new(WorkScheduler::new()) }
     }
 
     async fn on_route_capability_async<'a>(
@@ -190,25 +270,34 @@ impl WorkSchedulerHook {
 mod tests {
     use {
         super::*,
-        crate::{
-            model::{AbsoluteMoniker, ChildMoniker},
-            work_scheduler::{
-                time::test::{FakeTimeSource, SECOND},
-                work::{test as work_test, WorkStatus},
-            },
-        },
+        crate::model::{AbsoluteMoniker, ChildMoniker},
     };
 
-    async fn get_work_by_id(
+    /// Time is measured in nanoseconds. This provides a constant symbol for one second.
+    const SECOND: i64 = 1000000000;
+
+    // Use arbitrary start monolithic time. This will surface bugs that, for example, are not
+    // apparent when "time starts at 0".
+    const FAKE_MONOTONIC_TIME: i64 = 374789234875;
+
+    async fn get_work_status(
         work_scheduler: &WorkScheduler,
         abs_moniker: &AbsoluteMoniker,
         work_id: &str,
-    ) -> Result<WorkStatus, fsys::Error> {
-        let mut works_by_abs_moniker = work_scheduler.works.lock().await;
-        let works = works_by_abs_moniker
-            .entry(abs_moniker.clone())
-            .or_insert_with(|| Works::new(work_scheduler.time_source.clone()));
-        work_test::get_works_status(works, work_id)
+    ) -> Result<(i64, Option<i64>), fsys::Error> {
+        let work_items = work_scheduler.work_items.lock().await;
+        match work_items
+            .iter()
+            .find(|work_item| &work_item.abs_moniker == abs_moniker && work_item.id == work_id)
+        {
+            Some(work_item) => Ok((work_item.next_deadline_monotonic, work_item.period)),
+            None => Err(fsys::Error::InstanceNotFound),
+        }
+    }
+
+    async fn get_all_by_deadline(work_scheduler: &WorkScheduler) -> Vec<WorkItem> {
+        let work_items = work_scheduler.work_items.lock().await;
+        work_items.clone()
     }
 
     fn child(parent: &AbsoluteMoniker, name: &str) -> AbsoluteMoniker {
@@ -217,24 +306,22 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn work_scheduler_basic() {
-        let time_source = Arc::new(FakeTimeSource::new());
-        let work_scheduler = WorkScheduler::new(time_source.clone());
-        let now_monotonic = time_source.get_monotonic();
+        let work_scheduler = WorkScheduler::new();
         let root = AbsoluteMoniker::root();
         let a = child(&root, "a");
         let b = child(&a, "b");
         let c = child(&b, "c");
 
         let now_once = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(now_monotonic)),
+            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME)),
             period: None,
         };
         let each_second = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(now_monotonic + SECOND)),
+            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + SECOND)),
             period: Some(SECOND),
         };
         let in_an_hour = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(now_monotonic + (SECOND * 60 * 60))),
+            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + (SECOND * 60 * 60))),
             period: None,
         };
 
@@ -249,56 +336,43 @@ mod tests {
         assert_eq!(Ok(()), work_scheduler.schedule_work(&c, "IN_AN_HOUR", &in_an_hour).await);
         assert_eq!(Ok(()), work_scheduler.schedule_work(&c, "NOW_ONCE", &now_once).await);
 
-        // TODO(markdittmer): Create macro(s) to make this more terse but still explicit.
         assert_eq!(
-            Ok(WorkStatus { next_run_monotonic_time: time_source.get_monotonic(), period: None }),
-            get_work_by_id(&work_scheduler, &a, "NOW_ONCE").await
+            Ok((FAKE_MONOTONIC_TIME, None)),
+            get_work_status(&work_scheduler, &a, "NOW_ONCE").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + SECOND,
-                period: Some(SECOND),
-            }),
-            get_work_by_id(&work_scheduler, &a, "EACH_SECOND").await
+            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
+            get_work_status(&work_scheduler, &a, "EACH_SECOND").await
         );
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
-            get_work_by_id(&work_scheduler, &a, "IN_AN_HOUR").await
+            get_work_status(&work_scheduler, &a, "IN_AN_HOUR").await
         );
 
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
-            get_work_by_id(&work_scheduler, &b, "NOW_ONCE").await
+            get_work_status(&work_scheduler, &b, "NOW_ONCE").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + SECOND,
-                period: Some(SECOND),
-            }),
-            get_work_by_id(&work_scheduler, &b, "EACH_SECOND").await
+            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
+            get_work_status(&work_scheduler, &b, "EACH_SECOND").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + (SECOND * 60 * 60),
-                period: None,
-            }),
-            get_work_by_id(&work_scheduler, &b, "IN_AN_HOUR").await
+            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
+            get_work_status(&work_scheduler, &b, "IN_AN_HOUR").await
         );
 
         assert_eq!(
-            Ok(WorkStatus { next_run_monotonic_time: time_source.get_monotonic(), period: None }),
-            get_work_by_id(&work_scheduler, &c, "NOW_ONCE").await
+            Ok((FAKE_MONOTONIC_TIME, None)),
+            get_work_status(&work_scheduler, &c, "NOW_ONCE").await
         );
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
-            get_work_by_id(&work_scheduler, &c, "EACH_SECOND").await
+            get_work_status(&work_scheduler, &c, "EACH_SECOND").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + (SECOND * 60 * 60),
-                period: None,
-            }),
-            get_work_by_id(&work_scheduler, &c, "IN_AN_HOUR").await
+            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
+            get_work_status(&work_scheduler, &c, "IN_AN_HOUR").await
         );
 
         // Cancel a's NOW_ONCE. Confirm it only affects a's scheduled work.
@@ -307,53 +381,77 @@ mod tests {
 
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
-            get_work_by_id(&work_scheduler, &a, "NOW_ONCE").await
+            get_work_status(&work_scheduler, &a, "NOW_ONCE").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + SECOND,
-                period: Some(SECOND),
-            }),
-            get_work_by_id(&work_scheduler, &a, "EACH_SECOND").await
+            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
+            get_work_status(&work_scheduler, &a, "EACH_SECOND").await
         );
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
-            get_work_by_id(&work_scheduler, &a, "IN_AN_HOUR").await
+            get_work_status(&work_scheduler, &a, "IN_AN_HOUR").await
         );
 
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
-            get_work_by_id(&work_scheduler, &b, "NOW_ONCE").await
+            get_work_status(&work_scheduler, &b, "NOW_ONCE").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + SECOND,
-                period: Some(SECOND),
-            }),
-            get_work_by_id(&work_scheduler, &b, "EACH_SECOND").await
+            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
+            get_work_status(&work_scheduler, &b, "EACH_SECOND").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + (SECOND * 60 * 60),
-                period: None,
-            }),
-            get_work_by_id(&work_scheduler, &b, "IN_AN_HOUR").await
+            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
+            get_work_status(&work_scheduler, &b, "IN_AN_HOUR").await
         );
 
         assert_eq!(
-            Ok(WorkStatus { next_run_monotonic_time: time_source.get_monotonic(), period: None }),
-            get_work_by_id(&work_scheduler, &c, "NOW_ONCE").await
+            Ok((FAKE_MONOTONIC_TIME, None)),
+            get_work_status(&work_scheduler, &c, "NOW_ONCE").await
         );
         assert_eq!(
             Err(fsys::Error::InstanceNotFound),
-            get_work_by_id(&work_scheduler, &c, "EACH_SECOND").await
+            get_work_status(&work_scheduler, &c, "EACH_SECOND").await
         );
         assert_eq!(
-            Ok(WorkStatus {
-                next_run_monotonic_time: time_source.get_monotonic() + (SECOND * 60 * 60),
-                period: None,
-            }),
-            get_work_by_id(&work_scheduler, &c, "IN_AN_HOUR").await
+            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
+            get_work_status(&work_scheduler, &c, "IN_AN_HOUR").await
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn work_scheduler_deadline_order() {
+        let work_scheduler = WorkScheduler::new();
+        let root = AbsoluteMoniker::root();
+        let a = child(&root, "a");
+        let b = child(&a, "b");
+        let c = child(&b, "c");
+
+        let now_once = fsys::WorkRequest {
+            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME)),
+            period: None,
+        };
+        let each_second = fsys::WorkRequest {
+            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + SECOND)),
+            period: Some(SECOND),
+        };
+        let in_an_hour = fsys::WorkRequest {
+            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + (SECOND * 60 * 60))),
+            period: None,
+        };
+
+        assert_eq!(Ok(()), work_scheduler.schedule_work(&a, "EACH_SECOND", &each_second).await);
+        assert_eq!(Ok(()), work_scheduler.schedule_work(&c, "NOW_ONCE", &now_once).await);
+        assert_eq!(Ok(()), work_scheduler.schedule_work(&b, "IN_AN_HOUR", &in_an_hour).await);
+
+        // Order should match deadlines, not order of scheduling or component topology.
+        assert_eq!(
+            vec![
+                WorkItem::new(&c, "NOW_ONCE", FAKE_MONOTONIC_TIME, None),
+                WorkItem::new(&a, "EACH_SECOND", FAKE_MONOTONIC_TIME + SECOND, Some(SECOND),),
+                WorkItem::new(&b, "IN_AN_HOUR", FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None,),
+            ],
+            get_all_by_deadline(&work_scheduler).await
         );
     }
 }
