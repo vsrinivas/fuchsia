@@ -167,8 +167,9 @@ class Host(object):
         p = self.create_process(args)
         p.stdin = subprocess.PIPE
         p.stdout = subprocess.PIPE
-        out, _ = p.popen().communicate(raw)
-        if p.returncode != 0:
+        proc = p.popen()
+        out, _ = proc.communicate(raw)
+        if proc.returncode != 0:
             out = ''
         return re.sub(r'[0-9\[\]\.]*\[klog\] INFO: ', '', out)
 

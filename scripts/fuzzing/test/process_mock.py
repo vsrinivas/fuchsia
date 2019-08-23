@@ -16,7 +16,6 @@ class MockProcess(Process):
     def __init__(self, host, args, **kwargs):
         self.host = host
         self.response = None
-        self.returncode = 0
         super(MockProcess, self).__init__(args, **kwargs)
 
     def popen(self):
@@ -43,6 +42,7 @@ class MockPopen(object):
 
     def __init__(self, host, response):
         self.host = host
+        self.returncode = 0
         if response:
             self.response = response
         else:
