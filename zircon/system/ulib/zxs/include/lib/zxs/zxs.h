@@ -66,9 +66,10 @@ zx_status_t zxs_sendto(const zxs_socket_t* socket, const struct sockaddr* addr, 
 // Receive data from |socket| into the given |buffer|.
 //
 // The |addr| buffer is filled with the address from which the data was
-// received.
+// received. |flags| passes on some control command to the socket layer. For example:
+// ZX_SOCKET_PEEK.
 zx_status_t zxs_recvfrom(const zxs_socket_t* socket, struct sockaddr* addr, size_t addr_capacity,
-                         size_t* out_addr_actual, void* buffer, size_t capacity,
+                         size_t* out_addr_actual, void* buffer, size_t capacity, int flags,
                          size_t* out_actual);
 
 // Send the data described by |msg| over the given |socket|.
@@ -80,8 +81,10 @@ zx_status_t zxs_sendmsg(const zxs_socket_t* socket, const struct msghdr* msg, si
 // Receive data from |socket| into the buffers described by |msg|.
 //
 // The |out_actual| parameter is the amount of data received by this call,
-// scattered to the |iovec| records referenced by |msg|.
-zx_status_t zxs_recvmsg(const zxs_socket_t* socket, struct msghdr* msg, size_t* out_actual);
+// scattered to the |iovec| records referenced by |msg|. |flags| passes on some control command to
+// the socket layer. For example: ZX_SOCKET_PEEK.
+zx_status_t zxs_recvmsg(const zxs_socket_t* socket, struct msghdr* msg, int flags,
+                        size_t* out_actual);
 
 __END_CDECLS
 

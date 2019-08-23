@@ -23,9 +23,9 @@ static zx_status_t zxs_write(const zxs_socket_t* socket, const void* buffer, siz
   return socket->socket.write(0, buffer, capacity, out_actual);
 }
 
-static zx_status_t zxs_read(const zxs_socket_t* socket, void* buffer, size_t capacity,
+static zx_status_t zxs_read(const zxs_socket_t* socket, void* buffer, size_t capacity, int flags,
                             size_t* out_actual) {
-  zx_status_t status = socket->socket.read(0, buffer, capacity, out_actual);
+  zx_status_t status = socket->socket.read(flags, buffer, capacity, out_actual);
   if (status == ZX_ERR_PEER_CLOSED || status == ZX_ERR_BAD_STATE) {
     *out_actual = 0u;
     return ZX_OK;
@@ -38,9 +38,6 @@ static zx_status_t zxs_sendmsg_stream(const zxs_socket_t* socket, const struct m
   size_t total = 0u;
   for (int i = 0; i < msg->msg_iovlen; i++) {
     struct iovec* iov = &msg->msg_iov[i];
-    if (iov->iov_len <= 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
     size_t actual = 0u;
     zx_status_t status = zxs_write(socket, iov->iov_base, iov->iov_len, &actual);
     if (status != ZX_OK) {
@@ -66,9 +63,6 @@ static zx_status_t zxs_sendmsg_dgram(const zxs_socket_t* socket, const struct ms
   size_t total = 0u;
   for (int i = 0; i < msg->msg_iovlen; i++) {
     struct iovec* iov = &msg->msg_iov[i];
-    if (iov->iov_len <= 0) {
-      return ZX_ERR_INVALID_ARGS;
-    }
     total += iov->iov_len;
   }
   size_t encoded_size = total + FDIO_SOCKET_MSG_HEADER_SIZE;
@@ -94,13 +88,13 @@ static zx_status_t zxs_sendmsg_dgram(const zxs_socket_t* socket, const struct ms
   return status;
 }
 
-static zx_status_t zxs_recvmsg_stream(const zxs_socket_t* socket, struct msghdr* msg,
+static zx_status_t zxs_recvmsg_stream(const zxs_socket_t* socket, struct msghdr* msg, int flags,
                                       size_t* out_actual) {
   size_t total = 0u;
   for (int i = 0; i < msg->msg_iovlen; i++) {
     struct iovec* iov = &msg->msg_iov[i];
     size_t actual = 0u;
-    zx_status_t status = zxs_read(socket, iov->iov_base, iov->iov_len, &actual);
+    zx_status_t status = zxs_read(socket, iov->iov_base, iov->iov_len, flags, &actual);
     if (status != ZX_OK) {
       if (total > 0) {
         break;
@@ -116,7 +110,7 @@ static zx_status_t zxs_recvmsg_stream(const zxs_socket_t* socket, struct msghdr*
   return ZX_OK;
 }
 
-static zx_status_t zxs_recvmsg_dgram(const zxs_socket_t* socket, struct msghdr* msg,
+static zx_status_t zxs_recvmsg_dgram(const zxs_socket_t* socket, struct msghdr* msg, int flags,
                                      size_t* out_actual) {
   // Read 1 extra byte to detect if the buffer is too small to fit the whole
   // packet, so we can set MSG_TRUNC flag if necessary.
@@ -132,7 +126,7 @@ static zx_status_t zxs_recvmsg_dgram(const zxs_socket_t* socket, struct msghdr* 
   std::unique_ptr<uint8_t[]> buf(new uint8_t[encoded_size]);
   fdio_socket_msg_t* m = reinterpret_cast<fdio_socket_msg_t*>(buf.get());
   size_t actual = 0u;
-  zx_status_t status = zxs_read(socket, m, encoded_size, &actual);
+  zx_status_t status = zxs_read(socket, m, encoded_size, flags, &actual);
   if (status != ZX_OK) {
     return status;
   }
@@ -208,9 +202,9 @@ zx_status_t zxs_recv(const zxs_socket_t* socket, void* buffer, size_t capacity,
     msg.msg_controllen = 0;
     msg.msg_flags = 0;
 
-    return zxs_recvmsg_dgram(socket, &msg, out_actual);
+    return zxs_recvmsg_dgram(socket, &msg, 0, out_actual);
   } else {
-    return zxs_read(socket, buffer, capacity, out_actual);
+    return zxs_read(socket, buffer, capacity, 0, out_actual);
   }
 }
 
@@ -233,7 +227,7 @@ zx_status_t zxs_sendto(const zxs_socket_t* socket, const struct sockaddr* addr, 
 }
 
 zx_status_t zxs_recvfrom(const zxs_socket_t* socket, struct sockaddr* addr, size_t addr_capacity,
-                         size_t* out_addr_actual, void* buffer, size_t capacity,
+                         size_t* out_addr_actual, void* buffer, size_t capacity, int flags,
                          size_t* out_actual) {
   struct iovec iov;
   iov.iov_base = buffer;
@@ -248,7 +242,7 @@ zx_status_t zxs_recvfrom(const zxs_socket_t* socket, struct sockaddr* addr, size
   msg.msg_controllen = 0;
   msg.msg_flags = 0;
 
-  zx_status_t status = zxs_recvmsg(socket, &msg, out_actual);
+  zx_status_t status = zxs_recvmsg(socket, &msg, flags, out_actual);
   *out_addr_actual = msg.msg_namelen;
   return status;
 }
@@ -260,10 +254,11 @@ zx_status_t zxs_sendmsg(const zxs_socket_t* socket, const struct msghdr* msg, si
     return zxs_sendmsg_stream(socket, msg, out_actual);
   }
 }
-zx_status_t zxs_recvmsg(const zxs_socket_t* socket, struct msghdr* msg, size_t* out_actual) {
+zx_status_t zxs_recvmsg(const zxs_socket_t* socket, struct msghdr* msg, int flags,
+                        size_t* out_actual) {
   if (socket->flags & ZXS_FLAG_DATAGRAM) {
-    return zxs_recvmsg_dgram(socket, msg, out_actual);
+    return zxs_recvmsg_dgram(socket, msg, flags, out_actual);
   } else {
-    return zxs_recvmsg_stream(socket, msg, out_actual);
+    return zxs_recvmsg_stream(socket, msg, flags, out_actual);
   }
 }

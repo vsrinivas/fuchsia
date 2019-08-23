@@ -278,6 +278,12 @@ TEST(SocketTest, DatagramSendMsg) {
   }}};
 
   struct msghdr msg = {};
+  size_t actual = 0;
+  // sendmsg should accept 0 length payload.
+  EXPECT_EQ(sendmsg(fd, &msg, 0), 0, "%s", strerror(errno));
+  EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
+  EXPECT_EQ(actual - FDIO_SOCKET_MSG_HEADER_SIZE, 0);
+
   msg.msg_name = &addr;
   msg.msg_namelen = addrlen;
   msg.msg_iov = iov.data();
@@ -290,7 +296,6 @@ TEST(SocketTest, DatagramSendMsg) {
   EXPECT_EQ(sendmsg(fd, &msg, 0), -1);
   EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
 
-  size_t actual = 0;
   EXPECT_OK(server_socket.read(0, rcv_buf, sizeof(rcv_buf), &actual));
   EXPECT_EQ(actual - FDIO_SOCKET_MSG_HEADER_SIZE, sizeof(buf));
   EXPECT_EQ(close(fd), 0, "%s", strerror(errno));

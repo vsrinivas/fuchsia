@@ -971,7 +971,7 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
       break;
     }
     case SOCK_DGRAM: {
-      // Send a valid packet to unblock the receiver.
+      // Send a 0 length payload to unblock the receiver.
       // This would ensure that the async-task deterministically exits before call to future`s
       // destructor. Calling close() on recvfd when the async task is blocked on recv(),
       // __does_not__ cause recv to return; this can result in undefined behavior, as the descriptor
@@ -979,16 +979,11 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
       // shutdown(), but that returns ENOTCONN (unconnected) but still causing recv() to return.
       // shutdown() becomes unreliable for unconnected UDP sockets because, irrespective of the
       // effect of calling this call, it returns error.
-      // TODO(NET-2558): dgram send should accept 0 length payload, once that is fixed, fix this
-      // revert code
-      char shut[] = "shutdown";
-      EXPECT_EQ(
-          sendto(sendfd, shut, sizeof(shut), 0, reinterpret_cast<struct sockaddr*>(addr), *addrlen),
-          static_cast<ssize_t>(sizeof(shut)))
+      EXPECT_EQ(sendto(sendfd, nullptr, 0, 0, reinterpret_cast<struct sockaddr*>(addr), *addrlen),
+                0)
           << strerror(errno);
       EXPECT_EQ(recv.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
-      EXPECT_EQ(recv.get(), static_cast<ssize_t>(sizeof(shut)));
-      EXPECT_STREQ(shut, buf);
+      EXPECT_EQ(recv.get(), 0);
       break;
     }
     default: {
@@ -1434,4 +1429,112 @@ TEST(NetStreamTest, MultipleListeningSockets) {
   }
 }
 
+// Socket tests across multiple socket-types, SOCK_DGRAM, SOCK_STREAM.
+class NetSocketTest : public ::testing::TestWithParam<int> {};
+
+// Test MSG_PEEK
+// MSG_PEEK : Peek into the socket receive queue without moving the contents from it.
+TEST_P(NetSocketTest, SocketPeekTest) {
+  int socketType = GetParam();
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  socklen_t addrlen = sizeof(addr);
+  int sendfd;
+  int recvfd;
+  ssize_t expectReadLen = 0;
+  char sendbuf[8] = {};
+  char recvbuf[2 * sizeof(sendbuf)] = {};
+  ssize_t sendlen = sizeof(sendbuf);
+
+  ASSERT_GE(sendfd = socket(AF_INET, socketType, 0), 0) << strerror(errno);
+  // Setup the sender and receiver sockets.
+  switch (socketType) {
+    case SOCK_STREAM: {
+      int acptfd;
+      EXPECT_GE(acptfd = socket(AF_INET, socketType, 0), 0) << strerror(errno);
+      EXPECT_EQ(bind(acptfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+          << strerror(errno);
+      EXPECT_EQ(getsockname(acptfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+          << strerror(errno);
+      EXPECT_EQ(addrlen, sizeof(addr));
+      EXPECT_EQ(listen(acptfd, 1), 0) << strerror(errno);
+      EXPECT_EQ(connect(sendfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+          << strerror(errno);
+      EXPECT_GE(recvfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
+      EXPECT_EQ(close(acptfd), 0) << strerror(errno);
+      // Expect to read both the packets in a single recv() call.
+      expectReadLen = sizeof(recvbuf);
+      break;
+    }
+    case SOCK_DGRAM: {
+      EXPECT_GE(recvfd = socket(AF_INET, socketType, 0), 0) << strerror(errno);
+      EXPECT_EQ(bind(recvfd, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+          << strerror(errno);
+      EXPECT_EQ(getsockname(recvfd, reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+          << strerror(errno);
+      EXPECT_EQ(addrlen, sizeof(addr));
+      // Expect to read single packet per recv() call.
+      expectReadLen = sizeof(sendbuf);
+      break;
+    }
+    default: {
+      FAIL() << "unexpected test variant " << socketType;
+    }
+  }
+
+  // This test sends 2 packets with known values and validates MSG_PEEK across the 2 packets.
+  sendbuf[0] = 0xab;
+  sendbuf[6] = 0xce;
+
+  // send 2 separate packets and test peeking across
+  EXPECT_EQ(sendto(sendfd, sendbuf, sizeof(sendbuf), 0,
+                   reinterpret_cast<const struct sockaddr*>(&addr), addrlen),
+            sendlen)
+      << strerror(errno);
+  EXPECT_EQ(sendto(sendfd, sendbuf, sizeof(sendbuf), 0,
+                   reinterpret_cast<const struct sockaddr*>(&addr), addrlen),
+            sendlen)
+      << strerror(errno);
+
+  // First peek on first byte.
+  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, 1, MSG_PEEK, &addr,
+                            &addrlen, socketType),
+            1);
+  EXPECT_EQ(recvbuf[0], sendbuf[0]);
+
+  // Second peek across first 2 packets and drain them from the socket receive queue.
+  // Toggle the flags to MSG_PEEK every other iteration.
+  ssize_t torecv = sizeof(recvbuf);
+  for (int i = 0; torecv > 0; i++) {
+    int flags = i%2 ? 0 : MSG_PEEK;
+    ssize_t readLen = 0;
+    EXPECT_EQ(readLen = asyncSocketRead(recvfd, sendfd, recvbuf,
+                                        sizeof(recvbuf), flags, &addr, &addrlen, socketType),
+              expectReadLen);
+    if (HasFailure()) {
+      break;
+    }
+    EXPECT_EQ(recvbuf[0], sendbuf[0]);
+    EXPECT_EQ(recvbuf[6], sendbuf[6]);
+    // For SOCK_STREAM, we validate peek across 2 packets with a single recv call.
+    if (readLen == sizeof(recvbuf)) {
+      EXPECT_EQ(recvbuf[8], sendbuf[0]);
+      EXPECT_EQ(recvbuf[14], sendbuf[6]);
+    }
+    if (flags != MSG_PEEK) {
+      torecv -= readLen;
+    }
+  }
+
+  // Third peek on empty socket receive buffer, expect failure.
+  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, 1, MSG_PEEK, &addr,
+                            &addrlen, socketType),
+            0);
+  EXPECT_EQ(recvbuf[0], 0);
+  EXPECT_EQ(close(recvfd), 0) << strerror(errno);
+  EXPECT_EQ(close(sendfd), 0) << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, ::testing::Values(SOCK_DGRAM, SOCK_STREAM));
 }  // namespace netstack

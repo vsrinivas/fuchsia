@@ -32,8 +32,13 @@ static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
   zxio_socket_t* sio = fdio_get_zxio_socket(io);
   size_t addr_actual = 0u;
   size_t actual = 0u;
+  if (flags & ~MSG_PEEK) {
+    // TODO: support MSG_OOB
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  int zxs_flags = (flags & MSG_PEEK) ? ZX_SOCKET_PEEK : 0;
   zx_status_t status = zxs_recvfrom(&sio->socket, addr, addrlen != NULL ? *addrlen : 0u,
-                                    &addr_actual, data, len, &actual);
+                                    &addr_actual, data, len, zxs_flags, &actual);
   if (status == ZX_OK) {
     if (addrlen != NULL) {
       *addrlen = static_cast<socklen_t>(addr_actual);
@@ -51,21 +56,23 @@ static ssize_t zxsio_sendto(fdio_t* io, const void* data, size_t len, int flags,
   return status != ZX_OK ? status : static_cast<ssize_t>(actual);
 }
 
-static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
-  if (flags != 0) {
+static ssize_t zxsio_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {
+  if (flags & ~MSG_PEEK) {
     // TODO: support MSG_OOB
     return ZX_ERR_NOT_SUPPORTED;
   }
+  zxio_socket_t* sio = fdio_get_zxio_socket(io);
+  size_t actual = 0u;
+  int zxs_flags = (flags & MSG_PEEK) ? ZX_SOCKET_PEEK : 0;
+  zx_status_t status = zxs_recvmsg(&sio->socket, msg, zxs_flags, &actual);
+  return status != ZX_OK ? status : static_cast<ssize_t>(actual);
+}
+
+static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
   if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
     return ZX_ERR_BAD_STATE;
   }
-  // we ignore msg_name and msg_namelen members.
-  // (this is a consistent behavior with other OS implementations for TCP protocol)
-
-  zxio_socket_t* sio = fdio_get_zxio_socket(io);
-  size_t actual = 0u;
-  zx_status_t status = zxs_recvmsg(&sio->socket, msg, &actual);
-  return status != ZX_OK ? status : static_cast<ssize_t>(actual);
+  return zxsio_recvmsg(io, msg, flags);
 }
 
 static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int flags) {
@@ -199,17 +206,6 @@ static zx_status_t zxsio_posix_ioctl_stream(fdio_t* io, int req, va_list va) {
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
-}
-
-static ssize_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags) {
-  if (flags != 0) {
-    // TODO: support MSG_OOB
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zxio_socket_t* sio = fdio_get_zxio_socket(io);
-  size_t actual = 0u;
-  zx_status_t status = zxs_recvmsg(&sio->socket, msg, &actual);
-  return status != ZX_OK ? status : static_cast<ssize_t>(actual);
 }
 
 static ssize_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int flags) {
@@ -369,7 +365,7 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .set_flags = fdio_default_set_flags,
     .recvfrom = zxsio_recvfrom,
     .sendto = zxsio_sendto,
-    .recvmsg = zxsio_recvmsg_dgram,
+    .recvmsg = zxsio_recvmsg,
     .sendmsg = zxsio_sendmsg_dgram,
     .shutdown = fdio_socket_shutdown,
     .get_rcvtimeo = fdio_socket_get_rcvtimeo,
