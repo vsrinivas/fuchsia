@@ -258,7 +258,8 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       std::smatch match;
       while (!content.empty()) {
         // The regex_search loop should consume the entire gap
-        assert(std::regex_search(content, match, kGapTextRegex_) &&
+        std::regex_search(content, match, kGapTextRegex_);
+        assert(!match.empty() &&
                "gap content did not match any of the expected regular expressions");
 
         auto view = remaining_gap_view;
