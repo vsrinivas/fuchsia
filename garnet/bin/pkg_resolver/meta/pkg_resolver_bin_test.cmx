@@ -3,6 +3,6 @@
         "binary": "test/pkg_resolver_bin_test"
     },
     "sandbox": {
-        "features": [ "system-temp" ]
+        "features": [ "isolated-temp" ]
     }
 }

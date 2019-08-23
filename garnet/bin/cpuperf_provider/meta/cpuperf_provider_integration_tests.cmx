@@ -20,7 +20,7 @@
         "dev": [ "sys/cpu-trace" ],
         "features": [
             "deprecated-shell",
-            "system-temp",
+            "isolated-temp",
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [

@@ -5,7 +5,7 @@
     "sandbox": {
         "services": [],
         "features": [
-            "system-temp"
+            "isolated-temp"
         ]
     }
 }

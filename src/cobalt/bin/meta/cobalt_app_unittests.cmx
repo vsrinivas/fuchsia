@@ -3,6 +3,6 @@
         "binary": "test/cobalt_app_unittests"
     },
     "sandbox": {
-      "features": [ "system-temp" ]
+      "features": [ "isolated-temp" ]
     }
 }

@@ -7,7 +7,7 @@
             "test"
         ],
         "features": [
-            "system-temp"
+            "isolated-temp"
         ]
     }
 }

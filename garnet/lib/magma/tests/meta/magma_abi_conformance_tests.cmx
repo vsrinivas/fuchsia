@@ -12,7 +12,7 @@
     "sandbox": {
         "features": [
             "vulkan",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sysmem.Allocator"

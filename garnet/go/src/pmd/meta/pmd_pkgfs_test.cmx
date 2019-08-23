@@ -7,7 +7,7 @@
             "misc/ramctl"
         ],
         "features": [
-            "system-temp",
+            "isolated-temp",
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [

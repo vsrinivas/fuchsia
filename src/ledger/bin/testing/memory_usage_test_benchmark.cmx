@@ -20,7 +20,7 @@
     "sandbox": {
         "features": [
             "isolated-persistent-storage",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.boot.RootJob",

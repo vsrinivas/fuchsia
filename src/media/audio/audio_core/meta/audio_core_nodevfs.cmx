@@ -6,7 +6,7 @@
         "features": [
             "config-data",
             "isolated-persistent-storage",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.scheduler.ProfileProvider",

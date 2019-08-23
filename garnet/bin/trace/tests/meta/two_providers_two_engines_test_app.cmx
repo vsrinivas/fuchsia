@@ -5,7 +5,7 @@
     "sandbox": {
         "features": [
             "isolated-persistent-storage",
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.tracing.provider.Registry",

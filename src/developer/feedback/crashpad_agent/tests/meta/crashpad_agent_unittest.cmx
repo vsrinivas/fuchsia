@@ -5,7 +5,7 @@
     "sandbox": {
         "features": [
             "build-info",
-            "system-temp",
+            "isolated-temp",
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [

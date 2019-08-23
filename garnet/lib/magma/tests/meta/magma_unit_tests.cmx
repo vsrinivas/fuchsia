@@ -11,7 +11,7 @@
     },
     "sandbox": {
         "features": [
-            "system-temp"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.sysmem.Allocator"

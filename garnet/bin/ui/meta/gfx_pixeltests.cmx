@@ -13,7 +13,7 @@
     },
     "sandbox": {
         "features": [
-            "system-temp",
+            "isolated-temp",
             "vulkan"
         ],
         "services": [
