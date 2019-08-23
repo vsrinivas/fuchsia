@@ -34,6 +34,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.timezone:fuchsia.timezone-rustc",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
+    "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",

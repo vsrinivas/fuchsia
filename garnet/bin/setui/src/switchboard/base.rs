@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use bitflags::bitflags;
 use failure::Error;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
@@ -17,6 +18,7 @@ pub enum SettingType {
     Unknown,
     Display,
     Intl,
+    Setup,
     System,
 }
 
@@ -26,6 +28,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     let mut set = HashSet::new();
     set.insert(SettingType::Display);
     set.insert(SettingType::Intl);
+    set.insert(SettingType::Setup);
     set.insert(SettingType::System);
 
     set
@@ -40,6 +43,7 @@ pub enum SettingRequest {
     SetAutoBrightness(bool),
     SetLoginOverrideMode(SystemLoginOverrideMode),
     SetTimeZone(String),
+    SetConfigurationInterfaces(ConfigurationInterfaceFlags),
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -61,6 +65,13 @@ pub fn brightness_info(auto_brightness: bool, value: Option<f32>) -> BrightnessI
     }
 }
 
+bitflags! {
+    pub struct ConfigurationInterfaceFlags: u32 {
+        const ETHERNET = 1 << 0;
+        const WIFI = 1 << 1;
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct IntlInfo {
     pub time_zone_id: String,
@@ -78,6 +89,11 @@ pub struct SystemInfo {
     pub login_override_mode: SystemLoginOverrideMode,
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub struct SetupInfo {
+    pub configuration_interfaces: ConfigurationInterfaceFlags,
+}
+
 /// The possible responses to a SettingRequest.
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingResponse {
@@ -85,6 +101,7 @@ pub enum SettingResponse {
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(BrightnessInfo),
     Intl(IntlInfo),
+    Setup(SetupInfo),
     System(SystemInfo),
 }
 

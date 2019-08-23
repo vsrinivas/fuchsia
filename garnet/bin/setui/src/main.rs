@@ -17,6 +17,8 @@ use {
     crate::registry::registry_impl::RegistryImpl,
     crate::registry::service_context::ServiceContext,
     crate::setting_adapter::{MutationHandler, SettingAdapter},
+    crate::setup::setup_controller::SetupController,
+    crate::setup::setup_fidl_handler::SetupFidlHandler,
     crate::switchboard::base::{get_all_setting_types, SettingAction, SettingType},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::system::spawn_system_controller,
@@ -44,6 +46,7 @@ mod mutation;
 mod registry;
 mod setting_adapter;
 mod setui_handler;
+mod setup;
 mod switchboard;
 mod system;
 
@@ -159,6 +162,21 @@ fn create_fidl_service<'a>(
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: SystemRequestStream| {
             spawn_system_fidl_handler(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
+    if components.contains(&SettingType::Setup) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(
+                switchboard::base::SettingType::Setup,
+                SetupController::spawn(service_context_handle.clone()).unwrap(),
+            )
+            .unwrap();
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: SetupRequestStream| {
+            SetupFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
         });
     }
 }
@@ -427,5 +445,34 @@ mod tests {
             system_proxy.watch().await.expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.mode, Some(CHANGED_LOGIN_MODE));
+    }
+
+    //TODO(fxb/35371): Move out of main.rs
+    // Setup doesn't rely on any service yet. In the future this test will be
+    // updated to verify restart request is made on interface change.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_setup() {
+        let mut fs = ServiceFs::new();
+
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::Setup].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(None))),
+        );
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
+
+        let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
+        let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
+
+        // Ensure setting interface propagates correctly
+        let mut setup_settings = fidl_fuchsia_settings::SetupSettings::empty();
+        setup_settings.enabled_configuration_interfaces = Some(expected_interfaces);
+        setup_service.set(setup_settings).await.expect("set completed").expect("set successful");
+
+        // Ensure retrieved value matches set value
+        let settings = setup_service.watch().await.expect("watch completed");
+        assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
     }
 }
