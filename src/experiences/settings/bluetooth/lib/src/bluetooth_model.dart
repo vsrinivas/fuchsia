@@ -20,7 +20,7 @@ class BluetoothSettingsModel extends Model {
 
   List<AdapterInfo> _adapters;
   AdapterInfo _activeAdapter;
-  List<RemoteDevice> _remoteDevices = [];
+  final List<RemoteDevice> _remoteDevices = [];
   Timer _sortListTimer;
   bool _discoverable = true;
   final List<StreamSubscription> _listeners = [];
@@ -128,7 +128,11 @@ class BluetoothSettingsModel extends Model {
   Future<void> _refresh() async {
     _adapters = await _control.getAdapters();
     _activeAdapter = await _control.getActiveAdapterInfo();
-    _remoteDevices = await _control.getKnownRemoteDevices();
+
+    _remoteDevices
+      ..clear()
+      ..addAll(await _control.getKnownRemoteDevices());
+
     notifyListeners();
   }
 

@@ -224,7 +224,7 @@ SettingsTile _deviceTile(BluetoothSettingsModel model, RemoteDevice device,
   String description;
   if (model.debugMode) {
     description =
-        'id: ${device.identifier}\naddress: ${device.address}\nconnected: ${device.connected}\nbonded: ${device.bonded}';
+        'id: ${device.identifier}\naddress: ${device.address}\nappearance: ${device.appearance}\nconnected: ${device.connected}\nbonded: ${device.bonded}';
   } else {
     description = device.connected
         ? 'connected'
