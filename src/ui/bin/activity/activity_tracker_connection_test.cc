@@ -41,7 +41,7 @@ class ActivityTrackerConnectionTest : public ::gtest::TestLoopFixture {
         testing::UnitTest::GetInstance()->random_seed());
   }
 
- private:
+ protected:
   StateMachineDriver driver_;
   std::unique_ptr<ActivityTrackerConnection> conn_;
   fuchsia::ui::activity::TrackerPtr client_;
