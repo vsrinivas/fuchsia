@@ -85,6 +85,8 @@ class JournalImpl : public Journal {
   void GetObjectsToSync(
       fit::function<void(Status status, std::vector<ObjectIdentifier> objects_to_sync)> callback);
 
+  void SetEntryIds(std::vector<EntryChange>* entries);
+
   ledger::Environment* const environment_;
   PageStorageImpl* const page_storage_;
   std::unique_ptr<const storage::Commit> base_;

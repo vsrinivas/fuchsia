@@ -133,14 +133,16 @@ ObjectIdentifier RandomObjectIdentifier(rng::Random* random, ObjectIdentifierFac
 }
 
 EntryChange NewEntryChange(std::string key, std::string object_digest, KeyPriority priority) {
-  return EntryChange{
-      Entry{std::move(key), MakeObjectIdentifier(std::move(object_digest)), priority, EntryId()},
-      false};
+  EntryId id = "id" + key;
+  return EntryChange{Entry{std::move(key), MakeObjectIdentifier(std::move(object_digest)), priority,
+                           std::move(id)},
+                     false};
 }
 
 EntryChange NewRemoveEntryChange(std::string key) {
-  return EntryChange{Entry{std::move(key), MakeObjectIdentifier(""), KeyPriority::EAGER, EntryId()},
-                     true};
+  EntryId id = "id" + key;
+  return EntryChange{
+      Entry{std::move(key), MakeObjectIdentifier(""), KeyPriority::EAGER, std::move(id)}, true};
 }
 
 std::vector<Entry> WithoutEntryIds(std::vector<Entry> entries) {
@@ -225,7 +227,7 @@ StorageTest::~StorageTest() {}
       return assertion_result;
     }
     result.push_back(Entry{fxl::StringPrintf("key%02" PRIuMAX, i), object->GetIdentifier(),
-                           KeyPriority::EAGER, EntryId()});
+                           KeyPriority::EAGER, EntryId(fxl::StringPrintf("id_%02" PRIuMAX, i))});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();

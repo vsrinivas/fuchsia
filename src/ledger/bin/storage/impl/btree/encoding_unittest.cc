@@ -46,7 +46,7 @@ TEST(EncodingTest, EmptyData) {
 TEST(EncodingTest, SingleEntry) {
   uint8_t level = 1u;
   std::vector<Entry> entries = {
-      {"key", MakeObjectIdentifier("object_digest"), KeyPriority::EAGER, EntryId()}};
+      {"key", MakeObjectIdentifier("object_digest"), KeyPriority::EAGER, EntryId("id_1")}};
   std::map<size_t, ObjectIdentifier> children = {{0u, MakeObjectIdentifier("child_1")},
                                                  {1u, MakeObjectIdentifier("child_2")}};
 
@@ -58,36 +58,11 @@ TEST(EncodingTest, SingleEntry) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
+  EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, MoreEntries) {
-  uint8_t level = 5;
-  std::vector<Entry> entries = {
-      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId()},
-      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId()},
-      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId()},
-      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId()}};
-  std::map<size_t, ObjectIdentifier> children = {{0, MakeObjectIdentifier("child_1")},
-                                                 {1, MakeObjectIdentifier("child_2")},
-                                                 {2, MakeObjectIdentifier("child_3")},
-                                                 {3, MakeObjectIdentifier("child_4")},
-                                                 {4, MakeObjectIdentifier("child_5")}};
-
-  std::string bytes = EncodeNode(level, entries, children);
-
-  ObjectIdentifierFactoryImpl factory;
-  uint8_t res_level;
-  std::vector<Entry> res_entries;
-  std::map<size_t, ObjectIdentifier> res_children;
-  EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
-  EXPECT_EQ(res_level, level);
-  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
-  EXPECT_EQ(res_children, children);
-}
-
-TEST(EncodingTest, MoreEntriesWithEntryId) {
   uint8_t level = 5;
   std::vector<Entry> entries = {
       {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId("id_1")},
@@ -108,7 +83,7 @@ TEST(EncodingTest, MoreEntriesWithEntryId) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(WithoutEntryIds(res_entries), WithoutEntryIds(entries));
+  EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
 }
 
@@ -153,10 +128,10 @@ TEST(EncodingTest, BackwardCompatibilityWithoutEntryId) {
 TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
   uint8_t level = 5;
   std::vector<Entry> entries = {
-      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId()},
-      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId()},
-      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId()},
-      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId()}};
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId("id_1")},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId("id_2")},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId("id_3")},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId("id_4")}};
   std::map<size_t, ObjectIdentifier> children = {{0, MakeObjectIdentifier("child_1")},
                                                  {2, MakeObjectIdentifier("child_2")},
                                                  {4, MakeObjectIdentifier("child_3")}};
@@ -169,17 +144,17 @@ TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
+  EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
   uint8_t level = 5;
   std::vector<Entry> entries = {
-      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId()},
-      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId()},
-      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId()},
-      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId()}};
+      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER, EntryId("id_1")},
+      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY, EntryId("id_2")},
+      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER, EntryId("id_3")},
+      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY, EntryId("id_4")}};
   std::map<size_t, ObjectIdentifier> children = {{1, MakeObjectIdentifier("child_1")},
                                                  {3, MakeObjectIdentifier("child_2")}};
 
@@ -191,14 +166,14 @@ TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
+  EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
 }
 
 TEST(EncodingTest, ZeroByte) {
   uint8_t level = 13;
   std::vector<Entry> entries = {
-      {"k\0ey"_s, MakeObjectIdentifier("\0a\0\0"_s), KeyPriority::EAGER, EntryId()}};
+      {"k\0ey"_s, MakeObjectIdentifier("\0a\0\0"_s), KeyPriority::EAGER, EntryId("id_1")}};
   std::map<size_t, ObjectIdentifier> children = {{0u, MakeObjectIdentifier("ch\0ld_1"_s)},
                                                  {1u, MakeObjectIdentifier("child_\0"_s)}};
 
@@ -210,7 +185,7 @@ TEST(EncodingTest, ZeroByte) {
   std::map<size_t, ObjectIdentifier> res_children;
   EXPECT_TRUE(DecodeNode(bytes, &factory, &res_level, &res_entries, &res_children));
   EXPECT_EQ(res_level, level);
-  EXPECT_EQ(WithoutEntryIds(res_entries), entries);
+  EXPECT_EQ(res_entries, entries);
   EXPECT_EQ(res_children, children);
 }
 

@@ -426,6 +426,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage, uint8_t change_leve
     *did_mutate = true;
     entries_[split_index].object_identifier = std::move(entry.object_identifier);
     entries_[split_index].priority = entry.priority;
+    entries_[split_index].entry_id = entry.entry_id;
     return Status::OK;
   }
 

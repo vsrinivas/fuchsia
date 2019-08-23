@@ -51,7 +51,8 @@ FakeJournalDelegate::~FakeJournalDelegate() {}
 void FakeJournalDelegate::SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
                                    KeyPriority priority) {
   FXL_DCHECK(!is_committed_);
-  data_.insert({key.ToString(), {key.ToString(), std::move(value), priority, EntryId()}});
+  data_.insert(
+      {key.ToString(), {key.ToString(), std::move(value), priority, EntryId(key.ToString())}});
 }
 
 void FakeJournalDelegate::Delete(convert::ExtendedStringView key) {

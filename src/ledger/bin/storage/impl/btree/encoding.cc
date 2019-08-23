@@ -50,23 +50,17 @@ bool IsTreeNodeEntryValid(const EntryStorage* entry) {
          IsKeyPriorityStorageValid(entry->priority());
 }
 
-// Similar to fxl::Concatenate, but additionally inserts the length as a prefix to each of the
-// StringViews. Prevents accidental collisions.
-std::string SafeConcatenation(std::initializer_list<fxl::StringView> string_views) {
-  std::string result;
-  size_t result_size = string_views.size() * sizeof(size_t);
-  for (const fxl::StringView& string_view : string_views) {
-    result_size += string_view.size();
-  }
-  result.reserve(result_size);
-  for (const fxl::StringView& string_view : string_views) {
-    result.append(storage::SerializeData(string_view.size()).data(), sizeof(size_t));
-    result.append(string_view.data(), string_view.size());
-  }
-  return result;
+Entry ToEntry(const EntryStorage* entry_storage, ObjectIdentifierFactory* factory) {
+  FXL_DCHECK(IsTreeNodeEntryValid(entry_storage));
+  EntryId entry_id = entry_storage->entry_id() ? convert::ToString(entry_storage->entry_id()) : "";
+  Entry entry{convert::ToString(entry_storage->key()),
+              ToObjectIdentifier(entry_storage->object_id(), factory),
+              ToKeyPriority(entry_storage->priority()), entry_id};
+  SetEntryIdIfMissing(&entry);
+  return entry;
 }
+}  // namespace
 
-// Computes and sets the entry_id of the given entry, if it is not already present.
 void SetEntryIdIfMissing(Entry* entry) {
   if (!entry->entry_id.empty()) {
     // The EntryId was already read from the node.
@@ -82,17 +76,6 @@ void SetEntryIdIfMissing(Entry* entry) {
        fxl::NumberToString(object_id.deletion_scope_id()), object_id.object_digest().Serialize(),
        entry->priority == KeyPriority::EAGER ? "E" : "L"}));
 }
-
-Entry ToEntry(const EntryStorage* entry_storage, ObjectIdentifierFactory* factory) {
-  FXL_DCHECK(IsTreeNodeEntryValid(entry_storage));
-  EntryId entry_id = entry_storage->entry_id() ? convert::ToString(entry_storage->entry_id()) : "";
-  Entry entry{convert::ToString(entry_storage->key()),
-              ToObjectIdentifier(entry_storage->object_id(), factory),
-              ToKeyPriority(entry_storage->priority()), entry_id};
-  SetEntryIdIfMissing(&entry);
-  return entry;
-}
-}  // namespace
 
 bool CheckValidTreeNodeSerialization(fxl::StringView data) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
@@ -157,10 +140,12 @@ std::string EncodeNode(uint8_t level, const std::vector<Entry>& entries,
       entries.size(), static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
                           [&builder, &entries](size_t i) {
                             const auto& entry = entries[i];
+                            FXL_DCHECK(!entry.entry_id.empty());
                             return CreateEntryStorage(
                                 builder, convert::ToFlatBufferVector(&builder, entry.key),
                                 ToObjectIdentifierStorage(&builder, entry.object_identifier),
-                                ToKeyPriorityStorage(entry.priority));
+                                ToKeyPriorityStorage(entry.priority),
+                                convert::ToFlatBufferVector(&builder, entry.entry_id));
                           }));
 
   size_t children_count = children.size();

@@ -116,6 +116,7 @@ TEST_F(JournalTest, JournalsPutDeleteCommit) {
     EXPECT_EQ(entries[0].key, "key");
     EXPECT_EQ(entries[0].object_identifier, object_identifier_);
     EXPECT_EQ(entries[0].priority, KeyPriority::EAGER);
+    EXPECT_FALSE(entries[0].entry_id.empty());
 
     // Ledger's content is now a single entry "key" -> "value". Delete it.
     SetJournal(JournalImpl::Simple(&environment_, &page_storage_, std::move(commit)));
@@ -177,6 +178,7 @@ TEST_F(JournalTest, MultiplePutsDeletes) {
         EXPECT_EQ(entries[i].object_identifier, object_identifier_);
       }
       EXPECT_EQ(entries[i].priority, KeyPriority::EAGER);
+      EXPECT_FALSE(entries[i].entry_id.empty());
     }
 
     // Delete keys {"0", "2"}. Also insert a key, that is deleted on the same
@@ -197,6 +199,7 @@ TEST_F(JournalTest, MultiplePutsDeletes) {
     EXPECT_EQ(entries[0].key, "1");
     EXPECT_EQ(entries[0].object_identifier, object_identifier_);
     EXPECT_EQ(entries[0].priority, KeyPriority::EAGER);
+    EXPECT_FALSE(entries[0].entry_id.empty());
   }));
 }
 
@@ -271,10 +274,62 @@ TEST_F(JournalTest, MergeJournal) {
     EXPECT_EQ(entries[0].key, "0");
     EXPECT_EQ(entries[0].object_identifier, object_identifier_);
     EXPECT_EQ(entries[0].priority, KeyPriority::EAGER);
+    EXPECT_FALSE(entries[0].entry_id.empty());
 
     EXPECT_EQ(entries[1].key, "2");
     EXPECT_EQ(entries[1].object_identifier, object_identifier_);
     EXPECT_EQ(entries[1].priority, KeyPriority::EAGER);
+    EXPECT_FALSE(entries[1].entry_id.empty());
+  }));
+}
+
+TEST_F(JournalTest, MergesConsistent) {
+  ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // Create 2 commits from the |kFirstPageCommitId|, one with a key "0", and
+    // one with a key "1".
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("0", object_identifier_, KeyPriority::EAGER);
+
+    Status status;
+    std::unique_ptr<const Commit> commit_0;
+    std::vector<ObjectIdentifier> objects_to_sync_0;
+    status = journal_->Commit(handler, &commit_0, &objects_to_sync_0);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit_0);
+
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("1", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> commit_1;
+    std::vector<ObjectIdentifier> objects_to_sync_1;
+    status = journal_->Commit(handler, &commit_1, &objects_to_sync_1);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit_1);
+
+    // Create a merge journal, adding only a key "2".
+    SetJournal(
+        JournalImpl::Merge(&environment_, &page_storage_, commit_0->Clone(), commit_1->Clone()));
+    journal_->Put("2", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> merge_commit1;
+    std::vector<ObjectIdentifier> objects_to_sync_merge1;
+    status = journal_->Commit(handler, &merge_commit1, &objects_to_sync_merge1);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, merge_commit1);
+
+    // Create a merge journal, adding only a key "2".
+    SetJournal(
+        JournalImpl::Merge(&environment_, &page_storage_, commit_0->Clone(), commit_1->Clone()));
+    journal_->Put("2", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> merge_commit2;
+    std::vector<ObjectIdentifier> objects_to_sync_merge2;
+    status = journal_->Commit(handler, &merge_commit2, &objects_to_sync_merge2);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, merge_commit2);
+
+    // The two merges should have the same id so they are treated like a single merge by Ledger.
+    EXPECT_EQ(merge_commit1->GetId(), merge_commit2->GetId());
   }));
 }
 

@@ -16,6 +16,9 @@ namespace btree {
 
 bool CheckValidTreeNodeSerialization(fxl::StringView data);
 
+// Computes and sets the entry_id of the given entry, if it is not already present.
+void SetEntryIdIfMissing(Entry* entry);
+
 std::string EncodeNode(uint8_t level, const std::vector<Entry>& entries,
                        const std::map<size_t, ObjectIdentifier>& children);
 

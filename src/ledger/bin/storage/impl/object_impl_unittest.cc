@@ -247,10 +247,10 @@ TEST_F(ObjectImplTest, ObjectReferences) {
   const std::string data =
       btree::EncodeNode(/*level=*/0,
                         {
-                            Entry{"key01", inline_blob, KeyPriority::EAGER, EntryId()},
-                            Entry{"key02", noinline_blob, KeyPriority::EAGER, EntryId()},
-                            Entry{"key03", inline_blob, KeyPriority::LAZY, EntryId()},
-                            Entry{"key04", noinline_blob, KeyPriority::LAZY, EntryId()},
+                            Entry{"key01", inline_blob, KeyPriority::EAGER, EntryId("id_1")},
+                            Entry{"key02", noinline_blob, KeyPriority::EAGER, EntryId("id_2")},
+                            Entry{"key03", inline_blob, KeyPriority::LAZY, EntryId("id_3")},
+                            Entry{"key04", noinline_blob, KeyPriority::LAZY, EntryId("id_4")},
                         },
                         {
                             {0, inline_treenode},

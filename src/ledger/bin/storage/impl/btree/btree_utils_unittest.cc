@@ -161,7 +161,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(entries.size(), changes.size());
   for (size_t i = 0; i < entries.size(); ++i) {
-    EXPECT_EQ(WithoutEntryId(entries[i]), changes[i].entry);
+    EXPECT_EQ(entries[i], changes[i].entry);
   }
 }
 
@@ -191,7 +191,7 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
   std::vector<Entry> entries = GetEntriesList(new_root_identifier);
   ASSERT_EQ(entries.size(), golden_entries.size());
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    EXPECT_EQ(WithoutEntryId(entries[i]), golden_entries[i].entry);
+    EXPECT_EQ(entries[i], golden_entries[i].entry);
   }
 }
 
@@ -220,14 +220,8 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   EXPECT_EQ(new_nodes.size(), 4u);
   EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
 
-  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
-  ASSERT_EQ(entries.size(), golden_entries.size());
-  for (size_t i = 0; i < golden_entries.size(); ++i) {
-    EXPECT_EQ(WithoutEntryId(entries[i]), golden_entries[i].entry);
-  }
-
   Entry new_entry = {"key071", MakeObjectIdentifier("object_digest_071"), KeyPriority::EAGER,
-                     EntryId()};
+                     EntryId("id_071")};
   std::vector<EntryChange> new_change{EntryChange{new_entry, false}};
   // Insert key "071" between keys "07" and "08".
   golden_entries.insert(golden_entries.begin() + 8, new_change[0]);
@@ -251,15 +245,11 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   EXPECT_EQ(new_nodes.size(), 2u);
   EXPECT_TRUE(new_nodes.find(new_root_identifier2) != new_nodes.end());
 
-  std::vector<Entry> new_entries = GetEntriesList(new_root_identifier2);
-  ASSERT_EQ(new_entries.size(), golden_entries.size());
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier2);
+  ASSERT_EQ(entries.size(), golden_entries.size());
   for (size_t i = 0; i < golden_entries.size(); ++i) {
-    EXPECT_EQ(WithoutEntryId(new_entries[i]), golden_entries[i].entry);
+    EXPECT_EQ(entries[i], golden_entries[i].entry);
   }
-
-  // If we remove the new entry, |entries| and |new_entries| are equal, including entry ids.
-  new_entries.erase(new_entries.begin() + 8);
-  EXPECT_EQ(entries, new_entries);
 }
 
 TEST_F(BTreeUtilsTest, ApplyChangesBackToEmpty) {
@@ -314,13 +304,6 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
   ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
-  // Get back the entries with their entry ids.
-  std::vector<Entry> entries_before_update = GetEntriesList(root_identifier);
-  ASSERT_EQ(entries_before_update.size(), golden_entries.size());
-  for (size_t i = 0; i < golden_entries.size(); i++) {
-    EXPECT_EQ(WithoutEntryId(entries_before_update[i]), golden_entries[i].entry);
-  }
-
   // Update entry.
   std::vector<Entry> entries_to_update{golden_entries[2].entry};
   std::vector<EntryChange> update_changes;
@@ -354,12 +337,12 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     if (updated_index < entries_to_update.size() &&
         golden_entries[i].entry.key == entries_to_update[updated_index].key) {
-      EXPECT_EQ(WithoutEntryId(entries[i]), entries_to_update[updated_index]);
+      EXPECT_EQ(entries[i], entries_to_update[updated_index]);
       // Skip the updated entries.
       updated_index++;
       continue;
     }
-    EXPECT_EQ(entries[i], entries_before_update[i]);
+    EXPECT_EQ(entries[i], golden_entries[i].entry);
   }
 }
 
@@ -371,13 +354,6 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
   ObjectIdentifier root_identifier = CreateTree(golden_entries);
-
-  // Get back the entries with their entry ids.
-  std::vector<Entry> entries_before_update = GetEntriesList(root_identifier);
-  ASSERT_EQ(entries_before_update.size(), golden_entries.size());
-  for (size_t i = 0; i < golden_entries.size(); i++) {
-    EXPECT_EQ(WithoutEntryId(entries_before_update[i]), golden_entries[i].entry);
-  }
 
   // Update entry.
   std::vector<Entry> entries_to_update{golden_entries[3].entry};
@@ -412,12 +388,12 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   for (size_t i = 0; i < golden_entries.size(); ++i) {
     if (updated_index < entries_to_update.size() &&
         golden_entries[i].entry.key == entries_to_update[updated_index].key) {
-      EXPECT_EQ(WithoutEntryId(entries[i]), entries_to_update[updated_index]);
+      EXPECT_EQ(entries[i], entries_to_update[updated_index]);
       // Skip the updated entries.
       updated_index++;
       continue;
     }
-    EXPECT_EQ(entries[i], entries_before_update[i]);
+    EXPECT_EQ(entries[i], golden_entries[i].entry);
   }
 }
 
@@ -431,13 +407,6 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
                                  }),
                                  &golden_entries));
   ObjectIdentifier root_identifier = CreateTree(golden_entries);
-
-  // Get back the entries with their entry ids.
-  std::vector<Entry> entries_before_update = GetEntriesList(root_identifier);
-  ASSERT_EQ(entries_before_update.size(), golden_entries.size());
-  for (size_t i = 0; i < golden_entries.size(); i++) {
-    EXPECT_EQ(WithoutEntryId(entries_before_update[i]), golden_entries[i].entry);
-  }
 
   // Add level 1 entry.
   std::vector<EntryChange> update_changes;
@@ -469,15 +438,13 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   size_t updated_index = 0;
   for (size_t i = 0; i < entries.size(); ++i) {
     if (updated_index < update_changes.size() &&
-        WithoutEntryId(entries[i]) == update_changes[updated_index].entry) {
+        entries[i] == update_changes[updated_index].entry) {
       // Skip the updated entries.
       updated_index++;
       continue;
     }
     ASSERT_GT(golden_entries.size(), i - updated_index);
-    // XXX wrong I'd like entries_before_update here
-
-    EXPECT_EQ(entries[i], entries_before_update[i - updated_index]);
+    EXPECT_EQ(entries[i], golden_entries[i - updated_index].entry);
   }
 }
 
@@ -516,13 +483,6 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
   ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
-  // Get back the entries with their entry ids.
-  std::vector<Entry> entries_before_delete = GetEntriesList(root_identifier);
-  ASSERT_EQ(entries_before_delete.size(), golden_entries.size());
-  for (size_t i = 0; i < golden_entries.size(); i++) {
-    EXPECT_EQ(WithoutEntryId(entries_before_delete[i]), golden_entries[i].entry);
-  }
-
   // Delete entries.
   std::vector<EntryChange> delete_changes;
   ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({2, 4}), &delete_changes, true));
@@ -558,7 +518,7 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
       continue;
     }
     ASSERT_LT(i - deleted_index, entries.size());
-    EXPECT_EQ(entries[i - deleted_index], entries_before_delete[i]);
+    EXPECT_EQ(entries[i - deleted_index], golden_entries[i].entry);
   }
 }
 
@@ -570,13 +530,6 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   std::vector<EntryChange> golden_entries;
   ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
   ObjectIdentifier root_identifier = CreateTree(golden_entries);
-
-  // Get back the entries with their entry ids.
-  std::vector<Entry> entries_before_delete = GetEntriesList(root_identifier);
-  ASSERT_EQ(entries_before_delete.size(), golden_entries.size());
-  for (size_t i = 0; i < golden_entries.size(); i++) {
-    EXPECT_EQ(WithoutEntryId(entries_before_delete[i]), golden_entries[i].entry);
-  }
 
   // Delete entry.
   std::vector<EntryChange> delete_changes;
@@ -613,7 +566,7 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
       continue;
     }
     ASSERT_LT(i - deleted_index, entries.size());
-    EXPECT_EQ(entries[i - deleted_index], entries_before_delete[i]);
+    EXPECT_EQ(entries[i - deleted_index], golden_entries[i].entry);
   }
 }
 
@@ -659,13 +612,6 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
                                  &golden_entries));
   ObjectIdentifier root_identifier = CreateTree(golden_entries);
 
-  // Get back the entries with their entry ids.
-  std::vector<Entry> entries_before_insert = GetEntriesList(root_identifier);
-  ASSERT_EQ(entries_before_insert.size(), golden_entries.size());
-  for (size_t i = 0; i < golden_entries.size(); i++) {
-    EXPECT_EQ(WithoutEntryId(entries_before_insert[i]), golden_entries[i].entry);
-  }
-
   // Add level 2 entry.
   std::vector<EntryChange> update_changes;
   ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({75}), &update_changes));
@@ -698,13 +644,13 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   size_t updated_index = 0;
   for (size_t i = 0; i < entries.size(); ++i) {
     if (updated_index < update_changes.size() &&
-        WithoutEntryId(entries[i]) == update_changes[updated_index].entry) {
+        entries[i] == update_changes[updated_index].entry) {
       // Skip the updated entries.
       updated_index++;
       continue;
     }
     ASSERT_LT(i - updated_index, golden_entries.size());
-    EXPECT_EQ(entries[i], entries_before_insert[i - updated_index]);
+    EXPECT_EQ(entries[i], golden_entries[i - updated_index].entry);
   }
 
   // Remove the new entry.

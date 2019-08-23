@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "src/ledger/bin/storage/impl/btree/builder.h"
+#include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
@@ -131,11 +132,12 @@ Status JournalImpl::CreateCommitFromChanges(
     btree::LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,
     std::unique_ptr<const storage::Commit>* commit,
     std::vector<ObjectIdentifier>* objects_to_sync) {
+  SetEntryIds(&changes);
+
   ObjectIdentifier object_identifier;
   std::set<ObjectIdentifier> new_nodes;
-  Status status = btree::ApplyChanges(handler, page_storage_, std::move(root_identifier),
-                                      std::move(changes), &object_identifier, &new_nodes);
-
+  ledger::Status status = btree::ApplyChanges(handler, page_storage_, std::move(root_identifier),
+                                              std::move(changes), &object_identifier, &new_nodes);
   if (status != Status::OK) {
     return status;
   }
@@ -204,6 +206,14 @@ void JournalImpl::GetObjectsToSync(
     }
     callback(Status::OK, std::move(objects_to_sync));
   });
+}
+
+void JournalImpl::SetEntryIds(std::vector<EntryChange>* changes) {
+  for (auto& change : *changes) {
+    if (!change.deleted) {
+      btree::SetEntryIdIfMissing(&change.entry);
+    }
+  }
 }
 
 }  // namespace storage

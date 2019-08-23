@@ -5,6 +5,9 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_DATA_SERIALIZATION_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_DATA_SERIALIZATION_H_
 
+#include <initializer_list>
+#include <string>
+
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace storage {
@@ -25,6 +28,10 @@ fxl::StringView SerializeData(const I& value) {
                 "The parameter type must be trivially copyable.");
   return fxl::StringView(reinterpret_cast<const char*>(&value), sizeof(I));
 }
+
+// Similar to fxl::Concatenate, but additionally inserts the length as a prefix to each of the
+// StringViews. Prevents accidental collisions.
+std::string SafeConcatenation(std::initializer_list<fxl::StringView> string_views);
 
 }  // namespace storage
 

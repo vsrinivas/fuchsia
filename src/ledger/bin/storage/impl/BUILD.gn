@@ -70,6 +70,7 @@ source_set("object_identifier_lib") {
 
 source_set("data_serialization") {
   sources = [
+    "data_serialization.cc",
     "data_serialization.h",
   ]
 

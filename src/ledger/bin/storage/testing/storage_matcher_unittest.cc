@@ -20,7 +20,7 @@ TEST(StorageMatcher, MatchesDigest) {
 
 TEST(StorageMatcher, MatchesEntry2Parameters) {
   ObjectIdentifier id = ObjectIdentifier(0, 1, ObjectDigest("hello"), nullptr);
-  Entry entry = {"key", id, KeyPriority::EAGER, EntryId()};
+  Entry entry = {"key", id, KeyPriority::EAGER, EntryId("id")};
 
   EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello")}));
   EXPECT_THAT(entry, MatchesEntry({"key", id}));
@@ -29,7 +29,8 @@ TEST(StorageMatcher, MatchesEntry2Parameters) {
 }
 
 TEST(StorageMatcher, MatchesEntry3Parameters) {
-  Entry entry = {"key", ObjectIdentifier(0, 1, ObjectDigest("hello"), nullptr), KeyPriority::EAGER, EntryId()};
+  Entry entry = {"key", ObjectIdentifier(0, 1, ObjectDigest("hello"), nullptr), KeyPriority::EAGER,
+                 EntryId("id")};
 
   EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::EAGER}));
   EXPECT_THAT(entry, Not(MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::LAZY})));
