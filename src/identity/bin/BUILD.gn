@@ -62,7 +62,7 @@ group("core") {
   public_deps = [
     "account_handler",
     "account_manager",
-    "google_auth_provider",
+    "account_manager:account_manager_auth_providers",
     "token_manager_factory",
   ]
 }

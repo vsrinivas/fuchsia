@@ -45,7 +45,11 @@ lazy_static! {
     static ref DEFAULT_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
         vec![AuthProviderConfig {
             auth_provider_type: "google".to_string(),
-            url: fuchsia_single_component_package_url!("google_auth_provider").to_string(),
+            url: if cfg!(feature = "use_rust_auth_provider") {
+                fuchsia_single_component_package_url!("google_auth_provider_rust").to_string()
+            } else {
+                fuchsia_single_component_package_url!("google_auth_provider").to_string()
+            },
             params: None
         }]
     };
@@ -97,7 +101,9 @@ fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_manager_clone = Arc::clone(&account_manager);
         fasync::spawn(async move {
-            account_manager_clone.handle_requests_from_stream(stream).await
+            account_manager_clone
+                .handle_requests_from_stream(stream)
+                .await
                 .unwrap_or_else(|e| error!("Error handling AccountManager channel {:?}", e))
         });
     });

@@ -5,6 +5,11 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+declare_args() {
+  # Flag to switch between the C++ and Rust versions of Google auth provider.
+  use_rust_auth_provider = false
+}
+
 rustc_binary("bin") {
   name = "account_manager"
   edition = "2018"
@@ -35,6 +40,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
   ]
+  if (use_rust_auth_provider) {
+    features = [ "use_rust_auth_provider" ]
+  }
 }
 
 package("account_manager") {
@@ -50,4 +58,16 @@ package("account_manager") {
       dest = "account_manager.cmx"
     },
   ]
+}
+
+group("account_manager_auth_providers") {
+  if (use_rust_auth_provider) {
+    public_deps = [
+      "../google_auth_provider_rust",
+    ]
+  } else {
+    public_deps = [
+      "../google_auth_provider",
+    ]
+  }
 }
