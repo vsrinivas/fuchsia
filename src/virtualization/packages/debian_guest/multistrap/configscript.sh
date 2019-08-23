@@ -5,7 +5,6 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
-
 export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true
 export LC_ALL=C LANGUAGE=C LANG=C
 
@@ -83,11 +82,27 @@ StandardInput=socket
 StandardOutput=socket
 EOF
 
-systemctl enable telnet.socket
+# Expose the guest interaction daemon to allow automated tests to send files to
+# and receive files from the guest and exec commands.
+cat >> /etc/systemd/system/guest_interaction_daemon.service << EOF
+[Unit]
+Description=Guest Interaction Daemon
 
-# Mount the test utils on start up.
+[Service]
+Type=simple
+ExecStart=-/guest_interaction/guest_interaction_daemon
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable telnet.socket
+systemctl enable guest_interaction_daemon.service
+
+# Mount the test utils and guest interaction daemon on start up.
 cat >> /etc/fstab << EOF
 /dev/vdb /test_utils ext2 ro 0 0
+/dev/vdc /guest_interaction romfs ro 0 0
 EOF
 
 apt clean

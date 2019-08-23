@@ -81,4 +81,16 @@ guest_package("debian_guest") {
     },
   ]
   block_devices += [ "/guest/data/${tests_filename},ro" ]
+
+  deps += [ "//src/virtualization/lib/guest_interaction:extras" ]
+  gis_out_dir =
+      get_label_info("//src/virtualization/lib/guest_interaction:extras",
+                     "target_out_dir")
+  resources += [
+    {
+      path = rebase_path("$gis_out_dir/linux/extras.img")
+      dest = "extras.img"
+    },
+  ]
+  block_devices += [ "/guest/data/extras.img,ro" ]
 }

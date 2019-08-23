@@ -44,7 +44,7 @@ source_set("logger") {
 }
 
 source_set("guest_console") {
-  visibility = [ ":*" ]
+  visibility = [ "//src/virtualization/*" ]
   sources = [
     "guest_console.cc",
     "guest_console.h",
@@ -62,6 +62,24 @@ source_set("guest_console") {
   public_deps = [
     ":logger",
     "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("mock_netstack") {
+  visibility = [ "//src/virtualization/*" ]
+  sources = [
+    "mock_netstack.cc",
+    "mock_netstack.h",
+  ]
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/inet",
+    "//zircon/public/lib/fit",
+    "//zircon/system/public",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -101,14 +119,13 @@ source_set("lib") {
     "fake_scenic.cc",
     "fake_scenic.h",
     "guest_test.h",
-    "mock_netstack.cc",
-    "mock_netstack.h",
     "periodic_logger.cc",
     "periodic_logger.h",
   ]
 
   deps = [
     ":guest_console",
+    ":mock_netstack",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
@@ -159,7 +176,9 @@ executable("guest_integration_tests_bin") {
   }
 
   deps = [
+    ":guest_console",
     ":lib",
+    ":mock_netstack",
     ":test_main",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",

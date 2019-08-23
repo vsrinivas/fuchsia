@@ -117,7 +117,6 @@ sudo fstrim -v "${MOUNTPOINT}"
 sudo -v -p "[sudo] Enter password to unmount filesystems"
 sudo umount "${MOUNTPOINT}/proc"
 sudo umount "${MOUNTPOINT}/dev"
-sudo umount "${MOUNTPOINT}/etc/machine-id"
 sudo umount "${MOUNTPOINT}"
 
 if [[ -z "${DEVICE}" ]]; then
