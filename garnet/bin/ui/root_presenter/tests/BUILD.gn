@@ -16,7 +16,6 @@ executable("root_presenter_tests") {
   testonly = true
 
   sources = [
-    "a11y_settings_watcher_unittest.cc",
     "accessibility_pointer_event_registry_test.cc",
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
@@ -24,16 +23,12 @@ executable("root_presenter_tests") {
   ]
 
   deps = [
-    "//garnet/bin/ui/root_presenter:accessibility",
     "//garnet/bin/ui/root_presenter:displays",
     "//garnet/bin/ui/root_presenter:factory_reset_manager",
     "//garnet/bin/ui/root_presenter:key_util",
     "//garnet/bin/ui/root_presenter:lib",
-    "//garnet/bin/ui/root_presenter/tests/fakes",
     "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
@@ -47,7 +42,6 @@ executable("root_presenter_tests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/ui/a11y/lib/settings",
     "//zircon/public/fidl/fuchsia-inspect",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/hid",
