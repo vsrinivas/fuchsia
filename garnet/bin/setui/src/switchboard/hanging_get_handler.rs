@@ -4,6 +4,7 @@
 
 use {
     crate::switchboard::base::*,
+    failure::Error,
     fuchsia_async as fasync,
     futures::lock::Mutex,
     futures::stream::StreamExt,
@@ -47,9 +48,9 @@ where
             listen_session: switchboard_handle
                 .clone()
                 .write()
-                .unwrap()
+                .expect("got switchboard write lock")
                 .listen(setting_type, on_change_sender)
-                .unwrap(),
+                .expect("started listening successfully"),
             sent_latest_value: false,
             hanging_get: None,
             data_type: PhantomData,
@@ -88,7 +89,7 @@ where
         std::mem::swap(&mut self.hanging_get, &mut responder_swap);
 
         if let Some(responder) = responder_swap {
-            let value = self.get().await;
+            let value = self.get().await.expect("got current value");
             responder.send_response(value);
             self.hanging_get = None;
             self.sent_latest_value = true;
@@ -97,15 +98,18 @@ where
         }
     }
 
-    async fn get(&self) -> T {
+    async fn get(&self) -> Result<T, Error> {
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<SettingResponseResult>();
         {
-            let mut switchboard = self.switchboard_handle.write().unwrap();
-            switchboard.request(self.setting_type, SettingRequest::Get, response_tx).unwrap();
+            let mut switchboard =
+                self.switchboard_handle.write().expect("got switchboard write lock");
+            switchboard
+                .request(self.setting_type, SettingRequest::Get, response_tx)
+                .expect("made request");
         }
-        if let Ok(Some(setting_response)) = response_rx.await.unwrap() {
-            T::from(setting_response)
+        if let Ok(Some(setting_response)) = response_rx.await.expect("got result") {
+            Ok(T::from(setting_response))
         } else {
             panic!("incorrect value sent to display");
         }

@@ -8,7 +8,7 @@ use crate::switchboard::base::{
     SettingType,
 };
 
-use failure::{format_err, Error};
+use failure::{format_err, Error, ResultExt};
 use fuchsia_async as fasync;
 
 use futures::channel::mpsc::UnboundedReceiver;
@@ -159,7 +159,8 @@ impl RegistryImpl {
                 let error_sender_clone = self.event_sender.clone();
                 fasync::spawn(
                     async move {
-                        let response = receiver.await.unwrap();
+                        let response =
+                            receiver.await.context("getting response from controller")?;
                         sender_clone.unbounded_send(SettingEvent::Response(id, response)).ok();
 
                         Ok(())
