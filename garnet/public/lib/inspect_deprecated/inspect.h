@@ -5,13 +5,13 @@
 #ifndef LIB_INSPECT_DEPRECATED_INSPECT_H_
 #define LIB_INSPECT_DEPRECATED_INSPECT_H_
 
-#include <string>
-
 #include <lib/fit/defer.h>
 #include <lib/fit/variant.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect_deprecated/deprecated/exposed_object.h>
 #include <zircon/types.h>
+
+#include <string>
 
 #include "lib/inspect/cpp/vmo/block.h"
 
@@ -456,6 +456,9 @@ class Node final {
   // Construct a Node wrapping the given VMO Object.
   explicit Node(::inspect::Node object);
 
+  // Construct a Node wrapping a pointer to a non-owned VMO Node.
+  explicit Node(::inspect::Node* node_ptr);
+
   ~Node();
 
   // Output the contents of this node as a FIDL struct.
@@ -472,9 +475,9 @@ class Node final {
 
   // Allow moving, disallow copying.
   Node(const Node& other) = delete;
-  Node(Node&& other) = default;
+  Node(Node&& other);
   Node& operator=(const Node& other) = delete;
-  Node& operator=(Node&& other) = default;
+  Node& operator=(Node&& other);
 
   // Create a new |Node| with the given name that is a child of this node.
   [[nodiscard]] Node CreateChild(std::string name);
@@ -605,6 +608,8 @@ class Node final {
 
   fit::internal::variant<fit::internal::monostate, component::ExposedObject, ::inspect::Node>
       object_;
+
+  ::inspect::Node* node_ptr_ = nullptr;
 };
 
 // Settings to configure a specific Tree.
