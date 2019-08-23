@@ -10,6 +10,5 @@ fidl_library("fuchsia-net") {
     "connectivity.fidl",
     "namelookup.fidl",
     "net.fidl",
-    "socket.fidl",
   ]
 }

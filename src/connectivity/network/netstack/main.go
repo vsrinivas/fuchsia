@@ -195,16 +195,6 @@ func Main() {
 		},
 	)
 
-	var netSocketProviderService net.SocketProviderService
-	ctx.OutgoingService.AddService(
-		net.SocketProviderName,
-		&net.SocketProviderStub{Impl: &socketProviderImpl{ns: ns}},
-		func(s fidl.Stub, c zx.Channel) error {
-			_, err := netSocketProviderService.BindingSet.Add(s, c, nil)
-			return err
-		},
-	)
-
 	var posixSocketProviderService socket.ProviderService
 	ctx.OutgoingService.AddService(
 		socket.ProviderName,
