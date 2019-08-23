@@ -18,6 +18,17 @@ action("unpack_build_id_archives") {
   testonly = true
   script = "unpack_build_id_archives.sh"
 
+  # We list the jiri snapshot as input to force ninja to run the action
+  # if the snapshot has changed, which is what people want as we always
+  # want to unpack the latest build-id archives.
+  #
+  # Ideally, we would list explicitly all the archives downloaded from CIPD,
+  # but those aren't available from jiri so today, we glob `prebuilt_build_ids`
+  # inside `script` so the best approximation is a jiri snapshot change.
+  inputs = [
+    "//.jiri_root/update_history/latest",
+  ]
+
   # We output a text list of the build-id archives, as actions
   # require outputs, though it is not needed.
   _build_id_manifest = "$target_gen_dir/prebuilt-build-id-archives.txt"
