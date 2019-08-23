@@ -18,6 +18,7 @@ mod client;
 mod display;
 mod do_not_disturb;
 mod intl;
+mod setup;
 mod system;
 
 enum Services {
@@ -27,6 +28,7 @@ enum Services {
     DoNotDisturb(DoNotDisturbRequestStream),
     System(SystemRequestStream),
     Intl(IntlRequestStream),
+    Setup(SetupRequestStream),
 }
 
 const ENV_NAME: &str = "setui_client_test_environment";
@@ -96,6 +98,10 @@ async fn main() -> Result<(), Error> {
     println!("system service tests");
     println!("  client calls set login mode");
     validate_system_override().await?;
+
+    println!("setup service tests");
+    println!(" client calls set config interfaces");
+    validate_setup().await?;
 
     Ok(())
 }
@@ -311,9 +317,48 @@ async fn validate_dnd(
         .connect_to_service::<DoNotDisturbMarker>()
         .context("Failed to connect to do not disturb service")?;
 
-    do_not_disturb::command(do_not_disturb_service,
-                            expected_user_dnd,
-                            expected_night_mode_dnd).await?;
+    do_not_disturb::command(do_not_disturb_service, expected_user_dnd, expected_night_mode_dnd)
+        .await?;
+
+    Ok(())
+}
+
+fn create_setup_setting(interfaces: ConfigurationInterfaces) -> SetupSettings {
+    let mut settings = SetupSettings::empty();
+    settings.enabled_configuration_interfaces = Some(interfaces);
+
+    settings
+}
+
+async fn validate_setup() -> Result<(), Error> {
+    let expected_set_interfaces = ConfigurationInterfaces::Ethernet;
+    let expected_watch_interfaces =
+        ConfigurationInterfaces::Wifi | ConfigurationInterfaces::Ethernet;
+    let env = create_service!(
+        Services::Setup, SetupRequest::Set { settings, responder, } => {
+            if let Some(interfaces) = settings.enabled_configuration_interfaces {
+                assert_eq!(interfaces, expected_set_interfaces);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Unexpected call to set");
+            }
+        },
+        SetupRequest::Watch { responder } => {
+            responder.send(create_setup_setting(expected_watch_interfaces))?;
+        }
+    );
+
+    let setup_service =
+        env.connect_to_service::<SetupMarker>().context("Failed to connect to setup service")?;
+
+    setup::command(setup_service.clone(), Some(expected_set_interfaces)).await?;
+
+    let watch_result = setup::command(setup_service.clone(), None).await?;
+
+    assert_eq!(
+        watch_result,
+        setup::describe_setup_setting(&create_setup_setting(expected_watch_interfaces))
+    );
 
     Ok(())
 }

@@ -15,6 +15,7 @@
             "fuchsia.settings.Display",
             "fuchsia.settings.DoNotDisturb",
             "fuchsia.settings.Intl",
+            "fuchsia.settings.Setup",
             "fuchsia.settings.System",
             "fuchsia.sys.Launcher"
         ]
