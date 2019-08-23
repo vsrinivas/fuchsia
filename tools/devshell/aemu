@@ -123,10 +123,6 @@ while [[ $# -ge 1 ]]; do
     ;;
   --software-gpu)
     GPU="swiftshader_indirect"
-    # disable vulkan when using swiftshader.
-    # TODO: remove this when swiftshader supports external memory and
-    # can be used by fuchsia guests.
-    VULKAN=0
     ;;
   *)
     break
