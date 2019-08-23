@@ -52,10 +52,21 @@ typedef struct thread_record {
   thrd_t thread;
 } thread_record_t;
 
-const async_loop_config_t kAsyncLoopConfigAttachToThread = {.make_default_for_current_thread =
-                                                                true};
-const async_loop_config_t kAsyncLoopConfigNoAttachToThread = {.make_default_for_current_thread =
-                                                                  false};
+const async_loop_config_t kAsyncLoopConfigAttachToThread = {
+    .make_default_for_current_thread = true,
+    .default_accessors = {
+        .getter = async_get_default_dispatcher,
+        .setter = async_set_default_dispatcher,
+    }};
+const async_loop_config_t kAsyncLoopConfigNoAttachToThread = {
+    .make_default_for_current_thread = false,
+    .default_accessors = {
+        .getter = async_get_default_dispatcher,
+        .setter = async_set_default_dispatcher,
+    }};
+const async_loop_config_t kAsyncLoopConfigNeverAttachToThread = {
+    .make_default_for_current_thread = false,
+    .default_accessors = {.getter = NULL, .setter = NULL}};
 
 typedef struct async_loop {
   async_dispatcher_t dispatcher;  // must be first (the loop inherits from async_dispatcher_t)
@@ -112,6 +123,9 @@ static inline async_task_t* node_to_task(list_node_t* node) {
 zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** out_loop) {
   ZX_DEBUG_ASSERT(out_loop);
   ZX_DEBUG_ASSERT(config != NULL);
+  // If a setter was given, a getter should have been, too.
+  ZX_ASSERT((config->default_accessors.setter != NULL) ==
+            (config->default_accessors.getter != NULL));
 
   async_loop_t* loop = calloc(1u, sizeof(async_loop_t));
   if (!loop)
@@ -121,6 +135,10 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
 
   loop->dispatcher.ops = &async_loop_ops;
   loop->config = *config;
+  if (config->make_default_for_current_thread && config->default_accessors.setter == NULL) {
+    loop->config.default_accessors.getter = async_get_default_dispatcher;
+    loop->config.default_accessors.setter = async_set_default_dispatcher;
+  }
   mtx_init(&loop->lock, mtx_plain);
   list_initialize(&loop->wait_list);
   list_initialize(&loop->task_list);
@@ -133,10 +151,12 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
   if (status == ZX_OK) {
     *out_loop = loop;
     if (loop->config.make_default_for_current_thread) {
-      ZX_DEBUG_ASSERT(async_get_default_dispatcher() == NULL);
-      async_set_default_dispatcher(&loop->dispatcher);
+      ZX_DEBUG_ASSERT(loop->config.default_accessors.getter() == NULL);
+      loop->config.default_accessors.setter(&loop->dispatcher);
     }
   } else {
+    // Adjust this flag so we don't trip an assert trying to clear a default dispatcher we never
+    // installed.
     loop->config.make_default_for_current_thread = false;
     async_loop_destroy(loop);
   }
@@ -180,8 +200,8 @@ void async_loop_shutdown(async_loop_t* loop) {
   }
 
   if (loop->config.make_default_for_current_thread) {
-    ZX_DEBUG_ASSERT(async_get_default_dispatcher() == &loop->dispatcher);
-    async_set_default_dispatcher(NULL);
+    ZX_DEBUG_ASSERT(loop->config.default_accessors.getter() == &loop->dispatcher);
+    loop->config.default_accessors.setter(NULL);
   }
 }
 
@@ -620,7 +640,9 @@ static void async_loop_invoke_epilogue(async_loop_t* loop) {
 
 static int async_loop_run_thread(void* data) {
   async_loop_t* loop = (async_loop_t*)data;
-  async_set_default_dispatcher(&loop->dispatcher);
+  if (loop->config.default_accessors.setter) {
+    loop->config.default_accessors.setter(&loop->dispatcher);
+  }
   async_loop_run(loop, ZX_TIME_INFINITE, false);
   return 0;
 }

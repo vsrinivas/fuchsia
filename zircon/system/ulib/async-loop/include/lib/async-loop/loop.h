@@ -15,33 +15,50 @@
 #ifndef LIB_ASYNC_LOOP_LOOP_H_
 #define LIB_ASYNC_LOOP_LOOP_H_
 
+#include <lib/async/dispatcher.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <threads.h>
-
 #include <zircon/compiler.h>
-
-#include <lib/async/dispatcher.h>
 
 __BEGIN_CDECLS
 
 // Pointer to a message loop created using |async_loop_create()|.
 typedef struct async_loop async_loop_t;
 
+// Accessors for getting/setting the "default" async loop for the thread upon
+// which an async loop is created.
+typedef async_dispatcher_t*(async_loop_get_default_dispatcher_t)(void);
+typedef void(async_loop_set_default_dispatcher_t)(async_dispatcher_t*);
+typedef struct {
+  async_loop_get_default_dispatcher_t* getter;
+  async_loop_set_default_dispatcher_t* setter;
+} async_loop_default_accessors_t;
+
 // Message loop configuration structure.
 typedef void(async_loop_callback_t)(async_loop_t* loop, void* data);
 typedef struct async_loop_config {
-  // If true, the loop will automatically register itself as the default
-  // dispatcher for the thread upon which it was created and will
-  // automatically unregister itself when destroyed (which must occur on
-  // the same thread).
+  // If specified, these functions will be used to register the loop as the default
+  // dispatcher on the thread on which they are called and will be used to
+  // automatically unregister the loop when it is destroyed.
   //
-  // If false, the loop will not do this.  The loop's creator is then
+  // If NULL, the loop will not do this.  The loop's creator is then
   // responsible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
-  // and passing it around explicitly or calling |async_set_default_dispatcher()| as needed.
+  // and passing it around explicitly.
+  //
+  // It is an error for only one of the functions to be non-NULL.
   //
   // Note that the loop can be used even without setting it as the current
   // thread's default.
+  async_loop_default_accessors_t default_accessors;
+
+  // If true, then uses default_accessors.setter to register the loop as the
+  // default dispatcher for the thread upon which the loop was created.
+  //
+  // TRANSITIONAL BEHAVIOR:
+  // If default_accesors are not specified and this flag is true, then behaves as if
+  // async_get_default_dispatcher/async_set_default_dispatcher were specified
+  // as the default_accessors.
   bool make_default_for_current_thread;
 
   // A function to call before the dispatcher invokes each handler, or NULL if none.
@@ -62,8 +79,14 @@ typedef struct async_loop_config {
 extern const async_loop_config_t kAsyncLoopConfigAttachToThread;
 
 // Simple config that when passed to async_loop_create will create a loop
-// that is not registered to the current thread.
+// that is not registered to the current thread, but any threads created with
+// async_loop_start_thread will have the loop registered.
 extern const async_loop_config_t kAsyncLoopConfigNoAttachToThread;
+
+// Simple config that when passed to async_loop_create will create a loop
+// that is not registered to the current thread or any threads created with
+// async_loop_start_thread
+extern const async_loop_config_t kAsyncLoopConfigNeverAttachToThread;
 
 // Creates a message loop and returns a pointer to it in |out_loop|.
 // All operations on the message loop are thread-safe (except destroy).
@@ -100,6 +123,10 @@ void async_loop_shutdown(async_loop_t* loop);
 // Destroys the message loop.
 // Implicitly calls |async_loop_shutdown()| and joins all threads started
 // using |async_loop_start_thread()| before destroying the loop itself.
+//
+// If `make_default_for_current_thread` was true in the config used to create
+// the loop, then this method must be called on the same thread that called
+// async_loop_create.
 void async_loop_destroy(async_loop_t* loop);
 
 // Runs the message loop on the current thread.

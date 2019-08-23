@@ -2,29 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <threads.h>
-#include <utility>
-
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/time.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/receiver.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
-#include <lib/async/cpp/wait.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/event.h>
+#include <threads.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
+
+#include <atomic>
+#include <utility>
 
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/event.h>
 #include <unittest/unittest.h>
-#include <zircon/status.h>
-#include <zircon/threads.h>
 
 namespace {
 
@@ -281,16 +280,29 @@ bool make_default_false_test() {
   END_TEST;
 }
 
+// Static data and methods for use in make_default_true_test()
+async_dispatcher_t* test_default_dispatcher;
+
+void set_test_default_dispatcher(async_dispatcher_t* dispatcher) {
+  test_default_dispatcher = dispatcher;
+}
+
+async_dispatcher_t* get_test_default_dispatcher() { return test_default_dispatcher; }
+
 bool make_default_true_test() {
   BEGIN_TEST;
 
   async_loop_config_t config{};
+
   config.make_default_for_current_thread = true;
+  config.default_accessors.getter = get_test_default_dispatcher;
+  config.default_accessors.setter = set_test_default_dispatcher;
+
   {
     async::Loop loop(&config);
-    EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher(), "became default");
+    EXPECT_EQ(loop.dispatcher(), get_test_default_dispatcher(), "became default");
   }
-  EXPECT_NULL(async_get_default_dispatcher(), "no longer default");
+  EXPECT_NULL(get_test_default_dispatcher(), "no longer default");
 
   END_TEST;
 }
@@ -953,6 +965,23 @@ bool threads_have_default_dispatcher() {
   END_TEST;
 }
 
+bool threads_dont_have_default_dispatcher() {
+  BEGIN_TEST;
+
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  EXPECT_EQ(ZX_OK, loop.StartThread(), "start thread");
+
+  GetDefaultDispatcherTask task;
+  EXPECT_EQ(ZX_OK, task.Post(loop.dispatcher()), "post task");
+  loop.JoinThreads();
+
+  EXPECT_EQ(1u, task.run_count, "run count");
+  EXPECT_EQ(ZX_OK, task.last_status, "status");
+  EXPECT_NULL(task.last_default_dispatcher, "default dispatcher");
+
+  END_TEST;
+}
+
 // The goal here is to ensure that threads stop when Quit() is called.
 bool threads_quit() {
   const size_t num_threads = 4;
@@ -1128,6 +1157,7 @@ RUN_TEST(task_test)
 RUN_TEST(task_shutdown_test)
 RUN_TEST(receiver_test)
 RUN_TEST(receiver_shutdown_test)
+RUN_TEST(threads_dont_have_default_dispatcher)
 RUN_TEST(threads_have_default_dispatcher)
 for (int i = 0; i < 3; i++) {
   RUN_TEST(threads_quit)

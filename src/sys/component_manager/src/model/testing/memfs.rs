@@ -28,6 +28,8 @@ impl Memfs {
     pub fn new() -> Memfs {
         // Create async loop
         let config = AsyncLoopConfig {
+            default_getter: async_get_default_dispatcher,
+            default_setter: async_set_default_dispatcher,
             make_default_for_current_thread: true,
             prologue: ptr::null_mut(),
             epilogue: ptr::null_mut(),
@@ -110,9 +112,12 @@ extern "C" {
     fn memfs_free_filesystem(fs: *mut MemfsFilesystem, unmounted: *mut SyncCompletion);
 }
 
+// TODO(fxbug.dev/31742): These bindings should all be in a dedicated library
 #[repr(C)]
 #[derive(Debug, Clone)]
 struct AsyncLoopConfig {
+    default_getter: unsafe extern "C" fn() -> *mut AsyncDispatcher,
+    default_setter: unsafe extern "C" fn(*mut AsyncDispatcher),
     make_default_for_current_thread: bool,
     prologue: *mut raw::c_void,
     epilogue: *mut raw::c_void,
@@ -140,7 +145,6 @@ type AsyncDispatcher = raw::c_void;
 
 // This `#[allow(dead_code)]` is load bearing because without it the program will fail to link
 // against the following symbols, which are needed by the async-loop library.
-#[allow(dead_code)]
 #[link(name = "async-default")]
 #[link(name = "async")]
 extern "C" {
