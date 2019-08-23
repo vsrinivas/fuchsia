@@ -34,7 +34,9 @@
  *
  *****************************************************************************/
 
+#include <lib/device-protocol/pci.h>
 #include <stdlib.h>
+#include <zircon/status.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -42,9 +44,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/wlanphyimpl.h>
-#include <lib/device-protocol/pci.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
@@ -52,12 +52,6 @@
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #endif  // NEEDS_PORTING
-
-struct iwl_pci_device {
-  uint16_t device_id;
-  uint16_t subsystem_device_id;
-  const struct iwl_cfg* config;
-};
 
 #define IWL_PCI_DEVICE(dev, subdev, cfg) \
   .device_id = (dev), .subsystem_device_id = (subdev), .config = &(cfg)
@@ -947,13 +941,13 @@ static const struct iwl_pci_device iwl_devices[] = {
     {0},
 };
 
-static zx_status_t iwl_pci_config(uint16_t device_id, uint16_t subsystem_device_id,
-                                  const struct iwl_cfg** out_cfg) {
+static zx_status_t iwl_find_pci_device(uint16_t device_id, uint16_t subsystem_device_id,
+                                       const struct iwl_pci_device** out_device) {
   const struct iwl_pci_device* device = iwl_devices;
   for (size_t i = 0; i != ARRAY_SIZE(iwl_devices); ++i) {
     if (iwl_devices[i].device_id == device_id &&
         iwl_devices[i].subsystem_device_id == subsystem_device_id) {
-      *out_cfg = iwl_devices[i].config;
+      *out_device = &iwl_devices[i];
       return ZX_OK;
     }
     device++;
@@ -1028,14 +1022,14 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
   IWL_INFO(iwl_trans, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
            subsystem_device_id);
 
-  const struct iwl_cfg* cfg;
-  status = iwl_pci_config(pci_info.device_id, subsystem_device_id, &cfg);
+  const struct iwl_pci_device* device;
+  status = iwl_find_pci_device(pci_info.device_id, subsystem_device_id, &device);
   if (status != ZX_OK) {
     IWL_ERR(iwl_trans, "Failed to find PCI config: %s\n", zx_status_get_string(status));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  iwl_trans = iwl_trans_pcie_alloc(&pci, cfg);
+  iwl_trans = iwl_trans_pcie_alloc(&pci, device);
   if (!iwl_trans) {
     IWL_ERR(iwl_trans, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
     return ZX_ERR_NO_MEMORY;

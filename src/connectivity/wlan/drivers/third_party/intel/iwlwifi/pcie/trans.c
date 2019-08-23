@@ -33,9 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <stdint.h>
-
 #include <lib/device-protocol/pci.h>
+#include <stdint.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -3165,7 +3164,8 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 #endif
 };
 
-struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct iwl_cfg* cfg) {
+struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
+                                       const struct iwl_pci_device* device) {
   struct iwl_trans_pcie* trans_pcie;
   struct iwl_trans* trans;
   zx_status_t status;
@@ -3174,10 +3174,10 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
     int ret, addr_size;
 #endif  // NEEDS_PORTING
 
-  if (cfg->gen2) {
-    trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), cfg, &trans_ops_pcie_gen2);
+  if (device->config->gen2) {
+    trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie_gen2);
   } else {
-    trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), cfg, &trans_ops_pcie);
+    trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie);
   }
 
   if (!trans) {
@@ -3199,7 +3199,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
         goto out_no_pci;
     }
 
-    if (!cfg->base_params->pcie_l1_allowed) {
+    if (!device->config->base_params->pcie_l1_allowed) {
         /*
          * W/A - seems to solve weird behavior. We need to remove this
          * if we don't want to stay in L1 all the time. This wastes a
@@ -3212,7 +3212,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
 
   trans_pcie->def_rx_queue = 0;
 
-  if (cfg->use_tfh) {
+  if (device->config->use_tfh) {
     addr_size = 64;
     trans_pcie->max_tbs = IWL_TFH_NUM_TBS;
     trans_pcie->tfd_size = sizeof(struct iwl_tfh_tfd);
@@ -3324,7 +3324,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
 #if IS_ENABLED(CPTCFG_IWLMVM) || IS_ENABLED(CPTCFG_IWLFMAC)
   trans->hw_rf_id = iwl_read32(trans, CSR_HW_RF_ID);
 
-  if (cfg == &iwl22560_2ax_cfg_hr) {
+  if (device->config == &iwl22560_2ax_cfg_hr) {
     if (CSR_HW_RF_ID_TYPE_CHIP_ID(trans->hw_rf_id) ==
         CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_HR)) {
       trans->cfg = &iwl22560_2ax_cfg_hr;
@@ -3393,12 +3393,14 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
   }
 #endif
 #if 0  // NEEDS_PORTING
-
     iwl_pcie_set_interrupt_capa(pdev, trans);
-    trans->hw_id = (pdev->device << 16) + pdev->subsystem_device;
-    snprintf(trans->hw_id_str, sizeof(trans->hw_id_str), "PCI ID: 0x%04X:0x%04X", pdev->device,
-             pdev->subsystem_device);
+#endif  // NEEDS_PORTING
 
+  trans->hw_id = (device->device_id << 16) + device->subsystem_device_id;
+  snprintf(trans->hw_id_str, sizeof(trans->hw_id_str), "PCI ID: 0x%04X:0x%04X", device->device_id,
+           device->subsystem_device_id);
+
+#if 0   // NEEDS_PORTING
     /* Initialize the wait queue for commands */
     init_waitqueue_head(&trans_pcie->wait_command_queue);
 
@@ -3422,19 +3424,19 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
 
     trans_pcie->rba.alloc_wq = alloc_workqueue("rb_allocator", WQ_HIGHPRI | WQ_UNBOUND, 1);
     INIT_WORK(&trans_pcie->rba.rx_alloc, iwl_pcie_rx_allocator_work);
+#endif  // NEEDS_PORTING
 
 #ifdef CPTCFG_IWLWIFI_PCIE_RTPM
-    trans->runtime_pm_mode = IWL_PLAT_PM_MODE_D0I3;
+  trans->runtime_pm_mode = IWL_PLAT_PM_MODE_D0I3;
 #else
-    trans->runtime_pm_mode = IWL_PLAT_PM_MODE_DISABLED;
+  trans->runtime_pm_mode = IWL_PLAT_PM_MODE_DISABLED;
 #endif /* CPTCFG_IWLWIFI_PCIE_RTPM */
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-    trans_pcie->fw_mon_data.state = IWL_FW_MON_DBGFS_STATE_CLOSED;
-    mutex_init(&trans_pcie->fw_mon_data.mutex);
+  trans_pcie->fw_mon_data.state = IWL_FW_MON_DBGFS_STATE_CLOSED;
+  mutex_init(&trans_pcie->fw_mon_data.mutex);
 #endif
 
-#endif  // NEEDS_PORTING
   return trans;
 
 #if 0   // NEEDS_PORTING

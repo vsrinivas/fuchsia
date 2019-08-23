@@ -637,11 +637,24 @@ static inline struct iwl_trans* iwl_trans_pcie_get_trans(struct iwl_trans_pcie* 
   return containerof(trans_pcie, struct iwl_trans, trans_specific);
 }
 
+/**
+ * struct iwl_pcie_device - PCI specific data
+ * @device_id: PCI device ID.
+ * @subsystem_device_id: PCI subsystem device ID.
+ * @config: Config for the current device. See iwl-config.h.
+ */
+struct iwl_pci_device {
+  uint16_t device_id;
+  uint16_t subsystem_device_id;
+  const struct iwl_cfg* config;
+};
+
 /*
  * Convention: trans API functions: iwl_trans_pcie_XXX
  *  Other functions: iwl_pcie_XXX
  */
-struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct iwl_cfg* cfg);
+struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
+                                       const struct iwl_pci_device* device);
 void iwl_trans_pcie_free(struct iwl_trans* trans);
 
 /*****************************************************
