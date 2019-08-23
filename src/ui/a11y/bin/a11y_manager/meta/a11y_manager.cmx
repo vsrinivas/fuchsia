@@ -6,7 +6,9 @@
         "services": [
             "fuchsia.ui.input.accessibility.PointerEventRegistry",
             "fuchsia.logger.LogSink",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.accessibility.tts.EngineRegistry",
+            "fuchsia.ui.input.accessibility.PointerEventRegistry"
         ]
     }
 }
