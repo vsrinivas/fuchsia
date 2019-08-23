@@ -22,6 +22,7 @@ rustc_library("lib") {
 
   deps = [
     "//garnet/lib/rust/connectivity-testing",
+    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
     "//garnet/lib/wlan/fidl:sme-rustc",
@@ -45,6 +46,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
@@ -69,7 +71,9 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:void",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
