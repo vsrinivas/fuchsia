@@ -37,3 +37,45 @@ driver("astro-display") {
     "$zx/system/ulib/zx",
   ]
 }
+
+test("astro-display-test") {
+  sources = [
+    "aml-dsi-host.cc",
+    "aml-mipi-phy.cc",
+    "astro-clock.cc",
+    "astro-display-test.cc",
+    "astro-display.cc",
+    "lcd.cc",
+    "osd.cc",
+    "vpu.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.amlogiccanvas",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.display.controller",
+    "$zx/system/banjo/ddk.protocol.dsiimpl",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.sysmem",
+    "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/bitmap",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/image-format",
+    "$zx/system/ulib/mipi-dsi",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

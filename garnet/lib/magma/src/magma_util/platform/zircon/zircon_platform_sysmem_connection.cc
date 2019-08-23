@@ -30,6 +30,7 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
     switch (settings_.buffer_settings.coherency_domain) {
       case fuchsia::sysmem::CoherencyDomain::RAM:
       case fuchsia::sysmem::CoherencyDomain::CPU:
+      case fuchsia::sysmem::CoherencyDomain::INACCESSIBLE:
         break;
 
       default:
@@ -55,6 +56,11 @@ class ZirconPlatformBufferDescription : public PlatformBufferDescription {
 
       case fuchsia::sysmem::CoherencyDomain::CPU:
         return MAGMA_COHERENCY_DOMAIN_CPU;
+
+      case fuchsia::sysmem::CoherencyDomain::INACCESSIBLE:
+        // Doesn't matter - this will only happen with protected memory anyway,
+        // which the driver should check with is_secure.
+        return MAGMA_COHERENCY_DOMAIN_RAM;
 
       default:
         // Checked by IsValid()
@@ -125,6 +131,9 @@ class ZirconPlatformBufferConstraints : public PlatformBufferConstraints {
     // are for whether this memory should be protected (e.g. usable for DRM content, the precise
     // definition depending on the system).
     constraints_.buffer_memory_constraints.secure_required = constraints->secure_required;
+    constraints_.buffer_memory_constraints.inaccessible_domain_supported =
+        constraints->secure_required;
+
     constraints_.buffer_memory_constraints.ram_domain_supported = constraints->ram_domain_supported;
     constraints_.buffer_memory_constraints.cpu_domain_supported = constraints->cpu_domain_supported;
     constraints_.buffer_memory_constraints.min_size_bytes = constraints->min_size_bytes;
@@ -281,6 +290,7 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     constraints.buffer_memory_constraints.min_size_bytes = size;
     if (flags & MAGMA_SYSMEM_FLAG_PROTECTED) {
       constraints.buffer_memory_constraints.secure_required = true;
+      constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
     }
     constraints.image_format_constraints_count = 0;
 

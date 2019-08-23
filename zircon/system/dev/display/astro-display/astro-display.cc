@@ -568,6 +568,7 @@ zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.secure_required = false;
   buffer_constraints.ram_domain_supported = true;
   buffer_constraints.cpu_domain_supported = true;
+  buffer_constraints.inaccessible_domain_supported = true;
   buffer_constraints.heap_permitted_count = 2;
   buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
   buffer_constraints.heap_permitted[1] = fuchsia_sysmem_HeapType_AMLOGIC_SECURE;

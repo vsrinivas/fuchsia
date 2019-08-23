@@ -143,6 +143,41 @@ class TestPlatformSysmemConnection {
     EXPECT_FALSE(description->has_format_modifier());
     EXPECT_EQ(2u, description->count());
   }
+
+  static void TestProtectedBuffer() {
+    auto connection = magma_sysmem::PlatformSysmemConnection::Create();
+
+    ASSERT_NE(nullptr, connection.get());
+
+    uint32_t token;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->CreateBufferCollectionToken(&token).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferCollection> collection;
+    EXPECT_EQ(MAGMA_STATUS_OK, connection->ImportBufferCollection(token, &collection).get());
+
+    magma_buffer_format_constraints_t buffer_constraints{};
+    buffer_constraints.count = 1;
+    buffer_constraints.usage = 0;
+    buffer_constraints.secure_permitted = true;
+    buffer_constraints.secure_required = true;
+    buffer_constraints.min_size_bytes = 1024;
+
+    std::unique_ptr<magma_sysmem::PlatformBufferConstraints> constraints;
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              connection->CreateBufferConstraints(&buffer_constraints, &constraints).get());
+
+    EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
+    std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
+    magma_status_t status = collection->GetBufferDescription(&description).get();
+    if (status == MAGMA_STATUS_INTERNAL_ERROR) {
+      printf(
+          "GetBufferDescription returned internal error, possibly due to"
+          "system not having protected memory. Skipping test\n");
+      GTEST_SKIP();
+      return;
+    }
+
+    EXPECT_EQ(MAGMA_COHERENCY_DOMAIN_RAM, description->coherency_domain());
+  }
 };
 
 TEST(PlatformSysmemConnection, CreateBuffer) { TestPlatformSysmemConnection::TestCreateBuffer(); }
@@ -154,3 +189,7 @@ TEST(PlatformSysmemConnection, SetConstraints) {
 TEST(PlatformSysmemConnection, IntelTiling) { TestPlatformSysmemConnection::TestIntelTiling(); }
 
 TEST(PlatformSysmemConnection, Buffer) { TestPlatformSysmemConnection::TestBuffer(); }
+
+TEST(PlatformSysmemConnection, ProtectedBuffer) {
+  TestPlatformSysmemConnection::TestProtectedBuffer();
+}
