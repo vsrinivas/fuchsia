@@ -21,8 +21,7 @@ namespace feedback {
 // reachable and hands it off to the crash analyzer as today we only stow something in the reboot
 // log in case of OOM or kernel panic.
 //
-// fuchsia.net.Connectivity and fuchsia.crash.Analyzer are expected to be in
-// |services|.
+// fuchsia.net.Connectivity and fuchsia.feedback.CrashReporter are expected to be in |services|.
 fit::promise<void> HandleRebootLog(const std::string& filepath,
                                    std::shared_ptr<::sys::ServiceDirectory> services);
 

@@ -135,7 +135,7 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
         return;
       }
 
-      FX_PLOGS(ERROR, status) << "lost connection to fuchsia.crash.Analyzer";
+      FX_PLOGS(ERROR, status) << "lost connection to fuchsia.feedback.CrashReporter";
       crash_reporting_done_.completer.complete_error();
     });
 

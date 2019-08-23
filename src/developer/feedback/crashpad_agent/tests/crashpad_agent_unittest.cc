@@ -83,7 +83,8 @@ Attachment BuildAttachment(const std::string& key, const std::string& value) {
   return attachment;
 }
 
-// Unit-tests the implementation of the fuchsia.crash.Analyzer FIDL interface.
+// Unit-tests the implementation of the fuchsia.crash.Analyzer and fuchsia.feedback.CrashReporter
+// FIDL interfaces.
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
