@@ -12,6 +12,7 @@
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include "gtest/gtest.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_pointer_event_registry.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/mocks/mock_settings_provider.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
@@ -214,6 +215,38 @@ TEST_F(AppUnitTest, OffersTtsManagerServices) {
   context_provider_.ConnectToPublicService(tts_manager.NewRequest());
   RunLoopUntilIdle();
   ASSERT_TRUE(tts_manager.is_bound());
+}
+
+// This test makes sure that the accessibility pointer event listener is
+// registered whenever the screen reader is enabled. Once the screen reader is
+// deactivated, the listener closes the connection.
+TEST_F(AppUnitTest, RegistersAccessibilityPointerEventListener) {
+  MockPointerEventRegistry mock_pointer_event_registry(&context_provider_);
+  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
+  RunLoopUntilIdle();
+
+  // Create Settings Service.
+  MockSettingsProvider settings_provider(&context_provider_);
+  RunLoopUntilIdle();
+
+  // No listener should be registered in the beginning, as there is no
+  // accessibility service enabled.
+  EXPECT_FALSE(mock_pointer_event_registry.IsListenerRegistered());
+
+  SettingsManagerStatus status;
+  settings_provider.SetScreenReaderEnabled(
+      true, [&status](SettingsManagerStatus retval) { status = retval; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(status, SettingsManagerStatus::OK);
+
+  // When the screen reader is turned on, the listener is also on.
+  EXPECT_TRUE(mock_pointer_event_registry.IsListenerRegistered());
+
+  settings_provider.SetScreenReaderEnabled(
+      false, [&status](SettingsManagerStatus retval) { status = retval; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(status, SettingsManagerStatus::OK);
+  EXPECT_FALSE(mock_pointer_event_registry.IsListenerRegistered());
 }
 
 }  // namespace

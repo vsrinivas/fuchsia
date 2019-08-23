@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.ui.input.accessibility.PointerEventRegistry",
             "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry"
         ]

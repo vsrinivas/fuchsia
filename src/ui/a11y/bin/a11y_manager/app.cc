@@ -42,6 +42,14 @@ void App::Initialize() {
 
   // Register ourselves as a settings watcher.
   settings_manager_.Watch(settings_watcher_binding_.NewBinding());
+
+  // Connect to Root presenter service.
+  pointer_event_registry_ =
+      startup_context_->svc()->Connect<fuchsia::ui::input::accessibility::PointerEventRegistry>();
+  pointer_event_registry_.set_error_handler([](zx_status_t status) {
+    FXL_LOG(ERROR) << "Cannot connect to PointerEventRegistry with status:"
+                   << zx_status_get_string(status);
+  });
 }
 
 fuchsia::accessibility::SettingsPtr App::GetSettings() {
@@ -89,14 +97,27 @@ void App::OnScreenReaderEnabled(bool enabled) {
   }
 }
 
+void App::OnAccessibilityPointerEventListenerEnabled(bool enabled) {
+  if (enabled) {
+    gesture_manager_ = std::make_unique<a11y::GestureManager>();
+    auto listener_handle = listener_bindings_.AddBinding(gesture_manager_.get());
+    pointer_event_registry_->Register(std::move(listener_handle));
+  } else {
+    listener_bindings_.CloseAll();
+    gesture_manager_.reset();
+  }
+}
+
 void App::OnSettingsChange(fuchsia::accessibility::Settings provided_settings) {
   // Check if screen reader settings have changed.
-  if ((settings_.has_screen_reader_enabled() && settings_.screen_reader_enabled()) !=
-      (provided_settings.has_screen_reader_enabled() &&
-       provided_settings.screen_reader_enabled())) {
-    OnScreenReaderEnabled(provided_settings.screen_reader_enabled());
+  if (provided_settings.has_screen_reader_enabled()) {
+    const bool screen_reader_enabled = provided_settings.screen_reader_enabled();
+    if ((settings_.has_screen_reader_enabled() && settings_.screen_reader_enabled()) !=
+        screen_reader_enabled) {
+      OnAccessibilityPointerEventListenerEnabled(screen_reader_enabled);
+      OnScreenReaderEnabled(screen_reader_enabled);
+    }
   }
-
   // Set A11y Settings.
   SetSettings(std::move(provided_settings));
 }

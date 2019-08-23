@@ -4,18 +4,25 @@
 source_set("mocks") {
   testonly = true
   sources = [
+    "mock_pointer_event_registry.cc",
+    "mock_pointer_event_registry.h",
     "mock_semantic_listener.cc",
     "mock_semantic_listener.h",
     "mock_settings_provider.cc",
     "mock_settings_provider.h",
   ]
-  deps = [
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/gtest",
+
+  public_deps = [
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.views",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
