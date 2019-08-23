@@ -139,9 +139,7 @@ template("environment_redirect") {
     }
   }
 
-  if (defined(os)) {
-    assert(os != "", "empty `os` in environment_redirect()")
-  } else {
+  if (!defined(os)) {
     if (base_environment == "host") {
       assert(host_os != "", "empty `host_os` in environment_redirect()")
       os = host_os
@@ -149,6 +147,7 @@ template("environment_redirect") {
       os = "fuchsia"
     }
   }
+  assert(os != "", "empty `os` in environment_redirect()")
 
   redirect_deps = invoker.deps
   foreach(label, redirect_deps) {
@@ -230,20 +229,22 @@ template("environment_redirect") {
   }
 
   if (defined(variant)) {
-    # Name construction logic must match environment.gni.
-    toolchain_base_name = "${environment_label}-${cpu}"
+    assert(variant != "")
 
-    # For host environments include the OS to distinguish one from another.
-    # For other environments, the OS is implicit (i.e. "fuchsia" modulo EFI).
-    if (base_environment == "host") {
-      toolchain_base_name += "-${os}"
-    } else {
-      not_needed([ "os" ])
-    }
+    if (redirect_deps != []) {
+      # Name construction logic must match environment.gni.
+      toolchain_base_name = "${environment_label}-${cpu}"
 
-    toolchain_name = "${toolchain_base_name}-${variant}"
-    if (defined(invoker.shlib) && invoker.shlib) {
-      toolchain_name += ".shlib"
+      # For host environments include the OS to distinguish one from another.
+      # For other environments, the OS is implicit (i.e. "fuchsia" modulo EFI).
+      if (base_environment == "host") {
+        toolchain_base_name += "-${os}"
+      }
+
+      toolchain_name = "${toolchain_base_name}-${variant}"
+      if (defined(invoker.shlib) && invoker.shlib) {
+        toolchain_name += ".shlib"
+      }
     }
 
     group(target_name) {
