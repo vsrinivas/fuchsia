@@ -38,7 +38,7 @@ func (sp *nameLookupImpl) LookupIp(hostname string, options fidlnet.LookupIpOpti
 		var err error
 		ips, err = sp.dnsClient.LookupIP(hostname)
 		if err != nil {
-			syslog.ErrorTf("DNS", "lookup failed with internal error: %s", err)
+			syslog.VLogTf(syslog.DebugVerbosity, "DNS", "lookup failed with internal error: %s", err)
 			result.SetErr(fidlnet.LookupErrorInternalError)
 			return result, nil
 		}
