@@ -450,6 +450,7 @@ zx_status_t DebuggedThread::WriteRegisters(const std::vector<debug_ipc::Register
 }
 
 void DebuggedThread::SendThreadNotification() const {
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Sending starting notification.";
   debug_ipc::NotifyThread notify;
   FillThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal, nullptr, &notify.record);
 

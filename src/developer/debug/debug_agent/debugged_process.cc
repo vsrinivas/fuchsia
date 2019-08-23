@@ -55,17 +55,19 @@ std::string LogPreamble(const DebuggedProcess* process) {
   return fxl::StringPrintf("[P: %lu (%s)] ", process->koid(), process->name().c_str());
 }
 
-void LogRegisterBreakpoint(DebuggedProcess* process, Breakpoint* bp, uint64_t address) {
+void LogRegisterBreakpoint(debug_ipc::FileLineFunction location, DebuggedProcess* process,
+                           Breakpoint* bp, uint64_t address) {
   if (!debug_ipc::IsDebugModeActive())
     return;
 
   std::stringstream ss;
-  ss << LogPreamble(process) << "Setting breakpoint (" << bp->settings().name << ") on 0x"
-     << std::hex << address;
+  ss << LogPreamble(process) << "Setting breakpoint " << bp->settings().id << " ("
+     << bp->settings().name << ") on 0x" << std::hex << address;
+
   if (bp->settings().one_shot)
     ss << " (one shot)";
 
-  DEBUG_LOG(Process) << ss.str();
+  DEBUG_LOG_WITH_LOCATION(Process, location) << ss.str();
 }
 
 }  // namespace
@@ -367,7 +369,7 @@ ProcessWatchpoint* DebuggedProcess::FindWatchpointByAddress(uint64_t address) {
 }
 
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
-  LogRegisterBreakpoint(this, bp, address);
+  LogRegisterBreakpoint(FROM_HERE, this, bp, address);
 
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
@@ -384,6 +386,9 @@ zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address
 }
 
 void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
+  DEBUG_LOG(Process) << LogPreamble(this) << "Unregistering breakpoint " << bp->settings().id
+                     << " (" << bp->settings().name << ").";
+
   auto found = breakpoints_.find(address);
   if (found == breakpoints_.end()) {
     // This can happen if there was an error setting up the breakpoint.

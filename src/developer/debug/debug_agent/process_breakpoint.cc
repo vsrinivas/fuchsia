@@ -18,12 +18,26 @@
 
 namespace debug_agent {
 
-// ProcessBreakpoint Implementation --------------------------------------------
-
 namespace {
 
 std::string Preamble(ProcessBreakpoint* b) {
-  return fxl::StringPrintf("[Breakpoint 0x%zx] ", b->address());
+  std::stringstream ss;
+
+  ss << "[PB 0x" << std::hex << b->address();
+  bool first = true;
+
+  // Add the names of all the breakpoints associated with this process breakpoint.
+  ss << " (";
+  for (Breakpoint* breakpoint : b->breakpoints()) {
+    if (!first) {
+      first = false;
+      ss << ", ";
+    }
+    ss << breakpoint->settings().name;
+  }
+
+  ss << ")] ";
+  return ss.str();
 }
 
 void LogThreadsSteppingOver(ProcessBreakpoint* b, const std::set<zx_koid_t>& thread_koids) {

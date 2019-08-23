@@ -6,15 +6,40 @@
 
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/shared/logging/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
 
 namespace {
 
+std::string Preamble(const Breakpoint* bp) {
+  return fxl::StringPrintf("[Breakpoint %u (%s)] ", bp->settings().id, bp->settings().name.c_str());
+}
+
 // Debug logging to see if a breakpoint applies to a thread.
-void LogAppliesToThread(uint32_t breakpoint_id, zx_koid_t pid, zx_koid_t tid, bool applies) {
-  DEBUG_LOG(Breakpoint) << "Breakpoint " << breakpoint_id << " applies to [P: " << pid
-                        << ", T: " << tid << "]? " << applies;
+void LogAppliesToThread(const Breakpoint* bp, zx_koid_t pid, zx_koid_t tid, bool applies) {
+  DEBUG_LOG(Breakpoint) << Preamble(bp) << "applies to [P: " << pid << ", T: " << tid << "]? "
+                        << applies;
+}
+
+void LogSetSettings(debug_ipc::FileLineFunction location, const Breakpoint* bp) {
+  std::stringstream ss;
+
+  // Print a list of locations (process + thread + address) place of an actual breakpoint.
+  ss << "Updating locations: ";
+  for (auto& location : bp->settings().locations) {
+    // Log the process.
+    ss << std::dec << "[P: " << location.process_koid;
+
+    // |thread_koid| == 0 means that it applies to all the threads.
+    if (location.thread_koid != 0)
+      ss << ", T: " << location.thread_koid;
+
+    // Print the actual location.
+    ss << ", 0x" << std::hex << location.address << "] ";
+  }
+
+  DEBUG_LOG_WITH_LOCATION(Breakpoint, location) << Preamble(bp) << ss.str();
 }
 
 }  // namespace
@@ -22,6 +47,7 @@ void LogAppliesToThread(uint32_t breakpoint_id, zx_koid_t pid, zx_koid_t tid, bo
 Breakpoint::Breakpoint(ProcessDelegate* process_delegate) : process_delegate_(process_delegate) {}
 
 Breakpoint::~Breakpoint() {
+  DEBUG_LOG(Breakpoint) << Preamble(this) << "Deleting.";
   for (const auto& loc : locations_)
     process_delegate_->UnregisterBreakpoint(this, loc.first, loc.second);
 }
@@ -33,6 +59,7 @@ zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
       << "Got: " << debug_ipc::BreakpointTypeToString(type);
   type_ = type;
   settings_ = settings;
+  LogSetSettings(FROM_HERE, this);
 
   zx_status_t result = ZX_OK;
 
@@ -70,13 +97,13 @@ bool Breakpoint::AppliesToThread(zx_koid_t pid, zx_koid_t tid) const {
   for (auto& location : settings_.locations) {
     if (location.process_koid == pid) {
       if (location.thread_koid == 0 || location.thread_koid == tid) {
-        LogAppliesToThread(settings_.id, pid, tid, true);
+        LogAppliesToThread(this, pid, tid, true);
         return true;
       }
     }
   }
 
-  LogAppliesToThread(settings_.id, pid, tid, false);
+  LogAppliesToThread(this, pid, tid, false);
   return false;
 }
 
@@ -85,6 +112,7 @@ bool Breakpoint::AppliesToThread(zx_koid_t pid, zx_koid_t tid) const {
 Breakpoint::HitResult Breakpoint::OnHit() {
   stats_.hit_count++;
   if (settings_.one_shot) {
+    DEBUG_LOG(Breakpoint) << Preamble(this) << "One-shot breakpoint. Will be deleted.";
     stats_.should_delete = true;
     return HitResult::kOneShotHit;
   }

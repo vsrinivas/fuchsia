@@ -77,8 +77,6 @@ void RemoteAPIAdapter::OnStreamReadable() {
         this, &RemoteAPI::On##msg_type, std::move(buffer), #msg_type);         \
     break
 
-    DEBUG_LOG(RemoteAPI) << "Received " << debug_ipc::MsgHeader::TypeToString(header.type);
-
     switch (header.type) {
       DISPATCH(ConfigAgent);
       DISPATCH(Hello);

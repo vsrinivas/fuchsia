@@ -38,6 +38,28 @@ namespace {
 
 constexpr size_t kMegabyte = 1024 * 1024;
 
+std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
+  std::stringstream ss;
+  ss << "Got resume request for process " << request.process_koid;
+
+  // Print thread koids.
+  if (!request.thread_koids.empty()) {
+    ss << ", Threads: (";
+    for (size_t i = 0; i < request.thread_koids.size(); i++) {
+      if (i > 0)
+        ss << ", ";
+      ss << request.thread_koids[i];
+    }
+    ss << ")";
+  }
+
+  // Print step range.
+  if (request.range_begin != request.range_end)
+    ss << ", Range: [" << std::hex << request.range_begin << ", " << request.range_end << "]";
+
+  return ss.str();
+}
+
 }  // namespace
 
 DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services)
@@ -233,7 +255,8 @@ void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
 };
 
 void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) {
-  TIME_BLOCK();
+  DEBUG_LOG(Agent) << LogResumeRequest(request);
+
   if (request.process_koid) {
     // Single process.
     DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
@@ -376,11 +399,14 @@ void DebugAgent::SetupBreakpoint(const debug_ipc::AddOrChangeBreakpointRequest& 
   uint32_t id = request.breakpoint.id;
   auto found = breakpoints_.find(id);
   if (found == breakpoints_.end()) {
+    DEBUG_LOG(Agent) << "Creating new breakpoint " << request.breakpoint.id << " ("
+                     << request.breakpoint.name << ").";
     found = breakpoints_
                 .emplace(std::piecewise_construct, std::forward_as_tuple(id),
                          std::forward_as_tuple(this))
                 .first;
   }
+
   reply->status = found->second.SetSettings(request.breakpoint_type, request.breakpoint);
 }
 
