@@ -1,0 +1,25 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fonts;
+
+/// Protocol for listening to possible events that may occur in the `Provider`'s set of fonts.
+///
+/// Register a listener using [`fuchsia.fonts/Provider.RegisterFontSetEventListener`].
+protocol FontSetEventListener {
+    /// The set of fonts available in the `Provider` has changed. See
+    /// [`fuchsia.fonts/FontSetUpdatedEvent`].
+    OnFontSetUpdated(FontSetUpdatedEvent event) -> ();
+
+    // A future addition might include an event that is triggered when the user changes the mapping
+    // for generic font families (e.g. configuring "monospace" to default to "Inconsolata" instead of
+    // "Roboto Mono").
+};
+
+/// An event indicating that the set of fonts available in the `Provider` has changed. This is most
+/// frequently caused by an ephemeral font being downloaded and cached. Clients should consider
+/// re-requesting fonts and re-rendering any displayed text.
+table FontSetUpdatedEvent {
+    // No fields at the moment.
+};

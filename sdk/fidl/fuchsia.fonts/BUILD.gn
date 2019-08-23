@@ -8,6 +8,7 @@ fidl("fuchsia.fonts") {
   sdk_category = "partner"
 
   sources = [
+    "events.fidl",
     "font_provider.fidl",
     "provider.fidl",
     "styles.fidl",

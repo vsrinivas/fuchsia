@@ -133,4 +133,10 @@ protocol Provider {
     /// alias for the canonical name "Roboto Slab". A request for "robotoSLAB" would return the
     /// `FontFamilyInfo` for "Roboto Slab" due to the case-insensitivity and alias resolution.
     GetFontFamilyInfo(FamilyName family) -> (FontFamilyInfo family_info);
+
+    /// Register a listener to be notified when the set of available fonts or mappings has changed.
+    /// A client can register as many listeners as it wishes.
+    ///
+    /// To unregister, close the channel.
+    RegisterFontSetEventListener(FontSetEventListener listener) -> ();
 };

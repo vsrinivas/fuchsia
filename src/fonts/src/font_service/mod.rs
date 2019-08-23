@@ -487,6 +487,8 @@ impl FontService {
                 // TODO(kpozin): OutOfLine?
                 Ok(responder.send(family_info)?)
             }
+            // TODO(34897): Implement font event dispatch
+            RegisterFontSetEventListener { listener: _, responder: _ } => unimplemented!(),
         }
     }
 
