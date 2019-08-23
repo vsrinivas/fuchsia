@@ -93,7 +93,7 @@ static void start_main(const struct start_params* p) {
   exit((*p->main)(argc, argv, __environ));
 }
 
-__NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
+NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
                                                 int (*main)(int, char**, char**)) {
   // Initialize stack-protector canary value first thing.  Do the setjmp
   // manglers in the same call to avoid the overhead of two system calls.

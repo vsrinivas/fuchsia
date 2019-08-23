@@ -306,3 +306,15 @@ config("default_libs") {
     configs += [ "//build/config/mac:default_libs" ]
   }
 }
+
+config("shadow-call-stack") {
+  if (current_cpu == "arm64") {
+    cflags = [ "-fsanitize=shadow-call-stack" ]
+  }
+}
+
+config("no-shadow-call-stack") {
+  if (current_cpu == "arm64") {
+    cflags = [ "-fsanitize=no-shadow-call-stack" ]
+  }
+}

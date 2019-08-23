@@ -115,7 +115,7 @@ static_assert(TP_OFFSETOF(abi.stack_guard) == ZX_TLS_STACK_GUARD_OFFSET,
 static_assert(TP_OFFSETOF(abi.unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET,
               "unsafe_sp not at ABI-mandated offset from thread pointer");
 
-static inline void* pthread_to_tp(struct pthread* thread) {
+__NO_SAFESTACK static inline void* pthread_to_tp(struct pthread* thread) {
   return (void*)((char*)thread + PTHREAD_TP_OFFSET);
 }
 

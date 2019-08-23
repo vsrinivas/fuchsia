@@ -54,7 +54,7 @@
 #else
 #define __THREAD_ANNOTATION(x)
 #endif  // _LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS
-#define __NO_SAFESTACK __attribute__((__no_sanitize__("safe-stack")))
+#define __NO_SAFESTACK __attribute__((__no_sanitize__("safe-stack", "shadow-call-stack")))
 #endif
 
 #ifndef __has_feature

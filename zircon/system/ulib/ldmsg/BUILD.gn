@@ -19,4 +19,12 @@ library("ldmsg") {
 
   # However, it uses <string.h> for memcpy.
   deps += [ "$zx/system/ulib/c:headers" ]
+
+  # This code is called by the dynamic linker in early startup before
+  # fancy stacks have been set up.  So it can't rely on safe-stack or
+  # shadow-call-stack ABIs.
+  configs += [
+    "$zx/public/gn/config:no_safestack",
+    "$zx/public/gn/config:no-shadow-call-stack",
+  ]
 }

@@ -37,9 +37,11 @@ void __thread_allocation_inhibit(void) { pthread_rwlock_wrlock(&allocation_lock)
 
 void __thread_allocation_release(void) { pthread_rwlock_unlock(&allocation_lock); }
 
-static inline size_t round_up_to_page(size_t sz) { return (sz + PAGE_SIZE - 1) & -PAGE_SIZE; }
+__NO_SAFESTACK static inline size_t round_up_to_page(size_t sz) {
+  return (sz + PAGE_SIZE - 1) & -PAGE_SIZE;
+}
 
-static ptrdiff_t offset_for_module(const struct tls_module* module) {
+__NO_SAFESTACK static ptrdiff_t offset_for_module(const struct tls_module* module) {
 #ifdef TLS_ABOVE_TP
   return module->offset;
 #else
@@ -144,7 +146,16 @@ __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar, zx_handle_t vmo, s
 
 __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requested_stack_size,
                                         const char* thread_name, char vmo_name[ZX_MAX_NAME_LEN]) {
-  thread_allocation_acquire();
+  // In the initial thread, we're allocating the stacks and TCB for the running
+  // thread itself.  So we can't make calls that rely on safe-stack or
+  // shadow-call-stack setup.  Rather than annotating everything in the call
+  // path here, we just avoid the problematic calls.  Locking is not required
+  // since this is the sole thread.
+  const bool initial_thread = vmo_name == NULL;
+
+  if (!initial_thread) {
+    thread_allocation_acquire();
+  }
 
   const size_t guard_size = requested_guard_size == 0 ? 0 : round_up_to_page(requested_guard_size);
   const size_t stack_size = round_up_to_page(requested_stack_size);
@@ -156,12 +167,16 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
   zx_handle_t vmo;
   zx_status_t status = _zx_vmo_create(vmo_size, 0, &vmo);
   if (status != ZX_OK) {
-    __thread_allocation_release();
+    if (!initial_thread) {
+      __thread_allocation_release();
+    }
     return NULL;
   }
   struct iovec tcb, tcb_region;
   if (map_block(_zx_vmar_root_self(), vmo, 0, tcb_size, PAGE_SIZE, PAGE_SIZE, &tcb, &tcb_region)) {
-    __thread_allocation_release();
+    if (!initial_thread) {
+      __thread_allocation_release();
+    }
     _zx_handle_close(vmo);
     return NULL;
   }
@@ -170,11 +185,13 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
 
   // At this point all our access to global TLS state is done, so we
   // can allow dlopen again.
-  __thread_allocation_release();
+  if (!initial_thread) {
+    __thread_allocation_release();
+  }
 
   // For the initial thread, it's too early to call snprintf because
   // it's not __NO_SAFESTACK.
-  if (vmo_name != NULL) {
+  if (!initial_thread) {
     // For other threads, try to give the VMO a name that includes
     // the thrd_t value (and the TLS size if that fits too), but
     // don't use a truncated value since that would be confusing to

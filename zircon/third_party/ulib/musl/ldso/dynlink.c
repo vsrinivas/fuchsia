@@ -156,7 +156,7 @@ struct r_debug* _dl_debug_addr = &debug;
 // post-processing the h/w trace.
 static bool trace_maps = false;
 
-NO_ASAN static int dl_strcmp(const char* l, const char* r) {
+NO_ASAN __NO_SAFESTACK static int dl_strcmp(const char* l, const char* r) {
   for (; *l == *r && *l; l++, r++)
     ;
   return *(unsigned char*)l - *(unsigned char*)r;
@@ -168,7 +168,7 @@ NO_ASAN static int dl_strcmp(const char* l, const char* r) {
 // __builtin_trap() documented to never return. We don't want the compiler to
 // optimize later code away because it assumes the trap will never be returned
 // from.
-static void debug_break(void) {
+ __NO_SAFESTACK static void debug_break(void) {
 #if defined(__x86_64__)
   __asm__("int3");
 #elif defined(__aarch64__)
@@ -1063,7 +1063,7 @@ __NO_SAFESTACK NO_ASAN static void decode_dyn(struct dso* p) {
     p->versym = laddr(p, *dyn);
 }
 
-static size_t count_syms(struct dso* p) {
+ __NO_SAFESTACK static size_t count_syms(struct dso* p) {
   if (p->hashtab)
     return p->hashtab[1];
 
@@ -1490,9 +1490,15 @@ void __libc_start_init(void) {
   do_init_fini(tail);
 }
 
-static void dl_debug_state(void) {}
-
-weak_alias(dl_debug_state, _dl_debug_state);
+// This function exists just to have a breakpoint set on its entry point.
+// Define it in assembly as a single return instruction to avoid any ABI
+// interactions.
+void _dl_debug_state(void);
+__asm__(".pushsection .text._dl_debug_state,\"ax\",%progbits\n"
+        ".type _dl_debug_state,%function\n"
+        "_dl_debug_state: ret\n"
+        ".size _dl_debug_state, . - _dl_debug_state\n"
+        ".popsection");
 
 __attribute__((__visibility__("hidden"))) void* __tls_get_new(size_t* v) {
   pthread_t self = __pthread_self();
@@ -1784,7 +1790,7 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, const char* argv0, const 
   atomic_init(&unlogged_tail, (uintptr_t)tail);
 
   debug.r_version = 1;
-  debug.r_brk = (uintptr_t)dl_debug_state;
+  debug.r_brk = (uintptr_t)&_dl_debug_state;
   debug.r_map = &head->l_map;
   debug.r_ldbase = ldso.l_map.l_addr;
   debug.r_state = 0;
