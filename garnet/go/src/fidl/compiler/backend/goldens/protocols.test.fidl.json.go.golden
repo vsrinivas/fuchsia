@@ -69,9 +69,21 @@ func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetResponse(response WithErrorSy
 	u.Response = response
 }
 
+func WithErrorSyntaxErrorAsPrimitiveResultWithResponse(response WithErrorSyntaxErrorAsPrimitiveResponse) WithErrorSyntaxErrorAsPrimitiveResult {
+	var _u WithErrorSyntaxErrorAsPrimitiveResult
+	_u.SetResponse(response)
+	return _u
+}
+
 func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetErr(err uint32) {
 	u.WithErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultErr
 	u.Err = err
+}
+
+func WithErrorSyntaxErrorAsPrimitiveResultWithErr(err uint32) WithErrorSyntaxErrorAsPrimitiveResult {
+	var _u WithErrorSyntaxErrorAsPrimitiveResult
+	_u.SetErr(err)
+	return _u
 }
 type WithErrorSyntaxErrorAsEnumResultTag uint32
 const (
@@ -96,9 +108,21 @@ func (u *WithErrorSyntaxErrorAsEnumResult) SetResponse(response WithErrorSyntaxE
 	u.Response = response
 }
 
+func WithErrorSyntaxErrorAsEnumResultWithResponse(response WithErrorSyntaxErrorAsEnumResponse) WithErrorSyntaxErrorAsEnumResult {
+	var _u WithErrorSyntaxErrorAsEnumResult
+	_u.SetResponse(response)
+	return _u
+}
+
 func (u *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
 	u.WithErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultErr
 	u.Err = err
+}
+
+func WithErrorSyntaxErrorAsEnumResultWithErr(err ErrorEnun) WithErrorSyntaxErrorAsEnumResult {
+	var _u WithErrorSyntaxErrorAsEnumResult
+	_u.SetErr(err)
+	return _u
 }
 const (
 	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint64 = 0x1e03f87500000000

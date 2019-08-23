@@ -55,6 +55,12 @@ func (_m *{{ $.Name }}) Set{{ .Name }}({{ .PrivateName }} {{ .Type }}) {
 	_m.{{ $.TagName }} = {{ $.Name }}{{ .Name }}
 	_m.{{ .Name }} = {{ .PrivateName }}
 }
+
+func {{ $.Name }}With{{ .Name }}({{ .PrivateName }} {{ .Type }}) {{ $.Name }} {
+	var _u {{ $.Name }}
+	_u.Set{{ .Name }}({{ .PrivateName }})
+	return _u
+}
 {{- end }}
 
 {{/* Note that there is no SetUnknownData() function. If you really need to set the I_unknownData

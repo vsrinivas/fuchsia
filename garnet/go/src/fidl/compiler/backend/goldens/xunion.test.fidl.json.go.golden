@@ -56,9 +56,21 @@ func (_m *OlderSimpleUnion) SetI(i int64) {
 	_m.I = i
 }
 
+func OlderSimpleUnionWithI(i int64) OlderSimpleUnion {
+	var _u OlderSimpleUnion
+	_u.SetI(i)
+	return _u
+}
+
 func (_m *OlderSimpleUnion) SetF(f float32) {
 	_m.OlderSimpleUnionTag = OlderSimpleUnionF
 	_m.F = f
+}
+
+func OlderSimpleUnionWithF(f float32) OlderSimpleUnion {
+	var _u OlderSimpleUnion
+	_u.SetF(f)
+	return _u
 }
 
 
@@ -101,14 +113,32 @@ func (_m *NewerSimpleUnion) SetI(i int64) {
 	_m.I = i
 }
 
+func NewerSimpleUnionWithI(i int64) NewerSimpleUnion {
+	var _u NewerSimpleUnion
+	_u.SetI(i)
+	return _u
+}
+
 func (_m *NewerSimpleUnion) SetS(s string) {
 	_m.NewerSimpleUnionTag = NewerSimpleUnionS
 	_m.S = s
 }
 
+func NewerSimpleUnionWithS(s string) NewerSimpleUnion {
+	var _u NewerSimpleUnion
+	_u.SetS(s)
+	return _u
+}
+
 func (_m *NewerSimpleUnion) SetV(v []string) {
 	_m.NewerSimpleUnionTag = NewerSimpleUnionV
 	_m.V = v
+}
+
+func NewerSimpleUnionWithV(v []string) NewerSimpleUnion {
+	var _u NewerSimpleUnion
+	_u.SetV(v)
+	return _u
 }
 
 
@@ -141,14 +171,32 @@ func (_m *StrictSimpleXUnion) SetI(i int32) {
 	_m.I = i
 }
 
+func StrictSimpleXUnionWithI(i int32) StrictSimpleXUnion {
+	var _u StrictSimpleXUnion
+	_u.SetI(i)
+	return _u
+}
+
 func (_m *StrictSimpleXUnion) SetF(f float32) {
 	_m.StrictSimpleXUnionTag = StrictSimpleXUnionF
 	_m.F = f
 }
 
+func StrictSimpleXUnionWithF(f float32) StrictSimpleXUnion {
+	var _u StrictSimpleXUnion
+	_u.SetF(f)
+	return _u
+}
+
 func (_m *StrictSimpleXUnion) SetS(s string) {
 	_m.StrictSimpleXUnionTag = StrictSimpleXUnionS
 	_m.S = s
+}
+
+func StrictSimpleXUnionWithS(s string) StrictSimpleXUnion {
+	var _u StrictSimpleXUnion
+	_u.SetS(s)
+	return _u
 }
 
 
@@ -183,6 +231,12 @@ func (_m *XUnionContainingEmptyStruct) SetEmpty(empty Empty) {
 	_m.Empty = empty
 }
 
+func XUnionContainingEmptyStructWithEmpty(empty Empty) XUnionContainingEmptyStruct {
+	var _u XUnionContainingEmptyStruct
+	_u.SetEmpty(empty)
+	return _u
+}
+
 
 type StrictBoundedXUnionTag uint32
 const (
@@ -207,6 +261,12 @@ func (_m *StrictBoundedXUnion) Ordinal() uint32 {
 func (_m *StrictBoundedXUnion) SetV(v []uint8) {
 	_m.StrictBoundedXUnionTag = StrictBoundedXUnionV
 	_m.V = v
+}
+
+func StrictBoundedXUnionWithV(v []uint8) StrictBoundedXUnion {
+	var _u StrictBoundedXUnion
+	_u.SetV(v)
+	return _u
 }
 
 

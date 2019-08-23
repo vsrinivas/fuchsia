@@ -62,6 +62,12 @@ func (u *Union) SetField(field int32) {
 	u.Field = field
 }
 
+func UnionWithField(field int32) Union {
+	var _u Union
+	_u.SetField(field)
+	return _u
+}
+
 // table comment #1
 //
 // table comment #3

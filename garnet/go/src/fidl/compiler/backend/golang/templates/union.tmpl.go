@@ -37,6 +37,12 @@ func (u *{{ $.Name }}) Set{{ .Name }}({{ .PrivateName }} {{ .Type }}) {
 	u.{{ $.TagName }} = {{ $.Name }}{{ .Name }}
 	u.{{ .Name }} = {{ .PrivateName }}
 }
+
+func {{ $.Name }}With{{ .Name }}({{ .PrivateName }} {{ .Type }}) {{ $.Name }} {
+	var _u {{ $.Name }}
+	_u.Set{{ .Name }}({{ .PrivateName }})
+	return _u
+}
 {{- end }}
 
 {{- end -}}

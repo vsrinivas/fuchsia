@@ -31,12 +31,30 @@ func (u *Union) SetPrimitive(primitive int32) {
 	u.Primitive = primitive
 }
 
+func UnionWithPrimitive(primitive int32) Union {
+	var _u Union
+	_u.SetPrimitive(primitive)
+	return _u
+}
+
 func (u *Union) SetStringNeedsConstructor(stringNeedsConstructor string) {
 	u.UnionTag = UnionStringNeedsConstructor
 	u.StringNeedsConstructor = stringNeedsConstructor
 }
 
+func UnionWithStringNeedsConstructor(stringNeedsConstructor string) Union {
+	var _u Union
+	_u.SetStringNeedsConstructor(stringNeedsConstructor)
+	return _u
+}
+
 func (u *Union) SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) {
 	u.UnionTag = UnionVectorStringAlsoNeedsConstructor
 	u.VectorStringAlsoNeedsConstructor = vectorStringAlsoNeedsConstructor
+}
+
+func UnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor []string) Union {
+	var _u Union
+	_u.SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor)
+	return _u
 }

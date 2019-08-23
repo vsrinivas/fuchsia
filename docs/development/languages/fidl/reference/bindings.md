@@ -12,7 +12,7 @@ interpreted as described in [RFC2119][RFC2119].
 Items described in this section **MUST** be met for bindings to be considered
 conformant.
 
-### Generated code indication
+### Generated Code Indication
 
 A comment must be placed at the top of machine-generated code to indicate it is
 machine generated.
@@ -38,7 +38,7 @@ _TODO_
 Items described in this section **MAY** be met for bindings to be considered
 conformant.
 
-### Bits support
+### Bits Support
 
 It is RECOMMENDED to support the following operators over generated values:
 
@@ -62,6 +62,32 @@ invalid bits value (or risk a non-obvious translation of their meaning), e.g.:
 
 * bitwise shifts, i.e `<<` or `>>`
 * bitwise unsigned shift, i.e `>>>`
+
+### Union Support
+
+_This section applies to flexible unions as well as the soon to be deprecated
+unions_
+
+For languages without union types and literals for these, it is RECOMMENDED to
+support factory methods for constructing new unions/xunions given a value for
+one of the possible variants. For example, in a C like language, this would
+allow replacing code like:
+
+```C
+my_union_t foo;
+foo.set_variant(bar);
+do_stuff(foo);
+```
+
+with something like:
+
+```C
+do_stuff(my_union_with_variant(bar));
+```
+
+Examples of this for the
+[HLCPP](https://fuchsia-review.googlesource.com/c/fuchsia/+/309246/) and
+[Go](https://fuchsia-review.googlesource.com/c/fuchsia/+/313205/) bindings.
 
 ## Related Documents
 
