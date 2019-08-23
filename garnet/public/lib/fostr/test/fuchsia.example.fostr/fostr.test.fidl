@@ -6,7 +6,30 @@ bits ExampleBits {
     C = 4;
 };
 
+enum ExampleEnum {
+    FOO = 1;
+    BAR_BAZ = 2;
+};
+
+struct MyStruct {
+    vector<int32>:10? nums;
+    string foo;
+    MyXunion bar;
+};
+
 xunion MyXunion {
     int32 i;
     bool b;
+};
+
+union MyUnion {
+    int32 i;
+    bool b;
+};
+
+table SimpleTable {
+    1: bool x;
+    2: reserved;
+    3: MyStruct y;
+    4: int32 z;
 };

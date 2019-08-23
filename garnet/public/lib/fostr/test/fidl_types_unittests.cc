@@ -9,7 +9,9 @@
 
 #include <sstream>
 
+#include "fuchsia/example/fostr/cpp/fidl.h"
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/vector.h"
 #include "lib/fostr/fidl_types.h"
 #include "lib/fsl/handles/object_info.h"
 
@@ -35,6 +37,17 @@ std::istream& operator>>(std::istream& is, const std::string& value) {
   is.peek();
 
   return is;
+}
+
+TEST(FidlTypes, UnionEmpty) {
+  fuchsia::example::fostr::MyUnion u;
+  EXPECT_FIDL_TO_FORMAT_AS(u, "<invalid union>");
+}
+
+TEST(FidlTypes, UnionSet) {
+  fuchsia::example::fostr::MyUnion u;
+  u.set_i(5);
+  EXPECT_FIDL_TO_FORMAT_AS(u, "i 5");
 }
 
 // Tests an empty xunion.
@@ -513,5 +526,49 @@ TEST(FidlTypes, BitsFormatting) {
   EXPECT_FIDL_TO_FORMAT_AS(~ExampleBits::C, "a|b");
 }
 
+TEST(FidlTypes, EnumFormatting) {
+  using namespace fuchsia::example::fostr;
+
+  EXPECT_FIDL_TO_FORMAT_AS(ExampleEnum::FOO, "foo");
+  EXPECT_FIDL_TO_FORMAT_AS(ExampleEnum::BAR_BAZ, "bar baz");
+}
+
+TEST(FidlTypes, StructFormatting) {
+  using namespace fuchsia::example::fostr;
+
+  MyXunion xu;
+  xu.set_b(false);
+
+  fidl::VectorPtr<int32_t> nums;
+  for (int32_t i = 0; i < 3; ++i) {
+    nums->push_back(static_cast<int32_t>(i));
+  }
+
+  MyStruct my_struct;
+  my_struct.nums = std::move(nums);
+  my_struct.foo = "hello there";
+  my_struct.bar = std::move(xu);
+
+  EXPECT_FIDL_TO_FORMAT_AS(my_struct, R"(
+    nums: 
+    [0] 0
+    [1] 1
+    [2] 2
+    foo: hello there
+    bar: b 0)");
+}
+
+TEST(FidlTypes, TableFormatting) {
+  using namespace fuchsia::example::fostr;
+
+  SimpleTable table;
+  EXPECT_FIDL_TO_FORMAT_AS(table, "<empty table>");
+
+  table.set_x(false);
+  table.set_z(34);
+  EXPECT_FIDL_TO_FORMAT_AS(table, R"(
+    x: 0
+    z: 34)");
+}
 }  // namespace
 }  // namespace fostr

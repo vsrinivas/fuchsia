@@ -200,15 +200,15 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
   using fidl::operator<<;
-  os << fostr::Indent;
+  os << ::fostr::Indent;
         {{- range .Members }}
           {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-  os << fostr::NewLine << "{{ .Name }}: " << fostr::PrintVector(value.{{ .Name }});
+  os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::PrintVector(value.{{ .Name }});
           {{- else }}
-  os << fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }};
+  os << ::fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }};
           {{- end }}
         {{- end }}
-  return os << fostr::Outdent;
+  return os << ::fostr::Outdent;
 }
     {{- end }}
 {{- end }}
@@ -219,17 +219,22 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
   using fidl::operator<<;
-  os << fostr::Indent;
+  if (value.IsEmpty())
+    return os << "<empty table>";
+
+  os << ::fostr::Indent;
         {{- range .Members }}
+          {{- if not .Reserved }}
   if (value.has_{{ .Name }}()) {
-          {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-    os << fostr::NewLine << "{{ .Name }}: " << fostr::PrintVector(value.{{ .Name }}());
-          {{- else }}
-    os << fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }}();
-          {{- end }}
+            {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
+    os << ::fostr::NewLine << "{{ .Name }}: " << ::fostr::PrintVector(value.{{ .Name }}());
+            {{- else }}
+    os << ::fostr::NewLine << "{{ .Name }}: " << value.{{ .Name }}();
+            {{- end }}
   }
+          {{- end }}
         {{- end }}
-  return os << fostr::Outdent;
+  return os << ::fostr::Outdent;
 }
     {{- end }}
 {{- end }}
@@ -245,7 +250,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- range .Members }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
           {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-      return os << "{{ .Name }} " << fostr::PrintVector(value.{{ .Name }}());
+      return os << "{{ .Name }} " << ::fostr::PrintVector(value.{{ .Name }}());
           {{- else }}
       return os << "{{ .Name }} " << value.{{ .Name }}();
           {{- end }}
@@ -270,7 +275,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
         {{- range .Members }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
           {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
-      return os << "{{ .Name }} " << fostr::PrintVector(value.{{ .Name }}());
+      return os << "{{ .Name }} " << ::fostr::PrintVector(value.{{ .Name }}());
           {{- else }}
       return os << "{{ .Name }} " << value.{{ .Name }}();
           {{- end }}
