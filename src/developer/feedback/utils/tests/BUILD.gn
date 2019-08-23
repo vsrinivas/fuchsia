@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":feedback_utils_tests",
+  ]
+}
+
+test_package("feedback_utils_tests") {
+  tests = [
+    {
+      name = "archive_unittest"
+    },
+  ]
+
+  resources = [
+    # needed for archive_unittest
+    {
+      path = "resources/test_data.zip"
+      dest = "test_data.zip"
+    },
+  ]
+
+  deps = [
+    ":archive_unittest",
+  ]
+}
+
+executable("archive_unittest") {
+  testonly = true
+
+  sources = [
+    "archive_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/feedback/testing:gmatchers",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/utils:archive",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
