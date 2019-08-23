@@ -76,7 +76,7 @@ bits EventConfigFlags : uint32 {
     COLLECT_USER = 0x2;
 
     /// Collect aspace+pc values.
-    COLLECT_PC   = 0x4;
+    COLLECT_PC = 0x4;
 
     /// If set for an event then the event is used as the "timebase": data
     /// for events with a zero rate is collected when data for the timebase
