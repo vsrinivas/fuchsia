@@ -101,11 +101,12 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
  public:
   LoadStoryRuntimeCall(StoryProviderImpl* const story_provider_impl,
                        SessionStorage* const session_storage, fidl::StringPtr story_id,
-                       ResultCall result_call)
+                       inspect::Node* root_node, ResultCall result_call)
       : Operation("StoryProviderImpl::LoadStoryRuntimeCall", std::move(result_call)),
         story_provider_impl_(story_provider_impl),
         session_storage_(session_storage),
-        story_id_(story_id) {}
+        story_id_(story_id),
+        session_inspect_node_(root_node) {}
 
  private:
   void Run() override {
@@ -165,6 +166,8 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
                 story_provider->NotifyStoryStateChange(id);
               });
 
+          container.story_node = session_inspect_node_->CreateChild(story_id_.value_or(""));
+
           auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_,
                                                                             std::move(container));
           story_runtime_container_ = &it.first->second;
@@ -174,6 +177,8 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
   StoryProviderImpl* const story_provider_impl_;  // not owned
   SessionStorage* const session_storage_;         // not owned
   const fidl::StringPtr story_id_;
+
+  inspect::Node* session_inspect_node_;
 
   // Return value.
   StoryRuntimeContainer* story_runtime_container_ = nullptr;
@@ -236,10 +241,12 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
 class StoryProviderImpl::GetStoryEntityProviderCall : public Operation<StoryEntityProvider*> {
  public:
   GetStoryEntityProviderCall(StoryProviderImpl* const story_provider_impl,
-                             const std::string& story_id, ResultCall result_call)
+                             const std::string& story_id, inspect::Node* root_node,
+                             ResultCall result_call)
       : Operation("StoryProviderImpl::GetStoryEntityProviderCall", std::move(result_call)),
         story_provider_impl_(story_provider_impl),
-        story_id_(story_id) {}
+        story_id_(story_id),
+        session_inspect_node_(root_node) {}
 
  private:
   void Run() override {
@@ -247,7 +254,7 @@ class StoryProviderImpl::GetStoryEntityProviderCall : public Operation<StoryEnti
 
     operation_queue_.Add(std::make_unique<LoadStoryRuntimeCall>(
         story_provider_impl_, story_provider_impl_->session_storage_, story_id_,
-        [this, flow](StoryRuntimeContainer* story_controller_container) {
+        session_inspect_node_, [this, flow](StoryRuntimeContainer* story_controller_container) {
           if (story_controller_container) {
             story_entity_provider_ = story_controller_container->entity_provider.get();
           }
@@ -264,6 +271,8 @@ class StoryProviderImpl::GetStoryEntityProviderCall : public Operation<StoryEnti
   OperationQueue operation_queue_;
 
   std::string story_id_;
+
+  inspect::Node* session_inspect_node_;
 };
 
 StoryProviderImpl::StoryProviderImpl(
@@ -278,7 +287,8 @@ StoryProviderImpl::StoryProviderImpl(
     EntityProviderRunner* const entity_provider_runner,
     modular::ModuleFacetReader* const module_facet_reader,
     PresentationProvider* const presentation_provider,
-    fuchsia::ui::scenic::SnapshotPtr view_snapshot, const bool enable_story_shell_preload)
+    fuchsia::ui::scenic::SnapshotPtr view_snapshot, const bool enable_story_shell_preload,
+    inspect::Node* root_node)
     : user_environment_(user_environment),
       session_storage_(session_storage),
       device_id_(std::move(device_id)),
@@ -295,6 +305,7 @@ StoryProviderImpl::StoryProviderImpl(
       focus_provider_(std::move(focus_provider)),
       focus_watcher_binding_(this),
       snapshotter_(std::move(view_snapshot)),
+      session_inspect_node_(root_node),
       weak_factory_(this) {
   session_storage_->set_on_story_deleted(
       [weak_ptr = weak_factory_.GetWeakPtr()](fidl::StringPtr story_id) {
@@ -551,7 +562,7 @@ void StoryProviderImpl::NotifyStoryActivityChange(
 void StoryProviderImpl::GetController(
     std::string story_id, fidl::InterfaceRequest<fuchsia::modular::StoryController> request) {
   operation_queue_.Add(std::make_unique<LoadStoryRuntimeCall>(
-      this, session_storage_, story_id,
+      this, session_storage_, story_id, session_inspect_node_,
       [request = std::move(request)](StoryRuntimeContainer* story_controller_container) mutable {
         if (story_controller_container) {
           story_controller_container->controller_impl->Connect(std::move(request));
@@ -749,7 +760,7 @@ void StoryProviderImpl::CreateEntity(
     fidl::InterfaceRequest<fuchsia::modular::Entity> entity_request,
     fit::function<void(std::string /* entity_reference */)> callback) {
   operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
-      this, story_id,
+      this, story_id, session_inspect_node_,
       [this, type, story_id, data = std::move(data), callback = std::move(callback),
        entity_request = std::move(entity_request)](StoryEntityProvider* entity_provider) mutable {
         // Once the entity provider for the given story is available, create
@@ -782,7 +793,7 @@ void StoryProviderImpl::ConnectToStoryEntityProvider(
     const std::string& story_id,
     fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) {
   operation_queue_.Add(std::make_unique<GetStoryEntityProviderCall>(
-      this, story_id,
+      this, story_id, session_inspect_node_,
       [entity_provider_request =
            std::move(entity_provider_request)](StoryEntityProvider* entity_provider) mutable {
         entity_provider->Connect(std::move(entity_provider_request));

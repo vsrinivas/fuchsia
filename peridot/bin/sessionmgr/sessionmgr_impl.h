@@ -185,7 +185,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   fuchsia::modular::session::SessionmgrConfig config_;
 
-  inspect::Node node_;
+  inspect::Node inspect_root_node_;
 
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 

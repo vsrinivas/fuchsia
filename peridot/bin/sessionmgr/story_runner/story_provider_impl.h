@@ -20,6 +20,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <map>
 #include <memory>
@@ -63,7 +64,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
                     EntityProviderRunner* entity_provider_runner,
                     modular::ModuleFacetReader* module_facet_reader,
                     PresentationProvider* presentation_provider,
-                    fuchsia::ui::scenic::SnapshotPtr view_snapshot, bool test);
+                    fuchsia::ui::scenic::SnapshotPtr view_snapshot, bool enable_story_shell_preload,
+                    inspect::Node* root_node);
 
   ~StoryProviderImpl() override;
 
@@ -295,6 +297,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
     std::unique_ptr<StoryStorage> storage;
     std::unique_ptr<StoryEntityProvider> entity_provider;
     fuchsia::modular::internal::StoryDataPtr current_data;
+
+    inspect::Node story_node;
   };
   std::map<std::string, StoryRuntimeContainer> story_runtime_containers_;
 
@@ -316,6 +320,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
 
   // Service provided by scenic to take snapshots of stories.
   fuchsia::ui::scenic::SnapshotPtr snapshotter_;
+
+  inspect::Node* session_inspect_node_;
 
   // Cached mapping of story ID's to the story view koids. Used as a token to
   // take snapshots of stories. This is a temporary hack because koids are

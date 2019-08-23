@@ -179,7 +179,7 @@ SessionmgrImpl::SessionmgrImpl(sys::ComponentContext* const component_context,
                                inspect::Node node_object)
     : component_context_(component_context),
       config_(std::move(config)),
-      node_(std::move(node_object)),
+      inspect_root_node_(std::move(node_object)),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner"),
       weak_ptr_factory_(this) {
@@ -609,8 +609,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   // outlive the stories which contain modules that are connected to those
   // agents.
 
-  session_storage_ = std::make_unique<SessionStorage>(
-      ledger_client_.get(), fuchsia::ledger::PageId());
+  session_storage_ =
+      std::make_unique<SessionStorage>(ledger_client_.get(), fuchsia::ledger::PageId());
 
   module_facet_reader_.reset(
       new ModuleFacetReaderImpl(component_context_->svc()->Connect<fuchsia::sys::Loader>()));
@@ -622,7 +622,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       discover_registry_service_.get(), module_resolver_service_.get(),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
       component_context_->svc()->Connect<fuchsia::ui::scenic::Snapshot>(),
-      (config_.enable_story_shell_preload())));
+      (config_.enable_story_shell_preload()), &inspect_root_node_));
   story_provider_impl_->Connect(std::move(story_provider_request));
 
   AtEnd(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
