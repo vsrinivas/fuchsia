@@ -205,5 +205,31 @@ TEST(AutoCleanableMap, Clear) {
   EXPECT_TRUE(map.empty());
 }
 
+TEST(AutoCleanableMap, OperatorSquareBracket) {
+  AutoCleanableMap<int, Cleanable> map;
+  bool empty_called = false;
+  map.set_on_empty([&empty_called] { empty_called = true; });
+  int key = 0;
+
+  EXPECT_EQ(map.find(key), map.end());
+
+  // An object created by a default constructor should be placed in |map|.
+  EXPECT_EQ(map[key].id, 0);
+  EXPECT_NE(map.find(key), map.end());
+
+  // A new value should be assigned to the member variable of the existing object in |map|, that is
+  // returned by operator[].
+  map[key].id = 1;
+  EXPECT_EQ(map[key].id, 1);
+
+  EXPECT_FALSE(map.empty());
+
+  // The object should have on_empty_callback set.
+  map[key].Clean();
+
+  EXPECT_TRUE(empty_called);
+  EXPECT_TRUE(map.empty());
+}
+
 }  // namespace
 }  // namespace callback
