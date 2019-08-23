@@ -70,6 +70,8 @@ fbl::String RootName(const fbl::String& path) {
 
 std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
                                             fbl::unique_fd& data_sink_dir_fd, const char* path) {
+  zx_status_t status;
+
   if (mkdirat(data_sink_dir_fd.get(), data.sink_name.c_str(), 0777) != 0 && errno != EEXIST) {
     fprintf(stderr, "FAILURE: cannot mkdir \"%s\" for data-sink: %s\n", data.sink_name.c_str(),
             strerror(errno));
@@ -83,19 +85,39 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
     return {};
   }
 
-  fzl::VmoMapper mapper;
-  zx_status_t status = mapper.Map(data.file_data, 0, 0, ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    fprintf(stderr, "FAILURE: Cannot map VMO for data-sink \"%s\": %s\n", data.sink_name.c_str(),
-            zx_status_get_string(status));
-    return {};
-  }
-
   zx_info_handle_basic_t info;
   status = data.file_data.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     return {};
   }
+
+  char name[ZX_MAX_NAME_LEN];
+  status = data.file_data.get_property(ZX_PROP_NAME, name, sizeof(name));
+  if (status != ZX_OK || name[0] == '\0') {
+    snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
+  }
+
+  uint64_t size;
+  status = data.file_data.get_size(&size);
+  if (status != ZX_OK) {
+      fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
+              name, data.sink_name.c_str(), zx_status_get_string(status));
+      return {};
+  }
+
+  fzl::VmoMapper mapper;
+  if (size > 0) {
+    zx_status_t status = mapper.Map(data.file_data, 0, size, ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+      fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n",
+              name, data.sink_name.c_str(), zx_status_get_string(status));
+      return {};
+    }
+  } else {
+    fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n",
+            name, data.sink_name.c_str());
+  }
+
   char filename[ZX_MAX_NAME_LEN];
   snprintf(filename, sizeof(filename), "%s.%" PRIu64, data.sink_name.c_str(), info.koid);
 
@@ -111,7 +133,7 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
   auto dump_file = JoinPath(&path[i], JoinPath(data.sink_name, filename));
 
   auto* buf = reinterpret_cast<uint8_t*>(mapper.start());
-  ssize_t count = mapper.size();
+  ssize_t count = size;
   while (count > 0) {
     ssize_t len = write(fd.get(), buf, count);
     if (len == -1) {
@@ -121,15 +143,6 @@ std::optional<DumpFile> ProcessDataSinkDump(debugdata::DataSinkDump& data,
     }
     count -= len;
     buf += len;
-  }
-
-  char name[ZX_MAX_NAME_LEN];
-  status = data.file_data.get_property(ZX_PROP_NAME, name, sizeof(name));
-  if (status != ZX_OK) {
-    return {};
-  }
-  if (name[0] == '\0') {
-    snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
   }
 
   return DumpFile{name, dump_file.c_str()};
