@@ -142,5 +142,5 @@ TEST(Run, ExposesDebugDataService) {
 
   // our test component might try to connect to real debugData service when profiling is on, so to
   // be safe test that DebugData was called atleast once.
-  EXPECT_GE(1u, debugdata.call_count());
+  EXPECT_GE(debugdata.call_count(), 1u);
 }

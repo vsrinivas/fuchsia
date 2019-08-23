@@ -239,12 +239,18 @@ int main(int argc, const char** argv) {
 
   launcher->CreateComponent(std::move(parse_result.launch_info), controller.NewRequest());
 
-  controller.events().OnTerminated = [&program_name](int64_t return_code,
-                                                     TerminationReason termination_reason) {
+  controller.events().OnTerminated = [&program_name, &loop](int64_t return_code,
+                                                            TerminationReason termination_reason) {
     if (termination_reason != TerminationReason::EXITED) {
       fprintf(stderr, "%s: %s\n", program_name.c_str(),
               sys::HumanReadableTerminationReason(termination_reason).c_str());
     }
+
+    // Wait and process all messages in the queue.
+    loop.Quit();
+    loop.ResetQuit();
+    loop.RunUntilIdle();
+
     zx_process_exit(return_code);
   };
 
