@@ -19,6 +19,8 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
+#include "src/developer/feedback/testing/gmatchers.h"
+#include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -28,26 +30,7 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-template <typename ResultListenerT>
-bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual, const std::string& expected,
-                         ResultListenerT* result_listener) {
-  std::string actual_value;
-  if (!fsl::StringFromVmo(actual, &actual_value)) {
-    *result_listener << "Cannot parse actual VMO to string";
-    return false;
-  }
-
-  if (actual_value.compare(expected) != 0) {
-    return false;
-  }
-
-  return true;
-}
-
-// Returns true if gMock str(|arg|) matches |expected|.
-MATCHER_P(MatchesStringBuffer, expected, "'" + std::string(expected) + "'") {
-  return DoStringBufferMatch(arg, expected, result_listener);
-}
+using ::feedback::MatchesStringBuffer;
 
 class CollectSystemLogTest : public gtest::TestLoopFixture {
  public:
@@ -256,18 +239,6 @@ TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
 
 }  // namespace
 }  // namespace feedback
-
-namespace mem {
-
-// Pretty-prints string VMOs in gTest matchers instead of the default byte string in case of failed
-// expectations.
-void PrintTo(const Buffer& vmo, std::ostream* os) {
-  std::string value;
-  FXL_CHECK(fsl::StringFromVmo(vmo, &value));
-  *os << "'" << value << "'";
-}
-
-}  // namespace mem
 }  // namespace fuchsia
 
 int main(int argc, char** argv) {

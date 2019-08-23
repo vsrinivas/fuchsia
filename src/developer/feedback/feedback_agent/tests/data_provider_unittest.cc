@@ -7,8 +7,6 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
-#include <lib/fostr/fidl/fuchsia/mem/formatting.h>
-#include <lib/fostr/indent.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
@@ -22,7 +20,6 @@
 #include <zircon/errors.h>
 
 #include <memory>
-#include <ostream>
 #include <set>
 #include <string>
 #include <vector>
@@ -31,6 +28,8 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
+#include "src/developer/feedback/testing/gmatchers.h"
+#include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -42,6 +41,9 @@
 namespace fuchsia {
 namespace feedback {
 namespace {
+
+using ::feedback::MatchesAnnotation;
+using ::feedback::MatchesAttachment;
 
 const std::set<std::string> kDefaultAnnotations = {
     "build.board", "build.latest-commit-date", "build.product", "build.version",
@@ -122,62 +124,6 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
 // Returns true if gMock |arg| matches |expected|, assuming two GetScreenshotResponse objects.
 MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expected.get())) {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
-}
-
-// Compares two Attachment objects.
-template <typename ResultListenerT>
-bool DoAttachmentMatch(const Attachment& actual, const std::string& expected_key,
-                       const std::string& expected_value, ResultListenerT* result_listener) {
-  if (actual.key != expected_key) {
-    *result_listener << "Expected key " << expected_key << ", got " << actual.key;
-    return false;
-  }
-
-  std::string actual_value;
-  if (!fsl::StringFromVmo(actual.value, &actual_value)) {
-    *result_listener << "Cannot parse actual VMO for key " << actual.key << " to string";
-    return false;
-  }
-
-  if (actual_value.compare(expected_value) != 0) {
-    *result_listener << "Expected value " << expected_value << ", got " << actual_value;
-    return false;
-  }
-
-  return true;
-}
-
-// Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value) matches
-// |expected_value|, assuming two Attachment objects.
-MATCHER_P2(MatchesAttachment, expected_key, expected_value,
-           "matches an attachment with key '" + std::string(expected_key) + "' and value '" +
-               std::string(expected_value) + "'") {
-  return DoAttachmentMatch(arg, expected_key, expected_value, result_listener);
-}
-
-// Compares two Annotation objects.
-template <typename ResultListenerT>
-bool DoAnnotationMatch(const Annotation& actual, const std::string& expected_key,
-                       const std::string& expected_value, ResultListenerT* result_listener) {
-  if (actual.key != expected_key) {
-    *result_listener << "Expected key " << expected_key << ", got " << actual.key;
-    return false;
-  }
-
-  if (actual.value.compare(expected_value) != 0) {
-    *result_listener << "Expected value " << expected_value << ", got " << actual.value;
-    return false;
-  }
-
-  return true;
-}
-
-// Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value) matches
-// |expected_value|, assuming two Annotation objects.
-MATCHER_P2(MatchesAnnotation, expected_key, expected_value,
-           "matches an annotation with key '" + std::string(expected_key) + "' and value '" +
-               std::string(expected_value) + "'") {
-  return DoAnnotationMatch(arg, expected_key, expected_value, result_listener);
 }
 
 // Unit-tests the implementation of the fuchsia.feedback.DataProvider FIDL interface.
@@ -640,26 +586,6 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
 }
 
 }  // namespace
-
-// Pretty-prints Attachment in gTest matchers instead of the default byte string in case of failed
-// expectations.
-void PrintTo(const Attachment& attachment, std::ostream* os) {
-  *os << fostr::Indent;
-  *os << fostr::NewLine << "key: " << attachment.key;
-  *os << fostr::NewLine << "value: ";
-  std::string value;
-  if (fsl::StringFromVmo(attachment.value, &value)) {
-    if (value.size() < 1024) {
-      *os << "'" << value << "'";
-    } else {
-      *os << "(string too long)" << attachment.value;
-    }
-  } else {
-    *os << attachment.value;
-  }
-  *os << fostr::Outdent;
-}
-
 }  // namespace feedback
 }  // namespace fuchsia
 

@@ -40,6 +40,7 @@ executable("reboot_log_handler_unittest") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/boot_log_checker:src",
+    "//src/developer/feedback/testing:gpretty_printers",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",

@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
+#include "src/developer/feedback/testing/gmatchers.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -15,11 +16,7 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-// Returns true if gMock |arg|.key matches |expected_key|.
-MATCHER_P(MatchesKey, expected_key,
-          "matches an element with key '" + std::string(expected_key) + "'") {
-  return arg.key == expected_key;
-}
+using ::feedback::MatchesKey;
 
 // Smoke-tests the real environment service for the fuchsia.feedback.DataProvider FIDL interface,
 // connecting through FIDL.

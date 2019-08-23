@@ -15,6 +15,7 @@
 
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_network_reachability_provider.h"
+#include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -215,28 +216,6 @@ TEST_F(RebootLogHandlerTest, Fail_CrashReporterFailsToFile) {
 
 }  // namespace
 }  // namespace feedback
-
-namespace fit {
-
-// Pretty-prints fit::result_state in gTest matchers instead of the default byte string in case of
-// failed expectations.
-void PrintTo(const fit::result_state& state, std::ostream* os) {
-  std::string state_str;
-  switch (state) {
-    case fit::result_state::pending:
-      state_str = "PENDING";
-      break;
-    case fit::result_state::ok:
-      state_str = "OK";
-      break;
-    case fit::result_state::error:
-      state_str = "ERROR";
-      break;
-  }
-  *os << state_str;
-}
-
-}  // namespace fit
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

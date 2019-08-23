@@ -20,6 +20,7 @@
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
+#include "src/developer/feedback/testing/gmatchers.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -29,11 +30,7 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-// Returns true if gMock |arg|.key matches |expected_key|.
-MATCHER_P(MatchesKey, expected_key,
-          "matches an element with key '" + std::string(expected_key) + "'") {
-  return arg.key == expected_key;
-}
+using ::feedback::MatchesKey;
 
 class LogListener : public fuchsia::logger::LogListener {
  public:
