@@ -17,16 +17,15 @@ use {
         startup,
     },
     failure::{self, Error},
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl::endpoints::ClientEnd,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
+        DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
     fuchsia_zircon as zx,
     hub_test_hook::*,
-    std::{iter, path::PathBuf, sync::Arc, vec::Vec},
+    std::{path::PathBuf, sync::Arc, vec::Vec},
 };
 
 async fn connect_to_echo_service(hub_proxy: &DirectoryProxy, echo_service_path: String) {
@@ -61,14 +60,8 @@ async fn test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm".to_string();
 
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
-    let mut root_directory = directory::simple::empty();
-    root_directory.open(
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        0,
-        &mut iter::empty(),
-        ServerEnd::<NodeMarker>::new(server_chan.into()),
-    );
-    let hub = Arc::new(Hub::new(root_component_url.clone(), root_directory).unwrap());
+    let hub = Arc::new(Hub::new(root_component_url.clone()).unwrap());
+    hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
     let hub_test_hook = Arc::new(HubTestHook::new());
 
     let params = ModelParams {
@@ -83,7 +76,7 @@ async fn test() -> Result<(), Error> {
         (*model).clone(),
         Arc::new(RealFrameworkServiceHost::new()),
     ));
-    model.hooks.install(Hub::hooks(hub)).await;
+    model.hooks.install(hub.hooks()).await;
     model.hooks.install(vec![Hook::RouteFrameworkCapability(hub_test_hook.clone())]).await;
     model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
 
@@ -98,25 +91,19 @@ async fn test() -> Result<(), Error> {
     // Verify that echo_realm has two children.
     let children_dir_proxy = io_util::open_directory(
         &hub_proxy,
-        &PathBuf::from("self/children"),
+        &PathBuf::from("children"),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
     assert_eq!(vec!["echo_server", "hub_client"], list_directory(&children_dir_proxy).await);
 
     // These args are from hub_client.cml.
-    assert_eq!(
-        "Hippos",
-        read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/0").await
-    );
-    assert_eq!(
-        "rule!",
-        read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/1").await
-    );
+    assert_eq!("Hippos", read_file(&hub_proxy, "children/hub_client/exec/runtime/args/0").await);
+    assert_eq!("rule!", read_file(&hub_proxy, "children/hub_client/exec/runtime/args/1").await);
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let expose_svc_dir = "self/children/echo_server/exec/expose/svc";
+    let expose_svc_dir = "children/echo_server/exec/expose/svc";
     let expose_svc_dir_proxy = io_util::open_directory(
         &hub_proxy,
         &PathBuf::from(expose_svc_dir.clone()),
@@ -125,7 +112,7 @@ async fn test() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(vec![echo_service_name], list_directory(&expose_svc_dir_proxy).await);
 
-    let in_dir = "self/children/hub_client/exec/in";
+    let in_dir = "children/hub_client/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
     let svc_dir_proxy = io_util::open_directory(
         &hub_proxy,

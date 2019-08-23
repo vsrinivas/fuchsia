@@ -10,17 +10,16 @@ use {
         process_launcher::ProcessLauncherService,
     },
     failure::{format_err, Error, ResultExt},
-    fidl::endpoints::{ServerEnd, ServiceMarker},
-    fidl_fuchsia_io::{NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     fuchsia_runtime::HandleType,
-    fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
     fuchsia_zircon as zx,
     futures::prelude::*,
     log::*,
-    std::{iter, path::PathBuf, sync::Arc},
+    std::{path::PathBuf, sync::Arc},
 };
 
 /// Command line arguments that control component_manager's behavior. Use [Arguments::from_args()]
@@ -130,19 +129,13 @@ fn connect_pkg_resolver() -> Result<Option<PackageResolverProxy>, Error> {
 
 /// Installs a Hub if possible.
 pub async fn install_hub_if_possible(model: &Model) -> Result<(), ModelError> {
-    let mut root_directory = directory::simple::empty();
+    let hub = Arc::new(Hub::new(model.root_realm.component_url.clone())?);
+    model.hooks.install(hub.hooks()).await;
     if let Some(out_dir_handle) =
         fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
     {
-        root_directory.open(
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            0,
-            &mut iter::empty(),
-            ServerEnd::<NodeMarker>::new(out_dir_handle.into()),
-        );
+        hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, out_dir_handle.into()).await?;
     };
-    let hub = Arc::new(Hub::new(model.root_realm.component_url.clone(), root_directory)?);
-    model.hooks.install(Hub::hooks(hub)).await;
 
     Ok(())
 }

@@ -20,17 +20,15 @@ use {
         startup,
     },
     failure::{self, Error},
+    fidl::endpoints::ClientEnd,
     fidl::endpoints::ServiceMarker,
-    fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_test::SuiteMarker,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_syslog as syslog,
-    fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
-    fuchsia_zircon as zx,
+    fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::prelude::*,
     log::*,
-    std::{iter, path::PathBuf, process, sync::Arc},
+    std::{path::PathBuf, process, sync::Arc},
 };
 
 /// This is a prototype used with ftf to launch v2 tests.
@@ -56,14 +54,8 @@ async fn main() -> Result<(), Error> {
     let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
 
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
-    let mut root_directory = directory::simple::empty();
-    root_directory.open(
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-        0,
-        &mut iter::empty(),
-        ServerEnd::<NodeMarker>::new(server_chan.into()),
-    );
-    let hub = Arc::new(Hub::new(args.root_component_url.clone(), root_directory).unwrap());
+    let hub = Arc::new(Hub::new(args.root_component_url.clone()).unwrap());
+    hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
     // TODO(fsamuel): It would be nice to refactor some of this code into a helper
     // function to create a Model and install a bunch of default hooks.
     let params = ModelParams {
@@ -77,7 +69,7 @@ async fn main() -> Result<(), Error> {
         (*model).clone(),
         Arc::new(RealFrameworkServiceHost::new()),
     ));
-    model.hooks.install(Hub::hooks(hub)).await;
+    model.hooks.install(hub.hooks()).await;
     model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
 
     match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
@@ -98,7 +90,7 @@ async fn main() -> Result<(), Error> {
     // make sure root component exposes test suite protocol.
     let expose_dir_proxy = io_util::open_directory(
         &hub_proxy,
-        &PathBuf::from("self/exec/expose/svc"),
+        &PathBuf::from("exec/expose/svc"),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");

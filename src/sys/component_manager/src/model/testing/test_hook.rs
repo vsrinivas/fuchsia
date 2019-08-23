@@ -124,7 +124,6 @@ impl TestHook {
             Hook::AddDynamicChild(hook.clone()),
             Hook::RemoveDynamicChild(hook.clone()),
             Hook::BindInstance(hook.clone()),
-            Hook::RouteFrameworkCapability(hook.clone()),
             Hook::StopInstance(hook.clone()),
             Hook::DestroyInstance(hook.clone()),
         ]
@@ -243,17 +242,6 @@ impl AddDynamicChildHook for TestHook {
 impl RemoveDynamicChildHook for TestHook {
     fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.remove_instance(realm.abs_moniker.clone()))
-    }
-}
-
-impl RouteFrameworkCapabilityHook for TestHook {
-    fn on<'a>(
-        &'a self,
-        _realm: Arc<Realm>,
-        _capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(async move { Ok(capability) })
     }
 }
 
