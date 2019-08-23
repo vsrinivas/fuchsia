@@ -5,7 +5,7 @@
 #![allow(warnings)]
 use {fidl_fuchsia_bluetooth, std::fmt};
 
-pub use {adapter_info::*, address::*, bonding_data::*, peer::*};
+pub use {adapter_info::*, address::*, bonding_data::*, peer::*, uuid::*};
 mod adapter_info;
 mod address;
 mod bonding_data;
@@ -14,6 +14,7 @@ pub mod emulator;
 /// Bluetooth LowEnergy types
 pub mod le;
 mod peer;
+mod uuid;
 
 macro_rules! bt_fidl_wrap {
     ($x:ident) => {

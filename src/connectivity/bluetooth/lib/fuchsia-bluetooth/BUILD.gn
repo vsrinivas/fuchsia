@@ -29,6 +29,7 @@ rustc_library("fuchsia-bluetooth") {
     "//sdk/fidl/fuchsia.bluetooth.host:fuchsia.bluetooth.host-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
