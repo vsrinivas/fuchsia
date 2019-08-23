@@ -1806,6 +1806,8 @@ template("driver") {
   # TODO(mcgrathr): Give GN an assert_no_metadata feature for this.
   # Maybe set `output_conversion="empty"` in generated_file().
   action(check_target) {
+    # For prebuilt_dir:
+    import("$zx/public/gn/prebuilt.gni")
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":${driver_target}._build($current_toolchain)" ]
     script = "$zx/public/gn/driver-denylist-check.sh"
@@ -1818,7 +1820,12 @@ template("driver") {
     outputs = [
       "${denylist_file}.stamp",
     ]
-    args = [ driver_label ] + rebase_path(sources + outputs, root_build_dir)
+    args = [ driver_label ] +
+           rebase_path(sources + outputs + [
+                             "$prebuilt_dir/third_party/gn/$host_platform/gn",
+                             "$zx/",
+                           ],
+                       root_build_dir)
   }
 }
 
