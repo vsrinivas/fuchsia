@@ -388,15 +388,14 @@ static void ax88772b_queue_tx(void* ctx, uint32_t options, ethernet_netbuf_t* ne
   list_node_t* node = list_remove_head(&eth->free_write_reqs);
   if (!node) {
     list_add_tail(&eth->pending_netbufs, &txn->node);
-    status = ZX_ERR_SHOULD_WAIT;
-    goto out;
+    mtx_unlock(&eth->mutex);
+    return;
   }
   usb_req_internal_t* req_int = containerof(node, usb_req_internal_t, node);
   usb_request_t* request = REQ_INTERNAL_TO_USB_REQ(req_int, eth->parent_req_size);
 
   status = ax88772b_send(eth, request, netbuf);
 
-out:
   mtx_unlock(&eth->mutex);
   complete_txn(txn, status);
 }
