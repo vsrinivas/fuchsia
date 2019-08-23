@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "title": "Schema for factory store provider configuration",
+  "definitions": {
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/file"
+      },
+      "additionalProperties": false
+    },
+    "file": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "validators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/validator"
+          }
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "validator": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "pass",
+                "text"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "const": "size"
+            },
+            "args": {
+              "$ref": "#/definitions/size_validator_args"
+            }
+          },
+          "required": [
+            "name",
+            "args"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "size_validator_args": {
+      "oneOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "files": {
+      "$ref": "#/definitions/files"
+    }
+  },
+  "required": [
+    "files"
+  ],
+  "additionalProperties": false
+}
