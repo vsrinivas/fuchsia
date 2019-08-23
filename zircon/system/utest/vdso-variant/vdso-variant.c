@@ -4,14 +4,14 @@
 
 #include <fcntl.h>
 #include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
-
-#include <launchpad/launchpad.h>
 
 #define VDSO_FILE "/boot/kernel/vdso/test1"
 
@@ -38,12 +38,18 @@ int main(void) {
     return status;
   }
 
-  launchpad_set_vdso_vmo(vdso_vmo);
+  fdio_spawn_action_t actions[2];
+  size_t action_count = 0;
 
-  launchpad_t* lp;
-  launchpad_create(ZX_HANDLE_INVALID, "vdso-variant-helper", &lp);
-  launchpad_clone(lp, LP_CLONE_ALL);
-  launchpad_set_args(lp, 1, (const char*[]){"vdso-variant-helper"});
+  actions[action_count++] = (fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_SET_NAME,
+    .name = {.data = "vdso-variant-helper"},
+  };
+  actions[action_count++] = (fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_VMO_VDSO, 0), .handle = vdso_vmo,},
+  };
+
   const char* root_dir = getenv("TEST_ROOT_DIR");
   if (root_dir == NULL) {
     root_dir = "";
@@ -52,12 +58,17 @@ int main(void) {
   char path[strlen(root_dir) + strlen(kHelperPath) + 1];
   strcpy(path, root_dir);
   strcat(path, kHelperPath);
-  launchpad_load_from_file(lp, path);
+
+  const char* args[] = {
+    "vdso-variant-helper",
+    NULL,
+  };
   zx_handle_t proc;
-  const char* errmsg;
-  status = launchpad_go(lp, &proc, &errmsg);
+  char errmsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path, args, NULL, action_count,
+                          actions, &proc, errmsg);
   if (status != ZX_OK) {
-    printf("launchpad_go: %s\n", errmsg);
+    printf("failed to start helper: %s\n", errmsg);
     return status;
   }
 

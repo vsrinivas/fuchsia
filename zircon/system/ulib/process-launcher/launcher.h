@@ -60,6 +60,7 @@ class LauncherImpl : public fbl::SinglyLinkedListable<fbl::unique_ptr<LauncherIm
   fbl::Vector<uint32_t> ids_;
   fbl::Vector<zx::handle> handles_;
   zx::handle ldsvc_;
+  zx::handle vdso_;
 };
 
 }  // namespace launcher

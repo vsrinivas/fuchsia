@@ -251,6 +251,9 @@ zx_status_t LauncherImpl::AddHandles(fidl::Message message) {
     if (handles[i].id == PA_LDSVC_LOADER) {
       // We need to feed PA_LDSVC_LOADER to launchpad through a different API.
       ldsvc_.reset(handles[i].handle);
+    } else if (handles[i].id == PA_VMO_VDSO) {
+      // We need to feed PA_VMO_VDSO to launchpad through a different API.
+      vdso_.reset(handles[i].handle);
     } else {
       ids_.push_back(handles[i].id);
       handles_.push_back(zx::handle(handles[i].handle));
@@ -272,6 +275,10 @@ void LauncherImpl::PrepareLaunchpad(const fidl::Message& message, launchpad_t** 
   PushCStrs(environs_, &environs);
   PushCStrs(nametable_, &nametable);
   environs.push_back(nullptr);
+
+  if (vdso_) {
+    launchpad_set_vdso_vmo(vdso_.release());
+  }
 
   launchpad_t* lp = nullptr;
   launchpad_create_with_jobs(job.get(), ZX_HANDLE_INVALID, name.c_str(), &lp);
@@ -315,6 +322,7 @@ void LauncherImpl::Reset() {
   ids_.reset();
   handles_.reset();
   ldsvc_.reset();
+  vdso_.reset();
 }
 
 }  // namespace launcher

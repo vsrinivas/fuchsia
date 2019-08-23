@@ -105,6 +105,7 @@ pub struct NamespaceEntry {
 pub struct ProcessBuilder {
     executable: zx::Vmo,
     ldsvc: Option<fldsvc::LoaderProxy>,
+    vdso: Option<zx::Vmo>,
     inner: BuilderInner,
 }
 
@@ -197,6 +198,7 @@ impl ProcessBuilder {
         let mut pb = ProcessBuilder {
             executable,
             ldsvc: None,
+            vdso: None,
             inner: BuilderInner { process, thread, root_vmar, msg_contents },
         };
         pb.inner.msg_contents.handles.append(&mut pb.inner.common_message_handles()?);
@@ -236,6 +238,11 @@ impl ProcessBuilder {
         Ok(())
     }
 
+    /// Sets the vDSO VMO for the process.
+    pub fn set_vdso_vmo(&mut self, vdso: zx::Vmo) {
+        self.vdso = Some(vdso);
+    }
+
     /// Add arguments to the process's bootstrap message. Successive calls append (not replace)
     /// arguments.
     pub fn add_arguments(&mut self, mut args: Vec<CString>) {
@@ -269,7 +276,6 @@ impl ProcessBuilder {
     /// * [HandleType::ThreadSelf]
     /// * [HandleType::RootVmar]
     /// * [HandleType::LoadedVmar]
-    /// * [HandleType::VdsoVmo]
     /// * [HandleType::StackVmo]
     /// * [HandleType::ExecutableVmo]
     pub fn add_handles(
@@ -294,7 +300,6 @@ impl ProcessBuilder {
                 | HandleType::ThreadSelf
                 | HandleType::RootVmar
                 | HandleType::LoadedVmar
-                | HandleType::VdsoVmo
                 | HandleType::StackVmo
                 | HandleType::ExecutableVmo => {
                     return Err(ProcessBuilderError::InvalidArg(format!(
@@ -312,6 +317,9 @@ impl ProcessBuilder {
                 HandleType::LdsvcLoader => {
                     // Automatically pass this to |set_loader_service| instead.
                     self.set_loader_service(ClientEnd::from(h.handle))?;
+                }
+                HandleType::VdsoVmo => {
+                    self.set_vdso_vmo(h.handle.into());
                 }
                 _ => {
                     self.inner.msg_contents.handles.push(h);
@@ -448,7 +456,7 @@ impl ProcessBuilder {
 
         // Load the system vDSO into the process's address space and a handle to it to the
         // bootstrap message.
-        let vdso_base = self.inner.load_system_vdso()?;
+        let vdso_base = self.inner.load_system_vdso(self.vdso)?;
 
         // Calculate initial stack size.
         let stack_size;
@@ -612,8 +620,11 @@ impl BuilderInner {
 
     /// Load the system vDSO VMO into the process's address space and a handle to it to the
     /// bootstrap message. Returns the base address that the vDSO was mapped into.
-    fn load_system_vdso(&mut self) -> Result<usize, ProcessBuilderError> {
-        let vdso_vmo = get_system_vdso_vmo()?;
+    fn load_system_vdso(&mut self, vdso: Option<zx::Vmo>) -> Result<usize, ProcessBuilderError> {
+        let vdso_vmo = match vdso {
+            Some(vmo) => Ok(vmo),
+            None => get_system_vdso_vmo(),
+        }?;
         let vdso_headers = elf_parse::Elf64Headers::from_vmo(&vdso_vmo)?;
         let loaded_vdso = elf_load::load_elf(&vdso_vmo, &self.root_vmar, &vdso_headers)?;
 
@@ -1033,6 +1044,34 @@ mod tests {
         Ok(())
     }
 
+    // Verify that a vDSO handle is properly handled if passed directly to
+    // set_vdso_vmo instead of relying on the default value.
+    #[fasync::run_singlethreaded(test)]
+    async fn set_vdso_directly() -> Result<(), Error> {
+        let test_args = vec!["arg0", "arg1", "arg2"];
+        let test_args_cstr =
+            test_args.iter().map(|s| CString::new(s.clone())).collect::<Result<_, _>>()?;
+
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
+        builder.add_handles(vec![StartupHandle {
+            handle: get_system_vdso_vmo()?.into_handle(),
+            info: HandleInfo::new(HandleType::VdsoVmo, 0),
+        }])?;
+        builder.add_arguments(test_args_cstr);
+        let process = builder.build().await?.start()?;
+        check_process_running(&process)?;
+
+        // Use the util protocol to confirm that the new process was set up correctly. A successful
+        // connection to the util validates that handles are passed correctly to the new process,
+        // since the DirectoryRequest handle made it.
+        let proc_args = proxy.get_arguments().await.context("failed to get args from util")?;
+        assert_eq!(proc_args, test_args);
+
+        mem::drop(proxy);
+        check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_env() -> Result<(), Error> {
         let test_env = vec![("VAR1", "value2"), ("VAR2", "value2")];
@@ -1232,6 +1271,11 @@ mod tests {
                 continue;
             }
 
+            if *handle_type == HandleType::VdsoVmo {
+                // Skip VdsoVmo, which may be supplied by the user.
+                continue;
+            }
+
             // Another dummy VMO, just to have a valid handle.
             let dummy_vmo = zx::Vmo::create(1)?;
             let result = builder.add_handles(vec![StartupHandle {
@@ -1320,8 +1364,9 @@ mod tests {
         builder.build().await?.start()?;
         let signals = fasync::OnSignals::new(
             &local,
-            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED
-        ).await?;
+            zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
+        )
+        .await?;
         assert!(signals.contains(zx::Signals::CHANNEL_READABLE));
 
         let mut echoed = zx::MessageBuf::new();
