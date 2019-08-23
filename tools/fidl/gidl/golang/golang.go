@@ -376,7 +376,7 @@ func elemName(parent gidlmixer.ListDeclaration) string {
 var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:               "ErrStringTooLong",
 	gidlir.NullEmptyStringWithNullBody: "ErrUnexpectedNullRef",
-	gidlir.StrictXUnionFieldNotSet:     "ErrStrictXUnionFieldNotSet",
+	gidlir.StrictXUnionFieldNotSet:     "ErrInvalidXUnionTag",
 	gidlir.StrictXUnionUnknownField:    "ErrInvalidXUnionTag",
 }
 

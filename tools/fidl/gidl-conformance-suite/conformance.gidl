@@ -365,9 +365,8 @@ encode_failure("StrictXUnion Field Not Set") {
 		xu: SampleStrictXUnion {},
 	},
 	err = STRICT_XUNION_FIELD_NOT_SET,
-	// TODO(8047) Enable this. Currently no bindings support this error.
-	// Marked with "none" because the allowlist is a no-op if it is empty.
-	bindings_allowlist = [none,],
+	// TODO(8047) Enable this. Currently only go supports this error.
+	bindings_allowlist = [go,],
 }
 
 decode_failure("StrictXUnion Field Unknown") {
