@@ -37,6 +37,8 @@
 
 namespace fidlcat {
 
+constexpr int kDecimalBase = 10;
+
 typedef uint32_t Ordinal32;
 typedef uint64_t Ordinal64;
 
@@ -205,7 +207,7 @@ class Struct {
   void DecodeResponseTypes();
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes(std::string size_name, std::string member_name);
+  void DecodeTypes(const std::string& size_name, const std::string& member_name);
 
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
@@ -412,7 +414,7 @@ class Library {
 //          should be one of the last objects we destroy).
 class LibraryLoader {
  public:
-  LibraryLoader(std::vector<std::unique_ptr<std::istream>>& library_streams, LibraryReadError* err);
+  LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams, LibraryReadError* err);
 
   LibraryLoader& operator=(const LibraryLoader&) = delete;
   LibraryLoader(const LibraryLoader&) = delete;

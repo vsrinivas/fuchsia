@@ -4,8 +4,9 @@
 
 #include "wire_types.h"
 
-#include <src/lib/fxl/logging.h>
 #include <zircon/fidl.h>
+
+#include <src/lib/fxl/logging.h>
 
 #include "rapidjson/error/en.h"
 #include "tools/fidlcat/lib/library_loader.h"
@@ -15,7 +16,8 @@
 
 namespace fidlcat {
 
-bool Type::ValueEquals(const uint8_t* bytes, size_t length, const rapidjson::Value& value) const {
+bool Type::ValueEquals(const uint8_t* /*bytes*/, size_t /*length*/,
+                       const rapidjson::Value& /*value*/) const {
   FXL_LOG(FATAL) << "Equality operator for type not implemented";
   return false;
 }
@@ -25,8 +27,8 @@ size_t Type::InlineSize() const {
   return 0;
 }
 
-std::unique_ptr<Field> Type::Decode(MessageDecoder* decoder, std::string_view name,
-                                    uint64_t offset) const {
+std::unique_ptr<Field> Type::Decode(MessageDecoder* /*decoder*/, std::string_view name,
+                                    uint64_t /*offset*/) const {
   FXL_LOG(ERROR) << "Decode not implemented for field '" << name << "'";
   return nullptr;
 }
@@ -235,8 +237,6 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader, const rapi
 
 std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Value& type,
                                     size_t inline_size) {
-  // TODO: This is creating a new type every time we need one.  That's pretty
-  // inefficient.  Find a way of caching them if it becomes a problem.
   if (!type.HasMember("kind")) {
     FXL_LOG(ERROR) << "Invalid type";
     return std::make_unique<RawType>(inline_size);
@@ -244,20 +244,26 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Valu
   std::string kind = type["kind"].GetString();
   if (kind == "array") {
     const rapidjson::Value& element_type = type["element_type"];
-    uint32_t element_count = std::strtol(type["element_count"].GetString(), nullptr, 10);
+    uint32_t element_count = std::strtol(type["element_count"].GetString(), nullptr, kDecimalBase);
     return std::make_unique<ArrayType>(GetType(loader, element_type, 0), element_count);
-  } else if (kind == "vector") {
+  }
+  if (kind == "vector") {
     const rapidjson::Value& element_type = type["element_type"];
     return std::make_unique<VectorType>(GetType(loader, element_type, 0));
-  } else if (kind == "string") {
+  }
+  if (kind == "string") {
     return std::make_unique<StringType>();
-  } else if (kind == "handle") {
+  }
+  if (kind == "handle") {
     return std::make_unique<HandleType>();
-  } else if (kind == "request") {
+  }
+  if (kind == "request") {
     return std::make_unique<HandleType>();
-  } else if (kind == "primitive") {
+  }
+  if (kind == "primitive") {
     return Type::TypeFromPrimitive(type, inline_size);
-  } else if (kind == "identifier") {
+  }
+  if (kind == "identifier") {
     return Type::TypeFromIdentifier(loader, type, inline_size);
   }
   FXL_LOG(ERROR) << "Invalid type " << kind;

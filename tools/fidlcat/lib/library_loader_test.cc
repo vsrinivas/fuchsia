@@ -17,14 +17,14 @@ namespace fidlcat {
 TEST(LibraryLoader, LoadSimple) {
   fidlcat_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
-  for (auto element : examples.map()) {
+  for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
         std::make_unique<std::istringstream>(std::istringstream(element.second));
 
     library_files.push_back(std::move(file));
   }
   LibraryReadError err;
-  LibraryLoader loader = LibraryLoader(library_files, &err);
+  LibraryLoader loader = LibraryLoader(&library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
   Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
@@ -45,14 +45,14 @@ TEST(LibraryLoader, LoadSimple) {
 TEST(LibraryLoader, LoadFromOrdinal) {
   fidlcat_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
-  for (auto element : examples.map()) {
+  for (const auto& element : examples.map()) {
     std::unique_ptr<std::istream> file =
         std::make_unique<std::istringstream>(std::istringstream(element.second));
 
     library_files.push_back(std::move(file));
   }
   LibraryReadError err;
-  LibraryLoader loader = LibraryLoader(library_files, &err);
+  LibraryLoader loader = LibraryLoader(&library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
 
   Library* library_ptr = loader.GetLibraryFromName("test.fidlcat.sys");
@@ -82,7 +82,7 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   ASSERT_EQ("OnDirectoryReady", old_ordinal_method->name());
 }
 
-void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>& library_files) {
+void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_files) {
   LibraryReadError err;
   LibraryLoader loader = LibraryLoader(library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
@@ -131,20 +131,20 @@ TEST(LibraryLoader, OrdinalComposition) {
     // Load the libraries in the order in examples.map().
     fidlcat_test::ExampleMap examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
-    for (auto element : examples.map()) {
+    for (const auto& element : examples.map()) {
       std::unique_ptr<std::istream> file =
           std::make_unique<std::istringstream>(std::istringstream(element.second));
 
       library_files.push_back(std::move(file));
     }
 
-    OrdinalCompositionBody(library_files);
+    OrdinalCompositionBody(&library_files);
   }
   {
     // Load the libraries in the reverse of the order in examples.map().
     fidlcat_test::ExampleMap examples;
     std::vector<std::unique_ptr<std::istream>> library_files;
-    for (auto element : examples.map()) {
+    for (const auto& element : examples.map()) {
       std::unique_ptr<std::istream> file =
           std::make_unique<std::istringstream>(std::istringstream(element.second));
 

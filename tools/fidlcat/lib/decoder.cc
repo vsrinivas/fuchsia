@@ -40,8 +40,8 @@ void DisplayStackFrame(const Colors& colors, std::string_view line_header,
           size_t start = pos;
           pos = file_line.file().find('/', pos);
           if (pos == std::string::npos) {
-            file.push_back(std::string_view(file_line.file().c_str() + start,
-                                            file_line.file().size() - start));
+            file.emplace_back(std::string_view(file_line.file().c_str() + start,
+                                               file_line.file().size() - start));
             break;
           }
           std::string_view item(file_line.file().c_str() + start, pos - start);

@@ -24,7 +24,9 @@
 
 namespace fidlcat {
 
-const char kHelpIntro[] = R"(fidlcat [ <options> ] [ command [args] ]
+int constexpr kMinColumns = 80;
+
+const char* const kHelpIntro = R"(fidlcat [ <options> ] [ command [args] ]
 
   fidlcat will run the specified command until it exits.  It will intercept and
   record all fidl calls invoked by the process.  The command may be of the form
@@ -34,14 +36,14 @@ Options:
 
 )";
 
-const char kRemoteHostHelp[] = R"(  --connect
+const char* const kRemoteHostHelp = R"(  --connect
       The host and port of the target Fuchsia instance, of the form
       [<ipv6_addr>]:port.)";
 
-const char kRemotePidHelp[] = R"(  --remote-pid
+const char* const kRemotePidHelp = R"(  --remote-pid
       The koid of the remote process. Can be passed multiple times.)";
 
-const char kRemoteNameHelp[] = R"(  --remote-name=<regexp>
+const char* const kRemoteNameHelp = R"(  --remote-name=<regexp>
   -f <regexp>
       Adds a filter to the default job that will cause fidlcat to attach
       to processes whose name matches this regexp that are launched in the
@@ -49,7 +51,7 @@ const char kRemoteNameHelp[] = R"(  --remote-name=<regexp>
       echo_client).  Multiple filters can be specified to match more than one
       process.)";
 
-const char kFidlIrPathHelp[] = R"(  --fidl-ir-path=<path>|@argfile
+const char* const kFidlIrPathHelp = R"(  --fidl-ir-path=<path>|@argfile
       Adds the given path as a repository for FIDL IR, in the form of .fidl.json
       files.  Passing a file adds the given file.  Passing a directory adds all
       of the .fidl.json files in that directory and any directory transitively
@@ -59,7 +61,7 @@ const char kFidlIrPathHelp[] = R"(  --fidl-ir-path=<path>|@argfile
       argfile.  This switch can be passed multiple times to add multiple
       locations.)";
 
-const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
+const char* const kSymbolPathHelp = R"(  --symbol-path=<path>
   -s <path>
       Adds the given directory or file to the symbol search path. Multiple
       -s switches can be passed to add multiple locations. When a directory
@@ -70,14 +72,14 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
       as a mapping database from build ID to file path. Otherwise, the path
       will be loaded as an ELF file (if possible).)";
 
-const char kSyscallFilterHelp[] = R"(  --syscalls
+const char* const kSyscallFilterHelp = R"(  --syscalls
       A regular expression which selects the syscalls to decode and display.
       Can be passed multiple times.
       By default, only zx_channel_.* syscalls are displayed.
       To display all the syscalls, use: --syscalls ".*"
       This option is under development (we are adding the syscalls).)";
 
-const char kExcludeSyscallFilterHelp[] = R"(  --exclude-syscalls
+const char* const kExcludeSyscallFilterHelp = R"(  --exclude-syscalls
       A regular expression which selects the syscalls to not decode and display.
       Can be passed multiple times.
       To be displayed, a syscall must verify --syscalls and not verify
@@ -85,40 +87,40 @@ const char kExcludeSyscallFilterHelp[] = R"(  --exclude-syscalls
       To display all the syscalls but the zx_handle syscalls, use:
         --syscalls ".*" --exclude-syscalls "zx_handle_.*")";
 
-const char kPrettyPrintHelp[] = R"(  --pretty-print
+const char* const kPrettyPrintHelp = R"(  --pretty-print
       Use a formated print instead of JSON.)";
 
-const char kWithProcessInfoHelp[] = R"(  --with-process-info
+const char* const kWithProcessInfoHelp = R"(  --with-process-info
       Display the process name, process id and thread id on each line.)";
 
-const char kStackHelp[] = R"(  --stack=<value>
+const char* const kStackHelp = R"(  --stack=<value>
       The amount of stack frame to display:
       - 0: no stack (default value)
       - 1: call site (1 to 4 levels)
       - 2: full stack frame (adds some overhead))";
 
-const char kColorsHelp[] = R"(  --colors=[never|auto|always]
+const char* const kColorsHelp = R"(  --colors=[never|auto|always]
       For pretty print, use colors:
       - never
       - auto: only if running in a terminal (default value)
       - always)";
 
-const char kColumnsHelp[] = R"(  --columns=<size>
+const char* const kColumnsHelp = R"(  --columns=<size>
       For pretty print, width of the display. By default, on a terminal, use
       the terminal width.)";
 
-const char kVerbosityHelp[] = R"(  --verbose=<number or log level>
+const char* const kVerbosityHelp = R"(  --verbose=<number or log level>
       The log verbosity.  Legal values are "info", "warning", "error", "fatal",
       or a number, starting from 0. Extra verbosity comes with higher levels)";
 
-const char kQuietHelp[] = R"(  --quiet=<number or log level>
+const char* const kQuietHelp = R"(  --quiet=<number or log level>
       The log verbosity.  Legal values are "info", "warning", "error", "fatal",
       or a number, starting from 0. Extra verbosity comes with lower levels.)";
 
-const char kLogFileHelp[] = R"(  --log-file=<pathspec>
+const char* const kLogFileHelp = R"(  --log-file=<pathspec>
       The name of a file to which the log should be written.)";
 
-const char kHelpHelp[] = R"(  --help
+const char* const kHelpHelp = R"(  --help
   -h
       Prints all command-line switches.)";
 
@@ -126,17 +128,17 @@ const char kHelpHelp[] = R"(  --help
 // passed to --quiet or --verbose), |multiplier| is a value by which a numerical
 // setting will be multiplied (basically, -1 for verbose and 1 for quiet), and
 // |settings| contains the output.
-bool SetLogSettings(const std::string& level, int multiplier, fxl::LogSettings& settings) {
+bool SetLogSettings(const std::string& level, int multiplier, fxl::LogSettings* settings) {
   if (level == "info") {
-    settings.min_log_level = fxl::LOG_INFO;
+    settings->min_log_level = fxl::LOG_INFO;
   } else if (level == "warning") {
-    settings.min_log_level = fxl::LOG_WARNING;
+    settings->min_log_level = fxl::LOG_WARNING;
   } else if (level == "error") {
-    settings.min_log_level = fxl::LOG_ERROR;
+    settings->min_log_level = fxl::LOG_ERROR;
   } else if (level == "fatal") {
-    settings.min_log_level = fxl::LOG_FATAL;
-  } else if (fxl::StringToNumberWithError(level, &settings.min_log_level)) {
-    settings.min_log_level *= multiplier;
+    settings->min_log_level = fxl::LOG_FATAL;
+  } else if (fxl::StringToNumberWithError(level, &settings->min_log_level)) {
+    settings->min_log_level *= multiplier;
   } else {
     return false;
   }
@@ -146,13 +148,13 @@ bool SetLogSettings(const std::string& level, int multiplier, fxl::LogSettings& 
 cmdline::Status ProcessLogOptions(const CommandLineOptions* options) {
   fxl::LogSettings settings;
   if (options->verbose) {
-    if (!SetLogSettings(*options->verbose, -1, settings)) {
+    if (!SetLogSettings(*options->verbose, -1, &settings)) {
       return cmdline::Status::Error("Unable to parse verbose setting \"" + *options->verbose +
                                     "\"");
     }
   }
   if (options->quiet) {
-    if (!SetLogSettings(*options->quiet, 1, settings)) {
+    if (!SetLogSettings(*options->quiet, 1, &settings)) {
       return cmdline::Status::Error("Unable to parse quiet setting \"" + *options->quiet + "\"");
     }
   }
@@ -205,14 +207,14 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 
   decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
-    decode_options->syscall_filters.push_back(std::regex("zx_channel_.*"));
+    decode_options->syscall_filters.emplace_back(std::regex("zx_channel_.*"));
   } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != ".*")) {
     for (const auto& filter : options->syscall_filters) {
-      decode_options->syscall_filters.push_back(std::regex(filter));
+      decode_options->syscall_filters.emplace_back(std::regex(filter));
     }
   }
   for (const auto& filter : options->exclude_syscall_filters) {
-    decode_options->exclude_syscall_filters.push_back(std::regex(filter));
+    decode_options->exclude_syscall_filters.emplace_back(std::regex(filter));
   }
 
   display_options->pretty_print = options->pretty_print;
@@ -223,17 +225,14 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   int ioctl_result = ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_size);
   if (options->columns == 0) {
     display_options->columns = term_size.ws_col;
-    display_options->columns = std::max(display_options->columns, 80);
+    display_options->columns = std::max(display_options->columns, kMinColumns);
   } else {
     display_options->columns = options->columns;
   }
 
   if (options->pretty_print) {
-    if ((options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1))) {
-      display_options->needs_colors = true;
-    } else {
-      display_options->needs_colors = false;
-    }
+    display_options->needs_colors =
+        (options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1));
   }
 
   return cmdline::Status::Ok();
@@ -254,7 +253,7 @@ void ExpandFidlPathsFromOptions(std::vector<std::string> cli_ir_paths,
                                 std::vector<std::unique_ptr<std::istream>>& paths,
                                 std::vector<std::string>& bad_paths) {
   // Strip out argfiles before doing path processing.
-  for (int i = cli_ir_paths.size() - 1; i >= 0; i--) {
+  for (int64_t i = cli_ir_paths.size() - 1; i >= 0; i--) {
     std::string& path = cli_ir_paths[i];
     if (path.compare(0, 1, "@") == 0) {
       std::filesystem::path real_path(path.substr(1));

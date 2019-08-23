@@ -110,7 +110,7 @@ protocol EnvironmentController {
 };
 
 // Maximum length for an environment label.
-const uint32 kLabelMaxLength = 32;
+const uint32 LABEL_MAX_LENGTH = 32;
 
 struct EnvironmentOptions {
     // True if this environment should inherit services provided by the
@@ -150,7 +150,7 @@ protocol Environment {
     // `label` defines the new environment's label/name. It must be unique within
     // the parent environment (though not globally) and is used for isolating
     // separate environments. It can also be used for diagnostic purposes. The
-    // label will be truncated if it is longer than `kLabelMaxLength`.
+    // label will be truncated if it is longer than `LABEL_MAX_LENGTH`.
     //
     // `additional_services`, which may be empty, contains a list of services
     // that the environment provides, which are hosted by
@@ -174,7 +174,7 @@ protocol Environment {
 
     // Gets a superset of services provided by this environment's
     // `host_directory`.
-    GetServices(request<ServiceProvider> services);
+    GetServices(request<Provider> services);
 
     // Gets a superset of services provided by this environment's
     // `host_directory`.
@@ -182,13 +182,13 @@ protocol Environment {
 };
 
 struct FlatNamespace {
-  // The mount point for each of the directories below.
-  //
-  // For example, ["/pkg", "/svc"].
-  vector<string> paths;
+    // The mount point for each of the directories below.
+    //
+    // For example, ["/pkg", "/svc"].
+    vector<string> paths;
 
-  // The directories mounted at each path in the namespace.
-  vector<handle<channel>> directories;
+    // The directories mounted at each path in the namespace.
+    vector<handle<channel>> directories;
 };
 
 // An interface for providing a job handle. Instances of this interface are
@@ -259,7 +259,7 @@ struct ServiceList {
     vector<string> names;
 
     // A service provider to get the services listed in `names` from.
-    ServiceProvider? provider;
+    Provider? provider;
 
     // A channel to the directory hosting the services in `names`.
     // TODO(CP-124): Support `host_directory` for CreateComponent and deprecate
@@ -372,7 +372,7 @@ protocol Runner {
 // This interface is deprecated.  Services should be published as directory
 // entries instead, just like files.
 // TODO(ZX-1358): Point to the FIDL interface for file I/O once RIO is migrated.
-protocol ServiceProvider {
+protocol Provider {
     // Asks the host to provide the service identified by `service_name` through
     // the `channel` endpoint supplied by the caller. If the host is not willing
     // or able to provide the requested service, it should close the `channel`.

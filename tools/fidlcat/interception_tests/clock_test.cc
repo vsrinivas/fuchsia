@@ -9,13 +9,13 @@ namespace fidlcat {
 
 std::string ClockExpected(time_t time, const char* format) {
   struct tm tm;
-  char buffer[300];
+  std::vector<char> buffer(2 * strlen(format));
   if (localtime_r(&time, &tm) == &tm) {
-    strftime(buffer, sizeof(buffer), format, &tm);
+    strftime(buffer.data(), buffer.size(), format, &tm);
   } else {
     buffer[0] = 0;
   }
-  return std::string(buffer);
+  return std::string(buffer.data());
 }
 
 // zx_clock_adjust tests.

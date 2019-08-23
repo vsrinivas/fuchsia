@@ -28,8 +28,6 @@
 
 namespace fidlcat {
 
-constexpr int kDecimalBase = 10;
-
 static bool called_onexit_once_ = false;
 static std::atomic<InterceptionWorkflow*> workflow_;
 
@@ -145,7 +143,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   fidlcat::LibraryReadError loader_err;
-  LibraryLoader loader(paths, &loader_err);
+  LibraryLoader loader(&paths, &loader_err);
   if (loader_err.value != fidlcat::LibraryReadError::kOk) {
     FXL_LOG(ERROR) << "Failed to read libraries";
     return 1;

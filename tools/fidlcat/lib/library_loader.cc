@@ -16,7 +16,7 @@ namespace fidlcat {
 
 Enum::Enum(const rapidjson::Value& value) : value_(value) {}
 
-Enum::~Enum() {}
+Enum::~Enum() = default;
 
 void Enum::DecodeTypes() {
   if (decoded_) {
@@ -39,10 +39,11 @@ std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
 
 UnionMember::UnionMember(const Library& enclosing_library, const rapidjson::Value& value)
     : name_(value["name"].GetString()),
-      offset_(std::strtoll(value["offset"].GetString(), nullptr, 10)),
-      size_(std::strtoll(value["size"].GetString(), nullptr, 10)),
-      ordinal_(value.HasMember("ordinal") ? std::strtoll(value["ordinal"].GetString(), nullptr, 10)
-                                          : 0) {
+      offset_(std::strtoll(value["offset"].GetString(), nullptr, kDecimalBase)),
+      size_(std::strtoll(value["size"].GetString(), nullptr, kDecimalBase)),
+      ordinal_(value.HasMember("ordinal")
+                   ? std::strtoll(value["ordinal"].GetString(), nullptr, kDecimalBase)
+                   : 0) {
   if (!value.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
     type_ = std::make_unique<RawType>(size_);
@@ -51,7 +52,7 @@ UnionMember::UnionMember(const Library& enclosing_library, const rapidjson::Valu
   type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
 }
 
-UnionMember::~UnionMember() {}
+UnionMember::~UnionMember() = default;
 
 Union::Union(const Library& enclosing_library, const rapidjson::Value& value)
     : enclosing_library_(enclosing_library), value_(value) {}
@@ -62,8 +63,8 @@ void Union::DecodeTypes() {
   }
   decoded_ = true;
   name_ = value_["name"].GetString();
-  alignment_ = std::strtoll(value_["alignment"].GetString(), nullptr, 10);
-  size_ = std::strtoll(value_["size"].GetString(), nullptr, 10);
+  alignment_ = std::strtoll(value_["alignment"].GetString(), nullptr, kDecimalBase);
+  size_ = std::strtoll(value_["size"].GetString(), nullptr, kDecimalBase);
   auto member_arr = value_["members"].GetArray();
   members_.reserve(member_arr.Size());
   for (auto& member : member_arr) {
@@ -101,8 +102,8 @@ std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder, std::str
 
 StructMember::StructMember(const Library& enclosing_library, const rapidjson::Value& value)
     : name_(value["name"].GetString()),
-      offset_(std::strtoll(value["offset"].GetString(), nullptr, 10)),
-      size_(std::strtoll(value["size"].GetString(), nullptr, 10)) {
+      offset_(std::strtoll(value["offset"].GetString(), nullptr, kDecimalBase)),
+      size_(std::strtoll(value["size"].GetString(), nullptr, kDecimalBase)) {
   if (!value.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
     type_ = std::make_unique<RawType>(size());
@@ -111,7 +112,7 @@ StructMember::StructMember(const Library& enclosing_library, const rapidjson::Va
   type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
 }
 
-StructMember::~StructMember() {}
+StructMember::~StructMember() = default;
 
 Struct::Struct(const Library& enclosing_library, const rapidjson::Value& value)
     : enclosing_library_(enclosing_library), value_(value) {}
@@ -149,11 +150,11 @@ std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, std::strin
   return result;
 }
 
-void Struct::DecodeTypes(std::string size_name, std::string member_name) {
+void Struct::DecodeTypes(const std::string& size_name, const std::string& member_name) {
   FXL_DCHECK(!decoded_);
   decoded_ = true;
   name_ = value_["name"].GetString();
-  size_ = std::strtoll(value_[size_name].GetString(), nullptr, 10);
+  size_ = std::strtoll(value_[size_name].GetString(), nullptr, kDecimalBase);
   auto member_arr = value_[member_name].GetArray();
   members_.reserve(member_arr.Size());
   for (auto& member : member_arr) {
@@ -163,8 +164,8 @@ void Struct::DecodeTypes(std::string size_name, std::string member_name) {
 
 TableMember::TableMember(const Library& enclosing_library, const rapidjson::Value& value)
     : name_(value["name"].GetString()),
-      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
-      size_(std::strtoll(value["size"].GetString(), nullptr, 10)) {
+      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, kDecimalBase)),
+      size_(std::strtoll(value["size"].GetString(), nullptr, kDecimalBase)) {
   if (!value.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
     type_ = std::make_unique<RawType>(size_);
@@ -173,12 +174,12 @@ TableMember::TableMember(const Library& enclosing_library, const rapidjson::Valu
   type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
 }
 
-TableMember::~TableMember() {}
+TableMember::~TableMember() = default;
 
 Table::Table(const Library& enclosing_library, const rapidjson::Value& value)
     : enclosing_library_(enclosing_library), value_(value) {}
 
-Table::~Table() {}
+Table::~Table() = default;
 
 void Table::DecodeTypes() {
   if (decoded_) {
@@ -186,7 +187,7 @@ void Table::DecodeTypes() {
   }
   decoded_ = true;
   name_ = value_["name"].GetString();
-  size_ = std::strtoll(value_["size"].GetString(), nullptr, 10);
+  size_ = std::strtoll(value_["size"].GetString(), nullptr, kDecimalBase);
   unknown_member_type_ = std::make_unique<RawType>(size_);
   auto member_arr = value_["members"].GetArray();
   Ordinal32 max_ordinal = 0;
@@ -208,8 +209,8 @@ InterfaceMethod::InterfaceMethod(const Interface& interface, const rapidjson::Va
       value_(value),
       // TODO(FIDL-524): Step 4, i.e. both ord and gen are prepared by fidlc for
       // direct consumption by the bindings.
-      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
-      old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, 10)),
+      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, kDecimalBase)),
+      old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, kDecimalBase)),
       is_composed_(value["is_composed"].GetBool()),
       name_(value["name"].GetString()) {
   if (value_["has_request"].GetBool()) {
@@ -325,12 +326,12 @@ bool Library::GetInterfaceByName(const std::string& name, const Interface** ptr)
   return false;
 }
 
-LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>& library_streams,
+LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams,
                              LibraryReadError* err) {
   err->value = LibraryReadError::kOk;
-  for (size_t i = 0; i < library_streams.size(); i++) {
-    std::string ir(std::istreambuf_iterator<char>(*library_streams[i]), {});
-    if (library_streams[i]->fail()) {
+  for (const auto& stream : *library_streams) {
+    std::string ir(std::istreambuf_iterator<char>(*stream), {});
+    if (stream->fail()) {
       err->value = LibraryReadError ::kIoError;
       return;
     }

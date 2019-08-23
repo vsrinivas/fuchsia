@@ -17,11 +17,14 @@
 
 namespace fidlcat {
 
+#define kInvalid "invalid"
+#define kNull "null"
+
 const Colors WithoutColors("", "", "", "", "", "");
-const Colors WithColors(/*reset=*/"\u001b[0m", /*red=*/"\u001b[31m",
-                        /*green=*/"\u001b[32m", /*blue=*/"\u001b[34m",
-                        /*white_on_magenta=*/"\u001b[45m\u001b[37m",
-                        /*yellow_background=*/"\u001b[103m");
+const Colors WithColors(/*new_reset=*/"\u001b[0m", /*new_red=*/"\u001b[31m",
+                        /*new_green=*/"\u001b[32m", /*new_blue=*/"\u001b[34m",
+                        /*new_white_on_magenta=*/"\u001b[45m\u001b[37m",
+                        /*new_yellow_background=*/"\u001b[103m");
 
 void Field::ExtractJson(rapidjson::Document::AllocatorType& allocator,
                         rapidjson::Value& result) const {
@@ -54,36 +57,37 @@ bool NullableField::DecodeNullable(MessageDecoder* decoder, uint64_t offset, uin
   return true;
 }
 
-void InlineField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
+void InlineField::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
   FXL_LOG(FATAL) << "Field is defined inline";
 }
 
-int RawField::DisplaySize(int remaining_size) const { return size_ * 3 - 1; }
+int RawField::DisplaySize(int /*remaining_size*/) const { return static_cast<int>(size_) * 3 - 1; }
 
-void RawField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
-                           int tabs, int remaining_size, int max_line_size) const {
+void RawField::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
+                           std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
+                           int /*max_line_size*/) const {
   if (size_ == 0) {
     return;
   }
   size_t buffer_size = size_ * 3;
-  char buffer[buffer_size];
+  std::vector<char> buffer(buffer_size);
   for (size_t i = 0; i < size_; ++i) {
     if (i != 0) {
       buffer[i * 3 - 1] = ' ';
     }
-    snprintf(buffer + (i * 3), 4, "%02x", data()[i]);
+    snprintf(buffer.data() + (i * 3), 4, "%02x", data()[i]);
   }
-  os << buffer;
+  os << buffer.data();
 }
 
-int StringField::DisplaySize(int remaining_size) const {
+int StringField::DisplaySize(int /*remaining_size*/) const {
   if (is_null()) {
-    return 4;
+    return strlen(kNull);
   }
   if (data_ == nullptr) {
-    return 7;
+    return strlen(kInvalid);
   }
-  return string_length_ + 2;  // The two quotes.
+  return static_cast<int>(string_length_) + 2;  // The two quotes.
 }
 
 void StringField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
@@ -101,23 +105,29 @@ void StringField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void StringField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
-                              int tabs, int remaining_size, int max_line_size) const {
+void StringField::PrettyPrint(std::ostream& os, const Colors& colors,
+                              std::string_view /*line_header*/, int /*tabs*/,
+                              int /*remaining_size*/, int /*max_line_size*/) const {
   os << colors.red;
   if (is_null()) {
-    os << "null";
+    os << kNull;
   } else if (data_ == nullptr) {
-    os << "invalid";
+    os << kInvalid;
   } else {
     os << '"' << std::string_view(reinterpret_cast<const char*>(data_), string_length_) << '"';
   }
   os << colors.reset;
 }
 
-int BoolField::DisplaySize(int remaining_size) const { return *data() ? 4 : 5; }
+int BoolField::DisplaySize(int /*remaining_size*/) const {
+  constexpr int kTrueSize = 4;
+  constexpr int kFalseSize = 5;
+  return *data() ? kTrueSize : kFalseSize;
+}
 
-void BoolField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
-                            int tabs, int remaining_size, int max_line_size) const {
+void BoolField::PrettyPrint(std::ostream& os, const Colors& colors,
+                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
+                            int /*max_line_size*/) const {
   if (data() == nullptr) {
     os << colors.red << "invalid" << colors.reset;
   } else {
@@ -133,10 +143,11 @@ int Object::DisplaySize(int remaining_size) const {
   for (const auto& field : fields_) {
     // Two characters for the separator ("{ " or ", ") and three characters for
     // equal (" = ").
-    size += field->name().size() + 5;
+    constexpr int kExtraSize = 5;
+    size += static_cast<int>(field->name().size()) + kExtraSize;
     if (field->type() != nullptr) {
       // Two characters for ": ".
-      size += field->type()->Name().size() + 2;
+      size += static_cast<int>(field->type()->Name().size()) + 2;
     }
     size += field->DisplaySize(remaining_size - size);
     if (size > remaining_size) {
@@ -197,12 +208,12 @@ void Object::PrettyPrint(std::ostream& os, const Colors& colors, std::string_vie
   } else {
     os << "{\n";
     for (const auto& field : fields_) {
-      int size = (tabs + 1) * kTabSize + field->name().size();
+      int size = (tabs + 1) * kTabSize + static_cast<int>(field->name().size());
       os << line_header << std::string((tabs + 1) * kTabSize, ' ') << field->name();
       if (field->type() != nullptr) {
         std::string type_name = field->type()->Name();
         // Two characters for ": ".
-        size += type_name.size() + 2;
+        size += static_cast<int>(type_name.size()) + 2;
         os << ": " << colors.green << type_name << colors.reset;
       }
       size += 3;
@@ -266,9 +277,10 @@ int TableField::DisplaySize(int remaining_size) const {
     if (!envelope->is_null()) {
       // Two characters for the separator ("{ " or ", ") and three characters
       // for equal (" = ").
-      size += envelope->name().size() + 5;
+      constexpr int kExtraSize = 5;
+      size += static_cast<int>(envelope->name().size()) + kExtraSize;
       if (envelope->type() != nullptr) {
-        size += envelope->type()->Name().size() + 2;
+        size += static_cast<int>(envelope->type()->Name().size()) + 2;
       }
       size += envelope->DisplaySize(remaining_size - size);
       if (size > remaining_size) {
@@ -336,11 +348,11 @@ void TableField::PrettyPrint(std::ostream& os, const Colors& colors, std::string
     os << "{\n";
     for (const auto& envelope : envelopes_) {
       if (!envelope->is_null()) {
-        int size = (tabs + 1) * kTabSize + envelope->name().size() + 3;
+        int size = (tabs + 1) * kTabSize + static_cast<int>(envelope->name().size()) + 3;
         os << line_header << std::string((tabs + 1) * kTabSize, ' ') << envelope->name();
         if (envelope->type() != nullptr) {
           std::string type_name = envelope->type()->Name();
-          size += type_name.size() + 2;
+          size += static_cast<int>(type_name.size()) + 2;
           os << ": " << colors.green << type_name << colors.reset;
         }
         os << " = ";
@@ -359,10 +371,11 @@ int UnionField::DisplaySize(int remaining_size) const {
   }
   // Two characters for the opening brace ("{ ") + three characters for equal
   // (" = ") and two characters for the closing brace (" }").
-  int size = field_->name().size() + 7;
+  constexpr int kExtraSize = 7;
+  int size = static_cast<int>(field_->name().size()) + kExtraSize;
   if (field_->type() != nullptr) {
     // Two characters for ": ".
-    size += field_->type()->Name().size() + 2;
+    size += static_cast<int>(field_->type()->Name().size()) + 2;
   }
   size += field_->DisplaySize(remaining_size - size);
   return size;
@@ -404,12 +417,13 @@ void UnionField::PrettyPrint(std::ostream& os, const Colors& colors, std::string
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     // Two characters for the opening brace ("{ ") + three characters for equal
     // (" = ") and two characters for the closing brace (" }").
-    int size = field_->name().size() + 7;
+    constexpr int kExtraSize = 7;
+    int size = static_cast<int>(field_->name().size()) + kExtraSize;
     os << "{ " << field_->name();
     if (field_->type() != nullptr) {
       std::string type_name = field_->type()->Name();
       // Two characters for ": ".
-      size += type_name.size() + 2;
+      size += static_cast<int>(type_name.size()) + 2;
       os << ": " << colors.green << type_name << colors.reset;
     }
     os << " = ";
@@ -418,12 +432,12 @@ void UnionField::PrettyPrint(std::ostream& os, const Colors& colors, std::string
   } else {
     os << "{\n";
     // Three characters for " = ".
-    int size = (tabs + 1) * kTabSize + field_->name().size() + 3;
+    int size = (tabs + 1) * kTabSize + static_cast<int>(field_->name().size()) + 3;
     os << line_header << std::string((tabs + 1) * kTabSize, ' ') << field_->name();
     if (field_->type() != nullptr) {
       std::string type_name = field_->type()->Name();
       // Two characters for ": ".
-      size += type_name.size() + 2;
+      size += static_cast<int>(type_name.size()) + 2;
       os << ": " << colors.green << type_name << colors.reset;
     }
     os << " = ";
@@ -445,7 +459,7 @@ int ArrayField::DisplaySize(int remaining_size) const {
   return size;
 }
 
-void ArrayField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
+void ArrayField::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
   FXL_LOG(FATAL) << "Field is defined inline";
 }
 
@@ -488,7 +502,7 @@ int VectorField::DisplaySize(int remaining_size) const {
     return 4;
   }
   if (is_string_) {
-    return size_ + 2;  // The string and the two quotes.
+    return static_cast<int>(size_ + 2);  // The string and the two quotes.
   }
   int size = 0;
   for (const auto& field : fields_) {
@@ -512,7 +526,7 @@ void VectorField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
     std::unique_ptr<Field> field = component_type_->Decode(decoder, "", offset);
     if (field != nullptr) {
       uint8_t value = field->GetUint8Value();
-      if (value < 0x20) {
+      if (!std::isprint(value)) {
         if ((value == '\r') || (value == '\n')) {
           has_new_line_ = true;
         } else {
@@ -603,9 +617,9 @@ void VectorField::PrettyPrint(std::ostream& os, const Colors& colors, std::strin
   }
 }
 
-int EnumField::DisplaySize(int remaining_size) const {
+int EnumField::DisplaySize(int /*remaining_size*/) const {
   if (data() == nullptr) {
-    return 7;
+    return strlen(kInvalid);
   }
   return enum_definition_.GetNameFromBytes(data()).size();
 }
@@ -620,25 +634,27 @@ void EnumField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void EnumField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
-                            int tabs, int remaining_size, int max_line_size) const {
+void EnumField::PrettyPrint(std::ostream& os, const Colors& colors,
+                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
+                            int /*max_line_size*/) const {
   if (data() == nullptr) {
-    os << colors.red << "invalid" << colors.reset;
+    os << colors.red << kInvalid << colors.reset;
   } else {
     os << colors.blue << enum_definition_.GetNameFromBytes(data()) << colors.reset;
   }
 }
 
-int HandleField::DisplaySize(int remaining_size) const {
+int HandleField::DisplaySize(int /*remaining_size*/) const {
   return std::to_string(handle_.handle).size();
 }
 
-void HandleField::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
+void HandleField::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/) {
   FXL_LOG(FATAL) << "Handle field is defined inline";
 }
 
-void HandleField::PrettyPrint(std::ostream& os, const Colors& colors, std::string_view line_header,
-                              int tabs, int remaining_size, int max_line_size) const {
+void HandleField::PrettyPrint(std::ostream& os, const Colors& colors,
+                              std::string_view /*line_header*/, int /*tabs*/,
+                              int /*remaining_size*/, int /*max_line_size*/) const {
   DisplayHandle(colors, handle_, os);
 }
 

@@ -17,10 +17,10 @@
 
 namespace fidlcat {
 
-std::string DocumentToString(rapidjson::Document& document) {
+std::string DocumentToString(rapidjson::Document* document) {
   rapidjson::StringBuffer output;
   rapidjson::Writer<rapidjson::StringBuffer> writer(output);
-  document.Accept(writer);
+  document->Accept(writer);
   return output.GetString();
 }
 
@@ -36,7 +36,7 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
     os << line_header << std::string(tabs * kTabSize, ' ') << "not enough data for message\n";
     return false;
   }
-  const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);
+  auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
   const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header->ordinal);
   if (methods == nullptr || methods->empty()) {
     os << line_header << std::string(tabs * kTabSize, ' ') << "Protocol method with ordinal 0x"
@@ -157,7 +157,7 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
       decoded_request->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
                                    display_options_.columns);
     } else {
-      os << DocumentToString(actual_request);
+      os << DocumentToString(&actual_request);
     }
     os << '\n';
   }
@@ -169,7 +169,7 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
       decoded_response->PrettyPrint(os, colors_, line_header, tabs, tabs * kTabSize,
                                     display_options_.columns);
     } else {
-      os << DocumentToString(actual_response);
+      os << DocumentToString(&actual_response);
     }
     os << '\n';
   }

@@ -5,12 +5,12 @@
 library test.fidlcat.examples;
 
 protocol Echo {
-    EchoString(string? value) -> (string? response);
+    EchoString(string:100? value) -> (string:100? response);
 };
 
 protocol FidlcatTestInterface {
     Empty();
-    String(string s);
+    String(string:100 s);
     Bool(bool b);
     Int8(int8 i8);
     Int16(int16 i16);
@@ -24,52 +24,52 @@ protocol FidlcatTestInterface {
     Float64(float64 f64);
 
     Complex(int32 real, int32 imaginary);
-    StringInt(string s, int32 i32);
+    StringInt(string:100 s, int32 i32);
 
     Array1(array<int32>:1 b_1);
     Array2(array<int32>:2 b_2);
-    Vector(vector<int32>? v_1);
+    Vector(vector<int32>:10? v_1);
 
-    TwoStringArrayInt(array<string>:2 arr, int32 i32);
-    TwoStringVectorInt(vector<string> vec, int32 i32);
-    TwoStringVectors(vector<string> v_1, vector<string> v_2);
-    VectorUint8(vector<uint8> v);
-    VectorUint32(vector<uint32> v);
+    TwoStringArrayInt(array<string:100>:2 arr, int32 i32);
+    TwoStringVectorInt(vector<string:100>:10 vec, int32 i32);
+    TwoStringVectors(vector<string:100>:10 v_1, vector<string:100>:10 v_2);
+    VectorUint8(vector<uint8>:100 v);
+    VectorUint32(vector<uint32>:100 v);
 
-    Struct(primitive_types p);
-    NullableStruct(primitive_types? p);
-    NullableStructAndInt(primitive_types? p, int32 i);
+    Struct(PrimitiveTypes p);
+    NullableStruct(PrimitiveTypes? p);
+    NullableStructAndInt(PrimitiveTypes? p, int32 i);
 
-    TwoStringStructInt(two_string_struct s, int32 i32);
-    TwoStringNullableStructInt(two_string_struct? s, int32 i32);
+    TwoStringStructInt(TwoStringStruct s, int32 i32);
+    TwoStringNullableStructInt(TwoStringStruct? s, int32 i32);
 
-    Union(int_struct_union isu, int32 i);
-    NullableUnion(int_struct_union? isu, int32 i);
-    NullableUnionIntFirst(int32 i, int_struct_union? isu);
+    Union(IntStructUnion isu, int32 i);
+    NullableUnion(IntStructUnion? isu, int32 i);
+    NullableUnionIntFirst(int32 i, IntStructUnion? isu);
 
-    XUnion(int_struct_xunion isu, int32 i);
-    NullableXUnion(int_struct_xunion? isu, int32 i);
-    NullableXUnionIntFirst(int32 i, int_struct_xunion? isu);
+    XUnion(IntStructXunion isu, int32 i);
+    NullableXUnion(IntStructXunion? isu, int32 i);
+    NullableXUnionIntFirst(int32 i, IntStructXunion? isu);
 
-    ShortUnion(u8_u16_union u, int32 i);
-    ShortXUnion(u8_u16_xunion u, int32 i);
+    ShortUnion(U8U16Union u, int32 i);
+    ShortXUnion(U8U16Xunion u, int32 i);
 
-    DefaultEnum(default_enum ev);
-    I8Enum(i8_enum ev);
-    I16Enum(i16_enum ev);
+    DefaultEnumMessage(DefaultEnum ev);
+    I8EnumMessage(I8Enum ev);
+    I16EnumMessage(I16Enum ev);
 
-    Table(value_table table, int32 i);
+    Table(ValueTable table, int32 i);
 
     Handle(handle<channel> ch);
     NullableHandle(handle<channel>? ch);
-    HandleStruct(handle_struct hs);
-    TraversalOrder(traversal_order t);
+    HandleStructMessage(HandleStruct hs);
+    TraversalOrderMessage(TraversalOrder t);
 
     Protocol(ParamProtocol ch);
 };
 
-struct primitive_types {
-    string s;
+struct PrimitiveTypes {
+    string:100 s;
     bool b;
     int8 i8;
     int16 i16;
@@ -83,62 +83,62 @@ struct primitive_types {
     float64 f64;
 };
 
-struct two_string_struct {
-    string value1;
-    string value2;
+struct TwoStringStruct {
+    string:100 value1;
+    string:100 value2;
 };
 
-union int_struct_union {
+union IntStructUnion {
     int32 variant_i;
-    two_string_struct variant_tss;
+    TwoStringStruct variant_tss;
 };
 
-xunion int_struct_xunion {
+xunion IntStructXunion {
     int32 variant_i;
-    two_string_struct variant_tss;
+    TwoStringStruct variant_tss;
 };
 
-union u8_u16_union {
+union U8U16Union {
     uint8 variant_u8;
     uint16 variant_u16;
 };
 
-xunion u8_u16_xunion {
+xunion U8U16Xunion {
     uint8 variant_u8;
     uint16 variant_u16;
 };
 
-enum default_enum {
-    x = 23;
+enum DefaultEnum {
+    X = 23;
 };
 
-enum i8_enum : int8 {
-    x = -23;
+enum I8Enum : int8 {
+    X = -23;
 };
 
-enum i16_enum : int16 {
-    x = -23;
+enum I16Enum : int16 {
+    X = -23;
 };
 
-table value_table {
+table ValueTable {
     1: int16 first_int16;
-    2: two_string_struct second_struct;
-    3: int_struct_union third_union;
+    2: TwoStringStruct second_struct;
+    3: IntStructUnion third_union;
 };
 
-struct handle_struct {
+struct HandleStruct {
     handle<channel> h1;
     handle<channel> h2;
     handle<channel> h3;
 };
 
-struct opt_handle_struct {
+struct OptHandleStruct {
     handle<channel>? sh1;
     handle<channel>? sh2;
 };
 
-struct traversal_order {
-    opt_handle_struct? s;
+struct TraversalOrder {
+    OptHandleStruct? s;
     handle<channel>? h1;
     handle<channel>? h2;
 };

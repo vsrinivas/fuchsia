@@ -164,8 +164,8 @@ std::unique_ptr<SystemCallTest> ZxChannelRead(int64_t result, std::string_view r
   uint32_t actual_handles = data().num_handles();                                               \
   PerformDisplayTest("zx_channel_read@plt",                                                     \
                      ZxChannelRead(errno, #errno, kHandle, 0, data().bytes(), data().handles(), \
-                                   100, 64, check_bytes ? &actual_bytes : nullptr,              \
-                                   check_handles ? &actual_handles : nullptr),                  \
+                                   100, 64, (check_bytes) ? &actual_bytes : nullptr,            \
+                                   (check_handles) ? &actual_handles : nullptr),                \
                      expected);
 
 #define READ_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
@@ -264,8 +264,8 @@ std::unique_ptr<SystemCallTest> ZxChannelReadEtc(int64_t result, std::string_vie
   PerformDisplayTest(                                                                             \
       "zx_channel_read_etc@plt",                                                                  \
       ZxChannelReadEtc(errno, #errno, kHandle, 0, data().bytes(), data().handle_infos(), 100, 64, \
-                       check_bytes ? &actual_bytes : nullptr,                                     \
-                       check_handles ? &actual_handles : nullptr),                                \
+                       (check_bytes) ? &actual_bytes : nullptr,                                   \
+                       (check_handles) ? &actual_handles : nullptr),                              \
       expected);
 
 #define READ_ETC_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \
@@ -408,8 +408,8 @@ CALL_CHECK_TEST(ZxChannelCallCheck, ZX_OK);
   uint32_t actual_handles = data().num_handles();                                      \
   PerformDisplayTest("zx_channel_call@plt",                                            \
                      ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args, \
-                                   check_bytes ? &actual_bytes : nullptr,              \
-                                   check_handles ? &actual_handles : nullptr),         \
+                                   (check_bytes) ? &actual_bytes : nullptr,            \
+                                   (check_handles) ? &actual_handles : nullptr),       \
                      expected);
 
 #define CALL_DISPLAY_TEST(name, errno, check_bytes, check_handles, expected) \

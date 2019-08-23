@@ -17,39 +17,36 @@ namespace fidlcat {
 
 class CommandLineOptionsTest : public ::testing::Test {
  protected:
-  void SetUp() override {
-    const char* tmpl = "tmp.XXXXXX";
-    dir_.reset(new char[strlen(tmpl) + 1]);
-    strcpy(dir_.get(), tmpl);
-    mkdtemp(dir_.get());
-  }
+  void SetUp() override { mkdtemp(const_cast<char*>(dir_.c_str())); }
 
   void TearDown() override {
     for (auto& file : files_) {
-      std::string full_filename =
-          std::string(dir_.get()) + std::filesystem::path::preferred_separator + file;
+      std::string full_filename = dir_ + std::filesystem::path::preferred_separator + file;
       remove(full_filename.c_str());
     }
-    remove(dir_.get());
+    remove(dir_.c_str());
   }
 
-  std::unique_ptr<char[]> dir_;
+  const std::string& dir() const { return dir_; }
+  std::vector<std::string>& files() { return files_; }
+
+ private:
+  std::string dir_ = "tmp.XXXXXX";
   std::vector<std::string> files_;
 };
 
 // Test to ensure @argfile support works.
 TEST_F(CommandLineOptionsTest, ArgfileTest) {
   std::ofstream os;
-  std::string dir = std::string(dir_.get());
   std::string argfilename = "out.txt";
-  std::string filename = dir + std::filesystem::path::preferred_separator + argfilename;
-  files_ = {"foo.fidl.json", "bar.fidl.json"};
+  std::string filename = dir() + std::filesystem::path::preferred_separator + argfilename;
+  files() = {"foo.fidl.json", "bar.fidl.json"};
 
   // Write some content to each file, so that we have something to read to see
   // if the fidl paths were returned correctly.
-  for (auto& file : files_) {
+  for (auto& file : files()) {
     std::ofstream fout;
-    fout.open(dir + std::filesystem::path::preferred_separator + file,
+    fout.open(dir() + std::filesystem::path::preferred_separator + file,
               std::ofstream::out | std::ofstream::app);
     fout << file;
     fout.close();
@@ -57,20 +54,21 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
 
   // Write the filenames to the argfile.
   os.open(filename, std::ofstream::out | std::ofstream::app);
-  for (auto& file : files_) {
+  for (auto& file : files()) {
     os << file << "\n";
   }
   os.close();
 
   // Parse the command line.
   std::string param = "@" + filename;
-  const char* argv[] = {"fakebinary", "--remote-pid", "3141", "--fidl-ir-path", param.c_str()};
-  int argc = sizeof(argv) / sizeof(argv[0]);
+  std::vector<const char*> argv = {"fakebinary", "--remote-pid", "3141", "--fidl-ir-path",
+                                   param.c_str()};
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
+  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                 &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
@@ -79,30 +77,30 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
   std::vector<std::string> bad_paths;
   ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths, bad_paths);
 
-  ASSERT_EQ(files_.size(), paths.size());
+  ASSERT_EQ(files().size(), paths.size());
 
   for (size_t i = 0; i < paths.size(); i++) {
     std::string file_contents{std::istreambuf_iterator<char>(*paths[i]), {}};
     ASSERT_TRUE(paths[i]->good());
-    ASSERT_EQ(files_[i], file_contents);
+    ASSERT_EQ(files()[i], file_contents);
   }
   ASSERT_EQ(0U, bad_paths.size());
 
   // files_ also acts as the list of names files to delete.
-  files_.push_back(argfilename);
+  files().push_back(argfilename);
 }
 
 // Test to ensure that non-existent files are reported accordingly.
 TEST_F(CommandLineOptionsTest, BadOptionsTest) {
   // Parse the command line.
-  const char* argv[] = {"fakebinary", "--fidl-ir-path", "blah.fidl.json", "--remote-pid",
-                        "3141",       "--fidl-ir-path", "@all_files.txt"};
-  int argc = sizeof(argv) / sizeof(argv[0]);
+  std::vector<const char*> argv = {"fakebinary", "--fidl-ir-path", "blah.fidl.json", "--remote-pid",
+                                   "3141",       "--fidl-ir-path", "@all_files.txt"};
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
+  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                 &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
@@ -120,33 +118,33 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   std::string symbol_path = "path/to/debug/symbols";
   std::string remote_pid = "3141";
   std::string connect = "localhost:8080";
-  const char* argv[] = {"fakebinary",
-                        "--fidl-ir-path",
-                        fidl_ir_path.c_str(),
-                        "-s",
-                        symbol_path.c_str(),
-                        "--connect",
-                        connect.c_str(),
-                        "--remote-pid",
-                        remote_pid.c_str(),
-                        "--stack",
-                        "2",
-                        "--syscalls",
-                        "zx_handle_*",
-                        "--syscalls",
-                        "zx_channel_*",
-                        "--exclude-syscalls",
-                        "zx_handle_close",
-                        "--verbose",
-                        "error",
-                        "leftover",
-                        "args"};
-  int argc = sizeof(argv) / sizeof(argv[0]);
+  std::vector<const char*> argv = {"fakebinary",
+                                   "--fidl-ir-path",
+                                   fidl_ir_path.c_str(),
+                                   "-s",
+                                   symbol_path.c_str(),
+                                   "--connect",
+                                   connect.c_str(),
+                                   "--remote-pid",
+                                   remote_pid.c_str(),
+                                   "--stack",
+                                   "2",
+                                   "--syscalls",
+                                   "zx_handle_*",
+                                   "--syscalls",
+                                   "zx_channel_*",
+                                   "--exclude-syscalls",
+                                   "zx_handle_close",
+                                   "--verbose",
+                                   "error",
+                                   "leftover",
+                                   "args"};
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
+  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                 &display_options, &params);
   ASSERT_TRUE(status.ok());
   ASSERT_EQ(2U, params.size()) << "Expected 0 params, got (at least) " << params[0];
   ASSERT_EQ(connect, *options.connect);
@@ -173,14 +171,15 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
 TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
   std::string remote_pid = "3141";
   std::string filter = "echo_client";
-  const char* argv[] = {"fakebinary",       "--remote_name", filter.c_str(), "--remote-pid",
-                        remote_pid.c_str(), "leftover",      "args"};
-  int argc = sizeof(argv) / sizeof(argv[0]);
+  std::vector<const char*> argv = {"fakebinary",   "--remote_name",    filter.c_str(),
+                                   "--remote-pid", remote_pid.c_str(), "leftover",
+                                   "args"};
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
+  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                 &display_options, &params);
   ASSERT_TRUE(!status.ok());
 }
 
@@ -189,15 +188,15 @@ TEST_F(CommandLineOptionsTest, NoActionMeansFailure) {
   std::string fidl_ir_path = "blah.fidl.json";
   std::string symbol_path = "path/to/debug/symbols";
   std::string connect = "localhost:8080";
-  const char* argv[] = {
+  std::vector<const char*> argv = {
       "fakebinary", "--fidl-ir-path", fidl_ir_path.c_str(), "-s",  symbol_path.c_str(),
       "--connect",  connect.c_str(),  "leftover",           "args"};
-  int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
+  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                 &display_options, &params);
   ASSERT_TRUE(!status.ok());
 }
 
@@ -206,27 +205,27 @@ TEST_F(CommandLineOptionsTest, QuietTrumpsVerbose) {
   std::string symbol_path = "path/to/debug/symbols";
   std::string remote_pid = "3141";
   std::string connect = "localhost:8080";
-  const char* argv[] = {"fakebinary",
-                        "--fidl-ir-path",
-                        fidl_ir_path.c_str(),
-                        "-s",
-                        symbol_path.c_str(),
-                        "--connect",
-                        connect.c_str(),
-                        "--remote-pid",
-                        remote_pid.c_str(),
-                        "--verbose",
-                        "info",
-                        "--quiet",
-                        "2",
-                        "leftover",
-                        "args"};
-  int argc = sizeof(argv) / sizeof(argv[0]);
+  std::vector<const char*> argv = {"fakebinary",
+                                   "--fidl-ir-path",
+                                   fidl_ir_path.c_str(),
+                                   "-s",
+                                   symbol_path.c_str(),
+                                   "--connect",
+                                   connect.c_str(),
+                                   "--remote-pid",
+                                   remote_pid.c_str(),
+                                   "--verbose",
+                                   "info",
+                                   "--quiet",
+                                   "2",
+                                   "leftover",
+                                   "args"};
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
+  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                 &display_options, &params);
   ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
   ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
 }
