@@ -130,23 +130,6 @@ func TestParseSuccessCase(t *testing.T) {
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
-		Success: []ir.Success{{
-			Name: "OneStringOfMaxLengthFive-empty",
-			Value: ir.Object{
-				Name: "OneStringOfMaxLengthFive",
-				Fields: []ir.Field{
-					{
-						Name:  "first",
-						Value: "four",
-					},
-				},
-			},
-			Bytes: []byte{
-				0, 0, 0, 0, 0, 0, 0, 0, // length
-				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-			},
-		},
-		},
 		EncodeSuccess: []ir.EncodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
 			Value: ir.Object{
@@ -184,6 +167,7 @@ func TestParseSuccessCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
+
 func TestParseEncodeSuccessCase(t *testing.T) {
 	gidl := `
 	encode_success("OneStringOfMaxLengthFive-empty") {
@@ -218,6 +202,7 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 	}
 	checkMatch(t, all, expectedAll, err)
 }
+
 func TestParseDecodeSuccessCase(t *testing.T) {
 	gidl := `
 	decode_success("OneStringOfMaxLengthFive-empty") {
@@ -319,26 +304,6 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 	}`
 	all, err := parse(gidl)
 	expectedAll := ir.All{
-		Success: []ir.Success{
-			{
-				Name: "OneStringOfMaxLengthFive-empty",
-				Value: ir.Object{
-					Name: "OneStringOfMaxLengthFive",
-					Fields: []ir.Field{
-						{
-							Name:  "first",
-							Value: "four",
-						},
-					},
-				},
-				Bytes: []byte{
-					0, 0, 0, 0, 0, 0, 0, 0, // length
-					255, 255, 255, 255, 255, 255, 255, 255, // alloc present
-				},
-				BindingsAllowlist: &[]string{"go", "rust"},
-				BindingsDenylist:  &[]string{"go"},
-			},
-		},
 		EncodeSuccess: []ir.EncodeSuccess{
 			{
 				Name: "OneStringOfMaxLengthFive-empty",
@@ -421,12 +386,14 @@ func TestParseFailsUnknownErrorCode(t *testing.T) {
 		t.Errorf("expected 'unknown error code' error, but got %v", err)
 	}
 }
+
 func parse(gidlInput string) (ir.All, error) {
 	p := NewParser("", strings.NewReader(gidlInput))
 	var all ir.All
 	err := p.parseSection(&all)
 	return all, err
 }
+
 func checkMatch(t *testing.T, actual, expected interface{}, err error) {
 	if err != nil {
 		t.Fatal(err)
@@ -437,6 +404,7 @@ func checkMatch(t *testing.T, actual, expected interface{}, err error) {
 		t.Errorf("expected != actual (-want +got)\n%s", diff)
 	}
 }
+
 func checkFailure(t *testing.T, err error, errorSubstr string) {
 	if err == nil {
 		t.Errorf("expected error: %s", errorSubstr)

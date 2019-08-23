@@ -5,20 +5,10 @@
 package ir
 
 type All struct {
-	Success       []Success
 	EncodeSuccess []EncodeSuccess
 	DecodeSuccess []DecodeSuccess
 	EncodeFailure []EncodeFailure
 	DecodeFailure []DecodeFailure
-}
-
-type Success struct {
-	Name              string
-	Value             interface{}
-	Bytes             []byte
-	BindingsAllowlist *[]string
-	BindingsDenylist  *[]string
-	// Handles
 }
 
 type EncodeSuccess struct {
@@ -99,9 +89,6 @@ var AllErrorCodes = map[ErrorCode]bool{
 func Merge(input []All) All {
 	var output All
 	for _, elem := range input {
-		for _, success := range elem.Success {
-			output.Success = append(output.Success, success)
-		}
 		for _, encodeSuccess := range elem.EncodeSuccess {
 			output.EncodeSuccess = append(output.EncodeSuccess, encodeSuccess)
 		}
@@ -138,11 +125,6 @@ func FilterByBinding(input All, binding string) All {
 		return true
 	}
 	var output All
-	for _, def := range input.Success {
-		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
-			output.Success = append(output.Success, def)
-		}
-	}
 	for _, def := range input.EncodeSuccess {
 		if shouldKeep(binding, def.BindingsAllowlist, def.BindingsDenylist) {
 			output.EncodeSuccess = append(output.EncodeSuccess, def)

@@ -161,14 +161,6 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			success := ir.Success{
-				Name:              name,
-				Value:             body.Value,
-				Bytes:             body.Bytes,
-				BindingsAllowlist: body.BindingsAllowlist,
-				BindingsDenylist:  body.BindingsDenylist,
-			}
-			all.Success = append(all.Success, success)
 			encodeSuccess := ir.EncodeSuccess{
 				Name:              name,
 				Value:             body.Value,

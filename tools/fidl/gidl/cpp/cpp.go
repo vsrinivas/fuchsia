@@ -26,7 +26,7 @@ var tmpls = template.Must(template.New("tmpls").Parse(`
 
 {{end -}}
 
-{{- define "SuccessCase"}}
+{{- define "EncodeSuccessCase"}}
 
 TEST(Conformance, {{ .name }}_Encoding) {
   {{ .value_build }}
@@ -37,6 +37,10 @@ TEST(Conformance, {{ .name }}_Encoding) {
 
   EXPECT_TRUE(::fidl::test::util::ValueToBytes({{ .value_var }}, expected));
 }
+
+{{end -}}
+
+{{- define "DecodeSuccessCase"}}
 
 TEST(Conformance, {{ .name }}_Decoding) {
   auto input = std::vector<uint8_t>{
@@ -56,20 +60,40 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	if err := tmpls.ExecuteTemplate(wr, "Header", nil); err != nil {
 		return err
 	}
-	for _, success := range gidl.Success {
-		decl, err := gidlmixer.ExtractDeclaration(success.Value, fidl)
+	// Note: while the encodeSuccess and decodeSuccess loops look identical, they operate
+	// on different structures so are hard to consolidate.
+	for _, encodeSuccess := range gidl.EncodeSuccess {
+		decl, err := gidlmixer.ExtractDeclaration(encodeSuccess.Value, fidl)
 		if err != nil {
-			return fmt.Errorf("success %s: %s", success.Name, err)
+			return fmt.Errorf("encodeSuccess %s: %s", encodeSuccess.Name, err)
 		}
 
 		var valueBuilder cppValueBuilder
-		gidlmixer.Visit(&valueBuilder, success.Value, decl)
+		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
 
-		if err := tmpls.ExecuteTemplate(wr, "SuccessCase", map[string]interface{}{
-			"name":        success.Name,
+		if err := tmpls.ExecuteTemplate(wr, "EncodeSuccessCase", map[string]interface{}{
+			"name":        encodeSuccess.Name,
 			"value_build": valueBuilder.String(),
 			"value_var":   valueBuilder.lastVar,
-			"bytes":       bytesBuilder(success.Bytes),
+			"bytes":       bytesBuilder(encodeSuccess.Bytes),
+		}); err != nil {
+			return err
+		}
+	}
+	for _, decodeSuccess := range gidl.DecodeSuccess {
+		decl, err := gidlmixer.ExtractDeclaration(decodeSuccess.Value, fidl)
+		if err != nil {
+			return fmt.Errorf("decodeSuccess %s: %s", decodeSuccess.Name, err)
+		}
+
+		var valueBuilder cppValueBuilder
+		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
+
+		if err := tmpls.ExecuteTemplate(wr, "DecodeSuccessCase", map[string]interface{}{
+			"name":        decodeSuccess.Name,
+			"value_build": valueBuilder.String(),
+			"value_var":   valueBuilder.lastVar,
+			"bytes":       bytesBuilder(decodeSuccess.Bytes),
 		}); err != nil {
 			return err
 		}
