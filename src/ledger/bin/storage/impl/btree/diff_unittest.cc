@@ -247,6 +247,33 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
   EXPECT_EQ(actual_change.entry.priority, KeyPriority::LAZY);
 }
 
+TEST_F(DiffTest, ForEachDiffEntryIdChange) {
+  std::vector<EntryChange> base_changes;
+  ASSERT_TRUE(CreateEntryChanges(50, &base_changes));
+  std::vector<EntryChange> other_changes = base_changes;
+  other_changes[10].entry.entry_id = "other_entry_id";
+  ObjectIdentifier base_root_identifier = CreateTree(base_changes);
+  ObjectIdentifier other_root_identifier = CreateTree(other_changes);
+
+  // ForEachDiff should return no changes.
+  bool called;
+  Status status;
+  size_t change_count = 0;
+  ForEachDiff(
+      environment_.coroutine_service(), &fake_storage_,
+      {base_root_identifier, PageStorage::Location::Local()},
+      {other_root_identifier, PageStorage::Location::Local()}, "",
+      [&change_count](EntryChange e) {
+        ++change_count;
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(change_count, 0u);
+}
+
 TEST_F(DiffTest, ForEachTwoWayDiff) {
   // Construct a tree with 50 entries ("key00" to "key49").
   std::unique_ptr<const Object> object;
@@ -347,6 +374,40 @@ TEST_F(DiffTest, ForEachTwoWayDiffMinKey) {
   EXPECT_EQ(change_count, 1);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
+}
+
+TEST_F(DiffTest, ForEachTwoWayDiffEntryIdChange) {
+  std::vector<EntryChange> base_changes;
+  ASSERT_TRUE(CreateEntryChanges(50, &base_changes));
+  std::vector<EntryChange> other_changes = base_changes;
+  other_changes[10].entry.entry_id = "other_entry_id";
+  ObjectIdentifier base_root_identifier = CreateTree(base_changes);
+  ObjectIdentifier other_root_identifier = CreateTree(other_changes);
+
+  // ForEachTwoWayDiff should return one change.
+  bool called;
+  Status status;
+  size_t change_count = 0;
+  TwoWayChange actual_change;
+  ForEachTwoWayDiff(
+      environment_.coroutine_service(), &fake_storage_,
+      {base_root_identifier, PageStorage::Location::Local()},
+      {other_root_identifier, PageStorage::Location::Local()}, "",
+      [&actual_change, &change_count](TwoWayChange e) {
+        actual_change = std::move(e);
+        ++change_count;
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopFor(kSufficientDelay);
+  EXPECT_TRUE(called);
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(change_count, 1u);
+
+  ASSERT_TRUE(actual_change.base);
+  EXPECT_EQ(*actual_change.base, base_changes[10].entry);
+  ASSERT_TRUE(actual_change.target);
+  EXPECT_EQ(*actual_change.target, other_changes[10].entry);
 }
 
 TEST_F(DiffTest, ForEachThreeWayDiff) {

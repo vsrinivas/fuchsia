@@ -539,6 +539,11 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service, PageStorage* pa
                  LocatedObjectIdentifier other_root_identifier, std::string min_key,
                  fit::function<bool(EntryChange)> on_next, fit::function<void(Status)> on_done) {
   auto wrapped_next = [on_next = std::move(on_next)](TwoWayChange change) {
+    // Filter out changes where only the entry id is different.
+    if (change.base && change.target && change.base->priority == change.target->priority &&
+        change.base->object_identifier == change.target->object_identifier) {
+      return true;
+    }
     if (change.target) {
       return on_next({std::move(*change.target), false});
     }
