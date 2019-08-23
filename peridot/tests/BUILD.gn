@@ -6,6 +6,5 @@ group("tests") {
   testonly = true
   deps = [
     "benchmarks",
-    "modular_config",
   ]
 }

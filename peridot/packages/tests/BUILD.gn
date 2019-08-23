@@ -76,7 +76,7 @@ group("modular_integration_tests") {
     "//garnet/packages/prod:test_runner",
     "//peridot/bin/basemgr:auto_login_base_shell_test",
     "//peridot/packages/prod:integration_testing",
-    "//peridot/tests/modular_config:test_config",
+    "//src/modular/tests/modular_config:test_config",
   ]
 }
 

@@ -9,6 +9,8 @@ group("tests") {
   testonly = true
   deps = [
     ":modular_integration_tests",
+    "modular_config",
+
 
     # modular_test_harness is a dep for any test that uses test_harness_fixture
     # (all of the tests below). Add it here so that an fx set --with
