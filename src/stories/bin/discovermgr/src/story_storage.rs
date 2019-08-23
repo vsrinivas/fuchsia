@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{story_graph::StoryGraph, utils},
+    crate::{constants::TITLE_KEY, utils},
     failure::{format_err, Error, ResultExt},
     fidl::encoding::OutOfLine,
     fidl_fuchsia_ledger::{
@@ -24,32 +24,27 @@ pub type StoryTitle = String;
 type LedgerKey = String;
 type LedgerValue = String;
 type LedgerKeyValueEntry = (LedgerKey, LedgerValue);
-const TITLE_PREFIX: &str = "title/";
-const GRAPH_PREFIX: &str = "graph/";
 
 pub trait StoryStorage: Send + Sync {
-    // save a story graph with its name to storage
-    fn insert_graph<'a>(
+    // Set specific property of given story
+    fn set_property<'a>(
         &'a mut self,
-        story_name: StoryName,
-        story_graph: StoryGraph,
+        story_name: &'a str,
+        key: &'a str,
+        value: String,
     ) -> LocalFutureObj<'a, Result<(), Error>>;
 
-    // load a story graph from storage according to its name
-    fn get_graph<'a>(&'a self, story_name: &'a str)
-        -> LocalFutureObj<'a, Option<StoryGraph>>;
+    // Get specific property of given story
+    fn get_property<'a>(
+        &'a self,
+        story_name: &'a str,
+        key: &'a str,
+    ) -> LocalFutureObj<'a, Result<String, Error>>;
 
-    // return the number of saved stories
+    // Return the number of saved stories
     fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, Error>>;
 
-    // save the name and title of a story
-    fn insert_name_title<'a>(
-        &'a mut self,
-        story_name: StoryName,
-        story_title: StoryTitle,
-    ) -> LocalFutureObj<'a, Result<(), Error>>;
-
-    // return names and stories of all stories
+    // Return names and stories of all stories
     fn get_name_titles<'a>(
         &'a self,
     ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>>;
@@ -59,62 +54,58 @@ pub trait StoryStorage: Send + Sync {
 }
 
 pub struct MemoryStorage {
-    graph: HashMap<StoryName, StoryGraph>,
-    story_name_index: HashMap<StoryName, StoryTitle>,
+    properties: HashMap<String, String>,
 }
 
 impl StoryStorage for MemoryStorage {
-    fn insert_graph<'a>(
+    fn set_property<'a>(
         &'a mut self,
-        story_name: StoryName,
-        story_graph: StoryGraph,
+        story_name: &'a str,
+        key: &'a str,
+        value: String,
     ) -> LocalFutureObj<'a, Result<(), Error>> {
         LocalFutureObj::new(Box::new(async move {
-            self.graph.insert(story_name, story_graph);
+            let memory_key = format!("{}{}", key, story_name);
+            self.properties.insert(memory_key, value);
             Ok(())
         }))
     }
 
-    fn get_graph<'a>(
+    fn get_property<'a>(
         &'a self,
         story_name: &'a str,
-    ) -> LocalFutureObj<'a, Option<StoryGraph>> {
+        key: &'a str,
+    ) -> LocalFutureObj<'a, Result<String, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            if self.graph.contains_key(story_name) {
-                Some(self.graph[story_name].clone())
+            let memory_key = format!("{}{}", key, story_name);
+            if self.properties.contains_key(&memory_key) {
+                Ok(self.properties[&memory_key].clone())
             } else {
-                None
+                Err(format_err!("fail to get property"))
             }
         }))
     }
 
     fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, Error>> {
-        LocalFutureObj::new(Box::new(async move { Ok(self.graph.len()) }))
-    }
-
-    fn insert_name_title<'a>(
-        &'a mut self,
-        story_name: StoryName,
-        story_title: StoryTitle,
-    ) -> LocalFutureObj<'a, Result<(), Error>> {
-        LocalFutureObj::new(Box::new(async move {
-            self.story_name_index.insert(story_name, story_title);
-            Ok(())
-        }))
+        LocalFutureObj::new(Box::new(async move { Ok(self.get_name_titles().await?.len()) }))
     }
 
     fn get_name_titles<'a>(
         &'a self,
     ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            Ok(self.story_name_index.clone().into_iter().collect())
+            Ok(self
+                .properties
+                .clone()
+                .into_iter()
+                .filter(|(k, _)| k.starts_with(TITLE_KEY))
+                .collect())
         }))
     }
 
     fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), Error>> {
         LocalFutureObj::new(Box::new(async move {
-            self.story_name_index.clear();
-            self.graph.clear();
+            self.properties.clear();
             Ok(())
         }))
     }
@@ -122,7 +113,7 @@ impl StoryStorage for MemoryStorage {
 
 impl MemoryStorage {
     pub fn new() -> Self {
-        MemoryStorage { graph: HashMap::new(), story_name_index: HashMap::new() }
+        MemoryStorage { properties: HashMap::new() }
     }
 }
 
@@ -217,57 +208,45 @@ impl LedgerStorage {
 }
 
 impl StoryStorage for LedgerStorage {
-    fn insert_graph<'a>(
+    fn set_property<'a>(
         &'a mut self,
-        story_name: StoryName,
-        story_graph: StoryGraph,
+        story_name: &'a str,
+        key: &'a str,
+        value: String,
     ) -> LocalFutureObj<'a, Result<(), Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let key = format!("{}{}", GRAPH_PREFIX, story_name);
-            let value = serde_json::to_string(&story_graph)?;
-            self.write(&key, &value).await?;
+            let ledger_key = format!("{}{}", key, story_name);
+            self.write(&ledger_key, &value).await?;
             Ok(())
         }))
     }
 
-    fn get_graph<'a>(
+    fn get_property<'a>(
         &'a self,
         story_name: &'a str,
-    ) -> LocalFutureObj<'a, Option<StoryGraph>> {
+        key: &'a str,
+    ) -> LocalFutureObj<'a, Result<String, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let key = format!("{}{}", GRAPH_PREFIX, story_name);
-            self.read(&key, &key).await.ok().and_then(|optional_graph_string| {
-                optional_graph_string
-                    .and_then(|graph_string| serde_json::from_str(&graph_string).ok())
-            })
+            let ledger_key = format!("{}{}", key, story_name);
+            self.read(&ledger_key, &ledger_key)
+                .await
+                .unwrap_or(None)
+                .ok_or(format_err!("fail to get property"))
         }))
     }
 
     fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, Error>> {
-        LocalFutureObj::new(Box::new(async move { Ok(self.read_keys(TITLE_PREFIX).await?.len()) }))
-    }
-
-    fn insert_name_title<'a>(
-        &'a mut self,
-        story_name: StoryName,
-        story_title: StoryTitle,
-    ) -> LocalFutureObj<'a, Result<(), Error>> {
-        LocalFutureObj::new(Box::new(async move {
-            let key = format!("{}{}", TITLE_PREFIX, story_name);
-            let value = story_title.as_str();
-            self.write(&key, value).await?;
-            Ok(())
-        }))
+        LocalFutureObj::new(Box::new(async move { Ok(self.read_keys(TITLE_KEY).await?.len()) }))
     }
 
     fn get_name_titles<'a>(
         &'a self,
     ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let entries = self.read_entries(TITLE_PREFIX).await?;
+            let entries = self.read_entries(TITLE_KEY).await?;
             let results = entries
                 .into_iter()
-                .map(|(name, title)| (name.split_at(TITLE_PREFIX.len()).1.to_string(), title))
+                .map(|(name, title)| (name.split_at(TITLE_KEY.len()).1.to_string(), title))
                 .collect();
             Ok(results)
         }))
@@ -283,15 +262,27 @@ impl StoryStorage for LedgerStorage {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, failure::Error, fuchsia_async as fasync};
+    use {
+        super::*,
+        crate::{
+            constants::{GRAPH_KEY, TITLE_KEY},
+            story_graph::StoryGraph,
+        },
+        failure::Error,
+        fuchsia_async as fasync,
+    };
 
     #[fasync::run_singlethreaded(test)]
     async fn memory_storage() -> Result<(), Error> {
         let mut memory_storage = MemoryStorage::new();
+        memory_storage.set_property("story_name", TITLE_KEY, "story_title".to_string()).await?;
         memory_storage
-            .insert_name_title("story_name".to_string(), "story_title".to_string())
+            .set_property(
+                "story_name",
+                GRAPH_KEY,
+                serde_json::to_string(&StoryGraph::new()).unwrap(),
+            )
             .await?;
-        memory_storage.insert_graph("story_name".to_string(), StoryGraph::new()).await?;
 
         let mut name_titles = memory_storage.get_name_titles().await?;
         assert_eq!(name_titles.len(), 1);
@@ -299,9 +290,7 @@ mod tests {
         assert_eq!(name_titles[0].1, "story_title".to_string());
 
         // update the story title of saved story
-        memory_storage
-            .insert_name_title("story_name".to_string(), "story_title_new".to_string())
-            .await?;
+        memory_storage.set_property("story_name", TITLE_KEY, "story_title_new".to_string()).await?;
         name_titles = memory_storage.get_name_titles().await?;
         assert_eq!(name_titles[0].1, "story_title_new".to_string());
 

@@ -36,7 +36,6 @@ pub async fn run_server(
 pub struct StoryContextService {
     /// The story id to which the module belongs.
     story_id: String,
-
     story_manager: Arc<Mutex<StoryManager>>,
 }
 
@@ -57,10 +56,10 @@ impl StoryContextService {
                         StoryDiscoverContextRequest::GetSurfaceData { surface_id, responder } => {
                             // TODO: actually return the proper data.
                             let manager_lock = self.story_manager.lock();
-                            let graph_result = manager_lock
-                                .get_story_graph(&self.story_id)
-                                .await;
-                            let result = graph_result.as_ref().and_then(|result| result.get_module_data(&surface_id));
+                            let graph_result = manager_lock.get_story_graph(&self.story_id).await;
+                            let result = graph_result
+                                .as_ref()
+                                .and_then(|result| result.get_module_data(&surface_id));
                             match result {
                                 None => {
                                     responder.send(SurfaceData {
@@ -77,6 +76,20 @@ impl StoryContextService {
                                 }
                             }
                         }
+                        StoryDiscoverContextRequest::SetProperty { key, value, responder } => {
+                            let mut story_manager = self.story_manager.lock();
+                            story_manager.serve_set_property(&self.story_id, &key, value).await?;
+                            // TODO: handle the errors properly in a followup CL.
+                            responder.send(&mut Ok(()))?;
+                        }
+
+                        StoryDiscoverContextRequest::GetProperty { key, responder } => {
+                            let story_manager = self.story_manager.lock();
+                            let property =
+                                story_manager.serve_get_property(&self.story_id, key).await?;
+                            // TODO: handle the errors properly in a followup CL.
+                            responder.send(&mut Ok(property))?;
+                        }
                     }
                 }
                 Ok(())
@@ -89,9 +102,14 @@ impl StoryContextService {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{models::AddModInfo, story_manager::StoryManager, story_storage::MemoryStorage},
-        fidl_fuchsia_app_discover::StoryDiscoverContextMarker,
-        super::*, fidl_fuchsia_app_discover::SessionDiscoverContextMarker,
+        super::*,
+        crate::{
+            constants::TITLE_KEY, models::AddModInfo, story_manager::StoryManager,
+            story_storage::MemoryStorage, utils,
+        },
+        fidl_fuchsia_app_discover::{SessionDiscoverContextMarker, StoryDiscoverContextMarker},
+        fidl_fuchsia_mem::Buffer,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -101,8 +119,11 @@ mod tests {
         let mod_name = "my-mod".to_string();
         let action_name = "my-action".to_string();
         let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mut action =
-            AddModInfo::new_raw("some-component-url", Some(story_id.clone()), Some(mod_name.clone()));
+        let mut action = AddModInfo::new_raw(
+            "some-component-url",
+            Some(story_id.clone()),
+            Some(mod_name.clone()),
+        );
         action.intent.action = Some(action_name.clone());
         {
             let mut manager_lock = story_manager.lock();
@@ -125,6 +146,43 @@ mod tests {
         let surface_data = story_context_proxy.get_surface_data(&mod_name).await?;
         assert_eq!(surface_data.action, Some(action_name));
         assert_eq!(surface_data.parameter_types, Some(vec![]));
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_set_property() -> Result<(), Error> {
+        let (client, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<SessionDiscoverContextMarker>().unwrap();
+        let story_manager_arc =
+            Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
+
+        let cloned_story_manager_arc = story_manager_arc.clone();
+        fasync::spawn_local(
+            async move { run_server(request_stream, cloned_story_manager_arc).await }
+                .unwrap_or_else(|e: Error| eprintln!("error running server {}", e)),
+        );
+
+        // Get the StoryDiscoverContext connection.
+        let (story_discover_context_proxy, server_end) =
+            fidl::endpoints::create_proxy::<StoryDiscoverContextMarker>()?;
+        assert!(client.get_story_context("story_name", server_end).is_ok());
+
+        // Set the title of the story via SetProperty service
+        let data_to_write = "new_title".as_bytes();
+        let vmo = zx::Vmo::create(data_to_write.len() as u64)?;
+        vmo.write(&data_to_write, 0)?;
+        assert!(story_discover_context_proxy
+            .set_property(TITLE_KEY, &mut Buffer { vmo, size: data_to_write.len() as u64 })
+            .await
+            .is_ok());
+
+        // Get the title of the story via GetProperty service
+        let returned_title = utils::vmo_buffer_to_string(Box::new(
+            story_discover_context_proxy.get_property(TITLE_KEY).await?.unwrap(),
+        ))?;
+
+        // Ensure that set & get all succeed
+        assert_eq!(returned_title, "new_title".to_string());
         Ok(())
     }
 }

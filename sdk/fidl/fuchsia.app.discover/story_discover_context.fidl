@@ -4,9 +4,23 @@
 
 library fuchsia.app.discover;
 
+using fuchsia.mem;
+
 using ActionName = string:ACTION_NAME_MAX_LENGTH;
 using ParameterTypeName = string:PARAMETER_TYPE_NAME_MAX_LENGTH;
 using SurfaceId = string:SURFACE_ID_MAX_LENGTH;
+
+/// Error code for StoryDiscoverContext services.
+enum StoryDiscoverContextError : int32 {
+    /// If the story storage fails to respond to the SetProperty request.
+    STORAGE = 1;
+
+    /// If the given value fails to be converted to a story property.
+    STRING_CONVERSION = 2;
+
+    /// If the key for a story property is invalid.
+    NOT_FOUND = 3;
+};
 
 /// Provided to session shells to communicate with discover.
 [Discoverable]
@@ -19,6 +33,12 @@ protocol SessionDiscoverContext {
 //// Provided to story shell to communicate with discover.
 [Discoverable]
 protocol StoryDiscoverContext {
+    /// Sets the value for the given story property |key|.
+    SetProperty(string key, fuchsia.mem.Buffer value) -> () error StoryDiscoverContextError;
+
+    /// Gets the value for the given story property |key|.
+    GetProperty(string key) -> (fuchsia.mem.Buffer value) error StoryDiscoverContextError;
+
     /// Gets the surface data for the given |surface_id|.
     GetSurfaceData(SurfaceId surface_id) -> (SurfaceData surface_data);
 };

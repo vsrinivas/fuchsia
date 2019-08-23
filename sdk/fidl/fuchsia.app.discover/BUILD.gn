@@ -17,5 +17,6 @@ fidl("fuchsia.app.discover") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }

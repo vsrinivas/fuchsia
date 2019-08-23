@@ -42,6 +42,7 @@ use {
 mod testing;
 mod action_match;
 mod cloud_action_provider;
+mod constants;
 mod discover_registry;
 mod indexing;
 mod local_action_provider;
@@ -82,9 +83,9 @@ async fn run_lifecycle_server(mut stream: LifecycleRequestStream) -> Result<(), 
 /// Handle incoming service requests
 async fn run_fidl_service(
     story_context_store: Arc<Mutex<StoryContextStore>>,
+    story_manager: Arc<Mutex<StoryManager>>,
     suggestions_manager: Arc<Mutex<SuggestionsManager>>,
     mod_manager: Arc<Mutex<ModManager>>,
-    story_manager: Arc<Mutex<StoryManager>>,
     incoming_service_stream: IncomingServices,
 ) -> Result<(), Error> {
     match incoming_service_stream {
@@ -163,9 +164,9 @@ async fn main() -> Result<(), Error> {
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |incoming_service_stream| {
         run_fidl_service(
             story_context_store.clone(),
+            story_manager.clone(),
             suggestions_manager_ref.clone(),
             mod_manager.clone(),
-            story_manager.clone(),
             incoming_service_stream,
         )
         .unwrap_or_else(|e| fx_log_err!("{:?}", e))
