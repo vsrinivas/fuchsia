@@ -181,6 +181,8 @@ TEST_F(EncryptionServiceTest, GetEntryIdMergeCommit) {
   EXPECT_NE(entry_id, GetEntryIdForMerge(entry_name, parent_id1, parent_id2, "AD"));
   EXPECT_NE(entry_id, GetEntryIdForMerge(entry_name, parent_id1, "commit3", operation_list));
   EXPECT_NE(entry_id, GetEntryIdForMerge("Surname", parent_id1, parent_id2, operation_list));
+  // Changing the order of the parents must result in different entry ids.
+  EXPECT_NE(entry_id, GetEntryIdForMerge(entry_name, parent_id2, parent_id1, operation_list));
 }
 
 TEST_F(EncryptionServiceTest, GetEntryIdNonMergeCommit) { EXPECT_NE(GetEntryId(), GetEntryId()); }

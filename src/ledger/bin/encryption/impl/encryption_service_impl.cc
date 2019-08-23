@@ -321,7 +321,6 @@ std::string EncryptionServiceImpl::GetEntryIdForMerge(fxl::StringView entry_name
                                                       storage::CommitId left_parent_id,
                                                       storage::CommitId right_parent_id,
                                                       fxl::StringView operation_list) {
-  FXL_DCHECK(left_parent_id <= right_parent_id);
   // TODO(LE-827): Concatenation is ineffective; consider doing it once per commit.
   std::string input =
       fxl::Concatenate({entry_name, left_parent_id, right_parent_id, operation_list});
