@@ -18,9 +18,9 @@
 
 #include <threads.h>
 
-#include "bcdc.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
+#include "bcdc.h"
 #include "bus.h"
 #include "cfg80211.h"
 #include "common.h"
@@ -977,14 +977,8 @@ static void brcmf_fws_flow_control_check(struct brcmf_fws_info* fws, struct pktq
   return;
 }
 
-static zx_status_t brcmf_fws_rssi_indicate(struct brcmf_if* ifp, int8_t rssi) {
+static zx_status_t brcmf_fws_rssi_indicate(struct brcmf_fws_info* fws, int8_t rssi) {
   BRCMF_DBG(CTL, "rssi %d\n", rssi);
-  // Note that using an unsigned int8 to set the value of index ensures that -128
-  // is handled as well.
-  if (ifp->ndev && (rssi <= 0)) {
-    uint8_t idx = -rssi;
-    ifp->ndev->stats.rssi_buckets[idx]++;
-  }
   return ZX_OK;
 }
 
@@ -1874,7 +1868,7 @@ void brcmf_fws_hdrpull(struct brcmf_if* ifp, int16_t siglen, struct brcmf_netbuf
         schedule_status = brcmf_fws_fifocreditback_indicate(fws, data);
         break;
       case BRCMF_FWS_TYPE_RSSI:
-        brcmf_fws_rssi_indicate(ifp, *data);
+        brcmf_fws_rssi_indicate(fws, *data);
         break;
       case BRCMF_FWS_TYPE_TRANS_ID:
         brcmf_fws_dbg_seqnum_check(fws, data);
