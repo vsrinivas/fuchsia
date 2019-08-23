@@ -34,6 +34,8 @@
 
 #define GT_REG_FIRMWARE         0x41e4
 #define GT_FIRMWARE_MAGIC       0xbe
+
+#define GT_REG_TOUCH_STATUS_READY   0x80
 // clang-format on
 
 namespace goodix {
