@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <err.h>
 #include <lib/console.h>
+#include <lib/ktrace.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -35,6 +36,12 @@
 #include <kernel/timer.h>
 
 #define LOCAL_TRACE 0
+
+// Enable/disable ktraces local to this file.
+#define LOCAL_KTRACE_ENABLE 0 || LOCAL_TRACE
+
+using LocalTraceDuration =
+    TraceDuration<TraceEnabled<LOCAL_KTRACE_ENABLE>, KTRACE_GRP_SCHEDULER, TraceContext::Cpu>;
 
 struct x86_percpu* ap_percpus;
 uint8_t x86_num_cpus = 1;
@@ -329,6 +336,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
     for (;;) {
       while (*percpu->monitor) {
         X86IdleState* next_state = percpu->idle_states->PickIdleState();
+        LocalTraceDuration trace{"idle"_stringref, next_state->MwaitHint(), 0u};
         x86_monitor(percpu->monitor);
         // Check percpu->monitor in case it was cleared between the first check and
         // the monitor being armed. Any writes after arming the monitor will trigger
