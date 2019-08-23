@@ -176,7 +176,7 @@ func (c *Client) Run(ctx context.Context) {
 					panic(fmt.Sprintf("unknown client state: clientState=%s", clientState))
 				}
 				timer.Reset(c.retryTime)
-				syslog.WarnTf(tag, "%s; retrying", err)
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)
 			}
 
 			// Attempt complete. Wait for the next event.
