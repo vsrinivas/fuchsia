@@ -233,6 +233,48 @@ TEST_F(JournalTest, PutClear) {
   }));
 }
 
+TEST_F(JournalTest, JournalsPutTwice) {
+  ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("key", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> commit;
+    std::vector<ObjectIdentifier> objects_to_sync;
+    Status status = journal_->Commit(handler, &commit, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit);
+
+    std::vector<Entry> entries = GetCommitContents(*commit);
+    ASSERT_THAT(entries, SizeIs(1));
+    EXPECT_EQ(entries[0].key, "key");
+    EXPECT_EQ(entries[0].object_identifier, object_identifier_);
+    EXPECT_EQ(entries[0].priority, KeyPriority::EAGER);
+    EXPECT_FALSE(entries[0].entry_id.empty());
+
+    // Ledger's content is now a single entry "key" -> "value". Try to insert it again.
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, commit->Clone()));
+    journal_->Put("key", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> commit2;
+    status = journal_->Commit(handler, &commit2, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_EQ(nullptr, commit2);
+  }));
+}
+
+TEST_F(JournalTest, JournalsDeleteNonExisting) {
+  ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Delete("key");
+
+    std::unique_ptr<const Commit> commit;
+    std::vector<ObjectIdentifier> objects_to_sync;
+    Status status = journal_->Commit(handler, &commit, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_EQ(nullptr, commit);
+  }));
+}
+
 TEST_F(JournalTest, MergeJournal) {
   ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     // Create 2 commits from the |kFirstPageCommitId|, one with a key "0", and
