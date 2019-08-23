@@ -45,10 +45,10 @@ See the Gerrit documentation for more detail:
 
 ### Commit message tags
 
-If submitting a change to Zircon, Garnet, Peridot or Topaz, include [tags] in
-the commit subject flagging which module, library, app, etc, is affected by the
-change. The style here is somewhat informal. Look at these example changes to
-get a feel for how these are used.
+Changes must include [tags] in the commit subject flagging which
+module, library, app, etc, is affected by the change. For example, [docs] for
+documentation, [zircon] for zircon, [fidl] for FIDL, etc. You can check the commit history for the
+files you are modifying to see if there is a relevant tag. See these examples:
 
 * https://fuchsia-review.googlesource.com/c/zircon/+/112976
 * https://fuchsia-review.googlesource.com/c/garnet/+/110795
