@@ -53,9 +53,8 @@ ValuePtr GetValueFromEntry(storage::PageStorage* const storage,
       value->priority = Priority::LAZY;
       break;
   }
-  PageUtils::ResolveObjectIdentifierAsBuffer(
-      storage, entry->object_identifier, 0u, std::numeric_limits<int64_t>::max(),
-      storage::PageStorage::Location::Local(), std::move(callback));
+  storage->GetObjectPart(entry->object_identifier, 0u, std::numeric_limits<int64_t>::max(),
+                         storage::PageStorage::Location::Local(), std::move(callback));
   return value;
 }
 
@@ -65,8 +64,8 @@ void GetOptionalValueFromReference(
     storage::PageStorage* storage, const storage::ObjectIdentifier& object_identifier,
     Priority priority,
     fit::function<void(Status, std::unique_ptr<fuchsia::mem::Buffer>)> callback) {
-  PageUtils::ResolveObjectIdentifierAsBuffer(
-      storage, object_identifier, 0u, std::numeric_limits<int64_t>::max(),
+  storage->GetObjectPart(
+      object_identifier, 0u, std::numeric_limits<int64_t>::max(),
       storage::PageStorage::Location::Local(),
       [priority, callback = std::move(callback)](Status status, fsl::SizedVmo vmo) {
         if ((status == Status::INTERNAL_NOT_FOUND) && (priority == Priority::LAZY)) {

@@ -39,17 +39,6 @@ void PageUtils::ResolveObjectIdentifierAsStringView(
                      });
 }
 
-void PageUtils::ResolveObjectIdentifierAsBuffer(
-    storage::PageStorage* storage, storage::ObjectIdentifier object_identifier, int64_t offset,
-    int64_t max_size, storage::PageStorage::Location location,
-    fit::function<void(Status, fsl::SizedVmo)> callback) {
-  storage->GetObjectPart(
-      object_identifier, offset, max_size, location,
-      [callback = std::move(callback)](Status status, fsl::SizedVmo object_part) {
-        callback(status, std::move(object_part));
-      });
-}
-
 bool PageUtils::MatchesPrefix(const std::string& key, const std::string& prefix) {
   return convert::ExtendedStringView(key).substr(0, prefix.size()) ==
          convert::ExtendedStringView(prefix);

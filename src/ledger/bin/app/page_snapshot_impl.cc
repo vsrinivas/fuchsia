@@ -322,8 +322,8 @@ void PageSnapshotImpl::Get(
           callback(status, fuchsia::ledger::PageSnapshot_Get_Result());
           return;
         }
-        PageUtils::ResolveObjectIdentifierAsBuffer(
-            page_storage_, entry.object_identifier, 0u, std::numeric_limits<int64_t>::max(),
+        page_storage_->GetObjectPart(
+            entry.object_identifier, 0u, std::numeric_limits<int64_t>::max(),
             storage::PageStorage::Location::Local(),
             [callback = std::move(callback)](Status status, fsl::SizedVmo data) {
               if (status == Status::INTERNAL_NOT_FOUND) {
@@ -423,8 +423,8 @@ void PageSnapshotImpl::FetchPartial(
           return;
         }
 
-        PageUtils::ResolveObjectIdentifierAsBuffer(
-            page_storage_, entry.object_identifier, offset, max_size,
+        page_storage_->GetObjectPart(
+            entry.object_identifier, offset, max_size,
             storage::PageStorage::Location::ValueFromNetwork(),
             [callback = std::move(callback)](Status status, fsl::SizedVmo data) {
               if (status == Status::NETWORK_ERROR) {
