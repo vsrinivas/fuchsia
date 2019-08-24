@@ -740,21 +740,21 @@ zx_status_t EfiDevicePartitioner::AddPartition(Partition partition_type,
     case Partition::kZirconA: {
       const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
       memcpy(type, zircon_a_type, GPT_GUID_LEN);
-      minimum_size_bytes = 16LU * (1 << 20);
+      minimum_size_bytes = 32LU * (1 << 20);
       name = kZirconAName;
       break;
     }
     case Partition::kZirconB: {
       const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
       memcpy(type, zircon_b_type, GPT_GUID_LEN);
-      minimum_size_bytes = 16LU * (1 << 20);
+      minimum_size_bytes = 32LU * (1 << 20);
       name = kZirconBName;
       break;
     }
     case Partition::kZirconR: {
       const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
       memcpy(type, zircon_r_type, GPT_GUID_LEN);
-      minimum_size_bytes = 24LU * (1 << 20);
+      minimum_size_bytes = 48LU * (1 << 20);
       name = kZirconRName;
       break;
     }
