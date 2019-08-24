@@ -1,6 +1,9 @@
-# benchmark
+# benchmarks
 
-This directory contains benchmark tests for modular. They follow the pattern
-established by the [benchmark tests for ledger].
+This is where benchmarks for the Peridot layer are installed.  To run a benchmark
+on CI and upload its results to the performance dashboard, add an entry in benchmarks.cc.
+More detailed instructions can be found the [CI benchmarking guide].
 
-[benchmark tests for ledger]: /src/ledger/bin/tests/benchmark/README.md
+
+[CI benchmarking guide]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/running_on_ci.md
+
