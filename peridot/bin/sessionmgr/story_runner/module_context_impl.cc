@@ -11,8 +11,8 @@
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
 #include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
-#include "peridot/lib/fidl/clone.h"
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

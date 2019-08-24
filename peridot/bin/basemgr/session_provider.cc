@@ -9,7 +9,7 @@
 #include <zircon/status.h>
 
 #include "peridot/bin/basemgr/session_context_impl.h"
-#include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

@@ -22,13 +22,13 @@
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
-#include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/fake_agent_runner_storage.h"
-#include "peridot/lib/testing/mock_base.h"
-#include "peridot/lib/testing/test_with_ledger.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/modular/lib/agent/cpp/agent_impl.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/testing/fake_agent_runner_storage.h"
+#include "src/modular/lib/testing/mock_base.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace testing {

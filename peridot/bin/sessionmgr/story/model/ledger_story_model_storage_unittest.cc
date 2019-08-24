@@ -15,7 +15,7 @@
 #include "peridot/bin/sessionmgr/story/model/testing/mutation_matchers.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/test_with_ledger.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;

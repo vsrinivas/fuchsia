@@ -34,14 +34,14 @@
 #include "peridot/bin/sessionmgr/story/model/story_model_owner.h"
 #include "peridot/bin/sessionmgr/story/system.h"
 #include "peridot/bin/sessionmgr/story_runner/story_entity_provider.h"
-#include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/environment.h"
-#include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
-#include "peridot/lib/module_manifest/module_facet_reader.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/fidl/app_client.h"
+#include "src/modular/lib/fidl/environment.h"
+#include "src/modular/lib/fidl/proxy.h"
+#include "src/modular/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 

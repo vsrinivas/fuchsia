@@ -5,7 +5,7 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/remove_mod_command_runner.h"
 
 #include "gtest/gtest.h"
-#include "peridot/lib/testing/test_with_session_storage.h"
+#include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {

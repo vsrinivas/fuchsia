@@ -2,30 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
 group("lib") {
   testonly = true
   deps = [
-    ":maxwell_internal",
     ":peridot_lib_unittests",
     "base64url",
-    "bound_set",
-    "common",
     "convert",
-    "device_info",
-    "entity",
-    "fidl",
     "firebase",
     "ledger_client",
-    "module_manifest",
-    "module_manifest_source",
     "rapidjson",
     "rng",
     "scoped_tmpfs",
     "socket",
-    "testing",
     "util",
   ]
 }
@@ -36,23 +26,12 @@ executable("peridot_lib_unittests") {
   deps = [
     "//peridot/lib/base64url:unittests",
     "//peridot/lib/convert:unittests",
-    "//peridot/lib/fidl:unittests",
     "//peridot/lib/firebase:unittests",
     "//peridot/lib/ledger_client:unittests",
-    "//peridot/lib/modular_config:unittests",
-    "//peridot/lib/module_manifest:unittests",
     "//peridot/lib/rng:unittests",
     "//peridot/lib/scoped_tmpfs:unittests",
     "//peridot/lib/socket:unittests",
     "//peridot/lib/util:unittests",
     "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-fidl("maxwell_internal") {
-  name = "fuchsia.maxwell.internal"
-
-  sources = [
-    "module_manifest_source/fidl/module_package_indexer.fidl",
   ]
 }

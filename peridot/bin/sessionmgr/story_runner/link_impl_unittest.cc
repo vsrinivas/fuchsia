@@ -9,16 +9,16 @@
 
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
-#include "peridot/lib/testing/test_with_ledger.h"
 #include "src/modular/lib/async/cpp/operation.h"
 #include "src/modular/lib/entity/cpp/json.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/fidl/json_xdr.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 using fuchsia::modular::CreateLinkInfo;
 using fuchsia::modular::CreateLinkInfoPtr;

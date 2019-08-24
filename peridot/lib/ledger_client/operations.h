@@ -13,10 +13,10 @@
 
 #include <string>
 
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/json_xdr.h"
 
 namespace modular {
 

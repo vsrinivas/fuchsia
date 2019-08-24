@@ -9,8 +9,8 @@
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionctl/session_ctl_constants.h"
 #include "peridot/bin/sessionmgr/puppet_master/puppet_master_impl.h"
-#include "peridot/lib/testing/test_story_command_executor.h"
-#include "peridot/lib/testing/test_with_session_storage.h"
+#include "src/modular/lib/testing/test_story_command_executor.h"
+#include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {

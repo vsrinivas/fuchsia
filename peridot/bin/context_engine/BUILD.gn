@@ -90,10 +90,10 @@ source_set("context_repository") {
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
-    "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/bound_set",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//third_party/rapidjson",
   ]
 }
@@ -127,9 +127,9 @@ source_set("context_writer_impl") {
 
   deps = [
     ":context_repository",
-    "//peridot/lib/bound_set",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl",
+    "//src/modular/lib/bound_set",
     "//src/modular/lib/entity/cpp",
     "//src/modular/lib/entity/cpp:json",
     "//third_party/rapidjson",

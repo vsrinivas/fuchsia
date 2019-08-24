@@ -13,8 +13,8 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
-#include "peridot/lib/fidl/clone.h"
 #include "src/modular/lib/entity/cpp/json.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

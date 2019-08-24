@@ -12,9 +12,9 @@
 
 #include <src/lib/fxl/strings/split_string.h>
 
-#include "peridot/lib/fidl/clone.h"
 #include "src/modular/lib/context/cpp/context_helper.h"
 #include "src/modular/lib/entity/cpp/json.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 namespace {

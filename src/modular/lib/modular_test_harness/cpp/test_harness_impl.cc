@@ -12,9 +12,6 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/status.h>
 
-#include <peridot/lib/modular_config/modular_config.h>
-#include <peridot/lib/modular_config/modular_config_constants.h>
-#include <peridot/lib/modular_config/modular_config_xdr.h>
 #include <peridot/lib/util/pseudo_dir_utils.h>
 #include <src/lib/files/path.h>
 #include <src/lib/files/unique_fd.h>
@@ -22,6 +19,9 @@
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
+#include <src/modular/lib/modular_config/modular_config.h>
+#include <src/modular/lib/modular_config/modular_config_constants.h>
+#include <src/modular/lib/modular_config/modular_config_xdr.h>
 
 namespace modular::testing {
 namespace {

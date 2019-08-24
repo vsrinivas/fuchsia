@@ -12,10 +12,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/testing/annotations_matchers.h"
-#include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/test_with_ledger.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 #include "zircon/system/public/zircon/errors.h"
 
 namespace modular {

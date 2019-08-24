@@ -10,8 +10,8 @@
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/zx/eventpair.h>
 
-#include "peridot/lib/fidl/single_service_app.h"
 #include "src/lib/fxl/logging.h"
+#include "src/modular/lib/fidl/single_service_app.h"
 
 namespace modular_example {
 

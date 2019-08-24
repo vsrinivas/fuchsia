@@ -12,12 +12,12 @@
 #include <string>
 #include <utility>
 
-#include "peridot/lib/common/async_holder.h"
-#include "peridot/lib/common/teardown.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/modular_config/modular_config_constants.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/modular/lib/common/async_holder.h"
+#include "src/modular/lib/common/teardown.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 

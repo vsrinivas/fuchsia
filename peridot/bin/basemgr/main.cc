@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <memory>
-
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
@@ -14,6 +11,10 @@
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <iostream>
+#include <memory>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
@@ -21,8 +22,8 @@
 #include "peridot/bin/basemgr/basemgr_impl.h"
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
-#include "peridot/lib/modular_config/modular_config.h"
-#include "peridot/lib/modular_config/modular_config_constants.h"
+#include "src/modular/lib/modular_config/modular_config.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace {
 #ifdef AUTO_LOGIN_TO_GUEST

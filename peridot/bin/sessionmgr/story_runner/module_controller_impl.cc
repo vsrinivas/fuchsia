@@ -10,12 +10,13 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_request.h>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/time/time_delta.h>
 
 #include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
-#include "peridot/lib/common/teardown.h"
-#include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/common/teardown.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

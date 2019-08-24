@@ -41,10 +41,10 @@ source_set("test_harness_fixture") {
 
   deps = [
     "//garnet/public/lib/svc/cpp",
-    "//peridot/lib/testing:session_shell_impl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/modular/lib/testing:session_shell_impl",
     "//third_party/googletest:gtest",
   ]
 }
@@ -98,7 +98,6 @@ source_set("test_harness_impl") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//peridot/lib/modular_config",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.modular",
@@ -107,13 +106,14 @@ source_set("test_harness_impl") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/modular/lib/app_driver/cpp:agent_driver",
+    "//src/modular/lib/modular_config",
     "//zircon/public/lib/async-loop-cpp",
   ]
 
   deps = [
-    "//peridot/lib/fidl:json_xdr",
-    "//peridot/lib/modular_config:json_xdr",
     "//peridot/lib/util:pseudo_dir_utils",
+    "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/modular_config:json_xdr",
   ]
 }
 
@@ -126,7 +126,6 @@ source_set("test_harness_impl_unittest") {
 
   deps = [
     ":test_harness_impl",
-    "//peridot/lib/modular_config",
     "//peridot/lib/rapidjson",
     "//peridot/lib/util:pseudo_dir_server",
     "//sdk/fidl/fuchsia.modular",
@@ -134,6 +133,7 @@ source_set("test_harness_impl_unittest") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/modular_config",
     "//zircon/public/lib/fidl",
   ]
 }

@@ -6,8 +6,8 @@
 
 #include <iterator>
 
-#include <peridot/lib/fidl/clone.h>
 #include <src/lib/icu_data/cpp/icu_data.h>
+#include <src/modular/lib/fidl/clone.h>
 
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "lib/syslog/cpp/logger.h"

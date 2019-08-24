@@ -11,9 +11,9 @@
 
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/entity_resolver_fake.h"
-#include "peridot/lib/testing/module_resolver_fake.h"
-#include "peridot/lib/testing/test_with_session_storage.h"
+#include "src/modular/lib/testing/entity_resolver_fake.h"
+#include "src/modular/lib/testing/module_resolver_fake.h"
+#include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {

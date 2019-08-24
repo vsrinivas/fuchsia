@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
 namespace {

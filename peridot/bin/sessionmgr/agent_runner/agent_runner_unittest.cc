@@ -4,8 +4,6 @@
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 
-#include <fs/service.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
@@ -13,22 +11,25 @@
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/zx/object.h>
-#include <src/lib/fxl/macros.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <memory>
 
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
+#include <src/lib/fxl/macros.h>
+
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/sessionmgr/message_queue/message_queue_manager.h"
-#include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/fake_agent_runner_storage.h"
-#include "peridot/lib/testing/mock_base.h"
-#include "peridot/lib/testing/test_with_ledger.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/testing/fake_agent_runner_storage.h"
+#include "src/modular/lib/testing/mock_base.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace testing {

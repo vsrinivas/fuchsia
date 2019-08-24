@@ -38,15 +38,8 @@ executable_package("basemgr") {
     "//garnet/public/lib/json",
     "//peridot/bin/agents/clipboard:clipboard_sources",
     "//peridot/bin/basemgr/cobalt",
-    "//peridot/lib/common:async_holder",
-    "//peridot/lib/common:teardown",
-    "//peridot/lib/fidl:app_client",
-    "//peridot/lib/fidl:array_to_string",
-    "//peridot/lib/fidl:clone",
-    "//peridot/lib/fidl:environment",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/lib/modular_config:modular_config",
     "//peridot/lib/rapidjson",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.auth.account",
@@ -65,6 +58,13 @@ executable_package("basemgr") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/common:async_holder",
+    "//src/modular/lib/common:teardown",
+    "//src/modular/lib/fidl:app_client",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/fidl:environment",
+    "//src/modular/lib/modular_config:modular_config",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider-with-fdio",
@@ -112,14 +112,6 @@ source_set("lib") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//peridot/lib/common:async_holder",
-    "//peridot/lib/common:teardown",
-    "//peridot/lib/fidl:app_client",
-    "//peridot/lib/fidl:array_to_string",
-    "//peridot/lib/fidl:clone",
-    "//peridot/lib/fidl:environment",
-    "//peridot/lib/fidl:json_xdr",
-    "//peridot/lib/modular_config",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.gfx",
@@ -129,6 +121,14 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/common:async_holder",
+    "//src/modular/lib/common:teardown",
+    "//src/modular/lib/fidl:app_client",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/fidl:environment",
+    "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/modular_config",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/lib/trace",
   ]
@@ -161,12 +161,12 @@ executable_package("dev_base_shell") {
 
   deps = [
     "//garnet/public/lib/callback",
-    "//peridot/lib/fidl:single_service_app",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl",
     "//src/modular/lib/app_driver/cpp",
+    "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -181,12 +181,12 @@ executable("auto_login_base_shell_bin") {
 
   deps = [
     "//garnet/public/lib/callback",
-    "//peridot/lib/fidl:single_service_app",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl",
     "//src/modular/lib/app_driver/cpp",
+    "//src/modular/lib/fidl:single_service_app",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -254,12 +254,12 @@ executable("session_context_impl_unittest") {
     ":lib",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
-    "//peridot/lib/fidl:clone",
-    "//peridot/lib/fidl:environment",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/fidl:environment",
   ]
 }
 

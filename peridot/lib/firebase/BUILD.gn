@@ -5,6 +5,7 @@
 visibility = [
   "//peridot/bin/*",
   "//peridot/lib/*",
+  "//src/modular/*",
 ]
 
 source_set("firebase") {

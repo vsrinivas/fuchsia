@@ -32,15 +32,15 @@
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "peridot/bin/sessionmgr/user_intelligence_provider_impl.h"
-#include "peridot/lib/common/async_holder.h"
-#include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/environment.h"
-#include "peridot/lib/fidl/view_host.h"
-#include "peridot/lib/module_manifest/module_facet_reader.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/fxl/macros.h"
+#include "src/modular/lib/common/async_holder.h"
+#include "src/modular/lib/fidl/app_client.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/environment.h"
+#include "src/modular/lib/fidl/view_host.h"
+#include "src/modular/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 

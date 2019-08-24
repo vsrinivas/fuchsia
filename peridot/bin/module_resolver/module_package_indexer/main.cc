@@ -3,24 +3,24 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fuchsia/maxwell/internal/cpp/fidl.h>
 #include <glob.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <sys/types.h>
 
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include <fuchsia/maxwell/internal/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
-#include "peridot/lib/module_manifest_source/package_util.h"
 #include "src/lib/files/file.h"
+#include "src/modular/lib/module_manifest_source/package_util.h"
 
 using ::fuchsia::maxwell::internal::ModulePackageIndexer;
 using ::fuchsia::maxwell::internal::ModulePackageIndexerPtr;

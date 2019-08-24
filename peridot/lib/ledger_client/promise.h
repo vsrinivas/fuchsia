@@ -9,8 +9,8 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 
-#include "peridot/lib/fidl/array_to_string.h"  // for to_string(), to_array()
 #include "src/lib/fxl/logging.h"
+#include "src/modular/lib/fidl/array_to_string.h"  // for to_string(), to_array()
 
 namespace modular {
 

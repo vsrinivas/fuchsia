@@ -15,8 +15,8 @@
 
 #include <src/lib/fxl/memory/weak_ptr.h>
 
-#include "peridot/lib/module_manifest_source/module_manifest_source.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/module_manifest_source/module_manifest_source.h"
 
 namespace modular {
 

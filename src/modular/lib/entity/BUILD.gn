@@ -5,6 +5,22 @@
 group("entity") {
   testonly = true
   deps = [
+    ":entity_watcher",
     "cpp",
+  ]
+}
+
+source_set("entity_watcher") {
+  sources = [
+    "entity_watcher_impl.cc",
+    "entity_watcher_impl.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
   ]
 }

@@ -7,9 +7,10 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+
 #include <src/lib/fxl/macros.h>
 
-#include "peridot/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
 

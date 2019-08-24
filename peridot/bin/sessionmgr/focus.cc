@@ -5,14 +5,15 @@
 #include "peridot/bin/sessionmgr/focus.h"
 
 #include <lib/fsl/vmo/strings.h>
+
 #include <src/lib/fxl/time/time_point.h>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/fidl/json_xdr.h"
 
 namespace modular {
 

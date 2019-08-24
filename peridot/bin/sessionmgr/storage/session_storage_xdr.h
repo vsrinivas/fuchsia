@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
 
-#include "peridot/lib/fidl/json_xdr.h"
+#include "src/modular/lib/fidl/json_xdr.h"
 
 namespace modular {
 

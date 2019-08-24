@@ -9,16 +9,17 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/noop_clipboard_impl.h"
 #include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/wait_for_minfs.h"
-#include "peridot/lib/common/async_holder.h"
-#include "peridot/lib/common/teardown.h"
-#include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/common/async_holder.h"
+#include "src/modular/lib/common/teardown.h"
+#include "src/modular/lib/fidl/app_client.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace fidl {
 template <>

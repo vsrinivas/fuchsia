@@ -7,8 +7,8 @@
 
 #include <sdk/lib/sys/cpp/component_context.h>
 
-#include "peridot/lib/testing/session_shell_impl.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
+#include "src/modular/lib/testing/session_shell_impl.h"
 
 namespace modular {
 namespace testing {

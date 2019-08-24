@@ -20,9 +20,9 @@
 #include "lib/fit/function.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "lib/vfs/cpp/pseudo_dir.h"
-#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/constants.h"
 #include "src/lib/fxl/logging.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 namespace testing {

@@ -32,8 +32,8 @@
 #include "peridot/bin/basemgr/presentation_container.h"
 #include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
-#include "peridot/lib/fidl/clone.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

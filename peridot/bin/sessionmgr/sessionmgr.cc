@@ -18,9 +18,9 @@
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
-#include "peridot/lib/modular_config/modular_config.h"
-#include "peridot/lib/modular_config/modular_config_constants.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
+#include "src/modular/lib/modular_config/modular_config.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
                                                async_dispatcher_t* dispatcher,

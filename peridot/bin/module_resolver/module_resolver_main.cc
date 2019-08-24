@@ -16,10 +16,10 @@
 #include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/module_resolver/local_module_resolver.h"
-#include "peridot/lib/module_manifest_source/firebase_source.h"
-#include "peridot/lib/module_manifest_source/module_package_source.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "src/modular/lib/entity/cpp/json.h"
+#include "src/modular/lib/module_manifest_source/firebase_source.h"
+#include "src/modular/lib/module_manifest_source/module_package_source.h"
 
 namespace modular {
 namespace {

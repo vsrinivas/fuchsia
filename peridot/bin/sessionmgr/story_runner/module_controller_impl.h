@@ -13,11 +13,12 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <src/lib/fxl/macros.h>
 
 #include <vector>
 
-#include "peridot/lib/fidl/app_client.h"
+#include <src/lib/fxl/macros.h>
+
+#include "src/modular/lib/fidl/app_client.h"
 
 namespace modular {
 

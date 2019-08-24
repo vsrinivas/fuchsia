@@ -20,13 +20,13 @@
 #include <memory>
 #include <utility>
 
-#include "peridot/lib/fidl/single_service_app.h"
-#include "peridot/lib/fidl/view_host.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
+#include "src/modular/lib/fidl/single_service_app.h"
+#include "src/modular/lib/fidl/view_host.h"
 
 namespace {
 

@@ -17,8 +17,8 @@
 #include "peridot/bin/sessionmgr/agent_runner/agent_context_impl.h"
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/json_xdr.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/json_xdr.h"
 
 namespace modular {
 

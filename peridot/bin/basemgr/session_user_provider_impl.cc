@@ -4,13 +4,13 @@
 
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
 
-#include <utility>
-
 #include <lib/fit/function.h>
 #include <zircon/status.h>
 
-#include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/fidl/json_xdr.h"
+#include <utility>
+
+#include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/fidl/json_xdr.h"
 
 namespace modular {
 

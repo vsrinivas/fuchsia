@@ -11,9 +11,9 @@
 #include <utility>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/json_xdr.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/json_xdr.h"
 
 namespace modular {
 namespace {

@@ -11,8 +11,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/testing/annotations_matchers.h"
-#include "peridot/lib/testing/test_story_command_executor.h"
-#include "peridot/lib/testing/test_with_session_storage.h"
+#include "src/modular/lib/testing/test_story_command_executor.h"
+#include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {

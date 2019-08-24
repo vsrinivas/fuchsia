@@ -37,12 +37,12 @@
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_shell_context_impl.h"
-#include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/environment.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
 #include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/fidl/app_client.h"
+#include "src/modular/lib/fidl/environment.h"
 
 namespace modular {
 

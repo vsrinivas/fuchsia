@@ -60,7 +60,7 @@ source_set("module") {
 
   public_deps = [
     "//garnet/public/lib/ui/base_view/cpp",
-    "//peridot/lib/fidl:single_service_app",
+    "//src/modular/lib/fidl:single_service_app",
     "//zircon/public/lib/zx",
   ]
 
@@ -85,12 +85,12 @@ executable_package("swap_recipe") {
   ]
   deps = [
     "//garnet/public/lib/ui/base_view/cpp",
-    "//peridot/lib/fidl:single_service_app",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
     "//src/modular/lib/app_driver/cpp",
+    "//src/modular/lib/fidl:single_service_app",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]

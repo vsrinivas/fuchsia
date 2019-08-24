@@ -7,9 +7,9 @@
 #include <src/lib/fxl/logging.h>
 
 #include "gmock/gmock.h"
-#include "peridot/lib/testing/session_shell_impl.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
+#include "src/modular/lib/testing/session_shell_impl.h"
 
 using testing::ElementsAre;
 using testing::Gt;

@@ -24,8 +24,8 @@
 #include <src/lib/fxl/memory/weak_ptr.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 
-#include "peridot/lib/fidl/single_service_app.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
+#include "src/modular/lib/fidl/single_service_app.h"
 #include "src/modular/lib/integration_testing/cpp/reporting.h"
 #include "src/modular/lib/integration_testing/cpp/testing.h"
 

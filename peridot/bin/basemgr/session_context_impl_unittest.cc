@@ -9,7 +9,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 
-#include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 namespace testing {

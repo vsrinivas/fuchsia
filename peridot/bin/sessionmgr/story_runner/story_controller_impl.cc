@@ -45,13 +45,13 @@
 #include "peridot/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_shell_context_impl.h"
-#include "peridot/lib/common/teardown.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/util/string_escape.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/common/teardown.h"
 #include "src/modular/lib/entity/cpp/json.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/clone.h"
 
 // Used to create std::set<LinkPath>.
 namespace std {

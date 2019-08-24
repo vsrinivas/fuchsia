@@ -11,9 +11,9 @@
 #include <memory>
 #include <utility>
 
-#include "peridot/lib/fidl/single_service_app.h"
-#include "peridot/lib/fidl/view_host.h"
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
+#include "src/modular/lib/fidl/single_service_app.h"
+#include "src/modular/lib/fidl/view_host.h"
 
 namespace {
 

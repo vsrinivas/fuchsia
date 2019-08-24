@@ -7,11 +7,11 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/test_with_ledger.h"
 #include "src/lib/fxl/macros.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular {
 namespace testing {

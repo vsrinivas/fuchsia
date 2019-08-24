@@ -64,9 +64,9 @@ source_set("session_storage") {
   deps = [
     ":session_storage_xdr",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
-    "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
     "//src/lib/uuid",
+    "//src/modular/lib/fidl:clone",
   ]
 
   public_deps = [
@@ -87,9 +87,9 @@ source_set("session_storage_xdr") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/lib/base64url",
-    "//peridot/lib/fidl:json_xdr",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/fidl:json_xdr",
   ]
 }
 
@@ -103,11 +103,11 @@ executable("session_storage_unittest") {
   deps = [
     ":session_storage",
     "//peridot/bin/sessionmgr/testing:annotations_matchers",
-    "//peridot/lib/fidl:array_to_string",
-    "//peridot/lib/testing:test_with_ledger",
     "//sdk/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/testing:test_with_ledger",
     "//third_party/googletest:gmock",
     "//zircon/system/public",
   ]
@@ -122,11 +122,11 @@ source_set("story_storage") {
   deps = [
     ":story_storage_xdr",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
-    "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/fidl:clone",
   ]
   public_deps = [
     "//peridot/lib/ledger_client:page_client",
@@ -143,10 +143,10 @@ source_set("story_storage_xdr") {
   deps = [
     "//garnet/public/lib/fsl",
     "//peridot/lib/base64url",
-    "//peridot/lib/fidl:json_xdr",
-    "//peridot/lib/module_manifest:json_xdr",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/module_manifest:json_xdr",
   ]
 }
 
@@ -159,10 +159,10 @@ executable("story_storage_unittest") {
 
   deps = [
     ":story_storage",
-    "//peridot/lib/entity:entity_watcher",
-    "//peridot/lib/testing:test_with_ledger",
     "//sdk/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/entity:entity_watcher",
+    "//src/modular/lib/testing:test_with_ledger",
   ]
 }

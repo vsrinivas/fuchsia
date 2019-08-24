@@ -9,10 +9,10 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/entity/entity_watcher_impl.h"
 #include "peridot/lib/ledger_client/page_id.h"
-#include "peridot/lib/testing/test_with_ledger.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/entity/entity_watcher_impl.h"
+#include "src/modular/lib/testing/test_with_ledger.h"
 
 using fuchsia::modular::ModuleData;
 using fuchsia::modular::ModuleDataPtr;

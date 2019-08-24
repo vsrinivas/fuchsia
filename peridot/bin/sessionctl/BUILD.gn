@@ -74,10 +74,10 @@ executable("sessionctl_unittest") {
     ":lib",
     "//peridot/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//peridot/lib/rapidjson",
-    "//peridot/lib/testing:test_story_command_executor",
-    "//peridot/lib/testing:test_with_session_storage",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/testing:test_story_command_executor",
+    "//src/modular/lib/testing:test_with_session_storage",
   ]
 }
 

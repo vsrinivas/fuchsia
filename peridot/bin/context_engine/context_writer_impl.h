@@ -13,8 +13,8 @@
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/context_engine/context_repository.h"
-#include "peridot/lib/bound_set/bound_set.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/bound_set/bound_set.h"
 
 namespace modular {
 

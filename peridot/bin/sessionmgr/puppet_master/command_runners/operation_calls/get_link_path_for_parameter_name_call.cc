@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
 
-#include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

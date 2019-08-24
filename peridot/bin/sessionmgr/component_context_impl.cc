@@ -4,12 +4,12 @@
 
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 
-#include <src/lib/fxl/logging.h>
-
 #include <utility>
 
+#include <src/lib/fxl/logging.h>
+
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
-#include "peridot/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/array_to_string.h"
 
 namespace modular {
 

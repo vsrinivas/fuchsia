@@ -2,21 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/fidl/toolchain.gni")
 
 group("lib") {
   testonly = true
   deps = [
     ":just_fidl",
+    ":maxwell_internal",
     ":services",
     "agent",
     "app_driver",
     "async",
+    "bound_set",
+    "common",
     "context",
+    "device_info",
     "entity",
+    "fidl",
     "integration_testing",
     "lifecycle",
     "message_queue",
+    "module_manifest",
+    "module_manifest_source",
+    "testing",
   ]
 }
 
@@ -38,7 +47,18 @@ executable("modular_lib_unittests") {
   deps = [
     "async/cpp:unittests",
     "entity/cpp:unittests",
+    "fidl:unittests",
+    "modular_config:unittests",
     "modular_test_harness/cpp:unittests",
+    "module_manifest:unittests",
     "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fidl("maxwell_internal") {
+  name = "fuchsia.maxwell.internal"
+
+  sources = [
+    "module_manifest_source/fidl/module_package_indexer.fidl",
   ]
 }

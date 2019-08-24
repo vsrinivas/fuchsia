@@ -6,6 +6,7 @@
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
@@ -21,7 +22,7 @@ namespace modular {
 namespace {
 // Sets default values for all fields of a new StoryModel. Defaults are
 // documented in
-// peridot/lib/fidl/public/fuchsia.modular.storymodel/story_model.fidl.
+// src/modular/lib/fidl/public/fuchsia.modular.storymodel/story_model.fidl.
 void InitializeModelDefaults(StoryModel* model) {
   model->set_runtime_state(fuchsia::modular::StoryState::STOPPED);
   model->set_visibility_state(fuchsia::modular::StoryVisibilityState::DEFAULT);

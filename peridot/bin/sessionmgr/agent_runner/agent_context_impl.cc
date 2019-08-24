@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
-#include "peridot/lib/common/teardown.h"
+#include "src/modular/lib/common/teardown.h"
 
 namespace modular {
 

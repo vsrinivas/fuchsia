@@ -4,16 +4,16 @@
 
 #include "peridot/lib/ledger_client/ledger_client.h"
 
-#include <algorithm>
-
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/clone.h"
+#include <algorithm>
+
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
 

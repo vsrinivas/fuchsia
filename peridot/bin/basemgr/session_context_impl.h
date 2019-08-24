@@ -21,9 +21,9 @@
 
 #include <src/lib/fxl/macros.h>
 
-#include "peridot/lib/fidl/app_client.h"
-#include "peridot/lib/fidl/environment.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/fidl/app_client.h"
+#include "src/modular/lib/fidl/environment.h"
 
 namespace modular {
 

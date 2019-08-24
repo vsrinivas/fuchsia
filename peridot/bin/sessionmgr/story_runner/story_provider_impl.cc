@@ -28,12 +28,12 @@
 #include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
-#include "peridot/lib/common/teardown.h"
-#include "peridot/lib/fidl/array_to_string.h"
-#include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/fidl/proxy.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "src/lib/uuid/uuid.h"
+#include "src/modular/lib/common/teardown.h"
+#include "src/modular/lib/fidl/array_to_string.h"
+#include "src/modular/lib/fidl/clone.h"
+#include "src/modular/lib/fidl/proxy.h"
 
 // In tests prefetching mondrian saved ~30ms in story start up time.
 #define PREFETCH_MONDRIAN 1

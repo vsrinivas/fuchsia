@@ -11,13 +11,13 @@
 
 #include <thread>
 
-#include <peridot/lib/modular_config/modular_config.h>
-#include <peridot/lib/modular_config/modular_config_constants.h>
 #include <peridot/lib/util/pseudo_dir_server.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 #include <src/lib/fxl/strings/split_string.h>
 #include <src/lib/fxl/strings/substitute.h>
+#include <src/modular/lib/modular_config/modular_config.h>
+#include <src/modular/lib/modular_config/modular_config_constants.h>
 
 #include "gtest/gtest.h"
 

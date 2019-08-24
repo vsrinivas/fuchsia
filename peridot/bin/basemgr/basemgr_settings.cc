@@ -4,14 +4,15 @@
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 
+#include <lib/fidl/cpp/string.h>
+
 #include <string>
 
-#include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
 
-#include "peridot/lib/modular_config/modular_config_constants.h"
 #include "src/lib/files/file.h"
+#include "src/modular/lib/modular_config/modular_config_constants.h"
 
 namespace modular {
 

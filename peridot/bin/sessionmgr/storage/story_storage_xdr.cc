@@ -7,7 +7,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
 
-#include "peridot/lib/module_manifest/module_manifest_xdr.h"
+#include "src/modular/lib/module_manifest/module_manifest_xdr.h"
 
 namespace modular {
 

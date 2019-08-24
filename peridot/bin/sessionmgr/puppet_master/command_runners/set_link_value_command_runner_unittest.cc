@@ -7,7 +7,7 @@
 #include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/testing/test_with_session_storage.h"
+#include "src/modular/lib/testing/test_with_session_storage.h"
 
 namespace modular {
 namespace {
