@@ -199,8 +199,7 @@ class AudioCapturerImpl : public AudioObject,
   void UpdateFormat(fuchsia::media::AudioSampleFormat sample_format, uint32_t channels,
                     uint32_t frames_per_second) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
-  // Select a mixer for the link supplied and return true, or return false if
-  // one cannot be found.
+  // Select a mixer for the link supplied and return true, or return false if one cannot be found.
   zx_status_t ChooseMixer(const fbl::RefPtr<AudioLink>& link);
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
@@ -212,7 +211,7 @@ class AudioCapturerImpl : public AudioObject,
   // Capture format and gain state.
   fuchsia::media::AudioStreamTypePtr format_;
   uint32_t bytes_per_frame_;
-  TimelineRate frames_to_clock_mono_rate_;
+  TimelineRate dest_frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;
   std::atomic<float> stream_gain_db_;
   bool mute_;
@@ -228,8 +227,7 @@ class AudioCapturerImpl : public AudioObject,
   fbl::RefPtr<dispatcher::WakeupEvent> mix_wakeup_;
   fbl::RefPtr<dispatcher::Timer> mix_timer_;
 
-  // Queues of capture buffers supplied by the client and waiting to be filled,
-  // or waiting to be returned.
+  // Queues of capture buffers from the client: waiting to be filled, or waiting to be returned.
   fbl::Mutex pending_lock_;
   PcbList pending_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
   PcbList finished_capture_buffers_ FXL_GUARDED_BY(pending_lock_);
@@ -245,14 +243,15 @@ class AudioCapturerImpl : public AudioObject,
 
   // Capture bookkeeping
   bool async_mode_ = false;
-  TimelineFunction frames_to_clock_mono_ FXL_GUARDED_BY(mix_domain_->token());
-  GenerationId frames_to_clock_mono_gen_ FXL_GUARDED_BY(mix_domain_->token());
+  TimelineFunction dest_frames_to_clock_mono_ FXL_GUARDED_BY(mix_domain_->token());
+  GenerationId dest_frames_to_clock_mono_gen_ FXL_GUARDED_BY(mix_domain_->token());
   int64_t frame_count_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
 
   uint32_t async_frames_per_packet_;
   uint32_t async_next_frame_offset_ FXL_GUARDED_BY(mix_domain_->token()) = 0;
   StopAsyncCaptureCallback pending_async_stop_cbk_;
 
+  // for glitch-debugging purposes
   std::atomic<uint16_t> underflow_count_;
   std::atomic<uint16_t> partial_underflow_count_;
 };
