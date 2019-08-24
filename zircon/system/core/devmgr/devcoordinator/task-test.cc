@@ -77,6 +77,39 @@ class DepsTask : public CountingTask {
   bool fail_on_dep_failure_;
 };
 
+// A task which is dependent on their parent task.
+class DepOnParentTask : public CountingTask {
+ public:
+  // The created descendents will be stored in |out_deps|, beginning at |start_index|.
+  static fbl::RefPtr<DepOnParentTask> Create(zx_status_t root_status,
+                                             size_t num_descendents,
+                                             fbl::Vector<fbl::RefPtr<DepOnParentTask>>* out_deps,
+                                             size_t start_index = 0) {
+    auto task = fbl::MakeRefCounted<DepOnParentTask>();
+    task->mock_status_ = root_status;
+    if (num_descendents > 0) {
+      auto child_task =
+          DepOnParentTask::Create(ZX_OK, num_descendents - 1, out_deps, start_index + 1);
+      child_task->AddDependency(task);
+      out_deps->push_back(child_task);
+    }
+    return task;
+  }
+
+ private:
+  void Run() override {
+    CountingTask::Run();
+    Complete(mock_status_);
+  }
+
+  void DependencyFailed(zx_status_t status) override {
+    CountingTask::DependencyFailed(status);
+    Complete(status);
+  }
+
+  zx_status_t mock_status_;
+};
+
 class SequenceTask : public devmgr::Task {
  public:
   SequenceTask() : Task(async_get_default_dispatcher()) {}
@@ -200,6 +233,46 @@ TEST_F(TaskTestCase, DependencyTracking) {
   loop().RunUntilIdle();
   ASSERT_TRUE(task->is_completed());
   ASSERT_EQ(task->Dependencies().size(), 0);
+}
+
+TEST_F(TaskTestCase, DependentOnParentSuccess) {
+  size_t num_deps = 10;
+  fbl::Vector<fbl::RefPtr<DepOnParentTask>> deps;
+  auto root_task = DepOnParentTask::Create(ZX_OK, num_deps, &deps);
+
+  loop().RunUntilIdle();
+
+  ASSERT_TRUE(root_task->is_completed());
+  EXPECT_OK(root_task->status());
+  EXPECT_EQ(root_task->run_calls(), 1);
+  EXPECT_EQ(root_task->dep_fail_calls(), 0);
+
+  for (auto task : deps) {
+    ASSERT_TRUE(task->is_completed());
+    EXPECT_OK(task->status());
+    EXPECT_EQ(task->run_calls(), 1);
+    EXPECT_EQ(task->dep_fail_calls(), 0);
+  }
+}
+
+TEST_F(TaskTestCase, DependentOnParentFailure) {
+  size_t num_deps = 10;
+  fbl::Vector<fbl::RefPtr<DepOnParentTask>> deps;
+  auto root_task = DepOnParentTask::Create(ZX_ERR_BAD_STATE, num_deps, &deps);
+
+  loop().RunUntilIdle();
+
+  ASSERT_TRUE(root_task->is_completed());
+  EXPECT_NOT_OK(root_task->status());
+  EXPECT_EQ(root_task->run_calls(), 1);
+  EXPECT_EQ(root_task->dep_fail_calls(), 0);
+
+  for (auto task : deps) {
+    ASSERT_TRUE(task->is_completed());
+    EXPECT_NOT_OK(task->status());
+    EXPECT_EQ(task->run_calls(), 0);
+    EXPECT_EQ(task->dep_fail_calls(), 1);
+  }
 }
 
 }  // namespace

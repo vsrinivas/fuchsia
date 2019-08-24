@@ -48,8 +48,11 @@ void Task::RegisterDependent(fbl::RefPtr<Task> dependent) {
 
 void Task::DependencyComplete(const Task* dependency, zx_status_t status) {
   ++finished_dependencies_count_;
-  if (finished_dependencies_count_ == total_dependencies_count_) {
-    ZX_ASSERT(async_task_.Post(dispatcher_) == ZX_OK);
+  // If this task is already scheduled to run, we shouldn't try to run it again.
+  if (!is_pending()) {
+    if (finished_dependencies_count_ == total_dependencies_count_) {
+      ZX_ASSERT(async_task_.Post(dispatcher_) == ZX_OK);
+    }
   }
   if (status != ZX_OK && std::holds_alternative<Incomplete>(status_)) {
     DependencyFailed(status);

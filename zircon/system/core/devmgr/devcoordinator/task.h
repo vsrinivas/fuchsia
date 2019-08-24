@@ -71,6 +71,8 @@ class Task : public fbl::RefCounted<Task> {
   // element of dependencies_.
   void DependencyComplete(const Task* dependency, zx_status_t status);
 
+  bool is_pending() const { return async_task_.is_pending(); }
+
   // List of tasks that should be notified when this task is complete
   fbl::Vector<fbl::RefPtr<Task>> dependents_;
   // Reverse of dependents_

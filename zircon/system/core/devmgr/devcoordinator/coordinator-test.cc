@@ -1264,6 +1264,53 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   loop()->RunUntilIdle();
 }
 
+TEST_F(UnbindTestCase, TwoConcurrentRemovals) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent", 0 /* protocol id */, "", &parent_index));
+
+  auto* parent_device = device(parent_index);
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(parent_device->device, "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  // Schedule concurrent removals.
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
+  loop()->RunUntilIdle();
+}
+
+TEST_F(UnbindTestCase, ManyConcurrentRemovals) {
+  size_t num_devices = 100;
+  size_t idx_map[num_devices];
+
+  for (size_t i = 0; i < num_devices; i++) {
+    auto parent = i == 0 ? platform_bus() : device(idx_map[i - 1])->device;
+    ASSERT_NO_FATAL_FAILURES(AddDevice(parent, "child", 0 /* protocol id */, "", &idx_map[i]));
+  }
+
+  for (size_t i = 0; i < num_devices; i++) {
+    ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(device(idx_map[i])->device));
+  }
+
+  loop()->RunUntilIdle();
+
+  for (size_t i = 0; i < num_devices; i++) {
+    ASSERT_NO_FATAL_FAILURES(
+        CheckRemoveReceivedAndReply(device(idx_map[num_devices - i - 1])->remote));
+    loop()->RunUntilIdle();
+  }
+}
+
 class SuspendTestCase : public MultipleDeviceTestCase {
  public:
   void SuspendTest(uint32_t flags);
