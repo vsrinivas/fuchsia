@@ -11,7 +11,6 @@ group("tests") {
     ":modular_integration_tests",
     "modular_config",
 
-
     # modular_test_harness is a dep for any test that uses test_harness_fixture
     # (all of the tests below). Add it here so that an fx set --with
     # //src/modular/tests includes it.
@@ -176,11 +175,11 @@ executable("module_context_test") {
   ]
 }
 
-executable("module_output_test") {
+executable("story_module_test") {
   testonly = true
 
   sources = [
-    "module_output_test.cc",
+    "story_module_test.cc",
   ]
 
   deps = [
@@ -374,7 +373,7 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "module_output_test"
+      name = "story_module_test"
       environments = basic_envs
     },
     {
@@ -421,11 +420,11 @@ test_package("modular_integration_tests") {
     ":last_focus_time_test",
     ":login_override_test",
     ":module_context_test",
-    ":module_output_test",
     ":queue_persistence_test",
     ":session_shell_test",
     ":sessionctl_test",
     ":sessionmgr_integration_test",
+    ":story_module_test",
     ":story_shell_embedded_mod_test",
     ":story_shell_factory_test",
     ":story_shell_test",

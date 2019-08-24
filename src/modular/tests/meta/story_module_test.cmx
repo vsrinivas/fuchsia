@@ -1,10 +1,10 @@
 {
     "program": {
-        "binary": "test/module_output_test"
+        "binary": "test/story_module_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.app.discover.ModuleOutput",
+            "fuchsia.app.discover.StoryModule",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.modular.ModuleContext"

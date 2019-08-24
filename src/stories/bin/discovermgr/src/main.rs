@@ -53,6 +53,7 @@ mod session_context;
 mod story_context_store;
 mod story_graph;
 mod story_manager;
+mod story_module;
 mod story_storage;
 mod suggestion_providers;
 mod suggestions_manager;

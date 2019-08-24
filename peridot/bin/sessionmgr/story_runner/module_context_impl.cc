@@ -55,6 +55,12 @@ ModuleContextImpl::ModuleContextImpl(
         module_scope.set_module_path(module_data_->module_path);
         discover_registry_->RegisterModuleOutputWriter(std::move(module_scope), std::move(request));
       });
+  service_provider_impl_.AddService<fuchsia::app::discover::StoryModule>([this](auto request) {
+    fuchsia::app::discover::ModuleIdentifier module_scope;
+    module_scope.set_story_id(story_controller_impl_->GetStoryId().value_or(""));
+    module_scope.set_module_path(module_data_->module_path);
+    discover_registry_->RegisterStoryModule(std::move(module_scope), std::move(request));
+  });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
 }
 
@@ -64,7 +70,8 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
                                 fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   fuchsia::modular::LinkPathPtr link_path;
   // See if there's a parameter mapping for this link.
-  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path, name.value_or(""));
+  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path,
+                                                                  name.value_or(""));
   story_controller_impl_->ConnectLinkPath(std::move(link_path), std::move(request));
 }
 

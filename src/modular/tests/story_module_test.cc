@@ -16,7 +16,7 @@ constexpr char kIntentAction[] = "action";
 constexpr char kTestData[] = "test-data";
 constexpr char kTestType[] = "test-type";
 
-class ModuleOutputTest : public modular::testing::TestHarnessFixture {
+class StoryModuleTest : public modular::testing::TestHarnessFixture {
  public:
   void SetUp() override {
     test_module_ =
@@ -24,7 +24,7 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
     test_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl();
     builder_.InterceptComponent(test_module_->GetOnCreateHandler(),
                                 {.url = test_module_url_,
-                                 .sandbox_services = {"fuchsia.app.discover.ModuleOutputWriter",
+                                 .sandbox_services = {"fuchsia.app.discover.StoryModule",
                                                       "fuchsia.modular.ModuleContext"}});
     builder_.BuildAndRun(test_harness());
   }
@@ -35,7 +35,7 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
   std::string test_entity_provider_agent_url_;
 };
 
-TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
+TEST_F(StoryModuleTest, ModuleWritesToOutput) {
   fuchsia::modular::Intent intent;
   intent.handler = test_module_url_;
   intent.action = kIntentAction;
@@ -53,10 +53,10 @@ TEST_F(ModuleOutputTest, ModuleWritesToOutput) {
 
   RunLoopUntil([&] { return reference.has_value(); });
 
-  fuchsia::app::discover::ModuleOutputWriterPtr module_output;
-  test_module_->component_context()->svc()->Connect(module_output.NewRequest());
+  fuchsia::app::discover::StoryModulePtr story_module;
+  test_module_->component_context()->svc()->Connect(story_module.NewRequest());
   bool output_written{false};
-  module_output->Write("output_name", reference, [&output_written](auto result) {
+  story_module->WriteOutput("output_name", reference, [&output_written](auto result) {
     // TODO: once the discover service generates
     // suggestions, we should ensure they are generated
     // based on this modules output.
