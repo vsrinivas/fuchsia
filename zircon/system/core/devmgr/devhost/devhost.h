@@ -155,6 +155,12 @@ zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr
                                 uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) REQ_DM_LOCK;
 zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags) REQ_DM_LOCK;
+zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device_t>& dev,
+                                       fuchsia_device_DevicePowerState requested_state,
+                                       fuchsia_device_DevicePowerState *out_state);
+zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device_t>& dev,
+                                       fuchsia_device_DevicePowerState requested_state,
+                                       fuchsia_device_DevicePowerState *out_state);
 void devhost_device_destroy(zx_device_t* dev) REQ_DM_LOCK;
 
 zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,

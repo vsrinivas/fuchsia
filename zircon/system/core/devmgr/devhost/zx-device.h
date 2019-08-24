@@ -57,8 +57,17 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     return Dispatch(ops->suspend, ZX_ERR_NOT_SUPPORTED, flags);
   }
 
+  zx_status_t SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t* out_state) {
+    return Dispatch(ops->suspend_new, ZX_ERR_NOT_SUPPORTED, requested_state, enable_wake,
+                    out_state);
+  }
+
   zx_status_t ResumeOp(uint32_t flags) {
     return Dispatch(ops->resume, ZX_ERR_NOT_SUPPORTED, flags);
+  }
+
+  zx_status_t ResumeNewOp(uint8_t requested_state, uint8_t* out_state) {
+    return Dispatch(ops->resume_new, ZX_ERR_NOT_SUPPORTED, requested_state, out_state);
   }
 
   zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {

@@ -10,6 +10,65 @@ namespace device {
 namespace power {
 namespace test {
 
+::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::TestDevice_GetCurrentDevicePowerState_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::~TestDevice_GetCurrentDevicePowerState_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~TestDevice_GetCurrentDevicePowerState_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::MoveImpl_(TestDevice_GetCurrentDevicePowerState_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result) == ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::PrimarySize);
+}
+
+
+TestDevice_GetCurrentDevicePowerState_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) TestDevice_GetCurrentDevicePowerState_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::TestDevice_AddDeviceWithPowerArgs_Result() {
   tag_ = Tag::Invalid;
 }
@@ -75,6 +134,9 @@ namespace {
 constexpr uint64_t kTestDevice_AddDeviceWithPowerArgs_Ordinal = 0x5d89a15400000000lu;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kTestDevice_GetCurrentDevicePowerState_Ordinal = 0x724b2ef700000000lu;
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 
 }  // namespace
 template <>
@@ -145,6 +207,68 @@ TestDevice::UnownedResultOf::AddDeviceWithPowerArgs TestDevice::Call::AddDeviceW
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+TestDevice::ResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurrentDevicePowerStateResponse>::GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePowerStateRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetCurrentDevicePowerStateRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDevicePowerStateRequest));
+  ::fidl::DecodedMessage<GetCurrentDevicePowerStateRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      TestDevice::InPlace::GetCurrentDevicePowerState(std::move(_client_end), Super::response_buffer()));
+}
+
+TestDevice::ResultOf::GetCurrentDevicePowerState TestDevice::SyncClient::GetCurrentDevicePowerState() {
+  return ResultOf::GetCurrentDevicePowerState(zx::unowned_channel(this->channel_));
+}
+
+TestDevice::ResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCurrentDevicePowerState(zx::unowned_channel _client_end) {
+  return ResultOf::GetCurrentDevicePowerState(std::move(_client_end));
+}
+
+template <>
+TestDevice::UnownedResultOf::GetCurrentDevicePowerState_Impl<TestDevice::GetCurrentDevicePowerStateResponse>::GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetCurrentDevicePowerStateRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetCurrentDevicePowerStateRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetCurrentDevicePowerStateRequest));
+  ::fidl::DecodedMessage<GetCurrentDevicePowerStateRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      TestDevice::InPlace::GetCurrentDevicePowerState(std::move(_client_end), std::move(_response_buffer)));
+}
+
+TestDevice::UnownedResultOf::GetCurrentDevicePowerState TestDevice::SyncClient::GetCurrentDevicePowerState(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetCurrentDevicePowerState(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+TestDevice::UnownedResultOf::GetCurrentDevicePowerState TestDevice::Call::GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetCurrentDevicePowerState(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<TestDevice::GetCurrentDevicePowerStateResponse> TestDevice::InPlace::GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetCurrentDevicePowerStateRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetCurrentDevicePowerStateRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<TestDevice::GetCurrentDevicePowerStateResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetCurrentDevicePowerStateRequest, GetCurrentDevicePowerStateResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<TestDevice::GetCurrentDevicePowerStateResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -164,6 +288,17 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       auto message = result.message.message();
       impl->AddDeviceWithPowerArgs(std::move(message->info),
         Interface::AddDeviceWithPowerArgsCompleter::Sync(txn));
+      return true;
+    }
+    case kTestDevice_GetCurrentDevicePowerState_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetCurrentDevicePowerStateRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetCurrentDevicePowerState(
+        Interface::GetCurrentDevicePowerStateCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -207,6 +342,35 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::B
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kTestDevice_AddDeviceWithPowerArgs_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(TestDevice_GetCurrentDevicePowerState_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePowerStateResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetCurrentDevicePowerStateResponse*>(_write_bytes);
+  _response._hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDevicePowerStateResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_response_bytes)));
+}
+
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::BytePart _buffer, TestDevice_GetCurrentDevicePowerState_Result result) {
+  if (_buffer.capacity() < GetCurrentDevicePowerStateResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetCurrentDevicePowerStateResponse*>(_buffer.data());
+  _response._hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(GetCurrentDevicePowerStateResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_buffer)));
+}
+
+void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kTestDevice_GetCurrentDevicePowerState_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

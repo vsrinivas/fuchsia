@@ -23,7 +23,8 @@ using llcpp::fuchsia::device::DevicePowerStateInfo;
 using llcpp::fuchsia::device::power::test::TestDevice;
 
 class TestPowerDriverChild;
-using DeviceType = ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable, ddk::SuspendableNew,
+                               ddk::ResumableNew>;
 class TestPowerDriverChild : public DeviceType,
                              public TestDevice::Interface {
  public:
@@ -37,6 +38,7 @@ class TestPowerDriverChild : public DeviceType,
   void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                                      AddDeviceWithPowerArgsCompleter::Sync completer) override;
 
+  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
@@ -44,7 +46,25 @@ class TestPowerDriverChild : public DeviceType,
   }
 
   void DdkRelease() { delete this; }
+  zx_status_t DdkSuspendNew(uint8_t requested_state, bool enable_wake, uint8_t* out_state);
+  zx_status_t DdkResumeNew(uint8_t requested_state, uint8_t* out_state);
+
+ private:
+  uint8_t current_power_state_ = 0;
 };
+
+zx_status_t TestPowerDriverChild::DdkSuspendNew(uint8_t requested_state, bool enable_wake,
+                                                uint8_t* out_state) {
+  current_power_state_ = requested_state;
+  *out_state = requested_state;
+  return ZX_OK;
+}
+
+zx_status_t TestPowerDriverChild::DdkResumeNew(uint8_t requested_state, uint8_t* out_state) {
+  current_power_state_ = requested_state;
+  *out_state = requested_state;
+  return ZX_OK;
+}
 
 void TestPowerDriverChild::AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
                                                   AddDeviceWithPowerArgsCompleter::Sync completer) {
@@ -73,8 +93,18 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(::fidl::VectorView<DevicePower
   } else {
     response.set_response(
         llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response{});
+    __UNUSED auto ptr = child2.release();
   }
   completer.Reply(std::move(response));
+}
+
+void TestPowerDriverChild::GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) {
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
+  result.set_response(llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response{
+      .cur_state = static_cast<llcpp::fuchsia::device::DevicePowerState>(current_power_state_),
+  });
+
+  completer.Reply(std::move(result));
 }
 
 zx_status_t TestPowerDriverChild::Bind() {

@@ -31,21 +31,13 @@ IntelHDACodecDriverBase::IntelHDACodecDriverBase() {
 }
 
 #define DEV(_ctx) static_cast<IntelHDACodecDriverBase*>(_ctx)
-zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .close = nullptr,
-    .unbind = nullptr,
-    .release = [](void* ctx) { DEV(ctx)->DeviceRelease(); },
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .suspend = [](void* ctx, uint32_t flags) -> zx_status_t { return DEV(ctx)->Suspend(flags); },
-    .resume = nullptr,
-    .rxrpc = nullptr,
-    .message = nullptr,
-};
+zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = []() {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.release = [](void* ctx) { DEV(ctx)->DeviceRelease(); };
+  ops.suspend = [](void* ctx, uint32_t flags) -> zx_status_t { return DEV(ctx)->Suspend(flags); };
+  return ops;
+}();
 #undef DEV
 
 Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {

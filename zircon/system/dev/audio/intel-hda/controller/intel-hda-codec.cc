@@ -39,24 +39,15 @@ fuchsia_hardware_intel_hda_CodecDevice_ops_t IntelHDACodec::CODEC_FIDL_THUNKS = 
     .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t { return DEV->GetChannel(txn); },
 };
 
-zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .close = nullptr,
-    .unbind = nullptr,
-    .release = nullptr,
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
-    .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = []() {
+    zx_protocol_device_t ops = {};
+    ops.version = DEVICE_OPS_VERSION;
+    ops.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
       return fuchsia_hardware_intel_hda_CodecDevice_dispatch(ctx, txn, msg,
                                                              &IntelHDACodec::CODEC_FIDL_THUNKS);
-    },
-};
+    };
+    return ops;
+}();
 
 ihda_codec_protocol_ops_t IntelHDACodec::CODEC_PROTO_THUNKS = {
     .get_driver_channel = [](void* ctx, zx_handle_t* channel_out) -> zx_status_t {

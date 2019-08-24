@@ -242,6 +242,37 @@ class Suspendable : public base_mixin {
 };
 
 template <typename D>
+class SuspendableNew : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckSuspendableNew<D>();
+    proto->suspend_new = Suspend_New;
+  }
+
+ private:
+  static zx_status_t Suspend_New(void* ctx, uint8_t requested_state,
+                                   bool enable_wake, uint8_t* out_state) {
+    return static_cast<D*>(ctx)->DdkSuspendNew(requested_state, enable_wake,
+                                               out_state);
+  }
+};
+
+template <typename D>
+class ResumableNew : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckResumableNew<D>();
+    proto->resume_new = Resume_New;
+  }
+
+ private:
+  static zx_status_t Resume_New(void* ctx, uint8_t requested_state,
+                                uint8_t* out_state) {
+    return static_cast<D*>(ctx)->DdkResumeNew(requested_state, out_state);
+  }
+};
+
+template <typename D>
 class Resumable : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {

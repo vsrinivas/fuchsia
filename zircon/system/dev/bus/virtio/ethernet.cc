@@ -71,21 +71,13 @@ void virtio_net_release(void* ctx) {
   eth->Release();
 }
 
-zx_protocol_device_t kDeviceOps = {
-    DEVICE_OPS_VERSION,
-    nullptr,  // get_protocol
-    nullptr,  // open
-    nullptr,  // close
-    virtio_net_unbind,
-    virtio_net_release,
-    nullptr,  // read
-    nullptr,  // write
-    nullptr,  // get_size
-    nullptr,  // suspend
-    nullptr,  // resume
-    nullptr,  // rxrpc
-    nullptr,  // rxmsg
-};
+const zx_protocol_device_t kDeviceOps = []() {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.unbind = virtio_net_unbind;
+  ops.release = virtio_net_release;
+  return ops;
+}();
 
 // Protocol bridge helpers
 zx_status_t virtio_net_query(void* ctx, uint32_t options, ethernet_info_t* info) {

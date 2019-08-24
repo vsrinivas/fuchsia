@@ -35,6 +35,8 @@ enum class DevicePowerState : uint8_t {
 struct DevicePowerStateInfo;
 struct Controller_GetDevicePowerCaps_Response;
 struct Controller_GetDevicePowerCaps_Result;
+struct Controller_Resume_Response;
+struct Controller_Resume_Result;
 class Controller;
 
 extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
@@ -437,6 +439,101 @@ struct Controller_GetDevicePowerCaps_Result {
   };
 };
 
+
+
+struct Controller_Resume_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  DevicePowerState out_state = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Resume_ResultTable;
+
+struct Controller_Resume_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Controller_Resume_Result();
+  ~Controller_Resume_Result();
+
+  Controller_Resume_Result(Controller_Resume_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Controller_Resume_Result& operator=(Controller_Resume_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  Controller_Resume_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Controller_Resume_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Controller_Resume_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  Controller_Resume_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Resume_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Controller_Resume_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    Controller_Resume_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerBindResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerScheduleUnbindResponseTable;
@@ -449,6 +546,10 @@ extern "C" const fidl_type_t fuchsia_device_ControllerDebugSuspendResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerDebugResumeResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerSuspendRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerSuspendResponseTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerResumeRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerResumeResponseTable;
 
 // Interface for manipulating a device in a devhost
 class Controller final {
@@ -679,6 +780,63 @@ class Controller final {
   };
   using GetDevicePowerCapsRequest = ::fidl::AnyZeroArgMessage;
 
+  struct SuspendResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+    DevicePowerState out_state;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSuspendResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct SuspendRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    DevicePowerState requested_state;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSuspendRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = SuspendResponse;
+  };
+
+  struct ResumeResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    Controller_Resume_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerResumeResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct ResumeRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    DevicePowerState requested_state;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerResumeRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ResumeResponse;
+  };
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -876,6 +1034,38 @@ class Controller final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Suspend_Impl(zx::unowned_channel _client_end, DevicePowerState requested_state);
+      ~Suspend_Impl() = default;
+      Suspend_Impl(Suspend_Impl&& other) = default;
+      Suspend_Impl& operator=(Suspend_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class Resume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Resume_Impl(zx::unowned_channel _client_end, DevicePowerState requested_state);
+      ~Resume_Impl() = default;
+      Resume_Impl(Resume_Impl&& other) = default;
+      Resume_Impl& operator=(Resume_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -890,6 +1080,8 @@ class Controller final {
     using DebugResume = DebugResume_Impl<DebugResumeResponse>;
     using RunCompatibilityTests = RunCompatibilityTests_Impl<RunCompatibilityTestsResponse>;
     using GetDevicePowerCaps = GetDevicePowerCaps_Impl<GetDevicePowerCapsResponse>;
+    using Suspend = Suspend_Impl<SuspendResponse>;
+    using Resume = Resume_Impl<ResumeResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1089,6 +1281,38 @@ class Controller final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Suspend_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+      ~Suspend_Impl() = default;
+      Suspend_Impl(Suspend_Impl&& other) = default;
+      Suspend_Impl& operator=(Suspend_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class Resume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Resume_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+      ~Resume_Impl() = default;
+      Resume_Impl(Resume_Impl&& other) = default;
+      Resume_Impl& operator=(Resume_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using Bind = Bind_Impl<BindResponse>;
@@ -1103,6 +1327,8 @@ class Controller final {
     using DebugResume = DebugResume_Impl<DebugResumeResponse>;
     using RunCompatibilityTests = RunCompatibilityTests_Impl<RunCompatibilityTestsResponse>;
     using GetDevicePowerCaps = GetDevicePowerCaps_Impl<GetDevicePowerCapsResponse>;
+    using Suspend = Suspend_Impl<SuspendResponse>;
+    using Resume = Resume_Impl<ResumeResponse>;
   };
 
   class SyncClient final {
@@ -1226,6 +1452,48 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetDevicePowerCaps GetDevicePowerCaps(::fidl::BytePart _response_buffer);
 
+    // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
+    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
+    // In a future change, this api will result in suspend hook being called on all the children and
+    // descendants before transitioning this device.
+    // On success, the out_state is same as requested_state.
+    // On failure, the out_state is the state the device can go into at this point, depending
+    // on the configuration of its children. For example, a device cannot go into the
+    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Suspend Suspend(DevicePowerState requested_state);
+
+    // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
+    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
+    // In a future change, this api will result in suspend hook being called on all the children and
+    // descendants before transitioning this device.
+    // On success, the out_state is same as requested_state.
+    // On failure, the out_state is the state the device can go into at this point, depending
+    // on the configuration of its children. For example, a device cannot go into the
+    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+
+    // Transition this device from a sleep state to a working state.
+    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
+    // In a future change, this api will result in resume hook being called on all the children
+    // after the current device is transitioned.
+    // On success, the out_state has the actual state of the device. The out_state could be
+    // different from the requested_state, if the device could not resume to the requested
+    // performant state, but the device could resume to a working state.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Resume Resume(DevicePowerState requested_state);
+
+    // Transition this device from a sleep state to a working state.
+    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
+    // In a future change, this api will result in resume hook being called on all the children
+    // after the current device is transitioned.
+    // On success, the out_state has the actual state of the device. The out_state could be
+    // different from the requested_state, if the device could not resume to the requested
+    // performant state, but the device could resume to a working state.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Resume Resume(::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -1345,6 +1613,48 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetDevicePowerCaps GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
+    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
+    // In a future change, this api will result in suspend hook being called on all the children and
+    // descendants before transitioning this device.
+    // On success, the out_state is same as requested_state.
+    // On failure, the out_state is the state the device can go into at this point, depending
+    // on the configuration of its children. For example, a device cannot go into the
+    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Suspend Suspend(zx::unowned_channel _client_end, DevicePowerState requested_state);
+
+    // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
+    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
+    // In a future change, this api will result in suspend hook being called on all the children and
+    // descendants before transitioning this device.
+    // On success, the out_state is same as requested_state.
+    // On failure, the out_state is the state the device can go into at this point, depending
+    // on the configuration of its children. For example, a device cannot go into the
+    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Suspend Suspend(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+
+    // Transition this device from a sleep state to a working state.
+    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
+    // In a future change, this api will result in resume hook being called on all the children
+    // after the current device is transitioned.
+    // On success, the out_state has the actual state of the device. The out_state could be
+    // different from the requested_state, if the device could not resume to the requested
+    // performant state, but the device could resume to a working state.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Resume Resume(zx::unowned_channel _client_end, DevicePowerState requested_state);
+
+    // Transition this device from a sleep state to a working state.
+    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
+    // In a future change, this api will result in resume hook being called on all the children
+    // after the current device is transitioned.
+    // On success, the out_state has the actual state of the device. The out_state could be
+    // different from the requested_state, if the device could not resume to the requested
+    // performant state, but the device could resume to a working state.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Resume Resume(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -1395,6 +1705,25 @@ class Controller final {
     // Gets the device power capabilities. Used by the system wide power manager
     // to manage power for this device.
     static ::fidl::DecodeResult<GetDevicePowerCapsResponse> GetDevicePowerCaps(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
+    // state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
+    // In a future change, this api will result in suspend hook being called on all the children and
+    // descendants before transitioning this device.
+    // On success, the out_state is same as requested_state.
+    // On failure, the out_state is the state the device can go into at this point, depending
+    // on the configuration of its children. For example, a device cannot go into the
+    // requested_state, if the requested_state does not support a descendant's wake configuration.
+    static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
+
+    // Transition this device from a sleep state to a working state.
+    // TODO(ravoorir): At the moment, this will call the resume hook only on this device.
+    // In a future change, this api will result in resume hook being called on all the children
+    // after the current device is transitioned.
+    // On success, the out_state has the actual state of the device. The out_state could be
+    // different from the requested_state, if the device could not resume to the requested
+    // performant state, but the device could resume to a working state.
+    static ::fidl::DecodeResult<ResumeResponse> Resume(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ResumeRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1574,6 +1903,34 @@ class Controller final {
 
     virtual void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync _completer) = 0;
 
+    class SuspendCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status, DevicePowerState out_state);
+      void Reply(::fidl::BytePart _buffer, int32_t status, DevicePowerState out_state);
+      void Reply(::fidl::DecodedMessage<SuspendResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SuspendCompleter = ::fidl::Completer<SuspendCompleterBase>;
+
+    virtual void Suspend(DevicePowerState requested_state, SuspendCompleter::Sync _completer) = 0;
+
+    class ResumeCompleterBase : public _Base {
+     public:
+      void Reply(Controller_Resume_Result result);
+      void Reply(::fidl::BytePart _buffer, Controller_Resume_Result result);
+      void Reply(::fidl::DecodedMessage<ResumeResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ResumeCompleter = ::fidl::Completer<ResumeCompleterBase>;
+
+    virtual void Resume(DevicePowerState requested_state, ResumeCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -1662,6 +2019,16 @@ static_assert(sizeof(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Res
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_Resume_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Resume_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller_Resume_Response, out_state) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::Controller_Resume_Response) == ::llcpp::fuchsia::device::Controller_Resume_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_Resume_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Resume_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::BindRequest> : public std::true_type {};
@@ -1787,5 +2154,38 @@ struct IsFidlMessage<::llcpp::fuchsia::device::Controller::GetDevicePowerCapsRes
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetDevicePowerCapsResponse)
     == ::llcpp::fuchsia::device::Controller::GetDevicePowerCapsResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetDevicePowerCapsResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::SuspendRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::SuspendRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::SuspendRequest)
+    == ::llcpp::fuchsia::device::Controller::SuspendRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::SuspendRequest, requested_state) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::SuspendResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::SuspendResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::SuspendResponse)
+    == ::llcpp::fuchsia::device::Controller::SuspendResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::SuspendResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::SuspendResponse, out_state) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::ResumeRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::ResumeRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::ResumeRequest)
+    == ::llcpp::fuchsia::device::Controller::ResumeRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::ResumeRequest, requested_state) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller::ResumeResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::Controller::ResumeResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::Controller::ResumeResponse)
+    == ::llcpp::fuchsia::device::Controller::ResumeResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::ResumeResponse, result) == 16);
 
 }  // namespace fidl

@@ -140,4 +140,24 @@ protocol Controller {
     /// Gets the device power capabilities. Used by the system wide power manager
     /// to manage power for this device.
     GetDevicePowerCaps() -> (array<DevicePowerStateInfo>:MAX_DEVICE_POWER_STATES dpstates) error zx.status;
+
+    /// Transition this device from a working to a sleep state or from a sleep state to a deeper sleep
+    /// state. TODO(ravoorir): At the moment, this will call the suspend hook only on this device.
+    /// In a future change, this api will result in suspend hook being called on all the children and
+    /// descendants before transitioning this device.
+    /// On success, the out_state is same as requested_state.
+    /// On failure, the out_state is the state the device can go into at this point, depending
+    /// on the configuration of its children. For example, a device cannot go into the
+    /// requested_state, if the requested_state does not support a descendant's wake configuration.
+    Suspend(DevicePowerState requested_state) -> (zx.status status, DevicePowerState out_state);
+    /// Transition this device from a sleep state to a working state.
+    /// TODO(ravoorir): At the moment, this will call the resume hook only on this device.
+    /// In a future change, this api will result in resume hook being called on all the children
+    /// after the current device is transitioned.
+    /// On success, the out_state has the actual state of the device. The out_state could be
+    /// different from the requested_state, if the device could not resume to the requested
+    /// performant state, but the device could resume to a working state.
+    //  Just because the device is not able to transition to a particular performant state,
+    //  we do not want to suspend the device back.
+    Resume(DevicePowerState requested_state) -> (DevicePowerState out_state) error zx.status;
 };

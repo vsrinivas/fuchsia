@@ -10,4 +10,6 @@ using fuchsia.device;
 protocol TestDevice {
     /// Add Test Device with some powerargs
     AddDeviceWithPowerArgs(vector<fuchsia.device.DevicePowerStateInfo> info) -> () error zx.status;
+    /// Get current power state of the device
+    GetCurrentDevicePowerState() -> (fuchsia.device.DevicePowerState cur_state) error zx.status;
 };

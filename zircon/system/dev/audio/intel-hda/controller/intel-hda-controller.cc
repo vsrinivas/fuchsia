@@ -42,28 +42,22 @@ fuchsia_hardware_intel_hda_ControllerDevice_ops_t IntelHDAController::CONTROLLER
 };
 
 // Device interface thunks
-zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol =
+zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = []() {
+    zx_protocol_device_t ops = {};
+    ops.version = DEVICE_OPS_VERSION;
+    ops.get_protocol =
         [](void* ctx, uint32_t proto_id, void* protocol) {
           return static_cast<IntelHDAController*>(ctx)->DeviceGetProtocol(proto_id, protocol);
-        },
-    .open = nullptr,
-    .close = nullptr,
-    .unbind = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceShutdown(); },
-    .release = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceRelease(); },
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
-    .message =
+        };
+    ops.unbind = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceShutdown(); };
+    ops.release = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceRelease(); };
+    ops.message =
         [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
           return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
               ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
-        },
-};
+        };
+    return ops;
+}();
 
 ihda_codec_protocol_ops_t IntelHDAController::CODEC_PROTO_THUNKS = {
     .get_driver_channel =
@@ -355,6 +349,8 @@ zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = {
     .read = nullptr,
     .write = nullptr,
     .get_size = nullptr,
+    .suspend_new = nullptr,
+    .resume_new = nullptr,
     .suspend = nullptr,
     .resume = nullptr,
     .rxrpc = nullptr,

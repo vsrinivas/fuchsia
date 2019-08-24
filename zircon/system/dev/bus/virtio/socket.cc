@@ -104,21 +104,14 @@ static zx_status_t virtio_net_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* tx
   return status;
 }
 
-static zx_protocol_device_t kDeviceOps = {
-    DEVICE_OPS_VERSION,
-    nullptr,  // get_protocol
-    nullptr,  // open
-    nullptr,  // close
-    virtio_net_unbind,
-    virtio_net_release,
-    nullptr,             // read
-    nullptr,             // write
-    nullptr,             // get_size
-    nullptr,             // suspend
-    nullptr,             // resume
-    nullptr,             // rxrpc
-    virtio_net_message,  // rxmsg
-};
+static zx_protocol_device_t kDeviceOps = []() {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.unbind = virtio_net_unbind;
+  ops.release = virtio_net_release;
+  ops.message = virtio_net_message;
+  return ops;
+}();
 
 static virtio_vsock_hdr_t make_hdr(const SocketDevice::ConnectionKey& key, uint16_t op,
                                    uint32_t cid, const SocketDevice::CreditInfo& credit) {

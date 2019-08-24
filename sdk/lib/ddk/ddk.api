@@ -2,7 +2,7 @@
   "pkg/ddk/include/ddk/binding.h": "8a3132cf4f2bd6bbf0a9c692c64430d3",
   "pkg/ddk/include/ddk/debug.h": "62d8ab91159ee3cd6d14a5917633a6c5",
   "pkg/ddk/include/ddk/device-power-states.h": "27e4ede08c473a49485d1d61b0cc3288",
-  "pkg/ddk/include/ddk/device.h": "65aa52b35e37509ddb314f31234214c9",
+  "pkg/ddk/include/ddk/device.h": "4c87f4efbe5b42a89bef4ec3aa6c78cb",
   "pkg/ddk/include/ddk/driver.h": "44e275f762974cf8c4748480b675e7e5",
   "pkg/ddk/include/ddk/io-buffer.h": "f437e5d02e615b6366248c0363b69e8d",
   "pkg/ddk/include/ddk/metadata.h": "623bd21f37a20563c19f0fa251bf782a",

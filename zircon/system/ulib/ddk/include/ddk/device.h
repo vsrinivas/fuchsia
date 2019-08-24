@@ -38,6 +38,15 @@ typedef struct fidl_txn fidl_txn_t;
 #define DEVICE_SUSPEND_FLAG_SUSPEND_RAM 0xdcdc0400
 #define DEVICE_SUSPEND_REASON_MASK 0xffffff00
 
+// These values should be same as the enum fuchsia_device_DevicePowerState
+// generated from FIDL. The system wide power manager will be using the
+// power states from FIDL generated file.
+#define DEV_POWER_STATE_D0 UINT8_C(0)
+#define DEV_POWER_STATE_D1 UINT8_C(1)
+#define DEV_POWER_STATE_D2 UINT8_C(2)
+#define DEV_POWER_STATE_D3HOT UINT8_C(3)
+#define DEV_POWER_STATE_DCOLD UINT8_C(4)
+
 // reboot modifiers
 #define DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER (DEVICE_SUSPEND_FLAG_REBOOT | 0x01)
 #define DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY (DEVICE_SUSPEND_FLAG_REBOOT | 0x02)
@@ -162,6 +171,50 @@ typedef struct zx_protocol_device {
   // The default implementation returns 0.
   zx_off_t (*get_size)(void* ctx);
 
+  //@ ## suspend_new
+  // The suspend_new hook is used for suspending a device from a working to
+  // non-working low power state(sleep state), or from a non-working sleep state
+  // to a deeper sleep state.
+  //
+  // requested_state is always a non-working sleep state.
+  // enable_wake is whether to configure the device for wakeup from the requested non
+  // working sleep state. If enable_wake is true and the device does not support
+  // wake up, the hook fails without suspending the device.
+  //
+  // On success, the out_state is same as the requested_state.
+  // On failure, the device is not suspended and the out_state is the sleep state
+  // that the device can go into. For ex: Devices(buses) cannot go into a deeper
+  // sleep state when its children are suspended and configured to wake up from
+  // their sleep states.
+  //
+  // This hook assumes that the drivers are aware of their current state.
+  //
+  // TODO(ravoorir): Remove the old suspend when all the drivers are moved to
+  // new suspend and rename suspend_new to suspend.
+  zx_status_t (*suspend_new)(void* ctx, uint8_t requested_state, bool enable_wake,
+                             uint8_t* out_state);
+
+  //@ ## resume_new
+  // The resume_new hook is used for resuming a device from a non-working sleep
+  // state to a working state. It requires reinitializing the device completely
+  // or partially depending on the sleep state that device was in, when the
+  // resume call was made.
+  //
+  // requested_state is always a working state. It is fully working D0 for now.
+  // When we add more performant states, requested_state can be one of the working
+  // performant state.
+  //
+  // On success, the out_state is one of the working states that the device is
+  // in, although it might not be the requested_state.
+  //
+  // If the device, is not able to resume to a working state, the hook returns a
+  // failure.
+  //
+  // This hook assumes that the drivers are aware of their current state.
+  //
+  // TODO(ravoorir): Remove the old resume when all the drivers are moved to
+  // new suspend and resume.
+  zx_status_t (*resume_new)(void* ctx, uint8_t requested_state, uint8_t* out_state);
   // Stops the device and puts it in a low power mode
   zx_status_t (*suspend)(void* ctx, uint32_t flags);
 

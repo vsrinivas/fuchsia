@@ -606,6 +606,31 @@ static zx_status_t fidl_DeviceControllerGetDevicePowerCaps(void* ctx, fidl_txn_t
   return fuchsia_device_ControllerGetDevicePowerCaps_reply(txn, &result);
 }
 
+static zx_status_t fidl_DeviceControllerSuspend(void* ctx,
+                                                fuchsia_device_DevicePowerState requested_state,
+                                                fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  fuchsia_device_DevicePowerState out_state;
+  zx_status_t status = devhost_device_suspend_new(conn->dev, requested_state, &out_state);
+  return fuchsia_device_ControllerSuspend_reply(txn, status, out_state);
+}
+
+static zx_status_t fidl_DeviceControllerResume(void* ctx,
+                                               fuchsia_device_DevicePowerState requested_state,
+                                               fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  fuchsia_device_Controller_Resume_Result result{};
+  fuchsia_device_DevicePowerState out_state;
+  zx_status_t status = devhost_device_resume_new(conn->dev, requested_state, &out_state);
+  if (status == ZX_OK) {
+    result.tag = fuchsia_device_Controller_Resume_ResultTag_response;
+    result.response.out_state = out_state;
+  } else {
+    result.tag = fuchsia_device_Controller_Resume_ResultTag_err;
+  }
+  return fuchsia_device_ControllerResume_reply(txn, &result);
+}
+
 static zx_status_t fidl_DeviceControllerGetEventHandle(void* ctx, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   zx::eventpair event;
@@ -663,6 +688,8 @@ static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .DebugResume = fidl_DeviceControllerDebugResume,
     .RunCompatibilityTests = fidl_DeviceControllerRunCompatibilityTests,
     .GetDevicePowerCaps = fidl_DeviceControllerGetDevicePowerCaps,
+    .Suspend = fidl_DeviceControllerSuspend,
+    .Resume = fidl_DeviceControllerResume,
 };
 
 zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {

@@ -23,9 +23,106 @@ namespace device {
 namespace power {
 namespace test {
 
+struct TestDevice_GetCurrentDevicePowerState_Response;
+struct TestDevice_GetCurrentDevicePowerState_Result;
 struct TestDevice_AddDeviceWithPowerArgs_Response;
 struct TestDevice_AddDeviceWithPowerArgs_Result;
 class TestDevice;
+
+
+
+struct TestDevice_GetCurrentDevicePowerState_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::device::DevicePowerState cur_state = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
+
+struct TestDevice_GetCurrentDevicePowerState_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  TestDevice_GetCurrentDevicePowerState_Result();
+  ~TestDevice_GetCurrentDevicePowerState_Result();
+
+  TestDevice_GetCurrentDevicePowerState_Result(TestDevice_GetCurrentDevicePowerState_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  TestDevice_GetCurrentDevicePowerState_Result& operator=(TestDevice_GetCurrentDevicePowerState_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  TestDevice_GetCurrentDevicePowerState_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  TestDevice_GetCurrentDevicePowerState_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  void MoveImpl_(TestDevice_GetCurrentDevicePowerState_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    TestDevice_GetCurrentDevicePowerState_Response response_;
+    int32_t err_;
+  };
+};
 
 
 
@@ -124,6 +221,7 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
 
 class TestDevice final {
   TestDevice() = delete;
@@ -157,6 +255,21 @@ class TestDevice final {
     using ResponseType = AddDeviceWithPowerArgsResponse;
   };
 
+  struct GetCurrentDevicePowerStateResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    TestDevice_GetCurrentDevicePowerState_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetCurrentDevicePowerStateRequest = ::fidl::AnyZeroArgMessage;
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -178,9 +291,26 @@ class TestDevice final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class GetCurrentDevicePowerState_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end);
+      ~GetCurrentDevicePowerState_Impl() = default;
+      GetCurrentDevicePowerState_Impl(GetCurrentDevicePowerState_Impl&& other) = default;
+      GetCurrentDevicePowerState_Impl& operator=(GetCurrentDevicePowerState_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using AddDeviceWithPowerArgs = AddDeviceWithPowerArgs_Impl<AddDeviceWithPowerArgsResponse>;
+    using GetCurrentDevicePowerState = GetCurrentDevicePowerState_Impl<GetCurrentDevicePowerStateResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -204,9 +334,26 @@ class TestDevice final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class GetCurrentDevicePowerState_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetCurrentDevicePowerState_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetCurrentDevicePowerState_Impl() = default;
+      GetCurrentDevicePowerState_Impl(GetCurrentDevicePowerState_Impl&& other) = default;
+      GetCurrentDevicePowerState_Impl& operator=(GetCurrentDevicePowerState_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using AddDeviceWithPowerArgs = AddDeviceWithPowerArgs_Impl<AddDeviceWithPowerArgsResponse>;
+    using GetCurrentDevicePowerState = GetCurrentDevicePowerState_Impl<GetCurrentDevicePowerStateResponse>;
   };
 
   class SyncClient final {
@@ -228,6 +375,14 @@ class TestDevice final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::BytePart _response_buffer);
 
+    // Get current power state of the device
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState();
+
+    // Get current power state of the device
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -245,6 +400,14 @@ class TestDevice final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::BytePart _response_buffer);
 
+    // Get current power state of the device
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(zx::unowned_channel _client_end);
+
+    // Get current power state of the device
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -255,6 +418,9 @@ class TestDevice final {
 
     // Add Test Device with some powerargs
     static ::fidl::DecodeResult<AddDeviceWithPowerArgsResponse> AddDeviceWithPowerArgs(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceWithPowerArgsRequest> params, ::fidl::BytePart response_buffer);
+
+    // Get current power state of the device
+    static ::fidl::DecodeResult<GetCurrentDevicePowerStateResponse> GetCurrentDevicePowerState(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -279,6 +445,20 @@ class TestDevice final {
     using AddDeviceWithPowerArgsCompleter = ::fidl::Completer<AddDeviceWithPowerArgsCompleterBase>;
 
     virtual void AddDeviceWithPowerArgs(::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, AddDeviceWithPowerArgsCompleter::Sync _completer) = 0;
+
+    class GetCurrentDevicePowerStateCompleterBase : public _Base {
+     public:
+      void Reply(TestDevice_GetCurrentDevicePowerState_Result result);
+      void Reply(::fidl::BytePart _buffer, TestDevice_GetCurrentDevicePowerState_Result result);
+      void Reply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetCurrentDevicePowerStateCompleter = ::fidl::Completer<GetCurrentDevicePowerStateCompleterBase>;
+
+    virtual void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync _completer) = 0;
 
   };
 
@@ -311,6 +491,16 @@ class TestDevice final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response, cur_state) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response) == ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>);
 static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response, __reserved) == 0);
@@ -335,5 +525,13 @@ struct IsFidlMessage<::llcpp::fuchsia::device::power::test::TestDevice::AddDevic
 static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice::AddDeviceWithPowerArgsResponse)
     == ::llcpp::fuchsia::device::power::test::TestDevice::AddDeviceWithPowerArgsResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice::AddDeviceWithPowerArgsResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::power::test::TestDevice::GetCurrentDevicePowerStateResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::power::test::TestDevice::GetCurrentDevicePowerStateResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice::GetCurrentDevicePowerStateResponse)
+    == ::llcpp::fuchsia::device::power::test::TestDevice::GetCurrentDevicePowerStateResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice::GetCurrentDevicePowerStateResponse, result) == 16);
 
 }  // namespace fidl

@@ -714,21 +714,14 @@ static zx_status_t display_get_protocol(void* ctx, uint32_t proto_id, void* prot
   return ZX_OK;
 }
 
-static zx_protocol_device_t main_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = display_get_protocol,
-    .open = nullptr,
-    .close = nullptr,
-    .unbind = display_unbind,
-    .release = display_release,
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
-    .message = nullptr,
-};
+static zx_protocol_device_t main_device_proto = []() {
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.get_protocol = display_get_protocol;
+  ops.unbind = display_unbind;
+  ops.release = display_release;
+  return ops;
+}();
 
 static int hdmi_irq_handler(void* arg) {
   vim2_display_t* display = static_cast<vim2_display_t*>(arg);

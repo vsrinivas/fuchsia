@@ -572,4 +572,26 @@ zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t f
   }
   return ZX_OK;
 }
+
+zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
+                                       fuchsia_device_DevicePowerState requested_state,
+                                       fuchsia_device_DevicePowerState* out_state) {
+  zx_status_t status = ZX_OK;
+  if (dev->ops->suspend_new) {
+    status = dev->ops->suspend_new(dev->ctx, requested_state, false /* wake_configured */,
+                                   out_state);
+  }
+  return status;
+}
+
+zx_status_t devhost_device_resume_new(const fbl::RefPtr<zx_device>& dev,
+                                      fuchsia_device_DevicePowerState requested_state,
+                                      fuchsia_device_DevicePowerState* out_state) {
+  zx_status_t status = ZX_OK;
+  if (dev->ops->resume_new) {
+    status = dev->ops->resume_new(dev->ctx, requested_state, out_state);
+  }
+  return status;
+}
+
 }  // namespace devmgr
