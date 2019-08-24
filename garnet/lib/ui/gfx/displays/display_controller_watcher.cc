@@ -37,7 +37,7 @@ void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callb
   // Get display info.
   std::string path = kDisplayDir + "/" + filename;
 
-  FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".(" << filename << ")";
+  FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".";
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;

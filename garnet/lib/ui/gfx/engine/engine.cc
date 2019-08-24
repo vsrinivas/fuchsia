@@ -98,7 +98,7 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Composit
   };
 }
 
-bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_time) {
+RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_time) {
   uint64_t frame_number = timings->frame_number();
 
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
@@ -135,7 +135,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_t
   }
   if (hlas.empty()) {
     // No compositor has any renderable content.
-    return false;
+    return RenderFrameResult::kNoContentToRender;
   }
 
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number);
@@ -176,11 +176,11 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_t
     // are displayed and others aren't?  This isn't currently an issue because
     // there is only one Compositor; see above.
     FXL_DCHECK(hlas.size() == 1);
-    return false;
+    return RenderFrameResult::kRenderFailed;
   }
 
   CleanupEscher();
-  return true;
+  return RenderFrameResult::kRenderSuccess;
 }
 
 void Engine::UpdateAndDeliverMetrics(zx::time presentation_time) {

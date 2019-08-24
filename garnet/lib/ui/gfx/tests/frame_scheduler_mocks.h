@@ -149,7 +149,7 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() : weak_factory_(this) {}
 
   // |FrameRenderer|
-  bool RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time);
+  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time);
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
@@ -169,7 +169,9 @@ class MockFrameRenderer : public FrameRenderer {
   void SignalFrameDropped(uint64_t frame_number);
 
   // Manually set value returned from RenderFrame.
-  void SetRenderFrameReturnValue(bool new_value) { render_frame_return_value_ = new_value; }
+  void SetRenderFrameReturnValue(RenderFrameResult new_value) {
+    render_frame_return_value_ = new_value;
+  }
   uint32_t render_frame_call_count() { return render_frame_call_count_; }
   size_t pending_frames() { return frames_.size(); }
 
@@ -178,7 +180,7 @@ class MockFrameRenderer : public FrameRenderer {
  private:
   void CleanUpFrame(uint64_t frame_number);
 
-  bool render_frame_return_value_ = true;
+  RenderFrameResult render_frame_return_value_ = RenderFrameResult::kRenderSuccess;
   uint32_t render_frame_call_count_ = 0;
 
   struct Timings {

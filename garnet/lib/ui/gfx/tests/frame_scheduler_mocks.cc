@@ -83,8 +83,8 @@ std::shared_ptr<const MockSessionUpdater::CallbackStatus> MockSessionUpdater::Ad
   return status;
 }
 
-bool MockFrameRenderer::RenderFrame(const FrameTimingsPtr& frame_timings,
-                                    zx::time presentation_time) {
+RenderFrameResult MockFrameRenderer::RenderFrame(const FrameTimingsPtr& frame_timings,
+                                                 zx::time presentation_time) {
   const uint64_t frame_number = frame_timings->frame_number();
   FXL_CHECK(frames_.find(frame_number) == frames_.end());
   // Check that no frame numbers were skipped.

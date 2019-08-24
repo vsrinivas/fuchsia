@@ -54,6 +54,9 @@ class SessionUpdater {
   virtual void PrepareFrame(zx::time presentation_time, uint64_t trace_id) = 0;
 };
 
+// Result of a call to FrameRenderer::RenderFrame(). See below.
+enum RenderFrameResult { kRenderSuccess, kRenderFailed, kNoContentToRender };
+
 // Interface for rendering frames.
 class FrameRenderer {
  public:
@@ -68,7 +71,8 @@ class FrameRenderer {
   // frame.
   // TODO(SCN-1089): these return value semantics are not ideal.  See comments in
   // Engine::RenderFrame() regarding this same issue.
-  virtual bool RenderFrame(const FrameTimingsPtr& frame_timings, zx::time presentation_time) = 0;
+  virtual RenderFrameResult RenderFrame(const FrameTimingsPtr& frame_timings,
+                                        zx::time presentation_time) = 0;
 };
 
 // The FrameScheduler is responsible for scheduling frames to be drawn in response to requests from

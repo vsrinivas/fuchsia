@@ -97,7 +97,7 @@ void DefaultFrameScheduler::RequestFrame() {
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_LOG(INFO) << "RequestFrame";
+    FXL_VLOG(1) << "RequestFrame";
   }
 
   zx::time requested_presentation_time = render_continuously_ || render_pending_
@@ -128,8 +128,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_LOG(INFO) << "MaybeRenderFrame presentation_time=" << presentation_time
-                  << " wakeup_time=" << wakeup_time_ << " frame_number=" << frame_number_;
+    FXL_VLOG(1) << "MaybeRenderFrame presentation_time=" << presentation_time
+                << " wakeup_time=" << wakeup_time_ << " frame_number=" << frame_number_;
   }
 
   // Apply all updates
@@ -183,22 +183,30 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   inspect_frame_number_.Set(frame_number_);
 
   // Render the frame.
-  currently_rendering_ = frame_renderer_->RenderFrame(frame_timings, presentation_time);
+  auto render_frame_result = frame_renderer_->RenderFrame(frame_timings, presentation_time);
+  currently_rendering_ = render_frame_result == kRenderSuccess;
 
   // See SCN-1505 for details of measuring render time.
   const zx::time frame_render_end_cpu_time = zx::time(async_now(dispatcher_));
   frame_timings->OnFrameCpuRendered(frame_render_end_cpu_time);
 
-  if (currently_rendering_) {
-    outstanding_frames_.push_back(frame_timings);
-    render_pending_ = false;
+  switch (render_frame_result) {
+    case kRenderSuccess:
+      currently_rendering_ = true;
+      outstanding_frames_.push_back(frame_timings);
+      render_pending_ = false;
 
-    inspect_last_successful_render_start_time_.Set(presentation_time.get());
-  } else {
-    // TODO(SCN-1344): Handle failed rendering somehow.
-    FXL_LOG(WARNING) << "RenderFrame failed. "
-                     << "There may not be any calls to OnFrameRendered or OnFramePresented, "
-                     << "and no callbacks may be invoked.";
+      inspect_last_successful_render_start_time_.Set(presentation_time.get());
+      break;
+    case kRenderFailed:
+      // TODO(SCN-1344): Handle failed rendering somehow.
+      FXL_LOG(WARNING) << "RenderFrame failed. "
+                       << "There may not be any calls to OnFrameRendered or OnFramePresented, and "
+                          "no callbacks may be invoked.";
+      break;
+    case kNoContentToRender:
+      // Don't do anything.
+      break;
   }
 
   ++frame_number_;
@@ -215,8 +223,8 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_LOG(INFO) << "ScheduleUpdateForSession session_id: " << session_id
-                  << " presentation_time: " << presentation_time;
+    FXL_VLOG(1) << "ScheduleUpdateForSession session_id: " << session_id
+                << " presentation_time: " << presentation_time;
   }
 
   RequestFrame();
@@ -226,8 +234,8 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::
     zx::time presentation_time) {
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 3) {
-    FXL_LOG(INFO) << "ApplyScheduledSessionUpdates presentation_time=" << presentation_time
-                  << " frame_number=" << frame_number_;
+    FXL_VLOG(1) << "ApplyScheduledSessionUpdates presentation_time=" << presentation_time
+                << " frame_number=" << frame_number_;
   }
 
   return update_manager_.ApplyUpdates(presentation_time, display_->GetVsyncInterval(),
@@ -235,7 +243,7 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::
 }
 
 void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
-  if (frame_number_ < 5) {
+  if (frame_number_ < 3) {
     FXL_LOG(INFO) << "DefaultFrameScheduler::OnFramePresented"
                   << " frame_number=" << timings.frame_number();
   }
