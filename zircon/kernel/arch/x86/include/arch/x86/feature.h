@@ -329,6 +329,7 @@ typedef struct {
   bool has_meltdown;
   bool has_l1tf;
   bool has_mds;
+  bool has_swapgs_bug;
 
   x86_idle_states_t idle_states;
 } x86_microarch_config_t;
