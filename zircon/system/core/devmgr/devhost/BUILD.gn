@@ -95,6 +95,7 @@ library("driver") {
 test("devhost-test") {
   test_group = "ddk"
   sources = [
+    "core-test.cc",
     "device-api-test.cc",
     "device-controller-connection-test.cc",
     "device-controller-integration-test.cc",
@@ -105,6 +106,7 @@ test("devhost-test") {
     "$zx/system/fidl/fuchsia-device-test:c",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/zxtest",
     "../shared:env",
   ]

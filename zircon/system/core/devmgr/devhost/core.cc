@@ -490,11 +490,15 @@ zx_status_t devhost_device_remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK {
 }
 
 zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
-  // note that we want to be rebound when our children are all gone
-  dev->flags |= DEV_FLAG_WANTS_REBIND;
+  if (!dev->children.is_empty() || dev->has_composite()) {
+    // note that we want to be rebound when our children are all gone
+    dev->flags |= DEV_FLAG_WANTS_REBIND;
 
-  // request that any existing children go away
-  devhost_unbind_children(dev);
+    // request that any existing children go away
+    devhost_unbind_children(dev);
+  } else {
+    return devhost_device_bind(dev, "");
+  }
 
   return ZX_OK;
 }

@@ -162,6 +162,8 @@ fbl::RefPtr<zx_device> zx_device::GetDeviceFromLocalId(uint64_t local_id) {
   return fbl::WrapRefPtr(&*itr);
 }
 
+bool zx_device::has_composite() { return !!composite_; }
+
 fbl::RefPtr<devmgr::CompositeDevice> zx_device::take_composite() { return std::move(composite_); }
 
 void zx_device::set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite) {

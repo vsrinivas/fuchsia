@@ -153,6 +153,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     static bool EqualTo(const uint64_t& key1, const uint64_t& key2) { return key1 == key2; }
   };
 
+  bool has_composite();
   void set_composite(fbl::RefPtr<devmgr::CompositeDevice> composite);
   fbl::RefPtr<devmgr::CompositeDevice> take_composite();
   const std::array<fuchsia_device_DevicePowerStateInfo,
