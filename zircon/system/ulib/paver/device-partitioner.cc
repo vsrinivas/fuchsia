@@ -44,7 +44,6 @@ namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 namespace skipblock = ::llcpp::fuchsia::hardware::skipblock;
 
 constexpr char kEfiName[] = "EFI Gigaboot";
-constexpr char kGptDriverName[] = "/boot/driver/gpt.so";
 constexpr char kFvmPartitionName[] = "fvm";
 constexpr char kZirconAName[] = "ZIRCON-A";
 constexpr char kZirconBName[] = "ZIRCON-B";
@@ -397,20 +396,9 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
       ERROR("Failed to sync empty GPT\n");
       return ZX_ERR_BAD_STATE;
     }
-    // Try to rebind the GPT, in case a prior GPT driver was actually
-    // up and running.
     auto result = block::Block::Call::RebindDevice(caller.channel());
     if (!result.ok() || result.value().status != ZX_OK) {
       ERROR("Failed to re-read GPT\n");
-      return ZX_ERR_BAD_STATE;
-    }
-
-    // Manually re-bind the GPT driver, since it is almost certainly
-    // too late to be noticed by the block watcher.
-    auto result2 = ::llcpp::fuchsia::device::Controller::Call::Bind(
-        caller.channel(), fidl::StringView(strlen(kGptDriverName), kGptDriverName));
-    if (result2.status() != ZX_OK || result2.value().status != ZX_OK) {
-      ERROR("Failed to bind GPT\n");
       return ZX_ERR_BAD_STATE;
     }
   }
