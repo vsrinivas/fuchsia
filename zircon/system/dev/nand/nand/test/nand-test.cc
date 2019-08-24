@@ -204,8 +204,8 @@ class Operation {
   NandDeviceTest* test_;
   zx_status_t status_ = ZX_ERR_ACCESS_DENIED;
   bool completed_ = false;
-  static constexpr size_t buffer_size_ = kPageSize * kNumPages;
-  static constexpr size_t oob_buffer_size_ = kOobSize * kNumPages;
+  static constexpr size_t buffer_size_ = kNumBlocks * kPageSize * kNumPages;
+  static constexpr size_t oob_buffer_size_ = kNumBlocks * kPageSize * kNumPages;
   std::unique_ptr<char[]> raw_buffer_;
 };
 
@@ -365,6 +365,48 @@ TEST_F(NandDeviceTest, ReadWrite) {
 
   EXPECT_EQ(raw_nand().last_op().type, OperationType::kWrite);
   EXPECT_EQ(raw_nand().last_op().nandpage, 8);
+}
+
+TEST_F(NandDeviceTest, ReadWriteVmoOffsets) {
+  Operation operation(op_size(), this);
+  ASSERT_TRUE(operation.SetVmo());
+
+  nand_operation_t* op = operation.GetOperation();
+  ASSERT_NOT_NULL(op);
+
+  for (uint32_t offset = 0; offset < kNumPages * kNumBlocks; offset++) {
+    for (uint32_t length = 1; offset + length < kNumPages * kNumBlocks; length++) {
+      op->rw.command = NAND_OP_READ;
+      op->rw.length = length;
+      op->rw.offset_nand = offset;
+      op->rw.offset_data_vmo = offset;
+      op->rw.offset_oob_vmo = offset;
+      device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+
+      ASSERT_TRUE(Wait());
+      ASSERT_OK(operation.status(), "offset: %d length: %d", offset, length);
+
+      EXPECT_EQ(raw_nand().last_op().type, OperationType::kRead);
+      EXPECT_EQ(raw_nand().last_op().nandpage, offset + length - 1);
+
+      op->rw.command = NAND_OP_WRITE;
+      op->rw.length = length;
+      op->rw.offset_nand = offset;
+      op->rw.offset_data_vmo = offset;
+      op->rw.offset_oob_vmo = offset;
+      memset(static_cast<uint8_t*>(operation.buffer()) + (offset * kPageSize), kMagic,
+             kPageSize * length);
+      memset(static_cast<uint8_t*>(operation.oob_buffer()) + (offset * kPageSize), kOobMagic,
+             kOobSize * length);
+      device()->NandQueue(op, &NandDeviceTest::CompletionCb, &operation);
+
+      ASSERT_TRUE(Wait());
+      ASSERT_OK(operation.status());
+
+      EXPECT_EQ(raw_nand().last_op().type, OperationType::kWrite);
+      EXPECT_EQ(raw_nand().last_op().nandpage, length + offset - 1);
+    }
+  }
 }
 
 TEST_F(NandDeviceTest, Erase) {
