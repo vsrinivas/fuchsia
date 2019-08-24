@@ -45,9 +45,9 @@ zx_status_t RemoveUserHandles(T user_handles, size_t num_handles, ProcessDispatc
 // Given |handle| it returns a |raw_handle| that should be sent over |channel|. In case
 // of error, the return value should be reflected back to the user.
 zx_status_t get_handle_for_message_locked(ProcessDispatcher* process, const Dispatcher* channel,
-                                          zx_handle_t handle_val, Handle** raw_handle)
+                                          const zx_handle_t* handle_val, Handle** raw_handle)
     TA_REQ(process->handle_table_lock());
 
 zx_status_t get_handle_for_message_locked(ProcessDispatcher* process, const Dispatcher* channel,
-                                          zx_handle_disposition_t handle_disposition,
+                                          zx_handle_disposition_t* handle_disposition,
                                           Handle** raw_handle) TA_REQ(process->handle_table_lock());

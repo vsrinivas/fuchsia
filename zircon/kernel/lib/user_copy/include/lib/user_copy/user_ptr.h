@@ -42,6 +42,8 @@ class user_ptr {
     return *this;
   }
 
+  enum { is_out = ((Policy & kOut) == kOut) };
+
   T* get() const { return ptr_; }
 
   template <typename C>

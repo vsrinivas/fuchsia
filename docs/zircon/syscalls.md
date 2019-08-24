@@ -55,7 +55,7 @@
 + [channel_read](syscalls/channel_read.md) - receive a message from a channel
 + [channel_read_etc](syscalls/channel_read_etc.md) - receive a message from a channel with handle information
 + [channel_write](syscalls/channel_write.md) - write a message to a channel
-+ [channel_write_etc](syscalls/channel_write_etc.md) - _unimplemented_
++ [channel_write_etc](syscalls/channel_write_etc.md) - write a message to the channel and modify the handles.
 
 ## Sockets
 + [socket_create](syscalls/socket_create.md) - create a new socket

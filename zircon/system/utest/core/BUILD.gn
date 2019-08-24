@@ -12,6 +12,7 @@ core_tests = [
   "c11-mutex",
   "c11-thread",
   "channel",
+  "channel-write-etc",
   "clock",
   "elf-tls",
   "event-pair",

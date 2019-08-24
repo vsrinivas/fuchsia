@@ -29,10 +29,12 @@ bytes and *num_handles* handles to the channel specified by
 respective sizes are zero.
 
 On success, all *num_handles* of the handles in the *handles* array
-are no longer accessible to the caller's process -- they are attached
-to the message and will become available to the reader of that message
-from the opposite end of the channel.  On any failure, all handles
-are discarded rather than transferred.
+are attached to the message and will become available to the reader
+of that message from the opposite end of the channel.
+
+All handles are discarded and no longer available to the caller, on
+success or failure. Use [`zx_channel_write_etc()`] if handles need
+to be preserved by the sender.
 
 It is invalid to include *handle* (the handle of the channel being written
 to) in the *handles* array (the handles being sent in the message).
@@ -59,8 +61,8 @@ Every entry of *handles* must have **ZX_RIGHT_TRANSFER**.
 ## ERRORS
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle, any element in
-*handles* is not a valid handle, or there are duplicates among the handles
-in the *handles* array.
+*handles* is not a valid handle, or there are repeated handles among the
+handles in the *handles* array.
 
 **ZX_ERR_WRONG_TYPE**  *handle* is not a channel handle.
 
@@ -95,6 +97,8 @@ The byte size limitation on messages is not yet finalized.
  - [`zx_channel_call()`]
  - [`zx_channel_create()`]
  - [`zx_channel_read()`]
+ - [`zx_channel_read_etc()`]
+ - [`zx_channel_write_etc()`]
  - [`zx_handle_close()`]
  - [`zx_handle_duplicate()`]
  - [`zx_handle_replace()`]
@@ -107,6 +111,8 @@ The byte size limitation on messages is not yet finalized.
 [`zx_channel_call()`]: channel_call.md
 [`zx_channel_create()`]: channel_create.md
 [`zx_channel_read()`]: channel_read.md
+[`zx_channel_read_etc()`]: channel_read_etc.md
+[`zx_channel_write_etc()`]: channel_write_etc.md
 [`zx_handle_close()`]: handle_close.md
 [`zx_handle_duplicate()`]: handle_duplicate.md
 [`zx_handle_replace()`]: handle_replace.md

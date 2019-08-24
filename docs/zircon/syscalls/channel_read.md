@@ -91,6 +91,7 @@ set, then the message is discarded.
  - [`zx_channel_create()`]
  - [`zx_channel_read_etc()`]
  - [`zx_channel_write()`]
+ - [`zx_channel_write_etc()`]
  - [`zx_handle_close()`]
  - [`zx_handle_duplicate()`]
  - [`zx_handle_replace()`]
@@ -104,6 +105,7 @@ set, then the message is discarded.
 [`zx_channel_create()`]: channel_create.md
 [`zx_channel_read_etc()`]: channel_read_etc.md
 [`zx_channel_write()`]: channel_write.md
+[`zx_channel_write_etc()`]: channel_write_etc.md
 [`zx_handle_close()`]: handle_close.md
 [`zx_handle_duplicate()`]: handle_duplicate.md
 [`zx_handle_replace()`]: handle_replace.md

@@ -241,7 +241,9 @@ static zx_status_t channel_call_epilogue(ProcessDispatcher* up, MessagePacketPtr
   return ZX_OK;
 }
 
-// Consumes all handles whether it succeeds or not.
+// For zx_handle_write or zx_handle_write_etc with the ZX_HANDLE_OP_MOVE flag,
+// handles are closed whether success or failure. For zx_handle_write_etc
+// with the ZX_HANDLE_OP_DUPLICATE flag, handles always remain open.
 template <typename UserHandles>
 static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
                                    UserHandles user_handles, uint32_t num_handles,
@@ -258,13 +260,22 @@ static zx_status_t msg_put_handles(ProcessDispatcher* up, MessagePacket* msg,
 
     for (size_t ix = 0; ix != num_handles; ++ix) {
       Handle* handle = nullptr;
-      auto inner_status = get_handle_for_message_locked(up, channel, handles[ix], &handle);
+      auto inner_status = get_handle_for_message_locked(up, channel, &handles[ix], &handle);
       if ((inner_status != ZX_OK) && (status == ZX_OK)) {
         // Latch the first error encountered. It will be what the function returns.
         status = inner_status;
       }
 
       msg->mutable_handles()[ix] = handle;
+    }
+  }
+
+  // For zx_handle_write_etc, copy out to convey zx_status_t result on failure. The caller
+  // is expected to have initialized the result to ZX_OK (mentioned in the user docs)
+  // to save cycles for the success case.
+  if constexpr (UserHandles::is_out) {
+    if (status != ZX_OK) {
+      user_handles.copy_array_to_user(handles, num_handles);
     }
   }
 
@@ -334,8 +345,6 @@ zx_status_t sys_channel_write_etc(zx_handle_t handle_value, uint32_t options,
   LTRACEF("handle %x bytes %p num_bytes %u handles %p num_handles %u options 0x%x\n", handle_value,
           user_bytes.get(), num_bytes, user_handles.get(), num_handles, options);
 
-  // TODO(cpu):finish implementation of get_handle_for_message_locked() and
-  // get_user_handles_to_consume() for this syscall to work.
   return channel_write(handle_value, options, user_bytes, num_bytes, user_handles, num_handles);
 }
 

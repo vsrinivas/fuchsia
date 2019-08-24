@@ -23,11 +23,9 @@ zx_status_t zx_channel_write_etc(zx_handle_t handle,
 
 ## DESCRIPTION
 
-This syscall has not been implemented yet.
-
 Like [`zx_channel_write()`] it attempts to write a message of *num_bytes*
 bytes and *num_handles* handles to the channel specified by *handle*, but in
-addition it will perform operations in the handles that are being
+addition it will perform operations for the handles that are being
 transferred with *handles* being an array of `zx_handle_disposition_t`:
 
 ```
@@ -39,51 +37,45 @@ typedef struct zx_handle_disposition {
     zx_status_t result;
 } zx_handle_disposition_t;
 ```
+In zx_handle_disposition_t, *handle* is the source handle to be operated on,
+*rights* is the desired final rights (not a mask) and *result* must be set
+to **ZX_OK**. All source handles must have **ZX_RIGHT_TRANSFER**, but
+it it can  be removed in *rights* so that it is not available to the message
+receiver.
 
-With *handle* the source handle, *rights* the desired final rights and
-*result* must have exactly the value **ZX_OK**. All source handles must have
-at least **ZX_RIGHT_TRANSFER** right.
-
-The *type* is used to perform validation of the object type that the caller
-expects *handle* to be. It can be *ZX_OBJ_TYPE_NONE* to perform no validation
-check or one of `zx_obj_type_t` defined types. If any validation check fails
-the entire operation fails.
+*type* is used to perform validation of the object type that the caller
+expects *handle* to be. It can be *ZX_OBJ_TYPE_NONE* to skip validation
+checks or one of `zx_obj_type_t` defined types.
 
 The operation applied to *handle* is one of:
 
-*   **ZX_HANDLE_OP_MOVE**: The *handle* will be transferred with rights *rights*
-which can be *ZX_RIGHT_SAME_RIGHTS* or a reduced set of rights. This is
-equivalent to issuing [`zx_handle_replace()`] except that this operation can
-also remove the *ZX_RIGHT_TRANSFER* on the transferred handle.
+*   **ZX_HANDLE_OP_MOVE** This is equivalent to first issuing [`zx_handle_replace()`] then
+     [`zx_channel_write()`]. The source handle is always closed.
 
-*   **ZX_HANDLE_OP_DUPLICATE**: The *handle* will be duplicated with rights
-rights* which can be *ZX_RIGHT_SAME_RIGHTS* or a reduced set of rights. This
-is equivalent to issuing [`zx_handle_duplicate()`] except that this operation
-can also remove the *ZX_RIGHT_TRANSFER* on the duplicated handle.
+*   **ZX_HANDLE_OP_DUPLICATE** This is equivalent to first issuing [`zx_handle_duplicate()`]
+    then [`zx_channel_write()`]. The source handle always remains open and accessible to the
+    caller.
 
-If an operation fails, the error code for that source handle is written to
-*result*. All operations in the *handles* array are attempted, even if one or
-more operations fail.
+*handle* will be transferred with capability *rights* which can be **ZX_RIGHT_SAME_RIGHTS**
+or a reduced set of rights, or **ZX_RIGHT_NONE**. In addition, this operation allows removing
+**ZX_RIGHT_TRANSFER** in *rights* so that capability is not available for the receiver.
 
-All operations in all handles must succeed for the channel write to
-succeed.
+If any operation fails, the error code for that source handle is written to *result*, and the
+first failure is made available in the return value for `zx_channel_write_etc()`. All
+operations in the *handles* array are attempted, even if one or more operations fail.
 
-On success all source handles with **ZX_HANDLE_OP_MOVE** are no longer
-accessible to the caller's process -- they are attached to the message and will
-become available to the reader of that message from the opposite end of the
-channel. On any failure, these handles are discarded rather than transferred.
+All operations for each entry must succeed for the message to be written. On success, handles
+are attached to the message and will become available to the reader of that message from the
+opposite end of the channel.
 
-On success or failure, all source handles with **ZX_HANDLE_OP_DUPLICATE**
-will still be accessible to the caller's process.
+It is invalid to include *handle* (the handle of the channel being written to) in the
+*handles* array (the handles being sent in the message).
 
-It is invalid to include *handle* (the handle of the channel being written
-to) in the *handles* array (the handles being sent in the message).
+The maximum number of handles which may be sent in a message is **ZX_CHANNEL_MAX_MSG_HANDLES**,
+which is 64.
 
-The maximum number of handles which may be sent in a message is
-**ZX_CHANNEL_MAX_MSG_HANDLES**, which is 64.
-
-The maximum number of bytes which may be sent in a message is
-**ZX_CHANNEL_MAX_MSG_BYTES**, which is 65536.
+The maximum number of bytes which may be sent in a message is **ZX_CHANNEL_MAX_MSG_BYTES**,
+which is 65536.
 
 ## RIGHTS
 
@@ -100,21 +92,22 @@ Every entry of *handles* must have **ZX_RIGHT_TRANSFER**.
 ## ERRORS
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle, any source handle in
-*handles* is not a valid handle, or there are duplicates among the handles
-in the *handles* array.
+*handles* is not a valid handle, or there are repeated handles
+in the *handles* array if **ZX_HANDLE_OP_DUPLICATE** flags is not present.
 
-**ZX_ERR_WRONG_TYPE**  *handle* is not a channel handle, any source handle
+**ZX_ERR_WRONG_TYPE**  *handle* is not a channel handle, or any source handle
 in *handles* did not match the object type *type*.
 
 **ZX_ERR_INVALID_ARGS**  *bytes* is an invalid pointer, *handles*
-is an invalid pointer, or *options* is nonzero.
+is an invalid pointer, or *options* is nonzero, or *operation* is not
+one of ZX_HANDLE_OP_MOVE or ZX_HANDLE_OP_DUPLICATE.
 
-**ZX_ERR_NOT_SUPPORTED**  *handle* was found in the *handles* array, or
-one of the handles in *handles* was *handle* (the handle to the
-channel being written to).
+**ZX_ERR_NOT_SUPPORTED**  *handle* is included in the *handles* array.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE** or
-any source handle in *handles* does not have **ZX_RIGHT_TRANSFER**.
+any source handle in *handles* does not have **ZX_RIGHT_TRANSFER**, or
+any source handle in *handles* does not have **ZX_RIGHT_DUPLICATE** when
+**ZX_HANDLE_OP_DUPLICATE** operation is specified.
 
 **ZX_ERR_PEER_CLOSED**  The other side of the channel is closed.
 
@@ -138,6 +131,7 @@ rights and can be closed if not needed.
  - [`zx_channel_create()`]
  - [`zx_channel_read()`]
  - [`zx_channel_read_etc()`]
+ - [`zx_channel_write()`]
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
