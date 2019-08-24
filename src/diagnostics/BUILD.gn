@@ -4,14 +4,14 @@
 
 group("diagnostics") {
   deps = [
-    "inspect_validator",
+    # "inspect_validator",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "inspect_validator:tests",
-    "transit_bench",
+    # "inspect_validator:tests",
+    # "transit_bench",
   ]
 }
