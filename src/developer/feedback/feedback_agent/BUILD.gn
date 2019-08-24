@@ -125,6 +125,7 @@ source_set("src") {
   ]
 
   deps = [
+    ":constants",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/inspect_deprecated/query",
@@ -140,6 +141,14 @@ source_set("src") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
   ]
+}
+
+source_set("constants") {
+  sources = [
+    "constants.h",
+  ]
+
+  visibility = [ "//src/developer/feedback/feedback_agent/*" ]
 }
 
 config_data("production_config") {

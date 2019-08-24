@@ -19,6 +19,7 @@
 #include <zircon/errors.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/lib/fxl/logging.h"
@@ -162,21 +163,22 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   // depend on which device the test runs (e.g., board name) or what happened prior to running this
   // test (e.g., logs). But we should expect the keys to be present.
   ASSERT_TRUE(out_result.response().data.has_annotations());
-  EXPECT_THAT(out_result.response().data.annotations(), testing::UnorderedElementsAreArray({
-                                                            MatchesKey("device.board-name"),
-                                                            MatchesKey("build.latest-commit-date"),
-                                                            MatchesKey("build.version"),
-                                                            MatchesKey("build.board"),
-                                                            MatchesKey("build.product"),
-                                                            MatchesKey("channel"),
-                                                        }));
+  EXPECT_THAT(out_result.response().data.annotations(),
+              testing::UnorderedElementsAreArray({
+                  MatchesKey(kAnnotationBuildBoard),
+                  MatchesKey(kAnnotationBuildLatestCommitDate),
+                  MatchesKey(kAnnotationBuildProduct),
+                  MatchesKey(kAnnotationBuildVersion),
+                  MatchesKey(kAnnotationChannel),
+                  MatchesKey(kAnnotationDeviceBoardName),
+              }));
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
-                                                            MatchesKey("annotations.json"),
-                                                            MatchesKey("build.snapshot.xml"),
-                                                            MatchesKey("log.kernel.txt"),
-                                                            MatchesKey("log.system.txt"),
-                                                            MatchesKey("inspect.json"),
+                                                            MatchesKey(kAttachmentAnnotations),
+                                                            MatchesKey(kAttachmentBuildSnapshot),
+                                                            MatchesKey(kAttachmentInspect),
+                                                            MatchesKey(kAttachmentLogKernel),
+                                                            MatchesKey(kAttachmentLogSystem),
                                                         }));
 }
 

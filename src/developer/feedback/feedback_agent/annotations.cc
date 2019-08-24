@@ -17,6 +17,7 @@
 #include <string>
 
 #include "src/developer/feedback/feedback_agent/channel_provider_ptr.h"
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
@@ -69,17 +70,17 @@ fit::promise<std::string> ReadStringFromFile(const std::string& filepath) {
 fit::promise<std::string> BuildValue(const std::string& key, async_dispatcher_t* dispatcher,
                                      std::shared_ptr<::sys::ServiceDirectory> services,
                                      const zx::duration timeout) {
-  if (key == "device.board-name") {
+  if (key == kAnnotationDeviceBoardName) {
     return GetDeviceBoardName();
-  } else if (key == "build.board") {
+  } else if (key == kAnnotationBuildBoard) {
     return ReadStringFromFile("/config/build-info/board");
-  } else if (key == "build.product") {
+  } else if (key == kAnnotationBuildProduct) {
     return ReadStringFromFile("/config/build-info/product");
-  } else if (key == "build.latest-commit-date") {
+  } else if (key == kAnnotationBuildLatestCommitDate) {
     return ReadStringFromFile("/config/build-info/latest-commit-date");
-  } else if (key == "build.version") {
+  } else if (key == kAnnotationBuildVersion) {
     return ReadStringFromFile("/config/build-info/version");
-  } else if (key == "channel") {
+  } else if (key == kAnnotationChannel) {
     return RetrieveCurrentChannel(dispatcher, services, timeout);
   } else {
     FX_LOGS(WARNING) << "Unknown annotation " << key;

@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/config.h"
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
@@ -32,6 +33,7 @@
 #include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -46,14 +48,15 @@ using ::feedback::MatchesAnnotation;
 using ::feedback::MatchesAttachment;
 
 const std::set<std::string> kDefaultAnnotations = {
-    "build.board", "build.latest-commit-date", "build.product", "build.version",
-    "channel",     "device.board-name",
+    kAnnotationBuildBoard,   kAnnotationBuildLatestCommitDate,
+    kAnnotationBuildProduct, kAnnotationBuildVersion,
+    kAnnotationChannel,      kAnnotationDeviceBoardName,
 };
 const std::set<std::string> kDefaultAttachments = {
-    "build.snapshot.xml",
-    "inspect.json",
-    "log.kernel.txt",
-    "log.system.txt",
+    kAttachmentBuildSnapshot,
+    kAttachmentInspect,
+    kAttachmentLogKernel,
+    kAttachmentLogSystem,
 };
 const Config kDefaultConfig = Config{kDefaultAnnotations, kDefaultAttachments};
 
@@ -378,31 +381,6 @@ TEST_F(DataProviderImplTest, GetData_SmokeTest) {
   // There is nothing else we can assert here as no missing annotation nor attachment is fatal.
 }
 
-constexpr char kAnnotationsAsAttachmentJsonSchema[] = R"({
-  "type": "object",
-  "properties": {
-    "build.board": {
-      "type": "string"
-    },
-    "build.latest-commit-date": {
-      "type": "string"
-    },
-    "build.product": {
-      "type": "string"
-    },
-    "build.version": {
-      "type": "string"
-    },
-    "channel": {
-      "type": "string"
-    },
-    "device.board-name": {
-      "type": "string"
-    }
-  },
-  "additionalProperties": false
-})";
-
 TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
   DataProvider_GetData_Result result = GetData();
 
@@ -411,7 +389,7 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
 
   bool found_annotations_attachment = false;
   for (const auto& attachment : result.response().data.attachments()) {
-    if (attachment.key.compare("annotations.json") != 0) {
+    if (attachment.key.compare(kAttachmentAnnotations) != 0) {
       continue;
     }
     found_annotations_attachment = true;
@@ -425,7 +403,35 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
     rapidjson::Document json;
     ASSERT_FALSE(json.Parse(json_str.c_str()).HasParseError());
     rapidjson::Document schema_json;
-    ASSERT_FALSE(schema_json.Parse(kAnnotationsAsAttachmentJsonSchema).HasParseError());
+    ASSERT_FALSE(schema_json
+                     .Parse(fxl::Substitute(R"({
+  "type": "object",
+  "properties": {
+    "$0": {
+      "type": "string"
+    },
+    "$1": {
+      "type": "string"
+    },
+    "$2": {
+      "type": "string"
+    },
+    "$3": {
+      "type": "string"
+    },
+    "$4": {
+      "type": "string"
+    },
+    "$5": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+})",
+                                            kAnnotationBuildBoard, kAnnotationBuildLatestCommitDate,
+                                            kAnnotationBuildProduct, kAnnotationBuildVersion,
+                                            kAnnotationChannel, kAnnotationDeviceBoardName))
+                     .HasParseError());
     rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
     EXPECT_TRUE(json.Accept(validator));
@@ -447,7 +453,7 @@ TEST_F(DataProviderImplTest, GetData_SysLog) {
   ASSERT_TRUE(result.response().data.has_attachments());
   EXPECT_THAT(result.response().data.attachments(),
               testing::Contains(MatchesAttachment(
-                  "log.system.txt", "[15604.000][07559][07687][foo] INFO: log message\n")));
+                  kAttachmentLogSystem, "[15604.000][07559][07687][foo] INFO: log message\n")));
 }
 
 constexpr char kInspectJsonSchema[] = R"({
@@ -481,7 +487,7 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
 
   bool found_inspect_attachment = false;
   for (const auto& attachment : result.response().data.attachments()) {
-    if (attachment.key.compare("inspect.json") != 0) {
+    if (attachment.key.compare(kAttachmentInspect) != 0) {
       continue;
     }
     found_inspect_attachment = true;
@@ -536,7 +542,7 @@ TEST_F(DataProviderImplTest, GetData_Channel) {
   ASSERT_TRUE(result.is_response());
   ASSERT_TRUE(result.response().data.has_annotations());
   EXPECT_THAT(result.response().data.annotations(),
-              testing::Contains(MatchesAnnotation("channel", "my-channel")));
+              testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
@@ -554,7 +560,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
   ASSERT_TRUE(result.is_response());
   EXPECT_TRUE(result.response().data.has_attachments());
   ASSERT_EQ(result.response().data.attachments().size(), 1u);
-  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), "annotations.json");
+  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
@@ -582,7 +588,7 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
   ASSERT_TRUE(result.is_response());
   EXPECT_TRUE(result.response().data.has_attachments());
   EXPECT_EQ(result.response().data.attachments().size(), 1u);
-  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), "annotations.json");
+  ASSERT_STREQ(result.response().data.attachments()[0].key.c_str(), kAttachmentAnnotations);
 }
 
 }  // namespace

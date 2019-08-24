@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
 #include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -79,13 +80,13 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
                                               async_dispatcher_t* dispatcher,
                                               std::shared_ptr<::sys::ServiceDirectory> services,
                                               const zx::duration timeout) {
-  if (key == "build.snapshot.xml") {
+  if (key == kAttachmentBuildSnapshot) {
     return VmoFromFilename("/config/build-info/snapshot");
-  } else if (key == "log.kernel.txt") {
+  } else if (key == kAttachmentLogKernel) {
     return GetKernelLog();
-  } else if (key == "log.system.txt") {
+  } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher, services, timeout);
-  } else if (key == "inspect.json") {
+  } else if (key == kAttachmentInspect) {
     return CollectInspectData(dispatcher, timeout);
   } else {
     FX_LOGS(WARNING) << "Unknown attachment " << key;
@@ -143,7 +144,7 @@ void AddAnnotationsAsExtraAttachment(const std::vector<Annotation>& annotations,
   std::string json_str(buffer.GetString(), buffer.GetSize());
 
   Attachment extra_attachment;
-  extra_attachment.key = "annotations.json";
+  extra_attachment.key = kAttachmentAnnotations;
   if (!fsl::VmoFromString(json_str, &extra_attachment.value)) {
     FX_LOGS(WARNING) << "Failed to write annotations as an extra attachment";
     return;

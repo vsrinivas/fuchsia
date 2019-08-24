@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
+#include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -44,18 +45,19 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
   // Given that we don't inject an Inspect app nor a fake logger nor a fake channel provider, these
   // keys won't appear in the result either.
   ASSERT_TRUE(out_result.response().data.has_annotations());
-  EXPECT_THAT(out_result.response().data.annotations(), testing::UnorderedElementsAreArray({
-                                                            MatchesKey("device.board-name"),
-                                                            MatchesKey("build.latest-commit-date"),
-                                                            MatchesKey("build.version"),
-                                                            MatchesKey("build.board"),
-                                                            MatchesKey("build.product"),
-                                                        }));
+  EXPECT_THAT(out_result.response().data.annotations(),
+              testing::UnorderedElementsAreArray({
+                  MatchesKey(kAnnotationBuildBoard),
+                  MatchesKey(kAnnotationBuildLatestCommitDate),
+                  MatchesKey(kAnnotationBuildProduct),
+                  MatchesKey(kAnnotationBuildVersion),
+                  MatchesKey(kAnnotationDeviceBoardName),
+              }));
   ASSERT_TRUE(out_result.response().data.has_attachments());
   EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
-                                                            MatchesKey("annotations.json"),
-                                                            MatchesKey("build.snapshot.xml"),
-                                                            MatchesKey("log.kernel.txt"),
+                                                            MatchesKey(kAttachmentAnnotations),
+                                                            MatchesKey(kAttachmentBuildSnapshot),
+                                                            MatchesKey(kAttachmentLogKernel),
                                                         }));
 }
 
