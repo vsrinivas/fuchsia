@@ -11,6 +11,7 @@ fidl("fuchsia.ui.input2") {
     "events.fidl",
     "keyboard.fidl",
     "keys.fidl",
+    "layout.fidl",
     "modifiers.fidl",
   ]
 

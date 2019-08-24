@@ -13,11 +13,24 @@ enum KeyEventPhase {
     RELEASED = 1;
 };
 
+/// Direct key mapping from hardware code (USB HID).
+///
+/// Example:
+///   Key.Q for USB HID page 0x0007 usage 0x0014
+using PhysicalKey = Key;
+
 /// Keyboard event is generated to reflect key input.
 table KeyEvent {
-    /// Physical key being pressed.
+    /// The key that was pressed or released, taking the keyboard layout into account.
     ///
-    /// Keyboard layout is applied (QWERTY/AZERTY/Dvorak/etc).
+    /// Use this value for the following purposes:
+    /// -  interpreting keyboard shortcuts such as CTRL+C
+    ///
+    /// The input system derives this value from `physical_key` by consulting the
+    /// physical key map of the `KeyboardLayout` that was active for the keyboard when
+    /// when the key was pressed.  Note that the same value will be reported when
+    /// the key is released even if the keyboard layout changes in the interim between press
+    /// and release.
     1: Key key;
 
     /// Phase of input.
