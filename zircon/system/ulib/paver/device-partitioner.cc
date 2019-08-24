@@ -476,7 +476,7 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root, Arch 
       "Please run *one* of the following command(s):\n");
 
   for (const auto& [gpt_path, _] : gpt_devices) {
-    ERROR("install-disk-image init-gpt --block-device %s\n", gpt_path.c_str());
+    ERROR("install-disk-image init-partition-tables --block-device %s\n", gpt_path.c_str());
   }
 
   return ZX_ERR_NOT_FOUND;
