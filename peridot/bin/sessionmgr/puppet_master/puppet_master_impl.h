@@ -6,11 +6,13 @@
 #define PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_PUPPET_MASTER_IMPL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <memory>
+
+#include <src/lib/fxl/memory/weak_ptr.h>
+
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

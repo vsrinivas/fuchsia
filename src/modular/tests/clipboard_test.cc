@@ -5,11 +5,11 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/bin/basemgr/noop_clipboard_impl.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
 

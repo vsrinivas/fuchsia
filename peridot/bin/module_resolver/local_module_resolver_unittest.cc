@@ -4,13 +4,13 @@
 
 #include "peridot/bin/module_resolver/local_module_resolver.h"
 
-#include <lib/entity/cpp/json.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 #include "src/lib/files/file.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 namespace modular {
 namespace {

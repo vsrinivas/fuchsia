@@ -31,7 +31,7 @@ executable_package("clipboard_agent") {
   deps = [
     ":clipboard_sources",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//src/modular/lib/app_driver/cpp:agent_driver",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -47,9 +47,9 @@ source_set("clipboard_sources") {
   deps = [
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 

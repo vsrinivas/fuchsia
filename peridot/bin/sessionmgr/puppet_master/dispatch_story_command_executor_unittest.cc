@@ -5,7 +5,6 @@
 #include "peridot/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/string.h>
@@ -15,6 +14,7 @@
 
 #include "gtest/gtest.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 namespace {

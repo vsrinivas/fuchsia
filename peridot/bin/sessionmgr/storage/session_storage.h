@@ -7,12 +7,12 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {
 

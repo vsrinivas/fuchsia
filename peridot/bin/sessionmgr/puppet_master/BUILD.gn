@@ -51,8 +51,8 @@ source_set("puppet_master_impl") {
   public_deps = [
     "//peridot/bin/sessionmgr:annotations",
     "//peridot/bin/sessionmgr/storage",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -111,9 +111,9 @@ source_set("dispatch_story_command_executor") {
   public_deps = [
     ":story_command_executor",
     "//peridot/bin/sessionmgr/puppet_master/command_runners:command_runner",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 

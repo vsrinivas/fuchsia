@@ -14,7 +14,6 @@ group("peridot") {
     "cloud",
     "examples",
     "lib",
-    "public",
     "tests",
   ]
 }
@@ -31,7 +30,6 @@ config("internal") {
 hermetic_tests_package("peridot_tests") {
   deps = [
     "//peridot/lib:peridot_lib_unittests",
-    "//peridot/public/lib:peridot_public_lib_unittests",
   ]
   environments = basic_envs
 }

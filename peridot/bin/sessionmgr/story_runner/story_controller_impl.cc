@@ -10,10 +10,8 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
@@ -52,6 +50,8 @@
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/util/string_escape.h"
+#include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 // Used to create std::set<LinkPath>.
 namespace std {

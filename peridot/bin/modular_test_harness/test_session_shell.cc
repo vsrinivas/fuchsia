@@ -5,7 +5,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -14,6 +13,7 @@
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 
 namespace {
 

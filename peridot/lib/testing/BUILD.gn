@@ -36,9 +36,9 @@ source_set("component_base") {
   public_deps = [
     ":component_main",
     "//peridot/lib/fidl:single_service_app",
-    "//peridot/public/lib/integration_testing/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/modular/lib/integration_testing/cpp",
   ]
 }
 
@@ -50,7 +50,7 @@ source_set("component_main") {
   ]
 
   public_deps = [
-    "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//src/modular/lib/app_driver/cpp:app_driver",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -84,7 +84,7 @@ source_set("entity_resolver_fake") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl"
+    "//garnet/public/lib/fsl",
   ]
 }
 
@@ -140,12 +140,12 @@ source_set("session_shell_impl") {
 
   public_deps = [
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib/integration_testing/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

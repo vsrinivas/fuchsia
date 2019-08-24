@@ -11,13 +11,13 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include "peridot/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
 #include "peridot/bin/basemgr/session_context_impl.h"
 #include "peridot/bin/basemgr/session_provider.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {
 

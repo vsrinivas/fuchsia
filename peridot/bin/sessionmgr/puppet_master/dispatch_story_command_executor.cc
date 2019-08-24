@@ -4,10 +4,10 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
-#include <lib/async/cpp/future.h>
-#include <lib/async/cpp/operation.h>
-
 #include <map>
+
+#include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

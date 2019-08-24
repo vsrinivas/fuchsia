@@ -1,0 +1,59 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+group("cpp") {
+  public_deps = [
+    ":agent_driver",
+    ":app_driver",
+    ":module_driver",
+  ]
+}
+
+source_set("agent_driver") {
+  sources = [
+    "agent_driver.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/modular/lib/agent/cpp",
+    "//src/modular/lib/lifecycle/cpp",
+  ]
+}
+
+source_set("app_driver") {
+  sources = [
+    "app_driver.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//src/modular/lib/lifecycle/cpp",
+  ]
+}
+
+source_set("module_driver") {
+  sources = [
+    "module_driver.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/modular/lib/lifecycle/cpp",
+  ]
+}

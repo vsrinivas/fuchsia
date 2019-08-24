@@ -28,9 +28,9 @@ source_set("operations") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:json_xdr",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//src/lib/fxl",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -55,9 +55,9 @@ source_set("page_client") {
   ]
 
   public_deps = [
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//src/ledger/bin/fidl",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -102,8 +102,8 @@ source_set("page_client_unittest") {
     "//garnet/public/lib/fsl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib/async/cpp:operation",
     "//src/lib/fxl",
+    "//src/modular/lib/async/cpp:operation",
     "//third_party/googletest:gtest",
   ]
 }

@@ -10,19 +10,20 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
-#include <src/lib/fxl/macros.h>
 
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 
+#include <src/lib/fxl/macros.h>
+
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage.h"
 #include "peridot/bin/sessionmgr/agent_runner/agent_service_index.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

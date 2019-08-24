@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 #define PERIDOT_BIN_BASEMGR_BASEMGR_IMPL_H_
 
-#include <memory>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
@@ -17,13 +15,15 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/wlan/service/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
+
 #include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
@@ -33,6 +33,7 @@
 #include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
 #include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {
 

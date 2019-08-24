@@ -5,8 +5,9 @@
 #ifndef PERIDOT_LIB_TESTING_COMPONENT_MAIN_H_
 #define PERIDOT_LIB_TESTING_COMPONENT_MAIN_H_
 
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
+
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 
 namespace modular {
 namespace testing {

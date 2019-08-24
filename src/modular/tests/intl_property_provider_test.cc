@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/app_driver/cpp/module_driver.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
-#include <lib/modular_test_harness/cpp/fake_module.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 
 #include "fuchsia/modular/session/cpp/fidl.h"
 #include "gtest/gtest.h"
+#include "src/modular/lib/app_driver/cpp/module_driver.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
 

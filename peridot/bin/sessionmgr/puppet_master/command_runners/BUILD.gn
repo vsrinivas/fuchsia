@@ -48,8 +48,8 @@ source_set("set_link_value_command_runner") {
 
   public_deps = [
     ":command_runner",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -83,7 +83,7 @@ source_set("add_mod_command_runner") {
 
   public_deps = [
     ":command_runner",
-    "//peridot/public/lib/async/cpp:operation",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -120,7 +120,7 @@ source_set("remove_mod_command_runner") {
 
   public_deps = [
     ":command_runner",
-    "//peridot/public/lib/async/cpp:operation",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -206,7 +206,7 @@ source_set("set_kind_of_proto_story_option_command_runner") {
 
   deps = [
     ":command_runner",
-    "//peridot/public/lib/async/cpp:operation",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 

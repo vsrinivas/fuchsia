@@ -5,17 +5,18 @@
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fostr/fidl/fuchsia/modular/formatting.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/logging.h>
 
 #include <functional>
 
+#include <src/lib/fxl/logging.h>
+
 #include "peridot/lib/rapidjson/rapidjson.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 using fuchsia::modular::LinkWatcherPtr;
 

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <memory>
+
 #include "peridot/bin/context_engine/context_engine_impl.h"
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 
 namespace modular {
 

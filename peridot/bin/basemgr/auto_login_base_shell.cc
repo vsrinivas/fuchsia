@@ -6,23 +6,24 @@
 // command line configurable user name to its fuchsia::modular::UserProvider,
 // and is able to run a story with a single module through its life cycle.
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
+#include <utility>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 
 namespace modular {
 

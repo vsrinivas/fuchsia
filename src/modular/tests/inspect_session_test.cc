@@ -8,8 +8,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/inspect/testing/cpp/inspect.h>
-#include <lib/modular_test_harness/cpp/fake_session_shell.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <zircon/device/vfs.h>
 
 #include <peridot/lib/modular_config/modular_config_constants.h>
@@ -18,6 +16,8 @@
 
 #include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 using fuchsia::modular::AddMod;
 using fuchsia::modular::StoryCommand;

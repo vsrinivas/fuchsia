@@ -5,15 +5,16 @@
 #ifndef PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_
 #define PERIDOT_BIN_CONTEXT_ENGINE_CONTEXT_WRITER_IMPL_H_
 
+#include <fuchsia/modular/cpp/fidl.h>
+
 #include <map>
 #include <string>
 
-#include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/context_engine/context_repository.h"
 #include "peridot/lib/bound_set/bound_set.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {
 

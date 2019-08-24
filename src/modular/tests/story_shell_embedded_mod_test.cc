@@ -4,13 +4,14 @@
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/modular_test_harness/cpp/fake_module.h>
-#include <lib/modular_test_harness/cpp/fake_session_shell.h>
-#include <lib/modular_test_harness/cpp/fake_story_shell.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include <src/lib/fxl/logging.h>
+
+#include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
 

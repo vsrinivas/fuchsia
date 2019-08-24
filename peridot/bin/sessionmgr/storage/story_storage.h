@@ -6,7 +6,6 @@
 #define PERIDOT_BIN_SESSIONMGR_STORAGE_STORY_STORAGE_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/defer.h>
 
@@ -15,6 +14,7 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/page_id.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 using fuchsia::modular::LinkPath;
 using fuchsia::modular::LinkPathPtr;

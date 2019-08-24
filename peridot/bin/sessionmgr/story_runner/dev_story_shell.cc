@@ -9,7 +9,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -20,6 +19,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 
 namespace {
 

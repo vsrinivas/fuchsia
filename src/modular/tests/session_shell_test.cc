@@ -4,11 +4,12 @@
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/modular_test_harness/cpp/fake_session_shell.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
+
 #include <peridot/lib/modular_config/modular_config_constants.h>
 
 #include "gmock/gmock.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 // TODO(MF-435): Use modular::testing::AddModToStory() throughout the test.
 using fuchsia::modular::AddMod;

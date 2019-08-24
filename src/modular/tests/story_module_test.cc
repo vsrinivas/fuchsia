@@ -5,8 +5,9 @@
 #include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/modular_test_harness/cpp/fake_module.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
+
+#include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
 

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 
-#include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
@@ -14,6 +14,7 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 namespace modular {
 
@@ -126,7 +127,8 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
           case fuchsia::modular::IntentParameterData::Tag::kEntityReference: {
             fuchsia::modular::CreateLinkInfo create_link;
             fsl::SizedVmo vmo;
-            FXL_CHECK(fsl::VmoFromString(EntityReferenceToJson(param.data.entity_reference()), &vmo));
+            FXL_CHECK(
+                fsl::VmoFromString(EntityReferenceToJson(param.data.entity_reference()), &vmo));
             create_link.initial_data = std::move(vmo).ToTransport();
             entry.value.set_create_link(std::move(create_link));
             break;
@@ -150,8 +152,8 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
           }
           case fuchsia::modular::IntentParameterData::Tag::Invalid: {
             out_result_.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
-            out_result_.error_message = fxl::StringPrintf("Invalid data for parameter with name: %s",
-                                                          param.name.value_or("").c_str());
+            out_result_.error_message = fxl::StringPrintf(
+                "Invalid data for parameter with name: %s", param.name.value_or("").c_str());
             done();
             return;
           }

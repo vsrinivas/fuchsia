@@ -20,9 +20,9 @@ executable_package("context_engine") {
 
   deps = [
     ":context_engine_impl",
-    "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/sys/cpp",
+    "//src/modular/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -57,9 +57,9 @@ executable("context_index_unittest") {
   deps = [
     ":context_index",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib/context/cpp:context_helper",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/context/cpp:context_helper",
   ]
 }
 
@@ -108,10 +108,10 @@ executable("context_repository_unittest") {
   deps = [
     ":context_repository",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib/context/cpp:context_metadata_builder",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/context/cpp:context_helper",
+    "//src/modular/lib/context/cpp:context_metadata_builder",
   ]
 }
 
@@ -122,16 +122,16 @@ source_set("context_writer_impl") {
   ]
 
   public_deps = [
-    "//peridot/public/lib/async/cpp:future",
+    "//src/modular/lib/async/cpp:future",
   ]
 
   deps = [
     ":context_repository",
     "//peridot/lib/bound_set",
-    "//peridot/public/lib/entity/cpp",
-    "//peridot/public/lib/entity/cpp:json",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl",
+    "//src/modular/lib/entity/cpp",
+    "//src/modular/lib/entity/cpp:json",
     "//third_party/rapidjson",
   ]
 }

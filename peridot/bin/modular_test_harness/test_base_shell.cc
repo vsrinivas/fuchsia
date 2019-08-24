@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
+
+#include <memory>
+#include <utility>
+
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 
 namespace modular {
 namespace {

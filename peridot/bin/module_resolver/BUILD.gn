@@ -23,12 +23,12 @@ executable_package("module_resolver") {
     ":local_module_resolver",
     "//peridot/lib/module_manifest_source:firebase_source",
     "//peridot/lib/module_manifest_source:module_package_source",
-    "//peridot/public/lib/app_driver/cpp:app_driver",
-    "//peridot/public/lib/entity/cpp:json",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/modular/lib/app_driver/cpp:app_driver",
+    "//src/modular/lib/entity/cpp:json",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -49,11 +49,11 @@ source_set("local_module_resolver") {
   deps = [
     "//peridot/lib/fidl:clone",
     "//peridot/lib/module_manifest_source",
-    "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib/entity/cpp:json",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/context/cpp:context_helper",
+    "//src/modular/lib/entity/cpp:json",
   ]
 }
 
@@ -70,8 +70,8 @@ executable("local_module_resolver_unittest") {
     "//garnet/public/lib/gtest",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:entity_resolver_fake",
-    "//peridot/public/lib/entity/cpp:json",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/entity/cpp:json",
   ]
 }

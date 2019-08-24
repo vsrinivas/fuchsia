@@ -4,7 +4,6 @@
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 
-#include <lib/async/cpp/future.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include <memory>
@@ -13,6 +12,7 @@
 #include "peridot/lib/entity/entity_watcher_impl.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 using fuchsia::modular::ModuleData;
 using fuchsia::modular::ModuleDataPtr;

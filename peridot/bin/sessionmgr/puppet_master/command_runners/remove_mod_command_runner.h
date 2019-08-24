@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_COMMAND_RUNNERS_REMOVE_MOD_COMMAND_RUNNER_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/command_runner.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

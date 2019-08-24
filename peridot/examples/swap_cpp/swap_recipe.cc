@@ -5,7 +5,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -20,6 +19,7 @@
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "src/lib/fxl/logging.h"
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 #include "trace-provider/provider.h"
 
 namespace {

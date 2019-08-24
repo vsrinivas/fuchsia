@@ -20,10 +20,10 @@ source_set("message_queue") {
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }

@@ -6,9 +6,9 @@
 #define PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_COMMAND_RUNNERS_OPERATION_CALLS_ADD_MOD_CALL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

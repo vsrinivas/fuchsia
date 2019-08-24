@@ -5,18 +5,19 @@
 #ifndef PERIDOT_BIN_SESSIONCTL_SESSION_CTL_APP_H_
 #define PERIDOT_BIN_SESSIONCTL_SESSION_CTL_APP_H_
 
-#include <iostream>
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/future.h>
 #include <lib/async/cpp/task.h>
+
+#include <iostream>
+#include <string>
+
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include "peridot/bin/sessionctl/logger.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 using ::fuchsia::modular::PuppetMaster;
 using ::fuchsia::modular::PuppetMasterPtr;

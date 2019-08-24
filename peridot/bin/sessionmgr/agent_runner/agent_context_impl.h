@@ -8,16 +8,17 @@
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/macros.h>
 
 #include <string>
 
+#include <src/lib/fxl/macros.h>
+
 #include "peridot/bin/sessionmgr/component_context_impl.h"
 #include "peridot/lib/fidl/app_client.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

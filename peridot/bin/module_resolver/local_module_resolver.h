@@ -5,17 +5,18 @@
 #ifndef PERIDOT_BIN_MODULE_RESOLVER_LOCAL_MODULE_RESOLVER_H_
 #define PERIDOT_BIN_MODULE_RESOLVER_LOCAL_MODULE_RESOLVER_H_
 
+#include <fuchsia/modular/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+
 #include <functional>
 #include <memory>
 #include <set>
 #include <vector>
 
-#include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/module_manifest_source/module_manifest_source.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

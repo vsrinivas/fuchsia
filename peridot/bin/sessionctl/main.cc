@@ -3,7 +3,14 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <glob.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
 #include <sys/types.h>
 
 #include <chrono>
@@ -13,14 +20,6 @@
 #include <thread>
 #include <vector>
 
-#include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/modular/internal/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/future.h>
-#include <lib/async/cpp/task.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
@@ -29,6 +28,7 @@
 #include "peridot/bin/sessionctl/session_ctl_app.h"
 #include "peridot/bin/sessionctl/session_ctl_constants.h"
 #include "src/lib/files/file.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 using ::fuchsia::modular::PuppetMaster;
 using ::fuchsia::modular::PuppetMasterPtr;

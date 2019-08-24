@@ -8,7 +8,6 @@
 #define PERIDOT_LIB_LEDGER_CLIENT_OPERATIONS_H_
 
 #include <fuchsia/ledger/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 #include <lib/fsl/vmo/strings.h>
 #include <zircon/status.h>
 
@@ -17,6 +16,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/ledger_client/page_client.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 
@@ -99,8 +99,7 @@ class ReadDataCall : public PageOperation<DataPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    this->page()->GetSnapshot(page_snapshot_.NewRequest(), {},
-                              nullptr);
+    this->page()->GetSnapshot(page_snapshot_.NewRequest(), {}, nullptr);
     page_snapshot_->Get(
         to_array(key_), [this, flow](fuchsia::ledger::PageSnapshot_Get_Result result) {
           if (result.is_err()) {

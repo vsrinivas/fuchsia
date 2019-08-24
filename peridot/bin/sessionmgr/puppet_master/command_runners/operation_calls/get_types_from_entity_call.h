@@ -6,7 +6,8 @@
 #define PERIDOT_BIN_SESSIONMGR_PUPPET_MASTER_COMMAND_RUNNERS_OPERATION_CALLS_GET_TYPES_FROM_ENTITY_CALL_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
+
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

@@ -22,10 +22,10 @@ executable_package("sessionmgr") {
     ":sessionmgr_lib",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/lib/modular_config",
-    "//peridot/public/lib/app_driver/cpp:app_driver",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/modular/lib/app_driver/cpp:app_driver",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
@@ -91,14 +91,14 @@ source_set("sessionmgr_lib") {
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/modular_config:modular_config",
     "//peridot/lib/module_manifest:module_facet_reader_impl",
-    "//peridot/public/lib/app_driver/cpp:app_driver",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
+    "//src/modular/lib/app_driver/cpp:app_driver",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -120,12 +120,12 @@ executable_package("dev_session_shell") {
     "//peridot/lib/fidl:view_host",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:test_driver",
-    "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/modular/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -161,11 +161,11 @@ source_set("component_context") {
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 
@@ -185,13 +185,13 @@ source_set("focus") {
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:types",
     "//peridot/lib/rapidjson",
-    "//peridot/public/lib/async/cpp:operation",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/modular/lib/async/cpp:operation",
   ]
 }
 

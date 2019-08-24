@@ -15,7 +15,6 @@
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -43,6 +42,7 @@
 #include "peridot/lib/ledger_client/ledger_client.h"
 #include "peridot/lib/ledger_client/page_client.h"
 #include "peridot/lib/ledger_client/types.h"
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

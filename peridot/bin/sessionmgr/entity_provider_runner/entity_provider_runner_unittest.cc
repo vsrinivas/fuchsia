@@ -4,19 +4,19 @@
 
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 
-#include <fs/service.h>
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/agent/cpp/agent_impl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
-#include <src/lib/fxl/macros.h>
 
 #include <memory>
+
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
+#include <src/lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
@@ -28,6 +28,7 @@
 #include "peridot/lib/testing/mock_base.h"
 #include "peridot/lib/testing/test_with_ledger.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/modular/lib/agent/cpp/agent_impl.h"
 
 namespace modular {
 namespace testing {
@@ -260,8 +261,9 @@ TEST_F(EntityProviderRunnerTest, DataEntity) {
   entity_resolver->ResolveEntity(entity_ref, entity.NewRequest());
 
   fidl::VectorPtr<std::string> output_types;
-  entity->GetTypes(
-      [&output_types](std::vector<std::string> result) { output_types.emplace(std::move(result)); });
+  entity->GetTypes([&output_types](std::vector<std::string> result) {
+    output_types.emplace(std::move(result));
+  });
   RunLoopWithTimeoutOrUntil([&output_types] { return output_types.has_value(); });
 
   EXPECT_EQ(data.size(), output_types->size());

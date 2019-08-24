@@ -9,9 +9,10 @@
 #include <fuchsia/auth/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+
+#include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {
 

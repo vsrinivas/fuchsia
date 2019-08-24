@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/service_namespace.h>
@@ -10,6 +9,7 @@
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/bin/agents/clipboard/clipboard_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"
+#include "src/modular/lib/app_driver/cpp/agent_driver.h"
 
 namespace modular {
 

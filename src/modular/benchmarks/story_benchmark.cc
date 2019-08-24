@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <utility>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/modular_test_harness/cpp/fake_component.h>
-#include <lib/modular_test_harness/cpp/fake_module.h>
-#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
+
+#include <memory>
+#include <utility>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
@@ -19,6 +17,9 @@
 
 #include "peridot/lib/testing/session_shell_impl.h"
 #include "src/modular/benchmarks/tracing_waiter.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_component.h"
+#include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
+#include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
 

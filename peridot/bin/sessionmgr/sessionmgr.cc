@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
@@ -21,6 +20,7 @@
 #include "peridot/bin/sessionmgr/sessionmgr_impl.h"
 #include "peridot/lib/modular_config/modular_config.h"
 #include "peridot/lib/modular_config/modular_config_constants.h"
+#include "src/modular/lib/app_driver/cpp/app_driver.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(const bool enable_cobalt,
                                                async_dispatcher_t* dispatcher,

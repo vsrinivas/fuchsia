@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/find_modules_call.h"
 
-#include <lib/entity/cpp/json.h>
 #include <lib/fostr/fidl/fuchsia/modular/formatting.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
+
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 namespace modular {
 
@@ -60,13 +61,14 @@ class FindModulesCall
           param.name = "";
         }
 
-        constraint_futs_.push_back(GetTypesFromIntentParameter(std::move(param.data), param.name)
-                                       ->Map([name = param.name](std::vector<std::string> types) {
-                                         fuchsia::modular::FindModulesParameterConstraint constraint;
-                                         constraint.param_name = name.value_or("");
-                                         constraint.param_types = std::move(types);
-                                         return constraint;
-                                       }));
+        constraint_futs_.push_back(
+            GetTypesFromIntentParameter(std::move(param.data), param.name)
+                ->Map([name = param.name](std::vector<std::string> types) {
+                  fuchsia::modular::FindModulesParameterConstraint constraint;
+                  constraint.param_name = name.value_or("");
+                  constraint.param_types = std::move(types);
+                  return constraint;
+                }));
       }
     }
 

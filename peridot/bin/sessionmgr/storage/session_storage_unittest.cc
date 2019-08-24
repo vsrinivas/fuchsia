@@ -4,7 +4,6 @@
 
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 
-#include <lib/async/cpp/future.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
 
@@ -16,6 +15,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "src/modular/lib/async/cpp/future.h"
 #include "zircon/system/public/zircon/errors.h"
 
 namespace modular {

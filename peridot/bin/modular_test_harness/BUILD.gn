@@ -14,9 +14,9 @@ executable("modular_test_harness_bin") {
 
   deps = [
     "//garnet/public/lib/fxl",
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_impl",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -32,11 +32,11 @@ executable("test_base_shell_bin") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
-    "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/integration_testing/cpp",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/modular/lib/app_driver/cpp",
+    "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -52,11 +52,11 @@ executable("test_session_shell_bin") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
-    "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
+    "//src/modular/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -73,9 +73,9 @@ executable("test_story_shell_bin") {
     "//garnet/public/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
-    "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/modular/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -86,12 +86,12 @@ executable("modular_test_harness_test") {
     "modular_test_harness_test.cc",
   ]
   deps = [
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
   ]
 }
 

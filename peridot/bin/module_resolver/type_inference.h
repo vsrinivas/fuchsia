@@ -5,11 +5,12 @@
 #ifndef PERIDOT_BIN_MODULE_RESOLVER_TYPE_INFERENCE_H_
 #define PERIDOT_BIN_MODULE_RESOLVER_TYPE_INFERENCE_H_
 
+#include <fuchsia/modular/cpp/fidl.h>
+
 #include <string>
 #include <vector>
 
-#include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
+#include "src/modular/lib/async/cpp/operation.h"
 
 namespace modular {
 

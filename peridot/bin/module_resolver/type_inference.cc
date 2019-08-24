@@ -4,13 +4,15 @@
 
 #include "peridot/bin/module_resolver/type_inference.h"
 
+#include <lib/fsl/types/type_converters.h>
+
 #include <string>
 #include <vector>
 
-#include <lib/async/cpp/operation.h>
-#include <lib/entity/cpp/json.h>
-#include <lib/fsl/types/type_converters.h>
 #include <src/lib/fxl/macros.h>
+
+#include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 namespace modular {
 

@@ -4,16 +4,17 @@
 
 #include "peridot/bin/module_resolver/local_module_resolver.h"
 
-#include <algorithm>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/context/cpp/context_helper.h>
-#include <lib/entity/cpp/json.h>
+
+#include <algorithm>
+
 #include <src/lib/fxl/strings/split_string.h>
 
 #include "peridot/lib/fidl/clone.h"
+#include "src/modular/lib/context/cpp/context_helper.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 namespace modular {
 namespace {

@@ -4,15 +4,15 @@
 
 #include "peridot/bin/context_engine/context_writer_impl.h"
 
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 
+#include <memory>
+
 #include "peridot/bin/context_engine/debug.h"
 #include "rapidjson/document.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 namespace modular {
 

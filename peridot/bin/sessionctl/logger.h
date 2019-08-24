@@ -5,17 +5,18 @@
 #ifndef PERIDOT_BIN_SESSIONCTL_LOGGER_H_
 #define PERIDOT_BIN_SESSIONCTL_LOGGER_H_
 
+#include <fuchsia/modular/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+
 #include <iostream>
 #include <string>
 
-#include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async/cpp/future.h>
-#include <lib/async/cpp/task.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
+#include "src/modular/lib/async/cpp/future.h"
 
 namespace modular {
 

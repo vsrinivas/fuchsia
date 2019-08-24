@@ -5,8 +5,6 @@
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/async/cpp/operation.h>
-#include <lib/entity/cpp/json.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"
@@ -19,6 +17,8 @@
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "src/modular/lib/async/cpp/operation.h"
+#include "src/modular/lib/entity/cpp/json.h"
 
 using fuchsia::modular::CreateLinkInfo;
 using fuchsia::modular::CreateLinkInfoPtr;

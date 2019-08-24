@@ -72,9 +72,9 @@ source_set("session_storage") {
   public_deps = [
     ":story_storage",
     "//peridot/lib/ledger_client:page_client",
-    "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/async/cpp:future",
   ]
 }
 
@@ -105,9 +105,9 @@ executable("session_storage_unittest") {
     "//peridot/bin/sessionmgr/testing:annotations_matchers",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/async/cpp:future",
     "//third_party/googletest:gmock",
     "//zircon/system/public",
   ]
@@ -124,9 +124,9 @@ source_set("story_storage") {
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
-    "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/async/cpp:future",
   ]
   public_deps = [
     "//peridot/lib/ledger_client:page_client",
@@ -161,8 +161,8 @@ executable("story_storage_unittest") {
     ":story_storage",
     "//peridot/lib/entity:entity_watcher",
     "//peridot/lib/testing:test_with_ledger",
-    "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/async/cpp:future",
   ]
 }
