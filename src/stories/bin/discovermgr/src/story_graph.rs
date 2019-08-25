@@ -79,6 +79,7 @@ impl StoryGraph {
     }
 
     /// Retures the number of modules in this story.
+    #[cfg(test)]
     pub fn get_module_count(&self) -> usize {
         self.modules.len()
     }

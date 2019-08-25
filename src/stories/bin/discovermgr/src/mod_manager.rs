@@ -58,9 +58,10 @@ impl ModManager {
                     .await?;
 
                 let actions = modules
+                    .into_iter()
                     .map(|module| {
                         AddModInfo::new(
-                            module.last_intent.clone(),
+                            module.last_intent,
                             Some(restore_story_info.story_name.clone()),
                             None,
                         )

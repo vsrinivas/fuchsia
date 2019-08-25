@@ -20,19 +20,11 @@ use {
 pub struct StoryManager {
     // save stories to Ledger
     story_storage: Box<dyn StoryStorage>,
-    last_modified_story_name: Option<StoryName>,
-    last_modified_story_title: Option<StoryTitle>,
-    last_modified_story_graph: StoryGraph,
 }
 
 impl StoryManager {
     pub fn new(story_storage: Box<dyn StoryStorage>) -> Self {
-        StoryManager {
-            story_storage,
-            last_modified_story_name: None,
-            last_modified_story_title: None,
-            last_modified_story_graph: StoryGraph::new(),
-        }
+        StoryManager { story_storage }
     }
 
     pub async fn get_story_graph(&self, story_name: &str) -> Option<StoryGraph> {
@@ -43,27 +35,7 @@ impl StoryManager {
             .unwrap_or(None)
     }
 
-    // Reload last_modified_story_title in case it is changed
-    async fn update_story_info(&mut self, key: &str) -> Result<(), Error> {
-        match key {
-            TITLE_KEY => {
-                if self.last_modified_story_name.is_some() {
-                    self.last_modified_story_title = Some(
-                        self.story_storage
-                            .get_property(
-                                self.last_modified_story_name.as_ref().unwrap(),
-                                TITLE_KEY,
-                            )
-                            .await?,
-                    );
-                }
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    // Set property of given story with key & value;
+    // Set property of given story with key & value.
     pub async fn serve_set_property(
         &mut self,
         story_name: &StoryName,
@@ -72,11 +44,10 @@ impl StoryManager {
     ) -> Result<(), Error> {
         self.story_storage
             .set_property(story_name, key, utils::vmo_buffer_to_string(Box::new(value))?)
-            .await?;
-        self.update_story_info(key).await
+            .await
     }
 
-    // Get property of given story with key;
+    // Get property of given story with key.
     pub async fn serve_get_property(
         &self,
         story_name: &StoryName,
@@ -89,105 +60,62 @@ impl StoryManager {
         Ok(Buffer { vmo, size: data_to_write.len() as u64 })
     }
 
-    // Save the last modified story graph to storage
-    async fn save_last_modified_story_graph(&mut self) -> Result<(), Error> {
-        if self.last_modified_story_graph.get_module_count() > 0
-            && self.last_modified_story_name.is_some()
-        {
-            self.story_storage
-                .set_property(
-                    &self.last_modified_story_name.as_ref().unwrap(),
-                    GRAPH_KEY,
-                    serde_json::to_string(&self.last_modified_story_graph).unwrap(),
-                )
-                .await?;
-            // save its title using timestamp if user doesnot provide that
-            if self.last_modified_story_title.is_none() {
-                let now = Utc::now();
-                let story_title = format!(
+    // Restore the story in story_manager by returning a vector of its modules
+    pub async fn restore_story_graph(
+        &mut self,
+        target_story_name: StoryName,
+    ) -> Result<Vec<ModuleData>, Error> {
+        let story_graph = serde_json::from_str(
+            &self.story_storage.get_property(&target_story_name, GRAPH_KEY).await?,
+        )
+        .unwrap_or(StoryGraph::new());
+
+        let modules = story_graph.get_all_modules().map(|module| module.clone()).collect();
+
+        Ok(modules)
+    }
+
+    // Add the module to the story graph by loading it from storage,
+    // update it and save it to storage.
+    pub async fn add_to_story_graph(&mut self, action: &AddModInfo) -> Result<(), Error> {
+        let mut story_graph = self
+            .story_storage
+            .get_property(action.story_name(), GRAPH_KEY)
+            .await
+            .map(|s| serde_json::from_str(&s).unwrap_or(StoryGraph::new()))
+            .unwrap_or(StoryGraph::new());
+
+        let mut intent = action.intent().clone();
+        if intent.action.is_none() {
+            intent.action = Some("NONE".to_string());
+        }
+        story_graph.add_module(action.mod_name(), intent);
+        self.story_storage
+            .set_property(
+                action.story_name(),
+                GRAPH_KEY,
+                serde_json::to_string(&story_graph).unwrap(),
+            )
+            .await?;
+
+        let story_title = self.story_storage.get_property(action.story_name(), TITLE_KEY).await;
+        if story_title.is_ok() {
+            return Ok(());
+        }
+        let now = Utc::now();
+        self.story_storage
+            .set_property(
+                action.story_name(),
+                TITLE_KEY,
+                format!(
                     "a story from {:?} {:02}:{:02}:{:02}",
                     now.weekday(),
                     now.hour(),
                     now.minute(),
                     now.second(),
-                );
-                self.story_storage
-                    .set_property(
-                        &self.last_modified_story_name.as_ref().unwrap(),
-                        TITLE_KEY,
-                        story_title,
-                    )
-                    .await?;
-            }
-        }
-        Ok(())
-    }
-
-    // Restore the story in story_manager and return an iterator of modules in it
-    pub async fn restore_story_graph(
-        &mut self,
-        target_story_name: StoryName,
-    ) -> Result<impl Iterator<Item = &ModuleData>, Error> {
-        if self.last_modified_story_name != Some(target_story_name.clone()) {
-            self.last_modified_story_name = Some(target_story_name);
-            self.last_modified_story_title = Some(
-                self.story_storage
-                    .get_property(self.last_modified_story_name.as_ref().unwrap(), TITLE_KEY)
-                    .await?,
-            );
-            self.last_modified_story_graph = serde_json::from_str(
-                &self
-                    .story_storage
-                    .get_property(self.last_modified_story_name.as_ref().unwrap(), GRAPH_KEY)
-                    .await?,
+                ),
             )
-            .unwrap_or(StoryGraph::new())
-        }
-        Ok(self.last_modified_story_graph.get_all_modules())
-    }
-
-    // Add the suggestion to the story graph and if starting a new story
-    // then first save the story graph.
-    pub async fn add_to_story_graph(&mut self, action: &AddModInfo) -> Result<(), Error> {
-        let ongoing_story_name = action.story_name().to_string();
-        match &self.last_modified_story_name {
-            Some(story_name) => {
-                if story_name != &ongoing_story_name {
-                    // changed to another story: save the previous one to storage
-                    // and load/create the next one
-                    self.last_modified_story_name = Some(ongoing_story_name);
-                    self.last_modified_story_title = self
-                        .story_storage
-                        .get_property(self.last_modified_story_name.as_ref().unwrap(), TITLE_KEY)
-                        .await
-                        .ok(); // ok is allowed here as this could be a new story
-                    self.last_modified_story_graph = self
-                        .story_storage
-                        .get_property(self.last_modified_story_name.as_ref().unwrap(), GRAPH_KEY)
-                        .await
-                        .map(|s| serde_json::from_str(&s).unwrap_or(StoryGraph::new()))
-                        .unwrap_or(StoryGraph::new());
-                }
-            }
-            None => {
-                // clear the storage when system reboots
-                // should be removed if we really want to save all histories
-                self.story_storage.clear().await?;
-                self.last_modified_story_name = Some(ongoing_story_name);
-                self.last_modified_story_graph = self
-                    .story_storage
-                    .get_property(self.last_modified_story_name.as_ref().unwrap(), GRAPH_KEY)
-                    .await
-                    .map(|s| serde_json::from_str(&s).unwrap_or(StoryGraph::new()))
-                    .unwrap_or(StoryGraph::new());
-            }
-        }
-        let mut intent = action.intent().clone();
-        if intent.action.is_none() {
-            intent.action = Some("NONE".to_string());
-        }
-        self.last_modified_story_graph.add_module(action.mod_name(), intent);
-        self.save_last_modified_story_graph().await
+            .await
     }
 
     // Return names and titles of saved stories.
@@ -232,8 +160,13 @@ mod tests {
                 assert!(false);
             }
         }
-        assert_eq!(story_manager.last_modified_story_name.as_ref().unwrap(), "story_name_1");
-        assert_eq!(story_manager.last_modified_story_graph.get_module_count(), 1);
+
+        let story_graph = serde_json::from_str(
+            &story_manager.story_storage.get_property("story_name_1", GRAPH_KEY).await?,
+        )
+        .unwrap_or(StoryGraph::new());
+        assert_eq!(story_graph.get_module_count(), 1);
+
         // story_name_1 already saved
         assert_eq!(story_manager.story_storage.get_story_count().await?, 1);
         // changed to a new story_name_2
@@ -245,15 +178,11 @@ mod tests {
                 assert!(false);
             }
         }
-        assert_eq!(story_manager.last_modified_story_name.as_ref().unwrap(), "story_name_2");
         // story_name_1 & 2 already saved
         assert_eq!(story_manager.story_storage.get_story_count().await?, 2);
-
         // restore the story_name_1
-        let _modules = story_manager.restore_story_graph("story_name_1".to_string()).await?;
-        drop(_modules);
-        assert_eq!(story_manager.last_modified_story_name.as_ref().unwrap(), "story_name_1");
-        assert_eq!(story_manager.last_modified_story_graph.get_module_count(), 1);
+        let modules = story_manager.restore_story_graph("story_name_1".to_string()).await?;
+        assert_eq!(modules.len(), 1);
         Ok(())
     }
 }
