@@ -2,7 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("module_driver") {
+source_set("module_driver") {
+  sources = [
+    "module_driver.h"
+  ]
+
   public_deps = [
     "//src/modular/lib/app_driver/cpp:module_driver",
   ]
