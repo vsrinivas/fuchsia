@@ -14,6 +14,7 @@
 #include <string.h>
 #include <xefi.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/compiler.h>
 #include <zircon/hw/gpt.h>
 
 #include <efi/boot-services.h>
@@ -495,6 +496,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
           break;
         case IMAGE_RAMDISK:
           printf("%s is a ramdisk?!\n", boot_list[i].filename);
+          __FALLTHROUGH;
         case IMAGE_INVALID:
           printf("%s is not a valid kernel or combo image\n", boot_list[i].filename);
           *boot_list[i].ktype = IMAGE_INVALID;
@@ -625,6 +627,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
         if (ktype_b == IMAGE_COMBO) {
           zedboot(img, sys, kernel_b, ksz_b);
         }
+        __FALLTHROUGH;
       case 'r':
       case 'z':
         if (zedboot_ktype == IMAGE_COMBO) {
