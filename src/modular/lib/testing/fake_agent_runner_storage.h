@@ -10,7 +10,7 @@
 
 #include <src/lib/fxl/macros.h>
 
-#include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage.h"
+#include "src/modular/bin/sessionmgr/agent_runner/agent_runner_storage.h"
 
 namespace modular {
 namespace testing {

@@ -81,11 +81,11 @@ executable("sessionctl_test") {
     "sessionctl_test.cc",
   ]
   deps = [
-    "//peridot/bin/sessionctl:lib",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/modular/bin/sessionctl:lib",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gtest_main",
   ]
@@ -287,11 +287,11 @@ executable("clipboard_test") {
   ]
 
   deps = [
-    "//peridot/bin/agents/clipboard:clipboard_sources",
-    "//peridot/bin/basemgr:lib",
     "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/modular/bin/agents/clipboard:clipboard_sources",
+    "//src/modular/bin/basemgr:lib",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//src/modular/lib/testing:ledger_repository_for_testing",
     "//third_party/googletest:gtest_main",

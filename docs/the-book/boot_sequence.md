@@ -37,7 +37,7 @@ service implemented by that app.
 startup. The list of components to run at startup is contained in the
 `/system/data/bootstrap/apps.config` file.
 
-# Layer 3: [basemgr](/peridot/bin/basemgr/)
+# Layer 3: [basemgr](/src/modular/bin/basemgr/)
 
 `basemgr`'s job is to setup the interactive flow for user login and user
 management.

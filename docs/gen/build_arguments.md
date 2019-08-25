@@ -38,7 +38,7 @@ Whether basemgr should automatically login as a persistent guest user.
 
 **Current value (from the default):** `false`
 
-From //peridot/bin/basemgr/BUILD.gn:14
+From //src/modular/bin/basemgr/BUILD.gn:14
 
 ### auto_update_packages
 Whether the component loader should automatically update packages.

@@ -30,7 +30,7 @@ group("ledger") {
 group("voila") {
   testonly = true
   public_deps = [
-    "//peridot/bin/voila:voila_tests",
+    "//src/modular/bin/voila:voila_tests",
   ]
 }
 
@@ -54,8 +54,8 @@ group("all") {
 group("maxwell_unittests") {
   testonly = true
   public_deps = [
-    "//peridot/bin/context_engine:context_engine_unittests",
-    "//peridot/bin/module_resolver:module_resolver_unittests",
+    "//src/modular/bin/context_engine:context_engine_unittests",
+    "//src/modular/bin/module_resolver:module_resolver_unittests",
     "//src/stories/bin/discovermgr:discovermgr_tests",
   ]
 }
@@ -64,7 +64,7 @@ group("modular_test_harness") {
   testonly = true
   public_deps = [
     "//garnet/packages/testing:environment_delegating_runner",
-    "//peridot/bin/modular_test_harness:tests",
+    "//src/modular/bin/modular_test_harness:tests",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture_test",
   ]
 }
@@ -74,8 +74,8 @@ group("modular_integration_tests") {
   public_deps = [
     ":modular_test_harness",
     "//garnet/packages/prod:test_runner",
-    "//peridot/bin/basemgr:auto_login_base_shell_test",
     "//peridot/packages/prod:integration_testing",
+    "//src/modular/bin/basemgr:auto_login_base_shell_test",
     "//src/modular/tests/modular_config:test_config",
   ]
 }
@@ -98,21 +98,21 @@ group("bup") {
 group("modular_unittests") {
   testonly = true
   public_deps = [
-    "//peridot/bin/agents/clipboard:clipboard_unittests",
-    "//peridot/bin/basemgr:basemgr_unittests",
-    "//peridot/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
-    "//peridot/bin/module_resolver_rs:module_resolver_rs_tests",
-    "//peridot/bin/sessionctl:sessionctl_unittests",
-    "//peridot/bin/sessionmgr:sessionmgr_unittests",
-    "//peridot/bin/sessionmgr/agent_runner:agent_runner_unittests",
-    "//peridot/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
-    "//peridot/bin/sessionmgr/puppet_master:puppet_master_unittests",
-    "//peridot/bin/sessionmgr/storage:storage_unittests",
-    "//peridot/bin/sessionmgr/story/model:story_model_unittests",
-    "//peridot/bin/sessionmgr/story/systems:story_systems_unittests",
-    "//peridot/bin/sessionmgr/story_runner:story_runner_unittests",
     "//peridot/lib/sequential_futures:sequential_futures_tests",
     "//peridot/packages/prod:ledger",
+    "//src/modular/bin/agents/clipboard:clipboard_unittests",
+    "//src/modular/bin/basemgr:basemgr_unittests",
+    "//src/modular/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",
+    "//src/modular/bin/module_resolver_rs:module_resolver_rs_tests",
+    "//src/modular/bin/sessionctl:sessionctl_unittests",
+    "//src/modular/bin/sessionmgr:sessionmgr_unittests",
+    "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittests",
+    "//src/modular/bin/sessionmgr/entity_provider_runner:entity_provider_runner_unittests",
+    "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
+    "//src/modular/bin/sessionmgr/storage:storage_unittests",
+    "//src/modular/bin/sessionmgr/story/model:story_model_unittests",
+    "//src/modular/bin/sessionmgr/story/systems:story_systems_unittests",
+    "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
   ]
 }
 

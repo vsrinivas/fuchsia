@@ -8,8 +8,8 @@
 group("voila") {
   testonly = true
   public_deps = [
-    "//peridot/bin/voila",
     "//src/ledger/cloud_provider_in_memory/bin",
+    "//src/modular/bin/voila",
   ]
 }
 

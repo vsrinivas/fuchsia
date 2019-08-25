@@ -1,0 +1,114 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("operation_calls") {
+  public_deps = [
+    ":add_mod_call",
+    ":find_modules_call",
+    ":get_link_path_for_parameter_name_call",
+    ":get_types_from_entity_call",
+    ":initialize_chain_call",
+  ]
+}
+
+source_set("add_mod_call") {
+  sources = [
+    "add_mod_call.cc",
+    "add_mod_call.h",
+  ]
+
+  deps = [
+    ":find_modules_call",
+    ":get_link_path_for_parameter_name_call",
+    ":get_types_from_entity_call",
+    ":initialize_chain_call",
+    "//garnet/public/lib/fsl",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//src/modular/lib/entity/cpp:json",
+    "//src/modular/lib/module_manifest:module_facet_reader",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/bin/sessionmgr/storage:story_storage",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/fidl:clone",
+  ]
+}
+
+source_set("find_modules_call") {
+  sources = [
+    "find_modules_call.cc",
+    "find_modules_call.h",
+  ]
+
+  deps = [
+    ":get_link_path_for_parameter_name_call",
+    ":get_types_from_entity_call",
+    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
+    "//src/modular/bin/sessionmgr/storage:story_storage",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/entity/cpp:json",
+    "//src/modular/lib/fidl:clone",
+  ]
+}
+
+source_set("get_link_path_for_parameter_name_call") {
+  sources = [
+    "get_link_path_for_parameter_name_call.cc",
+    "get_link_path_for_parameter_name_call.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/bin/sessionmgr/storage:story_storage",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/fidl:clone",
+  ]
+}
+
+source_set("initialize_chain_call") {
+  sources = [
+    "initialize_chain_call.cc",
+    "initialize_chain_call.h",
+  ]
+
+  deps = [
+    ":set_link_value_call",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/bin/sessionmgr/storage:story_storage",
+    "//src/modular/lib/async/cpp:operation",
+  ]
+}
+
+source_set("get_types_from_entity_call") {
+  sources = [
+    "get_types_from_entity_call.cc",
+    "get_types_from_entity_call.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
+    "//src/modular/lib/async/cpp:operation",
+  ]
+}
+
+source_set("set_link_value_call") {
+  sources = [
+    "set_link_value_call.cc",
+    "set_link_value_call.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/bin/sessionmgr/storage:story_storage",
+    "//src/modular/lib/async/cpp:operation",
+  ]
+}

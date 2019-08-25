@@ -31,28 +31,28 @@ group("all") {
 group("basemgr_launcher") {
   testonly = true
   public_deps = [
-    "//peridot/bin/basemgr_launcher",
+    "//src/modular/bin/basemgr_launcher",
   ]
 }
 
 group("auto_login_base_shell") {
   testonly = true
   public_deps = [
-    "//peridot/bin/basemgr:auto_login_base_shell",
+    "//src/modular/bin/basemgr:auto_login_base_shell",
   ]
 }
 
 group("dev_base_shell") {
   testonly = true
   public_deps = [
-    "//peridot/bin/basemgr:dev_base_shell",
+    "//src/modular/bin/basemgr:dev_base_shell",
   ]
 }
 
 group("sessionctl") {
   testonly = true
   public_deps = [
-    "//peridot/bin/sessionctl",
+    "//src/modular/bin/sessionctl",
   ]
 }
 
@@ -66,7 +66,7 @@ group("cloud_provider_firestore") {
 group("clipboard_agent") {
   testonly = true
   public_deps = [
-    "//peridot/bin/agents/clipboard:clipboard_agent",
+    "//src/modular/bin/agents/clipboard:clipboard_agent",
   ]
 }
 
@@ -74,37 +74,37 @@ group("integration_testing") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:test_runner",
-    "//peridot/bin/sessionmgr:dev_session_shell",
-    "//peridot/bin/sessionmgr/story_runner:dev_story_shell",
     "//peridot/packages/prod:dev_base_shell",
     "//peridot/packages/prod:discover",
     "//peridot/packages/prod:modular",
     "//peridot/packages/testing:modular_test_harness",
+    "//src/modular/bin/sessionmgr:dev_session_shell",
+    "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
   ]
 }
 
 group("maxwell") {
   testonly = true
   public_deps = [
-    "//peridot/bin/context_engine",
+    "//src/modular/bin/context_engine",
   ]
 }
 
 group("module_resolver") {
   testonly = true
   public_deps = [
-    "//peridot/bin/module_resolver",
-    "//peridot/bin/module_resolver/module_package_indexer",
+    "//src/modular/bin/module_resolver",
+    "//src/modular/bin/module_resolver/module_package_indexer",
   ]
 }
 
 group("modular") {
   testonly = true
   public_deps = [
-    "//peridot/bin/basemgr",
-    "//peridot/bin/sessionmgr",
     "//peridot/cloud/go/src/remote_module_resolver:host",
     "//peridot/packages/prod:auto_login_base_shell",
+    "//src/modular/bin/basemgr",
+    "//src/modular/bin/sessionmgr",
   ]
 }
 

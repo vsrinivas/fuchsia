@@ -83,7 +83,7 @@ exceptions = {
     ],
     '//src/modular': [
         '//garnet/testing/benchmarking',
-        '//peridot/bin',
+        '//src/modular/bin',
         '//peridot/lib',
         '//peridot/public',
     ],

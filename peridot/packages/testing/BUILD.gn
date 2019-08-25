@@ -12,6 +12,6 @@ group("all") {
 group("modular_test_harness") {
   testonly = true
   public_deps = [
-    "//peridot/bin/modular_test_harness",
+    "//src/modular/bin/modular_test_harness",
   ]
 }

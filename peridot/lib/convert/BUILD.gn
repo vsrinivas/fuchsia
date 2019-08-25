@@ -5,7 +5,7 @@
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 visibility = [
-  "//peridot/bin/*",
+  "//src/modular/bin/*",
   "//peridot/lib/*",
   "//src/ledger/*",
 ]

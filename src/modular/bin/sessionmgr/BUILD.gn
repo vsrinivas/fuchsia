@@ -1,0 +1,315 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//src/modular/build/executable_package.gni")
+import("//src/modular/build/tests_package.gni")
+
+executable_package("sessionmgr") {
+  meta = [
+    {
+      path = "meta/sessionmgr.cmx"
+      dest = "sessionmgr.cmx"
+    },
+  ]
+
+  sources = [
+    "sessionmgr.cc",
+  ]
+
+  deps = [
+    ":sessionmgr_lib",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/modular/bin/basemgr/cobalt",
+    "//src/modular/lib/app_driver/cpp:app_driver",
+    "//src/modular/lib/modular_config",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider-with-fdio",
+  ]
+}
+
+source_set("sessionmgr_lib") {
+  sources = [
+    "argv_injecting_launcher.cc",
+    "argv_injecting_launcher.h",
+    "sessionmgr_impl.cc",
+    "sessionmgr_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/scoped_tmpfs",
+    "//sdk/fidl/fuchsia.app.discover",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.ledger.cloud",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.speech",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//src/ledger/cloud_provider_firestore/bin/fidl",
+    "//src/modular/bin/sessionmgr/agent_runner",
+  ]
+
+  deps = [
+    ":component_context",
+    ":focus",
+    ":presentation_provider",
+    ":session_ctl",
+    ":user_intelligence_provider",
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/ledger_client:constants",
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:types",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/ledger/bin/fidl",
+    "//src/lib/fxl",
+    "//src/modular/bin/basemgr/cobalt",
+    "//src/modular/bin/sessionmgr/entity_provider_runner",
+    "//src/modular/bin/sessionmgr/message_queue",
+    "//src/modular/bin/sessionmgr/puppet_master:make_production_impl",
+    "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
+    "//src/modular/bin/sessionmgr/puppet_master:story_command_executor",
+    "//src/modular/bin/sessionmgr/storage",
+    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/bin/sessionmgr/story_runner",
+    "//src/modular/lib/app_driver/cpp:app_driver",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/common:async_holder",
+    "//src/modular/lib/common:teardown",
+    "//src/modular/lib/device_info",
+    "//src/modular/lib/fidl:app_client",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/fidl:environment",
+    "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/fidl:view_host",
+    "//src/modular/lib/modular_config:modular_config",
+    "//src/modular/lib/module_manifest:module_facet_reader_impl",
+  ]
+}
+
+executable_package("dev_session_shell") {
+  meta = [
+    {
+      path = "meta/dev_session_shell.cmx"
+      dest = "dev_session_shell.cmx"
+    },
+  ]
+
+  sources = [
+    "dev_session_shell.cc",
+  ]
+
+  deps = [
+    "//peridot/lib/rapidjson",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//src/modular/lib/app_driver/cpp",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/fidl:single_service_app",
+    "//src/modular/lib/fidl:view_host",
+    "//src/modular/lib/testing:test_driver",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("session_ctl") {
+  sources = [
+    "session_ctl.cc",
+    "session_ctl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//src/lib/fxl",
+    "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
+    "//zircon/public/lib/fs",
+  ]
+}
+
+source_set("component_context") {
+  sources = [
+    "component_context_impl.cc",
+    "component_context_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:types",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/ledger/bin/fidl",
+    "//src/lib/fxl",
+    "//src/modular/bin/sessionmgr/agent_runner:public",
+    "//src/modular/bin/sessionmgr/entity_provider_runner",
+    "//src/modular/bin/sessionmgr/message_queue",
+    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/fidl:json_xdr",
+  ]
+}
+
+source_set("focus") {
+  sources = [
+    "focus.cc",
+    "focus.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:types",
+    "//peridot/lib/rapidjson",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/fidl:json_xdr",
+  ]
+}
+
+source_set("presentation_provider") {
+  sources = [
+    "presentation_provider.cc",
+    "presentation_provider.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+}
+
+source_set("user_intelligence_provider") {
+  sources = [
+    "user_intelligence_provider_impl.cc",
+    "user_intelligence_provider_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [
+    ":focus",
+    ":intelligence_services",
+    ":rate_limited_retry",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.bluetooth.le",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//src/modular/bin/basemgr/cobalt",
+    "//src/modular/lib:maxwell_internal",
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
+}
+
+source_set("intelligence_services") {
+  sources = [
+    "intelligence_services_impl.cc",
+    "intelligence_services_impl.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("rate_limited_retry") {
+  sources = [
+    "rate_limited_retry.cc",
+    "rate_limited_retry.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("annotations") {
+  sources = [
+    "annotations.cc",
+    "annotations.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+  ]
+}
+
+hermetic_tests_package("sessionmgr_unittests") {
+  deps = [
+    ":annotations_unittest",
+    ":sessionmgr_impl_unittest",
+  ]
+  environments = basic_envs
+}
+
+executable("annotations_unittest") {
+  testonly = true
+
+  sources = [
+    "annotations_unittest.cc",
+  ]
+
+  deps = [
+    ":annotations",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr/testing:annotations_matchers",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("sessionmgr_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "sessionmgr_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":sessionmgr_lib",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/ledger_client:constants",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/fidl:clone",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}

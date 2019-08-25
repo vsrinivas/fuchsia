@@ -1,0 +1,152 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//src/modular/build/tests_package.gni")
+
+group("puppet_master") {
+  testonly = true
+  deps = [
+    ":dispatch_story_command_executor",
+    ":dispatch_story_command_executor_unittest",
+    ":make_production_impl",
+    ":puppet_master_impl",
+    ":puppet_master_impl_unittest",
+    ":puppet_master_unittests",
+    ":story_command_executor",
+    ":story_command_executor_unittest",
+    "command_runners",
+  ]
+}
+
+hermetic_tests_package("puppet_master_unittests") {
+  deps = [
+    ":dispatch_story_command_executor_unittest",
+    ":puppet_master_impl_unittest",
+    ":story_command_executor_unittest",
+    "command_runners:add_mod_command_runner_unittest",
+    "command_runners:focus_mod_command_runner_unittest",
+    "command_runners:remove_mod_command_runner_unittest",
+    "command_runners:set_focus_state_command_runner_unittest",
+    "command_runners:set_kind_of_proto_story_option_command_runner_unittest",
+    "command_runners:set_link_value_command_runner_unittest",
+  ]
+  environments = basic_envs
+}
+
+source_set("puppet_master_impl") {
+  sources = [
+    "puppet_master_impl.cc",
+    "puppet_master_impl.h",
+    "story_puppet_master_impl.cc",
+    "story_puppet_master_impl.h",
+  ]
+
+  deps = [
+    ":story_command_executor",
+    "//src/lib/fxl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/bin/sessionmgr:annotations",
+    "//src/modular/bin/sessionmgr/storage",
+    "//src/modular/lib/async/cpp:operation",
+  ]
+}
+
+executable("puppet_master_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "puppet_master_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":puppet_master_impl",
+    ":story_command_executor",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr/testing:annotations_matchers",
+    "//src/modular/lib/testing:test_story_command_executor",
+    "//src/modular/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+source_set("story_command_executor") {
+  sources = [
+    "story_command_executor.cc",
+    "story_command_executor.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
+  ]
+}
+
+executable("story_command_executor_unittest") {
+  testonly = true
+
+  sources = [
+    "story_command_executor_unittest.cc",
+  ]
+
+  deps = [
+    ":story_command_executor",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+source_set("dispatch_story_command_executor") {
+  sources = [
+    "dispatch_story_command_executor.cc",
+    "dispatch_story_command_executor.h",
+  ]
+
+  public_deps = [
+    ":story_command_executor",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:command_runner",
+    "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/async/cpp:operation",
+  ]
+}
+
+executable("dispatch_story_command_executor_unittest") {
+  testonly = true
+
+  sources = [
+    "dispatch_story_command_executor_unittest.cc",
+  ]
+
+  deps = [
+    ":dispatch_story_command_executor",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/testing:test_with_ledger",
+  ]
+}
+
+source_set("make_production_impl") {
+  sources = [
+    "make_production_impl.cc",
+    "make_production_impl.h",
+  ]
+
+  deps = [
+    ":dispatch_story_command_executor",
+    ":puppet_master_impl",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:add_mod_command_runner",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:focus_mod_command_runner",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:remove_mod_command_runner",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:set_focus_state_command_runner",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:set_kind_of_proto_story_option_command_runner",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners:set_link_value_command_runner",
+    "//src/modular/lib/module_manifest:module_facet_reader",
+  ]
+}

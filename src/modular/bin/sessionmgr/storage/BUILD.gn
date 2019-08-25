@@ -1,0 +1,168 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//src/modular/build/tests_package.gni")
+
+hermetic_tests_package("storage_unittests") {
+  deps = [
+    ":constants_and_utils_unittest",
+    ":session_storage_unittest",
+    ":story_storage_unittest",
+  ]
+  environments = basic_envs
+}
+
+group("storage") {
+  public_deps = [
+    ":session_storage",
+    ":story_storage",
+  ]
+}
+
+source_set("constants_and_utils") {
+  sources = [
+    "constants_and_utils.cc",
+    "constants_and_utils.h",
+  ]
+
+  deps = [
+    "//peridot/lib/util",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+  ]
+}
+
+executable("constants_and_utils_unittest") {
+  testonly = true
+
+  sources = [
+    "constants_and_utils_unittest.cc",
+  ]
+
+  deps = [
+    ":constants_and_utils",
+    "//garnet/public/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("session_storage") {
+  sources = [
+    "session_storage.cc",
+    "session_storage.h",
+  ]
+
+  deps = [
+    ":session_storage_xdr",
+    "//peridot/lib/ledger_client:operations",
+    "//src/lib/uuid",
+    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/lib/fidl:clone",
+  ]
+
+  public_deps = [
+    ":story_storage",
+    "//peridot/lib/ledger_client:page_client",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/async/cpp:future",
+  ]
+}
+
+source_set("session_storage_xdr") {
+  sources = [
+    "session_storage_xdr.cc",
+    "session_storage_xdr.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/base64url",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/fidl:json_xdr",
+  ]
+}
+
+executable("session_storage_unittest") {
+  testonly = true
+
+  sources = [
+    "session_storage_unittest.cc",
+  ]
+
+  deps = [
+    ":session_storage",
+    "//sdk/fidl/fuchsia.ledger",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr/testing:annotations_matchers",
+    "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/testing:test_with_ledger",
+    "//third_party/googletest:gmock",
+    "//zircon/system/public",
+  ]
+}
+
+source_set("story_storage") {
+  sources = [
+    "story_storage.cc",
+    "story_storage.h",
+  ]
+
+  deps = [
+    ":story_storage_xdr",
+    "//peridot/lib/ledger_client:operations",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/fidl:clone",
+  ]
+  public_deps = [
+    "//peridot/lib/ledger_client:page_client",
+    "//sdk/fidl/fuchsia.modular.internal",
+  ]
+}
+
+source_set("story_storage_xdr") {
+  sources = [
+    "story_storage_xdr.cc",
+    "story_storage_xdr.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/base64url",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/module_manifest:json_xdr",
+  ]
+}
+
+executable("story_storage_unittest") {
+  testonly = true
+
+  sources = [
+    "story_storage_unittest.cc",
+  ]
+
+  deps = [
+    ":story_storage",
+    "//sdk/fidl/fuchsia.ledger",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/entity:entity_watcher",
+    "//src/modular/lib/testing:test_with_ledger",
+  ]
+}

@@ -10,6 +10,7 @@ group("modular") {
   deps = [
     ":benchmarks",
     ":tests",
+    "bin",
     "bundles",
     "lib",
   ]

@@ -1,0 +1,169 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//src/modular/build/executable_package.gni")
+import("//src/modular/build/tests_package.gni")
+
+executable_package("context_engine") {
+  meta = [
+    {
+      path = "meta/context_engine.cmx"
+      dest = "context_engine.cmx"
+    },
+  ]
+
+  sources = [
+    "context_engine_main.cc",
+  ]
+
+  deps = [
+    ":context_engine_impl",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/sys/cpp",
+    "//src/modular/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+hermetic_tests_package("context_engine_unittests") {
+  deps = [
+    ":context_index_unittest",
+    ":context_repository_unittest",
+  ]
+  environments = basic_envs
+}
+
+source_set("context_index") {
+  sources = [
+    "index.cc",
+    "index.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
+  ]
+}
+
+executable("context_index_unittest") {
+  testonly = true
+
+  sources = [
+    "index_unittest.cc",
+  ]
+
+  deps = [
+    ":context_index",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/context/cpp:context_helper",
+  ]
+}
+
+source_set("context_reader_impl") {
+  sources = [
+    "context_reader_impl.cc",
+    "context_reader_impl.h",
+  ]
+
+  deps = [
+    ":context_repository",
+    "//sdk/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("context_repository") {
+  sources = [
+    "context_repository.cc",
+    "context_repository.h",
+    "debug.cc",
+    "debug.h",
+  ]
+
+  public_deps = [
+    "//peridot/lib/util:idle_waiter",
+  ]
+
+  deps = [
+    ":context_index",
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/rapidjson",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/bound_set",
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("context_repository_unittest") {
+  testonly = true
+
+  sources = [
+    "context_repository_unittest.cc",
+  ]
+
+  deps = [
+    ":context_repository",
+    "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/context/cpp:context_helper",
+    "//src/modular/lib/context/cpp:context_metadata_builder",
+  ]
+}
+
+source_set("context_writer_impl") {
+  sources = [
+    "context_writer_impl.cc",
+    "context_writer_impl.h",
+  ]
+
+  public_deps = [
+    "//src/modular/lib/async/cpp:future",
+  ]
+
+  deps = [
+    ":context_repository",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
+    "//src/modular/lib/bound_set",
+    "//src/modular/lib/entity/cpp",
+    "//src/modular/lib/entity/cpp:json",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("context_engine_impl") {
+  sources = [
+    "context_engine_impl.cc",
+    "context_engine_impl.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+  ]
+
+  deps = [
+    ":context_reader_impl",
+    ":context_repository",
+    ":context_writer_impl",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/fidl/cpp",
+  ]
+}
+
+source_set("scope_utils") {
+  sources = [
+    "scope_utils.cc",
+    "scope_utils.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
+    "//third_party/boringssl",  # for sha256
+  ]
+}

@@ -1,0 +1,153 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//src/modular/build/executable_package.gni")
+import("//src/modular/build/tests_package.gni")
+
+hermetic_tests_package("story_runner_unittests") {
+  deps = [
+    ":link_impl_unittest",
+    ":story_controller_impl_unittest",  # incomplete, for now.
+  ]
+  environments = basic_envs
+}
+
+# NOTE: We are in the process of deconstructing story_runner into its
+# constituent components. Please see MF-85.
+source_set("story_runner") {
+  sources = [
+    "link_impl.cc",
+    "link_impl.h",
+    "module_context_impl.cc",
+    "module_context_impl.h",
+    "module_controller_impl.cc",
+    "module_controller_impl.h",
+    "ongoing_activity_impl.cc",
+    "ongoing_activity_impl.h",
+    "story_controller_impl.cc",
+    "story_controller_impl.h",
+    "story_entity_provider.cc",
+    "story_entity_provider.h",
+    "story_provider_impl.cc",
+    "story_provider_impl.h",
+    "story_shell_context_impl.cc",
+    "story_shell_context_impl.h",
+  ]
+
+  public_deps = [
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:types",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/util",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.app.discover",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.internal",
+    "//sdk/fidl/fuchsia.scenic.snapshot",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/ledger/bin/fidl",
+    "//src/lib/fxl",
+    "//src/modular/bin/basemgr/cobalt",
+    "//src/modular/bin/sessionmgr:component_context",
+    "//src/modular/bin/sessionmgr:focus",
+    "//src/modular/bin/sessionmgr:presentation_provider",
+    "//src/modular/bin/sessionmgr/agent_runner",
+    "//src/modular/bin/sessionmgr/message_queue",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:find_modules_call",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:get_types_from_entity_call",
+    "//src/modular/bin/sessionmgr/puppet_master/command_runners/operation_calls:initialize_chain_call",
+    "//src/modular/bin/sessionmgr/storage:constants_and_utils",
+    "//src/modular/bin/sessionmgr/story/model",
+    "//src/modular/bin/sessionmgr/story/systems:story_visibility_system",
+    "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/async/cpp:operation",
+    "//src/modular/lib/common:async_holder",
+    "//src/modular/lib/common:teardown",
+    "//src/modular/lib/context/cpp:context_helper",
+    "//src/modular/lib/entity/cpp:json",
+    "//src/modular/lib/fidl:app_client",
+    "//src/modular/lib/fidl:array_to_string",
+    "//src/modular/lib/fidl:environment",
+    "//src/modular/lib/fidl:json_xdr",
+    "//src/modular/lib/fidl:proxy",
+    "//src/modular/lib/module_manifest:module_facet_reader",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/uuid",
+    "//src/modular/bin/sessionmgr/storage",
+    "//src/modular/bin/sessionmgr/story:system",
+    "//src/modular/bin/sessionmgr/story/model",
+    "//src/modular/bin/sessionmgr/story/model:noop_story_model_storage",
+    "//src/modular/bin/sessionmgr/story/model:story_model_owner",
+    "//src/modular/lib/fidl:clone",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable_package("dev_story_shell") {
+  meta = [
+    {
+      path = "meta/dev_story_shell.cmx"
+      dest = "dev_story_shell.cmx"
+    },
+  ]
+  sources = [
+    "dev_story_shell.cc",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/modular/lib/app_driver/cpp",
+    "//src/modular/lib/fidl:single_service_app",
+    "//src/modular/lib/fidl:view_host",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("story_controller_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "story_controller_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/lib/fidl:clone",
+  ]
+}
+
+executable("link_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "link_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr/agent_runner",
+    "//src/modular/lib/entity/cpp:json",
+    "//src/modular/lib/fidl:clone",
+    "//src/modular/lib/testing:test_with_ledger",
+  ]
+}
