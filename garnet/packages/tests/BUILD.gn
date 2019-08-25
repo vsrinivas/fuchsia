@@ -367,6 +367,7 @@ group("all") {
     ":gfxlatency",
     ":go_benchmarking_tests",
     ":go_far_tests",
+    ":go_inspect_tests",
     ":go_merkle_tests",
     ":go_stdlib_tests",
     ":go_thinfs_tests",
@@ -1333,5 +1334,12 @@ group("files_async") {
   testonly = true
   public_deps = [
     "//garnet/lib/rust/files_async:files_async_tests",
+  ]
+}
+
+group("go_inspect_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/go/src/inspect:go_inspect_tests",
   ]
 }

@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+go_library("inspect") {
+  name = "fuchsia.googlesource.com/inspect"
+}
+
+go_test("go_inspect_test") {
+  gopackages = [ "fuchsia.googlesource.com/inspect" ]
+  deps = [
+    ":inspect",
+  ]
+}
+
+test_package("go_inspect_tests") {
+  deps = [
+    ":go_inspect_test",
+  ]
+
+  tests = [
+    {
+      name = "go_inspect_test"
+      environments = basic_envs
+    },
+  ]
+}
