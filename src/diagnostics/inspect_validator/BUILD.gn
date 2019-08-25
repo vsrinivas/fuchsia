@@ -59,8 +59,8 @@ package("inspect_validator_package") {
 
   meta = [
     {
-      path = rebase_path("meta/inspect_validator.cmx")
-      dest = "inspect_validator.cmx"
+      path = rebase_path("meta/validator.cmx")
+      dest = "validator.cmx"
     },
   ]
 }
