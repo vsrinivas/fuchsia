@@ -1,0 +1,5 @@
+{{~ #if (eq location.filename "generated") ~}}
+    *generated*
+{{~ else ~}}
+    *Defined in [{{@root.name}}{{@root.config.source.package}}{{rpn location.filename}}]({{sl @root location}})*
+{{~ /if}}
