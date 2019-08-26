@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/svc/cpp/service_namespace.h>
 
@@ -63,7 +64,7 @@ class ClipboardAgent {
 }  // namespace modular
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   modular::AgentDriver<modular::ClipboardAgent> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();

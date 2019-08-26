@@ -6,6 +6,7 @@
 #define SRC_MODULAR_LIB_TESTING_COMPONENT_MAIN_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "src/modular/lib/app_driver/cpp/app_driver.h"
 
@@ -40,7 +41,7 @@ namespace testing {
 // meant to be used as base classes for Impl.
 template <typename Impl, typename... Args>
 void ComponentMain(Args... args) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<Impl> driver(context->outgoing(),

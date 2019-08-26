@@ -24,6 +24,7 @@ executable_package("context_engine") {
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

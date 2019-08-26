@@ -11,6 +11,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -195,7 +196,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   Settings settings(command_line);
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<DevSessionShellApp> driver(

@@ -18,6 +18,7 @@ executable("modular_test_harness_bin") {
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -38,6 +39,7 @@ executable("test_base_shell_bin") {
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -58,6 +60,7 @@ executable("test_session_shell_bin") {
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/fidl:view_host",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -77,6 +80,7 @@ executable("test_story_shell_bin") {
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/fidl:view_host",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

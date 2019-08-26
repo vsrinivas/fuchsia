@@ -4,6 +4,7 @@
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -90,7 +91,7 @@ int main(int argc, const char** argv) {
     OverrideConfigFromCommandLine(command_line, &config);
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto component_context = sys::ComponentContext::Create();
   auto inspector = sys::ComponentInspector::Initialize(component_context.get());

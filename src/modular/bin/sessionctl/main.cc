@@ -7,6 +7,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <glob.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -222,7 +223,7 @@ bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebug* basemgr,
 }
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fxl::SetLogSettingsFromCommandLine(command_line);

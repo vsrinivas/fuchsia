@@ -11,6 +11,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -130,7 +131,7 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   modular::Settings settings(command_line);
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();
   modular::AppDriver<modular::AutoLoginBaseShellApp> driver(

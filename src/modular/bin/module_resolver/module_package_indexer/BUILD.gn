@@ -16,6 +16,7 @@ executable_package("module_package_indexer") {
     "//src/modular/lib:maxwell_internal",
     "//src/modular/lib/module_manifest_source:package_util",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
   ]
 

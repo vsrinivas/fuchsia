@@ -4,6 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -42,7 +43,7 @@ class ContextEngineApp {
 }  // namespace modular
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   auto context_engine_app = std::make_unique<modular::ContextEngineApp>(context.get());
   fxl::WeakPtr<modular::ContextDebugImpl> debug = context_engine_app->debug();

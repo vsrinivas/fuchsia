@@ -108,6 +108,7 @@ source_set("test_harness_impl") {
     "//src/modular/lib/app_driver/cpp:agent_driver",
     "//src/modular/lib/modular_config",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 
   deps = [

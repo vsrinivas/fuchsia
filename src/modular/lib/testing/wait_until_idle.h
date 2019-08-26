@@ -6,6 +6,7 @@
 #define SRC_MODULAR_LIB_TESTING_WAIT_UNTIL_IDLE_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 

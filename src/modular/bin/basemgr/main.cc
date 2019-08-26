@@ -7,6 +7,7 @@
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
@@ -192,7 +193,7 @@ int main(int argc, const char** argv) {
     config = CreateBasemgrConfigFromCommandLine(command_line);
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> component_context(sys::ComponentContext::Create());
 

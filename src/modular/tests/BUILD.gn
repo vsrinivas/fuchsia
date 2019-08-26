@@ -225,6 +225,7 @@ executable("story_shell_factory_test") {
     "//src/modular/lib/testing:session_shell_impl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

@@ -56,5 +56,6 @@ source_set("unittests") {
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

@@ -50,7 +50,7 @@ namespace modular {
 // };
 //
 // int main(int argc, const char** argv) {
-//   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+//   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 //   auto context = sys::ComponentContext::Create();
 //   modular::AppDriver<HelloWorldApp> driver(
 //       context->outgoing(),

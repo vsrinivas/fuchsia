@@ -5,6 +5,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/binding.h>
@@ -53,7 +54,7 @@ class ModuleResolverApp {
 const char kUsage[] = R"USAGE(%s)USAGE";
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (command_line.HasOption("help")) {
     printf(kUsage, argv[0]);

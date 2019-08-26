@@ -6,6 +6,7 @@
 // service. This component will exit if the test harness becomes unavailable.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <memory>
 
@@ -15,7 +16,7 @@
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_impl.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::unique_ptr<modular::testing::TestHarnessImpl> test_harness_impl;
 

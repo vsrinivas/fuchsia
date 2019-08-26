@@ -7,6 +7,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 
 #include <iostream>

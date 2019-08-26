@@ -33,6 +33,7 @@ executable_package("clipboard_agent") {
     "//peridot/lib/ledger_client:page_client",
     "//src/modular/lib/app_driver/cpp:agent_driver",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

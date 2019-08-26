@@ -94,6 +94,7 @@ source_set("story_runner") {
     "//src/modular/bin/sessionmgr/story/model:story_model_owner",
     "//src/modular/lib/fidl:clone",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -118,6 +119,7 @@ executable_package("dev_story_shell") {
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/fidl:view_host",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

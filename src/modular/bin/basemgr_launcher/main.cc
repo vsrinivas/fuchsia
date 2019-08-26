@@ -5,6 +5,7 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -51,7 +52,7 @@ cat myconfig.json | fx shell basemgr_launcher)";
 }
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   if (argc > 1) {
     std::cout << GetUsage() << std::endl;

@@ -67,6 +67,7 @@ executable_package("basemgr") {
     "//src/modular/lib/modular_config:modular_config",
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
 
@@ -169,6 +170,7 @@ executable_package("dev_base_shell") {
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -188,6 +190,7 @@ executable("auto_login_base_shell_bin") {
     "//src/modular/lib/app_driver/cpp",
     "//src/modular/lib/fidl:single_service_app",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

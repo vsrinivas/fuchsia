@@ -30,6 +30,7 @@ executable_package("module_resolver") {
     "//src/modular/lib/module_manifest_source:firebase_source",
     "//src/modular/lib/module_manifest_source:module_package_source",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

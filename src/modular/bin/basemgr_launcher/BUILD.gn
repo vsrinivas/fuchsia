@@ -17,6 +17,7 @@ executable("basemgr_launcher_bin") {
     "//src/lib/files",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
   ]
   public_deps = [
