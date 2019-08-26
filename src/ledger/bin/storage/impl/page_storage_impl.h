@@ -254,6 +254,11 @@ class PageStorageImpl : public PageStorage {
   // Returns true for all untracked object identifiers.
   bool IsTokenValid(const ObjectIdentifier& object_identifier);
 
+  // Finds good commits to use as diff bases for |target_id|. The commits will be locally present
+  // and synced.
+  void ChooseDiffBases(CommitIdView target_id,
+                       fit::callback<void(Status, std::vector<CommitId>)> callback);
+
   ledger::Environment* environment_;
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;

@@ -1605,4 +1605,48 @@ FXL_WARN_UNUSED_RESULT Status PageStorageImpl::SynchronousGetEmptyNodeIdentifier
 bool PageStorageImpl::IsTokenValid(const ObjectIdentifier& object_identifier) {
   return object_identifier.factory() == &object_identifier_factory_;
 }
+
+void PageStorageImpl::ChooseDiffBases(CommitIdView target_id,
+                                      fit::callback<void(Status, std::vector<CommitId>)> callback) {
+  // We find the synced heads by looking at the heads and the unsynced commits. As long as we do not
+  // get synced status by P2P, we are sure that the tree of these commits is present locally.
+  // TODO(ambre): implement a smarter version.
+
+  std::vector<std::unique_ptr<const Commit>> heads;
+  Status status = GetHeadCommits(&heads);
+  if (status != Status::OK) {
+    callback(status, {});
+    return;
+  }
+
+  GetUnsyncedCommits(
+      [heads = std::move(heads), callback = std::move(callback)](
+          Status status, std::vector<std::unique_ptr<const Commit>> unsynced_commits) mutable {
+        if (status != Status::OK) {
+          callback(status, {});
+          return;
+        }
+
+        // The sync heads are either heads or parents of unsynced commits, and are not unsynced
+        // commits themselves.
+        std::set<CommitId> sync_head_ids;
+        for (const auto& head : heads) {
+          sync_head_ids.insert(head->GetId());
+        }
+        for (const auto& commit : unsynced_commits) {
+          for (const auto& parent_id : commit->GetParentIds()) {
+            sync_head_ids.insert(parent_id.ToString());
+          }
+        }
+        for (const auto& commit : unsynced_commits) {
+          sync_head_ids.erase(commit->GetId());
+        }
+
+        std::vector<CommitId> diff_bases;
+        diff_bases.reserve(sync_head_ids.size());
+        std::move(sync_head_ids.begin(), sync_head_ids.end(), std::back_inserter(diff_bases));
+        callback(Status::OK, std::move(diff_bases));
+      });
+}
+
 }  // namespace storage

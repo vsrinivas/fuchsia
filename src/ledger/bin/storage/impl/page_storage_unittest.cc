@@ -69,6 +69,12 @@ class PageStorageImplAccessorForTest {
   static bool RootCommitIdentifierMapIsEmpty(const std::unique_ptr<PageStorageImpl>& storage) {
     return storage->roots_of_commits_being_added_.empty();
   }
+
+  static void ChooseDiffBases(const std::unique_ptr<PageStorageImpl>& storage,
+                              CommitIdView target_id,
+                              fit::callback<void(Status, std::vector<CommitId>)> callback) {
+    return storage->ChooseDiffBases(std::move(target_id), std::move(callback));
+  }
 };
 
 namespace {
@@ -79,6 +85,7 @@ using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::SizeIs;
+using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(const Commit& commit) {
@@ -3056,6 +3063,101 @@ TEST_F(PageStorageTest, GetCommitRootIdentifierFailedToAdd) {
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   EXPECT_EQ(root_id_from_storage, root_id);
+}
+
+TEST_F(PageStorageTest, ChooseDiffBases) {
+  // We have the following commit tree, with the uppercase commits synced and the lowercase commits
+  // unsynced.
+  //
+  //      (root)
+  //     /  |  \
+  //  (A)  (B)  (C)
+  //    \  /     |
+  //     (e)    (D)
+  //      |
+  //     (f)
+  //
+  // The set of sync heads is {A, B, D}, and they are used as diff bases.
+  std::vector<std::unique_ptr<const Commit>> heads = GetHeads();
+
+  // Build the tree.
+  bool called;
+  Status status;
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_A;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_A));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_B;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_B));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_C;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_C));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  journal = storage_->StartCommit(commit_C->Clone());
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_D;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_D));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  journal = storage_->StartMergeCommit(commit_A->Clone(), commit_B->Clone());
+  std::unique_ptr<const Commit> commit_e;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_e));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  journal = storage_->StartCommit(commit_e->Clone());
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_f;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_f));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  // Mark A,B,C,D as synced.
+  for (auto& commit_id :
+       {commit_A->GetId(), commit_B->GetId(), commit_C->GetId(), commit_D->GetId()}) {
+    storage_->MarkCommitSynced(commit_id,
+                               callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+  }
+
+  // Check that the diff bases are the sync heads.
+  std::vector<CommitId> sync_heads;
+  // The target commit is ignored.
+  CommitId target_id = commit_f->GetId();
+  PageStorageImplAccessorForTest::ChooseDiffBases(
+      storage_, target_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &sync_heads));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_THAT(sync_heads,
+              UnorderedElementsAre(commit_A->GetId(), commit_B->GetId(), commit_D->GetId()));
 }
 
 }  // namespace
