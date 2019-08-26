@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/provider_destruction_app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

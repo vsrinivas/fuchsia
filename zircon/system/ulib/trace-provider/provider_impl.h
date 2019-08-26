@@ -28,6 +28,8 @@ class TraceProviderImpl final : public trace_provider_t {
   TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel channel);
   ~TraceProviderImpl();
 
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
+
  private:
   class Connection final {
    public:

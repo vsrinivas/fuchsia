@@ -33,10 +33,11 @@ class Session final : public trace::TraceHandler {
   static void StopEngine();
   static void TerminateEngine();
 
- private:
-  Session(void* buffer, size_t buffer_num_bytes, zx::fifo fifo,
-          std::vector<std::string> categories);
   ~Session() override;
+
+ private:
+  Session(async_dispatcher_t* dispatcher, void* buffer, size_t buffer_num_bytes, zx::fifo fifo,
+          std::vector<std::string> categories);
 
   // |trace::TraceHandler|
   bool IsCategoryEnabled(const char* category) override;
@@ -56,6 +57,7 @@ class Session final : public trace::TraceHandler {
   // it has saved the buffer.
   static zx_status_t MarkBufferSaved(uint32_t wrapped_count, uint64_t durable_data_end);
 
+  async_dispatcher_t* const dispatcher_;
   void* buffer_;
   size_t buffer_num_bytes_;
   zx::fifo fifo_;

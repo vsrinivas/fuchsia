@@ -87,7 +87,8 @@ typedef struct trace_provider trace_provider_t;
 // It is consumed regardless of success/failure.
 //
 // |dispatcher| is the asynchronous dispatcher which the trace provider and trace
-// engine will use for dispatch.  This must outlive the trace provider instance.
+// engine will use for dispatch.  This must outlive the trace provider instance,
+// and must be single-threaded.
 //
 // |name| is the name of the trace provider and is used for diagnostic
 // purposes. The maximum supported length is 100 characters.

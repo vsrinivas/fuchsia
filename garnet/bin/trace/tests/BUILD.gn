@@ -328,6 +328,40 @@ executable("shared_provider_integration_tests") {
   ]
 }
 
+executable("provider_destruction_app") {
+  testonly = true
+
+  sources = [
+    "provider_destruction.cc",
+  ]
+
+  deps = [
+    ":integration_test_utils",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("provider_destruction_tests") {
+  testonly = true
+
+  sources = [
+    "provider_destruction_tests.cc"
+  ]
+
+  deps = [
+    ":integration_test_utils",
+    ":run_test",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/trace-reader",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 test_package("trace_tests") {
   deprecated_shell = "//build"
   rootjob_svc = "//build"
@@ -337,6 +371,8 @@ test_package("trace_tests") {
     ":detach_tests",
     ":ktrace_integration_tests",
     ":nested_environment_test",
+    ":provider_destruction_app",
+    ":provider_destruction_tests",
     ":return_1234",
     ":return_child_result_tests",
     ":run_awhile",
@@ -356,6 +392,10 @@ test_package("trace_tests") {
     },
     {
       name = "ktrace_integration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "provider_destruction_tests"
       environments = basic_envs
     },
     {
@@ -382,6 +422,9 @@ test_package("trace_tests") {
     },
     {
       name = "nested_environment_test"
+    },
+    {
+      name = "provider_destruction_app"
     },
     {
       name = "return_1234"
@@ -417,6 +460,10 @@ test_package("trace_tests") {
     {
       path = rebase_path("meta/nested_environment_test.cmx")
       dest = "nested_environment_test.cmx"
+    },
+    {
+      path = rebase_path("meta/provider_destruction_app.cmx")
+      dest = "provider_destruction_app.cmx"
     },
     {
       path = rebase_path("meta/shared_provider_app.cmx")

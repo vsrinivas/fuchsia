@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <lib/async/cpp/task.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/vmar.h>
 
@@ -21,9 +22,10 @@
 namespace trace {
 namespace internal {
 
-Session::Session(void* buffer, size_t buffer_num_bytes, zx::fifo fifo,
-                 std::vector<std::string> categories)
-    : buffer_(buffer),
+Session::Session(async_dispatcher_t* dispatcher, void* buffer, size_t buffer_num_bytes,
+                 zx::fifo fifo, std::vector<std::string> categories)
+    : dispatcher_(dispatcher),
+      buffer_(buffer),
       buffer_num_bytes_(buffer_num_bytes),
       fifo_(std::move(fifo)),
       fifo_wait_(this, fifo_.get(), ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED),
@@ -90,8 +92,8 @@ void Session::InitializeEngine(async_dispatcher_t* dispatcher,
     return;
   }
 
-  auto session = new Session(reinterpret_cast<void*>(buffer_ptr), buffer_num_bytes, std::move(fifo),
-                             std::move(categories));
+  auto session = new Session(dispatcher, reinterpret_cast<void*>(buffer_ptr), buffer_num_bytes,
+                             std::move(fifo), std::move(categories));
 
   status = session->fifo_wait_.Begin(dispatcher);
   if (status != ZX_OK) {
@@ -253,7 +255,15 @@ void Session::TraceStopped(zx_status_t disposition) {
   SendFifoPacket(&packet);
 }
 
-void Session::TraceTerminated() { delete this; }
+void Session::TraceTerminated() {
+  // Destruction can race with HandleFifo, e.g., if the dispatcher runs on a background thread
+  // and tracing terminates on a different thread. Handle this by running the destructor on the
+  // dispatcher's thread (which we assume is single-threaded). It may also happen that the task
+  // is not run. This can happen if the loop is quit and destructed before the task is run.
+  // Handle this by letting destruction of the closure delete the session.
+  std::unique_ptr<Session> session{this};
+  async::PostTask(dispatcher_, [session = std::move(session)]() {});
+}
 
 void Session::NotifyBufferFull(uint32_t wrapped_count, uint64_t durable_data_end) {
   trace_provider_packet_t packet{};

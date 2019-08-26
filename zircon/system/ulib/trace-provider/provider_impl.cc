@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <fuchsia/tracing/provider/c/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/process.h>
@@ -316,5 +317,30 @@ EXPORT trace_provider_t* trace_provider_create_synchronously(zx_handle_t to_serv
 
 EXPORT void trace_provider_destroy(trace_provider_t* provider) {
   ZX_DEBUG_ASSERT(provider);
-  delete static_cast<trace::internal::TraceProviderImpl*>(provider);
+
+  // The provider's dispatcher may be running on a different thread. This happens when, e.g., the
+  // dispatcher is running in a background thread and we are called in the foreground thread.
+  // async::WaitBase, which we use, requires all calls be made on the dispatcher thread. Thus we
+  // can't delete |provider| here. Instead we schedule it to be deleted on the dispatcher's thread.
+  //
+  // There are two cases to be handled:
+  // 1) The dispatcher's thread is our thread.
+  // 2) The dispatcher's thread is a different thread.
+  // In both cases there's an additional wrinkle:
+  // a) The task we post is run.
+  // b) The task we post is not run.
+  // In cases (1a,2a) we're ok: The provider is deleted. The provider isn't destroyed immediately
+  // but that's ok, it will be shortly.
+  // In cases (1b,2b) we're also ok. The only time this happens is if the loop is shutdown before
+  // our task is run. This is ok because when this happens our WaitBase method cannot be running.
+  //
+  // While one might want to check whether we're running in a different thread from the dispatcher
+  // with dispatcher == async_get_default_dispatcher(), we don't do this as we don't assume the
+  // default dispatcher has been set.
+
+  auto raw_provider_impl = static_cast<trace::internal::TraceProviderImpl*>(provider);
+  std::unique_ptr<trace::internal::TraceProviderImpl> provider_impl(raw_provider_impl);
+  async::PostTask(raw_provider_impl->dispatcher(), [provider_impl = std::move(provider_impl)]() {
+    // The provider will be deleted when the closure is deleted.
+  });
 }
