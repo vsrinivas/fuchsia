@@ -106,6 +106,7 @@ void UnbindTask::ScheduleUnbindChildren() {
 }
 
 void UnbindTask::Run() {
+  log(TRACE, "running unbind task for %s, do_unbind %d\n", device_->name().data(), do_unbind_);
   // The device is currently suspending, wait for it to complete.
   if (device_->state() == Device::State::kSuspending) {
     auto suspend_task = device_->GetActiveSuspend();
@@ -129,22 +130,26 @@ void UnbindTask::Run() {
     Complete(status == ZX_OK ? ZX_OK : ZX_ERR_UNAVAILABLE);
   };
 
-  // Check if this device is not in a devhost.  This happens for the
-  // top-level devices like /sys provided by devcoordinator, or if the device
-  // has already been removed.
-  if (device_->host() == nullptr) {
-    return completion(ZX_OK);
-  }
-
+  // Check if we should send the unbind request to the devhost. We do not want to send it if:
+  //  - This device is not in a devhost.  This happens for the top-level devices like /sys
+  //    provided by devcoordinator, or if the device has already been removed.
+  //  - device_remove does not call unbind on the device.
+  bool send_unbind = (device_->host() != nullptr) && do_unbind_;
   zx_status_t status = ZX_OK;
-  if (do_unbind_) {
+  if (send_unbind) {
     status = device_->SendUnbind(std::move(completion));
-  } else {
-    // Currently device_remove does not call unbind on the device.
-    return completion(status);
+    if (status == ZX_OK) {
+      // Sent the unbind request, the devhost will call our completion when ready.
+      return;
+    }
   }
-  if (status != ZX_OK) {
-    return completion(status);
+  // No unbind request sent, need to call the completion now.
+  completion(status);
+  // Since the device didn't successfully send an Unbind request, it will not
+  // drop our unbind task reference. We need to drop it now unless the error was
+  // that the unbind request had already been sent (ZX_ERR_UNAVAILABLE).
+  if (status != ZX_ERR_UNAVAILABLE) {
+    device_->DropUnbindTask();
   }
 }
 
@@ -159,6 +164,7 @@ fbl::RefPtr<RemoveTask> RemoveTask::Create(fbl::RefPtr<Device> device, Completio
 }
 
 void RemoveTask::Run() {
+  log(TRACE, "running remove task for %s\n", device_->name().data());
   auto completion = [this](zx_status_t status) {
     // If this remove task failed, force remove all devices from the devhost.
     bool failed_remove = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
@@ -172,14 +178,21 @@ void RemoveTask::Run() {
     Complete(status == ZX_OK ? ZX_OK : ZX_ERR_UNAVAILABLE);
   };
 
-
-  if (device_->host() == nullptr) {
-    return completion(ZX_OK);
+  zx_status_t status = ZX_OK;
+  if (device_->host() != nullptr) {
+    status = device_->SendCompleteRemoval(std::move(completion));
+    if (status == ZX_OK) {
+      // Sent the remove request, the devhost will call our completion when ready.
+      return;
+    }
   }
-
-  zx_status_t status = device_->SendCompleteRemoval(std::move(completion));
-  if (status != ZX_OK) {
-    return Complete(ZX_OK);
+  // No remove request sent, need to call the completion now.
+  completion(status);
+  // Since the device didn't successfully send an CompleteRemoval request, it will not
+  // drop our remove task reference. We need to drop it now unless the error was
+  // that the remove request had already been sent (ZX_ERR_UNAVAILABLE).
+  if (status != ZX_ERR_UNAVAILABLE) {
+    device_->DropRemoveTask();
   }
 }
 

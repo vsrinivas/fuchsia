@@ -1193,6 +1193,12 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
     ASSERT_TRUE(made_progress);
     loop()->RunUntilIdle();
   }
+
+  for (size_t i = 0; i < num_devices; i++) {
+    auto& desc = devices[i];
+    ASSERT_NULL(device(desc.index)->device->GetActiveUnbind());
+    ASSERT_NULL(device(desc.index)->device->GetActiveRemove());
+  }
 }
 
 TEST_F(UnbindTestCase, UnbindSysDevice) {
@@ -1212,6 +1218,9 @@ TEST_F(UnbindTestCase, UnbindSysDevice) {
 
   ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_remote_));
   loop()->RunUntilIdle();
+
+  ASSERT_NULL(coordinator_.sys_device()->GetActiveUnbind());
+  ASSERT_NULL(coordinator_.sys_device()->GetActiveRemove());
 }
 
 TEST_F(UnbindTestCase, NumRemovals) {

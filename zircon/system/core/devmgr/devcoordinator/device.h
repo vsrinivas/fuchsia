@@ -399,6 +399,11 @@ class Device : public fbl::RefCounted<Device>,
   // Run the completion for the outstanding remove, if any.
   zx_status_t CompleteRemove();
 
+  // Drops the reference to the task.
+  // This should be called if the device will not send an unbind or remove request.
+  void DropUnbindTask() { active_unbind_ = nullptr; }
+  void DropRemoveTask() { active_remove_ = nullptr; }
+
   zx_status_t DriverCompatibiltyTest();
 
   zx::channel take_client_remote() { return std::move(client_remote_); }
