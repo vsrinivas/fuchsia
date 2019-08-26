@@ -609,14 +609,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -714,14 +713,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -813,15 +811,15 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
     page2->Put(convert::ToArray(page2_keys.back()), convert::ToArray("value"));
   }
 
+  // Ensure the first commit is older than the second.
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   // We now have a conflict, wait for the resolve to be called.
   resolver_factory->RunUntilNewConflictResolverCalled();
@@ -872,14 +870,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   page2->Put(convert::ToArray("name"), convert::ToArray("Bob"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -939,14 +936,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   page2->Put(convert::ToArray("name"), convert::ToArray("Bob"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1014,14 +1010,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1168,14 +1163,14 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   page2->Put(convert::ToArray("city"), convert::ToArray("San Francisco"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  page1->Commit();
-  page2->Commit();
   waiter = NewWaiter();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
@@ -1255,14 +1250,13 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   page2->Put(convert::ToArray("city"), convert::ToArray("San Francisco"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1406,14 +1400,13 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1471,14 +1464,13 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"));
 
   waiter = NewWaiter();
+  page1->Commit();
   page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
   waiter = NewWaiter();
+  page2->Commit();
   page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-
-  page1->Commit();
-  page2->Commit();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
