@@ -149,6 +149,91 @@ TEST(StructSubFieldTestCase, Uint16) { ASSERT_NO_FAILURES(struct_sub_field_test<
 TEST(StructSubFieldTestCase, Uint32) { ASSERT_NO_FAILURES(struct_sub_field_test<uint32_t>()); }
 TEST(StructSubFieldTestCase, Uint64) { ASSERT_NO_FAILURES(struct_sub_field_test<uint64_t>()); }
 
+template <typename IntType>
+void struct_enum_sub_field_test() {
+  enum class EnumWholeRange : IntType {
+    kZero = 0,
+    kOne = 1,
+    kMax = std::numeric_limits<IntType>::max(),
+  };
+  enum class EnumBit : uint8_t {
+    kZero = 0,
+    kOne = 1,
+  };
+  enum class EnumRange : uint64_t {
+    kZero = 0,
+    kOne = 1,
+    kTwo = 2,
+    kThree = 3,
+  };
+
+  struct StructEnumSubFieldTest {
+    IntType field1;
+    DEF_ENUM_SUBFIELD(field1, EnumWholeRange, LastBit<IntType>::value, 0, whole_length);
+
+    IntType field2;
+    DEF_ENUM_SUBFIELD(field2, EnumBit, 2, 2, single_bit);
+
+    IntType field3;
+    DEF_ENUM_SUBFIELD(field3, EnumRange, 2, 1, range1);
+    DEF_ENUM_SUBFIELD(field3, EnumRange, 5, 3, range2);
+  };
+
+  StructEnumSubFieldTest val = {};
+
+  // Ensure writing to a whole length field affects all bits
+  constexpr IntType kMax = std::numeric_limits<IntType>::max();
+  EXPECT_EQ(EnumWholeRange::kZero, val.whole_length());
+  val.set_whole_length(EnumWholeRange::kMax);
+  EXPECT_EQ(EnumWholeRange::kMax, val.whole_length());
+  EXPECT_EQ(kMax, val.field1);
+  val.set_whole_length(EnumWholeRange::kZero);
+  EXPECT_EQ(EnumWholeRange::kZero, val.whole_length());
+  EXPECT_EQ(0, val.field1);
+
+  // Ensure writing to a single bit only affects that bit
+  EXPECT_EQ(EnumBit::kZero, val.single_bit());
+  val.set_single_bit(EnumBit::kOne);
+  EXPECT_EQ(EnumBit::kOne, val.single_bit());
+  EXPECT_EQ(4u, val.field2);
+  val.set_single_bit(EnumBit::kZero);
+  EXPECT_EQ(EnumBit::kZero, val.single_bit());
+  EXPECT_EQ(0u, val.field2);
+
+  // Ensure writing to adjacent fields does not bleed across
+  EXPECT_EQ(EnumRange::kZero, val.range1());
+  EXPECT_EQ(EnumRange::kZero, val.range2());
+  val.set_range1(EnumRange::kThree);
+  EXPECT_EQ(EnumRange::kThree, val.range1());
+  EXPECT_EQ(EnumRange::kZero, val.range2());
+  EXPECT_EQ(3u << 1, val.field3);
+  val.set_range2(EnumRange::kOne);
+  EXPECT_EQ(EnumRange::kThree, val.range1());
+  EXPECT_EQ(EnumRange::kOne, val.range2());
+  EXPECT_EQ((3u << 1) | (1u << 3), val.field3);
+  val.set_range2(EnumRange::kTwo);
+  EXPECT_EQ(EnumRange::kThree, val.range1());
+  EXPECT_EQ(EnumRange::kTwo, val.range2());
+  EXPECT_EQ((3u << 1) | (2u << 3), val.field3);
+  val.set_range1(EnumRange::kZero);
+  EXPECT_EQ(EnumRange::kZero, val.range1());
+  EXPECT_EQ(EnumRange::kTwo, val.range2());
+  EXPECT_EQ((2u << 3), val.field3);
+}
+
+TEST(StructEnumSubFieldTestCase, Uint8) {
+  ASSERT_NO_FAILURES(struct_enum_sub_field_test<uint8_t>());
+}
+TEST(StructEnumSubFieldTestCase, Uint16) {
+  ASSERT_NO_FAILURES(struct_enum_sub_field_test<uint16_t>());
+}
+TEST(StructEnumSubFieldTestCase, Uint32) {
+  ASSERT_NO_FAILURES(struct_enum_sub_field_test<uint32_t>());
+}
+TEST(StructEnumSubFieldTestCase, Uint64) {
+  ASSERT_NO_FAILURES(struct_enum_sub_field_test<uint64_t>());
+}
+
 TEST(RegisterTestCase, Rsvdz) {
   class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
    public:

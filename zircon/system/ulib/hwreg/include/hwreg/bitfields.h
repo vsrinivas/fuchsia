@@ -347,4 +347,27 @@ class BitfieldRef {
 // reads/modifies the declared bit.
 #define DEF_SUBBIT(FIELD, BIT, NAME) DEF_SUBFIELD(FIELD, BIT, BIT, NAME)
 
+// Declares "TYPE NAME() const" and "void set_NAME(TYPE)" that
+// reads/modifies the declared bitrange.  Both bit indices are inclusive.
+#define DEF_ENUM_SUBFIELD(FIELD, ENUM_TYPE, BIT_HIGH, BIT_LOW, NAME)                              \
+  static_assert(hwreg::internal::IsSupportedInt<                                                  \
+                    typename std::remove_reference<decltype(FIELD)>::type>::value,                \
+                #FIELD " has unsupported type");                                                  \
+  static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                      \
+  static_assert((BIT_HIGH) < sizeof(decltype(FIELD)) * CHAR_BIT, "Upper bit is out of range");    \
+  static_assert(std::is_enum<ENUM_TYPE>::value, "ENUM_TYPE is not an enum");                      \
+  ENUM_TYPE NAME() const {                                                                        \
+    return static_cast<ENUM_TYPE>(                                                                \
+        hwreg::BitfieldRef<const typename std::remove_reference<decltype(FIELD)>::type>(          \
+            &FIELD, (BIT_HIGH), (BIT_LOW))                                                        \
+            .get());                                                                              \
+  }                                                                                               \
+  auto& set_##NAME(ENUM_TYPE val) {                                                               \
+    hwreg::BitfieldRef<typename std::remove_reference<decltype(FIELD)>::type>(&FIELD, (BIT_HIGH), \
+                                                                              (BIT_LOW))          \
+        .set(static_cast<const typename std::remove_reference<decltype(FIELD)>::type>(val));      \
+    return *this;                                                                                 \
+  }                                                                                               \
+  static_assert(true)  // eat a ;
+
 }  // namespace hwreg
