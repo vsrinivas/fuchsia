@@ -1,0 +1,19 @@
+rustfmt: rustfmt 1.3.0-nightly (d334502 2019-06-09)
+icu-config: 64.2
+icu-config-cpp-flags: -I/usr/local/google/local/include
+flags: -I/usr/local/google/local/include
+icu-config-has-renaming: true
+bindgen: bindgen 0.50.0
+include-file: '/usr/local/google/local/include/unicode/ucal.h'
+include-file: '/usr/local/google/local/include/unicode/udat.h'
+include-file: '/usr/local/google/local/include/unicode/uenum.h'
+include-file: '/usr/local/google/local/include/unicode/ustring.h'
+include-file: '/usr/local/google/local/include/unicode/utext.h'
+flags: -I/usr/local/google/local/include
+bindgen-cmdline: ["--default-enum-style=rust", "--with-derive-default", "--with-derive-hash", "--with-derive-partialord", "--with-derive-partialeq", "--whitelist-type", "UBool|UCalendar.*|UChar.*|UDate|UDateFormat.*|UEnumeration.*|UErrorCode|UText.*", "--whitelist-function", "u_.*|ucal_.*|udat_.*|uenum_.*|uloc_.*|utext_.*", "--opaque-type", "", "-o", "/usr/local/google/code/rust_icu/target/debug/build/rust_icu_sys-e30096dda1891621/out/lib.rs", "/usr/local/google/code/rust_icu/target/debug/build/rust_icu_sys-e30096dda1891621/out/wrapper.h", "--", "-L /usr/local/google/local/lib -l icui18n -l icuuc -l icudata", "-I/usr/local/google/local/include"]
+flags: -I/usr/local/google/local/include
+renaming: true
+cargo:install-dir=/usr/local/google/local
+cargo:rustc-link-search=native=/usr/local/google/local/lib
+cargo:rustc-flags=-L /usr/local/google/local/lib -l icui18n -l icuuc -l icudata
+done:true
