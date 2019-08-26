@@ -45,6 +45,7 @@ source_set("pseudo_dir_server") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -80,5 +81,6 @@ source_set("idle_waiter") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

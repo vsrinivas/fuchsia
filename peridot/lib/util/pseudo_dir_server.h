@@ -10,6 +10,7 @@
 #include <thread>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <src/lib/files/unique_fd.h>

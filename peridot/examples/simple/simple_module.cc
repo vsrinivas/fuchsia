@@ -7,6 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -74,7 +75,7 @@ class SimpleModule : public fuchsia::ui::app::ViewProvider {
 }  // namespace simple
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<simple::SimpleModule> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();

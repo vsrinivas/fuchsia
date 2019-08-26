@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/svc/cpp/service_namespace.h>
 
 #include "peridot/examples/simple/simple_impl.h"
@@ -42,7 +43,7 @@ class SimpleAgent {
 }  // namespace simple
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   modular::AgentDriver<simple::SimpleAgent> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();

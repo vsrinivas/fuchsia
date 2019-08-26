@@ -16,7 +16,7 @@ namespace scoped_tmpfs {
 
 namespace {
 async_loop_config_t MakeConfig() {
-  async_loop_config_t result = kAsyncLoopConfigAttachToThread;
+  async_loop_config_t result = kAsyncLoopConfigAttachToCurrentThread;
   result.make_default_for_current_thread = false;
   return result;
 }

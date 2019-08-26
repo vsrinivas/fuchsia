@@ -52,7 +52,7 @@ fuchsia::io::DirectoryPtr PseudoDirServer::Serve() {
 // that it has started and serves a directory requests. The thread is exited
 // when this object is destroyed.
 void PseudoDirServer::StartThread(fidl::InterfaceRequest<fuchsia::io::Directory> request) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   {
     std::lock_guard<std::mutex> lock(ready_mutex_);

@@ -21,6 +21,7 @@ The first step to writing a `Module` is implementing the initializer.
 #include <lib/sys/cpp/component_context.h>
 #include "src/modular/lib/app_driver/cpp/module_driver.h"
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <ui/cpp/fidl.h>
 
 namespace simple {
@@ -106,7 +107,7 @@ message_queue.RegsiterReceiver(
 
 ```c++
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<simple::SimpleModule> driver(context.get(),
                                                      [&loop] { loop.Quit(); });

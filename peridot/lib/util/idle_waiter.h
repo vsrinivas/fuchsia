@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
 #include <src/lib/fxl/memory/weak_ptr.h>

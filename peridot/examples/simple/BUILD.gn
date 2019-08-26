@@ -33,6 +33,7 @@ executable_package("simple_agent") {
     "//sdk/lib/sys/cpp",
     "//src/modular/lib/app_driver/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -57,6 +58,7 @@ executable_package("simple_module") {
     "//src/modular/lib/app_driver/cpp:module_driver",
     "//src/modular/lib/message_queue/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
