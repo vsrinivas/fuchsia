@@ -6,6 +6,8 @@ toc:
   path: /docs/the-book/components
 - title: "Component manifests"
   path: /docs/the-book/components/component_manifests.md
+- title: "Hub"
+  path: /docs/the-book/components/hub.md
 - title: "Life of a service open"
   path: /docs/the-book/components/life_of_a_service_open.md
 - title: "ELF runner"

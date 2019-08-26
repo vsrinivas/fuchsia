@@ -427,11 +427,11 @@ threads. They may be further classified into
 
 #### **Hub** {#hub}
 
-The hub is a portal for introspection. It enables tools to access detailed
-structural information about realms and component instances at runtime, such as
-their names, job and process ids, and published services.
+The hub is a portal for tools to access detailed structural information about
+component instances at runtime, such as their names, job and process ids, and
+exposed capabilities.
 
--   [Hub](/docs/the-book/hub.md)
+-   [Hub](/docs/the-book/components/hub.md)
 
 #### **Jiri** {#jiri}
 
