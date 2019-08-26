@@ -68,6 +68,7 @@
 // IIR
 #define UART_IIR_RLS                (0x06)  // Receiver Line Status
 #define UART_IIR_RDA                (0x04)  // Receive Data Available
+#define UART_IIR_BUSY               (0x07)  // Busy Detect Indication
 #define UART_IIR_CTI                (0x0C)  // Character Timeout Indicator
 #define UART_IIR_THRE               (0x02)  // Transmit Holding Register Empty
 #define UART_IIR_MS                 (0x00)  // Check Modem Status Register
@@ -102,6 +103,12 @@ static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 #define UARTREG(reg) (*(volatile uint32_t*)((uart_base) + (reg)))
 
 static interrupt_eoi dw8250_uart_irq(void* arg) {
+  if ((UARTREG(UART_IIR) & UART_IIR_BUSY) == UART_IIR_BUSY) {
+    // To clear the USR (UART Status Register) we need to read it.
+    volatile uint32_t unused = UARTREG(UART_USR);
+    static_cast<void>(unused);
+  }
+
   // read interrupt status and mask
   while (UARTREG(UART_LSR) & UART_LSR_DR) {
     if (cbuf_space_avail(&uart_rx_buf) == 0) {
