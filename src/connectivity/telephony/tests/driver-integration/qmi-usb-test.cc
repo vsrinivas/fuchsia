@@ -76,9 +76,7 @@ class UsbQmiTest : public ::gtest::RealLoopFixture {
   }
 
   void TearDown() override {
-    auto result = bus_.peripheral().ClearFunctions();
-    ASSERT_EQ(result.status(), ZX_OK);
-    ASSERT_EQ(result.value().result.is_err(), false);
+    ASSERT_NO_FATAL_FAILURE(bus_.ClearPeripheralDeviceFunctions());
 
     auto result2 = bus_.virtual_bus().Disable();
     ASSERT_EQ(result2.status(), ZX_OK);

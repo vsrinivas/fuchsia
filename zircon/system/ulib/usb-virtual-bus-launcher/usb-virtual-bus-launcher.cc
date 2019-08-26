@@ -74,9 +74,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
   ASSERT_OK(fdio_get_service_handle(fd.release(), peripheral.reset_and_get_address()));
   peripheral_.emplace(std::move(peripheral));
 
-  auto clear_result = peripheral_->ClearFunctions();
-  ASSERT_OK(clear_result.status());
-  ASSERT_FALSE(clear_result->result.is_err());
+  ASSERT_NO_FATAL_FAILURES(ClearPeripheralDeviceFunctions());
 }
 
 int USBVirtualBusBase::GetRootFd() { return devmgr_.devfs_root().get(); }
@@ -100,6 +98,21 @@ void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_des
 
   auto connect_result = virtual_bus_->Connect();
   ASSERT_NO_FATAL_FAILURES(ValidateResult(connect_result));
+}
+
+void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {
+  zx::channel handles[2];
+  ASSERT_OK(zx::channel::create(0, handles, handles + 1));
+  auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
+  ASSERT_OK(set_result.status());
+
+  auto clear_functions = peripheral_->ClearFunctions();
+  ASSERT_OK(clear_functions.status());
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 0);
+  loop.Run();
+  ASSERT_TRUE(watcher.all_functions_cleared());
 }
 
 }  // namespace usb_virtual_bus_base

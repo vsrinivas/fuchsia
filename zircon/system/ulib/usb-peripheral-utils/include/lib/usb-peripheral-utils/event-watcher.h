@@ -20,14 +20,18 @@ class EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events:
     fidl::Bind(loop->dispatcher(), std::move(svc), this);
   }
 
-  void FunctionRegistered(FunctionRegisteredCompleter::Sync completer) override;
+  void FunctionRegistered(FunctionRegisteredCompleter::Sync completer);
+  void FunctionsCleared(FunctionsClearedCompleter::Sync completer);
 
   bool all_functions_registered() { return functions_registered_ == functions_; }
+  bool all_functions_cleared() { return all_functions_cleared_; }
 
  private:
   async::Loop* loop_;
   const size_t functions_;
   size_t functions_registered_ = 0;
+
+  bool all_functions_cleared_ = false;
 };
 
 }  // namespace usb_peripheral_utils

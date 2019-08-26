@@ -282,6 +282,23 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
   return DeviceStateChanged();
 }
 
+void UsbPeripheral::FunctionCleared() {
+  zxlogf(TRACE, "%s\n", __func__);
+  fbl::AutoLock lock(&lock_);
+
+  if (num_functions_to_clear_ == 0 || !shutting_down_) {
+    zxlogf(ERROR, "unexpected FunctionCleared event, num_functions: %lu is_shutting_down: %d\n",
+           num_functions_to_clear_, shutting_down_);
+    return;
+  }
+  num_functions_to_clear_--;
+  if (num_functions_to_clear_ > 0) {
+    // Still waiting for more functions to clear.
+    return;
+  }
+  ClearFunctionsComplete();
+}
+
 zx_status_t UsbPeripheral::AllocInterface(fbl::RefPtr<UsbFunction> function,
                                           uint8_t* out_intf_num) {
   fbl::AutoLock lock(&lock_);
@@ -467,23 +484,50 @@ zx_status_t UsbPeripheral::BindFunctions() {
   return DeviceStateChanged();
 }
 
-zx_status_t UsbPeripheral::ClearFunctions() {
-  fbl::AutoLock lock(&lock_);
-  shutting_down_ = true;
-  for (size_t i = 0; i < 256; i++) {
-    dci_.CancelAll(static_cast<uint8_t>(i));
+void UsbPeripheral::ClearFunctions() {
+  zxlogf(TRACE, "%s\n", __func__);
+  {
+    fbl::AutoLock lock(&lock_);
+    if (shutting_down_) {
+      zxlogf(INFO, "%s: already in process of clearing the functions\n", __func__);
+      return;
+    }
+    shutting_down_ = true;
+    for (size_t i = 0; i < 256; i++) {
+      dci_.CancelAll(static_cast<uint8_t>(i));
+    }
+    for (size_t i = 0; i < functions_.size(); i++) {
+      auto* function = functions_[i].get();
+      if (function->zxdev()) {
+        num_functions_to_clear_++;
+      }
+    }
+    zxlogf(TRACE, "%s: found %lu functions\n", __func__, num_functions_to_clear_);
+    if (num_functions_to_clear_ == 0) {
+      // Don't need to wait for anything to be removed, update our state now.
+      ClearFunctionsComplete();
+      return;
+    }
   }
+
+  // TODO(jocelyndang): we can call DdkRemove inside the lock above once DdkRemove becomes async.
   for (size_t i = 0; i < functions_.size(); i++) {
     auto* function = functions_[i].get();
     if (function->zxdev()) {
       function->DdkRemove();
     }
   }
+}
+
+void UsbPeripheral::ClearFunctionsComplete() {
+  zxlogf(TRACE, "%s\n", __func__);
+
   shutting_down_ = false;
   functions_.reset();
   config_desc_.reset();
   functions_bound_ = false;
   functions_registered_ = false;
+  function_devs_added_ = false;
 
   for (size_t i = 0; i < countof(interface_map_); i++) {
     interface_map_[i].reset();
@@ -493,7 +537,11 @@ zx_status_t UsbPeripheral::ClearFunctions() {
   }
   strings_.reset();
 
-  return DeviceStateChanged();
+  DeviceStateChanged();
+
+  if (listener_) {
+    peripheral::Events::Call::FunctionsCleared(zx::unowned_channel(listener_.get()));
+  }
 }
 
 zx_status_t UsbPeripheral::AddFunctionDevices() {
@@ -529,21 +577,6 @@ zx_status_t UsbPeripheral::AddFunctionDevices() {
 
   function_devs_added_ = true;
   return ZX_OK;
-}
-
-void UsbPeripheral::RemoveFunctionDevices() {
-  zxlogf(TRACE, "%s\n", __func__);
-
-  for (size_t i = 0; i < functions_.size(); i++) {
-    auto* function = functions_[i].get();
-    // Here we remove the function from the DDK device tree,
-    // but the storage for the function remains on our function list.
-    function->DdkRemove();
-  }
-
-  config_desc_.reset();
-  functions_registered_ = false;
-  function_devs_added_ = false;
 }
 
 zx_status_t UsbPeripheral::DeviceStateChanged() {
@@ -584,10 +617,6 @@ zx_status_t UsbPeripheral::DeviceStateChanged() {
       }
     }
     dci_usb_mode_ = new_dci_usb_mode;
-  }
-
-  if (!add_function_devs && function_devs_added_) {
-    RemoveFunctionDevices();
   }
 
   return status;
@@ -710,7 +739,18 @@ void UsbPeripheral::UsbDciInterfaceSetSpeed(usb_speed_t speed) { speed_ = speed;
 void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
                                      ::fidl::VectorView<FunctionDescriptor> func_descs,
                                      SetConfigurationCompleter::Sync completer) {
+  zxlogf(TRACE, "%s\n", __func__);
   peripheral::Device_SetConfiguration_Result response;
+  {
+    fbl::AutoLock lock(&lock_);
+    if (shutting_down_) {
+      zxlogf(ERROR, "%s: cannot set configuration while clearing functions\n", __func__);
+      response.set_err(ZX_ERR_BAD_STATE);
+      completer.Reply(std::move(response));
+      return;
+    }
+  }
+
   if (func_descs.count() == 0) {
     response.set_err(ZX_ERR_INVALID_ARGS);
     completer.Reply(std::move(response));
@@ -774,16 +814,8 @@ zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
 
 void UsbPeripheral::ClearFunctions(ClearFunctionsCompleter::Sync completer) {
   zxlogf(TRACE, "%s\n", __func__);
-
-  peripheral::Device_ClearFunctions_Result response;
-  zx_status_t status = ClearFunctions();
-  if (status != ZX_OK) {
-    response.set_err(status);
-    completer.Reply(std::move(response));
-    return;
-  }
-  response.set_response(peripheral::Device_ClearFunctions_Response{});
-  completer.Reply(std::move(response));
+  ClearFunctions();
+  completer.Reply();
 }
 
 int UsbPeripheral::ListenerCleanupThread() {

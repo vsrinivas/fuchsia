@@ -27,6 +27,7 @@ class USBVirtualBusBase {
   void InitPeripheral();
   void SetupPeripheralDevice(const DeviceDescriptor& device_desc,
                              std::vector<FunctionDescriptor> function_descs);
+  void ClearPeripheralDeviceFunctions();
   int GetRootFd();
   fbl::unique_fd& devfs_root() { return devfs_; };
   llcpp::fuchsia::hardware::usb::peripheral::Device::SyncClient& peripheral() {

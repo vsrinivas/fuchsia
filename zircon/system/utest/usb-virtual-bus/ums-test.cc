@@ -93,9 +93,7 @@ class BlockDeviceController {
 
   void Disconnect() {
     cachecontrol_.reset();
-    auto result = peripheral().ClearFunctions();
-    ASSERT_OK(result.status());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_NO_FATAL_FAILURES(bus_->ClearPeripheralDeviceFunctions());
 
     auto result2 = virtual_bus().Disconnect();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));
@@ -202,9 +200,7 @@ class UmsTest : public zxtest::Test {
 void UmsTest::SetUp() { ASSERT_NO_FATAL_FAILURES(bus_.InitUMS(&devpath_)); }
 
 void UmsTest::TearDown() {
-  auto result = bus_.peripheral().ClearFunctions();
-  ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
+  ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
 
   auto result2 = bus_.virtual_bus().Disable();
   ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));

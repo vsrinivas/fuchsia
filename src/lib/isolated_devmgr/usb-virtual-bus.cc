@@ -81,9 +81,7 @@ void USBVirtualBusBase::InitPeripheral() {
   ASSERT_EQ(fdio_get_service_handle(fd.release(), peripheral.reset_and_get_address()), ZX_OK);
   peripheral_.emplace(std::move(peripheral));
 
-  auto clear_result = peripheral_->ClearFunctions();
-  ASSERT_EQ(clear_result.status(), ZX_OK);
-  ASSERT_EQ(clear_result.value().result.is_err(), false);
+  ASSERT_NO_FATAL_FAILURE(ClearPeripheralDeviceFunctions());
 }
 
 int USBVirtualBusBase::GetRootFd() { return devfs_root().get(); }
@@ -96,26 +94,33 @@ class EventWatcher : public ::llcpp::fuchsia::hardware::usb::peripheral::Events:
   }
 
   void FunctionRegistered(FunctionRegisteredCompleter::Sync completer);
+  void FunctionsCleared(FunctionsClearedCompleter::Sync completer);
 
   bool all_functions_registered() { return functions_registered_ == functions_; }
+  bool all_functions_cleared() { return all_functions_cleared_; }
 
  private:
   async::Loop* loop_;
   const size_t functions_;
   size_t functions_registered_ = 0;
 
-  bool state_changed_ = false;
+  bool all_functions_cleared_ = false;
 };
 
 void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync completer) {
   functions_registered_++;
   if (all_functions_registered()) {
-    state_changed_ = true;
     loop_->Quit();
     completer.Close(ZX_ERR_CANCELED);
   } else {
     completer.Reply();
   }
+}
+
+void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync completer) {
+  all_functions_cleared_ = true;
+  loop_->Quit();
+  completer.Close(ZX_ERR_CANCELED);
 }
 
 void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_desc,
@@ -138,6 +143,21 @@ void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_des
   auto connect_result = virtual_bus_->Connect();
   ASSERT_EQ(connect_result.status(), ZX_OK);
   ASSERT_EQ(connect_result.value().status, ZX_OK);
+}
+
+void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {
+  zx::channel handles[2];
+  ASSERT_EQ(zx::channel::create(0, handles, handles + 1), ZX_OK);
+  auto set_result = peripheral_->SetStateChangeListener(std::move(handles[1]));
+  ASSERT_EQ(set_result.status(), ZX_OK);
+
+  auto clear_functions = peripheral_->ClearFunctions();
+  ASSERT_EQ(clear_functions.status(), ZX_OK);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  EventWatcher watcher(&loop, std::move(handles[0]), 0);
+  loop.Run();
+  ASSERT_TRUE(watcher.all_functions_cleared());
 }
 
 }  // namespace usb_virtual_bus

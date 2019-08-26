@@ -42,6 +42,8 @@ struct DeviceDescriptor {
 protocol Events {
     /// Invoked when a function registers
     FunctionRegistered() -> ();
+    /// Invoked when all functions have been cleared.
+    FunctionsCleared();
 };
 
 protocol Device {
@@ -54,7 +56,8 @@ protocol Device {
 
     /// Tells the device to remove the child devices for the configuration's interfaces
     /// and reset the list of functions to empty.
-    ClearFunctions() -> () error zx.status;
+    /// The caller should wait for the |FunctionsCleared| event.
+    ClearFunctions() -> ();
     /// Adds a state change listener that is invoked when a state change completes.
     SetStateChangeListener(request<Events> listener);
 };

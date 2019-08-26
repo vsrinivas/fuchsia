@@ -14,6 +14,8 @@ namespace {
 
 [[maybe_unused]]
 constexpr uint64_t kEvents_FunctionRegistered_Ordinal = 0x48ca785200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kEvents_FunctionsCleared_Ordinal = 0x24319fec00000000lu;
 
 }  // namespace
 template <>
@@ -60,6 +62,49 @@ Events::ResultOf::FunctionRegistered Events::Call::FunctionRegistered(zx::unowne
 }
 
 
+Events::ResultOf::FunctionsCleared_Impl::FunctionsCleared_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FunctionsClearedRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, FunctionsClearedRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(FunctionsClearedRequest));
+  ::fidl::DecodedMessage<FunctionsClearedRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      Events::InPlace::FunctionsCleared(std::move(_client_end)));
+}
+
+Events::ResultOf::FunctionsCleared Events::SyncClient::FunctionsCleared() {
+  return ResultOf::FunctionsCleared(zx::unowned_channel(this->channel_));
+}
+
+Events::ResultOf::FunctionsCleared Events::Call::FunctionsCleared(zx::unowned_channel _client_end) {
+  return ResultOf::FunctionsCleared(std::move(_client_end));
+}
+
+::fidl::internal::StatusAndError Events::InPlace::FunctionsCleared(zx::unowned_channel _client_end) {
+  constexpr uint32_t _write_num_bytes = sizeof(FunctionsClearedRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<FunctionsClearedRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kEvents_FunctionsCleared_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
 bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -77,6 +122,17 @@ bool Events::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       impl->FunctionRegistered(
         Interface::FunctionRegisteredCompleter::Sync(txn));
+      return true;
+    }
+    case kEvents_FunctionsCleared_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<FunctionsClearedRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->FunctionsCleared(
+        Interface::FunctionsClearedCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -164,65 +220,6 @@ int32_t& ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Re
 }
 
 
-::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::Device_ClearFunctions_Result() {
-  tag_ = Tag::Invalid;
-}
-
-::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::~Device_ClearFunctions_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
-    response_.~Device_ClearFunctions_Response();
-    break;
-  default:
-    break;
-  }
-  tag_ = Tag::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::MoveImpl_(Device_ClearFunctions_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Tag::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result) == ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::PrimarySize);
-}
-
-
-Device_ClearFunctions_Response& ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
-    Destroy();
-    new (&response_) Device_ClearFunctions_Response;
-  }
-  tag_ = Tag::kResponse;
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result::mutable_err() {
-  if (which() != Tag::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-  }
-  tag_ = Tag::kErr;
-  return err_;
-}
-
-
 namespace {
 
 [[maybe_unused]]
@@ -231,7 +228,6 @@ extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurat
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_ClearFunctions_Ordinal = 0x4e0ef30000000000lu;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kDevice_SetStateChangeListener_Ordinal = 0x4409dd700000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
@@ -326,25 +322,6 @@ Device::ResultOf::ClearFunctions Device::SyncClient::ClearFunctions() {
 
 Device::ResultOf::ClearFunctions Device::Call::ClearFunctions(zx::unowned_channel _client_end) {
   return ResultOf::ClearFunctions(std::move(_client_end));
-}
-
-template <>
-Device::UnownedResultOf::ClearFunctions_Impl<Device::ClearFunctionsResponse>::ClearFunctions_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ClearFunctionsRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, ClearFunctionsRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(ClearFunctionsRequest));
-  ::fidl::DecodedMessage<ClearFunctionsRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Device::InPlace::ClearFunctions(std::move(_client_end), std::move(_response_buffer)));
-}
-
-Device::UnownedResultOf::ClearFunctions Device::SyncClient::ClearFunctions(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ClearFunctions(zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-Device::UnownedResultOf::ClearFunctions Device::Call::ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ClearFunctions(std::move(_client_end), std::move(_response_buffer));
 }
 
 ::fidl::DecodeResult<Device::ClearFunctionsResponse> Device::InPlace::ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
@@ -522,32 +499,13 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-void Device::Interface::ClearFunctionsCompleterBase::Reply(Device_ClearFunctions_Result result) {
+void Device::Interface::ClearFunctionsCompleterBase::Reply() {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ClearFunctionsResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ClearFunctionsResponse*>(_write_bytes);
   _response._hdr.ordinal = kDevice_ClearFunctions_Ordinal;
-  _response.result = std::move(result);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ClearFunctionsResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ClearFunctionsResponse>(std::move(_response_bytes)));
-}
-
-void Device::Interface::ClearFunctionsCompleterBase::Reply(::fidl::BytePart _buffer, Device_ClearFunctions_Result result) {
-  if (_buffer.capacity() < ClearFunctionsResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<ClearFunctionsResponse*>(_buffer.data());
-  _response._hdr.ordinal = kDevice_ClearFunctions_Ordinal;
-  _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ClearFunctionsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ClearFunctionsResponse>(std::move(_buffer)));
-}
-
-void Device::Interface::ClearFunctionsCompleterBase::Reply(::fidl::DecodedMessage<ClearFunctionsResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kDevice_ClearFunctions_Ordinal;
-  CompleterBase::SendReply(std::move(params));
 }
 
 

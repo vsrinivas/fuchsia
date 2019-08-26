@@ -9,6 +9,8 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
+#include <lib/usb-peripheral-utils/event-watcher.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -171,12 +173,34 @@ static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   return ZX_OK;
 }
 
-static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
-  auto resp = peripheral::Device::Call::ClearFunctions(zx::unowned_channel(svc));
-  zx_status_t status = resp.status();
-  if (status == ZX_OK && resp->result.is_err()) {
-    status = resp->result.err();
+static zx_status_t device_clear_functions(zx_handle_t svc) {
+  zx::channel handles[2];
+  zx_status_t status = zx::channel::create(0, handles, handles + 1);
+  if (status != ZX_OK) {
+    return status;
   }
+  auto set_result = peripheral::Device::Call::SetStateChangeListener(
+      zx::unowned_channel(svc), std::move(handles[1]));
+  if (set_result.status() != ZX_OK) {
+    return set_result.status();
+  }
+
+  auto clear_functions = peripheral::Device::Call::ClearFunctions(zx::unowned_channel(svc));
+  if (clear_functions.status() != ZX_OK) {
+    return clear_functions.status();
+  }
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 0);
+  loop.Run();
+  if (!watcher.all_functions_cleared()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
+}
+
+static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
+  zx_status_t status = device_clear_functions(svc);
   if (status == ZX_OK) {
     status = device_init(svc, &ums_function);
   }
@@ -185,11 +209,7 @@ static int ums_command(zx_handle_t svc, int argc, const char* argv[]) {
 }
 
 static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
-  auto resp = peripheral::Device::Call::ClearFunctions(zx::unowned_channel(svc));
-  zx_status_t status = resp.status();
-  if (status == ZX_OK && resp->result.is_err()) {
-    status = resp->result.err();
-  }
+  zx_status_t status = device_clear_functions(svc);
   if (status == ZX_OK) {
     status = device_init(svc, &cdc_function);
   }
@@ -198,11 +218,7 @@ static int cdc_command(zx_handle_t svc, int argc, const char* argv[]) {
 }
 
 static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
-  auto resp = peripheral::Device::Call::ClearFunctions(zx::unowned_channel(svc));
-  zx_status_t status = resp.status();
-  if (status == ZX_OK && resp->result.is_err()) {
-    status = resp->result.err();
-  }
+  zx_status_t status = device_clear_functions(svc);
   if (status == ZX_OK) {
     status = device_init(svc, &test_function);
   }
@@ -211,11 +227,7 @@ static int test_command(zx_handle_t svc, int argc, const char* argv[]) {
 }
 
 static int cdc_test_command(zx_handle_t svc, int argc, const char* argv[]) {
-  auto resp = peripheral::Device::Call::ClearFunctions(zx::unowned_channel(svc));
-  zx_status_t status = resp.status();
-  if (status == ZX_OK && resp->result.is_err()) {
-    status = resp->result.err();
-  }
+  zx_status_t status = device_clear_functions(svc);
   if (status == ZX_OK) {
     status = device_init(svc, &cdc_test_function);
   }

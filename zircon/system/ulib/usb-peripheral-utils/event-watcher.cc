@@ -20,4 +20,10 @@ void EventWatcher::FunctionRegistered(FunctionRegisteredCompleter::Sync complete
   }
 }
 
+void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync completer) {
+  all_functions_cleared_ = true;
+  loop_->Quit();
+  completer.Close(ZX_ERR_CANCELED);
+}
+
 }  // namespace usb_peripheral_utils

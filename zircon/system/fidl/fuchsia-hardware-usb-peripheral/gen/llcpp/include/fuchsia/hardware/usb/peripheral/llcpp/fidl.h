@@ -25,8 +25,6 @@ class Events;
 struct FunctionDescriptor;
 struct Device_SetConfiguration_Response;
 struct Device_SetConfiguration_Result;
-struct Device_ClearFunctions_Response;
-struct Device_ClearFunctions_Result;
 struct DeviceDescriptor;
 class Device;
 
@@ -40,6 +38,8 @@ class Events final {
 
   using FunctionRegisteredResponse = ::fidl::AnyZeroArgMessage;
   using FunctionRegisteredRequest = ::fidl::AnyZeroArgMessage;
+
+  using FunctionsClearedRequest = ::fidl::AnyZeroArgMessage;
 
 
   // Collection of return types of FIDL calls in this interface.
@@ -62,9 +62,21 @@ class Events final {
       using Super::operator->;
       using Super::operator*;
     };
+    class FunctionsCleared_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      FunctionsCleared_Impl(zx::unowned_channel _client_end);
+      ~FunctionsCleared_Impl() = default;
+      FunctionsCleared_Impl(FunctionsCleared_Impl&& other) = default;
+      FunctionsCleared_Impl& operator=(FunctionsCleared_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
 
    public:
     using FunctionRegistered = FunctionRegistered_Impl<FunctionRegisteredResponse>;
+    using FunctionsCleared = FunctionsCleared_Impl;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -88,9 +100,21 @@ class Events final {
       using Super::operator->;
       using Super::operator*;
     };
+    class FunctionsCleared_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      FunctionsCleared_Impl(zx::unowned_channel _client_end);
+      ~FunctionsCleared_Impl() = default;
+      FunctionsCleared_Impl(FunctionsCleared_Impl&& other) = default;
+      FunctionsCleared_Impl& operator=(FunctionsCleared_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
 
    public:
     using FunctionRegistered = FunctionRegistered_Impl<FunctionRegisteredResponse>;
+    using FunctionsCleared = FunctionsCleared_Impl;
   };
 
   class SyncClient final {
@@ -109,6 +133,11 @@ class Events final {
     ResultOf::FunctionRegistered FunctionRegistered();
 
 
+    // Invoked when all functions have been cleared.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::FunctionsCleared FunctionsCleared();
+
+
    private:
     ::zx::channel channel_;
   };
@@ -123,6 +152,11 @@ class Events final {
     static ResultOf::FunctionRegistered FunctionRegistered(zx::unowned_channel _client_end);
 
 
+    // Invoked when all functions have been cleared.
+    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::FunctionsCleared FunctionsCleared(zx::unowned_channel _client_end);
+
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -133,6 +167,9 @@ class Events final {
 
     // Invoked when a function registers
     static ::fidl::DecodeResult<FunctionRegisteredResponse> FunctionRegistered(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Invoked when all functions have been cleared.
+    static ::fidl::internal::StatusAndError FunctionsCleared(zx::unowned_channel _client_end);
 
   };
 
@@ -155,6 +192,10 @@ class Events final {
     using FunctionRegisteredCompleter = ::fidl::Completer<FunctionRegisteredCompleterBase>;
 
     virtual void FunctionRegistered(FunctionRegisteredCompleter::Sync _completer) = 0;
+
+    using FunctionsClearedCompleter = ::fidl::Completer<>;
+
+    virtual void FunctionsCleared(FunctionsClearedCompleter::Sync _completer) = 0;
 
   };
 
@@ -295,101 +336,6 @@ struct Device_SetConfiguration_Result {
   };
 };
 
-
-
-struct Device_ClearFunctions_Response {
-  static constexpr const fidl_type_t* Type = nullptr;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_Device_ClearFunctions_ResultTable;
-
-struct Device_ClearFunctions_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  Device_ClearFunctions_Result();
-  ~Device_ClearFunctions_Result();
-
-  Device_ClearFunctions_Result(Device_ClearFunctions_Result&& other) {
-    tag_ = Tag::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Device_ClearFunctions_Result& operator=(Device_ClearFunctions_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
-
-  bool is_response() const { return tag_ == Tag::kResponse; }
-
-  Device_ClearFunctions_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_ClearFunctions_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, Device_ClearFunctions_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
-  }
-
-  Device_ClearFunctions_Response const & response() const { return response_; }
-
-  bool is_err() const { return tag_ == Tag::kErr; }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const { return tag_; }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_Device_ClearFunctions_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
- private:
-  void Destroy();
-  void MoveImpl_(Device_ClearFunctions_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
-  union {
-    Device_ClearFunctions_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceDescriptorTable;
 
 // The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
@@ -428,7 +374,6 @@ struct DeviceDescriptor {
 
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetConfigurationResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_usb_peripheral_DeviceSetStateChangeListenerRequestTable;
 
 class Device final {
@@ -464,19 +409,7 @@ class Device final {
     using ResponseType = SetConfigurationResponse;
   };
 
-  struct ClearFunctionsResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    Device_ClearFunctions_Result result;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_DeviceClearFunctionsResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
+  using ClearFunctionsResponse = ::fidl::AnyZeroArgMessage;
   using ClearFunctionsRequest = ::fidl::AnyZeroArgMessage;
 
   struct SetStateChangeListenerRequest final {
@@ -628,13 +561,10 @@ class Device final {
 
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // The caller should wait for the |FunctionsCleared| event.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ClearFunctions ClearFunctions();
 
-    // Tells the device to remove the child devices for the configuration's interfaces
-    // and reset the list of functions to empty.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ClearFunctions ClearFunctions(::fidl::BytePart _response_buffer);
 
     // Adds a state change listener that is invoked when a state change completes.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
@@ -667,13 +597,10 @@ class Device final {
 
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // The caller should wait for the |FunctionsCleared| event.
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end);
 
-    // Tells the device to remove the child devices for the configuration's interfaces
-    // and reset the list of functions to empty.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ClearFunctions ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Adds a state change listener that is invoked when a state change completes.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
@@ -698,6 +625,7 @@ class Device final {
 
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
+    // The caller should wait for the |FunctionsCleared| event.
     static ::fidl::DecodeResult<ClearFunctionsResponse> ClearFunctions(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Adds a state change listener that is invoked when a state change completes.
@@ -729,9 +657,7 @@ class Device final {
 
     class ClearFunctionsCompleterBase : public _Base {
      public:
-      void Reply(Device_ClearFunctions_Result result);
-      void Reply(::fidl::BytePart _buffer, Device_ClearFunctions_Result result);
-      void Reply(::fidl::DecodedMessage<ClearFunctionsResponse> params);
+      void Reply();
 
      protected:
       using ::fidl::CompleterBase::CompleterBase;
@@ -794,16 +720,6 @@ struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfigu
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Response>);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Response, __reserved) == 0);
-static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Response) == ::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Response::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::usb::peripheral::Device_ClearFunctions_Result>);
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor>);
 static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor, bcdUSB) == 0);
@@ -836,14 +752,6 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::SetCon
 static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetConfigurationResponse)
     == ::llcpp::fuchsia::hardware::usb::peripheral::Device::SetConfigurationResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::SetConfigurationResponse, result) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse)
-    == ::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::usb::peripheral::Device::ClearFunctionsResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::usb::peripheral::Device::SetStateChangeListenerRequest> : public std::true_type {};

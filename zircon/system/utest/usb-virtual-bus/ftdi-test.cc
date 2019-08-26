@@ -69,9 +69,7 @@ class FtdiTest : public zxtest::Test {
   void SetUp() override { ASSERT_NO_FATAL_FAILURES(bus_.InitFtdi(&devpath_)); }
 
   void TearDown() override {
-    auto result = bus_.peripheral().ClearFunctions();
-    ASSERT_OK(result.status());
-    ASSERT_FALSE(result->result.is_err());
+    ASSERT_NO_FATAL_FAILURES(bus_.ClearPeripheralDeviceFunctions());
 
     auto result2 = bus_.virtual_bus().Disable();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result2));

@@ -113,6 +113,7 @@ class UsbPeripheral : public UsbPeripheralType,
   zx_status_t ValidateFunction(fbl::RefPtr<UsbFunction> function, void* descriptors, size_t length,
                                uint8_t* out_num_interfaces);
   zx_status_t FunctionRegistered();
+  void FunctionCleared();
 
   inline const ddk::UsbDciProtocolClient& dci() const { return dci_; }
   inline size_t ParentRequestSize() const { return parent_request_size_; }
@@ -142,7 +143,10 @@ class UsbPeripheral : public UsbPeripheralType,
   zx_status_t Init();
   zx_status_t AddFunction(FunctionDescriptor desc);
   zx_status_t BindFunctions();
-  zx_status_t ClearFunctions();
+  // Begins the process of clearing the functions.
+  void ClearFunctions();
+  // Updates the internal state after all functions have finished being removed.
+  void ClearFunctionsComplete() __TA_REQUIRES(lock_);
   zx_status_t DeviceStateChanged() __TA_REQUIRES(lock_);
   zx_status_t AddFunctionDevices() __TA_REQUIRES(lock_);
   void RemoveFunctionDevices() __TA_REQUIRES(lock_);
@@ -183,6 +187,8 @@ class UsbPeripheral : public UsbPeripheralType,
   bool functions_registered_ __TA_GUARDED(lock_) = false;
   // True if we have added child devices for our functions.
   bool function_devs_added_ __TA_GUARDED(lock_) = false;
+  // Number of functions left to clear.
+  size_t num_functions_to_clear_ __TA_GUARDED(lock_) = 0;
   // True if we are connected to a host,
   bool connected_ __TA_GUARDED(lock_) = false;
   // True if we are shutting down/clearing functions

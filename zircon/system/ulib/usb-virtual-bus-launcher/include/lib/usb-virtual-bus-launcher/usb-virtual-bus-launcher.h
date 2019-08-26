@@ -27,6 +27,8 @@ class USBVirtualBusBase {
 
   void SetupPeripheralDevice(const DeviceDescriptor& device_desc,
                              std::vector<FunctionDescriptor> function_descs);
+  // Asks the peripheral device to clear its functions and waits for the FunctionsCleared event.
+  void ClearPeripheralDeviceFunctions();
 
   int GetRootFd();
 
