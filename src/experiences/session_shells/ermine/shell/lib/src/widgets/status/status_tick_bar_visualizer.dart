@@ -106,8 +106,9 @@ class StatusTickBarVisualizer extends StatelessWidget {
 
   // Builds string of ticks.
   String _drawTicks(int numTicks) {
-    if (numTicks < 0 || numTicks == null)
+    if (numTicks < 0 || numTicks == null) {
       return List.filled(1, '').join('| ');
+    }
     return List.filled(numTicks + 1, '').join('| ');
   }
 

@@ -12,6 +12,6 @@ group("session_shells") {
 group("dart_unittests") {
   testonly = true
   deps = [
-    "ermine:ermine_unittests($host_toolchain)",
+    "ermine/shell:ermine_unittests($host_toolchain)",
   ]
 }
