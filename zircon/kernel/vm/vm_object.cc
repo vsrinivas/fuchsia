@@ -248,7 +248,7 @@ uint32_t VmObject::num_user_children() const {
   return user_child_count_;
 }
 
-void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list) {
+void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op) {
   while (!list->is_empty()) {
     VmObject* object = list->pop_front();
 
@@ -260,7 +260,13 @@ void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list) {
 
     // other mappings may have covered this offset into the vmo, so unmap those ranges
     for (auto& m : object->mapping_list_) {
-      m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
+      if (op == RangeChangeOp::Unmap) {
+        m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
+      } else if (op == RangeChangeOp::RemoveWrite) {
+        m.RemoveWriteVmoRangeLocked(aligned_offset, aligned_len);
+      } else {
+        panic("Unknown RangeChangeOp %d\n", static_cast<int>(op));
+      }
     }
 
     // inform all our children this as well, so they can inform their mappings
@@ -275,7 +281,7 @@ void VmObject::RangeChangeUpdateListLocked(RangeChangeList* list) {
   }
 }
 
-void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {
+void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) {
   canary_.Assert();
   DEBUG_ASSERT(lock_.lock().IsHeld());
 
@@ -283,7 +289,7 @@ void VmObject::RangeChangeUpdateLocked(uint64_t offset, uint64_t len) {
   this->range_change_offset_ = offset;
   this->range_change_len_ = len;
   list.push_front(this);
-  RangeChangeUpdateListLocked(&list);
+  RangeChangeUpdateListLocked(&list, op);
 }
 
 zx_status_t VmObject::InvalidateCache(const uint64_t offset, const uint64_t len) {

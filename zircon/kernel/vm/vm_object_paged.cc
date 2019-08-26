@@ -584,8 +584,8 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
 
       // Invalidate everything the clone will be able to see. They're COW pages now,
       // so any existing mappings can no longer directly write to the pages.
-      // TODO: Just change the mappings to RO instead of fully unmapping.
-      RangeChangeUpdateLocked(vmo->parent_offset_, vmo->parent_offset_ + vmo->parent_limit_);
+      RangeChangeUpdateLocked(vmo->parent_offset_, vmo->parent_offset_ + vmo->parent_limit_,
+                              RangeChangeOp::RemoveWrite);
     } else {
       clone_parent = this;
     }
@@ -1177,7 +1177,7 @@ zx_status_t VmObjectPaged::AddPageLocked(vm_page_t* p, uint64_t offset, bool do_
 
   if (do_range_update) {
     // other mappings may have covered this offset into the vmo, so unmap those ranges
-    RangeChangeUpdateLocked(offset, PAGE_SIZE);
+    RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
   }
 
   return ZX_OK;
@@ -1318,11 +1318,11 @@ vm_page_t* VmObjectPaged::CloneCowPageLocked(uint64_t offset, list_node_t* free_
                                                                       : cur->left_child_locked();
         RangeChangeList list;
         other.RangeChangeUpdateFromParentLocked(cur_offset, PAGE_SIZE, &list);
-        RangeChangeUpdateListLocked(&list);
+        RangeChangeUpdateListLocked(&list, RangeChangeOp::Unmap);
       } else {
         // In this case, cur is the last vmo being changed, so update its whole subtree.
         DEBUG_ASSERT(offset == cur_offset);
-        RangeChangeUpdateLocked(offset, PAGE_SIZE);
+        RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
       }
     }
   } while (cur != this);
@@ -1397,7 +1397,7 @@ void VmObjectPaged::ContiguousCowFixupLocked(VmObjectPaged* page_owner, uint64_t
           DEBUG_ASSERT(status == ZX_OK);
 
           if (found) {
-            cur->RangeChangeUpdateLocked(cur_offset, PAGE_SIZE);
+            cur->RangeChangeUpdateLocked(cur_offset, PAGE_SIZE, RangeChangeOp::Unmap);
           } else {
             cur = cur->stack_.dir_flag == StackDir::Left ? &cur->left_child_locked()
                                                          : &cur->right_child_locked();
@@ -1726,7 +1726,7 @@ zx_status_t VmObjectPaged::CommitRange(uint64_t offset, uint64_t len) {
     // ranges or unmapping things multiple times, but it's necessary to ensure that we unmap
     // everything that actually is present before anything else sees it.
     if (cur_offset - offset) {
-      RangeChangeUpdateLocked(offset, cur_offset - offset);
+      RangeChangeUpdateLocked(offset, cur_offset - offset, RangeChangeOp::Unmap);
     }
 
     if (retry && cur_offset == end) {
@@ -1806,7 +1806,7 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
   }
 
   // unmap all of the pages in this range on all the mapping regions
-  RangeChangeUpdateLocked(start, page_aligned_len);
+  RangeChangeUpdateLocked(start, page_aligned_len, RangeChangeOp::Unmap);
 
   page_list_.RemovePages(start, end, &free_list);
 
@@ -2164,7 +2164,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
     }
 
     // unmap all of the pages in this range on all the mapping regions
-    RangeChangeUpdateLocked(start, len);
+    RangeChangeUpdateLocked(start, len, RangeChangeOp::Unmap);
 
     if (page_source_) {
       // Tell the page source that any non-resident pages that are now out-of-bounds
@@ -2199,7 +2199,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
     uint64_t len = end - start;
 
     // inform all our children or mapping that there's new bits
-    RangeChangeUpdateLocked(start, len);
+    RangeChangeUpdateLocked(start, len, RangeChangeOp::Unmap);
   }
 
   // save bytewise size

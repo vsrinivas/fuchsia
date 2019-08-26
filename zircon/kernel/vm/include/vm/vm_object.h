@@ -314,11 +314,18 @@ class VmObject : public fbl::RefCounted<VmObject>, public fbl::DoublyLinkedLista
   void AddToGlobalList();
   void RemoveFromGlobalList();
 
-  // inform all mappings and children that a range of this vmo's pages were added or removed.
-  void RangeChangeUpdateLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+  // Different operations that RangeChangeUpdate* can perform against any VmMappings that are found.
+  enum class RangeChangeOp {
+    Unmap,
+    RemoveWrite,
+  };
+
+  // Apply the specified operation to all mappings in the given range. This is applied to all
+  // descendants within the range.
+  void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
 
   // Given an initial list of VmObject's performs RangeChangeUpdate on it until the list is empty.
-  static void RangeChangeUpdateListLocked(RangeChangeList* list)
+  static void RangeChangeUpdateListLocked(RangeChangeList* list, RangeChangeOp op)
       // Reaches into many children, which confuses the safety analysis.
       TA_NO_THREAD_SAFETY_ANALYSIS;
 

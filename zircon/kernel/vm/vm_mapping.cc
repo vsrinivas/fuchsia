@@ -314,11 +314,49 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   return ZX_OK;
 }
 
-zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
-  canary_.Assert();
+bool VmMapping::ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* base,
+                                        uint64_t* virtual_len) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+  DEBUG_ASSERT(base);
+  DEBUG_ASSERT(virtual_len);
 
+  // Zero sized ranges are considered to have no overlap.
+  if (len == 0) {
+    *base = 0;
+    *virtual_len = 0;
+    return false;
+  }
+
+  // compute the intersection of the passed in vmo range and our mapping
+  uint64_t offset_new;
+  if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len, &offset_new,
+                    virtual_len)) {
+    return false;
+  }
+
+  DEBUG_ASSERT(*virtual_len > 0 && *virtual_len <= SIZE_MAX);
+  DEBUG_ASSERT(offset_new >= object_offset_);
+
+  LTRACEF("intersection offset %#" PRIx64 ", len %#" PRIx64 "\n", offset_new, *virtual_len);
+
+  // make sure the base + offset is within our address space
+  // should be, according to the range stored in base_ + size_
+  bool overflowed = add_overflow(base_, offset_new - object_offset_, base);
+  ASSERT(!overflowed);
+
+  // make sure we're only operating within our window
+  ASSERT(*base >= base_);
+  ASSERT((*base + *virtual_len - 1) <= (base_ + size_ - 1));
+
+  return true;
+}
+
+zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_, size_, offset, len);
+
+  canary_.Assert();
 
   // NOTE: must be acquired with the vmo lock held, but doesn't need to take
   // the address space lock, since it will not manipulate its location in the
@@ -332,10 +370,6 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
   DEBUG_ASSERT(object_);
   DEBUG_ASSERT(object_->lock()->lock().IsHeld());
 
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
-  DEBUG_ASSERT(len > 0);
-
   // If we're currently faulting and are responsible for the vmo code to be calling
   // back to us, detect the recursion and abort here.
   // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
@@ -346,43 +380,30 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
     return ZX_OK;
   }
 
-  if (len == 0) {
+  // See if there's an intersect.
+  vaddr_t base;
+  uint64_t new_len;
+  if (!ObjectRangeToVaddrRange(offset, len, &base, &new_len)) {
     return ZX_OK;
   }
 
-  // compute the intersection of the passed in vmo range and our mapping
-  uint64_t offset_new;
-  uint64_t len_new;
-  if (!GetIntersect(object_offset_, static_cast<uint64_t>(size_), offset, len, &offset_new,
-                    &len_new)) {
+  return aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, nullptr);
+}
+
+zx_status_t VmMapping::RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const {
+  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
+          this, object_offset_, size_, offset, len);
+
+  canary_.Assert();
+
+  // If this doesn't support writing then nothing to be done, as we know we have no write mappings.
+  if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) || !(arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE)) {
     return ZX_OK;
   }
 
-  DEBUG_ASSERT(len_new > 0 && len_new <= SIZE_MAX);
-  DEBUG_ASSERT(offset_new >= object_offset_);
-
-  LTRACEF("intersection offset %#" PRIx64 ", len %#" PRIx64 "\n", offset_new, len_new);
-
-  // make sure the base + offset is within our address space
-  // should be, according to the range stored in base_ + size_
-  vaddr_t unmap_base;
-  bool overflowed = add_overflow(base_, offset_new - object_offset_, &unmap_base);
-  ASSERT(!overflowed);
-
-  // make sure we're only unmapping within our window
-  ASSERT(unmap_base >= base_);
-  ASSERT((unmap_base + len_new - 1) <= (base_ + size_ - 1));
-
-  LTRACEF("going to unmap %#" PRIxPTR ", len %#" PRIx64 " aspace %p\n", unmap_base, len_new,
-          aspace_.get());
-
-  zx_status_t status =
-      aspace_->arch_aspace().Unmap(unmap_base, static_cast<size_t>(len_new) / PAGE_SIZE, nullptr);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return ZX_OK;
+  // For now we simulate remove write by unmapping due to the performance of protect not being
+  // suitable at the moment on all architectures.
+  return UnmapVmoRangeLocked(offset, len);
 }
 
 namespace {

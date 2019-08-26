@@ -442,7 +442,11 @@ class VmMapping final : public VmAddressRegionOrMapping,
   friend class VmObject;
 
   // unmap any pages that map the passed in vmo range. May not intersect with this range
-  zx_status_t UnmapVmoRangeLocked(uint64_t start, uint64_t size) const;
+  zx_status_t UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
+  // removes any writeable mappings for the passed in vmo range. May fall back to unmapping pages
+  // if necessary.
+  zx_status_t RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const
+      TA_REQ(object_->lock());
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmMapping);
@@ -476,6 +480,12 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // Should be annotated TA_REQ(object_->lock()), but due to limitations
   // in Clang around capability aliasing, we need to relax the analysis.
   void ActivateLocked();
+
+  // Takes a range relative to the vmo object_ and converts it into a virtual address range relative
+  // to aspace_. Returns true if a non zero sized intersection was found, false otherwise. If false
+  // is returned |base| and |virtual_len| hold undefined contents.
+  bool ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* base,
+                               uint64_t* virtual_len) const TA_REQ(object_->lock());
 
   // pointer and region of the object we are mapping
   fbl::RefPtr<VmObject> object_;
