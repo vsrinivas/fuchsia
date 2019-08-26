@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_GPT_GPT_H_
-#define LIB_GPT_GPT_H_
+#ifndef GPT_C_GPT_H_
+#define GPT_C_GPT_H_
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <unistd.h>
-
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
 
 __BEGIN_CDECLS
 typedef gpt_entry_t gpt_partition_t;
-static_assert(sizeof(gpt_partition_t) == GPT_ENTRY_SIZE, "unexpected gpt entry size");
 
 // Helpers for translating the |name| field of "gpt_partition_t".
 // Assumes UTF-16LE.
@@ -53,4 +51,4 @@ const char* gpt_guid_to_type(const char* guid);
 void gpt_sort_partitions(gpt_partition_t** partitions, size_t count);
 
 __END_CDECLS
-#endif  // LIB_GPT_GPT_H_
+#endif  // GPT_C_GPT_H_

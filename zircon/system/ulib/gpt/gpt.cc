@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gpt/gpt.h"
+
 #include <assert.h>
 #include <errno.h>
-#include <gpt/gpt.h>
-#include <gpt/guid.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
+#include <lib/fzl/fdio.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -17,13 +19,8 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>  // for zx_cprng_draw
 
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <gpt/gpt.h>
-#include <lib/fzl/fdio.h>
-#include <zircon/device/block.h>
-#include <zircon/syscalls.h>  // for zx_cprng_draw
-
-#include "gpt/gpt.h"
+#include <gpt/guid.h>
 
 namespace gpt {
 
@@ -42,8 +39,6 @@ struct mbr_partition_t {
   uint32_t lba;
   uint32_t sectors;
 };
-
-static_assert(sizeof(gpt_header_t) == GPT_HEADER_SIZE, "unexpected gpt header size");
 
 void print_array(const gpt_partition_t* const a[kPartitionCount], int c) {
   char GUID[GPT_GUID_STRLEN];
@@ -180,6 +175,114 @@ const char* gpt_guid_to_type(const char* guid) { return gpt::KnownGuid::GuidStrT
 
 __END_CDECLS
 
+uint64_t MinimumRequiredBlocksPerCopy(uint64_t block_size) {
+  uint64_t header_blocks = kHeaderBlocks;
+  uint64_t table_blocks = ((kMaxPartitionTableSize + block_size - 1) / block_size);
+  return header_blocks + table_blocks;
+}
+
+uint64_t MinimumRequiredBlocks(uint64_t block_size) {
+  // There are two copies of GPT and a block for MBR(or such use).
+  return kPrimaryHeaderStartBlock + (2 * MinimumRequiredBlocksPerCopy(block_size));
+}
+
+fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
+                                                               uint64_t block_count) {
+  gpt_header_t header = {};
+
+  if (block_size < kHeaderSize) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  if (block_count <= MinimumRequiredBlocks(block_size)) {
+    return fit::error(ZX_ERR_BUFFER_TOO_SMALL);
+  }
+
+  header.magic = kMagicNumber;
+  header.revision = kRevision;
+  header.size = kHeaderSize;
+  header.current = kPrimaryHeaderStartBlock;
+
+  // backup gpt is in the last block
+  header.backup = block_count - 1;
+
+  // First usable block is the block after end of primary copy.
+  header.first = kPrimaryHeaderStartBlock + MinimumRequiredBlocksPerCopy(block_size);
+
+  // Last usable block is the block before beginning of backup entries array.
+  header.last = block_count - MinimumRequiredBlocksPerCopy(block_size) - 1;
+
+  // We have ensured above that there are more blocks than MinimumRequiredBlocks().
+  ZX_DEBUG_ASSERT(header.first <= header.last);
+
+  // generate a guid
+  zx_cprng_draw(header.guid, GPT_GUID_LEN);
+
+  // fill in partition table fields in header
+  header.entries = kPrimaryEntriesStartBlock;
+  header.entries_count = kPartitionCount;
+  header.entries_size = kEntrySize;
+
+  // Finally, calculate header checksum
+  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
+
+  return fit::ok(header);
+}
+
+// Returns user friendly error message given `status`.
+const char* HeaderStatusToCString(zx_status_t status) {
+  switch (status) {
+    case ZX_OK:
+      return "valid partition";
+    case ZX_ERR_BAD_STATE:
+      return "bad header magic";
+    case ZX_ERR_INVALID_ARGS:
+      return "invalid header size";
+    case ZX_ERR_IO_DATA_INTEGRITY:
+      return "invalid header crc";
+    case ZX_ERR_IO_OVERRUN:
+      return "too many partitions";
+    case ZX_ERR_FILE_BIG:
+      return "invalid entry size";
+    case ZX_ERR_BUFFER_TOO_SMALL:
+      return "last block > block count";
+    default:
+      return "unknown error";
+  }
+}
+
+zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count) {
+  if (header->magic != kMagicNumber) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (header->size != sizeof(gpt_header_t)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  gpt_header_t copy;
+  memcpy(&copy, header, sizeof(gpt_header_t));
+  copy.crc32 = 0;
+  uint32_t crc = crc32(0, reinterpret_cast<uint8_t*>(&copy), copy.size);
+  if (crc != header->crc32) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  if (header->entries_count > kPartitionCount) {
+    return ZX_ERR_IO_OVERRUN;
+  }
+
+  if (header->entries_size != kEntrySize) {
+    return ZX_ERR_FILE_BIG;
+  }
+
+  if (header->current >= block_count || header->backup >= block_count) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  return ZX_OK;
+}
+
 bool IsPartitionVisible(const gpt_partition_t* partition) {
   return !((partition->flags & kFlagHidden) == kFlagHidden);
 }
@@ -217,22 +320,19 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
     mbr_ = true;
   }
 
+  auto result = InitializePrimaryHeader(blocksize_, blocks_);
+
+  if (result.is_error()) {
+    return result.error();
+  }
   // fill in the new header fields
-  gpt_header_t header;
-  memset(&header, 0, sizeof(header));
-  header.magic = GPT_MAGIC;
-  header.revision = 0x00010000;  // gpt version 1.0
-  header.size = GPT_HEADER_SIZE;
+  gpt_header_t header = result.value();
+
   if (valid_) {
     header.current = header_.current;
     header.backup = header_.backup;
     memcpy(header.guid, header_.guid, 16);
-  } else {
-    header.current = 1;
-    // backup gpt is in the last block
-    header.backup = blocks_ - 1;
-    // generate a guid
-    zx_cprng_draw(header.guid, GPT_GUID_LEN);
+    header.entries = header_.entries;
   }
 
   // always write 128 entries in partition table
@@ -246,14 +346,10 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
   // generate partition table
   uint8_t* ptr = reinterpret_cast<uint8_t*>(buf.get());
   for (uint32_t i = 0; i < kPartitionCount && partitions_[i] != NULL; i++) {
-    memcpy(ptr, partitions_[i], GPT_ENTRY_SIZE);
-    ptr += GPT_ENTRY_SIZE;
+    memcpy(ptr, partitions_[i], kEntrySize);
+    ptr += kEntrySize;
   }
 
-  // fill in partition table fields in header
-  header.entries = valid_ ? header_.entries : 2;
-  header.entries_count = kPartitionCount;
-  header.entries_size = GPT_ENTRY_SIZE;
   header.entries_crc = crc32(0, reinterpret_cast<uint8_t*>(buf.get()), ptable_size);
 
   uint64_t ptable_blocks = ptable_size / blocksize_;
@@ -261,7 +357,8 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
   header.last = header.backup - ptable_blocks - 1;
 
   // calculate header checksum
-  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), GPT_HEADER_SIZE);
+  header.crc32 = 0;
+  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
 
   // the copy cached in priv is the primary copy
   memcpy(&header_, &header, sizeof(header));
@@ -271,7 +368,7 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
   header.backup = header_.current;
   header.entries = header_.last + 1;
   header.crc32 = 0;
-  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), GPT_HEADER_SIZE);
+  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
 
   if (persist) {
     zx_status_t status;
@@ -301,16 +398,6 @@ void GptDevice::PrintTable() const {
   for (; partitions_[count] != NULL; ++count)
     ;
   print_array(partitions_, count);
-}
-
-zx_status_t GptDevice::BlockRrPart() {
-  fzl::UnownedFdioCaller caller(fd_.get());
-  zx_status_t status, io_status;
-  io_status = fuchsia_hardware_block_BlockRebindDevice(caller.borrow_channel(), &status);
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-  return status;
 }
 
 zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
@@ -350,7 +437,7 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
 
 zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
   ssize_t ptable_size;
-  uint32_t saved_crc, crc;
+  uint32_t crc;
   gpt_partition_t* ptable;
   gpt_header_t* header;
   ssize_t ret;
@@ -388,35 +475,17 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
 
   header = &header_;
   memcpy(header, block, sizeof(*header));
+  zx_status_t status = ValidateHeader(header, blocks);
 
-  // is this a valid gpt header?
-  if (header->magic != GPT_MAGIC) {
-    G_PRINTF("invalid header magic!\n");
-    // ok to have an invalid header
-    return ZX_OK;
-  }
-
-  // header checksum
-  saved_crc = header->crc32;
-  header->crc32 = 0;
-  crc = crc32(0, reinterpret_cast<const uint8_t*>(header), header->size);
-  if (crc != saved_crc) {
-    G_PRINTF("header crc check failed\n");
-    return ZX_OK;
-  }
-
-  if (header->entries_count > kPartitionCount) {
-    G_PRINTF("too many partitions!\n");
+  // Invalid header.
+  if (status != ZX_OK) {
+    G_PRINTF("%s\n", HeaderStatusToCString(status));
     return ZX_OK;
   }
 
   valid_ = true;
 
   if (header->entries_count == 0) {
-    return ZX_OK;
-  }
-  if (header->entries_count > kPartitionCount) {
-    G_PRINTF("too many partitions\n");
     return ZX_OK;
   }
 
@@ -582,7 +651,7 @@ zx_status_t GptDevice::RemovePartition(const uint8_t* guid) {
     return ZX_ERR_NOT_FOUND;
   }
   // clear the entry
-  memset(partitions_[i], 0, GPT_ENTRY_SIZE);
+  memset(partitions_[i], 0, kEntrySize);
   // pack the partition list
   for (i = i + 1; i < kPartitionCount; i++) {
     if (partitions_[i] == NULL) {

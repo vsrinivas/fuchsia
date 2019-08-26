@@ -4,22 +4,23 @@
 
 #include <ctype.h>
 #include <fcntl.h>
+#include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
 #include <inttypes.h>
-#include <optional>
+#include <lib/fzl/fdio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <gpt/cros.h>
-#include <gpt/gpt.h>
-#include <gpt/guid.h>
-#include <lib/fzl/fdio.h>
 #include <zircon/device/block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>  // for zx_cprng_draw
+
+#include <optional>
+
+#include <gpt/cros.h>
+#include <gpt/gpt.h>
+#include <gpt/guid.h>
 
 using gpt::GptDevice;
 using gpt::KnownGuid;
@@ -151,6 +152,16 @@ constexpr void SetXY(unsigned yes, const char** X, const char** Y) {
   }
 }
 
+zx_status_t BlockRrPart(int fd) {
+  fzl::UnownedFdioCaller caller(fd);
+  zx_status_t status, io_status;
+  io_status = fuchsia_hardware_block_BlockRebindDevice(caller.borrow_channel(), &status);
+  if (io_status != ZX_OK) {
+    return io_status;
+  }
+  return status;
+}
+
 void Dump(const GptDevice* gpt, int* count) {
   if (!gpt->Valid()) {
     return;
@@ -239,6 +250,12 @@ bool ConfirmCommit(const GptDevice* gpt, const char* dev) {
 }
 
 zx_status_t Commit(GptDevice* gpt, const char* dev) {
+  fbl::unique_fd fd(open(dev, O_RDWR));
+  if (!fd.is_valid()) {
+    fprintf(stderr, "error opening %s\n", dev);
+    return ZX_ERR_NOT_FOUND;
+  }
+
   if (!ConfirmCommit(gpt, dev)) {
     return ZX_OK;
   }
@@ -248,7 +265,8 @@ zx_status_t Commit(GptDevice* gpt, const char* dev) {
     fprintf(stderr, "Error: GPT device sync failed.\n");
     return rc;
   }
-  if ((rc = gpt->BlockRrPart()) != ZX_OK) {
+
+  if ((rc = BlockRrPart(fd.get())) != ZX_OK) {
     fprintf(stderr, "Error: GPT updated but device could not be rebound. Please reboot.\n");
     return rc;
   }

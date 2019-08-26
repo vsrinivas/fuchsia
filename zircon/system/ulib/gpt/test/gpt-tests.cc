@@ -4,6 +4,7 @@
 
 #include <fbl/auto_call.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <lib/cksum.h>
 #include <lib/fzl/fdio.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zircon/assert.h>
@@ -16,6 +17,7 @@ extern bool gUseRamDisk;
 extern char gDevPath[PATH_MAX];
 extern unsigned int gRandSeed;
 
+namespace gpt {
 namespace {
 
 using gpt::GptDevice;
@@ -389,6 +391,24 @@ void LibGptTest::Teardown() {
   } else {
     TearDownDisk();
   }
+}
+
+uint64_t EntryArrayBlockCount(uint64_t block_size) {
+  return ((kMaxPartitionTableSize + block_size - 1) / block_size);
+}
+
+// Manually calculate the minimum block count.
+uint64_t GptMinimumBlockCount(uint64_t block_size) {
+  uint64_t block_count = kPrimaryHeaderStartBlock;
+
+  // Two copies of gpt_header_t. A block for each.
+  block_count += (2 * kHeaderBlocks);
+
+  // Two copies of entries array.
+  block_count += (2 * EntryArrayBlockCount(block_size));
+
+  // We need at least one block as usable block.
+  return block_count + 1;
 }
 
 }  // namespace
@@ -961,3 +981,103 @@ TEST(KnownGuidTest, GuidStrToName) {
   EXPECT_EQ(strcmp(KnownGuid::GuidStrToName("41D0E340-57E3-954E-8C1E-17ECAC44CFF5"), "fuchsia-fvm"),
             0);
 }
+
+TEST(InitializePrimaryHeader, BlockSizeTooSmall) {
+  ASSERT_EQ(InitializePrimaryHeader(sizeof(gpt_header_t) - 1, kBlockCount).error(),
+            ZX_ERR_INVALID_ARGS);
+}
+
+TEST(InitializePrimaryHeader, BlockCountOne) {
+  ASSERT_EQ(InitializePrimaryHeader(kBlockSize, 1).error(), ZX_ERR_BUFFER_TOO_SMALL);
+}
+
+TEST(InitializePrimaryHeader, BlockCountOneLessThanRequired) {
+  uint64_t block_count = GptMinimumBlockCount(kBlockSize) - 1;
+  ASSERT_EQ(InitializePrimaryHeader(kBlockSize, block_count).error(), ZX_ERR_BUFFER_TOO_SMALL);
+}
+
+TEST(InitializePrimaryHeader, BlockCountEqualsMinimumRequired) {
+  uint64_t block_count = GptMinimumBlockCount(kBlockSize);
+  ASSERT_TRUE(InitializePrimaryHeader(kBlockSize, block_count).is_ok());
+}
+
+TEST(InitializePrimaryHeader, CheckFields) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  guid_t zero_guid = {};
+
+  ASSERT_EQ(header.magic, kMagicNumber);
+  ASSERT_EQ(header.revision, kRevision);
+  ASSERT_EQ(header.size, kHeaderSize);
+  ASSERT_EQ(header.reserved0, 0);
+  ASSERT_EQ(header.current, kPrimaryHeaderStartBlock);
+  ASSERT_EQ(header.backup, kBlockCount - 1);
+  ASSERT_EQ(header.first, kPrimaryHeaderStartBlock + 1 + EntryArrayBlockCount(kBlockSize));
+  ASSERT_EQ(header.last, header.backup - EntryArrayBlockCount(kBlockSize) - 1);
+
+  // Guid can be anything but all zeros
+  ASSERT_NE(memcmp(header.guid, &zero_guid, sizeof(guid_t)), 0);
+  ASSERT_EQ(header.entries, header.current + 1);
+  ASSERT_EQ(header.entries_count, kPartitionCount);
+  ASSERT_EQ(header.entries_size, kEntrySize);
+  ASSERT_EQ(header.entries_crc, 0);
+
+  uint32_t crc = header.crc32;
+  header.crc32 = 0;
+  ASSERT_EQ(crc, crc32(0, reinterpret_cast<uint8_t*>(&header), kHeaderSize));
+}
+
+TEST(ValidateHeaderTest, ValidHeader) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_OK);
+}
+
+TEST(ValidateHeaderTest, BadMagic) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  header.magic = ~header.magic;
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_BAD_STATE);
+}
+
+TEST(ValidateHeaderTest, InvalidSize) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  header.size = header.size + 1;
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_INVALID_ARGS);
+
+  header.size = header.size - 2;
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(ValidateHeaderTest, BadCrc) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  header.crc32 = ~header.crc32;
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_IO_DATA_INTEGRITY);
+}
+
+TEST(ValidateHeaderTest, TooManyPartitions) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  header.entries_count = kPartitionCount + 1;
+  header.crc32 = 0;
+  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
+
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_IO_OVERRUN);
+}
+
+TEST(ValidateHeaderTest, EntrySizeMismatch) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  header.entries_size = kEntrySize - 1;
+  header.crc32 = 0;
+  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_FILE_BIG);
+
+  header.entries_size = kEntrySize + 1;
+  header.crc32 = 0;
+  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_FILE_BIG);
+}
+
+TEST(ValidateHeaderTest, BlockDeviceShrunk) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+
+  ASSERT_EQ(ValidateHeader(&header, kBlockCount - 1), ZX_ERR_BUFFER_TOO_SMALL);
+}
+
+}  // namespace gpt

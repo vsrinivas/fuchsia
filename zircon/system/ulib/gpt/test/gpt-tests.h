@@ -13,6 +13,7 @@
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
 
+namespace gpt {
 namespace {
 
 constexpr uint32_t kBlockSize = 512;
@@ -175,3 +176,4 @@ class LibGptTest {
 };
 
 }  // namespace
+}  // namespace gpt

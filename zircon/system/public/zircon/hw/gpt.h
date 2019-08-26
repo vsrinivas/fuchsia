@@ -5,9 +5,9 @@
 #ifndef SYSROOT_ZIRCON_HW_GPT_H_
 #define SYSROOT_ZIRCON_HW_GPT_H_
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
-
 #include <zircon/compiler.h>
 
 #define GPT_MAGIC (0x5452415020494645ull)  // 'EFI PART'
@@ -18,21 +18,24 @@
 #define GPT_NAME_LEN 72
 
 typedef struct gpt_header {
-  uint64_t magic;
-  uint32_t revision;
-  uint32_t size;
-  uint32_t crc32;
-  uint32_t reserved0;
-  uint64_t current;
-  uint64_t backup;
-  uint64_t first;
-  uint64_t last;
-  uint8_t guid[GPT_GUID_LEN];
-  uint64_t entries;
-  uint32_t entries_count;
-  uint32_t entries_size;
-  uint32_t entries_crc;
+  uint64_t magic;              // Magic number.
+  uint32_t revision;           // Revision.
+  uint32_t size;               // Size of the header.
+  uint32_t crc32;              // Checksum of this header.
+  uint32_t reserved0;          // Reserved field.
+  uint64_t current;            // Block where this table is stored.
+  uint64_t backup;             // Block where other copy of partition table is stored.
+  uint64_t first;              // First usable block. Block after primary partition table ends.
+  uint64_t last;               // Last usable block. Block before backup partition table starts.
+  uint8_t guid[GPT_GUID_LEN];  // Disk GUID.
+  uint64_t entries;            // Starting block where entries for this partition tables are found.
+                               // Value equals 2 for primary copy.
+  uint32_t entries_count;      // Total number of entries.
+  uint32_t entries_size;       // Size of each entry.
+  uint32_t entries_crc;        // Checksum of the entire entries array.
 } __PACKED gpt_header_t;
+
+static_assert(GPT_HEADER_SIZE == sizeof(gpt_header_t), "Gpt header size invalid");
 
 typedef struct gpt_entry {
   uint8_t type[GPT_GUID_LEN];
@@ -42,6 +45,8 @@ typedef struct gpt_entry {
   uint64_t flags;
   uint8_t name[GPT_NAME_LEN];  // UTF-16 on disk
 } __PACKED gpt_entry_t;
+
+static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 
 // clang-format off
 #define GUID_EMPTY_STRING "00000000-0000-0000-0000-000000000000"

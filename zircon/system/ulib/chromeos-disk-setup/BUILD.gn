@@ -11,6 +11,7 @@ library("chromeos-disk-setup") {
     "$zx/system/fidl/fuchsia-hardware-block:c",
   ]
   deps = [
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/zircon",
   ]

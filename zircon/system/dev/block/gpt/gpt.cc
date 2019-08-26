@@ -5,35 +5,37 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/cksum.h>
+#include <lib/sync/completion.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
-
-#include <memory>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/binding.h>
-#include <ddk/metadata.h>
-#include <ddk/metadata/gpt.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/block/partition.h>
-#include <lib/cksum.h>
-#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/gpt.h>
+#include <ddk/protocol/block.h>
+#include <ddk/protocol/block/partition.h>
+#include <gpt/c/gpt.h>
+#include <gpt/gpt.h>
+
+namespace gpt {
+
 namespace {
 
-typedef gpt_header_t gpt_t;
-
-constexpr size_t kTransactionSize = 0x4000;  // 128 partition entries
+using gpt_t = gpt_header_t;
 
 struct Guid {
   uint32_t data1;
@@ -125,30 +127,13 @@ uint64_t get_lba_count(gptpart_device_t* dev) {
 }
 
 bool validate_header(const gpt_t* header, const block_info_t* info) {
-  if (header->size > sizeof(gpt_t)) {
-    zxlogf(ERROR, "gpt: invalid header size\n");
+  zx_status_t status = ValidateHeader(header, info->block_count);
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "gpt: %s\n", HeaderStatusToCString(status));
     return false;
   }
-  if (header->magic != GPT_MAGIC) {
-    zxlogf(ERROR, "gpt: bad header magic\n");
-    return false;
-  }
-  gpt_t copy;
-  memcpy(&copy, header, sizeof(gpt_t));
-  copy.crc32 = 0;
-  uint32_t crc = crc32(0, (const unsigned char*)&copy, copy.size);
-  if (crc != header->crc32) {
-    zxlogf(ERROR, "gpt: header crc invalid\n");
-    return false;
-  }
-  if (header->last >= info->block_count) {
-    zxlogf(ERROR, "gpt: last block > block count\n");
-    return false;
-  }
-  if (header->entries_count * header->entries_size > kTransactionSize) {
-    zxlogf(ERROR, "gpt: entry table too big\n");
-    return false;
-  }
+
   return true;
 }
 
@@ -320,15 +305,16 @@ int gpt_bind_thread(void* arg) {
     goto unbind;
   }
 
-  if (zx_vmo_create(kTransactionSize, 0, &vmo) != ZX_OK) {
+  if (zx_vmo_create(kMaxPartitionTableSize, 0, &vmo) != ZX_OK) {
     zxlogf(ERROR, "gpt: cannot allocate vmo\n");
     goto unbind;
   }
 
   // sanity check the default txn size with the block size
-  if ((kTransactionSize % block_info.block_size) || (kTransactionSize < block_info.block_size)) {
-    zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!\n", kTransactionSize,
-           block_info.block_size);
+  if ((kMaxPartitionTableSize % block_info.block_size) ||
+      (kMaxPartitionTableSize < block_info.block_size)) {
+    zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!\n",
+           kMaxPartitionTableSize, block_info.block_size);
     goto unbind;
   }
 
@@ -360,11 +346,11 @@ int gpt_bind_thread(void* arg) {
 
   // read partition table entries
   table_sz = header.entries_count * header.entries_size;
-  if (table_sz > kTransactionSize) {
+  if (table_sz > kMaxPartitionTableSize) {
     zxlogf(INFO, "gpt: partition table is larger than the buffer!\n");
     // FIXME read the whole partition table. ok for now because on pixel2, this is
     // enough to read the entries that actually contain valid data
-    table_sz = kTransactionSize;
+    table_sz = kMaxPartitionTableSize;
   }
 
   bop->command = BLOCK_OP_READ;
@@ -383,8 +369,8 @@ int gpt_bind_thread(void* arg) {
     goto unbind;
   }
 
-  uint8_t entries[kTransactionSize];
-  if (vmo_read(vmo, entries, 0, kTransactionSize) != ZX_OK) {
+  uint8_t entries[kMaxPartitionTableSize];
+  if (vmo_read(vmo, entries, 0, kMaxPartitionTableSize) != ZX_OK) {
     goto unbind;
   }
 
@@ -550,8 +536,10 @@ constexpr zx_driver_ops_t gpt_driver_ops = []() {
 
 }  // namespace
 
+}  // namespace gpt
+
 // clang-format off
-ZIRCON_DRIVER_BEGIN(gpt, gpt_driver_ops, "zircon", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(gpt, gpt::gpt_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF_AUTOBIND,
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_BLOCK),
 ZIRCON_DRIVER_END(gpt)

@@ -13,6 +13,7 @@ library("fvm") {
   deps = [
     "$zx/system/ulib/digest",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/uboringssl",
   ]

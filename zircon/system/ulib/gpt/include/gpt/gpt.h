@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GPT_GPT_H_
+#define GPT_GPT_H_
+
+#include <lib/fit/result.h>
 
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
@@ -10,7 +13,38 @@
 
 namespace gpt {
 
+// GPT magic number.
+constexpr uint64_t kMagicNumber = GPT_MAGIC;
+
+// GPT version 1.0
+constexpr uint32_t kRevision = 0x00010000;
+
+// GPT expect fixed size header. Verify that size of gpt_header_t meets
+// the standards.
+constexpr uint32_t kHeaderSize = GPT_HEADER_SIZE;
+static_assert(kHeaderSize == sizeof(gpt_header_t), "invalid gpt header size");
+
+// A copy of GPT is always at block 1. Location of backup copy is pointed by
+// field within gpt_header_t.
+constexpr uint64_t kPrimaryHeaderStartBlock = 1;
+
+// Block size is expected to be large enough to hold gpt_header_t. GPT
+// entries array start in the next block i.e. 2.
+constexpr uint64_t kPrimaryEntriesStartBlock = kPrimaryHeaderStartBlock + 1;
+
+// Maximum number of partitions supported.
 constexpr uint32_t kPartitionCount = 128;
+
+// Number of blocks required to hold gpt_header_t. This should be always 1.
+constexpr uint32_t kHeaderBlocks = 1;
+
+// GPT expect fixed size entry structure. Verify that size of gpt_entry_t meets
+// the standards.
+constexpr uint32_t kEntrySize = GPT_ENTRY_SIZE;
+static_assert(kEntrySize == sizeof(gpt_entry_t), "invalid gpt entry size");
+
+// Maximum size of the partition entry table.
+constexpr size_t kMaxPartitionTableSize = kPartitionCount * kEntrySize;
 
 // Size of array need to store "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 // There are other places where we use different macros to get this
@@ -111,8 +145,6 @@ class GptDevice {
   // print out the GPT
   void PrintTable() const;
 
-  zx_status_t BlockRrPart();
-
   // Return device's block size
   uint64_t BlockSize() const { return blocksize_; }
 
@@ -155,4 +187,18 @@ class GptDevice {
   gpt_partition_t ptable_backup_[kPartitionCount] = {};
 };
 
+// On success returns initialized gpt header. On finding either |block_size| or
+// |block_count| is not large enough, returns error.
+fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
+                                                               uint64_t block_count);
+
+// Validates gpt header. Each type of inconsistency leads to unique status code.
+// The status can be used to print user friendly error messages.
+zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count);
+
+// Converts status returned by ValidateHeader to a human readable error message.
+const char* HeaderStatusToCString(zx_status_t status);
+
 }  // namespace gpt
+
+#endif  // GPT_GPT_H_
