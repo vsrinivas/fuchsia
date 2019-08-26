@@ -68,6 +68,11 @@
 ##   --ide                 Pass --ide=VALUE to gn when generating to create project
 ##                         files usable with that IDE. Useful values include "vs"
 ##                         for Visual Studio or "xcode" for Xcode.
+##   --json-ide-script     Pass --json-ide-script=python_script to gn which runs
+##                         the given python script after the JSON project file is
+##                         generated when using --ide json. The path to the project
+##                         file is given as the first argument to the script.
+##                         The script may be a path or a gn label.
 ##   --netboot             Ensure that a network ramboot image is always built.
 ##   --no-ensure-goma      Skip ensuring that goma is started when using goma.
 ##   --release             an alias for "--args=is_debug=false"
@@ -306,6 +311,14 @@ function main {
           return 1
         fi
         gn_switches+=("--ide=$2")
+        shift
+        ;;
+      --json-ide-script)
+        if [[ $# -lt 2 ]]; then
+          fx-command-help
+          return 1
+        fi
+        gn_switches+=("--json-ide-script=$2")
         shift
         ;;
       *)
