@@ -57,6 +57,10 @@ class TestPageCloud : public cloud_provider::PageCloud {
   unsigned int get_object_calls = 0u;
   std::map<std::string, std::string> objects_to_return;
 
+  // GetDiff().
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<std::vector<uint8_t>>>> get_diff_calls;
+  cloud_provider::Diff diff_to_return;
+
   // SetWatcher().
   std::vector<std::unique_ptr<cloud_provider::PositionToken>> set_watcher_position_tokens;
   cloud_provider::PageCloudWatcherPtr set_watcher;

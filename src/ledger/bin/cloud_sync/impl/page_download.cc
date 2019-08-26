@@ -8,8 +8,11 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
+#include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace cloud_sync {
@@ -143,7 +146,7 @@ void PageDownload::StartDownload() {
 }
 
 bool PageDownload::IsIdle() {
-  switch (GetMergedState(commit_state_, current_get_object_calls_)) {
+  switch (GetMergedState(commit_state_, current_get_calls_)) {
     case DOWNLOAD_NOT_STARTED:
     case DOWNLOAD_IDLE:
     case DOWNLOAD_PERMANENT_ERROR:
@@ -292,7 +295,7 @@ void PageDownload::GetObject(
     fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
-  current_get_object_calls_++;
+  current_get_calls_++;
   UpdateDownloadState();
   encryption_service_->GetObjectName(
       object_identifier,
@@ -354,22 +357,116 @@ void PageDownload::DecryptObject(
               callback(ledger::Status::OK, storage::ChangeSource::CLOUD,
                        storage::IsObjectSynced::YES,
                        storage::DataSource::DataChunk::Create(std::move(content)));
-              current_get_object_calls_--;
+              current_get_calls_--;
               UpdateDownloadState();
             });
       });
+}
+
+bool PageDownload::ReadDiffEntry(const cloud_provider::DiffEntry& change,
+                                 storage::EntryChange* result) {
+  if (!change.has_entry_id() || change.entry_id().empty() || !change.has_operation() ||
+      !change.has_data()) {
+    return false;
+  }
+
+  result->deleted = change.operation() == cloud_provider::Operation::DELETION;
+  return DecodeEntryPayload(change.entry_id(), change.data(),
+                            storage_->GetObjectIdentifierFactory(), &result->entry);
+}
+
+// TODO(35364): decrypt commit ids.
+bool PageDownload::DecodeAndParseDiff(const cloud_provider::DiffPack& diff_pack,
+                                      storage::CommitId* base_commit,
+                                      std::vector<storage::EntryChange>* changes) {
+  cloud_provider::Diff diff;
+  if (!cloud_provider::DecodeFromBuffer(diff_pack.buffer, &diff)) {
+    return false;
+  }
+
+  if (!diff.has_base_state()) {
+    return false;
+  }
+  if (diff.base_state().is_empty_page()) {
+    *base_commit = storage::kFirstPageCommitId.ToString();
+  } else if (diff.base_state().is_at_commit()) {
+    *base_commit = convert::ToString(diff.base_state().at_commit());
+  } else {
+    return false;
+  }
+
+  if (!diff.has_changes()) {
+    return false;
+  }
+
+  for (const cloud_provider::DiffEntry& cloud_change : diff.changes()) {
+    storage::EntryChange change;
+    if (!ReadDiffEntry(cloud_change, &change)) {
+      return false;
+    }
+    changes->push_back(std::move(change));
+  }
+  return true;
 }
 
 void PageDownload::GetDiff(
     storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases,
     fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
         callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
+  current_get_calls_++;
+  UpdateDownloadState();
+
+  std::vector<std::vector<uint8_t>> bases_as_bytes;
+  bases_as_bytes.reserve(possible_bases.size());
+  for (auto& base : possible_bases) {
+    bases_as_bytes.push_back(convert::ToArray(base));
+  }
+
+  (*page_cloud_)
+      ->GetDiff(convert::ToArray(commit_id), std::move(bases_as_bytes),
+                [this, callback = std::move(callback), commit_id = std::move(commit_id),
+                 possible_bases = std::move(possible_bases)](
+                    cloud_provider::Status status,
+                    std::unique_ptr<cloud_provider::DiffPack> diff_pack) mutable {
+                  if (status == cloud_provider::Status::NOT_SUPPORTED) {
+                    // The cloud provider does not support diff. Ask the storage to apply
+                    // an empty diff to the root of the same commit.
+                    // TODO(12356): remove compatibility.
+                    callback(ledger::Status::OK, std::move(commit_id), {});
+                    current_get_calls_--;
+                    UpdateDownloadState();
+                    return;
+                  }
+
+                  if (status != cloud_provider::Status::OK) {
+                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                       IsPermanentError(status), "cloud provider",
+                                       std::move(callback));
+                    return;
+                  }
+
+                  if (!diff_pack) {
+                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                       /*is_permanent*/ true, "missing diff", std::move(callback));
+                    return;
+                  }
+
+                  storage::CommitId base_commit;
+                  std::vector<storage::EntryChange> changes;
+                  if (!DecodeAndParseDiff(*diff_pack, &base_commit, &changes)) {
+                    HandleGetDiffError(std::move(commit_id), std::move(possible_bases),
+                                       /*is_permanent*/ true, "invalid diff", std::move(callback));
+                    return;
+                  }
+
+                  callback(ledger::Status::OK, std::move(base_commit), std::move(changes));
+                  current_get_calls_--;
+                  UpdateDownloadState();
+                });
 }
 
 void PageDownload::HandleGetObjectError(
-    storage::ObjectIdentifier object_identifier, bool is_permanent, const char error_name[],
+    storage::ObjectIdentifier object_identifier, bool is_permanent, fxl::StringView error_name,
     fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -379,13 +476,13 @@ void PageDownload::HandleGetObjectError(
                      << " error.";
     callback(ledger::Status::IO_ERROR, storage::ChangeSource::CLOUD, storage::IsObjectSynced::YES,
              nullptr);
-    current_get_object_calls_--;
+    current_get_calls_--;
     UpdateDownloadState();
     return;
   }
   FXL_LOG(WARNING) << log_prefix_ << "GetObject() failed due to a " << error_name
                    << " error, retrying.";
-  current_get_object_calls_--;
+  current_get_calls_--;
   UpdateDownloadState();
   RetryWithBackoff([this, object_identifier = std::move(object_identifier),
                     callback = std::move(callback)]() mutable {
@@ -393,7 +490,32 @@ void PageDownload::HandleGetObjectError(
   });
 }
 
-void PageDownload::HandleDownloadCommitError(const char error_description[]) {
+void PageDownload::HandleGetDiffError(
+    storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases, bool is_permanent,
+    fxl::StringView error_name,
+    fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+        callback) {
+  if (is_permanent) {
+    backoff_->Reset();
+    FXL_LOG(WARNING) << log_prefix_ << "GetDiff() failed due to a permanent " << error_name
+                     << " error.";
+    callback(ledger::Status::IO_ERROR, "", {});
+    current_get_calls_--;
+    UpdateDownloadState();
+    return;
+  }
+  FXL_LOG(WARNING) << log_prefix_ << "GetDiff() failed due to a " << error_name
+                   << " error, retrying.";
+  current_get_calls_--;
+  UpdateDownloadState();
+  RetryWithBackoff([this, commit_id = std::move(commit_id),
+                    possible_bases = std::move(possible_bases),
+                    callback = std::move(callback)]() mutable {
+    GetDiff(std::move(commit_id), std::move(possible_bases), std::move(callback));
+  });
+}
+
+void PageDownload::HandleDownloadCommitError(fxl::StringView error_description) {
   FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (watcher_binding_.is_bound()) {
     watcher_binding_.Unbind();
@@ -412,12 +534,12 @@ void PageDownload::SetCommitState(DownloadSyncState new_state) {
 }
 
 void PageDownload::UpdateDownloadState() {
-  DownloadSyncState new_state = GetMergedState(commit_state_, current_get_object_calls_);
+  DownloadSyncState new_state = GetMergedState(commit_state_, current_get_calls_);
 
   // Notify only if the externally visible state changed.
   if (new_state != merged_state_) {
     merged_state_ = new_state;
-    delegate_->SetDownloadState(GetMergedState(commit_state_, current_get_object_calls_));
+    delegate_->SetDownloadState(GetMergedState(commit_state_, current_get_calls_));
   }
 }
 

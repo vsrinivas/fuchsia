@@ -18,12 +18,15 @@
 #include <utility>
 #include <vector>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
+#include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
@@ -31,6 +34,12 @@
 
 namespace cloud_sync {
 namespace {
+
+using ::testing::Each;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::SizeIs;
 
 // Creates a dummy continuation token.
 cloud_provider::PositionToken MakeToken(convert::ExtendedStringView token_id) {
@@ -477,6 +486,268 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   EXPECT_EQ(status, ledger::Status::IO_ERROR);
   EXPECT_EQ(source, storage::ChangeSource::CLOUD);
 }
+
+class PageDownloadDiffTest
+    : public PageDownloadTest,
+      public ::testing::WithParamInterface<std::function<void(cloud_provider::Diff*)>> {
+ public:
+  void SetUp() override {
+    page_download_->StartDownload();
+    RunLoopUntilIdle();
+    FXL_DCHECK(states_.back() == DOWNLOAD_IDLE);
+    states_.clear();
+  }
+
+  std::pair<cloud_provider::Diff, std::vector<storage::EntryChange>> MakeTestDiff() {
+    cloud_provider::Diff diff;
+    std::vector<storage::EntryChange> changes;
+
+    diff.mutable_base_state()->set_at_commit(convert::ToArray("base1"));
+
+    changes.push_back(
+        {{"key1", storage::ObjectIdentifier(1u, 4u, storage::ObjectDigest("digest1"), nullptr),
+          storage::KeyPriority::EAGER, "entry1"},
+         false});
+    cloud_provider::DiffEntry entry1;
+    entry1.set_entry_id(convert::ToArray("entry1"));
+    entry1.set_operation(cloud_provider::Operation::INSERTION);
+    entry1.set_data(convert::ToArray(
+        EncodeEntryPayload(changes.back().entry, storage_.GetObjectIdentifierFactory())));
+    diff.mutable_changes()->push_back(std::move(entry1));
+
+    changes.push_back(
+        {{"key1", storage::ObjectIdentifier(0u, 0u, storage::ObjectDigest("digest2"), nullptr),
+          storage::KeyPriority::LAZY, "entry2"},
+         true});
+    cloud_provider::DiffEntry entry2;
+    entry2.set_entry_id(convert::ToArray("entry2"));
+    entry2.set_operation(cloud_provider::Operation::DELETION);
+    entry2.set_data(convert::ToArray(
+        EncodeEntryPayload(changes.back().entry, storage_.GetObjectIdentifierFactory())));
+    diff.mutable_changes()->push_back(std::move(entry2));
+
+    return {std::move(diff), std::move(changes)};
+  }
+};
+
+TEST_F(PageDownloadDiffTest, GetDiff) {
+  std::vector<storage::EntryChange> expected_changes;
+  std::tie(page_cloud_.diff_to_return, expected_changes) = MakeTestDiff();
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(base_commit, "base1");
+  EXPECT_EQ(changes, expected_changes);
+
+  EXPECT_EQ(states_.size(), 2u);
+  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
+  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
+}
+
+TEST_F(PageDownloadDiffTest, GetDiffFromEmpty) {
+  std::vector<storage::EntryChange> expected_changes;
+  std::tie(page_cloud_.diff_to_return, expected_changes) = MakeTestDiff();
+  page_cloud_.diff_to_return.mutable_base_state()->set_empty_page({});
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  EXPECT_EQ(changes, expected_changes);
+
+  EXPECT_EQ(states_.size(), 2u);
+  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
+  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
+}
+
+TEST_F(PageDownloadDiffTest, GetDiffFallback) {
+  page_cloud_.status_to_return = cloud_provider::Status::NOT_SUPPORTED;
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(base_commit, "commit");
+  EXPECT_THAT(changes, IsEmpty());
+
+  EXPECT_EQ(states_.size(), 2u);
+  EXPECT_EQ(states_[0], DOWNLOAD_IN_PROGRESS);
+  EXPECT_EQ(states_[1], DOWNLOAD_IDLE);
+}
+
+TEST_F(PageDownloadDiffTest, GetDiffRetryOnNetworkError) {
+  std::vector<storage::EntryChange> expected_changes;
+  std::tie(page_cloud_.diff_to_return, expected_changes) = MakeTestDiff();
+
+  page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
+  SetOnNewStateCallback([this] {
+    if (states_.back() == DOWNLOAD_PERMANENT_ERROR) {
+      QuitLoop();
+    }
+  });
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+
+  // Allow the operation to succeed after looping through five attempts.
+  RunLoopFor(kTestBackoffInterval * 4);
+  page_cloud_.status_to_return = cloud_provider::Status::OK;
+  RunLoopFor(kTestBackoffInterval);
+
+  EXPECT_THAT(page_cloud_.get_diff_calls, SizeIs(6));
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              Each(Pair(convert::ToArray("commit"),
+                        std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                          convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::OK);
+  EXPECT_EQ(base_commit, "base1");
+  EXPECT_EQ(changes, expected_changes);
+}
+
+TEST_F(PageDownloadDiffTest, GetDiffNotFound) {
+  page_cloud_.status_to_return = cloud_provider::Status::NOT_FOUND;
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+  EXPECT_EQ(base_commit, "");
+  EXPECT_THAT(changes, IsEmpty());
+
+  ASSERT_FALSE(states_.empty());
+  EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
+}
+
+class PageCloudReturningNoDiffPack : public TestPageCloud {
+ public:
+  PageCloudReturningNoDiffPack(fidl::InterfaceRequest<cloud_provider::PageCloud> request)
+      : TestPageCloud(std::move(request)) {}
+  void GetDiff(std::vector<uint8_t> commit_id, std::vector<std::vector<uint8_t>> possible_bases,
+               GetDiffCallback callback) override {
+    get_diff_calls.emplace_back(commit_id, possible_bases);
+    callback(cloud_provider::Status::OK, {});
+  }
+};
+
+TEST_F(PageDownloadDiffTest, GetDiffNoPack) {
+  // Rebind the PageCloudPtr used by PageDownload.
+  PageCloudReturningNoDiffPack page_cloud(page_cloud_ptr_.NewRequest());
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+  EXPECT_EQ(base_commit, "");
+  EXPECT_THAT(changes, IsEmpty());
+
+  ASSERT_FALSE(states_.empty());
+  EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
+}
+
+TEST_P(PageDownloadDiffTest, AlteredDiffTest) {
+  std::vector<storage::EntryChange> expected_changes;
+  std::tie(page_cloud_.diff_to_return, expected_changes) = MakeTestDiff();
+  fit::function<void(cloud_provider::Diff*)> alteration = GetParam();
+  alteration(&page_cloud_.diff_to_return);
+
+  bool called;
+  ledger::Status status;
+  storage::CommitId base_commit;
+  std::vector<storage::EntryChange> changes;
+  storage_.page_sync_delegate_->GetDiff(
+      "commit", {"base1", "base2"},
+      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(page_cloud_.get_diff_calls,
+              ElementsAre(Pair(convert::ToArray("commit"),
+                               std::vector<std::vector<uint8_t>>{convert::ToArray("base1"),
+                                                                 convert::ToArray("base2")})));
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, ledger::Status::IO_ERROR);
+  EXPECT_EQ(base_commit, "");
+  EXPECT_THAT(changes, IsEmpty());
+
+  ASSERT_FALSE(states_.empty());
+  EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
+}
+
+// Only PageDownloadDiffTest.AlteredDiffTest is parametrized.
+INSTANTIATE_TEST_SUITE_P(
+    PageDownloadDiffTest, PageDownloadDiffTest,
+    ::testing::Values(
+        [](cloud_provider::Diff* diff) { diff->clear_base_state(); },
+        [](cloud_provider::Diff* diff) { diff->clear_changes(); },
+        [](cloud_provider::Diff* diff) { (*diff->mutable_changes())[0].clear_entry_id(); },
+        [](cloud_provider::Diff* diff) { (*diff->mutable_changes())[0].set_entry_id({}); },
+        [](cloud_provider::Diff* diff) { (*diff->mutable_changes())[0].clear_operation(); },
+        [](cloud_provider::Diff* diff) { (*diff->mutable_changes())[0].clear_data(); },
+        [](cloud_provider::Diff* diff) {
+          (*diff->mutable_changes())[0].set_data(convert::ToArray("invalid"));
+        }));
 
 }  // namespace
 }  // namespace cloud_sync

@@ -137,7 +137,20 @@ void TestPageCloud::SetWatcher(std::unique_ptr<cloud_provider::PositionToken> mi
 void TestPageCloud::GetDiff(std::vector<uint8_t> commit_id,
                             std::vector<std::vector<uint8_t>> possible_bases,
                             GetDiffCallback callback) {
-  callback(cloud_provider::Status::NOT_SUPPORTED, {});
+  get_diff_calls.emplace_back(commit_id, possible_bases);
+  if (status_to_return != cloud_provider::Status::OK) {
+    callback(status_to_return, {});
+    return;
+  }
+
+  cloud_provider::Diff diff;
+  zx_status_t status = diff_to_return.Clone(&diff);
+  FXL_DCHECK(status == ZX_OK);
+  std::unique_ptr<cloud_provider::DiffPack> diff_pack =
+      std::make_unique<cloud_provider::DiffPack>();
+  bool encoded = cloud_provider::EncodeToBuffer(&diff, &diff_pack->buffer);
+  FXL_DCHECK(encoded);
+  callback(cloud_provider::Status::OK, std::move(diff_pack));
 }
 
 }  // namespace cloud_sync

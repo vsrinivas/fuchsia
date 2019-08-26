@@ -92,13 +92,23 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
+  bool ReadDiffEntry(const cloud_provider::DiffEntry& change, storage::EntryChange* result);
+
+  bool DecodeAndParseDiff(const cloud_provider::DiffPack& diff_pack, storage::CommitId* base_commit,
+                          std::vector<storage::EntryChange>* changes);
   void HandleGetObjectError(
-      storage::ObjectIdentifier object_identifier, bool is_permanent, const char error_name[],
+      storage::ObjectIdentifier object_identifier, bool is_permanent, fxl::StringView error_name,
       fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
-  void HandleDownloadCommitError(const char error_description[]);
+  void HandleGetDiffError(
+      storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases, bool is_permanent,
+      fxl::StringView error_name,
+      fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
+          callback);
+
+  void HandleDownloadCommitError(fxl::StringView error_description);
 
   // Sets the state for commit download.
   void SetCommitState(DownloadSyncState new_state);
@@ -130,7 +140,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
   // State:
   // Commit download state.
   DownloadSyncState commit_state_ = DOWNLOAD_NOT_STARTED;
-  int current_get_object_calls_ = 0;
+  // The number of active GetObject and GetDiff calls.
+  int current_get_calls_ = 0;
   // Merged state of commit and object download.
   DownloadSyncState merged_state_ = DOWNLOAD_NOT_STARTED;
 
