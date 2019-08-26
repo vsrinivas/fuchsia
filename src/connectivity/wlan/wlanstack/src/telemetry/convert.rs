@@ -107,8 +107,9 @@ pub(super) fn convert_protection(
 
 pub(super) fn convert_rssi(rssi: i8) -> metrics::ConnectionResultPerRssiMetricDimensionRssi {
     use metrics::ConnectionResultPerRssiMetricDimensionRssi::*;
-    match rssi.abs() {
-        90..=127 => From127To90,
+    match (rssi as i16).abs() {
+        // TODO(35522) Change From127To90 to From128To90 in Cobalt so that they are consistent
+        90..=128 => From127To90,
         86..=89 => From89To86,
         83..=85 => From85To83,
         80..=82 => From82To80,
@@ -230,5 +231,19 @@ pub(super) fn convert_select_network_failure(
         SelectNetworkFailure::InvalidPasswordArg => InvalidPasswordArg,
         SelectNetworkFailure::NoCompatibleNetwork => NoCompatibleNetwork,
         SelectNetworkFailure::InternalError => InternalError,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn convert_rssi_must_not_overflow() {
+        use metrics::ConnectionResultPerRssiMetricDimensionRssi::*;
+        assert_eq!(convert_rssi(-128), From127To90);
+        assert_eq!(convert_rssi(-127), From127To90);
+        assert_eq!(convert_rssi(-1), From50To1);
+        assert_eq!(convert_rssi(0), _0);
     }
 }
