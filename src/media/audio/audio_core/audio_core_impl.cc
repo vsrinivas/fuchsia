@@ -173,69 +173,35 @@ void AudioCoreImpl::NotifyGainMuteChanged() {
 
 float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioCoreImpl::GetRenderUsageGain");
-  auto usage_index = fidl::ToUnderlying(usage);
-
-  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
-    return Gain::kUnityGainDb;
-  }
   return Gain::GetRenderUsageGain(usage) + Gain::GetRenderUsageGainAdjustment(usage);
 }
 
 float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioCoreImpl::GetCaptureUsageGain");
-  auto usage_index = fidl::ToUnderlying(usage);
-
-  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
-    return Gain::kUnityGainDb;
-  }
   return Gain::GetCaptureUsageGain(usage) + Gain::GetCaptureUsageGainAdjustment(usage);
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
   AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
-
-  auto usage_index = fidl::ToUnderlying(usage);
-  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
-    return;
-  }
   Gain::SetRenderUsageGain(usage, gain_db);
 }
 
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
   AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
-
-  auto usage_index = fidl::ToUnderlying(usage);
-  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
-    return;
-  }
   Gain::SetCaptureUsageGain(usage, gain_db);
 }
 
 void AudioCoreImpl::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
                                                  float db_gain) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGainAdjustment");
-  auto usage_index = fidl::ToUnderlying(usage);
-  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
-    return;
-  }
   Gain::SetRenderUsageGainAdjustment(usage, db_gain);
 }
 
 void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
                                                   float db_gain) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGainAdjustment");
-  auto usage_index = fidl::ToUnderlying(usage);
-  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
-    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
-    return;
-  }
   Gain::SetCaptureUsageGainAdjustment(usage, db_gain);
 }
 

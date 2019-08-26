@@ -28,9 +28,6 @@ std::atomic<float> Gain::capture_usage_gain_adjustment_[fuchsia::media::CAPTURE_
 void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
   TRACE_DURATION("audio", "Gain::GetRenderUsageGain");
   auto usage_index = fidl::ToUnderlying(usage);
-  FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
-      << "Unexpected Render Usage: " << usage_index;
-
   float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
 
   render_usage_gain_[usage_index].store(clamped_gain_db);
@@ -39,9 +36,6 @@ void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain
 void Gain::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
   TRACE_DURATION("audio", "Gain::GetCaptureUsageGain");
   auto usage_index = fidl::ToUnderlying(usage);
-  FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
-      << "Unexpected Capture Usage: " << usage_index;
-
   float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
 
   capture_usage_gain_[usage_index].store(clamped_gain_db);
@@ -50,9 +44,6 @@ void Gain::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float ga
 void Gain::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) {
   TRACE_DURATION("audio", "Gain::SetRenderUsageGainAdjustment");
   auto usage_index = fidl::ToUnderlying(usage);
-  FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
-      << "Unexpected Render Usage: " << usage_index;
-
   float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
 
   render_usage_gain_adjustment_[usage_index].store(clamped_gain_db);
@@ -61,9 +52,6 @@ void Gain::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, 
 void Gain::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
   TRACE_DURATION("audio", "Gain::SetCaptureUsageGainAdjustment");
   auto usage_index = fidl::ToUnderlying(usage);
-  FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
-      << "Unexpected Capture Usage: " << usage_index;
-
   float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
 
   capture_usage_gain_adjustment_[usage_index].store(clamped_gain_db);

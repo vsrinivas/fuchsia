@@ -181,17 +181,11 @@ class Gain {
 
   static float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
     auto usage_index = fidl::ToUnderlying(usage);
-    FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
-        << "Unexpected Render Usage: " << usage_index;
-
     return render_usage_gain_[usage_index].load();
   }
 
   static float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
     auto usage_index = fidl::ToUnderlying(usage);
-    FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
-        << "Unexpected Capture Usage: " << usage_index;
-
     return capture_usage_gain_[usage_index].load();
   }
 
@@ -200,17 +194,11 @@ class Gain {
 
   static float GetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage) {
     auto usage_index = fidl::ToUnderlying(usage);
-    FXL_DCHECK(usage_index < fuchsia::media::RENDER_USAGE_COUNT)
-        << "Unexpected Render Usage: " << usage_index;
-
     return render_usage_gain_adjustment_[usage_index].load();
   }
 
   static float GetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage) {
     auto usage_index = fidl::ToUnderlying(usage);
-    FXL_DCHECK(usage_index < fuchsia::media::CAPTURE_USAGE_COUNT)
-        << "Unexpected Capture Usage: " << usage_index;
-
     return capture_usage_gain_adjustment_[usage_index].load();
   }
 
