@@ -241,9 +241,7 @@ group("all") {
     "//garnet/packages/prod:pkg_ctl",
     "//garnet/packages/prod:pkg_resolver",
     "//garnet/packages/prod:pm",
-
-    # TODO(DNO-678): restore once power fidl updated & power manager refactored
-    #"//garnet/packages/prod:power_manager",
+    "//garnet/packages/prod:power_manager",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:root_ssl_certificates",

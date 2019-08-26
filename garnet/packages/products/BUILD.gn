@@ -84,9 +84,7 @@ group("base") {
     "//garnet/packages/prod:openssh",
     "//garnet/packages/prod:pkg_cache",
     "//garnet/packages/prod:pkg_resolver",
-
-    # TODO(DNO-678): restore once power fidl updated & power manager refactored
-    #"//garnet/packages/prod:power_manager",
+    "//garnet/packages/prod:power_manager",
     "//garnet/packages/prod:root_ssl_certificates",
     "//garnet/packages/prod:runtime",
     "//garnet/packages/prod:scpi",

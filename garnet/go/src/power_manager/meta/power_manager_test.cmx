@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.power.PowerManager": "fuchsia-pkg://fuchsia.com/power_manager#meta/power_manager.cmx"
+                "fuchsia.power.BatteryManager": "fuchsia-pkg://fuchsia.com/power_manager#meta/power_manager.cmx"
             }
         }
     },
@@ -11,7 +11,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.power.PowerManager"
+            "fuchsia.power.BatteryManager"
         ]
     }
 }

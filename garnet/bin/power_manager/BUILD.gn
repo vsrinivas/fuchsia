@@ -25,6 +25,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:parking_lot",
+    "//zircon/public/fidl/fuchsia-hardware-power:fuchsia-hardware-power-rustc",
   ]
 }
 

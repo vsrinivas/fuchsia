@@ -403,9 +403,7 @@ group("all") {
     ":pkg_resolver",
     ":pkg_url",
     ":pmd",
-
-    # TODO(DNO-678): restore once power fidl updated & power manager refactored
-    #":power_manager",
+    ":power_manager",
     ":process",
     ":profiler",
     ":rapidjson_utils",
@@ -841,15 +839,14 @@ group("pkg_cache") {
   ]
 }
 
-# TODO(DNO-678): restore once power fidl updated & power manager refactored
-#group("power_manager") {
-#  testonly = true
-#  public_deps = [
-#    "//garnet/bin/power_manager:power_manager_tests",
-#    "//garnet/go/src/power_manager:power_manager_gotests",
-#    "//garnet/packages/prod:power_manager",
-#  ]
-#}
+group("power_manager") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/power_manager:power_manager_tests",
+    "//garnet/go/src/power_manager:power_manager_gotests",
+    "//garnet/packages/prod:power_manager",
+  ]
+}
 
 group("fidl_compatibility_test") {
   testonly = true

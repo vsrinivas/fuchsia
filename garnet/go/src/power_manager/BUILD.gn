@@ -19,22 +19,22 @@ go_library("power_manager_lib") {
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
   ]
 }
-# TODO(DNO-678): restore once power fidl updated & power manager refactored
-#go_test("power_manager_test") {
-#  gopackage = "power_manager"
-#  deps = [
-#    ":power_manager_lib",
-#  ]
-#}
-#
-#test_package("power_manager_gotests") {
-#  deps = [
-#    ":power_manager_test",
-#  ]
-#  tests = [
-#    {
-#      name = "power_manager_test"
-#      environments = basic_envs
-#    },
-#  ]
-#}
+
+go_test("power_manager_test") {
+  gopackages = [ "power_manager" ]
+  deps = [
+    ":power_manager_lib",
+  ]
+}
+
+test_package("power_manager_gotests") {
+  deps = [
+    ":power_manager_test",
+  ]
+  tests = [
+    {
+      name = "power_manager_test"
+      environments = basic_envs
+    },
+  ]
+}
