@@ -17,11 +17,13 @@ The initial build and deploy workflow using `fx` is as follows:
 1.  `fx mkzedboot <usb_drive_device_path>`
     Builds the Zedboot media and installs to the USB drive target. See below
     for notes on obtaining the USB drive device path.
-1.  `fx pave`
-    Starts the bootserver.
 1.  Attach Zedboot USB to device and reboot.
-    Zedboot will connect to the host, download the pave image, and pave the
-    device.
+1.  Run `lsblk` on the device. Take note of the HDD or SSD's device path.
+    1. An example path looks like `/dev/sys/pci/00:17.0/ahci/sata0/block`
+1.  Run `install-disk-image init-partition-tables <BLOCK_DEVICE_PATH>` on the device.
+1.  Run `fx pave` on your workstation.
+    Starts the bootserver. The bootserver connects to the device to upload the pave image,
+    and then paves the device.
 
 ### USB drive device path
 
