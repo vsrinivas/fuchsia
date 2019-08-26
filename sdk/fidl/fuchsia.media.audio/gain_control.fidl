@@ -13,6 +13,7 @@ using zx;
 /// a tear-off of other interfaces. For example, `fuchsia.media.audio.Renderer`
 /// has a `BindGainControl` method that binds to a gain control that controls
 /// gain for the renderer.
+// TODO(35393, 35311, 35309): Deprecate and remove.
 protocol GainControl {
     /// Sets the gain in decibels.
     SetGain(float32 gain_db);

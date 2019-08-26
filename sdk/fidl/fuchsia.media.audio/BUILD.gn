@@ -9,5 +9,6 @@ fidl("fuchsia.media.audio") {
 
   sources = [
     "gain_control.fidl",
+    "volume_control.fidl",
   ]
 }

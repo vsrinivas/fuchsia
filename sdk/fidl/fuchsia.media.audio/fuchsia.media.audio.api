@@ -1,3 +1,4 @@
 {
-  "fidl/fuchsia.media.audio/gain_control.fidl": "97a5100f5f9b39c0cb52135a88a8de8e"
+  "fidl/fuchsia.media.audio/gain_control.fidl": "0882351775e1b05cfbe0aabcae2d1c47",
+  "fidl/fuchsia.media.audio/volume_control.fidl": "21fe50f1f2a2daa32f8bb63b18aa3986"
 }
