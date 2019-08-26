@@ -74,6 +74,7 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
 
   struct Capabilities {
     CapabilityList list;
+    ExtCapabilityList ext_list;
     MsiCapability* msi;
     MsixCapability* msix;
     PciExpressCapability* pcie;
@@ -203,6 +204,7 @@ class Device : public PciDeviceType, public fbl::DoublyLinkedListable<Device*> {
 
   zx_status_t ProbeCapabilities() TA_REQ(dev_lock_);
   zx_status_t ParseCapabilities() TA_REQ(dev_lock_);
+  zx_status_t ParseExtendedCapabilities() TA_REQ(dev_lock_);
   // TODO(cja) port zx_status_t ParseExtendedCapabilities() TA_REQ(dev_lock_);
 
   fbl::Mutex cmd_reg_lock_;            // Protection for access to the command register.

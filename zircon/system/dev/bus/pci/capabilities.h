@@ -23,33 +23,33 @@ class Capability : public fbl::DoublyLinkedListable<std::unique_ptr<Capability>>
 
   // PCI Code and ID Assignment Specification Revision 1.9 section 2.
   enum class Id : RegType {
-    kNull = 0,
-    kPciPowerManagement,
-    kAgp,
-    kVpd,
-    kSlotIdentification,
-    kMsi,
-    kCompactPciHotSwap,
-    kPciX,
-    kHyperTransport,
-    kVendor,
-    kDebugPort,
-    kCompactPciCrc,
-    kPciHotplug,
-    kPciBridgeSubsystemVendorId,
-    kAgp8x,
-    kSecureDevice,
-    kPciExpress,
-    kMsiX,
-    kSataDataNdxCfg,
-    kAdvancedFeatures,
-    kEnhancedAllocation,
-    kFlatteningPortalBridge,
+    /* 0x00 */ kNull = 0,
+    /* 0x01 */ kPciPowerManagement,
+    /* 0x02 */ kAgp,
+    /* 0x03 */ kVitalProductData,
+    /* 0x04 */ kSlotIdentification,
+    /* 0x05 */ kMsi,
+    /* 0x06 */ kCompactPciHotSwap,
+    /* 0x07 */ kPciX,
+    /* 0x08 */ kHyperTransport,
+    /* 0x09 */ kVendor,
+    /* 0x0a */ kDebugPort,
+    /* 0x0b */ kCompactPciCrc,
+    /* 0x0c */ kPciHotplug,
+    /* 0x0d */ kPciBridgeSubsystemVendorId,
+    /* 0x0e */ kAgp8x,
+    /* 0x0f */ kSecureDevice,
+    /* 0x10 */ kPciExpress,
+    /* 0x11 */ kMsiX,
+    /* 0x12 */ kSataDataNdxCfg,
+    /* 0x13 */ kAdvancedFeatures,
+    /* 0x14 */ kEnhancedAllocation,
+    /* 0x15 */ kFlatteningPortalBridge,
   };
 
   Capability(uint8_t id, uint8_t base) : id_(id), base_(base) {}
-  uint8_t id() const { return id_; }
-  uint8_t base() const { return base_; }
+  [[nodiscard]] uint8_t id() const { return id_; }
+  [[nodiscard]] uint8_t base() const { return base_; }
 
  private:
   uint8_t id_;
@@ -68,51 +68,66 @@ class ExtCapability : public fbl::DoublyLinkedListable<std::unique_ptr<ExtCapabi
 
   // PCI Code and ID Assignment Specification Revision 1.9 section 3.
   enum class Id : RegType {
-    kNull = 0,
-    kAdvancedErrorReporting,
-    kVirtualChannelNoMFVC,
-    kDeviceSerialNumber,
-    kPowerBudgeting,
-    kRootComplexLinkDeclaration,
-    kRootComplexInternalLinkControl,
-    kRootComplexEventCollectorEndpointAssociation,
-    kMFVC,
-    kVC,
-    kRCRB,
-    kVSEC,
-    kCAC,
-    kACS,
-    kART,
-    kATS,
-    kSR_IOV,
-    kMR_IOV,
-    kMulticast,
-    kPRI,
-    kAmdReserved,
-    kResizableBAR,
-    kDPA,
-    kTPM,
-    kLTR,
-    kSecondaryPCIExpress,
-    kPMUX,
-    kPASID,
-    kLNR,
-    kDPC,
-    kL1PMSubstates,
-    kPTM,
-    kMPCIe,
-    kFRSQueueing,
-    kReadinessTimeReporting,
-    kVSECDesignatedVendorExtended,
-    kVFResizableBAR,
-    kDataLinkFeature,
-    kPhysicalLayer16,
-    kLaneMarginingAtReceiver,
-    kHierarchyId,
+    /* 0x00 */ kNull = 0,
+    /* 0x01 */ kAdvancedErrorReporting,
+    /* 0x02 */ kVirtualChannelNoMFVC,
+    /* 0x03 */ kDeviceSerialNumber,
+    /* 0x04 */ kPowerBudgeting,
+    /* 0x05 */ kRootComplexLinkDeclaration,
+    /* 0x06 */ kRootComplexInternalLinkControl,
+    /* 0x07 */ kRootComplexEventCollectorEndpointAssociation,
+    /* 0x08 */ kMultiFunctionVirtualChannel,
+    /* 0x09 */ kVirtualChannel,
+    /* 0x0a */ kRCRB,
+    /* 0x0b */ kVendor,
+    /* 0x0c */ kCAC,
+    /* 0x0d */ kACS,
+    /* 0x0e */ kARI,
+    /* 0x0f */ kATS,
+    /* 0x10 */ kSR_IOV,
+    /* 0x11 */ kMR_IOV,
+    /* 0x12 */ kMulticast,
+    /* 0x13 */ kPRI,
+    /* 0x14 */ kEnhancedAllocation,
+    /* 0x15 */ kResizableBAR,
+    /* 0x16 */ kDynamicPowerAllocation,
+    /* 0x17 */ kTPHRequester,
+    /* 0x18 */ kLatencyToleranceReporting,
+    /* 0x19 */ kSecondaryPCIExpress,
+    /* 0x1a */ kPMUX,
+    /* 0x1b */ kPASID,
+    /* 0x1c */ kLNR,
+    /* 0x1d */ kDPC,
+    /* 0x1e */ kL1PMSubstates,
+    /* 0x1f */ kPrecisionTimeMeasurement,
+    /* 0x20 */ kMPCIe,
+    /* 0x21 */ kFRSQueueing,
+    /* 0x22 */ kReadinessTimeReporting,
+    /* 0x23 */ kDesignatedVendor,
+    /* 0x24 */ kVFResizableBAR,
+    /* 0x25 */ kDataLinkFeature,
+    /* 0x26 */ kPhysicalLayer16,
+    /* 0x27 */ kLaneMarginingAtReceiver,
+    /* 0x28 */ kHierarchyId,
+    /* 0x29 */ kNativePCIeEnclosure,
+    /* 0x2a */ kPhysicalLayer32,
+    /* 0x2b */ kAlternateProtocol,
+    /* 0x2c */ kSystemFirmwareIntermediary,
   };
+
+  ExtCapability(uint16_t id, uint8_t version, uint16_t base)
+      : id_(id), base_(base), version_(version) {}
+  [[nodiscard]] uint16_t id() const { return id_; }
+  [[nodiscard]] uint16_t base() const { return base_; }
+  [[nodiscard]] uint8_t version() const { return version_; }
+
+ private:
+  uint16_t id_;
+  uint16_t base_;
+  uint8_t version_;
 };
 using ExtCapabilityList = fbl::DoublyLinkedList<std::unique_ptr<ExtCapability>>;
-static_assert(static_cast<uint16_t>(ExtCapability::Id::kHierarchyId) == 0x28);
+static_assert(static_cast<uint16_t>(ExtCapability::Id::kSystemFirmwareIntermediary) == 0x2c);
 
 const char* CapabilityIdToName(Capability::Id id);
 const char* ExtCapabilityIdToName(ExtCapability::Id id);

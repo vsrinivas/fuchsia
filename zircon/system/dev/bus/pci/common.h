@@ -4,6 +4,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
 #define ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
 
+#include <zircon/hw/pci.h>
+
 #include <ddk/debug.h>
 
 // Switch for easy enabling of output during unit tests where we
@@ -112,6 +114,7 @@
 #define PCI_CAP_PTR_ALIGNMENT (2u)
 
 #define PCIE_EXT_CAP_PTR_NULL (0u)
+#define PCIE_EXT_CAP_BASE_PTR (0x100)
 #define PCIE_EXT_CAP_PTR_MIN_VALID (PCI_BASE_CONFIG_SIZE)
 #define PCIE_EXT_CAP_PTR_MAX_VALID (PCIE_EXTENDED_CONFIG_SIZE - PCI_CAPABILITY_ALIGNMENT)
 #define PCIE_EXT_CAP_PTR_ALIGNMENT (4u)

@@ -76,12 +76,12 @@ TEST_F(PciDeviceTests, CreationTest) {
 }
 
 // Test a normal capability chain
-TEST_F(PciDeviceTests, BasicCapabilityTest) {
+TEST_F(PciDeviceTests, StdCapabilityTest) {
   std::unique_ptr<Config> cfg;
 
   // Copy the config dump into a device entry in the ecam.
-  memcpy(pciroot_proto().ecam().get(default_bdf()).config, kFakeVirtioInputDeviceConfig,
-         sizeof(kFakeVirtioInputDeviceConfig));
+  memcpy(pciroot_proto().ecam().get(default_bdf()).config, kFakeVirtioInputDeviceConfig.data(),
+         kFakeVirtioInputDeviceConfig.max_size());
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
   ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
   auto& dev = bus().get_device(default_bdf());
@@ -105,6 +105,34 @@ TEST_F(PciDeviceTests, BasicCapabilityTest) {
   ASSERT_TRUE(cap_iter != dev.capabilities().list.end());
   EXPECT_EQ(static_cast<Capability::Id>((++cap_iter)->id()), Capability::Id::kVendor);
   EXPECT_TRUE(++cap_iter == dev.capabilities().list.end());
+}
+
+// Test an extended capability chain
+TEST_F(PciDeviceTests, ExtendedCapabilityTest) {
+  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
+  ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
+
+  // Since this is a dump of an emulated device we that it should have:
+  //
+  //      Capabilities: [100] Virtual Channel
+  //      Capabilities: [250] Latency Tolerance Reporting
+  //      Capabilities: [258] L1 PM Substates
+  //      Capabilities: [128] Power Budgeting
+  //      Capabilities: [600] Vendor Specific Information
+  auto cap_iter = dev.capabilities().ext_list.begin();
+  ASSERT_TRUE(cap_iter.IsValid());
+  EXPECT_EQ(static_cast<ExtCapability::Id>(cap_iter->id()),
+            ExtCapability::Id::kVirtualChannelNoMFVC);
+  ASSERT_TRUE(cap_iter != dev.capabilities().ext_list.end());
+  EXPECT_EQ(static_cast<ExtCapability::Id>((++cap_iter)->id()),
+            ExtCapability::Id::kLatencyToleranceReporting);
+  ASSERT_TRUE(cap_iter != dev.capabilities().ext_list.end());
+  EXPECT_EQ(static_cast<ExtCapability::Id>((++cap_iter)->id()), ExtCapability::Id::kL1PMSubstates);
+  ASSERT_TRUE(cap_iter != dev.capabilities().ext_list.end());
+  EXPECT_EQ(static_cast<ExtCapability::Id>((++cap_iter)->id()), ExtCapability::Id::kPowerBudgeting);
+  ASSERT_TRUE(cap_iter != dev.capabilities().ext_list.end());
+  EXPECT_EQ(static_cast<ExtCapability::Id>((++cap_iter)->id()), ExtCapability::Id::kVendor);
+  EXPECT_TRUE(++cap_iter == dev.capabilities().ext_list.end());
 }
 
 // This test checks for proper handling of capability pointers that are
@@ -209,7 +237,7 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
 // Ensure we parse MSI capabilities properly in the Quadro device.
 // lspci output: Capabilities: [68] MSI: Enable+ Count=1/1 Maskable- 64bit+
 TEST_F(PciDeviceTests, MsiCapabilityTest) {
-  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig, sizeof(kFakeQuadroDeviceConfig));
+  auto& dev = CreateTestDevice(kFakeQuadroDeviceConfig.data(), kFakeQuadroDeviceConfig.max_size());
   ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
   ASSERT_NE(nullptr, dev.capabilities().msi);
 
@@ -217,7 +245,7 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
   EXPECT_EQ(0x68, msi.base());
   EXPECT_EQ(static_cast<uint8_t>(Capability::Id::kMsi), msi.id());
   EXPECT_EQ(true, msi.is_64bit());
-  EXPECT_EQ(1, msi.vectors_avail());
+  EXPECT_EQ(4, msi.vectors_avail());
   EXPECT_EQ(false, msi.supports_pvm());
 
   MsiControlReg ctrl = {.value = dev.config()->Read(msi.ctrl())};
@@ -226,7 +254,7 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
 
 // Ensure we parse MSIX capabilities properly in the Virtio-input device.
 TEST_F(PciDeviceTests, MsixCapabilityTest) {
-  auto& dev = CreateTestDevice(kFakeVirtioInputDeviceConfig, sizeof(kFakeVirtioInputDeviceConfig));
+  auto& dev = CreateTestDevice(kFakeVirtioInputDeviceConfig.data(), kFakeVirtioInputDeviceConfig.max_size());
   ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
   ASSERT_NE(nullptr, dev.capabilities().msix);
 

@@ -330,6 +330,62 @@ TEST_F(PciProtocolTests, GetCapabilities) {
   ASSERT_EQ(PCI_CAP_ID_MSIX, val8);
 }
 
+TEST_F(PciProtocolTests, GetExtendedCapabilities) {
+  uint16_t offsetA = 0;
+  uint16_t offsetB = 0;
+  uint16_t val16 = 0;
+
+  // First extneded capability is Virtual Channel @ 0x100
+  ASSERT_OK(pci().GetFirstExtendedCapability(PCI_EXT_CAP_ID_VIRTUAL_CHANNEL_NO_MFVC, &offsetA));
+  ASSERT_EQ(0x100, offsetA);
+  ASSERT_OK(pci().ConfigRead16(offsetA, &val16));
+  ASSERT_EQ(PCI_EXT_CAP_ID_VIRTUAL_CHANNEL_NO_MFVC, val16);
+
+  // There is no second Virtual Channel extended capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            pci().GetNextExtendedCapability(PCI_EXT_CAP_ID_VIRTUAL_CHANNEL, offsetA, &offsetB));
+
+  // Latency Tolerance Reporting @ 0x250.
+  ASSERT_OK(pci().GetFirstExtendedCapability(PCI_EXT_CAP_ID_LATENCY_TOLERANCE_REPORTING, &offsetA));
+  ASSERT_EQ(0x250, offsetA);
+  ASSERT_OK(pci().ConfigRead16(offsetA, &val16));
+  ASSERT_EQ(PCI_EXT_CAP_ID_LATENCY_TOLERANCE_REPORTING, val16);
+
+  // There is no second LTR extended capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetNextExtendedCapability(
+                                  PCI_EXT_CAP_ID_LATENCY_TOLERANCE_REPORTING, offsetA, &offsetB));
+
+  // L1 PM Substates @ 0x258.
+  ASSERT_OK(pci().GetNextExtendedCapability(PCI_EXT_CAP_ID_L1PM_SUBSTATES, offsetA, &offsetA));
+  ASSERT_EQ(0x258, offsetA);
+  ASSERT_OK(pci().ConfigRead16(offsetA, &val16));
+  ASSERT_EQ(PCI_EXT_CAP_ID_L1PM_SUBSTATES, val16);
+
+  // There is no second L1PM Substates extended capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            pci().GetNextExtendedCapability(PCI_EXT_CAP_ID_L1PM_SUBSTATES, offsetA, &offsetB));
+
+  // Power Budgeting @ 0x128.
+  ASSERT_OK(pci().GetFirstExtendedCapability(PCI_EXT_CAP_ID_POWER_BUDGETING, &offsetA));
+  ASSERT_EQ(0x128, offsetA);
+  ASSERT_OK(pci().ConfigRead16(offsetA, &val16));
+  ASSERT_EQ(PCI_EXT_CAP_ID_POWER_BUDGETING, val16);
+
+  // There is no second Power Budgeting extended capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            pci().GetNextExtendedCapability(PCI_EXT_CAP_ID_POWER_BUDGETING, offsetA, &offsetB));
+
+  // Vendor Specific @ 0x128.
+  ASSERT_OK(pci().GetFirstExtendedCapability(PCI_EXT_CAP_ID_VENDOR, &offsetA));
+  ASSERT_EQ(0x600, offsetA);
+  ASSERT_OK(pci().ConfigRead16(offsetA, &val16));
+  ASSERT_EQ(PCI_EXT_CAP_ID_VENDOR, val16);
+
+  // There is no second Vendor specific capability.
+  ASSERT_EQ(ZX_ERR_NOT_FOUND,
+            pci().GetNextExtendedCapability(PCI_EXT_CAP_ID_VENDOR, offsetA, &offsetB));
+}
+
 TEST_F(PciProtocolTests, GetDeviceInfo) {
   uint16_t vendor_id;
   uint16_t device_id;

@@ -238,6 +238,35 @@ zx_status_t DeviceProxy::PciGetNextCapability(uint8_t cap_id, uint8_t offset, ui
   return st;
 }
 
+zx_status_t DeviceProxy::PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset) {
+  return PciGetNextExtendedCapability(cap_id, kPciExtCapOffsetFirst, out_offset);
+}
+
+zx_status_t DeviceProxy::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset,
+                                                      uint16_t* out_offset) {
+  PciRpcMsg req = {};
+  PciRpcMsg resp = {};
+
+  if (!out_offset) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  req.cap.id = cap_id;
+  if (offset == kPciExtCapOffsetFirst) {
+    req.cap.is_first = true;
+    req.cap.offset = 0;
+  } else {
+    req.cap.offset = offset;
+  }
+  req.cap.is_extended = true;
+
+  zx_status_t st = RpcRequest(PCI_OP_GET_NEXT_CAPABILITY, nullptr, &req, &resp);
+  if (st == ZX_OK) {
+    *out_offset = resp.cap.offset;
+  }
+  return st;
+}
+
 // TODO(ZX-3146): These methods need to be deleted, or refactored.
 zx_status_t DeviceProxy::PciGetAuxdata(const char* args, void* out_data_buffer, size_t data_size,
                                        size_t* out_data_actual) {

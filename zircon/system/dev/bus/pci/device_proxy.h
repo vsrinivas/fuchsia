@@ -121,6 +121,8 @@ class DeviceProxy : public PciDeviceProxyType, public ddk::PciProtocol<pci::Devi
   zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value);
   zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset);
   zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
+  zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
+  zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
   zx_status_t PciGetAuxdata(const char* args, void* out_data_buffer, size_t data_size,
                             size_t* out_data_actual);
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);

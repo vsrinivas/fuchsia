@@ -27,8 +27,8 @@ zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name) {
   }
 
   auto cleanup = fbl::MakeAutoCall([&bus] { bus->DdkRemove(); });
-  st = bus->CreateDevice(bus->test_bdf(), (uint8_t*)kFakeQuadroDeviceConfig,
-                         sizeof(kFakeQuadroDeviceConfig));
+  st = bus->CreateDevice(bus->test_bdf(), kFakeQuadroDeviceConfig.data(),
+                         kFakeQuadroDeviceConfig.max_size());
   if (st != ZX_OK) {
     return st;
   }

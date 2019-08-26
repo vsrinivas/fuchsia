@@ -21,17 +21,19 @@ enum PciCapId : uint8 {
     NULL = 0x00;
     PCI_PWR_MGMT = 0x01;
     AGP = 0x02;
-    VPD = 0x03;
+    VITAL_PRODUCT_DATA = 0x03;
+    SLOT_IDENTIFICATION = 0x04;
     MSI = 0x05;
+    COMPACT_PCI_HOTSWAP = 0x06;
     PCIX = 0x07;
     HYPERTRANSPORT = 0x08;
     VENDOR = 0x09;
-    DEBUG_PORT = 0x0A;
-    COMPACT_PCI_CRC = 0x0B;
-    PCI_HOT_PLUG = 0x0C;
-    PCI_BRIDGE_SUBSYSTEM_VID = 0x0D;
-    AGP8X = 0x0E;
-    SECURE_DEVICE = 0x0F;
+    DEBUG_PORT = 0x0a;
+    COMPACT_PCI_CRC = 0x0b;
+    PCI_HOT_PLUG = 0x0c;
+    PCI_BRIDGE_SUBSYSTEM_VID = 0x0d;
+    AGP8X = 0x0e;
+    SECURE_DEVICE = 0x0f;
     PCI_EXPRESS = 0x10;
     MSIX = 0x11;
     SATA_DATA_NDX_CFG = 0x12;
@@ -39,6 +41,55 @@ enum PciCapId : uint8 {
     ENHANCED_ALLOCATION = 0x14;
     FLATTENING_PORTAL_BRIDGE = 0x15;
 };
+
+enum PciExtCapId : uint16 {
+    NULL = 0x00;
+    ADVANCED_ERROR_REPORTING = 0x01;
+    VIRTUAL_CHANNEL_NO_MFVC = 0x02;
+    DEVICE_SERIAL_NUMBER = 0x03;
+    POWER_BUDGETING = 0x04;
+    ROOT_COMPLEX_LINK_DECLARATION = 0x05;
+    ROOT_COMPLEX_INTERNAL_LINK_CONTROL = 0x06;
+    ROOT_COMPLEX_EVENT_COLLECTOR_ENDPOINT_ASSOCIATION = 0x07;
+    MULTI_FUNCTION_VIRTUAL_CHANNEL = 0x08;
+    VIRTUAL_CHANNEL = 0x09;
+    RCRB = 0x0a;
+    VENDOR = 0x0b;
+    CAC = 0x0c;
+    ACS = 0x0d;
+    ARI = 0x0e;
+    ATS = 0x0f;
+    SR_IOV = 0x10;
+    MR_IOV = 0x11;
+    MULTICAST = 0x12;
+    PRI = 0x13;
+    ENHANCED_ALLOCATION = 0x14;
+    RESIZABLE_BAR = 0x15;
+    DYNAMIC_POWER_ALLOCATION = 0x16;
+    TPH = 0x17;
+    LATENCY_TOLERANCE_REPORTING = 0x18;
+    SECONDARY_PCI_EXPRESS = 0x19;
+    PMUX = 0x1a;
+    PASID = 0x1b;
+    LNR = 0x1c;
+    DPC = 0x1d;
+    L1PM_SUBSTATES = 0x1e;
+    PRECISION_TIME_MEASUREMENT = 0x1f;
+    MPCIE = 0x20;
+    FRS_QUEUEING = 0x21;
+    READINESS_TIME_REPORTING = 0x22;
+    DESIGNATED_VENDOR = 0x23;
+    VF_RESIZABLE_BAR = 0x24;
+    DATA_LINK_FEATURE = 0x25;
+    PHYSICAL_LAYER_16 = 0x26;
+    LANE_MARGINING_AT_RECEIVER = 0x27;
+    HIERARCHY_ID = 0x28;
+    NATIVE_PCIE_ENCLOSURE = 0x29;
+    PHYSICAL_LAYER_32 = 0x2a;
+    ALTERNATE_PROTOCOL = 0x2b;
+    SYSTEM_FIRMWARE_INTERMEDIARY = 0x2c;
+};
+
 
 /// ZX-3927: Remove the zx_pcie types and implement them here
 [Layout = "ddk-protocol"]
@@ -56,8 +107,10 @@ protocol Pci {
     ConfigWrite8(uint16 offset, uint8 value) -> (zx.status s);
     ConfigWrite16(uint16 offset, uint16 value) -> (zx.status s);
     ConfigWrite32(uint16 offset, uint32 value) -> (zx.status s);
-    GetNextCapability(uint8 id, uint8 offset) -> (zx.status s, uint8 offset);
     GetFirstCapability(uint8 id) -> (zx.status s, uint8 offset);
+    GetNextCapability(uint8 id, uint8 offset) -> (zx.status s, uint8 offset);
+    GetFirstExtendedCapability(uint16 id) -> (zx.status s, uint16 offset);
+    GetNextExtendedCapability(uint16 id, uint16 offset) -> (zx.status s, uint16 offset);
     GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     GetBti(uint32 index) -> (zx.status s, handle<bti> bti);
 };

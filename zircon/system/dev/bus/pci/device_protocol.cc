@@ -244,24 +244,25 @@ zx_status_t Device::RpcGetDeviceInfo(const zx::unowned_channel& ch) {
   return RpcReply(ch, ZX_OK);
 }
 
-zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
-  response_.cap.id = request_.cap.id;
-  response_.cap.is_extended = request_.cap.is_extended;
-  response_.cap.is_first = request_.cap.is_first;
-
+namespace {
+template <class T, class L>
+zx_status_t GetNextCapability(PciRpcMsg* req, PciRpcMsg* resp, const L* list) {
+  resp->cap.id = req->cap.id;
+  resp->cap.is_extended = req->cap.is_extended;
+  resp->cap.is_first = req->cap.is_first;
   // Scan for the capability type requested, returning the first capability
   // found after we've seen the capability owning the previous offset.  We
   // can't scan entirely based on offset being >= than a given base because
   // capabilities pointers can point backwards in config space as long as the
   // structures are valid.
   zx_status_t st = ZX_ERR_NOT_FOUND;
-  bool found_prev = (request_.cap.is_first) ? true : false;
-  uint8_t scan_offset = static_cast<uint8_t>(request_.cap.offset);
+  bool found_prev = (req->cap.is_first) ? true : false;
+  T scan_offset = static_cast<T>(req->cap.offset);
 
-  for (auto& cap : capabilities().list) {
+  for (auto& cap : *list) {
     if (found_prev) {
-      if (cap.id() == request_.cap.id) {
-        response_.cap.offset = cap.base();
+      if (cap.id() == req->cap.id) {
+        resp->cap.offset = cap.base();
         st = ZX_OK;
         break;
       }
@@ -271,7 +272,20 @@ zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
       }
     }
   }
+  return st;
+}
 
+}  // namespace
+zx_status_t Device::RpcGetNextCapability(const zx::unowned_channel& ch) {
+  // Capabilities and Extended Capabilities only differ by what list they're in along with the
+  // size of their entries. We can offload most of the work into a templated work function.
+  zx_status_t st = ZX_ERR_NOT_FOUND;
+  if (request_.cap.is_extended) {
+    st = GetNextCapability<uint16_t, ExtCapabilityList>(&request_, &response_,
+                                                        &capabilities().ext_list);
+  } else {
+    st = GetNextCapability<uint8_t, CapabilityList>(&request_, &response_, &capabilities().list);
+  }
   return RpcReply(ch, st);
 }
 

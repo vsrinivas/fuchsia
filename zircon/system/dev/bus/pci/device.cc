@@ -78,6 +78,7 @@ Device::~Device() {
   ModifyCmd(PCI_COMMAND_IO_EN | PCI_COMMAND_MEM_EN, PCIE_CFG_COMMAND_INT_DISABLE);
 
   caps_.list.clear();
+  caps_.ext_list.clear();
   // TODO(cja/ZX-3147): Remove this after porting is finished.
   pci_tracef("%s [%s] dtor finished\n", is_bridge() ? "bridge" : "device", cfg_->addr());
 }
@@ -458,6 +459,15 @@ void Device::Dump() const {
       auto id = static_cast<Capability::Id>(cap.id());
       zxlogf(INFO, "%s (%#x)%s", CapabilityIdToName(id), cap.id(),
              (&cap == &caps_.list.back()) ? "\n" : ", ");
+    }
+  }
+
+  if (!caps_.ext_list.is_empty()) {
+    pci_infof("    extended capabilities: ");
+    for (auto& cap : caps_.ext_list) {
+      auto id = static_cast<ExtCapability::Id>(cap.id());
+      zxlogf(INFO, "%s (%#x)%s", ExtCapabilityIdToName(id), cap.id(),
+             (&cap == &caps_.ext_list.back()) ? "\n" : ", ");
     }
   }
 }
