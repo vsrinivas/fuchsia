@@ -1,6 +1,6 @@
 # zxcrypt
 
-__<font color=red>ALERT: zxcrypt is not secure until [31073][issue31073] is resolved!</font>__
+__<font color=red>ALERT: zxcrypt is not secure until [24992][issue24992] is resolved!</font>__
 
 ## Overview
 zxcrypt is a block device filter driver that transparently encrypts data being written to and
@@ -138,7 +138,7 @@ device keys, e.g. those from a [TPM][tpm], in deriving their zxcrypt key._
 
 ## Future Work
 There are a number of areas where further work could, should, or must be done:
-* __Properly bind with keys__ ([bug][issue31073])
+* __Properly bind with keys__ ([bug][issue24992])
 
   Currently, there is __NO__ way to inject a key at binding.  This forces zxcrypt to currently use a
   __static key__, which catastrophically undermines its security.
@@ -198,7 +198,7 @@ There are a number of areas where further work could, should, or must be done:
 [hmac]: https://www.ietf.org/rfc/rfc2104.txt
 [stretch]: https://en.wikipedia.org/wiki/Key_stretching
 [tpm]: https://trustedcomputinggroup.org/work-groups/trusted-platform-module/
-[issue31073]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=31073
+[issue24992]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=24992
 [issue31081]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=31081
 [aead]: https://tools.ietf.org/html/rfc5116
 [atomic]: https://en.wikipedia.org/wiki/Atomic_commit
