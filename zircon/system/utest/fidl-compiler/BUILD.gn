@@ -48,6 +48,7 @@ if (current_toolchain == default_toolchain) {
 } else {
   test("fidl-compiler") {
     sources = [
+      "array_tests.cc",
       "attributes_tests.cc",
       "bits_tests.cc",
       "coded_types_generator_tests.cc",

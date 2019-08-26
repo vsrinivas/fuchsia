@@ -262,8 +262,7 @@ TypeShape Table::Shape(std::vector<TypeShape*>* fields, types::Strictness strict
   return Struct::Shape(&header, extra_handles);
 }
 
-TypeShape XUnion::Shape(std::vector<FieldShape*>* fields,
-                        types::Strictness strictness,
+TypeShape XUnion::Shape(std::vector<FieldShape*>* fields, types::Strictness strictness,
                         uint32_t extra_handles) {
   TypeShapeBuilder builder{.inline_size = 24, .alignment = 8};
   for (auto& field : *fields) {
@@ -548,6 +547,8 @@ class ArrayTypeTemplate final : public TypeTemplate {
       return MustBeParameterized(maybe_location);
     if (size == nullptr)
       return MustHaveSize(maybe_location);
+    if (size->value == 0)
+      return MustHaveNonZeroSize(maybe_location);
     if (nullability == types::Nullability::kNullable)
       return CannotBeNullable(maybe_location);
 

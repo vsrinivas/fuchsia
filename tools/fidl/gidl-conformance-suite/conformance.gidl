@@ -488,7 +488,6 @@ success("Optionals") {
 
 success("Arrays") {
 	value = StructWithArrays {
-		arr_empty: [],
 		arr_int: [1, 2,],
 		arr_string: ["a", "b",],
 		arr_struct: [StructWithInt{x: 1,},StructWithInt{x: 2,},],

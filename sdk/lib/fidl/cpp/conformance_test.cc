@@ -1016,40 +1016,37 @@ TEST(Conformance, Optionals_Encoding) {
 TEST(Conformance, Arrays_Encoding) {
   conformance::StructWithArrays v1;
 
-  auto v2 = std::array<int32_t, 0>{};
-  v1.arr_empty = std::move(v2);
+  int32_t v2 = 1ull;
+  int32_t v3 = 2ull;
+  auto v4 = std::array<int32_t, 2>{v2, v3};
+  v1.arr_int = std::move(v4);
 
-  int32_t v3 = 1ull;
-  int32_t v4 = 2ull;
-  auto v5 = std::array<int32_t, 2>{v3, v4};
-  v1.arr_int = std::move(v5);
+  std::string v5 = "a";
+  std::string v6 = "b";
+  auto v7 = std::array<std::string, 2>{v5, v6};
+  v1.arr_string = std::move(v7);
 
-  std::string v6 = "a";
-  std::string v7 = "b";
-  auto v8 = std::array<std::string, 2>{v6, v7};
-  v1.arr_string = std::move(v8);
+  conformance::StructWithInt v8;
 
-  conformance::StructWithInt v9;
+  int32_t v9 = 1ull;
+  v8.x = std::move(v9);
+  conformance::StructWithInt v10;
 
-  int32_t v10 = 1ull;
-  v9.x = std::move(v10);
-  conformance::StructWithInt v11;
+  int32_t v11 = 2ull;
+  v10.x = std::move(v11);
+  auto v12 = std::array<conformance::StructWithInt, 2>{v8, v10};
+  v1.arr_struct = std::move(v12);
 
-  int32_t v12 = 2ull;
-  v11.x = std::move(v12);
-  auto v13 = std::array<conformance::StructWithInt, 2>{v9, v11};
-  v1.arr_struct = std::move(v13);
-
-  int32_t v14 = 1ull;
-  int32_t v15 = 2ull;
-  int32_t v16 = 3ull;
-  auto v17 = std::array<int32_t, 3>{v14, v15, v16};
-  int32_t v18 = 4ull;
-  int32_t v19 = 5ull;
-  int32_t v20 = 6ull;
-  auto v21 = std::array<int32_t, 3>{v18, v19, v20};
-  auto v22 = std::array<std::array<int32_t, 3>, 2>{v17, v21};
-  v1.arr_arr_int = std::move(v22);
+  int32_t v13 = 1ull;
+  int32_t v14 = 2ull;
+  int32_t v15 = 3ull;
+  auto v16 = std::array<int32_t, 3>{v13, v14, v15};
+  int32_t v17 = 4ull;
+  int32_t v18 = 5ull;
+  int32_t v19 = 6ull;
+  auto v20 = std::array<int32_t, 3>{v17, v18, v19};
+  auto v21 = std::array<std::array<int32_t, 3>, 2>{v16, v20};
+  v1.arr_arr_int = std::move(v21);
 
   auto expected = std::vector<uint8_t>{
       0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1642,40 +1639,37 @@ TEST(Conformance, Arrays_Decoding) {
 
   conformance::StructWithArrays v1;
 
-  auto v2 = std::array<int32_t, 0>{};
-  v1.arr_empty = std::move(v2);
+  int32_t v2 = 1ull;
+  int32_t v3 = 2ull;
+  auto v4 = std::array<int32_t, 2>{v2, v3};
+  v1.arr_int = std::move(v4);
 
-  int32_t v3 = 1ull;
-  int32_t v4 = 2ull;
-  auto v5 = std::array<int32_t, 2>{v3, v4};
-  v1.arr_int = std::move(v5);
+  std::string v5 = "a";
+  std::string v6 = "b";
+  auto v7 = std::array<std::string, 2>{v5, v6};
+  v1.arr_string = std::move(v7);
 
-  std::string v6 = "a";
-  std::string v7 = "b";
-  auto v8 = std::array<std::string, 2>{v6, v7};
-  v1.arr_string = std::move(v8);
+  conformance::StructWithInt v8;
 
-  conformance::StructWithInt v9;
+  int32_t v9 = 1ull;
+  v8.x = std::move(v9);
+  conformance::StructWithInt v10;
 
-  int32_t v10 = 1ull;
-  v9.x = std::move(v10);
-  conformance::StructWithInt v11;
+  int32_t v11 = 2ull;
+  v10.x = std::move(v11);
+  auto v12 = std::array<conformance::StructWithInt, 2>{v8, v10};
+  v1.arr_struct = std::move(v12);
 
-  int32_t v12 = 2ull;
-  v11.x = std::move(v12);
-  auto v13 = std::array<conformance::StructWithInt, 2>{v9, v11};
-  v1.arr_struct = std::move(v13);
-
-  int32_t v14 = 1ull;
-  int32_t v15 = 2ull;
-  int32_t v16 = 3ull;
-  auto v17 = std::array<int32_t, 3>{v14, v15, v16};
-  int32_t v18 = 4ull;
-  int32_t v19 = 5ull;
-  int32_t v20 = 6ull;
-  auto v21 = std::array<int32_t, 3>{v18, v19, v20};
-  auto v22 = std::array<std::array<int32_t, 3>, 2>{v17, v21};
-  v1.arr_arr_int = std::move(v22);
+  int32_t v13 = 1ull;
+  int32_t v14 = 2ull;
+  int32_t v15 = 3ull;
+  auto v16 = std::array<int32_t, 3>{v13, v14, v15};
+  int32_t v17 = 4ull;
+  int32_t v18 = 5ull;
+  int32_t v19 = 6ull;
+  auto v20 = std::array<int32_t, 3>{v17, v18, v19};
+  auto v21 = std::array<std::array<int32_t, 3>, 2>{v16, v20};
+  v1.arr_arr_int = std::move(v21);
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));

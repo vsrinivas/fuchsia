@@ -903,8 +903,7 @@ struct XUnion final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
-  static TypeShape Shape(std::vector<FieldShape*>* fields,
-                         types::Strictness strictness,
+  static TypeShape Shape(std::vector<FieldShape*>* fields, types::Strictness strictness,
                          uint32_t extra_handles = 0u);
 };
 
@@ -994,6 +993,9 @@ class TypeTemplate {
   }
   bool MustHaveSize(const SourceLocation* maybe_location) const {
     return Fail(maybe_location, "must have size");
+  }
+  bool MustHaveNonZeroSize(const SourceLocation* maybe_location) const {
+    return Fail(maybe_location, "must have non-zero size");
   }
   bool CannotBeParameterized(const SourceLocation* maybe_location) const {
     return Fail(maybe_location, "cannot be parametrized");

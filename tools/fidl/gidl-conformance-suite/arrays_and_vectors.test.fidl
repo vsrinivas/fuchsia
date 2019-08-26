@@ -14,7 +14,6 @@ struct StructWithInt {
 };
 
 struct StructWithArrays {
-    array<int32>:0 arr_empty;
     array<int32>:2 arr_int;
     array<string>:2 arr_string;
     array<StructWithInt>:2 arr_struct;
