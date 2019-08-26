@@ -481,6 +481,11 @@
             "package_name": "valico"
         },
         {
+            "crate_name": "vk_sys",
+            "crate_type": "lib",
+            "package_name": "vk-sys"
+        },
+        {
             "crate_name": "void",
             "crate_type": "lib",
             "package_name": "void"

@@ -752,6 +752,7 @@ dependencies = [
  "utf8parse 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "valico 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vk-sys 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "vte 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "walkdir 2.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2781,6 +2782,11 @@ version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "vk-sys"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3252,6 +3258,7 @@ version = "0.3.99"
 "checksum valico 2.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "37e084b2c7df35a00cb40009b2d7fc12918e38f5515fcf8f96aefd457d558412"
 "checksum vec_map 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "05c78687fb1a80548ae3250346c3db86a80a7cdd77bda190189f2d0a0987c81a"
 "checksum version_check 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "914b1a6776c4c929a602fafd8bc742e06365d4bcbe48c30f9cca5824f70dc9dd"
+"checksum vk-sys 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "36f5fd4a7d6d5d19808610583131c0aed271556527cad4cb71c436831a28e059"
 "checksum void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 "checksum vte 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4f42f536e22f7fcbb407639765c8fd78707a33109301f834a594758bedd6e8cf"
 "checksum wait-timeout 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "b9f3bf741a801531993db6478b95682117471f76916f5e690dd8d45395b09349"
