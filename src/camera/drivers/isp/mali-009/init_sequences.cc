@@ -184,7 +184,7 @@ void ArmIspDevice::IspLoadSeq_settings() {
       .set_input_port_safely_stopped(0x1)
       .WriteTo(&isp_mmio_);
 
-  IspGlobalInterrupt_PulseMode::Get().ReadFrom(&isp_mmio_).set_value(0x1).WriteTo(&isp_mmio_);
+  IspGlobalInterrupt_PulseMode::Get().ReadFrom(&isp_mmio_).set_value(0x0).WriteTo(&isp_mmio_);
 
   IspGlobalInterrupt_Clear::Get().ReadFrom(&isp_mmio_).set_value(0).WriteTo(&isp_mmio_);
 
