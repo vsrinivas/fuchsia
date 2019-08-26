@@ -34,23 +34,12 @@ constexpr uint32_t kEncryptionVersion = 0;
 
 // The default encryption values. Only used until real encryption is
 // implemented: LE-286
-//
-// Use max_int32 for key_index as it will never be used in practice as it is not
-// expected that any user will change its key 2^32 times.
-constexpr uint32_t kDefaultKeyIndex = std::numeric_limits<uint32_t>::max();
+
 // Use max_int32 - 1 for default deletion scoped id. max_int32 has a special
 // meaning in the specification and is used to have per object deletion scope.
 constexpr uint32_t kDefaultDeletionScopeId = std::numeric_limits<uint32_t>::max() - 1;
 // Special deletion scope id that produces a per-object deletion scope.
 constexpr uint32_t kPerObjectDeletionScopedId = std::numeric_limits<uint32_t>::max();
-
-// Size of keys. Key must have 128 bits of entropy. Randomly generated keys can
-// be 128 bits long, but derived ones need to be twice as big because of the
-// birthday paradox.
-// Size of the randomly generated key.
-constexpr size_t kRandomlyGeneratedKeySize = 16u;
-// Size of the derived keys.
-constexpr size_t kDerivedKeySize = 32u;
 
 // Entry id size in bytes.
 constexpr size_t kEntryIdSize = 32u;
@@ -70,56 +59,19 @@ bool CheckValidSerialization(fxl::StringView storage_bytes) {
 
 }  // namespace
 
-// Fake implementation of a key service for the Ledger.
-//
-// This implementation generate fake keys and will need to be replaced by a
-// real component.
-class EncryptionServiceImpl::KeyService {
- public:
-  explicit KeyService(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher), weak_factory_(this) {}
-
-  // Retrieves the master key.
-  void GetMasterKey(uint32_t key_index, fit::function<void(std::string)> callback) {
-    async::PostTask(dispatcher_,
-                    callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                                         [key_index, callback = std::move(callback)]() {
-                                           std::string master_key(16u, 0);
-                                           memcpy(&master_key[0], &key_index, sizeof(key_index));
-                                           callback(std::move(master_key));
-                                         }));
-  }
-
-  // Retrieves the reference key associated to the given namespace and reference
-  // key. If the id is not yet associated with a reference key, generates a new
-  // one and associates it with the id before returning.
-  void GetReferenceKey(const std::string& namespace_id, const std::string& reference_key_id,
-                       fit::function<void(const std::string&)> callback) {
-    std::string result =
-        HMAC256KDF(fxl::Concatenate({namespace_id, reference_key_id}), kRandomlyGeneratedKeySize);
-    async::PostTask(dispatcher_, callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                                                      [result = std::move(result),
-                                                       callback = std::move(callback)]() mutable {
-                                                        callback(result);
-                                                      }));
-  }
-
- private:
-  async_dispatcher_t* const dispatcher_;
-  fxl::WeakPtrFactory<EncryptionServiceImpl::KeyService> weak_factory_;
-};
-
 EncryptionServiceImpl::EncryptionServiceImpl(ledger::Environment* environment,
                                              std::string namespace_id)
     : environment_(environment),
       namespace_id_(std::move(namespace_id)),
-      key_service_(std::make_unique<KeyService>(environment_->dispatcher())),
-      master_keys_(kKeyIndexCacheSize, Status::OK,
-                   [this](auto k, auto c) { FetchMasterKey(std::move(k), std::move(c)); }),
+      key_service_(std::make_unique<KeyService>(environment_->dispatcher(), namespace_id_)),
+      master_keys_(
+          kKeyIndexCacheSize, Status::OK,
+          [this](auto k, auto c) { key_service_->GetMasterKey(std::move(k), std::move(c)); }),
       namespace_keys_(kKeyIndexCacheSize, Status::OK,
                       [this](auto k, auto c) { FetchNamespaceKey(std::move(k), std::move(c)); }),
       reference_keys_(kReferenceKeysCacheSize, Status::OK,
-                      [this](auto k, auto c) { FetchReferenceKey(std::move(k), std::move(c)); }) {}
+                      [this](auto k, auto c) { FetchReferenceKey(std::move(k), std::move(c)); }),
+      chunking_key_(Status::OK, [this](auto c) { key_service_->GetChunkingKey(std::move(c)); }) {}
 
 EncryptionServiceImpl::~EncryptionServiceImpl() {}
 
@@ -253,13 +205,6 @@ void EncryptionServiceImpl::Decrypt(size_t key_index, std::string encrypted_data
                    });
 }
 
-void EncryptionServiceImpl::FetchMasterKey(size_t key_index,
-                                           fit::function<void(Status, std::string)> callback) {
-  key_service_->GetMasterKey(key_index, [callback = std::move(callback)](std::string master_key) {
-    callback(Status::OK, std::move(master_key));
-  });
-}
-
 void EncryptionServiceImpl::FetchNamespaceKey(size_t key_index,
                                               fit::function<void(Status, std::string)> callback) {
   master_keys_.Get(key_index, [this, callback = std::move(callback)](
@@ -295,19 +240,20 @@ void EncryptionServiceImpl::FetchReferenceKey(DeletionScopeSeed deletion_scope_s
 
 void EncryptionServiceImpl::GetChunkingPermutation(
     fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) {
-  master_keys_.Get(kDefaultKeyIndex, [this, callback = std::move(callback)](
-                                         Status status, const std::string& master_key) {
-    if (status != Status::OK) {
-      callback(status, nullptr);
-      return;
-    }
-    std::string derived_key = HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}), 8u);
-    uint64_t chunking_permutation_key = *reinterpret_cast<uint64_t*>(derived_key.data());
-    auto chunking_permutation = [chunking_permutation_key](uint64_t chunk_window_hash) {
-      return chunk_window_hash ^ chunking_permutation_key;
-    };
-    callback(Status::OK, std::move(chunking_permutation));
-  });
+  chunking_key_.Get(
+      [callback = std::move(callback)](Status status, const std::string& chunking_key) {
+        if (status != Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        const uint64_t chunking_permutation_key =
+            *reinterpret_cast<const uint64_t*>(chunking_key.data());
+        // TODO(35273): Use some other permutation.
+        auto chunking_permutation = [chunking_permutation_key](uint64_t chunk_window_hash) {
+          return chunk_window_hash ^ chunking_permutation_key;
+        };
+        callback(Status::OK, std::move(chunking_permutation));
+      });
 }
 
 std::string EncryptionServiceImpl::GetEntryId() {

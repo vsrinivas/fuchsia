@@ -14,6 +14,7 @@
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/cache/lazy_value.h"
 #include "src/ledger/bin/cache/lru_cache.h"
+#include "src/ledger/bin/encryption/impl/key_service.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 
@@ -51,7 +52,6 @@ class EncryptionServiceImpl : public EncryptionService {
   bool IsSameVersion(convert::ExtendedStringView remote_commit_id) override;
 
  private:
-  class KeyService;
   using DeletionScopeSeed = std::pair<size_t, std::string>;
 
   uint32_t GetCurrentKeyIndex();
@@ -63,7 +63,6 @@ class EncryptionServiceImpl : public EncryptionService {
   void Decrypt(size_t key_index, std::string encrypted_data,
                fit::function<void(Status, std::string)> callback);
 
-  void FetchMasterKey(size_t key_index, fit::function<void(Status, std::string)> callback);
   void FetchNamespaceKey(size_t key_index, fit::function<void(Status, std::string)> callback);
   void FetchReferenceKey(DeletionScopeSeed deletion_scope_seed,
                          fit::function<void(Status, std::string)> callback);
@@ -78,6 +77,9 @@ class EncryptionServiceImpl : public EncryptionService {
   cache::LRUCache<uint32_t, std::string, Status> namespace_keys_;
   // Reference keys indexed by deletion scope seed.
   cache::LRUCache<DeletionScopeSeed, std::string, Status> reference_keys_;
+
+  // A key used for hash permutation in chunking.
+  cache::LazyValue<std::string, Status> chunking_key_;
 };
 
 }  // namespace encryption

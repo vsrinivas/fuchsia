@@ -12,6 +12,8 @@ source_set("impl") {
     "encryption_service_factory_impl.h",
     "encryption_service_impl.cc",
     "encryption_service_impl.h",
+    "key_service.cc",
+    "key_service.h",
   ]
 
   deps = [
@@ -53,6 +55,7 @@ source_set("unittests") {
   sources = [
     "encryption_service_factory_impl_unittest.cc",
     "encryption_service_impl_unittest.cc",
+    "key_service_unittest.cc",
   ]
 
   deps = [
