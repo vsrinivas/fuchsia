@@ -161,6 +161,8 @@ inline float LinearInterpolate(float A, float B, uint32_t alpha) {
   return ((B - A) * kFramesPerPtsSubframe * alpha) + A;
 }
 
+inline float LinearInterpolateF(float A, float B, float alpha) { return ((B - A) * alpha) + A; }
+
 //
 // DestMixer
 //

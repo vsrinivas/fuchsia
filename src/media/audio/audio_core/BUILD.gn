@@ -139,6 +139,8 @@ source_set("audio_core_lib") {
     "driver_utils.cc",
     "driver_utils.h",
     "fwd_decls.h",
+    "gain_curve.cc",
+    "gain_curve.h",
     "pending_flush_token.cc",
     "pending_flush_token.h",
     "policy_loader.cc",
@@ -206,6 +208,7 @@ executable("unittest_bin") {
   sources = [
     "audio_link_packet_source_unittest.cc",
     "command_line_options_unittest.cc",
+    "gain_curve_unittest.cc",
     "policy_loader_unittest.cc",
     "policy_loader_unittest_data.h",
     "utils_unittest.cc",
