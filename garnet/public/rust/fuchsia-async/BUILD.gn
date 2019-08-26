@@ -24,6 +24,9 @@ rustc_library("fuchsia-async") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:slab",
   ]
+  test_deps = [
+    "//third_party/rust_crates:futures-test-preview",
+  ]
 }
 
 test_package("fuchsia-async-tests") {

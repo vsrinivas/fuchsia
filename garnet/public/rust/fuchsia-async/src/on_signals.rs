@@ -101,3 +101,35 @@ impl fmt::Debug for OnSignals {
         write!(f, "OnSignals")
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use futures::future::{pending, FutureExt};
+
+    #[test]
+    fn wait_for_event() -> Result<(), zx::Status> {
+        let mut exec = crate::Executor::new()?;
+        let mut deliver_events = || assert!(exec.run_until_stalled(&mut pending::<()>()).is_pending());
+
+        let event = zx::Event::create()?;
+        let mut signals = OnSignals::new(&event, zx::Signals::EVENT_SIGNALED);
+        let (waker, waker_count) = futures_test::task::new_count_waker();
+        let cx = &mut std::task::Context::from_waker(&waker);
+
+        // Check that `signals` is still pending before the event has been signaled
+        assert_eq!(signals.poll_unpin(cx), Poll::Pending);
+        deliver_events();
+        assert_eq!(waker_count, 0);
+        assert_eq!(signals.poll_unpin(cx), Poll::Pending);
+
+        // signal the event and check that `signals` has been woken up and is
+        // no longer pending
+        event.signal_handle(zx::Signals::NONE, zx::Signals::EVENT_SIGNALED)?;
+        deliver_events();
+        assert_eq!(waker_count, 1);
+        assert_eq!(signals.poll_unpin(cx), Poll::Ready(Ok(zx::Signals::EVENT_SIGNALED)));
+
+        Ok(())
+    }
+}
