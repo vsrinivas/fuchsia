@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::clone::Clone;
-use std::iter::Iterator;
-use std::ops::Range;
-use std::vec::Vec;
-use unic_char_range::{chars, CharIter, CharRange};
+use {
+    failure::{format_err, Error},
+    std::{clone::Clone, cmp::Ordering, iter::Iterator, ops::Range, vec::Vec},
+    unic_char_range::{chars, CharIter, CharRange},
+};
 
-/// A trait for objects that represent one or more disjoint
+/// A trait for objects that represent one or more disjoint, non-adjacent
 /// [CharRanges](unic_char_range::CharRange).
 pub trait MultiCharRange {
-    /// Iterate over the discrete [CharRange]s in the collection in ascending order.
+    /// Iterate over the disjoint, non-adjacent [CharRange]s in the collection in ascending order.
     fn iter_ranges<'a>(&'a self) -> Box<dyn Iterator<Item = CharRange> + 'a>;
     /// The number of ranges in the collection.
     fn range_count(&self) -> usize;
@@ -20,7 +20,7 @@ pub trait MultiCharRange {
 /// A collection of `char`s (i.e. Unicode code points), used for storing large continuous ranges
 /// efficiently.
 ///
-/// Lookups and insertions are O(log <var>R</var>), where <var>R</var> is the number of discrete
+/// Lookups and insertions are O(log <var>R</var>), where <var>R</var> is the number of disjoint
 /// ranges in the collection.
 ///
 /// The easiest way to create instances is using the
@@ -47,7 +47,7 @@ pub trait MultiCharRange {
 /// ```
 ///
 /// TODO(kpozin): Implement IntoIter.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct CharCollection {
     ranges: Vec<CharRange>,
 }
@@ -55,7 +55,47 @@ pub struct CharCollection {
 impl CharCollection {
     /// Create a new, empty `CharCollection`.
     pub fn new() -> CharCollection {
-        CharCollection { ranges: Vec::new() }
+        CharCollection::default()
+    }
+
+    /// Create a new `CharCollection` from a list of disjoint, non-adjacent `CharRange`s, pre-sorted
+    /// in ascending code point order.
+    ///
+    /// This factory method is primarily intended for use in deserializing valid representations of
+    /// `CharCollections`. Will return an error if ranges are out of order, overlapping, or
+    /// adjacent.
+    pub fn from_sorted_ranges<T>(ranges: T) -> Result<CharCollection, Error>
+    where
+        T: IntoIterator<Item = CharRange>,
+    {
+        // If the original `ranges` is also a Vec, this doesn't result in an extra copy.
+        let collection = CharCollection { ranges: ranges.into_iter().collect() };
+        let ranges: &Vec<CharRange> = &collection.ranges;
+        match (1..ranges.len()).find(|i| (ranges[*i].low as i64 - ranges[*i - 1].high as i64) <= 1)
+        {
+            Some(i) => Err(format_err!(
+                "These ranges are out of order, overlapping, or adjacent: {}, {}",
+                format_range(&ranges[i - 1]),
+                format_range(&ranges[i])
+            )),
+            None => Ok(collection),
+        }
+    }
+
+    /// Create a new `CharCollection` from a list of `char`s, pre-sorted in ascending code point
+    /// order.
+    ///
+    /// This factory method is primarily intended for use in deserializing valid representations of
+    /// `CharCollections`. Will return an error if chars are out of order or contain duplicates.
+    pub fn from_sorted_chars<T>(chars: T) -> Result<CharCollection, Error>
+    where
+        T: IntoIterator<Item = char>,
+    {
+        let mut collection = CharCollection::new();
+        for ch in chars.into_iter() {
+            collection.append(ch)?;
+        }
+        Ok(collection)
     }
 
     /// Iterate over all the `char`s in the collection.
@@ -97,6 +137,57 @@ impl CharCollection {
     pub fn insert<V: MultiCharRange>(&mut self, to_add: &V) -> &mut Self {
         to_add.iter_ranges().for_each(|range| self.insert_char_range(&range));
         self
+    }
+
+    /// Appends a `char` to the end of the existing collection. Panics if the given `char` is not
+    /// higher than the highest code point in the existing collection.
+    ///
+    /// Returns `&mut self` for easy chaining.
+    ///
+    /// The time complexity is O(1).
+    pub fn append(&mut self, ch: char) -> Result<&mut Self, Error> {
+        let mut coalesced = false;
+        if let Some(last_range) = self.ranges.last_mut() {
+            if last_range.cmp_char(ch) != Ordering::Less {
+                return Err(format_err!("Cannot append {} after {}", ch, last_range.high));
+            }
+            if are_chars_adjacent(&last_range.high, &ch) {
+                last_range.high = ch;
+                coalesced = true;
+            }
+        }
+        if !coalesced {
+            self.ranges.push(chars!(ch..=ch));
+        }
+        Ok(self)
+    }
+
+    /// Appends a `CharRange` to the end of the existing collection. Panics if the given range is
+    /// not higher than the highest code point in the existing collection. (The new range _may_ be
+    /// adjacent to the previous highest range, but may not overlap.)
+    ///
+    /// Returns `&mut self` for easy chaining.
+    ///
+    /// The time complexity is O(1).
+    pub fn append_range(&mut self, range: CharRange) -> Result<&mut Self, Error> {
+        let mut coalesced = false;
+        if let Some(last_range) = self.ranges.last_mut() {
+            if last_range.cmp_char(range.low) != Ordering::Less {
+                return Err(format_err!(
+                    "Cannot append {} after {}",
+                    format_range(&range),
+                    last_range.high
+                ));
+            }
+            if are_chars_adjacent(&last_range.high, &range.low) {
+                last_range.high = range.high;
+                coalesced = true;
+            }
+        }
+        if !coalesced {
+            self.ranges.push(range);
+        }
+        Ok(self)
     }
 
     /// Remove a `char` or other collection of chars from this collection.
@@ -345,11 +436,72 @@ fn are_chars_adjacent(left: &char, right: &char) -> bool {
     }
 }
 
+fn format_range(range: &CharRange) -> String {
+    format!("{}..={}", range.low, range.high)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::are_chars_adjacent;
-    use std::char;
-    use unic_char_range::{chars, CharRange};
+    use {
+        super::{are_chars_adjacent, CharCollection},
+        failure::Error,
+        std::char,
+        unic_char_range::{chars, CharRange},
+    };
+
+    #[test]
+    fn test_from_sorted_ranges() -> Result<(), Error> {
+        let expected = char_collect!('a'..='d', 'g'..='l', 'z');
+        let actual = CharCollection::from_sorted_ranges(vec![
+            chars!('a'..='d'),
+            chars!('g'..='l'),
+            chars!('z'..='z'),
+        ])?;
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_sorted_ranges_out_of_order() {
+        assert!(CharCollection::from_sorted_ranges(vec![
+            chars!('g'..='l'),
+            chars!('a'..='d'),
+            chars!('z'..='z'),
+        ])
+        .is_err());
+    }
+
+    #[test]
+    fn test_from_sorted_ranges_overlap() {
+        assert!(CharCollection::from_sorted_ranges(vec![
+            chars!('a'..='d'),
+            chars!('c'..='l'),
+            chars!('z'..='z'),
+        ])
+        .is_err());
+    }
+
+    #[test]
+    fn test_from_sorted_ranges_adjacent() {
+        assert!(
+            CharCollection::from_sorted_ranges(vec![chars!('a'..='d'), chars!('e'..='g')]).is_err()
+        );
+    }
+
+    #[test]
+    fn test_from_sorted_chars() -> Result<(), Error> {
+        let chars = vec!['a', 'b', 'c', 'd', 'g', 'h', 'i', 'j', 'k', 'l', 'z'];
+        let expected = char_collect!('a'..='d', 'g'..='l', 'z');
+        let actual = CharCollection::from_sorted_chars(chars)?;
+        assert_eq!(actual, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_sorted_chars_out_of_order() {
+        let chars = vec!['a', 'b', 'c', 'd', 'g', 'h', 'i', 'j', 'k', 'l', 'e'];
+        assert!(CharCollection::from_sorted_chars(chars).is_err());
+    }
 
     #[test]
     fn test_find_containing_range() {
@@ -423,6 +575,47 @@ mod tests {
 
         collection += 'd'..='i';
         assert_eq!(collection.ranges, vec![chars!('a'..='m')]);
+    }
+
+    #[test]
+    fn test_append() -> Result<(), Error> {
+        let mut collection = char_collect!('a'..='c');
+
+        collection.append('d')?.append('g')?.append('h')?.append('i')?.append('z')?;
+        assert_eq!(collection, char_collect!('a'..='d', 'g'..='i', 'z'));
+        Ok(())
+    }
+
+    #[test]
+    fn test_append_out_of_order() -> Result<(), Error> {
+        let mut collection = char_collect!('a'..='c');
+        assert!(collection
+            .append('d')?
+            .append('g')?
+            .append('h')?
+            .append('i')?
+            .append('e')
+            .is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_append_range() -> Result<(), Error> {
+        let mut collection = char_collect!('a'..='c');
+        collection.append_range(chars!('g'..='i'))?.append_range(chars!('j'..='m'))?;
+        assert_eq!(collection, char_collect!('a'..='c', 'g'..='m'));
+        Ok(())
+    }
+
+    #[test]
+    fn test_append_range_out_of_order() -> Result<(), Error> {
+        let mut collection = char_collect!('a'..='c');
+        assert!(collection
+            .append_range(chars!('g'..='i'))?
+            .append_range(chars!('j'..='m'))?
+            .append_range(chars!('k'..='m'))
+            .is_err());
+        Ok(())
     }
 
     #[test]
@@ -526,10 +719,9 @@ mod tests {
 
     #[test]
     fn test_iter() {
-        let mut v: Vec<char> = Vec::new();
         let collection = char_collect!('a'..='c', 'j'..='l', 'x'..='z');
 
-        collection.iter().for_each(|ch| v.push(ch));
+        let v = collection.iter().collect::<Vec<char>>();
         assert_eq!(v, vec!['a', 'b', 'c', 'j', 'k', 'l', 'x', 'y', 'z']);
     }
 

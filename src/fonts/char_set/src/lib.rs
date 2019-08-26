@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
-    std::cmp::Ordering,
+    char_collection::CharCollection,
+    std::{cmp::Ordering, convert::TryFrom, iter::Iterator},
 };
 
 type BitmapElement = u64;
@@ -38,6 +38,7 @@ impl CharSetRange {
 
     fn add(&mut self, val: u32) {
         assert!(val >= self.start);
+        assert!(char::try_from(val).is_ok());
 
         if self.bitmap.is_empty() {
             self.start = val;
@@ -60,6 +61,30 @@ impl CharSetRange {
             let index = c as usize - self.start as usize;
             (self.bitmap[index / 64] & (1 << (index % 64))) > 0
         }
+    }
+
+    fn iter(&self) -> CharSetRangeIterator {
+        CharSetRangeIterator { char_set_range: &self, position: self.start.clone() }
+    }
+}
+
+struct CharSetRangeIterator<'a> {
+    char_set_range: &'a CharSetRange,
+    position: u32,
+}
+
+impl Iterator for CharSetRangeIterator<'_> {
+    type Item = char;
+
+    fn next(&mut self) -> Option<char> {
+        while self.position < self.char_set_range.end() {
+            if self.char_set_range.contains(self.position) {
+                self.position += 1;
+                return Some(std::char::from_u32(self.position - 1).unwrap());
+            }
+            self.position += 1;
+        }
+        None
     }
 }
 
@@ -91,37 +116,6 @@ impl CharSet {
         CharSet { ranges }
     }
 
-    pub fn from_string(s: String) -> Result<CharSet, Error> {
-        let mut code_points: Vec<u32> = vec![];
-        let mut prev: u32 = 0;
-        for range in s.split(',').filter(|x| !x.is_empty()) {
-            let mut split = range.split('+');
-
-            let offset: u32 = match split.next() {
-                Some(off) => off
-                    .parse()
-                    .or_else(|_| Err(format_err!("Failed to parse {:?} as u32.", off)))?,
-                None => return Err(format_err!("Failed to parse {:?}: not a valid range.", range)),
-            };
-
-            let length: u32 = match split.next() {
-                Some(len) => len
-                    .parse()
-                    .or_else(|_| Err(format_err!("Failed to parse {:?} as u32.", len)))?,
-                None => 0, // We can treat "0,2,..." as "0+0,2+0,..."
-            };
-
-            if split.next().is_some() {
-                return Err(format_err!("Failed to parse {:?}: not a valid range.", range));
-            }
-
-            let begin = prev + offset;
-            prev = begin + length;
-            code_points.extend(begin..=prev);
-        }
-        Ok(CharSet::new(code_points))
-    }
-
     pub fn contains(&self, c: u32) -> bool {
         match self.ranges.binary_search_by(|r| {
             if r.end() < c {
@@ -140,6 +134,11 @@ impl CharSet {
     pub fn is_empty(&self) -> bool {
         self.ranges.is_empty()
     }
+
+    /// Iterate over all the characters in the the `CharSet` in code point order.
+    pub fn iter(&self) -> impl Iterator<Item = char> + '_ {
+        self.ranges.iter().flat_map(CharSetRange::iter)
+    }
 }
 
 impl Default for CharSet {
@@ -148,9 +147,28 @@ impl Default for CharSet {
     }
 }
 
+impl Into<CharCollection> for &CharSet {
+    fn into(self) -> CharCollection {
+        // Unwrapping is safe because we know `CharSet` iterates in order.
+        CharCollection::from_sorted_chars(self.iter()).unwrap()
+    }
+}
+
+impl From<CharCollection> for CharSet {
+    fn from(value: CharCollection) -> CharSet {
+        CharSet::from(&value)
+    }
+}
+
+impl From<&CharCollection> for CharSet {
+    fn from(value: &CharCollection) -> CharSet {
+        CharSet::new(value.iter().map(|ch| ch as u32).collect::<Vec<u32>>())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, char_collection::char_collect};
 
     #[test]
     fn test_charset() {
@@ -170,21 +188,18 @@ mod tests {
         assert!(!charset.contains(9999));
         assert!(charset.contains(10000));
         assert!(!charset.contains(10001));
+
+        assert_eq!(
+            charset.iter().map(|ch| ch as u32).collect::<Vec<u32>>(),
+            vec![1, 2, 3, 10, 500, 5000, 5001, 10000]
+        );
     }
 
     #[test]
-    fn test_charset_from_string() -> Result<(), Error> {
-        let s = "0,2,11,19+94".to_string();
-        let charset = CharSet::from_string(s)?;
+    fn test_charset_from_char_collection() {
+        let collection = char_collect!(0..=0, 2..=2, 13..=13, 32..=126);
+        let charset = CharSet::from(&collection);
         assert!([0, 2, 13, 32, 54, 126].into_iter().all(|c| charset.contains(*c)));
         assert!([1, 11, 19, 127, 10000].into_iter().all(|c| !charset.contains(*c)));
-        Ok(())
-    }
-
-    #[test]
-    fn test_charset_from_string_not_a_number() {
-        for s in &["0,p,11", "q+1", "3+r"] {
-            assert!(CharSet::from_string(s.to_string()).is_err())
-        }
     }
 }

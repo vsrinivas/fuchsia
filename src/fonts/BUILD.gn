@@ -15,6 +15,7 @@ group("tests") {
     ":font_provider_tests",
     "//src/fonts/char_set:tests",
     "//src/fonts/manifest:tests",
+    "//src/fonts/offset_string:tests",
   ]
 }
 

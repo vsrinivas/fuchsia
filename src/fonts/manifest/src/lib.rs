@@ -2,17 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[macro_use]
+mod serde_ext;
+mod v1_to_v2;
+mod v2;
+
 use {
+    crate::{serde_ext::*, v2::FontsManifest as FontsManifestV2},
     char_set::CharSet,
     failure::{self, format_err, ResultExt},
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
     fuchsia_url::pkg_url::PkgUrl,
-    lazy_static::lazy_static,
-    regex::Regex,
-    serde::de::{self, Deserialize, Deserializer, Error},
-    serde_derive::Deserialize,
+    offset_string::OffsetString,
+    serde::{
+        de::{self, Deserialize, Deserializer, Error},
+        ser::{Serialize, Serializer},
+    },
+    serde_derive::{Deserialize, Serialize},
     serde_json,
     std::{
+        convert::TryFrom,
         fmt,
         fs::{self, File},
         io::Read,
@@ -20,14 +29,22 @@ use {
     },
 };
 
+#[derive(Deserialize, Serialize)]
+#[serde(tag = "version")]
+pub enum FontManifestWrapper {
+    #[serde(rename = "1")]
+    Version1(FontsManifest),
+    #[serde(rename = "2")]
+    Version2(FontsManifestV2),
+}
+
 // Following structs are used to parse manifest.json.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct FontsManifest {
-    pub fallback: Option<String>,
     pub families: Vec<Family>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Family {
     pub family: String,
 
@@ -41,27 +58,27 @@ pub struct Family {
     #[serde(
         alias = "fallback_group",
         default = "default_generic_family",
-        deserialize_with = "deserialize_generic_family"
+        with = "OptGenericFontFamily"
     )]
     pub generic_family: Option<GenericFontFamily>,
 }
 
 pub type LanguageSet = Vec<String>;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Font {
     pub asset: PathBuf,
 
     #[serde(default = "default_index")]
     pub index: u32,
 
-    #[serde(default = "default_slant", deserialize_with = "deserialize_slant")]
+    #[serde(default = "default_slant", with = "SlantDef")]
     pub slant: Slant,
 
     #[serde(default = "default_weight")]
     pub weight: u16,
 
-    #[serde(default = "default_width", deserialize_with = "deserialize_width")]
+    #[serde(default = "default_width", with = "WidthDef")]
     pub width: Width,
 
     #[serde(
@@ -71,10 +88,14 @@ pub struct Font {
     )]
     pub languages: LanguageSet,
 
-    #[serde(default = "default_package", deserialize_with = "deserialize_package")]
+    #[serde(default = "default_package")]
     pub package: Option<PkgUrl>,
 
-    #[serde(default, deserialize_with = "deserialize_code_points")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_code_points",
+        serialize_with = "serialize_code_points"
+    )]
     pub code_points: CharSet,
 }
 
@@ -110,79 +131,6 @@ fn default_package() -> Option<PkgUrl> {
     None
 }
 
-lazy_static! {
-    static ref SEPARATOR_REGEX: Regex = Regex::new(r"[_ ]").unwrap();
-}
-
-fn deserialize_generic_family<'d, D>(deserializer: D) -> Result<Option<GenericFontFamily>, D::Error>
-where
-    D: Deserializer<'d>,
-{
-    use GenericFontFamily::*;
-
-    let s = String::deserialize(deserializer)?;
-    let s: String = SEPARATOR_REGEX.replace_all(&s, "-").to_string();
-    match s.as_str() {
-        "serif" => Ok(Some(Serif)),
-        "sans-serif" => Ok(Some(SansSerif)),
-        "monospace" => Ok(Some(Monospace)),
-        "cursive" => Ok(Some(Cursive)),
-        "fantasy" => Ok(Some(Fantasy)),
-        "system-ui" => Ok(Some(SystemUi)),
-        "emoji" => Ok(Some(Emoji)),
-        "math" => Ok(Some(Math)),
-        "fangsong" => Ok(Some(Fangsong)),
-        x => Err(D::Error::custom(format!("unknown value for generic_family in manifest: {}", x))),
-    }
-}
-
-fn deserialize_slant<'d, D>(deserializer: D) -> Result<Slant, D::Error>
-where
-    D: Deserializer<'d>,
-{
-    use Slant::*;
-
-    let s = String::deserialize(deserializer)?;
-    match s.as_str() {
-        "upright" => Ok(Upright),
-        "italic" => Ok(Italic),
-        "oblique" => Ok(Oblique),
-        x => Err(D::Error::custom(format!("unknown value for slant in manifest: {}", x))),
-    }
-}
-
-fn deserialize_width<'d, D>(deserializer: D) -> Result<Width, D::Error>
-where
-    D: Deserializer<'d>,
-{
-    use Width::*;
-
-    let s = String::deserialize(deserializer)?;
-
-    if let Ok(numeric) = s.parse::<u16>() {
-        match Width::from_primitive(numeric.into()) {
-            Some(value) => Ok(value),
-            None => {
-                Err(D::Error::custom(format!("unknown value for width in manifest: {}", numeric)))
-            }
-        }
-    } else {
-        let s: String = SEPARATOR_REGEX.replace_all(&s, "-").to_string();
-        match s.as_str() {
-            "ultra-condensed" => Ok(UltraCondensed),
-            "extra-condensed" => Ok(ExtraCondensed),
-            "condensed" => Ok(Condensed),
-            "semi-condensed" => Ok(SemiCondensed),
-            "normal" => Ok(Normal),
-            "semi-expanded" => Ok(SemiExpanded),
-            "expanded" => Ok(Expanded),
-            "extra-expanded" => Ok(ExtraExpanded),
-            "ultra-expanded" => Ok(UltraExpanded),
-            x => Err(D::Error::custom(format!("unknown value for width in manifest: {}", x))),
-        }
-    }
-}
-
 /// Helper used to deserialize language field for a font. Language field can contain either a single
 /// string or an array of strings.
 fn deserialize_languages<'d, D>(deserializer: D) -> Result<LanguageSet, D::Error>
@@ -216,22 +164,24 @@ where
     deserializer.deserialize_any(LanguageSetVisitor)
 }
 
-fn deserialize_package<'d, D>(deserializer: D) -> Result<Option<PkgUrl>, D::Error>
-where
-    D: Deserializer<'d>,
-{
-    Some(PkgUrl::deserialize(deserializer)).transpose()
-}
-
 fn deserialize_code_points<'d, D>(deserializer: D) -> Result<CharSet, D::Error>
 where
     D: Deserializer<'d>,
 {
-    let s = String::deserialize(deserializer)?;
-    CharSet::from_string(s).map_err(|e| D::Error::custom(format!("{:?}", e)))
+    let offset_string = OffsetString::deserialize(deserializer)?;
+    CharSet::try_from(offset_string).map_err(|e| D::Error::custom(format!("{:?}", e)))
+}
+
+fn serialize_code_points<S>(code_points: &CharSet, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let offset_string: OffsetString = code_points.into();
+    offset_string.serialize(serializer)
 }
 
 impl FontsManifest {
+    // TODO(8892): Implement loading of v2 manifests.
     pub fn load_from_file(path: &Path) -> Result<FontsManifest, failure::Error> {
         let path = fs::canonicalize(path)?;
         let base_dir =

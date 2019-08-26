@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/offset_string_lib_test"
+    }
+}

@@ -7,7 +7,7 @@
         {
           "asset": "Ephemeral.ttf",
           "package": "fuchsia-pkg://fuchsia.com/font_package_ephemeral_ttf",
-          "code_points": "0,1,48+9,38,2+25"
+          "code_points": "0+1,48+9,38,2+25"
         }
       ]
     }
