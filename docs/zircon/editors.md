@@ -25,13 +25,8 @@ installation instructions.
 YouCompleteMe (and other tools like clang-tidy) require a [JSON compilation
 database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) that
 specifies how each file is compiled. This database is normally stored in a file
-called `compile_commands.json`. 
-
-The following will create a `compile_commands.json` file in the local directory:
-
-```gn
-gn gen build-zircon --export-compile-commands
-```
+called `compile_commands.json`, created automatically by `fx set` (or `fx gen`
+if you need to regenerate it).
 
 ### Use it
 

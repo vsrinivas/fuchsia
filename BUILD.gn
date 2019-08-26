@@ -59,7 +59,7 @@ declare_args() {
   # given the empty string. Path can be source-absolute or system-absolute.
   zircon_tracelog = ""
 
-  # Compliation database filter. Gets passed to --export_compile_commands=<filter>.
+  # Compilation database filter. Gets passed to --export-compile-commands=<filter>.
   zircon_compdb_filter = "legacy-$target_cpu"
 }
 

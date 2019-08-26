@@ -64,7 +64,7 @@ function fx-gen {
     (
       set -ex
       cd "${FUCHSIA_DIR}"
-      fx-gn gen "${FUCHSIA_BUILD_DIR}"
+      fx-gn gen --check --export-compile-commands=default "${FUCHSIA_BUILD_DIR}"
     ) || return 1
 }
 

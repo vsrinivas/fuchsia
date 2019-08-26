@@ -20,6 +20,7 @@ main () {
     fi
 
     rm -f "${FUCHSIA_DIR}/compile_commands.json"
+    fx-gen
     ${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py ${ZIRCON_BUILDROOT}/compile_commands.json \
     ${FUCHSIA_BUILD_DIR}/compile_commands.json > ${FUCHSIA_DIR}/compile_commands.json
 }

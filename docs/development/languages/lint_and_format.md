@@ -137,8 +137,7 @@ $FILES
 Before you run `clang-tidy`, you must:
 
 * Create the compilation command database.
-  The compilation command database is created from running `fx set` or if you pass
-  `--export-compile-commands` to the `gn gen` command.
+  The compilation command database is created from running `fx compdb`.
 * Build the set of generated headers.
   The `clang-tidy` tool partially compiles the source code and most C and C++ code in Fuchsia
   includes headers generated as part of the build.
