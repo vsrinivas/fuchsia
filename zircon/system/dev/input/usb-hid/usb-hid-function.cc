@@ -5,11 +5,15 @@
 #include "usb-hid-function.h"
 
 #include <assert.h>
-#include <memory>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/device/usb-peripheral.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -18,9 +22,6 @@
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <usb/usb-request.h>
-#include <zircon/device/usb-peripheral.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
 
 namespace usb_hid_function {
 
@@ -87,17 +88,23 @@ zx_status_t FakeUsbHidFunction::UsbFunctionInterfaceControl(void* ctx, const usb
       *out_read_actual = func->report_.size();
       return ZX_OK;
     }
+    if (setup->bRequest == USB_HID_GET_PROTOCOL) {
+      memcpy(out_read_buffer, &func->hid_protocol_, sizeof(func->hid_protocol_));
+      *out_read_actual = sizeof(func->hid_protocol_);
+      return ZX_OK;
+    }
   }
   if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
     if (setup->bRequest == USB_HID_SET_REPORT) {
       memcpy(func->report_.data(), write_buffer, func->report_.size());
       return ZX_OK;
     }
+    if (setup->bRequest == USB_HID_SET_PROTOCOL) {
+      func->hid_protocol_ = static_cast<uint8_t>(setup->wValue);
+      return ZX_OK;
+    }
   }
-  if (out_read_actual) {
-    *out_read_actual = 0;
-  }
-  return ZX_OK;
+  return ZX_ERR_IO_REFUSED;
 }
 
 zx_status_t FakeUsbHidFunction::UsbFunctionInterfaceSetConfigured(void* ctx, bool configured,
@@ -123,8 +130,8 @@ zx_status_t FakeUsbHidFunction::Bind() {
       .bAlternateSetting = 0,
       .bNumEndpoints = 1,
       .bInterfaceClass = USB_CLASS_HID,
-      .bInterfaceSubClass = 0,
-      .bInterfaceProtocol = 0,
+      .bInterfaceSubClass = USB_HID_SUBCLASS_BOOT,
+      .bInterfaceProtocol = USB_HID_PROTOCOL_MOUSE,
       .iInterface = 0,
   };
   descriptor_->interrupt = {

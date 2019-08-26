@@ -10,14 +10,21 @@
 
 __BEGIN_CDECLS
 
-/* HID Request Values */
 // clang-format off
+
+// HID Request Values.
 #define USB_HID_GET_REPORT                  0x01
 #define USB_HID_GET_IDLE                    0x02
 #define USB_HID_GET_PROTOCOL                0x03
 #define USB_HID_SET_REPORT                  0x09
 #define USB_HID_SET_IDLE                    0x0A
 #define USB_HID_SET_PROTOCOL                0x0B
+
+// HID USB protocols
+#define USB_HID_PROTOCOL_KBD 0x01
+#define USB_HID_PROTOCOL_MOUSE 0x02
+#define USB_HID_SUBCLASS_BOOT 0x01
+
 // clang-format on
 
 typedef struct {

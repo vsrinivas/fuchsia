@@ -19,10 +19,6 @@
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 
-#define USB_HID_SUBCLASS_BOOT 0x01
-#define USB_HID_PROTOCOL_KBD 0x01
-#define USB_HID_PROTOCOL_MOUSE 0x02
-
 #define to_usb_hid(d) containerof(d, usb_hid_device_t, hiddev)
 
 // This driver binds on any USB device that exposes HID reports. It passes the
@@ -208,8 +204,9 @@ static zx_status_t usb_hid_set_idle(void* ctx, uint8_t rpt_id, uint8_t duration)
 
 static zx_status_t usb_hid_get_protocol(void* ctx, uint8_t* protocol) {
   usb_hid_device_t* hid = ctx;
-  return usb_hid_control(hid, USB_DIR_IN, USB_HID_GET_PROTOCOL, 0, hid->interface, protocol,
-                         sizeof(*protocol), NULL);
+  return usb_hid_control(hid, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                         USB_HID_GET_PROTOCOL, 0, hid->interface, protocol, sizeof(*protocol),
+                         NULL);
 }
 
 static zx_status_t usb_hid_set_protocol(void* ctx, uint8_t protocol) {

@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
+#define ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
+
+#include <zircon/hw/usb/hid.h>
 
 #include <memory>
 #include <vector>
 
 #include <ddk/device.h>
+#include <ddk/protocol/hidbus.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/function.h>
-#include <zircon/hw/usb/hid.h>
 
 namespace usb_hid_function {
 
@@ -66,6 +69,10 @@ class FakeUsbHidFunction : public DeviceType {
   };
   std::unique_ptr<fake_usb_hid_descriptor_t, DescriptorDeleter> descriptor_;
   size_t descriptor_size_;
+
+  uint8_t hid_protocol_ = HID_PROTOCOL_REPORT;
 };
 
 }  // namespace usb_hid_function
+
+#endif  // ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
