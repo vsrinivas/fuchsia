@@ -46,23 +46,14 @@ class AudioLinkPacketSourceTest : public gtest::TestLoopFixture {
     packet.payload_offset = 0;
     packet.payload_size = PAGE_SIZE;
     return fbl::MakeRefCounted<AudioPacketRef>(
-        std::move(vmo_mapper), [] {}, std::move(packet),
-        [this](std::unique_ptr<AudioPacketRef> p) { OnAudioPacketRefReleased(std::move(p)); }, 0,
-        0);
+        std::move(vmo_mapper), dispatcher(), [this] { ++released_packet_count_; },
+        std::move(packet), 0, 0);
   }
 
-  std::deque<std::unique_ptr<AudioPacketRef>> TakeReleasedPackets() {
-    return std::move(released_packets_);
-  }
-  const std::deque<std::unique_ptr<AudioPacketRef>>& ReleasedPackets() const {
-    return released_packets_;
-  }
+  size_t released_packet_count() const { return released_packet_count_; }
 
  private:
-  void OnAudioPacketRefReleased(std::unique_ptr<AudioPacketRef> pkt) {
-    released_packets_.push_back(std::move(pkt));
-  }
-  std::deque<std::unique_ptr<AudioPacketRef>> released_packets_;
+  size_t released_packet_count_ = 0;
 };
 
 TEST_F(AudioLinkPacketSourceTest, PushToPendingQueue) {
@@ -73,7 +64,7 @@ TEST_F(AudioLinkPacketSourceTest, PushToPendingQueue) {
 
   link->PushToPendingQueue(CreateAudioPacketRef());
   ASSERT_FALSE(link->pending_queue_empty());
-  ASSERT_EQ(0u, ReleasedPackets().size());
+  ASSERT_EQ(0u, released_packet_count());
 }
 
 TEST_F(AudioLinkPacketSourceTest, FlushPendingQueue) {
@@ -83,12 +74,14 @@ TEST_F(AudioLinkPacketSourceTest, FlushPendingQueue) {
   ASSERT_TRUE(link->pending_queue_empty());
   link->PushToPendingQueue(CreateAudioPacketRef());
   ASSERT_FALSE(link->pending_queue_empty());
-  ASSERT_EQ(0u, ReleasedPackets().size());
+  ASSERT_EQ(0u, released_packet_count());
 
   // Flush queue (discard all packets). Expect to see one packet released back to us.
   link->FlushPendingQueue(nullptr);
+  RunLoopUntilIdle();
+
   ASSERT_TRUE(link->pending_queue_empty());
-  ASSERT_EQ(1u, ReleasedPackets().size());
+  ASSERT_EQ(1u, released_packet_count());
 }
 
 // Simulate the packet sink popping packets off the pending queue.
@@ -101,7 +94,7 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   link->PushToPendingQueue(CreateAudioPacketRef(1));
   link->PushToPendingQueue(CreateAudioPacketRef(2));
   ASSERT_FALSE(link->pending_queue_empty());
-  ASSERT_EQ(0u, ReleasedPackets().size());
+  ASSERT_EQ(0u, released_packet_count());
 
   // Now pop off the packets in FIFO order.
   //
@@ -112,11 +105,12 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_NE(nullptr, packet);
   ASSERT_EQ(0u, packet->payload_buffer_id());
   ASSERT_FALSE(link->pending_queue_empty());
-  ASSERT_EQ(0u, ReleasedPackets().size());
+  ASSERT_EQ(0u, released_packet_count());
   packet.reset();
   link->UnlockPendingQueueFront(true);
+  RunLoopUntilIdle();
   ASSERT_FALSE(link->pending_queue_empty());
-  ASSERT_EQ(1u, ReleasedPackets().size());
+  ASSERT_EQ(1u, released_packet_count());
 
   // Packet #1
   packet = link->LockPendingQueueFront(&was_flushed);
@@ -125,8 +119,9 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_EQ(1u, packet->payload_buffer_id());
   packet.reset();
   link->UnlockPendingQueueFront(true);
+  RunLoopUntilIdle();
   ASSERT_FALSE(link->pending_queue_empty());
-  ASSERT_EQ(2u, ReleasedPackets().size());
+  ASSERT_EQ(2u, released_packet_count());
 
   // ...and #2
   packet = link->LockPendingQueueFront(&was_flushed);
@@ -135,8 +130,9 @@ TEST_F(AudioLinkPacketSourceTest, LockUnlockPendingQueue) {
   ASSERT_EQ(2u, packet->payload_buffer_id());
   packet.reset();
   link->UnlockPendingQueueFront(true);
+  RunLoopUntilIdle();
   ASSERT_TRUE(link->pending_queue_empty());
-  ASSERT_EQ(3u, ReleasedPackets().size());
+  ASSERT_EQ(3u, released_packet_count());
 }
 
 }  // namespace

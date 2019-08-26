@@ -22,29 +22,26 @@ class PendingFlushToken : public fbl::RefCounted<PendingFlushToken>,
                           public fbl::DoublyLinkedListable<std::unique_ptr<PendingFlushToken>> {
  public:
   static fbl::RefPtr<PendingFlushToken> Create(
-      AudioCoreImpl* const service,
+      async_dispatcher_t* dispatcher,
       fuchsia::media::AudioRenderer::DiscardAllPacketsCallback callback) {
-    return fbl::AdoptRef(new PendingFlushToken(service, std::move(callback)));
+    return fbl::AdoptRef(new PendingFlushToken(dispatcher, std::move(callback)));
   }
-
-  void Cleanup() { callback_(); }
 
  private:
   friend class fbl::RefPtr<PendingFlushToken>;
   friend class fbl::Recyclable<PendingFlushToken>;
   friend class std::default_delete<PendingFlushToken>;
 
-  PendingFlushToken(AudioCoreImpl* const service,
+  PendingFlushToken(async_dispatcher_t* dispatcher,
                     fuchsia::media::AudioRenderer::DiscardAllPacketsCallback callback)
-      : service_(service), callback_(std::move(callback)) {}
+      : dispatcher_(dispatcher), callback_(std::move(callback)) {}
 
-  ~PendingFlushToken();
+  ~PendingFlushToken() = default;
 
   void fbl_recycle();
 
-  AudioCoreImpl* const service_;
+  async_dispatcher_t* dispatcher_;
   fuchsia::media::AudioRenderer::DiscardAllPacketsCallback callback_;
-  bool was_recycled_ = false;
 };
 
 }  // namespace media::audio

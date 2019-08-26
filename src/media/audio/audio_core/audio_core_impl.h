@@ -53,19 +53,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
 
   void EnableDeviceSettings(bool enabled) final;
 
-  // Called (indirectly) by AudioOutputs to schedule the callback for a
-  // packet was queued to an AudioRenderer.
-  //
-  // TODO(johngro): This bouncing through thread contexts is inefficient and
-  // will increase the latency requirements for clients (its going to take them
-  // some extra time to discover that their media has been completely consumed).
-  // When fidl exposes a way to safely invoke interface method callbacks from
-  // threads other than the thread which executed the method itself, we will
-  // want to switch to creating the callback message directly, instead of
-  // indirecting through the service.
-  void SchedulePacketCleanup(std::unique_ptr<AudioPacketRef> packet);
-  void ScheduleFlushCleanup(std::unique_ptr<PendingFlushToken> token);
-
   // Schedule a closure to run on the service's main message loop.
   void ScheduleMainThreadTask(fit::closure task) {
     FXL_DCHECK(dispatcher_);
@@ -113,7 +100,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   void NotifyGainMuteChanged();
   void PublishServices();
   void Shutdown();
-  void DoPacketCleanup(trace_async_id_t nonce);
 
   fidl::BindingSet<fuchsia::media::AudioCore> bindings_;
 
@@ -129,15 +115,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   AudioAdmin audio_admin_;
 
   std::unique_ptr<sys::ComponentContext> component_context_;
-
-  // State for dealing with cleanup tasks.
-  std::mutex cleanup_queue_mutex_;
-  fbl::DoublyLinkedList<std::unique_ptr<AudioPacketRef>> packet_cleanup_queue_
-      FXL_GUARDED_BY(cleanup_queue_mutex_);
-  fbl::DoublyLinkedList<std::unique_ptr<PendingFlushToken>> flush_cleanup_queue_
-      FXL_GUARDED_BY(cleanup_queue_mutex_);
-  bool cleanup_scheduled_ FXL_GUARDED_BY(cleanup_queue_mutex_) = false;
-  bool shutting_down_ = false;
 
   // TODO(johngro): remove this state.  Migrate users to AudioDeviceEnumerator,
   // to control gain on a per-input/output basis.

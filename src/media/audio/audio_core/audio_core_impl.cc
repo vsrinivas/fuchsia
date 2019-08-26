@@ -77,11 +77,7 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_co
   PublishServices();
 }
 
-AudioCoreImpl::~AudioCoreImpl() {
-  Shutdown();
-  FXL_DCHECK(packet_cleanup_queue_.is_empty());
-  FXL_DCHECK(flush_cleanup_queue_.is_empty());
-}
+AudioCoreImpl::~AudioCoreImpl() { Shutdown(); }
 
 void AudioCoreImpl::PublishServices() {
   component_context_->outgoing()->AddPublicService<fuchsia::media::AudioCore>(
@@ -99,9 +95,7 @@ void AudioCoreImpl::PublishServices() {
 
 void AudioCoreImpl::Shutdown() {
   TRACE_DURATION("audio", "AudioCoreImpl::Shutdown");
-  shutting_down_ = true;
   device_manager_.Shutdown();
-  DoPacketCleanup(0);
 }
 
 void AudioCoreImpl::CreateAudioRenderer(
@@ -243,73 +237,6 @@ void AudioCoreImpl::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage,
                                         fuchsia::media::AudioCapturer* capturer) {
   TRACE_DURATION("audio", "AudioCoreImpl::UpdateCapturerState");
   audio_admin_.UpdateCapturerState(usage, active, capturer);
-}
-
-void AudioCoreImpl::DoPacketCleanup(trace_async_id_t nonce) {
-  TRACE_DURATION("audio", "AudioCoreImpl::DoPacketCleanup");
-  TRACE_FLOW_END("audio", "DoPacketCleanup", nonce);
-  // In order to minimize the time we spend in the lock we obtain the lock, swap // the contents of
-  // the cleanup queue with a local queue and clear the sched flag, and finally unlock clean out the
-  // queue (which has the side effect of triggering all of the send packet callbacks).
-  //
-  // Note: this is only safe because we know that we are executing on a single
-  // threaded task runner.  Without this guarantee, it might be possible call
-  // the send packet callbacks in a different order than the packets were sent
-  // in the first place.  If the async object for the audio service ever loses
-  // this serialization guarantee (because it becomes multi-threaded, for
-  // example) we will need to introduce another lock (different from the cleanup
-  // lock) in order to keep the cleanup tasks properly ordered while
-  // guaranteeing minimal contention of the cleanup lock (which is being
-  // acquired by the high priority mixing threads).
-  fbl::DoublyLinkedList<std::unique_ptr<AudioPacketRef>> tmp_packet_queue;
-  fbl::DoublyLinkedList<std::unique_ptr<PendingFlushToken>> tmp_token_queue;
-
-  {
-    std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
-    packet_cleanup_queue_.swap(tmp_packet_queue);
-    flush_cleanup_queue_.swap(tmp_token_queue);
-    cleanup_scheduled_ = false;
-  }
-
-  // Call the Cleanup method for each of the packets in order, then let the tmp
-  // queue go out of scope cleaning up all of the packet references.
-  for (auto& packet_ref : tmp_packet_queue) {
-    packet_ref.Cleanup();
-  }
-
-  for (auto& token : tmp_token_queue) {
-    token.Cleanup();
-  }
-}
-
-void AudioCoreImpl::SchedulePacketCleanup(std::unique_ptr<AudioPacketRef> packet) {
-  TRACE_DURATION("audio", "AudioCoreImpl::SchedulePacketCleanup");
-  std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
-
-  packet_cleanup_queue_.push_back(std::move(packet));
-
-  if (!cleanup_scheduled_ && !shutting_down_) {
-    FXL_DCHECK(dispatcher_);
-    auto nonce = TRACE_NONCE();
-    TRACE_FLOW_BEGIN("audio", "DoPacketCleanup", nonce);
-    async::PostTask(dispatcher_, [this, nonce]() { DoPacketCleanup(nonce); });
-    cleanup_scheduled_ = true;
-  }
-}
-
-void AudioCoreImpl::ScheduleFlushCleanup(std::unique_ptr<PendingFlushToken> token) {
-  TRACE_DURATION("audio", "AudioCoreImpl::ScheduleFlushCleanup");
-  std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
-
-  flush_cleanup_queue_.push_back(std::move(token));
-
-  if (!cleanup_scheduled_ && !shutting_down_) {
-    FXL_DCHECK(dispatcher_);
-    auto nonce = TRACE_NONCE();
-    TRACE_FLOW_BEGIN("audio", "DoPacketCleanup", nonce);
-    async::PostTask(dispatcher_, [this, nonce]() { DoPacketCleanup(nonce); });
-    cleanup_scheduled_ = true;
-  }
 }
 
 }  // namespace media::audio

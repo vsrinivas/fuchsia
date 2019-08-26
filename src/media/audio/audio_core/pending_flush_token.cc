@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/pending_flush_token.h"
 
+#include <lib/async/cpp/task.h>
+
 #include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
@@ -11,17 +13,12 @@
 
 namespace media::audio {
 
-PendingFlushToken::~PendingFlushToken() { FXL_DCHECK(was_recycled_); }
-
 void PendingFlushToken::fbl_recycle() {
   TRACE_DURATION("audio", "PendingFlushToken::fbl_recycle");
-  if (!was_recycled_) {
-    was_recycled_ = true;
-    FXL_DCHECK(service_);
-    service_->ScheduleFlushCleanup(std::unique_ptr<PendingFlushToken>(this));
-  } else {
-    delete this;
+  if (callback_) {
+    async::PostTask(dispatcher_, std::move(callback_));
   }
+  delete this;
 }
 
 }  // namespace media::audio

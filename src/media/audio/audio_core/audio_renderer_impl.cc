@@ -646,10 +646,9 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   start_pts &= mask;
 
   // Create the packet.
-  auto packet_ref = fbl::MakeRefCounted<AudioPacketRef>(
-      payload_buffer, std::move(callback), packet,
-      [owner = this->owner_](auto p) { owner->SchedulePacketCleanup(std::move(p)); },
-      frame_count << kPtsFractionalBits, start_pts);
+  auto packet_ref =
+      fbl::MakeRefCounted<AudioPacketRef>(payload_buffer, owner_->dispatcher(), std::move(callback),
+                                          packet, frame_count << kPtsFractionalBits, start_pts);
 
   // The end pts is the value we will use for the next packet's start PTS, if the user does not
   // provide an explicit PTS.
@@ -687,7 +686,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // at the proper time.
   fbl::RefPtr<PendingFlushToken> flush_token;
   if (callback != nullptr) {
-    flush_token = PendingFlushToken::Create(owner_, std::move(callback));
+    flush_token = PendingFlushToken::Create(owner_->dispatcher(), std::move(callback));
   }
 
   // Tell each link to flush. If link is currently processing pending data, it will take a reference

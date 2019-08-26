@@ -30,12 +30,9 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
                        public fbl::Recyclable<AudioPacketRef>,
                        public fbl::DoublyLinkedListable<std::unique_ptr<AudioPacketRef>> {
  public:
-  using ReleaseHandler = fit::inline_function<void(std::unique_ptr<AudioPacketRef>), sizeof(void*)>;
-
-  AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
+  AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, async_dispatcher_t* callback_dispatcher,
                  fuchsia::media::AudioRenderer::SendPacketCallback callback,
-                 fuchsia::media::StreamPacket packet, ReleaseHandler release_handler,
-                 uint32_t frac_frame_len, int64_t start_pts);
+                 fuchsia::media::StreamPacket packet, uint32_t frac_frame_len, int64_t start_pts);
 
   // Accessors for starting and ending presentation time stamps expressed in
   // units of audio frames (note, not media time), as signed 50.13 fixed point
@@ -59,10 +56,6 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
   int64_t end_pts() const { return end_pts_; }
   uint32_t frac_frame_len() const { return frac_frame_len_; }
 
-  void Cleanup() {
-    FXL_DCHECK(callback_ != nullptr);
-    callback_();
-  }
   void* payload() {
     auto start = reinterpret_cast<uint8_t*>(vmo_ref_->start());
     return (start + packet_.payload_offset);
@@ -75,12 +68,6 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
   friend class fbl::Recyclable<AudioPacketRef>;
   friend class std::default_delete<AudioPacketRef>;
 
-  // Check to see if this packet has a valid callback.  If so, when it gets
-  // recycled for the first time, it needs to be kept alive and posted to the
-  // service's cleanup queue so that the user's callback gets called on the main
-  // service dispatcher thread.
-  bool NeedsCleanup() { return callback_ != nullptr; }
-
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;
   fuchsia::media::AudioRenderer::SendPacketCallback callback_;
   fuchsia::media::StreamPacket packet_;
@@ -88,11 +75,10 @@ class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
   uint32_t frac_frame_len_;
   int64_t start_pts_;
   int64_t end_pts_;
-  bool was_recycled_ = false;
 
  private:
   void fbl_recycle();
-  ReleaseHandler release_handler_;
+  async_dispatcher_t* dispatcher_;
   trace_async_id_t nonce_ = TRACE_NONCE();
 };
 

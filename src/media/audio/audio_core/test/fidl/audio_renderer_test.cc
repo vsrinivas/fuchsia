@@ -181,8 +181,59 @@ TEST_F(AudioRendererTest, RemovePayloadBufferWhileOperationalCausesDisconnect) {
 // StreamSink validation
 //
 
-// TODO(mpuryear): test SendPacket(StreamPacket packet) -> ();
-// Also negative testing: malformed packet
+//
+// SendPacket tests.
+//
+TEST_F(AudioRendererTest, SendPacket) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  bool callback_received = false;
+  audio_renderer_->SendPacket(std::move(packet),
+                              [&callback_received] { callback_received = true; });
+
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP, [](...) {});
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &callback_received]() { return error_occurred_ || callback_received; },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
+  EXPECT_TRUE(callback_received);
+}
+
+TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  uint32_t callback_count = 0;
+  audio_renderer_->SendPacket(fidl::Clone(packet),
+                              [&callback_count] { EXPECT_EQ(0u, callback_count++); });
+  audio_renderer_->SendPacket(fidl::Clone(packet),
+                              [&callback_count] { EXPECT_EQ(1u, callback_count++); });
+  audio_renderer_->SendPacket(fidl::Clone(packet),
+                              [&callback_count] { EXPECT_EQ(2u, callback_count++); });
+  audio_renderer_->SendPacket(fidl::Clone(packet),
+                              [&callback_count] { EXPECT_EQ(3u, callback_count++); });
+
+  // Play and expect the callbacks in order.
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP, [](...) {});
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &callback_count]() { return error_occurred_ || (callback_count == 4u); },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
+  EXPECT_EQ(4u, callback_count);
+}
 
 //
 // SendPacketNoReply tests.

@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_packet_ref.h"
 
+#include <lib/async/cpp/task.h>
+
 #include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
@@ -11,35 +13,29 @@
 namespace media::audio {
 
 AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
+                               async_dispatcher_t* callback_dispatcher,
                                fuchsia::media::AudioRenderer::SendPacketCallback callback,
-                               fuchsia::media::StreamPacket packet, ReleaseHandler release_handler,
-                               uint32_t frac_frame_len, int64_t start_pts)
+                               fuchsia::media::StreamPacket packet, uint32_t frac_frame_len,
+                               int64_t start_pts)
     : vmo_ref_(std::move(vmo_ref)),
       callback_(std::move(callback)),
       packet_(packet),
       frac_frame_len_(frac_frame_len),
       start_pts_(start_pts),
       end_pts_(start_pts + frac_frame_len),
-      release_handler_(std::move(release_handler)) {
+      dispatcher_(callback_dispatcher) {
   TRACE_DURATION("audio", "AudioPacketRef::AudioPacketRef");
   TRACE_FLOW_BEGIN("audio", "ProcessPacket", nonce_);
-  FXL_DCHECK(release_handler_);
+  FXL_DCHECK(dispatcher_ != nullptr);
   FXL_DCHECK(vmo_ref_ != nullptr);
 }
 
 void AudioPacketRef::fbl_recycle() {
   TRACE_DURATION("audio", "AudioPacketRef::fbl_recycle");
   TRACE_FLOW_END("audio", "ProcessPacket", nonce_);
-  // If the packet is dying for the first time, and we successfully queue it for
-  // cleanup, allow it to live on until the cleanup actually runs.  Otherwise
-  // the object is at its end of life.
-  if (!was_recycled_) {
-    was_recycled_ = true;
-    if (NeedsCleanup()) {
-      FXL_DCHECK(release_handler_);
-      release_handler_(std::unique_ptr<AudioPacketRef>(this));
-      return;
-    }
+
+  if (callback_) {
+    async::PostTask(dispatcher_, std::move(callback_));
   }
 
   delete this;
