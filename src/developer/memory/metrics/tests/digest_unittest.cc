@@ -159,5 +159,63 @@ TEST_F(DigestUnitTest, Orphaned) {
   EXPECT_EQ(0U, b.size());
 }
 
+TEST_F(DigestUnitTest, DefaultBuckets) {
+  // Test kernel stats.
+  Capture c;
+  TestUtils::CreateCapture(
+      c, {
+             .vmos =
+                 {
+                     {.koid = 1, .name = "", .committed_bytes = 1},
+                     {.koid = 2, .name = "magma_create_buffer", .committed_bytes = 2},
+                     {.koid = 3, .name = "Sysmem:buf", .committed_bytes = 3},
+                     {.koid = 4, .name = "test", .committed_bytes = 4},
+                     {.koid = 5, .name = "test", .committed_bytes = 5},
+                     {.koid = 6, .name = "test", .committed_bytes = 6},
+                     {.koid = 7, .name = "test", .committed_bytes = 7},
+                     {.koid = 8, .name = "test", .committed_bytes = 8},
+                     {.koid = 9, .name = "test", .committed_bytes = 9},
+                     {.koid = 10, .name = "test", .committed_bytes = 10},
+                     {.koid = 11, .name = "test", .committed_bytes = 11},
+                     {.koid = 12, .name = "test", .committed_bytes = 12},
+                     {.koid = 13, .name = "test", .committed_bytes = 13},
+                     {.koid = 14, .name = "test", .committed_bytes = 14},
+                     {.koid = 15, .name = "test", .committed_bytes = 15},
+                     {.koid = 16, .name = "test", .committed_bytes = 16},
+                 },
+             .processes =
+                 {
+                     {.koid = 1, .name = "bin/bootsvc", .vmos = {1}},
+                     {.koid = 2, .name = "test", .vmos = {2}},
+                     {.koid = 3, .name = "devhost:sys", .vmos = {3}},
+                     {.koid = 4, .name = "minfs:/data", .vmos = {4}},
+                     {.koid = 5, .name = "blobfs:/blob", .vmos = {5}},
+                     {.koid = 6, .name = "io.flutter.product_runner.jit", .vmos = {6}},
+                     {.koid = 7, .name = "/pkg/web_engine_exe", .vmos = {7}},
+                     {.koid = 8, .name = "kronk.cmx", .vmos = {8}},
+                     {.koid = 9, .name = "scenic.cmx", .vmos = {9}},
+                     {.koid = 10, .name = "devhost:pdev:05:00:f", .vmos = {10}},
+                     {.koid = 11, .name = "netstack.cmx", .vmos = {11}},
+                     {.koid = 12, .name = "amber.cmx", .vmos = {12}},
+                     {.koid = 13, .name = "pkgfs", .vmos = {13}},
+                     {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
+                     {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
+                     {.koid = 16, .name = "new", .vmos = {16}},
+                 },
+         });
+  Digest d(c);
+  auto const& buckets = d.buckets();
+  EXPECT_EQ(1U, d.undigested_vmos().size());
+  ASSERT_EQ(16U, buckets.size());
+  for (uint64_t b = 0; b < 15; b++) {
+    // They will be sorted in reverse order of size.
+    uint64_t m = 15 - b;
+    EXPECT_STREQ(Digest::kDefaultBucketMatches[m - 1].name.c_str(), buckets[b].name().c_str());
+    EXPECT_EQ(m, buckets[b].size());
+  }
+  EXPECT_STREQ("Undigested", buckets[15].name().c_str());
+  EXPECT_EQ(16U, buckets[15].size());
+}
+
 }  // namespace test
 }  // namespace memory

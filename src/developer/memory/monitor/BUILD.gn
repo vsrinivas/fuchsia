@@ -4,11 +4,14 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
 
 source_set("lib") {
   sources = [
     "high_water.cc",
     "high_water.h",
+    "metrics.cc",
+    "metrics.h",
     "monitor.cc",
     "monitor.h",
   ]
@@ -17,14 +20,26 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.memory",
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/metrics",
+    "//zircon/public/fidl/fuchsia-cobalt",
   ]
   deps = [
+    ":memory_metrics_registry",
     "//garnet/public/lib/fsl",
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
+}
+
+metrics_registry("memory_metrics_registry") {
+  # This must match the name of our Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "memory"
+  namespace = "cobalt_registry"
+  generate_cc = true
+  generate_binarypb = false
 }
 
 executable("bin") {

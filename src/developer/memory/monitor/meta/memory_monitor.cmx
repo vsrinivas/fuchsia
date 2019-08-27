@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.boot.RootJob",
             "fuchsia.boot.RootResource",
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]

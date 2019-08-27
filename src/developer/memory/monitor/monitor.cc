@@ -39,14 +39,16 @@ using namespace memory;
 const char Monitor::kTraceName[] = "memory_monitor";
 
 namespace {
-const zx::duration kPollFrequency = zx::sec(10);
-const uint64_t kThreshold = 10 * 1024 * 1024;
+const zx::duration kHighWaterPollFrequency = zx::sec(10);
+const uint64_t kHighWaterThreshold = 10 * 1024 * 1024;
+const zx::duration kMetricsPollFrequency = zx::min(5);
 }  // namespace
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
-                 const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher)
+                 const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher,
+                 bool send_metrics)
     : high_water_(
-          "/cache", kPollFrequency, kThreshold, dispatcher,
+          "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
           [this](Capture& c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
       prealloc_size_(0),
       logging_(command_line.HasOption("log")),
@@ -122,6 +124,35 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     FXL_LOG(INFO) << "Total: " << kmem.total_bytes << " Wired: " << kmem.wired_bytes
                   << " Total Heap: " << kmem.total_heap_bytes;
   }
+
+  if (send_metrics) {
+    fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+    // Create a Cobalt Logger. The project name is the one we specified in the
+    // Cobalt metrics registry. We specify that our release stage is DOGFOOD.
+    // This means we are not allowed to use any metrics declared as DEBUG
+    // or FISHFOOD.
+    static const char kProjectName[] = "memory";
+    // Connect to the cobalt fidl service provided by the environment.
+    fuchsia::cobalt::LoggerFactorySyncPtr factory;
+
+    component_context_->svc()->Connect(factory.NewRequest());
+    if (!factory) {
+      FXL_LOG(ERROR) << "Unable to get LoggerFactory.";
+      return;
+    }
+
+    factory->CreateLoggerFromProjectName(kProjectName, fuchsia::cobalt::ReleaseStage::DOGFOOD,
+                                         logger_.NewRequest(), &status);
+    if (status != fuchsia::cobalt::Status::OK) {
+      FXL_LOG(ERROR) << "Unable to get Logger from factory";
+      return;
+    }
+    std::cerr << "Creating Metrics()()\n";
+    metrics_ = std::make_unique<Metrics>(
+        kMetricsPollFrequency, dispatcher, logger_.get(),
+        [this](Capture& c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
+  }
+
   SampleAndPost();
 }
 

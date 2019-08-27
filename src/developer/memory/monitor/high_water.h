@@ -19,9 +19,8 @@ namespace monitor {
 
 class HighWater {
  public:
-  explicit HighWater(const std::string& dir, zx::duration poll_frequency,
-                     uint64_t high_water_threshold, async_dispatcher_t* dispatcher,
-                     fit::function<zx_status_t(memory::Capture&, memory::CaptureLevel)> capture_cb);
+  HighWater(const std::string& dir, zx::duration poll_frequency, uint64_t high_water_threshold,
+            async_dispatcher_t* dispatcher, memory::CaptureFn capture_cb);
   ~HighWater() = default;
 
   void RecordHighWater(const memory::Capture& capture);

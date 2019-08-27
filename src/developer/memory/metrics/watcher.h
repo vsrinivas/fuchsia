@@ -13,6 +13,11 @@
 
 namespace memory {
 
+// Used by Watcher to capture memory periodically.
+using CaptureFn = fit::function<zx_status_t(Capture &, CaptureLevel)>;
+// Used by Watcher to notify when new high water marks have been reached.
+using HighWaterFn = fit::function<void (const Capture &)>;
+
 // Watches memory usage and reports back when memory reaches a new high.
 class Watcher {
  public:
@@ -22,9 +27,7 @@ class Watcher {
   // |high_water_cb| will be called.
   // |capture_cb| is used to access memory usage.
   Watcher(zx::duration poll_frequency, uint64_t high_water_threshold,
-          async_dispatcher_t* dispatcher,
-          fit::function<zx_status_t(Capture&, CaptureLevel)> capture_cb,
-          fit::function<void(const Capture&)> high_water_cb);
+          async_dispatcher_t* dispatcher, CaptureFn capture_cb, HighWaterFn high_water_cb);
   ~Watcher() = default;
 
  private:
@@ -34,8 +37,8 @@ class Watcher {
   zx::duration poll_frequency_;
   uint64_t high_water_threshold_;
   async_dispatcher_t* dispatcher_;
-  fit::function<zx_status_t(Capture&, CaptureLevel level)> capture_cb_;
-  fit::function<void(const Capture&)> high_water_cb_;
+  CaptureFn capture_cb_;
+  HighWaterFn high_water_cb_;
   async::TaskClosureMethod<Watcher, &Watcher::CaptureMemory> task_{this};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Watcher);

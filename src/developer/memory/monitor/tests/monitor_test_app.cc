@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+
 #include <src/lib/fxl/command_line.h>
 
 #include "src/developer/memory/monitor/monitor.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  monitor::Monitor app(sys::ComponentContext::Create(), fxl::CommandLine{}, loop.dispatcher());
+  monitor::Monitor app(sys::ComponentContext::Create(), fxl::CommandLine{}, loop.dispatcher(),
+                       false);
   loop.Run();
   return 0;
 }

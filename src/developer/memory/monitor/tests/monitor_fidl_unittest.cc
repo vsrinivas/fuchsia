@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+
+#include <gtest/gtest.h>
 
 #include "src/developer/memory/monitor/monitor.h"
 
@@ -19,7 +20,7 @@ class MonitorFidlUnitTest : public gtest::TestLoopFixture {
  protected:
   MonitorFidlUnitTest()
       : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(), fxl::CommandLine{},
-                                           dispatcher())) {}
+                                           dispatcher(), false)) {}
 
   void TearDown() override {
     monitor_.reset();

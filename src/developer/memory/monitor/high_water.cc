@@ -20,7 +20,7 @@ using namespace memory;
 
 HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
                      uint64_t high_water_threshold, async_dispatcher_t* dispatcher,
-                     fit::function<zx_status_t(Capture&, CaptureLevel)> capture_cb)
+                     CaptureFn capture_cb)
     : dir_(dir),
       watcher_(poll_frequency, high_water_threshold, dispatcher, std::move(capture_cb),
                [this](const Capture& c) { RecordHighWater(c); }),

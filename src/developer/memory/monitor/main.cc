@@ -36,7 +36,8 @@ int main(int argc, const char** argv) {
   auto set_status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
   FXL_CHECK(set_status == ZX_OK);
 
-  monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher());
+  monitor::Monitor app(std::move(startup_context), command_line, loop.dispatcher(),
+                       true /* send_metrics */);
   loop.Run();
 
   FXL_VLOG(2) << argv[0] << ": exiting";
