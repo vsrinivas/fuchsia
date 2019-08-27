@@ -392,7 +392,7 @@ mod tests {
             });
             let framework_services_hook =
                 Arc::new(FrameworkServicesHook::new(model.clone(), framework_services.clone()));
-            model.hooks.install(TestHook::hooks(hook.clone())).await;
+            model.hooks.install(hook.hooks()).await;
             model
                 .hooks
                 .install(vec![Hook::RouteFrameworkCapability(framework_services_hook)])

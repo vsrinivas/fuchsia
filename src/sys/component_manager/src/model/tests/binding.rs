@@ -97,7 +97,7 @@ async fn bind_instance_child() {
     mock_resolver.add_component("system", default_component_decl());
     mock_resolver.add_component("echo", default_component_decl());
     let hook = Arc::new(TestHook::new());
-    let model = new_model_with(mock_resolver, mock_runner, TestHook::hooks(hook.clone())).await;
+    let model = new_model_with(mock_resolver, mock_runner, hook.hooks()).await;
     // bind to system
     assert!(model.look_up_and_bind_instance(vec!["system"].into()).await.is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
@@ -233,7 +233,7 @@ async fn bind_instance_eager_children() {
     );
     mock_resolver.add_component("e", default_component_decl());
     let hook = Arc::new(TestHook::new());
-    let model = new_model_with(mock_resolver, mock_runner, TestHook::hooks(hook.clone())).await;
+    let model = new_model_with(mock_resolver, mock_runner, hook.hooks()).await;
 
     // Bind to the top component, and check that it and the eager components were started.
     {
@@ -341,7 +341,7 @@ async fn bind_instance_recursive_child() {
     mock_resolver.add_component("logger", default_component_decl());
     mock_resolver.add_component("netstack", default_component_decl());
     let hook = Arc::new(TestHook::new());
-    let model = new_model_with(mock_resolver, mock_runner, TestHook::hooks(hook.clone())).await;
+    let model = new_model_with(mock_resolver, mock_runner, hook.hooks()).await;
 
     // bind to logger (before ever binding to system)
     assert!(model.look_up_and_bind_instance(vec!["system", "logger"].into()).await.is_ok());

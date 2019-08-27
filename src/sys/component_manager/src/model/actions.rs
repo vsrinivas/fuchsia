@@ -450,7 +450,7 @@ mod tests {
                 .hooks
                 .install(vec![Hook::RouteFrameworkCapability(framework_services_hook)])
                 .await;
-            model.hooks.install(TestHook::hooks(hook.clone())).await;
+            model.hooks.install(hook.hooks()).await;
 
             // Host framework service for root realm, if requested.
             let realm_proxy = if let Some(realm_moniker) = realm_moniker {

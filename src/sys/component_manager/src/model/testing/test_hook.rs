@@ -94,39 +94,60 @@ impl fmt::Display for Lifecycle {
     }
 }
 
+#[derive(Clone)]
 pub struct TestHook {
+    inner: Arc<TestHookInner>,
+}
+
+pub struct TestHookInner {
     instances: Mutex<HashMap<AbsoluteMoniker, Arc<ComponentInstance>>>,
     lifecycle_events: Mutex<Vec<Lifecycle>>,
 }
 
 impl fmt::Display for TestHook {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{}", self.print())?;
+        writeln!(f, "{}", self.inner.print())?;
         Ok(())
+    }
+}
+
+impl TestHook {
+    pub fn new() -> TestHook {
+        TestHook { inner: Arc::new(TestHookInner::new()) }
+    }
+
+    /// Returns the set of hooks into the component manager that TestHook is interested in.
+    pub fn hooks(&self) -> Vec<Hook> {
+        vec![
+            Hook::AddDynamicChild(self.inner.clone()),
+            Hook::RemoveDynamicChild(self.inner.clone()),
+            Hook::BindInstance(self.inner.clone()),
+            Hook::StopInstance(self.inner.clone()),
+            Hook::DestroyInstance(self.inner.clone()),
+        ]
+    }
+
+    /// Recursively traverse the Instance tree to generate a string representing the component
+    /// topology.
+    pub fn print(&self) -> String {
+        self.inner.print()
+    }
+
+    pub fn lifecycle(&self) -> Vec<Lifecycle> {
+        self.inner.lifecycle()
     }
 }
 
 /// TestHook is a Hook that generates a strings representing the component
 /// topology.
-impl TestHook {
-    pub fn new() -> TestHook {
+impl TestHookInner {
+    pub fn new() -> TestHookInner {
         let abs_moniker = AbsoluteMoniker::root();
         let instance =
             ComponentInstance { abs_moniker: abs_moniker.clone(), children: Mutex::new(vec![]) };
         let mut instances = HashMap::new();
         instances.insert(abs_moniker, Arc::new(instance));
-        TestHook { instances: Mutex::new(instances), lifecycle_events: Mutex::new(vec![]) }
-    }
-
-    /// Returns the set of hooks into the component manager that TestHook is interested in.
-    pub fn hooks(hook: Arc<TestHook>) -> Vec<Hook> {
-        vec![
-            Hook::AddDynamicChild(hook.clone()),
-            Hook::RemoveDynamicChild(hook.clone()),
-            Hook::BindInstance(hook.clone()),
-            Hook::StopInstance(hook.clone()),
-            Hook::DestroyInstance(hook.clone()),
-        ]
+        TestHookInner { instances: Mutex::new(instances), lifecycle_events: Mutex::new(vec![]) }
     }
 
     /// Recursively traverse the Instance tree to generate a string representing the component
@@ -222,7 +243,7 @@ impl TestHook {
     }
 }
 
-impl BindInstanceHook for TestHook {
+impl BindInstanceHook for TestHookInner {
     fn on<'a>(
         &'a self,
         realm: Arc<Realm>,
@@ -233,25 +254,25 @@ impl BindInstanceHook for TestHook {
     }
 }
 
-impl AddDynamicChildHook for TestHook {
+impl AddDynamicChildHook for TestHookInner {
     fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
     }
 }
 
-impl RemoveDynamicChildHook for TestHook {
+impl RemoveDynamicChildHook for TestHookInner {
     fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.remove_instance(realm.abs_moniker.clone()))
     }
 }
 
-impl StopInstanceHook for TestHook {
+impl StopInstanceHook for TestHookInner {
     fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.on_stop_instance_async(realm))
     }
 }
 
-impl DestroyInstanceHook for TestHook {
+impl DestroyInstanceHook for TestHookInner {
     fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.on_destroy_instance_async(realm))
     }
@@ -405,7 +426,7 @@ mod tests {
         // Try adding parent followed by children then verify the topology string
         // is correct.
         {
-            let test_hook = TestHook::new();
+            let test_hook = TestHookInner::new();
             assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
@@ -417,7 +438,7 @@ mod tests {
 
         // Changing the order of monikers should not affect the output string.
         {
-            let test_hook = TestHook::new();
+            let test_hook = TestHookInner::new();
             assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
@@ -429,7 +450,7 @@ mod tests {
 
         // Submitting children before parents should still succeed.
         {
-            let test_hook = TestHook::new();
+            let test_hook = TestHookInner::new();
             assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
