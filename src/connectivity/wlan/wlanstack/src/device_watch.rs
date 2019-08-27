@@ -63,13 +63,18 @@ fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     let dir = E::open_dir(&path)?;
     Ok(async move {
         let watcher = Watcher::new(&dir).await?;
-        Ok(watcher.try_filter_map(move |msg| {
-            future::ready(Ok(match msg.event {
-                WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(path.as_ref().join(msg.filename)),
-                _ => None,
-            }))
-        }).err_into())
-    }.try_flatten_stream())
+        Ok(watcher
+            .try_filter_map(move |msg| {
+                future::ready(Ok(match msg.event {
+                    WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
+                        Some(path.as_ref().join(msg.filename))
+                    }
+                    _ => None,
+                }))
+            })
+            .err_into())
+    }
+        .try_flatten_stream())
 }
 
 fn new_phy<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewPhyDevice, failure::Error> {
@@ -102,9 +107,10 @@ mod tests {
     use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy};
     use fidl_fuchsia_wlan_tap as fidl_wlantap;
-    use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+    use fuchsia_async::{self as fasync};
     use fuchsia_zircon::prelude::*;
     use pin_utils::pin_mut;
+    use wlan_common::test_utils::ExpectWithin;
     use wlantap_client;
 
     #[test]
@@ -119,9 +125,7 @@ mod tests {
             // 5 is more than enough even for Toulouse but let's be generous
             let new_phy = exec
                 .run_singlethreaded(
-                    new_phy_stream
-                        .next()
-                        .on_timeout(2.seconds().after_now(), || panic!("No more phys")),
+                    new_phy_stream.next().expect_within(2.seconds(), "No more phys"),
                 )
                 .expect("new_phy_stream ended without yielding a phy")
                 .expect("new_phy_stream returned an error");

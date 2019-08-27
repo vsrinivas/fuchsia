@@ -13,6 +13,7 @@ rustc_test("set_country") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:pin-utils",

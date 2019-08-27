@@ -10,7 +10,6 @@ use {
     },
     fidl_fuchsia_wlan_sme::{ApConfig, ApSmeProxy, StartApResultCode},
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
-    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{sys::ZX_OK, DurationNum},
     futures::{channel::oneshot, StreamExt},
@@ -19,7 +18,9 @@ use {
     wlan_common::{
         assert_variant,
         channel::{Cbw, Phy},
-        mac, RadioConfig,
+        mac,
+        test_utils::ExpectWithin,
+        RadioConfig,
     },
     wlan_hw_sim::*,
 };
@@ -57,11 +58,11 @@ async fn open_ap_connect() {
     // Wait until iface is created from wlantap PHY
     let mut watcher_event_stream = watcher_proxy.take_event_stream();
     let iface_id = get_new_added_iface(&mut watcher_event_stream)
-        .on_timeout(10.seconds().after_now(), || panic!("no iface added"))
+        .expect_within(10.seconds(), "no iface added")
         .await;
 
     let sme = get_ap_sme(&wlan_service, iface_id)
-        .on_timeout(5.seconds().after_now(), || panic!("timeout retrieving ap sme"))
+        .expect_within(5.seconds(), "timeout retrieving ap sme")
         .await;
 
     // Stop AP in case it was already started

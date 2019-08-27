@@ -9,12 +9,12 @@ use {
         DeviceServiceMarker, DeviceServiceProxy, SetCountryRequest,
     },
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
-    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
     fuchsia_zircon_sys::ZX_OK,
     futures::channel::oneshot,
     pin_utils::pin_mut,
+    wlan_common::test_utils::ExpectWithin,
     wlan_hw_sim::*,
 };
 
@@ -44,7 +44,7 @@ async fn set_country() {
 
     let resp = svc
         .list_phys()
-        .on_timeout(1.seconds().after_now(), || panic!("list_phys did not complete in time"))
+        .expect_within(1.seconds(), "list_phys did not complete in time")
         .await
         .unwrap();
 

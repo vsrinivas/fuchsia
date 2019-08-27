@@ -5,11 +5,11 @@
 use {
     fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap as wlantap,
-    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, ready, task::Context, Future, FutureExt, Poll, StreamExt},
     std::{marker::Unpin, pin::Pin, sync::Arc},
+    wlan_common::test_utils::ExpectWithin,
     wlantap_client::Wlantap,
 };
 
@@ -115,9 +115,7 @@ impl TestHelper {
             event_handler,
             main_future: future,
         }
-        .on_timeout(timeout.after_now(), || {
-            panic!("Did not complete in time: {}", context.to_string())
-        })
+        .expect_within(timeout, format!("Did not complete in time: {}", context.to_string()))
         .await;
         self.event_stream = Some(stream);
         item

@@ -2,10 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::appendable::{Appendable, BufferTooSmall};
+use {
+    crate::appendable::{Appendable, BufferTooSmall},
+    fuchsia_async::{DurationExt, OnTimeout, TimeoutExt},
+    fuchsia_zircon as zx,
+    futures::Future,
+};
 
 pub mod fake_frames;
 pub mod fake_stas;
+
+/// A trait which allows to expect a future to terminate within a given time or panic otherwise.
+pub trait ExpectWithin: Future + Sized {
+    fn expect_within<S: ToString + Clone>(
+        self,
+        duration: zx::Duration,
+        msg: S,
+    ) -> OnTimeout<Self, Box<dyn FnOnce() -> Self::Output>> {
+        let msg = msg.clone().to_string();
+        self.on_timeout(duration.after_now(), Box::new(move || panic!(msg)))
+    }
+}
+
+impl<F: Future + Sized> ExpectWithin for F {}
 
 pub struct FixedSizedTestBuffer(Vec<u8>);
 impl FixedSizedTestBuffer {
