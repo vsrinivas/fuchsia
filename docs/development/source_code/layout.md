@@ -21,12 +21,18 @@ where sub areas are located. However, some directories required of an area also
 exist next to `src` rather than inside it, e.g. `third_party`. These can be
 thought of global ones for all areas to depend on. There are also other places
 outside `src` that hold further top-level areas, e.g. in `vendor/*`.
+Being open source code `third_party` is available to all areas.
 
 Source repositories, whether open- or closed-source, also follow the conventions
 for areas and are mapped into subdirectories of `src` in fuchsia.git. Currently,
 we have small number of such "petal" repositories, but we will "promote" areas
 currently in the `fuchsia.git` repository into separate repositories as the
 system stabilizes.
+
+The `vendor/*` directories contain closed-source code, organized by the vendor
+of that code. Nothing outside of `//vendor` can depend on `//vendor`.
+Dependencies between different vendors is supported, `vendor/A` can have a
+depency on `vendor/B`.
 
 The `products` directory contains a list of products that you can build. Some
 products are quite small and build quickly (e.g., the [core](/products/core.gni)
@@ -99,6 +105,7 @@ pattern:
         * You make a new name for the code that (a) does not match upstream and
           (b) does not appear in any other third_party directory anywhere in the
           Fuchsia Source Tree
+        * The code is open source
  * `tools/` (optional)
    * This directory contains command-line tools provided by the area.  These
      are usually things that can (or must) be built for the development host
