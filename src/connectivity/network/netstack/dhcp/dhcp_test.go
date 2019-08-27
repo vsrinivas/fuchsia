@@ -6,7 +6,6 @@ package dhcp
 
 import (
 	"context"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -59,9 +58,7 @@ func createTestStackWithChannel(t *testing.T) (*stack.Stack, *channel.Endpoint) 
 	}
 
 	s.SetRouteTable([]tcpip.Route{{
-		Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-		Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
-		Gateway:     "",
+		Destination: tcpipHeader.IPv4EmptySubnet,
 		NIC:         nicid,
 	}})
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"netstack/link/bridge"
+	"netstack/util"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -64,12 +65,14 @@ func TestBridge(t *testing.T) {
 	ep1, ep2 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{1}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{2}, header.EthernetAddressSize)))
 	ep3, ep4 := pipe(tcpip.LinkAddress(bytes.Repeat([]byte{3}, header.EthernetAddressSize)), tcpip.LinkAddress(bytes.Repeat([]byte{4}, header.EthernetAddressSize)))
 	s1addr := tcpip.Address([]byte{1, 1, 1, 1})
+	s1subnet := util.PointSubnet(s1addr)
 	s1, err := makeStackWithEndpoint(ep1, s1addr)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	baddr := tcpip.Address([]byte{2, 2, 2, 2})
+	bsubnet := util.PointSubnet(baddr)
 	sb, b, err := makeStackWithBridgedEndpoints(ep2, ep3, baddr)
 	if err != nil {
 		t.Fatal(err)
@@ -80,6 +83,7 @@ func TestBridge(t *testing.T) {
 	}
 
 	s2addr := tcpip.Address([]byte{3, 3, 3, 3})
+	s2subnet := util.PointSubnet(s2addr)
 	s2, err := makeStackWithEndpoint(ep4, s2addr)
 	if err != nil {
 		t.Fatal(err)
@@ -89,6 +93,7 @@ func TestBridge(t *testing.T) {
 	// to the address on the virtual NIC representing the bridge itself), to test
 	// that constituent links are still routable.
 	bcaddr := tcpip.Address([]byte{4, 4, 4, 4})
+	bcsubnet := util.PointSubnet(bcaddr)
 	if err := sb.AddAddress(1, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
 		t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 	}
@@ -98,26 +103,22 @@ func TestBridge(t *testing.T) {
 
 	s1.SetRouteTable([]tcpip.Route{
 		{
-			Destination: s2addr,
-			Mask:        "\xff\xff\xff\xff",
+			Destination: s2subnet,
 			NIC:         1,
 		},
 		{
-			Destination: baddr,
-			Mask:        "\xff\xff\xff\xff",
+			Destination: bsubnet,
 			NIC:         1,
 		},
 		{
-			Destination: bcaddr,
-			Mask:        "\xff\xff\xff\xff",
+			Destination: bcsubnet,
 			NIC:         1,
 		},
 	})
 
 	sb.SetRouteTable([]tcpip.Route{
 		{
-			Destination: s1addr,
-			Mask:        "\xff\xff\xff\xff",
+			Destination: s1subnet,
 			NIC:         1,
 		},
 	})
@@ -125,8 +126,7 @@ func TestBridge(t *testing.T) {
 	s2.SetRouteTable(
 		[]tcpip.Route{
 			{
-				Destination: s1addr,
-				Mask:        "\xff\xff\xff\xff",
+				Destination: s1subnet,
 				NIC:         2,
 			},
 		},

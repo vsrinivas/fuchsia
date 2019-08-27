@@ -70,7 +70,7 @@ func TestRouteTableTransactions(t *testing.T) {
 			t.Errorf("can't start a transaction")
 		}
 
-		destinationAddress, destinationSubnet, err := net.ParseCIDR("1.2.3.4/24")
+		_, destinationSubnet, err := net.ParseCIDR("1.2.3.4/24")
 		AssertNoError(t, err)
 		gatewayAddress := net.ParseIP("5.6.7.8")
 		if gatewayAddress == nil {
@@ -78,7 +78,7 @@ func TestRouteTableTransactions(t *testing.T) {
 		}
 		gateway := toIpAddress(gatewayAddress)
 		newRouteTableEntry2 := netstack.RouteTableEntry2{
-			Destination: toIpAddress(destinationAddress),
+			Destination: toIpAddress(destinationSubnet.IP),
 			Netmask:     toIpAddress(net.IP(destinationSubnet.Mask)),
 			Gateway:     &gateway,
 			Nicid:       uint32(ifs.nicid),

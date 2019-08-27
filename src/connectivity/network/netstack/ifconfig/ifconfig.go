@@ -150,12 +150,12 @@ func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry2, a
 
 func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.RouteTableEntry2, err error) {
 	destination, remaining := args[0], args[1:]
-	dstAddr, dstSubnet, err := net.ParseCIDR(destination)
+	_, dstSubnet, err := net.ParseCIDR(destination)
 	if err != nil {
 		return route, fmt.Errorf("invalid destination (destination must be provided in CIDR format): %s", destination)
 	}
 
-	route.Destination = toIpAddress(dstAddr)
+	route.Destination = toIpAddress(dstSubnet.IP)
 	route.Netmask = toIpAddress(net.IP(dstSubnet.Mask))
 
 	for len(remaining) > 0 {

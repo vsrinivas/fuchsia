@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"netstack/routes"
-	"netstack/util"
 
 	"github.com/google/netstack/tcpip"
 )
@@ -32,10 +31,16 @@ var testRouteTable = routes.ExtendedRouteTable{
 }
 
 func createRoute(nicid tcpip.NICID, subnet string, gateway string) tcpip.Route {
-	_, s, _ := net.ParseCIDR(subnet)
+	_, s, err := net.ParseCIDR(subnet)
+	if err != nil {
+		panic(err)
+	}
+	sn, err := tcpip.NewSubnet(tcpip.Address(s.IP), tcpip.AddressMask(s.Mask))
+	if err != nil {
+		panic(err)
+	}
 	return tcpip.Route{
-		Destination: tcpip.Address(s.IP),
-		Mask:        tcpip.AddressMask(s.Mask),
+		Destination: sn,
 		Gateway:     ipStringToAddress(gateway),
 		NIC:         nicid,
 	}
@@ -178,73 +183,13 @@ func TestSortingLess(t *testing.T) {
 	}
 }
 
-func changeByte(b []byte) []byte {
-	b[0] = ^b[0]
-	return b
-}
-
-func TestIsSameRoute(t *testing.T) {
-	gatewaysWithPrefix := []string{"127.0.0.1/32", "0.0.0.0/0", "123.220.3.14/14", "192.168.10.1/24",
-		"::1/128", "::/128", "2605:143:32:113::1/64", "fe80:4234:242f:1111:5:243:5:4f/88"}
-	nics := []tcpip.NICID{1, 2}
-
-	for _, nic1 := range nics {
-		t.Run(fmt.Sprintf("nic1=%d", nic1), func(t *testing.T) {
-			for _, gp1 := range gatewaysWithPrefix {
-				t.Run(fmt.Sprintf("gp1=%s", gp1), func(t *testing.T) {
-					ip, s, err := net.ParseCIDR(gp1)
-					if err != nil {
-						t.Fatalf("net.ParseCIDR(%s) failed", gp1)
-					}
-					route1 := tcpip.Route{
-						Destination: tcpip.Address(ipToAddress(s.IP)),
-						Mask:        tcpip.AddressMask(s.Mask),
-						Gateway:     tcpip.Address(ipToAddress(ip)),
-						NIC:         nic1,
-					}
-
-					if got := routes.IsSameRoute(route1, route1); got != true {
-						t.Fatalf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route1), got, true)
-					}
-					// Change the NIC
-					route2 := route1
-					route2.NIC = route1.NIC + 1
-					if got := routes.IsSameRoute(route1, route2); got != false {
-						t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
-					}
-					// Change destination.
-					route2 = route1
-					route2.Destination = tcpip.Address(changeByte([]byte(route2.Destination)))
-					if got := routes.IsSameRoute(route1, route2); got != false {
-						t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
-					}
-					// Change gateway.
-					route2 = route1
-					route2.Gateway = tcpip.Address(changeByte([]byte(route2.Gateway)))
-					if got := routes.IsSameRoute(route1, route2); got != false {
-						t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
-					}
-					// Remove gateway if possible
-					if !util.IsAny(route1.Gateway) {
-						route2 = route1
-						route2.Gateway = tcpip.Address("")
-						if got := routes.IsSameRoute(route1, route2); got != false {
-							t.Errorf("got IsSameRoute(%s, %s) = %t, want = %t", routes.RouteStringer(&route1), routes.RouteStringer(&route2), got, false)
-						}
-					}
-				})
-			}
-		})
-	}
-}
-
 func isSameRouteTableImpl(rt1, rt2 []routes.ExtendedRoute, checkAttributes bool) bool {
 	if len(rt1) != len(rt2) {
 		return false
 	}
 	for i, r1 := range rt1 {
 		r2 := rt2[i]
-		if !routes.IsSameRoute(r1.Route, r2.Route) {
+		if r1.Route != r2.Route {
 			return false
 		}
 		if checkAttributes && (r1.Metric != r2.Metric || r1.MetricTracksInterface != r2.MetricTracksInterface || r1.Dynamic != r2.Dynamic || r1.Enabled != r2.Enabled) {
@@ -333,21 +278,31 @@ func TestAddRoute(t *testing.T) {
 		r1 := createRoute(2, "0.0.0.0/0", "192.168.100.10")
 
 		// 1.test - r0 gets lower metric.
-		tb := routes.RouteTable{}
-		tb.AddRoute(r0, 100, true, true, true)
-		tb.AddRoute(r1, 200, true, true, true)
-		tableGot := tb.GetExtendedRouteTable()
-		if !routes.IsSameRoute(r0, tableGot[0].Route) || !routes.IsSameRoute(r1, tableGot[1].Route) {
-			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r0), routes.RouteStringer(&r1))
+		{
+			var tb routes.RouteTable
+			tb.AddRoute(r0, 100, true, true, true)
+			tb.AddRoute(r1, 200, true, true, true)
+			tableGot := tb.GetExtendedRouteTable()
+			if got, want := tableGot[0].Route, r0; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+			if got, want := tableGot[1].Route, r1; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
 		}
 
 		// 2.test - r1 gets lower metric.
-		tb = routes.RouteTable{}
-		tb.AddRoute(r0, 200, true, true, true)
-		tb.AddRoute(r1, 100, true, true, true)
-		tableGot = tb.GetExtendedRouteTable()
-		if !routes.IsSameRoute(r0, tableGot[1].Route) || !routes.IsSameRoute(r1, tableGot[0].Route) {
-			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r1), routes.RouteStringer(&r0))
+		{
+			var tb routes.RouteTable
+			tb.AddRoute(r0, 200, true, true, true)
+			tb.AddRoute(r1, 100, true, true, true)
+			tableGot := tb.GetExtendedRouteTable()
+			if got, want := tableGot[0].Route, r1; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+			if got, want := tableGot[1].Route, r0; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
 		}
 	})
 }
@@ -434,17 +389,27 @@ func TestUpdateMetricByInterface(t *testing.T) {
 		tb := routes.RouteTable{}
 		tb.AddRoute(r0, 100, true, true, true)
 		tb.AddRoute(r1, 200, true, true, true)
-		tableGot := tb.GetExtendedRouteTable()
-		if !routes.IsSameRoute(r0, tableGot[0].Route) || !routes.IsSameRoute(r1, tableGot[1].Route) {
-			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r0), routes.RouteStringer(&r1))
+		{
+			tableGot := tb.GetExtendedRouteTable()
+			if got, want := tableGot[0].Route, r0; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+			if got, want := tableGot[1].Route, r1; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
 		}
 
 		// Lowering nic1's metric should be reflected in r1's metric and promote it
 		// in the route table.
 		tb.UpdateMetricByInterface(1, 50)
-		tableGot = tb.GetExtendedRouteTable()
-		if !routes.IsSameRoute(r0, tableGot[1].Route) || !routes.IsSameRoute(r1, tableGot[0].Route) {
-			t.Errorf("got %s, %s, want %s, %s", routes.RouteStringer(&tableGot[0].Route), routes.RouteStringer(&tableGot[1].Route), routes.RouteStringer(&r1), routes.RouteStringer(&r0))
+		{
+			tableGot := tb.GetExtendedRouteTable()
+			if got, want := tableGot[0].Route, r1; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
+			if got, want := tableGot[1].Route, r0; got != want {
+				t.Errorf("got = %s, want = %s", got, want)
+			}
 		}
 	})
 }
@@ -561,25 +526,24 @@ func TestGetNetstackTable(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// We have no way to directly disable routes in the route table, but we
 			// can use the Set() command to set a table with pre-disabled routes.
-			testRouteTable2 := make([]routes.ExtendedRoute, len(testRouteTable))
-			copy(testRouteTable2, testRouteTable)
+			testRouteTable := append([]routes.ExtendedRoute(nil), testRouteTable...)
 			// Disable a few routes.
 			for _, i := range tc.disabled {
-				testRouteTable2[i].Enabled = false
+				testRouteTable[i].Enabled = false
 			}
-			tb := routes.RouteTable{}
-			tb.Set(testRouteTable2)
+			var tb routes.RouteTable
+			tb.Set(testRouteTable)
 
 			tableGot := tb.GetNetstackTable()
 
 			// Verify no disabled routes are in the Netstack table we got.
 			i := 0
-			for _, r := range testRouteTable2 {
+			for _, r := range testRouteTable {
 				if r.Enabled {
-					if !routes.IsSameRoute(tableGot[i], r.Route) {
-						t.Errorf("got = %s, want = %s", routes.RouteStringer(&tableGot[i]), routes.RouteStringer(&r.Route))
+					if got, want := tableGot[i], r.Route; got != want {
+						t.Errorf("got = %s, want = %s", got, want)
 					}
-					i += 1
+					i++
 				}
 			}
 		})

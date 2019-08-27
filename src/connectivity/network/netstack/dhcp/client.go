@@ -9,9 +9,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"time"
 
-	"netstack/util"
 	"syslog"
 
 	"github.com/google/netstack/rand"
@@ -350,12 +350,13 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			c.server = cfg.ServerAddress
 
 			if len(cfg.SubnetMask) == 0 {
-				cfg.SubnetMask = util.DefaultMask(c.addr.Address)
+				cfg.SubnetMask = tcpip.AddressMask(net.IP(c.addr.Address).DefaultMask())
 			}
 
+			prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
 			requestedAddr = tcpip.AddressWithPrefix{
 				Address:   addr,
-				PrefixLen: util.PrefixLength(cfg.SubnetMask),
+				PrefixLen: prefixLen,
 			}
 
 			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
@@ -400,9 +401,10 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			if err := cfg.decode(opts); err != nil {
 				return Config{}, fmt.Errorf("%s decode: %s", typ, err)
 			}
+			prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
 			addr := tcpip.AddressWithPrefix{
 				Address:   addr,
-				PrefixLen: util.PrefixLength(cfg.SubnetMask),
+				PrefixLen: prefixLen,
 			}
 			if addr != requestedAddr {
 				return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)

@@ -43,14 +43,16 @@ async fn create_endpoint<'a>(
     name: &'static str,
     endpoint_manager: &'a fidl_fuchsia_netemul_network::EndpointManagerProxy,
 ) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointProxy, failure::Error> {
-    let (status, endpoint) = endpoint_manager.create_endpoint(
-        name,
-        &mut fidl_fuchsia_netemul_network::EndpointConfig {
-            mtu: 1500,
-            mac: None,
-            backing: fidl_fuchsia_netemul_network::EndpointBacking::Ethertap,
-        },
-    ).await
+    let (status, endpoint) = endpoint_manager
+        .create_endpoint(
+            name,
+            &mut fidl_fuchsia_netemul_network::EndpointConfig {
+                mtu: 1500,
+                mac: None,
+                backing: fidl_fuchsia_netemul_network::EndpointBacking::Ethertap,
+            },
+        )
+        .await
         .context("failed to create endpoint")?;
     let () = fuchsia_zircon::Status::ok(status).context("failed to create endpoint")?;
     let endpoint = endpoint
@@ -161,8 +163,7 @@ async fn get_aggregate_stats() -> Result {
     let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
         .context("failed to create node proxy")?;
     let () = netstack_proxy.get_aggregate_stats(server).context("failed to get aggregate stats")?;
-    let dir_entries =
-        files_async::readdir_recursive(&client).await.context("failed to readdir")?;
+    let dir_entries = files_async::readdir_recursive(&client).await.context("failed to readdir")?;
     let path_segments: std::collections::hash_set::HashSet<usize> = dir_entries
         .iter()
         .map(|dir_entry| 1 + dir_entry.name.matches(std::path::MAIN_SEPARATOR).count())
@@ -181,18 +182,22 @@ async fn add_ethernet_device() -> Result {
         name,
         |netstack, device| {
             async move {
-                let id = netstack.add_ethernet_device(
-                    name,
-                    &mut fidl_fuchsia_netstack::InterfaceConfig {
-                        name: name.to_string(),
-                        filepath: "/fake/filepath/for_test".to_string(),
-                        metric: 0,
-                        ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
-                    },
-                    device,
-                ).await
+                let id = netstack
+                    .add_ethernet_device(
+                        name,
+                        &mut fidl_fuchsia_netstack::InterfaceConfig {
+                            name: name.to_string(),
+                            filepath: "/fake/filepath/for_test".to_string(),
+                            metric: 0,
+                            ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
+                        },
+                        device,
+                    )
+                    .await
                     .context("failed to add ethernet device")?;
-                let interface = netstack.get_interfaces2().await
+                let interface = netstack
+                    .get_interfaces2()
+                    .await
                     .context("failed to get interfaces")?
                     .into_iter()
                     .find(|interface| interface.id == id)
@@ -205,38 +210,41 @@ async fn add_ethernet_device() -> Result {
                 Ok::<(), failure::Error>(())
             }
         },
-    ).await
+    )
+    .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn add_ethernet_interface() -> Result {
     let name = stringify!(add_ethernet_interface);
 
-    with_netstack_and_device::<_, _, fidl_fuchsia_net_stack::StackMarker>(
-        name,
-        |stack, device| {
-            async move {
-                let (error, id) = stack.add_ethernet_interface(name, device).await
-                    .context("failed to add ethernet interface")?;
-                assert_eq!(error, None);
-                let interface = stack.list_interfaces().await
-                    .context("failed to list interfaces")?
-                    .into_iter()
-                    .find(|interface| interface.id == id)
-                    .ok_or(failure::err_msg("failed to find added ethernet interface"))?;
-                assert_eq!(
-                    interface.properties.features
-                        & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
-                    0
-                );
-                assert_eq!(
-                    interface.properties.physical_status,
-                    fidl_fuchsia_net_stack::PhysicalStatus::Down
-                );
-                Ok(())
-            }
-        },
-    ).await
+    with_netstack_and_device::<_, _, fidl_fuchsia_net_stack::StackMarker>(name, |stack, device| {
+        async move {
+            let (error, id) = stack
+                .add_ethernet_interface(name, device)
+                .await
+                .context("failed to add ethernet interface")?;
+            assert_eq!(error, None);
+            let interface = stack
+                .list_interfaces()
+                .await
+                .context("failed to list interfaces")?
+                .into_iter()
+                .find(|interface| interface.id == id)
+                .ok_or(failure::err_msg("failed to find added ethernet interface"))?;
+            assert_eq!(
+                interface.properties.features
+                    & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
+                0
+            );
+            assert_eq!(
+                interface.properties.physical_status,
+                fidl_fuchsia_net_stack::PhysicalStatus::Down
+            );
+            Ok(())
+        }
+    })
+    .await
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -266,11 +274,13 @@ async fn add_del_interface_address() -> Result {
         }),
         prefix_len: 32,
     };
-    let error = stack.add_interface_address(loopback.id, &mut interface_address).await
+    let error = stack
+        .add_interface_address(loopback.id, &mut interface_address)
+        .await
         .context("failed to call add interface address")?;
     assert_eq!(error.as_ref(), None);
-    let (loopback, error) = stack.get_interface_info(loopback.id).await
-        .context("failed to get loopback interface")?;
+    let (loopback, error) =
+        stack.get_interface_info(loopback.id).await.context("failed to get loopback interface")?;
     assert_eq!(error.as_ref(), None);
     let loopback = loopback.ok_or(failure::err_msg("failed to find loopback"))?;
 
@@ -281,11 +291,13 @@ async fn add_del_interface_address() -> Result {
         loopback.properties.addresses
     );
 
-    let error = stack.del_interface_address(loopback.id, &mut interface_address).await
+    let error = stack
+        .del_interface_address(loopback.id, &mut interface_address)
+        .await
         .context("failed to call del interface address")?;
     assert_eq!(error.as_ref(), None);
-    let (loopback, error) = stack.get_interface_info(loopback.id).await
-        .context("failed to get loopback interface")?;
+    let (loopback, error) =
+        stack.get_interface_info(loopback.id).await.context("failed to get loopback interface")?;
     assert_eq!(error.as_ref(), None);
     let loopback = loopback.ok_or(failure::err_msg("failed to find loopback"))?;
 
@@ -321,7 +333,9 @@ async fn add_interface_address_errors() -> Result {
     };
 
     // NET-2234 (crash on interface not found).
-    let error = stack.add_interface_address(max_id + 1, &mut interface_address).await
+    let error = stack
+        .add_interface_address(max_id + 1, &mut interface_address)
+        .await
         .context("failed to call add interface address")?
         .ok_or(failure::err_msg("failed to get add interface address error"))?;
     assert_eq!(
@@ -331,12 +345,14 @@ async fn add_interface_address_errors() -> Result {
 
     // NET-2334 (crash on invalid prefix length).
     interface_address.prefix_len = 43;
-    let error = stack.add_interface_address(max_id, &mut interface_address).await
+    let error = stack
+        .add_interface_address(max_id, &mut interface_address)
+        .await
         .context("failed to call add interface address")?
         .ok_or(failure::err_msg("failed to get add interface address error"))?;
     assert_eq!(
         error.as_ref(),
-        &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::BadState }
+        &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::InvalidArgs }
     );
 
     Ok(())
@@ -356,8 +372,8 @@ async fn get_interface_info_not_found() -> Result {
         .context("failed to connect to netstack")?;
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let (info, error) = stack.get_interface_info(max_id + 1).await
-        .context("failed to call get interface info")?;
+    let (info, error) =
+        stack.get_interface_info(max_id + 1).await.context("failed to call get interface info")?;
     assert_eq!(info, None);
     let error = error.ok_or(failure::err_msg("failed to get get interface info error"))?;
     assert_eq!(
@@ -422,32 +438,38 @@ async fn acquire_dhcp() -> Result {
     let server_environment = create_netstack_environment(&sandbox, format!("{}_server", name))
         .context("failed to create server environment")?;
     let server_endpoint_name = "server";
-    let server_endpoint = create_endpoint(server_endpoint_name, &endpoint_manager).await
+    let server_endpoint = create_endpoint(server_endpoint_name, &endpoint_manager)
+        .await
         .context("failed to create endpoint")?;
-    let () =
-        server_endpoint.set_link_up(true).await.context("failed to start server endpoint")?;
+    let () = server_endpoint.set_link_up(true).await.context("failed to start server endpoint")?;
     {
-        let server_device = server_endpoint.get_ethernet_device().await
+        let server_device = server_endpoint
+            .get_ethernet_device()
+            .await
             .context("failed to get server ethernet device")?;
         let server_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&server_environment)
                 .context("failed to connect to server stack")?;
-        let (error, id) = server_stack.add_ethernet_interface(name, server_device).await
+        let (error, id) = server_stack
+            .add_ethernet_interface(name, server_device)
+            .await
             .context("failed to add server ethernet interface")?;
         assert_eq!(error, None);
-        let error = server_stack.add_interface_address(
-            id,
-            &mut fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: [192, 168, 0, 1],
-                }),
-                prefix_len: 24,
-            },
-        ).await
+        let error = server_stack
+            .add_interface_address(
+                id,
+                &mut fidl_fuchsia_net_stack::InterfaceAddress {
+                    ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                        addr: [192, 168, 0, 1],
+                    }),
+                    prefix_len: 24,
+                },
+            )
+            .await
             .context("failed to add interface address")?;
         assert_eq!(error, None);
-        let error = server_stack.enable_interface(id).await
-            .context("failed to enable server interface")?;
+        let error =
+            server_stack.enable_interface(id).await.context("failed to enable server interface")?;
         assert_eq!(error, None);
     }
     let launcher = {
@@ -465,10 +487,10 @@ async fn acquire_dhcp() -> Result {
     let client_environment = create_netstack_environment(&sandbox, format!("{}_client", name))
         .context("failed to create client environment")?;
     let client_endpoint_name = "client";
-    let client_endpoint = create_endpoint(client_endpoint_name, &endpoint_manager).await
+    let client_endpoint = create_endpoint(client_endpoint_name, &endpoint_manager)
+        .await
         .context("failed to create endpoint")?;
-    let () =
-        client_endpoint.set_link_up(true).await.context("failed to start client endpoint")?;
+    let () = client_endpoint.set_link_up(true).await.context("failed to start client endpoint")?;
 
     let network_manager = {
         let (client, server) =
@@ -479,43 +501,55 @@ async fn acquire_dhcp() -> Result {
         client
     };
 
-    let (status, network) = network_manager.create_network(
-        name,
-        fidl_fuchsia_netemul_network::NetworkConfig {
-            latency: None,
-            packet_loss: None,
-            reorder: None,
-        },
-    ).await
+    let (status, network) = network_manager
+        .create_network(
+            name,
+            fidl_fuchsia_netemul_network::NetworkConfig {
+                latency: None,
+                packet_loss: None,
+                reorder: None,
+            },
+        )
+        .await
         .context("failed to create network")?;
     let network = network
         .ok_or(failure::err_msg("failed to create network"))?
         .into_proxy()
         .context("failed to get network proxy")?;
     let () = fuchsia_zircon::Status::ok(status).context("failed to create network")?;
-    let status = network.attach_endpoint(server_endpoint_name).await
+    let status = network
+        .attach_endpoint(server_endpoint_name)
+        .await
         .context("failed to attach server endpoint")?;
     let () = fuchsia_zircon::Status::ok(status).context("failed to attach server endpoint")?;
-    let status = network.attach_endpoint(client_endpoint_name).await
+    let status = network
+        .attach_endpoint(client_endpoint_name)
+        .await
         .context("failed to attach client endpoint")?;
     let () = fuchsia_zircon::Status::ok(status).context("failed to attach client endpoint")?;
 
     {
-        let client_device = client_endpoint.get_ethernet_device().await
+        let client_device = client_endpoint
+            .get_ethernet_device()
+            .await
             .context("failed to get client ethernet device")?;
         let client_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&client_environment)
                 .context("failed to connect to client stack")?;
-        let (error, id) = client_stack.add_ethernet_interface(name, client_device).await
+        let (error, id) = client_stack
+            .add_ethernet_interface(name, client_device)
+            .await
             .context("failed to add client ethernet interface")?;
         assert_eq!(error, None);
-        let error = client_stack.enable_interface(id).await
-            .context("failed to enable client interface")?;
+        let error =
+            client_stack.enable_interface(id).await.context("failed to enable client interface")?;
         assert_eq!(error, None);
         let client_netstack =
             connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&client_environment)
                 .context("failed to connect to client netstack")?;
-        let error = client_netstack.set_dhcp_client_status(id as u32, true).await
+        let error = client_netstack
+            .set_dhcp_client_status(id as u32, true)
+            .await
             .context("failed to set DHCP client status")?;
         assert_eq!(error.status, fidl_fuchsia_netstack::Status::Ok, "{}", error.message);
 
@@ -552,7 +586,8 @@ async fn acquire_dhcp() -> Result {
             fuchsia_async::Time::after(fuchsia_zircon::Duration::from_seconds(60)),
             || None,
         );
-        let (addr, netmask) = address_change.await
+        let (addr, netmask) = address_change
+            .await
             .ok_or(failure::err_msg("failed to observe DHCP acquisition"))?
             .context("failed to observe DHCP acquisition")?;
         assert_eq!(

@@ -5,10 +5,9 @@
 package filter
 
 import (
-	"netstack/util"
-
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/filter"
+	"netstack/fidlconv"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
@@ -137,16 +136,6 @@ func fromSubnet(o *tcpip.Subnet) (net.Subnet, error) {
 	}, nil
 }
 
-func toSubnet(o *net.Subnet) (tcpip.Subnet, error) {
-	addr, err := toAddress(&o.Addr)
-	if err != nil {
-		return tcpip.Subnet{}, ErrBadAddress
-	}
-	mask := util.CIDRMask(int(o.PrefixLen), 8*len(addr))
-	subnet, err := tcpip.NewSubnet(addr, mask)
-	return subnet, err
-}
-
 func fromRule(o *Rule) (filter.Rule, error) {
 	action, err := fromAction(o.action)
 	if err != nil {
@@ -207,17 +196,11 @@ func toRule(o *filter.Rule) (Rule, error) {
 	}
 	var srcSubnet, dstSubnet *tcpip.Subnet
 	if o.SrcSubnet != nil {
-		subnet, err := toSubnet(o.SrcSubnet)
-		if err != nil {
-			return Rule{}, err
-		}
+		subnet := fidlconv.ToTCPIPSubnet(*o.SrcSubnet)
 		srcSubnet = &subnet
 	}
 	if o.DstSubnet != nil {
-		subnet, err := toSubnet(o.DstSubnet)
-		if err != nil {
-			return Rule{}, err
-		}
+		subnet := fidlconv.ToTCPIPSubnet(*o.DstSubnet)
 		dstSubnet = &subnet
 	}
 	return Rule{
@@ -287,14 +270,11 @@ func toNAT(o *filter.Nat) (NAT, error) {
 	if err != nil {
 		return NAT{}, err
 	}
-	srcSubnet, err := toSubnet(&o.SrcSubnet)
-	if err != nil {
-		return NAT{}, err
-	}
 	newSrcAddr, err := toAddress(&o.NewSrcAddr)
 	if err != nil {
 		return NAT{}, err
 	}
+	srcSubnet := fidlconv.ToTCPIPSubnet(o.SrcSubnet)
 	return NAT{
 		transProto: transProto,
 		srcSubnet:  &srcSubnet,
