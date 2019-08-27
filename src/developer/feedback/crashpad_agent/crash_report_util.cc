@@ -18,6 +18,9 @@ using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
 
+// The crash server expects a specific key for client-provided event keys.
+const char kEventIdKey[] = "comments";
+
 // The crash server expects a specific key for client-provided crash signatures.
 const char kCrashSignatureKey[] = "signature";
 
@@ -37,6 +40,10 @@ void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
     for (const auto& annotation : report.annotations()) {
       (*annotations)[annotation.key] = annotation.value;
     }
+  }
+
+  if (report.has_event_id()) {
+    (*annotations)[kEventIdKey] = report.event_id();
   }
 
   // Generic-specific annotations.

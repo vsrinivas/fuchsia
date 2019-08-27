@@ -649,6 +649,15 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithAdditionalData) {
   CheckAttachments({kSingleAttachmentKey});
 }
 
+TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
+  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  CrashReport report;
+  report.set_program_name(kProgramName);
+  report.set_event_id("event-id");
+  ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_response());
+  CheckAttachments();
+}
+
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   ASSERT_TRUE(FileOneGenericCrashReport(std::nullopt).is_response());

@@ -31,6 +31,14 @@ table CrashReport {
     /// A vector of key-value string-to-VMO pairs representing arbitrary data that should be
     /// attached to a crash report. Keys should be unique.
     4: vector<Attachment>:16 attachments;
+
+    /// A text ID that the crash server can use to group multiple crash reports related to the
+    /// same event.
+    ///
+    /// Unlike the crash signature, crash reports sharing the same ID correspond to different
+    /// crashes, but can be considered as belonging to the same event, e.g., a crash in a low-level
+    /// server causing a crash in a high-level UI widget.
+    5: string:128 event_id;
 };
 
 /// Represents a specific crash report.
@@ -52,6 +60,10 @@ xunion SpecificCrashReport {
 table GenericCrashReport {
     /// A text signature that the crash server can use to track the same crash over time, e.g.,
     /// "kernel-panic" or "oom".
+    ///
+    /// Unlike the event ID, crash reports sharing the same signature correspond to the same crash,
+    /// but happening over multiple events, e.g., a null pointer exception in a server whenever
+    /// asked the same request.
     1: string:128 crash_signature;
 };
 
