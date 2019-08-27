@@ -26,10 +26,14 @@ class Stack {
   void Release();
 
   size_t stack_size() const { return stack_size_; }
+  static size_t shadow_call_stack_size() { return kShadowCallStackSize; }
 
   uintptr_t safe_stack() const { return safe_stack_; }
 #if __has_feature(safe_stack)
   uintptr_t unsafe_stack() const { return unsafe_stack_; };
+#endif
+#if __has_feature(shadow_call_stack)
+  uintptr_t shadow_call_stack() const { return shadow_call_stack_; };
 #endif
 
  private:
@@ -40,6 +44,13 @@ class Stack {
 #if __has_feature(safe_stack)
   zx::vmar unsafe_stack_mapping_;
   uintptr_t unsafe_stack_;
+#endif
+#if __has_feature(shadow_call_stack)
+  zx::vmar shadow_call_stack_mapping_;
+  uintptr_t shadow_call_stack_;
+  static constexpr size_t kShadowCallStackSize = ZX_PAGE_SIZE;
+#else
+  static constexpr size_t kShadowCallStackSize = 0;
 #endif
 };
 }  // namespace context

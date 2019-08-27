@@ -37,6 +37,10 @@ constexpr size_t kVmoSizeMultiplier = 2u;
 constexpr size_t kVmoSizeMultiplier = 1u;
 #endif
 
+size_t VmoSize(size_t stack_size) {
+  return (kVmoSizeMultiplier * stack_size) + Stack::shadow_call_stack_size();
+}
+
 void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size, zx::vmar* vmar,
                    uintptr_t* addr) {
   uintptr_t allocate_address;
@@ -59,6 +63,10 @@ Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FXL_DCHECK(stack_size_);
 
   AllocateASAN(stack_size_, &safe_stack_);
+
+#if __has_feature(shadow_call_stack)
+  AllocateASAN(kShadowCallStackSize, &shadow_call_stack_);
+#endif
 }
 
 Stack::~Stack() { ReleaseASAN(safe_stack_); }
@@ -66,13 +74,18 @@ Stack::~Stack() { ReleaseASAN(safe_stack_); }
 void Stack::Release() {
   ReleaseASAN(safe_stack_);
   AllocateASAN(stack_size_, &safe_stack_);
+
+#if __has_feature(shadow_call_stack)
+  ReleaseASAN(shadow_call_stack_);
+  AllocateASAN(kShadowCallStackSize, &shadow_call_stack_);
+#endif
 }
 
 #else  // __has_feature(address_sanitizer)
 
 Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FXL_DCHECK(stack_size_);
-  zx_status_t status = zx::vmo::create(kVmoSizeMultiplier * stack_size_, 0, &vmo_);
+  zx_status_t status = zx::vmo::create(VmoSize(stack_size_), 0, &vmo_);
   FXL_DCHECK(status == ZX_OK);
 
   AllocateStack(vmo_, 0, stack_size_, &safe_stack_mapping_, &safe_stack_);
@@ -82,6 +95,12 @@ Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_, &unsafe_stack_);
   FXL_DCHECK(unsafe_stack_);
 #endif
+
+#if __has_feature(shadow_call_stack)
+  AllocateStack(vmo_, stack_size_ * kVmoSizeMultiplier, kShadowCallStackSize,
+                &shadow_call_stack_mapping_, &shadow_call_stack_);
+  FXL_DCHECK(shadow_call_stack_);
+#endif
 }
 
 Stack::~Stack() {
@@ -89,11 +108,13 @@ Stack::~Stack() {
 #if __has_feature(safe_stack)
   unsafe_stack_mapping_.destroy();
 #endif
+#if __has_feature(shadow_call_stack)
+  shadow_call_stack_mapping_.destroy();
+#endif
 }
 
 void Stack::Release() {
-  zx_status_t status =
-      vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, kVmoSizeMultiplier * stack_size_, nullptr, 0);
+  zx_status_t status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, VmoSize(stack_size_), nullptr, 0);
   FXL_DCHECK(status == ZX_OK);
 }
 

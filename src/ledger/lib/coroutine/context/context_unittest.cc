@@ -21,6 +21,12 @@ char* GetUnsafeStackForTest(const Stack& stack) {
 
 namespace {
 
+#if __has_feature(shadow_call_stack)
+char* GetShadowCallStackForTest(const Stack& stack) {
+  return reinterpret_cast<char*>(stack.shadow_call_stack());
+}
+#endif
+
 // Function using variable args to generate mmx code on x86_64. Running this
 // without crashing ensures that the stack is correctly aligned.
 int UseMMX(const char* format, ...) {
@@ -31,7 +37,7 @@ int UseMMX(const char* format, ...) {
   return result;
 }
 
-size_t Fact(size_t n) {
+[[gnu::noinline]] size_t Fact(size_t n) {
   if (n == 0) {
     return 1;
   }
@@ -115,6 +121,17 @@ TEST(Context, ThreadLocal) {
   EXPECT_EQ(&c, context.ptr);
 }
 
+#if __has_feature(safe_stack) || __has_feature(shadow_call_stack)
+__NO_SAFESTACK intptr_t GetSafeStackPointer() {
+  char a = 0;
+  // Suppress check about returning a stack memory address.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wreturn-stack-address"
+  return reinterpret_cast<intptr_t>(&a);  // NOLINT
+#pragma clang diagnostic pop
+}
+#endif
+
 #if __has_feature(safe_stack)
 // Force to set the pointed address to 1. This must be no-inline to prevent the
 // compiler to optimize away the set.
@@ -150,15 +167,6 @@ TEST(Context, MakeContextUnsafeStack) {
   EXPECT_TRUE(found);
 }
 
-__NO_SAFESTACK intptr_t GetSafeStackPointer() {
-  char a = 0;
-  // Suppress check about returning a stack memory address.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreturn-stack-address"
-  return reinterpret_cast<intptr_t>(&a);  // NOLINT
-#pragma clang diagnostic pop
-}
-
 void CheckDistinctStack(void* context) {
   char buff[1];
   memset(buff, 0, sizeof(buff));
@@ -178,6 +186,70 @@ TEST(Context, CheckStacksAreDifferent) {
 
   EXPECT_TRUE(GetContext(&new_context));
   MakeContext(&new_context, &stack, &CheckDistinctStack, &old_context);
+
+  SwapContext(&old_context, &new_context);
+}
+#endif
+
+#if __has_feature(shadow_call_stack)
+// Write some data to the shadow call stack.
+void TrashShadowCallStack(void* context) {
+  [[maybe_unused]] volatile auto x = Fact(20);
+  SetContext(reinterpret_cast<Context*>(context));
+}
+
+TEST(Context, MakeContextShadowCallStack) {
+  Stack stack;
+  memset(GetShadowCallStackForTest(stack), 0, stack.shadow_call_stack_size());
+
+  Context new_context;
+  Context old_context;
+
+  EXPECT_TRUE(GetContext(&new_context));
+  MakeContext(&new_context, &stack, &TrashShadowCallStack, &old_context);
+
+  SwapContext(&old_context, &new_context);
+
+  bool found = false;
+  char* ptr = GetShadowCallStackForTest(stack);
+  for (size_t i = 0; i < stack.shadow_call_stack_size(); ++i) {
+    found = found || *(ptr + i);
+  }
+  EXPECT_TRUE(found);
+}
+
+intptr_t GetShadowCallStackPointer() {
+#ifdef __aarch64__
+  intptr_t result;
+  __asm__("mov %0, x18" : "=r"(result));
+  return result;
+#else
+#error "what shadow-call-stack ABI??"
+#endif
+}
+
+void CheckDistinctShadowCallStack(void* context) {
+  // This is on the unsafe stack under safe-stack (and otherwise the main
+  // stack is always unsafe).
+  char buff[1];
+  memset(buff, 0, sizeof(buff));
+  EXPECT_GE(std::abs(reinterpret_cast<intptr_t>(buff) - GetShadowCallStackPointer()),
+            2 * PAGE_SIZE);
+
+  // The machine stack and shadow call stack should also be disjoint.
+  EXPECT_GE(std::abs(GetSafeStackPointer() - GetShadowCallStackPointer()), 2 * PAGE_SIZE);
+
+  SetContext(reinterpret_cast<Context*>(context));
+}
+
+TEST(Context, CheckShadowCallStacksAreDifferent) {
+  Stack stack;
+
+  Context new_context;
+  Context old_context;
+
+  EXPECT_TRUE(GetContext(&new_context));
+  MakeContext(&new_context, &stack, &CheckDistinctShadowCallStack, &old_context);
 
   SwapContext(&old_context, &new_context);
 }

@@ -26,8 +26,10 @@ FUNCTION(_ZN7context10GetContextEPNS_15InternalContextE)
     stp d10, d11, [x0, #D10_O]
     stp d12, d13, [x0, #D12_O]
     stp d14, d15, [x0, #D14_O]
-    mov x1,  #0
-    str x1,  [x0, #X0_O]
+    stp xzr, x18, [x0, #X0_O]
+#if X0_O + 8 != X18_O
+# error "x0 and x18 assumed adjacent in InternalContext::registers"
+#endif
 
 #if __has_feature(safe_stack)
     mrs x1, TPIDR_EL0
@@ -74,5 +76,5 @@ FUNCTION(_ZN7context10SetContextEPNS_15InternalContextE)
     str x2, [x1, #ZX_TLS_UNSAFE_SP_OFFSET]
 #endif
 
-    ldr x0, [x0, #X0_O]
+    ldp x0, x18, [x0, #X0_O]
     br x30

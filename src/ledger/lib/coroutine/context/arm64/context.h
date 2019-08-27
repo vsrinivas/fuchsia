@@ -28,9 +28,10 @@
 #define D14_O 152
 #define D15_O 160
 #define X0_O 168
+#define X18_O 176
 
 #if __has_feature(safe_stack)
-#define UNSAFE_SP_O 176
+#define UNSAFE_SP_O 184
 #endif
 
 #ifndef __ASSEMBLER__
@@ -63,6 +64,7 @@ enum Register {
   REG_D14,
   REG_D15,
   REG_X0,
+  REG_X18,
 #if __has_feature(safe_stack)
   REG_UNSAFE_SP,
 #endif

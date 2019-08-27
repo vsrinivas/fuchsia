@@ -29,6 +29,15 @@ void MakeContext(Context* context, Stack* stack, void (*func)(void*), void* data
   context->registers[REG_ARG0] = reinterpret_cast<uintptr_t>(data);
   context->registers[REG_SP] = sp;
 
+#if __has_feature(shadow_call_stack)
+#ifdef __aarch64__
+  // Shadow call stack grows up.
+  context->registers[REG_X18] = stack->shadow_call_stack();
+#else
+#error "what shadow-call-stack ABI?"
+#endif
+#endif
+
 #if __has_feature(safe_stack)
   uintptr_t unsafe_sp = stack->unsafe_stack() + stack->stack_size();
   // Align stack.
