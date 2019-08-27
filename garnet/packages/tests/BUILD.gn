@@ -377,6 +377,7 @@ group("all") {
     ":image_pipe_swapchain",
     ":insntrace",
     ":inspect_tests",
+    ":intl",
     ":json",
     ":kms",
     ":lib",
@@ -435,7 +436,6 @@ group("all") {
     ":timezone",
     ":tracing",
     ":ui",
-    ":unicode_utils",
     ":url",
     ":uuid",
     ":vfs_cpp",
@@ -1270,10 +1270,10 @@ group("setui_client") {
   ]
 }
 
-group("unicode_utils") {
+group("intl") {
   testonly = true
   public_deps = [
-    "//garnet/lib/rust/intl/unicode_utils/char_collection:char_collection_tests",
+    "//src/lib/intl:tests",
   ]
 }
 

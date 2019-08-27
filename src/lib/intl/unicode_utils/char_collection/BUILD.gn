@@ -12,7 +12,7 @@ rustc_library("char_collection") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/intl/unicode_utils/unicode_blocks",
+    "//src/lib/intl/unicode_utils/unicode_blocks",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:unic-char-range",
@@ -30,5 +30,12 @@ test_package("char_collection_tests") {
       name = "char_collection_lib_test"
       environments = basic_envs
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":char_collection_tests",
   ]
 }

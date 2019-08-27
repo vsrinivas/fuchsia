@@ -182,5 +182,4 @@ mod from_tests {
         let actual: CharCollection = (&UnicodeBlockId::BasicLatin).into();
         assert_eq!(actual, char_collect!('\u{0000}'..='\u{007f}'));
     }
-
 }
