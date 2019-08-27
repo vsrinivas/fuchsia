@@ -96,7 +96,11 @@ std::ostream& operator<<(std::ostream& os, const StreamType& value) {
   os << fostr::Indent;
   os << fostr::NewLine << "medium:               " << value.medium();
   os << fostr::NewLine << "encoding:             " << value.encoding();
-  os << fostr::NewLine << "encoding parameters:  " << value.encoding_parameters();
+  if (value.encoding_parameters()) {
+    os << fostr::NewLine << "encoding parameters:  " << *value.encoding_parameters();
+  } else {
+    os << fostr::NewLine << "encoding parameters:  <null>";
+  }
 
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
@@ -250,6 +254,8 @@ std::ostream& operator<<(std::ostream& os, PayloadMode value) {
       return os << "uses vmos";
     case PayloadMode::kProvidesVmos:
       return os << "provides vmos";
+    case PayloadMode::kUsesSysmemVmos:
+      return os << "uses sysmem vmos";
   }
 
   return os;
@@ -277,7 +283,25 @@ std::ostream& operator<<(std::ostream& os, const PayloadConfig& value) {
   os << fostr::NewLine << "max payload count:          " << value.max_payload_count_;
   os << fostr::NewLine << "max payload size:           " << value.max_payload_size_;
   os << fostr::NewLine << "vmo allocation:             " << value.vmo_allocation_;
-  os << fostr::NewLine << "physically contiguous:      " << value.physically_contiguous_;
+  os << fostr::NewLine << "map flags:                  ";
+
+  switch (value.map_flags_) {
+    case 0:
+      os << "<none>";
+      break;
+    case ZX_VM_PERM_READ:
+      os << "ZX_VM_PERM_READ";
+      break;
+    case ZX_VM_PERM_WRITE:
+      os << "ZX_VM_PERM_WRITE";
+      break;
+    case ZX_VM_PERM_READ | ZX_VM_PERM_WRITE:
+      os << "ZX_VM_PERM_READ | ZX_VM_PERM_WRITE";
+      break;
+    default:
+      os << "0x" << std::hex << value.map_flags_ << std::dec;
+      break;
+  }
 
   return os << fostr::Outdent;
 }

@@ -77,6 +77,7 @@ class VmoPayloadAllocator : public PayloadAllocator,
 
   mutable std::mutex mutex_;
   VmoAllocation vmo_allocation_ FXL_GUARDED_BY(mutex_) = VmoAllocation::kNotApplicable;
+  bool vmo_allocation_set_ FXL_GUARDED_BY(mutex_) = false;
   std::vector<fbl::RefPtr<PayloadVmo>> payload_vmos_ FXL_GUARDED_BY(mutex_);
   size_t suggested_allocation_vmo_ FXL_GUARDED_BY(mutex_) = 0;
 };

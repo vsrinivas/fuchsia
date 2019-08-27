@@ -41,6 +41,17 @@ const std::string kMetadataUnknownPropertyPrefix = "ffmpeg.";
 
 constexpr size_t kBitsPerByte = 8;
 
+constexpr uint32_t kMaxPayloadCount = 1;
+
+// TODO(dalesat): Refine this function.
+uint64_t MaxPayloadSize(StreamType* stream_type) {
+  FXL_DCHECK(stream_type);
+  constexpr uint64_t kMaxPayloadSizeAudio = (64 * 1024);
+  constexpr uint64_t kMaxPayloadSizeVideo = (512 * 1024);
+  return stream_type->medium() == StreamType::Medium::kVideo ? kMaxPayloadSizeVideo
+                                                             : kMaxPayloadSizeAudio;
+}
+
 }  // namespace
 
 class FfmpegDemuxImpl : public FfmpegDemux {
@@ -243,7 +254,9 @@ void FfmpegDemuxImpl::Dump(std::ostream& os) const {
 
 void FfmpegDemuxImpl::ConfigureConnectors() {
   for (size_t output_index = 0; output_index < streams_.size(); ++output_index) {
-    ConfigureOutputToProvideLocalMemory(output_index);
+    ConfigureOutputToProvideLocalMemory(0, kMaxPayloadCount,
+                                        MaxPayloadSize(streams_[output_index]->stream_type().get()),
+                                        output_index);
   }
 }
 

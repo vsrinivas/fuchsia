@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 source_set("graph") {
   sources = [
     "formatting.cc",
@@ -60,5 +62,23 @@ source_set("graph") {
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/util",
+  ]
+}
+
+test("tests") {
+  output_name = "mediaplayer_graph_tests"
+
+  sources = [
+    "test/fake_service_provider.cc",
+    "test/fake_service_provider.h",
+    "test/payload_manager_test.cc",
+  ]
+
+  deps = [
+    ":graph",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

@@ -5,13 +5,17 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_MANAGER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_PAYLOAD_MANAGER_H_
 
+#include <fuchsia/sysmem/cpp/fidl.h>
+
 #include <mutex>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/graph/payloads/local_memory_payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_config.h"
 #include "src/media/playback/mediaplayer/graph/payloads/vmo_payload_allocator.h"
+#include "src/media/playback/mediaplayer/graph/service_provider.h"
 
 namespace media_player {
 
@@ -56,10 +60,13 @@ namespace media_player {
 // correct allocation strategy based on the constraints expressed by the
 // output and input.
 //
-// |PayloadManager| is thread-safe. All of its methods may be called on any
-// thread.
+// Methods may be called on any thread unless otherwise noted in the method comments.
 class PayloadManager {
  public:
+  PayloadManager();
+
+  ~PayloadManager() = default;
+
   // Function type used by clients who want to implement buffer allocation
   // themselves.
   //
@@ -79,9 +86,11 @@ class PayloadManager {
   // Dumps this |PayloadManager|'s state to |os|.
   void Dump(std::ostream& os) const;
 
-  // Applies the output configuration supplied in |config|. |bti_handle| must
-  // be provided if and only if |config.physically_contiguous| is true.
-  void ApplyOutputConfiguration(const PayloadConfig& config, zx::handle bti_handle);
+  // Applies the output configuration supplied in |config|.
+  //
+  // This method must be called on the main graph thread.
+  void ApplyOutputConfiguration(const PayloadConfig& config,
+                                ServiceProvider* service_provider = nullptr);
 
   // Applies the input configuration supplied in |config|.
   //
@@ -91,13 +100,15 @@ class PayloadManager {
   // |allocate_callback| is called on an arbitrary thread, and may not reenter
   // this |PayloadManager|.
   //
-  // |bti_handle| must be provided if and only if |config.physically_contiguous|
-  // is true.
-  void ApplyInputConfiguration(const PayloadConfig& config, zx::handle bti_handle,
-                               AllocateCallback allocate_callback);
+  // This method must be called on the main graph thread.
+  void ApplyInputConfiguration(const PayloadConfig& config, AllocateCallback allocate_callback,
+                               ServiceProvider* service_provider = nullptr);
 
   // Indicates whether the connection manager is ready for allocator access.
   bool ready() const;
+
+  // Registers a handler to be called when the connection is ready.
+  void ListenForReady(fit::closure handler);
 
   // Allocates and returns a |PayloadBuffer| for the output with the specified
   // size. Returns nullptr if the allocation fails.
@@ -113,6 +124,10 @@ class PayloadManager {
   // |kProvidesVmos|.
   PayloadVmoProvision& input_external_vmos() const;
 
+  // Takes the |BufferCollectionTokenPtr| for the input. This method should only be called if this
+  // |PayloadManager| is ready and the input mode is |kUsesSysmemVmos|.
+  fuchsia::sysmem::BufferCollectionTokenPtr TakeInputSysmemToken();
+
   // Gets the |PayloadVmos| interface for the output. This method should only be
   // called if this |PayloadManager| is ready and the output mode is |kUsesVmos|
   // or |kProvidesVmos|.
@@ -122,6 +137,10 @@ class PayloadManager {
   // only be called if this |PayloadManager| is ready and the output mode is
   // |kProvidesVmos|.
   PayloadVmoProvision& output_external_vmos() const;
+
+  // Takes the |BufferCollectionTokenPtr| for the output. This method should only be called if this
+  // |PayloadManager| is ready and the output mode is |kUsesSysmemVmos|.
+  fuchsia::sysmem::BufferCollectionTokenPtr TakeOutputSysmemToken();
 
   // Indicates whether copying is required and maybe provides a copy destination
   // payload buffer. This method returns true if and only if copying is required
@@ -138,27 +157,99 @@ class PayloadManager {
   // Signals that the output and input are disconnected.
   void OnDisconnect();
 
+  // TEST ONLY.
+  // Returns a pointer to the |VmoPayloadAllocator| used to satisfy calls to |input_vmos| or
+  // |input_external_vmos|, if there is one, otherwise nullptr.
+  VmoPayloadAllocator* input_vmo_payload_allocator_for_testing() const {
+    std::lock_guard<std::mutex> locker(mutex_);
+    return input_vmo_payload_allocator_locked();
+  }
+
+  // TEST ONLY.
+  // Returns a pointer to the |VmoPayloadAllocator| used to satisfy calls to |output_vmos| or
+  // |output_external_vmos|, if there is one, otherwise nullptr.
+  VmoPayloadAllocator* output_vmo_payload_allocator_for_testing() const {
+    std::lock_guard<std::mutex> locker(mutex_);
+    return output_vmo_payload_allocator_locked();
+  }
+
+  // TEST ONLY.
+  // Returns a pointer to the |LocalMemoryPayloadAllocator| used to allocate memory for the output,
+  // if there is one, otherwise nullptr.
+  LocalMemoryPayloadAllocator* output_local_memory_payload_allocator_for_testing() const {
+    std::lock_guard<std::mutex> locker(mutex_);
+    return output_.local_memory_allocator_.get();
+  }
+
+  // TEST ONLY.
+  // Indicates whether this |PayloadManager| must copy payloads.
+  bool must_copy_for_testing() const {
+    std::lock_guard<std::mutex> locker(mutex_);
+    return copy_;
+  }
+
  private:
   // State relating to output or input.
   struct Connector {
-    PayloadConfig config_;
-    zx::handle bti_handle_;
-    fbl::RefPtr<LocalMemoryPayloadAllocator> local_memory_allocator_;
-    fbl::RefPtr<VmoPayloadAllocator> vmo_allocator_;
-
     // Ensure that this |Connector| has no allocators.
     void EnsureNoAllocator();
 
-    // Ensure that this |Connector| has only a local memory allocator.
+    // Ensure that this |Connector| has a local memory allocator.
     void EnsureLocalMemoryAllocator();
 
-    // Ensure that this |Connector| has only a VMO allocator. Returns a raw
-    // pointer to the VMO allocator.
-    VmoPayloadAllocator* EnsureVmoAllocator();
+    // Ensure that this |Connector| has a VMO allocator with no VMOs.
+    void EnsureEmptyVmoAllocator(VmoAllocation vmo_allocation);
+
+    // Ensures this |Connector| has a VMO allocator prepared to allocate from externally-provided
+    // VMOs. If |vmo_allocation| is not provided, the |VmoAllocation| value from |config_| is used.
+    void EnsureExternalVmoAllocator(VmoAllocation vmo_allocation = VmoAllocation::kNotApplicable);
+
+    // Ensures this |Connector| has a VMO allocator provisioned with VMOs as specified in |config|.
+    //
+    // This method is used in three cases:
+    // 1) The allocator is associated with only the output, in which case |config| is the config for
+    //    that output.
+    // 2) The allocator is associated with only the input, in which case |config| is the augmented
+    //    config for that input (|AugmentedInputConfig()|).
+    // 3) The allocator is shared between the output and input, in which case |config| is the
+    //    merged configuration of the output and the input (|CombinedConfig()|).
+    void EnsureProvisionedVmoAllocator(const PayloadConfig& config);
+
+    // Ensures this |Connector| has a VMO allocator prepared to allocate from sysmem-provided VMOs.
+    //
+    // |local_config| is used to determine the buffer constraints that are sent to the sysmem buffer
+    // collection. Those constraints concern the needs of the *local* end of the connection. The
+    // end of the connection that uses sysmem itself supplies its constraints directly to sysmem.
+    // For example, if the upstream node uses sysmem and the downstream node wants to access
+    // payloads locally, the upstream node (associated with the output) will be providing its own
+    // constraints to sysmem directly, and |local_config| should reflect the constraints of the
+    // downstream node (associated with the input). In this case, |local_config| should be
+    // |input_.config_|, event though it's the output side that is using sysmem.
+    //
+    // |vmo_allocation| indicates how payload will be allocated from VMOs locally. In many cases,
+    // no such allocation will occur, in which case the default is appropriate. If allocation does
+    // occur, it must meet the constraints of the connector using sysmem.
+    //
+    // Sometime after this method is called, the owner's |DecrementReadyDeferrals| is called.
+    // The owning |PayloadManager| should increment |ready_deferrals_| before calling this method.
+    void EnsureProvisionedSysmemVmoAllocator(
+        const PayloadConfig& local_config, fuchsia::sysmem::Allocator* sysmem_allocator,
+        VmoAllocation vmo_allocation = VmoAllocation::kNotApplicable);
 
     // Return a |PayloadAllocator| implemented by this connector, if there is
     // one, nullptr otherwise.
     PayloadAllocator* payload_allocator() const;
+
+    PayloadManager* owner_;
+    PayloadConfig config_;
+    fbl::RefPtr<LocalMemoryPayloadAllocator> local_memory_allocator_;
+    fbl::RefPtr<VmoPayloadAllocator> vmo_allocator_;
+    // |sysmem_token_for_node_| is the one provided to the node for its use.
+    fuchsia::sysmem::BufferCollectionTokenPtr sysmem_token_for_node_;
+    // |sysmem_token_for_mate_or_provisioning_| either becomes |sysmem_token_for_node_| for the
+    // other connector or is used to provision |vmo_allocator_| with buffers.
+    fuchsia::sysmem::BufferCollectionTokenPtr sysmem_token_for_mate_or_provisioning_;
+    fuchsia::sysmem::BufferCollectionPtr sysmem_collection_;
   };
 
   void DumpInternal(std::ostream& os) const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
@@ -166,7 +257,32 @@ class PayloadManager {
   // Indicates whether the connection manager is ready for allocator access.
   bool ready_locked() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
+  VmoPayloadAllocator* input_vmo_payload_allocator_locked() const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+    FXL_DCHECK(ready_locked());
+    return input_.vmo_allocator_ ? input_.vmo_allocator_.get() : output_.vmo_allocator_.get();
+  }
+
+  // TEST ONLY.
+  VmoPayloadAllocator* output_vmo_payload_allocator_locked() const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_) {
+    FXL_DCHECK(ready_locked());
+    return output_.vmo_allocator_ ? output_.vmo_allocator_.get() : input_.vmo_allocator_.get();
+  }
+
+  // Decrements |ready_deferrals_| and signals readiness if it reaches zero.
+  //
+  // This method must be called on the main graph thread.
+  void DecrementReadyDeferrals();
+
+  // Ensures that |sysmem_allocator_| is populated.
+  //
+  // This method must be called on the main graph thread.
+  void EnsureSysmemAllocator(ServiceProvider* service_provider);
+
   // Updates the allocators based in the current configs.
+  //
+  // This method must be called on the main graph thread.
   void UpdateAllocators() FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Determines whether the output and input configuration are compatible.
@@ -184,50 +300,24 @@ class PayloadManager {
   // compatible |config_.vmo_allocation_| values.
   VmoAllocation CombinedVmoAllocation() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  // Creates VMOs for an allocator shared by the input and output and adds them
-  // to |allocator|. The VMOs created will satisfy the requirements of both the
-  // output and the input.
-  void ProvideVmosForSharedAllocator(VmoPayloadAllocator* allocator) const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  // Returns a |PayloadConfig| that combines both output an input payload configs. The output and
+  // input must have compatible |config_.vmo_allocation_| values.
+  PayloadConfig CombinedConfig() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  // Creates VMOs and adds them to |allocator|. The VMOs created will satisfy
-  // the specified configuration.
-  //
-  // This method is used in two cases:
-  // 1) The allocator is associated with only the output or the input, in which
-  //    case |config| is the configuration for that output or input.
-  // 2) When an allocator is shared between the output and input, in which case
-  //    |config| is the merged configuration of the output and the input.
-  //    |ProvideVmosForSharedAllocator| merges the configurations and calls
-  //    this method.
-  //
-  // The larger of |max_payload_size| and |config.max_payload_size_| will be
-  // used. When providing VMOs for an input, |max_payload_size| should be the
-  // max payload size from the output's config. Otherwise, it should be zero.
-  // |bti_handle| is provided to indicate that the VMOs must be physically
-  // contiguous.
-  void ProvideVmos(VmoPayloadAllocator* allocator, const PayloadConfig& config,
-                   uint64_t max_payload_size, const zx::handle* bti_handle) const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  // Returns the input's |PayloadConfig| with the |max_payload_size_| value set to the max of those
+  // values for input and output.
+  PayloadConfig AugmentedInputConfig() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
-  // Prepares |allocator| for external VMOs by settings its |VmoAllocation|
-  // setting based on |config|. This method is used when |allocator| is
-  // associated with only the output or the input (not both). |config| is the
-  // configuration for that output or input.
-  void PrepareForExternalVmos(VmoPayloadAllocator* allocator, const PayloadConfig& config) const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
-
-  // Prepares |allocator| for external VMOs by settings its |VmoAllocation|
-  // setting based on the requirements of both the output and the input. This
-  // method is used when |allocator| is shared by the output and input.
-  void PrepareSharedAllocatorForExternalVmos(VmoPayloadAllocator* allocator) const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  // Returns the output's |PayloadConfig| with the |max_payload_count_| value set to the zero and
+  // |map_flags_| set to |ZX_VM_PERM_WRITE|.
+  PayloadConfig CopyToOutputConfig() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Allocates and returns a |PayloadBuffer| using the allocator callback.
   // Returns nullptr if the allocation fails.
   fbl::RefPtr<PayloadBuffer> AllocateUsingAllocateCallback(uint64_t size) const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
+  FXL_DECLARE_THREAD_CHECKER(thread_checker_);
   mutable std::mutex mutex_;
 
   Connector output_ FXL_GUARDED_BY(mutex_);
@@ -240,6 +330,17 @@ class PayloadManager {
   // Indicates whether copying must occur. If this field is true, the input
   // will have an allocator.
   bool copy_ FXL_GUARDED_BY(mutex_) = false;
+
+  // Accessed only on the main graph thread.
+  fuchsia::sysmem::AllocatorPtr sysmem_allocator_;
+
+  // Async listeners for readiness, at most one per connector.
+  // Accessed only on the main graph thread.
+  fit::closure ready_listeners_[2];
+
+  // Count of reasons to defer readiness. This |PayloadManager| is ready when this value reaches
+  // zero.
+  uint32_t ready_deferrals_ FXL_GUARDED_BY(mutex_) = 1;
 };
 
 }  // namespace media_player

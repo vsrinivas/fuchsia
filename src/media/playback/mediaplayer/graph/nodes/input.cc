@@ -66,6 +66,10 @@ void Input::PutPacket(PacketPtr packet) {
 PacketPtr Input::TakePacket(bool request_another) {
   FXL_DCHECK(mate_);
 
+  if (!payload_manager_.ready()) {
+    return nullptr;
+  }
+
   PacketPtr no_packet;
   PacketPtr packet = std::atomic_exchange(&packet_, no_packet);
 
@@ -96,7 +100,9 @@ PacketPtr Input::TakePacket(bool request_another) {
 
   if (!copy_destination_buffer) {
     // We just drop the packet, so there will be a glitch.
-    // TODO(dalesat): Record/report packet drop.
+    // TODO(dalesat): Leave the packet behind so we can try again later.
+    // We'll also need a NeedsUpdate when the allocator is no longer empty.
+    FXL_LOG(ERROR) << "No buffer for copy, dropping packet.";
 
     // We needed a packet and couldn't produce one, so we still need one.
     state_.store(State::kNeedsPacket);

@@ -231,17 +231,14 @@ void FidlDecoder::MaybeConfigureInput(fuchsia::media::StreamBufferConstraints* c
       constraints->has_is_physically_contiguous_required() &&
       constraints->is_physically_contiguous_required();
 
-  FXL_DCHECK(!physically_contiguous_required || constraints->has_very_temp_kludge_bti_handle());
+  // Physically-contiguous buffers are temporarily unsupported pending sysmem integration.
+  FXL_CHECK(!physically_contiguous_required);
 
   BufferSet& current_set = input_buffers_.current_set();
   ConfigureInputToUseVmos(
       0, current_set.buffer_count(), current_set.buffer_size(),
       current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
-      physically_contiguous_required,
-      physically_contiguous_required
-          ? std::move(*constraints->mutable_very_temp_kludge_bti_handle())
-          : zx::handle(),
-      [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
+      ZX_VM_PERM_READ, [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
         // This callback runs on an arbitrary thread.
         return current_set.AllocateBuffer(size, payload_vmos);
       });
@@ -279,13 +276,13 @@ void FidlDecoder::MaybeConfigureOutput(fuchsia::media::StreamBufferConstraints* 
 
   // TODO(dalesat): Do we need to add some buffers for queueing?
   BufferSet& current_set = output_buffers_.current_set();
-  output_vmos_physically_contiguous_ = (constraints->has_is_physically_contiguous_required() &&
-                                        constraints->is_physically_contiguous_required());
+  bool output_vmos_physically_contiguous = (constraints->has_is_physically_contiguous_required() &&
+                                            constraints->is_physically_contiguous_required());
+  FXL_CHECK(!output_vmos_physically_contiguous);
+
   ConfigureOutputToUseVmos(
       0, current_set.buffer_count(), current_set.buffer_size(),
-      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
-      output_vmos_physically_contiguous_,
-      std::move(*constraints->mutable_very_temp_kludge_bti_handle()));
+      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer);
 
   if (OutputConnectionReady()) {
     AddOutputBuffers();

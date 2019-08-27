@@ -163,6 +163,7 @@ test_package("mediaplayer_tests") {
     ":mediaplayer_tests_bin",
     "//src/media/playback/mediaplayer/core:tests",
     "//src/media/playback/mediaplayer/demux:tests",
+    "//src/media/playback/mediaplayer/graph:tests",
     "//src/media/playback/mediaplayer/util:tests",
   ]
 
@@ -184,6 +185,11 @@ test_package("mediaplayer_tests") {
 
     {
       name = "mediaplayer_core_tests"
+      environments = basic_envs
+    },
+
+    {
+      name = "mediaplayer_graph_tests"
       environments = basic_envs
     },
   ]

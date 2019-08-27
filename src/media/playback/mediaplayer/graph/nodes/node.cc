@@ -9,50 +9,6 @@
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
-namespace {
-
-// Determines if the |PayloadManager| for the input's connection is ready.
-// If so, notifies the node associated with the connected output and returns
-// true. If not, returns false.
-bool NotifyConnectionReady(const Input& input) {
-  if (!input.connected()) {
-    return false;
-  }
-
-  if (!input.payload_manager().ready()) {
-    return false;
-  }
-
-  Output* output = input.mate();
-  FXL_DCHECK(output);
-  FXL_DCHECK(output->node());
-  output->node()->NotifyOutputConnectionReady(output->index());
-
-  return true;
-}
-
-// Determines if the |PayloadManager| for the output's connection is ready.
-// If so, notifies the node associated with the connected input and returns
-// true. If not, returns false.
-bool NotifyConnectionReady(const Output& output) {
-  if (!output.connected()) {
-    return false;
-  }
-
-  Input* input = output.mate();
-  FXL_DCHECK(input);
-
-  if (!input->payload_manager().ready()) {
-    return false;
-  }
-
-  FXL_DCHECK(input->node());
-  input->node()->NotifyInputConnectionReady(input->index());
-
-  return true;
-}
-
-}  // namespace
 
 Node::Node() { update_counter_ = 0; }
 
@@ -272,6 +228,8 @@ void Node::NotifyInputConnectionReady(size_t index) {
   PostTask([this, index]() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
     OnInputConnectionReady(index);
+    // We may be ready to move packets now.
+    NeedsUpdate();
   });
 }
 
@@ -281,6 +239,8 @@ void Node::NotifyOutputConnectionReady(size_t index) {
   PostTask([this, index]() {
     FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
     OnOutputConnectionReady(index);
+    // We may be ready to move packets now.
+    NeedsUpdate();
   });
 }
 
@@ -377,7 +337,8 @@ void Node::ConfigureInputDeferred(size_t input_index) {
 }
 
 bool Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                          uint32_t max_payload_count, size_t input_index) {
+                                          uint32_t max_payload_count, zx_vm_option_t map_flags,
+                                          size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
 
@@ -390,20 +351,17 @@ bool Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
   config.max_payload_count_ = max_payload_count;
   config.max_payload_size_ = 0;
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
-  config.physically_contiguous_ = false;
+  config.map_flags_ = map_flags;
 
-  input.payload_manager().ApplyInputConfiguration(config, zx::handle(), nullptr);
-
-  return NotifyConnectionReady(input);
+  return ApplyInputConfiguration(&input);
 }
 
 bool Node::ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                    uint64_t max_payload_size, VmoAllocation vmo_allocation,
-                                   bool physically_contiguous, zx::handle bti_handle,
-                                   AllocateCallback allocate_callback, size_t input_index) {
+                                   zx_vm_option_t map_flags, AllocateCallback allocate_callback,
+                                   size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
-  FXL_DCHECK(physically_contiguous == bti_handle.is_valid());
 
   EnsureInput(input_index);
   Input& input = inputs_[input_index];
@@ -414,15 +372,12 @@ bool Node::ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t
   config.max_payload_count_ = max_payload_count;
   config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = vmo_allocation;
-  config.physically_contiguous_ = physically_contiguous;
+  config.map_flags_ = map_flags;
 
-  input.payload_manager().ApplyInputConfiguration(config, std::move(bti_handle),
-                                                  std::move(allocate_callback));
-
-  return NotifyConnectionReady(input);
+  return ApplyInputConfiguration(&input, std::move(allocate_callback));
 }
 
-bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, bool physically_contiguous,
+bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
                                        AllocateCallback allocate_callback, size_t input_index) {
   // This method runs on an arbitrary thread.
   EnsureInput(input_index);
@@ -434,12 +389,30 @@ bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, bool physic
   config.max_payload_count_ = 0;
   config.max_payload_size_ = 0;
   config.vmo_allocation_ = vmo_allocation;
-  config.physically_contiguous_ = physically_contiguous;
+  config.map_flags_ = map_flags;
 
-  input.payload_manager().ApplyInputConfiguration(config, zx::handle(),
-                                                  std::move(allocate_callback));
+  return ApplyInputConfiguration(&input, std::move(allocate_callback));
+}
 
-  return NotifyConnectionReady(input);
+bool Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
+                                         uint64_t max_aggregate_payload_size,
+                                         uint32_t max_payload_count, uint64_t max_payload_size,
+                                         VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
+                                         AllocateCallback allocate_callback, size_t input_index) {
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+
+  EnsureInput(input_index);
+  Input& input = inputs_[input_index];
+
+  PayloadConfig& config = input.payload_config();
+  config.mode_ = PayloadMode::kUsesSysmemVmos;
+  config.max_aggregate_payload_size_ = max_aggregate_payload_size;
+  config.max_payload_count_ = max_payload_count;
+  config.max_payload_size_ = max_payload_size;
+  config.vmo_allocation_ = vmo_allocation;
+  config.map_flags_ = map_flags;
+
+  return ApplyInputConfiguration(&input, std::move(allocate_callback), service_provider);
 }
 
 bool Node::InputConnectionReady(size_t input_index) const {
@@ -454,21 +427,32 @@ const PayloadVmos& Node::UseInputVmos(size_t input_index) const {
   const Input& input = inputs_[input_index];
 
   FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kUsesVmos ||
-             input.payload_config().mode_ == PayloadMode::kProvidesVmos);
+             input.payload_config().mode_ == PayloadMode::kProvidesVmos ||
+             input.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
   FXL_DCHECK(input.payload_manager().ready());
 
   return input.payload_manager().input_vmos();
 }
 
-PayloadVmoProvision& Node::ProvideInputVmos(size_t input_index) {
+PayloadVmoProvision& Node::ProvideInputVmos(size_t input_index) const {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(input_index < inputs_.size());
-  Input& input = inputs_[input_index];
+  const Input& input = inputs_[input_index];
 
   FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kProvidesVmos);
   FXL_DCHECK(input.payload_manager().ready());
 
   return input.payload_manager().input_external_vmos();
+}
+
+fuchsia::sysmem::BufferCollectionTokenPtr Node::TakeInputSysmemToken(size_t input_index) {
+  // This method runs on an arbitrary thread.
+  FXL_DCHECK(input_index < inputs_.size());
+  Input& input = inputs_[input_index];
+
+  FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
+
+  return input.payload_manager().TakeInputSysmemToken();
 }
 
 void Node::RequestInputPacket(size_t input_index) {
@@ -485,7 +469,7 @@ void Node::ConfigureOutputDeferred(size_t output_index) {
 
 bool Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                            uint32_t max_payload_count, uint64_t max_payload_size,
-                                           size_t output_index) {
+                                           zx_vm_option_t map_flags, size_t output_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
 
@@ -498,42 +482,34 @@ bool Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
   config.max_payload_count_ = max_payload_count;
   config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
-  config.physically_contiguous_ = false;
+  config.map_flags_ = map_flags;
 
-  if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(config, zx::handle());
-  }
-
-  return NotifyConnectionReady(output);
+  return ApplyOutputConfiguration(&output);
 }
 
-bool Node::ConfigureOutputToProvideLocalMemory(size_t output_index) {
+bool Node::ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
+                                               uint32_t max_payload_count,
+                                               uint64_t max_payload_size, size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
 
   PayloadConfig& config = output.payload_config();
   config.mode_ = PayloadMode::kProvidesLocalMemory;
-  config.max_aggregate_payload_size_ = 0;
-  config.max_payload_count_ = 0;
-  config.max_payload_size_ = 0;
+  config.max_aggregate_payload_size_ = max_aggregate_payload_size;
+  config.max_payload_count_ = max_payload_count;
+  config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
-  config.physically_contiguous_ = false;
+  config.map_flags_ = ZX_VM_PERM_WRITE;
 
-  if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(config, zx::handle());
-  }
-
-  return NotifyConnectionReady(output);
+  return ApplyOutputConfiguration(&output);
 }
 
 bool Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                     uint64_t max_payload_size, VmoAllocation vmo_allocation,
-                                    bool physically_contiguous, zx::handle bti_handle,
-                                    size_t output_index) {
+                                    zx_vm_option_t map_flags, size_t output_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
-  FXL_DCHECK(physically_contiguous == bti_handle.is_valid());
 
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -544,18 +520,12 @@ bool Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_
   config.max_payload_count_ = max_payload_count;
   config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = vmo_allocation;
-  config.physically_contiguous_ = physically_contiguous;
+  config.map_flags_ = map_flags;
 
-  if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(config, std::move(bti_handle));
-  } else {
-    // TODO: stash the bti handle
-  }
-
-  return NotifyConnectionReady(output);
+  return ApplyOutputConfiguration(&output);
 }
 
-bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, bool physically_contiguous,
+bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
                                         size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
@@ -567,13 +537,30 @@ bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, bool physi
   config.max_payload_count_ = 0;
   config.max_payload_size_ = 0;
   config.vmo_allocation_ = vmo_allocation;
-  config.physically_contiguous_ = physically_contiguous;
+  config.map_flags_ = map_flags;
 
-  if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(config, zx::handle());
-  }
+  return ApplyOutputConfiguration(&output);
+}
 
-  return NotifyConnectionReady(output);
+bool Node::ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
+                                          uint64_t max_aggregate_payload_size,
+                                          uint32_t max_payload_count, uint64_t max_payload_size,
+                                          VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
+                                          size_t output_index) {
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+
+  EnsureOutput(output_index);
+  Output& output = outputs_[output_index];
+
+  PayloadConfig& config = output.payload_config();
+  config.mode_ = PayloadMode::kUsesSysmemVmos;
+  config.max_aggregate_payload_size_ = max_aggregate_payload_size;
+  config.max_payload_count_ = max_payload_count;
+  config.max_payload_size_ = max_payload_size;
+  config.vmo_allocation_ = vmo_allocation;
+  config.map_flags_ = map_flags;
+
+  return ApplyOutputConfiguration(&output, service_provider);
 }
 
 bool Node::OutputConnectionReady(size_t output_index) const {
@@ -600,23 +587,35 @@ const PayloadVmos& Node::UseOutputVmos(size_t output_index) const {
   const Output& output = outputs_[output_index];
 
   FXL_DCHECK(output.payload_config().mode_ == PayloadMode::kUsesVmos ||
-             output.payload_config().mode_ == PayloadMode::kProvidesVmos);
+             output.payload_config().mode_ == PayloadMode::kProvidesVmos ||
+             output.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
   FXL_DCHECK(output.connected());
   FXL_DCHECK(output.mate()->payload_manager().ready());
 
   return output.mate()->payload_manager().output_vmos();
 }
 
-PayloadVmoProvision& Node::ProvideOutputVmos(size_t output_index) {
+PayloadVmoProvision& Node::ProvideOutputVmos(size_t output_index) const {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(output_index < outputs_.size());
-  Output& output = outputs_[output_index];
+  const Output& output = outputs_[output_index];
 
   FXL_DCHECK(output.payload_config().mode_ == PayloadMode::kProvidesVmos);
   FXL_DCHECK(output.connected());
   FXL_DCHECK(output.mate()->payload_manager().ready());
 
   return output.mate()->payload_manager().output_external_vmos();
+}
+
+fuchsia::sysmem::BufferCollectionTokenPtr Node::TakeOutputSysmemToken(size_t output_index) {
+  // This method runs on an arbitrary thread.
+  FXL_DCHECK(output_index < outputs_.size());
+  Output& output = outputs_[output_index];
+
+  FXL_DCHECK(output.payload_config().mode_ == PayloadMode::kUsesSysmemVmos);
+  FXL_DCHECK(output.connected());
+
+  return output.mate()->payload_manager().TakeOutputSysmemToken();
 }
 
 void Node::PutOutputPacket(PacketPtr packet, size_t output_index) {
@@ -651,6 +650,44 @@ void Node::EnsureOutput(size_t output_index) {
 
   std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
   packets_per_output_.resize(output_index + 1);
+}
+
+bool Node::ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider) {
+  FXL_DCHECK(output);
+
+  if (!output->connected()) {
+    return false;
+  }
+
+  auto& payload_manager = output->mate()->payload_manager();
+
+  payload_manager.ApplyOutputConfiguration(output->payload_config(), service_provider);
+  if (payload_manager.ready()) {
+    return true;
+  }
+
+  payload_manager.ListenForReady(
+      [this, index = output->index()]() { NotifyOutputConnectionReady(index); });
+
+  return false;
+}
+
+bool Node::ApplyInputConfiguration(Input* input, PayloadManager::AllocateCallback allocate_callback,
+                                   ServiceProvider* service_provider) {
+  FXL_DCHECK(input);
+
+  auto& payload_manager = input->payload_manager();
+
+  payload_manager.ApplyInputConfiguration(input->payload_config(), std::move(allocate_callback),
+                                          service_provider);
+  if (payload_manager.ready()) {
+    return true;
+  }
+
+  payload_manager.ListenForReady(
+      [this, index = input->index()]() { NotifyInputConnectionReady(index); });
+
+  return false;
 }
 
 }  // namespace media_player

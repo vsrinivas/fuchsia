@@ -127,7 +127,6 @@ class FidlDecoder : public Decoder {
   std::unique_ptr<StreamType> revised_output_stream_type_;
   bool add_input_buffers_pending_ = false;
   bool add_output_buffers_pending_ = false;
-  bool output_vmos_physically_contiguous_ = false;
   uint64_t stream_lifetime_ordinal_ = 1;
   uint64_t output_format_details_version_ordinal_ = 0;
   bool end_of_input_stream_ = false;

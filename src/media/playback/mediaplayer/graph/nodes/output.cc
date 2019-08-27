@@ -12,10 +12,7 @@ namespace media_player {
 Output::Output(Node* node, size_t index) : node_(node), index_(index) {}
 
 Output::Output(Output&& output)
-    : node_(output.node()),
-      index_(output.index()),
-      payload_config_(output.payload_config()),
-      bti_handle_(std::move(output.bti_handle_)) {
+    : node_(output.node()), index_(output.index()), payload_config_(output.payload_config()) {
   // We can't move an output that's connected.
   // TODO(dalesat): Make |Output| non-movable.
   FXL_DCHECK(output.mate() == nullptr);
@@ -29,7 +26,7 @@ void Output::Connect(Input* input) {
   mate_ = input;
 
   if (payload_config_.mode_ != PayloadMode::kNotConfigured) {
-    mate_->payload_manager().ApplyOutputConfiguration(payload_config_, std::move(bti_handle_));
+    mate_->payload_manager().ApplyOutputConfiguration(payload_config_);
   }
 }
 

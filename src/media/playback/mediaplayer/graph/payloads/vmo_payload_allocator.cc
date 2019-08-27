@@ -29,15 +29,15 @@ void VmoPayloadAllocator::Dump(std::ostream& os) const {
 void VmoPayloadAllocator::SetVmoAllocation(VmoAllocation vmo_allocation) {
   FXL_DCHECK(vmo_allocation != VmoAllocation::kNotApplicable);
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(vmo_allocation_ == VmoAllocation::kNotApplicable)
-      << "SetVmoAllocation may only be called once.";
+  FXL_DCHECK(!vmo_allocation_set_) << "SetVmoAllocation may only be called once.";
+  vmo_allocation_set_ = true;
   vmo_allocation_ = vmo_allocation;
 }
 
 fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::AllocatePayloadBuffer(uint64_t size) {
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(vmo_allocation_ != VmoAllocation::kNotApplicable)
-      << "SetVmoAllocation must be called before AllocatePayloadBuffer.";
+  FXL_DCHECK(vmo_allocation_set_);
+  FXL_DCHECK(vmo_allocation_ != VmoAllocation::kNotApplicable);
   FXL_DCHECK(!payload_vmos_.empty());
   FXL_DCHECK((vmo_allocation_ != VmoAllocation::kSingleVmo) || (payload_vmos_.size() == 1));
 
@@ -80,7 +80,8 @@ void VmoPayloadAllocator::AddVmo(fbl::RefPtr<PayloadVmo> payload_vmo) {
   payload_vmo->SetIndex(payload_vmos_.size());
 
   payload_vmos_.push_back(payload_vmo);
-  if (vmo_allocation_ != VmoAllocation::kVmoPerBuffer) {
+  if (vmo_allocation_ == VmoAllocation::kSingleVmo ||
+      vmo_allocation_ == VmoAllocation::kUnrestricted) {
     payload_vmo->allocator_ = std::make_unique<FifoAllocator>(payload_vmo->size());
   }
 }

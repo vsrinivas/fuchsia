@@ -23,7 +23,10 @@ enum class PayloadMode {
   kUsesVmos,
 
   // Payloads are in VMOs provided by the connector via |PayloadVmoProvision|.
-  kProvidesVmos
+  kProvidesVmos,
+
+  // Payloads are in sysmem-allocated VMOs obtained through |PayloadVmos|.
+  kUsesSysmemVmos
 };
 
 // Indicates how buffers should be allocated from VMOs.
@@ -93,21 +96,21 @@ enum class VmoAllocation {
 // TODO(dalesat): More.
 //
 struct PayloadConfig {
-  // Indicates how the input/output will operate with respect to payload
+  // Indicates how the connector will operate with respect to payload
   // allocation. See comments on |PayloadMode| above.
   PayloadMode mode_ = PayloadMode::kNotConfigured;
 
-  // Indicates the amount of memory in bytes the input/output will require.
+  // Indicates the amount of memory in bytes the connector will require.
   // See the class comment above.
   //
-  // When an input/output is used a kExternalX mode, it doesn't provide this
+  // When an connector is used a kExternalX mode, it doesn't provide this
   // value. Outputs using |kProvidesLocalMemory| mode are assumed to be able to
-  // allocated an indefinite amount of payload memory. When an input/output
+  // allocated an indefinite amount of payload memory. When an connector
   // uses kProvidesVmos mode, the manager examines the provided VMOs to see if
   // they fulfill the requirements of the connected output/input.
   uint64_t max_aggregate_payload_size_ = 0;
 
-  // Indicates the maximum number of payloads the input/output will required.
+  // Indicates the maximum number of payloads the connector will required.
   // See the class comment above.
   uint32_t max_payload_count_ = 0;
 
@@ -121,22 +124,20 @@ struct PayloadConfig {
 
   // Indicates how buffers should or will be allocated from VMOs. For
   // inputs/outputs using a |kExternalVmo| mode, this value indicates how that
-  // input/output will allocate buffers. For inputs/output using |kUsesVmos|
+  // connector will allocate buffers. For inputs/output using |kUsesVmos|
   // mode, this value indicates how buffers must be allocated for that
-  // input/output.
+  // connector.
   //
   // In some cases, incompatible values of |vmo_allocation_| from the input and
   // output in a connection will require that payloads be copied.
   VmoAllocation vmo_allocation_ = VmoAllocation::kNotApplicable;
 
-  // Indicates whether VMOs should or will be physically contiguous. For
-  // inputs/outputs using a |kExternalVmo| mode, this value indicates how that
-  // input/output will create VMOs. For inputs/output using |kUsesVmos| mode,
-  // this value indicates how VMOs must be created for that input/output.
-  //
-  // In some cases, incompatible values of |physically_contiguous_| from the
-  // input and output in a connection will require that payloads be copied.
-  bool physically_contiguous_ = false;
+  // Indicates the VMO map flags the connector will require. Typically, an output will require
+  // write access (|ZX_VM_PERM_WRITE|), and an input will require read access (|ZX_VM_PERM_READ|).
+  // A zero |map_flags_| value indicates that the connector doesn't require the VMO to be
+  // mapped at all. This can happen when the node is a pass-through for VMOs. The video renderer
+  // is an example of this.
+  zx_vm_option_t map_flags_;
 };
 
 }  // namespace media_player

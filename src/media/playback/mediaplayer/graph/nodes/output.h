@@ -57,7 +57,6 @@ class Output {
   size_t index_;
   Input* mate_ = nullptr;
   PayloadConfig payload_config_;
-  zx::handle bti_handle_;
 };
 
 }  // namespace media_player

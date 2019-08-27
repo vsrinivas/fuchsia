@@ -93,7 +93,8 @@ void FidlVideoRenderer::ConfigureConnectors() {
   ConfigureInputToUseVmos(0,              // max_aggregate_payload_size
                           kPacketDemand,  // max_payload_count
                           0,              // max_payload_size
-                          VmoAllocation::kVmoPerBuffer, false);
+                          VmoAllocation::kVmoPerBuffer,
+                          0);  // map_flags
 }
 
 void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {

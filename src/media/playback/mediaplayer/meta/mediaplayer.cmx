@@ -8,6 +8,7 @@
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.sys.Environment",
+            "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.scenic.Scenic"
         ]

@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_NODES_NODE_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_NODES_NODE_H_
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
@@ -211,14 +212,16 @@ class Node : public std::enable_shared_from_this<Node> {
   // |ProvideInputVmos| for the specified input.
   //
   // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::InputConnectionReady| is called
+  // false if not, in which case |Node::NotifyInputConnectionReady| is called
   // when the connection becomes ready.
   //
   // This method may be called on any thread provided the input has been
   // configured previously (possibly with |ConfigureInputDeferred|). Otherwise,
   // it must be called on the main graph thread.
   bool ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                      uint32_t max_payload_count, size_t input_index = 0);
+                                      uint32_t max_payload_count,
+                                      zx_vm_option_t map_flags = ZX_VM_PERM_READ,
+                                      size_t input_index = 0);
 
   // Configures an input to address payloads as contiguous regions in VMOs
   // that are created by some other party. |max_aggregate_payload_size| sets
@@ -231,10 +234,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // |max_aggregate_payload_size| and |max_payload_count| must be non-zero.
   //
   // |vmo_allocation| indicates how the payload buffers must be distributed
-  // across the VMOs. |physically_contiguous| indicates whether the VMOs
-  // must be physically contiguous. If and only if |physically_contiguous|
-  // is true, |bti_handle| provides the handle required for
-  // |zx_vmo_create_contiguous|.
+  // across the VMOs.
   //
   // Calling this function prohibits the use of |ProvideInputVmos| for the
   // specified input. |UseInputVmos| is available to determine what VMOs are
@@ -250,7 +250,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // TODO(dalesat): Be explicit about what the VMOs will actually be like.
   //
   // Returns true if the connection is ready for allocation activity.
-  // Returns false if not, in which case |Node::InputConnectionReady|
+  // Returns false if not, in which case |Node::NotifyInputConnectionReady|
   // is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the input has been
@@ -258,8 +258,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // Otherwise, it must be called on the main graph thread.
   bool ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                uint64_t max_payload_size, VmoAllocation vmo_allocation,
-                               bool physically_contiguous = false,
-                               zx::handle bti_handle = zx::handle(),
+                               zx_vm_option_t map_flags = ZX_VM_PERM_READ,
                                AllocateCallback allocate_callback = nullptr,
                                size_t input_index = 0);
 
@@ -269,8 +268,6 @@ class Node : public std::enable_shared_from_this<Node> {
   // the connection will adapt accordingly by creating a separate allocator
   // for the output and doing copies. |vmo_allocation| indicates how the
   // payload buffers will be distributed across the VMOs.
-  // |physically_contiguous| indicates whether the VMOs will be contiguous in
-  // physical memory.
   //
   // Calling this function allows the use of |ProvideInputVmos| for the
   // specified input.
@@ -282,15 +279,36 @@ class Node : public std::enable_shared_from_this<Node> {
   // will always be the same VMOs provided by the input.
   //
   // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::InputConnectionReady| is called
+  // false if not, in which case |Node::NotifyInputConnectionReady| is called
   // when the connection becomes ready.
   //
   // This method may be called on any thread provided the input has been
   // configured previously (possibly with |ConfigureInputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, bool physically_contiguous = false,
+  bool ConfigureInputToProvideVmos(VmoAllocation vmo_allocation,
+                                   zx_vm_option_t map_flags = ZX_VM_PERM_READ,
                                    AllocateCallback allocate_callback = nullptr,
                                    size_t input_index = 0);
+
+  // Configures an input to address payloads as contiguous regions in VMOs provided by sysmem. If
+  // the VMOs provided by sysmem are inadequate to hold all the payloads that are kept in memory
+  // at one time, the connection will adapt accordingly by creating a separate allocator for the
+  // output and doing copies. |vmo_allocation| indicates how the payload buffers will be distributed
+  // across the VMOs.
+  //
+  // Calling this function allows the use of |TakeInputSysmemToken| for the specified input.
+  //
+  // Returns true if the connection is ready for allocation activity. Returns false if not, in which
+  // case |Node::NotifyInputConnectionReady| is called when the connection becomes ready.
+  //
+  // This method must be called on the main graph thread.
+  bool ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
+                                     uint64_t max_aggregate_payload_size,
+                                     uint32_t max_payload_count, uint64_t max_payload_size,
+                                     VmoAllocation vmo_allocation,
+                                     zx_vm_option_t map_flags = ZX_VM_PERM_READ,
+                                     AllocateCallback allocate_callback = nullptr,
+                                     size_t input_index = 0);
 
   // Returns true if the specified output is ready for calls to |UseInputVmos|
   // or |ProvideInputVmos|.
@@ -311,7 +329,14 @@ class Node : public std::enable_shared_from_this<Node> {
   // configure the specified input, and the connection is ready.
   //
   // This method may be called on an arbitrary thread.
-  PayloadVmoProvision& ProvideInputVmos(size_t input_index = 0);
+  PayloadVmoProvision& ProvideInputVmos(size_t input_index = 0) const;
+
+  // Takes the sysmem buffer collection token for the specified input. This method is only usable
+  // if |ConfigureInputToUseSysmemVmos| has been called to configure the specified input, and the
+  // connection is ready.
+  //
+  // This method may be called on an arbitrary thread.
+  fuchsia::sysmem::BufferCollectionTokenPtr TakeInputSysmemToken(size_t input_index = 0);
 
   // Requests an input packet on the specified input. |input_index| must be
   // less than the configured input count. This method may be called from
@@ -351,7 +376,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // is available for allocating payloads.
   //
   // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::OutputConnectionReady| is called
+  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
   // when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
@@ -359,23 +384,28 @@ class Node : public std::enable_shared_from_this<Node> {
   // it must be called on the main graph thread.
   bool ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                        uint32_t max_payload_count, uint64_t max_payload_size,
+                                       zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
                                        size_t output_index = 0);
 
   // Configures an output to allocate its own payloads from local memory. It is
-  // assumed that the output can allocate as much memory as is required.
+  // assumed that the output can allocate as much memory as is required. The size and count values
+  // aren't used unless packet payloads need to be copied into a limited collection of payload
+  // buffers.
   // TODO(dalesat): Consider committing to handle shortfalls by copying.
   //
   // Calling this function prohibits the use of |UseOutputVmos|,
   // |ProvideOutputVmos| or |AllocatePayloadBuffer| for the specified output.
   //
   // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::OutputConnectionReady| is called
+  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
   // when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureOutputToProvideLocalMemory(size_t output_index = 0);
+  bool ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
+                                           uint32_t max_payload_count, uint64_t max_payload_size,
+                                           size_t output_index = 0);
 
   // Configures an output to address payloads as contiguous regions in VMOs
   // that are created by some other party. |max_aggregate_payload_size|
@@ -389,9 +419,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // |max_payload_count| must be non-zero.
   //
   // |vmo_allocation| indicates how the payload buffers must be distributed
-  // across the VMOs. |physically_contiguous| indicates whether the VMOs must
-  // be physically contiguous. If and only if |physically_contiguous| is true,
-  // |bti_handle| provides the handle required for |zx_vmo_create_contiguous|.
+  // across the VMOs.
   //
   // Calling this function prohibits the use of |ProvideOutputVmos| for the
   // specified output. |UseOutputVmos| is available to determine what VMOs are
@@ -399,7 +427,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // payloads.
   //
   // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::OutputConnectionReady| is called
+  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
   // when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
@@ -407,8 +435,8 @@ class Node : public std::enable_shared_from_this<Node> {
   // it must be called on the main graph thread.
   bool ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                 uint64_t max_payload_size, VmoAllocation vmo_allocation,
-                                bool physically_contiguous = false,
-                                zx::handle bti_handle = zx::handle(), size_t output_index = 0);
+                                zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+                                size_t output_index = 0);
 
   // Configures an output to address payloads as contiguous regions in VMOs
   // that the output provides. If the VMOs provided by the output are
@@ -416,22 +444,40 @@ class Node : public std::enable_shared_from_this<Node> {
   // the connection will adapt accordingly by creating a separate allocator
   // for the output and doing copies. |vmo_allocation| indicates how the
   // payload buffers will be distributed across the VMOs.
-  // |physically_contiguous| indicates whether the VMOs will be contiguous in
-  // physical memory.
   //
   // Calling this function allows the use of |ProvideOutputVmos| for the
   // specified output, and |AllocatePayloadBuffer| is available for allocating
   // payloads.
   //
   // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::OutputConnectionReady| is called
+  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
   // when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
   bool ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
-                                    bool physically_contiguous = false, size_t output_index = 0);
+                                    zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+                                    size_t output_index = 0);
+
+  // Configures an output to address payloads as contiguous regions in VMOs provided by sysmem. If
+  // the VMOs provided by sysmem are inadequate to hold all the payloads that are kept in memory
+  // at one time, the connection will adapt accordingly by creating a separate allocator for the
+  // input and doing copies. |vmo_allocation| indicates how the payload buffers will be distributed
+  // across the VMOs.
+  //
+  // Calling this function allows the use of |TakeOutputSysmemToken| for the specified output.
+  //
+  // Returns true if the connection is ready for allocation activity. Returns false if not, in which
+  // case |Node::NotifyOutputConnectionReady| is called when the connection becomes ready.
+  //
+  // This method must be called on the main graph thread.
+  bool ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
+                                      uint64_t max_aggregate_payload_size,
+                                      uint32_t max_payload_count, uint64_t max_payload_size,
+                                      VmoAllocation vmo_allocation,
+                                      zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
+                                      size_t output_index = 0);
 
   // Returns true if the specified input is ready for calls to
   // |AllocatePayloadBuffer|, |UseOutputVmos| or |ProvideOutputVmos|.
@@ -460,7 +506,14 @@ class Node : public std::enable_shared_from_this<Node> {
   // to configure the specified output, and the connection is ready.
   //
   // This method may be called on an arbitrary thread.
-  PayloadVmoProvision& ProvideOutputVmos(size_t output_index = 0);
+  PayloadVmoProvision& ProvideOutputVmos(size_t output_index = 0) const;
+
+  // Takes the sysmem buffer collection token for the specified output. This method is only usable
+  // if |ConfigureOutputToUseSysmemVmos| has been called to configure the specified output, and the
+  // connection is ready.
+  //
+  // This method may be called on an arbitrary thread.
+  fuchsia::sysmem::BufferCollectionTokenPtr TakeOutputSysmemToken(size_t output_index = 0);
 
   // Supplies a packet to be sent downstream on the specified output.
   //
@@ -501,6 +554,12 @@ class Node : public std::enable_shared_from_this<Node> {
   void EnsureInput(size_t input_index);
 
   void EnsureOutput(size_t output_index);
+
+  bool ApplyInputConfiguration(Input* input,
+                               PayloadManager::AllocateCallback allocate_callback = nullptr,
+                               ServiceProvider* service_provider = nullptr);
+
+  bool ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider = nullptr);
 
   // The stage's thread is always the main graph thread.
   FXL_DECLARE_THREAD_CHECKER(thread_checker_);
