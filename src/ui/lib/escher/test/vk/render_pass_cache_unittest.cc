@@ -77,4 +77,125 @@ VK_TEST(RenderPassCache, DefaultSubpass) {
   EXPECT_TRUE(escher->Cleanup());
 }
 
+// Helper function for RenderPassCache.RespectsSampleCount.
+static void InitRenderPassInfo(RenderPassInfo* rp, const TexturePtr& depth_tex,
+                               const TexturePtr& color_tex, const TexturePtr& resolve_tex) {
+  const uint32_t width = depth_tex->width();
+  const uint32_t height = depth_tex->height();
+  const uint32_t sample_count = depth_tex->image()->info().sample_count;
+
+  FXL_DCHECK(width == color_tex->width());
+  FXL_DCHECK(height == color_tex->height());
+  FXL_DCHECK(sample_count == color_tex->image()->info().sample_count);
+
+  static constexpr uint32_t kRenderTargetAttachmentIndex = 0;
+  static constexpr uint32_t kResolveTargetAttachmentIndex = 1;
+
+  rp->depth_stencil_attachment = depth_tex;
+  rp->color_attachments[kRenderTargetAttachmentIndex] = color_tex;
+  rp->num_color_attachments = 1;
+  // Clear and store color attachment 0, the sole color attachment.
+  rp->clear_attachments = 1u << kRenderTargetAttachmentIndex;
+  rp->store_attachments = 1u << kRenderTargetAttachmentIndex;
+  // Standard flags for a depth-testing render-pass that needs to first clear
+  // the depth image.
+  rp->op_flags = RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalColorLayoutOp |
+                 RenderPassInfo::kOptimalDepthStencilLayoutOp;
+  rp->clear_color[0].setFloat32({0.f, 0.f, 0.f, 0.f});
+
+  if (sample_count == 1) {
+    FXL_DCHECK(!resolve_tex);
+
+    rp->color_attachments[kRenderTargetAttachmentIndex] = color_tex;
+    rp->subpasses.push_back(RenderPassInfo::Subpass{
+        .num_color_attachments = 1,
+        .color_attachments = {kRenderTargetAttachmentIndex},
+        .num_input_attachments = 0,
+        .input_attachments = {},
+        .num_resolve_attachments = 0,
+        .resolve_attachments = {},
+    });
+  } else {
+    FXL_DCHECK(resolve_tex);
+    FXL_DCHECK(resolve_tex->image()->info().sample_count == 1);
+    FXL_DCHECK(width == resolve_tex->width());
+    FXL_DCHECK(height == resolve_tex->height());
+
+    rp->color_attachments[kResolveTargetAttachmentIndex] = resolve_tex;
+    rp->num_color_attachments++;
+    rp->subpasses.push_back(RenderPassInfo::Subpass{
+        .num_color_attachments = 1,
+        .color_attachments = {kRenderTargetAttachmentIndex},
+        .num_input_attachments = 0,
+        .input_attachments = {},
+        .num_resolve_attachments = 1,
+        .resolve_attachments = {kResolveTargetAttachmentIndex},
+    });
+  }
+}
+
+VK_TEST(RenderPassCache, RespectsSampleCount) {
+  auto escher = test::GetEscher();
+
+  impl::RenderPassCache cache(escher->resource_recycler());
+  EXPECT_EQ(cache.size(), 0U);
+
+  uint32_t width = 1024;
+  uint32_t height = 1024;
+
+  // Attachments and renderpass info for no MSAA.
+  TexturePtr depth_tex1 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
+                                                       1, vk::Filter::eNearest);
+  TexturePtr color_tex1a = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
+                                                        1, vk::Filter::eNearest);
+  TexturePtr color_tex1b = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
+                                                        1, vk::Filter::eNearest);
+  RenderPassInfo info1a, info1b;
+  InitRenderPassInfo(&info1a, depth_tex1, color_tex1a, nullptr);
+  InitRenderPassInfo(&info1b, depth_tex1, color_tex1b, nullptr);
+
+  // Attachments and renderpass info for 2x MSAA.
+  TexturePtr depth_tex2 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
+                                                       2, vk::Filter::eNearest);
+  TexturePtr color_tex2a = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
+                                                        2, vk::Filter::eNearest);
+  TexturePtr color_tex2b = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
+                                                        2, vk::Filter::eNearest);
+  RenderPassInfo info2a, info2b;
+  InitRenderPassInfo(&info2a, depth_tex2, color_tex2a, color_tex1a);
+  InitRenderPassInfo(&info2b, depth_tex2, color_tex2b, color_tex1b);
+
+  // Attachments and renderpass info for 4x MSAA.
+  TexturePtr depth_tex4 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
+                                                       4, vk::Filter::eNearest);
+  TexturePtr color_tex4a = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
+                                                        4, vk::Filter::eNearest);
+  TexturePtr color_tex4b = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height,
+                                                        4, vk::Filter::eNearest);
+  RenderPassInfo info4a, info4b;
+  InitRenderPassInfo(&info4a, depth_tex4, color_tex4a, color_tex1a);
+  InitRenderPassInfo(&info4b, depth_tex4, color_tex4b, color_tex1b);
+
+  impl::RenderPassPtr rp1a, rp1b, rp2a, rp2b, rp4a, rp4b;
+  rp1a = cache.ObtainRenderPass(info1a);
+  rp1b = cache.ObtainRenderPass(info1b);
+  rp2a = cache.ObtainRenderPass(info2a);
+  rp2b = cache.ObtainRenderPass(info2b);
+  rp4a = cache.ObtainRenderPass(info4a);
+  rp4b = cache.ObtainRenderPass(info4b);
+
+  // Same cached renderpass should be returned for info with the same sample count (but different
+  // framebuffer images).
+  EXPECT_EQ(rp1a, rp1b);
+  EXPECT_EQ(rp2a, rp2b);
+  EXPECT_EQ(rp4a, rp4b);
+
+  // Different cached renderpass should be returned when the sample count differs.
+  EXPECT_NE(rp1a, rp2a);
+  EXPECT_NE(rp1a, rp4a);
+  EXPECT_NE(rp2a, rp4a);
+
+  EXPECT_TRUE(escher->Cleanup());
+}
+
 }  // anonymous namespace

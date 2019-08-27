@@ -136,16 +136,11 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         if (sample_count == 1) {
           sample_count = 2;
         } else if (sample_count == 2) {
-          // TODO(ES-156): there seems to be a RenderPass-caching bug where if
-          // we change the RenderPassInfo's images to have a different sample
-          // count, then the old cached RenderPass is not flushed from the
-          // cache.  For now, just toggle between two values.
-          sample_count = 1;
-          // sample_count = 4;
+          sample_count = 4;
         } else {
           sample_count = 1;
         }
-        FXL_LOG(INFO) << "MSAA sample count: " << sample_count;
+        FXL_LOG(INFO) << "MSAA sample count: " << unsigned{sample_count};
         renderer_config_.msaa_sample_count = sample_count;
         renderer_->SetConfig(renderer_config_);
         return true;

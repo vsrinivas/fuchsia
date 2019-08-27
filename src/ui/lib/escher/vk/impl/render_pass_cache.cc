@@ -34,6 +34,7 @@ const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(const RenderPassInf
     FXL_DCHECK(image_view);
     h.u32(EnumCast(image_view->image()->format()));
     h.u32(EnumCast(image_view->image()->swapchain_layout()));
+    h.u32(image_view->image()->info().sample_count);
     if (image_view->image()->is_transient()) {
       lazy |= 1u << i;
     }
