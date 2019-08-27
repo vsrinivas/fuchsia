@@ -33,6 +33,7 @@ executable("bin") {
     "//src/virtualization/packages/biscotti_guest/third_party/protos:vsh_cc_proto",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/virtio",
   ]

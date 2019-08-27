@@ -10,6 +10,7 @@
 #include <fs-management/mount.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -146,7 +147,7 @@ class FactoryResetTest : public Test {
 // superblocks, causing it to look like an unknown partition (which upon reboot
 // will cause recovery to happen).
 TEST_F(FactoryResetTest, CanShredVolume) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::device::manager::Administrator> binding;

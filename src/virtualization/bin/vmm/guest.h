@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_GUEST_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/guest.h>
 #include <lib/zx/vmar.h>
 

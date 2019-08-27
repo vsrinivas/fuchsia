@@ -7,6 +7,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async_promise/executor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -41,7 +42,7 @@ enum class GuestKernel {
 class EnclosedGuest {
  public:
   EnclosedGuest()
-      : loop_(&kAsyncLoopConfigAttachToThread),
+      : loop_(&kAsyncLoopConfigAttachToCurrentThread),
         real_services_(sys::ServiceDirectory::CreateFromNamespace()) {}
   virtual ~EnclosedGuest() {}
 

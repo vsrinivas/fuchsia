@@ -148,6 +148,7 @@ source_set("lib") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]

@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fsl/handles/object_info.h>
 #include <lib/gtest/test_loop_fixture.h>
 

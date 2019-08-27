@@ -6,6 +6,7 @@
 #define SRC_UI_EXAMPLES_ESCHER_COMMON_DEMO_HARNESS_FUCHSIA_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>

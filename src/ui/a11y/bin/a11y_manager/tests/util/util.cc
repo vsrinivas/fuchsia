@@ -8,7 +8,7 @@ namespace accessibility_test {
 
 char *ReadFile(vfs::internal::Node *node, int length, char *buffer) {
   EXPECT_LE(length, kMaxLogBufferSize);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("ReadingDebugFile");
 
   int fd = OpenAsFD(node, loop.dispatcher());

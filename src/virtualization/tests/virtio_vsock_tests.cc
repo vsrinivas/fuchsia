@@ -50,7 +50,7 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
   }
 
   void TestThread() {
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
     fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
     this->GetHostVsockEndpoint(vsock_endpoint.NewRequest());

@@ -8,6 +8,7 @@
 #include <fuchsia/virtualization/vmm/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/directory.h>
@@ -94,8 +95,8 @@ static zx_gpaddr_t alloc_device_addr(size_t device_size) {
 }
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  async::Loop device_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async::Loop device_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<component::StartupContext> context =
       component::StartupContext::CreateFromStartupInfo();
@@ -329,7 +330,7 @@ int main(int argc, char** argv) {
 
   // Setup vsock device. Vsock uses its own dispatcher as a temporary measure
   // until it is moved out of process.
-  async::Loop vsock_loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop vsock_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   VirtioVsock vsock(context.get(), guest.phys_mem(), vsock_loop.dispatcher());
   if (cfg.virtio_vsock()) {
     status = bus.Connect(vsock.pci_device(), vsock_loop.dispatcher(), false);

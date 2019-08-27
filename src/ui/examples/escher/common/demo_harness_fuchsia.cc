@@ -85,7 +85,7 @@ std::unique_ptr<DemoHarness> DemoHarness::New(DemoHarness::WindowParams window_p
 DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params)
     : DemoHarness(window_params),
       loop_(loop),
-      owned_loop_(loop_ ? nullptr : new async::Loop(&kAsyncLoopConfigAttachToThread)),
+      owned_loop_(loop_ ? nullptr : new async::Loop(&kAsyncLoopConfigAttachToCurrentThread)),
       trace_provider_((loop_ ? loop_ : owned_loop_.get())->dispatcher()),
       component_context_(sys::ComponentContext::Create()),
       input_reader_(this) {

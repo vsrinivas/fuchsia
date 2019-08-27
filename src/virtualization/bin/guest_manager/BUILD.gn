@@ -39,6 +39,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.virtualization.vmm",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/bitmap",
   ]
 }

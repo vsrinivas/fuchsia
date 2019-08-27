@@ -51,7 +51,7 @@ class VirtioMagmaTest : public TestWithDevice {
   VirtioMagmaTest()
       : out_queue_(phys_mem_, kDescriptorSize, kQueueSize),
         wayland_importer_mock_binding_(&wayland_importer_mock_),
-        wayland_importer_mock_loop_(&kAsyncLoopConfigNoAttachToThread) {}
+        wayland_importer_mock_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
     uintptr_t vmar_addr;

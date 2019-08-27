@@ -4,6 +4,7 @@
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
@@ -14,7 +15,7 @@
 #include "src/ui/bin/activity/state_machine_driver.h"
 
 int main(void) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
 
   std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();

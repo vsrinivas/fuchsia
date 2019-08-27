@@ -4,6 +4,7 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zircon/device/ethernet.h>
 
 #include <trace-provider/provider.h>

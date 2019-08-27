@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -136,7 +137,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
 
 int main(int argc, const char** argv) {
   fit::closure func;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
   // This program might be called via an alias representing the vsh subcommand, e.g.

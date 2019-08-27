@@ -6,6 +6,7 @@
 #define SRC_UI_A11Y_BIN_A11Y_MANAGER_TESTS_UTIL_UTIL_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 

@@ -66,6 +66,7 @@ source_set("lib") {
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",

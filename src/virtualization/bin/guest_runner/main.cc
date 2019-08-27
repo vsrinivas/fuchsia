@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest_runner/runner_impl.h"
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   guest_runner::RunnerImpl runner;
   loop.Run();
 }

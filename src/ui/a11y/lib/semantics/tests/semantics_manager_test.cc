@@ -7,6 +7,7 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -132,7 +133,7 @@ int SemanticsManagerTest::OpenAsFD(vfs::internal::Node *node, async_dispatcher_t
 
 char *SemanticsManagerTest::ReadFile(vfs::internal::Node *node, int length, char *buffer) {
   EXPECT_LE(length, kMaxLogBufferSize);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("ReadingDebugFile");
 
   int fd = OpenAsFD(node, loop.dispatcher());

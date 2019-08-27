@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_GUEST_VSHC_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stddef.h>
 #include <stdint.h>

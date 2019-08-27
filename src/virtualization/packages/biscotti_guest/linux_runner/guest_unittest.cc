@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/memfs/memfs.h>
@@ -112,7 +113,7 @@ class LinuxRunnerGuestTest : public gtest::TestLoopFixture {
   guest::testing::FakeManager fake_guest_manager_;
   std::unique_ptr<Guest> guest_;
   sys::testing::ComponentContextProvider provider_;
-  async::Loop memfs_loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop memfs_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<ScopedMemfs> data_;
 };
 

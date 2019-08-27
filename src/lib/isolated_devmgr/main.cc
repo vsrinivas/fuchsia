@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/device/vfs.h>
@@ -93,7 +94,7 @@ static int process_device_ids(const char* str,
 }
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   devmgr_launcher::Args args;
   auto device_list_unique_ptr = std::unique_ptr<fbl::Vector<board_test::DeviceEntry>>(
       new fbl::Vector<board_test::DeviceEntry>());

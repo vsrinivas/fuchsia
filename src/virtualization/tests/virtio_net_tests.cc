@@ -58,7 +58,7 @@ class VirtioNetDebianGuest : public DebianEnclosedGuest {
 
 static void TestThread(const MockNetstack& netstack, uint8_t receive_byte, uint8_t send_byte,
                        bool use_raw_packets) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // This thread will loop indefinitely until it receives the correct packet.
   // The test will time out via RunUtil in the test fixture if we fail to

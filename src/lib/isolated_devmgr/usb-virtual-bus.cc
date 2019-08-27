@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -135,7 +136,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_des
   ASSERT_EQ(set_config.status(), ZX_OK);
   ASSERT_FALSE(set_config->result.is_err());
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   EventWatcher watcher(&loop, std::move(state_change_sender), function_descs.size());
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_registered());

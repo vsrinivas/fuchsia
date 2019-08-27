@@ -4,11 +4,12 @@
 
 #include <fuchsia/recovery/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 // A simplie command-line tool for initiating factory reset.
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::Create();
   fuchsia::recovery::FactoryResetSyncPtr fdr;

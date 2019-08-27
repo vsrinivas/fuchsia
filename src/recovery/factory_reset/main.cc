@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <unistd.h>
@@ -12,7 +13,7 @@
 #include "src/recovery/factory_reset/factory_reset.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   fbl::unique_fd dev_fd;
   dev_fd.reset(open("/dev", O_RDONLY | O_DIRECTORY));

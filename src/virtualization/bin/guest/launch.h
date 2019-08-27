@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_GUEST_LAUNCH_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 void handle_launch(int argc, const char* argv[], async::Loop* loop, sys::ComponentContext* context);

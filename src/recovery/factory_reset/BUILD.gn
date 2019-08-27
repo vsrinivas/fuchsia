@@ -47,6 +47,7 @@ executable("bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -61,6 +62,7 @@ executable("fdr") {
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -123,6 +125,7 @@ test("factory_reset_unittests") {
     "//zircon/public/fidl/fuchsia-device-manager",
     "//zircon/public/fidl/fuchsia-hardware-block-volume:fuchsia-hardware-block-volume_c",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fs-management",

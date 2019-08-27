@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/vmm/device/virtio_wl.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/event.h>
@@ -925,7 +926,7 @@ bool VirtioWl::AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
 }
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
