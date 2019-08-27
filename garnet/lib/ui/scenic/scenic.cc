@@ -36,14 +36,8 @@ void Scenic::SetInitialized() {
 }
 
 void Scenic::CloseSession(Session* session) {
-  for (auto& binding : session_bindings_.bindings()) {
-    // It's possible that this is called by BindingSet::CloseAndCheckForEmpty.
-    // In that case, binding could be empty, so check for that.
-    if (binding && binding->impl().get() == session) {
-      binding->Unbind();
-      return;
-    }
-  }
+  const bool removed = session_bindings_.RemoveBinding(session);
+  FXL_DCHECK(removed) << "No binding found for Session " << session->id();
 }
 
 void Scenic::RunAfterInitialized(fit::closure closure) {
