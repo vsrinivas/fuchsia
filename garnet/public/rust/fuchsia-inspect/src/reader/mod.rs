@@ -10,7 +10,12 @@ use {
     },
     failure::{bail, format_err, Error},
     fuchsia_zircon::Vmo,
-    std::{cmp::min, collections::BTreeMap, convert::TryFrom},
+    std::{
+        cmp::min,
+        collections::BTreeMap,
+        convert::TryFrom,
+        ops::{Add, AddAssign, MulAssign},
+    },
 };
 
 pub use crate::format::block::ArrayFormat;
@@ -57,13 +62,109 @@ pub enum Property {
     Double(String, f64),
 
     /// The value is a double array.
-    DoubleArray(String, Vec<f64>, ArrayFormat),
+    DoubleArray(String, ArrayValue<f64>),
 
     /// The value is an integer.
-    IntArray(String, Vec<i64>, ArrayFormat),
+    IntArray(String, ArrayValue<i64>),
 
     /// The value is an unsigned integer.
-    UintArray(String, Vec<u64>, ArrayFormat),
+    UintArray(String, ArrayValue<u64>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ArrayValue<T> {
+    pub format: ArrayFormat,
+    pub values: Vec<T>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct ArrayBucket<T> {
+    pub floor: BucketLimit<T>,
+    pub upper: BucketLimit<T>,
+    pub count: T,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BucketLimit<T> {
+    Min,
+    Value(T),
+    Max,
+}
+
+impl<T> ArrayBucket<T> {
+    fn new(floor: BucketLimit<T>, upper: BucketLimit<T>, count: T) -> Self {
+        Self { floor, upper, count }
+    }
+}
+
+impl<T: Add<Output = T> + AddAssign + Copy + MulAssign> ArrayValue<T> {
+    pub fn new(values: Vec<T>, format: ArrayFormat) -> Self {
+        Self { format, values }
+    }
+
+    pub fn buckets(&self) -> Option<Vec<ArrayBucket<T>>> {
+        match self.format {
+            ArrayFormat::Default => None,
+            ArrayFormat::LinearHistogram => self.buckets_for_linear_hist(),
+            ArrayFormat::ExponentialHistogram => self.buckets_for_exp_hist(),
+        }
+    }
+
+    fn buckets_for_linear_hist(&self) -> Option<Vec<ArrayBucket<T>>> {
+        // Check that the minimum required values are available:
+        // floor, stepsize, underflow, bucket 0, underflow
+        if self.values.len() < 5 {
+            return None;
+        }
+        let mut floor = self.values[0];
+        let step_size = self.values[1];
+
+        let mut result = Vec::new();
+        result.push(ArrayBucket::new(BucketLimit::Min, BucketLimit::Value(floor), self.values[2]));
+        for i in 3..self.values.len() - 1 {
+            result.push(ArrayBucket::new(
+                BucketLimit::Value(floor),
+                BucketLimit::Value(floor + step_size),
+                self.values[i],
+            ));
+            floor += step_size;
+        }
+        result.push(ArrayBucket::new(
+            BucketLimit::Value(floor),
+            BucketLimit::Max,
+            self.values[self.values.len() - 1],
+        ));
+        Some(result)
+    }
+
+    fn buckets_for_exp_hist(&self) -> Option<Vec<ArrayBucket<T>>> {
+        // Check that the minimum required values are available:
+        // floor, initial step, step multiplier, underflow, bucket 0, underflow
+        if self.values.len() < 6 {
+            return None;
+        }
+        let mut floor = self.values[0];
+        let mut current_step = self.values[1];
+        let step_multiplier = self.values[2];
+
+        let mut result = Vec::new();
+        result.push(ArrayBucket::new(BucketLimit::Min, BucketLimit::Value(floor), self.values[3]));
+        for i in 4..self.values.len() - 1 {
+            result.push(ArrayBucket::new(
+                BucketLimit::Value(floor),
+                BucketLimit::Value(floor + current_step),
+                self.values[i],
+            ));
+            floor += current_step;
+            current_step *= step_multiplier;
+        }
+        result.push(ArrayBucket::new(
+            BucketLimit::Value(floor),
+            BucketLimit::Max,
+            self.values[self.values.len() - 1],
+        ));
+        Some(result)
+    }
 }
 
 impl Property {
@@ -72,11 +173,11 @@ impl Property {
             Property::String(name, _)
             | Property::Bytes(name, _)
             | Property::Int(name, _)
-            | Property::IntArray(name, _, _)
+            | Property::IntArray(name, _)
             | Property::Uint(name, _)
-            | Property::UintArray(name, _, _)
+            | Property::UintArray(name, _)
             | Property::Double(name, _)
-            | Property::DoubleArray(name, _, _) => &name,
+            | Property::DoubleArray(name, _) => &name,
         }
     }
 }
@@ -287,8 +388,7 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<i64>>();
                 parent.hierarchy.properties.push(Property::IntArray(
                     name,
-                    values,
-                    block.array_format().unwrap(),
+                    ArrayValue::new(values, block.array_format().unwrap()),
                 ));
             }
             BlockType::UintValue => {
@@ -297,8 +397,7 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<u64>>();
                 parent.hierarchy.properties.push(Property::UintArray(
                     name,
-                    values,
-                    block.array_format().unwrap(),
+                    ArrayValue::new(values, block.array_format().unwrap()),
                 ));
             }
             BlockType::DoubleValue => {
@@ -307,8 +406,7 @@ impl<'a> ScanResult<'a> {
                     .collect::<Vec<f64>>();
                 parent.hierarchy.properties.push(Property::DoubleArray(
                     name,
-                    values,
-                    block.array_format().unwrap(),
+                    ArrayValue::new(values, block.array_format().unwrap()),
                 ));
             }
             _ => bail!("Unexpected array entry type format"),
@@ -394,7 +492,7 @@ mod tests {
         let bytes_data = (0u8..=9u8).cycle().take(5000).collect::<Vec<u8>>();
         let _bytes_prop = child3.create_bytes("property-bytes", &bytes_data);
 
-        let child3_int_array = child3.create_uint_exponential_histogram(
+        let child3_uint_array = child3.create_uint_exponential_histogram(
             "property-uint-array",
             ExponentialHistogramParams {
                 floor: 1,
@@ -404,7 +502,7 @@ mod tests {
             },
         );
         for x in [1, 2, 3, 4].iter() {
-            child3_int_array.insert(*x);
+            child3_uint_array.insert(*x);
         }
 
         let result = NodeHierarchy::try_from(&inspector).unwrap();
@@ -417,8 +515,7 @@ mod tests {
                     Property::Int("int-root".to_string(), 3),
                     Property::DoubleArray(
                         "property-double-array".to_string(),
-                        double_array_data,
-                        ArrayFormat::Default
+                        ArrayValue::new(double_array_data, ArrayFormat::Default),
                     ),
                 ],
                 children: vec![
@@ -430,8 +527,10 @@ mod tests {
                             Property::String("property-string".to_string(), string_data),
                             Property::IntArray(
                                 "property-int-array".to_string(),
-                                vec![1, 2, 1, 1, 1, 1, 1],
-                                ArrayFormat::LinearHistogram
+                                ArrayValue::new(
+                                    vec![1, 2, 1, 1, 1, 1, 1],
+                                    ArrayFormat::LinearHistogram
+                                ),
                             ),
                         ],
                         children: vec![NodeHierarchy {
@@ -441,8 +540,10 @@ mod tests {
                                 Property::Bytes("property-bytes".to_string(), bytes_data),
                                 Property::UintArray(
                                     "property-uint-array".to_string(),
-                                    vec![1, 1, 2, 0, 1, 2, 1, 0, 0],
-                                    ArrayFormat::ExponentialHistogram
+                                    ArrayValue::new(
+                                        vec![1, 1, 2, 0, 1, 2, 1, 0, 0],
+                                        ArrayFormat::ExponentialHistogram
+                                    ),
                                 ),
                             ],
                             children: vec![],
@@ -522,5 +623,74 @@ mod tests {
         assert!(NodeHierarchy::try_from(Snapshot::build(&buf)).is_err());
 
         Ok(())
+    }
+
+    #[test]
+    fn array_value() {
+        let values = vec![1, 2, 5, 7, 9, 11, 13];
+        let array = ArrayValue::<u64>::new(values.clone(), ArrayFormat::Default);
+        assert!(array.buckets().is_none());
+    }
+
+    #[test]
+    fn linear_histogram_array_value() {
+        let values = vec![1, 2, 5, 7, 9, 11, 13];
+        let int_array = ArrayValue::<i64>::new(values.clone(), ArrayFormat::LinearHistogram);
+        assert_eq!(int_array.values, values);
+        let buckets = int_array.buckets().unwrap();
+        assert_eq!(buckets.len(), 5);
+        assert_eq!(
+            buckets[0],
+            ArrayBucket { floor: BucketLimit::Min, upper: BucketLimit::Value(1), count: 5 }
+        );
+        assert_eq!(
+            buckets[1],
+            ArrayBucket { floor: BucketLimit::Value(1), upper: BucketLimit::Value(3), count: 7 }
+        );
+        assert_eq!(
+            buckets[2],
+            ArrayBucket { floor: BucketLimit::Value(3), upper: BucketLimit::Value(5), count: 9 }
+        );
+        assert_eq!(
+            buckets[3],
+            ArrayBucket { floor: BucketLimit::Value(5), upper: BucketLimit::Value(7), count: 11 }
+        );
+        assert_eq!(
+            buckets[4],
+            ArrayBucket { floor: BucketLimit::Value(7), upper: BucketLimit::Max, count: 13 }
+        );
+    }
+
+    #[test]
+    fn exponential_histogram_array_value() {
+        let values = vec![1.0, 2.0, 5.0, 7.0, 9.0, 11.0, 15.0];
+        let array = ArrayValue::<f64>::new(values.clone(), ArrayFormat::ExponentialHistogram);
+        assert_eq!(array.values, values);
+        let buckets = array.buckets().unwrap();
+        assert_eq!(buckets.len(), 4);
+        assert_eq!(
+            buckets[0],
+            ArrayBucket { floor: BucketLimit::Min, upper: BucketLimit::Value(1.0), count: 7.0 }
+        );
+        assert_eq!(
+            buckets[1],
+            ArrayBucket {
+                floor: BucketLimit::Value(1.0),
+                upper: BucketLimit::Value(3.0),
+                count: 9.0
+            }
+        );
+        assert_eq!(
+            buckets[2],
+            ArrayBucket {
+                floor: BucketLimit::Value(3.0),
+                upper: BucketLimit::Value(13.0),
+                count: 11.0
+            }
+        );
+        assert_eq!(
+            buckets[3],
+            ArrayBucket { floor: BucketLimit::Value(13.0), upper: BucketLimit::Max, count: 15.0 }
+        );
     }
 }

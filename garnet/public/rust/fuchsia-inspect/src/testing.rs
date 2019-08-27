@@ -279,16 +279,33 @@ macro_rules! impl_property_assertion {
     }
 }
 
+macro_rules! impl_array_property_assertion {
+    ($prop_variant:ident, $($ty:ty),+) => {
+        $(
+            impl PropertyAssertion for $ty {
+                fn run(&self, actual: &Property) -> Result<(), Error> {
+                    if let Property::$prop_variant(_key, value, ..) = actual {
+                        eq_or_bail!(self, &value.values);
+                    } else {
+                        bail!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual));
+                    }
+                    Ok(())
+                }
+            }
+        )+
+    }
+}
+
 fn property_type_name(property: &Property) -> &str {
     match property {
         Property::String(_, _) => "String",
         Property::Bytes(_, _) => "Bytes",
         Property::Int(_, _) => "Int",
-        Property::IntArray(_, _, _) => "IntArray",
+        Property::IntArray(_, _) => "IntArray",
         Property::Uint(_, _) => "Uint",
-        Property::UintArray(_, _, _) => "UintArray",
+        Property::UintArray(_, _) => "UintArray",
         Property::Double(_, _) => "Double",
-        Property::DoubleArray(_, _, _) => "DoubleArray",
+        Property::DoubleArray(_, _) => "DoubleArray",
     }
 }
 
@@ -297,9 +314,9 @@ impl_property_assertion!(Bytes, Vec<u8>);
 impl_property_assertion!(Uint, u64);
 impl_property_assertion!(Int, i64);
 impl_property_assertion!(Double, f64);
-impl_property_assertion!(DoubleArray, Vec<f64>);
-impl_property_assertion!(IntArray, Vec<i64>);
-impl_property_assertion!(UintArray, Vec<u64>);
+impl_array_property_assertion!(DoubleArray, Vec<f64>);
+impl_array_property_assertion!(IntArray, Vec<i64>);
+impl_array_property_assertion!(UintArray, Vec<u64>);
 
 /// A PropertyAssertion that always passes
 pub struct AnyProperty;
@@ -312,7 +329,10 @@ impl PropertyAssertion for AnyProperty {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::reader::ArrayFormat};
+    use {
+        super::*,
+        crate::reader::{ArrayFormat, ArrayValue},
+    };
 
     #[test]
     fn test_exact_match_simple() {
@@ -493,12 +513,17 @@ mod tests {
             name: "key".to_string(),
             children: vec![],
             properties: vec![
-                Property::UintArray("@uints".to_string(), vec![1, 2, 3], ArrayFormat::Default),
-                Property::IntArray("@ints".to_string(), vec![-2, -4, 0], ArrayFormat::Default),
+                Property::UintArray(
+                    "@uints".to_string(),
+                    ArrayValue::new(vec![1, 2, 3], ArrayFormat::Default),
+                ),
+                Property::IntArray(
+                    "@ints".to_string(),
+                    ArrayValue::new(vec![-2, -4, 0], ArrayFormat::Default),
+                ),
                 Property::DoubleArray(
                     "@doubles".to_string(),
-                    vec![1.3, 2.5, -3.6],
-                    ArrayFormat::Default,
+                    ArrayValue::new(vec![1.3, 2.5, -3.6], ArrayFormat::Default),
                 ),
             ],
         };
@@ -517,33 +542,30 @@ mod tests {
             properties: vec![
                 Property::UintArray(
                     "@linear-uints".to_string(),
-                    vec![1, 2, 3, 4, 5],
-                    ArrayFormat::LinearHistogram,
+                    ArrayValue::new(vec![1, 2, 3, 4, 5], ArrayFormat::LinearHistogram),
                 ),
                 Property::IntArray(
                     "@linear-ints".to_string(),
-                    vec![6, 7, 8, 9],
-                    ArrayFormat::LinearHistogram,
+                    ArrayValue::new(vec![6, 7, 8, 9], ArrayFormat::LinearHistogram),
                 ),
                 Property::DoubleArray(
                     "@linear-doubles".to_string(),
-                    vec![1.0, 2.0, 4.0, 5.0],
-                    ArrayFormat::LinearHistogram,
+                    ArrayValue::new(vec![1.0, 2.0, 4.0, 5.0], ArrayFormat::LinearHistogram),
                 ),
                 Property::UintArray(
                     "@exp-uints".to_string(),
-                    vec![2, 4, 6, 8, 10],
-                    ArrayFormat::ExponentialHistogram,
+                    ArrayValue::new(vec![2, 4, 6, 8, 10], ArrayFormat::ExponentialHistogram),
                 ),
                 Property::IntArray(
                     "@exp-ints".to_string(),
-                    vec![1, 3, 5, 7, 9],
-                    ArrayFormat::ExponentialHistogram,
+                    ArrayValue::new(vec![1, 3, 5, 7, 9], ArrayFormat::ExponentialHistogram),
                 ),
                 Property::DoubleArray(
                     "@exp-doubles".to_string(),
-                    vec![1.0, 2.0, 3.0, 4.0, 5.0],
-                    ArrayFormat::ExponentialHistogram,
+                    ArrayValue::new(
+                        vec![1.0, 2.0, 3.0, 4.0, 5.0],
+                        ArrayFormat::ExponentialHistogram,
+                    ),
                 ),
             ],
         };
