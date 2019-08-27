@@ -23,6 +23,12 @@ namespace media::audio {
 // its type so that it may be safely downcast from generic object to something more specific.
 class AudioObject : public fbl::RefCounted<AudioObject> {
  public:
+  // Disallow copy, assign, and move.
+  AudioObject& operator=(AudioObject) = delete;
+  AudioObject(const AudioObject&) = delete;
+  AudioObject(AudioObject&&) = delete;
+  AudioObject& operator=(AudioObject&&) = delete;
+
   enum class Type {
     Output,
     Input,
