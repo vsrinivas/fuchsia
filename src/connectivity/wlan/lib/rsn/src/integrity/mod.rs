@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[allow(unused)]
+pub mod hmac_md5;
 pub mod hmac_sha1;
 
 use crate::Error;
