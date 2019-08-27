@@ -49,5 +49,12 @@ group("end_to_end_deps_too_big_for_astro_e2e") {
   public_deps = [
     # Needed for VP9 decode conformance testing.
     "//garnet/examples/media:vp9_decoder_conformance_http",
+
+    # Needed to verify communication with amlogic optee.
+    #
+    # TODO(dustingreen): (See also IN-1097) Also need a dart e2e test that invokes this and checks
+    # for success, or a way to run a target-specific list of tests that just need to run like a unit
+    # test would, but during e2e tests.
+    "//garnet/bin/tee_manager:optee_smoke_test",
   ]
 }
