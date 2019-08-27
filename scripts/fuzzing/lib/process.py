@@ -7,7 +7,7 @@ import subprocess
 
 
 class Process(object):
-    """Represent an child process.
+    """Represents a child process.
 
        This class is intentionally similar to subprocess, except that it allows
        various fields to be set before executing the process. Additionally, it
@@ -25,14 +25,21 @@ class Process(object):
     def popen(self):
         """Analogous to subprocess.Popen."""
         p = subprocess.Popen(
-            self.args, stdin=self.stdin, stdout=self.stdout, stderr=self.stderr)
-        self.__init__([])
+            self.args,
+            cwd=self.cwd,
+            stdin=self.stdin,
+            stdout=self.stdout,
+            stderr=self.stderr)
         return p
 
     def call(self):
         """Analogous to subprocess.call."""
         p = self.popen()
-        return p.wait()
+        try:
+          return p.wait()
+        except:
+          p.kill()
+          raise
 
     def check_call(self):
         """Analogous to subprocess.check_call."""
@@ -50,5 +57,5 @@ class Process(object):
         out, _ = p.communicate()
         rc = p.returncode
         if rc != 0:
-            raise subprocess.CalledProcessError(rc, cmd)
+            raise subprocess.CalledProcessError(rc, cmd, output=out)
         return out

@@ -21,7 +21,7 @@ class MockCipd(Cipd):
         super(MockCipd, self).__init__(Corpus(fuzzer))
 
     def _cipd(self, cmd, cwd=None):
-        """Overrides Cipd._exec for testing."""
+        """Overrides Cipd._cipd for testing."""
         super(MockCipd, self)._cipd(cmd, cwd)
         if cmd[0] == 'install' or cmd[0] == 'create':
             return 'ok'

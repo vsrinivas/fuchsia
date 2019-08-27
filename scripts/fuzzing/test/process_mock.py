@@ -27,7 +27,8 @@ class MockProcess(Process):
         return MockPopen(self.host, self.response)
 
     def call(self):
-        self.popen()
+        p = self.popen()
+        return p.returncode
 
     def check_call(self):
         self.popen()
