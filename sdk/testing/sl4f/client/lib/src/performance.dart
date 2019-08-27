@@ -104,10 +104,17 @@ class Performance {
     final String extension =
         _traceExtension(binary: binary, compress: compress);
     final tracePath = _traceNameToTargetPath(traceName, extension);
-    final String response = await _sl4f
+
+    var response = await _sl4f
         .request('traceutil_facade.GetTraceFile', {'path': tracePath});
-    return _dump.writeAsBytes(
-        '$traceName-trace', extension, base64.decode(response));
+    List<int> contents = base64.decode(response['data']);
+    while (response.containsKey('next_offset')) {
+      response = await _sl4f.request('traceutil_facade.GetTraceFile',
+          {'path': tracePath, 'offset': response['next_offset']});
+      contents += base64.decode(response['data']);
+    }
+
+    return _dump.writeAsBytes('$traceName-trace', extension, contents);
   }
 
   /// A helper function that runs a process with the given args.

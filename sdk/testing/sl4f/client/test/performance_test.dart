@@ -50,7 +50,7 @@ void main(List<String> args) {
     final List<int> traceData =
         utf8.encode('{"traceEvents": [], "displayTimeUnit": "ns"}');
     when(mockSl4f.request(sl4fTraceRequestMethod, any))
-        .thenAnswer((_) => Future.value(base64.encode(traceData)));
+        .thenAnswer((_) => Future.value({'data': base64.encode(traceData)}));
 
     await performance.downloadTraceFile('test-trace');
 
@@ -85,7 +85,7 @@ void main(List<String> args) {
     expect(() => utf8.decode(nonUtf8Data), throwsException);
 
     when(mockSl4f.request(sl4fTraceRequestMethod, any))
-        .thenAnswer((_) => Future.value(base64.encode(nonUtf8Data)));
+        .thenAnswer((_) => Future.value({'data': base64.encode(nonUtf8Data)}));
 
     await performance.downloadTraceFile('non-utf8');
 
@@ -223,7 +223,7 @@ void main(List<String> args) {
       final mockSl4f = MockSl4f();
 
       when(mockSl4f.request(sl4fTraceRequestMethod, any))
-          .thenAnswer((_) => Future.value(base64.encode(data)));
+          .thenAnswer((_) => Future.value({'data': base64.encode(data)}));
 
       final performance = Performance(mockSl4f, mockDump);
       Map<Symbol, dynamic> traceOptions = {};
@@ -256,5 +256,40 @@ void main(List<String> args) {
     await doTest('fxt', binary: true);
     await doTest('fxt', binary: true, compress: false);
     await doTest('fxt.gz', binary: true, compress: true);
+  });
+
+  test('chunked trace download', () async {
+    final performance = Performance(mockSl4f, mockDump);
+
+    final List<int> largeData = List.filled(0x150000, 0);
+    const chunkSize = 0x100000;
+
+    var responses = [
+      {
+        'data': base64.encode(largeData.sublist(0, chunkSize)),
+        'next_offset': chunkSize,
+      },
+      {
+        'data': base64.encode(largeData.sublist(chunkSize)),
+      }
+    ];
+
+    when(mockSl4f.request(sl4fTraceRequestMethod, any))
+        .thenAnswer((_) => Future.value(responses.removeAt(0)));
+
+    await performance.downloadTraceFile('chunked');
+
+    final verifyMockSl4fRequest =
+        verify(mockSl4f.request(sl4fTraceRequestMethod, captureAny))..called(2);
+    expect(verifyMockSl4fRequest.captured, [
+      {'path': '/tmp/chunked-trace.json'},
+      {'path': '/tmp/chunked-trace.json', 'offset': chunkSize}
+    ]);
+
+    final verifyMockDumpWriteAsBytes =
+        verify(mockDump.writeAsBytes(captureAny, captureAny, captureAny))
+          ..called(1);
+    expect(verifyMockDumpWriteAsBytes.captured,
+        ['chunked-trace', 'json', largeData]);
   });
 }

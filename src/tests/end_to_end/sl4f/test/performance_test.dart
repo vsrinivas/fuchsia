@@ -46,5 +46,29 @@ void main() {
             matches(RegExp(r'-test-trace-trace.json$')),
           ]));
     });
+
+    test('download large trace', () async {
+      // This obviously creates an invalid json file, but the act of downloading
+      // said file shouldn't care about its contents.
+      if ((await sl4fDriver.ssh.run(
+                  'dd if=/dev/zero of=/tmp/fake-large-trace.json bs=1M count=40'))
+              .exitCode !=
+          0) {
+        fail('Failed to create fake large trace file to download.');
+      }
+
+      await performance.downloadTraceFile('fake-large');
+
+      expect(
+          dumpDir.listSync().map((f) => f.path.split('/').last),
+          unorderedMatches([
+            matches(RegExp(r'-fake-large-trace.json$')),
+          ]));
+
+      final downloadedFile = dumpDir.listSync()[0];
+      final stat = await downloadedFile.stat();
+
+      expect(stat.size, equals(40 * 1024 * 1024));
+    });
   }, timeout: Timeout(_timeout));
 }
