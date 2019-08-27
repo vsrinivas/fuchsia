@@ -787,7 +787,7 @@ struct Service final : public TypeDecl {
 };
 
 struct Struct final : public TypeDecl {
-  struct Member : public virtual FieldShapeContainer {
+  struct Member : public virtual FieldShapeContainer, public virtual TypeShapeContainer {
     Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
            std::unique_ptr<Constant> maybe_default_value,
            std::unique_ptr<raw::AttributeList> attributes)
@@ -810,7 +810,15 @@ struct Struct final : public TypeDecl {
   std::vector<Member> members;
   const bool anonymous;
 
-  static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
+  // Computes a resulting TypeShape appropriate for a struct, given |member_typeshapes|.
+  static TypeShape Shape(const std::vector<const TypeShape*>& member_typeshapes,
+                         uint32_t extra_handles = 0u);
+
+  // Computes a resulting TypeShape for a struct given the TypeShapes in |member_shapes|, and also
+  // updates each member's FieldShape in |member_shapes| to have the correct padding and offsets for
+  // the resulting struct.
+  static TypeShape Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& member_shapes,
+                         uint32_t extra_handles = 0u);
 };
 
 struct Table final : public TypeDecl {
@@ -857,7 +865,7 @@ struct Table final : public TypeDecl {
 };
 
 struct Union final : public TypeDecl {
-  struct Member : public virtual FieldShapeContainer {
+  struct Member : public virtual FieldShapeContainer, public virtual TypeShapeContainer {
     Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
            std::unique_ptr<raw::AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
@@ -873,15 +881,15 @@ struct Union final : public TypeDecl {
         members(std::move(members)) {}
 
   std::vector<Member> members;
-  // The offset of each of the union members is the same, so store
-  // it here as well.
-  FieldShape membershape;
 
-  static TypeShape Shape(std::vector<FieldShape*>* fields);
+  // Returns the offset from the start of union where the union variant starts. (Either 4, or 8.)
+  uint32_t DataOffset() const;
+
+  static TypeShape Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& fields);
 };
 
 struct XUnion final : public TypeDecl {
-  struct Member : public virtual FieldShapeContainer {
+  struct Member : public virtual FieldShapeContainer, public virtual TypeShapeContainer {
     Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
            SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
         : ordinal(std::move(ordinal)),
@@ -903,8 +911,8 @@ struct XUnion final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
-  static TypeShape Shape(std::vector<FieldShape*>* fields, types::Strictness strictness,
-                         uint32_t extra_handles = 0u);
+  static TypeShape Shape(const std::vector<std::pair<const TypeShape*, FieldShape*>>& fields,
+                         types::Strictness strictness, uint32_t extra_handles = 0u);
 };
 
 struct Protocol final : public TypeDecl {

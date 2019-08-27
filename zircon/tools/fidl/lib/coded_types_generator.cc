@@ -202,7 +202,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             auto coded_parameter_type =
                 CompileType(parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope);
             if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
-              request_fields.emplace_back(coded_parameter_type, parameter.fieldshape().InlineSize(),
+              request_fields.emplace_back(coded_parameter_type, parameter.typeshape().InlineSize(),
                                           parameter.fieldshape().Offset(),
                                           parameter.fieldshape().Padding());
           }
@@ -234,13 +234,12 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
           [[maybe_unused]] auto is_primitive =
               coded_member_type->kind == coded::Type::Kind::kPrimitive;
           assert(!is_primitive && "No primitive in struct coding table!");
-          struct_fields.emplace_back(coded_member_type, member.fieldshape().InlineSize(),
+          struct_fields.emplace_back(coded_member_type, member.typeshape().InlineSize(),
                                      member.fieldshape().Offset(), member.fieldshape().Padding());
         } else if (member.fieldshape().Padding() > 0) {
           // The type does not need coding, but the field needs padding zeroing.
-          struct_fields.emplace_back(nullptr, member.fieldshape().InlineSize(),
-                                     member.fieldshape().Offset(),
-                                     member.fieldshape().Padding());
+          struct_fields.emplace_back(nullptr, member.typeshape().InlineSize(),
+                                     member.fieldshape().Offset(), member.fieldshape().Padding());
         }
       }
       break;
@@ -415,10 +414,10 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
       auto union_decl = static_cast<const flat::Union*>(decl);
       std::string union_name = NameCodedName(union_decl->name);
       named_coded_types_.emplace(
-          &decl->name, std::make_unique<coded::UnionType>(
-                           std::move(union_name), std::vector<coded::UnionField>(),
-                           union_decl->membershape.Offset(), union_decl->typeshape().InlineSize(),
-                           NameFlatName(union_decl->name)));
+          &decl->name,
+          std::make_unique<coded::UnionType>(
+              std::move(union_name), std::vector<coded::UnionField>(), union_decl->DataOffset(),
+              union_decl->typeshape().InlineSize(), NameFlatName(union_decl->name)));
       break;
     }
     case flat::Decl::Kind::kXUnion: {

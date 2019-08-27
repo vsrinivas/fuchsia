@@ -102,37 +102,22 @@ class TypeShapeContainer {
   mutable TypeShape typeshape_;
 };
 
-// |FieldShape| describes a |TypeShape| that is embedded in a struct or (x)union as a member field.
-// It contains additional offset and padding information.
+// |FieldShape| describes the offset and padding information for members that are contained within
+// an aggregate type (e.g. struct/union).
 class FieldShape {
  public:
-  // Constructs a |FieldShape| with zero offset and padding.
-  // The offset and padding can be updated via |SetOffset| and |SetPadding| respectively.
-  explicit FieldShape(TypeShape typeshape) : typeshape_(typeshape), offset_(0), padding_(0) {}
-
-  FieldShape() : FieldShape(TypeShape()) {}
-
-  TypeShape& Typeshape() { return typeshape_; }
-  const TypeShape& Typeshape() const { return typeshape_; }
-
-  uint32_t InlineSize() const { return typeshape_.InlineSize(); }
-  uint32_t Alignment() const { return typeshape_.Alignment(); }
-  uint32_t Depth() const { return typeshape_.Depth(); }
   uint32_t Offset() const { return offset_; }
   // Padding after this field until the next field or the end of the container.
   // See
   // https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/README.md#size-and-alignment
   uint32_t Padding() const { return padding_; }
-  uint32_t MaxHandles() const { return typeshape_.MaxHandles(); }
-  uint32_t MaxOutOfLine() const { return typeshape_.MaxOutOfLine(); }
 
   void SetOffset(uint32_t offset) { offset_ = offset; }
   void SetPadding(uint32_t padding) { padding_ = padding; }
 
  private:
-  TypeShape typeshape_;
-  uint32_t offset_;
-  uint32_t padding_;
+  uint32_t offset_ = 0;
+  uint32_t padding_ = 0;
 };
 
 // An object that has a FieldShape is a FieldShapeContainer. See the documentation above on
@@ -145,6 +130,8 @@ class FieldShapeContainer {
   virtual ~FieldShapeContainer() = default;
 
  private:
+  // |fieldshape_| is mutable since some overrides of fieldshape(), which is a const method, may
+  // need to mutate it for e.g. memoization.
   mutable FieldShape fieldshape_;
 };
 
