@@ -106,12 +106,12 @@ impl TestStack {
 
     async fn wait_for_interface_online(&mut self, if_id: u64) {
         let check_online = |status: &EthernetStatus| status.contains(EthernetStatus::ONLINE);
-        self.wait_for_interface_status(if_id, check_online);
+        self.wait_for_interface_status(if_id, check_online).await;
     }
 
     async fn wait_for_interface_offline(&mut self, if_id: u64) {
         let check_offline = |status: &EthernetStatus| !status.contains(EthernetStatus::ONLINE);
-        self.wait_for_interface_status(if_id, check_offline);
+        self.wait_for_interface_status(if_id, check_offline).await;
     }
 
     async fn wait_for_interface_status<F: Fn(&EthernetStatus) -> bool>(
