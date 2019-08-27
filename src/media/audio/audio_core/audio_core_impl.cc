@@ -28,11 +28,13 @@ constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
 AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_context,
                              CommandLineOptions options)
-    : device_manager_(this),
+    : dispatcher_(async_get_default_dispatcher()),
+      device_manager_(dispatcher_, *this),
       audio_admin_(this),
       component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
+  FXL_DCHECK(dispatcher_);
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
   AudioDeviceSettings::EnableDeviceSettings(options.enable_device_settings_writeback);
@@ -43,10 +45,6 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_co
   // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
   Logging::Init(fxl::LOG_INFO);
 #endif
-
-  // Stash a pointer to our async object.
-  dispatcher_ = async_get_default_dispatcher();
-  FXL_DCHECK(dispatcher_);
 
   // TODO(30888)
   //

@@ -32,7 +32,13 @@ class Services;
 
 namespace media::audio {
 
-class AudioCoreImpl : public fuchsia::media::AudioCore {
+class SystemGainMuteProvider {
+ public:
+  virtual float system_gain_db() const = 0;
+  virtual bool system_muted() const = 0;
+};
+
+class AudioCoreImpl : public fuchsia::media::AudioCore, SystemGainMuteProvider {
  public:
   AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_context,
                 CommandLineOptions options);
@@ -65,8 +71,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   // Accessor for our encapsulated device manager.
   AudioDeviceManager& GetDeviceManager() { return device_manager_; }
 
-  float system_gain_db() const { return system_gain_db_; }
-  bool system_muted() const { return system_muted_; }
+  float system_gain_db() const override { return system_gain_db_; }
+  bool system_muted() const override { return system_muted_; }
 
   fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
 

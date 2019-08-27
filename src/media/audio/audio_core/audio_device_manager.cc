@@ -20,7 +20,9 @@
 
 namespace media::audio {
 
-AudioDeviceManager::AudioDeviceManager(AudioCoreImpl* service) : service_(service) {}
+AudioDeviceManager::AudioDeviceManager(async_dispatcher_t* dispatcher,
+                                       const SystemGainMuteProvider& system_gain_mute)
+    : dispatcher_(dispatcher), system_gain_mute_(system_gain_mute) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -463,8 +465,8 @@ void AudioDeviceManager::RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) 
 
 void AudioDeviceManager::ScheduleMainThreadTask(fit::closure task) {
   TRACE_DURATION("audio", "AudioDeviceManager::ScheduleMainThreadTask");
-  FXL_DCHECK(service_);
-  service_->ScheduleMainThreadTask(std::move(task));
+  FXL_DCHECK(dispatcher_);
+  async::PostTask(dispatcher_, std::move(task));
 }
 
 fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type type,
@@ -746,8 +748,8 @@ void AudioDeviceManager::UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>
   constexpr uint32_t set_flags =
       fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
   fuchsia::media::AudioGainInfo set_cmd = {
-      service_->system_gain_db(),
-      service_->system_muted() ? fuchsia::media::AudioGainInfoFlag_Mute : 0u};
+      system_gain_mute_.system_gain_db(),
+      system_gain_mute_.system_muted() ? fuchsia::media::AudioGainInfoFlag_Mute : 0u};
 
   FXL_DCHECK(device != nullptr);
   REP(SettingDeviceGainInfo(*device, set_cmd, set_flags));
@@ -773,7 +775,7 @@ void AudioDeviceManager::CommitDirtySettings() {
 
   // If we need to update in the future, schedule a commit task to do so.
   if (next != zx::time::infinite()) {
-    commit_settings_task_.PostForTime(service_->dispatcher(), next);
+    commit_settings_task_.PostForTime(dispatcher_, next);
   }
 }
 

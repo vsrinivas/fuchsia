@@ -24,10 +24,12 @@
 namespace media::audio {
 
 class AudioCapturerImpl;
+class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
  public:
-  explicit AudioDeviceManager(AudioCoreImpl* service);
+  AudioDeviceManager(async_dispatcher_t* dispatcher,
+                     const SystemGainMuteProvider& system_gain_mute);
   ~AudioDeviceManager();
 
   // Initialize the input/output manager. Called once from service impl, at startup time. Should...
@@ -189,8 +191,10 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
     CommitDirtySettings();
   }
 
-  // Pointer to the service which encapsulates us. This pointer cannot be bad while we still exist.
-  AudioCoreImpl* service_;
+  async_dispatcher_t* dispatcher_;
+
+  // Pointer to System gain/mute values. This pointer cannot be bad while we still exist.
+  const SystemGainMuteProvider& system_gain_mute_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;
