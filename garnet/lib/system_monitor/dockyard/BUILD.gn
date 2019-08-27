@@ -15,7 +15,7 @@ source_set("headers") {
   ]
 
   public_deps = [
-    ":protos",
+    ":proto",
     "//garnet/lib/system_monitor:lib",
     "//third_party/grpc:grpc++",
   ]
@@ -33,9 +33,9 @@ source_set("lib") {
   ]
 }
 
-proto_library("protos") {
+proto_library("proto") {
   sources = [
-    "../protos/dockyard.proto",
+    "../proto/dockyard.proto",
   ]
 
   generate_python = false

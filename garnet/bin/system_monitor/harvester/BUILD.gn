@@ -38,7 +38,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/system_monitor/dockyard:lib",
-    "//garnet/lib/system_monitor/dockyard:protos",
+    "//garnet/lib/system_monitor/dockyard:proto",
     "//garnet/public/lib/inspect_deprecated/query",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",

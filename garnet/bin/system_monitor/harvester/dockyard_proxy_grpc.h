@@ -7,7 +7,7 @@
 
 #include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
-#include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
+#include "garnet/lib/system_monitor/proto/dockyard.grpc.pb.h"
 
 #include <grpc++/grpc++.h>
 

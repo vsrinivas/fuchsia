@@ -6,11 +6,6 @@ syntax = "proto3";
 
 package dockyard_proto;
 
-option java_multiple_files = true;
-option java_package = "io.grpc.system_monitor.dockyard";
-option java_outer_classname = "DockyardProto";
-option objc_class_prefix = "HLW";
-
 // The dockyard service definition.
 service Dockyard {
   // Sends initial set up data.
