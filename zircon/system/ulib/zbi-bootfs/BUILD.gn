@@ -4,9 +4,8 @@
 
 library("zbi-bootfs") {
   sdk_headers = [ "zbi-bootfs/zbi-bootfs.h" ]
-  sdk = "static"
-  static = true
-  kernel = true
+  sdk = "shared"
+  shared = true
 
   sources = [
     "zbi-bootfs.cc",

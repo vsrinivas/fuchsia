@@ -49,7 +49,7 @@ bool ZbiBootfsParser::IsSkipBlock(const char* path,
   return status == ZX_OK;
 }
 
-zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
+__EXPORT zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
   zbi_header_t hdr;
   zx::vmo bootfs_vmo;
 
@@ -164,7 +164,7 @@ zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* entry) {
   return status;
 }
 
-zx_status_t ZbiBootfsParser::Init(const char* input, size_t byte_offset) {
+__EXPORT zx_status_t ZbiBootfsParser::Init(const char* input, size_t byte_offset) {
   zx_status_t status = LoadZbi(input, byte_offset);
   if (status != ZX_OK) {
     fprintf(stderr, "Error loading ZBI. Error code: %d\n", status);
@@ -172,7 +172,7 @@ zx_status_t ZbiBootfsParser::Init(const char* input, size_t byte_offset) {
   return status;
 }
 
-zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_offset) {
+__EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_offset) {
   // Logic for skip-block devices.
   fuchsia_hardware_skipblock_PartitionInfo partition_info = {};
 
