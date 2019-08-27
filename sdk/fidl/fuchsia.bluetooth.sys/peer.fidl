@@ -51,7 +51,7 @@ table Peer {
     7: bt.Appearance appearance;
 
     /// The class of device for this device, if known.
-    8: DeviceClass device_class;
+    8: bt.DeviceClass device_class;
 
     /// The most recently obtained advertising signal strength for this peer. Present if known.
     9: int8 rssi;

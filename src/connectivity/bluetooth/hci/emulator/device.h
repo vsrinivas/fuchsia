@@ -14,6 +14,7 @@
 #include <zircon/types.h>
 
 #include <queue>
+#include <unordered_map>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -23,6 +24,7 @@
 #include <fbl/unique_ptr.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
+#include "src/connectivity/bluetooth/hci/emulator/peer.h"
 
 namespace bt_hci_emulator {
 
@@ -57,10 +59,17 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   // fuchsia::bluetooth::test::HciEmulator overrides:
   void Publish(fuchsia::bluetooth::test::EmulatorSettings settings,
                PublishCallback callback) override;
-  void AddPeer(fuchsia::bluetooth::test::FakePeer peer, AddPeerCallback callback) override;
-  void RemovePeer(fuchsia::bluetooth::PeerId id, RemovePeerCallback callback) override;
+  void AddLowEnergyPeer(fuchsia::bluetooth::test::LowEnergyPeerParameters params,
+                        fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
+                        AddLowEnergyPeerCallback callback) override;
+  void AddBredrPeer(fuchsia::bluetooth::test::BredrPeerParameters params,
+                    fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
+                    AddBredrPeerCallback callback) override;
   void WatchLeScanStates(WatchLeScanStatesCallback callback) override;
   void WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) override;
+
+  // Helper function used to initialize BR/EDR and LE peers.
+  void AddPeer(std::unique_ptr<Peer> peer);
 
   void OnLegacyAdvertisingStateChanged();
   void NotifyLegacyAdvertisingStateWatchers();
@@ -101,6 +110,9 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   // Binding for fuchsia.bluetooth.test.HciEmulator channel. |binding_| is only accessed on
   // |loop_|'s dispatcher.
   fidl::Binding<fuchsia::bluetooth::test::HciEmulator> binding_;
+
+  // List of active peers that have been registered with us.
+  std::unordered_map<Peer*, std::unique_ptr<Peer>> peers_;
 
   WatchLegacyAdvertisingStatesCallback legacy_adv_watcher_;
   std::vector<fuchsia::bluetooth::test::LegacyAdvertisingState> legacy_adv_states_;

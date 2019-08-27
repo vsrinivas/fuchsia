@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.bluetooth.sys;
+library fuchsia.bluetooth;
 
 /// The "Class of Device/Service" is a variable-format field that defines the category of a
 /// Bluetooth device. The bitfield is divided into segments called "major service class",

@@ -197,8 +197,15 @@ void Device::Unbind() {
   loop_.JoinThreads();
   logf(TRACE, "emulator dispatcher shut down\n");
 
+  // Clean up all fake peers. This will close their local channels and remove them from the fake
+  // controller.
+  peers_.clear();
+
+  // Destroy the FakeController here. Since |loop_| has been shutdown, we
+  // don't expect it to be dereferenced again.
   fake_device_ = nullptr;
   UnpublishHci();
+
   device_remove(emulator_dev_);
   emulator_dev_ = nullptr;
 }
@@ -302,12 +309,42 @@ void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callba
   callback(std::move(result));
 }
 
-void Device::AddPeer(ftest::FakePeer peer, AddPeerCallback callback) {
-  // TODO(BT-229): Implement
+void Device::AddLowEnergyPeer(ftest::LowEnergyPeerParameters params,
+                              fidl::InterfaceRequest<ftest::Peer> request,
+                              AddLowEnergyPeerCallback callback) {
+  logf(TRACE, "HciEmulator.AddLowEnergyPeer\n");
+
+  ftest::HciEmulator_AddLowEnergyPeer_Result fidl_result;
+
+  auto result = Peer::NewLowEnergy(std::move(params), std::move(request), fake_device_);
+  if (result.is_error()) {
+    fidl_result.set_err(result.error());
+    callback(std::move(fidl_result));
+    return;
+  }
+
+  AddPeer(result.take_value());
+  fidl_result.set_response(ftest::HciEmulator_AddLowEnergyPeer_Response{});
+  callback(std::move(fidl_result));
 }
 
-void Device::RemovePeer(::fuchsia::bluetooth::PeerId id, RemovePeerCallback callback) {
-  // TODO(BT-229): Implement
+void Device::AddBredrPeer(ftest::BredrPeerParameters params,
+                          fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
+                          AddBredrPeerCallback callback) {
+  logf(TRACE, "HciEmulator.AddBredrPeer\n");
+
+  ftest::HciEmulator_AddBredrPeer_Result fidl_result;
+
+  auto result = Peer::NewBredr(std::move(params), std::move(request), fake_device_);
+  if (result.is_error()) {
+    fidl_result.set_err(result.error());
+    callback(std::move(fidl_result));
+    return;
+  }
+
+  AddPeer(result.take_value());
+  fidl_result.set_response(ftest::HciEmulator_AddBredrPeer_Response{});
+  callback(std::move(fidl_result));
 }
 
 void Device::WatchLeScanStates(WatchLeScanStatesCallback callback) {
@@ -327,6 +364,11 @@ void Device::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback c
 
   legacy_adv_watcher_ = std::move(callback);
   NotifyLegacyAdvertisingStateWatchers();
+}
+
+void Device::AddPeer(std::unique_ptr<Peer> peer) {
+  peer->set_closed_callback([this, ptr = peer.get()] { peers_.erase(ptr); });
+  peers_[peer.get()] = std::move(peer);
 }
 
 void Device::OnLegacyAdvertisingStateChanged() {

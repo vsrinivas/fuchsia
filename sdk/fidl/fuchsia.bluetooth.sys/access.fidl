@@ -53,7 +53,7 @@ protocol Access {
     /// discoverable mode.
     ///
     /// + request `device_class` The device class to assign to the system.
-    SetDeviceClass(DeviceClass device_class);
+    SetDeviceClass(bt.DeviceClass device_class);
 
     /// Put the system into the "General Discoverable" mode on the BR/EDR transport. The active
     /// host will respond to general inquiry (by regularly entering the inquiry scan mode).

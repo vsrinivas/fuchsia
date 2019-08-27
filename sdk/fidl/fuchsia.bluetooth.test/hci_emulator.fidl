@@ -19,49 +19,6 @@ enum EmulatorPeerError {
     NOT_FOUND = 3;
 };
 
-/// Represents a peer that a FakeController can be configured to emulate.
-table FakePeer {
-    /// The LE identity address and/or `BD_ADDR` of the peer. This field is mandatory.
-    1: bt.Address address;
-
-    /// Parameters used by this peer on the Low Energy transport. This field is optional. The peer
-    /// will not be active on the LE transport if this field is not present. However, the peer must
-    /// support at least one transport.
-    2: LeParameters le;
-
-    /// Parameters used by this peer on the BR/EDR transport. This field is optional. The peer
-    /// will not be active on the BR/EDR transport if this field is not present. However, the peer
-    /// must support at least one transport.
-    3: BrEdrParameters bredr;
-};
-
-xunion AdvertisingData {
-    bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH legacy_data;
-    bytes:MAX_EXTENDED_ADVERTISING_DATA_LENGTH extended_data;
-};
-
-/// Parameters used to emulate a peer's behavior over the Low Energy transport.
-table LeParameters {
-    /// If true, the peer will send connectable advertisements and accept connection requests. The
-    /// peer will ignore connection requests if not connectable.
-    1: bool connectable;
-
-    /// The advertising data contents. If not present, the advertising data sent by this peer will
-    /// be empty.
-    2: AdvertisingData advertisement;
-
-    /// The scan response data contents. When present, the fake controller will generate scannable
-    /// advertising packets and scan response events.
-    3: AdvertisingData scan_response;
-
-    // TODO(armansito): Add SMP parameters
-};
-
-/// Parameters used to emulate a peer's behavior over the BR/EDR transport.
-table BrEdrParameters {
-    // TODO(armansito): add inquiry response data and other parameters
-};
-
 // TODO(BT-229): Add state structures for other LE and BR/EDR operations.
 // TODO(armansito): Add ability to publish GATT services
 // TODO(armansito): Add ability to publish SDP records
@@ -108,6 +65,49 @@ table EmulatorSettings {
     5: AclBufferSettings le_acl_buffer_settings;
 };
 
+struct AdvertisingData {
+    bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH data;
+};
+
+/// Parameters used to emulate a peer's behavior over the Low Energy transport.
+table LowEnergyPeerParameters {
+    /// The LE identity address of the peer. This field is mandatory.
+    1: bt.Address address;
+
+    /// When present and true, the peer will send connectable advertisements and accept connection
+    /// requests. The peer will ignore connection requests if not connectable.
+    2: bool connectable;
+
+    /// The advertising data contents. If not present, the advertising data sent by this peer will
+    /// be empty.
+    3: AdvertisingData advertisement;
+
+    /// The scan response data contents. When present, the fake controller will generate scannable
+    /// advertising packets and scan response events.
+    4: AdvertisingData scan_response;
+};
+
+/// Parameters used to emulate a peer's behavior over the BR/EDR transport.
+table BredrPeerParameters {
+    /// The BD_ADDR of the peer. This field is mandatory.
+    1: bt.Address address;
+
+    /// When present and true, the peer will accept connection requests. The peer will ignore
+    /// connection requests if not connectable.
+    2: bool connectable;
+
+    /// The device class reported in the inquiry response for this peer during device discovery.
+    3: bt.DeviceClass device_class;
+};
+
+/// Protocol used to drive the state of a fake peer device.
+protocol Peer {
+    /// Assign a HCI `status` for the controller to generate in response to connection requests.
+    /// Applies to all successive HCI_Create_Connection and HCI_LE_Create_Connection commands. The
+    /// procedure is acknowledged with an empty response.
+    AssignConnectionStatus(HciError status) -> ();
+};
+
 /// Protocol used to emulate a Bluetooth controller that supports the standard Bluetooth HCI.
 [Discoverable]
 protocol HciEmulator {
@@ -116,14 +116,33 @@ protocol HciEmulator {
     /// already been published.
     Publish(EmulatorSettings settings) -> () error EmulatorError;
 
-    /// Inserts a new peer device to be emulated by this controller. Returns an error if `peer` is
-    /// improperly configured (e.g. does not contain an address). On success, returns an `id` that
-    /// can be used to refer to the created peer.
-    AddPeer(FakePeer peer) -> (bt.PeerId id) error EmulatorPeerError;
+    /// Inserts a new LE peer device to be emulated by this controller. Once registered, the state
+    /// of the fake peer can be driven and observed using the `peer` handle.
+    ///
+    /// A reply will be sent to acknowledge the creation of the fake peer. If a peer cannot be
+    /// initialized (e.g. due to a missing required field in `parameters` or for containing an
+    /// address that is already emulated) the `peer` handle will be closed and an error reply will
+    /// be sent.
+    ///
+    /// The peer will appear in advertising reports and respond to requests according to its
+    /// configuration as long as the `peer` channel is open. The emulator stops emulating this peer
+    /// when the channel gets closed, which makes it no longer discoverable and not respond to any
+    /// requests.
+    AddLowEnergyPeer(LowEnergyPeerParameters parameters, request<Peer> peer) -> () error EmulatorPeerError;
 
-    /// Remove a previously inserted peer. Returns EmulatorPeerError.`NOT_FOUND` if `id` is not
-    /// recognized.
-    RemovePeer(bt.PeerId id) -> () error EmulatorPeerError;
+    /// Inserts a new BR/EDR peer device to be emulated by this controller. Once registered, the state
+    /// of the fake peer can be driven and observed using the `peer` handle.
+    ///
+    /// A reply will be sent to acknowledge the creation of the fake peer. If a peer cannot be
+    /// initialized (e.g. due to a missing required field in `parameters` or for containing an
+    /// address that is already emulated) the `peer` handle will be closed and an error reply will
+    /// be sent.
+    ///
+    /// The peer will appear in inquiry results and respond to requests according to its
+    /// configuration as long as the `peer` channel is open. The emulator stops emulating this peer
+    /// when the channel gets closed, which makes it no longer discoverable and not respond to any
+    /// requests.
+    AddBredrPeer(BredrPeerParameters parameters, request<Peer> peer) -> () error EmulatorPeerError;
 
     /// Returns the most recent set of state transitions for the link layer LE scan procedure. This
     /// method returns when there has been a state change since the last invocation of this method
