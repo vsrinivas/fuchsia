@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        action_match::query_text_match, mod_manager::ModManager, models::Suggestion,
-        story_context_store::ContextEntity,
-    },
+    crate::{mod_manager::ModManager, models::Suggestion, story_context_store::ContextEntity},
     failure::Error,
     fuchsia_syslog::macros::*,
     futures::future::{join_all, LocalFutureObj},
@@ -53,6 +50,7 @@ impl SuggestionsManager {
             .map(|p| p.request(query, context))
             .map(|fut| Pin::<Box<_>>::from(Box::new(fut)));
         let results = join_all(futs).await;
+        let query_lower = query.to_lowercase();
         self.suggestions = results
             .into_iter()
             .filter(|result| result.is_ok())
@@ -60,7 +58,7 @@ impl SuggestionsManager {
             .flat_map(|result| result.into_iter())
             .filter(|s| {
                 if let Some(ref title) = &s.display_info().title {
-                    query_text_match(query, &title)
+                    title.to_lowercase().contains(&query_lower)
                 } else {
                     true
                 }
@@ -188,7 +186,7 @@ mod tests {
         suggestions_manager.suggestions = hashmap!(
         "12345".to_string() => suggestion!(
             action = "SEE_CONCERTS",
-            title = "See concerts for Garnet",
+            title = "See concerts for something_garnet",
             parameters = [(name = "artist", entity_reference = "abcdefgh")],
             story = "story_name"
         ));
