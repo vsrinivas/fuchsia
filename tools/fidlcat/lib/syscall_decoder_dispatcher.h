@@ -46,6 +46,19 @@ void DisplayValue(const Colors& /*colors*/, SyscallType type, ValueType /*value*
 }
 
 template <>
+inline void DisplayValue<bool>(const Colors& colors, SyscallType type, bool value, bool /*hexa*/,
+                               std::ostream& os) {
+  switch (type) {
+    case SyscallType::kBool:
+      os << colors.blue << (value ? "true" : "false") << colors.reset;
+      break;
+    default:
+      os << "unimplemented bool value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
 inline void DisplayValue<int32_t>(const Colors& colors, SyscallType type, int32_t value,
                                   bool /*hexa*/, std::ostream& os) {
   switch (type) {
@@ -87,7 +100,7 @@ inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_
         snprintf(buffer.data(), buffer.size(), "%02x", value);
         os << colors.blue << buffer.data() << colors.reset;
       } else {
-        os << colors.blue << value << colors.reset;
+        os << colors.blue << static_cast<uint32_t>(value) << colors.reset;
       }
       break;
     default:
@@ -230,6 +243,14 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
         os << colors.blue << value << colors.reset;
       }
       break;
+#ifndef __MACH__
+    case SyscallType::kGpAddr: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
+#endif
     case SyscallType::kTime:
       os << DisplayTime(colors, value);
       break;
@@ -259,6 +280,24 @@ inline void DisplayValue<std::pair<const uint64_t*, int>>(const Colors& colors, 
   }
 }
 
+#ifdef __MACH__
+template <>
+inline void DisplayValue<uintptr_t>(const Colors& colors, SyscallType type, uintptr_t value,
+                                    bool /*hexa*/, std::ostream& os) {
+  switch (type) {
+    case SyscallType::kGpAddr: {
+      std::vector<char> buffer(sizeof(uintptr_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
+    default:
+      os << "unimplemented uintptr_t value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+#endif
+
 // Base class for all conditions on fields.
 template <typename ClassType>
 class ClassFieldConditionBase {
@@ -267,7 +306,7 @@ class ClassFieldConditionBase {
   virtual ~ClassFieldConditionBase() = default;
 
   // Returns true if the condition is true.
-  virtual bool True(const ClassType* object) = 0;
+  virtual bool True(const ClassType* object, debug_ipc::Arch /*arch*/) = 0;
 };
 
 // Condition which checks that the field has an expected value.
@@ -277,13 +316,44 @@ class ClassFieldCondition : public ClassFieldConditionBase<ClassType> {
   ClassFieldCondition(const ClassField<ClassType, Type>* field, Type value)
       : field_(field), value_(value) {}
 
-  bool True(const ClassType* object) override;
+  bool True(const ClassType* object, debug_ipc::Arch /*arch*/) override;
 
  private:
   // The field we check.
   const ClassField<ClassType, Type>* const field_;
   // The value we expect.
   const Type value_;
+};
+
+// Condition which checks that the masked field has an expected value.
+template <typename ClassType, typename Type>
+class ClassFieldMaskedCondition : public ClassFieldConditionBase<ClassType> {
+ public:
+  ClassFieldMaskedCondition(const ClassField<ClassType, Type>* field, Type mask, Type value)
+      : field_(field), mask_(mask), value_(value) {}
+
+  bool True(const ClassType* object, debug_ipc::Arch /*arch*/) override;
+
+ private:
+  // The field we check.
+  const ClassField<ClassType, Type>* const field_;
+  // The mask to apply to the field.
+  const Type mask_;
+  // The value we expect.
+  const Type value_;
+};
+
+// Condition which checks that the architecture has an expected value.
+template <typename ClassType, typename Type>
+class ArchCondition : public ClassFieldConditionBase<ClassType> {
+ public:
+  explicit ArchCondition(debug_ipc::Arch arch) : arch_(arch) {}
+
+  bool True(const ClassType* object, debug_ipc::Arch /*arch*/) override;
+
+ private:
+  // The architecture we check.
+  const debug_ipc::Arch arch_;
 };
 
 // Base class for all class fields.
@@ -304,17 +374,32 @@ class ClassFieldBase {
     return this;
   }
 
-  bool ConditionsAreTrue(const ClassType* object) {
+  // Add a condition which must be true to display the input/output.
+  template <typename Type>
+  ClassFieldBase<ClassType>* DisplayIfMaskedEqual(const ClassField<ClassType, Type>* field,
+                                                  Type mask, Type value) {
+    conditions_.push_back(
+        std::make_unique<ClassFieldMaskedCondition<ClassType, Type>>(field, mask, value));
+    return this;
+  }
+
+  // Define the architecture needed to display the input/output.
+  ClassFieldBase<ClassType>* DisplayIfArch(debug_ipc::Arch arch) {
+    conditions_.push_back(std::make_unique<ArchCondition<ClassType, uint8_t>>(arch));
+    return this;
+  }
+
+  bool ConditionsAreTrue(const ClassType* object, debug_ipc::Arch arch) {
     for (const auto& condition : conditions_) {
-      if (!condition->True(object)) {
+      if (!condition->True(object, arch)) {
         return false;
       }
     }
     return true;
   }
 
-  virtual void Display(const ClassType* object, const Colors& colors, std::string_view line_header,
-                       int tabs, std::ostream& os) const = 0;
+  virtual void Display(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
+                       std::string_view line_header, int tabs, std::ostream& os) const = 0;
 
  private:
   std::string name_;
@@ -331,8 +416,8 @@ class ClassField : public ClassFieldBase<ClassType> {
 
   Type (*get() const)(const ClassType* from) { return get_; }
 
-  void Display(const ClassType* object, const Colors& colors, std::string_view line_header,
-               int tabs, std::ostream& os) const override {
+  void Display(const ClassType* object, debug_ipc::Arch /*arch*/, const Colors& colors,
+               std::string_view line_header, int tabs, std::ostream& os) const override {
     os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name();
     DisplayType(colors, ClassFieldBase<ClassType>::syscall_type(), os);
     DisplayValue<Type>(colors, ClassFieldBase<ClassType>::syscall_type(), get_(object),
@@ -355,8 +440,8 @@ class ClassClassField : public ClassFieldBase<ClassType> {
         get_(get),
         field_class_(field_class) {}
 
-  void Display(const ClassType* object, const Colors& colors, std::string_view line_header,
-               int tabs, std::ostream& os) const override;
+  void Display(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
+               std::string_view line_header, int tabs, std::ostream& os) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -371,12 +456,12 @@ class Class {
  public:
   const std::string& name() const { return name_; }
 
-  void DisplayObject(const ClassType* object, const Colors& colors, std::string_view line_header,
-                     int tabs, std::ostream& os) const {
+  void DisplayObject(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
+                     std::string_view line_header, int tabs, std::ostream& os) const {
     os << "{\n";
     for (const auto& field : fields_) {
-      if (field->ConditionsAreTrue(object)) {
-        field->Display(object, colors, line_header, tabs + 1, os);
+      if (field->ConditionsAreTrue(object, arch)) {
+        field->Display(object, arch, colors, line_header, tabs + 1, os);
       }
     }
     os << line_header << std::string(tabs * kTabSize, ' ') << "}";
@@ -411,18 +496,29 @@ class Class {
 };
 
 template <typename ClassType, typename Type>
-bool ClassFieldCondition<ClassType, Type>::True(const ClassType* object) {
+bool ClassFieldCondition<ClassType, Type>::True(const ClassType* object, debug_ipc::Arch /*arch*/) {
   return field_->get()(object) == value_;
 }
 
 template <typename ClassType, typename Type>
-void ClassClassField<ClassType, Type>::Display(const ClassType* object, const Colors& colors,
-                                               std::string_view line_header, int tabs,
-                                               std::ostream& os) const {
+bool ClassFieldMaskedCondition<ClassType, Type>::True(const ClassType* object,
+                                                      debug_ipc::Arch /*arch*/) {
+  return (field_->get()(object) & mask_) == value_;
+}
+
+template <typename ClassType, typename Type>
+bool ArchCondition<ClassType, Type>::True(const ClassType* /*object*/, debug_ipc::Arch arch) {
+  return arch_ == arch;
+}
+
+template <typename ClassType, typename Type>
+void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
+                                               const Colors& colors, std::string_view line_header,
+                                               int tabs, std::ostream& os) const {
   os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name() << ':'
      << colors.green << field_class_->name() << colors.reset << ": ";
   const Type* sub_object = get_(object);
-  field_class_->DisplayObject(sub_object, colors, line_header, tabs, os);
+  field_class_->DisplayObject(sub_object, arch, colors, line_header, tabs, os);
   os << '\n';
 }
 
@@ -984,6 +1080,18 @@ class Syscall {
     inputs_.push_back(std::make_unique<SyscallInputOutput<Type>>(0, name, std::move(access)));
   }
 
+  // Adds an object input to display.
+  template <typename ClassType>
+  SyscallInputOutputObject<ClassType>* InputObject(std::string_view name,
+                                                   std::unique_ptr<AccessBase> buffer,
+                                                   const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObject<ClassType>>(0, name, std::move(buffer),
+                                                                        class_definition);
+    auto result = object.get();
+    inputs_.push_back(std::move(object));
+    return result;
+  }
+
   // Adds an input FIDL message to display.
   void InputFidlMessage(std::string_view name, SyscallFidlType type,
                         std::unique_ptr<Access<zx_handle_t>> handle,
@@ -1182,7 +1290,7 @@ void SyscallInputOutputObject<ClassType>::DisplayOutline(SyscallDisplayDispatche
   if (object == nullptr) {
     os << colors.red << "nullptr" << colors.reset;
   } else {
-    class_definition_->DisplayObject(object, colors, line_header, tabs + 1, os);
+    class_definition_->DisplayObject(object, decoder->arch(), colors, line_header, tabs + 1, os);
   }
   os << '\n';
 }

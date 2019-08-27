@@ -275,6 +275,9 @@ void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::os
 
 void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
   switch (type) {
+    case SyscallType::kBool:
+      os << ":" << colors.green << "bool" << colors.reset << ": ";
+      break;
     case SyscallType::kInt64:
       os << ":" << colors.green << "int64" << colors.reset << ": ";
       break;
@@ -307,6 +310,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kDuration:
       os << ":" << colors.green << "duration" << colors.reset << ": ";
+      break;
+    case SyscallType::kGpAddr:
+      os << ":" << colors.green << "zx_gpaddr_t" << colors.reset << ": ";
       break;
     case SyscallType::kHandle:
       os << ":" << colors.green << "handle" << colors.reset << ": ";

@@ -106,6 +106,7 @@ class SyscallDecoder {
   zxdb::Thread* thread() const { return thread_.get(); }
   uint64_t thread_id() const { return thread_id_; }
   const Syscall* syscall() const { return syscall_; }
+  debug_ipc::Arch arch() const { return arch_; }
   const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }

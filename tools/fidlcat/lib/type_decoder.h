@@ -24,6 +24,7 @@ constexpr int kCharatersPerByte = 2;
 
 // Types for syscall arguments.
 enum class SyscallType {
+  kBool,
   kInt64,
   kUint8,
   kUint8Array,
@@ -35,6 +36,7 @@ enum class SyscallType {
   kUint64Array,
   kClock,
   kDuration,
+  kGpAddr,
   kHandle,
   kPortPacketType,
   kSignals,
@@ -184,6 +186,32 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayTime& time) {
   }
   return os;
 }
+
+// This is a copy of zx_packet_guest_mem from zircon/system/public/zircon/syscalls/port.h
+// specialized for AArch64.
+struct zx_packet_guest_mem_aarch64 {
+  zx_gpaddr_t addr;
+  uint8_t access_size;
+  bool sign_extend;
+  uint8_t xt;
+  bool read;
+  uint64_t data;
+  uint64_t reserved;
+};
+using zx_packet_guest_mem_aarch64_t = struct zx_packet_guest_mem_aarch64;
+
+// This is a copy of zx_packet_guest_mem from zircon/system/public/zircon/syscalls/port.h
+// specialized for X86.
+struct zx_packet_guest_mem_x86 {
+  zx_gpaddr_t addr;
+// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
+#define X86_MAX_INST_LEN 15u
+  uint8_t inst_len;
+  uint8_t inst_buf[X86_MAX_INST_LEN];
+  uint8_t default_operand_size;
+  uint8_t reserved[7];
+};
+using zx_packet_guest_mem_x86_t = struct zx_packet_guest_mem_x86;
 
 }  // namespace fidlcat
 

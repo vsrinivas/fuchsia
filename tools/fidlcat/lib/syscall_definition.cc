@@ -119,6 +119,166 @@ const ZxPacketSignal* ZxPacketSignal::GetClass() {
   return instance_;
 }
 
+class ZxPacketException : public Class<zx_packet_exception_t> {
+ public:
+  static const ZxPacketException* GetClass();
+
+  static uint64_t pid(const zx_packet_exception_t* from) { return from->pid; }
+  static uint64_t tid(const zx_packet_exception_t* from) { return from->tid; }
+  static uint64_t reserved0(const zx_packet_exception_t* from) { return from->reserved0; }
+  static uint64_t reserved1(const zx_packet_exception_t* from) { return from->reserved1; }
+
+ private:
+  ZxPacketException() : Class("zx_packet_exception_t") {
+    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
+        "pid", SyscallType::kUint64, pid));
+    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
+        "tid", SyscallType::kUint64, tid));
+    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
+        "reserved0", SyscallType::kUint64, reserved0));
+    AddField(std::make_unique<ClassField<zx_packet_exception_t, uint64_t>>(
+        "reserved1", SyscallType::kUint64, reserved1));
+  }
+  ZxPacketException(const ZxPacketException&) = delete;
+  ZxPacketException& operator=(const ZxPacketException&) = delete;
+  static ZxPacketException* instance_;
+};
+
+ZxPacketException* ZxPacketException::instance_ = nullptr;
+
+const ZxPacketException* ZxPacketException::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketException;
+  }
+  return instance_;
+}
+
+class ZxPacketGuestBell : public Class<zx_packet_guest_bell_t> {
+ public:
+  static const ZxPacketGuestBell* GetClass();
+
+  static zx_gpaddr_t addr(const zx_packet_guest_bell_t* from) { return from->addr; }
+  static uint64_t reserved0(const zx_packet_guest_bell_t* from) { return from->reserved0; }
+  static uint64_t reserved1(const zx_packet_guest_bell_t* from) { return from->reserved1; }
+  static uint64_t reserved2(const zx_packet_guest_bell_t* from) { return from->reserved2; }
+
+ private:
+  ZxPacketGuestBell() : Class("zx_packet_guest_bell_t") {
+    AddField(std::make_unique<ClassField<zx_packet_guest_bell_t, zx_gpaddr_t>>(
+        "addr", SyscallType::kGpAddr, addr));
+    AddField(std::make_unique<ClassField<zx_packet_guest_bell_t, uint64_t>>(
+        "reserved0", SyscallType::kUint64, reserved0));
+    AddField(std::make_unique<ClassField<zx_packet_guest_bell_t, uint64_t>>(
+        "reserved1", SyscallType::kUint64, reserved1));
+    AddField(std::make_unique<ClassField<zx_packet_guest_bell_t, uint64_t>>(
+        "reserved2", SyscallType::kUint64, reserved2));
+  }
+  ZxPacketGuestBell(const ZxPacketGuestBell&) = delete;
+  ZxPacketGuestBell& operator=(const ZxPacketGuestBell&) = delete;
+  static ZxPacketGuestBell* instance_;
+};
+
+ZxPacketGuestBell* ZxPacketGuestBell::instance_ = nullptr;
+
+const ZxPacketGuestBell* ZxPacketGuestBell::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketGuestBell;
+  }
+  return instance_;
+}
+
+class ZxPacketGuestMemAArch64 : public Class<zx_packet_guest_mem_aarch64_t> {
+ public:
+  static const ZxPacketGuestMemAArch64* GetClass();
+
+  static zx_gpaddr_t addr(const zx_packet_guest_mem_aarch64_t* from) { return from->addr; }
+  static uint8_t access_size(const zx_packet_guest_mem_aarch64_t* from) {
+    return from->access_size;
+  }
+  static bool sign_extend(const zx_packet_guest_mem_aarch64_t* from) { return from->sign_extend; }
+  static uint8_t xt(const zx_packet_guest_mem_aarch64_t* from) { return from->xt; }
+  static bool read(const zx_packet_guest_mem_aarch64_t* from) { return from->read; }
+  static uint64_t data(const zx_packet_guest_mem_aarch64_t* from) { return from->data; }
+  static uint64_t reserved(const zx_packet_guest_mem_aarch64_t* from) { return from->reserved; }
+
+ private:
+  ZxPacketGuestMemAArch64() : Class("zx_packet_guest_mem_aarch64_t") {
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_aarch64_t, zx_gpaddr_t>>(
+        "addr", SyscallType::kGpAddr, addr));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_aarch64_t, uint8_t>>(
+        "access_size", SyscallType::kUint8, access_size));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_aarch64_t, bool>>(
+        "sign_extend", SyscallType::kBool, sign_extend));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_aarch64_t, uint8_t>>(
+        "xt", SyscallType::kUint8, xt));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_aarch64_t, bool>>(
+        "read", SyscallType::kBool, read));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_aarch64_t, uint64_t>>(
+        "data", SyscallType::kUint64, data));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_aarch64_t, uint64_t>>(
+        "reserved", SyscallType::kUint64, reserved));
+  }
+  ZxPacketGuestMemAArch64(const ZxPacketGuestMemAArch64&) = delete;
+  ZxPacketGuestMemAArch64& operator=(const ZxPacketGuestMemAArch64&) = delete;
+  static ZxPacketGuestMemAArch64* instance_;
+};
+
+ZxPacketGuestMemAArch64* ZxPacketGuestMemAArch64::instance_ = nullptr;
+
+const ZxPacketGuestMemAArch64* ZxPacketGuestMemAArch64::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketGuestMemAArch64;
+  }
+  return instance_;
+}
+
+class ZxPacketGuestMemX86 : public Class<zx_packet_guest_mem_x86_t> {
+ public:
+  static const ZxPacketGuestMemX86* GetClass();
+
+  static zx_gpaddr_t addr(const zx_packet_guest_mem_x86_t* from) { return from->addr; }
+  static uint8_t inst_len(const zx_packet_guest_mem_x86_t* from) { return from->inst_len; }
+  static std::pair<const uint8_t*, int> inst_buf(const zx_packet_guest_mem_x86_t* from) {
+    return std::make_pair(reinterpret_cast<const uint8_t*>(from->inst_buf),
+                          sizeof(from->inst_buf) / sizeof(uint8_t));
+  }
+  static uint8_t default_operand_size(const zx_packet_guest_mem_x86_t* from) {
+    return from->default_operand_size;
+  }
+  static std::pair<const uint8_t*, int> reserved(const zx_packet_guest_mem_x86_t* from) {
+    return std::make_pair(reinterpret_cast<const uint8_t*>(from->reserved),
+                          sizeof(from->reserved) / sizeof(uint8_t));
+  }
+
+ private:
+  ZxPacketGuestMemX86() : Class("zx_packet_guest_mem_x86_t") {
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_x86_t, zx_gpaddr_t>>(
+        "addr", SyscallType::kGpAddr, addr));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_x86_t, uint8_t>>(
+        "inst_len", SyscallType::kUint8, inst_len));
+    AddField(
+        std::make_unique<ClassField<zx_packet_guest_mem_x86_t, std::pair<const uint8_t*, int>>>(
+            "inst_buf", SyscallType::kUint8Array, inst_buf));
+    AddField(std::make_unique<ClassField<zx_packet_guest_mem_x86_t, uint8_t>>(
+        "default_operand_size", SyscallType::kUint8, default_operand_size));
+    AddField(
+        std::make_unique<ClassField<zx_packet_guest_mem_x86_t, std::pair<const uint8_t*, int>>>(
+            "reserved", SyscallType::kUint8Array, reserved));
+  }
+  ZxPacketGuestMemX86(const ZxPacketGuestMemX86&) = delete;
+  ZxPacketGuestMemX86& operator=(const ZxPacketGuestMemX86&) = delete;
+  static ZxPacketGuestMemX86* instance_;
+};
+
+ZxPacketGuestMemX86* ZxPacketGuestMemX86::instance_ = nullptr;
+
+const ZxPacketGuestMemX86* ZxPacketGuestMemX86::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketGuestMemX86;
+  }
+  return instance_;
+}
+
 class ZxPortPacket : public Class<zx_port_packet_t> {
  public:
   static const ZxPortPacket* GetClass();
@@ -128,6 +288,20 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
   static zx_status_t status(const zx_port_packet_t* from) { return from->status; }
   static const zx_packet_user_t* user(const zx_port_packet_t* from) { return &from->user; }
   static const zx_packet_signal_t* signal(const zx_port_packet_t* from) { return &from->signal; }
+  static const zx_packet_exception_t* exception(const zx_port_packet_t* from) {
+    return &from->exception;
+  }
+  static const zx_packet_guest_bell_t* guest_bell(const zx_port_packet_t* from) {
+    return &from->guest_bell;
+  }
+  static const zx_packet_guest_mem_aarch64_t* guest_mem_aarch64(const zx_port_packet_t* from) {
+    return reinterpret_cast<const zx_packet_guest_mem_aarch64_t*>(&from->guest_mem);
+  }
+  static const zx_packet_guest_mem_x86_t* guest_mem_x86(const zx_port_packet_t* from) {
+    return reinterpret_cast<const zx_packet_guest_mem_x86_t*>(&from->guest_mem);
+  }
+
+  static constexpr uint32_t kExceptionMask = 0xff;
 
  private:
   ZxPortPacket() : Class("zx_port_packet_t") {
@@ -146,6 +320,20 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
     AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_signal_t>>(
                  "signal", signal, ZxPacketSignal::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_SIGNAL_REP));
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_exception_t>>(
+                 "exception", exception, ZxPacketException::GetClass()))
+        ->DisplayIfMaskedEqual(type_field, kExceptionMask, uint32_t(ZX_PKT_TYPE_EXCEPTION(0)));
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_bell_t>>(
+                 "guest_bell", guest_bell, ZxPacketGuestBell::GetClass()))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_BELL));
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_mem_aarch64_t>>(
+                 "guest_mem", guest_mem_aarch64, ZxPacketGuestMemAArch64::GetClass()))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_MEM))
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_mem_x86_t>>(
+                 "guest_mem", guest_mem_x86, ZxPacketGuestMemX86::GetClass()))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_MEM))
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
   }
   ZxPortPacket(const ZxPortPacket&) = delete;
   ZxPortPacket& operator=(const ZxPortPacket&) = delete;
@@ -365,6 +553,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_call->Output<uint32_t>(ZX_ERR_BUFFER_TOO_SMALL, "actual_handles",
                                       std::make_unique<ArgumentAccess<uint32_t>>(actual_handles));
   }
+
   {
     Syscall* zx_port_create = Add("zx_port_create", SyscallReturnType::kStatus);
     // Arguments
@@ -375,6 +564,19 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_port_create->Output<zx_handle_t>(ZX_OK, "out",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_port_queue = Add("zx_port_queue", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_port_queue->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto packet = zx_port_queue->PointerArgument<zx_port_packet_t>(SyscallType::kStruct);
+    // Inputs
+    zx_port_queue->Input<zx_handle_t>("handle",
+                                      std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_port_queue->InputObject<zx_port_packet_t>(
+        "packet", std::make_unique<ArgumentAccess<zx_port_packet_t>>(packet),
+        ZxPortPacket::GetClass());
   }
 
   {
