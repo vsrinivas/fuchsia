@@ -78,15 +78,14 @@ impl StoryContextService {
                         }
                         StoryDiscoverContextRequest::SetProperty { key, value, responder } => {
                             let mut story_manager = self.story_manager.lock();
-                            story_manager.serve_set_property(&self.story_id, &key, value).await?;
+                            story_manager.set_property(&self.story_id, &key, value).await?;
                             // TODO: handle the errors properly in a followup CL.
                             responder.send(&mut Ok(()))?;
                         }
 
                         StoryDiscoverContextRequest::GetProperty { key, responder } => {
                             let story_manager = self.story_manager.lock();
-                            let property =
-                                story_manager.serve_get_property(&self.story_id, key).await?;
+                            let property = story_manager.get_property(&self.story_id, key).await?;
                             // TODO: handle the errors properly in a followup CL.
                             responder.send(&mut Ok(property))?;
                         }

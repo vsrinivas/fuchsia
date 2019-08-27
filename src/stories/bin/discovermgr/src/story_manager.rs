@@ -36,7 +36,7 @@ impl StoryManager {
     }
 
     // Set property of given story with key & value.
-    pub async fn serve_set_property(
+    pub async fn set_property(
         &mut self,
         story_name: &StoryName,
         key: &str,
@@ -48,11 +48,7 @@ impl StoryManager {
     }
 
     // Get property of given story with key.
-    pub async fn serve_get_property(
-        &self,
-        story_name: &StoryName,
-        key: String,
-    ) -> Result<Buffer, Error> {
+    pub async fn get_property(&self, story_name: &StoryName, key: String) -> Result<Buffer, Error> {
         let value = self.story_storage.get_property(story_name, &key).await?;
         let data_to_write = value.as_bytes();
         let vmo = zx::Vmo::create(data_to_write.len() as u64)?;
