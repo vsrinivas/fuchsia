@@ -236,7 +236,7 @@ fidl_lint_is_outdated() {
     # executable. Touching these files in this order will ensure the
     # executable is rebuilt and relinked.
     touch "${FIDL_LINT}"
-    touch "${FUCHSIA_DIR}/zircon/tools/fidl/linter/main.cpp"
+    touch "${FUCHSIA_DIR}/zircon/tools/fidl/linter/main.cc"
     return $yes
   fi
   local files_out_of_date=$(
@@ -255,14 +255,12 @@ ensure_fidl_lint() {
     for file in ${FILES}; do
       if [[ ${file} =~ .*\.fidl ]]; then
         if fidl_lint_is_outdated; then
-          fx-warn "fidl-lint is out of date or missing..."
-          echo -n "OK to run 'fx build zircon/tools' to rebuild it? [Y/n] "
-          if [[ ! -t 1 ]]; then
-            echo  # flush the prompt
-          fi
+          # echo directly to /dev/tty in case stdout and/or stderr are redirected
+          fx-warn "fidl-lint is out of date or missing..." >/dev/tty
+          echo -n "OK to run 'fx build zircon/tools' to rebuild it? [Y/n] " >/dev/tty
           read
           if [[ $REPLY == "" || $REPLY =~ Y|y ]]; then
-            fx-command-run build zircon/tools || return $?
+            fx-command-run build zircon/tools >/dev/tty 2>&1 || return $?
           fi
         fi
         break
@@ -291,7 +289,7 @@ execute() {
   fi
 
   if [[ ! -n "${DRY_RUN}" ]]; then
-    "$@"
+    "$@" || return $?
   fi
 }
 
