@@ -9,6 +9,7 @@
   * Fuchsia: Create or extend a [`fuzzers_package`][gn fuzzers package] in an appropriate BUILD.gn.
   * Ensure there's a path from  a top-level target, e.g. `//bundles:tests`, to your fuzzers package.
 1. Configure, build, and boot (with networking), e.g.:
+  * _if a Fuchsia instance is not already running:_ `fx run -k -N`
   * `fx set core.x64 --fuzz-with asan --with //bundles:tests`
   * `fx build`
   * `fx serve`
@@ -200,6 +201,8 @@ function in a source file and the library under test as a dependency, it will pr
 [compiler flags] to link against the fuzzing engine:
 
 ```python
+import("//build/fuzzing/fuzzer.gni")
+
 fuzzer("cowsay_simple_fuzzer") {
   sources = [ "cowsay_fuzzer.cpp" ]
   deps = [ ":cowsay_sources" ]
@@ -229,6 +232,8 @@ e.g. "GET" and "POST" for HTTP.
 [options].
 
 ```python
+import("//build/fuzzing/fuzzer.gni")
+
 fuzzer("cowsay_simple_fuzzer") {
   sources = [ "cowsay_fuzztest.cpp" ]
   deps = [ ":cowsay_sources" ]
@@ -270,9 +275,11 @@ $ fx build
 
 ## Q: How do I create a Zircon fuzzer? {#q-how-do-i-create-a-zircon-fuzzer}
 
-Zircon has an equivalent [template][zircon_fuzzer.gni] to that of Fuchsia, and is used similarly:
+Zircon has a different [fuzzer.gni template][fuzzer.gni] from the rest of Fuchsia, but is used similarly:
 
 ```python
+import("$zx/public/gn/fuzzer.gni")
+
 fuzzer("zx_fuzzer") {
   sources = [ "zx_fuzzer.cpp" ]
   deps = [ ":zx_sources" ]
@@ -280,12 +287,14 @@ fuzzer("zx_fuzzer") {
 ```
 
 Zircon fuzzers will be built with all supported sanitizers automatically. These fuzzers can be included in a
-Fuchsia instance by includong the `zircon_fuzzers` package, e.g.:
+Fuchsia instance by including the `zircon_fuzzers` package, e.g.:
 
 ```
 $ fx set core.x64 --with //garnet/tests/zircon:zircon_fuzzers
 $ fx build
 ```
+
+Note that Zircon fuzzers *must* have names that end in "\_fuzzer".
 
 ## Q: How do I run a fuzzer? {#q-how-do-i-run-a-fuzzer}
 
@@ -302,6 +311,8 @@ fuzzing related files and knows various common options.  Try one or more of the 
   `$ fx fuzz list`
 * To start a fuzzer:
   `fx fuzz [package]/[fuzzer]`
+
+(Ignore errors of the form `Error: no such package.` These come from CIPD and should not affect the fuzzer!)
 
 `package` and `fuzzer` match those reported by `fx fuzz list`, and may be abbreviated.  For commands
 that accept a single fuzzer, e.g. `check`, the abbreviated name must uniquely identify exactly one
@@ -335,10 +346,10 @@ When filing bugs, __please__ use both the custom `found-by-libfuzzer` label, as 
 `Sec-TriageMe` label.  This will help the security team see where fuzzers are being used and stay
 aware of any critical issues they are finding.
 
-As with other potential security issues, bugs should be filed __in the project of the code under
-test__ (and __not__ in the [security project]).  Conversely, if you encounter problems or
+As with other potential security issues, bugs should be filed __in the component of the code under
+test__ (and __not__ in the [security component]).  Conversely, if you encounter problems or
 shortcomings in the fuzzing framework _itself_, please __do__ open bugs or feature requests in the
-[security project] with the label `libFuzzer`.
+[security component] with the label `libFuzzer`.
 
 As with all potential security issues, don't wait for triage to begin fixing the bug!  Once fixed,
 don't forget to link to the bug in the commit message.  This may also be a good time to consider
@@ -364,7 +375,7 @@ you can retrieve older versions of the corpus relating to a specific version of 
 
 ## Q: Can I use an existing third party corpus?  {#q-can-i-use-an-existing-third-party-corpus}
 
-A: Yes! by , and then performing a normal corpus update:
+A: Yes! by fetching the corpus, and then performing a normal corpus update:
 
 1. Fetch from a directory rather than CIPD:
 * `fx fuzz fetch [package]/[fuzzer] /path/to/third/party/corpus`
@@ -414,7 +425,7 @@ If coverage in a certain area is low, there are a few options:
 
 The "run, merge, measure, improve" steps can be repeated for as many iterations as you feel are
 needed to create a quality fuzzer.  Once ready, you'll need to upload your corpus and update the
-[GN fuzzer] in the appropriate project.  At this point, others will be able use your fuzzer,
+[GN fuzzer] in the appropriate project.  At this point, others will be able use your fuzzer.
 This includes [ClusterFuzz] which will automatically find new fuzzers and continuously fuzz them,
 updating their corpora, filing bugs for crashes, and closing them when fixed.
 
@@ -466,7 +477,7 @@ become available.
 [issue 24866]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=24866
 [issue 27001]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=27001
 [pod]: http://www.cplusplus.com/reference/type_traits/is_pod/
-[security project]: https://fuchsia.atlassian.net/browse/SEC
+[security component]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ASecurity
 [latest corpus]: #q-how-do-i-manage-my-corpus
 [fx fuzz tool]: #q-how-do-i-run-a-fuzzer
 [fuzzer scope]: #q-how-should-i-scope-my-fuzzer
