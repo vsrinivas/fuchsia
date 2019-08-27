@@ -15,8 +15,9 @@
 #include <arch/x86/cpuid.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/platform_access.h>
-#include <platform/pc/bootbyte.h>
 #include <fbl/algorithm.h>
+#include <lib/code_patching.h>
+#include <platform/pc/bootbyte.h>
 
 #define LOCAL_TRACE 0
 
@@ -39,6 +40,7 @@ bool g_has_meltdown;
 bool g_has_l1tf;
 bool g_has_mds;
 bool g_has_swapgs_bug;
+bool g_swapgs_bug_mitigated;
 
 enum x86_hypervisor_list x86_hypervisor;
 
@@ -356,6 +358,8 @@ void x86_feature_debug(void) {
     printf("mds ");
   if (g_has_swapgs_bug)
     printf("swapgs_bug ");
+  if (g_swapgs_bug_mitigated)
+    printf("swapgs_bug_mitigated ");
   if (g_x86_feature_pcid_good)
     printf("pcid_good ");
   if (x86_kpti_is_enabled()) {
@@ -797,4 +801,23 @@ const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
   }
 
   return &unknown_vendor_config;
+}
+
+extern "C" {
+
+CODE_TEMPLATE(kLfence, "lfence")
+void swapgs_bug_postfence(const CodePatchInfo* patch) {
+  const uint8_t kNop = 0x90;
+  const size_t kSize = 3;
+  DEBUG_ASSERT(patch->dest_size == kSize);
+  DEBUG_ASSERT(kLfenceEnd - kLfence == kSize);
+
+  if (g_has_swapgs_bug) {
+    memcpy(patch->dest_addr, kLfence, kSize);
+    g_swapgs_bug_mitigated = true;
+  } else {
+    memset(patch->dest_addr, kNop, kSize);
+  }
+}
+
 }

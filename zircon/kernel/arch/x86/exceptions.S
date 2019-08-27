@@ -9,6 +9,7 @@
 
 #include <asm.h>
 #include <arch/x86/descriptor.h>
+#include <lib/code_patching.h>
 
 #define NUM_INT 256
 
@@ -105,6 +106,12 @@ FUNCTION_LABEL(interrupt_common)
     swapgs
 
 1:
+    /* Certain processors may speculative past a conditional swapgs, with a caller-controlled
+     * GS_BASE register. This may allow callers to infer the contents of kernel offsets or data.
+     * Execute a dispatch-serializing fence to constrain speculation and mitigate the leak.
+     */
+    APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
+
     /* save general purpose registers */
     push_reg %r15
     push_reg %r14
@@ -156,6 +163,7 @@ interrupt_common_iframe_set_up_for_debugger:
     swapgs
 
 1:
+    APPLY_CODE_PATCH_FUNC(swapgs_bug_postfence, 3)
     /* drop vector number and error code*/
     add_to_sp 16
 
