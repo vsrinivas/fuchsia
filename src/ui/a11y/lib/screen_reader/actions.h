@@ -31,7 +31,7 @@ class ScreenReaderAction {
   // Struct to hold pointers to various services, which will be required to
   // complete an action.
   struct ActionContext {
-    std::shared_ptr<a11y::SemanticsManager> semantics_manager;
+    a11y::SemanticsManager* semantics_manager;
     fuchsia::accessibility::tts::EnginePtr tts_engine_ptr;
   };
 

@@ -34,14 +34,13 @@ class ExploreActionTest : public gtest::RealLoopFixture {
     RealLoopFixture::SetUp();
 
     // Initialize ActionContext.
-    action_context_ = std::make_shared<a11y::ExploreAction::ActionContext>();
-    action_context_->semantics_manager = std::make_shared<a11y::SemanticsManager>();
+    action_context_.semantics_manager = &semantics_manager_;
     // Enabled Semantics Manager.
-    action_context_->semantics_manager->SetSemanticsManagerEnabled(true);
+    action_context_.semantics_manager->SetSemanticsManagerEnabled(true);
 
     // Intiailize TtsManager.
     tts_manager_ = std::make_unique<a11y::TtsManager>(context_provider_.context());
-    tts_manager_->OpenEngine(action_context_->tts_engine_ptr.NewRequest(),
+    tts_manager_->OpenEngine(action_context_.tts_engine_ptr.NewRequest(),
                              [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
                                EXPECT_TRUE(result.is_response());
                              });
@@ -54,13 +53,13 @@ class ExploreActionTest : public gtest::RealLoopFixture {
         .reference = std::move(a),
     });
 
-    action_context_->semantics_manager->SetDebugDirectory(
+    action_context_.semantics_manager->SetDebugDirectory(
         context_provider_.context()->outgoing()->debug_dir());
 
     // Add Semantics Manager service.
     context_provider_.service_directory_provider()->AddService<SemanticsManager>(
         [this](fidl::InterfaceRequest<SemanticsManager> request) {
-          action_context_->semantics_manager->AddBinding(std::move(request));
+          action_context_.semantics_manager->AddBinding(std::move(request));
         });
     RunLoopUntilIdle();
 
@@ -71,11 +70,12 @@ class ExploreActionTest : public gtest::RealLoopFixture {
     RunLoopUntilIdle();
   }
 
-  std::shared_ptr<a11y::ExploreAction::ActionContext> action_context_;
+  a11y::ScreenReaderAction::ActionContext action_context_;
   sys::testing::ComponentContextProvider context_provider_;
   fuchsia::ui::views::ViewRef view_ref_;
   std::unique_ptr<a11y::TtsManager> tts_manager_;
   std::unique_ptr<accessibility_test::MockSemanticListener> semantic_listener_;
+  a11y::SemanticsManager semantics_manager_;
 };
 
 // Create a test node with only a node id and a label.
@@ -127,7 +127,7 @@ TEST_F(ExploreActionTest, ReadLabel) {
   accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 
-  a11y::ExploreAction explore_action(action_context_);
+  a11y::ExploreAction explore_action(&action_context_);
   a11y::ExploreAction::ActionData action_data;
   action_data.koid = a11y::GetKoid(view_ref_);
 

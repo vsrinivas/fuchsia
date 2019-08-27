@@ -8,6 +8,7 @@ source_set("screen_reader") {
     "actions.h",
     "explore_action.cc",
     "explore_action.h",
+    "screen_reader.cc",
     "screen_reader.h",
   ]
 
@@ -23,7 +24,9 @@ source_set("screen_reader") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/tts",
     "//src/ui/lib/glm_workaround",
   ]
 }

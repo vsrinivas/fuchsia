@@ -91,7 +91,8 @@ void App::OnScreenReaderEnabled(bool enabled) {
 
   // Reset ScreenReader.
   if (enabled) {
-    screen_reader_ = std::make_unique<a11y::ScreenReader>();
+    screen_reader_ = std::make_unique<a11y::ScreenReader>(
+        &semantics_manager_, &tts_manager_, gesture_manager_.get());
   } else {
     screen_reader_.reset();
   }

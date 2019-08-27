@@ -67,6 +67,7 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
 
   fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> settings_watcher_bindings_;
+
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
   // Private variable for storing A11y Settings.
   fuchsia::accessibility::Settings settings_;

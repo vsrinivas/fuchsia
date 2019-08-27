@@ -9,7 +9,9 @@
 #include <string>
 #include <unordered_map>
 
-#include "src/ui/a11y/lib/screen_reader/actions.h"
+#include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
+#include "src/ui/a11y/lib/screen_reader/explore_action.h"
+#include "src/ui/a11y/lib/tts/tts_manager.h"
 
 namespace a11y {
 
@@ -26,16 +28,34 @@ namespace a11y {
 // TODO(MI4-2546): Rename this class once the final screen reader name exists.
 class ScreenReader {
  public:
-  ScreenReader() = default;
+  // Pointers to Semantics Manager, TTS Manager and Gesture Manager must outlive
+  // screen reader. A11y App is responsible for creating these pointers along
+  // with Screen Reader object.
+  explicit ScreenReader(a11y::SemanticsManager* semantics_manager_impl,
+                        a11y::TtsManager* tts_manager, a11y::GestureManager* gesture_manager);
   ~ScreenReader() = default;
 
-  // Initializes the Screen Reader, connecting to services and biding inputs to
-  // Screen Reader Actions.
-  void Init() {}
-
  private:
+  // Initializes services TTS Engine and binds actions to gesture manager.
+  void InitalizeServicesAndAction();
+
+  // Helps finding the appropriate Action based on Action Name and calls Run()
+  // for the matched Action.
+  // Functions returns false, if no action matches the provided "action_name",
+  // returns true if Run() is called.
+  bool ExecuteAction(std::string action_name, ScreenReaderAction::ActionData action_data);
+
   // Maps action names to screen reader actions.
   std::unordered_map<std::string, std::unique_ptr<ScreenReaderAction>> actions_;
+
+  // Stores Action context which is reaquired to build an Action.
+  std::unique_ptr<ScreenReaderAction::ActionContext> action_context_;
+
+  // Pointer to TTS Manager.
+  a11y::TtsManager* tts_manager_;
+
+  // Pointer to Gesture Manager.
+  a11y::GestureManager* gesture_manager_;
 };
 
 }  // namespace a11y

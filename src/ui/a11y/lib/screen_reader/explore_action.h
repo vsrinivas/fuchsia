@@ -17,7 +17,7 @@ namespace a11y {
 //   * Manage focus change for a node(if any).
 class ExploreAction : public ScreenReaderAction {
  public:
-  explicit ExploreAction(std::shared_ptr<ActionContext> context);
+  explicit ExploreAction(ActionContext* context);
   ~ExploreAction() override;
 
   // This method will be implementing the actual sequence of events that should
@@ -30,7 +30,7 @@ class ExploreAction : public ScreenReaderAction {
   void ProcessHitTestResult(::fuchsia::accessibility::semantics::Hit hit, ActionData process_data);
 
   // ActionContext which is used to make calls to Semantics Manager and TTS.
-  std::shared_ptr<ActionContext> action_context_;
+  ActionContext* action_context_;
 };
 
 }  // namespace a11y

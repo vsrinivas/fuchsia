@@ -8,7 +8,7 @@
 
 namespace a11y {
 
-ExploreAction::ExploreAction(std::shared_ptr<ActionContext> context) : action_context_(context) {}
+ExploreAction::ExploreAction(ActionContext* context) : action_context_(context) {}
 ExploreAction::~ExploreAction() = default;
 
 void ExploreAction::ProcessHitTestResult(::fuchsia::accessibility::semantics::Hit hit,
