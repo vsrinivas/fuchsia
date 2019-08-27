@@ -180,7 +180,7 @@ class Fuzzer(object):
         self.device.rm(self.data_path('fuzz-*.log'))
         results = os.path.join(
             self._output,
-            datetime.datetime.utcnow().isoformat())
+            datetime.datetime.today().isoformat())
         try:
             os.unlink(self.results())
         except OSError as e:
