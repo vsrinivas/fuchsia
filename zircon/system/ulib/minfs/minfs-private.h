@@ -5,25 +5,28 @@
 // This file describes the in-memory structures which construct
 // a MinFS filesystem.
 
-#pragma once
-
-#include <utility>
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_MINFS_PRIVATE_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_MINFS_PRIVATE_H_
 
 #include <inttypes.h>
 
+#include <utility>
+
 #ifdef __Fuchsia__
-#include <fbl/auto_lock.h>
-#include <fs/managed-vfs.h>
-#include <fs/remote.h>
-#include <fs/watcher.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
+
+#include <fs/managed-vfs.h>
+#include <fs/remote.h>
+#include <fs/watcher.h>
 #include <minfs/metrics.h>
 #include <minfs/writeback-async.h>
 #endif
+
+#include <lib/zircon-internal/fnv1hash.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
@@ -38,7 +41,6 @@
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <lib/zircon-internal/fnv1hash.h>
 #include <minfs/format.h>
 #include <minfs/minfs.h>
 #include <minfs/superblock.h>
@@ -192,14 +194,14 @@ class Minfs :
   ~Minfs();
 
   static zx_status_t Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
-                            fbl::unique_ptr<Minfs>* out, IntegrityCheck checks);
+                            IntegrityCheck checks, fbl::unique_ptr<Minfs>* out);
 
 #ifdef __Fuchsia__
   // Initializes the Minfs writeback queue and resolves any pending disk state (e.g., resolving
   // unlinked nodes).
   zx_status_t InitializeWriteback();
 
-  // Queries the underlying FVM, if it exists.
+  // Queries the superblock flags for FVM as well as underlying FVM, if it exists.
   zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const;
 #endif
 
@@ -434,6 +436,21 @@ class Minfs :
   TransactionLimits limits_;
 };
 
+// Create and register a VMO for writes.
+#ifdef __Fuchsia__
+zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
+                                 fuchsia_hardware_block_VmoID* out_vmoid);
+#endif
+
+// Upgrades superblock from older version 7 to newer version 8.
+// TODO(ZX-4623): Remove this code after migration to version 8.
+#ifdef __Fuchsia__
+zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler,
+                              block_client::BlockDevice* device, void* out_info);
+#else
+zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void* out_info);
+#endif
+
 // Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect
 // block at dindex
 constexpr uint32_t GetVmoOffsetForIndirect(uint32_t dibindex) {
@@ -467,5 +484,7 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 // Given an input bcache, initialize the filesystem and return a reference to the
 // root node.
 zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options,
-                  fbl::RefPtr<VnodeMinfs>* root_out);
+                  minfs::Superblock* info, fbl::RefPtr<VnodeMinfs>* root_out);
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_MINFS_PRIVATE_H_

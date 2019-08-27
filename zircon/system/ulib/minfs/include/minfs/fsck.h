@@ -5,16 +5,17 @@
 // This file includes necessary methods for checking the consistency
 // of a MinFS filesystem.
 
-#pragma once
+#ifndef MINFS_FSCK_H_
+#define MINFS_FSCK_H_
 
 #include <inttypes.h>
 
-#include <minfs/bcache.h>
-#include <minfs/format.h>
 #include <fbl/array.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs/trace.h>
+#include <minfs/bcache.h>
+#include <minfs/format.h>
 
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
@@ -37,6 +38,32 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
                                    Superblock* out_info);
 #endif
 
+// Indicates whether fsck repair is allowed on the corrupted filesystem.
+enum class Repair {
+  // Do not repair the filesystem.
+  kDisabled,
+  // Repair the filesystem.
+  kEnabled,
+};
+
+// Updates generation_count and checksum of the superblock.
+void UpdateChecksum(Superblock* info);
+
+ // TODO(ZX-4623): Remove this code after migration to major version 8 and replace calling sites
+ // with LoadSuperblock.
+ // Loads the superblock and upgrades if needed from version 7 to version 8.
+zx_status_t LoadAndUpgradeSuperblock(Bcache* bc, bool is_fs_writable, Superblock* out_info);
+
+// Loads superblock from disk and checks it for integrity.
+zx_status_t LoadSuperblock(Bcache* bc, Superblock* out);
+
+// Repair corrupted superblock from backup.
+#ifdef __Fuchsia__
+zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
+                             block_client::BlockDevice* device, uint32_t max_blocks,
+                             Superblock* info_out);
+#endif
+
 // On success, returns ZX_OK and copies the number of bytes used by data
 // within the fs.
 zx_status_t UsedDataSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size);
@@ -51,8 +78,8 @@ zx_status_t UsedSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size);
 
 // Run fsck on an unmounted filesystem backed by |bc|.
 //
-// Invokes CheckSuperblock, but also verifies inode and block usage.
-zx_status_t Fsck(fbl::unique_ptr<Bcache> bc);
+// Invokes CheckSuperblock, and repairs filesystem if needed.
+zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair repair_fs);
 
 // Returns number of blocks required to store inode_count inodes
 uint32_t BlocksRequiredForInode(uint64_t inode_count);
@@ -86,3 +113,5 @@ zx_status_t SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
 
 #endif
 }  // namespace minfs
+
+#endif  // MINFS_FSCK_H_

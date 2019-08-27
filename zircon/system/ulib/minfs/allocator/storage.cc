@@ -83,7 +83,7 @@ zx_status_t PersistentStorage::Extend(WriteTxn* write_transaction, WriteData dat
 
   metadata_.Fvm().SetDataSlices(data_slices_new);
   metadata_.SetPoolTotal(pool_size);
-  sb_->Write(write_transaction);
+  sb_->Write(write_transaction, UpdateBackupSuperblock::kUpdate);
 
   // Update the block bitmap.
   PersistRange(write_transaction, data, old_pool_size, pool_size - old_pool_size);

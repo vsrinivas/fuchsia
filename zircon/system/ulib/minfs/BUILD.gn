@@ -49,6 +49,7 @@ library("minfs") {
     "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/storage-metrics",
     "$zx/system/ulib/zircon-internal",
+    "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/safemath",
   ]
   if (is_fuchsia) {

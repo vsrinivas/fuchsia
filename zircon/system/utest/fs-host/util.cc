@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include "util.h"
 
-#include <minfs/fsck.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <utility>
+
+#include <minfs/fsck.h>
 
 void setup_fs_test(size_t disk_size) {
   int r = open(MOUNT_PATH, O_RDWR | O_CREAT | O_EXCL, 0755);
@@ -75,5 +76,6 @@ int run_fsck() {
     return -1;
   }
 
-  return Fsck(std::move(block_cache));
+  // The filesystem is never repaired on the host side.
+  return Fsck(std::move(block_cache), minfs::Repair::kDisabled);
 }

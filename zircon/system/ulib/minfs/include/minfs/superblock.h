@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef MINFS_SUPERBLOCK_H_
+#define MINFS_SUPERBLOCK_H_
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/transaction/block_transaction.h>
+#include <minfs/block-txn.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
-#include <minfs/block-txn.h>
 #include <minfs/minfs.h>
 
 #ifdef __Fuchsia__
-#include <block-client/cpp/block-device.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
+
+#include <block-client/cpp/block-device.h>
 #endif
 
 namespace minfs {
@@ -63,8 +65,9 @@ class SuperblockManager {
 #endif
   }
 
-  // Write the superblock back to persistent storage.
-  void Write(WriteTxn* txn);
+  // Write the superblock/backup superblock back to persistent storage at respective locations.
+  // If write_backup is kUpdate, also update the backup superblock.
+  void Write(WriteTxn* txn, UpdateBackupSuperblock write_backup);
 
  private:
 #ifdef __Fuchsia__
@@ -81,3 +84,5 @@ class SuperblockManager {
 };
 
 }  // namespace minfs
+
+#endif  // MINFS_SUPERBLOCK_H_

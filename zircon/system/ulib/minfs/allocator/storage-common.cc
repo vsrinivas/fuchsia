@@ -43,13 +43,13 @@ void PersistentStorage::PersistRange(WriteTxn* write_transaction, WriteData data
 void PersistentStorage::PersistAllocate(WriteTxn* write_transaction, size_t count) {
   ZX_DEBUG_ASSERT(write_transaction != nullptr);
   metadata_.PoolAllocate(static_cast<blk_t>(count));
-  sb_->Write(write_transaction);
+  sb_->Write(write_transaction, UpdateBackupSuperblock::kUpdate);
 }
 
 void PersistentStorage::PersistRelease(WriteTxn* write_transaction, size_t count) {
   ZX_DEBUG_ASSERT(write_transaction != nullptr);
   metadata_.PoolRelease(static_cast<blk_t>(count));
-  sb_->Write(write_transaction);
+  sb_->Write(write_transaction, UpdateBackupSuperblock::kUpdate);
 }
 
 // Static.

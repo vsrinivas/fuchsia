@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fvm/fvm-sparse.h>
-#include <minfs/transaction-limits.h>
-#include <safemath/checked_math.h>
+#include <lib/cksum.h>
 
 #include <utility>
+
+#include <fvm/fvm-sparse.h>
+#include <minfs/minfs.h>
+#include <minfs/transaction-limits.h>
+#include <safemath/checked_math.h>
 
 #include "fvm-host/format.h"
 
@@ -60,7 +63,7 @@ MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type) : Format() {
 zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
                                       FvmReservation* reserve) {
   memcpy(&fvm_blk_, &blk_, minfs::kMinfsBlockSize);
-  fvm_info_.slice_size = slice_size;
+  fvm_info_.slice_size = static_cast<uint32_t>(slice_size);
   fvm_info_.flags |= minfs::kMinfsFlagFVM;
 
   if (fvm_info_.slice_size % minfs::kMinfsBlockSize) {
@@ -139,6 +142,8 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   if (!reserve->Approved()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
+
+  UpdateChecksum(&fvm_info_);
 
   zx_status_t status;
   // Check if bitmaps are the wrong size, slice extents run on too long, etc.
