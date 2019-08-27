@@ -21,8 +21,8 @@ pub struct MundaneAsymmetricPrivateKey {
 }
 
 impl CryptoProvider for MundaneSoftwareProvider {
-    fn supported_asymmetric_algorithms(&self) -> Vec<AsymmetricKeyAlgorithm> {
-        vec![
+    fn supported_asymmetric_algorithms(&self) -> &'static [AsymmetricKeyAlgorithm] {
+        &[
             AsymmetricKeyAlgorithm::EcdsaSha256P256,
             AsymmetricKeyAlgorithm::EcdsaSha512P384,
             AsymmetricKeyAlgorithm::EcdsaSha512P521,

@@ -5,6 +5,7 @@
 #[cfg(test)]
 pub mod mock_provider;
 pub mod mundane_provider;
+pub mod optee_provider;
 
 use fidl_fuchsia_kms::AsymmetricKeyAlgorithm;
 use std::error::Error;
@@ -34,7 +35,7 @@ impl CryptoProviderError {
 /// A cryptography provider that could support cryptography operations.
 pub trait CryptoProvider: Debug + Send + Sync {
     /// Return a list of supported algorithms.
-    fn supported_asymmetric_algorithms(&self) -> Vec<AsymmetricKeyAlgorithm>;
+    fn supported_asymmetric_algorithms(&self) -> &'static [AsymmetricKeyAlgorithm];
 
     /// Return a human-friendly name for this provider.
     fn get_name(&self) -> &'static str;

@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO: Remove this once the CL that uses this module lands.
-#![allow(dead_code)]
-
 extern crate libc;
 mod tee_client_api;
 

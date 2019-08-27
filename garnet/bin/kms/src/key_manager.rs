@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use crate::common::{DataRequest, KeyAttributes, KeyRequestType, KeyType, KmsKey};
-use crate::crypto_provider::{mundane_provider::MundaneSoftwareProvider, CryptoProvider};
+use crate::crypto_provider::{
+    mundane_provider::MundaneSoftwareProvider, optee_provider::OpteeProvider, CryptoProvider,
+};
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
 use crate::kms_sealing_key::{KmsSealingKey, SEALING_KEY_NAME};
 use base64;
@@ -71,8 +73,8 @@ impl KeyManager {
             key_folder: KEY_FOLDER.to_string(),
         };
 
-        // We now only register mundane software provider.
         key_manager.add_provider(Box::new(MundaneSoftwareProvider {}));
+        key_manager.add_provider(Box::new(OpteeProvider {}));
 
         key_manager
     }
@@ -559,6 +561,7 @@ impl KeyManager {
             .find(|&alg| alg == &key_algorithm)
             .is_none()
         {
+            warn!("The asymmetric algorithm is not supported.");
             // TODO: Add logic to fall back.
             return Err(Status::InternalError);
         }

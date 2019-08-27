@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
     "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

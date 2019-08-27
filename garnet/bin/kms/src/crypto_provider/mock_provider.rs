@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use crate::common::ASYMMETRIC_KEY_ALGORITHMS;
 use crate::crypto_provider::{
     AsymmetricProviderKey, CryptoProvider, CryptoProviderError, ProviderKey, SealingProviderKey,
@@ -24,9 +25,9 @@ pub struct MockProvider {
 }
 
 impl CryptoProvider for MockProvider {
-    fn supported_asymmetric_algorithms(&self) -> Vec<AsymmetricKeyAlgorithm> {
+    fn supported_asymmetric_algorithms(&self) -> &'static [AsymmetricKeyAlgorithm] {
         // The mock provider supported all asymmetric algorithms.
-        ASYMMETRIC_KEY_ALGORITHMS.to_vec()
+        ASYMMETRIC_KEY_ALGORITHMS
     }
     fn get_name(&self) -> &'static str {
         "MockProvider"
