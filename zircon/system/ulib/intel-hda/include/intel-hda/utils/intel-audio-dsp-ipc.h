@@ -5,6 +5,7 @@
 #ifndef INTEL_HDA_UTILS_INTEL_AUDIO_DSP_IPC_H_
 #define INTEL_HDA_UTILS_INTEL_AUDIO_DSP_IPC_H_
 
+#include <stdint.h>
 #include <zircon/compiler.h>
 
 /**
@@ -23,10 +24,7 @@
  * September 2017
  */
 
-#ifdef __cplusplus
-
-namespace audio {
-namespace intel_hda {
+namespace audio::intel_hda {
 
 // Common structures
 
@@ -69,7 +67,53 @@ enum class ModuleMsgType : uint8_t {
 
 enum class MsgStatus : uint32_t {
   IPC_SUCCESS = 0u,
+
+  // General errors.
+  ERROR_INVALID_PARAM = 1u,
+  UNKNOWN_MESSAGE_TYPE = 2u,
+  OUT_OF_MEMORY = 3u,
+  BUSY = 4u,
+  FAILURE = 6u,
+  INVALID_REQUEST = 7u,
+  INVALID_RESOURCE_ID = 9u,
+  RESOURCE_ID_EXISTS = 10u,
+  INVALID_RESOURCE_STATE = 12u,
+  POWER_TRANSITION_FAILED = 13u,
+
+  // Library loading errors.
+  INVALID_MANIFEST = 14u,
+  UNAVAILABLE = 15u,
+  LOAD_ADDRESS_OUT_OF_RANGE = 42u,
+  CSE_VALIDATION_FAILED = 44u,
+
+  // Module management errors.
+  MOD_MGMT_ERROR = 100u,
+  MOD_LOAD_CL_FAILED = 101u,
+  MOD_LOAD_INVALID_HASH = 102u,
+  MOD_INSTANCE_EXISTS = 103u,
   MOD_NOT_INITIALIZED = 104u,
+  MOD_INVALID_ID = 110u,
+  MOD_INST_INVALID_ID = 111u,
+  QUEUE_INVALID_ID = 112u,
+  QUEUE_DST_INVALID_ID = 113u,
+
+  // Configuration errors.
+  INVALID_CORE_ID = 116u,
+  INVALID_CONFIG_PARAM_ID = 120u,
+  INVALID_CONFIG_DATA_LEN = 121u,
+  INVALID_CONFIG_DATA_STRUCT = 122u,
+
+  // Gateway errors.
+  GATEWAY_NOT_INITIALIZED = 140u,
+  GATEWAY_NOT_EXIST = 141u,
+  GATEWAY_STATE_NOT_SET = 142u,
+
+  // Other errors.
+  SCLK_ALREADY_RUNNING = 150u,
+  MCLK_ALREADY_RUNNING = 151u,
+  NO_RUNNING_SCLK = 152u,
+  NO_RUNNING_MCLK = 153u,
+  CORE_INACTIVE = 166u,
 };
 
 // Notifications
@@ -577,9 +621,6 @@ struct CopierCfg {
   CopierGatewayCfg gtw_cfg;
 } __PACKED;
 
-}  // namespace intel_hda
-}  // namespace audio
-
-#endif  // __cplusplus
+}  // namespace audio::intel_hda
 
 #endif  // INTEL_HDA_UTILS_INTEL_AUDIO_DSP_IPC_H_
