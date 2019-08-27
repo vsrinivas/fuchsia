@@ -20,7 +20,7 @@ namespace wlan::testing {
 //
 class SingleApTest : public ::testing::Test {
  public:
-  SingleApTest() : ap_(kApAddr, kSsid, kChannel), trans_(&env_) {
+  SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), trans_(&env_) {
     zx_status_t status = trans_.Init();
     ZX_ASSERT_MSG(ZX_OK == status, "Transportation initialization failed: %s",
                   zx_status_get_string(status));
@@ -29,14 +29,19 @@ class SingleApTest : public ::testing::Test {
   ~SingleApTest() {}
 
  protected:
-  static constexpr std::array<uint8_t, ETH_ALEN> kApAddr = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
+  static constexpr std::array<uint8_t, common::kMacAddrLen> kApAddr = {0x12, 0x34, 0x56,
+                                                                       0x78, 0x9a, 0xbc};
   static constexpr wlan_ssid_t kSsid = {.ssid = "MySSID", .len = 6 /* strlen("MySSID") */};
   static constexpr wlan_channel_t kChannel = {.primary = 11, .cbw = CBW20};
+
+  static const common::MacAddr default_macaddr_;
 
   ::wlan::simulation::Environment env_;
   ::wlan::simulation::FakeAp ap_;
   TransportSim trans_;
 };
+
+const common::MacAddr SingleApTest::default_macaddr_(kApAddr);
 
 }  // namespace wlan::testing
 

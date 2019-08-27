@@ -40,6 +40,7 @@ group("tests") {
   public_deps = [
     "//src/connectivity/wlan/drivers/testing/lib/sim-device/test:sim_device_test",
     "//src/connectivity/wlan/drivers/testing/lib/sim-env/test:wlan-sim-env-test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/test:wlan-sim-fake-ap-test",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:brcmfmac_test",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test:iwlwifi_test",
     "//src/connectivity/wlan/drivers/wlan:wlan_drivers_tests",

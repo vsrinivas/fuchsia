@@ -4,6 +4,7 @@
 
 static_library("sim-fake-ap") {
   sources = [
+    "sim-fake-ap.cc",
     "sim-fake-ap.h",
   ]
 
