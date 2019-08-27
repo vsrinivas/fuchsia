@@ -16,15 +16,16 @@ constexpr char kInterface[] = "/dev/whatever/whatever";
 constexpr char kNodename[] = "some-four-word-name";
 constexpr char kEthDir[] = "/dev";
 
-TEST(ArgsTest, NetsvcNoArgsExits) {
+TEST(ArgsTest, NetsvcNodenamePrintsAndExits) {
   const char* root_dir = getenv("TEST_ROOT_DIR");
   if (root_dir == nullptr) {
     root_dir = "";
   }
   const std::string path = std::string(root_dir) + "/bin/netsvc";
-  const char* argv[] = {path.c_str(), nullptr};
+  const char* argv[] = {path.c_str(), "--nodename", nullptr};
   zx::process process;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+
   ASSERT_OK(fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, nullptr, 0,
                            nullptr, process.reset_and_get_address(), err_msg),
             "%s", err_msg);
@@ -39,33 +40,35 @@ TEST(ArgsTest, NetsvcNoneProvided) {
   int argc = 1;
   const char* argv[] = {"netsvc"};
   bool netboot = false;
+  bool nodename = false;
   bool advertise = false;
   const char* interface = nullptr;
-  const char* nodename = nullptr;
   const char* error = nullptr;
-  ASSERT_EQ(
-      parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &advertise, &interface),
-      0, "%s", error);
+  ASSERT_EQ(parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &nodename,
+                              &advertise, &interface),
+            0, "%s", error);
   ASSERT_FALSE(netboot);
+  ASSERT_FALSE(nodename);
   ASSERT_FALSE(advertise);
   ASSERT_EQ(interface, nullptr);
-  ASSERT_EQ(nodename, nullptr);
   ASSERT_EQ(error, nullptr);
 }
 
 TEST(ArgsTest, NetsvcAllProvided) {
-  int argc = 5;
+  int argc = 6;
   const char* argv[] = {
-      "netsvc", "--netboot", "--advertise", "--interface", kInterface,
+      "netsvc", "--netboot", "--nodename", "--advertise", "--interface", kInterface,
   };
   bool netboot = false;
+  bool nodename = false;
   bool advertise = false;
   const char* interface = nullptr;
   const char* error = nullptr;
-  ASSERT_EQ(
-      parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &advertise, &interface),
-      0, "%s", error);
+  ASSERT_EQ(parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &nodename,
+                              &advertise, &interface),
+            0, "%s", error);
   ASSERT_TRUE(netboot);
+  ASSERT_TRUE(nodename);
   ASSERT_TRUE(advertise);
   ASSERT_EQ(interface, kInterface);
   ASSERT_EQ(error, nullptr);
@@ -78,19 +81,20 @@ TEST(ArgsTest, NetsvcValidation) {
       "--interface",
   };
   bool netboot = false;
+  bool nodename = false;
   bool advertise = false;
   const char* interface = nullptr;
   const char* error = nullptr;
-  ASSERT_LT(
-      parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &advertise, &interface),
-      0);
+  ASSERT_LT(parse_netsvc_args(argc, const_cast<char**>(argv), &error, &netboot, &nodename,
+                              &advertise, &interface),
+            0);
   ASSERT_EQ(interface, nullptr);
   ASSERT_TRUE(strstr(error, "interface"));
 }
 
 TEST(ArgsTest, DeviceNameProviderNoneProvided) {
   int argc = 1;
-  const char* argv[] = {"netsvc"};
+  const char* argv[] = {"device-name-provider"};
   const char* interface = nullptr;
   const char* nodename = nullptr;
   const char* ethdir = nullptr;
@@ -129,7 +133,7 @@ TEST(ArgsTest, DeviceNameProviderAllProvided) {
 TEST(ArgsTest, DeviceNameProviderValidation) {
   int argc = 2;
   const char* argv[] = {
-      "netsvc",
+      "device-name-provider",
       "--interface",
   };
   const char* interface = nullptr;

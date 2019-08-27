@@ -25,8 +25,8 @@ int parse_common_args(int argc, char** argv, const char** error, const char** in
   return 0;
 }
 
-int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, bool* advertise,
-                      const char** interface) {
+int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, bool* nodename,
+                      bool* advertise, const char** interface) {
   int err = parse_common_args(argc, argv, error, interface);
   if (err) {
     return err;
@@ -34,6 +34,8 @@ int parse_netsvc_args(int argc, char** argv, const char** error, bool* netboot, 
   while (argc > 1) {
     if (!strncmp(argv[1], "--netboot", 9)) {
       *netboot = true;
+    } else if (!strncmp(argv[1], "--nodename", 10)) {
+      *nodename = true;
     } else if (!strncmp(argv[1], "--advertise", 11)) {
       *advertise = true;
     }

@@ -91,24 +91,30 @@ int main(int argc, char** argv) {
   }
 
   const char* interface = NULL;
+  bool print_nodename_and_exit = false;
   bool should_advertise = false;
 
   const char* error;
-  if (parse_netsvc_args(argc, argv, &error, &g_netbootloader, &should_advertise, &interface) < 0) {
+  if (parse_netsvc_args(argc, argv, &error, &g_netbootloader, &print_nodename_and_exit,
+                        &should_advertise, &interface) < 0) {
     printf("netsvc: fatal error: %s\n", error);
     return -1;
   };
 
   gethostname(g_nodename, sizeof(g_nodename));
 
+  printf("netsvc: nodename='%s'\n", g_nodename);
+
+  if (print_nodename_and_exit) {
+    return 0;
+  }
+
   if (interface != NULL) {
     printf("netsvc: looking for interface %s\n", interface);
   }
 
-  printf("netsvc: nodename='%s'\n", g_nodename);
   if (!should_advertise) {
     printf("netsvc: will not advertise\n");
-    return 0;
   }
 
   for (;;) {
