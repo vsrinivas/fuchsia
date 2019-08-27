@@ -7,25 +7,6 @@
 #include "threads_impl.h"
 #include "zircon_impl.h"
 
-#if HAVE_SHADOW_CALL_STACK
-// TODO(ZX-1947): Add some runtime configuration for the size?  Extra APIs
-// would be needed to specify it explicitly.  The only existing API for
-// choosing the stack is via pthread_attr_t, which is not something we
-// really want to extend since we'd prefer to go to pure C11/C++17 thread
-// interfaces rather than POSIX ones.  For SafeStack we didn't add an API
-// but just always use the same size for both stacks on the theory that
-// virtual memory is cheap if you never actually touch the pages and so
-// while you're "allocating" twice as much stack, you're not actually using
-// more than one additional page at most by splitting your use between the
-// two stacks.  We could do some similar calculation of the appropriate
-// ShadowCallStack size for a requested unitary stack size.  But it also
-// seems likely that a page is already a lot for the ShadowCallStack since
-// that's a call depth of 512 with 64-bit PCs and 4KB pages.
-static const size_t kShadowCallStackSize = ZX_PAGE_SIZE;
-#else
-static const size_t kShadowCallStackSize = 0;
-#endif
-
 static pthread_rwlock_t allocation_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 // Many threads could be reading the TLS state.
@@ -130,19 +111,55 @@ __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar, zx_handle_t vmo, s
 // it's serialized with any dynamic linker changes to the TLS
 // bookkeeping.
 //
-// This conceptually allocates four things, but concretely allocates
-// three separate blocks.
+// This conceptually allocates five things, but concretely allocates
+// four separate blocks.
 // 1. The safe stack (where the thread's SP will point).
 // 2. The unsafe stack (where __builtin___get_unsafe_stack_ptr() will point).
-// 3. The thread descriptor (struct pthread).  The thread pointer points
+// 3. The shadow call stack (where the thread's SCSP will point).
+//    (This only exists #if HAVE_SHADOW_CALL_STACK.)
+// 4. The thread descriptor (struct pthread).  The thread pointer points
 //    into this (where into it depends on the machine ABI).
-// 4. The static TLS area.  The ELF TLS ABI for the Initial Exec model
+// 5. The static TLS area.  The ELF TLS ABI for the Initial Exec model
 //    mandates a fixed distance from the thread pointer to the TLS area
 //    across all threads.  So effectively this must always be allocated
 //    as part of the same block with the thread descriptor.
 // This function also copies in the TLS initializer data.
 // It initializes the basic thread descriptor fields.
 // Everything else is zero-initialized.
+//
+// The region for the TCB and TLS area has a precise required size that's
+// computed here.  The sizes of the stacks and the guard regions around them
+// are speculative parameters to be tuned.  Note that there are only two tuning
+// knobs provided due to API legacy: the "stack size" and the "guard size".
+//
+// Nowadays with both safe-stack and shadow-call-stack available in the ABI
+// there are three different stacks to choose sizes for.  Different kinds of
+// program behavior consume each of the different stacks at different rates, so
+// it's hard to predict generically: buffers and other address-taken stack
+// variables grow the unsafe stack; pure call depth (e.g. deep recursion) grows
+// the shadow call stack; certain kinds of large functions, and aggregate call
+// depth of those, grow the safe stack.
+//
+// The legacy presumption is that all consumption is on a single stack (the
+// machine stack, aka the "safe" stack under safe-stack).  Thus the single
+// tuned size provided by the legacy API is meant to represent total
+// consumption across all types of stack use but we don't know how best to
+// allot that among the three stacks so that the actual overall consumption
+// pattern that works in the traditional single-stack ABI with a given total
+// consumption limit still works in with the new stack ABIs.
+//
+// To support whatever consumption patterns may arise, we give each of the
+// three stacks the full size requested via the legacy API for a unitary stack.
+// This seems very wasteful: 3x the stack allocation!  But in theory it should
+// only waste 3x *address space*, not 3x *memory*.  The worst-case total
+// "wasted" space in each of the three should be one page minus one word,
+// i.e. around three pages total (plus some amortized page table overhead
+// proportional to the address space use).  Since all stack pages are actually
+// lazily allocated on demand, the excess unused pages of each stack that's
+// larger than it needs to be will never be allocated.  The only alternative
+// that works in the general case is to come up with new tuning APIs that can
+// express the different kinds of stack consumption required to tune the three
+// sizes separately (or proportionally to each other or whatever).
 
 __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requested_stack_size,
                                         const char* thread_name, char vmo_name[ZX_MAX_NAME_LEN]) {
@@ -163,7 +180,7 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
   const size_t tls_size = libc.tls_size;
   const size_t tcb_size = round_up_to_page(tls_size);
 
-  const size_t vmo_size = tcb_size + stack_size * 2 + kShadowCallStackSize;
+  const size_t vmo_size = tcb_size + stack_size * (2 + HAVE_SHADOW_CALL_STACK);
   zx_handle_t vmo;
   zx_status_t status = _zx_vmo_create(vmo_size, 0, &vmo);
   if (status != ZX_OK) {
@@ -223,7 +240,7 @@ __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requ
   if (map_block(_zx_vmar_root_self(), vmo, tcb_size + stack_size * 2,
                 // Shadow call stack grows up, so a guard after is probably
                 // enough.  But be extra careful with guards on both sides.
-                kShadowCallStackSize, guard_size, guard_size,
+                stack_size, guard_size, guard_size,
                 //
                 &td->shadow_call_stack, &td->shadow_call_stack_region)) {
     _zx_vmar_unmap(_zx_vmar_root_self(), (uintptr_t)td->unsafe_stack_region.iov_base,

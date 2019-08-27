@@ -60,20 +60,27 @@ The feature is not yet supported on any other architecture.
 ## Use in Zircon & Fuchsia
 
 This is enabled in the Clang compiler by the `-fsanitize=shadow-call-stack`
-command-line option.  **TODO(TC-616)**: When the support is fully tested and
+command-line option.  **TODO(27339)**: When the support is fully tested and
 the ABI finalized for each machine, this will become the default mode of the
 compiler for `*-fuchsia` targets.  To disable it for a specific compilation,
 use the `-fno-sanitize=shadow-call-stack` option.
 
 Currently Zircon supports shadow-call-stack only for user-mode code.
-**TODO(ZX-4677)**: In future, it will be supported in the kernel too.
-**TODO(BLD-584)**: Currently, shadow-call-stack is not enabled in the Fuchsia
+**TODO(34551)**: In future, it will be supported in the kernel too.
+**TODO(3370)**: Currently, shadow-call-stack is not enabled in the Fuchsia
 build (except for some special test cases).
 
-There is no facility for specifying the size of the shadow call stack.
-Currently it's fixed at one page (4KB), which allows for a call depth of 512.
-There are guard pages around the shadow call stack so that overflow or
-underflow will fault immediately.
+As with [safe-stack], there is no separate facility for specifying the size of
+the shadow call stack.  Instead, the size specified for "the stack" in legacy
+APIs (such as `pthread_attr_setstacksize`) and ABIs (such as `PT_GNU_STACK`) is
+used as the size for **each** kind of stack.  Because the different kinds of
+stack are used in different proportions according to the particular program
+behavior, there is no good way to choose the shadow call stack size based on
+the traditional single stack size.  So each kind of stack is as big as it might
+need to be in the worst case expected by the tuned "unitary" stack size.  While
+this seems wasteful, it is only slightly so: at worst one page is wasted per
+kind of stack, plus the page table overhead of using more address space for
+pages that are never accessed.
 
 ## Implementation details
 
