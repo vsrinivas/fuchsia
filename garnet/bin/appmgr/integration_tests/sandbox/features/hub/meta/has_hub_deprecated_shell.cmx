@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/has_hub_deprecated_shell"
+    },
+    "sandbox": {
+        "features": [
+            "deprecated-shell",
+            "hub"
+        ]
+    }
+}

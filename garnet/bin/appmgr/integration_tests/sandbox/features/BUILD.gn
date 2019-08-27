@@ -6,6 +6,7 @@ group("features") {
   testonly = true
   deps = [
     "build-info",
+    "hub",
     "isolated-temp",
     "shell",
     "shell-commands",

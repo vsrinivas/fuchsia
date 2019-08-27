@@ -57,6 +57,12 @@ void NamespaceBuilder::AddServices(zx::channel services) {
   PushDirectoryFromChannel("/svc", std::move(services));
 }
 
+void NamespaceBuilder::AddHub(const HubDirectoryFactory& hub_directory_factory) {
+  if (std::find(paths_.begin(), paths_.end(), "/hub") != paths_.end())
+    return;
+  PushDirectoryFromChannel("/hub", hub_directory_factory());
+}
+
 void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
                                   const HubDirectoryFactory& hub_directory_factory) {
   AddSandbox(
@@ -142,7 +148,7 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
         // PushDirectoryFromPath does not override existing directories.
         PushDirectoryFromPath("/data");
         PushDirectoryFromPath("/dev");
-        PushDirectoryFromChannel("/hub", hub_directory_factory());
+        AddHub(hub_directory_factory);
         PushDirectoryFromPath("/install");
         PushDirectoryFromPath("/pkgfs");
         PushDirectoryFromPath("/system");
@@ -162,6 +168,8 @@ void NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
                               "/config/vulkan/icd.d");
     } else if (feature == "isolated-temp") {
       PushDirectoryFromPathAs(isolated_temp_path_factory(), "/tmp");
+    } else if (feature == "hub") {
+      AddHub(hub_directory_factory);
     }
   }
   for (const auto& path : sandbox.boot())

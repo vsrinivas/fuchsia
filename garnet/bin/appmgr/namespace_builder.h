@@ -66,6 +66,7 @@ class NamespaceBuilder {
 
  private:
   std::string ns_id;
+  void AddHub(const HubDirectoryFactory& hub_directory_factory);
   void PushDirectoryFromPath(std::string path);
   void PushDirectoryFromPathAs(std::string src_path, std::string dst_path);
   void PushDirectoryFromChannel(std::string path, zx::channel channel);
