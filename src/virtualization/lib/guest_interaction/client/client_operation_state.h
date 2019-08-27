@@ -379,8 +379,9 @@ void ExecReadCallData<T>::Proceed(bool ok) {
     if (!grpc_stream_status_.ok() && operation_status_ == OperationStatus::OK) {
       operation_status_ = OperationStatus::GRPC_FAILURE;
     }
-    callback_(operation_status_, ret_val_);
     Finish();
+    callback_(operation_status_, ret_val_);
+    delete this;
     return;
   }
 
@@ -402,7 +403,6 @@ template <class T>
 void ExecReadCallData<T>::Finish() {
   platform_interface_.CloseFile(stdout_);
   platform_interface_.CloseFile(stderr_);
-  delete this;
 }
 
 template <class T>
