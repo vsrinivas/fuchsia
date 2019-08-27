@@ -6,7 +6,6 @@
 
 #include <algorithm>
 
-#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
@@ -220,8 +219,6 @@ void MessageLoop::PostTaskInternal(FileLineFunction file_line, TaskType task) {
 }
 
 void MessageLoop::RunOneTask(Task& task) {
-  debug_ipc::BlockTimer(task.file_line);
-
   if (task.task_fn) {
     task.task_fn();
   } else if (task.pending) {

@@ -9,7 +9,6 @@
 #include <iostream>
 #include <limits>
 
-#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
@@ -243,7 +242,6 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
 
 void ThreadImpl::OnException(debug_ipc::NotifyException::Type type,
                              const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
-  TIME_BLOCK();
 #if defined(DEBUG_THREAD_CONTROLLERS)
   ThreadController::LogRaw("----------\r\nGot %s exception @ 0x%" PRIx64 " in %s",
                            debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),

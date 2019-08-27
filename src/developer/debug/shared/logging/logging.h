@@ -10,7 +10,6 @@
 
 #include <sstream>
 
-#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/logging/macros.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"

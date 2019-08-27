@@ -8,7 +8,6 @@
 
 #include <set>
 
-#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/client/backtrace_cache.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
@@ -191,7 +190,6 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
 }
 
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume) {
-  TIME_BLOCK();
   if (threads_.find(record.thread_koid) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
     // this, like the client requesting a thread list (which will add missing
@@ -222,7 +220,6 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
 }
 
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
-  TIME_BLOCK();
   auto found = threads_.find(record.thread_koid);
   if (found == threads_.end()) {
     // Duplicate exit thread notification. Some legitimate cases could cause
@@ -238,7 +235,6 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
 
 void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
                             const std::vector<uint64_t>& stopped_thread_koids) {
-  TIME_BLOCK();
   symbols_.SetModules(modules);
 
   // If this is the first thread, we see if we need to restart.

@@ -20,7 +20,6 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/buffered_fd.h"
-#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -534,7 +533,6 @@ void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify)
 
 // This is the main entrypoint for all thread stops notifications in the client.
 void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata) {
-  TIME_BLOCK();
   ThreadImpl* thread = ThreadImplFromKoid(notify.thread.process_koid, notify.thread.thread_koid);
   if (!thread) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,

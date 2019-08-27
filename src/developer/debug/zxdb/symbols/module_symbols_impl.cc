@@ -117,7 +117,8 @@ ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
 }
 
 Err ModuleSymbolsImpl::Load() {
-  TIME_BLOCK() << "Loading " << binary_name_ << " (" << name_ << ").";
+  DEBUG_LOG(Session) << "Loading " << binary_name_ << " (" << name_ << ").";
+
   if (auto debug = elflib::ElfLib::Create(name_)) {
     if (debug->ProbeHasProgramBits()) {
       plt_locations_ = debug->GetPLTOffsets();

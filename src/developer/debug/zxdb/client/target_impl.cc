@@ -6,7 +6,6 @@
 
 #include <sstream>
 
-#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
