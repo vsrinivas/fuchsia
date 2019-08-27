@@ -356,6 +356,21 @@ impl Into<FidlSuggestion> for Suggestion {
     }
 }
 
+impl Into<Intent> for FidlIntent {
+    fn into(self) -> Intent {
+        Intent {
+            handler: self.handler,
+            action: self.action,
+            parameters: self
+                .parameters
+                .map(|params| {
+                    params.into_iter().map(|p| p.into()).collect::<BTreeSet<IntentParameter>>()
+                })
+                .unwrap_or(BTreeSet::new()),
+        }
+    }
+}
+
 impl Into<FidlIntent> for Intent {
     fn into(self) -> FidlIntent {
         FidlIntent {
@@ -364,6 +379,18 @@ impl Into<FidlIntent> for Intent {
             parameters: Some(
                 self.parameters.into_iter().map(|p| p.into()).collect::<Vec<FidlIntentParameter>>(),
             ),
+        }
+    }
+}
+
+impl Into<IntentParameter> for FidlIntentParameter {
+    fn into(self) -> IntentParameter {
+        IntentParameter {
+            name: self.name.unwrap_or("".to_string()),
+            entity_reference: match self.data {
+                FidlIntentParameterData::EntityReference(reference) => reference,
+                _ => "".to_string(),
+            },
         }
     }
 }

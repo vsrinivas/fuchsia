@@ -36,21 +36,24 @@ impl ModManager {
         ModManager { actions: HashMap::new(), puppet_master, story_manager }
     }
 
+    pub async fn issue_action(&mut self, action: &AddModInfo, focus: bool) -> Result<(), Error> {
+        let mut story_manager = self.story_manager.lock();
+        story_manager.add_to_story_graph(action).await?;
+        self.execute_actions(vec![action], focus).await?;
+        for param in action.intent().parameters() {
+            self.actions
+                .entry(param.entity_reference().to_string())
+                .or_insert(HashSet::new())
+                .insert(action.clone());
+        }
+        Ok(())
+    }
+
     pub async fn execute_suggestion(&mut self, suggestion: Suggestion) -> Result<(), Error> {
         match suggestion.action() {
             SuggestedAction::AddMod(action) => {
-                // execute a mod suggestion
-                let mut story_manager = self.story_manager.lock();
-                story_manager.add_to_story_graph(&action).await?;
-                self.execute_actions(vec![&action], /*focus=*/ true).await?;
-                for param in action.intent().parameters() {
-                    self.actions
-                        .entry(param.entity_reference().to_string())
-                        .or_insert(HashSet::new())
-                        .insert(action.clone());
-                }
+                self.issue_action(&action, /* focus= */ true).await?;
             }
-
             SuggestedAction::RestoreStory(restore_story_info) => {
                 let mut story_manager = self.story_manager.lock();
                 let modules = story_manager

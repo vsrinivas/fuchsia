@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mod_manager::ModManager, story_context_store::StoryContextStore, utils},
+    crate::{
+        mod_manager::ModManager, models::AddModInfo, story_context_store::StoryContextStore, utils,
+    },
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_app_discover::{ModuleIdentifier, StoryModuleRequest, StoryModuleRequestStream},
+    fidl_fuchsia_modular::Intent,
     fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
     futures::prelude::*,
@@ -62,8 +65,10 @@ impl StoryModuleService {
                             self.handle_write(output_name, entity_reference).await?;
                             responder.send(&mut Ok(()))?;
                         }
-                        StoryModuleRequest::AddModuleToStory { .. } => {
-                            fx_log_err!("Not implemented yet");
+                        StoryModuleRequest::IssueIntent { intent, mod_name, responder } => {
+                            self.handle_add_to_story(intent, mod_name).await?;
+                            responder.send()?;
+                            // TODO: bind controller.
                         }
                     }
                 }
@@ -71,6 +76,12 @@ impl StoryModuleService {
             }
                 .unwrap_or_else(|e: Error| fx_log_err!("error serving module output {}", e)),
         )
+    }
+
+    async fn handle_add_to_story(&self, intent: Intent, mod_name: String) -> Result<(), Error> {
+        let mut mod_manager = self.mod_manager.lock();
+        let action = AddModInfo::new(intent.into(), Some(self.story_id.clone()), Some(mod_name));
+        mod_manager.issue_action(&action, /*focus=*/ true).await
     }
 
     /// Write to the given |entity_reference| to the context store and associate
@@ -241,6 +252,68 @@ mod tests {
 
         // Write a module output.
         assert!(client.write_output("artist", Some("garnet-ref")).await.is_ok());
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn issue_intent() -> Result<(), Error> {
+        // Setup puppet master fake.
+        let (puppet_master_client, puppet_master_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+        let mut puppet_master_fake = PuppetMasterFake::new();
+
+        let (entity_resolver, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
+        let mut fake_entity_resolver = FakeEntityResolver::new();
+        fake_entity_resolver
+            .register_entity("garnet-ref", FakeEntityData::new(vec!["some-type".into()], ""));
+        fake_entity_resolver.spawn(request_stream);
+
+        // This will be called with the action of the old reference but with
+        // the replaced entity reference.
+        puppet_master_fake.set_on_execute("story1", |commands| {
+            assert_eq!(commands.len(), 3);
+            if let (
+                StoryCommand::AddMod(add_mod),
+                StoryCommand::SetFocusState(set_focus),
+                StoryCommand::FocusMod(focus_mod),
+            ) = (&commands[0], &commands[1], &commands[2])
+            {
+                assert_eq!(add_mod.intent.action, Some("PLAY_MUSIC".to_string()));
+                assert_eq!(add_mod.mod_name_transitional, Some("mod-b".to_string()));
+                assert_eq!(
+                    add_mod.intent.parameters,
+                    Some(vec![FidlIntentParameter {
+                        name: Some("artist".to_string()),
+                        data: IntentParameterData::EntityReference("garnet-ref".to_string()),
+                    },])
+                );
+                assert!(set_focus.focused);
+                assert_eq!(add_mod.mod_name_transitional, focus_mod.mod_name_transitional);
+            } else {
+                assert!(false);
+            }
+        });
+
+        puppet_master_fake.spawn(puppet_master_request_stream);
+
+        // Initialize service client and server.
+        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
+        let mod_manager =
+            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
+        let context_store = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
+        let (client, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoryModuleMarker>().unwrap();
+        let module = ModuleIdentifier {
+            story_id: Some("story1".to_string()),
+            module_path: Some(vec!["mod-a".to_string()]),
+        };
+        StoryModuleService::new(context_store, mod_manager, module).unwrap().spawn(request_stream);
+
+        // Write a module output.
+        let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "garnet-ref");
+        assert!(client.issue_intent(&mut intent.into(), "mod-b").await.is_ok());
 
         Ok(())
     }

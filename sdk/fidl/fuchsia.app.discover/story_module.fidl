@@ -6,6 +6,9 @@ library fuchsia.app.discover;
 
 using fuchsia.modular;
 
+const uint32 MODULE_NAME_MAX_LENGTH = 512;
+using ModuleName = string:MODULE_NAME_MAX_LENGTH;
+
 [Discoverable]
 protocol StoryModule {
     /// Writes the `entity_reference` to the module's `output_parameter_name`
@@ -13,17 +16,9 @@ protocol StoryModule {
     /// Return happens upon completion of a successful write.
     WriteOutput(OutputName output_name, string:ENTITY_REFERENCE_MAX_LENGTH? entity_reference) -> () error OutputError;
 
-    /// Starts a mod by issuing an intent to it. Gets a `controller` for the
-    /// mod for future intent issuing, stopping, etc.
-    AddModuleToStory(fuchsia.modular.Intent intent, request<ModuleController> controller);
-};
-
-protocol ModuleController {
-    /// Issues an intent to the mod.
-    IssueIntent(fuchsia.modular.Intent intent);
-
-    /// Stops a module and removes it from the story.
-    Stop();
+    /// Starts a mod by issuing an intent to it or re-issues an intent to the mod
+    /// with the given name.
+    IssueIntent(fuchsia.modular.Intent intent, ModuleName mod_name) -> ();
 };
 
 /// Errors that can occur when writing to an output.
