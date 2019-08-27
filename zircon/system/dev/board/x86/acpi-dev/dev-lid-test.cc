@@ -102,15 +102,9 @@ TEST(LidTest, HidGetDescriptor) {
       fake_ddk::kFakeParent, nullptr, &device, CreateFakeAcpiEvalFn(&state),
       CreateFakeAcpiInstallNotifyHandlerFn(&state), CreateFakeAcpiRemoveNotifyHandlerFn(&state)));
 
-  void* data = nullptr;
-  auto ac = fbl::MakeAutoCall([&]() {
-    if (data != nullptr) {
-      free(data);
-    }
-  });
+  uint8_t data[HID_MAX_DESC_LEN];
   size_t len;
-  device->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT, &data, &len);
-  ASSERT_NE(data, nullptr);
+  ASSERT_OK(device->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT, data, sizeof(data), &len));
   ASSERT_EQ(len, AcpiLidDevice::kHidDescriptorLen);
   EXPECT_BYTES_EQ(data, AcpiLidDevice::kHidDescriptor, AcpiLidDevice::kHidDescriptorLen);
 }

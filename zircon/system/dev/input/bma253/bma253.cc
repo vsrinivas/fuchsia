@@ -123,19 +123,17 @@ zx_status_t Bma253::HidbusQuery(uint32_t options, hid_info_t* out_info) {
   return ZX_OK;
 }
 
-zx_status_t Bma253::HidbusGetDescriptor(hid_description_type_t desc_type, void** out_data_buffer,
-                                        size_t* data_size) {
+zx_status_t Bma253::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                        size_t data_size, size_t* out_data_actual) {
   const uint8_t* desc;
-  *data_size = get_bma253_report_desc(&desc);
+  size_t desc_size = get_bma253_report_desc(&desc);
 
-  fbl::AllocChecker ac;
-  uint8_t* buf = new (&ac) uint8_t[*data_size];
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+  if (data_size < desc_size) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  memcpy(buf, desc, *data_size);
-  *out_data_buffer = buf;
+  memcpy(out_data_buffer, desc, desc_size);
+  *out_data_actual = desc_size;
 
   return ZX_OK;
 }

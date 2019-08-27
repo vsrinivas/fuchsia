@@ -143,7 +143,9 @@ static zx_status_t usb_hid_control(usb_hid_device_t* hid, uint8_t req_type, uint
   return status;
 }
 
-static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type, void** data, size_t* len) {
+static zx_status_t usb_hid_get_descriptor(void* ctx, hid_description_type_t desc_type,
+                                          void* out_data_buffer, size_t data_size,
+                                          size_t* out_data_actual) {
   usb_hid_device_t* hid = ctx;
   int desc_idx = -1;
   for (int i = 0; i < hid->hid_desc->bNumDescriptors; i++) {
@@ -157,18 +159,16 @@ static zx_status_t usb_hid_get_descriptor(void* ctx, uint8_t desc_type, void** d
   }
 
   size_t desc_len = hid->hid_desc->descriptors[desc_idx].wDescriptorLength;
-  uint8_t* desc_buf = malloc(desc_len);
+  if (data_size < desc_len) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
   zx_status_t status = usb_hid_control(hid, USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE,
                                        USB_REQ_GET_DESCRIPTOR, desc_type << 8, hid->interface,
-                                       desc_buf, desc_len, len);
+                                       out_data_buffer, desc_len, out_data_actual);
   if (status < 0) {
     zxlogf(ERROR, "usb-hid: error reading report descriptor 0x%02x: %d\n", desc_type, status);
-    free(desc_buf);
-    return status;
-  } else {
-    *data = desc_buf;
   }
-  return ZX_OK;
+  return status;
 }
 
 static zx_status_t usb_hid_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id, void* data,

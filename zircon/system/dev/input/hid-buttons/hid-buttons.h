@@ -43,7 +43,8 @@ class HidButtonsDevice : public DeviceType,
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_lock_);
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
   void HidbusStop() TA_EXCL(client_lock_);
-  zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
+  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                  size_t data_size, size_t* out_data_actual);
   zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
                               size_t* out_len) TA_EXCL(client_lock_);
   zx_status_t HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data, size_t len);

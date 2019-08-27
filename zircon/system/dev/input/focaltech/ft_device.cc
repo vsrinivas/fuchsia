@@ -207,15 +207,14 @@ zx_status_t FtDevice::ShutDown() {
   return ZX_OK;
 }
 
-zx_status_t FtDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-  fbl::AllocChecker ac;
-  uint8_t* buf = new (&ac) uint8_t[descriptor_len_];
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+zx_status_t FtDevice::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                          size_t data_size, size_t* out_data_actual) {
+  if (data_size < descriptor_len_) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  memcpy(buf, descriptor_, descriptor_len_);
-  *data = buf;
-  *len = descriptor_len_;
+
+  memcpy(out_data_buffer, descriptor_, descriptor_len_);
+  *out_data_actual = descriptor_len_;
   return ZX_OK;
 }
 

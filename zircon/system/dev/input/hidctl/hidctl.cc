@@ -139,10 +139,11 @@ void HidDevice::HidbusStop() {
   client_.clear();
 }
 
-zx_status_t HidDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t HidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                           size_t data_size, size_t* out_data_actual) {
   zxlogf(TRACE, "hidctl: get descriptor %u\n", desc_type);
 
-  if (data == nullptr || len == nullptr) {
+  if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -150,12 +151,11 @@ zx_status_t HidDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_
     return ZX_ERR_NOT_FOUND;
   }
 
-  *data = malloc(report_desc_.size());
-  if (*data == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+  if (data_size < report_desc_.size()) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  *len = report_desc_.size();
-  memcpy(*data, report_desc_.get(), report_desc_.size());
+  memcpy(out_data_buffer, report_desc_.get(), report_desc_.size());
+  *out_data_actual = report_desc_.size();
   return ZX_OK;
 }
 

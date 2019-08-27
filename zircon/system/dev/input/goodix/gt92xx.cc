@@ -274,17 +274,17 @@ zx_status_t Gt92xxDevice::ShutDown() {
   return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-  const uint8_t* desc_ptr;
-  uint8_t* buf;
-  *len = get_gt92xx_report_desc(&desc_ptr);
-  fbl::AllocChecker ac;
-  buf = new (&ac) uint8_t[*len];
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+zx_status_t Gt92xxDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                              void* out_data_buffer, size_t data_size,
+                                              size_t* out_data_actual) {
+  const uint8_t* desc;
+  size_t desc_size = get_gt92xx_report_desc(&desc);
+  if (data_size < desc_size) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  memcpy(buf, desc_ptr, *len);
-  *data = buf;
+  memcpy(out_data_buffer, desc, desc_size);
+  *out_data_actual = desc_size;
+
   return ZX_OK;
 }
 

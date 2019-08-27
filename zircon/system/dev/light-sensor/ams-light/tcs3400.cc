@@ -233,17 +233,18 @@ zx_status_t Tcs3400Device::HidbusQuery(uint32_t options, hid_info_t* info) {
 
 void Tcs3400Device::HidbusStop() {}
 
-zx_status_t Tcs3400Device::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-  const uint8_t* desc_ptr;
-  uint8_t* buf;
-  *len = get_ambient_light_report_desc(&desc_ptr);
-  fbl::AllocChecker ac;
-  buf = new (&ac) uint8_t[*len];
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+zx_status_t Tcs3400Device::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                               void* out_data_buffer, size_t data_size,
+                                               size_t* out_data_actual) {
+  const uint8_t* desc;
+  size_t desc_size = get_ambient_light_report_desc(&desc);
+
+  if (data_size < desc_size) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  memcpy(buf, desc_ptr, *len);
-  *data = buf;
+
+  memcpy(out_data_buffer, desc, desc_size);
+  *out_data_actual = desc_size;
   return ZX_OK;
 }
 

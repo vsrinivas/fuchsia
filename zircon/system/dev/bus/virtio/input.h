@@ -38,8 +38,9 @@ class InputDevice : public Device {
   static zx_status_t virtio_input_query(void* ctx, uint32_t options, hid_info_t* info);
   static zx_status_t virtio_input_start(void* ctx, const hidbus_ifc_protocol_t* ifc);
   static void virtio_input_stop(void* ctx);
-  static zx_status_t virtio_input_get_descriptor(void* ctx, uint8_t desc_type, void** data,
-                                                 size_t* len);
+  static zx_status_t virtio_input_get_descriptor(void* ctx, uint8_t desc_type,
+                                                 void* out_data_buffer, size_t data_size,
+                                                 size_t* out_data_actual);
   static zx_status_t virtio_input_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
                                              void* data, size_t len, size_t* out_len);
   static zx_status_t virtio_input_set_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
@@ -52,7 +53,8 @@ class InputDevice : public Device {
   zx_status_t Start(const hidbus_ifc_protocol_t* ifc);
   void Stop();
   zx_status_t Query(uint32_t options, hid_info_t* info);
-  zx_status_t GetDescriptor(uint8_t desc_type, void** data, size_t* len);
+  zx_status_t GetDescriptor(uint8_t desc_type, void* out_data_buffer, size_t data_size,
+                            size_t* out_data_actual);
   void ReceiveEvent(virtio_input_event_t* event);
 
   void SelectConfig(uint8_t select, uint8_t subsel);

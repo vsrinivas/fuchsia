@@ -17,7 +17,8 @@ class HidDevice {
 
   // Gets the HID Report Descriptor for this device. The memory for the descriptor
   // is dynamically allocated and placed in |data| with length |len|.
-  virtual zx_status_t GetDescriptor(uint8_t desc_type, void** data, size_t* len) = 0;
+  virtual zx_status_t GetDescriptor(uint8_t desc_type, void* out_data_buffer, size_t data_size,
+                                    size_t* out_data_actual) = 0;
 
   // Process a virtio event for this device and update the private HID
   // report accordingly.

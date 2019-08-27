@@ -286,7 +286,8 @@ zx_status_t HidDevice::ProcessReportDescriptor() {
   reports.sizes = sizes_.data();
   reports.has_rpt_id = false;
 
-  zx_status_t status = hid_lib_parse_reports(hid_report_desc_, hid_report_desc_len_, &reports);
+  zx_status_t status = hid_lib_parse_reports(hid_report_desc_.data(), hid_report_desc_.size(),
+                                             &reports);
   if (status != ZX_OK) {
     return status;
   }
@@ -329,11 +330,6 @@ zx_status_t HidDevice::InitReassemblyBuffer() {
 }
 
 void HidDevice::DdkRelease() {
-  if (hid_report_desc_) {
-    free(hid_report_desc_);
-    hid_report_desc_ = NULL;
-    hid_report_desc_len_ = 0;
-  }
   ReleaseReassemblyBuffer();
   delete this;
 }
@@ -485,12 +481,15 @@ hidbus_ifc_protocol_ops_t hid_ifc_ops = {
 };
 
 zx_status_t HidDevice::SetReportDescriptor() {
+  hid_report_desc_.resize(HID_MAX_DESC_LEN);
+  size_t actual;
   zx_status_t status = hidbus_.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT,
-                                             reinterpret_cast<void**>(&hid_report_desc_),
-                                             &hid_report_desc_len_);
+                                             hid_report_desc_.data(), hid_report_desc_.size(),
+                                             &actual);
   if (status != ZX_OK) {
     return status;
   }
+  hid_report_desc_.resize(actual);
 
   if (!info_.boot_device) {
     return ZX_OK;
@@ -512,15 +511,9 @@ zx_status_t HidDevice::SetReportDescriptor() {
 
   // If we are a boot protocol kbd, we need to use the right HID descriptor.
   if (info_.device_class == HID_DEVICE_CLASS_KBD) {
-    const uint8_t* boot_kbd_desc = get_boot_kbd_report_desc(&hid_report_desc_len_);
-
-    free(hid_report_desc_);
-    hid_report_desc_ = static_cast<uint8_t*>(malloc(hid_report_desc_len_));
-    if (!hid_report_desc_) {
-      status = ZX_ERR_NO_MEMORY;
-      return status;
-    }
-    memcpy(hid_report_desc_, boot_kbd_desc, hid_report_desc_len_);
+    const uint8_t* boot_kbd_desc = get_boot_kbd_report_desc(&actual);
+    hid_report_desc_.resize(actual);
+    memcpy(hid_report_desc_.data(), boot_kbd_desc, actual);
 
     // Disable numlock
     uint8_t zero = 0;
@@ -530,15 +523,10 @@ zx_status_t HidDevice::SetReportDescriptor() {
 
   // If we are a boot protocol pointer, we need to use the right HID descriptor.
   if (info_.device_class == HID_DEVICE_CLASS_POINTER) {
-    const uint8_t* boot_mouse_desc = get_boot_mouse_report_desc(&hid_report_desc_len_);
+    const uint8_t* boot_mouse_desc = get_boot_mouse_report_desc(&actual);
 
-    free(hid_report_desc_);
-    hid_report_desc_ = static_cast<uint8_t*>(malloc(hid_report_desc_len_));
-    if (!hid_report_desc_) {
-      status = ZX_ERR_NO_MEMORY;
-      return status;
-    }
-    memcpy(hid_report_desc_, boot_mouse_desc, hid_report_desc_len_);
+    hid_report_desc_.resize(actual);
+    memcpy(hid_report_desc_.data(), boot_mouse_desc, actual);
   }
 
   return ZX_OK;

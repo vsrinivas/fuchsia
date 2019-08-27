@@ -81,7 +81,8 @@ void I2cHidbus::HidbusStop() {
   ifc_.clear();
 }
 
-zx_status_t I2cHidbus::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t I2cHidbus::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                           size_t data_size, size_t* out_data_actual) {
   if (desc_type != HID_DESCRIPTION_TYPE_REPORT) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -92,22 +93,21 @@ zx_status_t I2cHidbus::HidbusGetDescriptor(uint8_t desc_type, void** data, size_
   size_t desc_len = letoh16(hiddesc_.wReportDescLength);
   uint16_t desc_reg = letoh16(hiddesc_.wReportDescRegister);
   uint16_t buf = htole16(desc_reg);
-  uint8_t* out = static_cast<uint8_t*>(malloc(desc_len));
-  if (out == NULL) {
-    return ZX_ERR_NO_MEMORY;
+
+  if (data_size < desc_len) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
   zx_status_t status =
-      i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(uint16_t), out, desc_len);
+      i2c_.WriteReadSync(reinterpret_cast<uint8_t*>(&buf), sizeof(uint16_t),
+                         static_cast<uint8_t*>(out_data_buffer), desc_len);
   if (status < 0) {
     zxlogf(ERROR, "i2c-hid: could not read HID report descriptor from reg 0x%04x: %d\n", desc_reg,
            status);
-    free(out);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  *data = out;
-  *len = desc_len;
+  *out_data_actual = desc_len;
   return ZX_OK;
 }
 

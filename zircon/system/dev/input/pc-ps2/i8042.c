@@ -826,8 +826,10 @@ static void i8042_stop(void* ctx) {
   mtx_unlock(&i8042->lock);
 }
 
-static zx_status_t i8042_get_descriptor(void* ctx, uint8_t desc_type, void** data, size_t* len) {
-  if (data == NULL || len == NULL) {
+static zx_status_t i8042_get_descriptor(void* ctx, hid_description_type_t desc_type,
+                                        void* out_data_buffer, size_t data_size,
+                                        size_t* out_data_actual) {
+  if (out_data_buffer == NULL || out_data_actual == NULL) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -848,9 +850,12 @@ static zx_status_t i8042_get_descriptor(void* ctx, uint8_t desc_type, void** dat
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  *data = malloc(buflen);
-  *len = buflen;
-  memcpy(*data, buf, buflen);
+  if (data_size < buflen) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  memcpy(out_data_buffer, buf, buflen);
+  *out_data_actual = buflen;
   return ZX_OK;
 }
 

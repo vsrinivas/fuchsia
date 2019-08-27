@@ -172,7 +172,7 @@ class I2cHidTest : public zxtest::Test {
 TEST_F(I2cHidTest, HidTestBind) { ASSERT_OK(device_->Bind(channel_)); }
 
 TEST_F(I2cHidTest, HidTestReadReportDesc) {
-  uint8_t* returned_report_desc;
+  uint8_t returned_report_desc[HID_MAX_DESC_LEN];
   size_t returned_report_desc_len;
   std::vector<uint8_t> report_desc(4);
   report_desc[0] = 1;
@@ -184,13 +184,12 @@ TEST_F(I2cHidTest, HidTestReadReportDesc) {
   ASSERT_OK(device_->Bind(channel_));
 
   ASSERT_OK(device_->HidbusGetDescriptor(HID_DESCRIPTION_TYPE_REPORT,
-                                         reinterpret_cast<void**>(&returned_report_desc),
+                                         returned_report_desc, sizeof(returned_report_desc),
                                          &returned_report_desc_len));
   ASSERT_EQ(returned_report_desc_len, report_desc.size());
   for (size_t i = 0; i < returned_report_desc_len; i++) {
     ASSERT_EQ(returned_report_desc[i], report_desc[i]);
   }
-  free(returned_report_desc);
 }
 
 TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {

@@ -21,9 +21,10 @@ class HidTouch : public HidDevice {
     report_.rpt_id = PARADISE_RPT_ID_TOUCH;
   }
 
-  zx_status_t GetDescriptor(uint8_t desc_type, void** data, size_t* len);
-  void ReceiveEvent(virtio_input_event_t* event);
-  const uint8_t* GetReport(size_t* size);
+  zx_status_t GetDescriptor(uint8_t desc_type, void* out_data_buffer, size_t data_size,
+                            size_t* out_data_actual) override;
+  void ReceiveEvent(virtio_input_event_t* event) override;
+  const uint8_t* GetReport(size_t* size) override;
 
  private:
   static constexpr int MAX_TOUCH_POINTS = 5;

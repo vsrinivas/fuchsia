@@ -6,6 +6,8 @@ library ddk.protocol.hidbus;
 
 using zx;
 
+const uint16 HID_MAX_DESC_LEN = 8192;
+
 enum HidDescriptionType : uint8 {
     REPORT = 0x22;
 };
@@ -54,9 +56,7 @@ protocol Hidbus {
     Start(HidbusIfc ifc) -> (zx.status s);
     /// Stop the hidbus device. Safe to call if the hidbus is already stopped.
     Stop() -> ();
-    /// What are the ownership semantics with regards to the data buffer passed back?
-    /// is len an input and output parameter?
-    GetDescriptor(HidDescriptionType desc_type) -> (zx.status s, vector<voidptr>? data);
+    GetDescriptor(HidDescriptionType desc_type) -> (zx.status s, vector<voidptr> data);
     GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, vector<voidptr> data);
     SetReport(HidReportType rpt_type, uint8 rpt_id, vector<voidptr> data) -> (zx.status s);
     GetIdle(uint8 rpt_id) -> (zx.status s, uint8 duration);

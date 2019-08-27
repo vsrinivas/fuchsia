@@ -61,8 +61,9 @@ static void hogd_hid_stop(void* ctx) {
   zxlogf(TRACE, "bt_hog hogd_hid_stop, ctx: %p\n", ctx);
 }
 
-static zx_status_t hogd_hid_get_descriptor(void* ctx, uint8_t desc_type,
-                                           void** data, size_t* len) {
+static zx_status_t hogd_hid_get_descriptor(void* ctx, hid_description_type_t desc_type,
+                                           void* out_data_buffer, size_t data_size,
+                                           size_t* out_data_actual) {
   hogd_device_t* hogd_child = (hogd_device_t*)ctx;
   zxlogf(TRACE, "bt_hog hogd_hid_get_descriptor, ctx: %p, desc_type: %u\n", ctx,
          desc_type);
@@ -77,20 +78,26 @@ static zx_status_t hogd_hid_get_descriptor(void* ctx, uint8_t desc_type,
   // that assumption.
   switch (hogd_child->device_type) {
     case HOGD_DEVICE_BOOT_KEYBOARD:
-      *data = malloc(sizeof(kbd_hid_report_desc));
-      memcpy(*data, kbd_hid_report_desc, sizeof(kbd_hid_report_desc));
-      *len = sizeof(kbd_hid_report_desc);
+      if (data_size < sizeof(kbd_hid_report_desc)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      memcpy(out_data_buffer, kbd_hid_report_desc, sizeof(kbd_hid_report_desc));
+      *out_data_actual = sizeof(kbd_hid_report_desc);
       break;
     case HOGD_DEVICE_BOOT_MOUSE:
-      *data = malloc(sizeof(mouse_hid_report_desc));
-      memcpy(*data, mouse_hid_report_desc, sizeof(mouse_hid_report_desc));
-      *len = sizeof(mouse_hid_report_desc);
+      if (data_size < sizeof(mouse_hid_report_desc)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      memcpy(out_data_buffer, mouse_hid_report_desc, sizeof(mouse_hid_report_desc));
+      *out_data_actual = sizeof(mouse_hid_report_desc);
       break;
     default:
-      *data = malloc(hogd_child->parent->hid_descriptor_len);
-      memcpy(*data, hogd_child->parent->hid_descriptor,
+      if (data_size <hogd_child->parent->hid_descriptor_len) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      memcpy(out_data_buffer, hogd_child->parent->hid_descriptor,
              hogd_child->parent->hid_descriptor_len);
-      *len = hogd_child->parent->hid_descriptor_len;
+      *out_data_actual = hogd_child->parent->hid_descriptor_len;
   }
 
   return ZX_OK;

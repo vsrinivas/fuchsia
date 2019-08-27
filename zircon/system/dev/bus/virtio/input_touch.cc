@@ -14,8 +14,9 @@
 
 namespace virtio {
 
-zx_status_t HidTouch::GetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-  if (data == nullptr || len == nullptr) {
+zx_status_t HidTouch::GetDescriptor(uint8_t desc_type, void* out_data_buffer, size_t data_size,
+                                       size_t* out_data_actual) {
+  if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -26,12 +27,11 @@ zx_status_t HidTouch::GetDescriptor(uint8_t desc_type, void** data, size_t* len)
   size_t buflen = 0;
   const uint8_t* buf = get_paradise_touch_report_desc(&buflen);
 
-  *data = malloc(buflen);
-  if (*data == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+  if (data_size < buflen) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  *len = buflen;
-  memcpy(*data, buf, buflen);
+  memcpy(out_data_buffer, buf, buflen);
+  *out_data_actual = buflen;
   return ZX_OK;
 }
 

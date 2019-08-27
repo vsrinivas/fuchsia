@@ -34,10 +34,10 @@ TEST_F(VirtioInputTest, MultiTouchReportDescriptor) {
 
   // Assert that the report descriptor is correct.
   // In this case correct means a copy of the paradise touch report descriptor.
-  uint8_t* desc;
+  uint8_t desc[HID_MAX_DESC_LEN];
   size_t desc_len;
   zx_status_t status =
-      touch.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT, reinterpret_cast<void**>(&desc), &desc_len);
+      touch.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT, desc, sizeof(desc), &desc_len);
   ASSERT_OK(status);
 
   size_t paradise_size;

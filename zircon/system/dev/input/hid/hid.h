@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/input/c/fidl.h>
 
 #include <array>
+#include <vector>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -61,8 +62,8 @@ class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_HID_D
 
   void RemoveHidInstanceFromList(HidInstance* instance);
 
-  size_t GetReportDescLen() { return hid_report_desc_len_; }
-  const uint8_t* GetReportDesc() { return hid_report_desc_; }
+  size_t GetReportDescLen() { return hid_report_desc_.size(); }
+  const uint8_t* GetReportDesc() { return hid_report_desc_.data(); }
   size_t GetNumReports() { return num_reports_; }
 
   // Needs to be called with an array of size |fuchsia_hardware_input_MAX_REPORT_IDS|.
@@ -87,8 +88,7 @@ class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_HID_D
   size_t rbuf_filled_ = 0;
   size_t rbuf_needed_ = 0;
 
-  size_t hid_report_desc_len_ = 0;
-  uint8_t* hid_report_desc_ = nullptr;
+  std::vector<uint8_t> hid_report_desc_;
 
   size_t num_reports_ = 0;
   std::array<hid_report_size_t, kHidMaxReportIds> sizes_;

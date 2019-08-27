@@ -89,10 +89,11 @@ zx_status_t InputDevice::virtio_input_query(void* ctx, uint32_t options, hid_inf
   return inp->Query(options, info);
 }
 
-zx_status_t InputDevice::virtio_input_get_descriptor(void* ctx, uint8_t desc_type, void** data,
-                                                     size_t* len) {
+zx_status_t InputDevice::virtio_input_get_descriptor(void* ctx, uint8_t desc_type,
+                                                     void* out_data_buffer, size_t data_size,
+                                                     size_t* out_data_actual) {
   virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
-  return inp->GetDescriptor(desc_type, data, len);
+  return inp->GetDescriptor(desc_type, out_data_buffer, data_size, out_data_actual);
 }
 
 zx_status_t InputDevice::virtio_input_get_report(void* ctx, uint8_t rpt_type, uint8_t rpt_id,
@@ -296,8 +297,9 @@ zx_status_t InputDevice::Query(uint32_t options, hid_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t InputDevice::GetDescriptor(uint8_t desc_type, void** data, size_t* len) {
-  return hid_device_->GetDescriptor(desc_type, data, len);
+zx_status_t InputDevice::GetDescriptor(uint8_t desc_type, void* out_data_buffer, size_t data_size,
+                                       size_t* out_data_actual) {
+  return hid_device_->GetDescriptor(desc_type, out_data_buffer, data_size, out_data_actual);
 }
 
 void InputDevice::ReceiveEvent(virtio_input_event_t* event) {

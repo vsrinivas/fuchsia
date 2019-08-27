@@ -29,8 +29,8 @@ class Bma253 : public DeviceType, public ddk::HidbusProtocol<Bma253, ddk::base_p
   zx_status_t HidbusQuery(uint32_t options, hid_info_t* out_info);
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) { return simple_hid_.HidbusStart(ifc); }
   void HidbusStop() { simple_hid_.HidbusStop(); }
-  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void** out_data_buffer,
-                                  size_t* data_size);
+  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                  size_t data_size, size_t* out_data_actual);
   zx_status_t HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, void* out_data_buffer,
                               size_t data_size, size_t* out_data_actual);
   zx_status_t HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id, const void* data_buffer,

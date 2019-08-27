@@ -185,11 +185,13 @@ void AcpiCrOsEcMotionDevice::HidbusStop() {
   }
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(uint8_t desc_type, void** data,
-                                                        size_t* len) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(hid_description_type_t desc_type,
+                                                        void* out_data_buffer,
+                                                        size_t data_size,
+                                                        size_t* out_data_actual) {
   zxlogf(TRACE, "acpi-cros-ec-motion: hid bus get descriptor\n");
 
-  if (data == nullptr || len == nullptr) {
+  if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -197,12 +199,12 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusGetDescriptor(uint8_t desc_type, void*
     return ZX_ERR_NOT_FOUND;
   }
 
-  *data = malloc(hid_descriptor_len_);
-  if (*data == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+  if (data_size < hid_descriptor_len_) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  *len = hid_descriptor_len_;
-  memcpy(*data, hid_descriptor_.get(), hid_descriptor_len_);
+
+  memcpy(out_data_buffer, hid_descriptor_.get(), hid_descriptor_len_);
+  *out_data_actual = hid_descriptor_len_;
   return ZX_OK;
 }
 

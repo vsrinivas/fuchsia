@@ -80,16 +80,16 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
 
   void HidbusStop() { ifc_.ops = nullptr; }
 
-  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void** out_data_buffer,
-                                  size_t* data_size) {
-    *out_data_buffer = malloc(report_desc_.size());
-    if (*out_data_buffer == nullptr) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    memcpy(*out_data_buffer, report_desc_.data(), report_desc_.size());
-    *data_size = report_desc_.size();
+  zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                  size_t data_size, size_t* out_data_actual) {
+  if (data_size < report_desc_.size()) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
 
-    return ZX_OK;
+  memcpy(out_data_buffer, report_desc_.data(), report_desc_.size());
+  *out_data_actual = report_desc_.size();
+
+  return ZX_OK;
   }
 
   void SetDescriptor(const uint8_t* desc, size_t desc_len) {

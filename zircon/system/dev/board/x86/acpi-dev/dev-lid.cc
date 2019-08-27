@@ -144,10 +144,11 @@ void AcpiLidDevice::HidbusStop() {
   client_.clear();
 }
 
-zx_status_t AcpiLidDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t AcpiLidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
+                                size_t data_size, size_t* out_data_actual) {
   zxlogf(TRACE, "acpi-lid: hid bus get descriptor\n");
 
-  if (data == nullptr || len == nullptr) {
+  if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -155,12 +156,12 @@ zx_status_t AcpiLidDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, s
     return ZX_ERR_NOT_FOUND;
   }
 
-  *data = malloc(kHidDescriptorLen);
-  if (*data == nullptr) {
-    return ZX_ERR_NO_MEMORY;
+  if (data_size < kHidDescriptorLen) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  *len = kHidDescriptorLen;
-  memcpy(*data, kHidDescriptor, kHidDescriptorLen);
+
+  memcpy(out_data_buffer, kHidDescriptor, kHidDescriptorLen);
+  *out_data_actual = kHidDescriptorLen;
   return ZX_OK;
 }
 
