@@ -4,26 +4,16 @@
 
 #define HAS_DEVICE_TREE 1
 
-static const zbi_cpu_config_t cpu_config = {
-    .cluster_count = 1,
-    .clusters =
-        {
-            {
-                .cpu_count = 1,
-            },
-        },
-};
-
 static const zbi_mem_range_t mem_config[] = {
     {
-        .type = ZBI_MEM_RANGE_RAM,
         .paddr = 0,
         .length = 0x20000000,  // 512M
+        .type = ZBI_MEM_RANGE_RAM,
     },
     {
-        .type = ZBI_MEM_RANGE_PERIPHERAL,
         .paddr = 0xf0000000,
         .length = 0x10000000,
+        .type = ZBI_MEM_RANGE_PERIPHERAL,
     },
 };
 
@@ -49,15 +39,46 @@ static const dcfg_arm_generic_timer_driver_t timer_driver = {
 };
 
 static const zbi_platform_id_t platform_id = {
-    .vid = PDEV_VID_GOOGLE,
-    .pid = PDEV_PID_VISALIA,
-    .board_name = "visalia",
+    PDEV_VID_GOOGLE,
+    PDEV_PID_VISALIA,
+    "visalia",
 };
 
+static void add_cpu_topology(zbi_header_t* zbi) {
+#define TOPOLOGY_CPU_COUNT 4
+  zbi_topology_node_t nodes[TOPOLOGY_CPU_COUNT];
+
+  for (uint8_t index = 0; index < TOPOLOGY_CPU_COUNT; index++) {
+    nodes[index] = (zbi_topology_node_t){
+        .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+        .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+        .entity =
+            {
+                .processor =
+                    {
+                        .logical_ids = {index},
+                        .logical_id_count = 1,
+                        .flags = (uint16_t)(index == 0 ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0),
+                        .architecture = ZBI_TOPOLOGY_ARCH_ARM,
+                        .architecture_info =
+                            {
+                                .arm =
+                                    {
+                                        .cpu_id = index,
+                                        .gic_id = index,
+                                    },
+                            },
+                    },
+            },
+    };
+  }
+
+  append_boot_item(zbi, ZBI_TYPE_CPU_TOPOLOGY, sizeof(zbi_topology_node_t), &nodes,
+                   sizeof(zbi_topology_node_t) * TOPOLOGY_CPU_COUNT);
+}
+
 static void append_board_boot_item(zbi_header_t* bootdata) {
-  // add CPU configuration
-  append_boot_item(bootdata, ZBI_TYPE_CPU_CONFIG, 0, &cpu_config,
-                   sizeof(zbi_cpu_config_t) + sizeof(zbi_cpu_cluster_t) * cpu_config.cluster_count);
+  add_cpu_topology(bootdata);
 
   // add memory configuration
   append_boot_item(bootdata, ZBI_TYPE_MEM_CONFIG, 0, &mem_config,
