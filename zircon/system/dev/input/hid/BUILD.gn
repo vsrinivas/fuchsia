@@ -5,6 +5,7 @@
 driver("hid") {
   sources = [
     "hid-fifo.c",
+    "hid-instance.cc",
     "hid-parser-lib.cc",
     "hid.cc",
   ]
@@ -29,6 +30,7 @@ driver("hid") {
 test("hid-test") {
   sources = [
     "hid-fifo.c",
+    "hid-instance.cc",
     "hid-parser-lib.cc",
     "hid-test.cc",
     "hid.cc",
