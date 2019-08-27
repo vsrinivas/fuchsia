@@ -39,17 +39,12 @@ class Inspector final {
   // If an invalid VMO is passed all Node operations will will have no effect.
   Inspector(const std::string& name, zx::vmo vmo);
 
-  // Gets a reference to the VMO backing this inspector's tree if one exists, otherwise return
+  // Returns a pointer to the VMO backing this inspector's tree if one exists, otherwise return
   // fit::error.
   fit::result<const zx::vmo*> GetVmo() const;
 
-  // Gets a reference to the root node owned by this inspector.
+  // Returns a reference to the root node owned by this inspector.
   Node& GetRoot() const;
-
-  // Takes the root node from this inspector.
-  // Future calls for GetRoot or TakeRoot will return a separate no-op node, but will not crash.
-  // DEPRECATED: This function will be removed, do not depend on being able to take the root.
-  Node TakeRoot();
 
   // Boolean value of an Inspector is whether it is actually backed by a VMO.
   //

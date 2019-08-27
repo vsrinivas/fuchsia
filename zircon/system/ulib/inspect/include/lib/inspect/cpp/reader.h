@@ -12,15 +12,15 @@
 
 namespace inspect {
 
-// Construct a new hierarchy by synchronously reading objects out of
+// Construct a new Hierarchy by synchronously reading objects out of
 // the given VMO.
 fit::result<Hierarchy> ReadFromVmo(const zx::vmo& vmo);
 
-// Construct a new hierarchy by synchronously reading objects out of the
+// Construct a new Hierarchy by synchronously reading objects out of the
 // given VMO Snapshot.
 fit::result<Hierarchy> ReadFromSnapshot(Snapshot snapshot);
 
-// Construct a new hierarchy by synchronously reading objects out of the
+// Construct a new Hierarchy by synchronously reading objects out of the
 // contents of the given buffer.
 fit::result<Hierarchy> ReadFromBuffer(std::vector<uint8_t> buffer);
 

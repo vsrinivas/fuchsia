@@ -5,14 +5,13 @@
 #ifndef LIB_INSPECT_CPP_VMO_SNAPSHOT_H_
 #define LIB_INSPECT_CPP_VMO_SNAPSHOT_H_
 
+#include <lib/inspect/cpp/vmo/block.h>
+#include <lib/zx/vmo.h>
 #include <unistd.h>
+#include <zircon/types.h>
 
 #include <functional>
 #include <vector>
-
-#include <lib/inspect/cpp/vmo/block.h>
-#include <lib/zx/vmo.h>
-#include <zircon/types.h>
 
 namespace inspect {
 
@@ -50,20 +49,19 @@ class Snapshot final {
   static constexpr Options kDefaultOptions = {.read_attempts = 1024,
                                               .skip_consistency_check = false};
 
-  // Create a new snapshot of the given VMO and default options.
+  // Create a new snapshot of the given VMO using default options.
   static zx_status_t Create(const zx::vmo& vmo, Snapshot* out_snapshot);
 
-  // Create a new snapshot of the given VMO and given options.
+  // Create a new snapshot of the given VMO using the given options.
   static zx_status_t Create(const zx::vmo& vmo, Options options, Snapshot* out_snapshot);
 
-  // Create a new snapshot of the given VMO, given options, and the given read observer
+  // Create a new snapshot of the given VMO using the given options, and use the read_observer
   // for observing snapshot operations.
   static zx_status_t Create(const zx::vmo& vmo, Options options, ReadObserver read_observer,
                             Snapshot* out_snapshot);
 
-  // Create a new snapshot over the supplied immutable buffer. If the buffer
-  // can not be interpreted as a snapshot, an error status is returned.
-  // There are no observers or writers involved.
+  // Create a new snapshot over the supplied buffer. If the buffer cannot be interpreted as a
+  // snapshot, an error status is returned. There are no observers or writers involved.
   static zx_status_t Create(std::vector<uint8_t> buffer, Snapshot* out_snapshot);
 
   Snapshot() = default;
@@ -73,10 +71,10 @@ class Snapshot final {
 
   explicit operator bool() const { return !buffer_.empty(); }
 
-  // Returns the start of the snapshot data, if valid.
+  // Returns the start of the snapshot data.
   const uint8_t* data() const { return buffer_.data(); }
 
-  // Returns the size of the snapshot, if valid.
+  // Returns the size of the snapshot.
   size_t size() const { return buffer_.size(); }
 
   // Get a pointer to a block in the buffer by index.

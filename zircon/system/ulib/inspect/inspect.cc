@@ -68,12 +68,6 @@ fit::result<const zx::vmo*> Inspector::GetVmo() const {
 
 Node& Inspector::GetRoot() const { return *root_; }
 
-Node Inspector::TakeRoot() {
-  auto tmp = std::make_unique<Node>();
-  root_.swap(tmp);
-  return std::move(*tmp);
-}
-
 std::string UniqueName(const std::string& prefix) {
   static std::atomic_uint_fast64_t next_id;
   std::ostringstream out;

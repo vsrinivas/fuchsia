@@ -14,10 +14,11 @@
 
 namespace inspect {
 
-// |State| wraps a |Heap| and implements the Inspect VMO API on top of
+// |State| wraps a |Heap| and implements the Inspect File API on top of
 // that heap. This class contains the low-level operations necessary to
 // deal with the various Inspect types and wrappers to denote ownership of
 // those values.
+//
 // This class should not be used directly, prefer to use |Inspector|.
 class State final {
  public:
@@ -25,8 +26,8 @@ class State final {
   // On failure, returns nullptr.
   static std::shared_ptr<State> Create(std::unique_ptr<Heap> heap);
 
-  // Create a new State wrapping a heap of the given size.
-  // On failure, returns nullptr.
+  // Create a new State wrapping a new heap of the given size.
+  // On failure, returns an empty shared_ptr.
   static std::shared_ptr<State> CreateWithSize(size_t size);
 
   ~State();
@@ -46,50 +47,49 @@ class State final {
   // Returns true on success, false otherwise.
   bool Copy(zx::vmo* vmo) const;
 
-  // Create a new |IntProperty| in the Inspect VMO. The returned node releases
+  // Create a new |IntProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
   IntProperty CreateIntProperty(const std::string& name, BlockIndex parent, int64_t value);
 
-  // Create a new |UintProperty| in the Inspect VMO. The returned node releases
+  // Create a new |UintProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
   UintProperty CreateUintProperty(const std::string& name, BlockIndex parent, uint64_t value);
 
-  // Create a new |DoubleProperty| in the Inspect VMO. The returned node releases
+  // Create a new |DoubleProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
   DoubleProperty CreateDoubleProperty(const std::string& name, BlockIndex parent, double value);
 
-  // Create a new |IntArray| in the Inspect VMO. The returned node releases
+  // Create a new |IntArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
   IntArray CreateIntArray(const std::string& name, BlockIndex parent, size_t slots,
                           ArrayBlockFormat format);
 
-  // Create a new |UintArray| in the Inspect VMO. The returned node releases
+  // Create a new |UintArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
   UintArray CreateUintArray(const std::string& name, BlockIndex parent, size_t slots,
                             ArrayBlockFormat format);
 
-  // Create a new |DoubleArray| in the Inspect VMO. The returned node releases
+  // Create a new |DoubleArray| in the Inspect VMO. The returned value releases
   // the array when destroyed.
   DoubleArray CreateDoubleArray(const std::string& name, BlockIndex parent, size_t slots,
                                 ArrayBlockFormat format);
 
-  // Create a new |StringProperty| in the Inspect VMO. The returned node releases
+  // Create a new |StringProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
   StringProperty CreateStringProperty(const std::string& name, BlockIndex parent,
                                       const std::string& value);
 
-  // Create a new |ByteVectorProperty| in the Inspect VMO. The returned node releases
+  // Create a new |ByteVectorProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
   ByteVectorProperty CreateByteVectorProperty(const std::string& name, BlockIndex parent,
                                               const std::vector<uint8_t>& value);
 
-  // Create a new [Link] in the Inspect VMO. The returned node releases the link when destroyed.
+  // Create a new [Link] in the Inspect VMO. The returned value releases the link when destroyed.
   Link CreateLink(const std::string& name, BlockIndex parent, const std::string& content,
                   LinkBlockDisposition disposition);
 
-  // Create a new |Node| in the Inspect VMO. Nodes are refcounted such that
-  // Propertys and Properties nested under the node remain valid until all
-  // entities using the Node are destroyed.
+  // Create a new |Node| in the Inspect VMO. Nodes are refcounted such that values nested under the
+  // node remain valid until all such values values are destroyed.
   Node CreateNode(const std::string& name, BlockIndex parent);
 
   // Setters for various property types

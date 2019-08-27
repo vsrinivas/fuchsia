@@ -13,9 +13,10 @@
 
 namespace sys {
 
-// ComponentInspector wraps an Inspector and Tree for a component.
-// These objects are available globally so long as the ComponentInspector
-// returned by Initialize is still alive.
+// ComponentInspector is a singleton wrapping an Inspector for a Fuchsia Component.
+//
+// Callers must ensure the ComponentInspector returned by Initialize remains alive for the lifetime
+// of the component.
 class ComponentInspector final {
  public:
   // Get the inspector for this component.
@@ -26,13 +27,17 @@ class ComponentInspector final {
 
   // Initialize Inspection for the component. The returned ComponentInspector
   // must remain alive as long as inspection information needs to be available.
+  //
+  // This method is NOT thread safe, and should only be called once by the main thread.
   static std::shared_ptr<ComponentInspector> Initialize(sys::ComponentContext* startup_context);
 
   // Gets the singleton ComponentInspector for this process, if it exists.
+  //
+  // This method is thread safe.
   static std::shared_ptr<ComponentInspector> Get() { return singleton_.lock(); }
 
   // Gets the NodeHealth for this component.
-  // This method is not thread safe.
+  // This method is NOT thread safe.
   ::inspect::NodeHealth& Health();
 
  private:

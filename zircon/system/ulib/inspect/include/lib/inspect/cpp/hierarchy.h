@@ -5,12 +5,12 @@
 #ifndef LIB_INSPECT_CPP_HIERARCHY_H_
 #define LIB_INSPECT_CPP_HIERARCHY_H_
 
+#include <lib/fit/optional.h>
+#include <lib/fit/variant.h>
+
 #include <limits>
 #include <string>
 #include <vector>
-
-#include <lib/fit/optional.h>
-#include <lib/fit/variant.h>
 
 namespace inspect {
 
