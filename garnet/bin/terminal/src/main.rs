@@ -6,6 +6,7 @@
 #![recursion_limit = "4096"]
 
 mod app;
+mod key_util;
 mod pty;
 mod terminal_view;
 

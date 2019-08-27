@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::key_util::get_input_sequence_for_key_event,
     crate::pty::Pty,
     carnelian::{
         make_message, AnimationMode, App, Color, FontDescription, FontFace, Message, Paint, Point,
@@ -10,7 +11,7 @@ use {
     },
     failure::{Error, ResultExt},
     fidl_fuchsia_hardware_pty::WindowSize,
-    fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase},
+    fidl_fuchsia_ui_input::KeyboardEvent,
     fuchsia_async as fasync,
     futures::{
         channel::mpsc,
@@ -36,8 +37,8 @@ enum PtyIncomingMessages {
 
 /// Messages which can be used to interact with the Pty.
 enum PtyOutgoingMessages {
-    /// A message which indicates that a char should be sent to the Pty.
-    SendInput(char),
+    /// A message which indicates that a String should be sent to the Pty.
+    SendInput(String),
 
     /// Indicates that the logical size of the Pty should be updated.
     Resize(Size),
@@ -54,7 +55,6 @@ pub struct TerminalViewAssistant {
 }
 
 impl TerminalViewAssistant {
-
     /// Creates a new instance of the TerminalViewAssistant.
     pub fn new() -> TerminalViewAssistant {
         let font_face = FontFace::new(FONT_DATA).expect("unable to load font data");
@@ -169,9 +169,7 @@ impl TerminalViewAssistant {
                 result = pty_receiver.next().fuse() => {
                         let message = result.expect("failed to unwrap pty send event");
                         match message {
-                            PtyOutgoingMessages::SendInput(c) => {
-                                let mut buffer = [0u8; 4];
-                                let string = c.encode_utf8(&mut buffer);
+                            PtyOutgoingMessages::SendInput(string) => {
                                 evented_fd.write_all(string.as_bytes()).await.unwrap_or_else(|e| {
                                     println!("failed to write character to pty: {}", e)
                                 });
@@ -206,30 +204,8 @@ impl TerminalViewAssistant {
     // The ViewAssistant trait requires a ViewAssistantContext which we do not use and
     // we cannot make. This allows us to call the method directly in the tests.
     fn handle_keyboard_event(&mut self, event: &KeyboardEvent) -> Result<(), Error> {
-        let mut character: Option<char> = None;
-        if event.phase == KeyboardEventPhase::Pressed || event.phase == KeyboardEventPhase::Repeat {
-            match (std::char::from_u32(event.code_point), event.hid_usage) {
-                (Some('\0'), 40) => {
-                    // Enter key
-                    character = Some('\n');
-                }
-                (Some('\0'), 42) => {
-                    // Backspace key
-                    character = Some('\x7f');
-                }
-                (Some('\0'), _) => {
-                    // Some other non-printable key
-                }
-                (Some(codepoint), _) => {
-                    // All printable keys
-                    character = Some(codepoint);
-                }
-                (None, _) => {}
-            }
-        }
-
-        if let Some(character) = character {
-            self.queue_outgoing_message(PtyOutgoingMessages::SendInput(character))?;
+        if let Some(string) = get_input_sequence_for_key_event(event) {
+            self.queue_outgoing_message(PtyOutgoingMessages::SendInput(string))?;
         }
 
         Ok(())
@@ -327,6 +303,7 @@ impl PtyWrapper {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_ui_input::KeyboardEventPhase;
 
     #[test]
     fn can_create_view() {
@@ -426,7 +403,7 @@ mod tests {
         let message = receiver.next().await.expect("failed to receive pty event");
         match message {
             PtyOutgoingMessages::SendInput(c) => {
-                assert_eq!(c, 'A');
+                assert_eq!(c, "A");
             }
             _ => assert!(false),
         }
