@@ -4,11 +4,11 @@
 
 #include "lib/inspect_deprecated/reader.h"
 
+#include <lib/inspect/cpp/reader.h>
+
 #include <iterator>
 #include <stack>
 #include <unordered_map>
-
-#include <lib/inspect/cpp/reader.h>
 
 #include "fuchsia/inspect/cpp/fidl.h"
 #include "lib/fit/bridge.h"
@@ -29,8 +29,8 @@ hierarchy::Node FidlObjectToNode(fuchsia::inspect::Object obj) {
         metrics.push_back(hierarchy::Metric(std::move(metric.key),
                                             hierarchy::UIntMetric(metric.value.uint_value())));
       } else if (metric.value.is_int_value()) {
-        metrics.push_back(
-            hierarchy::Metric(std::move(metric.key), hierarchy::IntMetric(metric.value.int_value())));
+        metrics.push_back(hierarchy::Metric(std::move(metric.key),
+                                            hierarchy::IntMetric(metric.value.int_value())));
       } else if (metric.value.is_double_value()) {
         metrics.push_back(hierarchy::Metric(std::move(metric.key),
                                             hierarchy::DoubleMetric(metric.value.double_value())));
@@ -73,11 +73,11 @@ ObjectHierarchy Read(std::shared_ptr<component::Object> object_root, int depth) 
 
 hierarchy::ArrayDisplayFormat FromNewFormat(::inspect::ArrayDisplayFormat format) {
   switch (format) {
-    case ::inspect::ArrayDisplayFormat::FLAT:
+    case ::inspect::ArrayDisplayFormat::kFlat:
       return hierarchy::ArrayDisplayFormat::FLAT;
-    case ::inspect::ArrayDisplayFormat::LINEAR_HISTOGRAM:
+    case ::inspect::ArrayDisplayFormat::kLinearHistogram:
       return hierarchy::ArrayDisplayFormat::LINEAR_HISTOGRAM;
-    case ::inspect::ArrayDisplayFormat::EXPONENTIAL_HISTOGRAM:
+    case ::inspect::ArrayDisplayFormat::kExponentialHistogram:
       return hierarchy::ArrayDisplayFormat::EXPONENTIAL_HISTOGRAM;
   }
 }

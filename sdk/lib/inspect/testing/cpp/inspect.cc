@@ -12,38 +12,38 @@ namespace {}  // namespace
 namespace inspect {
 
 void PrintTo(const PropertyValue& property, std::ostream* os) {
-  if (property.format() == PropertyFormat::INT)
+  if (property.format() == PropertyFormat::kInt)
     *os << "Int";
-  if (property.format() == PropertyFormat::UINT)
+  if (property.format() == PropertyFormat::kUint)
     *os << "Uint";
-  if (property.format() == PropertyFormat::DOUBLE)
+  if (property.format() == PropertyFormat::kDouble)
     *os << "Double";
-  if (property.format() == PropertyFormat::INT_ARRAY)
+  if (property.format() == PropertyFormat::kIntArray)
     *os << "IntArray";
-  if (property.format() == PropertyFormat::UINT_ARRAY)
+  if (property.format() == PropertyFormat::kUintArray)
     *os << "UintArray";
-  if (property.format() == PropertyFormat::DOUBLE_ARRAY)
+  if (property.format() == PropertyFormat::kDoubleArray)
     *os << "DoubleArray";
-  if (property.format() == PropertyFormat::STRING)
+  if (property.format() == PropertyFormat::kString)
     *os << "String";
-  if (property.format() == PropertyFormat::BYTES)
+  if (property.format() == PropertyFormat::kBytes)
     *os << "ByteVector";
   *os << "Property(" << ::testing::PrintToString(property.name()) << ", ";
-  if (property.format() == PropertyFormat::INT)
+  if (property.format() == PropertyFormat::kInt)
     *os << ::testing::PrintToString(property.Get<IntPropertyValue>().value());
-  if (property.format() == PropertyFormat::UINT)
+  if (property.format() == PropertyFormat::kUint)
     *os << ::testing::PrintToString(property.Get<UintPropertyValue>().value());
-  if (property.format() == PropertyFormat::DOUBLE)
+  if (property.format() == PropertyFormat::kDouble)
     *os << ::testing::PrintToString(property.Get<DoublePropertyValue>().value());
-  if (property.format() == PropertyFormat::INT_ARRAY)
+  if (property.format() == PropertyFormat::kIntArray)
     *os << ::testing::PrintToString(property.Get<IntArrayValue>().value());
-  if (property.format() == PropertyFormat::UINT_ARRAY)
+  if (property.format() == PropertyFormat::kUintArray)
     *os << ::testing::PrintToString(property.Get<UintArrayValue>().value());
-  if (property.format() == PropertyFormat::DOUBLE_ARRAY)
+  if (property.format() == PropertyFormat::kDoubleArray)
     *os << ::testing::PrintToString(property.Get<DoubleArrayValue>().value());
-  if (property.format() == PropertyFormat::STRING)
+  if (property.format() == PropertyFormat::kString)
     *os << ::testing::PrintToString(property.Get<StringPropertyValue>().value());
-  if (property.format() == PropertyFormat::BYTES)
+  if (property.format() == PropertyFormat::kBytes)
     *os << ::testing::PrintToString(property.Get<ByteVectorPropertyValue>().value());
   *os << ")";
 }
@@ -108,7 +108,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 ::testing::Matcher<const PropertyValue&> StringIs(const std::string& name,
                                                   const std::string& value) {
   return ::testing::AllOf(::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-                          ::testing::Property(&PropertyValue::format, PropertyFormat::STRING),
+                          ::testing::Property(&PropertyValue::format, PropertyFormat::kString),
                           ::testing::Property(&PropertyValue::Get<StringPropertyValue>,
                                               ::testing::Property(&StringPropertyValue::value,
                                                                   ::testing::StrEq(value))));
@@ -117,7 +117,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 ::testing::Matcher<const PropertyValue&> ByteVectorIs(const std::string& name,
                                                       const std::vector<uint8_t>& value) {
   return ::testing::AllOf(::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-                          ::testing::Property(&PropertyValue::format, PropertyFormat::BYTES),
+                          ::testing::Property(&PropertyValue::format, PropertyFormat::kBytes),
                           ::testing::Property(&PropertyValue::Get<ByteVectorPropertyValue>,
                                               ::testing::Property(&ByteVectorPropertyValue::value,
                                                                   ::testing::Eq(value))));
@@ -126,7 +126,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 ::testing::Matcher<const PropertyValue&> IntIs(const std::string& name, int64_t value) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-      ::testing::Property(&PropertyValue::format, PropertyFormat::INT),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kInt),
       ::testing::Property(&PropertyValue::Get<IntPropertyValue>,
                           ::testing::Property(&IntPropertyValue::value, ::testing::Eq(value))));
 }
@@ -134,7 +134,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 ::testing::Matcher<const PropertyValue&> UintIs(const std::string& name, uint64_t value) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-      ::testing::Property(&PropertyValue::format, PropertyFormat::UINT),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kUint),
       ::testing::Property(&PropertyValue::Get<UintPropertyValue>,
                           ::testing::Property(&UintPropertyValue::value, ::testing::Eq(value))));
 }
@@ -142,7 +142,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 ::testing::Matcher<const PropertyValue&> DoubleIs(const std::string& name, double value) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-      ::testing::Property(&PropertyValue::format, PropertyFormat::DOUBLE),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kDouble),
       ::testing::Property(&PropertyValue::Get<DoublePropertyValue>,
                           ::testing::Property(&DoublePropertyValue::value, ::testing::Eq(value))));
 }
@@ -151,7 +151,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
     const std::string& name, ::testing::Matcher<std::vector<int64_t>> matcher) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-      ::testing::Property(&PropertyValue::format, PropertyFormat::INT_ARRAY),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kIntArray),
       ::testing::Property(&PropertyValue::Get<IntArrayValue>,
                           ::testing::Property(&IntArrayValue::value, std::move(matcher))));
 }
@@ -160,7 +160,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
     const std::string& name, ::testing::Matcher<std::vector<uint64_t>> matcher) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-      ::testing::Property(&PropertyValue::format, PropertyFormat::UINT_ARRAY),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kUintArray),
       ::testing::Property(&PropertyValue::Get<UintArrayValue>,
                           ::testing::Property(&UintArrayValue::value, std::move(matcher))));
 }
@@ -169,7 +169,7 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
     const std::string& name, ::testing::Matcher<std::vector<double>> matcher) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-      ::testing::Property(&PropertyValue::format, PropertyFormat::DOUBLE_ARRAY),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kDoubleArray),
       ::testing::Property(&PropertyValue::Get<DoubleArrayValue>,
                           ::testing::Property(&DoubleArrayValue::value, std::move(matcher))));
 }
@@ -177,15 +177,15 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 ::testing::Matcher<const PropertyValue&> ArrayDisplayFormatIs(ArrayDisplayFormat format) {
   return ::testing::AnyOf(
       ::testing::AllOf(
-          ::testing::Property(&PropertyValue::format, PropertyFormat::INT_ARRAY),
+          ::testing::Property(&PropertyValue::format, PropertyFormat::kIntArray),
           ::testing::Property(&PropertyValue::Get<IntArrayValue>,
                               ::testing::Property(&IntArrayValue::GetDisplayFormat, format))),
       ::testing::AllOf(
-          ::testing::Property(&PropertyValue::format, PropertyFormat::UINT_ARRAY),
+          ::testing::Property(&PropertyValue::format, PropertyFormat::kUintArray),
           ::testing::Property(&PropertyValue::Get<UintArrayValue>,
                               ::testing::Property(&UintArrayValue::GetDisplayFormat, format))),
       ::testing::AllOf(
-          ::testing::Property(&PropertyValue::format, PropertyFormat::DOUBLE_ARRAY),
+          ::testing::Property(&PropertyValue::format, PropertyFormat::kDoubleArray),
           ::testing::Property(&PropertyValue::Get<DoubleArrayValue>,
                               ::testing::Property(&DoubleArrayValue::GetDisplayFormat, format))));
 }

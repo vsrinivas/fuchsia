@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iterator>
-#include <stack>
-#include <unordered_map>
-
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/scanner.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
+
+#include <iterator>
+#include <stack>
+#include <unordered_map>
 
 namespace inspect {
 
@@ -204,11 +204,11 @@ ParsedNode* Reader::GetOrCreate(BlockIndex index) {
 ArrayDisplayFormat ArrayBlockFormatToDisplay(ArrayBlockFormat format) {
   switch (format) {
     case ArrayBlockFormat::kLinearHistogram:
-      return ArrayDisplayFormat::LINEAR_HISTOGRAM;
+      return ArrayDisplayFormat::kLinearHistogram;
     case ArrayBlockFormat::kExponentialHistogram:
-      return ArrayDisplayFormat::EXPONENTIAL_HISTOGRAM;
+      return ArrayDisplayFormat::kExponentialHistogram;
     default:
-      return ArrayDisplayFormat::FLAT;
+      return ArrayDisplayFormat::kFlat;
   }
 }
 

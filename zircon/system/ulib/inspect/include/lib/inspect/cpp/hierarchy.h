@@ -17,14 +17,14 @@ namespace inspect {
 // Describes how an array of values should be displayed.
 enum class ArrayDisplayFormat {
   // The array should be displayed as a flat list of numeric types.
-  FLAT,
+  kFlat,
 
   // The array consists of parameters and buckets for a linear histogram.
-  LINEAR_HISTOGRAM,
+  kLinearHistogram,
 
   // The array consists of parameters and buckets for an exponential
   // histogram.
-  EXPONENTIAL_HISTOGRAM,
+  kExponentialHistogram,
 };
 
 namespace internal {
@@ -94,7 +94,7 @@ std::vector<typename Array<T, FormatIndex>::HistogramBucket> Array<T, FormatInde
 
   const auto& value = this->value();
 
-  if (display_format_ == ArrayDisplayFormat::LINEAR_HISTOGRAM) {
+  if (display_format_ == ArrayDisplayFormat::kLinearHistogram) {
     if (value.size() < 5) {
       // We need at least floor, step_size, underflow, bucket 0, overflow.
       return ret;
@@ -120,7 +120,7 @@ std::vector<typename Array<T, FormatIndex>::HistogramBucket> Array<T, FormatInde
       ret.push_back(HistogramBucket(floor, std::numeric_limits<T>::max(), value[value.size() - 1]));
     }
 
-  } else if (display_format_ == ArrayDisplayFormat::EXPONENTIAL_HISTOGRAM) {
+  } else if (display_format_ == ArrayDisplayFormat::kExponentialHistogram) {
     if (value.size() < 6) {
       // We need at least floor, initial_step, step_multiplier, underflow,
       // bucket 0, overflow.
@@ -193,27 +193,27 @@ class NamedValue final {
 
 // Describes the format of a parsed property.
 enum class PropertyFormat {
-  INVALID = 0,
-  INT = 1,
-  UINT = 2,
-  DOUBLE = 3,
-  INT_ARRAY = 4,
-  UINT_ARRAY = 5,
-  DOUBLE_ARRAY = 6,
-  STRING = 7,
-  BYTES = 8,
+  kInvalid = 0,
+  kInt = 1,
+  kUint = 2,
+  kDouble = 3,
+  kIntArray = 4,
+  kUintArray = 5,
+  kDoubleArray = 6,
+  kString = 7,
+  kBytes = 8,
 };
 
-using IntPropertyValue = internal::Value<int64_t, static_cast<size_t>(PropertyFormat::INT)>;
-using UintPropertyValue = internal::Value<uint64_t, static_cast<size_t>(PropertyFormat::UINT)>;
-using DoublePropertyValue = internal::Value<double, static_cast<size_t>(PropertyFormat::DOUBLE)>;
-using IntArrayValue = internal::Array<int64_t, static_cast<size_t>(PropertyFormat::INT_ARRAY)>;
-using UintArrayValue = internal::Array<uint64_t, static_cast<size_t>(PropertyFormat::UINT_ARRAY)>;
-using DoubleArrayValue = internal::Array<double, static_cast<size_t>(PropertyFormat::DOUBLE_ARRAY)>;
+using IntPropertyValue = internal::Value<int64_t, static_cast<size_t>(PropertyFormat::kInt)>;
+using UintPropertyValue = internal::Value<uint64_t, static_cast<size_t>(PropertyFormat::kUint)>;
+using DoublePropertyValue = internal::Value<double, static_cast<size_t>(PropertyFormat::kDouble)>;
+using IntArrayValue = internal::Array<int64_t, static_cast<size_t>(PropertyFormat::kIntArray)>;
+using UintArrayValue = internal::Array<uint64_t, static_cast<size_t>(PropertyFormat::kUintArray)>;
+using DoubleArrayValue = internal::Array<double, static_cast<size_t>(PropertyFormat::kDoubleArray)>;
 using StringPropertyValue =
-    internal::Value<std::string, static_cast<size_t>(PropertyFormat::STRING)>;
+    internal::Value<std::string, static_cast<size_t>(PropertyFormat::kString)>;
 using ByteVectorPropertyValue =
-    internal::Value<std::vector<uint8_t>, static_cast<size_t>(PropertyFormat::BYTES)>;
+    internal::Value<std::vector<uint8_t>, static_cast<size_t>(PropertyFormat::kBytes)>;
 
 // Property consists of a name and a value corresponding to one PropertyFormat.
 using PropertyValue = internal::NamedValue<
