@@ -120,7 +120,7 @@ void AudioRendererImpl::Shutdown() {
 
   // Make sure we have left the set of active AudioRenderers.
   if (InContainer()) {
-    owner_->GetDeviceManager().RemoveAudioRenderer(this);
+    owner_->device_manager().RemoveAudioRenderer(this);
   }
 }
 
@@ -411,7 +411,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   // AudioRenderers, and notifying users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
-  owner_->GetDeviceManager().SelectOutputsForAudioRenderer(this);
+  owner_->device_manager().SelectOutputsForAudioRenderer(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.

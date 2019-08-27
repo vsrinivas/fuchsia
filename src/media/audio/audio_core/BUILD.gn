@@ -37,7 +37,7 @@ config_data("default_audio_policy") {
   ]
 }
 
-action_foreach("generate_schemas") {
+action_foreach("json_schema_headers") {
   visibility = [ ":*" ]
 
   script = "//src/media/audio/audio_core/schema/make_schema_header.py"
@@ -108,6 +108,10 @@ source_set("audio_core_lib") {
     "audio_device_manager.h",
     "audio_device_settings.cc",
     "audio_device_settings.h",
+    "audio_device_settings_json.cc",
+    "audio_device_settings_json.h",
+    "audio_device_settings_persistence.cc",
+    "audio_device_settings_persistence.h",
     "audio_driver.cc",
     "audio_driver.h",
     "audio_input.cc",
@@ -161,7 +165,7 @@ source_set("audio_core_lib") {
   ]
 
   deps = [
-    ":generate_schemas",
+    ":json_schema_headers",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/fidl/fuchsia.media",
@@ -206,6 +210,9 @@ executable("unittest_bin") {
   output_name = "audio_core_unittests"
 
   sources = [
+    "audio_device_settings_json_unittest.cc",
+    "audio_device_settings_persistence_unittest.cc",
+    "audio_device_settings_unittest.cc",
     "audio_link_packet_source_unittest.cc",
     "command_line_options_unittest.cc",
     "gain_curve_unittest.cc",

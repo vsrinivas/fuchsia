@@ -14,6 +14,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/audio_device_settings_persistence.h"
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/audio_plug_detector.h"
@@ -39,6 +40,10 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   // 3) Monitor for plug/unplug events for pluggable audio output devices.
   // 4) Load the device effects library.
   zx_status_t Init();
+
+  AudioDeviceSettingsPersistence& device_settings_persistence() {
+    return device_settings_persistence_;
+  }
 
   // Blocking call. Called by the service, once, when it is time to shutdown the service
   // implementation. While this function is blocking, it must never block for long. Our process is
@@ -126,26 +131,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
                           bool is_input) final;
 
  private:
-  // KeyTraits we use to sort our AudioDeviceSettings set to ensure uniqueness.
-  struct AudioDeviceSettingsKeyTraits {
-    static const AudioDeviceSettings* GetKey(const AudioDeviceSettings& obj) { return &obj; }
-
-    static bool LessThan(const AudioDeviceSettings* k1, const AudioDeviceSettings* k2) {
-      return (k1->is_input() && !k2->is_input()) ||
-             ((k1->is_input() == k2->is_input()) &&
-              (memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) < 0));
-    }
-
-    static bool EqualTo(const AudioDeviceSettings* k1, const AudioDeviceSettings* k2) {
-      return (k1->is_input() == k2->is_input()) &&
-             (memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) == 0);
-    }
-  };
-
-  using DeviceSettingsSet =
-      ::fbl::WAVLTree<const AudioDeviceSettings*, fbl::RefPtr<AudioDeviceSettings>,
-                      AudioDeviceSettingsKeyTraits>;
-
   // Find the most-recently plugged device (per type: input or output) excluding throttle_output. If
   // allow_unplugged, return the most-recently UNplugged device if no plugged devices are found --
   // otherwise return nullptr.
@@ -170,10 +155,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
 
   void LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& device);
 
-  // Commit any pending device-settings changes to disk (if settings are disk-backed), then remove
-  // the settings from our persisted_device_settings_ map.
-  void FinalizeDeviceSettings(const AudioDevice& device);
-
   // Send notification to users that this device's gain settings have changed.
   void NotifyDeviceGainChanged(const AudioDevice& device);
 
@@ -184,12 +165,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   //
   // TODO(johngro): Remove this when we remove system gain entirely.
   void UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>& device);
-
-  // Commit any dirty settings to storage, (re)scheduling the timer as needed.
-  void CommitDirtySettings();
-  void CommitDirtySettingsThunk(async_dispatcher_t*, async::TaskBase*, zx_status_t) {
-    CommitDirtySettings();
-  }
 
   async_dispatcher_t* dispatcher_;
 
@@ -219,10 +194,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;
 
-  // The unique AudioDeviceSettings subset we track that needs disk-persistence.
-  DeviceSettingsSet persisted_device_settings_;
-  async::TaskMethod<AudioDeviceManager, &AudioDeviceManager::CommitDirtySettingsThunk>
-      commit_settings_task_{this};
+  AudioDeviceSettingsPersistence device_settings_persistence_;
 
   EffectsLoader effects_loader_;
 };

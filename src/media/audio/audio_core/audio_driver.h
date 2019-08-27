@@ -27,6 +27,20 @@ namespace media::audio {
 
 class AudioOutput;
 
+struct HwGainState {
+  // TODO(johngro): when driver interfaces move to FIDL, just change this to match the fidl
+  // structure returned from a GetGain request by the driver.
+  bool cur_mute;
+  bool cur_agc;
+  float cur_gain;
+
+  bool can_mute;
+  bool can_agc;
+  float min_gain;
+  float max_gain;
+  float gain_step;
+};
+
 class AudioDriver {
  public:
   enum class State {
@@ -49,20 +63,6 @@ class AudioDriver {
     uint32_t position_to_end_fence_frames;
     uint32_t end_fence_to_start_fence_frames;
     uint32_t gen_id;
-  };
-
-  struct HwGainState {
-    // TODO(johngro): when driver interfaces move to FIDL, just change this to match the fidl
-    // structure returned from a GetGain request by the driver.
-    bool cur_mute;
-    bool cur_agc;
-    float cur_gain;
-
-    bool can_mute;
-    bool can_agc;
-    float min_gain;
-    float max_gain;
-    float gain_step;
   };
 
   AudioDriver(AudioDevice* owner);
