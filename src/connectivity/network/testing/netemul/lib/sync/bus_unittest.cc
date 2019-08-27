@@ -36,7 +36,7 @@ class BusTest : public TestWithEnvironment {
     fuchsia::sys::EnvironmentPtr parent_env;
     real_services()->Connect(parent_env.NewRequest());
 
-    svc_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    svc_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<SyncManager>(svc_loop_->dispatcher());
 

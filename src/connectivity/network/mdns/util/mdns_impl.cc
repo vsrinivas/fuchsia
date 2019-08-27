@@ -5,6 +5,7 @@
 #include "src/connectivity/network/mdns/util/mdns_impl.h"
 
 #include <fuchsia/net/mdns/cpp/fidl.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <poll.h>

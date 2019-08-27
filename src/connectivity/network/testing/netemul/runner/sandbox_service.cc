@@ -132,7 +132,7 @@ fidl::InterfaceRequestHandler<fuchsia::netemul::sandbox::Sandbox> SandboxService
     // service in each test in a rust create test suite. Rust crate tests
     // run in parallel, so enclosing each binding in its own thread will
     // makes a bit more sense to service everything independently.
-    auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
     fuchsia::sys::EnvironmentPtr env;
     fuchsia::sys::EnvironmentControllerPtr env_ctlr;

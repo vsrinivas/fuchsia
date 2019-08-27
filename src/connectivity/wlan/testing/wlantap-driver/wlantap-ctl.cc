@@ -11,6 +11,7 @@
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <wlan/common/channel.h>
 #include <zircon/fidl.h>
@@ -27,7 +28,7 @@ class WlantapDriver {
   zx_status_t GetOrStartLoop(async_dispatcher_t** out) {
     std::lock_guard<std::mutex> guard(mutex_);
     if (!loop_) {
-      auto l = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      auto l = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       zx_status_t status = l->StartThread("wlantap-loop");
       if (status != ZX_OK) {
         return status;

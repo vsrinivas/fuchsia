@@ -24,7 +24,7 @@ zx_status_t Device::Init(zx_device_t* phy_device, zx_device_t* parent_device,
                          BusRegisterFn bus_register_fn) {
   zx_status_t status = ZX_OK;
 
-  auto dispatcher = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  auto dispatcher = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   if ((status = dispatcher->StartThread("brcmfmac-worker", nullptr)) != ZX_OK) {
     return status;
   }

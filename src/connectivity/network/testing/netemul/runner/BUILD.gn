@@ -70,6 +70,7 @@ source_set("src") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/zx",
@@ -99,6 +100,7 @@ executable("bin") {
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/memfs-cpp",
   ]
 }
@@ -127,6 +129,7 @@ executable("sandbox_unittest") {
     "//third_party/rapidjson",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs-cpp",
   ]

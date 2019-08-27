@@ -27,6 +27,7 @@ driver_module("wlantap_driver") {
     "//zircon/public/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",

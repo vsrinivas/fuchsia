@@ -4,6 +4,7 @@
 
 #include <fuchsia/net/mdns/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -264,7 +265,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 

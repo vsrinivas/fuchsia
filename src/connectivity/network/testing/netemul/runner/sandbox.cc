@@ -78,7 +78,7 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
     return;
   }
 
-  helper_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  helper_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   if (helper_loop_->StartThread("helper-thread") != ZX_OK) {
     Terminate(SandboxResult::Status::INTERNAL_ERROR, "Can't start config thread");
     return;

@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zircon/status.h>
 
 #include "device.h"
@@ -17,7 +18,7 @@
 static async::Loop* loop = nullptr;
 
 zx_status_t wlanphy_init(void** out_ctx) {
-  loop = new async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  loop = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = loop->StartThread("wlanphy-loop");
   if (status != ZX_OK) {
     zxlogf(ERROR, "wlanphy: could not create event loop: %s\n", zx_status_get_string(status));

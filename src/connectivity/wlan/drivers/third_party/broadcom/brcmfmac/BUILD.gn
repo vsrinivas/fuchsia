@@ -115,6 +115,7 @@ source_set("core") {
     "//zircon/public/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/system/public",

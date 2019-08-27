@@ -10,6 +10,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <memory>
 
@@ -21,7 +22,7 @@ static async::Loop* loop = nullptr;
 
 zx_status_t wlanphy_test_init(void** out_ctx) {
   zxlogf(INFO, "%s\n", __func__);
-  loop = new async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  loop = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = loop->StartThread("wlan-test-loop");
   if (status != ZX_OK) {
     zxlogf(ERROR, "wlanphy_test: could not create event loop: %d\n", status);

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <iomanip>
 #include <iostream>
@@ -68,7 +69,7 @@ class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
 // Constructs an |MdnsInterfaceTransceiverTest| and checks the values of its
 // identifying properties.
 TEST(InterfaceTransceiverTest, Construct) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
   uint32_t nic_index = 1234;
@@ -82,7 +83,7 @@ TEST(InterfaceTransceiverTest, Construct) {
 
 // Sends a message containing no A or AAAA resources.
 TEST(InterfaceTransceiverTest, SendSimpleMessage) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
   uint32_t nic_index = 1234;
@@ -122,7 +123,7 @@ TEST(InterfaceTransceiverTest, SendSimpleMessage) {
 
 // Sends a message containing a leading A resource.
 TEST(InterfaceTransceiverTest, SendLeadingA) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
   uint32_t nic_index = 1234;
@@ -171,7 +172,7 @@ TEST(InterfaceTransceiverTest, SendLeadingA) {
 
 // Sends a message containing leading A and AAAA resources.
 TEST(InterfaceTransceiverTest, SendLeadingAAndAAAA) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
   uint32_t nic_index = 1234;
@@ -223,7 +224,7 @@ TEST(InterfaceTransceiverTest, SendLeadingAAndAAAA) {
 
 // Sends a message containing trailing A and AAAA resources.
 TEST(InterfaceTransceiverTest, SendTrailingAAndAAAA) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
   uint32_t nic_index = 1234;
@@ -275,7 +276,7 @@ TEST(InterfaceTransceiverTest, SendTrailingAAndAAAA) {
 
 // Sends a message containing bracketing A and AAAA resources.
 TEST(InterfaceTransceiverTest, SendBracketingAAndAAAA) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   std::string nic_name = "testnic";
   uint32_t nic_index = 1234;
@@ -327,7 +328,7 @@ TEST(InterfaceTransceiverTest, SendBracketingAAndAAAA) {
 
 // Sends a message containing a leading A resource with alternate address.
 TEST(InterfaceTransceiverTest, SendLeadingAWithAlternate) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   inet::IpAddress nic_address(1, 2, 3, 4);
   inet::IpAddress alternate_address(1, 2);
   std::string nic_name = "testnic";

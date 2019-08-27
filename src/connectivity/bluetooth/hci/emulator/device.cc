@@ -74,7 +74,7 @@ fuchsia::bluetooth::AddressType LeOwnAddressTypeToFidl(bt::hci::LEOwnAddressType
 }  // namespace
 
 Device::Device(zx_device_t* device)
-    : loop_(&kAsyncLoopConfigNoAttachToThread),
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       parent_(device),
       hci_dev_(nullptr),
       emulator_dev_(nullptr),

@@ -27,6 +27,7 @@ all_deps = [
   "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
   "//zircon/public/lib/async-cpp",
   "//zircon/public/lib/async-loop-cpp",
+  "//zircon/public/lib/async-loop-default",
   "//zircon/public/lib/ddk",
   "//zircon/public/lib/driver",
 ]

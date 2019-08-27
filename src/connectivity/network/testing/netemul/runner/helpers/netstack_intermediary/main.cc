@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/logger.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
@@ -29,7 +30,7 @@ int main(int argc, char** argv) {
   std::string network_name;
   command_line.GetOptionValue("network", &network_name);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
   NetstackIntermediary netstack_intermediary(std::move(network_name));
   loop.Run();

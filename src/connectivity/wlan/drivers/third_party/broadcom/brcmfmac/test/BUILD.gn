@@ -72,6 +72,7 @@ executable("sdio_test") {
     "//zircon/public/banjo/ddk.protocol.sdio",
     "//zircon/public/banjo/ddk.protocol.sdio:ddk.protocol.sdio_mock",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake_ddk",

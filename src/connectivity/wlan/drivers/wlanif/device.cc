@@ -25,7 +25,7 @@ namespace wlan_stats = ::fuchsia::wlan::stats;
 Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
     : parent_(device),
       wlanif_impl_(wlanif_impl_proto),
-      loop_(&kAsyncLoopConfigNoAttachToThread),
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       binding_(this) {
   debugfn();
 }

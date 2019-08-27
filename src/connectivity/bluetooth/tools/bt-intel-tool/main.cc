@@ -5,6 +5,7 @@
 #include <ddk/driver.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <sys/stat.h>
 
 #include <cstdio>
@@ -58,7 +59,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   CommandChannel channel(hci_dev_path);
 
   bluetooth_tools::CommandDispatcher dispatcher;

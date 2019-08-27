@@ -22,5 +22,6 @@ executable("bt-le-heart-rate-peripheral") {
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

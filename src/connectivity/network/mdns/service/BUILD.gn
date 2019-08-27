@@ -39,6 +39,7 @@ executable("bin") {
   deps = [
     ":source_set",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -133,6 +134,7 @@ test("tests") {
     ":source_set",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -221,6 +223,7 @@ executable("mdns_netemul_test_agent") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

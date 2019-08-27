@@ -7,6 +7,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/promise.h>
 #include <src/connectivity/network/testing/netemul/lib/network/netdump.h>

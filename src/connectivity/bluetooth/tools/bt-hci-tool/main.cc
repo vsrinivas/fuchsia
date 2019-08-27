@@ -6,6 +6,7 @@
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <sys/stat.h>
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
   // Make sure the HCI Transport gets shut down cleanly upon exit.
   auto ac = fit::defer([&hci] { hci->ShutDown(); });
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   bluetooth_tools::CommandDispatcher dispatcher;
   hcitool::CommandData cmd_data(hci->command_channel(), loop.dispatcher());

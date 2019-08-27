@@ -30,6 +30,7 @@ driver_module("wlanphy-testdev") {
     "//zircon/public/banjo/ddk.protocol.wlanphy",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",

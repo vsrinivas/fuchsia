@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include "src/lib/fxl/command_line.h"
 
@@ -12,7 +13,7 @@ int main(int argc, char* argv[]) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   bool just_tilts = command_line.HasOption("tilt");
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   bt_beacon_reader::App app(&loop, just_tilts);
 

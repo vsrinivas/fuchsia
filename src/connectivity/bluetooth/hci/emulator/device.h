@@ -8,6 +8,7 @@
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
