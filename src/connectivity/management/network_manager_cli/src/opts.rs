@@ -12,7 +12,7 @@ use fidl_fuchsia_router_config::{CidrAddress, Id};
 use std::convert::TryInto;
 use std::net::Ipv4Addr;
 use std::str::FromStr;
-use structopt::StructOpt;
+pub use structopt::StructOpt;
 
 // Custom parser used for creating interface identifiers
 fn construct_id(src: &str) -> Result<Id, Error> {
