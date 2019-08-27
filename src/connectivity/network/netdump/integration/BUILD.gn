@@ -13,6 +13,7 @@ group("tests") {
     "basic_integration",
     "filter_integration",
     "helper",
+    "pcapng_format",
   ]
 }
 
@@ -20,6 +21,7 @@ group("tests") {
 group("netemul_empty_binaries") {
   write_file("$root_out_dir/basic_integration_test", "")
   write_file("$root_out_dir/filter_integration_test", "")
+  write_file("$root_out_dir/pcapng_format_test", "")
 }
 
 test_package("netdump_integration_tests") {
@@ -28,6 +30,7 @@ test_package("netdump_integration_tests") {
     "basic_integration",
     "filter_integration",
     "helper:helper_test",
+    "pcapng_format",
     "//src/connectivity/network/netdump",
     "//src/connectivity/network/testing/netemul/runner:netemul_sandbox",
   ]
@@ -45,6 +48,10 @@ test_package("netdump_integration_tests") {
       path = rebase_path("meta/helper.cmx")
       dest = "helper.cmx"
     },
+    {
+      path = rebase_path("meta/pcapng_format.cmx")
+      dest = "pcapng_format.cmx"
+    },
   ]
 
   binaries = [
@@ -53,6 +60,9 @@ test_package("netdump_integration_tests") {
     },
     {
       name = "filter_integration"
+    },
+    {
+      name = "pcapng_format"
     },
   ]
 
@@ -68,6 +78,10 @@ test_package("netdump_integration_tests") {
     {
       name = "helper_lib_test"
       dest = "helper_test"
+      environments = [ nuc_env ]
+    },
+    {
+      name = "pcapng_format_test"
       environments = [ nuc_env ]
     },
   ]

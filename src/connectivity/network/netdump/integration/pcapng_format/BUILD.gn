@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("pcapng_format") {
+  edition = "2018"
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/packet",
+    "//garnet/public/rust/zerocopy",
+    "//src/connectivity/lib/net-types",
+    "//src/connectivity/network/netdump/integration/helper",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}

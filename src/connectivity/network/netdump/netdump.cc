@@ -43,15 +43,21 @@ static constexpr int64_t DEFAULT_TIMEOUT_SECONDS = 60;
 
 namespace netdump {
 
+enum class PrintFormat {
+  LOG,
+  HEXDUMP,
+  PCAPNG,
+};
+
 class NetdumpOptions {
  public:
   std::string device;
-  bool raw = false;
+  PrintFormat print_format = PrintFormat::LOG;
   bool link_level = false;
   bool promisc = false;
   std::optional<uint64_t> packet_count = std::nullopt;
   size_t verbose_level = 0;
-  int dumpfile = 0;
+  int dumpfile_fd = -1;
   zx::time timeout_deadline = zx::time::infinite();
   Tokenizer tokenizer{};
   parser::Parser parser{tokenizer};
@@ -372,10 +378,11 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
                const NetdumpOptions& options) {
   eth_fifo_entry_t entries[count];
 
-  if (write_shb(options.dumpfile)) {
-    return;
-  }
-  if (write_idb(options.dumpfile)) {
+  bool dumpfile_write_error =
+      write_shb(options.dumpfile_fd) < 0 || write_idb(options.dumpfile_fd) < 0;
+  bool livedump_write_error = (options.print_format == PrintFormat::PCAPNG) &&
+                              (write_shb(STDOUT_FILENO) < 0 || write_idb(STDOUT_FILENO) < 0);
+  if (dumpfile_write_error || livedump_write_error) {
     return;
   }
 
@@ -403,21 +410,47 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
       if (e->flags & ETH_FIFO_RX_OK) {
         void* buffer = iobuf + e->offset;
         uint16_t length = e->length;
-        bool do_write = true;  // Whether the packet is included for write-out.
+        bool do_write = true;  // Whether the packet is included for write-out to dumpfile.
         packet.populate(buffer, length);
         if (packet.frame == nullptr) {
-          std::cout << "Packet size (" << length << ") too small for Ethernet headers" << std::endl;
-          if (options.verbose_level == 2) {
-            hexdump8_ex(buffer, length, 0);
+          // Not setting `do_write` to false in order to record small frames.
+          switch (options.print_format) {
+            case PrintFormat::LOG:
+              [[fallthrough]];
+            case PrintFormat::HEXDUMP:
+              std::cout << "Packet size (" << length << ") too small for Ethernet headers"
+                        << std::endl;
+              if (options.verbose_level == 2 || options.print_format == PrintFormat::HEXDUMP) {
+                hexdump8_very_ex(buffer, length, 0, hexdump_stdio_printf, stdout);
+              }
+              break;
+            case PrintFormat::PCAPNG:
+              if (write_packet(STDOUT_FILENO, buffer, length) < 0) {
+                return;
+              }
+              break;
+            default:
+              ZX_ASSERT_MSG(false, "Unknown print format.");
+              break;
           }
-          // Not setting `write` to false in order to record small frames.
         } else {
           if (filter_packet(options, &packet)) {
-            if (options.raw) {
-              std::cout << "---" << std::endl;
-              hexdump8_ex(buffer, length, 0);
-            } else {
-              parse_packet(packet, options);
+            switch (options.print_format) {
+              case PrintFormat::LOG:
+                parse_packet(packet, options);
+                break;
+              case PrintFormat::HEXDUMP:
+                std::cout << "---" << std::endl;
+                hexdump8_very_ex(buffer, length, 0, hexdump_stdio_printf, stdout);
+                break;
+              case PrintFormat::PCAPNG:
+                if (write_packet(STDOUT_FILENO, buffer, length) < 0) {
+                  return;
+                }
+                break;
+              default:
+                ZX_ASSERT_MSG(false, "Unknown print format.");
+                break;
             }
             --packets_remaining;
           } else {
@@ -425,7 +458,7 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
           }
         }
 
-        if (do_write && write_packet(options.dumpfile, buffer, length)) {
+        if (do_write && (write_packet(options.dumpfile_fd, buffer, length) < 0)) {
           return;
         }
 
@@ -445,21 +478,25 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count,
 }
 
 int usage() {
+  // clang-format off
   std::cerr << "usage: netdump [ <option>* ] <network-device>" << std::endl
-            << " -t {sec}  : Exit after sec seconds, default " << DEFAULT_TIMEOUT_SECONDS
+            << " -t {sec}      : Exit after sec seconds, default " << DEFAULT_TIMEOUT_SECONDS
             << std::endl
-            << " -w file   : Write packet output to file in pcapng format" << std::endl
-            << " -c count  : Exit after receiving count packets" << std::endl
-            << " -e        : Print link-level header information" << std::endl
-            << " -f filter : Capture only packets specified by filter" << std::endl
-            << " -i filter : Highlight packets specified by filter" << std::endl
-            << " -p        : Use promiscuous mode" << std::endl
-            << " -v        : Print verbose output" << std::endl
-            << " -vv       : Print extra verbose output" << std::endl
-            << " --raw     : Print raw bytes of all incoming packets" << std::endl
-            << " --fhelp   : Show filter syntax usage" << std::endl
-            << " --help    : Show this help message" << std::endl
+            << " -w file       : Write packet output to file in pcapng format" << std::endl
+            << " -c count      : Exit after receiving count packets" << std::endl
+            << " -e            : Print link-level header information" << std::endl
+            << " -f filter     : Capture only packets specified by filter" << std::endl
+            << " -i filter     : Highlight packets specified by filter" << std::endl
+            << " -p            : Use promiscuous mode" << std::endl
+            << " -v            : Print verbose output" << std::endl
+            << " -vv           : Print extra verbose output" << std::endl
+            << " --pcapdump    : Print packet output in pcapng format, "
+            << "can be combined with -w" << std::endl
+            << " --hexdump     : Print packet output in hexdump format" << std::endl
+            << " --help-filter : Show filter syntax usage" << std::endl
+            << " --help        : Show this help message" << std::endl
             << "Filter syntax usage:" << std::endl;
+  // clang-format on
   parser::parser_syntax(&std::cerr);
   return -1;
 }
@@ -496,7 +533,7 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
       parser::FilterTreeBuilder builder(options->tokenizer);
       auto parsed = options->parser.parse(*begin, &builder);
       if (auto error = std::get_if<parser::ParseError>(&parsed)) {
-        std::cerr << *error << "Use '--fhelp' to see the filter syntax." << std::endl;
+        std::cerr << *error << "Use '--help-filter' to see the filter syntax." << std::endl;
         return -1;
       }
       if (arg == "-f") {
@@ -508,11 +545,11 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
       options->promisc = true;
     } else if (arg == "-w") {
       ++begin;
-      if (begin == end || options->dumpfile != -1) {
+      if (begin == end || options->dumpfile_fd != -1) {
         return usage();
       }
-      options->dumpfile = open(begin->c_str(), O_WRONLY | O_CREAT);
-      if (options->dumpfile < 0) {
+      options->dumpfile_fd = open(begin->c_str(), O_WRONLY | O_CREAT);
+      if (options->dumpfile_fd < 0) {
         std::cerr << "Error: Could not output to file: " << *begin << std::endl;
         return usage();
       }
@@ -521,8 +558,10 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
     } else if (!arg.compare(0, sizeof("-vv"), "-vv")) {
       // Since this is the max verbosity, adding extra 'v's does nothing.
       options->verbose_level = 2;
-    } else if (arg == "--raw") {
-      options->raw = true;
+    } else if (arg == "--hexdump") {
+      options->print_format = PrintFormat::HEXDUMP;
+    } else if (arg == "--pcapdump") {
+      options->print_format = PrintFormat::PCAPNG;
     } else if (arg == "-t") {
       int64_t timeout_seconds = DEFAULT_TIMEOUT_SECONDS;
       if (begin < end - 1) {
@@ -543,7 +582,7 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
     }
   }
 
-  if (last == "--fhelp") {
+  if (last == "--help-filter") {
     parser::parser_syntax(&std::cerr);
     return -1;
   }
@@ -559,7 +598,6 @@ int parse_args(StringIterator begin, StringIterator end, NetdumpOptions* options
 
 int main(int argc, const char** argv) {
   netdump::NetdumpOptions options;
-  options.dumpfile = -1;
   std::vector<std::string> args(argv + 1, argv + argc);
   if (parse_args(args.begin(), args.end(), &options)) {
     return -1;
@@ -649,8 +687,8 @@ int main(int argc, const char** argv) {
   handle_rx(rx_fifo, iobuf, count, options);
 
   zx_handle_close(rx_fifo.get());
-  if (options.dumpfile != -1) {
-    close(options.dumpfile);
+  if (options.dumpfile_fd != -1) {
+    close(options.dumpfile_fd);
   }
   return 0;
 }

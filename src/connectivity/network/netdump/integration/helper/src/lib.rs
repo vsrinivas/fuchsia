@@ -93,6 +93,11 @@ impl Args {
     pub fn insert_write_to_dumpfile(self, path: &str) -> Self {
         self.insert_arg("-w".into()).insert_arg(format!("{}/{}", DUMPFILE_DIR, path))
     }
+
+    /// Helper method for inserting a pcapng dump to stdout argument.
+    pub fn insert_pcapng_dump_to_stdout(self) -> Self {
+        self.insert_arg("--pcapdump".into())
+    }
 }
 
 #[derive(Copy, Clone)]
