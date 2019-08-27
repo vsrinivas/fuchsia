@@ -40,12 +40,8 @@ zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> aspace, user_out_ptr<zx_info_v
 // been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-// Requires that the caller hold the |process->handle_table_lock()| so it can
-// call ForEachHandleLocked. Pushing locking into the caller allows the caller
-// to resolve any lock ordering issues.
-zx_status_t GetProcessVmosLocked(const ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos,
-                                 size_t max, size_t* actual, size_t* available)
-    TA_REQ_SHARED(process->handle_table_lock());
+zx_status_t GetProcessVmos(ProcessDispatcher* process, user_out_ptr<zx_info_vmo_t> vmos, size_t max,
+                           size_t* actual, size_t* available);
 
 // Prints (with the supplied prefix) the number of mapped, committed bytes for
 // each process in the system whose page count > |min_pages|. Does not take

@@ -21,6 +21,7 @@
 #include <kernel/brwlock.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
+#include <ktl/array.h>
 #include <object/dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/futex_context.h>
@@ -203,6 +204,31 @@ class ProcessDispatcher final
     return ZX_OK;
   }
 
+  // Iterates over every handle owned by this process and calls |func| on each one.
+  //
+  // Returns the error returned by |func| or ZX_OK if iteration completed without error.  Upon
+  // error, iteration stops.
+  //
+  // |func| should match: |zx_status_t func(zx_handle_t, zx_rights_t, const Dispatcher*)|
+  //
+  // This method differs from ForEachHandle in that it does not hold the handle table lock for the
+  // duration.  Instead, it iterates over handles in batches in order to minimize the length of time
+  // the handle table lock is held.
+  //
+  // While the method acquires the handle table lock it does not hold the lock while calling |func|.
+  // In other words, the iteration over the handle table is not atomic.  This means that the set of
+  // handles |func| "sees" may be different from the set held by the process at the start or end of
+  // the call.
+  //
+  // Handles being added or removed concurrent with |ForEachHandleBatched| may or may not be
+  // observed by |func|.
+  //
+  // A Handle observed by |func| may or may not be owned by the process at the moment |func| is
+  // invoked, however, it is guaranteed it was held at some point between the invocation of this
+  // method and |func|.
+  template <typename Func>
+  zx_status_t ForEachHandleBatched(Func&& func);
+
   // accessors
   Lock<BrwLockPi>* handle_table_lock() const TA_RET_CAP(handle_table_lock_) {
     return &handle_table_lock_;
@@ -236,7 +262,7 @@ class ProcessDispatcher final
   zx_status_t GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, size_t max, size_t* actual,
                             size_t* available) const;
   zx_status_t GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t max, size_t* actual,
-                      size_t* available) const;
+                      size_t* available);
 
   zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads) const;
 
@@ -305,6 +331,43 @@ class ProcessDispatcher final
   }
 
  private:
+  // HandleCursor is used to reduce the lock duration while iterate over the handle table.
+  //
+  // It allows iteration over the handle table to be broken up into multiple critical sections.
+  class HandleCursor : public fbl::DoublyLinkedListable<HandleCursor*> {
+   public:
+    explicit HandleCursor(ProcessDispatcher* process);
+    ~HandleCursor();
+
+    // Invalidate this cursor.
+    //
+    // Once invalidated |Next| will return nullptr and |AdvanceIf| will be a no-op.
+    //
+    // The caller must hold the |handle_table_lock_| in Writer mode.
+    void Invalidate() TA_REQ(&handle_table_lock_);
+
+    // Advance the cursor and return the next Handle or nullptr if at the end of the list.
+    //
+    // Once |Next| has returned nullptr, all subsequent calls will return nullptr.
+    //
+    // The caller must hold the |handle_table_lock_| in Reader mode.
+    Handle* Next() TA_REQ_SHARED(&handle_table_lock_);
+
+    // If the next element is |h|, advance the cursor past it.
+    //
+    // The caller must hold the |handle_table_lock_| in Writer mode.
+    void AdvanceIf(const Handle* h) TA_REQ(&handle_table_lock_);
+
+   private:
+    HandleCursor(const HandleCursor&) = delete;
+    HandleCursor& operator=(const HandleCursor&) = delete;
+    HandleCursor(HandleCursor&&) = delete;
+    HandleCursor& operator=(HandleCursor&&) = delete;
+
+    ProcessDispatcher* const process_;
+    fbl::DoublyLinkedList<Handle*>::iterator iter_ TA_GUARDED(&handle_table_lock_);
+  };
+
   // compute the vdso code address and store in vdso_code_address_
   uintptr_t cache_vdso_code_address();
 
@@ -360,9 +423,13 @@ class ProcessDispatcher final
   // our address space
   fbl::RefPtr<VmAspace> aspace_;
 
-  // our list of handles
-  mutable DECLARE_BRWLOCK_PI(ProcessDispatcher) handle_table_lock_;  // protects |handles_|.
+  // Protects |handles_| and handle_cursors_.
+  mutable DECLARE_BRWLOCK_PI(ProcessDispatcher) handle_table_lock_;
+  // This process's handle table.  When removing one or more handles from this list, be sure to
+  // advance or invalidate any cursors that might point to the handles being removed.
   fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
+  // A list of cursors that contain pointers to elements of handles_.
+  fbl::DoublyLinkedList<HandleCursor*> handle_cursors_ TA_GUARDED(handle_table_lock_);
 
   FutexContext futex_context_;
 
@@ -398,5 +465,53 @@ class ProcessDispatcher final
 };
 
 const char* StateToString(ProcessDispatcher::State state);
+
+template <typename Func>
+zx_status_t ProcessDispatcher::ForEachHandleBatched(Func&& func) {
+  HandleCursor cursor(this);
+
+  bool done = false;
+  while (!done) {
+    struct Args {
+      zx_handle_t handle_value;
+      zx_rights_t desired_rights;
+      // Use a RefPtr to ensure the dispatcher isn't destroyed out from under |func|.
+      fbl::RefPtr<const Dispatcher> dispatcher;
+    };
+    // The smaller this value is, the more we'll acquire/release the handle table lock.  The larger
+    // it is, the longer the duration we'll hold the lock.  This value also impacts the required
+    // stack size.
+    static constexpr size_t kMaxBatchSize = 64;
+    ktl::array<Args, kMaxBatchSize> batch{};
+
+    // Don't use too much stack space.  The limit here is somewhat arbitrary.
+    static_assert(sizeof(batch) <= 1024);
+
+    // Gather a batch of arguments while holding the handle table lock.
+    size_t count = 0;
+    {
+      Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
+      for (; count < kMaxBatchSize; ++count) {
+        Handle* handle = cursor.Next();
+        if (!handle) {
+          done = true;
+          break;
+        }
+        batch[count] = {MapHandleToValue(handle), handle->rights(), handle->dispatcher()};
+      }
+    }
+
+    // Now that we have a batch of handles, call |func| on each one.
+    for (size_t i = 0; i < count; ++i) {
+      zx_status_t status = ktl::forward<Func>(func)(batch[i].handle_value, batch[i].desired_rights,
+                                                    batch[i].dispatcher.get());
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+  }
+
+  return ZX_OK;
+}
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PROCESS_DISPATCHER_H_

@@ -415,6 +415,9 @@ void ProcessDispatcher::FinishDeadTransition() {
   fbl::DoublyLinkedList<Handle*> to_clean;
   {
     Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_lock_};
+    for (auto& cursor : handle_cursors_) {
+      cursor.Invalidate();
+    }
     for (auto& handle : handles_) {
       handle.set_process_id(ZX_KOID_INVALID);
     }
@@ -491,6 +494,11 @@ void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
 
 HandleOwner ProcessDispatcher::RemoveHandleLocked(Handle* handle) {
   handle->set_process_id(ZX_KOID_INVALID);
+  // Make sure we don't leave any dangling cursors.
+  for (auto& cursor : handle_cursors_) {
+    // If it points to |handle|, skip over it.
+    cursor.AdvanceIf(handle);
+  }
   handles_.erase(*handle);
   return HandleOwner(handle);
 }
@@ -601,22 +609,20 @@ zx_status_t ProcessDispatcher::GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, 
 }
 
 zx_status_t ProcessDispatcher::GetVmos(user_out_ptr<zx_info_vmo_t> vmos, size_t max,
-                                       size_t* actual_out, size_t* available_out) const {
-  // We need the handle_table_lock for |GetProcessVmosLocked|, but we must also acquire it
-  // before acquiring |get_lock()|.
-  Guard<BrwLockPi, BrwLockPi::Reader> handle_table_guard{handle_table_lock()};
-  Guard<fbl::Mutex> guard{get_lock()};
-  if (state_ != State::RUNNING) {
-    return ZX_ERR_BAD_STATE;
+                                       size_t* actual_out, size_t* available_out) {
+  {
+    Guard<fbl::Mutex> guard{get_lock()};
+    if (state_ != State::RUNNING) {
+      return ZX_ERR_BAD_STATE;
+    }
   }
+
   size_t actual = 0;
   size_t available = 0;
-  zx_status_t s = GetProcessVmosLocked(this, vmos, max, &actual, &available);
+  zx_status_t s = GetProcessVmos(this, vmos, max, &actual, &available);
   if (s != ZX_OK) {
     return s;
   }
-  // Done with the handle table lock now that we've called |GetProcessVmosLocked|
-  handle_table_guard.Release();
 
   size_t actual2 = 0;
   size_t available2 = 0;
@@ -893,5 +899,44 @@ void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher* t,
     }
 
     job = job->parent();
+  }
+}
+
+ProcessDispatcher::HandleCursor::HandleCursor(ProcessDispatcher* process) : process_(process) {
+  Guard<BrwLockPi, BrwLockPi::Writer> guard{&process_->handle_table_lock_};
+  if (!process_->handles_.is_empty()) {
+    iter_ = process_->handles_.begin();
+  } else {
+    iter_ = process_->handles_.end();
+  }
+
+  // Register so this cursor can be invalidated or advanced if the handle it points to is removed.
+  process_->handle_cursors_.push_front(this);
+}
+
+ProcessDispatcher::HandleCursor::~HandleCursor() {
+  Guard<BrwLockPi, BrwLockPi::Writer> guard{&process_->handle_table_lock_};
+  process_->handle_cursors_.erase(*this);
+}
+
+void ProcessDispatcher::HandleCursor::Invalidate() {
+  iter_ = process_->handles_.end();
+}
+
+Handle* ProcessDispatcher::HandleCursor::Next() {
+  if (iter_ == process_->handles_.end()) {
+    return nullptr;
+  }
+
+  Handle* result = &*iter_;
+  iter_++;
+  return result;
+}
+
+void ProcessDispatcher::HandleCursor::AdvanceIf(const Handle* h) {
+  if (iter_ != process_->handles_.end()) {
+    if (&*iter_ == h) {
+      iter_++;
+    }
   }
 }
