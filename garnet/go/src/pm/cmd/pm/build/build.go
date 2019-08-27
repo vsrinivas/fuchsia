@@ -74,7 +74,7 @@ func Run(cfg *build.Config, args []string) error {
 	}
 
 	if *blobsfile {
-		content, err := json.Marshal(blobs)
+		content, err := json.MarshalIndent(blobs, "", "    ")
 		if err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func Run(cfg *build.Config, args []string) error {
 		if err != nil {
 			return err
 		}
-		content, err := json.Marshal(pkgManifest)
+		content, err := json.MarshalIndent(pkgManifest, "", "    ")
 		if err != nil {
 			return err
 		}

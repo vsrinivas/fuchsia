@@ -159,7 +159,9 @@ func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 		return err
 	}
 
-	if err := json.NewEncoder(f).Encode(blobs); err != nil {
+	encoder := json.NewEncoder(f)
+	encoder.SetIndent("", "    ")
+	if err := encoder.Encode(blobs); err != nil {
 		f.Close()
 		return err
 	}
@@ -171,7 +173,7 @@ func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 		Package: *p,
 		Blobs:   blobs,
 	}
-	content, err := json.Marshal(pkgManifest)
+	content, err := json.MarshalIndent(pkgManifest, "", "    ")
 	if err != nil {
 		return err
 	}
