@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"go.fuchsia.dev/tools/build"
@@ -164,6 +165,7 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 // This function serves to emulate zero-state, and will eventually be superseded by an
 // infra implementation.
 func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image) error {
+	netsvcName := kernelNetsvcName
 	zirconRImg := build.Image{}
 	for _, img := range imgs {
 		for _, arg := range img.PaveArgs {
@@ -176,6 +178,10 @@ func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image)
 			}
 			if name == zirconRNetsvcName {
 				zirconRImg = img
+				// Signed ZBIs cannot be mexec()'d, so pave them to A and boot instead.
+				if strings.HasSuffix(img.Name, ".signed") {
+					netsvcName = zirconANetsvcName
+				}
 				break
 			}
 		}
@@ -185,7 +191,7 @@ func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image)
 	}
 
 	if zirconRImg.Name != "" {
-		imgFile, err := openNetsvcFile(kernelNetsvcName, zirconRImg.Path)
+		imgFile, err := openNetsvcFile(netsvcName, zirconRImg.Path)
 		if err != nil {
 			return err
 		}
@@ -194,7 +200,10 @@ func BootZedbootShim(ctx context.Context, addr *net.UDPAddr, imgs []build.Image)
 			return err
 		}
 		n := netboot.NewClient(time.Second)
-		return n.Boot(addr)
+		if netsvcName == kernelNetsvcName {
+			return n.Boot(addr)
+		}
+		return n.Reboot(addr)
 	}
 
 	return fmt.Errorf("no zircon-r image found in: %v", imgs)
