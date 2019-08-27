@@ -6,6 +6,8 @@
 #![allow(dead_code)]
 
 use {
+    crate::accessibility::spawn_accessibility_controller,
+    crate::accessibility::spawn_accessibility_fidl_handler,
     crate::default_store::DefaultStore,
     crate::display::spawn_display_controller,
     crate::display::spawn_display_fidl_handler,
@@ -36,6 +38,7 @@ use {
     std::sync::{Arc, RwLock},
 };
 
+mod accessibility;
 mod common;
 mod default_store;
 mod display;
@@ -120,6 +123,22 @@ fn create_fidl_service<'a>(
         });
     });
 
+    if components.contains(&SettingType::Accessibility) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(
+                switchboard::base::SettingType::Accessibility,
+                spawn_accessibility_controller(service_context_handle.clone()),
+            )
+            .unwrap();
+
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {
+            spawn_accessibility_fidl_handler(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
     if components.contains(&SettingType::Display) {
         registry_handle
             .write()
@@ -186,14 +205,105 @@ mod tests {
     use super::*;
     use failure::format_err;
     use fidl::endpoints::{ServerEnd, ServiceMarker};
+    use fidl_fuchsia_accessibility::*;
     use fuchsia_zircon as zx;
     use futures::prelude::*;
 
     const ENV_NAME: &str = "settings_service_test_environment";
 
     enum Services {
+        Accessibility(AccessibilityRequestStream),
         Timezone(fidl_fuchsia_timezone::TimezoneRequestStream),
         Intl(IntlRequestStream),
+    }
+
+    // TODO(fxb/35254): move out of main.rs
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_accessibility() {
+        const INITIAL_AUDIO_DESCRIPTION: bool = false;
+        const CHANGED_AUDIO_DESCRIPTION: bool = true;
+
+        // Fake accessibility service for test.
+        let service_gen = move |service_name: &str, channel: zx::Channel| {
+            if service_name != SettingsManagerMarker::NAME {
+                return Err(format_err!("unsupported!"));
+            }
+
+            let stored_audio_description: Arc<RwLock<bool>> =
+                Arc::new(RwLock::new(INITIAL_AUDIO_DESCRIPTION.into()));
+
+            // Handle calls to RegisterSettingProvider.
+            let mut manager_stream =
+                ServerEnd::<SettingsManagerMarker>::new(channel).into_stream()?;
+            fasync::spawn(async move {
+                while let Some(req) = manager_stream.try_next().await.unwrap() {
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        SettingsManagerRequest::RegisterSettingProvider {
+                            settings_provider_request,
+                            control_handle: _,
+                        } => {
+                            let stored_audio_description_clone = stored_audio_description.clone();
+
+                            // Handle set calls on the provider that was registered.
+                            let mut provider_stream =
+                                settings_provider_request.into_stream().unwrap();
+                            fasync::spawn(async move {
+                                while let Some(req) = provider_stream.try_next().await.unwrap() {
+                                    #[allow(unreachable_patterns)]
+                                    match req {
+                                        SettingsProviderRequest::SetScreenReaderEnabled {
+                                            screen_reader_enabled,
+                                            responder,
+                                        } => {
+                                            *stored_audio_description_clone.write().unwrap() =
+                                                screen_reader_enabled;
+                                            responder.send(SettingsManagerStatus::Ok).unwrap();
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            });
+                        }
+                        _ => {}
+                    }
+                }
+            });
+
+            Ok(())
+        };
+
+        // Create the fake accessibility service.
+        let mut fs = ServiceFs::new();
+
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::Accessibility].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+        );
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
+
+        // Fetch the initial audio description value.
+        let accessibility_proxy = env.connect_to_service::<AccessibilityMarker>().unwrap();
+        let settings =
+            accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
+        assert_eq!(settings.audio_description, Some(INITIAL_AUDIO_DESCRIPTION));
+
+        // Set the audio description value.
+        let mut accessibility_settings = AccessibilitySettings::empty();
+        accessibility_settings.audio_description = Some(CHANGED_AUDIO_DESCRIPTION);
+        accessibility_proxy
+            .set(accessibility_settings)
+            .await
+            .expect("set completed")
+            .expect("set successful");
+
+        // Verify the value we set is returned when watching.
+        let settings =
+            accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
+        assert_eq!(settings.audio_description, Some(CHANGED_AUDIO_DESCRIPTION));
     }
 
     /// Tests that the FIDL calls result in appropriate commands sent to the switchboard

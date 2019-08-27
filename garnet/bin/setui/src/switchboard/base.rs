@@ -16,6 +16,7 @@ pub type SettingRequestResponder = Sender<SettingResponseResult>;
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
 pub enum SettingType {
     Unknown,
+    Accessibility,
     Display,
     Intl,
     Setup,
@@ -26,6 +27,7 @@ pub enum SettingType {
 /// be inserted here.
 pub fn get_all_setting_types() -> HashSet<SettingType> {
     let mut set = HashSet::new();
+    set.insert(SettingType::Accessibility);
     set.insert(SettingType::Display);
     set.insert(SettingType::Intl);
     set.insert(SettingType::Setup);
@@ -39,11 +41,27 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingRequest {
     Get,
+
+    // Accessibility requests.
+    SetAudioDescription(bool),
+
+    // Display requests.
     SetBrightness(f32),
     SetAutoBrightness(bool),
+
+    // System login requests.
     SetLoginOverrideMode(SystemLoginOverrideMode),
+
+    // Intl requests.
     SetTimeZone(String),
+
+    // Setup info requests.
     SetConfigurationInterfaces(ConfigurationInterfaceFlags),
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub enum AccessibilityInfo {
+    AudioDescription(bool),
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -98,6 +116,7 @@ pub struct SetupInfo {
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingResponse {
     Unknown,
+    Accessibility(AccessibilityInfo),
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(BrightnessInfo),
     Intl(IntlInfo),
