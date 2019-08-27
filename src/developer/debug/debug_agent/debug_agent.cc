@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/features.h>
 #include <zircon/status.h>

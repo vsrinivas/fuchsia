@@ -60,6 +60,7 @@ executable("bin-monitor") {
     "//sdk/lib/sys/cpp",
     "//src/developer/memory/monitor:lib",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdint.h>
@@ -23,7 +24,7 @@ class Object {
 };
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   auto inspector = inspect_deprecated::ComponentInspector::Initialize(context.get());
   auto& root = inspector->root_tree()->GetRoot();

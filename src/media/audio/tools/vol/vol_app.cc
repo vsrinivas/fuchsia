@@ -3,6 +3,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
@@ -604,7 +605,7 @@ class VolApp {
 }  // namespace media
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   media::VolApp app(argc, argv,
                     [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
   loop.Run();

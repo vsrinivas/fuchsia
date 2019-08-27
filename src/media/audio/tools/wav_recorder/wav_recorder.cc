@@ -3,6 +3,7 @@
 
 #include "src/media/audio/tools/wav_recorder/wav_recorder.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fit/defer.h>
 #include <poll.h>

@@ -4,6 +4,7 @@
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>
 
@@ -28,7 +29,7 @@ using google_auth_provider::Settings;
 class GoogleAuthProviderApp {
  public:
   GoogleAuthProviderApp(fxl::CommandLine command_line)
-      : loop_(&kAsyncLoopConfigAttachToThread),
+      : loop_(&kAsyncLoopConfigAttachToCurrentThread),
         component_context_(sys::ComponentContext::Create()),
         trace_provider_(loop_.dispatcher()),
         network_wrapper_(

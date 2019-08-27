@@ -5,6 +5,7 @@
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <garnet/public/lib/inspect_deprecated/reader.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/spawn.h>

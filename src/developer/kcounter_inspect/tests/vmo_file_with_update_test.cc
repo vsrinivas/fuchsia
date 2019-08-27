@@ -60,7 +60,7 @@ class VmoFileWithUpdateTest : public gtest::RealLoopFixture {
     loop_.JoinThreads();
   }
 
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<::sys::testing::ServiceDirectoryProvider> service_directory_provider_;
   std::unique_ptr<StubKcounter> stub_kcounter_;
   thrd_t thread_;

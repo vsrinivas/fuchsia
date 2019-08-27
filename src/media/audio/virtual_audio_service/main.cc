@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "src/media/audio/virtual_audio_service/virtual_audio_service_impl.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   virtual_audio::VirtualAudioServiceImpl impl(sys::ComponentContext::Create());
 

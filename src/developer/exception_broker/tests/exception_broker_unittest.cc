@@ -5,6 +5,7 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
@@ -81,7 +82,7 @@ struct TestContext {
 
 std::unique_ptr<TestContext> CreateTestContext() {
   std::unique_ptr<TestContext> context(
-      new TestContext{.loop = async::Loop(&kAsyncLoopConfigAttachToThread),
+      new TestContext{.loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread),
                       .services = sys::testing::ServiceDirectoryProvider{},
                       .analyzer = std::make_unique<StubAnalyzer>()});
 

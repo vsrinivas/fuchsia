@@ -9,11 +9,12 @@
 
 #include "fuchsia/kernel/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
+#include "lib/async-loop/default.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/developer/kcounter_inspect/vmo_file_with_update.h"
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
   fuchsia::kernel::CounterSyncPtr kcounter;

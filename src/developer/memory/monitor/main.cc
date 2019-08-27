@@ -4,6 +4,7 @@
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
@@ -19,7 +20,7 @@ int main(int argc, const char** argv) {
 
   FXL_VLOG(2) << argv[0] << ": starting";
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), monitor::Monitor::kTraceName);
   std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
 

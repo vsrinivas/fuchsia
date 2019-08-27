@@ -3,6 +3,7 @@
 
 #include "src/media/audio/tools/signal_generator/signal_generator.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <math.h>

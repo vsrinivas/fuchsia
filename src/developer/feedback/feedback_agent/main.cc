@@ -4,6 +4,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
@@ -42,7 +43,7 @@ fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> SpawnNewDataProvi
 int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback"});
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   // We spawn a new process capable of handling fuchsia.feedback.DataProvider requests on every
   // incoming request. This has the advantage of tying each request to a different process that can

@@ -4,6 +4,7 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/logger.h>
@@ -30,7 +31,7 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   std::unique_ptr<fuchsia::feedback::DataProviderImpl> data_provider =
       fuchsia::feedback::DataProviderImpl::TryCreate(loop.dispatcher(), context->svc());

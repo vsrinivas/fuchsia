@@ -58,6 +58,7 @@ executable("kcounter_inspect_integration_test") {
     "//zircon/public/fidl/fuchsia-kernel",
     "//zircon/public/fidl/fuchsia-mem",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
   ]
 }

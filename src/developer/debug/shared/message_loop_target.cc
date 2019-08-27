@@ -31,7 +31,7 @@ thread_local MessageLoopTarget* current_message_loop = nullptr;
 
 // MessageLoopTarget -----------------------------------------------------------
 
-MessageLoopTarget::MessageLoopTarget() : loop_(&kAsyncLoopConfigAttachToThread) {}
+MessageLoopTarget::MessageLoopTarget() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
 MessageLoopTarget::~MessageLoopTarget() {
   FXL_DCHECK(Current() != this);  // Cleanup should have been called.

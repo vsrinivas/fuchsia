@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_TARGET_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>

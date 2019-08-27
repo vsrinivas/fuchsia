@@ -5,6 +5,7 @@
 #include "src/developer/feedback/bugreport/bug_reporter.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zircon/errors.h>
@@ -29,7 +30,7 @@ namespace {
 class BugReporterTest : public gtest::RealLoopFixture {
  public:
   BugReporterTest()
-      : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
+      : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         service_directory_provider_(service_directory_provider_loop_.dispatcher()) {
     // We run the service directory provider in a different loop and thread so that the
     // MakeBugReport can connect to the stub feedback data provider synchronously.

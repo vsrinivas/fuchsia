@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/memfs/memfs.h>
@@ -86,7 +87,7 @@ class HighWaterUnitTest : public gtest::RealLoopFixture {
   }
 
   //  private:
-  async::Loop memfs_loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop memfs_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   std::unique_ptr<ScopedMemfs> data_;
 };
 

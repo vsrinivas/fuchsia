@@ -5,6 +5,7 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
@@ -17,7 +18,7 @@
 int main(int argc, const char** argv) {
   syslog::InitLogger({"crash"});
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
   auto inspector = ::inspect_deprecated::ComponentInspector::Initialize(context.get());

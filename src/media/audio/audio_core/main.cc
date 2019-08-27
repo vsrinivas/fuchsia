@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 #ifndef NTRACE
@@ -14,7 +15,7 @@
 #include "src/media/audio/audio_core/reporter.h"
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 #ifndef NTRACE
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 #endif

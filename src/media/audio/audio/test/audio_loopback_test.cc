@@ -69,7 +69,7 @@ std::shared_ptr<sys::ServiceDirectory> AudioLoopbackTest::service_directory_ = n
 
 // static
 void AudioLoopbackTest::SetUpTestSuite() {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   if (!service_directory_) {
     service_directory_ = sys::ComponentContext::Create()->svc();
   }
@@ -88,7 +88,7 @@ void AudioLoopbackTest::SetUpTestSuite() {
 
 // static
 void AudioLoopbackTest::TearDownTestSuite() {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_NE(service_directory_, nullptr);
 
   // Ensure that virtualaudio is disabled, by the time we leave.

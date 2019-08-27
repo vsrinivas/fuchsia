@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ui/base_view/cpp/view_provider_component.h>
 
 #include "src/lib/fxl/command_line.h"
@@ -16,7 +17,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   int result;
   auto quit_callback = [&loop, &result](int exit_code) {
     result = exit_code;

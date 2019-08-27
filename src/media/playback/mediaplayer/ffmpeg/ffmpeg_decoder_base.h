@@ -6,6 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_FFMPEG_DECODER_BASE_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <limits>
 

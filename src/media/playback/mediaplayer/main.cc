@@ -5,6 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
@@ -45,7 +46,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();

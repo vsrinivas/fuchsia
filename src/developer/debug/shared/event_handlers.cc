@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/shared/event_handlers.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>

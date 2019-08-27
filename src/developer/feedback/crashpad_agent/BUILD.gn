@@ -65,6 +65,7 @@ executable("main") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -117,6 +118,7 @@ source_set("src") {
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
@@ -44,7 +45,7 @@ int main(int argc, const char** argv) {
   std::unique_ptr<trace::TraceProviderWithFdio> provider;
 
   if (command_line.HasOption("trace")) {
-    loop.reset(new async::Loop(&kAsyncLoopConfigNoAttachToThread));
+    loop.reset(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread));
     loop->StartThread("provider loop");
     provider.reset(new trace::TraceProviderWithFdio(loop->dispatcher(), "mem"));
   }

@@ -61,6 +61,7 @@ executable("mediaplayer_bin") {
     "//src/media/playback/mediaplayer/render",
     "//src/media/playback/mediaplayer/util",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]
 }
@@ -87,6 +88,7 @@ executable("mediaplayer_test_util_bin") {
     "//src/lib/url",
     "//src/media/playback/mediaplayer/graph",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/hid",
   ]
 }
@@ -153,6 +155,7 @@ executable("mediaplayer_tests_bin") {
     "//src/lib/url",
     "//src/media/playback/mediaplayer/graph",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
   ]

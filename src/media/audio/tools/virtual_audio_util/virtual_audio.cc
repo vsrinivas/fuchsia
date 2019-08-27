@@ -5,6 +5,7 @@
 
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fsl/tasks/fd_waiter.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -1091,7 +1092,7 @@ void VirtualAudioUtil::PositionCallback(zx_time_t time_for_pos, uint32_t rb_pos)
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   virtual_audio::VirtualAudioUtil util(&loop);
   util.Run(&command_line);

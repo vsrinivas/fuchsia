@@ -87,6 +87,7 @@ static_library("lib") {
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ngunwind",
   ]
 }

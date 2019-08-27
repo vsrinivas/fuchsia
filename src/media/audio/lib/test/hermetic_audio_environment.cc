@@ -59,7 +59,7 @@ fit::function<fuchsia::sys::LaunchInfo()> VirtualAudioLaunchInfo(
 // when, for example, using a sync pointer since that will block the async loop before the backing
 // service has a chance to be created.
 void EnvironmentMain(HermeticAudioEnvironment* env) {
-  async::Loop loop{&kAsyncLoopConfigAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigAttachToCurrentThread};
   env->Start(&loop);
   loop.Run();
 }

@@ -37,6 +37,7 @@ executable("main") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
   ]
 }

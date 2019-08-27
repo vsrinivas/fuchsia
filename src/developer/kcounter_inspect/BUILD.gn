@@ -51,5 +51,6 @@ executable("main") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-kernel",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

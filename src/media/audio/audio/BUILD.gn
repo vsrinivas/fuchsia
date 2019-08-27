@@ -36,6 +36,7 @@ source_set("audio_core_client_lib") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -50,6 +51,7 @@ executable("audio_bin") {
     ":audio_core_client_lib",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
