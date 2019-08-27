@@ -83,9 +83,13 @@ impl Account {
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
         let task_group = TaskGroup::new();
-        let token_manager_task_group = task_group.create_child().await
+        let token_manager_task_group = task_group
+            .create_child()
+            .await
             .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
-        let default_persona_task_group = task_group.create_child().await
+        let default_persona_task_group = task_group
+            .create_child()
+            .await
             .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
         let auth_provider_supplier = AuthProviderSupplier::new(context_proxy);
         let token_manager = Arc::new(match &lifetime {
@@ -305,14 +309,21 @@ impl Account {
             PersonaContext { auth_ui_context_provider: context.auth_ui_context_provider.clone() };
         match persona_server_end.into_stream() {
             Ok(stream) => {
-                match self.default_persona.task_group().spawn(|cancel| async move {
-                    persona_clone.handle_requests_from_stream(
-                        &persona_context,
-                        stream,
-                        cancel
-                    ).await
-                    .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
-                }).await {
+                match self
+                    .default_persona
+                    .task_group()
+                    .spawn(|cancel| {
+                        async move {
+                            persona_clone
+                                .handle_requests_from_stream(&persona_context, stream, cancel)
+                                .await
+                                .unwrap_or_else(|e| {
+                                    error!("Error handling Persona channel {:?}", e)
+                                })
+                        }
+                    })
+                    .await
+                {
                     Err(_) => (Status::RemovalInProgress, None),
                     Ok(()) => (Status::Ok, Some(self.default_persona.id().clone().into())),
                 }
@@ -383,7 +394,8 @@ mod tests {
                 AccountLifetime::Persistent { account_dir },
                 account_handler_context_client_end.into_proxy().unwrap(),
                 &inspector.root(),
-            ).await
+            )
+            .await
         }
 
         async fn create_ephemeral_account(&self) -> Result<Account, AccountManagerError> {
@@ -395,7 +407,8 @@ mod tests {
                 AccountLifetime::Ephemeral,
                 account_handler_context_client_end.into_proxy().unwrap(),
                 &inspector.root(),
-            ).await
+            )
+            .await
         }
 
         async fn load_account(&self) -> Result<Account, AccountManagerError> {
@@ -407,7 +420,8 @@ mod tests {
                 AccountLifetime::Persistent { account_dir: self.location.path.clone() },
                 account_handler_context_client_end.into_proxy().unwrap(),
                 &inspector.root(),
-            ).await
+            )
+            .await
         }
 
         async fn run<TestFn, Fut>(&mut self, test_object: Account, test_fn: TestFn)
@@ -428,11 +442,19 @@ mod tests {
 
             let task_group = TaskGroup::new();
 
-            task_group.spawn(|cancel| async move {
-                test_object.handle_requests_from_stream(&context, request_stream, cancel).await
-                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
-            },).await
-            .expect("Unable to spawn task");
+            task_group
+                .spawn(|cancel| {
+                    async move {
+                        test_object
+                            .handle_requests_from_stream(&context, request_stream, cancel)
+                            .await
+                            .unwrap_or_else(|err| {
+                                panic!("Fatal error handling test request: {:?}", err)
+                            })
+                    }
+                })
+                .await
+                .expect("Unable to spawn task");
             test_fn(account_proxy).await.expect("Test function failed.")
         }
     }
@@ -450,28 +472,37 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_account_name() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_account_name().await?, Account::DEFAULT_ACCOUNT_NAME);
-            Ok(())
-        }).await;
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(proxy.get_account_name().await?, Account::DEFAULT_ACCOUNT_NAME);
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_ephemeral() {
         let mut test = Test::new();
-        test.run(test.create_ephemeral_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_lifetime().await?, Lifetime::Ephemeral);
-            Ok(())
-        }).await;
+        test.run(test.create_ephemeral_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(proxy.get_lifetime().await?, Lifetime::Ephemeral);
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_persistent() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_lifetime().await?, Lifetime::Persistent);
-            Ok(())
-        }).await;
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(proxy.get_lifetime().await?, Lifetime::Persistent);
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -503,7 +534,8 @@ mod tests {
             AccountLifetime::Ephemeral,
             account_handler_context_client_end.into_proxy().unwrap(),
             &inspector.root(),
-        ).await
+        )
+        .await
         .is_err());
     }
 
@@ -517,30 +549,38 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(
-                proxy.get_auth_state().await?,
-                (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
-            );
-            Ok(())
-        }).await;
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(
+                    proxy.get_auth_state().await?,
+                    (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
+                );
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            let (auth_listener_client_end, _) = create_endpoints().unwrap();
-            assert_eq!(
-                proxy.register_auth_listener(
-                    auth_listener_client_end,
-                    true, /* include initial state */
-                    &mut AuthChangeGranularity { summary_changes: true }
-                ).await?,
-                Status::InternalError
-            );
-            Ok(())
-        }).await;
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                let (auth_listener_client_end, _) = create_endpoints().unwrap();
+                assert_eq!(
+                    proxy
+                        .register_auth_listener(
+                            auth_listener_client_end,
+                            true, /* include initial state */
+                            &mut AuthChangeGranularity { summary_changes: true }
+                        )
+                        .await?,
+                    Status::InternalError
+                );
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -550,12 +590,15 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        test.run(account, |proxy| async move {
-            let response = proxy.get_persona_ids().await?;
-            assert_eq!(response.len(), 1);
-            assert_eq!(&LocalPersonaId::new(response[0].id), persona_id);
-            Ok(())
-        }).await;
+        test.run(account, |proxy| {
+            async move {
+                let response = proxy.get_persona_ids().await?;
+                assert_eq!(response.len(), 1);
+                assert_eq!(&LocalPersonaId::new(response[0].id), persona_id);
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -565,22 +608,25 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        test.run(account, |account_proxy| async move {
-            let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
-            let response = account_proxy.get_default_persona(persona_server_end).await?;
-            assert_eq!(response.0, Status::Ok);
-            assert_eq!(&LocalPersonaId::from(*response.1.unwrap()), persona_id);
+        test.run(account, |account_proxy| {
+            async move {
+                let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
+                let response = account_proxy.get_default_persona(persona_server_end).await?;
+                assert_eq!(response.0, Status::Ok);
+                assert_eq!(&LocalPersonaId::from(*response.1.unwrap()), persona_id);
 
-            // The persona channel should now be usable.
-            let persona_proxy = persona_client_end.into_proxy().unwrap();
-            assert_eq!(
-                persona_proxy.get_auth_state().await?,
-                (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
-            );
-            assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Persistent);
+                // The persona channel should now be usable.
+                let persona_proxy = persona_client_end.into_proxy().unwrap();
+                assert_eq!(
+                    persona_proxy.get_auth_state().await?,
+                    (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
+                );
+                assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Persistent);
 
-            Ok(())
-        }).await;
+                Ok(())
+            }
+        })
+        .await;
     }
 
     /// When an ephemeral account is created, its default persona is also ephemeral.
@@ -588,17 +634,20 @@ mod tests {
     async fn test_ephemeral_account_has_ephemeral_persona() {
         let mut test = Test::new();
         let account = test.create_ephemeral_account().await.unwrap();
-        test.run(account, |account_proxy| async move {
-            let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
-            assert_eq!(
-                account_proxy.get_default_persona(persona_server_end).await?.0,
-                Status::Ok
-            );
-            let persona_proxy = persona_client_end.into_proxy().unwrap();
+        test.run(account, |account_proxy| {
+            async move {
+                let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
+                assert_eq!(
+                    account_proxy.get_default_persona(persona_server_end).await?.0,
+                    Status::Ok
+                );
+                let persona_proxy = persona_client_end.into_proxy().unwrap();
 
-            assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Ephemeral);
-            Ok(())
-        }).await;
+                assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Ephemeral);
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -607,23 +656,27 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         let persona_id = account.default_persona.id().clone();
 
-        test.run(account, |account_proxy| async move {
-            let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
-            assert_eq!(
-                account_proxy
-                    .get_persona(&mut FidlLocalPersonaId::from(persona_id), persona_server_end).await?,
-                Status::Ok
-            );
+        test.run(account, |account_proxy| {
+            async move {
+                let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
+                assert_eq!(
+                    account_proxy
+                        .get_persona(&mut FidlLocalPersonaId::from(persona_id), persona_server_end)
+                        .await?,
+                    Status::Ok
+                );
 
-            // The persona channel should now be usable.
-            let persona_proxy = persona_client_end.into_proxy().unwrap();
-            assert_eq!(
-                persona_proxy.get_auth_state().await?,
-                (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
-            );
+                // The persona channel should now be usable.
+                let persona_proxy = persona_client_end.into_proxy().unwrap();
+                assert_eq!(
+                    persona_proxy.get_auth_state().await?,
+                    (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
+                );
 
-            Ok(())
-        }).await;
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -634,15 +687,18 @@ mod tests {
         // one.
         let wrong_id = LocalPersonaId::new(13);
 
-        test.run(account, |proxy| async move {
-            let (_, persona_server_end) = create_endpoints().unwrap();
-            assert_eq!(
-                proxy.get_persona(&mut wrong_id.into(), persona_server_end).await?,
-                Status::NotFound
-            );
+        test.run(account, |proxy| {
+            async move {
+                let (_, persona_server_end) = create_endpoints().unwrap();
+                assert_eq!(
+                    proxy.get_persona(&mut wrong_id.into(), persona_server_end).await?,
+                    Status::NotFound
+                );
 
-            Ok(())
-        }).await;
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -653,22 +709,28 @@ mod tests {
             user_profile_id: "test_obfuscated_gaia_id".to_string(),
         };
 
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(
-                proxy.set_recovery_account(&mut service_provider_account).await?,
-                Status::InternalError
-            );
-            Ok(())
-        }).await;
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(
+                    proxy.set_recovery_account(&mut service_provider_account).await?,
+                    Status::InternalError
+                );
+                Ok(())
+            }
+        })
+        .await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_recovery_account() {
         let mut test = Test::new();
         let expectation = (Status::InternalError, None);
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.get_recovery_account().await?, expectation);
-            Ok(())
-        }).await;
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(proxy.get_recovery_account().await?, expectation);
+                Ok(())
+            }
+        })
+        .await;
     }
 }

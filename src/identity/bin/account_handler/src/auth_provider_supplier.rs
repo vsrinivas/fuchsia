@@ -45,7 +45,8 @@ impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
         FutureObj::new(Box::new(async move {
             match self
                 .account_handler_context
-                .get_auth_provider(auth_provider_type, server_end).await
+                .get_auth_provider(auth_provider_type, server_end)
+                .await
             {
                 Ok(fidl_fuchsia_auth_account::Status::Ok) => Ok(client_end),
                 Ok(stat) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)

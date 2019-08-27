@@ -110,7 +110,9 @@ pub fn spawn_context_channel(
     let request_stream = server_end.into_stream().unwrap();
     let context_clone = Arc::clone(&context);
     fasync::spawn(async move {
-        context_clone.handle_requests_from_stream(request_stream).await
+        context_clone
+            .handle_requests_from_stream(request_stream)
+            .await
             .unwrap_or_else(|err| error!("Error handling FakeAccountHandlerContext: {:?}", err))
     });
     client_end
