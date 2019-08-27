@@ -540,8 +540,7 @@ struct iwl_trans_pcie {
 #endif  // NEEDS_PORTING
 
   /* INT ICT Table */
-  __le32* ict_tbl;
-  dma_addr_t ict_tbl_dma;
+  io_buffer_t ict_tbl;
   int ict_index;
   bool use_ict;
   bool is_down, opmode_down;
@@ -678,10 +677,13 @@ int iwl_pcie_dummy_napi_poll(struct napi_struct* napi, int budget);
 #if 0   // NEEDS_PORTING
 irqreturn_t iwl_pcie_isr(int irq, void* data);
 #endif  // NEEDS_PORTING
-int iwl_pcie_alloc_ict(struct iwl_trans* trans);
+zx_status_t iwl_pcie_alloc_ict(struct iwl_trans* trans);
 void iwl_pcie_free_ict(struct iwl_trans* trans);
 void iwl_pcie_reset_ict(struct iwl_trans* trans);
 void iwl_pcie_disable_ict(struct iwl_trans* trans);
+
+// Exposed for tests only.
+uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans);
 
 /*****************************************************
  * TX / HCMD

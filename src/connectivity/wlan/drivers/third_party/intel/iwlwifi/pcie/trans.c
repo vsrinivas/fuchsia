@@ -3405,14 +3405,21 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
     init_waitqueue_head(&trans_pcie->wait_command_queue);
 
     init_waitqueue_head(&trans_pcie->d0i3_waitq);
+#endif  // NEEDS_PORTING
 
-    if (trans_pcie->msix_enabled) {
+  if (trans_pcie->msix_enabled) {
+    IWL_ERR(trans, "MSIX is not supported\n");
+#if 0   // NEEDS_PORTING
         ret = iwl_pcie_init_msix_handler(pdev, trans_pcie);
         if (ret) { goto out_no_pci; }
-    } else {
-        ret = iwl_pcie_alloc_ict(trans);
-        if (ret) { goto out_no_pci; }
+#endif  // NEEDS_PORTING
+  } else {
+    status = iwl_pcie_alloc_ict(trans);
+    if (status != ZX_OK) {
+      goto out_no_pci;
+    }
 
+#if 0   // NEEDS_PORTING
         ret = devm_request_threaded_irq(&pdev->dev, pdev->irq, iwl_pcie_isr, iwl_pcie_irq_handler,
                                         IRQF_SHARED, DRV_NAME, trans);
         if (ret) {
@@ -3420,11 +3427,11 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
             goto out_free_ict;
         }
         trans_pcie->inta_mask = CSR_INI_SET_MASK;
-    }
 
     trans_pcie->rba.alloc_wq = alloc_workqueue("rb_allocator", WQ_HIGHPRI | WQ_UNBOUND, 1);
     INIT_WORK(&trans_pcie->rba.rx_alloc, iwl_pcie_rx_allocator_work);
 #endif  // NEEDS_PORTING
+  }
 
 #ifdef CPTCFG_IWLWIFI_PCIE_RTPM
   trans->runtime_pm_mode = IWL_PLAT_PM_MODE_D0I3;
@@ -3441,7 +3448,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
 
 #if 0   // NEEDS_PORTING
 out_free_ict:
-    iwl_pcie_free_ict(trans);
+  iwl_pcie_free_ict(trans);
 #endif  // NEEDS_PORTING
 out_no_pci:
 #if 0   // NEEDS_PORTING

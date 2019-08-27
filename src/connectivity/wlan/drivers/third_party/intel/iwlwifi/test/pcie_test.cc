@@ -149,4 +149,59 @@ TEST_F(PcieTest, RxInit) {
   iwl_pcie_rx_free(trans_);
 }
 
+TEST_F(PcieTest, IctTable) {
+  ASSERT_EQ(iwl_pcie_alloc_ict(trans_), ZX_OK);
+
+  // Check the initial state.
+  ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
+  EXPECT_EQ(iwl_pcie_int_cause_ict(trans_), 0);
+  EXPECT_EQ(trans_pcie_->ict_index, 0);
+
+  // Reads an interrupt from the table.
+  uint32_t* ict_table = static_cast<uint32_t*>(io_buffer_virt(&trans_pcie_->ict_tbl));
+  trans_pcie_->ict_index = 0;
+  ict_table[0] = 0x1234;
+  ict_table[1] = 0;
+  EXPECT_EQ(iwl_pcie_int_cause_ict(trans_), 0x12000034);
+  EXPECT_EQ(trans_pcie_->ict_index, 1);
+
+  // Reads multiple interrupts from the table.
+  trans_pcie_->ict_index = 1;
+  ict_table[1] = 1 << 0;
+  ict_table[2] = 1 << 1;
+  ict_table[3] = 1 << 2;
+  ict_table[4] = 0;
+  EXPECT_EQ(iwl_pcie_int_cause_ict(trans_), (1 << 0) | (1 << 1) | (1 << 2));
+  EXPECT_EQ(trans_pcie_->ict_index, 4);
+
+  // This should match ICT_COUNT defined in pcie/rx.c.
+  size_t ict_count = io_buffer_size(&trans_pcie_->ict_tbl, 0) / sizeof(uint32_t);
+
+  // Guarantee that we have enough room in the table for the tests.
+  ASSERT_GT(ict_count, 42);
+
+  // Correctly wraps the index.
+  trans_pcie_->ict_index = ict_count - 1;
+  ict_table[ict_count - 1] = 1 << 0;
+  ict_table[0] = 1 << 1;
+  ict_table[1] = 0;
+  EXPECT_EQ(iwl_pcie_int_cause_ict(trans_), (1 << 0) | (1 << 1));
+  EXPECT_EQ(trans_pcie_->ict_index, 1);
+
+  // Hardware bug workaround.
+  trans_pcie_->ict_index = 1;
+  ict_table[1] = 0xC0000;
+  ict_table[2] = 0;
+  EXPECT_EQ(iwl_pcie_int_cause_ict(trans_), 0x80000000);
+
+  // Correctly resets
+  trans_pcie_->ict_index = 42;
+  ict_table[42] = 0xdeadbeef;
+  iwl_pcie_reset_ict(trans_);
+  EXPECT_EQ(trans_pcie_->ict_index, 0);
+  EXPECT_EQ(ict_table[42], 0);
+
+  iwl_pcie_free_ict(trans_);
+}
+
 }  // namespace

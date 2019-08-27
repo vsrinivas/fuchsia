@@ -1344,7 +1344,7 @@ out:
   iwl_pcie_rxq_restock(trans, rxq);
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static struct iwl_trans_pcie* iwl_pcie_get_trans_pcie(struct msix_entry* entry) {
   uint8_t queue = entry->entry;
   struct msix_entry* entries = entry - queue;
@@ -1425,6 +1425,7 @@ static uint32_t iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
   /* the thread will service interrupts and re-enable them */
   return inta;
 }
+#endif  // NEEDS_PORTING
 
 /* a device (PCI-E) page is 4096 bytes long */
 #define ICT_SHIFT 12
@@ -1439,22 +1440,22 @@ static uint32_t iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
  * the interrupt we need to service, driver will set the entries back to 0 and
  * set index.
  */
-static uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
+uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  uint32_t inta;
-  uint32_t val = 0;
-  uint32_t read;
+  uint32_t* ict_table = (uint32_t*)io_buffer_virt(&trans_pcie->ict_tbl);
 
-#if     // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   trace_iwlwifi_dev_irq(trans->dev);
 #endif  // NEEDS_PORTING
+
   /* Ignore interrupt if there's nothing in NIC to service.
    * This may be due to IRQ shared with another device,
    * or due to sporadic interrupts thrown from our NIC. */
-  read = le32_to_cpu(trans_pcie->ict_tbl[trans_pcie->ict_index]);
-#if     // NEEDS_PORTING
+  uint32_t read = le32_to_cpu(ict_table[trans_pcie->ict_index]);
+#if 0   // NEEDS_PORTING
   trace_iwlwifi_dev_ict_read(trans->dev, trans_pcie->ict_index, read);
 #endif  // NEEDS_PORTING
+
   if (!read) {
     return 0;
   }
@@ -1463,14 +1464,17 @@ static uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
    * Collect all entries up to the first 0, starting from ict_index;
    * note we already read at ict_index.
    */
+  uint32_t val = 0;
   do {
     val |= read;
     IWL_DEBUG_ISR(trans, "ICT index %d value 0x%08X\n", trans_pcie->ict_index, read);
-    trans_pcie->ict_tbl[trans_pcie->ict_index] = 0;
+    ict_table[trans_pcie->ict_index] = 0;
     trans_pcie->ict_index = ((trans_pcie->ict_index + 1) & (ICT_COUNT - 1));
 
-    read = le32_to_cpu(trans_pcie->ict_tbl[trans_pcie->ict_index]);
+    read = le32_to_cpu(ict_table[trans_pcie->ict_index]);
+#if 0   // NEEDS_PORTING
     trace_iwlwifi_dev_ict_read(trans->dev, trans_pcie->ict_index, read);
+#endif  // NEEDS_PORTING
   } while (read);
 
   /* We should not get this value, just ignore it. */
@@ -1478,21 +1482,18 @@ static uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
     val = 0;
   }
 
-  /*
-   * this is a w/a for a h/w bug. the h/w bug may cause the Rx bit
-   * (bit 15 before shifting it to 31) to clear when using interrupt
-   * coalescing. fortunately, bits 18 and 19 stay set when this happens
-   * so we use them to decide on the real state of the Rx bit.
-   * In order words, bit 15 is set if bit 18 or bit 19 are set.
-   */
+  // This is a workaround for a hardware bug. The bug may cause the Rx bit (bit 15 before shifting
+  // it to 31) to clear when using interrupt coalescing. Fortunately, bits 18 and 19 stay set when
+  // this happens so we use them to decide on the real state of the Rx bit. In order words, bit 15
+  // is set if bit 18 or bit 19 are set.
   if (val & 0xC0000) {
     val |= 0x8000;
   }
 
-  inta = (0xff & val) | ((0xff00 & val) << 16);
-  return inta;
+  return (0xff & val) | ((0xff00 & val) << 16);
 }
 
+#if 0  // NEEDS_PORTING
 void iwl_pcie_handle_rfkill_irq(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct isr_statistics* isr_stats = &trans_pcie->isr_stats;
@@ -1768,6 +1769,7 @@ out:
   lock_map_release(&trans->sync_cmd_lockdep_map);
   return IRQ_HANDLED;
 }
+#endif
 
 /******************************************************************************
  *
@@ -1779,34 +1781,29 @@ out:
 void iwl_pcie_free_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  if (trans_pcie->ict_tbl) {
-    dma_free_coherent(trans->dev, ICT_SIZE, trans_pcie->ict_tbl, trans_pcie->ict_tbl_dma);
-    trans_pcie->ict_tbl = NULL;
-    trans_pcie->ict_tbl_dma = 0;
-  }
+  io_buffer_release(&trans_pcie->ict_tbl);
 }
 
 /*
- * allocate dram shared table, it is an aligned memory
- * block of ICT_SIZE.
- * also reset all data related to ICT table interrupt.
+ * Allocate dram shared table, it is an aligned memory block of ICT_SIZE.
+ * Also reset all data related to ICT table interrupt.
  */
-int iwl_pcie_alloc_ict(struct iwl_trans* trans) {
+zx_status_t iwl_pcie_alloc_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-  trans_pcie->ict_tbl =
-      dma_zalloc_coherent(trans->dev, ICT_SIZE, &trans_pcie->ict_tbl_dma, GFP_KERNEL);
-  if (!trans_pcie->ict_tbl) {
-    return -ENOMEM;
+  zx_status_t status = io_buffer_init(&trans_pcie->ict_tbl, trans_pcie->bti, ICT_SIZE,
+                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  if (status != ZX_OK) {
+    return status;
   }
 
-  /* just an API sanity check ... it is guaranteed to be aligned */
-  if (WARN_ON(trans_pcie->ict_tbl_dma & (ICT_SIZE - 1))) {
-    iwl_pcie_free_ict(trans);
-    return -EINVAL;
+  // The device expects the shifted physical address to be written to a 32-bit register.
+  zx_paddr_t dma_addr = io_buffer_phys(&trans_pcie->ict_tbl);
+  if ((dma_addr >> ICT_SHIFT) > UINT32_MAX) {
+    return ZX_ERR_INTERNAL;
   }
 
-  return 0;
+  return status;
 }
 
 /* Device is going up inform it about using ICT interrupt table,
@@ -1814,19 +1811,17 @@ int iwl_pcie_alloc_ict(struct iwl_trans* trans) {
  */
 void iwl_pcie_reset_ict(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  uint32_t val;
 
-  if (!trans_pcie->ict_tbl) {
+  if (!io_buffer_is_valid(&trans_pcie->ict_tbl)) {
     return;
   }
 
   mtx_lock(&trans_pcie->irq_lock);
   _iwl_disable_interrupts(trans);
 
-  memset(trans_pcie->ict_tbl, 0, ICT_SIZE);
+  memset(io_buffer_virt(&trans_pcie->ict_tbl), 0, ICT_SIZE);
 
-  val = trans_pcie->ict_tbl_dma >> ICT_SHIFT;
-
+  uint32_t val = io_buffer_phys(&trans_pcie->ict_tbl) >> ICT_SHIFT;
   val |= CSR_DRAM_INT_TBL_ENABLE | CSR_DRAM_INIT_TBL_WRAP_CHECK | CSR_DRAM_INIT_TBL_WRITE_POINTER;
 
   IWL_DEBUG_ISR(trans, "CSR_DRAM_INT_TBL_REG =0x%x\n", val);
@@ -1838,7 +1833,6 @@ void iwl_pcie_reset_ict(struct iwl_trans* trans) {
   _iwl_enable_interrupts(trans);
   mtx_unlock(&trans_pcie->irq_lock);
 }
-#endif  // NEEDS_PORTING
 
 /* Device is going down disable ict interrupt usage */
 void iwl_pcie_disable_ict(struct iwl_trans* trans) {
