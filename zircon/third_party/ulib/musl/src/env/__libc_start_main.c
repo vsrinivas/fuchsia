@@ -196,8 +196,12 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
 #elif defined(__aarch64__)
   __asm__(
       "add sp, %[base], %[len]\n"
-      "mov x0, %[arg]\n"
       "mov x18, %[shadow_call_stack]\n"
+      // Neither sp nor x18 might be used as an input operand, but x0 might be.
+      // So clobber x0 last.  We don't need to declare it to the compiler as a
+      // clobber since we'll never come back and it's fine if it's used as an
+      // input operand.
+      "mov x0, %[arg]\n"
       "b start_main"
       :
       : [ base ] "r"(p.td->safe_stack.iov_base), [ len ] "r"(p.td->safe_stack.iov_len),
