@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdlib.h>
 
@@ -46,7 +47,7 @@ int TryGetMemory(sys::ComponentContext* context, fuchsia::sys::ComponentControll
 }  // namespace
 
 int main() {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr controller;
   scoped_tmpfs::ScopedTmpFS tmp_dir;

@@ -7,6 +7,7 @@
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <trace-provider/provider.h>
 

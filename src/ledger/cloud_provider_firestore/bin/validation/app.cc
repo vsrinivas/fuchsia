@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 
 #include <iostream>
@@ -32,7 +33,7 @@ constexpr fxl::StringView kGtestFilterSuffix = "-:PageCloudTest.Diff_*:PageCloud
 
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
   ledger::SyncParams sync_params;

@@ -20,5 +20,6 @@ executable("validation") {
     "//src/ledger/cloud_provider_firestore/bin/testing",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

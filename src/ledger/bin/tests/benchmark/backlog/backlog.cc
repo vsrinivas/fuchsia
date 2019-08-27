@@ -4,6 +4,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
@@ -376,7 +377,7 @@ fit::closure BacklogBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
   std::string unique_key_count_str;

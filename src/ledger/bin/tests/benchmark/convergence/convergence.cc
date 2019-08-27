@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/callback/waiter.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
@@ -221,7 +222,7 @@ fit::closure ConvergenceBenchmark::QuitLoopClosure() {
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
   std::string entry_count_str;

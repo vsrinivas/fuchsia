@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <cstdlib>
@@ -37,7 +38,7 @@ int Main(int argc, char** argv) {
   SyncParams sync_params;
 
   {
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     auto component_context = sys::ComponentContext::Create();
 
     if (!ParseSyncParamsFromCommandLine(command_line, component_context.get(), &sync_params)) {

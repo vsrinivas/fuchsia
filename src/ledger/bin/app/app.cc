@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
@@ -69,8 +70,8 @@ class App : public ledger_internal::LedgerController {
  public:
   explicit App(AppParams app_params)
       : app_params_(std::move(app_params)),
-        loop_(&kAsyncLoopConfigAttachToThread),
-        io_loop_(&kAsyncLoopConfigNoAttachToThread),
+        loop_(&kAsyncLoopConfigAttachToCurrentThread),
+        io_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         trace_provider_(loop_.dispatcher()),
         component_context_(sys::ComponentContext::Create()),
         cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics, loop_.dispatcher(),

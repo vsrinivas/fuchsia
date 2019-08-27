@@ -4,6 +4,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>
@@ -26,7 +27,7 @@ struct AppParams {
 class App : public fuchsia::modular::Lifecycle {
  public:
   explicit App(AppParams app_params)
-      : loop_(&kAsyncLoopConfigAttachToThread),
+      : loop_(&kAsyncLoopConfigAttachToCurrentThread),
         component_context_(sys::ComponentContext::Create()),
         trace_provider_(loop_.dispatcher()),
         factory_impl_(loop_.dispatcher(), &random_, component_context_.get(),

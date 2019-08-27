@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_TESTING_LOOP_CONTROLLER_REAL_LOOP_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <memory>
 

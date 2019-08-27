@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
@@ -453,7 +454,7 @@ bool GetPositiveIntValue(const fxl::CommandLine& command_line, fxl::StringView f
 
 int Main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
   int story_count;

@@ -9,6 +9,7 @@
 #include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/network_wrapper/network_wrapper_impl.h>
 #include <lib/sys/cpp/component_context.h>

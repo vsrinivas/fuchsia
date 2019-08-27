@@ -5,6 +5,7 @@
 #include "src/ledger/bin/testing/get_ledger.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gtest/gtest.h"
@@ -15,7 +16,7 @@ namespace ledger {
 namespace {
 
 TEST(GetLedgerTest, CreateAndDeleteLedger) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   auto component_context = sys::ComponentContext::Create();
@@ -38,7 +39,7 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
 }
 
 TEST(GetLedgerTest, GetPageEnsureInitialized) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   auto component_context = sys::ComponentContext::Create();

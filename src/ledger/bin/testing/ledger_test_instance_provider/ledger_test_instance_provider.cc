@@ -6,6 +6,7 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
@@ -25,7 +26,7 @@ constexpr fxl::StringView kLedgerName = "test ledger instance";
 
 // Exposes a public service that serves an in-memory Ledger.
 int main(int argc, char const *argv[]) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   std::unique_ptr<sys::ComponentContext> context(sys::ComponentContext::Create());
 
   // Get a repository factory.

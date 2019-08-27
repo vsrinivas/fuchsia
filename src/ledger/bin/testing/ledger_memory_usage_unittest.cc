@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -53,12 +54,12 @@ int64_t LaunchTestBenchmark(async::Loop* loop) {
 }
 
 TEST(LedgerMemoryUsage, Simple) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   EXPECT_EQ(LaunchTestBenchmark(&loop), EXIT_SUCCESS);
 }
 
 TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr component_controller;
   scoped_tmpfs::ScopedTmpFS tmp_dir;

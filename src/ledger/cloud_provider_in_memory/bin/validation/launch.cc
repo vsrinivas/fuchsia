@@ -4,6 +4,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -25,7 +26,7 @@ constexpr fxl::StringView kGtestFilter =
 }  // namespace
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
   fuchsia::sys::LauncherPtr component_launcher;
   component_context->svc()->Connect(component_launcher.NewRequest());

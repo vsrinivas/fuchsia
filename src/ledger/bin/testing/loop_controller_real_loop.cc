@@ -5,6 +5,7 @@
 #include "src/ledger/bin/testing/loop_controller_real_loop.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 
@@ -17,7 +18,7 @@ namespace {
 // Implementation of a SubLoop that uses a real loop.
 class SubLoopRealLoop : public SubLoop {
  public:
-  SubLoopRealLoop() : loop_(&kAsyncLoopConfigNoAttachToThread) { loop_.StartThread(); };
+  SubLoopRealLoop() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) { loop_.StartThread(); };
 
   ~SubLoopRealLoop() override { loop_.Shutdown(); }
 
@@ -35,7 +36,7 @@ class SubLoopRealLoop : public SubLoop {
 
 }  // namespace
 
-LoopControllerRealLoop::LoopControllerRealLoop() : loop_(&kAsyncLoopConfigAttachToThread) {}
+LoopControllerRealLoop::LoopControllerRealLoop() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
 LoopControllerRealLoop::~LoopControllerRealLoop() {}
 

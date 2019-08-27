@@ -84,7 +84,7 @@ CloudProviderFactory::CloudProviderFactory(
       random_(random),
       api_key_(std::move(api_key)),
       credentials_(std::move(credentials)),
-      services_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      services_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   FXL_DCHECK(component_context);
   FXL_DCHECK(!api_key_.empty());
 }
