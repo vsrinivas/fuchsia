@@ -60,12 +60,10 @@ func createTestStackRouterRDR(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	s.SetRouteTable([]tcpip.Route{
 		{
 			Destination: testLanNet,
-			Mask:        testLanNetMask,
 			NIC:         nic1,
 		},
 		{
 			Destination: testWanNet,
-			Mask:        testWanNetMask,
 			NIC:         nic2,
 		},
 	})

@@ -9,56 +9,6 @@ import (
 	"github.com/google/netstack/tcpip"
 )
 
-func TestApplyMask(t *testing.T) {
-	tests := []struct {
-		name        string
-		addr        tcpip.Address
-		mask        tcpip.AddressMask
-		want        tcpip.Address
-		shouldPanic bool
-	}{
-		{
-			name: "fullMask",
-			addr: "\x01\x01\x01\x01",
-			mask: "\xff\xff\xff\xff",
-			want: "\x01\x01\x01\x01",
-		},
-		{
-			name: "partialMask",
-			addr: "\x01\x01\x01\x01",
-			mask: "\xff\xff\xff\x00",
-			want: "\x01\x01\x01\x00",
-		},
-		{
-			name:        "mismatchedLengths",
-			addr:        "\x01\x01\x01\x01",
-			mask:        "\xff\xff\xff",
-			shouldPanic: true,
-		},
-		{
-			name:        "zeroLengthMask",
-			addr:        "\x01\x01\x01\x01",
-			mask:        "",
-			shouldPanic: true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				if got := r != nil; got != test.shouldPanic {
-					t.Logf("recover() = %s", r)
-					t.Errorf("got (recover() != nil) = %t; want = %t", got, test.shouldPanic)
-				}
-			}()
-			if got := util.ApplyMask(test.addr, test.mask); got != test.want {
-				t.Errorf("got util.ApplyMask(%s, %s) = %s, want = %s", test.addr, test.mask, got, test.want)
-			}
-		})
-	}
-}
-
 func TestParse(t *testing.T) {
 	tests := []struct {
 		txt  string
@@ -86,65 +36,6 @@ func TestParse(t *testing.T) {
 		got := util.Parse(test.txt)
 		if got != test.addr {
 			t.Errorf("got util.Parse(%q) = %q, want %q", test.txt, got, test.addr)
-		}
-	}
-}
-
-func TestDefaultMask(t *testing.T) {
-	tests := []struct {
-		addr        tcpip.Address
-		mask        tcpip.AddressMask
-		shouldPanic bool
-	}{
-		{addr: util.Parse("192.168.42.10"), mask: "\xff\xff\xff\x00"},
-		{addr: util.Parse("10.0.1.1"), mask: "\xff\x00\x00\x00"},
-		{addr: util.Parse("10.0.1"), shouldPanic: true},
-		{addr: util.Parse("2001:0db8:85a3:0000:0000:8a2e:0370:7334"), shouldPanic: true},
-		{addr: util.Parse(""), shouldPanic: true},
-	}
-
-	for _, test := range tests {
-		func() {
-			defer func() {
-				r := recover()
-				if got := r != nil; got != test.shouldPanic {
-					t.Logf("recover() = %s", r)
-					t.Errorf("got (recover() != nil) = %t; want = %t", got, test.shouldPanic)
-				}
-			}()
-			got := util.DefaultMask(test.addr)
-			if got != test.mask {
-				t.Errorf("got util.DefaultMask(%q) = %q, want %q", test.addr, got, test.mask)
-			}
-		}()
-	}
-}
-
-// Copied from pkg net (ip_test.go).
-func TestParseCIDR(t *testing.T) {
-	for _, tt := range []struct {
-		in      string
-		address string
-		netmask string
-	}{
-		{"135.104.0.0/32", "135.104.0.0", "255.255.255.255"},
-		{"0.0.0.0/24", "0.0.0.0", "255.255.255.0"},
-		{"135.104.0.0/24", "135.104.0.0", "255.255.255.0"},
-		{"135.104.0.1/32", "135.104.0.1", "255.255.255.255"},
-		{"135.104.0.1/24", "135.104.0.1", "255.255.255.0"},
-	} {
-		address, subnet, err := util.ParseCIDR(tt.in)
-		if err != nil {
-			t.Error(err)
-		} else if want := util.Parse(tt.address); address != want {
-			t.Errorf("ParseCIDR('%s') = ('%s', _); want ('%s', _)", tt.in, address, want)
-		} else {
-			netmask := tcpip.AddressMask(util.Parse(tt.netmask))
-			if want, err := tcpip.NewSubnet(util.ApplyMask(want, netmask), netmask); err != nil {
-				t.Errorf("tcpip.NewSubnet('%v', '%v') failed: %v", want, tt.netmask, err)
-			} else if want != subnet {
-				t.Errorf("ParseCIDR('%s') = (_, %+v); want (_, %+v)", tt.in, subnet, want)
-			}
 		}
 	}
 }
@@ -178,39 +69,6 @@ func TestIsAny(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := util.IsAny(tc.addr); got != tc.want {
 				t.Fatalf("IsAny(%v) = %v, want = %v", tc.addr, got, tc.want)
-			}
-		})
-	}
-}
-
-func TestPrefixLength(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		mask tcpip.AddressMask
-		want int
-	}{
-		{"IPv4-Empty", "", 0},
-		{"IPv4-0", "\x00\x00\x00\x00", 0},
-		{"IPv4-3", "\xe0\x00\x00\x00", 3},
-		{"IPv4-7", "\xfe\x00\x00\x00", 7},
-		{"IPv4-8", "\xff\x00\x00\x00", 8},
-		{"IPv4-12", "\xff\xf0\x00\x00", 12},
-		{"IPv4-16", "\xff\xff\x00\x00", 16},
-		{"IPv4-24", "\xff\xff\xff\x00", 24},
-		{"IPv4-29", "\xff\xff\xff\xfc", 30},
-		{"IPv4-32", "\xff\xff\xff\xff", 32},
-		{"IPv6-Empty", "", 0},
-		{"IPv6-0", "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 0},
-		{"IPv6-5", "\xf8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 5},
-		{"IPv6-8", "\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 8},
-		{"IPv6-22", "\xff\xff\xfc\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 22},
-		{"IPv6-73", "\xff\xff\xff\xff\xff\xff\xff\xff\xff\x80\x00\x00\x00\x00\x00\x00", 73},
-		{"IPv6-123", "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xe0", 123},
-		{"IPv6-128", "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", 128},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := util.PrefixLength(tc.mask); got != tc.want {
-				t.Fatalf("PrefixLength(%v) = %v, want = %v", tc.mask, got, tc.want)
 			}
 		})
 	}

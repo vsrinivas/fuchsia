@@ -170,7 +170,7 @@ func (ios *iostate) loopWrite() error {
 				return fmt.Errorf("Endpoint.Write(%s): %s", optsStr, err)
 			}
 			if ios.transProto != tcp.ProtocolNumber {
-				if int(n) < len(v) {
+				if n < int64(len(v)) {
 					panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
 				}
 			}
@@ -717,21 +717,30 @@ func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
 	if err != nil {
 		return tcpipErrorToCode(tcpip.ErrBadAddress), nil
 	}
-	if l := len(addr.Addr); l > 0 {
-		if ios.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ios, addr.Addr)
-			return C.EAFNOSUPPORT, nil
+	// NB: We can't just compare the length to zero because that would
+	// mishandle the IPv6-mapped IPv4 unspecified address.
+	disconnect := addr.Port == 0 && (len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified())
+	if disconnect {
+		if err := ios.ep.Disconnect(); err != nil {
+			return tcpipErrorToCode(err), nil
 		}
-	}
-	if err := ios.ep.Connect(addr); err != nil {
-		if err == tcpip.ErrConnectStarted {
-			localAddr, err := ios.ep.GetLocalAddress()
-			if err != nil {
-				panic(err)
+	} else {
+		if l := len(addr.Addr); l > 0 {
+			if ios.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
+				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: unsupported address %s", ios, addr.Addr)
+				return C.EAFNOSUPPORT, nil
 			}
-			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ios, localAddr, addr)
 		}
-		return tcpipErrorToCode(err), nil
+		if err := ios.ep.Connect(addr); err != nil {
+			if err == tcpip.ErrConnectStarted {
+				localAddr, err := ios.ep.GetLocalAddress()
+				if err != nil {
+					panic(err)
+				}
+				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ios, localAddr, addr)
+			}
+			return tcpipErrorToCode(err), nil
+		}
 	}
 
 	{
@@ -740,9 +749,7 @@ func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
 			panic(err)
 		}
 
-		// NB: We can't just compare the length to zero because that would
-		// mishandle the IPv6-mapped IPv4 unspecified address.
-		if len(addr.Addr) == 0 || net.IP(addr.Addr).IsUnspecified() {
+		if disconnect {
 			syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: local=%+v, remote=disconnected", ios, localAddr)
 		} else {
 			remoteAddr, err := ios.ep.GetRemoteAddress()

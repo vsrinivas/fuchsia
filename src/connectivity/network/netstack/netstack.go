@@ -7,7 +7,8 @@ package netstack
 import (
 	"context"
 	"fmt"
-	"strings"
+	"net"
+	"netstack/util"
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
@@ -17,17 +18,14 @@ import (
 
 	"netstack/dhcp"
 	"netstack/dns"
-	"netstack/fidlconv"
 	"netstack/filter"
 	"netstack/link"
 	"netstack/link/bridge"
 	"netstack/link/eth"
 	"netstack/routes"
-	"netstack/util"
 
 	"fidl/fuchsia/device"
 	"fidl/fuchsia/hardware/ethernet"
-	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
@@ -127,23 +125,26 @@ type ifState struct {
 func defaultRoutes(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
 	return []tcpip.Route{
 		{
-			Destination: tcpip.Address(strings.Repeat("\x00", 4)),
-			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 4)),
+			Destination: header.IPv4EmptySubnet,
 			Gateway:     gateway,
 			NIC:         nicid,
 		},
 		{
-			Destination: tcpip.Address(strings.Repeat("\x00", 16)),
-			Mask:        tcpip.AddressMask(strings.Repeat("\x00", 16)),
+			Destination: header.IPv6EmptySubnet,
 			NIC:         nicid,
 		},
 	}
 }
 
-func subnetRoute(addr tcpip.Address, mask tcpip.AddressMask, nicid tcpip.NICID) tcpip.Route {
+func addressWithPrefixRoute(nicid tcpip.NICID, addr tcpip.AddressWithPrefix) tcpip.Route {
+	mask := net.CIDRMask(addr.PrefixLen, len(addr.Address)*8)
+	destination, err := tcpip.NewSubnet(tcpip.Address(net.IP(addr.Address).Mask(mask)), tcpip.AddressMask(mask))
+	if err != nil {
+		panic(err)
+	}
+
 	return tcpip.Route{
-		Destination: util.ApplyMask(addr, mask),
-		Mask:        mask,
+		Destination: destination,
 		NIC:         nicid,
 	}
 }
@@ -179,7 +180,7 @@ func (ns *Netstack) AddRoutesLocked(rs []tcpip.Route, metric routes.Metric, dyna
 	}
 
 	for _, r := range rs {
-		switch len(r.Destination) {
+		switch len(r.Destination.ID()) {
 		case header.IPv4AddressSize, header.IPv6AddressSize:
 		default:
 			// TODO(NET-2244): update this to return an error; panicing here enables syzkaller to find
@@ -264,28 +265,24 @@ func (ns *Netstack) UpdateInterfaceMetric(nicid tcpip.NICID, metric routes.Metri
 	return nil
 }
 
-func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
-	subnet, err := toSubnet(addr, prefixLen)
-	if err != nil {
-		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
-	}
-	route := subnetRoute(addr, subnet.Mask(), nic)
-	syslog.Infof("removing static IP %s/%d from NIC %d, deleting subnet route %+v", addr, prefixLen, nic, route)
+func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) error {
+	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
+	syslog.Infof("removing static IP %s from NIC %d, deleting subnet route %+v", addr.AddressWithPrefix, nic, route)
 
 	ns.mu.Lock()
 	if err := func() error {
-		if _, found := ns.findAddress(nic, protocol, addr); !found {
-			return fmt.Errorf("address %s doesn't exist on NIC ID %d", addr, nic)
+		if _, found := ns.findAddress(nic, addr); !found {
+			return fmt.Errorf("address %s doesn't exist on NIC ID %d", addr.AddressWithPrefix, nic)
 		}
 
 		if err := ns.DelRouteLocked(route); err != nil {
 			// The route might have been removed by user action. Continue.
 		}
 
-		if err := ns.mu.stack.RemoveAddress(nic, addr); err == tcpip.ErrUnknownNICID {
+		if err := ns.mu.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err == tcpip.ErrUnknownNICID {
 			panic(fmt.Sprintf("stack.RemoveAddress(_): NIC [%d] not found", nic))
 		} else if err != nil {
-			return fmt.Errorf("error removing address %s from NIC ID %d: %s", addr, nic, err)
+			return fmt.Errorf("error removing address %s from NIC ID %d: %s", addr.AddressWithPrefix, nic, err)
 		}
 
 		return nil
@@ -300,43 +297,25 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 	return nil
 }
 
-func toSubnet(address tcpip.Address, prefixLen uint8) (tcpip.Subnet, error) {
-	m := util.CIDRMask(int(prefixLen), int(len(address)*8))
-	if len(m) == 0 {
-		return tcpip.Subnet{}, fmt.Errorf("net.CIDRMask(%d, %d) = nil", prefixLen, len(address)*8)
-	}
-	return tcpip.NewSubnet(util.ApplyMask(address, m), m)
-}
-
-func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address, prefixLen uint8) error {
-	subnet, err := toSubnet(addr, prefixLen)
-	if err != nil {
-		return fmt.Errorf("error parsing subnet format for NIC ID %d: %s", nic, err)
-	}
-	route := subnetRoute(addr, subnet.Mask(), nic)
-	syslog.Infof("adding static IP %v/%d to NIC %d, creating subnet route %+v with metric=<not-set>, dynamic=false", addr, prefixLen, nic, route)
+func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) error {
+	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
+	syslog.Infof("adding static IP %s to NIC %d, creating subnet route %+v with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
 
 	ns.mu.Lock()
 	if err := func() error {
-		if a, found := ns.findAddress(nic, protocol, addr); found {
-			if int(prefixLen) == a.AddressWithPrefix.PrefixLen {
-				return fmt.Errorf("address %s/%d already exists on NIC ID %d", addr, prefixLen, nic)
+		if a, found := ns.findAddress(nic, addr); found {
+			if a.AddressWithPrefix.PrefixLen == addr.AddressWithPrefix.PrefixLen {
+				return fmt.Errorf("address %s already exists on NIC ID %d", addr.AddressWithPrefix, nic)
 			}
 			// Same address but different prefix. Remove the address and re-add it
 			// with the new prefix (below).
-			if err := ns.mu.stack.RemoveAddress(nic, addr); err != nil {
-				return fmt.Errorf("NIC %d: failed to remove address %s: %s", nic, addr, err)
+			if err := ns.mu.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err != nil {
+				return fmt.Errorf("NIC %d: failed to remove address %s: %s", nic, addr.AddressWithPrefix, err)
 			}
 		}
 
-		if err := ns.mu.stack.AddProtocolAddress(nic, tcpip.ProtocolAddress{
-			Protocol: protocol,
-			AddressWithPrefix: tcpip.AddressWithPrefix{
-				Address:   addr,
-				PrefixLen: int(prefixLen),
-			},
-		}); err != nil {
-			return fmt.Errorf("error adding address %s/%d to NIC ID %d: %s", addr, prefixLen, nic, err)
+		if err := ns.mu.stack.AddProtocolAddress(nic, addr); err != nil {
+			return fmt.Errorf("error adding address %s to NIC ID %d: %s", addr.AddressWithPrefix, nic, err)
 		}
 
 		if err := ns.AddRouteLocked(route, metricNotSet, false); err != nil {
@@ -390,7 +369,7 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.AddressWithPrefix, confi
 
 				// Add a default route and a route for the local subnet.
 				rs := defaultRoutes(ifs.nicid, config.Gateway)
-				rs = append(rs, subnetRoute(newAddr.Address, config.SubnetMask, ifs.nicid))
+				rs = append(rs, addressWithPrefixRoute(ifs.nicid, newAddr))
 				syslog.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
 
 				if err := ifs.ns.AddRoutesLocked(rs, metricNotSet, true /* dynamic */); err != nil {
@@ -599,13 +578,11 @@ func (ns *Netstack) addLoopback() error {
 	if err := ns.AddRoutesLocked(
 		[]tcpip.Route{
 			{
-				Destination: ipv4Loopback,
-				Mask:        tcpip.AddressMask(strings.Repeat("\xff", 4)),
+				Destination: util.PointSubnet(ipv4Loopback),
 				NIC:         nicid,
 			},
 			{
-				Destination: ipv6Loopback,
-				Mask:        tcpip.AddressMask(strings.Repeat("\xff", 16)),
+				Destination: util.PointSubnet(ipv6Loopback),
 				NIC:         nicid,
 			},
 		},
@@ -735,24 +712,6 @@ func (ns *Netstack) addEndpoint(
 	return ifs, nil
 }
 
-func (ns *Netstack) validateInterfaceAddress(address net.IpAddress, prefixLen uint8) (tcpip.NetworkProtocolNumber, tcpip.Address, netstack.NetErr) {
-	var protocol tcpip.NetworkProtocolNumber
-	switch address.Which() {
-	case net.IpAddressIpv4:
-		protocol = ipv4.ProtocolNumber
-	case net.IpAddressIpv6:
-		return 0, "", netstack.NetErr{Status: netstack.StatusIpv4Only, Message: "IPv6 not yet supported"}
-	}
-
-	addr := fidlconv.ToTCPIPAddress(address)
-
-	if (8 * len(addr)) < int(prefixLen) {
-		return 0, "", netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}
-	}
-
-	return protocol, addr, netstack.NetErr{Status: netstack.StatusOk}
-}
-
 func (ns *Netstack) getAddressesLocked(nic tcpip.NICID) []tcpip.ProtocolAddress {
 	nicInfo := ns.mu.stack.NICInfo()
 	info, ok := nicInfo[nic]
@@ -764,10 +723,12 @@ func (ns *Netstack) getAddressesLocked(nic tcpip.NICID) []tcpip.ProtocolAddress 
 
 // findAddress finds the given address in the addresses currently assigned to
 // the NIC. Note that no duplicate addresses exist on a NIC.
-func (ns *Netstack) findAddress(nic tcpip.NICID, protocol tcpip.NetworkProtocolNumber, addr tcpip.Address) (tcpip.ProtocolAddress, bool) {
-	addresses := ns.getAddressesLocked(nic)
-	for _, a := range addresses {
-		if a.Protocol == protocol && a.AddressWithPrefix.Address == addr {
+func (ns *Netstack) findAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (tcpip.ProtocolAddress, bool) {
+	// Ignore prefix length.
+	addr.AddressWithPrefix.PrefixLen = 0
+	for _, a := range ns.getAddressesLocked(nic) {
+		a.AddressWithPrefix.PrefixLen = 0
+		if a == addr {
 			return a, true
 		}
 	}

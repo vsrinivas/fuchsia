@@ -138,19 +138,43 @@ func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
 
 	if enabled {
 		if err := ifs.eth.Up(); err != nil {
-			syslog.Errorf("ifs.eth.Up() failed (NIC %d): %v", id, err)
+			syslog.Errorf("ifs.eth.Up() failed (NIC %d): %s", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	} else {
 		if err := ifs.eth.Down(); err != nil {
-			syslog.Errorf("ifs.eth.Down() failed (NIC %d): %v", id, err)
+			syslog.Errorf("ifs.eth.Down() failed (NIC %d): %s", id, err)
 			return &stack.Error{Type: stack.ErrorTypeInternal}
 		}
 	}
 	return nil
 }
 
+func toProtocolAddr(ifAddr stack.InterfaceAddress) tcpip.ProtocolAddress {
+	protocolAddr := tcpip.ProtocolAddress{
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			PrefixLen: int(ifAddr.PrefixLen),
+		},
+	}
+
+	switch typ := ifAddr.IpAddress.Which(); typ {
+	case net.IpAddressIpv4:
+		protocolAddr.Protocol = ipv4.ProtocolNumber
+		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.IpAddress.Ipv4.Addr[:])
+	case net.IpAddressIpv6:
+		protocolAddr.Protocol = ipv6.ProtocolNumber
+		protocolAddr.AddressWithPrefix.Address = tcpip.Address(ifAddr.IpAddress.Ipv6.Addr[:])
+	default:
+		panic(fmt.Sprintf("unknown IpAddress type %d", typ))
+	}
+	return protocolAddr
+}
+
 func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
+	protocolAddr := toProtocolAddr(ifAddr)
+	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
+		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
+	}
 	nicid := tcpip.NICID(id)
 
 	ns.mu.Lock()
@@ -161,44 +185,30 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
 
-	var protocol tcpip.NetworkProtocolNumber
-	switch typ := ifAddr.IpAddress.Which(); typ {
-	case net.IpAddressIpv4:
-		protocol = ipv4.ProtocolNumber
-	case net.IpAddressIpv6:
-		protocol = ipv6.ProtocolNumber
-	default:
-		panic(fmt.Sprintf("unknown IpAddress type %d", typ))
-	}
-
-	if err := ns.addInterfaceAddress(nicid, protocol, fidlconv.ToTCPIPAddress(ifAddr.IpAddress), ifAddr.PrefixLen); err != nil {
-		syslog.Errorf("(*Netstack).setInterfaceAddress(...) failed (NIC %d): %v", nicid, err)
+	if err := ns.addInterfaceAddress(nicid, protocolAddr); err != nil {
+		syslog.Errorf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, nicid, err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
 	}
 	return nil
 }
 
-func (ns *Netstack) delInterfaceAddr(id uint64, addr stack.InterfaceAddress) *stack.Error {
+func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
+	protocolAddr := toProtocolAddr(ifAddr)
+	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
+		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
+	}
+	nicid := tcpip.NICID(id)
+
 	ns.mu.Lock()
-	_, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	_, ok := ns.mu.ifStates[nicid]
 	ns.mu.Unlock()
 
 	if !ok {
 		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
 
-	var protocol tcpip.NetworkProtocolNumber
-	switch tag := addr.IpAddress.Which(); tag {
-	case net.IpAddressIpv4:
-		protocol = ipv4.ProtocolNumber
-	case net.IpAddressIpv6:
-		protocol = ipv6.ProtocolNumber
-	default:
-		panic(fmt.Sprintf("unknown IpAddress type %d", tag))
-	}
-
-	if err := ns.removeInterfaceAddress(tcpip.NICID(id), protocol, fidlconv.ToTCPIPAddress(addr.IpAddress), uint8(addr.PrefixLen)); err != nil {
-		syslog.Errorf("failed to remove interface address: %s", err)
+	if err := ns.removeInterfaceAddress(nicid, protocolAddr); err != nil {
+		syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, nicid, err)
 		return &stack.Error{Type: stack.ErrorTypeInternal}
 	}
 
@@ -262,13 +272,7 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
 		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
 	}
 
-	sn, err := fidlconv.ToTCPIPSubnet(subnet)
-	if err != nil {
-		syslog.Errorf("cannot convert subnet %+v: %s", subnet, err)
-		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
-	}
-
-	if err := ns.DelRoute(tcpip.Route{Destination: sn.ID(), Mask: sn.Mask()}); err != nil {
+	if err := ns.DelRoute(tcpip.Route{Destination: fidlconv.ToTCPIPSubnet(subnet)}); err != nil {
 		syslog.Errorf("deleting forwarding entry %+v from route table failed: %s", subnet, err)
 		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}

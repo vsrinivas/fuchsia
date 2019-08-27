@@ -64,32 +64,12 @@ type ExtendedRoute struct {
 
 // Match matches the given address against this route.
 func (er *ExtendedRoute) Match(addr tcpip.Address) bool {
-	r := er.Route
-	if len(addr) != len(r.Destination) {
-		return false
-	}
-	for i := 0; i < len(r.Destination); i++ {
-		if (addr[i] & r.Mask[i]) != r.Destination[i] {
-			return false
-		}
-	}
-	return true
-}
-
-// Temporary stringer helper until tcpip.Route implements one.
-func RouteStringer(r *tcpip.Route) string {
-	var out strings.Builder
-	fmt.Fprintf(&out, "%s/%d", r.Destination, util.PrefixLength(r.Mask))
-	if len(r.Gateway) > 0 {
-		fmt.Fprintf(&out, " via %s", r.Gateway)
-	}
-	fmt.Fprintf(&out, " nic %d", r.NIC)
-	return out.String()
+	return er.Route.Destination.Contains(addr)
 }
 
 func (er *ExtendedRoute) String() string {
 	var out strings.Builder
-	fmt.Fprintf(&out, "%s", RouteStringer(&er.Route))
+	fmt.Fprintf(&out, "%s", er.Route)
 	if er.MetricTracksInterface {
 		fmt.Fprintf(&out, " metric[if] %d", er.Metric)
 	} else {
@@ -125,18 +105,12 @@ type RouteTable struct {
 	}
 }
 
-func (rt *RouteTable) String() string {
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-	return rt.mu.routes.String()
-}
-
 // For debugging.
-func (rt *RouteTable) Dump() {
+func (rt *RouteTable) dumpLocked() {
 	if rt == nil {
 		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:<nil>")
 	} else {
-		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:\n%s", rt)
+		syslog.VLogTf(syslog.TraceVerbosity, tag, "Current Route Table:\n%s", rt.mu.routes)
 	}
 }
 
@@ -151,14 +125,14 @@ func (rt *RouteTable) Set(r []ExtendedRoute) {
 // route already exists, it simply updates that route's metric, dynamic and
 // enabled fields.
 func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface bool, dynamic bool, enabled bool) {
-	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Adding route %s with metric:%d, trackIf=%t, dynamic=%t, enabled=%t", RouteStringer(&route), metric, tracksInterface, dynamic, enabled)
+	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Adding route %s with metric:%d, trackIf=%t, dynamic=%t, enabled=%t", route, metric, tracksInterface, dynamic, enabled)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 
 	// First check if the route already exists, and remove it.
 	for i, er := range rt.mu.routes {
-		if IsSameRoute(route, er.Route) {
+		if er.Route == route {
 			rt.mu.routes = append(rt.mu.routes[:i], rt.mu.routes[i+1:]...)
 			break
 		}
@@ -189,12 +163,12 @@ func (rt *RouteTable) AddRoute(route tcpip.Route, metric Metric, tracksInterface
 		rt.mu.routes[targetIdx] = newEr
 	}
 
-	rt.Dump()
+	rt.dumpLocked()
 }
 
 // DelRoute removes the given route from the route table.
 func (rt *RouteTable) DelRoute(route tcpip.Route) error {
-	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Deleting route %s", RouteStringer(&route))
+	syslog.VLogTf(syslog.DebugVerbosity, tag, "RouteTable:Deleting route %s", route)
 
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -204,7 +178,7 @@ func (rt *RouteTable) DelRoute(route tcpip.Route) error {
 	rt.mu.routes = oldTable[:0]
 	for _, er := range oldTable {
 		// Match all fields that are non-zero.
-		if isSameSubnet(er.Route, route) {
+		if er.Route.Destination == route.Destination {
 			if route.NIC == 0 || route.NIC == er.Route.NIC {
 				if len(route.Gateway) == 0 || route.Gateway == er.Route.Gateway {
 					routeDeleted = true
@@ -220,7 +194,7 @@ func (rt *RouteTable) DelRoute(route tcpip.Route) error {
 		return fmt.Errorf("no such route")
 	}
 
-	rt.Dump()
+	rt.dumpLocked()
 	return nil
 }
 
@@ -229,7 +203,7 @@ func (rt *RouteTable) GetExtendedRouteTable() ExtendedRouteTable {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 
-	rt.Dump()
+	rt.dumpLocked()
 
 	return append([]ExtendedRoute(nil), rt.mu.routes...)
 }
@@ -269,7 +243,7 @@ func (rt *RouteTable) UpdateMetricByInterface(nicid tcpip.NICID, metric Metric) 
 
 	rt.sortRouteTableLocked()
 
-	rt.Dump()
+	rt.dumpLocked()
 }
 
 // UpdateRoutesByInterface applies an action to the routes pointing to an interface.
@@ -306,7 +280,7 @@ func (rt *RouteTable) UpdateRoutesByInterface(nicid tcpip.NICID, action Action) 
 
 	rt.sortRouteTableLocked()
 
-	rt.Dump()
+	rt.dumpLocked()
 }
 
 // FindNIC returns the NIC-ID that the given address is routed on. This requires
@@ -317,7 +291,7 @@ func (rt *RouteTable) FindNIC(addr tcpip.Address) (tcpip.NICID, error) {
 
 	for _, er := range rt.mu.routes {
 		// Ignore default routes.
-		if util.IsAny(er.Route.Destination) {
+		if util.IsAny(er.Route.Destination.ID()) {
 			continue
 		}
 		if er.Match(addr) && er.Route.NIC > 0 {
@@ -337,20 +311,20 @@ func (rt *RouteTable) sortRouteTableLocked() {
 // route table.
 func Less(ei, ej *ExtendedRoute) bool {
 	ri, rj := ei.Route, ej.Route
+	riDest, rjDest := ri.Destination.ID(), rj.Destination.ID()
 	// Non-default before default one.
-	if util.IsAny(ri.Destination) != util.IsAny(rj.Destination) {
-		return !util.IsAny(ri.Destination)
+	if riAny, rjAny := util.IsAny(riDest), util.IsAny(rjDest); riAny != rjAny {
+		return !riAny
 	}
 
 	// IPv4 before IPv6 (arbitrary choice).
-	if len(ri.Destination) != len(rj.Destination) {
-		return len(ri.Destination) == header.IPv4AddressSize
+	if riLen, rjLen := len(riDest), len(rjDest); riLen != rjLen {
+		return riLen == header.IPv4AddressSize
 	}
 
 	// Longer prefix wins.
-	li, lj := util.PrefixLength(ri.Mask), util.PrefixLength(rj.Mask)
-	if len(ri.Mask) == len(rj.Mask) && li != lj {
-		return li > lj
+	if riPrefix, rjPrefix := ri.Destination.Prefix(), rj.Destination.Prefix(); riPrefix != rjPrefix {
+		return riPrefix > rjPrefix
 	}
 
 	// Lower metrics wins.
@@ -361,7 +335,6 @@ func Less(ei, ej *ExtendedRoute) bool {
 	// Everything that matters is the same. At this point we still need a
 	// deterministic way to tie-break. First go by destination IPs (lower wins),
 	// finally use the NIC.
-	riDest, rjDest := []byte(ri.Destination), []byte(rj.Destination)
 	for i := 0; i < len(riDest); i++ {
 		if riDest[i] != rjDest[i] {
 			return riDest[i] < rjDest[i]
@@ -371,23 +344,4 @@ func Less(ei, ej *ExtendedRoute) bool {
 	// Same prefix and destination IPs (e.g. loopback IPs), use NIC as final
 	// tie-breaker.
 	return ri.NIC < rj.NIC
-}
-
-func isSameSubnet(a, b tcpip.Route) bool {
-	return a.Destination == b.Destination && a.Mask == b.Mask
-}
-
-// IsSameRoute returns true if two routes are the same.
-func IsSameRoute(a, b tcpip.Route) bool {
-	if !isSameSubnet(a, b) || a.NIC != b.NIC {
-		return false
-	}
-
-	aHasGW := len(a.Gateway) > 0 && !util.IsAny(a.Gateway)
-	bHasGW := len(a.Gateway) > 0 && !util.IsAny(b.Gateway)
-	if aHasGW && bHasGW {
-		return a.Gateway == b.Gateway
-	}
-	// either one or both routes have no gateway
-	return !aHasGW && !bHasGW
 }

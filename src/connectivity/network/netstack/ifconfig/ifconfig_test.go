@@ -49,7 +49,7 @@ func TestOutput(t *testing.T) {
 		RunQuietly(t, "/bin/ifconfig", "route", "add", "1.2.3.4/14", "gateway", "9.8.7.6", "iface", "lo")
 
 		out := Run(t, "/bin/ifconfig", "route", "show")
-		expected := "1.2.3.4/14 via 9.8.7.6 lo"
+		expected := "1.0.0.0/14 via 9.8.7.6 lo"
 		if !strings.Contains(out, expected) {
 			t.Errorf("ifconfig route add failed, couldn't find '%s' in '%s'", expected, out)
 		}

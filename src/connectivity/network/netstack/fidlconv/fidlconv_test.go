@@ -5,11 +5,12 @@
 package fidlconv
 
 import (
+	"net"
 	"testing"
 
 	"netstack/util"
 
-	"fidl/fuchsia/net"
+	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 
 	"github.com/google/netstack/tcpip"
@@ -19,8 +20,8 @@ import (
 // This is challenging because of the way FIDL unions are constructed in Go.
 
 func TestNetIPtoTCPIPAddressIPv4(t *testing.T) {
-	from := net.IpAddress{}
-	from.SetIpv4(net.Ipv4Address{Addr: [4]uint8{127, 0, 0, 1}})
+	from := fidlnet.IpAddress{}
+	from.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{127, 0, 0, 1}})
 	to := ToTCPIPAddress(from)
 	expected := util.Parse("127.0.0.1")
 	if to != expected {
@@ -29,8 +30,8 @@ func TestNetIPtoTCPIPAddressIPv4(t *testing.T) {
 }
 
 func TestNetIPtoTCPIPAddressIPv6(t *testing.T) {
-	from := net.IpAddress{}
-	from.SetIpv6(net.Ipv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
+	from := fidlnet.IpAddress{}
+	from.SetIpv6(fidlnet.Ipv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
 	to := ToTCPIPAddress(from)
 	expected := util.Parse("fe80::1")
 	if to != expected {
@@ -41,8 +42,8 @@ func TestNetIPtoTCPIPAddressIPv6(t *testing.T) {
 func TestToFIDLIPAddressIPv4(t *testing.T) {
 	from := util.Parse("127.0.0.1")
 	to := ToNetIpAddress(from)
-	expected := net.IpAddress{}
-	expected.SetIpv4(net.Ipv4Address{Addr: [4]uint8{127, 0, 0, 1}})
+	expected := fidlnet.IpAddress{}
+	expected.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{127, 0, 0, 1}})
 	if to != expected {
 		t.Fatalf("Expected:\n %v\nActual:\n %v", expected, to)
 	}
@@ -51,8 +52,8 @@ func TestToFIDLIPAddressIPv4(t *testing.T) {
 func TestToFIDLIPAddressIPv6(t *testing.T) {
 	from := util.Parse("fe80::1")
 	to := ToNetIpAddress(from)
-	expected := net.IpAddress{}
-	expected.SetIpv6(net.Ipv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
+	expected := fidlnet.IpAddress{}
+	expected.SetIpv6(fidlnet.Ipv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
 	if to != expected {
 		t.Fatalf("Expected:\n %v\nActual:\n %v", expected, to)
 	}
@@ -96,15 +97,18 @@ func TestToTCPIPSubnet(t *testing.T) {
 		{[4]uint8{0, 0, 0, 0}, 0, "0.0.0.0/0"},
 	}
 	for _, testCase := range cases {
-		netSubnet := newNetSubnet(testCase.addr, testCase.prefix)
-		to, err := ToTCPIPSubnet(netSubnet)
-		if err != nil {
-			t.Errorf("Error generating tcpip.Subnet: %v", err)
-			continue
+		netSubnet := fidlnet.Subnet{
+			PrefixLen: testCase.prefix,
 		}
-		_, expected, err := util.ParseCIDR(testCase.expected)
+		netSubnet.Addr.SetIpv4(fidlnet.Ipv4Address{Addr: testCase.addr})
+		to := ToTCPIPSubnet(netSubnet)
+		_, ipNet, err := net.ParseCIDR(testCase.expected)
 		if err != nil {
 			t.Fatalf("Error creating tcpip.Subnet: %v", err)
+		}
+		expected, err := tcpip.NewSubnet(tcpip.Address(ipNet.IP), tcpip.AddressMask(ipNet.Mask))
+		if err != nil {
+			t.Fatal(err)
 		}
 		if to != expected {
 			t.Errorf("Expected:\n {%v, %v}\nActual: {%v, %v}",
@@ -114,70 +118,13 @@ func TestToTCPIPSubnet(t *testing.T) {
 	}
 }
 
-func TestPrefixLenIPv4(t *testing.T) {
-	cases := []struct {
-		mask   tcpip.AddressMask
-		prefix uint8
-	}{
-		{tcpip.AddressMask(util.Parse("255.255.255.255")), 32},
-		{tcpip.AddressMask(util.Parse("255.255.255.254")), 31},
-		{tcpip.AddressMask(util.Parse("255.255.255.128")), 25},
-		{tcpip.AddressMask(util.Parse("255.255.255.0")), 24},
-		{tcpip.AddressMask(util.Parse("255.0.0.0")), 8},
-		{tcpip.AddressMask(util.Parse("128.0.0.0")), 1},
-		{tcpip.AddressMask(util.Parse("0.0.0.0")), 0},
-	}
-	for _, testCase := range cases {
-		prefixLen := GetPrefixLen(testCase.mask)
-		if prefixLen != testCase.prefix {
-			t.Errorf("Expected:\n %v\nActual: %v", testCase.prefix, prefixLen)
-		}
-	}
-}
-
-func TestPrefixLenIPv6(t *testing.T) {
-	cases := []struct {
-		mask   tcpip.AddressMask
-		prefix uint8
-	}{
-		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff")), 128},
-		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff:8000")), 113},
-		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:ffff::")), 112},
-		{tcpip.AddressMask(util.Parse("ffff:ffff:ffff:ffff:ffff:ffff:fffe::")), 111},
-		{tcpip.AddressMask(util.Parse("8000::")), 1},
-		{tcpip.AddressMask(util.Parse("::")), 0},
-	}
-	for _, testCase := range cases {
-		prefixLen := GetPrefixLen(testCase.mask)
-		if prefixLen != testCase.prefix {
-			t.Errorf("Case: %v\n Expected:\n %v\nActual: %v", testCase.mask, testCase.prefix, prefixLen)
-		}
-	}
-}
-
-func TestPrefixLenEmptyInvalid(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("Expected to fail on invalid address length")
-		}
-	}()
-
-	GetPrefixLen("")
-	t.Errorf("Expected to fail on invalid address length")
-}
-
-func TestPrefixLenInvalidLength(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("Expected to fail on invalid address length")
-		}
-	}()
-
-	GetPrefixLen("\x00\x00")
-	t.Errorf("Expected to fail on invalid address length")
-}
-
 func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
+	const gateway = "efghijklmnopqrst"
+
+	destination, err := tcpip.NewSubnet("\xab\xcd\x00\x00", "\xff\xff\xe0\x00")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tc := range []struct {
 		dest stack.ForwardingDestination
 		want tcpip.Route
@@ -188,24 +135,22 @@ func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
 			return dest
 		}(),
 			want: tcpip.Route{
-				Destination: tcpip.Address("abcd"),
-				Mask:        "\xff\xff\xe0\x00",
+				Destination: destination,
 				NIC:         789,
 			}},
 		{dest: func() stack.ForwardingDestination {
 			var dest stack.ForwardingDestination
-			dest.SetNextHop(ToNetIpAddress(tcpip.Address("efghijklmnopqrst")))
+			dest.SetNextHop(ToNetIpAddress(gateway))
 			return dest
 		}(),
 			want: tcpip.Route{
-				Destination: tcpip.Address("abcd"),
-				Mask:        "\xff\xff\xe0\x00",
-				Gateway:     tcpip.Address("efghijklmnopqrst"),
+				Destination: destination,
+				Gateway:     gateway,
 			}},
 	} {
 		fe := stack.ForwardingEntry{
-			Subnet: net.Subnet{
-				Addr:      ToNetIpAddress(tcpip.Address("abcd")),
+			Subnet: fidlnet.Subnet{
+				Addr:      ToNetIpAddress(destination.ID()),
 				PrefixLen: 19,
 			},
 			Destination: tc.dest,
@@ -219,11 +164,4 @@ func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
 			t.Errorf("got TcpipRouteToForwardingEntry(%+v) = %+v, want = %+v", got, roundtripFe, fe)
 		}
 	}
-}
-
-func newNetSubnet(addr [4]uint8, prefix uint8) net.Subnet {
-	subnet := net.Subnet{}
-	subnet.Addr.SetIpv4(net.Ipv4Address{Addr: addr})
-	subnet.PrefixLen = prefix
-	return subnet
 }

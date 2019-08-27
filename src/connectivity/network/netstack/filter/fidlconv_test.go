@@ -5,12 +5,13 @@
 package filter
 
 import (
+	"net"
 	"reflect"
 	"testing"
 
 	"netstack/util"
 
-	"fidl/fuchsia/net"
+	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/filter"
 
 	"github.com/google/netstack/tcpip"
@@ -177,25 +178,25 @@ func TestToTransProto(t *testing.T) {
 
 func TestFromAddress(t *testing.T) {
 	a1 := util.Parse("1.2.3.4")
-	var b1 net.IpAddress
+	var b1 fidlnet.IpAddress
 
-	b1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	b1.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
 
 	a2 := util.Parse("a:b:c::2:3:4")
-	var b2v6 net.Ipv6Address
+	var b2v6 fidlnet.Ipv6Address
 	copy(b2v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x02\x00\x03\x00\x04")
-	var b2 net.IpAddress
+	var b2 fidlnet.IpAddress
 
 	b2.SetIpv6(b2v6)
 
 	var tests = []struct {
 		address    tcpip.Address
-		netAddress net.IpAddress
+		netAddress fidlnet.IpAddress
 		err        error
 	}{
 		{a1, b1, nil},
 		{a2, b2, nil},
-		{tcpip.Address("12345"), net.IpAddress{}, ErrUnknownAddressType},
+		{tcpip.Address("12345"), fidlnet.IpAddress{}, ErrUnknownAddressType},
 	}
 
 	for _, test := range tests {
@@ -211,11 +212,11 @@ func TestFromAddress(t *testing.T) {
 			t.Errorf("fromAddress got.Which()=%v, want.Which()=%v", got.Which(), want.Which())
 		}
 		switch got.Which() {
-		case net.IpAddressIpv4:
+		case fidlnet.IpAddressIpv4:
 			if got.Ipv4 != want.Ipv4 {
 				t.Errorf("fromAddress got.Ipv4=%v, want.Ipv4=%v", got.Ipv4, want.Ipv4)
 			}
-		case net.IpAddressIpv6:
+		case fidlnet.IpAddressIpv6:
 			if got.Ipv6 != want.Ipv6 {
 				t.Errorf("fromAddress got.Ipv6=%v, want.Ipv6=%v", got.Ipv6, want.Ipv6)
 			}
@@ -226,26 +227,26 @@ func TestFromAddress(t *testing.T) {
 }
 
 func TestToAddress(t *testing.T) {
-	var a1 net.IpAddress
-	a1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	var a1 fidlnet.IpAddress
+	a1.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
 
 	b1 := util.Parse("1.2.3.4")
 
-	var a2v6 net.Ipv6Address
+	var a2v6 fidlnet.Ipv6Address
 	copy(a2v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x02\x00\x03\x00\x04")
-	var a2 net.IpAddress
+	var a2 fidlnet.IpAddress
 	a2.SetIpv6(a2v6)
 
 	b2 := util.Parse("a:b:c::2:3:4")
 
 	var tests = []struct {
-		netAddress net.IpAddress
+		netAddress fidlnet.IpAddress
 		address    tcpip.Address
 		err        error
 	}{
 		{a1, b1, nil},
 		{a2, b2, nil},
-		{net.IpAddress{}, tcpip.Address(""), ErrUnknownAddressType},
+		{fidlnet.IpAddress{}, tcpip.Address(""), ErrUnknownAddressType},
 	}
 
 	for _, test := range tests {
@@ -262,42 +263,50 @@ func TestToAddress(t *testing.T) {
 	}
 }
 
+func parseCIDR(s string) (tcpip.Subnet, error) {
+	_, subnet, err := net.ParseCIDR(s)
+	if err != nil {
+		return tcpip.Subnet{}, err
+	}
+	return tcpip.NewSubnet(tcpip.Address(subnet.IP), tcpip.AddressMask(subnet.Mask))
+}
+
 func TestFromSubnet(t *testing.T) {
 	// test1
-	_, s1, err := util.ParseCIDR("1.2.3.4/32")
+	s1, err := parseCIDR("1.2.3.4/32")
 	if err != nil {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
 
-	var a1 net.IpAddress
-	a1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
-	t1 := net.Subnet{Addr: a1, PrefixLen: 32}
+	var a1 fidlnet.IpAddress
+	a1.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	t1 := fidlnet.Subnet{Addr: a1, PrefixLen: 32}
 
 	// test2
-	_, s2, err := util.ParseCIDR("10.0.0.0/8")
+	s2, err := parseCIDR("10.0.0.0/8")
 	if err != nil {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
 
-	var a2 net.IpAddress
-	a2.SetIpv4(net.Ipv4Address{Addr: [4]uint8{10, 0, 0, 0}})
-	t2 := net.Subnet{Addr: a2, PrefixLen: 8}
+	var a2 fidlnet.IpAddress
+	a2.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{10, 0, 0, 0}})
+	t2 := fidlnet.Subnet{Addr: a2, PrefixLen: 8}
 
 	// test3
-	_, s3, err := util.ParseCIDR("a:b:c::/96")
+	s3, err := parseCIDR("a:b:c::/96")
 	if err != nil {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
 
-	var a3v6 net.Ipv6Address
+	var a3v6 fidlnet.Ipv6Address
 	copy(a3v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
-	var a3 net.IpAddress
+	var a3 fidlnet.IpAddress
 	a3.SetIpv6(a3v6)
-	t3 := net.Subnet{Addr: a3, PrefixLen: 96}
+	t3 := fidlnet.Subnet{Addr: a3, PrefixLen: 96}
 
 	var tests = []struct {
 		subnet    tcpip.Subnet
-		netSubnet net.Subnet
+		netSubnet fidlnet.Subnet
 		err       error
 	}{
 		{s1, t1, nil},
@@ -318,11 +327,11 @@ func TestFromSubnet(t *testing.T) {
 			t.Errorf("fromSubnet got.Addr.Which()=%v, want.Addr.Which()=%v", got.Addr.Which(), want.Addr.Which())
 		}
 		switch got.Addr.Which() {
-		case net.IpAddressIpv4:
+		case fidlnet.IpAddressIpv4:
 			if got.Addr.Ipv4 != want.Addr.Ipv4 {
 				t.Errorf("fromSubnet got.Addr.Ipv4=%v, want.Addr.Ipv4=%v", got.Addr.Ipv4, want.Addr.Ipv4)
 			}
-		case net.IpAddressIpv6:
+		case fidlnet.IpAddressIpv6:
 			if got.Addr.Ipv6 != want.Addr.Ipv6 {
 				t.Errorf("fromSubnet got.Addr.Ipv6=%v, want.Addr.Ipv6=%v", got.Addr.Ipv6, want.Addr.Ipv6)
 			}
@@ -335,73 +344,12 @@ func TestFromSubnet(t *testing.T) {
 	}
 }
 
-func TestToSubnet(t *testing.T) {
-	// test1
-	var a1 net.IpAddress
-	a1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
-	s1 := net.Subnet{Addr: a1, PrefixLen: 32}
-
-	_, t1, err := util.ParseCIDR("1.2.3.4/32")
-	if err != nil {
-		t.Errorf("ParseCIDR error: %v", err)
-	}
-
-	// test2
-	var a2 net.IpAddress
-	a2.SetIpv4(net.Ipv4Address{Addr: [4]uint8{10, 0, 0, 0}})
-	s2 := net.Subnet{Addr: a2, PrefixLen: 8}
-
-	_, t2, err := util.ParseCIDR("10.0.0.0/8")
-	if err != nil {
-		t.Errorf("ParseCIDR error: %v", err)
-	}
-
-	// test3
-	var a3v6 net.Ipv6Address
-	copy(a3v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
-	var a3 net.IpAddress
-	a3.SetIpv6(a3v6)
-	s3 := net.Subnet{Addr: a3, PrefixLen: 96}
-
-	_, t3, err := util.ParseCIDR("a:b:c::/96")
-	if err != nil {
-		t.Errorf("ParseCIDR error: %v", err)
-	}
-
-	var tests = []struct {
-		netSubnet net.Subnet
-		subnet    tcpip.Subnet
-		err       error
-	}{
-		{s1, t1, nil},
-		{s2, t2, nil},
-		{s3, t3, nil},
-	}
-
-	for _, test := range tests {
-		subnet, err := toSubnet(&test.netSubnet)
-		if err != test.err {
-			t.Errorf("toSubnet unxpected error: %v", err)
-		}
-		if err != nil {
-			continue
-		}
-		got, want := subnet, test.subnet
-		if got.ID() != want.ID() {
-			t.Errorf("toSubnet got.ID()=%v, want.ID()=%v", got.ID(), want.ID())
-		}
-		if got.Mask() != want.Mask() {
-			t.Errorf("toSubnet got.Mask()=%x, want.Mask()=%x", got.Mask(), want.Mask())
-		}
-	}
-}
-
 func TestRules(t *testing.T) {
-	_, srcSubnet, err := util.ParseCIDR("1.2.3.4/32")
+	srcSubnet, err := parseCIDR("1.2.3.4/32")
 	if err != nil {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
-	_, dstSubnet, err := util.ParseCIDR("5.6.7.8/32")
+	dstSubnet, err := parseCIDR("5.6.7.8/32")
 	if err != nil {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
@@ -474,7 +422,7 @@ func TestRules(t *testing.T) {
 }
 
 func TestNATs(t *testing.T) {
-	_, srcSubnet, err := util.ParseCIDR("1.2.3.4/32")
+	srcSubnet, err := parseCIDR("1.2.3.4/32")
 	if err != nil {
 		t.Errorf("ParseCIDR error: %v", err)
 	}

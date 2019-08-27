@@ -6,7 +6,6 @@ package netstack
 
 import (
 	"fmt"
-	"syscall/zx/fidl"
 	"testing"
 
 	"netstack/fidlconv"
@@ -48,7 +47,6 @@ func TestValidateIPAddressMask(t *testing.T) {
 }
 
 func TestFuchsiaNetStack(t *testing.T) {
-	go fidl.Serve()
 	t.Run("Add and Delete Forwarding Entries", func(t *testing.T) {
 		ns := newNetstack(t)
 		eth := deviceForAddEth(ethernet.Info{}, t)

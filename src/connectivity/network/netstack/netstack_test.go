@@ -5,14 +5,14 @@
 package netstack
 
 import (
+	"net"
 	"sort"
-	"strings"
 	"syscall/zx"
 	"testing"
 	"time"
 
 	"fidl/fuchsia/hardware/ethernet"
-	"fidl/fuchsia/net"
+	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
@@ -27,7 +27,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/arp"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
@@ -372,8 +371,8 @@ func TestNetstackImpl_GetInterfaces2(t *testing.T) {
 		t.Fatalf("got len(GetInterfaces2()) = %d, want != %d", l, l)
 	}
 
-	var expectedAddr net.IpAddress
-	expectedAddr.SetIpv4(net.Ipv4Address{})
+	var expectedAddr fidlnet.IpAddress
+	expectedAddr.SetIpv4(fidlnet.Ipv4Address{})
 	for _, iface := range interfaces {
 		if iface.Addr != expectedAddr {
 			t.Errorf("got interface %+v, want Addr = %+v", iface, expectedAddr)
@@ -504,15 +503,21 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 func TestAddRouteParameterValidation(t *testing.T) {
 	ns := newNetstack(t)
 	d := deviceForAddEth(ethernet.Info{}, t)
-	interfaceAddress, prefix := tcpip.Address("\xf0\xf0\xf0\xf0"), uint8(24)
+	addr := tcpip.ProtocolAddress{
+		Protocol: ipv4.ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address:   tcpip.Address("\xf0\xf0\xf0\xf0"),
+			PrefixLen: 24,
+		},
+	}
 	subnetLocalAddress := tcpip.Address("\xf0\xf0\xf0\xf1")
 	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
 	if err != nil {
 		t.Fatalf("got ns.addEth(_) = _, %s want = _, nil", err)
 	}
 
-	if err := ns.addInterfaceAddress(ifState.nicid, ipv4.ProtocolNumber, interfaceAddress, prefix); err != nil {
-		t.Fatalf("ns.addInterfaceAddress(%d, %d, %s, %d) = %s", ifState.nicid, ipv4.ProtocolNumber, interfaceAddress, prefix, err)
+	if err := ns.addInterfaceAddress(ifState.nicid, addr); err != nil {
+		t.Fatalf("ns.addInterfaceAddress(%d, %s) = %s", ifState.nicid, addr.AddressWithPrefix, err)
 	}
 
 	tests := []struct {
@@ -527,10 +532,15 @@ func TestAddRouteParameterValidation(t *testing.T) {
 			// TODO(NET-2244): don't panic when given invalid route destinations
 			name: "zero-length destination",
 			route: tcpip.Route{
-				Destination: tcpip.Address(""),
-				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
-				Gateway:     testV4Address,
-				NIC:         ifState.nicid,
+				Destination: func() tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("", "")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return subnet
+				}(),
+				Gateway: testV4Address,
+				NIC:     ifState.nicid,
 			},
 			metric:      routes.Metric(0),
 			shouldPanic: true,
@@ -539,10 +549,15 @@ func TestAddRouteParameterValidation(t *testing.T) {
 			// TODO(NET-2244): don't panic when given invalid route destinations
 			name: "invalid destination",
 			route: tcpip.Route{
-				Destination: tcpip.Address("\xff"),
-				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
-				Gateway:     testV4Address,
-				NIC:         ifState.nicid,
+				Destination: func() tcpip.Subnet {
+					subnet, err := tcpip.NewSubnet("\xff", "\xff")
+					if err != nil {
+						t.Fatal(err)
+					}
+					return subnet
+				}(),
+				Gateway: testV4Address,
+				NIC:     ifState.nicid,
 			},
 			metric:      routes.Metric(0),
 			shouldPanic: true,
@@ -550,8 +565,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		{
 			name: "IPv4 destination no NIC invalid gateway",
 			route: tcpip.Route{
-				Destination: testV4Address,
-				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
+				Destination: util.PointSubnet(testV4Address),
 				Gateway:     testV4Address,
 				NIC:         0,
 			},
@@ -561,8 +575,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		{
 			name: "IPv6 destination no NIC invalid gateway",
 			route: tcpip.Route{
-				Destination: testV6Address,
-				Mask:        tcpip.AddressMask(strings.Repeat("\xff", 16)),
+				Destination: util.PointSubnet(testV6Address),
 				Gateway:     testV6Address,
 				NIC:         0,
 			},
@@ -572,8 +585,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		{
 			name: "IPv4 destination no NIC valid gateway",
 			route: tcpip.Route{
-				Destination: testV4Address,
-				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
+				Destination: util.PointSubnet(testV4Address),
 				Gateway:     subnetLocalAddress,
 				NIC:         0,
 			},
@@ -581,9 +593,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		{
 			name: "zero length gateway",
 			route: tcpip.Route{
-				Destination: testV4Address,
-				Mask:        tcpip.AddressMask(header.IPv4Broadcast),
-				Gateway:     tcpip.Address(""),
+				Destination: util.PointSubnet(testV4Address),
 				NIC:         ifState.nicid,
 			},
 		},
@@ -622,6 +632,22 @@ func TestDHCPAcquired(t *testing.T) {
 	gatewayAddress[len(gatewayAddress)-1]++
 	const defaultLeaseLength = 60 * time.Second
 
+	defaultMask := net.IP(testV4Address).DefaultMask()
+	prefixLen, _ := defaultMask.Size()
+
+	destination1, err := tcpip.NewSubnet(util.Parse("192.168.42.0"), tcpip.AddressMask(util.Parse("255.255.255.0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	destination2, err := tcpip.NewSubnet(util.Parse("0.0.0.0"), tcpip.AddressMask(util.Parse("0.0.0.0")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	destination3, err := tcpip.NewSubnet(util.Parse("::"), tcpip.AddressMask(util.Parse("::")))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name               string
 		oldAddr, newAddr   tcpip.AddressWithPrefix
@@ -633,20 +659,19 @@ func TestDHCPAcquired(t *testing.T) {
 			oldAddr: tcpip.AddressWithPrefix{},
 			newAddr: tcpip.AddressWithPrefix{
 				Address:   testV4Address,
-				PrefixLen: util.PrefixLength(util.DefaultMask(testV4Address)),
+				PrefixLen: prefixLen,
 			},
 			config: dhcp.Config{
 				ServerAddress: tcpip.Address(serverAddress),
 				Gateway:       tcpip.Address(serverAddress),
-				SubnetMask:    util.DefaultMask(testV4Address),
+				SubnetMask:    tcpip.AddressMask(defaultMask),
 				DNS:           []tcpip.Address{tcpip.Address(gatewayAddress)},
 				LeaseLength:   defaultLeaseLength,
 			},
 			expectedRouteTable: []routes.ExtendedRoute{
 				{
 					Route: tcpip.Route{
-						Destination: util.Parse("192.168.42.0"),
-						Mask:        tcpip.AddressMask(util.Parse("255.255.255.0")),
+						Destination: destination1,
 						NIC:         1,
 					},
 					Metric:                0,
@@ -656,8 +681,7 @@ func TestDHCPAcquired(t *testing.T) {
 				},
 				{
 					Route: tcpip.Route{
-						Destination: util.Parse("0.0.0.0"),
-						Mask:        tcpip.AddressMask(util.Parse("0.0.0.0")),
+						Destination: destination2,
 						Gateway:     util.Parse("192.168.42.18"),
 						NIC:         1,
 					},
@@ -668,8 +692,7 @@ func TestDHCPAcquired(t *testing.T) {
 				},
 				{
 					Route: tcpip.Route{
-						Destination: util.Parse("::"),
-						Mask:        tcpip.AddressMask(util.Parse("::")),
+						Destination: destination3,
 						NIC:         1,
 					},
 					Metric:                0,
@@ -694,7 +717,7 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("ifState.mu.dnsServers mismatch (-want +got):\n%s", diff)
 			}
 
-			if diff := cmp.Diff(ifState.ns.GetExtendedRouteTable(), test.expectedRouteTable); diff != "" {
+			if diff := cmp.Diff(ifState.ns.GetExtendedRouteTable(), test.expectedRouteTable, cmp.AllowUnexported(tcpip.Subnet{})); diff != "" {
 				t.Errorf("GetExtendedRouteTable() mismatch (-want +got):\n%s", diff)
 			}
 
@@ -749,10 +772,6 @@ func TestDHCPAcquired(t *testing.T) {
 			}
 		})
 	}
-}
-
-func getNetmask(prefix uint8, bits int) net.IpAddress {
-	return fidlconv.ToNetIpAddress(tcpip.Address(util.CIDRMask(int(prefix), bits)))
 }
 
 // Returns an ethernetext.Device struct that implements

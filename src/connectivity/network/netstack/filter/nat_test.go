@@ -19,12 +19,17 @@ import (
 
 // TODO: make these tests table-driven.
 
-var (
-	testLanNet                       = util.Parse("192.168.42.0")
-	testLanNetMask tcpip.AddressMask = "\xff\xff\xff\x00"
+func makeSubnet(addr string, m tcpip.AddressMask) tcpip.Subnet {
+	subnet, err := tcpip.NewSubnet(util.Parse(addr), m)
+	if err != nil {
+		panic(err)
+	}
+	return subnet
+}
 
-	testWanNet                       = util.Parse("10.0.0.0")
-	testWanNetMask tcpip.AddressMask = "\xff\x00\x00\x00"
+var (
+	testLanNet = makeSubnet("192.168.42.0", "\xff\xff\xff\x00")
+	testWanNet = makeSubnet("10.0.0.0", "\xff\x00\x00\x00")
 
 	testLanNICAddr     = util.Parse("192.168.42.10")
 	testRouterNICAddr1 = util.Parse("192.168.42.1")
@@ -58,12 +63,10 @@ func createTestStackLan(t *testing.T) (*stack.Stack, *channel.Endpoint) {
 	s.SetRouteTable([]tcpip.Route{
 		{
 			Destination: testLanNet,
-			Mask:        testLanNetMask,
 			NIC:         nic,
 		},
 		{
 			Destination: testWanNet,
-			Mask:        testWanNetMask,
 			NIC:         nic,
 		},
 	})
@@ -82,7 +85,6 @@ func createTestStackWan(t *testing.T) (*stack.Stack, *channel.Endpoint) {
 	s.SetRouteTable([]tcpip.Route{
 		{
 			Destination: testWanNet,
-			Mask:        testWanNetMask,
 			NIC:         nic,
 		},
 	})
@@ -93,20 +95,16 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	s := stack.New([]string{ipv4.ProtocolName}, []string{udp.ProtocolName, tcp.ProtocolName}, stack.Options{})
 
 	f := New(s.PortManager)
-	srcSubnet, terr := tcpip.NewSubnet(testLanNet, tcpip.AddressMask(testLanNetMask))
-	if terr != nil {
-		t.Fatalf("NewSubnet error: %s", terr)
-	}
 	f.rulesetNAT.Lock()
 	f.rulesetNAT.v = []NAT{
 		{
 			transProto: header.UDPProtocolNumber,
-			srcSubnet:  &srcSubnet,
+			srcSubnet:  &testLanNet,
 			newSrcAddr: testRouterNICAddr2,
 		},
 		{
 			transProto: header.TCPProtocolNumber,
-			srcSubnet:  &srcSubnet,
+			srcSubnet:  &testLanNet,
 			newSrcAddr: testRouterNICAddr2,
 		},
 	}
@@ -133,12 +131,10 @@ func createTestStackRouterNAT(t *testing.T) (*stack.Stack, *channel.Endpoint, *c
 	s.SetRouteTable([]tcpip.Route{
 		{
 			Destination: testLanNet,
-			Mask:        testLanNetMask,
 			NIC:         nic1,
 		},
 		{
 			Destination: testWanNet,
-			Mask:        testWanNetMask,
 			NIC:         nic2,
 		},
 	})
