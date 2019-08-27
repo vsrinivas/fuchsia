@@ -396,4 +396,7 @@ zx_status_t brcmf_sdio_sleep(struct brcmf_sdio* bus, bool sleep);
 void brcmf_sdio_trigger_dpc(struct brcmf_sdio* bus);
 int brcmf_sdio_oob_irqhandler(void* cookie);
 
+zx_status_t brcmf_sdio_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus);
+void brcmf_sdio_exit(struct brcmf_bus* bus);
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SDIO_H_

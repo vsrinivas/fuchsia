@@ -21,22 +21,18 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim_device.h"
 
 namespace wlan {
 namespace brcmfmac {
 namespace {
 
 TEST(LifecycleTest, StartStop) {
-  zx_status_t status = ZX_OK;
-  Device* device = nullptr;
-  simulation::Environment env;
+  auto env = std::make_shared<simulation::Environment>();
 
-  status = Device::Create(nullptr, &device, &env);
-  EXPECT_EQ(status, ZX_OK);
-
-  device->SimUnbind();
-  device = nullptr;
+  std::unique_ptr<SimDevice> device;
+  zx_status_t status = SimDevice::Create(nullptr, env, &device);
+  ASSERT_EQ(status, ZX_OK);
 }
 
 }  // namespace

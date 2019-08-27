@@ -20,27 +20,6 @@ import("//build/package.gni")
 # By default, targets are only visible here and to subdirectories.
 visibility = [ "./*" ]
 
-# The brcmfmac driver can be built with support for different system buses
-# (SDIO, and simulated-firmware), and different configurations will require
-# different support.  To facilitate consolidating all the potentially messy
-# conditional compilation in one place, "bus.cc" is conditionally compiled based
-# on the values of the preprocessor #defines:
-#
-# * CONFIG_BRCMFMAC_SDIO
-# * CONFIG_BRCMFMAC_SIM
-#
-# These #defines are applied as public_configs entries on the targets,
-# respectively:
-#
-# * :sdio
-# * :sim
-#
-# Thus a target that depends on one of the above targets, can include "bus.cc"
-# in its sources and will then conditionally compile it with the set of
-# preprocessor #defines set by the targets it depends on.
-#
-# See the targets ":driver_module" and ":driver_test" to see how this is done.
-
 source_set("debug") {
   sources = [
     "debug.cc",
@@ -76,7 +55,6 @@ source_set("linuxisms") {
 
 source_set("core") {
   sources = [
-    # "bus.cc" is not included here; see top-of-file comment.
     "bcdc.cc",
     "bits.cc",
     "bits.h",
@@ -162,17 +140,15 @@ source_set("firmware") {
   ]
 }
 
-config("config_sdio") {
-  defines = [ "CONFIG_BRCMFMAC_SDIO=1" ]
-}
-
 source_set("sdio") {
   sources = [
     "bcmsdh.cc",
     "sdio.cc",
+    "sdio_device.cc",
   ]
   public = [
     "sdio.h",
+    "sdio_device.h",
   ]
   deps = [
     ":debug",
@@ -190,23 +166,20 @@ source_set("sdio") {
     "//zircon/public/banjo/ddk.protocol.sdio",
     "//zircon/public/lib/ddk",
   ]
-  public_configs = [ ":config_sdio" ]
-}
-
-config("config_sim") {
-  defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
 }
 
 source_set("sim") {
   sources = [
     "sim-fw/sim_fw.cc",
+    "sim-fw/sim_fw.h",
     "sim-fw/sim_hw.cc",
     "sim-fw/sim_hw.h",
     "sim.cc",
+    "sim.h",
+    "sim_device.cc",
   ]
   public = [
-    "sim-fw/sim_fw.h",
-    "sim.h",
+    "sim_device.h",
   ]
   deps = [
     ":core",
@@ -218,15 +191,12 @@ source_set("sim") {
   public_deps = [
     ":core",
   ]
-  public_configs = [ ":config_sim" ]
 }
 
 driver_module("driver_module") {
   output_name = "brcmfmac"
   sources = [
-    # bus.cc is included here.  See top-of-file comment.
     "binding.cc",
-    "bus.cc",
   ]
   deps = [
     ":core",
@@ -240,13 +210,11 @@ driver_module("driver_module") {
 
 source_set("driver_test") {
   testonly = true
-  sources = [
-    # bus.cc is included here.  See top-of-file comment.
-    "bus.cc",
-  ]
   deps = [
     ":core",
     ":debug",
+  ]
+  public_deps = [
     ":sim",
   ]
 }

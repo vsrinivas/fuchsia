@@ -20,14 +20,12 @@
 #include <hw/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio_device.h"
 
 static constexpr zx_driver_ops_t brcmfmac_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind =
-        [](void* ctx, zx_device_t* device) {
-          return ::wlan::brcmfmac::Device::Create(device, nullptr);
-        },
+    .bind = [](void* ctx,
+               zx_device_t* device) { return ::wlan::brcmfmac::SdioDevice::Create(device); },
 };
 
 // clang-format off

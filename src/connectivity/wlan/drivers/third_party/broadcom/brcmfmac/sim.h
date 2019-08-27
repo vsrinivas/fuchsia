@@ -27,4 +27,8 @@ struct brcmf_simdev {
   struct brcmf_mp_device* settings;
 };
 
+zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
+                               ::wlan::simulation::Environment* env);
+void brcmf_sim_exit(brcmf_bus* bus);
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
