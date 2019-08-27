@@ -1,0 +1,129 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/toolchain.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/go/toolchain.gni")
+
+# This template allows aliasing a FIDL library.
+# It is currently used to make `//zircon/public/fidl/foo` strictly equivalent
+# to `//zircon/system/fidl/foo` in the Fuchsia GN build.
+template("fidl_alias") {
+  not_needed(invoker, "*")
+  library_name = target_name
+  if (current_toolchain == dart_toolchain) {
+    foreach(suffix, [ "" ]) {
+      group(target_name + suffix) {
+        forward_variables_from(invoker, [ "testonly" ])
+        public_deps = [
+          "//zircon/system/fidl/$library_name:$library_name$suffix",
+        ]
+      }
+    }
+    action("${target_name}_dot_packages") {
+      forward_variables_from(invoker, [ "testonly" ])
+      script = "//build/unification/copy_dot_packages.py"
+      deps = [
+        "//zircon/system/fidl/$library_name:${library_name}_dot_packages",
+      ]
+      inputs = [
+        get_label_info(deps[0], "target_gen_dir") + "/$library_name.packages",
+      ]
+      outputs = [
+        "$target_gen_dir/$library_name.packages",
+      ]
+      args = [
+        "--source",
+        rebase_path(inputs[0]),
+        "--destination",
+        rebase_path(outputs[0]),
+      ]
+    }
+  } else if (current_toolchain == fidl_toolchain) {
+    copy("$library_name-libraries") {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        "//zircon/system/fidl/$library_name:${library_name}",
+      ]
+      sources = [
+        get_label_info(deps[0], "target_gen_dir") + "/$library_name.libraries",
+      ]
+      outputs = [
+        "$target_gen_dir/$library_name.libraries",
+      ]
+    }
+    copy("$library_name-json") {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        "//zircon/system/fidl/$library_name:${library_name}",
+      ]
+      sources = [
+        get_label_info(deps[0], "target_gen_dir") + "/$library_name.fidl.json",
+      ]
+      outputs = [
+        "$target_gen_dir/$library_name.fidl.json",
+      ]
+    }
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      public_deps = [
+        ":$library_name-json",
+        ":$library_name-libraries",
+      ]
+    }
+  } else if (current_toolchain == go_toolchain) {
+    copy(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        "//zircon/system/fidl/$library_name:${library_name}",
+      ]
+      sources = [
+        get_label_info(deps[0], "target_gen_dir") + "/$library_name.go_deps",
+      ]
+      outputs = [
+        "$target_gen_dir/$library_name.go_deps",
+      ]
+    }
+  } else {
+    copy("$library_name-rustc_info") {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        "//zircon/system/fidl/$library_name:${library_name}-rustc_info",
+      ]
+      sources = [
+        get_label_info(deps[0], "target_out_dir") +
+            "/$library_name-rustc_info.json",
+      ]
+      outputs = [
+        "$target_out_dir/$library_name-rustc_info.json",
+      ]
+    }
+    foreach(suffix,
+            [
+              "",
+              "-rustc",
+              "_c",
+              "_c_client",
+              "_c_server",
+              "_llcpp",
+            ]) {
+      group(target_name + suffix) {
+        forward_variables_from(invoker, [ "testonly" ])
+        public_deps = [
+          "//zircon/system/fidl/$library_name:$library_name$suffix",
+        ]
+        if (suffix == "-rustc") {
+          public_deps += [ ":$library_name-rustc_info" ]
+        }
+      }
+    }
+  }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    import("//build/sdk/sdk_atom_alias.gni")
+    sdk_atom_alias("${target_name}_sdk") {
+      atom = "//zircon/system/fidl/$library_name:${library_name}_sdk($fidl_toolchain)"
+    }
+  }
+}

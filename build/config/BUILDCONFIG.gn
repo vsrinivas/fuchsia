@@ -10,6 +10,16 @@ flutter_root = "//third_party/flutter"
 # in place of // to refer to the root of the cobalt source tree.
 cobalt_root = "//third_party/cobalt"
 
+# Variable used in Zircon build files to declare absolute labels representing
+# buildable artifacts.
+# TODO(3367): remove when the build is unified.
+zx = "//zircon"
+
+# Variable used in Zircon build files to declare absolute labels representing
+# build infrastructure (e.g. .gni files).
+# TODO(3367): remove when the build is unified.
+zx_build = "//build/unification/zn_build"
+
 declare_args() {
   # Debug build.
   is_debug = true

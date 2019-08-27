@@ -3,14 +3,18 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # *This must never be set as a build argument*.
-  #
+  # *These must never be set as a build argument*.
+
   # "$zx/" is the prefix for GN "source-absolute" paths in the Zircon
   # build.  When Zircon is built standalone, the Zircon repository is the
   # root of the build (where `.gn` is found) so "$zx/" becomes "//".  When
   # Zircon is part of a larger unified build, there is a higher-level `.gn`
   # file that uses `default_args` to set "$zx/" to "//zircon/".
   zx = "/"
+
+  # "$zx_build/" is the prefix for GN "source-absolute" paths in the Zircon
+  # build for build infrastructure.
+  zx_build = "/"
 }
 
 declare_args() {
