@@ -20,22 +20,23 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
         None => return Err(ctxt.check().unwrap_err()),
     };
     precondition(&ctxt, &cont);
-    try!(ctxt.check());
+    ctxt.check()?;
 
     let ident = &cont.ident;
     let params = Parameters::new(&cont);
     let (de_impl_generics, _, ty_generics, where_clause) = split_with_de_lifetime(&params);
     let body = Stmts(deserialize_body(&cont, &params));
     let delife = params.borrowed.de_lifetime();
+    let serde = cont.attrs.serde_path();
 
     let impl_block = if let Some(remote) = cont.attrs.remote() {
         let vis = &input.vis;
         let used = pretend::pretend_used(&cont);
         quote! {
             impl #de_impl_generics #ident #ty_generics #where_clause {
-                #vis fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<#remote #ty_generics, __D::Error>
+                #vis fn deserialize<__D>(__deserializer: __D) -> #serde::export::Result<#remote #ty_generics, __D::Error>
                 where
-                    __D: _serde::Deserializer<#delife>,
+                    __D: #serde::Deserializer<#delife>,
                 {
                     #used
                     #body
@@ -47,10 +48,10 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
 
         quote! {
             #[automatically_derived]
-            impl #de_impl_generics _serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
-                fn deserialize<__D>(__deserializer: __D) -> _serde::export::Result<Self, __D::Error>
+            impl #de_impl_generics #serde::Deserialize<#delife> for #ident #ty_generics #where_clause {
+                fn deserialize<__D>(__deserializer: __D) -> #serde::export::Result<Self, __D::Error>
                 where
-                    __D: _serde::Deserializer<#delife>,
+                    __D: #serde::Deserializer<#delife>,
                 {
                     #body
                 }
@@ -60,7 +61,12 @@ pub fn expand_derive_deserialize(input: &syn::DeriveInput) -> Result<TokenStream
         }
     };
 
-    Ok(dummy::wrap_in_const("DESERIALIZE", ident, impl_block))
+    Ok(dummy::wrap_in_const(
+        cont.attrs.custom_serde_path(),
+        "DESERIALIZE",
+        ident,
+        impl_block,
+    ))
 }
 
 fn precondition(cx: &Ctxt, cont: &Container) {
@@ -139,7 +145,7 @@ impl Parameters {
     /// Type name to use in error messages and `&'static str` arguments to
     /// various Deserializer methods.
     fn type_name(&self) -> String {
-        self.this.segments.last().unwrap().value().ident.to_string()
+        self.this.segments.last().unwrap().ident.to_string()
     }
 }
 
@@ -263,6 +269,8 @@ fn deserialize_body(cont: &Container, params: &Parameters) -> Fragment {
         deserialize_transparent(cont, params)
     } else if let Some(type_from) = cont.attrs.type_from() {
         deserialize_from(type_from)
+    } else if let Some(type_try_from) = cont.attrs.type_try_from() {
+        deserialize_try_from(type_try_from)
     } else if let attr::Identifier::No = cont.attrs.identifier() {
         match cont.data {
             Data::Enum(ref variants) => deserialize_enum(params, variants, &cont.attrs),
@@ -292,6 +300,7 @@ fn deserialize_in_place_body(cont: &Container, params: &Parameters) -> Option<St
 
     if cont.attrs.transparent()
         || cont.attrs.type_from().is_some()
+        || cont.attrs.type_try_from().is_some()
         || cont.attrs.identifier().is_some()
         || cont
             .data
@@ -381,6 +390,14 @@ fn deserialize_from(type_from: &syn::Type) -> Fragment {
         _serde::export::Result::map(
             <#type_from as _serde::Deserialize>::deserialize(__deserializer),
             _serde::export::From::from)
+    }
+}
+
+fn deserialize_try_from(type_try_from: &syn::Type) -> Fragment {
+    quote_block! {
+        _serde::export::Result::and_then(
+            <#type_try_from as _serde::Deserialize>::deserialize(__deserializer),
+            |v| _serde::export::TryFrom::try_from(v).map_err(_serde::de::Error::custom))
     }
 }
 
@@ -2053,7 +2070,7 @@ fn deserialize_identifier(
     ) = if collect_other_fields {
         (
             Some(quote! {
-                let __value = _serde::private::de::Content::String(__value.to_string());
+                let __value = _serde::private::de::Content::String(_serde::export::ToString::to_string(__value));
             }),
             Some(quote! {
                 let __value = _serde::private::de::Content::Str(__value);
@@ -2384,7 +2401,12 @@ fn deserialize_map(
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
                         #wrapper
-                        try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
+                        match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                            _serde::export::Ok(__wrapper) => __wrapper.value,
+                            _serde::export::Err(__err) => {
+                                return _serde::export::Err(__err);
+                            }
+                        }
                     })
                 }
             };
@@ -2451,7 +2473,7 @@ fn deserialize_map(
 
     let extract_collected = fields_names
         .iter()
-        .filter(|&&(field, _)| field.attrs.flatten())
+        .filter(|&&(field, _)| field.attrs.flatten() && !field.attrs.skip_deserializing())
         .map(|&(field, ref name)| {
             let field_ty = field.ty;
             let func = match field.attrs.deserialize_with() {
@@ -2471,7 +2493,9 @@ fn deserialize_map(
 
     let collected_deny_unknown_fields = if cattrs.has_flatten() && cattrs.deny_unknown_fields() {
         Some(quote! {
-            if let _serde::export::Some(_serde::export::Some((__key, _))) = __collect.into_iter().filter(|x| x.is_some()).next() {
+            if let _serde::export::Some(_serde::export::Some((__key, _))) =
+                __collect.into_iter().filter(_serde::export::Option::is_some).next()
+            {
                 if let _serde::export::Some(__key) = __key.as_str() {
                     return _serde::export::Err(
                         _serde::de::Error::custom(format_args!("unknown field `{}`", &__key)));
@@ -2615,7 +2639,12 @@ fn deserialize_map_in_place(
                     let (wrapper, wrapper_ty) = wrap_deserialize_field_with(params, field.ty, path);
                     quote!({
                         #wrapper
-                        self.place.#member = try!(_serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map)).value
+                        self.place.#member = match _serde::de::MapAccess::next_value::<#wrapper_ty>(&mut __map) {
+                            _serde::export::Ok(__wrapper) => __wrapper.value,
+                            _serde::export::Err(__err) => {
+                                return _serde::export::Err(__err);
+                            }
+                        };
                     })
                 }
             };

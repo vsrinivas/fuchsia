@@ -13,6 +13,7 @@ pub fn check(cx: &Ctxt, cont: &mut Container, derive: Derive) {
     check_internal_tag_field_name_conflict(cx, cont);
     check_adjacent_tag_conflict(cx, cont);
     check_transparent(cx, cont, derive);
+    check_from_and_try_from(cx, cont);
 }
 
 /// Getters are only allowed inside structs (not enums) with the `remote`
@@ -75,25 +76,6 @@ fn check_flatten_field(cx: &Ctxt, style: Style, field: &Field) {
             );
         }
         _ => {}
-    }
-    if field.attrs.skip_serializing() {
-        cx.error_spanned_by(
-            field.original,
-            "#[serde(flatten)] can not be combined with \
-             #[serde(skip_serializing)]",
-        );
-    } else if field.attrs.skip_serializing_if().is_some() {
-        cx.error_spanned_by(
-            field.original,
-            "#[serde(flatten)] can not be combined with \
-             #[serde(skip_serializing_if = \"...\")]",
-        );
-    } else if field.attrs.skip_deserializing() {
-        cx.error_spanned_by(
-            field.original,
-            "#[serde(flatten)] can not be combined with \
-             #[serde(skip_deserializing)]",
-        );
     }
 }
 
@@ -349,6 +331,13 @@ fn check_transparent(cx: &Ctxt, cont: &mut Container, derive: Derive) {
         );
     }
 
+    if cont.attrs.type_try_from().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(transparent)] is not allowed with #[serde(try_from = \"...\")]",
+        );
+    }
+
     if cont.attrs.type_into().is_some() {
         cx.error_spanned_by(
             cont.original,
@@ -418,7 +407,7 @@ fn member_message(member: &Member) -> String {
 fn allow_transparent(field: &Field, derive: Derive) -> bool {
     if let Type::Path(ref ty) = *field.ty {
         if let Some(seg) = ty.path.segments.last() {
-            if seg.into_value().ident == "PhantomData" {
+            if seg.ident == "PhantomData" {
                 return false;
             }
         }
@@ -427,5 +416,14 @@ fn allow_transparent(field: &Field, derive: Derive) -> bool {
     match derive {
         Derive::Serialize => !field.attrs.skip_serializing(),
         Derive::Deserialize => !field.attrs.skip_deserializing() && field.attrs.default().is_none(),
+    }
+}
+
+fn check_from_and_try_from(cx: &Ctxt, cont: &mut Container) {
+    if cont.attrs.type_from().is_some() && cont.attrs.type_try_from().is_some() {
+        cx.error_spanned_by(
+            cont.original,
+            "#[serde(from = \"...\")] and #[serde(try_from = \"...\")] conflict with each other",
+        );
     }
 }

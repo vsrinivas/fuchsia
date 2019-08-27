@@ -13,14 +13,15 @@
 //!
 //! [https://serde.rs/derive.html]: https://serde.rs/derive.html
 
-#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.87")]
+#![doc(html_root_url = "https://docs.rs/serde_derive/1.0.99")]
+#![allow(unknown_lints, bare_trait_objects)]
 #![cfg_attr(feature = "cargo-clippy", allow(renamed_and_removed_lints))]
 #![cfg_attr(feature = "cargo-clippy", deny(clippy, clippy_pedantic))]
 // Ignored clippy lints
 #![cfg_attr(
     feature = "cargo-clippy",
     allow(
-        cyclomatic_complexity,
+        cognitive_complexity,
         enum_variant_names,
         needless_pass_by_value,
         redundant_field_names,
@@ -34,6 +35,7 @@
     feature = "cargo-clippy",
     allow(
         cast_possible_truncation,
+        checked_conversions,
         doc_markdown,
         enum_glob_use,
         filter_map,
