@@ -14,6 +14,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
+#include <zircon/time.h>
 
 #include <fbl/canary.h>
 #include <fbl/macros.h>
@@ -32,12 +33,12 @@ class TA_CAP("mutex") Mutex {
   // No moving or copying allowed.
   DISALLOW_COPY_ASSIGN_AND_MOVE(Mutex);
 
-  // The maximum number of iterations to spin before falling back to blocking.
+  // The maximum duration to spin before falling back to blocking.
   // TODO(ZX-4873): Decide how to make this configurable per device/platform
   // and describe how to optimize this value.
-  static constexpr uint32_t SPIN_MAX = 8192;
+  static constexpr zx_duration_t SPIN_MAX_DURATION = ZX_USEC(150);
 
-  void Acquire(uint32_t spin_max = SPIN_MAX) TA_ACQ() TA_EXCL(thread_lock);
+  void Acquire(zx_duration_t spin_max_duration = SPIN_MAX_DURATION) TA_ACQ() TA_EXCL(thread_lock);
   void Release() TA_REL() TA_EXCL(thread_lock);
 
   // Special version of Release which operates with the thread lock held
@@ -80,13 +81,13 @@ class TA_CAP("mutex") Mutex {
 //
 struct MutexPolicy {
   struct State {
-    const uint32_t spin_max{Mutex::SPIN_MAX};
+    const zx_duration_t spin_max_duration{Mutex::SPIN_MAX_DURATION};
   };
 
   // Basic acquire and release operations.
   template <typename LockType>
   static bool Acquire(LockType* lock, State* state) TA_ACQ(lock) TA_EXCL(thread_lock) {
-    lock->Acquire(state->spin_max);
+    lock->Acquire(state->spin_max_duration);
     return true;
   }
   template <typename LockType>

@@ -21,7 +21,9 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/ktrace.h>
+#include <platform.h>
 #include <trace.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <kernel/sched.h>
@@ -118,40 +120,51 @@ Mutex::~Mutex() {
 /**
  * @brief  Acquire the mutex
  */
-void Mutex::Acquire(uint32_t spin_max) {
+void Mutex::Acquire(zx_duration_t spin_max_duration) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
-  thread_t* ct = get_current_thread();
-  uintptr_t old_mutex_state;
-  uintptr_t new_mutex_state;
+  thread_t* const ct = get_current_thread();
+  const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(ct);
 
-  // fast path: assume the mutex is unlocked and try to grab it
-  //
+  // Fastest path: The mutex is unlocked and uncontested. Try to acquire it
+  // immediately.
+  uintptr_t old_mutex_state = STATE_FREE;
+  if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
+                                          ktl::memory_order_seq_cst, ktl::memory_order_seq_cst))) {
+    // Don't bother to update the ownership of the wait queue. If another thread
+    // attempts to acquire the mutex and discovers it to be already locked, it
+    // will take care of updating the wait queue ownership while it is inside of
+    // the thread_lock.
+    KTracer{}.KernelMutexUncontestedAcquire(this);
+    return;
+  }
+
+  // Faster path: Spin on the mutex until it is either released, contested, or
+  // the max spin time is reached.
   // TODO(ZX-4873): Optimize cache pressure of spinners and default spin max.
+  // TODO(35437): Convert spin loop to use ticks instead of mono.
+  const zx_time_t spin_until_time = zx_time_add_duration(current_time(), spin_max_duration);
   do {
     old_mutex_state = STATE_FREE;
-    new_mutex_state = reinterpret_cast<uintptr_t>(ct);
     if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
                                             ktl::memory_order_seq_cst,
                                             ktl::memory_order_seq_cst))) {
-      // acquired it cleanly.  Don't bother to update the ownership of our
-      // wait queue.  As of this instant, the mutex appears to be uncontested.
-      // If someone else attempts to acquire the mutex and discovers it to be
-      // already locked, they will take care of updating the wait queue
-      // ownership while they are inside of the thread_lock.
+      // Same as above in the fastest path: leave accounting to later contending
+      // threads.
       KTracer{}.KernelMutexUncontestedAcquire(this);
       return;
     }
 
     // Stop spinning if the mutex is or becomes contested. All spinners convert
-    // to blocking when the first one reaches the maximum tries.
+    // to blocking when the first one reaches the max spin duration.
     if (old_mutex_state & STATE_FLAG_CONTESTED) {
       break;
     }
 
+    // Give the arch a chance to relax the CPU.
     arch_spinloop_pause();
-  } while (spin_max-- != 0);
+  } while (current_time() < spin_until_time);
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {
     panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n", ct,
@@ -176,7 +189,7 @@ void Mutex::Acquire(uint32_t spin_max) {
         // waiters and no one is able to perform fast path acquisition.
         // Therefore we can just take the mutex, and remove the queued
         // flag.
-        val_.store(reinterpret_cast<uintptr_t>(ct), ktl::memory_order_seq_cst);
+        val_.store(new_mutex_state, ktl::memory_order_seq_cst);
         return;
       }
     }
