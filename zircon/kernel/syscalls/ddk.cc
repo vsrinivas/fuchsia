@@ -141,23 +141,29 @@ zx_status_t sys_framebuffer_get_info(zx_handle_t handle, user_out_ptr<uint32_t> 
                                      user_out_ptr<uint32_t> width, user_out_ptr<uint32_t> height,
                                      user_out_ptr<uint32_t> stride) {
   zx_status_t status;
-  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0)
+  if ((status = validate_resource(handle, ZX_RSRC_KIND_ROOT)) < 0) {
     return status;
+  }
 #if ARCH_X86
-  if (!bootloader.fb.base)
+  if (!bootloader.fb.base) {
     return ZX_ERR_INVALID_ARGS;
+  }
   status = format.copy_to_user(bootloader.fb.format);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = width.copy_to_user(bootloader.fb.width);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = height.copy_to_user(bootloader.fb.height);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   status = stride.copy_to_user(bootloader.fb.stride);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   return ZX_OK;
 #else
   return ZX_ERR_NOT_SUPPORTED;
@@ -169,8 +175,9 @@ zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle,
                                       uint32_t format, uint32_t width, uint32_t height,
                                       uint32_t stride) {
   zx_status_t status;
-  if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0)
+  if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
     return status;
+  }
 
   if (vmo_handle == ZX_HANDLE_INVALID) {
     udisplay_clear_framebuffer_vmo();
@@ -182,12 +189,14 @@ zx_status_t sys_framebuffer_set_range(zx_handle_t hrsrc, zx_handle_t vmo_handle,
   // lookup the dispatcher from handle
   fbl::RefPtr<VmObjectDispatcher> vmo;
   status = up->GetDispatcher(vmo_handle, &vmo);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   status = udisplay_set_framebuffer(vmo->vmo());
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   struct display_info di;
   memset(&di, 0, sizeof(struct display_info));
@@ -451,15 +460,17 @@ zx_status_t sys_pmt_unpin(zx_handle_t handle) {
   auto up = ProcessDispatcher::GetCurrent();
 
   HandleOwner handle_owner = up->RemoveHandle(handle);
-  if (!handle_owner)
+  if (!handle_owner) {
     return ZX_ERR_BAD_HANDLE;
+  }
+
   fbl::RefPtr<Dispatcher> dispatcher = handle_owner->dispatcher();
   auto pmt_dispatcher = DownCastDispatcher<PinnedMemoryTokenDispatcher>(&dispatcher);
-  if (!pmt_dispatcher)
+  if (!pmt_dispatcher) {
     return ZX_ERR_WRONG_TYPE;
+  }
 
   pmt_dispatcher->MarkUnpinned();
-
   return ZX_OK;
 }
 
@@ -484,8 +495,9 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num, uint32_t
   } else {
     result = InterruptEventDispatcher::Create(&handle, &rights, src_num, options);
   }
-  if (result != ZX_OK)
+  if (result != ZX_OK) {
     return result;
+  }
 
   return out_handle->make(ktl::move(handle), rights);
 }
@@ -502,14 +514,15 @@ zx_status_t sys_interrupt_bind(zx_handle_t handle, zx_handle_t port_handle, uint
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
   status = up->GetDispatcherWithRights(handle, ZX_RIGHT_READ, &interrupt);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   fbl::RefPtr<PortDispatcher> port;
   status = up->GetDispatcherWithRights(port_handle, ZX_RIGHT_WRITE, &port);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
-
+  }
   if (!port->can_bind_to_interrupt()) {
     return ZX_ERR_WRONG_TYPE;
   }
@@ -545,8 +558,9 @@ zx_status_t sys_interrupt_ack(zx_handle_t inth) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
   status = up->GetDispatcherWithRights(inth, ZX_RIGHT_WRITE, &interrupt);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
   return interrupt->Ack();
 }
 
@@ -558,13 +572,16 @@ zx_status_t sys_interrupt_wait(zx_handle_t handle, user_out_ptr<zx_time_t> out_t
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
   status = up->GetDispatcherWithRights(handle, ZX_RIGHT_WAIT, &interrupt);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   zx_time_t timestamp;
   status = interrupt->WaitForInterrupt(&timestamp);
-  if (status == ZX_OK && out_timestamp)
+  if (status == ZX_OK && out_timestamp) {
     status = out_timestamp.copy_to_user(timestamp);
+  }
+
   return status;
 }
 
@@ -576,8 +593,10 @@ zx_status_t sys_interrupt_destroy(zx_handle_t handle) {
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
   status = up->GetDispatcher(handle, &interrupt);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
+
   return interrupt->Destroy();
 }
 
@@ -593,8 +612,9 @@ zx_status_t sys_interrupt_trigger(zx_handle_t handle, uint32_t options, zx_time_
   auto up = ProcessDispatcher::GetCurrent();
   fbl::RefPtr<InterruptDispatcher> interrupt;
   status = up->GetDispatcherWithRights(handle, ZX_RIGHT_SIGNAL, &interrupt);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   return interrupt->Trigger(timestamp);
 }
