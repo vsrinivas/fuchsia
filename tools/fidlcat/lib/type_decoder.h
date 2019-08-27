@@ -38,6 +38,8 @@ enum class SyscallType {
   kDuration,
   kGpAddr,
   kHandle,
+  kPacketGuestVcpuType,
+  kPacketPageRequestCommand,
   kPortPacketType,
   kSignals,
   kStatus,
@@ -74,6 +76,8 @@ struct Colors {
 
 void ClockName(zx_clock_t clock, std::ostream& os);
 void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
+void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);
+void PacketPageRequestCommandName(uint16_t command, std::ostream& os);
 void PortPacketTypeName(uint32_t type, std::ostream& os);
 void RightsName(zx_rights_t rights, std::ostream& os);
 void StatusName(zx_status_t status, std::ostream& os);

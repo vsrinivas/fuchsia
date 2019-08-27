@@ -279,6 +279,247 @@ const ZxPacketGuestMemX86* ZxPacketGuestMemX86::GetClass() {
   return instance_;
 }
 
+class ZxPacketGuestIo : public Class<zx_packet_guest_io_t> {
+ public:
+  static const ZxPacketGuestIo* GetClass();
+
+  static uint16_t port(const zx_packet_guest_io_t* from) { return from->port; }
+  static uint8_t access_size(const zx_packet_guest_io_t* from) { return from->access_size; }
+  static bool input(const zx_packet_guest_io_t* from) { return from->input; }
+  static uint8_t u8(const zx_packet_guest_io_t* from) { return from->u8; }
+  static uint16_t u16(const zx_packet_guest_io_t* from) { return from->u16; }
+  static uint32_t u32(const zx_packet_guest_io_t* from) { return from->u32; }
+  static std::pair<const uint8_t*, int> data(const zx_packet_guest_io_t* from) {
+    return std::make_pair(reinterpret_cast<const uint8_t*>(from->data),
+                          sizeof(from->data) / sizeof(uint8_t));
+  }
+  static uint64_t reserved0(const zx_packet_guest_io_t* from) { return from->reserved0; }
+  static uint64_t reserved1(const zx_packet_guest_io_t* from) { return from->reserved1; }
+  static uint64_t reserved2(const zx_packet_guest_io_t* from) { return from->reserved2; }
+
+ private:
+  ZxPacketGuestIo() : Class("zx_packet_guest_io_t") {
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint16_t>>(
+        "port", SyscallType::kUint16, port));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint8_t>>(
+        "access_size", SyscallType::kUint8, access_size));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, bool>>("input", SyscallType::kBool,
+                                                                      input));
+    AddField(
+        std::make_unique<ClassField<zx_packet_guest_io_t, uint8_t>>("u8", SyscallType::kUint8, u8));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint16_t>>(
+        "u16", SyscallType::kUint16, u16));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint32_t>>(
+        "u32", SyscallType::kUint32, u32));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, std::pair<const uint8_t*, int>>>(
+        "data", SyscallType::kUint8Array, data));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint64_t>>(
+        "reserved0", SyscallType::kUint64, reserved0));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint64_t>>(
+        "reserved1", SyscallType::kUint64, reserved1));
+    AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint64_t>>(
+        "reserved2", SyscallType::kUint64, reserved2));
+  }
+  ZxPacketGuestIo(const ZxPacketGuestIo&) = delete;
+  ZxPacketGuestIo& operator=(const ZxPacketGuestIo&) = delete;
+  static ZxPacketGuestIo* instance_;
+};
+
+ZxPacketGuestIo* ZxPacketGuestIo::instance_ = nullptr;
+
+const ZxPacketGuestIo* ZxPacketGuestIo::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketGuestIo;
+  }
+  return instance_;
+}
+
+// This is extracted from zx_packet_vcpu from zircon/system/public/zircon/syscalls/port.h
+struct zx_packet_guest_vcpu_interrupt {
+  uint64_t mask;
+  uint8_t vector;
+};
+using zx_packet_guest_vcpu_interrupt_t = struct zx_packet_guest_vcpu_interrupt;
+
+class ZxPacketGuestVcpuInterrupt : public Class<zx_packet_guest_vcpu_interrupt_t> {
+ public:
+  static const ZxPacketGuestVcpuInterrupt* GetClass();
+
+  static uint64_t mask(const zx_packet_guest_vcpu_interrupt_t* from) { return from->mask; }
+  static uint8_t vector(const zx_packet_guest_vcpu_interrupt_t* from) { return from->vector; }
+
+ private:
+  ZxPacketGuestVcpuInterrupt() : Class("zx_packet_guest_vcpu_interrupt_t") {
+    AddField(std::make_unique<ClassField<zx_packet_guest_vcpu_interrupt_t, uint64_t>>(
+        "mask", SyscallType::kUint64, mask));
+    AddField(std::make_unique<ClassField<zx_packet_guest_vcpu_interrupt_t, uint8_t>>(
+        "vector", SyscallType::kUint8, vector));
+  }
+  ZxPacketGuestVcpuInterrupt(const ZxPacketGuestVcpuInterrupt&) = delete;
+  ZxPacketGuestVcpuInterrupt& operator=(const ZxPacketGuestVcpuInterrupt&) = delete;
+  static ZxPacketGuestVcpuInterrupt* instance_;
+};
+
+ZxPacketGuestVcpuInterrupt* ZxPacketGuestVcpuInterrupt::instance_ = nullptr;
+
+const ZxPacketGuestVcpuInterrupt* ZxPacketGuestVcpuInterrupt::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketGuestVcpuInterrupt;
+  }
+  return instance_;
+}
+
+// This is extracted from zx_packet_vcpu from zircon/system/public/zircon/syscalls/port.h
+struct zx_packet_guest_vcpu_startup {
+  uint64_t id;
+  zx_gpaddr_t entry;
+};
+using zx_packet_guest_vcpu_startup_t = struct zx_packet_guest_vcpu_startup;
+
+class ZxPacketGuestVcpuStartup : public Class<zx_packet_guest_vcpu_startup_t> {
+ public:
+  static const ZxPacketGuestVcpuStartup* GetClass();
+
+  static uint64_t id(const zx_packet_guest_vcpu_startup_t* from) { return from->id; }
+  static zx_gpaddr_t entry(const zx_packet_guest_vcpu_startup_t* from) { return from->entry; }
+
+ private:
+  ZxPacketGuestVcpuStartup() : Class("zx_packet_guest_vcpu_startup_t") {
+    AddField(std::make_unique<ClassField<zx_packet_guest_vcpu_startup_t, uint64_t>>(
+        "id", SyscallType::kUint64, id));
+    AddField(std::make_unique<ClassField<zx_packet_guest_vcpu_startup_t, zx_gpaddr_t>>(
+        "entry", SyscallType::kGpAddr, entry));
+  }
+  ZxPacketGuestVcpuStartup(const ZxPacketGuestVcpuStartup&) = delete;
+  ZxPacketGuestVcpuStartup& operator=(const ZxPacketGuestVcpuStartup&) = delete;
+  static ZxPacketGuestVcpuStartup* instance_;
+};
+
+ZxPacketGuestVcpuStartup* ZxPacketGuestVcpuStartup::instance_ = nullptr;
+
+const ZxPacketGuestVcpuStartup* ZxPacketGuestVcpuStartup::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketGuestVcpuStartup;
+  }
+  return instance_;
+}
+
+class ZxPacketGuestVcpu : public Class<zx_packet_guest_vcpu_t> {
+ public:
+  static const ZxPacketGuestVcpu* GetClass();
+
+  static const zx_packet_guest_vcpu_interrupt_t* interrupt(const zx_packet_guest_vcpu_t* from) {
+    return reinterpret_cast<const zx_packet_guest_vcpu_interrupt_t*>(&from->interrupt);
+  }
+  static const zx_packet_guest_vcpu_startup_t* startup(const zx_packet_guest_vcpu_t* from) {
+    return reinterpret_cast<const zx_packet_guest_vcpu_startup_t*>(&from->startup);
+  }
+  static uint8_t type(const zx_packet_guest_vcpu_t* from) { return from->type; }
+  static uint64_t reserved(const zx_packet_guest_vcpu_t* from) { return from->reserved; }
+
+ private:
+  ZxPacketGuestVcpu() : Class("zx_packet_guest_vcpu_t") {
+    auto type_field = AddField(std::make_unique<ClassField<zx_packet_guest_vcpu_t, uint8_t>>(
+        "type", SyscallType::kPacketGuestVcpuType, type));
+    AddField(
+        std::make_unique<ClassClassField<zx_packet_guest_vcpu_t, zx_packet_guest_vcpu_interrupt_t>>(
+            "interrupt", interrupt, ZxPacketGuestVcpuInterrupt::GetClass()))
+        ->DisplayIfEqual(type_field, uint8_t(ZX_PKT_GUEST_VCPU_INTERRUPT));
+    AddField(
+        std::make_unique<ClassClassField<zx_packet_guest_vcpu_t, zx_packet_guest_vcpu_startup_t>>(
+            "startup", startup, ZxPacketGuestVcpuStartup::GetClass()))
+        ->DisplayIfEqual(type_field, uint8_t(ZX_PKT_GUEST_VCPU_STARTUP));
+    AddField(std::make_unique<ClassField<zx_packet_guest_vcpu_t, uint64_t>>(
+        "reserved", SyscallType::kUint64, reserved));
+  }
+  ZxPacketGuestVcpu(const ZxPacketGuestVcpu&) = delete;
+  ZxPacketGuestVcpu& operator=(const ZxPacketGuestVcpu&) = delete;
+  static ZxPacketGuestVcpu* instance_;
+};
+
+ZxPacketGuestVcpu* ZxPacketGuestVcpu::instance_ = nullptr;
+
+const ZxPacketGuestVcpu* ZxPacketGuestVcpu::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketGuestVcpu;
+  }
+  return instance_;
+}
+
+class ZxPacketInterrupt : public Class<zx_packet_interrupt_t> {
+ public:
+  static const ZxPacketInterrupt* GetClass();
+
+  static zx_time_t timestamp(const zx_packet_interrupt_t* from) { return from->timestamp; }
+  static uint64_t reserved0(const zx_packet_interrupt_t* from) { return from->reserved0; }
+  static uint64_t reserved1(const zx_packet_interrupt_t* from) { return from->reserved1; }
+  static uint64_t reserved2(const zx_packet_interrupt_t* from) { return from->reserved2; }
+
+ private:
+  ZxPacketInterrupt() : Class("zx_packet_interrupt_t") {
+    AddField(std::make_unique<ClassField<zx_packet_interrupt_t, zx_time_t>>(
+        "timestamp", SyscallType::kTime, timestamp));
+    AddField(std::make_unique<ClassField<zx_packet_interrupt_t, uint64_t>>(
+        "reserved0", SyscallType::kUint64, reserved0));
+    AddField(std::make_unique<ClassField<zx_packet_interrupt_t, uint64_t>>(
+        "reserved1", SyscallType::kUint64, reserved1));
+    AddField(std::make_unique<ClassField<zx_packet_interrupt_t, uint64_t>>(
+        "reserved2", SyscallType::kUint64, reserved2));
+  }
+  ZxPacketInterrupt(const ZxPacketInterrupt&) = delete;
+  ZxPacketInterrupt& operator=(const ZxPacketInterrupt&) = delete;
+  static ZxPacketInterrupt* instance_;
+};
+
+ZxPacketInterrupt* ZxPacketInterrupt::instance_ = nullptr;
+
+const ZxPacketInterrupt* ZxPacketInterrupt::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketInterrupt;
+  }
+  return instance_;
+}
+
+class ZxPacketPageRequest : public Class<zx_packet_page_request_t> {
+ public:
+  static const ZxPacketPageRequest* GetClass();
+
+  static uint16_t command(const zx_packet_page_request_t* from) { return from->command; }
+  static uint16_t flags(const zx_packet_page_request_t* from) { return from->flags; }
+  static uint32_t reserved0(const zx_packet_page_request_t* from) { return from->reserved0; }
+  static uint64_t offset(const zx_packet_page_request_t* from) { return from->offset; }
+  static uint64_t length(const zx_packet_page_request_t* from) { return from->length; }
+  static uint64_t reserved1(const zx_packet_page_request_t* from) { return from->reserved1; }
+
+ private:
+  ZxPacketPageRequest() : Class("zx_packet_page_request_t") {
+    AddField(std::make_unique<ClassField<zx_packet_page_request_t, uint16_t>>(
+        "command", SyscallType::kPacketPageRequestCommand, command));
+    AddField(std::make_unique<ClassField<zx_packet_page_request_t, uint16_t>>(
+        "flags", SyscallType::kUint16, flags));
+    AddField(std::make_unique<ClassField<zx_packet_page_request_t, uint32_t>>(
+        "reserved0", SyscallType::kUint32, reserved0));
+    AddField(std::make_unique<ClassField<zx_packet_page_request_t, uint64_t>>(
+        "offset", SyscallType::kUint64, offset));
+    AddField(std::make_unique<ClassField<zx_packet_page_request_t, uint64_t>>(
+        "length", SyscallType::kUint64, length));
+    AddField(std::make_unique<ClassField<zx_packet_page_request_t, uint64_t>>(
+        "reserved1", SyscallType::kUint64, reserved1));
+  }
+  ZxPacketPageRequest(const ZxPacketPageRequest&) = delete;
+  ZxPacketPageRequest& operator=(const ZxPacketPageRequest&) = delete;
+  static ZxPacketPageRequest* instance_;
+};
+
+ZxPacketPageRequest* ZxPacketPageRequest::instance_ = nullptr;
+
+const ZxPacketPageRequest* ZxPacketPageRequest::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxPacketPageRequest;
+  }
+  return instance_;
+}
+
 class ZxPortPacket : public Class<zx_port_packet_t> {
  public:
   static const ZxPortPacket* GetClass();
@@ -299,6 +540,18 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
   }
   static const zx_packet_guest_mem_x86_t* guest_mem_x86(const zx_port_packet_t* from) {
     return reinterpret_cast<const zx_packet_guest_mem_x86_t*>(&from->guest_mem);
+  }
+  static const zx_packet_guest_io_t* guest_io(const zx_port_packet_t* from) {
+    return &from->guest_io;
+  }
+  static const zx_packet_guest_vcpu_t* guest_vcpu(const zx_port_packet_t* from) {
+    return &from->guest_vcpu;
+  }
+  static const zx_packet_interrupt_t* interrupt(const zx_port_packet_t* from) {
+    return &from->interrupt;
+  }
+  static const zx_packet_page_request_t* page_request(const zx_port_packet_t* from) {
+    return &from->page_request;
   }
 
   static constexpr uint32_t kExceptionMask = 0xff;
@@ -334,6 +587,18 @@ class ZxPortPacket : public Class<zx_port_packet_t> {
                  "guest_mem", guest_mem_x86, ZxPacketGuestMemX86::GetClass()))
         ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_MEM))
         ->DisplayIfArch(debug_ipc::Arch::kX64);
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_io_t>>(
+                 "guest_io", guest_io, ZxPacketGuestIo::GetClass()))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_IO));
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_guest_vcpu_t>>(
+                 "guest_vcpu", guest_vcpu, ZxPacketGuestVcpu::GetClass()))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_GUEST_VCPU));
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_interrupt_t>>(
+                 "interrupt", interrupt, ZxPacketInterrupt::GetClass()))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_INTERRUPT));
+    AddField(std::make_unique<ClassClassField<zx_port_packet_t, zx_packet_page_request_t>>(
+                 "page_request", page_request, ZxPacketPageRequest::GetClass()))
+        ->DisplayIfEqual(type_field, uint32_t(ZX_PKT_TYPE_PAGE_REQUEST));
   }
   ZxPortPacket(const ZxPortPacket&) = delete;
   ZxPortPacket& operator=(const ZxPortPacket&) = delete;

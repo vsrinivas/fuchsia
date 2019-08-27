@@ -103,6 +103,11 @@ inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_
         os << colors.blue << static_cast<uint32_t>(value) << colors.reset;
       }
       break;
+    case SyscallType::kPacketGuestVcpuType:
+      os << colors.blue;
+      PacketGuestVcpuTypeName(value, os);
+      os << colors.reset;
+      break;
     default:
       os << "unimplemented uint8_t value " << static_cast<uint32_t>(type);
       break;
@@ -141,6 +146,11 @@ inline void DisplayValue<uint16_t>(const Colors& colors, SyscallType type, uint1
       } else {
         os << colors.blue << value << colors.reset;
       }
+      break;
+    case SyscallType::kPacketPageRequestCommand:
+      os << colors.blue;
+      PacketPageRequestCommandName(value, os);
+      os << colors.reset;
       break;
     default:
       os << "unimplemented uint16_t value " << static_cast<uint32_t>(type);

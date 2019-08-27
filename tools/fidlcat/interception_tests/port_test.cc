@@ -437,6 +437,184 @@ TEST_F(InterceptionWorkflowTestArm, ZxPortWaitGuestMemAArch64) {
       "      }\n");
 }
 
+void InitGuestIo(zx_port_packet_t* packet) {
+  constexpr uint16_t kPort = 0x1357;
+  constexpr uint8_t kAccessSize = 4;
+  constexpr uint32_t kData = 0x12345678;
+  packet->key = kKey;
+  packet->type = ZX_PKT_TYPE_GUEST_IO;
+  packet->status = ZX_OK;
+  packet->guest_io.port = kPort;
+  packet->guest_io.access_size = kAccessSize;
+  packet->guest_io.input = true;
+  packet->guest_io.u32 = kData;
+  packet->guest_io.reserved0 = 0;
+  packet->guest_io.reserved1 = 1;
+  packet->guest_io.reserved2 = 2;
+}
+
+PORT_WAIT_DISPLAY_TEST(
+    ZxPortWaitGuestIo, ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestIo,
+    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_port_wait("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "      packet:\x1B[32mzx_port_packet_t\x1B[0m: {\n"
+    "        key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m\n"
+    "        type:\x1B[32mzx_port_packet_t::type\x1B[0m: \x1B[34mZX_PKT_TYPE_GUEST_IO\x1B[0m\n"
+    "        status:\x1B[32mstatus_t\x1B[0m: \x1B[32mZX_OK\x1B[0m\n"
+    "        guest_io:\x1B[32mzx_packet_guest_io_t\x1B[0m: {\n"
+    "          port:\x1B[32muint16\x1B[0m: \x1B[34m4951\x1B[0m\n"
+    "          access_size:\x1B[32muint8\x1B[0m: \x1B[34m4\x1B[0m\n"
+    "          input:\x1B[32mbool\x1B[0m: \x1B[34mtrue\x1B[0m\n"
+    "          u8:\x1B[32muint8\x1B[0m: \x1B[34m120\x1B[0m\n"
+    "          u16:\x1B[32muint16\x1B[0m: \x1B[34m22136\x1B[0m\n"
+    "          u32:\x1B[32muint32\x1B[0m: \x1B[34m305419896\x1B[0m\n"
+    "          data:\x1B[32muint8[]\x1B[0m: \x1B[34m78\x1B[0m, \x1B[34m56\x1B[0m, "
+    "\x1B[34m34\x1B[0m, \x1B[34m12\x1B[0m\n"
+    "          reserved0:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "          reserved1:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "          reserved2:\x1B[32muint64\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "        }\n"
+    "      }\n");
+
+void InitGuestVcpuInterrupt(zx_port_packet_t* packet) {
+  constexpr uint64_t kMask = 1234;
+  constexpr uint8_t kVector = 50;
+  packet->key = kKey;
+  packet->type = ZX_PKT_TYPE_GUEST_VCPU;
+  packet->status = ZX_OK;
+  packet->guest_vcpu.interrupt.mask = kMask;
+  packet->guest_vcpu.interrupt.vector = kVector;
+  packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
+  packet->guest_vcpu.reserved = 0;
+}
+
+PORT_WAIT_DISPLAY_TEST(
+    ZxPortWaitGuestVcpuInterrupt, ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestVcpuInterrupt,
+    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_port_wait("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "      packet:\x1B[32mzx_port_packet_t\x1B[0m: {\n"
+    "        key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m\n"
+    "        type:\x1B[32mzx_port_packet_t::type\x1B[0m: \x1B[34mZX_PKT_TYPE_GUEST_VCPU\x1B[0m\n"
+    "        status:\x1B[32mstatus_t\x1B[0m: \x1B[32mZX_OK\x1B[0m\n"
+    "        guest_vcpu:\x1B[32mzx_packet_guest_vcpu_t\x1B[0m: {\n"
+    "          type:\x1B[32mzx_packet_guest_vcpu_t::type\x1B[0m: "
+    "\x1B[34mZX_PKT_GUEST_VCPU_INTERRUPT\x1B[0m\n"
+    "          interrupt:\x1B[32mzx_packet_guest_vcpu_interrupt_t\x1B[0m: {\n"
+    "            mask:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m\n"
+    "            vector:\x1B[32muint8\x1B[0m: \x1B[34m50\x1B[0m\n"
+    "          }\n"
+    "          reserved:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "        }\n"
+    "      }\n");
+
+void InitGuestVcpuStartup(zx_port_packet_t* packet) {
+  constexpr uint64_t kId = 56789;
+  constexpr zx_gpaddr_t kEntry = 0x78654321;
+  packet->key = kKey;
+  packet->type = ZX_PKT_TYPE_GUEST_VCPU;
+  packet->status = ZX_OK;
+  packet->guest_vcpu.startup.id = kId;
+  packet->guest_vcpu.startup.entry = kEntry;
+  packet->guest_vcpu.type = ZX_PKT_GUEST_VCPU_STARTUP;
+  packet->guest_vcpu.reserved = 0;
+}
+
+PORT_WAIT_DISPLAY_TEST(
+    ZxPortWaitGuestVcpuStartup, ZX_OK, kHandle, ZX_TIME_INFINITE, InitGuestVcpuStartup,
+    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_port_wait("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "      packet:\x1B[32mzx_port_packet_t\x1B[0m: {\n"
+    "        key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m\n"
+    "        type:\x1B[32mzx_port_packet_t::type\x1B[0m: \x1B[34mZX_PKT_TYPE_GUEST_VCPU\x1B[0m\n"
+    "        status:\x1B[32mstatus_t\x1B[0m: \x1B[32mZX_OK\x1B[0m\n"
+    "        guest_vcpu:\x1B[32mzx_packet_guest_vcpu_t\x1B[0m: {\n"
+    "          type:\x1B[32mzx_packet_guest_vcpu_t::type\x1B[0m: "
+    "\x1B[34mZX_PKT_GUEST_VCPU_STARTUP\x1B[0m\n"
+    "          startup:\x1B[32mzx_packet_guest_vcpu_startup_t\x1B[0m: {\n"
+    "            id:\x1B[32muint64\x1B[0m: \x1B[34m56789\x1B[0m\n"
+    "            entry:\x1B[32mzx_gpaddr_t\x1B[0m: \x1B[34m0000000078654321\x1B[0m\n"
+    "          }\n"
+    "          reserved:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "        }\n"
+    "      }\n");
+
+void InitInterrupt(zx_port_packet_t* packet) {
+  packet->key = kKey;
+  packet->type = ZX_PKT_TYPE_INTERRUPT;
+  packet->status = ZX_OK;
+  packet->interrupt.timestamp = 0;
+  packet->interrupt.reserved0 = 0;
+  packet->interrupt.reserved1 = 1;
+  packet->interrupt.reserved2 = 2;
+}
+
+PORT_WAIT_DISPLAY_TEST(
+    ZxPortWaitInterrupt, ZX_OK, kHandle, ZX_TIME_INFINITE, InitInterrupt,
+    ClockExpected(
+        0,
+        "\n"
+        "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+        "zx_port_wait("
+        "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+        "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+        "  -> \x1B[32mZX_OK\x1B[0m\n"
+        "      packet:\x1B[32mzx_port_packet_t\x1B[0m: {\n"
+        "        key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m\n"
+        "        type:\x1B[32mzx_port_packet_t::type\x1B[0m: \x1B[34mZX_PKT_TYPE_INTERRUPT\x1B[0m\n"
+        "        status:\x1B[32mstatus_t\x1B[0m: \x1B[32mZX_OK\x1B[0m\n"
+        "        interrupt:\x1B[32mzx_packet_interrupt_t\x1B[0m: {\n"
+        "          timestamp:\x1B[32mtime\x1B[0m: \x1B[34m%c and 000000000 ns\x1B[0m\n"
+        "          reserved0:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+        "          reserved1:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
+        "          reserved2:\x1B[32muint64\x1B[0m: \x1B[34m2\x1B[0m\n"
+        "        }\n"
+        "      }\n")
+        .c_str());
+
+void InitPageRequest(zx_port_packet_t* packet) {
+  constexpr uint64_t kLength = 4096;
+  packet->key = kKey;
+  packet->type = ZX_PKT_TYPE_PAGE_REQUEST;
+  packet->status = ZX_OK;
+  packet->page_request.command = ZX_PAGER_VMO_COMPLETE;
+  packet->page_request.flags = 0;
+  packet->page_request.reserved0 = 0;
+  packet->page_request.offset = 0;
+  packet->page_request.length = kLength;
+  packet->page_request.reserved1 = 1;
+}
+
+PORT_WAIT_DISPLAY_TEST(
+    ZxPortWaitPageRequest, ZX_OK, kHandle, ZX_TIME_INFINITE, InitPageRequest,
+    "\ntest_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_port_wait("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "deadline:\x1B[32mtime\x1B[0m: \x1B[34mZX_TIME_INFINITE\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m\n"
+    "      packet:\x1B[32mzx_port_packet_t\x1B[0m: {\n"
+    "        key:\x1B[32muint64\x1B[0m: \x1B[34m1234\x1B[0m\n"
+    "        type:\x1B[32mzx_port_packet_t::type\x1B[0m: \x1B[34mZX_PKT_TYPE_PAGE_REQUEST\x1B[0m\n"
+    "        status:\x1B[32mstatus_t\x1B[0m: \x1B[32mZX_OK\x1B[0m\n"
+    "        page_request:\x1B[32mzx_packet_page_request_t\x1B[0m: {\n"
+    "          command:\x1B[32mzx_packet_page_request_t::command\x1B[0m: "
+    "\x1B[34mZX_PAGER_VMO_COMPLETE\x1B[0m\n"
+    "          flags:\x1B[32muint16\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "          reserved0:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "          offset:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "          length:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "          reserved1:\x1B[32muint64\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "        }\n"
+    "      }\n");
+
 // zx_port_cancel tests.
 
 std::unique_ptr<SystemCallTest> ZxPortCancel(int64_t status, std::string_view status_name,

@@ -70,6 +70,36 @@ void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os) {
   }
 }
 
+#define PacketGuestVcpuTypeNameCase(name) \
+  case name:                              \
+    os << #name;                          \
+    return
+
+void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os) {
+  switch (type) {
+    PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_INTERRUPT);
+    PacketGuestVcpuTypeNameCase(ZX_PKT_GUEST_VCPU_STARTUP);
+    default:
+      os << static_cast<uint32_t>(type);
+      return;
+  }
+}
+
+#define PacketPageRequestCommandNameCase(name) \
+  case name:                                   \
+    os << #name;                               \
+    return
+
+void PacketPageRequestCommandName(uint16_t command, std::ostream& os) {
+  switch (command) {
+    PacketPageRequestCommandNameCase(ZX_PAGER_VMO_READ);
+    PacketPageRequestCommandNameCase(ZX_PAGER_VMO_COMPLETE);
+    default:
+      os << static_cast<uint32_t>(command);
+      return;
+  }
+}
+
 constexpr uint32_t kExceptionMask = 0xff;
 constexpr int kExceptionNumberShift = 8;
 constexpr uint32_t kExceptionNumberMask = 0xff;
@@ -316,6 +346,12 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kHandle:
       os << ":" << colors.green << "handle" << colors.reset << ": ";
+      break;
+    case SyscallType::kPacketGuestVcpuType:
+      os << ":" << colors.green << "zx_packet_guest_vcpu_t::type" << colors.reset << ": ";
+      break;
+    case SyscallType::kPacketPageRequestCommand:
+      os << ":" << colors.green << "zx_packet_page_request_t::command" << colors.reset << ": ";
       break;
     case SyscallType::kPortPacketType:
       os << ":" << colors.green << "zx_port_packet_t::type" << colors.reset << ": ";
