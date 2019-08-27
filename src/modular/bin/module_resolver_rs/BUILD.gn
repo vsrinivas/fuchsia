@@ -27,7 +27,7 @@ package("module_resolver_rs") {
     ":bin",
   ]
 
-  binary = "rust_crates/module_resolver_rs"
+  binary = "module_resolver_rs"
 
   meta = [
     {

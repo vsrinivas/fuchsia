@@ -28,8 +28,6 @@ package("qmi-snoop") {
   binaries = [
     {
       name = "qmi_snoop"
-      dest = "qmi-snoop"
-      path = "rust_crates/qmi_snoop"
       shell = true
     },
   ]

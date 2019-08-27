@@ -27,12 +27,7 @@ package("inspect_vmo_example") {
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "rust_crates/inspect_vmo_example"
-      dest = "inspect_vmo_example"
-    },
-  ]
+  binary = "inspect_vmo_example"
 
   meta = [
     {

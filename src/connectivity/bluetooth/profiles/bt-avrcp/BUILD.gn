@@ -26,7 +26,7 @@ package("bt-avrcp") {
     ":bin",
   ]
 
-  binary = "rust_crates/bt_avrcp"
+  binary = "bt_avrcp"
 
   meta = [
     {
