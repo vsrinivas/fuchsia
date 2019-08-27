@@ -148,7 +148,7 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
 
     // Build the crash report.
     fuchsia::feedback::GenericCrashReport generic_report;
-    generic_report.set_signature(Signature(crash_type));
+    generic_report.set_crash_signature(Signature(crash_type));
     fuchsia::feedback::SpecificCrashReport specific_report;
     specific_report.set_generic(std::move(generic_report));
     fuchsia::feedback::CrashReport report;

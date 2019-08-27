@@ -50,9 +50,9 @@ xunion SpecificCrashReport {
 
 /// Represents a generic crash report.
 table GenericCrashReport {
-    /// A text signature that the crash server can use to group similar crashes together, e.g.,
+    /// A text signature that the crash server can use to track the same crash over time, e.g.,
     /// "kernel-panic" or "oom".
-    1: string:128 signature;
+    1: string:128 crash_signature;
 };
 
 /// Represents a crash report for a native exception out of which the client has built a minidump.

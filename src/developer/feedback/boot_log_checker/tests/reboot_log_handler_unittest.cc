@@ -93,7 +93,7 @@ TEST_F(RebootLogHandlerTest, Succeed_KernelPanicCrashLogPresent) {
   stub_network_reachability_provider_->TriggerOnNetworkReachable(true);
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kOk);
-  EXPECT_STREQ(stub_crash_reporter_->signature().c_str(), "fuchsia-kernel-panic");
+  EXPECT_STREQ(stub_crash_reporter_->crash_signature().c_str(), "fuchsia-kernel-panic");
   EXPECT_STREQ(stub_crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
 }
 
@@ -109,7 +109,7 @@ TEST_F(RebootLogHandlerTest, Succeed_OutOfMemoryLogPresent) {
   stub_network_reachability_provider_->TriggerOnNetworkReachable(true);
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kOk);
-  EXPECT_STREQ(stub_crash_reporter_->signature().c_str(), "fuchsia-oom");
+  EXPECT_STREQ(stub_crash_reporter_->crash_signature().c_str(), "fuchsia-oom");
   EXPECT_STREQ(stub_crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
 }
 
@@ -125,7 +125,7 @@ TEST_F(RebootLogHandlerTest, Succeed_UnrecognizedCrashTypeInRebootLog) {
   stub_network_reachability_provider_->TriggerOnNetworkReachable(true);
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kOk);
-  EXPECT_STREQ(stub_crash_reporter_->signature().c_str(), "fuchsia-kernel-panic");
+  EXPECT_STREQ(stub_crash_reporter_->crash_signature().c_str(), "fuchsia-kernel-panic");
   EXPECT_STREQ(stub_crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
 }
 

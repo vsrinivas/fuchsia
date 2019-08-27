@@ -225,10 +225,11 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   }
 
   // Files one generic crash report.
-  CrashReporter_File_Result FileOneGenericCrashReport(const std::optional<std::string>& signature) {
+  CrashReporter_File_Result FileOneGenericCrashReport(
+      const std::optional<std::string>& crash_signature) {
     GenericCrashReport generic_report;
-    if (signature.has_value()) {
-      generic_report.set_signature(signature.value());
+    if (crash_signature.has_value()) {
+      generic_report.set_crash_signature(crash_signature.value());
     }
 
     SpecificCrashReport specific_report;

@@ -17,8 +17,8 @@ using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
 
-// The crash server expects a specific key for client-provided signatures.
-const char kSignature[] = "signature";
+// The crash server expects a specific key for client-provided crash signatures.
+const char kCrashSignatureKey[] = "signature";
 
 // The crash server expects specific key and values for some annotations and attachments for Dart.
 const char kDartTypeKey[] = "type";
@@ -41,8 +41,8 @@ void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
   // Generic-specific annotations.
   if (report.has_specific_report() && report.specific_report().is_generic()) {
     const auto& generic_report = report.specific_report().generic();
-    if (generic_report.has_signature()) {
-      (*annotations)[kSignature] = generic_report.signature();
+    if (generic_report.has_crash_signature()) {
+      (*annotations)[kCrashSignatureKey] = generic_report.crash_signature();
     }
   }
 

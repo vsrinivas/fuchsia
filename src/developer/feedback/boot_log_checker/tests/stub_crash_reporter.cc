@@ -14,11 +14,11 @@ namespace feedback {
 void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   FXL_CHECK(report.has_specific_report());
   FXL_CHECK(report.specific_report().is_generic());
-  FXL_CHECK(report.specific_report().generic().has_signature());
+  FXL_CHECK(report.specific_report().generic().has_crash_signature());
   FXL_CHECK(report.has_attachments());
   FXL_CHECK(report.attachments().size() == 1u);
 
-  signature_ = report.specific_report().generic().signature();
+  crash_signature_ = report.specific_report().generic().crash_signature();
 
   fuchsia::feedback::CrashReporter_File_Result result;
   if (!fsl::StringFromVmo(report.attachments()[0].value, &reboot_log_)) {
