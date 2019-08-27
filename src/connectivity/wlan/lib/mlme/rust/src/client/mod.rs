@@ -234,6 +234,42 @@ impl ClientStation {
             })
         })
     }
+
+    /// Sends an EAPoL frame over the air and reports transmission status to SME via an
+    /// MLME-EAPOL.confirm message.
+    pub fn send_eapol_frame(
+        &mut self,
+        src: MacAddr,
+        dst: MacAddr,
+        is_protected: bool,
+        eapol_frame: &[u8],
+    ) {
+        // TODO(34910): EAPoL frames can be send in QoS data frames. However, Fuchsia's old C++
+        // MLME never sent EAPoL frames in QoS data frames. For feature parity do the same.
+        let result = self.send_data_frame(
+            src,
+            dst,
+            is_protected,
+            false, /* don't use QoS */
+            mac::ETHER_TYPE_EAPOL,
+            eapol_frame,
+        );
+        let result_code = match result {
+            Ok(()) => fidl_mlme::EapolResultCodes::Success,
+            Err(e) => {
+                error!("error sending EAPoL frame: {}", e);
+                fidl_mlme::EapolResultCodes::TransmissionFailure
+            }
+        };
+
+        // Report transmission result to SME.
+        let result = self.device.access_sme_sender(|sender| {
+            sender.send_eapol_conf(&mut fidl_mlme::EapolConfirm { result_code })
+        });
+        if let Err(e) = result {
+            error!("error sending MLME-EAPOL.confirm message: {}", e);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -504,5 +540,60 @@ mod tests {
             eapol_ind,
             fidl_mlme::EapolIndication { src_addr: [1; 6], dst_addr: [2; 6], data: vec![5; 200] }
         );
+    }
+
+    #[test]
+    fn send_eapol_frame_success() {
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device());
+        client.send_eapol_frame(IFACE_MAC, BSSID, false, &[5; 8]);
+
+        // Verify EAPOL.confirm message was sent to SME.
+        let eapol_confirm = fake_device
+            .next_mlme_msg::<fidl_mlme::EapolConfirm>()
+            .expect("error reading EAPOL.confirm");
+        assert_eq!(
+            eapol_confirm,
+            fidl_mlme::EapolConfirm { result_code: fidl_mlme::EapolResultCodes::Success }
+        );
+
+        // Verify EAPoL frame was sent over the air.
+        #[rustfmt::skip]
+        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
+            // Data header:
+            0b0000_10_00, 0b0000000_1, // FC
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // addr1
+            7, 7, 7, 7, 7, 7, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // Sequence Control
+            // LLC header:
+            0xaa, 0xaa, 0x03, // dsap ssap ctrl
+            0x00, 0x00, 0x00, // oui
+            0x88, 0x8E, // protocol id (EAPOL)
+            // EAPoL PDU:
+            5, 5, 5, 5, 5, 5, 5, 5,
+        ][..]);
+    }
+
+    #[test]
+    fn send_eapol_frame_failure() {
+        let mut fake_device = FakeDevice::new();
+        let mut client = make_client_station(fake_device.as_device_fail_wlan_tx());
+        client.send_eapol_frame([1; 6], [2; 6], false, &[5; 200]);
+
+        // Verify EAPOL.confirm message was sent to SME.
+        let eapol_confirm = fake_device
+            .next_mlme_msg::<fidl_mlme::EapolConfirm>()
+            .expect("error reading EAPOL.confirm");
+        assert_eq!(
+            eapol_confirm,
+            fidl_mlme::EapolConfirm {
+                result_code: fidl_mlme::EapolResultCodes::TransmissionFailure
+            }
+        );
+
+        // Verify EAPoL frame was not sent over the air.
+        assert!(fake_device.wlan_queue.is_empty());
     }
 }

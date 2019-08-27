@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/timekeeper/clock.h>
+
+#include <fbl/unique_ptr.h>
+#include <gtest/gtest.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/mlme/client/client_mlme.h>
@@ -368,11 +369,12 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
   device.wlan_queue.clear();
 
   // Verify EAPOL.confirm message was sent to SME
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto msgs =
-      device.GetServiceMsgs<wlan_mlme::EapolConfirm>(fuchsia_wlan_mlme_MLMEEapolConfOrdinal);
-  ASSERT_EQ(msgs.size(), 1ULL);
-  EXPECT_EQ(msgs[0].body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
+  auto msg_data = device.NextTxMlmeMsg();
+  ASSERT_TRUE(msg_data.has_value());
+  auto eapol_confirm = MlmeMsg<wlan_mlme::EapolConfirm>::Decode(
+      msg_data->data(), fuchsia_wlan_mlme_MLMEEapolConfOrdinal);
+  ASSERT_TRUE(eapol_confirm.has_value());
+  EXPECT_EQ(eapol_confirm.value().body()->result_code, wlan_mlme::EapolResultCodes::SUCCESS);
 
   // After controlled port opens, EAPOL frame has protected flag enabled
   EstablishRsna();

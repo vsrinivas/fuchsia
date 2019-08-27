@@ -36,6 +36,41 @@ struct WlanPacket {
   uint32_t flags;
 };
 
+std::pair<zx::channel, zx::channel> make_channel() {
+  zx::channel local;
+  zx::channel remote;
+  zx::channel::create(0, &local, &remote);
+  return {std::move(local), std::move(remote)};
+}
+
+// Reads a fidl_msg_t from a channel.
+struct FidlMessage {
+  static std::optional<FidlMessage> ReadFromChannel(zx::channel* endpoint) {
+    FidlMessage msg = {};
+    auto status =
+        endpoint->read(ZX_CHANNEL_READ_MAY_DISCARD, msg.bytes, msg.handles, sizeof(msg.bytes),
+                       sizeof(msg.handles), &msg.actual_bytes, &msg.actual_handles);
+    if (status != ZX_OK) {
+      return {std::nullopt};
+    }
+    return {std::move(msg)};
+  }
+
+  fidl_msg_t get() {
+    return {.bytes = bytes,
+            .handles = handles,
+            .num_bytes = actual_bytes,
+            .num_handles = actual_handles};
+  }
+
+  fbl::Span<uint8_t> data() { return {bytes, actual_bytes}; }
+
+  FIDL_ALIGNDECL uint8_t bytes[256];
+  zx_handle_t handles[256];
+  uint32_t actual_bytes;
+  uint32_t actual_handles;
+};
+
 // TODO(hahnr): Support for failing various device calls.
 struct MockDevice : public DeviceInterface {
  public:
@@ -43,6 +78,10 @@ struct MockDevice : public DeviceInterface {
   using KeyList = std::vector<wlan_key_config_t>;
 
   MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_{} {
+    auto [sme, mlme] = make_channel();
+    sme_ = std::move(sme);
+    mlme_ = std::move(mlme);
+
     state = fbl::AdoptRef(new DeviceState);
     state->set_address(addr);
 
@@ -68,7 +107,7 @@ struct MockDevice : public DeviceInterface {
     return std::make_unique<TestTimer>(id, &clock_);
   }
 
-  zx_handle_t GetSmeChannelRef() override final { return ZX_HANDLE_INVALID; }
+  zx_handle_t GetSmeChannelRef() override final { return mlme_.get(); }
 
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) override final {
     eth_queue.push_back({eth_frame.cbegin(), eth_frame.cend()});
@@ -196,6 +235,8 @@ struct MockDevice : public DeviceInterface {
 
   bool AreQueuesEmpty() { return wlan_queue.empty() && svc_queue.empty() && eth_queue.empty(); }
 
+  std::optional<FidlMessage> NextTxMlmeMsg() { return FidlMessage::ReadFromChannel(&sme_); }
+
   fbl::RefPtr<DeviceState> state;
   wlanmac_info_t wlanmac_info;
   PacketList wlan_queue;
@@ -206,6 +247,8 @@ struct MockDevice : public DeviceInterface {
   fbl::unique_ptr<Packet> beacon;
   bool beaconing_enabled;
   wlan_assoc_ctx_t sta_assoc_ctx_;
+  zx::channel sme_;
+  zx::channel mlme_;
 
  private:
   timekeeper::TestClock clock_;

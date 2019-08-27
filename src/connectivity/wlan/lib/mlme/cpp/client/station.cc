@@ -777,17 +777,9 @@ zx_status_t Station::SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
 
   bool needs_protection =
       join_ctx_->bss()->rsn.has_value() && controlled_port_ == eapol::PortState::kOpen;
-  auto status = client_sta_send_data_frame(rust_client_.get(), &src.byte, &dst.byte,
-                                           needs_protection, false /* don't use QoS */, 0x888E,
-                                           eapol_frame.data(), eapol_frame.size_bytes());
-  if (status != ZX_OK) {
-    errorf("could not send eapol request packet: %d\n", status);
-    service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::TRANSMISSION_FAILURE);
-    return status;
-  }
-
-  service::SendEapolConfirm(device_, wlan_mlme::EapolResultCodes::SUCCESS);
-  return status;
+  client_sta_send_eapol_frame(rust_client_.get(), &src.byte, &dst.byte, needs_protection,
+                              eapol_frame.data(), eapol_frame.size_bytes());
+  return ZX_OK;
 }
 
 zx_status_t Station::SetKeys(fbl::Span<const wlan_mlme::SetKeyDescriptor> keys) {

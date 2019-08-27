@@ -98,6 +98,10 @@ impl FakeDevice {
         zx::sys::ZX_OK
     }
 
+    pub extern "C" fn send_wlan_frame_with_failure(_: *mut c_void, _: OutBuf, _: u32) -> i32 {
+        zx::sys::ZX_ERR_IO
+    }
+
     pub extern "C" fn get_sme_channel(device: *mut c_void) -> u32 {
         use fuchsia_zircon::AsHandleRef;
 
@@ -129,6 +133,15 @@ impl FakeDevice {
             device: self as *mut Self as *mut c_void,
             deliver_eth_frame: Self::deliver_eth_frame,
             send_wlan_frame: Self::send_wlan_frame,
+            get_sme_channel: Self::get_sme_channel,
+        }
+    }
+
+    pub fn as_device_fail_wlan_tx(&mut self) -> Device {
+        Device {
+            device: self as *mut Self as *mut c_void,
+            deliver_eth_frame: Self::deliver_eth_frame,
+            send_wlan_frame: Self::send_wlan_frame_with_failure,
             get_sme_channel: Self::get_sme_channel,
         }
     }

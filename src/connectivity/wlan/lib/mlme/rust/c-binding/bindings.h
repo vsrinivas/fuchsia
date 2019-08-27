@@ -109,6 +109,10 @@ extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, const uint
 
 extern "C" int32_t client_sta_send_deauth_frame(wlan_client_sta_t *sta, uint16_t reason_code);
 
+extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, const uint8_t (*src)[6],
+                                            const uint8_t (*dest)[6], bool is_protected,
+                                            const uint8_t *payload, uintptr_t payload_len);
+
 extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta);
 
 extern "C" mlme_sequence_manager_t *client_sta_seq_mgr(wlan_client_sta_t *sta);

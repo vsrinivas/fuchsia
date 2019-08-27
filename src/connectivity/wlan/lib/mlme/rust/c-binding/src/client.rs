@@ -80,3 +80,16 @@ pub unsafe extern "C" fn client_sta_send_data_frame(
     let payload = utils::as_slice(payload, payload_len);
     sta.send_data_frame(*src, *dest, is_protected, is_qos, ether_type, payload).into_raw_zx_status()
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn client_sta_send_eapol_frame(
+    sta: &mut ClientStation,
+    src: &[u8; 6],
+    dest: &[u8; 6],
+    is_protected: bool,
+    payload: *const u8,
+    payload_len: usize,
+) {
+    let payload = utils::as_slice(payload, payload_len);
+    sta.send_eapol_frame(*src, *dest, is_protected, payload)
+}
