@@ -106,8 +106,12 @@ Status IntelDsp::ParseNhlt() {
   if (!nhlt.ok()) {
     return nhlt.status();
   }
-
   nhlt_ = nhlt.ConsumeValueOrDie();
+
+  if (zxlog_level_enabled(TRACE)) {
+    nhlt_->Dump();
+  }
+
   return OkStatus();
 }
 

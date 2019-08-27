@@ -171,28 +171,33 @@ StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(fbl::Span<const uint8_t> buffer
 
 void Nhlt::Dump() const {
   GLOBAL_LOG(INFO, "Got %lu NHLT endpoints:\n", i2s_configs_.size());
+  size_t n = 0;
   for (const I2SConfig& endpoint : i2s_configs_) {
-    GLOBAL_LOG(INFO, "  link_type: %u\n", endpoint.header.link_type);
-    GLOBAL_LOG(INFO, "  instance_id: %u\n", endpoint.header.instance_id);
-    GLOBAL_LOG(INFO, "  vendor_id: 0x%x\n", endpoint.header.vendor_id);
-    GLOBAL_LOG(INFO, "  device_id: 0x%x\n", endpoint.header.device_id);
-    GLOBAL_LOG(INFO, "  revision_id: %u\n", endpoint.header.revision_id);
-    GLOBAL_LOG(INFO, "  subsystem_id: %u\n", endpoint.header.subsystem_id);
-    GLOBAL_LOG(INFO, "  device_type: %u\n", endpoint.header.device_type);
-    GLOBAL_LOG(INFO, "  direction: %u\n", endpoint.header.direction);
-    GLOBAL_LOG(INFO, "  virtual_bus_id: %u\n", endpoint.header.virtual_bus_id);
-    GLOBAL_LOG(INFO, "  specific_config: %lu byte(s):\n", endpoint.specific_config.size());
+    GLOBAL_LOG(INFO, "  Endpoint %lu:\n", n++);
+    GLOBAL_LOG(INFO, "    link_type: %u\n", endpoint.header.link_type);
+    GLOBAL_LOG(INFO, "    instance_id: %u\n", endpoint.header.instance_id);
+    GLOBAL_LOG(INFO, "    vendor_id: 0x%x\n", endpoint.header.vendor_id);
+    GLOBAL_LOG(INFO, "    device_id: 0x%x\n", endpoint.header.device_id);
+    GLOBAL_LOG(INFO, "    revision_id: %u\n", endpoint.header.revision_id);
+    GLOBAL_LOG(INFO, "    subsystem_id: %u\n", endpoint.header.subsystem_id);
+    GLOBAL_LOG(INFO, "    device_type: %u\n", endpoint.header.device_type);
+    GLOBAL_LOG(INFO, "    direction: %u\n", endpoint.header.direction);
+    GLOBAL_LOG(INFO, "    virtual_bus_id: %u\n", endpoint.header.virtual_bus_id);
+    GLOBAL_LOG(INFO, "    specific_config: %lu byte(s):\n", endpoint.specific_config.size());
     for (const auto& format : endpoint.formats) {
-      GLOBAL_LOG(INFO, "  * Format:\n");
-      GLOBAL_LOG(INFO, "    tag=%u, n_channels=%d, n_samples_per_sec=%d, n_avg_bytes_per_sec=%d\n",
+      GLOBAL_LOG(INFO, "    * Format:\n");
+      GLOBAL_LOG(INFO,
+                 "      tag=%u, n_channels=%d, n_samples_per_sec=%d, "
+                 "n_avg_bytes_per_sec=%d\n",
                  format.config.format_tag, format.config.n_channels,
                  format.config.n_samples_per_sec, format.config.n_avg_bytes_per_sec);
       GLOBAL_LOG(INFO,
-                 "    n_block_align=%d, bits_per_sample=%d, cb_size=%d, valid_bits_per_sample=%d\n",
+                 "      n_block_align=%d, bits_per_sample=%d, cb_size=%d, "
+                 "valid_bits_per_sample=%d\n",
                  format.config.n_block_align, format.config.bits_per_sample, format.config.cb_size,
                  format.config.valid_bits_per_sample);
-      GLOBAL_LOG(INFO, "    channel_mask=%d\n", format.config.channel_mask);
-      GLOBAL_LOG(INFO, "    capabilities: %lu byte(s):\n", format.capabilities.size());
+      GLOBAL_LOG(INFO, "      channel_mask=%d\n", format.config.channel_mask);
+      GLOBAL_LOG(INFO, "      capabilities: %lu byte(s)\n", format.capabilities.size());
     }
   }
 }
