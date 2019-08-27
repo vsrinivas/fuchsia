@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/crash/c/fidl.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
+#include <fidl/test/echo/c/fidl.h>
 #include <unittest/unittest.h>
 
-static int crash_server(void* ctx) {
+static int echo_server(void* ctx) {
   zx_handle_t server = *(zx_handle_t*)ctx;
   zx_status_t status = ZX_OK;
 
@@ -31,11 +31,11 @@ static int crash_server(void* ctx) {
       ASSERT_EQ(actual_handles, 2u, "");
       zx_handle_close_many(handles, actual_handles);
       fidl_message_header_t* req = (fidl_message_header_t*)msg;
-      fuchsia_crash_AnalyzerOnNativeExceptionResponse response;
+      fidl_test_echo_EchoEchoResponse response;
       memset(&response, 0, sizeof(response));
       response.hdr.txid = req->txid;
       response.hdr.ordinal = req->ordinal;
-      response.result.tag = fuchsia_crash_Analyzer_OnNativeException_ResultTag_response;
+      response.result.tag = fidl_test_echo_Echo_Echo_ResultTag_response;
       status = zx_channel_write(server, 0, &response, sizeof(response), NULL, 0);
       ASSERT_EQ(ZX_OK, status, "");
     } else {
@@ -47,7 +47,7 @@ static int crash_server(void* ctx) {
   return 0;
 }
 
-static bool crash_analyzer_test(void) {
+static bool echo_test(void) {
   BEGIN_TEST;
 
   zx_handle_t client, server;
@@ -55,17 +55,17 @@ static bool crash_analyzer_test(void) {
   ASSERT_EQ(ZX_OK, status, "");
 
   thrd_t thread;
-  int rv = thrd_create(&thread, crash_server, &server);
+  int rv = thrd_create(&thread, echo_server, &server);
   ASSERT_EQ(thrd_success, rv, "");
 
   zx_handle_t h0, h1;
   status = zx_eventpair_create(0, &h0, &h1);
   ASSERT_EQ(ZX_OK, status, "");
 
-  fuchsia_crash_Analyzer_OnNativeException_Result analyzer_result;
-  status = fuchsia_crash_AnalyzerOnNativeException(client, h0, h1, &analyzer_result);
+  fidl_test_echo_Echo_Echo_Result analyzer_result;
+  status = fidl_test_echo_EchoEcho(client, h0, h1, &analyzer_result);
   ASSERT_EQ(ZX_OK, status, "");
-  ASSERT_EQ(fuchsia_crash_Analyzer_OnNativeException_ResultTag_response, analyzer_result.tag, "");
+  ASSERT_EQ(fidl_test_echo_Echo_Echo_ResultTag_response, analyzer_result.tag, "");
 
   status = zx_handle_close(client);
   ASSERT_EQ(ZX_OK, status, "");
@@ -78,5 +78,5 @@ static bool crash_analyzer_test(void) {
 }
 
 BEGIN_TEST_CASE(client_tests)
-RUN_NAMED_TEST("fuchsia.crash.Analyzer test", crash_analyzer_test)
+RUN_NAMED_TEST("fidl.test.echo.Echo test", echo_test)
 END_TEST_CASE(client_tests);
