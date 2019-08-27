@@ -33,8 +33,6 @@ class PlatformConnection {
     virtual bool CreateContext(uint32_t context_id) = 0;
     virtual bool DestroyContext(uint32_t context_id) = 0;
 
-    virtual magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle,
-                                               uint32_t context_id) = 0;
     virtual magma::Status ExecuteCommandBufferWithResources(
         uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
         std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) = 0;

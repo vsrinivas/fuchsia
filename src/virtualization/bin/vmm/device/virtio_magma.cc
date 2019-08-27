@@ -110,27 +110,6 @@ zx_status_t VirtioMagma::Handle_create_buffer(const virtio_magma_create_buffer_c
   return ZX_OK;
 }
 
-zx_status_t VirtioMagma::Handle_create_command_buffer(
-    const virtio_magma_create_command_buffer_ctrl_t* request,
-    virtio_magma_create_command_buffer_resp_t* response) {
-  zx_status_t status = VirtioMagmaGeneric::Handle_create_command_buffer(request, response);
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx::vmar vmar;
-  status = vmar_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmar);
-  if (status != ZX_OK) {
-    return status;
-  }
-  magma_status_t magma_status =
-      magma_set_buffer_mapping_address_range(response->buffer_out, vmar.release());
-  if (magma_status != MAGMA_STATUS_OK) {
-    FXL_LOG(ERROR) << "magma_set_buffer_mapping_address_range failed - " << magma_status;
-    return ZX_ERR_INTERNAL;
-  }
-  return ZX_OK;
-}
-
 zx_status_t VirtioMagma::Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
                                             virtio_magma_map_aligned_resp_t* response) {
   FXL_LOG(ERROR) << "Specialized map calls should be converted by the driver into generic ones";

@@ -32,8 +32,6 @@ class MagmaSystemContext {
   MagmaSystemContext(Owner* owner, msd_context_unique_ptr_t msd_ctx)
       : owner_(owner), msd_ctx_(std::move(msd_ctx)) {}
 
-  magma::Status ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> command_buffer);
-  magma::Status ExecuteCommandBuffer(std::unique_ptr<MagmaSystemCommandBuffer> cmd_buf);
   magma::Status ExecuteCommandBufferWithResources(
       std::unique_ptr<magma_system_command_buffer> command_buffer,
       std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores);

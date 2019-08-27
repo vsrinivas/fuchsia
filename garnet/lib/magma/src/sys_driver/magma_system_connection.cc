@@ -63,20 +63,6 @@ MagmaSystemContext* MagmaSystemConnection::LookupContext(uint32_t context_id) {
   return iter->second.get();
 }
 
-magma::Status MagmaSystemConnection::ExecuteCommandBuffer(uint32_t command_buffer_handle,
-                                                          uint32_t context_id) {
-  auto command_buffer = magma::PlatformBuffer::Import(command_buffer_handle);
-  if (!command_buffer)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Failed to import command buffer");
-
-  auto context = LookupContext(context_id);
-  if (!context)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
-                    "Attempting to execute command buffer on invalid context");
-
-  return context->ExecuteCommandBuffer(std::move(command_buffer));
-}
-
 magma::Status MagmaSystemConnection::ExecuteCommandBufferWithResources(
     uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
     std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) {

@@ -308,38 +308,6 @@ magma_status_t magma_import(
     magma_buffer_t* buffer_out);
 
 ///
-/// \brief Creates a buffer of the given size that may be submitted as a command buffer.
-/// \param connection An open connection.
-/// \param size The requested size of the buffer.
-/// \param buffer_out The returned buffer.
-///
-magma_status_t magma_create_command_buffer(
-    magma_connection_t connection,
-    uint64_t size,
-    magma_buffer_t* buffer_out);
-
-///
-/// \brief Releases a command buffer without submitting it.
-/// \param connection An open connection.
-/// \param command_buffer A valid command buffer.
-///
-void magma_release_command_buffer(
-    magma_connection_t connection,
-    magma_buffer_t command_buffer);
-
-///
-/// \brief Submits a command buffer for execution on the GPU, and transfers ownership to the given
-///        context. The command buffer should not be mapped.
-/// \param connection An open connection.
-/// \param command_buffer A valid buffer containing valid magma_system_command_buffer structures.
-/// \param context_id A valid context ID.
-///
-void magma_submit_command_buffer(
-    magma_connection_t connection,
-    magma_buffer_t command_buffer,
-    uint32_t context_id);
-
-///
 /// \brief Submits a command buffer for execution on the GPU, with associated resources.
 /// \param connection An open connection.
 /// \param context_id A valid context ID.

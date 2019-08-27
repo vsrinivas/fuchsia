@@ -57,12 +57,6 @@ protocol Primary {
     /// Destroys context `context_id`.
     DestroyContext(uint32 context_id);
 
-    /// Submits a command buffer for execution on the GPU.
-    /// Note that the buffer referred to by `command_buffer` must contain a valid
-    /// magma_system_command_buffer and all associated data structures
-    /// Transfers ownership of `command_buffer`.
-    ExecuteCommandBuffer(handle command_buffer, uint32 context_id);
-
     /// Submits a command buffer for execution on the GPU, with associated resources.
     ExecuteCommandBufferWithResources(
         uint32 context_id,

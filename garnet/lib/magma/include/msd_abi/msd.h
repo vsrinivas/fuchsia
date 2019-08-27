@@ -67,19 +67,6 @@ struct msd_context_t* msd_connection_create_context(struct msd_connection_t* con
 // Destroys the given context.
 void msd_context_destroy(struct msd_context_t* ctx);
 
-// |ctx| is the context in which to execute the command buffer
-// |cmd_buf| is the command buffer to be executed
-// |buffers| are the buffers referenced by the handles in command_buf->exec_resources,
-// in the same order
-// |wait_semaphores| are the semaphores that must be signaled before starting command buffer
-// execution
-// |signal_semaphores| are the semaphores to be signaled upon completion of the command buffer
-magma_status_t msd_context_execute_command_buffer(struct msd_context_t* ctx,
-                                                  struct msd_buffer_t* cmd_buf,
-                                                  struct msd_buffer_t** buffers,
-                                                  struct msd_semaphore_t** wait_semaphores,
-                                                  struct msd_semaphore_t** signal_semaphores);
-
 // Executes a command buffer given associated set of resources and semaphores.
 // |ctx| is the context in which to execute the command buffer
 // |command_buffer| is the command buffer to be executed

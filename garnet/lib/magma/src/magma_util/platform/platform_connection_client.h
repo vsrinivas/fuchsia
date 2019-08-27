@@ -49,8 +49,6 @@ class PlatformConnectionClient : public magma_connection {
 
   virtual magma_status_t GetError() = 0;
 
-  virtual void ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) = 0;
-
   virtual magma_status_t MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset,
                                       uint64_t page_count, uint64_t flags) = 0;
 

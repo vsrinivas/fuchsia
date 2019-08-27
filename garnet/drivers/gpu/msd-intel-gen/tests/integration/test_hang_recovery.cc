@@ -79,11 +79,11 @@ class TestConnection : public TestBase {
     // Increment gpu address for next iteration
     gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
-    magma_buffer_t command_buffer;
-    ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer),
-              MAGMA_STATUS_OK);
-    EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, buffer_size));
-    magma_submit_command_buffer(connection_, command_buffer, context_id_);
+    magma_system_command_buffer command_buffer;
+    magma_system_exec_resource exec_resource;
+    EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, buffer_size));
+    magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
+                                                &exec_resource, nullptr);
 
     magma::InflightList list;
 
@@ -156,23 +156,18 @@ class TestConnection : public TestBase {
     reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1] = 0xdeadbeef;
   }
 
-  bool InitCommandBuffer(magma_buffer_t buffer, magma_buffer_t batch_buffer,
+  bool InitCommandBuffer(magma_system_command_buffer* command_buffer,
+                         magma_system_exec_resource* exec_resource, magma_buffer_t batch_buffer,
                          uint64_t batch_buffer_length) {
-    void* vaddr;
-    if (magma_map(connection_, buffer, &vaddr) != 0)
-      return DRETF(false, "couldn't map command buffer");
-
-    auto command_buffer = reinterpret_cast<struct magma_system_command_buffer*>(vaddr);
     command_buffer->batch_buffer_resource_index = 0;
     command_buffer->batch_start_offset = 0;
     command_buffer->num_resources = 1;
+    command_buffer->wait_semaphore_count = 0;
+    command_buffer->signal_semaphore_count = 0;
 
-    auto exec_resource = reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
     exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
     exec_resource->offset = 0;
     exec_resource->length = batch_buffer_length;
-
-    EXPECT_EQ(magma_unmap(connection_, buffer), 0);
 
     return true;
   }
@@ -217,10 +212,11 @@ class TestConnection : public TestBase {
 
     InitBatchBuffer(vaddr, size, true, kUnmappedBufferGpuAddress);
 
-    magma_buffer_t command_buffer;
-    ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
-    EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size));
-    magma_submit_command_buffer(connection_, command_buffer, context_id_);
+    magma_system_command_buffer command_buffer;
+    magma_system_exec_resource exec_resource;
+    EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, size));
+    magma_execute_command_buffer_with_resources(connection_, context_id_, &command_buffer,
+                                                &exec_resource, nullptr);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 

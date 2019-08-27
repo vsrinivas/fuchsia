@@ -190,15 +190,6 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
       SetError(MAGMA_STATUS_INTERNAL_ERROR);
   }
 
-  void ExecuteCommandBuffer(zx::handle command_buffer, uint32_t context_id) override {
-    DLOG("ZirconPlatformConnection: ExecuteCommandBuffer");
-    magma::Status status = delegate_->ExecuteCommandBuffer(command_buffer.release(), context_id);
-    if (status.get() == MAGMA_STATUS_CONTEXT_KILLED)
-      ShutdownEvent()->Signal();
-    if (!status)
-      SetError(MAGMA_STATUS_INTERNAL_ERROR);
-  }
-
   void ExecuteCommandBufferWithResources(uint32_t context_id,
                                          fuchsia::gpu::magma::CommandBuffer fidl_command_buffer,
                                          std::vector<fuchsia::gpu::magma::Resource> fidl_resources,

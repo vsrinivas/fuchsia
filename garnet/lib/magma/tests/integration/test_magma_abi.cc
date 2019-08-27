@@ -414,29 +414,6 @@ class TestConnectionWithContext : public TestConnection {
 
   uint32_t context_id() { return context_id_; }
 
-  void SubmitCommandBuffer(uint64_t resource_count) {
-    uint64_t command_buffer_size =
-        sizeof(magma_system_command_buffer) + resource_count * sizeof(magma_system_exec_resource);
-
-    magma_buffer_t command_buffer;
-    ASSERT_EQ(MAGMA_STATUS_OK,
-              magma_create_command_buffer(connection(), command_buffer_size, &command_buffer));
-
-    magma_system_command_buffer* mapped_command_buffer;
-    ASSERT_EQ(MAGMA_STATUS_OK, magma_map(connection(), command_buffer,
-                                         reinterpret_cast<void**>(&mapped_command_buffer)));
-
-    memset(mapped_command_buffer, 0, command_buffer_size);
-    mapped_command_buffer->num_resources = resource_count;
-
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_unmap(connection(), command_buffer));
-
-    magma_submit_command_buffer(connection(), command_buffer, context_id());
-
-    // Command buffer is mostly zeros, so we expect an error here
-    EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection()));
-  }
-
   void ExecuteCommandBufferWithResources(uint32_t resource_count) {
     magma_system_command_buffer command_buffer = {.num_resources = resource_count};
     magma_system_exec_resource resources[resource_count];
@@ -536,28 +513,8 @@ TEST(MagmaAbi, QueryReturnsBuffer) {
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name())); }
 
-TEST(MagmaAbi, SubmitCommandBuffer) { TestConnectionWithContext().SubmitCommandBuffer(5); }
-
 TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
   TestConnectionWithContext().ExecuteCommandBufferWithResources(5);
-}
-
-TEST(MagmaAbiPerf, SubmitCommandBuffer) {
-  if (TestConnection::is_virtmagma())
-    GTEST_SKIP();
-
-  TestConnectionWithContext test;
-
-  auto start = std::chrono::steady_clock::now();
-  constexpr uint32_t kTestIterations = 10000;
-  for (uint32_t test_iter = kTestIterations; test_iter; --test_iter) {
-    test.SubmitCommandBuffer(10);
-  }
-  auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      std::chrono::steady_clock::now() - start);
-
-  magma::log(magma::LOG_INFO, "SubmitCommandBuffer: avg duration %lld ns",
-             duration.count() / kTestIterations);
 }
 
 TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {

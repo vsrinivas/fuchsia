@@ -228,36 +228,6 @@ void msd_context_destroy(msd_context_t* ctx) {
   connection->DestroyContext(std::move(client_context));
 }
 
-magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer_t* cmd_buf,
-                                                  msd_buffer_t** buffers,
-                                                  msd_semaphore_t** wait_semaphores,
-                                                  msd_semaphore_t** signal_semaphores) {
-  std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelAbiBuffer::cast(cmd_buf)->ptr();
-
-  void* ptr;
-  if (!buffer->platform_buffer()->MapCpu(&ptr))
-    return DRET(MAGMA_STATUS_MEMORY_ERROR);
-
-  auto cmd_buf_ptr = reinterpret_cast<magma_system_command_buffer*>(ptr);
-  auto semaphores_ptr = reinterpret_cast<uint64_t*>(cmd_buf_ptr + 1);
-  auto exec_resource_ptr = reinterpret_cast<magma_system_exec_resource*>(
-      semaphores_ptr + cmd_buf_ptr->wait_semaphore_count + cmd_buf_ptr->signal_semaphore_count);
-
-  auto context = MsdIntelAbiContext::cast(ctx)->ptr();
-  auto command_buffer = CommandBuffer::Create(context, cmd_buf_ptr, exec_resource_ptr, buffers,
-                                              wait_semaphores, signal_semaphores);
-
-  buffer->platform_buffer()->UnmapCpu();
-
-  TRACE_DURATION_BEGIN("magma", "PrepareForExecution", "id", command_buffer->GetBatchBufferId());
-  if (!command_buffer->PrepareForExecution())
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to prepare command buffer for execution");
-  TRACE_DURATION_END("magma", "PrepareForExecution");
-
-  magma::Status status = context->SubmitCommandBuffer(std::move(command_buffer));
-  return status.get();
-}
-
 magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64_t commands_size,
                                                       void* commands, uint64_t semaphore_count,
                                                       msd_semaphore_t** msd_semaphores) {

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <mutex>
-
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <lib/fdio/unsafe.h>
+
+#include <mutex>
 
 #include "platform_connection_client.h"
 
@@ -95,15 +95,6 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
   void DestroyContext(uint32_t context_id) override {
     DLOG("ZirconPlatformConnectionClient: DestroyContext");
     magma_status_t result = MagmaChannelStatus(magma_fidl_->DestroyContext(context_id));
-    if (result != MAGMA_STATUS_OK)
-      SetError(result);
-  }
-
-  void ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) override {
-    DLOG("ZirconPlatformConnectionClient: ExecuteCommandBuffer");
-    zx::handle duplicate_handle(command_buffer_handle);
-    magma_status_t result = MagmaChannelStatus(
-        magma_fidl_->ExecuteCommandBuffer(std::move(duplicate_handle), context_id));
     if (result != MAGMA_STATUS_OK)
       SetError(result);
   }

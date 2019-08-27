@@ -50,7 +50,6 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   // Returns the msd_semaphore for the given |id| if present in the semaphore map.
   std::shared_ptr<MagmaSystemSemaphore> LookupSemaphore(uint64_t id);
 
-  magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) override;
   magma::Status ExecuteCommandBufferWithResources(
       uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
       std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) override;

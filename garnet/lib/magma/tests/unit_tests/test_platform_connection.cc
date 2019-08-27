@@ -80,15 +80,6 @@ class TestPlatformConnection {
     EXPECT_EQ(client_connection_->GetError(), 0);
   }
 
-  void TestExecuteCommandBuffer() {
-    auto buf = magma::PlatformBuffer::Create(1, "test");
-    test_buffer_id = buf->id();
-    uint32_t handle;
-    EXPECT_TRUE(buf->duplicate_handle(&handle));
-    client_connection_->ExecuteCommandBuffer(handle, test_context_id);
-    EXPECT_EQ(client_connection_->GetError(), 0);
-  }
-
   void TestExecuteCommandBufferWithResources() {
     ASSERT_EQ(TestPlatformConnection::test_command_buffer.num_resources,
               TestPlatformConnection::test_resources.size());
@@ -257,14 +248,6 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     return true;
   }
 
-  magma::Status ExecuteCommandBuffer(uint32_t command_buffer_handle, uint32_t context_id) override {
-    auto buffer = magma::PlatformBuffer::Import(command_buffer_handle);
-    EXPECT_EQ(buffer->id(), TestPlatformConnection::test_buffer_id);
-    EXPECT_EQ(context_id, TestPlatformConnection::test_context_id);
-    TestPlatformConnection::test_complete = true;
-    return MAGMA_STATUS_OK;
-  }
-
   magma::Status ExecuteCommandBufferWithResources(
       uint32_t context_id, std::unique_ptr<magma_system_command_buffer> command_buffer,
       std::vector<magma_system_exec_resource> resources,
@@ -410,12 +393,6 @@ TEST(PlatformConnection, DestroyContext) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
   Test->TestDestroyContext();
-}
-
-TEST(PlatformConnection, ExecuteCommandBuffer) {
-  auto Test = TestPlatformConnection::Create();
-  ASSERT_NE(Test, nullptr);
-  Test->TestExecuteCommandBuffer();
 }
 
 TEST(PlatformConnection, ExecuteCommandBufferWithResources) {

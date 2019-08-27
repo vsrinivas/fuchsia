@@ -139,13 +139,6 @@ bool MsdArmConnection::ExecuteAtom(
   return true;
 }
 
-magma_status_t msd_context_execute_command_buffer(msd_context_t* ctx, msd_buffer_t* cmd_buf,
-                                                  msd_buffer_t** exec_resources,
-                                                  msd_semaphore_t** wait_semaphores,
-                                                  msd_semaphore_t** signal_semaphores) {
-  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "msd_context_execute_command_buffer not implemented");
-}
-
 magma_status_t msd_context_execute_command_buffer_with_resources(
     struct msd_context_t* ctx, struct magma_system_command_buffer* command_buffer,
     struct magma_system_exec_resource* exec_resources, struct msd_buffer_t** buffers,

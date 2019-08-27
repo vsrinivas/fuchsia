@@ -48,9 +48,6 @@ class VirtioMagma : public VirtioMagmaGeneric,
       virtio_magma_create_connection_resp_t* response) override;
   virtual zx_status_t Handle_create_buffer(const virtio_magma_create_buffer_ctrl_t* request,
                                            virtio_magma_create_buffer_resp_t* response) override;
-  virtual zx_status_t Handle_create_command_buffer(
-      const virtio_magma_create_command_buffer_ctrl_t* request,
-      virtio_magma_create_command_buffer_resp_t* response) override;
   virtual zx_status_t Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
                                          virtio_magma_map_aligned_resp_t* response) override;
   virtual zx_status_t Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,

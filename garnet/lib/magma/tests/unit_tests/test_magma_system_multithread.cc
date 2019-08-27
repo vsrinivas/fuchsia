@@ -87,31 +87,27 @@ class TestMultithread {
       EXPECT_TRUE(connection->MapBufferGpu(id, gpu_addr, 0, batch_buffer->size() / PAGE_SIZE, 0));
       gpu_addr += batch_buffer->size() + extra_page_count * PAGE_SIZE;
 
-      auto command_buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+      auto command_buffer = std::make_unique<magma_system_command_buffer>();
+      std::vector<magma_system_exec_resource> exec_resources(1);
+      EXPECT_TRUE(InitCommandBuffer(command_buffer.get(), &exec_resources[0], batch_buffer.get()));
 
-      EXPECT_TRUE(InitCommandBuffer(command_buffer.get(), id));
-
-      EXPECT_TRUE(context->ExecuteCommandBuffer(std::move(command_buffer)));
+      EXPECT_TRUE(context->ExecuteCommandBufferWithResources(std::move(command_buffer),
+                                                             std::move(exec_resources), {}));
     }
   }
 
-  bool InitCommandBuffer(magma::PlatformBuffer* buffer, uint64_t batch_buffer_id) {
-    void* vaddr;
-    if (!buffer->MapCpu(&vaddr))
-      return DRETF(false, "couldn't map buffer");
-
-    auto command_buffer = reinterpret_cast<struct magma_system_command_buffer*>(vaddr);
+  bool InitCommandBuffer(magma_system_command_buffer* command_buffer,
+                         magma_system_exec_resource* exec_resource,
+                         magma::PlatformBuffer* batch_buffer) {
     command_buffer->batch_buffer_resource_index = 0;
     command_buffer->batch_start_offset = 0;
     command_buffer->num_resources = 1;
+    command_buffer->wait_semaphore_count = 0;
+    command_buffer->signal_semaphore_count = 0;
 
-    auto exec_resource = reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
-    exec_resource->buffer_id = batch_buffer_id;
+    exec_resource->buffer_id = batch_buffer->id();
     exec_resource->offset = 0;
-    exec_resource->length = buffer->size();
-
-    if (!buffer->UnmapCpu())
-      return DRETF(false, "couldn't unmap buffer");
+    exec_resource->length = batch_buffer->size();
 
     return true;
   }
