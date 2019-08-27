@@ -7,7 +7,7 @@ the syntax for writing [component manifest source](#component-manifest-source).
 Component declarations contain:
 
 - Information about [how to run the component](#runtime).
-- The realm's [child component instances](#child-component-instances) and
+- The realm's [child component instances][children] and
   [component collections](#component-collections).
 - [Routing rules](#capability-routing) that describe how capabilities are used,
   exposed, and offered between components.
@@ -61,28 +61,6 @@ omitted.
 
 See also: [ELF Runner](elf_runner.md)
 
-### Child component instances
-
-A *child component instance* is a component instance that is owned by another
-component (the "parent"). Child instances may be *static* or *dynamic*. Static
-children are declared by the [`children`](#children) section of a component
-manifest. Dynamic children are created in a [collection](#component-collections)
-at runtime.
-
-The [`offer`](#offer) declarations determine which capabilities child instances
-have access to (see [Routing terminology](#routing-terminology)).
-
-### Component collections
-
-A *collection* is a container for component instances which may be created and
-destroyed at runtime using the
-[`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl) [framework
-service](#framework-services). Collections are declared in the
-[`collections`](#collections) section of a component manifest. When an
-[`offer`](#offer) declaration targets a collection, the offered capability is
-made available to every instance in the collection (see [Routing
-terminology](#routing-terminology)).
-
 ### Capability routing
 
 Component manifests provide a syntax for routing capabilities between
@@ -107,13 +85,13 @@ language of capability routing consists of the following three keywords:
   the component's namespace. A component may `use` any capability that has been
   `offered` to it.
 - `offer`: A component may `offer` a capability to a *target*, which is either a
-  [child](#child-component-instances) or [collection](#collections). When a
+  [child][children] or [collection][collections]. When a
   capability is offered to a child, the child instance may `use` the capability
   or `offer` it to one of its own targets. Likewise, when a capability is
   offered to a collection, any instance in the collection may `use` the
   capability or `offer` it.
-- `expose`: When a component `exposes` a capability to its containing realm
-  (i.e., its parent), the parent may `offer` the capability to one of its other
+- `expose`: When a component `exposes` a capability to its [containing
+  realm][realm-definitions], the parent may `offer` the capability to one of its other
   children. A component may `expose` any capability that it provides, or that
   one of its children exposes.
 
@@ -249,7 +227,7 @@ See also: [ELF Runner](elf_runner.md)
 ### children
 
 The `children` section declares child component instances as described in [Child
-component instances](#child-component-instances).
+component instances][children]
 
 `children` is an array of objects with the following properties:
 
@@ -472,7 +450,12 @@ A *reference* is a string of the form `#<reference-name>`, where
 
 A reference may refer to:
 
-- A [static child instance](#child-component-instances) whose name is
+- A [static child instance][static-children] whose name is
   `<reference-name>`.
-- A [collection](#component-collections) whose name is `<reference-name>`.
+- A [collection][collections] whose name is `<reference-name>`.
 - A [storage declaration](#storage) whose name is `<reference-name>`.
+
+[children]: ./realms.md#child-component-instances
+[collections]: ./realms.md#collections
+[realm-definitions]: ./realms.md#definitions
+[static-children]: ./realms.md#static-children

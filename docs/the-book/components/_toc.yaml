@@ -10,6 +10,8 @@ toc:
   path: /docs/the-book/components/life_of_a_service_open.md
 - title: "ELF runner"
   path: /docs/the-book/components/elf_runner.md
+- title: "Realms"
+  path: /docs/the-book/components/realms.md
 - title: "Capabilities"
   section:
   - include: /docs/the-book/components/capabilities/_toc.yaml
