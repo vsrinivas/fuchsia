@@ -319,7 +319,7 @@ impl Repository {
             }
             unreachable!();
         }
-            .on_timeout(5.seconds().after_now(), || {
+            .on_timeout(20.seconds().after_now(), || {
                 bail!("timed out waiting for 'pm serve' to respond to http requests")
             })
             .boxed();

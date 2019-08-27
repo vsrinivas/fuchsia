@@ -20,11 +20,15 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
+    fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{pkgfs::TestPkgFs, Package, PackageBuilder, RepositoryBuilder},
     fuchsia_zircon::Status,
     futures::prelude::*,
     matches::assert_matches,
-    std::io::{self, Read},
+    std::{
+        fs::File,
+        io::{self, Read},
+    },
 };
 
 struct Proxies {
@@ -150,6 +154,87 @@ impl TestEnv {
         Status::ok(status)?;
         Ok(package)
     }
+
+    fn add_file_with_merkle_to_blobfs(&self, mut file: File, merkle: &Hash) {
+        let mut blob = self
+            .pkgfs
+            .blobfs()
+            .as_dir()
+            .expect("blobfs has root dir")
+            .write_file(merkle.to_string(), 0)
+            .expect("create file in blobfs");
+        blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
+        io::copy(&mut file, &mut blob).expect("copy file to blobfs");
+    }
+
+    fn add_slice_to_blobfs(&self, slice: &[u8]) {
+        let merkle = MerkleTree::from_reader(slice).expect("merkle slice").root().to_string();
+        let mut blob = self
+            .pkgfs
+            .blobfs()
+            .as_dir()
+            .expect("blobfs has root dir")
+            .write_file(merkle, 0)
+            .expect("create file in blobfs");
+        blob.set_len(slice.len() as u64).expect("set_len");
+        io::copy(&mut &slice[..], &mut blob).expect("copy from slice to blob");
+    }
+
+    fn add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
+        let mut blob = self
+            .pkgfs
+            .root_dir()
+            .expect("pkgfs root_dir")
+            .new_file(path, 0)
+            .expect("create file in pkgfs");
+        blob.set_len(file.metadata().expect("file has metadata").len()).expect("set_len");
+        io::copy(&mut file, &mut blob).expect("copy file to pkgfs");
+    }
+
+    fn partially_add_file_to_pkgfs_at_path(&self, mut file: File, path: impl openat::AsPath) {
+        let full_len = file.metadata().expect("file has metadata").len();
+        assert!(full_len > 1, "can't partially write 1 byte");
+        let mut partial_bytes = vec![0; full_len as usize / 2];
+        file.read_exact(partial_bytes.as_mut_slice()).expect("partial read of file");
+        let mut blob = self
+            .pkgfs
+            .root_dir()
+            .expect("pkgfs root_dir")
+            .new_file(path, 0)
+            .expect("create file in pkgfs");
+        blob.set_len(full_len).expect("set_len");
+        io::copy(&mut partial_bytes.as_slice(), &mut blob).expect("copy file to pkgfs");
+    }
+
+    fn partially_add_slice_to_pkgfs_at_path(&self, slice: &[u8], path: impl openat::AsPath) {
+        assert!(slice.len() > 1, "can't partially write 1 byte");
+        let partial_slice = &slice[0..slice.len() / 2];
+        let mut blob = self
+            .pkgfs
+            .root_dir()
+            .expect("pkgfs root_dir")
+            .new_file(path, 0)
+            .expect("create file in pkgfs");
+        blob.set_len(slice.len() as u64).expect("set_len");
+        io::copy(&mut &partial_slice[..], &mut blob).expect("copy file to pkgfs");
+    }
+}
+
+const ROLLDICE_BIN: &'static [u8] = b"#!/boot/bin/sh\necho 4\n";
+const ROLLDICE_CMX: &'static [u8] = br#"{"program":{"binary":"bin/rolldice"}}"#;
+
+fn extra_blob_contents(i: u32) -> Vec<u8> {
+    format!("contents of file {}", i).as_bytes().to_owned()
+}
+
+async fn make_rolldice_pkg_with_extra_blobs(n: u32) -> Result<Package, Error> {
+    let mut pkg = PackageBuilder::new("rolldice")
+        .add_resource_at("bin/rolldice", ROLLDICE_BIN)?
+        .add_resource_at("meta/rolldice.cmx", ROLLDICE_CMX)?;
+    for i in 0..n {
+        pkg = pkg.add_resource_at(format!("data/file{}", i), extra_blob_contents(i).as_slice())?;
+    }
+    pkg.build().await
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -157,11 +242,8 @@ async fn test_package_resolution() -> Result<(), Error> {
     let env = TestEnv::new();
 
     let pkg = PackageBuilder::new("rolldice")
-        .add_resource_at("bin/rolldice", "#!/boot/bin/sh\necho 4\n".as_bytes())?
-        .add_resource_at(
-            "meta/rolldice.cmx",
-            r#"{"program":{"binary":"bin/rolldice"}}"#.as_bytes(),
-        )?
+        .add_resource_at("bin/rolldice", ROLLDICE_BIN)?
+        .add_resource_at("meta/rolldice.cmx", ROLLDICE_CMX)?
         .add_resource_at("data/duplicate_a", "same contents".as_bytes())?
         .add_resource_at("data/duplicate_b", "same contents".as_bytes())?
         .build()
@@ -188,7 +270,10 @@ async fn test_package_resolution() -> Result<(), Error> {
     Ok(())
 }
 
-async fn verify_download_blob_resolve(pkg: Package) -> Result<(), Error> {
+async fn verify_download_blob_resolve_with_altered_env(
+    pkg: Package,
+    alter_env: impl FnOnce(&TestEnv, &Package),
+) -> Result<(), Error> {
     let env = TestEnv::new();
 
     let repo = RepositoryBuilder::new().add_package(&pkg).build().await?;
@@ -201,6 +286,8 @@ async fn verify_download_blob_resolve(pkg: Package) -> Result<(), Error> {
 
     env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
+    alter_env(&env, &pkg);
+
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
 
@@ -208,6 +295,10 @@ async fn verify_download_blob_resolve(pkg: Package) -> Result<(), Error> {
     assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
 
     Ok(())
+}
+
+fn verify_download_blob_resolve(pkg: Package) -> impl Future<Output = Result<(), Error>> {
+    verify_download_blob_resolve_with_altered_env(pkg, |_, _| {})
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -230,7 +321,7 @@ async fn test_download_blob_meta_far_and_empty_blob() -> Result<(), Error> {
 async fn test_download_blob_experiment_large_blobs() -> Result<(), Error> {
     verify_download_blob_resolve(
         PackageBuilder::new("numbers")
-            .add_resource_at("bin/numbers", "#!/boot/bin/sh\necho 4\n".as_bytes())?
+            .add_resource_at("bin/numbers", ROLLDICE_BIN)?
             .add_resource_at("data/ones", io::repeat(1).take(1 * 1024 * 1024))?
             .add_resource_at("data/twos", io::repeat(2).take(2 * 1024 * 1024))?
             .add_resource_at("data/threes", io::repeat(3).take(3 * 1024 * 1024))?
@@ -242,14 +333,7 @@ async fn test_download_blob_experiment_large_blobs() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_download_blob_experiment_many_blobs() -> Result<(), Error> {
-    let mut pkg = PackageBuilder::new("all-the-blobs");
-    for i in 0..200 {
-        pkg = pkg.add_resource_at(
-            format!("data/file{}", i),
-            format!("contents of file {}", i).as_bytes(),
-        )?;
-    }
-    verify_download_blob_resolve(pkg.build().await?).await
+    verify_download_blob_resolve(make_rolldice_pkg_with_extra_blobs(200).await?).await
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -293,4 +377,100 @@ async fn test_download_blob_experiment_uses_cached_package() -> Result<(), Error
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_meta_far_installed_blobs_not_installed() -> Result<(), Error> {
+    verify_download_blob_resolve_with_altered_env(
+        make_rolldice_pkg_with_extra_blobs(3).await?,
+        |env, pkg| {
+            env.add_file_to_pkgfs_at_path(
+                pkg.meta_far().expect("package has meta.far"),
+                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+            )
+        },
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_meta_far_partially_installed() -> Result<(), Error> {
+    verify_download_blob_resolve_with_altered_env(
+        make_rolldice_pkg_with_extra_blobs(3).await?,
+        |env, pkg| {
+            env.partially_add_file_to_pkgfs_at_path(
+                pkg.meta_far().expect("package has meta.far"),
+                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+            )
+        },
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_meta_far_already_in_blobfs() -> Result<(), Error> {
+    verify_download_blob_resolve_with_altered_env(
+        make_rolldice_pkg_with_extra_blobs(3).await?,
+        |env, pkg| {
+            env.add_file_with_merkle_to_blobfs(
+                pkg.meta_far().expect("package has meta.far"),
+                pkg.meta_far_merkle_root(),
+            )
+        },
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_all_blobs_already_in_blobfs() -> Result<(), Error> {
+    verify_download_blob_resolve_with_altered_env(
+        make_rolldice_pkg_with_extra_blobs(3).await?,
+        |env, pkg| {
+            env.add_file_with_merkle_to_blobfs(
+                pkg.meta_far().expect("package has meta.far"),
+                pkg.meta_far_merkle_root(),
+            );
+            env.add_slice_to_blobfs(ROLLDICE_BIN);
+            for i in 0..3 {
+                env.add_slice_to_blobfs(extra_blob_contents(i).as_slice());
+            }
+        },
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_meta_far_installed_one_blob_in_blobfs() -> Result<(), Error> {
+    verify_download_blob_resolve_with_altered_env(
+        make_rolldice_pkg_with_extra_blobs(3).await?,
+        |env, pkg| {
+            env.add_file_to_pkgfs_at_path(
+                pkg.meta_far().expect("package has meta.far"),
+                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+            );
+            env.add_slice_to_blobfs(ROLLDICE_BIN);
+        },
+    )
+    .await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_meta_far_installed_one_blob_partially_installed() -> Result<(), Error> {
+    verify_download_blob_resolve_with_altered_env(
+        make_rolldice_pkg_with_extra_blobs(3).await?,
+        |env, pkg| {
+            env.add_file_to_pkgfs_at_path(
+                pkg.meta_far().expect("package has meta.far"),
+                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+            );
+            env.partially_add_slice_to_pkgfs_at_path(
+                ROLLDICE_BIN,
+                format!(
+                    "install/blob/{}",
+                    MerkleTree::from_reader(ROLLDICE_BIN).expect("merkle slice").root().to_string()
+                ),
+            );
+        },
+    )
+    .await
 }
