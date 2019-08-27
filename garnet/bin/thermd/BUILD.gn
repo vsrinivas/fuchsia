@@ -20,13 +20,13 @@ executable("bin") {
 
   deps = [
     "//zircon/public/banjo/ddk.protocol.scpi",
+    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/fidl/fuchsia-hardware-gpu-clock:fuchsia-hardware-gpu-clock_c_client",
     "//zircon/public/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
-    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",

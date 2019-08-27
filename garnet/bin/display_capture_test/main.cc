@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <stdio.h>
 
 #include "runner.h"
@@ -31,7 +32,7 @@ int main(int argc, char** argv) {
     printf("Usage: display_capture_test <monitor name>\n");
     return -1;
   }
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   display_test::internal::Runner runner(&loop);
 

@@ -5,6 +5,7 @@
 #include <thread>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <trace-provider/provider.h>
 #include <zircon/compiler.h>
 
@@ -20,7 +21,7 @@ __END_CDECLS
 // This is intended to be a temporary solution until we have a proper rust
 // trace-provider implementation.
 static void trace_provider_with_fdio_thread_entry() {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   loop.Run();
 }

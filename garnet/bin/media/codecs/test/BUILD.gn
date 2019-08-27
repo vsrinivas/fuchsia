@@ -86,6 +86,7 @@ executable("mpsc_queue_test_bin") {
     "//garnet/public/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

@@ -4,6 +4,7 @@
 
 #include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <stdio.h>
 #include <zircon/assert.h>
@@ -1239,7 +1240,7 @@ class CompatibilityTest : public ::testing::TestWithParam<std::tuple<std::string
     server_url_ = ::testing::get<1>(GetParam());
     // The FIDL support lib requires async_get_default_dispatcher() to return
     // non-null.
-    loop_.reset(new async::Loop(&kAsyncLoopConfigAttachToThread));
+    loop_.reset(new async::Loop(&kAsyncLoopConfigAttachToCurrentThread));
   }
   std::string proxy_url_;
   std::string server_url_;
@@ -1262,7 +1263,7 @@ void ForSomeServers(AllowServer allow, TestBody body) {
         continue;
       }
       std::cerr << proxy_url << " <-> " << server_url << std::endl;
-      async::Loop loop(&kAsyncLoopConfigAttachToThread);
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
       fidl::test::compatibility::EchoClientApp proxy;
       bool test_completed = false;
       proxy.echo().set_error_handler([&proxy_url, &loop, &test_completed](zx_status_t status) {

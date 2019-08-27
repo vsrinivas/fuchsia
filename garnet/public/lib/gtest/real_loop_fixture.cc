@@ -43,7 +43,7 @@ bool RunGivenLoopWithTimeout(async::Loop* loop, zx::duration timeout) {
 
 }  // namespace
 
-RealLoopFixture::RealLoopFixture() : loop_(&kAsyncLoopConfigAttachToThread) {}
+RealLoopFixture::RealLoopFixture() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
 RealLoopFixture::~RealLoopFixture() = default;
 

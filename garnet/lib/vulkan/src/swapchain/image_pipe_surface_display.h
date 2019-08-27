@@ -6,6 +6,7 @@
 #define GARNET_LIB_VULKAN_SRC_SWAPCHAIN_IMAGE_PIPE_SURFACE_DISPLAY_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <map>
 

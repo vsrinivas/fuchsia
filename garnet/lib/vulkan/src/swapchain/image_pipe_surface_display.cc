@@ -21,7 +21,7 @@
 
 namespace image_pipe_swapchain {
 
-ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay() : loop_(&kAsyncLoopConfigNoAttachToThread) {}
+ImagePipeSurfaceDisplay::ImagePipeSurfaceDisplay() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 bool ImagePipeSurfaceDisplay::Init() {
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",

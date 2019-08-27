@@ -70,7 +70,7 @@ void FakeSubComponent::PublishService(::std::string service_name, PublishService
 }
 
 MockRunner::MockRunner()
-    : loop_(&kAsyncLoopConfigAttachToThread),
+    : loop_(&kAsyncLoopConfigAttachToCurrentThread),
       context_(sys::ComponentContext::Create()),
       mock_binding_(this),
       component_id_counter_(0) {

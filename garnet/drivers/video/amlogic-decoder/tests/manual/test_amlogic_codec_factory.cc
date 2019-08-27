@@ -4,6 +4,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
@@ -28,7 +29,7 @@ void test_factory() {
   // We don't just use Sync FIDL proxies because we might need to receive events
   // before long.
 
-  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // Start a separate FIDL thread for two reasons:
   //   * It's handy for the main thread to stay separate to control the test.
   //   * By having a separate FIDL thread, this test shows how to do so without
@@ -39,7 +40,7 @@ void test_factory() {
   // Use FIDL thread to run Create(), since it uses the calling
   // thread's default async_t, and we don't want to be accidentally doing
   // FIDL requests from the main thread, so we use
-  // kAsyncLoopConfigNoAttachToThread above.
+  // kAsyncLoopConfigNoAttachToCurrentThread above.
   PostSerial(fidl_loop.dispatcher(),
              [&component_context] { component_context = sys::ComponentContext::Create(); });
 

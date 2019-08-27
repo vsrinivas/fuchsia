@@ -6,6 +6,7 @@
 #define GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PRESENTER_APP_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/ui/scenic/cpp/resources.h"

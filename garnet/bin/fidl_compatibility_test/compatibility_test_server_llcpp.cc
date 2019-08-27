@@ -5,6 +5,7 @@
 #include <fidl/test/compatibility/llcpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -208,7 +209,7 @@ class EchoConnection final : public Echo::Interface {
 int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default_dispatcher() to return
   // non-null.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   std::vector<std::unique_ptr<llcpp::fidl::test::compatibility::EchoConnection>> connections;
 

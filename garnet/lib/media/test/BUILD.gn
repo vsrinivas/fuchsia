@@ -31,6 +31,7 @@ source_set("frame_sink") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 
   deps = [
@@ -68,6 +69,7 @@ source_set("codec_client") {
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

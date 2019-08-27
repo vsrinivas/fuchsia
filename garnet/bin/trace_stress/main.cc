@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <src/lib/fxl/command_line.h>
@@ -81,7 +82,7 @@ static bool WaitForTracingStarted(zx::duration timeout) {
   // It is written this way as part of the purpose of this program is to
   // provide examples of tracing usage.
   trace::TraceObserver trace_observer;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   bool started = false;
   auto on_trace_state_changed = [&loop, &started]() {
@@ -147,7 +148,7 @@ int main(int argc, char** argv) {
 
   // Use a separate loop for the provider.
   // This is in anticipation of double-buffering support.
-  async::Loop provider_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop provider_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   provider_loop.StartThread("TraceProvider");
   std::unique_ptr<trace::TraceProviderWithFdio> provider;
   bool already_started;
@@ -170,7 +171,7 @@ int main(int argc, char** argv) {
     zx::nanosleep(zx::deadline_after(zx::sec(delay)));
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   zx::time start_time = async::Now(loop.dispatcher());
   zx::time quit_time = start_time + zx::sec(duration);
 

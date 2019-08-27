@@ -11,6 +11,7 @@
 #include "use_video_decoder_test.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
@@ -35,7 +36,7 @@ constexpr uint32_t kMaxPeekBytes = 8 * 1024 * 1024;
 
 int use_video_decoder_test(std::string input_file_path, int expected_frame_count,
                            UseVideoDecoderFunction use_video_decoder, std::string golden_sha256) {
-  async::Loop fidl_loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
   std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();

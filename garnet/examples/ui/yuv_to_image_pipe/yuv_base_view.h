@@ -6,6 +6,7 @@
 #define GARNET_EXAMPLES_UI_YUV_TO_IMAGE_PIPE_YUV_BASE_VIEW_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>

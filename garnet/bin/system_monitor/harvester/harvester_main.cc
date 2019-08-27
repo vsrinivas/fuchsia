@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 #include <zircon/status.h>
 
@@ -79,7 +80,7 @@ int main(int argc, char** argv) {
     exit(EXIT_CODE_GENERAL_ERROR);
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   harvester::Harvester harvester(root_resource, loop.dispatcher(),
                                  std::move(dockyard_proxy));
   harvester.GatherData();

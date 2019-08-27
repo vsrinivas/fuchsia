@@ -21,8 +21,8 @@ IOLoop::IOLoop(int fd, Delegate* delegate, async::Loop* origin_loop)
       delegate_(delegate),
       is_running_(false),
       origin_loop_(origin_loop),
-      read_loop_(&kAsyncLoopConfigNoAttachToThread),
-      write_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      read_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+      write_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   // Allow -1 for test purposes. This is a simple test anyway, the caller
   // could pass 314159 and we don't verify it's validity here.
   FXL_DCHECK(fd_ >= -1);

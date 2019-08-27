@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -54,7 +55,7 @@ class LoaderImpl : public fuchsia::vulkan::loader::Loader {
 };
 
 int main(int argc, const char* const* argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fxl::SetLogSettingsFromCommandLine(fxl::CommandLineFromArgcArgv(argc, argv));
 
   auto context = sys::ComponentContext::Create();

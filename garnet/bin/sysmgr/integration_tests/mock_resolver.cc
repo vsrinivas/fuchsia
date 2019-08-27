@@ -7,6 +7,7 @@
 
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
@@ -40,7 +41,7 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
 }  // namespace
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   PackageResolverMock service;
   loop.Run();

@@ -4,6 +4,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
@@ -12,7 +13,7 @@
 #include "gtest/gtest.h"
 
 TEST(Run, Daemonize) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // It is not possible to use the /bin trampoline unless
   // fuchsia.process.Resolver is proxied to the child process.

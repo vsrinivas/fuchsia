@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/log_settings_command_line.h>
@@ -34,7 +35,7 @@ int main(int argc, char** argv) {
 
   FXL_LOG(INFO) << "Trace Manager starting with config: " << config_file;
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   TraceManagerApp trace_manager_app(config);
   loop.Run();
   return 0;

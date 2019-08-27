@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ui/input/device_state.h>
 #include <lib/ui/input/input_device_impl.h>
 

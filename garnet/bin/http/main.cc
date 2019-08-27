@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "garnet/bin/http/http_service_delegate.h"
 #include "src/lib/fxl/command_line.h"
@@ -13,7 +14,7 @@ int main(int argc, const char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   http::HttpServiceDelegate delegate2(loop.dispatcher());
   loop.Run();
   return 0;

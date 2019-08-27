@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>

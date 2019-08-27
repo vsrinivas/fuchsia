@@ -4,6 +4,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "lib/ui/input/cpp/formatting.h"
@@ -91,7 +92,7 @@ int main(int argc, char** argv) {
   if (!fxl::SetLogSettingsFromCommandLine(command_line))
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   print_input::App app;
   loop.Run();
   return 0;

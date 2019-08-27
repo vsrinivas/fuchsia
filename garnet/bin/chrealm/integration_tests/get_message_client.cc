@@ -7,6 +7,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
@@ -18,7 +19,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup_context = sys::ComponentContext::Create();
   fuchsia::testing::chrealm::TestServicePtr test_svc;
   startup_context->svc()->Connect(test_svc.NewRequest());

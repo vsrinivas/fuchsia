@@ -51,6 +51,7 @@ executable("get_message_client_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
   ]
 }

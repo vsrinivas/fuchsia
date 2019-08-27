@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/inspect_deprecated/deprecated/object_dir.h>
 #include <lib/inspect_deprecated/inspect.h>
@@ -280,7 +281,7 @@ class Employee {
 int main(int argc, const char** argv) {
   // Standard component setup, create an event loop and obtain the
   // |StartupContext|.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
   // Create a root object and bind it to out/

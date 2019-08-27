@@ -57,6 +57,7 @@ static_library("inferior_control") {
   public_deps = [
     "//garnet/lib/process",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
   ]
 

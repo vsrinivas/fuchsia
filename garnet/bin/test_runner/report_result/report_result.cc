@@ -9,6 +9,7 @@
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
 #include <zircon/processargs.h>
@@ -83,7 +84,7 @@ int main(int argc, char** argv) {
     name = "report_result";
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto app_context = component::StartupContext::CreateFromStartupInfo();
   auto test_runner = app_context->ConnectToEnvironmentService<TestRunner>();
   Reporter reporter(&loop, name, test_runner.get());

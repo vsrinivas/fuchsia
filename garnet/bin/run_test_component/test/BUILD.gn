@@ -31,6 +31,7 @@ executable("bin") {
     "//zircon/public/fidl/fuchsia-debugdata",
     "//zircon/public/fidl/fuchsia-process",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
   ]
 }
@@ -47,6 +48,7 @@ executable("coverage_component") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-debugdata",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

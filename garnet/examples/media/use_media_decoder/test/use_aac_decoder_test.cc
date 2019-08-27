@@ -16,6 +16,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -54,7 +55,7 @@ constexpr char kGoldenSha256_arm64[SHA256_DIGEST_LENGTH * 2 + 1] =
     "f0b7fadd99727a57e5529efb9eefd2dc1beee592d87766a5d9a0d9ae5593bb50";
 
 TEST(DecoderTest, AacDecoder) {
-  async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop main_loop(&kAsyncLoopConfigAttachToCurrentThread);
   main_loop.StartThread("main_loop");
   auto component_context = sys::ComponentContext::Create();
   fuchsia::mediacodec::CodecFactoryPtr codec_factory;

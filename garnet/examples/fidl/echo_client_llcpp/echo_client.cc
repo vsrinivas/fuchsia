@@ -5,6 +5,7 @@
 #include <fidl/examples/echo/llcpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
@@ -29,7 +30,7 @@ int main(int argc, const char** argv) {
   }
 
   // Using high-level C++ bindings to launch the server component
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ::fidl::InterfaceHandle<fuchsia::io::Directory> directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = server_url;

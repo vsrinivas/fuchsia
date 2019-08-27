@@ -7,6 +7,7 @@
 #include <array>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "garnet/lib/inferior_control/io_loop.h"
 

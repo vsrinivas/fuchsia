@@ -5,6 +5,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sys/index/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/limits.h>
 #include <lib/sys/cpp/file_descriptor.h>
@@ -84,7 +85,7 @@ int main(int argc, const char** argv) {
     consume_arg(&argc, &argv);
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto services = sys::ServiceDirectory::CreateFromNamespace();
 
   // Connect to the Launcher service through our static environment.

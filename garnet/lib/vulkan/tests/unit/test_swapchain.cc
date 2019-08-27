@@ -6,6 +6,7 @@
 #include <fuchsia/images/cpp/fidl_test_base.h>
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/channel.h>
 #include <vulkan/vulkan.h>
@@ -247,7 +248,7 @@ uint64_t ZirconIdFromHandle(uint32_t handle) {
 class FakeImagePipe : public fuchsia::images::testing::ImagePipe_TestBase {
  public:
   FakeImagePipe(fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
-      : loop_(&kAsyncLoopConfigNoAttachToThread),
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         binding_(this, std::move(request), loop_.dispatcher()) {
     loop_.StartThread();
   }
@@ -315,7 +316,7 @@ TEST_P(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
     return;
   ASSERT_TRUE(test.init_);
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   zx::channel local_endpoint, remote_endpoint;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local_endpoint, &remote_endpoint));

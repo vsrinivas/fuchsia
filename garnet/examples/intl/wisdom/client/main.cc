@@ -9,6 +9,7 @@
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
 #include "intl_wisdom_client.h"
 #include "lib/async-loop/cpp/loop.h"
+#include "lib/async-loop/default.h"
 #include "lib/async/default.h"
 #include "lib/zx/process.h"
 #include "src/lib/fxl/command_line.h"
@@ -75,7 +76,7 @@ int main(int argc, const char** argv) {
   zx::time timestamp = ParseTimestamp(time_string);
   auto time_zone = ParseOrGetDefaultTimeZone(time_zone_id);
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   intl_wisdom::IntlWisdomClient client(sys::ComponentContext::Create());
   client.Start(server_url);
   client.SendRequest(timestamp, *time_zone, [&loop](fidl::StringPtr response) {

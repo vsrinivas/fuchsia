@@ -4,6 +4,7 @@
 
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/process.h>
@@ -23,7 +24,7 @@ int main(int argc, const char** argv) {
     }
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   echo::EchoClientApp app;
   app.Start(server_url);

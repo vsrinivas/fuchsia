@@ -35,5 +35,6 @@ executable("intl_wisdom_client") {
     "//third_party/icu:icu",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

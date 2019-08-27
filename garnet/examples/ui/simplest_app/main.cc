@@ -4,6 +4,7 @@
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/ui/base_view/cpp/view_provider_component.h>
@@ -24,7 +25,7 @@ int main(int argc, const char** argv) {
   constexpr char kProcessName[] = "simplest_app";
   zx::process::self()->set_property(ZX_PROP_NAME, kProcessName, sizeof(kProcessName));
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

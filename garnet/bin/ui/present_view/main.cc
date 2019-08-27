@@ -6,6 +6,7 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -44,7 +45,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Launch application.

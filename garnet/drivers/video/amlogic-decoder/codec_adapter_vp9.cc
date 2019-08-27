@@ -93,7 +93,7 @@ CodecAdapterVp9::CodecAdapterVp9(std::mutex& lock, CodecAdapterEvents* codec_ada
     : CodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
-      input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(device_);
   ZX_DEBUG_ASSERT(video_);
 }

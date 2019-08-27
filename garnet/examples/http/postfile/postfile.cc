@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -141,7 +142,7 @@ class PostFileApp {
 
 int main(int argc, const char** argv) {
   std::vector<std::string> args(argv, argv + argc);
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   examples::PostFileApp postfile_app(&loop);
   if (postfile_app.Start(args))

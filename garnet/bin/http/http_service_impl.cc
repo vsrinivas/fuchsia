@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/limits.h>
 
@@ -41,7 +42,7 @@ class HttpServiceImpl::UrlLoaderContainer : public URLLoaderImpl::Coordinator {
       : request_(std::move(request)),
         top_coordinator_(top_coordinator),
         main_dispatcher_(main_dispatcher),
-        io_loop_(&kAsyncLoopConfigNoAttachToThread),
+        io_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         weak_ptr_factory_(this) {
     FXL_DCHECK(main_dispatcher_);
     weak_ptr_ = weak_ptr_factory_.GetWeakPtr();

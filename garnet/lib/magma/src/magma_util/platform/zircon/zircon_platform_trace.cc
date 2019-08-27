@@ -19,7 +19,7 @@ namespace magma {
 
 static std::unique_ptr<ZirconPlatformTrace> g_platform_trace;
 
-ZirconPlatformTrace::ZirconPlatformTrace() : loop_(&kAsyncLoopConfigNoAttachToThread) {}
+ZirconPlatformTrace::ZirconPlatformTrace() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 ZirconPlatformTrace::~ZirconPlatformTrace() {
   if (trace_provider_) {
@@ -57,7 +57,7 @@ std::unique_ptr<PlatformTrace> PlatformTrace::CreateForTesting() {
 }
 
 ZirconPlatformTraceObserver::ZirconPlatformTraceObserver()
-    : loop_(&kAsyncLoopConfigNoAttachToThread) {}
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 bool ZirconPlatformTraceObserver::Initialize() {
   zx_status_t status = loop_.StartThread();

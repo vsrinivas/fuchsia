@@ -31,10 +31,11 @@ executable("bin") {
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/public/fidl/fuchsia-hardware-cpu-insntrace",
     "//zircon/public/fidl/fuchsia-tracing-kernel:fuchsia-tracing-kernel",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/zircon-internal",
   ]
 
   libs = [ "zircon" ]

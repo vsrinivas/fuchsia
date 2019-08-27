@@ -37,6 +37,8 @@ executable("service") {
     "//src/ui/examples/escher/common",
     "//src/ui/lib/escher",
     "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]

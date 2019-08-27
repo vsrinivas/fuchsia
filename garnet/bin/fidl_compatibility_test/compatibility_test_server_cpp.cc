@@ -4,6 +4,7 @@
 
 #include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
@@ -211,7 +212,7 @@ class EchoServerApp : public Echo {
 int main(int argc, const char** argv) {
   // The FIDL support lib requires async_get_default_dispatcher() to return
   // non-null.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   fidl::test::compatibility::EchoServerApp app(&loop);
   loop.Run();

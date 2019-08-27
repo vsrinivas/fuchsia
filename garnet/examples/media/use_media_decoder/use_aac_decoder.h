@@ -7,6 +7,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <openssl/sha.h>
 #include <stdint.h>
 

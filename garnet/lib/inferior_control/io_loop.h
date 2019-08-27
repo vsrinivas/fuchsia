@@ -8,6 +8,7 @@
 #include <thread>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>

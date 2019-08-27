@@ -17,8 +17,8 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/banjo/ddk.protocol.scpi",
-    "//zircon/public/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
+    "//zircon/public/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
   ]
@@ -35,6 +35,7 @@ executable("bin") {
     ":lib",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

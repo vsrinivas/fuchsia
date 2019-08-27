@@ -6,6 +6,7 @@
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -48,7 +49,7 @@ class FakeDebugData : public fuchsia::debugdata::DebugData {
 };
 
 TEST(Run, ExposesDebugDataService) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
 

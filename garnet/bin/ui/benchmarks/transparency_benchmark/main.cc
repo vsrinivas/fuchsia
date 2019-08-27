@@ -7,6 +7,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -480,7 +481,7 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
 };
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
   std::unique_ptr<component::StartupContext> startup_context =

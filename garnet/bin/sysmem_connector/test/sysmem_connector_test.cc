@@ -4,6 +4,7 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -17,7 +18,7 @@
 // test is only meant to verify that sysmem_connector establishes a connection
 // to the sysmem driver.
 TEST(SysmemConnectorTest, Connect) {
-  async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop main_loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
   std::mutex is_sync_complete_lock;

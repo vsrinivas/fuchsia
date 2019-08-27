@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <src/lib/fxl/strings/string_printf.h>
 #include <unistd.h>
 
 #include <memory>
 
+#include <fidl/examples/echo/cpp/fidl.h>
+#include <src/lib/fxl/strings/string_printf.h>
+
 #include "garnet/bin/appmgr/integration_tests/mock_runner_registry.h"
 #include "lib/async-loop/cpp/loop.h"
+#include "lib/async-loop/default.h"
 #include "lib/async-loop/loop.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"

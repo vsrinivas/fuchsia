@@ -58,7 +58,7 @@ void ThreadInterrupter::InitOnce(CpuProfiler* profiler) {
 
 void ThreadInterrupter::Startup() {
   assert(initialized_);
-  loop_ = new async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  loop_ = new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop_->StartThread();
 }
 

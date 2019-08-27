@@ -4,6 +4,7 @@
 
 #include "garnet/bin/appmgr/dynamic_library_loader.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <loader-service/loader-service.h>
 
@@ -16,7 +17,7 @@ zx_status_t Start(fbl::unique_fd fd, zx::channel* result) {
   zx_status_t status = ZX_OK;
 
   if (!ld_loop) {
-    status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &ld_loop);
+    status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &ld_loop);
     if (status != ZX_OK)
       return status;
 

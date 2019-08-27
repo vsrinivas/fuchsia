@@ -7,6 +7,7 @@
 
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/eventpair.h>
 
 #include "garnet/examples/ui/shadertoy/service/compiler.h"

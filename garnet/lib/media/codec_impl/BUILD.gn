@@ -47,6 +47,7 @@ source_set("codec_impl") {
     "//sdk/fidl/fuchsia.mediacodec",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
   ]
   public_configs = [ ":codec_impl_include_config" ]

@@ -5,6 +5,7 @@
 #include "garnet/bin/run_test_component/run_test_component.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <string>
 
@@ -17,7 +18,7 @@ namespace run {
 namespace {
 
 TEST(RunTest, ParseArgs) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
   constexpr char kBinName[] = "bin_name";
 

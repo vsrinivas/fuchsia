@@ -5,6 +5,7 @@
 #include "sched.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/process.h>
 #include <lib/zx/profile.h>
 #include <stdio.h>
@@ -33,7 +34,7 @@ TEST(SchedTest, TestCreateProfile) {
     return;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   zx::profile profile;
   ASSERT_EQ(CreateProfile(10, "test-profile", &profile), ZX_OK);
   ASSERT_NE(profile.get(), ZX_HANDLE_INVALID);
@@ -45,7 +46,7 @@ TEST(SchedTest, TestApplyProfileSelf) {
     return;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   zx::profile profile;
   ASSERT_EQ(CreateProfile(10, "test-profile", &profile), ZX_OK);
   ASSERT_EQ(ApplyProfileToProcess(*zx::process::self(), profile, /*verbose=*/false), ZX_OK);

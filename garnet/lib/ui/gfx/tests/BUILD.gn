@@ -213,6 +213,7 @@ executable("mock_pose_buffer_provider_cc") {
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

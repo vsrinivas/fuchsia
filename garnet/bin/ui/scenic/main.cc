@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fsl/syslogger/init.h>
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/sys/cpp/component_context.h>
@@ -22,7 +23,7 @@ int main(int argc, const char** argv) {
   if (fsl::InitLoggerFromCommandLine(command_line, {"scenic"}) != ZX_OK)
     return 1;
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> app_context(sys::ComponentContext::Create());
 

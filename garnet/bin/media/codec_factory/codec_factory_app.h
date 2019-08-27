@@ -10,6 +10,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fsl/io/device_watcher.h>
 #include <src/lib/fxl/logging.h>

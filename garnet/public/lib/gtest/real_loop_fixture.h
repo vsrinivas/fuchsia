@@ -6,6 +6,7 @@
 #define LIB_GTEST_REAL_LOOP_FIXTURE_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 

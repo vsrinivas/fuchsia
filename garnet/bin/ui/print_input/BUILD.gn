@@ -13,5 +13,6 @@ executable("print_input") {
     "//garnet/public/lib/ui/input/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

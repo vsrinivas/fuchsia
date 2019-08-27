@@ -4,6 +4,7 @@
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/bin/ui/root_presenter/renderer_params.h"
@@ -41,7 +42,7 @@ int main(int argc, const char** argv) {
     renderer_params.push_back(std::move(param));
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup_context_ = component::StartupContext::CreateFromStartupInfo();
 
   // Ask the presenter to change renderer params.

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <string>
 
@@ -18,7 +19,7 @@ int main(int argc, const char** argv) {
 
   FXL_LOG(INFO) << "direct_input started.";
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   direct_input::App app(&loop);
   loop.Run();
 

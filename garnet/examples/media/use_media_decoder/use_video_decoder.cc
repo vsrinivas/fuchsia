@@ -8,6 +8,7 @@
 
 #include <garnet/lib/media/raw_video_writer/raw_video_writer.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/fourcc.h>

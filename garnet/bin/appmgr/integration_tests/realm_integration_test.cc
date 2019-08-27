@@ -7,6 +7,7 @@
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/directory.h>

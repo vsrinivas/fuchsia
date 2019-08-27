@@ -5,6 +5,7 @@
 #include "garnet/examples/ui/shadertoy/service/compiler.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 
 #include "garnet/examples/ui/shadertoy/service/renderer.h"

@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/channel.h>

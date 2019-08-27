@@ -25,6 +25,7 @@ executable("embedder") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -51,5 +52,6 @@ executable("subview") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

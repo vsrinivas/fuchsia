@@ -17,5 +17,6 @@ executable("present_view") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

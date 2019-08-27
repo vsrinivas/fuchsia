@@ -5,6 +5,7 @@
 #include "garnet/lib/profiler/fuchsia/profiler_log_listener.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/sanitizer.h>
 
@@ -157,7 +158,7 @@ static zx_koid_t GetCurrentProcessKoid() {
 }
 
 std::string CollectProfilerLog() {
-  async::Loop loop_(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop_(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop_.StartThread();
 
   std::unique_ptr<ProfilerLogListener> log_listener;

@@ -53,6 +53,7 @@ source_set("codec_impl_tests") {
     "//garnet/public/lib/gtest",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
@@ -73,6 +74,7 @@ executable("decryptor_adapter_tests_bin") {
     "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]

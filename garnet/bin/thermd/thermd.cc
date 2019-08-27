@@ -8,6 +8,7 @@
 #include <zircon/syscalls/system.h>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <lib/fdio/watcher.h>
 #include <lib/fdio/fd.h>
@@ -84,7 +85,7 @@ static zx_status_t thermal_device_added(int dirfd, int event, const char* name, 
 
 static void start_trace(void) {
   // Create a message loop
-  static async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  static async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   static trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   static bool started = false;
   if (!started) {

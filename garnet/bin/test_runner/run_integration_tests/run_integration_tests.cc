@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
@@ -72,7 +73,7 @@ void PrintKnownTests(const TestRunnerConfig& config) {
 }
 
 int RunIntegrationTestsMain(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::string test_file;
   bool has_test_file = settings.GetOptionValue("test_file", &test_file);

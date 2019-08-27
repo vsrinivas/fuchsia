@@ -27,6 +27,7 @@ executable("test_sysmgr_service") {
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
   ]
 }
@@ -45,6 +46,7 @@ executable("mock_resolver") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
   ]
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/command_line.h>
@@ -119,7 +120,7 @@ int main(int argc, char** argv) {
   }
 
   // Exposing objects requires a loop and the startup context.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
 
   // Legacy work required to expose an object tree over FIDL.

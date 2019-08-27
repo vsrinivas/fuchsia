@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIA_CODECS_SW_CODEC_ADAPTER_SW_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_buffer.h>
@@ -41,7 +42,7 @@ class CodecAdapterSW : public CodecAdapter {
       : CodecAdapter(lock, codec_adapter_events),
         input_queue_(),
         free_output_packets_(),
-        input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
+        input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     ZX_DEBUG_ASSERT(events_);
   }
 

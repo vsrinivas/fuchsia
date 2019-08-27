@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -29,7 +30,7 @@ int main(int argc, char** argv) {
 
   async_loop_t* loop = NULL;
   zx_status_t status =
-      async_loop_create(&kAsyncLoopConfigAttachToThread, &loop);
+      async_loop_create(&kAsyncLoopConfigAttachToCurrentThread, &loop);
   if (status != ZX_OK) {
     printf("error: async_loop_create returned: %d (%s)\n", status,
            zx_status_get_string(status));

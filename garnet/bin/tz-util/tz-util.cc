@@ -4,6 +4,7 @@
 
 #include <fuchsia/timezone/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls.h>
 
@@ -89,7 +90,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   // loop is needed by StartupContext.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   TzUtil app(sys::ComponentContext::Create());
   app.Run(command_line);
   return 0;

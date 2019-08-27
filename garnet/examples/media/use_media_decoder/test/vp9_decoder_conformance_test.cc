@@ -9,6 +9,7 @@
 // involve dustingreen@ (me) in figuring it out.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
   std::string url;
   bool is_url = command_line.GetOptionValue("url", &url);
 
-  async::Loop fidl_loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop fidl_loop(&kAsyncLoopConfigAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("FIDL_thread", &fidl_thread));
   std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();

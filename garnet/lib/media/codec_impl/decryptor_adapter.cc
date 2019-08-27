@@ -71,7 +71,7 @@ DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_a
                                    bool secure_mode)
     : CodecAdapter(lock, codec_adapter_events),
       secure_mode_(secure_mode),
-      input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(codec_adapter_events);
 }
 

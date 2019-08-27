@@ -6,6 +6,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/sys/cpp/component_context.h>
@@ -206,7 +207,7 @@ static bool LaunchApp(sys::ComponentContext* context, const std::string& app,
 
   // Attach to the current thread so that it's using the default async
   // dispatcher, which is what the component controller machinery is using.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());

@@ -7,6 +7,7 @@
 
 #include <fuchsia/media/drm/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 
 #include <array>

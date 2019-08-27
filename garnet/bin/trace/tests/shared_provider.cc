@@ -7,6 +7,7 @@
 // tested for.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
 #include <src/lib/fxl/logging.h>
@@ -41,7 +42,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   if (!tracing::test::WriteEvents(loop)) {
     return EXIT_FAILURE;

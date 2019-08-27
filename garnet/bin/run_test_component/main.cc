@@ -7,6 +7,7 @@
 #include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -111,7 +112,7 @@ int main(int argc, const char** argv) {
   // Services which we get from /svc. They might be different depending on in which shell this
   // binary is launched from, so can't use it to create underlying environment.
   auto namespace_services = sys::ServiceDirectory::CreateFromNamespace();
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto parse_result = run::ParseArgs(namespace_services, argc, argv);
   if (parse_result.error) {

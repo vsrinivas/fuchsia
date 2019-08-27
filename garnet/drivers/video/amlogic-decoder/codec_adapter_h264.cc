@@ -101,7 +101,7 @@ CodecAdapterH264::CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_a
     : CodecAdapter(lock, codec_adapter_events),
       device_(device),
       video_(device_->video()),
-      input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(device_);
   ZX_DEBUG_ASSERT(video_);
 }

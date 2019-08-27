@@ -9,6 +9,7 @@
 // the glm headers to work.
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>

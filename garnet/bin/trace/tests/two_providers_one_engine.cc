@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
@@ -31,7 +32,7 @@ int main(int argc, char* argv[]) {
   // until after we've completed registration with trace-manager.
   // Run the loop in this thread to reduce timing differences that
   // make debugging harder.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   loop.StartThread("provider-thread", nullptr);
   async_dispatcher_t* dispatcher = loop.dispatcher();
 

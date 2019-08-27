@@ -7,6 +7,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -23,7 +24,7 @@ template <typename Decoder, typename Encoder>
 class CodecRunnerApp {
  public:
   CodecRunnerApp()
-      : loop_(&kAsyncLoopConfigAttachToThread),
+      : loop_(&kAsyncLoopConfigAttachToCurrentThread),
         component_context_(sys::ComponentContext::Create()),
         codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 

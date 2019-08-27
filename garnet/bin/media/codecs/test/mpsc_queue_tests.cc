@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 
 #include "../mpsc_queue.h"
@@ -37,7 +38,7 @@ TEST(MpscQueueTest, TwoThreads) {
     expectation.insert(i);
   }
 
-  async::Loop producer_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop producer_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(producer_loop.dispatcher(), [&under_test] {
     for (int i = 0; i < kElements; ++i) {
       under_test.Push(i);
@@ -67,7 +68,7 @@ TEST(BlockingMpscQueueTest, TwoThreads) {
     expectation.insert(i);
   }
 
-  async::Loop producer_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop producer_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(producer_loop.dispatcher(), [&under_test] {
     for (int i = 0; i < kElements; ++i) {
       under_test.Push(i);
@@ -134,7 +135,7 @@ TEST(BlockingMpscQueueTest, ManyThreads) {
   // here that the implementation is stable and all elements are yielded.
   std::unique_ptr<async::Loop> producer_loops[kThreads];
   for (auto& producer_loop : producer_loops) {
-    producer_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    producer_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::PostTask(producer_loop->dispatcher(), [&under_test] {
       for (int j = 0; j < kElements; ++j) {
         under_test.Push(j);

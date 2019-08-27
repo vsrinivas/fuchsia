@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "garnet/examples/ui/lab/direct_input/child/app.h"
 #include "src/lib/fxl/command_line.h"
@@ -16,7 +17,7 @@ int main(int argc, const char** argv) {
 
   FXL_LOG(INFO) << "direct_input_child started.";
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   direct_input_child::App app(&loop);
   loop.Run();
 

@@ -5,6 +5,7 @@
 #include "harvester.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async-testing/dispatcher_stub.h>
 
@@ -61,7 +62,7 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
 
   std::unique_ptr<harvester::Harvester> test_harvester;
   AsyncDispatcherFake dispatcher;
-  async::Loop loop{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx_handle_t root_resource;
 };
 

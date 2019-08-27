@@ -10,6 +10,7 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/virtualconsole/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
@@ -39,7 +40,7 @@ std::vector<std::string> RootRealmServices() {
 }  // namespace
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   auto environment_services = sys::ServiceDirectory::CreateFromNamespace();

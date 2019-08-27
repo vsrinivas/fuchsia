@@ -16,6 +16,7 @@
 #include <hid/paradise.h>
 #include <hid/usages.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/coding.h>
 #include <lib/fit/defer.h>
@@ -719,7 +720,7 @@ class BufferArray {
 };
 
 int main(int argc, char* argv[]) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
   VSync vsync = VSync::ADAPTIVE;
@@ -1132,9 +1133,9 @@ int main(int argc, char* argv[]) {
     ZX_ASSERT(status == ZX_OK);
   }
 
-  async::Loop update_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop update_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   update_loop.StartThread();
-  async::Loop sprite_update_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop sprite_update_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   sprite_update_loop.StartThread();
 
   size_t buffer_frame = 0;

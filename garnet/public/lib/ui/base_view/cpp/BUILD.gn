@@ -26,6 +26,7 @@ source_set("cpp") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 
   deps = [

@@ -6,6 +6,7 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_COMPILER_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 
 #include <functional>

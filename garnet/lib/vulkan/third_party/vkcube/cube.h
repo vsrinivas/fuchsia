@@ -36,6 +36,7 @@
 #if defined(CUBE_USE_IMAGE_PIPE)
 #include <garnet/lib/vulkan/src/imagepipe_view/imagepipe_view.h>  // nogncheck
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #endif  // defined(CUBE_USE_IMAGE_PIPE)
 
 #include "linmath.h"
@@ -80,7 +81,7 @@ struct FuchsiaState {
   uint32_t elapsed_frames = 0;
   std::chrono::time_point<std::chrono::high_resolution_clock> t0{};
 
-  FuchsiaState() : loop(&kAsyncLoopConfigAttachToThread) {}
+  FuchsiaState() : loop(&kAsyncLoopConfigAttachToCurrentThread) {}
 };
 #endif
 

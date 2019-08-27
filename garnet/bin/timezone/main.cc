@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/component_context.h>
@@ -25,7 +26,7 @@ class MainService {
 }  // namespace time_zone
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   time_zone::MainService svc;
   loop.Run();
   return 0;

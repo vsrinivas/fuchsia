@@ -62,7 +62,7 @@ void IntegrationTest::DoSetup(bool should_create_composite) {
 void IntegrationTest::TearDownTestCase() { IntegrationTest::devmgr_.reset(); }
 
 IntegrationTest::IntegrationTest()
-    : loop_(&kAsyncLoopConfigNoAttachToThread), devmgr_exception_(this) {}
+    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), devmgr_exception_(this) {}
 
 void IntegrationTest::SetUp() {
   // We do this in SetUp() rather than the ctor, since gtest cannot assert in

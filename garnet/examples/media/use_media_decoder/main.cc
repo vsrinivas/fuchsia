@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/media/test/frame_sink.h>
 #include <lib/media/test/one_shot_event.h>
 #include <lib/sys/cpp/component_context.h>
@@ -52,7 +53,7 @@ int main(int argc, char* argv[]) {
     exit(-1);
   }
 
-  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   thrd_t fidl_thread;
   ZX_ASSERT(ZX_OK == fidl_loop.StartThread("fidl_thread", &fidl_thread));
   async_dispatcher_t* fidl_dispatcher = fidl_loop.dispatcher();

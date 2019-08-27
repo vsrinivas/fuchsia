@@ -29,6 +29,7 @@ source_set("use_media_decoder_source_set") {
     "//sdk/lib/sys/cpp",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
   ]
 

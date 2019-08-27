@@ -9,6 +9,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/zx/time.h>
@@ -43,7 +44,7 @@ auto CreateDecryptorParams() {
 class CodecImplLifetime : public gtest::RealLoopFixture {
  protected:
   CodecImplLifetime()
-      : loop_separate_thread_(&kAsyncLoopConfigNoAttachToThread), admission_control_(dispatcher()) {
+      : loop_separate_thread_(&kAsyncLoopConfigNoAttachToCurrentThread), admission_control_(dispatcher()) {
     // nothing else to do here
   }
 

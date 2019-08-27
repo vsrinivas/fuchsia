@@ -22,6 +22,7 @@ executable("bin") {
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-backlight:fuchsia-hardware-backlight_c_client",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

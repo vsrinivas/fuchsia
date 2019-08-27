@@ -23,7 +23,7 @@
 
 class StorageWatchdogTest : public ::testing::Test {
  public:
-  StorageWatchdogTest() : loop_(async::Loop(&kAsyncLoopConfigAttachToThread)) {}
+  StorageWatchdogTest() : loop_(async::Loop(&kAsyncLoopConfigAttachToCurrentThread)) {}
 
   void SetUp() override {
     testing::Test::SetUp();

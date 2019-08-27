@@ -12,7 +12,7 @@
 const char kProviderName[] = "fill-buffer";
 
 static bool RunFillBufferTest(const tracing::Spec& spec) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   // If we're streaming then we need intermediate buffer saving to be acted on while we're
   // writing the buffer. So run the provider loop in the background.
   loop.StartThread();
@@ -29,7 +29,7 @@ static bool RunFillBufferTest(const tracing::Spec& spec) {
     // At this point we're registered with trace-manager, and we know tracing
     // has started. But we haven't received the Start() request yet, which
     // contains the trace buffer (as a vmo) and other things. So wait for it.
-    async::Loop wait_loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop wait_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     if (!WaitForTracingToStart(wait_loop, kStartTimeout)) {
       FXL_LOG(ERROR) << "Provider " << kProviderName << " failed waiting for tracing to start";
       return false;

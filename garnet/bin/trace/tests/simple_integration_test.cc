@@ -14,7 +14,7 @@
 #include "garnet/bin/trace/tests/basic_integration_tests.h"
 
 static bool RunSimpleTest(const tracing::Spec& spec) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::unique_ptr<trace::TraceProviderWithFdio> provider;
   if (!CreateProviderSynchronouslyAndWait(loop, "simple", &provider)) {

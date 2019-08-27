@@ -19,7 +19,7 @@ class IOLoopTest : public IOLoop, public ::testing::Test {
  public:
   static constexpr int kInitialFd = -1;
 
-  IOLoopTest() : IOLoop(kInitialFd, &delegate_, &loop_), loop_(&kAsyncLoopConfigNoAttachToThread) {}
+  IOLoopTest() : IOLoop(kInitialFd, &delegate_, &loop_), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {}
   void TearDown() override {}

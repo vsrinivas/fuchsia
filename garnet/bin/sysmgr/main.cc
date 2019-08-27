@@ -8,6 +8,7 @@
 #include <string>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include "garnet/bin/sysmgr/app.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -33,7 +34,7 @@ int main(int argc, const char** argv) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   sysmgr::App app(std::move(config));
 
   loop.Run();

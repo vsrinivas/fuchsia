@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
@@ -20,7 +21,7 @@
 #define TEST_NAME "two-providers-two-engines"
 
 static bool RunTwoProvidersTwoEnginesTest(const tracing::Spec& spec) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fbl::unique_ptr<trace::TraceProviderWithFdio> provider1;
   if (!CreateProviderSynchronouslyAndWait(loop, "provider1", &provider1)) {

@@ -9,6 +9,7 @@
 // involve dustingreen@ (me) in figuring it out.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/sys/cpp/component_context.h>
 #include <stdio.h>

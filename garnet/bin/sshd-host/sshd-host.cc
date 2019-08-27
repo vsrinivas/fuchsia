@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/job.h>
@@ -28,7 +29,7 @@ int main(int /*argc*/, const char** /*argv*/) {
   // introspection services for debugging.
   { zx::handle((zx_take_startup_handle(PA_DIRECTORY_REQUEST))); }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
 
   zx::process process;

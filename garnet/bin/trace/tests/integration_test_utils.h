@@ -9,6 +9,7 @@
 #include <string>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/time.h>
 #include <trace-provider/provider.h>
 

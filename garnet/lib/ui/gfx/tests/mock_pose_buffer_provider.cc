@@ -5,6 +5,7 @@
 #include "mock_pose_buffer_provider.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 namespace mock_pose_buffer_provider {
@@ -24,7 +25,7 @@ void MockPoseBufferProviderApp::SetPoseBuffer(zx::vmo buffer, uint32_t num_entri
 }  // namespace mock_pose_buffer_provider
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   mock_pose_buffer_provider::MockPoseBufferProviderApp app;
   loop.Run();
   return 0;

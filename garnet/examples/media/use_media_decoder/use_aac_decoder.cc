@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 #include <lib/media/test/codec_buffer.h>
@@ -130,7 +131,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // those sends which are already on the loop thread, vs. what we're doing
   // which only needs anything extra for sends we queue from threads that aren't
   // the loop thread.
-  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop fidl_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // This example will give the loop it's own thread, so that the main thread
   // can be used to sequence overall control of the Codec instance using a

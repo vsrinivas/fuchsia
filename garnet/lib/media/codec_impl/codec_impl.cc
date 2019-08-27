@@ -89,7 +89,7 @@ CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
       tmp_sysmem_(std::move(sysmem)),
       tmp_interface_request_(std::move(request)),
       binding_(this),
-      stream_control_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      stream_control_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   ZX_DEBUG_ASSERT(tmp_sysmem_);
   ZX_DEBUG_ASSERT(tmp_interface_request_);

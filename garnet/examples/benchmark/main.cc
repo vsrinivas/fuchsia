@@ -7,13 +7,14 @@
 #include <stdio.h>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
 #include <lib/zx/time.h>
 
 int main(int argc, char** argv) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
   // Wait for tracing to get set up.  This works around a race condition in

@@ -14,6 +14,7 @@ executable("bin") {
   deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider-with-fdio",
   ]

@@ -8,6 +8,7 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/gtest/real_loop_fixture.h>
 
 #include <gtest/gtest.h>

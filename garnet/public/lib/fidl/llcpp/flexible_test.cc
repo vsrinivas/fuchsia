@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/wait.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
@@ -279,7 +280,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
 class FlexibleEnvelopeTest : public ::testing::Test {
  protected:
   virtual void SetUp() {
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_flexible_envelope_server"), ZX_OK);
     ASSERT_EQ(zx::channel::create(0, &client_end_, &server_end_), ZX_OK);
     server_ = std::make_unique<Server>(loop_->dispatcher(), std::move(server_end_));

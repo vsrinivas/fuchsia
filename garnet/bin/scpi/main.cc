@@ -5,9 +5,10 @@
 #include "garnet/bin/scpi/app.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   scpi::App app;
   zx_status_t status = app.Start();
   if (status != ZX_OK) {

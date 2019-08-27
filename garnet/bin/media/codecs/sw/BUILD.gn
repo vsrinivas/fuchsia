@@ -62,5 +62,6 @@ source_set("codec_adapter_sw") {
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

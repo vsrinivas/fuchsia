@@ -57,6 +57,7 @@
 
 #ifdef MAGMA_ENABLE_TRACING
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <trace-provider/provider.h>
 #endif
 
@@ -3055,7 +3056,7 @@ int test_vk_cube(int argc, char** argv) {
   VulkanShimInit();
 #endif
 #if defined(MAGMA_ENABLE_TRACING)
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread();
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 #endif

@@ -8,6 +8,7 @@
 
 #include <fuchsia/zircon/benchmarks/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -522,7 +523,7 @@ class FidlTest {
     FXL_CHECK(handles.size() == 1);
     zx::channel channel(handles[0]);
 
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     RoundTripServiceImpl service_impl;
     fidl::Binding<fuchsia::zircon::benchmarks::RoundTripService> binding(&service_impl,
                                                                          std::move(channel));

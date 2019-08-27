@@ -6,6 +6,7 @@
 #define GARNET_BIN_MEDIA_CODECS_SW_AAC_CODEC_ADAPTER_AAC_ENCODER_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/result.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/zx/bti.h>

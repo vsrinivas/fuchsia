@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/display/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fsl/io/device_watcher.h>
 #include <zircon/pixelformat.h>

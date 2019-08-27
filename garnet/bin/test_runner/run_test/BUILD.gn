@@ -10,5 +10,6 @@ executable("run_test") {
     "//garnet/public/lib/test_runner/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

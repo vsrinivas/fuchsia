@@ -6,6 +6,7 @@
 #define GARNET_LIB_PROFILER_FUCHSIA_THREAD_INTERRUPTER_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 class CpuProfiler;
 

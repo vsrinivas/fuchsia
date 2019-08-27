@@ -6,6 +6,7 @@
 
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
@@ -45,7 +46,7 @@ class FrameStatsTest : public gtest::RealLoopFixture {
       : object_(component::Object::Make(kObjectsName)),
         root_object_(component::ObjectDir(object_)),
         executor_(dispatcher()),
-        server_loop_(&kAsyncLoopConfigNoAttachToThread) {
+        server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     fuchsia::inspect::InspectSyncPtr ptr;
     zx::channel server_channel = ptr.NewRequest().TakeChannel();
     server_thread_ = std::thread([this, server_channel = std::move(server_channel)]() mutable {

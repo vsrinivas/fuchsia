@@ -23,7 +23,7 @@ void PostTask(async_dispatcher_t* dispatcher, fit::closure task) {
 CodecAdapterAacEncoder::CodecAdapterAacEncoder(std::mutex& lock,
                                                CodecAdapterEvents* codec_adapter_events)
     : CodecAdapter(lock, codec_adapter_events),
-      input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {}
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 CodecAdapterAacEncoder::~CodecAdapterAacEncoder() {}
 

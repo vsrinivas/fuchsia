@@ -7,6 +7,7 @@
 // failure of the test.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "lib/test_runner/cpp/test_runner.h"
@@ -33,7 +34,7 @@ class QuitObserver : public test_runner::TestRunObserver {
 int main(int argc, char** argv) {
   std::shared_ptr<component::StartupContext> app_context =
       component::StartupContext::CreateFromStartupInfo();
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::vector<std::string> args = settings.positional_args();

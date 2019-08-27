@@ -8,6 +8,7 @@
 #include "image_pipe_surface.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <mutex>
 #include <thread>
 
@@ -16,7 +17,7 @@ namespace image_pipe_swapchain {
 // An implementation of ImagePipeSurface based on an async fidl ImagePipe.
 class ImagePipeSurfaceAsync : public ImagePipeSurface {
  public:
-  ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle) : loop_(&kAsyncLoopConfigNoAttachToThread) {
+  ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle) : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
     loop_.StartThread();
   }
