@@ -40,6 +40,8 @@ constexpr const char* FlagToString(uint32_t flag) {
       return "RIGHT_READABLE";
     case ZX_FS_RIGHT_WRITABLE:
       return "RIGHT_WRITABLE";
+    case ZX_FS_RIGHT_EXECUTABLE:
+      return "RIGHT_EXECUTABLE";
     case ZX_FS_RIGHTS:
       return "RIGHTS";
     case ZX_FS_FLAG_CREATE:
