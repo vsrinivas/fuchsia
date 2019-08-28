@@ -31,13 +31,16 @@ class _NavigationBarState extends State<NavigationBar> {
   void initState() {
     _focusNode = FocusNode();
     _controller = TextEditingController();
+    _focusNode.addListener(_onFocusChange);
     widget.bloc.url.addListener(_onUrlChanged);
     super.initState();
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    _focusNode
+      ..removeListener(_onFocusChange)
+      ..dispose();
     _controller.dispose();
     widget.bloc.url.removeListener(_onUrlChanged);
     super.dispose();
@@ -59,6 +62,13 @@ class _NavigationBarState extends State<NavigationBar> {
       FocusScope.of(context).requestFocus(_focusNode);
     } else {
       _focusNode.unfocus();
+    }
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      _controller.selection =
+          TextSelection(baseOffset: 0, extentOffset: _controller.text.length);
     }
   }
 
