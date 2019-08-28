@@ -34,6 +34,7 @@ executable("bin") {
     ":camera_client_test_src",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

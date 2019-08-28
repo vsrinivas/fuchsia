@@ -66,6 +66,7 @@ rustc_library("lib") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/memfs",
   ]
@@ -96,6 +97,7 @@ rustc_binary("bin") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/memfs",
   ]

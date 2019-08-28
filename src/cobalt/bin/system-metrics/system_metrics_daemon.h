@@ -28,7 +28,7 @@
 //
 // Usage:
 //
-// async::Loop loop(&kAsyncLoopConfigAttachToThread);
+// async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 // std::unique_ptr<sys::ComponentContext> context(
 //     sys::ComponentContext::Create());
 // SystemMetricsDaemon daemon(loop.dispatcher(), context.get());

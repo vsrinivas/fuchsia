@@ -11,6 +11,7 @@
 #include <threads.h>
 #endif
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
@@ -39,7 +40,7 @@ class Controller : public ControllerDeviceType, public ddk::EmptyProtocol<ZX_PRO
       : ControllerDeviceType(parent),
         isp_(isp),
         gdc_(gdc),
-        controller_loop_(&kAsyncLoopConfigNoAttachToThread) {}
+        controller_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   // Setup() is used to create an instance of Controller.
   static zx_status_t Setup(zx_device_t* parent, std::unique_ptr<Controller>* out);

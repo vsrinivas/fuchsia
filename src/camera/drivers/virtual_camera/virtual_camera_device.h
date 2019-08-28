@@ -8,6 +8,7 @@
 #include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 
 #include <ddk/protocol/test.h>

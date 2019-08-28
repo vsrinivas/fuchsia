@@ -51,7 +51,7 @@ UsbVideoStream::UsbVideoStream(zx_device_t* parent, usb_protocol_t* usb, UvcForm
       parent_req_size_(parent_req_size),
       device_info_(std::move(device_info)) {
   if (fidl_dispatch_loop_ == nullptr) {
-    fidl_dispatch_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    fidl_dispatch_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     fidl_dispatch_loop_->StartThread();
   }
 }

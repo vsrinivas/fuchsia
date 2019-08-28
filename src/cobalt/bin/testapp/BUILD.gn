@@ -62,6 +62,7 @@ executable("cobalt_testapp") {
     "//third_party/cobalt/src/registry:id",
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 
   configs += [ "//third_party/cobalt:cobalt_config" ]

@@ -6,6 +6,7 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -219,7 +220,7 @@ int main(int argc, const char** argv) {
                 << ", start_event_aggregator_worker=" << start_event_aggregator_worker
                 << ", release_stage=" << release_stage << ".";
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
   cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval, initial_interval,
                         event_aggregator_backfill_days, start_event_aggregator_worker,

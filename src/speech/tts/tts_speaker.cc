@@ -19,7 +19,7 @@ static constexpr uint32_t kLowWaterBytes =
     (kFliteFrameRate * kLowWaterMsec * kFliteBytesPerFrame) / 1000;
 
 TtsSpeaker::TtsSpeaker(async_dispatcher_t* dispatcher)
-    : engine_loop_(&kAsyncLoopConfigNoAttachToThread),
+    : engine_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       master_dispatcher_(dispatcher),
       abort_playback_(false),
       synthesis_complete_(false) {

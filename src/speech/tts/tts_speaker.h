@@ -11,6 +11,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/tts/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/types.h>

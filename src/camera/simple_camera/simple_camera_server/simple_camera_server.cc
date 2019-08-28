@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include "simple_camera_server_app.h"
 
 int main() {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   simple_camera::SimpleCameraApp app;
   loop.Run();
   return 0;

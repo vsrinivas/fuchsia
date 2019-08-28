@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/zx/eventpair.h>
 
@@ -48,7 +49,7 @@ zx_status_t run_camera(bool use_camera_manager, const char* source) {
   printf("Connecting to camera using %s\n",
          use_camera_manager ? "camera manager" : "camera driver");
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   camera::Client client;
 

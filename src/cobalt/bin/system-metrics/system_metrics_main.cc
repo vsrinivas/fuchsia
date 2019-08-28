@@ -6,6 +6,7 @@
 // on a regular basis.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fsl/syslogger/init.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>
@@ -20,7 +21,7 @@ int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   fsl::InitLoggerFromCommandLine(command_line, {"cobalt", "system_metrics"});
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
   // Create the SystemMetricsDaemon and start it.

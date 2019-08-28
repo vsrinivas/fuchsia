@@ -72,6 +72,7 @@ rustc_test("hub_integration_test_bin") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/memfs",
   ]
@@ -173,6 +174,7 @@ rustc_binary("memfs_bin") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/memfs",
   ]
@@ -198,6 +200,7 @@ rustc_binary("storage_user_bin") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/memfs",
   ]
@@ -416,6 +419,7 @@ rustc_test("no_pkg_resolver_test_bin") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/memfs",
   ]

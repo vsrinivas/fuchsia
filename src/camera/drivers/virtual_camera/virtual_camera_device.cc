@@ -24,7 +24,7 @@ static zx_protocol_device_t virtual_camera_device_ops = {
 
 VirtualCameraDevice::VirtualCameraDevice() {
   if (fidl_dispatch_loop_ == nullptr) {
-    fidl_dispatch_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    fidl_dispatch_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     fidl_dispatch_loop_->StartThread();
   }
 }

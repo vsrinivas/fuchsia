@@ -53,6 +53,7 @@ source_set("lib") {
     "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

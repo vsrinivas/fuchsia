@@ -10,6 +10,7 @@
 // It is also invoked by the cobalt_client CQ and CI.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <memory>
 #include <sstream>
@@ -56,7 +57,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   cobalt::testapp::CobaltTestApp app(use_network, test_for_prober);
 
   if (!app.RunTests()) {
