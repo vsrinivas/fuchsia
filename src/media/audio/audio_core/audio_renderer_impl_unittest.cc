@@ -85,14 +85,10 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
 };
 
 constexpr zx::duration kMinLeadTime = zx::nsec(123456789);
-constexpr zx::duration kTemporaryMinLeadTimePadding = zx::msec(4);
 constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
 TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
-  // Currently, as short-term workaround, AudioRenderer pads its reported MinLeadTime value.
-  zx::duration expected_lead_time = kMinLeadTime + kTemporaryMinLeadTimePadding;
-
   auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &object_registry_);
 
   // We must set our output's lead time, before linking it, before calling SetPcmStreamType().
@@ -112,7 +108,7 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
 
   RunLoopUntilIdle();
   ASSERT_NE(lead_time_ns, kInvalidLeadTimeNs) << "No response received for GetMinLeadTime";
-  EXPECT_EQ(lead_time_ns, expected_lead_time.to_nsecs()) << "Incorrect GetMinLeadTime received";
+  EXPECT_EQ(lead_time_ns, kMinLeadTime.to_nsecs()) << "Incorrect GetMinLeadTime received";
 }
 
 }  // namespace

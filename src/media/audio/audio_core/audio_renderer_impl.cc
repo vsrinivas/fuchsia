@@ -21,9 +21,6 @@ constexpr zx::duration kPaddingForUnspecifiedRefTime = zx::msec(20);
 // telling them what actual ref_time was), secretly pad by this amount.
 constexpr zx::duration kPaddingForPlayNoReplyWithRefTime = zx::msec(10);
 
-// Short-term workaround: pad our reported min_lead_time duration by this.
-constexpr zx::duration kPaddingForMinLeadTimeReporting = zx::msec(4);
-
 // To what extent should client-side underflows be logged? (A "client-side underflow" refers to when
 // all or part of a packet's data is discarded because its start timestamp has already passed.)
 // For each Renderer, we will log the first underflow. For subsequent occurrences, depending on
@@ -1027,11 +1024,7 @@ void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::GetMinLeadTime");
   AUD_VLOG_OBJ(TRACE, this);
 
-  zx::duration lead_time = min_clock_lead_time_;
-  if (lead_time.get() > 0) {
-    lead_time += kPaddingForMinLeadTimeReporting;
-  }
-  callback(lead_time.to_nsecs());
+  callback(min_clock_lead_time_.to_nsecs());
 }
 
 // For now, we pad what we report for min lead time. We don't simply increase the minleadtime by
@@ -1042,12 +1035,7 @@ void AudioRendererImpl::ReportNewMinClockLeadTime() {
     AUD_VLOG_OBJ(TRACE, this);
 
     auto& lead_time_event = audio_renderer_binding_.events();
-
-    zx::duration lead_time = min_clock_lead_time_;
-    if (lead_time.get() > 0) {
-      lead_time += kPaddingForMinLeadTimeReporting;
-    }
-    lead_time_event.OnMinLeadTimeChanged(lead_time.to_nsecs());
+    lead_time_event.OnMinLeadTimeChanged(min_clock_lead_time_.to_nsecs());
   }
 }
 
