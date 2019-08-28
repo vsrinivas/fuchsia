@@ -33,20 +33,24 @@ const zbi_platform_id_t kPlatformId = []() {
 // This function is responsible for serializing driver data. It must be kept
 // updated with the function that deserialized the data. This function
 // is TestBoard::FetchAndDeserialize.
-zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, uint32_t type,
-                        uint32_t extra, zx::vmo* out, uint32_t* length) {
+zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, fbl::String board_name,
+                        uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
   zx::vmo vmo;
   switch (type) {
     case ZBI_TYPE_PLATFORM_ID: {
+      zbi_platform_id_t platform_id = kPlatformId;
+      if (!board_name.empty()) {
+        strncpy(platform_id.board_name, board_name.c_str(), ZBI_BOARD_NAME_LEN - 1);
+       }
       zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
       if (status != ZX_OK) {
         return status;
       }
-      status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+      status = vmo.write(&platform_id, 0, sizeof(platform_id));
       if (status != ZX_OK) {
         return status;
       }
-      *length = sizeof(kPlatformId);
+      *length = sizeof(platform_id);
       break;
     }
     case ZBI_TYPE_DRV_BOARD_PRIVATE: {
@@ -101,6 +105,14 @@ zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, uin
 zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* out) {
   IsolatedDevmgr devmgr;
 
+  struct Args {
+    Args(fbl::Vector<board_test::DeviceEntry> device_list, fbl::String board_name)
+        : device_list_(std::move(device_list)), board_name_(board_name) {}
+    fbl::Vector<board_test::DeviceEntry> device_list_;
+    fbl::String board_name_;
+  };
+  auto cb_args = std::make_unique<Args>(std::move(args->device_list), args->board_name);
+
   devmgr_launcher::Args devmgr_args;
   devmgr_args.sys_device_driver = "/boot/driver/platform-bus.so";
   devmgr_args.driver_search_paths.swap(args->driver_search_paths);
@@ -108,9 +120,9 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* o
   devmgr_args.flat_namespace = std::move(args->flat_namespace);
   devmgr_args.disable_block_watcher = args->disable_block_watcher;
   devmgr_args.disable_netsvc = args->disable_netsvc;
-  devmgr_args.get_boot_item = [args](uint32_t type, uint32_t extra, zx::vmo* out,
-                                     uint32_t* length) {
-    return GetBootItem(args->device_list, type, extra, out, length);
+  devmgr_args.get_boot_item = [args = std::move(cb_args)](uint32_t type, uint32_t extra,
+                                                              zx::vmo* out, uint32_t* length) {
+    return GetBootItem(args->device_list_, args->board_name_, type, extra, out, length);
   };
 
   zx_status_t status =

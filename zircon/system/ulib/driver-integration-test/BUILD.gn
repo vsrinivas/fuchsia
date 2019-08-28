@@ -3,6 +3,9 @@
 # found in the LICENSE file.
 
 library("driver-integration-test") {
+  sdk = "shared"
+  sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
+
   shared = true
   sources = [
     "launcher.cc",

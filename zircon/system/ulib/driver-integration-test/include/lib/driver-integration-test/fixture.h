@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/metadata/test.h>
+#include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -31,6 +32,8 @@ class IsolatedDevmgr {
     fbl::Vector<board_test::DeviceEntry> device_list;
     // A list of kernel cmdline arguments to pass to the devmgr process.
     fbl::Vector<const char*> arguments;
+    // A board name to appear.
+    fbl::String board_name;
     // If set to true, the block watcher will be disabled.
     bool disable_block_watcher = true;
     // If set to true, the netsvc will be disabled.

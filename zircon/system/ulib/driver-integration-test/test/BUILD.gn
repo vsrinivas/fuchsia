@@ -15,14 +15,16 @@ test("driver-integration") {
     "main.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/driver-integration-test",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

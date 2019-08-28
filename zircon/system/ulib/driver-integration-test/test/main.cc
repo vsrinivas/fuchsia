@@ -13,8 +13,11 @@
 #include <unistd.h>
 
 #include <ddk/platform-defs.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
+#include <lib/fdio/directory.h>
+#include <lib/fzl/fdio.h>
 #include <zircon/status.h>
 #include <zxtest/zxtest.h>
 
@@ -46,6 +49,27 @@ TEST(DriverIntegrationTest, EnumerationTest) {
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd));
 
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
+}
+
+TEST(DriverIntegrationTest, BoardName) {
+  constexpr char kBoardName[] = "Random Board";
+
+  IsolatedDevmgr::Args args;
+  args.driver_search_paths.push_back("/boot/driver");
+  args.board_name = kBoardName;
+
+  IsolatedDevmgr devmgr;
+  ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
+
+  fbl::unique_fd fd;
+  ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
+  ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "misc/sysinfo", &fd));
+
+  fzl::FdioCaller caller(std::move(fd));
+  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(caller.channel());
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+  ASSERT_BYTES_EQ(result->name.data(), kBoardName, result->name.size());
 }
 
 }  // namespace
