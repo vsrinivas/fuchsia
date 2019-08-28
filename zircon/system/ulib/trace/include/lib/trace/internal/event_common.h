@@ -4,8 +4,8 @@
 
 // This file contains definitions common to userspace and DDK tracing.
 
-#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_COMMON_H_
-#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_COMMON_H_
+#ifndef LIB_TRACE_INTERNAL_EVENT_COMMON_H_
+#define LIB_TRACE_INTERNAL_EVENT_COMMON_H_
 
 #include <lib/trace/event_args.h>
 #include <lib/trace/internal/event_internal.h>
@@ -35,11 +35,7 @@
 //         // do something possibly expensive only when tracing this category
 //     }
 //
-#ifndef NTRACE
-#define TRACE_CATEGORY_ENABLED(category_literal) (trace_is_category_enabled(category_literal))
-#else
-#define TRACE_CATEGORY_ENABLED(category_literal) ((void)(category_literal), false)
-#endif  // NTRACE
+#define TRACE_CATEGORY_ENABLED(category_literal) TRACE_INTERNAL_CATEGORY_ENABLED(category_literal)
 
 // Returns a new unique 64-bit unsigned integer (within this process).
 // Each invocation returns a different non-zero value.
@@ -337,7 +333,7 @@
 // |blob_size| is the size, in bytes, of the data.
 // |args| is the list of argument key/value pairs.
 #define TRACE_BLOB_EVENT(category_literal, name_literal, blob, blob_size, args...) \
-    TRACE_INTERNAL_BLOB_EVENT(category_literal, name_literal, blob, blob_size, args)
+  TRACE_INTERNAL_BLOB_EVENT(category_literal, name_literal, blob, blob_size, args)
 
 // Writes a large blob record with the given blob data, with only a
 // category and name associated with the blob. This will not contain much
@@ -352,7 +348,7 @@
 // |blob| is a pointer to the data.
 // |blob_size| is the size, in bytes, of the data.
 #define TRACE_BLOB_ATTACHMENT(category_literal, name_literal, blob, blob_size) \
-    TRACE_INTERNAL_BLOB_ATTACHMENT(category_literal, name_literal, blob, blob_size) \
+  TRACE_INTERNAL_BLOB_ATTACHMENT(category_literal, name_literal, blob, blob_size)
 
 // Writes a description of a kernel object indicated by |handle|,
 // including its koid, name, and the supplied arguments.
@@ -396,4 +392,4 @@
 #define TRACE_BLOB(type, name, blob, blob_size) \
   TRACE_INTERNAL_BLOB((type), (name), (blob), (blob_size))
 
-#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_COMMON_H_
+#endif  // LIB_TRACE_INTERNAL_EVENT_COMMON_H_

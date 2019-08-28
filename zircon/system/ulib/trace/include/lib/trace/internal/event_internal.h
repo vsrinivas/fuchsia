@@ -7,11 +7,8 @@
 // This is not part of the public API: use <trace/event.h> instead.
 //
 
-#ifndef ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
-#define ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
-
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
+#ifndef LIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
+#define LIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
 
 #include <lib/trace-engine/instrumentation.h>
 #include <lib/trace/internal/event_args.h>
@@ -25,6 +22,9 @@ __BEGIN_CDECLS
 
 // Variable used to hold call-site cache state.
 #define TRACE_INTERNAL_SITE_STATE __trace_site_state
+
+// Variable used to maintain the category enabled state.
+#define TRACE_INTERNAL_CATEGORY_ENABLED_STATE __trace_is_category_group_enabled
 
 // Variable used to refer to the current trace category's string ref.
 #define TRACE_INTERNAL_CATEGORY_REF __trace_category_ref
@@ -42,6 +42,25 @@ __BEGIN_CDECLS
 
 #define TRACE_INTERNAL_SCOPE_ARGS_LABEL(scope) TRACE_INTERNAL_SCOPE_ARGS_LABEL_(scope)
 #define TRACE_INTERNAL_SCOPE_ARGS_LABEL_(scope) scope##_args
+
+// Scaffolding for category enabled check.
+#ifndef NTRACE
+#define TRACE_INTERNAL_CATEGORY_ENABLED(category_literal)                                \
+  ({                                                                                     \
+    static trace_site_t TRACE_INTERNAL_SITE_STATE;                                       \
+    trace_string_ref_t TRACE_INTERNAL_CATEGORY_REF;                                      \
+    bool TRACE_INTERNAL_CATEGORY_ENABLED_STATE = false;                                  \
+    trace_context_t* TRACE_INTERNAL_CONTEXT = trace_acquire_context_for_category_cached( \
+        (category_literal), &TRACE_INTERNAL_SITE_STATE, &TRACE_INTERNAL_CATEGORY_REF);   \
+    if (unlikely(TRACE_INTERNAL_CONTEXT)) {                                              \
+      TRACE_INTERNAL_CATEGORY_ENABLED_STATE = true;                                      \
+      trace_release_context(TRACE_INTERNAL_CONTEXT);                                     \
+    }                                                                                    \
+    TRACE_INTERNAL_CATEGORY_ENABLED_STATE;                                               \
+  })
+#else
+#define TRACE_INTERNAL_CATEGORY_ENABLED(category_literal) ((void)(category_literal), false)
+#endif  // NTRACE
 
 // Scaffolding for a trace macro that does not have a category.
 #ifndef NTRACE
@@ -354,4 +373,4 @@ static inline void trace_internal_cleanup_duration_scope(trace_internal_duration
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
+#endif  // LIB_TRACE_INTERNAL_EVENT_INTERNAL_H_
