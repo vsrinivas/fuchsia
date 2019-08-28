@@ -9,26 +9,49 @@
 //! protocols' packet formats. The checksum operates by computing the 1s
 //! complement of the 1s complement sum of successive 16-bit words of the input.
 //!
-//! SIMD acceleration is used on some platforms (currently, x86_64 with the avx2
-//! extensions).
-//!
 //! # Benchmarks
 //!
-//! The following microbenchmarks were performed on a 2018 Google Pixelbook.
-//! Each benchmark constructs a [`Checksum`] object, calls
-//! [`Checksum::add_bytes`] with an input of the given number of bytes, and then
-//! calls [`Checksum::checksum`] to finalize. Benchmarks were performed with
-//! SIMD both enabled and disabled. Average values were calculated over 3
-//! trials.
+//! ## [`Checksum::add_bytes`]
 //!
-//! Bytes | Time w/o SIMD | Rate w/o SIMD | Time w/ SIMD | Rate w/ SIMD | Ratio (time w / time w/o)
-//! ----- | ------------- | ------------- | ------------ | ------------ | -------------------------
-//!    31 |      3,657 ns |     8.48 MB/s |     3,692 ns |    8.40 MB/s |                      1.01
-//!    32 |      3,735 ns |     8.57 MB/s |     3,767 ns |    8.50 MB/s |                      1.01
-//!    64 |      7,092 ns |     9.02 MB/s |     6,580 ns |    9.73 MB/s |                      0.93
-//!   128 |     13,790 ns |     9.28 MB/s |     7,428 ns |    17.2 MB/s |                      0.54
-//!   256 |     27,169 ns |     9.42 MB/s |     9,224 ns |    27.8 MB/s |                      0.34
-//!  1024 |    107,609 ns |     9.52 MB/s |    20,071 ns |    51.0 MB/s |                      0.19
+//! The following microbenchmarks were performed on a 2018 Google Pixelbook. Each benchmark
+//! constructs a [`Checksum`] object, calls [`Checksum::add_bytes`] with an input of the given
+//! number of bytes, and then calls [`Checksum::checksum`] to finalize. Average values were
+//! calculated over 3 trials.
+//!
+//! Bytes |    Time    |    Rate
+//! ----- | ---------- | ----------
+//!    20 |   2,649 ns |  7.55 MB/s
+//!    31 |   3,826 ns |  8.10 MB/s
+//!    32 |   3,871 ns |  8.27 MB/s
+//!    64 |   1,433 ns |  44.7 MB/s
+//!   128 |   2,225 ns |  57.5 MB/s
+//!   256 |   3,829 ns |  66.9 MB/s
+//!  1023 |  13,802 ns |  74.1 MB/s
+//!  1024 |  13,535 ns |  75.7 MB/s
+//!
+//! ## [`Checksum::add_bytes_small`]
+//!
+//! The following microbenchmarks were performed on a 2018 Google Pixelbook. Each benchmark
+//! constructs a [`Checksum`] object, calls [`Checksum::add_bytes_small`] with an input of the
+//! given number of bytes, and then calls [`Checksum::checksum`] to finalize. Average values
+//! were calculated over 3 trials.
+//!
+//! Bytes |    Time    |    Rate
+//! ----- | ---------- | ----------
+//!    20 |   2,639 ns |  7.57 MB/s
+//!    31 |   3,806 ns |  8.15 MB/s
+//!
+//! ## [`update`]
+//!
+//! The following microbenchmarks were performed on a 2018 Google Pixelbook. Each benchmark
+//! calls [`update`] with an original 2 byte checksum, and byteslices of specified lengths
+//! to be updated. Average values were calculated over 3 trials.
+//!
+//! Bytes |    Time    |    Rate
+//! ----- | ---------- | ----------
+//!     2 |   1,550 ns |  1.29 MB/s
+//!     4 |   1,972 ns |  2.03 MB/s
+//!     8 |   2,892 ns |  2.77 MB/s
 //!
 //! [RFC 1071]: https://tools.ietf.org/html/rfc1071
 //! [RFC 1141]: https://tools.ietf.org/html/rfc1141
@@ -83,8 +106,7 @@
 //
 // Micro-benchmarks are run on an x86-64 gLinux workstation. In summary,
 // compared the baseline 0 which is prior to the byteorder independence
-// patch, there is a ~4x speedup and the current non-simd version is faster
-// than the simd version of that baseline version.
+// patch, there is a ~4x speedup.
 //
 // TODO: run this optimization on other platforms. I would expect
 // the situation on ARM a bit different because I am not sure
@@ -99,9 +121,6 @@
 
 #[cfg(all(test, feature = "benchmark"))]
 extern crate test;
-
-#[cfg(target_arch = "x86_64")]
-use core::arch::x86_64;
 
 use byteorder::{ByteOrder, NativeEndian};
 
@@ -275,17 +294,6 @@ pub struct Checksum {
 }
 
 impl Checksum {
-    /// Minimum number of bytes in a buffer to run the SIMD algorithm.
-    ///
-    /// Running the algorithm with less than `MIN_BYTES_FOR_SIMD` bytes will
-    /// cause the benefits of SIMD to be dwarfed by the overhead (performing
-    /// worse than the normal/non-SIMD algorithm). This value was chosen after
-    /// several benchmarks which showed that the algorithm performed worse than
-    /// the normal/non-SIMD algorithm when the number of bytes was less than 256.
-    // TODO: 256 may not perform the best on other platforms such as ARM.
-    #[cfg(target_arch = "x86_64")]
-    const MIN_BYTES_FOR_SIMD: usize = 256;
-
     /// Initialize a new checksum.
     #[inline]
     pub const fn new() -> Self {
@@ -298,8 +306,7 @@ impl Checksum {
     /// will be added to the end before updating the checksum.
     ///
     /// Note that `add_bytes` has some fixed overhead regardless of the size of
-    /// `bytes`. Additionally, SIMD optimizations are only available for inputs
-    /// of a certain size. Where performance is a concern, prefer fewer calls to
+    /// `bytes`. Where performance is a concern, prefer fewer calls to
     /// `add_bytes` with larger input over more calls with smaller input.
     #[inline]
     pub fn add_bytes(&mut self, mut bytes: &[u8]) {
@@ -363,9 +370,6 @@ impl Checksum {
             update_sum_carry!(1, read_u16, &[byte, bytes[0]]);
             self.trailing_byte = None;
         }
-
-        // First, process as much as we can with SIMD.
-        bytes = Self::add_bytes_simd(&mut sum, bytes);
 
         loop_unroll!(bytes, update_sum_carry);
 
@@ -444,136 +448,6 @@ impl Checksum {
         NativeEndian::write_u16(&mut cksum[..], self.checksum_inner());
         cksum
     }
-
-    /// Adds bytes to a running sum using architecture specific SIMD
-    /// instructions.
-    ///
-    /// `add_bytes_simd` updates `sum` with the sum of `bytes` using
-    /// architecture-specific SIMD instructions. It may not process all bytes,
-    /// and whatever bytes are not processed will be returned. If no
-    /// implementation exists for the target architecture and run-time CPU
-    /// features, `add_bytes_simd` does nothing and simply returns `bytes`
-    /// directly.
-    #[inline(always)]
-    fn add_bytes_simd<'a>(sum: &mut Accumulator, bytes: &'a [u8]) -> &'a [u8] {
-        #[cfg(target_arch = "x86_64")]
-        {
-            if is_x86_feature_detected!("avx2") && bytes.len() >= Self::MIN_BYTES_FOR_SIMD {
-                return unsafe { Self::add_bytes_x86_64(sum, bytes) };
-            }
-        }
-
-        // Suppress unused variable warning when we don't compile the preceding
-        // block.
-        #[cfg(not(target_arch = "x86_64"))]
-        let _ = sum;
-
-        bytes
-    }
-
-    /// Adds bytes to a running sum using x86_64's avx2 SIMD instructions.
-    ///
-    /// # Safety
-    ///
-    /// `add_bytes_x86_64` should never be called unless the run-time CPU
-    /// features include 'avx2'. If `add_bytes_x86_64` is called and the
-    /// run-time CPU features do not include 'avx2', it is considered undefined
-    /// behaviour.
-    #[cfg(target_arch = "x86_64")]
-    #[target_feature(enable = "avx2")]
-    unsafe fn add_bytes_x86_64<'a>(sum: &mut Accumulator, mut bytes: &'a [u8]) -> &'a [u8] {
-        // TODO(ghanan): Use safer alternatives to achieve SIMD algorithm once
-        // they stabilize.
-
-        let zeros: x86_64::__m256i = x86_64::_mm256_setzero_si256();
-        let mut c0: x86_64::__m256i;
-        let mut c1: x86_64::__m256i;
-        let mut acc: x86_64::__m256i;
-        let data: [u8; 32] = [0; 32];
-
-        while bytes.len() >= 32 {
-            let mut add_count: u32 = 0;
-
-            // Reset accumulator.
-            acc = zeros;
-
-            // We can do (2^16 + 1) additions to the accumulator (`acc`) that
-            // starts off at 0 without worrying about overflow. Since each
-            // iteration of this loop does 2 additions to the accumulator,
-            // `add_count` must be less than or equal to U16_MAX(= 2 ^ 16 - 1 =
-            // 2 ^ 16 - 1 - 2) to guarantee no overflows during this loop
-            // iteration. We know we can do 2^16 + 1 additions to the
-            // accumulator because we are using 32bit integers which can hold a
-            // max value of U32_MAX (2^32 - 1), and we are adding 16bit values
-            // with a max value of U16_MAX (2^16 - 1). U32_MAX = (U16_MAX << 16
-            // + U16_MAX) = U16_MAX * (2 ^ 16 + 1)
-            while bytes.len() >= 32 && add_count <= u32::from(std::u16::MAX) {
-                // Load 32 bytes from memory (16 16bit values to add to `sum`)
-                //
-                // `_mm256_lddqu_si256` does not require the memory address to
-                // be aligned so remove the linter check for casting from a less
-                // strictly-aligned pointer to a more strictly-aligned pointer.
-                // https://doc.rust-lang.org/core/arch/x86_64/fn._mm256_lddqu_si256.html
-                #[allow(clippy::cast_ptr_alignment)]
-                {
-                    c0 = x86_64::_mm256_lddqu_si256(bytes.as_ptr() as *const x86_64::__m256i);
-                }
-
-                // Create 32bit words with most significant 16 bits = 0, least
-                // significant 16 bits set to a new 16 bit word to add to
-                // checksum from bytes. Setting the most significant 16 bits to
-                // 0 allows us to do 2^16 simd additions (2^20 16bit word
-                // additions) without worrying about overflows.
-                c1 = x86_64::_mm256_unpackhi_epi16(c0, zeros);
-                c0 = x86_64::_mm256_unpacklo_epi16(c0, zeros);
-
-                // Sum 'em up!
-                // `acc` being treated as a vector of 8x 32bit words.
-                acc = x86_64::_mm256_add_epi32(acc, c1);
-                acc = x86_64::_mm256_add_epi32(acc, c0);
-
-                // We did 2 additions to the accumulator in this iteration of
-                // the loop.
-                add_count += 2;
-
-                bytes = &bytes[32..];
-            }
-
-            // Store the results of our accumlator of 8x 32bit words to our
-            // temporary buffer `data` so that we can iterate over data 16 bits
-            // at a time and add the values to `sum`. Since `acc` is a 256bit
-            // value, it requires 32 bytes, provided by `data`.
-            //
-            // `_mm256_storeu_si256` does not require the memory address to be
-            // aligned on any particular boundary so remove the linter check for
-            // casting from a less strictly-aligned pointer to a more strictly-
-            // aligned pointer.
-            // https://doc.rust-lang.org/core/arch/x86_64/fn._mm256_storeu_si256.html
-            #[allow(clippy::cast_ptr_alignment)]
-            x86_64::_mm256_storeu_si256(data.as_ptr() as *mut x86_64::__m256i, acc);
-
-            let mut fold = *sum;
-            // Iterate over the accumulator data accumulator-width bytes at a time,
-            // and add it to `sum`.
-            macro_rules! fold {
-                ($step: literal, $read: ident) => {
-                    for x in (0..32).step_by($step) {
-                        fold = adc_accumulator(
-                            fold,
-                            NativeEndian::$read(&data[x..x + $step]) as Accumulator,
-                        );
-                    }
-                };
-            }
-            #[cfg(not(target_arch = "x86_64"))]
-            fold!(8, read_u64);
-            #[cfg(target_arch = "x86_64")]
-            fold!(16, read_u128);
-            *sum = fold;
-        }
-
-        bytes
-    }
 }
 
 macro_rules! impl_adc {
@@ -610,20 +484,6 @@ fn normalize_64(a: u64) -> u16 {
 
 #[cfg(all(test, feature = "benchmark"))]
 mod benchmarks {
-    // Benchmark results for comparing checksum calculation with and without
-    // SIMD implementation, running on Google's Pixelbook. Average values were
-    // calculated over 3 trials.
-    //
-    // Number of | Average time  | Average time | Ratio
-    //   bytes   | (ns) w/o SIMD | (ns) w/ SIMD | (w / w/o)
-    // --------------------------------------------------
-    //        31 |          3657 |         3692 |   1.01
-    //        32 |          3735 |         3767 |   1.01
-    //        64 |          7092 |         6580 |   0.93
-    //       128 |         13790 |         7428 |   0.54
-    //       256 |         27169 |         9224 |   0.34
-    //      1024 |        107609 |        20071 |   0.19
-
     extern crate test;
     use super::*;
 
@@ -771,8 +631,6 @@ mod benchmarks {
 
 #[cfg(test)]
 mod tests {
-    use core::iter;
-
     use byteorder::NativeEndian;
     use rand::{Rng, SeedableRng};
 
@@ -822,47 +680,6 @@ mod tests {
             }
             assert_eq!(c.checksum(), [0u8; 2]);
         }
-
-        // Make sure that checksum works with add_bytes taking a buffer big
-        // enough to test implementation with simd instructions and cause
-        // overflow within the implementation.
-        let mut c = Checksum::new();
-        // 2 bytes/word * 8 words/additions * 2^16 additions/overflow
-        // * 1 overflow + 79 extra bytes = 2^20 + 79
-        let buf = vec![0xFF; (1 << 20) + 79];
-        c.add_bytes(&buf);
-        assert_eq!(c.checksum(), [0, 0xFF]);
-    }
-
-    #[test]
-    fn test_checksum_simd_rand() {
-        let mut rng = new_rng(70812476915813);
-
-        // Test simd implementation with random values and buffer big enough to
-        // cause an overflow within the implementation..
-        // 2 bytes/word * 8 words/additions * 2^16 additions/overflow
-        // * 1 overflow + 79 extra bytes
-        // = 2^20 + 79
-        const BUF_LEN: usize = (1 << 20) + 79;
-        let buf: Vec<u8> = iter::repeat_with(|| rng.gen()).take(BUF_LEN).collect();
-
-        let single_bytes = {
-            // Add 1 byte at a time to make sure we do not enter implementation
-            // with simd instructions
-            let mut c = Checksum::new();
-            for i in 0..BUF_LEN {
-                c.add_bytes(&buf[i..=i]);
-            }
-            c.checksum()
-        };
-        let all_bytes = {
-            // Calculate checksum with same buffer, but this time test the
-            // implementation with simd instructions
-            let mut c = Checksum::new();
-            c.add_bytes(&buf);
-            c.checksum()
-        };
-        assert_eq!(single_bytes, all_bytes);
     }
 
     #[test]
@@ -886,29 +703,6 @@ mod tests {
             };
             assert_eq!(updated, from_scratch);
         }
-
-        // Test update with bytes big enough to test simd implementation with
-        // overflow.
-        const BUF_LEN: usize = (1 << 20) + 79;
-        let buf = vec![0xFF; BUF_LEN];
-        let mut new_buf = buf.to_vec();
-        let (begin, end) = (4, BUF_LEN);
-
-        for i in begin..end {
-            new_buf[i] = i as u8;
-        }
-
-        let updated = {
-            let mut c = Checksum::new();
-            c.add_bytes(&buf);
-            update(c.checksum(), &buf[begin..end], &new_buf[begin..end])
-        };
-        let from_scratch = {
-            let mut c = Checksum::new();
-            c.add_bytes(&new_buf);
-            c.checksum()
-        };
-        assert_eq!(updated, from_scratch);
     }
 
     #[test]
@@ -944,48 +738,6 @@ mod tests {
             };
             assert_eq!(updated, from_scratch);
         }
-    }
-
-    #[test]
-    fn test_update_simd_rand() {
-        let mut rng = new_rng(70812476915813);
-
-        // Test updating with random values and update size big enough to test
-        // simd implementation with overflow
-        const MIN_BYTES: usize = 1 << 20;
-        const BUF_LEN: usize = (1 << 21) + 79;
-        let buf: Vec<u8> = iter::repeat_with(|| rng.gen()).take(BUF_LEN).collect();
-        let orig_checksum = {
-            let mut c = Checksum::new();
-            c.add_bytes(&buf);
-            c.checksum()
-        };
-
-        let (begin, end) = loop {
-            let begin = rng.gen::<usize>() % ((BUF_LEN - MIN_BYTES) / 2);
-            let end = begin
-                + MIN_BYTES
-                + (rng.gen::<usize>() % (((BUF_LEN - MIN_BYTES) / 2) + 1 - begin));
-            // update requires that begin is even and end is either even or the
-            // end of the input
-            if begin % 2 == 0 && (end % 2 == 0 || end == BUF_LEN) {
-                break (begin, end);
-            }
-        };
-
-        let mut new_buf: Vec<u8> = buf.to_vec();
-
-        for i in begin..end {
-            new_buf[i] = rng.gen();
-        }
-
-        let from_update = update(orig_checksum, &buf[begin..end], &new_buf[begin..end]);
-        let from_scratch = {
-            let mut c = Checksum::new();
-            c.add_bytes(&new_buf);
-            c.checksum()
-        };
-        assert_eq!(from_scratch, from_update);
     }
 
     #[test]
