@@ -618,7 +618,6 @@ pub(crate) mod mld_router_report {
     pub(crate) const SRC_IP: Ipv6Addr = Ipv6Addr::new([0; 16]);
     pub(crate) const DST_IP: Ipv6Addr =
         Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
-
 }
 
 pub(crate) mod mld_router_done {

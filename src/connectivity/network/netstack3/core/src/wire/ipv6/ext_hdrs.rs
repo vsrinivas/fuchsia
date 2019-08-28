@@ -220,7 +220,7 @@ impl Ipv6ExtensionHeaderImpl {
         // 4 bytes worth of data we need to look at.
         let (next_header, hdr_ext_len) = Self::get_next_hdr_and_len(data, context)?;
         let routing_data =
-            data.take_front(2).ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;;
+            data.take_front(2).ok_or_else(|| Ipv6ExtensionHeaderParsingError::BufferExhausted)?;
         let routing_type = routing_data[0];
         let segments_left = routing_data[1];
 
@@ -2150,5 +2150,4 @@ mod tests {
             assert_eq!(&buf[base..base + 4], &[5, 2, 0, 0]);
         }
     }
-
 }

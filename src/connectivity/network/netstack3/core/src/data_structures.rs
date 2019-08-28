@@ -608,7 +608,6 @@ pub(crate) mod id_map {
             }
             assert_eq!(map.data, vec![Some(4), Some(10), Some(5), Some(7), Some(0)]);
         }
-
     }
 }
 
@@ -875,7 +874,5 @@ pub mod id_map_collection {
             assert_eq!(*t.get(&KEY_B).unwrap(), 5);
             assert_eq!(*t.get(&KEY_C).unwrap(), 7);
         }
-
     }
-
 }

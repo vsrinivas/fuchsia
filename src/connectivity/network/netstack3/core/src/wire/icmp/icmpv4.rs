@@ -389,5 +389,4 @@ mod tests {
             assert_eq!(icmp.original_packet_body(), ORIGIN_DATA);
         });
     }
-
 }
