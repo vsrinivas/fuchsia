@@ -50,12 +50,16 @@ async fn main() -> Result<(), Error> {
         fx_log_err!("while updating the target channel: {}", e);
     }
 
-    let channel_notifier =
-        channel::CurrentChannelNotifier::new(connect::ServiceConnector, "/misc/ota");
-    let channel_fut = channel_notifier.run();
+    let (current_channel_manager, current_channel_notifier) =
+        channel::build_current_channel_manager_and_notifier(
+            connect::ServiceConnector,
+            "/misc/ota",
+        )?;
+    let channel_fut = current_channel_notifier.run();
 
     let update_manager = Arc::new(RealUpdateManager::new(
         target_channel_manager,
+        current_channel_manager,
         inspector.root().create_child("update-manager"),
     ));
     let info_handler = InfoHandler::default();

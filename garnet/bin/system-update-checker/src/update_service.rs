@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::apply::Initiator;
-use crate::channel::TargetChannelManager;
+use crate::channel::{CurrentChannelManager, TargetChannelManager};
 use crate::connect::ServiceConnector;
 use crate::update_manager::{
-    RealUpdateApplier, RealUpdateChecker, TargetChannelUpdater, UpdateApplier, UpdateChecker,
-    UpdateManager,
+    CurrentChannelUpdater, RealUpdateApplier, RealUpdateChecker, TargetChannelUpdater,
+    UpdateApplier, UpdateChecker, UpdateManager,
 };
 use crate::update_monitor::{State, StateChangeCallback};
 use failure::{bail, Error, ResultExt};
@@ -20,28 +20,36 @@ use futures::prelude::*;
 use std::sync::Arc;
 
 pub type RealTargetChannelUpdater = TargetChannelManager<ServiceConnector>;
-pub type RealUpdateService =
-    UpdateService<RealTargetChannelUpdater, RealUpdateChecker, RealUpdateApplier>;
+pub type RealCurrentChannelUpdater = CurrentChannelManager;
+pub type RealUpdateService = UpdateService<
+    RealTargetChannelUpdater,
+    RealCurrentChannelUpdater,
+    RealUpdateChecker,
+    RealUpdateApplier,
+>;
 pub type RealStateChangeCallback = MonitorControlHandle;
 pub type RealUpdateManager = UpdateManager<
     RealTargetChannelUpdater,
+    RealCurrentChannelUpdater,
     RealUpdateChecker,
     RealUpdateApplier,
     RealStateChangeCallback,
 >;
 
-pub struct UpdateService<T, C, A>
+pub struct UpdateService<T, Ch, C, A>
 where
     T: TargetChannelUpdater,
+    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
 {
-    update_manager: Arc<UpdateManager<T, C, A, RealStateChangeCallback>>,
+    update_manager: Arc<UpdateManager<T, Ch, C, A, RealStateChangeCallback>>,
 }
 
-impl<T, C, A> Clone for UpdateService<T, C, A>
+impl<T, Ch, C, A> Clone for UpdateService<T, Ch, C, A>
 where
     T: TargetChannelUpdater,
+    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
 {
@@ -56,9 +64,10 @@ impl RealUpdateService {
     }
 }
 
-impl<T, C, A> UpdateService<T, C, A>
+impl<T, Ch, C, A> UpdateService<T, Ch, C, A>
 where
     T: TargetChannelUpdater,
+    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
 {
@@ -162,7 +171,8 @@ impl StateChangeCallback for MonitorControlHandle {
 mod tests {
     use super::*;
     use crate::update_manager::tests::{
-        BlockingUpdateChecker, FakeTargetChannelUpdater, FakeUpdateApplier, FakeUpdateChecker,
+        BlockingUpdateChecker, FakeCurrentChannelUpdater, FakeTargetChannelUpdater,
+        FakeUpdateApplier, FakeUpdateChecker,
     };
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_update::ManagerState;
@@ -184,20 +194,23 @@ mod tests {
         fidl_fuchsia_update::Options { initiator: Some(fidl_fuchsia_update::Initiator::User) }
     }
 
-    fn spawn_update_service<T, C, A>(
+    fn spawn_update_service<T, Ch, C, A>(
         channel_updater: T,
+        current_channel_updater: Ch,
         update_checker: C,
         update_applier: A,
-    ) -> (ManagerProxy, UpdateService<T, C, A>)
+    ) -> (ManagerProxy, UpdateService<T, Ch, C, A>)
     where
         T: TargetChannelUpdater,
+        Ch: CurrentChannelUpdater,
         C: UpdateChecker,
         A: UpdateApplier,
     {
-        let update_service = UpdateService::<T, C, A> {
+        let update_service = UpdateService::<T, Ch, C, A> {
             update_manager: Arc::new(
-                UpdateManager::<T, C, A, RealStateChangeCallback>::from_checker_and_applier(
+                UpdateManager::<T, Ch, C, A, RealStateChangeCallback>::from_checker_and_applier(
                     channel_updater,
+                    current_channel_updater,
                     update_checker,
                     update_applier,
                 ),
@@ -235,6 +248,7 @@ mod tests {
     async fn test_check_now_monitor_sees_on_state_events() {
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         )
@@ -259,6 +273,7 @@ mod tests {
     async fn test_add_monitor_sees_on_state_events() {
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         )
@@ -285,6 +300,7 @@ mod tests {
     async fn test_get_state() {
         let proxy = spawn_update_service(
             FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         )
@@ -300,6 +316,7 @@ mod tests {
     async fn test_multiple_clients_see_on_state_events() {
         let (proxy0, service) = spawn_update_service(
             FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
             FakeUpdateChecker::new_update_available(),
             FakeUpdateApplier::new_error(),
         );
@@ -346,6 +363,7 @@ mod tests {
         let fake_update_applier = FakeUpdateApplier::new_error();
         let (proxy0, service) = spawn_update_service(
             FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
             blocking_update_checker,
             fake_update_applier.clone(),
         );

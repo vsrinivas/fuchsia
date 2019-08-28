@@ -121,5 +121,4 @@ mod tests {
 
         assert_eq!(res.map_err(|e| e.to_string()), Ok("".into()));
     }
-
 }
