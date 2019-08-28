@@ -15,7 +15,7 @@
 
 namespace escher {
 
-static constexpr uint32_t kPoolSize = 100;
+static constexpr uint32_t kPoolSize = 20;
 
 TimestampProfiler::TimestampProfiler(vk::Device device, float timestamp_period)
     : device_(device), timestamp_period_(timestamp_period) {}
@@ -256,6 +256,7 @@ TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(impl::Comma
   info.queryType = vk::QueryType::eTimestamp;
   info.queryCount = kPoolSize;
   vk::QueryPool pool = ESCHER_CHECKED_VK_RESULT(device_.createQueryPool(info));
+  cmd_buf->vk().resetQueryPool(pool, 0, kPoolSize);
 
   QueryRange range;
   range.pool = pool;

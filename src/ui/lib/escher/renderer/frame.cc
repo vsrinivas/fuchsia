@@ -43,7 +43,7 @@ Frame::Frame(impl::FrameManager* manager, escher::CommandBuffer::Type requested_
       command_buffer_type_(requested_type),
       block_allocator_(std::move(allocator)),
       uniform_block_allocator_(std::move(uniform_buffer_pool)),
-      profiler_(escher()->supports_timer_queries()
+      profiler_(escher()->supports_timer_queries() && enable_gpu_logging
                     ? fxl::MakeRefCounted<TimestampProfiler>(escher()->vk_device(),
                                                              escher()->timestamp_period())
                     : TimestampProfilerPtr()) {
