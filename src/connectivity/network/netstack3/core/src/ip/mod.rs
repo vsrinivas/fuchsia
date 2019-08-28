@@ -45,7 +45,7 @@ use crate::ip::reassembly::{
     handle_reassembly_timer, process_fragment, reassemble_packet, FragmentCacheKey,
     FragmentProcessingState, IpLayerFragmentCache,
 };
-use crate::wire::icmp::{IcmpIpExt, Icmpv4ParameterProblem, Icmpv6ParameterProblem};
+use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
 use crate::wire::ipv6::Ipv6Packet;
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
@@ -1676,49 +1676,84 @@ impl<D: EventDispatcher> StateContext<(), Icmpv6State> for Context<D> {
     }
 }
 
-impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B>> IcmpContext<I, B> for Context<D> {
-    fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<I::Addr>) -> S>(
+impl<B: BufferMut, D: BufferDispatcher<B>> IcmpContext<Ipv4, B> for Context<D> {
+    fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S>(
         &mut self,
         device: Option<DeviceId>,
-        src_ip: SpecifiedAddr<I::Addr>,
-        dst_ip: SpecifiedAddr<I::Addr>,
+        src_ip: SpecifiedAddr<Ipv4Addr>,
+        dst_ip: SpecifiedAddr<Ipv4Addr>,
         get_body: F,
     ) -> Result<(), S> {
         trace!("send_icmp_reply({:?}, {}, {})", device, src_ip, dst_ip);
         self.increment_counter("send_icmp_reply");
 
-        #[specialize_ip_address]
-        fn send_ip_packet<
-            B: BufferMut,
-            D: BufferDispatcher<B>,
-            A: IpAddress,
-            S: Serializer<Buffer = B>,
-            F: FnOnce(SpecifiedAddr<A>) -> S,
-        >(
-            ctx: &mut Context<D>,
-            dst_ip: SpecifiedAddr<A>,
-            proto: IpProto,
-            get_body: F,
-        ) -> Result<(), S> {
-            #[ipv4addr]
-            return send_ipv4_packet(ctx, dst_ip, proto, get_body);
-            #[ipv6addr]
-            return send_ipv6_packet(ctx, dst_ip, proto, get_body);
-        }
-
         // TODO(joshlf): Use `dst_ip` for anything?
-        send_ip_packet(self, src_ip, I::IP_PROTO, get_body)
+        send_ipv4_packet(self, src_ip, IpProto::Icmp, get_body)
     }
 
     fn send_icmp_error_message<
         S: Serializer<Buffer = B>,
-        F: FnOnce(SpecifiedAddr<I::Addr>) -> S,
+        F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S,
     >(
         &mut self,
         device: DeviceId,
         frame_dst: FrameDestination,
-        src_ip: SpecifiedAddr<I::Addr>,
-        dst_ip: I::Addr,
+        src_ip: SpecifiedAddr<Ipv4Addr>,
+        dst_ip: Ipv4Addr,
+        get_body: F,
+        ip_mtu: Option<u32>,
+        _allow_dst_multicast: bool,
+    ) -> Result<(), S> {
+        trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
+        self.increment_counter("send_icmp_error_message");
+
+        if !crate::ip::icmp::should_send_icmpv4_error(frame_dst, src_ip, dst_ip) {
+            return Ok(());
+        }
+
+        if let Some((device, local_ip, next_hop)) =
+            get_icmp_error_message_destination(self, device, src_ip, dst_ip)
+        {
+            send_ip_packet_from_device(
+                self,
+                device,
+                local_ip.into_addr(),
+                src_ip.into_addr(),
+                next_hop,
+                IpProto::Icmp,
+                get_body(local_ip),
+                ip_mtu,
+            )?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<B: BufferMut, D: BufferDispatcher<B>> IcmpContext<Ipv6, B> for Context<D> {
+    fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<Ipv6Addr>) -> S>(
+        &mut self,
+        device: Option<DeviceId>,
+        src_ip: SpecifiedAddr<Ipv6Addr>,
+        dst_ip: SpecifiedAddr<Ipv6Addr>,
+        get_body: F,
+    ) -> Result<(), S> {
+        trace!("send_icmp_reply({:?}, {}, {})", device, src_ip, dst_ip);
+        self.increment_counter("send_icmp_reply");
+
+        // TODO(joshlf): Use `dst_ip` for anything?
+        send_ipv6_packet(self, src_ip, IpProto::Icmpv6, get_body)
+    }
+
+    fn send_icmp_error_message<
+        S: Serializer<Buffer = B>,
+        F: FnOnce(SpecifiedAddr<Ipv6Addr>) -> S,
+    >(
+        &mut self,
+        device: DeviceId,
+        frame_dst: FrameDestination,
+        src_ip: SpecifiedAddr<Ipv6Addr>,
+        dst_ip: Ipv6Addr,
         get_body: F,
         ip_mtu: Option<u32>,
         allow_dst_multicast: bool,
@@ -1726,72 +1761,82 @@ impl<I: IcmpIpExt, B: BufferMut, D: BufferDispatcher<B>> IcmpContext<I, B> for C
         trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
         self.increment_counter("send_icmp_error_message");
 
-        // TODO(joshlf): Come up with rules for when to send ICMP responses.
-        // E.g., should we send a response over a different device than the
-        // device that the original packet ingressed over? We'll probably want
-        // to consult BCP 38 (aka RFC 2827) and RFC 3704.
-
-        #[specialize_ip_address]
-        fn should_send_icmp_error<A: IpAddress>(
-            frame_dst: FrameDestination,
-            src_ip: SpecifiedAddr<A>,
-            dst_ip: A,
-            allow_dst_multicast: bool,
-        ) -> bool {
-            #[ipv4addr]
-            return crate::ip::icmp::should_send_icmpv4_error(frame_dst, src_ip, dst_ip);
-            #[ipv6addr]
-            return crate::ip::icmp::should_send_icmpv6_error(
-                frame_dst,
-                src_ip,
-                dst_ip,
-                allow_dst_multicast,
-            );
-        }
-
-        if !should_send_icmp_error(frame_dst, src_ip, dst_ip, allow_dst_multicast) {
+        if !crate::ip::icmp::should_send_icmpv6_error(
+            frame_dst,
+            src_ip,
+            dst_ip,
+            allow_dst_multicast,
+        ) {
             return Ok(());
         }
 
-        if let Some(route) = lookup_route(self, src_ip) {
-            if let Some(local_ip_subnet) =
-                crate::device::get_ip_addr_subnet(self.state(), route.device)
-            {
-                let local_ip: SpecifiedAddr<I::Addr> = local_ip_subnet.into_addr();
-
-                send_ip_packet_from_device(
-                    self,
-                    route.device,
-                    local_ip.into_addr(),
-                    src_ip.into_addr(),
-                    route.next_hop,
-                    I::IP_PROTO,
-                    get_body(local_ip),
-                    ip_mtu,
-                )?;
-            } else {
-                log_unimplemented!(
-                    (),
-                    "Sending ICMP over unnumbered device {} is unimplemented",
-                    route.device
-                );
-
-                // TODO(joshlf): We need a general-purpose mechanism for
-                // choosing a source address in cases where we're a) acting as a
-                // router (and thus sending packets with our own source address,
-                // but not as a result of any local application behavior) and,
-                // b) sending over an unnumbered device (one without any
-                // configured IP address). ICMP is the notable use case. Most
-                // likely, we will want to pick the IP address of a different
-                // local device. See for an explanation of why we might have
-                // this setup:
-                // https://www.cisco.com/c/en/us/support/docs/ip/hot-standby-router-protocol-hsrp/13786-20.html#unnumbered_iface
-            }
-        } else {
-            debug!("Can't send ICMP response to {}: no route to host", src_ip);
+        if let Some((device, local_ip, next_hop)) =
+            get_icmp_error_message_destination(self, device, src_ip, dst_ip)
+        {
+            send_ip_packet_from_device(
+                self,
+                device,
+                local_ip.into_addr(),
+                src_ip.into_addr(),
+                next_hop,
+                IpProto::Icmpv6,
+                get_body(local_ip),
+                ip_mtu,
+            )?;
         }
 
         Ok(())
+    }
+}
+
+/// Compute the device, source address, and next hop address for sending an ICMP
+/// error message.
+///
+/// `device`, `src_ip`, and `dst_ip` are the device, source IP, and destination
+/// IP of the original packet _being responded to_. If `Some(d, local_ip,
+/// next_hop)` is returned, then a packet should be serialized with the source
+/// address `local_ip` and the destination address `src_ip` and sent to the next
+/// hop address `next_hop` on device `d`.
+///
+/// If `None` is returned, then an error message should not be sent. Note that
+/// this does not call `crate::ip::icmp::should_send_icmpv{4,6}_error`; it is
+/// the caller's responsibility to call that function and not send an error
+/// message if it returns false.
+fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
+    ctx: &Context<D>,
+    device: DeviceId,
+    src_ip: SpecifiedAddr<A>,
+    dst_ip: A,
+) -> Option<(DeviceId, SpecifiedAddr<A>, SpecifiedAddr<A>)> {
+    // TODO(joshlf): Come up with rules for when to send ICMP error messages.
+    // E.g., should we send a response over a different device than the device
+    // that the original packet ingressed over? We'll probably want to consult
+    // BCP 38 (aka RFC 2827) and RFC 3704.
+
+    if let Some(route) = lookup_route(ctx, src_ip) {
+        if let Some(local_ip) =
+            crate::device::get_ip_addr_subnet(ctx.state(), route.device).map(AddrSubnet::into_addr)
+        {
+            Some((route.device, local_ip, route.next_hop))
+        } else {
+            // TODO(joshlf): We need a general-purpose mechanism for choosing a
+            // source address in cases where we're a) acting as a router (and
+            // thus sending packets with our own source address, but not as a
+            // result of any local application behavior) and, b) sending over an
+            // unnumbered device (one without any configured IP address). ICMP
+            // is the notable use case. Most likely, we will want to pick the IP
+            // address of a different local device. See for an explanation of
+            // why we might have this setup:
+            // https://www.cisco.com/c/en/us/support/docs/ip/hot-standby-router-protocol-hsrp/13786-20.html#unnumbered_iface
+            log_unimplemented!(
+                None,
+                "Sending ICMP over unnumbered device {} is unimplemented",
+                route.device
+            )
+        }
+    } else {
+        debug!("Can't send ICMP response to {}: no route to host", src_ip);
+        None
     }
 }
 
