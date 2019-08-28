@@ -35,12 +35,18 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:timebomb",
     "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }
 
 package("omaha_client") {
+  deprecated_misc_storage = "//build"
+
   deps = [
     ":bin",
   ]

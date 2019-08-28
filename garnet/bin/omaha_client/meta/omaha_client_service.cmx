@@ -6,6 +6,7 @@
         "features": [
             "build-info",
             "config-data",
+            "deprecated-misc-storage",
             "root-ssl-certificates"
         ],
         "services": [

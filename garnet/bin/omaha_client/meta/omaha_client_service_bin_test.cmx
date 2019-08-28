@@ -12,7 +12,8 @@
     },
     "sandbox": {
         "features": [
-            "config-data"
+            "config-data",
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.logger.LogSink",
