@@ -4,7 +4,9 @@
 
 #include <stdio.h>
 #include <zircon/status.h>
+
 #include <ddk/debug.h>
+
 #include "../device.h"
 #include "gtest/gtest.h"
 
@@ -30,6 +32,7 @@ TEST_F(TestDeviceOps, AddRemoveDevs) {
   zx_status_t last_sts;
   zx_device_t *my_dev, *dev, *parent;
   device_add_args_t *temp;
+  wlan::simulation::FakeDevMgr DevMgr;
 
   printf("Allocate mem for parent dev context\n");
   // Allocate memory for parent
@@ -39,29 +42,29 @@ TEST_F(TestDeviceOps, AddRemoveDevs) {
   printf("Adding a device\n");
   // Add the first device
   dev_args[0].name = "dev1";
-  last_sts = wlan_sim_device_add(my_dev, &dev_args[0], &ctx[0]);
+  last_sts = DevMgr.wlan_sim_device_add(my_dev, &dev_args[0], &ctx[0]);
   EXPECT_EQ(last_sts, ZX_OK);
   num_devices++;
 
   printf("Adding another device\n");
   // Add another device
   dev_args[1].name = "dev2";
-  last_sts = wlan_sim_device_add(my_dev, &dev_args[1], &ctx[1]);
+  last_sts = DevMgr.wlan_sim_device_add(my_dev, &dev_args[1], &ctx[1]);
   EXPECT_EQ(last_sts, ZX_OK);
   num_devices++;
 
   printf("Check if # devs is 2\n");
   // Check number of devices is TWO
-  num_devs = wlan_sim_device_get_num_devices();
+  num_devs = DevMgr.wlan_sim_device_get_num_devices();
   EXPECT_EQ(num_devices, num_devs);
 
   printf("Iterate through the list\n");
   // Iterate through the dev list
-  dev = wlan_sim_device_get_first(&parent, &temp);
+  dev = DevMgr.wlan_sim_device_get_first(&parent, &temp);
   EXPECT_NE(dev, nullptr);
   EXPECT_EQ(parent, my_dev);
   while (dev != nullptr) {
-    dev = wlan_sim_device_get_next(&parent, &temp);
+    dev = DevMgr.wlan_sim_device_get_next(&parent, &temp);
     if (dev != nullptr) {
       EXPECT_EQ(parent, my_dev);
     }
@@ -70,20 +73,20 @@ TEST_F(TestDeviceOps, AddRemoveDevs) {
   printf("Remove the devs\n");
   // Remove the devices (deliberately not in the add order)
 
-  last_sts = wlan_sim_device_remove(ctx[1]);
+  last_sts = DevMgr.wlan_sim_device_remove(ctx[1]);
   EXPECT_EQ(last_sts, ZX_OK);
 
-  last_sts = wlan_sim_device_remove(ctx[0]);
+  last_sts = DevMgr.wlan_sim_device_remove(ctx[0]);
   EXPECT_EQ(last_sts, ZX_OK);
 
   printf("Check if # devs is 0\n");
   // Check if num devices in the list is zero
-  num_devices = wlan_sim_device_get_num_devices();
+  num_devices = DevMgr.wlan_sim_device_get_num_devices();
   EXPECT_EQ(num_devices, 0u);
 
   printf("Remove a non-existent dev\n");
   // Negative test...attempt to remove from empty list
-  last_sts = wlan_sim_device_remove(ctx[0]);
+  last_sts = DevMgr.wlan_sim_device_remove(ctx[0]);
   EXPECT_NE(last_sts, ZX_OK);
   free(my_dev);
 }

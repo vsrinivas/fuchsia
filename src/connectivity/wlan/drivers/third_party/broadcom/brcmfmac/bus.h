@@ -64,7 +64,8 @@ struct brcmf_bus_dcmd {
  * @get_memdump: obtain device memory dump in provided buffer.
  * @get_fwname: obtain firmware name.
  * @get_bootloader_macaddr: obtain mac address from bootloader, if supported.
- * @device_add: register device.
+ * @device_add: register device with devmgr.
+ * @device_remove: deregister device with devmgr.
  *
  * This structure provides an abstract interface towards the
  * bus specific driver. For control messages to common driver
@@ -87,7 +88,9 @@ struct brcmf_bus_ops {
   zx_status_t (*get_memdump)(brcmf_bus* bus, void* data, size_t len);
   zx_status_t (*get_fwname)(brcmf_bus* bus, uint chip, uint chiprev, unsigned char* fw_name);
   zx_status_t (*get_bootloader_macaddr)(brcmf_bus* bus, uint8_t* mac_addr);
-  zx_status_t (*device_add)(zx_device_t* parent, device_add_args_t* args, zx_device_t** out);
+  zx_status_t (*device_add)(brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args,
+                            zx_device_t** out);
+  zx_status_t (*device_remove)(brcmf_bus* bus, zx_device_t* dev);
 };
 
 /**
@@ -205,7 +208,11 @@ static inline zx_status_t brcmf_bus_get_bootloader_macaddr(struct brcmf_bus* bus
 
 static inline zx_status_t brcmf_bus_device_add(struct brcmf_bus* bus, zx_device_t* parent,
                                                device_add_args_t* args, zx_device_t** out) {
-  return bus->ops->device_add(parent, args, out);
+  return bus->ops->device_add(bus, parent, args, out);
+}
+
+static inline zx_status_t brcmf_bus_device_remove(struct brcmf_bus* bus, zx_device_t* dev) {
+  return bus->ops->device_remove(bus, dev);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_

@@ -14,6 +14,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_DEVICE_H_
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
@@ -23,11 +24,14 @@ class SimDevice : public Device {
  public:
   // Static factory function for SimDevice instances.
   static zx_status_t Create(zx_device_t* parent_device,
+                            const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
                             const std::shared_ptr<simulation::Environment>& env,
                             std::unique_ptr<SimDevice>* device_out);
 
-  explicit SimDevice(zx_device_t* phy_device, const std::shared_ptr<simulation::Environment>& env)
-      : phy_device_(phy_device), sim_environ_(env) {}
+  explicit SimDevice(zx_device_t* phy_device,
+                     const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
+                     const std::shared_ptr<simulation::Environment>& env)
+      : phy_device_(phy_device), fake_dev_mgr_(dev_mgr), sim_environ_(env) {}
 
   SimDevice(const SimDevice& device) = delete;
   SimDevice& operator=(const SimDevice& other) = delete;
@@ -41,6 +45,7 @@ class SimDevice : public Device {
  private:
   std::unique_ptr<brcmf_bus> brcmf_bus_;
   zx_device_t* phy_device_;
+  std::shared_ptr<simulation::FakeDevMgr> fake_dev_mgr_;
   std::shared_ptr<simulation::Environment> sim_environ_;
 };
 

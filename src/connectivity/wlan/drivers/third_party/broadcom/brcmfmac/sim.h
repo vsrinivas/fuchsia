@@ -19,15 +19,19 @@
 
 #include <memory>
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
+
 #include "bus.h"
 #include "sim-fw/sim_fw.h"
 
 struct brcmf_simdev {
   std::unique_ptr<::wlan::brcmfmac::SimFirmware> sim_fw;
+  ::wlan::simulation::FakeDevMgr* dev_mgr;
   struct brcmf_mp_device* settings;
 };
 
 zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
+                               ::wlan::simulation::FakeDevMgr* dev_mgr,
                                ::wlan::simulation::Environment* env);
 void brcmf_sim_exit(brcmf_bus* bus);
 

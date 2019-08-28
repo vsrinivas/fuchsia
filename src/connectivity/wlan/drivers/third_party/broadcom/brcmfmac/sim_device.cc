@@ -25,6 +25,7 @@ namespace brcmfmac {
 
 // static
 zx_status_t SimDevice::Create(zx_device_t* parent_device,
+                              const std::shared_ptr<simulation::FakeDevMgr>& dev_mgr,
                               const std::shared_ptr<simulation::Environment>& env,
                               std::unique_ptr<SimDevice>* device_out) {
   zx_status_t status = ZX_OK;
@@ -36,11 +37,11 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device,
       // The tests don't access any of the other fields yet
   };
 
-  if ((status = wlan_sim_device_add(parent_device, &add_args, &phy_device)) != ZX_OK) {
+  if ((status = dev_mgr->wlan_sim_device_add(parent_device, &add_args, &phy_device)) != ZX_OK) {
     return status;
   }
 
-  *device_out = std::make_unique<SimDevice>(phy_device, env);
+  *device_out = std::make_unique<SimDevice>(phy_device, dev_mgr, env);
   auto bus_register_fn =
       std::bind(&SimDevice::BusRegister, device_out->get(), std::placeholders::_1);
   return (*device_out)
@@ -51,7 +52,7 @@ zx_status_t SimDevice::BusRegister(brcmf_pub* drvr) {
   zx_status_t status;
   std::unique_ptr<brcmf_bus> bus;
 
-  if ((status = brcmf_sim_register(drvr, &bus, sim_environ_.get())) != ZX_OK) {
+  if ((status = brcmf_sim_register(drvr, &bus, fake_dev_mgr_.get(), sim_environ_.get())) != ZX_OK) {
     return status;
   }
 
@@ -61,8 +62,8 @@ zx_status_t SimDevice::BusRegister(brcmf_pub* drvr) {
 
 SimDevice::~SimDevice() {
   DisableDispatcher();
-  if (phy_device_ != nullptr) {
-    wlan_sim_device_remove(phy_device_);
+  if (fake_dev_mgr_ != nullptr && phy_device_ != nullptr) {
+    fake_dev_mgr_->wlan_sim_device_remove(phy_device_);
   }
   if (brcmf_bus_) {
     brcmf_sim_exit(brcmf_bus_.get());

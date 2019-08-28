@@ -595,7 +595,8 @@ static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
   brcmf_free_net_device_vif(ndev);
   brcmf_free_net_device(ndev);
   if (drvr->phy_zxdev != NULL) {
-    device_remove(drvr->phy_zxdev);
+    brcmf_bus* const bus = drvr->bus_if;
+    brcmf_bus_device_remove(bus, drvr->phy_zxdev);
     drvr->phy_zxdev = NULL;
   }
 }

@@ -50,7 +50,13 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
         [](brcmf_bus* bus, uint8_t* mac_addr) {
           return BUS_OP(bus)->BusGetBootloaderMacAddr(mac_addr);
         },
-    .device_add = wlan_sim_device_add};
+    .device_add =
+        [](brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {
+          return bus->bus_priv.sim->dev_mgr->wlan_sim_device_add(parent, args, out);
+        },
+    .device_remove = [](brcmf_bus* bus, zx_device_t* dev) {
+                        return bus->bus_priv.sim->dev_mgr->wlan_sim_device_remove(dev); },
+};
 #undef BUS_OP
 
 // Get device-specific information
@@ -72,6 +78,7 @@ zx_status_t brcmf_sim_probe(struct brcmf_bus* bus) {
 
 // Allocate necessary memory and initialize simulator-specific structures
 zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_bus,
+                               ::wlan::simulation::FakeDevMgr* dev_mgr,
                                ::wlan::simulation::Environment* env) {
   zx_status_t status = ZX_OK;
   auto simdev = std::make_unique<brcmf_simdev>();
@@ -79,6 +86,7 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
 
   // Initialize inter-structure pointers
   simdev->sim_fw = std::make_unique<::wlan::brcmfmac::SimFirmware>(env);
+  simdev->dev_mgr = dev_mgr;
   bus_if->bus_priv.sim = simdev.get();
 
   BRCMF_DBG(SIM, "Registering simulator target\n");

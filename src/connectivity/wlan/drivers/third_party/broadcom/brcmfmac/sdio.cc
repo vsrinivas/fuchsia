@@ -3620,7 +3620,8 @@ static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .get_memdump = brcmf_sdio_bus_get_memdump,
     .get_fwname = brcmf_sdio_get_fwname,
     .get_bootloader_macaddr = brcmf_sdio_get_bootloader_macaddr,
-    .device_add = device_add,
+    .device_add = [](struct brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args,
+                     zx_device_t** out) { return device_add(parent, args, out); },
 };
 
 static void brcmf_sdio_firmware_callback(brcmf_pub* drvr, zx_status_t err,

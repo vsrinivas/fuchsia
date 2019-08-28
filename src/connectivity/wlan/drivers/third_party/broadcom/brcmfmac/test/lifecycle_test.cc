@@ -19,6 +19,7 @@
 #include <ddk/device.h>
 #include <gtest/gtest.h>
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-device/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim_device.h"
@@ -29,9 +30,10 @@ namespace {
 
 TEST(LifecycleTest, StartStop) {
   auto env = std::make_shared<simulation::Environment>();
+  auto dev_mgr = std::make_shared<simulation::FakeDevMgr>();
 
   std::unique_ptr<SimDevice> device;
-  zx_status_t status = SimDevice::Create(nullptr, env, &device);
+  zx_status_t status = SimDevice::Create(nullptr, dev_mgr, env, &device);
   ASSERT_EQ(status, ZX_OK);
 }
 
