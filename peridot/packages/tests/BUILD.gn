@@ -54,7 +54,6 @@ group("all") {
 group("maxwell_unittests") {
   testonly = true
   public_deps = [
-    "//src/modular/bin/context_engine:context_engine_unittests",
     "//src/modular/bin/module_resolver:module_resolver_unittests",
     "//src/stories/bin/discovermgr:discovermgr_tests",
   ]

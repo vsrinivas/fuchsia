@@ -30,7 +30,6 @@ struct ModuleContextInfo {
   const ComponentContextInfo component_context_info;
   StoryControllerImpl* const story_controller_impl;
   StoryVisibilitySystem* const story_visibility_system;
-  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider;
   fuchsia::app::discover::DiscoverRegistry* const discover_registry;
 };
 
@@ -119,8 +118,6 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   StoryVisibilitySystem* const story_visibility_system_;  // Not owned.
 
   ComponentContextImpl component_context_impl_;
-
-  fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;  // Not owned
 
   fuchsia::app::discover::DiscoverRegistry* const discover_registry_;  // Not owned
 

@@ -26,13 +26,6 @@ fidl("fuchsia.modular") {
     "component/component_context.fidl",
     "component/message_queue.fidl",
     "config/config.fidl",
-    "context/context_engine.fidl",
-    "context/context_reader.fidl",
-    "context/context_writer.fidl",
-    "context/debug.fidl",
-    "context/metadata.fidl",
-    "context/value.fidl",
-    "context/value_type.fidl",
     "entity/entity.fidl",
     "entity/entity_provider.fidl",
     "entity/entity_reference_factory.fidl",
@@ -64,8 +57,6 @@ fidl("fuchsia.modular") {
     "story/story_visibility_state.fidl",
     "surface/container.fidl",
     "surface/surface.fidl",
-    "user_intelligence/intelligence_services.fidl",
-    "user_intelligence/scope.fidl",
     "user_intelligence/user_intelligence_provider.fidl",
   ]
 

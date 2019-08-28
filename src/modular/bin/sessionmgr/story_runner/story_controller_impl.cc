@@ -185,7 +185,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     auto service_list = fuchsia::sys::ServiceList::New();
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
-    service_list->names.push_back(fuchsia::modular::IntelligenceServices::Name_);
     service_list->names.push_back(fuchsia::app::discover::ModuleOutputWriter::Name_);
     service_list->names.push_back(fuchsia::app::discover::StoryModule::Name_);
     service_list->provider = std::move(module_context_provider);
@@ -222,7 +221,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_->story_provider_impl_->component_context_info(),
         story_controller_impl_,
         story_controller_impl_->story_visibility_system_,
-        story_controller_impl_->story_provider_impl_->user_intelligence_provider(),
         story_controller_impl_->story_provider_impl_->discover_registry(),
     };
 
@@ -1001,12 +999,6 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
       story_visibility_system_(story_visibility_system),
       story_shell_context_impl_{story_id_, story_provider_impl, this},
       weak_factory_(this) {
-  auto story_scope = fuchsia::modular::StoryScope::New();
-  story_scope->story_id = story_id_;
-  auto scope = fuchsia::modular::ComponentScope::New();
-  scope->set_story_scope(std::move(*story_scope));
-  story_provider_impl_->user_intelligence_provider()->GetComponentIntelligenceServices(
-      std::move(*scope), intelligence_services_.NewRequest());
   story_storage_->set_on_module_data_updated([this](fuchsia::modular::ModuleData module_data) {
     OnModuleDataUpdated(std::move(module_data));
   });
@@ -1388,16 +1380,11 @@ void StoryControllerImpl::RemoveModuleFromStory(const std::vector<std::string>& 
 void StoryControllerImpl::InitStoryEnvironment() {
   FXL_DCHECK(!story_environment_) << "Story scope already running for story_id = " << story_id_;
 
-  static const auto* const kEnvServices =
-      new std::vector<std::string>{fuchsia::modular::ContextWriter::Name_};
+  static const auto* const kEnvServices = new std::vector<std::string>{};
   story_environment_ =
       std::make_unique<Environment>(story_provider_impl_->user_environment(),
                                     kStoryEnvironmentLabelPrefix + story_id_, *kEnvServices,
                                     /* kill_on_oom = */ false);
-  story_environment_->AddService<fuchsia::modular::ContextWriter>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
-        intelligence_services_->GetContextWriter(std::move(request));
-      });
 }
 
 void StoryControllerImpl::DestroyStoryEnvironment() { story_environment_.reset(); }

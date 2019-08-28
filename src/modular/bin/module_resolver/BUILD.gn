@@ -51,7 +51,6 @@ source_set("local_module_resolver") {
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl",
     "//src/modular/lib/async/cpp:operation",
-    "//src/modular/lib/context/cpp:context_helper",
     "//src/modular/lib/entity/cpp:json",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/module_manifest_source",

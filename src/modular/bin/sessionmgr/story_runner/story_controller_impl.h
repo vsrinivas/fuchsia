@@ -306,10 +306,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Used to load snapshots.
   fuchsia::scenic::snapshot::LoaderPtr snapshot_loader_;
 
-  // A collection of services, scoped to this Story, for use by intelligent
-  // Modules.
-  fuchsia::modular::IntelligenceServicesPtr intelligence_services_;
-
   // Asynchronous operations are sequenced in a queue.
   OperationQueue operation_queue_;
 

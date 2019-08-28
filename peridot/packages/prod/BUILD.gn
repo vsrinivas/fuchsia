@@ -21,7 +21,6 @@ group("all") {
     "//peridot/packages/prod:discover",
     "//peridot/packages/prod:integration_testing",
     "//peridot/packages/prod:ledger",
-    "//peridot/packages/prod:maxwell",
     "//peridot/packages/prod:modular",
     "//peridot/packages/prod:module_resolver",
     "//peridot/packages/prod:sessionctl",
@@ -80,13 +79,6 @@ group("integration_testing") {
     "//peridot/packages/testing:modular_test_harness",
     "//src/modular/bin/sessionmgr:dev_session_shell",
     "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
-  ]
-}
-
-group("maxwell") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/context_engine",
   ]
 }
 

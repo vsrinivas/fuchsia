@@ -25,7 +25,6 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
       sys::ComponentContext* context,
-      fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine_handle,
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
           story_provider_connector,
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
@@ -34,10 +33,6 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
           puppet_master_connector);
 
   ~UserIntelligenceProviderImpl() override = default;
-
-  void GetComponentIntelligenceServices(
-      fuchsia::modular::ComponentScope scope,
-      fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) override;
 
   void GetSpeechToText(fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) override;
 
@@ -85,13 +80,7 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
 
   void StartSessionAgent(const std::string& url);
 
-  fuchsia::modular::ContextEnginePtr context_engine_;
-
   std::map<std::string, SessionAgentData> session_agents_;
-
-  fidl::BindingSet<fuchsia::modular::IntelligenceServices,
-                   std::unique_ptr<fuchsia::modular::IntelligenceServices>>
-      intelligence_services_bindings_;
 
   fidl::InterfacePtr<fuchsia::modular::ComponentContext> component_context_;
   fidl::InterfacePtr<fuchsia::modular::StoryProvider> story_provider_;

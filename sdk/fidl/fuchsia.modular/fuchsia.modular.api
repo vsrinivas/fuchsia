@@ -9,13 +9,6 @@
   "fidl/fuchsia.modular/component/component_context.fidl": "289112328c5434422c94da9db9c73e21",
   "fidl/fuchsia.modular/component/message_queue.fidl": "f41a32e78e94fee4fd8f1493d506743b",
   "fidl/fuchsia.modular/config/config.fidl": "030ee886d159c111ea334a90d5cbec54",
-  "fidl/fuchsia.modular/context/context_engine.fidl": "4a79be53ad64763fd95aef895c622631",
-  "fidl/fuchsia.modular/context/context_reader.fidl": "7152f99b3be9e709bf4a98a0f879c65b",
-  "fidl/fuchsia.modular/context/context_writer.fidl": "71c0b7b1806e70d35775733743d81bec",
-  "fidl/fuchsia.modular/context/debug.fidl": "6d6e5aff736f4c8920a81f7fb75d3095",
-  "fidl/fuchsia.modular/context/metadata.fidl": "2b19bd4008456aa82fa309074a78b6fc",
-  "fidl/fuchsia.modular/context/value.fidl": "9d6f69e251b8c312f097de550a6c010e",
-  "fidl/fuchsia.modular/context/value_type.fidl": "333bbe609b6269830c3e0c782d233970",
   "fidl/fuchsia.modular/entity/entity.fidl": "8e80d4c30870b4a2a8995afd731d9cae",
   "fidl/fuchsia.modular/entity/entity_provider.fidl": "7013d9d2e03ec4b77d15e2801b04d07b",
   "fidl/fuchsia.modular/entity/entity_reference_factory.fidl": "185bd98fb2216ed97efc9950bbf409ca",
@@ -47,7 +40,5 @@
   "fidl/fuchsia.modular/story/story_visibility_state.fidl": "843f5de3bd99588b32e94eb0cda2242c",
   "fidl/fuchsia.modular/surface/container.fidl": "9032770de8d2e49d898a07ae0c929d41",
   "fidl/fuchsia.modular/surface/surface.fidl": "ed54e678c1a007dcfdbc21249116c3a1",
-  "fidl/fuchsia.modular/user_intelligence/intelligence_services.fidl": "6bed9efb654facae5c2b57dffbc5e23c",
-  "fidl/fuchsia.modular/user_intelligence/scope.fidl": "b1e2e4f1d76636e1f3733a424917b604",
-  "fidl/fuchsia.modular/user_intelligence/user_intelligence_provider.fidl": "edba1cd91dd311afd1027f08f329c56c"
+  "fidl/fuchsia.modular/user_intelligence/user_intelligence_provider.fidl": "ae41cbbb878202ed952f39b38a1ddce1"
 }

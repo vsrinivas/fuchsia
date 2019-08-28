@@ -210,7 +210,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   fuchsia::modular::auth::AccountPtr account_;
 
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> context_engine_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> discovermgr_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> module_resolver_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
@@ -231,13 +230,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<SessionCtl> session_ctl_;
 
-  // Services we provide to |context_engine_app_|.
-  component::ServiceProviderImpl context_engine_ns_services_;
-
   // These component contexts are supplied to:
   // - the user intelligence provider so it can run agents and create message
   //   queues
-  // - |context_engine_app_| so it can resolve entity references
   // - |modular resolver_service_| so it can resolve entity references
   std::unique_ptr<
       fidl::BindingSet<fuchsia::modular::ComponentContext, std::unique_ptr<ComponentContextImpl>>>

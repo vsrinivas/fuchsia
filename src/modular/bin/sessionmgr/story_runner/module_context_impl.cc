@@ -26,7 +26,6 @@ ModuleContextImpl::ModuleContextImpl(
           info.component_context_info,
           EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId().value_or("")),
           EncodeModulePath(module_data_->module_path), module_data_->module_url),
-      user_intelligence_provider_(info.user_intelligence_provider),
       discover_registry_(info.discover_registry) {
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
@@ -35,18 +34,6 @@ ModuleContextImpl::ModuleContextImpl(
   service_provider_impl_.AddService<fuchsia::modular::ModuleContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
-      });
-  service_provider_impl_.AddService<fuchsia::modular::IntelligenceServices>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
-        auto module_scope = fuchsia::modular::ModuleScope::New();
-        module_scope->module_path = module_data_->module_path;
-        module_scope->url = module_data_->module_url;
-        module_scope->story_id = story_controller_impl_->GetStoryId().value_or("");
-
-        auto scope = fuchsia::modular::ComponentScope::New();
-        scope->set_module_scope(std::move(*module_scope));
-        user_intelligence_provider_->GetComponentIntelligenceServices(std::move(*scope),
-                                                                      std::move(request));
       });
   service_provider_impl_.AddService<fuchsia::app::discover::ModuleOutputWriter>(
       [this](auto request) {

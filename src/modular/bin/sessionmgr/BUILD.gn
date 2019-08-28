@@ -223,7 +223,6 @@ source_set("user_intelligence_provider") {
 
   deps = [
     ":focus",
-    ":intelligence_services",
     ":rate_limited_retry",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.bluetooth.le",
@@ -232,17 +231,6 @@ source_set("user_intelligence_provider") {
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib:maxwell_internal",
     "//zircon/public/fidl/fuchsia-cobalt",
-  ]
-}
-
-source_set("intelligence_services") {
-  sources = [
-    "intelligence_services_impl.cc",
-    "intelligence_services_impl.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
   ]
 }
 

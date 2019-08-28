@@ -13,7 +13,6 @@
 
 #include "src/lib/files/file.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
-#include "src/modular/bin/sessionmgr/intelligence_services_impl.h"
 
 namespace modular {
 
@@ -23,12 +22,6 @@ namespace {
 
 constexpr char kKronkUrl[] = "kronk";
 static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit = {3, zx::sec(45)};
-
-fuchsia::modular::ComponentScope CloneScope(const fuchsia::modular::ComponentScope& scope) {
-  fuchsia::modular::ComponentScope result;
-  fidl::Clone(scope, &result);
-  return result;
-}
 
 }  // namespace
 
@@ -52,7 +45,6 @@ void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceReques
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     sys::ComponentContext* const context,
-    fidl::InterfaceHandle<fuchsia::modular::ContextEngine> context_engine_handle,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
         story_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
@@ -61,17 +53,7 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
         puppet_master_connector)
     : story_provider_connector_(std::move(story_provider_connector)),
       focus_provider_connector_(std::move(focus_provider_connector)),
-      puppet_master_connector_(std::move(puppet_master_connector)) {
-  context_engine_.Bind(std::move(context_engine_handle));
-}
-
-void UserIntelligenceProviderImpl::GetComponentIntelligenceServices(
-    fuchsia::modular::ComponentScope scope,
-    fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
-  intelligence_services_bindings_.AddBinding(
-      std::make_unique<IntelligenceServicesImpl>(std::move(scope), context_engine_.get()),
-      std::move(request));
-}
+      puppet_master_connector_(std::move(puppet_master_connector)){};
 
 void UserIntelligenceProviderImpl::GetSpeechToText(
     fidl::InterfaceRequest<fuchsia::speech::SpeechToText> request) {
@@ -170,32 +152,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
 
 std::vector<std::string> UserIntelligenceProviderImpl::AddAgentServices(
     const std::string& url, component::ServiceNamespace* agent_host) {
-  fuchsia::modular::ComponentScope agent_info;
-  fuchsia::modular::AgentScope agent_scope;
-  agent_scope.url = url;
-  agent_info.set_agent_scope(std::move(agent_scope));
   std::vector<std::string> service_names;
-
-  service_names.push_back(fuchsia::modular::ContextWriter::Name_);
-  agent_host->AddService<fuchsia::modular::ContextWriter>(
-      [this, client_info = CloneScope(agent_info),
-       url](fidl::InterfaceRequest<fuchsia::modular::ContextWriter> request) {
-        context_engine_->GetWriter(CloneScope(client_info), std::move(request));
-      });
-
-  service_names.push_back(fuchsia::modular::ContextReader::Name_);
-  agent_host->AddService<fuchsia::modular::ContextReader>(
-      [this, client_info = CloneScope(agent_info),
-       url](fidl::InterfaceRequest<fuchsia::modular::ContextReader> request) {
-        context_engine_->GetReader(CloneScope(client_info), std::move(request));
-      });
-
-  service_names.push_back(fuchsia::modular::IntelligenceServices::Name_);
-  agent_host->AddService<fuchsia::modular::IntelligenceServices>(
-      [this, client_info = CloneScope(agent_info),
-       url](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices> request) {
-        this->GetComponentIntelligenceServices(CloneScope(client_info), std::move(request));
-      });
 
   if (session_agents_.find(url) != session_agents_.end()) {
     // All services added below should be exclusive to session agents.

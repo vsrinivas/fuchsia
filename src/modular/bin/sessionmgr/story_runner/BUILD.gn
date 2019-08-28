@@ -72,7 +72,6 @@ source_set("story_runner") {
     "//src/modular/lib/async/cpp:operation",
     "//src/modular/lib/common:async_holder",
     "//src/modular/lib/common:teardown",
-    "//src/modular/lib/context/cpp:context_helper",
     "//src/modular/lib/entity/cpp:json",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:array_to_string",

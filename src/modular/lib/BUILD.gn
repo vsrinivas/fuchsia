@@ -16,7 +16,6 @@ group("lib") {
     "async",
     "bound_set",
     "common",
-    "context",
     "device_info",
     "entity",
     "fidl",

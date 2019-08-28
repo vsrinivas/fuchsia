@@ -8,7 +8,6 @@
         ],
         "services": [
             "fuchsia.modular.ComponentContext",
-            "fuchsia.modular.IntelligenceServices",
             "fuchsia.net.oldhttp.HttpService"
         ]
     }

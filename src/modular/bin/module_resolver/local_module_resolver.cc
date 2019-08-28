@@ -12,7 +12,6 @@
 
 #include <src/lib/fxl/strings/split_string.h>
 
-#include "src/modular/lib/context/cpp/context_helper.h"
 #include "src/modular/lib/entity/cpp/json.h"
 #include "src/modular/lib/fidl/clone.h"
 
