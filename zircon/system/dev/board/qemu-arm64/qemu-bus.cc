@@ -47,11 +47,16 @@ int QemuArm64::Thread() {
     return thrd_error;
   }
 
+  // [bug:35681] Disable starting up the fake display driver for now
+  // so that the virtio-gpu can take over.
+  // TODO(payamm): Look into loading the fake driver for testing purposes
+#if 0
   status = DisplayInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DisplayInit() failed %d\n", __func__, status);
     return thrd_error;
   }
+#endif
   return 0;
 }
 
