@@ -21,6 +21,7 @@ library("fit") {
     "lib/fit/promise_internal.h",
     "lib/fit/result.h",
     "lib/fit/scheduler.h",
+    "lib/fit/string_view.h",
     "lib/fit/scope.h",
     "lib/fit/sequencer.h",
     "lib/fit/single_threaded_executor.h",
