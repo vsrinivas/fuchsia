@@ -72,6 +72,7 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/as370:audio-dsp-test",
       "$zx/system/dev/lib/as370:syn-audio-in-test",
       "$zx/system/dev/lib/fake-bti/test:fake-bti",
+      "$zx/system/dev/lib/mock-mmio-reg:mock-mmio-reg-test",
       "$zx/system/dev/lib/mt8167:mt8167-audio-lib-test",
       "$zx/system/dev/lib/scsi:scsilib-disk-test",
       "$zx/system/dev/lib/usb:usb-lib-test",

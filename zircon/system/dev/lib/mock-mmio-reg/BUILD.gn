@@ -8,3 +8,17 @@ library("mock-mmio-reg") {
   testonly = true
   sources = []
 }
+
+test("mock-mmio-reg-test") {
+  output_name = "mock-mmio-reg-test"
+  sources = [
+    "mock-mmio-reg-test.cc",
+  ]
+  deps = [
+    ":mock-mmio-reg",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

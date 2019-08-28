@@ -106,6 +106,11 @@ class MmioBuffer {
 
   void ClearBits32(uint32_t bits, zx_off_t offs) const { ClearBits<uint32_t>(bits, offs); }
 
+  void CopyFrom32(const MmioBuffer& source, zx_off_t source_offs, zx_off_t dest_offs,
+                  size_t count) const {
+    CopyFrom<uint32_t>(source, source_offs, dest_offs, count);
+  }
+
   template <typename T>
   T Read(zx_off_t offs) const {
     // MockMmioRegRegion.GetMmioBuffer() returns an mmio_buffer_t with an offset of 0. This
@@ -120,6 +125,17 @@ class MmioBuffer {
   template <typename T>
   T ReadMasked(T mask, zx_off_t offs) const {
     return (Read<T>(offs) & mask);
+  }
+
+  template <typename T>
+  void CopyFrom(const MmioBuffer& source, zx_off_t source_offs, zx_off_t dest_offs,
+                size_t count) const {
+    for (size_t i = 0; i < count; i++) {
+      T val = source.Read<T>(source_offs);
+      Write<T>(val, dest_offs);
+      source_offs = source_offs + sizeof(T);
+      dest_offs = dest_offs + sizeof(T);
+    }
   }
 
   template <typename T>
