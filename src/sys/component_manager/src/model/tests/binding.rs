@@ -51,7 +51,7 @@ async fn bind_instance_root() {
     let actual_urls = urls_run.lock().await;
     let expected_urls = vec!["test:///root_resolved".to_string()];
     assert_eq!(*actual_urls, expected_urls);
-    let actual_children = get_children(&model.root_realm).await;
+    let actual_children = get_live_children(&model.root_realm).await;
     assert!(actual_children.is_empty());
 }
 
@@ -104,15 +104,15 @@ async fn bind_instance_child() {
     assert_eq!(*urls_run.lock().await, expected_urls);
 
     // Validate children. system is resolved, but not echo.
-    let actual_children = get_children(&*model.root_realm).await;
-    let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
+    let actual_children = get_live_children(&*model.root_realm).await;
+    let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
     expected_children.insert("system".into());
     expected_children.insert("echo".into());
     assert_eq!(actual_children, expected_children);
 
-    let system_realm = get_child_realm(&*model.root_realm, "system").await;
-    let echo_realm = get_child_realm(&*model.root_realm, "echo").await;
-    let actual_children = get_children(&*system_realm).await;
+    let system_realm = get_live_child(&*model.root_realm, "system").await;
+    let echo_realm = get_live_child(&*model.root_realm, "echo").await;
+    let actual_children = get_live_children(&*system_realm).await;
     assert!(actual_children.is_empty());
     assert!(!echo_realm.lock_state().await.is_resolved());
     // bind to echo
@@ -122,8 +122,8 @@ async fn bind_instance_child() {
     assert_eq!(*urls_run.lock().await, expected_urls);
 
     // Validate children. Now echo is resolved.
-    let echo_realm = get_child_realm(&*model.root_realm, "echo").await;
-    let actual_children = get_children(&*echo_realm).await;
+    let echo_realm = get_live_child(&*model.root_realm, "echo").await;
+    let actual_children = get_live_children(&*echo_realm).await;
     assert!(actual_children.is_empty());
 
     // Verify that the component topology matches expectations.

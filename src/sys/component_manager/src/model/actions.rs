@@ -202,9 +202,8 @@ impl RealmState {
         action: &'a Action,
     ) -> Result<(), ModelError> {
         match action {
-            Action::DeleteChild(child_moniker) => {
-                self.handle_delete_child(model, realm, action.clone(), child_moniker.clone())
-                    .await?;
+            Action::DeleteChild(moniker) => {
+                self.handle_delete_child(model, realm, action.clone(), moniker.clone()).await?;
             }
             Action::Destroy => {
                 self.handle_destroy(model, realm).await?;
@@ -235,13 +234,13 @@ impl RealmState {
         model: Model,
         realm: Arc<Realm>,
         action: Action,
-        child_moniker: ChildMoniker,
+        moniker: ChildMoniker,
     ) -> Result<(), ModelError> {
-        if let Some(child_realm) = self.all_child_realms().get(&child_moniker) {
+        if let Some(child_realm) = self.all_child_realms().get(&moniker) {
             // Child exists (live or deleting), schedule work.
             let child_realm = child_realm.clone();
             fasync::spawn(async move {
-                let res = do_delete_child(model, realm.clone(), child_realm, child_moniker).await;
+                let res = do_delete_child(model, realm.clone(), child_realm, moniker).await;
                 finish_action(realm, &action, res).await;
             });
         } else {
@@ -263,11 +262,12 @@ impl RealmState {
 async fn do_shutdown(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
     let child_realms = {
         let state = realm.lock_state().await;
-        state.get().live_child_realms().clone()
+        let res: Vec<_> = state.get().live_child_realms().map(|(_, r)| r.clone()).collect();
+        res
     };
     // Stop children before stopping the parent.
     let mut futures = vec![];
-    for (_, child_realm) in child_realms {
+    for child_realm in child_realms {
         let nf = register_action(model.clone(), child_realm, Action::Shutdown).await?;
         futures.push(nf);
     }
@@ -282,17 +282,18 @@ async fn do_delete_child(
     model: Model,
     realm: Arc<Realm>,
     child_realm: Arc<Realm>,
-    child_moniker: ChildMoniker,
+    moniker: ChildMoniker,
 ) -> Result<(), ModelError> {
     {
         let mut state = realm.lock_state().await;
-        state.get_mut().mark_child_realm_deleting(&child_moniker);
+        state.get_mut().mark_child_realm_deleting(&moniker.to_partial());
     }
-    execute_action(model, child_realm, Action::Destroy).await?;
+    execute_action(model.clone(), child_realm.clone(), Action::Destroy).await?;
     {
         let mut state = realm.lock_state().await;
-        state.get_mut().remove_child_realm(&child_moniker);
+        state.get_mut().remove_child_realm(&moniker);
     }
+    model.hooks.on_destroy_instance(child_realm.clone()).await?;
     Ok(())
 }
 
@@ -306,7 +307,7 @@ async fn do_destroy(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
         let mut state = realm.lock_state().await;
         let state = state.get_mut();
         let live_monikers = {
-            let res: Vec<_> = state.live_child_realms().keys().map(|m| m.clone()).collect();
+            let res: Vec<_> = state.live_child_realms().map(|(m, _)| m.clone()).collect();
             res
         };
         for m in live_monikers {
@@ -315,22 +316,17 @@ async fn do_destroy(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
         state.all_child_realms().clone()
     };
     let mut futures = vec![];
-    for (child_moniker, child_realm) in child_realms {
+    for (m, _) in child_realms {
         let realm = realm.clone();
-        let nf = register_action(model.clone(), child_realm, Action::Destroy).await?;
-        let fut = async move {
-            nf.await?;
-            let mut state = realm.lock_state().await;
-            state.get_mut().remove_child_realm(&child_moniker);
-            Ok(())
-        };
+        let nf = register_action(model.clone(), realm, Action::DeleteChild(m)).await?;
+        let fut = async move { nf.await };
         futures.push(fut);
     }
     let results = join_all(futures).await;
     ok_or_first_error(results)?;
 
     // Now that all children have been destroyed, destroy the containing realm.
-    Realm::destroy_instance(realm, &model.hooks).await
+    Realm::destroy_instance(realm).await
 }
 
 fn ok_or_first_error(results: Vec<Result<(), ModelError>>) -> Result<(), ModelError> {
@@ -778,15 +774,16 @@ mod tests {
         let test = ActionsTest::new("root", components, None).await;
         // Bind to the component, causing it to start. This should cause the realm to have an
         // `Execution`.
-        let realm = test.look_up(vec!["a"].into()).await;
-        test.model.bind_instance(realm.clone()).await.expect("could not bind to a");
-        assert!(is_executing(&realm).await);
+        let realm_root = test.look_up(vec![].into()).await;
+        let realm_a = test.look_up(vec!["a"].into()).await;
+        test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
 
-        // Register destroy action, and wait for it. Component should be destroyed.
-        execute_action(test.model.clone(), realm.clone(), Action::Destroy)
+        // Register delete child action, and wait for it. Component should be destroyed.
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_destroyed(&realm).await);
+        assert!(is_destroyed(&realm_a).await);
         {
             let events: Vec<_> = test
                 .hook
@@ -805,15 +802,15 @@ mod tests {
 
         // Trying to bind to the component should fail because it's shut down.
         test.model
-            .bind_instance(realm.clone())
+            .bind_instance(realm_a.clone())
             .await
             .expect_err("successfully bound to a after shutdown");
 
         // Destroy the component again. This succeeds, but has no additional effect.
-        execute_action(test.model.clone(), realm.clone(), Action::Destroy)
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
-        assert!(is_destroyed(&realm).await);
+        assert!(is_destroyed(&realm_a).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -896,6 +893,7 @@ mod tests {
             ("b", ComponentDecl { ..default_component_decl() }),
         ];
         let test = ActionsTest::new("root", components, None).await;
+        let realm_root = test.look_up(vec![].into()).await;
         let realm_a = test.look_up(vec!["a"].into()).await;
         let realm_b = test.look_up(vec!["a", "b"].into()).await;
 
@@ -907,8 +905,8 @@ mod tests {
         assert!(is_shut_down(&realm_a).await);
         assert!(is_shut_down(&realm_b).await);
 
-        // Now destroy "a". This should cause all components to be destroyed.
-        execute_action(test.model.clone(), realm_a.clone(), Action::Destroy)
+        // Now delete child "a". This should cause all components to be destroyed.
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("destroy failed");
         assert!(is_destroyed(&realm_a).await);
@@ -946,7 +944,7 @@ mod tests {
     ///     / \
     ///    c   d
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn delete_hierarchy() {
+    async fn destroy_hierarchy() {
         let components = vec![
             (
                 "root",
@@ -1019,7 +1017,7 @@ mod tests {
         // Register destroy action on "a", and wait for it. This should cause all components
         // in "a"'s realm to be shut down and destroyed, in bottom-up order, but "x" is still
         // running.
-        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a".into()))
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
             .expect("delete child failed");
         assert!(is_destroyed(&realm_a).await);
@@ -1032,7 +1030,7 @@ mod tests {
             let state = realm_root.lock_state().await;
             let children: Vec<_> =
                 state.get().all_child_realms().keys().map(|m| m.clone()).collect();
-            assert_eq!(children, vec!["x".into()]);
+            assert_eq!(children, vec!["x:0".into()]);
         }
         {
             let mut events: Vec<_> = test

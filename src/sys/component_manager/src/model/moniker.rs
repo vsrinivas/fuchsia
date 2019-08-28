@@ -11,44 +11,79 @@ use {
 /// A child moniker locally identifies a child component instance using the name assigned by
 /// its parent and its collection (if present). It is a building block for more complex monikers.
 ///
-/// Display notation: "name[:collection]".
-///
-/// TODO: Add a mechanism for representing children grouped into collections by index.
+/// Display notation: "[collection:]name:instance_id".
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct ChildMoniker {
     name: String,
     collection: Option<String>,
+    instance: InstanceId,
     rep: String,
 }
 
+pub type InstanceId = u32;
+
 impl ChildMoniker {
-    pub fn new(name: String, collection: Option<String>) -> Self {
+    pub fn new(name: String, collection: Option<String>, instance: InstanceId) -> Self {
         assert!(!name.is_empty());
         let rep = if let Some(c) = collection.as_ref() {
             assert!(!c.is_empty());
-            format!("{}:{}", c, name)
+            format!("{}:{}:{}", c, name, instance)
         } else {
-            name.clone()
+            format!("{}:{}", name, instance)
         };
-        ChildMoniker { name, collection, rep }
+        Self { name, collection, instance, rep }
     }
 
-    /// Parses a `ChildMoniker` from a string.
+    /// Parses an `ChildMoniker` from a string.
     ///
-    /// Input strings should be of the format `<name>(:<collection>)?`, e.g. `foo` or `biz:foo`.
+    /// Input strings should be of the format `<name>(:<collection>)?:<instance_id>`, e.g. `foo:42`
+    /// or `biz:foo:42`.
     fn parse(rep: &str) -> Result<Self, MonikerError> {
-        let mut parts = rep.split(":").fuse();
+        let parts: Vec<_> = rep.split(":").collect();
         let invalid = || MonikerError::invalid_moniker(rep);
-        let first = parts.next().ok_or_else(invalid)?;
-        let second = parts.next();
-        if parts.next().is_some() || first.len() == 0 || second.map_or(false, |s| s.len() == 0) {
+        // An instanced moniker is either just a name (static instance), or
+        // collection:name:instance_id.
+        if parts.len() != 2 && parts.len() != 3 {
             return Err(invalid());
         }
-        let (name, coll) = match second {
-            Some(s) => (s, Some(first.to_string())),
-            None => (first, None),
+        for p in parts.iter() {
+            if p.is_empty() {
+                return Err(invalid());
+            }
+        }
+        let (name, coll, instance) = match parts.len() == 3 {
+            true => {
+                let name = parts[1].to_string();
+                let coll = parts[0].to_string();
+                let instance: InstanceId = match parts[2].parse() {
+                    Ok(i) => i,
+                    _ => {
+                        return Err(invalid());
+                    }
+                };
+                (name, Some(coll), instance)
+            }
+            false => {
+                let instance: InstanceId = match parts[1].parse() {
+                    Ok(i) => i,
+                    _ => {
+                        return Err(invalid());
+                    }
+                };
+                (parts[0].to_string(), None, instance)
+            }
         };
-        Ok(ChildMoniker::new(name.to_string(), coll))
+        Ok(Self::new(name, coll, instance))
+    }
+
+    /// Converts this instanced moniker to a regular child moniker by stripping the instance id.
+    pub fn to_partial(&self) -> PartialMoniker {
+        PartialMoniker::new(self.name.clone(), self.collection.clone())
+    }
+
+    /// Converts this child moniker to an instanced moniker.
+    pub fn from_partial(m: &PartialMoniker, instance: InstanceId) -> Self {
+        Self::new(m.name.clone(), m.collection.clone(), instance)
     }
 
     pub fn name(&self) -> &str {
@@ -59,6 +94,10 @@ impl ChildMoniker {
         self.collection.as_ref().map(|s| &**s)
     }
 
+    pub fn instance(&self) -> InstanceId {
+        self.instance
+    }
+
     pub fn as_str(&self) -> &str {
         &self.rep
     }
@@ -66,13 +105,17 @@ impl ChildMoniker {
 
 impl From<&str> for ChildMoniker {
     fn from(rep: &str) -> Self {
-        ChildMoniker::parse(rep).expect(&format!("child moniker failed to parse: {}", rep))
+        ChildMoniker::parse(rep).expect(&format!("instanced moniker failed to parse: {}", rep))
     }
 }
 
 impl Ord for ChildMoniker {
     fn cmp(&self, other: &Self) -> Ordering {
-        (&self.collection, &self.name).cmp(&(&other.collection, &other.name))
+        (&self.collection, &self.name, &self.instance).cmp(&(
+            &other.collection,
+            &other.name,
+            &other.instance,
+        ))
     }
 }
 
@@ -88,6 +131,83 @@ impl fmt::Display for ChildMoniker {
     }
 }
 
+/// A variant of child moniker that does not distinguish between instances
+///
+/// Display notation: "name[:collection]".
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+pub struct PartialMoniker {
+    name: String,
+    collection: Option<String>,
+    rep: String,
+}
+
+impl PartialMoniker {
+    pub fn new(name: String, collection: Option<String>) -> Self {
+        assert!(!name.is_empty());
+        let rep = if let Some(c) = collection.as_ref() {
+            assert!(!c.is_empty());
+            format!("{}:{}", c, name)
+        } else {
+            name.clone()
+        };
+        PartialMoniker { name, collection, rep }
+    }
+
+    /// Parses a `PartialMoniker` from a string.
+    ///
+    /// Input strings should be of the format `<name>(:<collection>)?`, e.g. `foo` or `biz:foo`.
+    fn parse(rep: &str) -> Result<Self, MonikerError> {
+        let mut parts = rep.split(":").fuse();
+        let invalid = || MonikerError::invalid_moniker(rep);
+        let first = parts.next().ok_or_else(invalid)?;
+        let second = parts.next();
+        if parts.next().is_some() || first.len() == 0 || second.map_or(false, |s| s.len() == 0) {
+            return Err(invalid());
+        }
+        let (name, coll) = match second {
+            Some(s) => (s, Some(first.to_string())),
+            None => (first, None),
+        };
+        Ok(PartialMoniker::new(name.to_string(), coll))
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn collection(&self) -> Option<&str> {
+        self.collection.as_ref().map(|s| &**s)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.rep
+    }
+}
+
+impl From<&str> for PartialMoniker {
+    fn from(rep: &str) -> Self {
+        PartialMoniker::parse(rep).expect(&format!("child moniker failed to parse: {}", rep))
+    }
+}
+
+impl Ord for PartialMoniker {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (&self.collection, &self.name).cmp(&(&other.collection, &other.name))
+    }
+}
+
+impl PartialOrd for PartialMoniker {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl fmt::Display for PartialMoniker {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 /// An absolute moniker describes the identity of a component instance in terms of its path
 /// relative to the root of the component instance tree.
 ///
@@ -98,23 +218,24 @@ impl fmt::Display for ChildMoniker {
 /// information which is disclosed about the overall structure of the component instance tree.
 ///
 /// Display notation: "/", "/name1", "/name1/name2", ...
+// TODO: Absolute monikers should distinguish instance id.
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct AbsoluteMoniker {
-    path: Vec<ChildMoniker>,
+    path: Vec<PartialMoniker>,
 }
 
 impl AbsoluteMoniker {
-    pub fn new(path: Vec<ChildMoniker>) -> AbsoluteMoniker {
+    pub fn new(path: Vec<PartialMoniker>) -> AbsoluteMoniker {
         AbsoluteMoniker { path }
     }
 
     fn parse(path: &Vec<&str>) -> Result<Self, MonikerError> {
-        let path: Result<Vec<ChildMoniker>, MonikerError> =
-            path.iter().map(|x| ChildMoniker::parse(x)).collect();
+        let path: Result<Vec<PartialMoniker>, MonikerError> =
+            path.iter().map(|x| PartialMoniker::parse(x)).collect();
         Ok(AbsoluteMoniker::new(path?))
     }
 
-    pub fn path(&self) -> &Vec<ChildMoniker> {
+    pub fn path(&self) -> &Vec<PartialMoniker> {
         &self.path
     }
 
@@ -139,7 +260,7 @@ impl AbsoluteMoniker {
         }
     }
 
-    pub fn child(&self, child: ChildMoniker) -> AbsoluteMoniker {
+    pub fn child(&self, child: PartialMoniker) -> AbsoluteMoniker {
         let mut path = self.path.clone();
         path.push(child);
         AbsoluteMoniker { path }
@@ -219,12 +340,12 @@ impl fmt::Display for AbsoluteMoniker {
 /// Display notation: ".", "./down1", ".\up1/down1", ".\up1\up2/down1", ...
 #[derive(Eq, PartialEq, Debug)]
 pub struct RelativeMoniker {
-    up_path: Vec<ChildMoniker>,
-    down_path: Vec<ChildMoniker>,
+    up_path: Vec<PartialMoniker>,
+    down_path: Vec<PartialMoniker>,
 }
 
 impl RelativeMoniker {
-    pub fn new(up_path: Vec<ChildMoniker>, down_path: Vec<ChildMoniker>) -> RelativeMoniker {
+    pub fn new(up_path: Vec<PartialMoniker>, down_path: Vec<PartialMoniker>) -> RelativeMoniker {
         RelativeMoniker { up_path, down_path }
     }
 
@@ -245,11 +366,11 @@ impl RelativeMoniker {
         res
     }
 
-    pub fn up_path(&self) -> &Vec<ChildMoniker> {
+    pub fn up_path(&self) -> &Vec<PartialMoniker> {
         &self.up_path
     }
 
-    pub fn down_path(&self) -> &Vec<ChildMoniker> {
+    pub fn down_path(&self) -> &Vec<PartialMoniker> {
         &self.down_path
     }
 
@@ -290,35 +411,112 @@ mod tests {
 
     #[test]
     fn child_monikers() {
-        let m = ChildMoniker::new("test".to_string(), None);
+        let m = ChildMoniker::new("test".to_string(), None, 42);
         assert_eq!("test", m.name());
         assert_eq!(None, m.collection());
-        assert_eq!("test", m.as_str());
-        assert_eq!("test", format!("{}", m));
-        assert_eq!(m, ChildMoniker::from("test"));
+        assert_eq!(42, m.instance());
+        assert_eq!("test:42", m.as_str());
+        assert_eq!("test:42", format!("{}", m));
+        assert_eq!(m, ChildMoniker::from("test:42"));
+        assert_eq!("test", m.to_partial().as_str());
+        assert_eq!(m, ChildMoniker::from_partial(&"test".into(), 42));
 
-        let m = ChildMoniker::new("test".to_string(), Some("coll".to_string()));
+        let m = ChildMoniker::new("test".to_string(), Some("coll".to_string()), 42);
         assert_eq!("test", m.name());
         assert_eq!(Some("coll"), m.collection());
-        assert_eq!("coll:test", m.as_str());
-        assert_eq!("coll:test", format!("{}", m));
-        assert_eq!(m, ChildMoniker::from("coll:test"));
+        assert_eq!(42, m.instance());
+        assert_eq!("coll:test:42", m.as_str());
+        assert_eq!("coll:test:42", format!("{}", m));
+        assert_eq!(m, ChildMoniker::from("coll:test:42"));
+        assert_eq!("coll:test", m.to_partial().as_str());
+        assert_eq!(m, ChildMoniker::from_partial(&"coll:test".into(), 42));
 
         assert!(ChildMoniker::parse("").is_err(), "cannot be empty");
         assert!(ChildMoniker::parse(":").is_err(), "cannot be empty with colon");
+        assert!(ChildMoniker::parse("::").is_err(), "cannot be empty with double colon");
         assert!(ChildMoniker::parse("f:").is_err(), "second part cannot be empty with colon");
-        assert!(ChildMoniker::parse(":f").is_err(), "first part cannot be empty with colon");
-        assert!(ChildMoniker::parse("f:f:f").is_err(), "multiple colons not allowed");
+        assert!(ChildMoniker::parse(":1").is_err(), "first part cannot be empty with colon");
+        assert!(ChildMoniker::parse("f:f:").is_err(), "third part cannot be empty with colon");
+        assert!(ChildMoniker::parse("f::1").is_err(), "second part cannot be empty with colon");
+        assert!(ChildMoniker::parse(":f:1").is_err(), "first part cannot be empty with colon");
+        assert!(ChildMoniker::parse("f:f:1:1").is_err(), "more than three colons not allowed");
+        assert!(ChildMoniker::parse("f:f").is_err(), "second part must be int");
+        assert!(ChildMoniker::parse("f:f:f").is_err(), "third part must be int");
     }
 
     #[test]
     fn child_moniker_compare() {
-        let a = ChildMoniker::new("a".to_string(), None);
-        let aa = ChildMoniker::new("a".to_string(), Some("a".to_string()));
-        let ab = ChildMoniker::new("a".to_string(), Some("b".to_string()));
-        let ba = ChildMoniker::new("b".to_string(), Some("a".to_string()));
-        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()));
-        let aa_same = ChildMoniker::new("a".to_string(), Some("a".to_string()));
+        let a = ChildMoniker::new("a".to_string(), None, 1);
+        let a2 = ChildMoniker::new("a".to_string(), None, 2);
+        let aa = ChildMoniker::new("a".to_string(), Some("a".to_string()), 1);
+        let aa2 = ChildMoniker::new("a".to_string(), Some("a".to_string()), 2);
+        let ab = ChildMoniker::new("a".to_string(), Some("b".to_string()), 1);
+        let ba = ChildMoniker::new("b".to_string(), Some("a".to_string()), 1);
+        let bb = ChildMoniker::new("b".to_string(), Some("b".to_string()), 1);
+        let aa_same = ChildMoniker::new("a".to_string(), Some("a".to_string()), 1);
+
+        assert_eq!(Ordering::Less, a.cmp(&a2));
+        assert_eq!(Ordering::Greater, a2.cmp(&a));
+        assert_eq!(Ordering::Less, a2.cmp(&aa));
+        assert_eq!(Ordering::Greater, aa.cmp(&a2));
+        assert_eq!(Ordering::Less, a.cmp(&ab));
+        assert_eq!(Ordering::Greater, ab.cmp(&a));
+        assert_eq!(Ordering::Less, a.cmp(&ba));
+        assert_eq!(Ordering::Greater, ba.cmp(&a));
+        assert_eq!(Ordering::Less, a.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&a));
+
+        assert_eq!(Ordering::Less, aa.cmp(&aa2));
+        assert_eq!(Ordering::Greater, aa2.cmp(&aa));
+        assert_eq!(Ordering::Less, aa.cmp(&ab));
+        assert_eq!(Ordering::Greater, ab.cmp(&aa));
+        assert_eq!(Ordering::Less, aa.cmp(&ba));
+        assert_eq!(Ordering::Greater, ba.cmp(&aa));
+        assert_eq!(Ordering::Less, aa.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&aa));
+        assert_eq!(Ordering::Equal, aa.cmp(&aa_same));
+        assert_eq!(Ordering::Equal, aa_same.cmp(&aa));
+
+        assert_eq!(Ordering::Greater, ab.cmp(&ba));
+        assert_eq!(Ordering::Less, ba.cmp(&ab));
+        assert_eq!(Ordering::Less, ab.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&ab));
+
+        assert_eq!(Ordering::Less, ba.cmp(&bb));
+        assert_eq!(Ordering::Greater, bb.cmp(&ba));
+    }
+
+    #[test]
+    fn partial_monikers() {
+        let m = PartialMoniker::new("test".to_string(), None);
+        assert_eq!("test", m.name());
+        assert_eq!(None, m.collection());
+        assert_eq!("test", m.as_str());
+        assert_eq!("test", format!("{}", m));
+        assert_eq!(m, PartialMoniker::from("test"));
+
+        let m = PartialMoniker::new("test".to_string(), Some("coll".to_string()));
+        assert_eq!("test", m.name());
+        assert_eq!(Some("coll"), m.collection());
+        assert_eq!("coll:test", m.as_str());
+        assert_eq!("coll:test", format!("{}", m));
+        assert_eq!(m, PartialMoniker::from("coll:test"));
+
+        assert!(PartialMoniker::parse("").is_err(), "cannot be empty");
+        assert!(PartialMoniker::parse(":").is_err(), "cannot be empty with colon");
+        assert!(PartialMoniker::parse("f:").is_err(), "second part cannot be empty with colon");
+        assert!(PartialMoniker::parse(":f").is_err(), "first part cannot be empty with colon");
+        assert!(PartialMoniker::parse("f:f:f").is_err(), "multiple colons not allowed");
+    }
+
+    #[test]
+    fn partial_moniker_compare() {
+        let a = PartialMoniker::new("a".to_string(), None);
+        let aa = PartialMoniker::new("a".to_string(), Some("a".to_string()));
+        let ab = PartialMoniker::new("a".to_string(), Some("b".to_string()));
+        let ba = PartialMoniker::new("b".to_string(), Some("a".to_string()));
+        let bb = PartialMoniker::new("b".to_string(), Some("b".to_string()));
+        let aa_same = PartialMoniker::new("a".to_string(), Some("a".to_string()));
 
         assert_eq!(Ordering::Less, a.cmp(&aa));
         assert_eq!(Ordering::Greater, aa.cmp(&a));
@@ -355,8 +553,8 @@ mod tests {
         assert_eq!(root, AbsoluteMoniker::from(vec![]));
 
         let leaf = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), Some("coll".to_string())),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), Some("coll".to_string())),
         ]);
         assert_eq!(false, leaf.is_root());
         assert_eq!("/a/coll:b", format!("{}", leaf));
@@ -370,8 +568,8 @@ mod tests {
         assert_eq!(None, root.parent());
 
         let leaf = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
         ]);
         assert_eq!("/a/b", format!("{}", leaf));
         assert_eq!("/a", format!("{}", leaf.parent().unwrap()));
@@ -383,25 +581,25 @@ mod tests {
     #[test]
     fn absolute_moniker_compare() {
         let a = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("c".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
+            PartialMoniker::new("c".to_string(), None),
         ]);
         let b = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
         ]);
         let c = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("c".to_string(), None),
-            ChildMoniker::new("d".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
+            PartialMoniker::new("c".to_string(), None),
+            PartialMoniker::new("d".to_string(), None),
         ]);
         let d = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("c".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
+            PartialMoniker::new("c".to_string(), None),
         ]);
 
         assert_eq!(Ordering::Greater, a.cmp(&b));
@@ -426,8 +624,8 @@ mod tests {
 
         let ancestor = RelativeMoniker::new(
             vec![
-                ChildMoniker::new("a".to_string(), None),
-                ChildMoniker::new("b".to_string(), None),
+                PartialMoniker::new("a".to_string(), None),
+                PartialMoniker::new("b".to_string(), None),
             ],
             vec![],
         );
@@ -437,28 +635,28 @@ mod tests {
         let descendant = RelativeMoniker::new(
             vec![],
             vec![
-                ChildMoniker::new("a".to_string(), None),
-                ChildMoniker::new("b".to_string(), None),
+                PartialMoniker::new("a".to_string(), None),
+                PartialMoniker::new("b".to_string(), None),
             ],
         );
         assert_eq!(false, descendant.is_self());
         assert_eq!("./a/b", format!("{}", descendant));
 
         let sibling = RelativeMoniker::new(
-            vec![ChildMoniker::new("a".to_string(), None)],
-            vec![ChildMoniker::new("b".to_string(), None)],
+            vec![PartialMoniker::new("a".to_string(), None)],
+            vec![PartialMoniker::new("b".to_string(), None)],
         );
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a/b", format!("{}", sibling));
 
         let cousin = RelativeMoniker::new(
             vec![
-                ChildMoniker::new("a".to_string(), None),
-                ChildMoniker::new("a0".to_string(), None),
+                PartialMoniker::new("a".to_string(), None),
+                PartialMoniker::new("a0".to_string(), None),
             ],
             vec![
-                ChildMoniker::new("b0".to_string(), None),
-                ChildMoniker::new("b".to_string(), None),
+                PartialMoniker::new("b0".to_string(), None),
+                PartialMoniker::new("b".to_string(), None),
             ],
         );
         assert_eq!(false, cousin.is_self());

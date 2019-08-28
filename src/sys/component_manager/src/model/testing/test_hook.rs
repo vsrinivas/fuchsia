@@ -172,7 +172,7 @@ impl TestHookInner {
         _routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
         self.create_instance_if_necessary(realm.abs_moniker.clone()).await?;
-        for child_realm in realm_state.live_child_realms().values() {
+        for child_realm in realm_state.live_child_realms().map(|(_, r)| r) {
             self.create_instance_if_necessary(child_realm.abs_moniker.clone()).await?;
         }
         let mut events = self.lifecycle_events.lock().await;
@@ -398,29 +398,29 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_hook_test() {
-        let a = AbsoluteMoniker::new(vec![ChildMoniker::new("a".to_string(), None)]);
+        let a = AbsoluteMoniker::new(vec![PartialMoniker::new("a".to_string(), None)]);
         let ab = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
         ]);
         let ac = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("c".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("c".to_string(), None),
         ]);
         let abd = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("d".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
+            PartialMoniker::new("d".to_string(), None),
         ]);
         let abe = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("b".to_string(), None),
-            ChildMoniker::new("e".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("b".to_string(), None),
+            PartialMoniker::new("e".to_string(), None),
         ]);
         let acf = AbsoluteMoniker::new(vec![
-            ChildMoniker::new("a".to_string(), None),
-            ChildMoniker::new("c".to_string(), None),
-            ChildMoniker::new("f".to_string(), None),
+            PartialMoniker::new("a".to_string(), None),
+            PartialMoniker::new("c".to_string(), None),
+            PartialMoniker::new("f".to_string(), None),
         ]);
 
         // Try adding parent followed by children then verify the topology string

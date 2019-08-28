@@ -81,7 +81,7 @@ pub async fn route_expose_capability<'a>(
 ) -> Result<(), ModelError> {
     let capability = RoutedCapability::Expose(expose_decl.clone());
     let mut pos =
-        WalkPosition { capability, last_child_moniker: None, moniker: Some(abs_moniker.clone()) };
+        WalkPosition { capability, last_partial_moniker: None, moniker: Some(abs_moniker.clone()) };
     let source = walk_expose_chain(model, &mut pos).await?;
     open_capability_at_source(model, flags, open_mode, String::new(), source, server_chan).await
 }
@@ -177,7 +177,7 @@ pub async fn route_and_open_storage_capability<'a>(
     };
     let mut pos = WalkPosition {
         capability: RoutedCapability::Use(use_decl.clone()),
-        last_child_moniker: use_abs_moniker.path().last().map(|c| c.clone()),
+        last_partial_moniker: use_abs_moniker.path().last().map(|c| c.clone()),
         moniker: Some(parent_moniker),
     };
 
@@ -213,10 +213,10 @@ pub async fn route_and_open_storage_capability<'a>(
         }
         StorageDirectorySource::Child(ref name) => {
             let moniker = Some(
-                storage_decl_realm.abs_moniker.child(ChildMoniker::new(name.to_string(), None)),
+                storage_decl_realm.abs_moniker.child(PartialMoniker::new(name.to_string(), None)),
             );
             let capability = RoutedCapability::Storage(storage_decl);
-            let mut pos = WalkPosition { capability, last_child_moniker: None, moniker };
+            let mut pos = WalkPosition { capability, last_partial_moniker: None, moniker };
             match walk_expose_chain(model, &mut pos).await? {
                 CapabilitySource::Component(source_capability, realm) => {
                     (source_capability.source_path().unwrap().clone(), realm)
@@ -339,7 +339,7 @@ struct WalkPosition {
     /// The capability declaration as it's represented in the current component.
     capability: RoutedCapability,
     /// The moniker of the child we came from.
-    last_child_moniker: Option<ChildMoniker>,
+    last_partial_moniker: Option<PartialMoniker>,
     /// The moniker of the component we are currently looking at. `None` for component manager's
     /// realm.
     moniker: Option<AbsoluteMoniker>,
@@ -381,7 +381,7 @@ async fn find_offered_capability_source<'a>(
 ) -> Result<CapabilitySource, ModelError> {
     let mut pos = WalkPosition {
         capability,
-        last_child_moniker: abs_moniker.path().last().map(|c| c.clone()),
+        last_partial_moniker: abs_moniker.path().last().map(|c| c.clone()),
         moniker: abs_moniker.parent(),
     };
     if let Some(source) = walk_offer_chain(model, &mut pos).await? {
@@ -415,8 +415,8 @@ async fn walk_offer_chain<'a>(
         let realm_state = realm_state.get();
         // This `get()` is safe because `look_up_realm` populates this field
         let decl = realm_state.decl();
-        let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
-        if let Some(offer) = pos.capability.find_offer_source(decl, last_child_moniker) {
+        let last_partial_moniker = pos.last_partial_moniker.as_ref().unwrap();
+        if let Some(offer) = pos.capability.find_offer_source(decl, last_partial_moniker) {
             let source = match offer {
                 OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
                 OfferDecl::LegacyService(s) => OfferSource::LegacyService(&s.source),
@@ -445,7 +445,7 @@ async fn walk_offer_chain<'a>(
                     // The offered capability comes from the realm, so follow the
                     // parent
                     pos.capability = RoutedCapability::Offer(offer.clone());
-                    pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
+                    pos.last_partial_moniker = pos.moniker().path().last().map(|c| c.clone());
                     pos.moniker = pos.moniker().parent();
                     continue 'offerloop;
                 }
@@ -466,7 +466,7 @@ async fn walk_offer_chain<'a>(
                     // and begin walking the expose chain.
                     pos.capability = RoutedCapability::Offer(offer.clone());
                     pos.moniker =
-                        Some(pos.moniker().child(ChildMoniker::new(child_name.to_string(), None)));
+                        Some(pos.moniker().child(PartialMoniker::new(child_name.to_string(), None)));
                     return Ok(None);
                 }
                 OfferSource::Storage(OfferStorageSource::Storage(storage_name)) => {
@@ -537,7 +537,7 @@ async fn walk_expose_chain<'a>(
                     // The offered capability comes from a child, so follow the child.
                     pos.capability = RoutedCapability::Expose(expose.clone());
                     pos.moniker =
-                        Some(pos.moniker().child(ChildMoniker::new(child_name.to_string(), None)));
+                        Some(pos.moniker().child(PartialMoniker::new(child_name.to_string(), None)));
                     continue;
                 }
                 ExposeSource::Framework => {

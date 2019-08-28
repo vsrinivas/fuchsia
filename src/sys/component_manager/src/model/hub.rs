@@ -411,7 +411,7 @@ impl HubInner {
         }
 
         // TODO: Loop over deleting realms also?
-        for child_realm in realm_state.live_child_realms().values() {
+        for child_realm in realm_state.live_child_realms().map(|(_, r)| r) {
             Self::add_instance_to_parent_if_necessary(
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),

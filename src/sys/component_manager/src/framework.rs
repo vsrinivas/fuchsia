@@ -216,7 +216,7 @@ impl RealFrameworkServiceHost {
         child: fsys::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fsys::Error> {
-        let child_moniker = ChildMoniker::new(child.name, child.collection);
+        let partial_moniker = PartialMoniker::new(child.name, child.collection);
         realm.resolve_decl().await.map_err(|e| match e {
             ModelError::ResolverError { err } => {
                 debug!("failed to resolve: {:?}", err);
@@ -230,7 +230,7 @@ impl RealFrameworkServiceHost {
         let child_realm = {
             let realm_state = realm.lock_state().await;
             let realm_state = realm_state.get();
-            realm_state.live_child_realms().get(&child_moniker).map(|r| r.clone())
+            realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
         };
         if let Some(child_realm) = child_realm {
             model
@@ -262,8 +262,8 @@ impl RealFrameworkServiceHost {
         child: fsys::ChildRef,
     ) -> Result<(), fsys::Error> {
         child.collection.as_ref().ok_or(fsys::Error::InvalidArguments)?;
-        let child_moniker = ChildMoniker::new(child.name, child.collection);
-        realm.remove_dynamic_child(&child_moniker, &model.hooks).await.map_err(|e| match e {
+        let partial_moniker = PartialMoniker::new(child.name, child.collection);
+        Realm::remove_dynamic_child(model, realm, &partial_moniker).await.map_err(|e| match e {
             ModelError::InstanceNotFound { .. } => fsys::Error::InstanceNotFound,
             ModelError::Unsupported { .. } => fsys::Error::Unsupported,
             e => {
@@ -291,8 +291,7 @@ impl RealFrameworkServiceHost {
             .ok_or_else(|| fsys::Error::CollectionNotFound)?;
         let mut children: Vec<_> = state
             .live_child_realms()
-            .keys()
-            .filter_map(|m| match m.collection() {
+            .filter_map(|(m, _)| match m.collection() {
                 Some(c) => {
                     if c == collection.name {
                         Some(fsys::ChildRef {
@@ -359,6 +358,7 @@ mod tests {
         fidl_fidl_examples_echo as echo,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
+        futures::{channel::mpsc, lock::Mutex},
         io_util::OPEN_RIGHT_READABLE,
         std::collections::HashSet,
         std::convert::TryFrom,
@@ -366,7 +366,6 @@ mod tests {
     };
 
     struct FrameworkServiceTest {
-        hook: Arc<TestHook>,
         realm: Arc<Realm>,
         realm_proxy: fsys::RealmProxy,
     }
@@ -376,11 +375,11 @@ mod tests {
             mock_resolver: MockResolver,
             mock_runner: MockRunner,
             realm_moniker: AbsoluteMoniker,
+            hooks: Vec<Hook>,
         ) -> Self {
             // Init model.
             let mut resolver = ResolverRegistry::new();
             resolver.register("test".to_string(), Box::new(mock_resolver));
-            let hook = Arc::new(TestHook::new());
             let mut config = ModelConfig::default();
             config.list_children_batch_size = 2;
             let framework_services = Arc::new(RealFrameworkServiceHost::new());
@@ -392,11 +391,11 @@ mod tests {
             });
             let framework_services_hook =
                 Arc::new(FrameworkServicesHook::new(model.clone(), framework_services.clone()));
-            model.hooks.install(hook.hooks()).await;
             model
                 .hooks
                 .install(vec![Hook::RouteFrameworkCapability(framework_services_hook)])
                 .await;
+            model.hooks.install(hooks).await;
 
             // Look up and bind to realm.
             let realm = model.look_up_realm(&realm_moniker).await.expect("failed to look up realm");
@@ -415,7 +414,7 @@ mod tests {
                         .expect("failed serving realm service");
                 });
             }
-            FrameworkServiceTest { hook, realm, realm_proxy }
+            FrameworkServiceTest { realm, realm_proxy }
         }
     }
 
@@ -445,8 +444,14 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let test =
-            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec!["system"].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Create children "a" and "b" in collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -458,12 +463,12 @@ mod tests {
         let _ = res.expect("failed to create child b").expect("failed to create child b");
 
         // Verify that the component topology matches expectations.
-        let actual_children = get_children(&test.realm).await;
-        let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
+        let actual_children = get_live_children(&test.realm).await;
+        let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
         expected_children.insert("coll:a".into());
         expected_children.insert("coll:b".into());
         assert_eq!(actual_children, expected_children);
-        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
+        assert_eq!("(system(coll:a,coll:b))", hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -497,8 +502,14 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let test =
-            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec!["system"].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Invalid arguments.
         {
@@ -598,8 +609,18 @@ mod tests {
                 ..default_component_decl()
             },
         );
+        mock_resolver.add_component("a", default_component_decl());
+        mock_resolver.add_component("b", default_component_decl());
+
+        let hook = Arc::new(TestHook::new());
+        let (destroy_hook, mut stop_send, mut destroy_recv) =
+            DestroyHook::new(vec!["system", "coll:a"].into());
+        let mut hooks = vec![];
+        hooks.append(&mut hook.hooks());
+        hooks.append(&mut DestroyHook::hooks(destroy_hook));
         let test =
-            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()).await;
+            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into(), hooks)
+                .await;
 
         // Create children "a" and "b" in collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -610,23 +631,27 @@ mod tests {
         let res = test.realm_proxy.create_child(&mut collection_ref, child_decl("b")).await;
         let _ = res.expect("failed to create child b").expect("failed to create child b");
 
-        let child_realm = get_child(&test.realm, "coll:a").await;
-        let old_instance_id = child_realm.instance_id;
-        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
+        let child_realm = get_live_child(&test.realm, "coll:a").await;
+        let instance_id = get_instance_id(&test.realm, "coll:a").await;
+        assert_eq!("(system(coll:a,coll:b))", hook.print());
+        assert_eq!(child_realm.component_url, "test:///a".to_string());
+        assert_eq!(instance_id, 1);
 
-        // Destroy "a". "a" is gone from the topology.
+        // Destroy "a". "a" is no longer live from the client's perspective, although it's still
+        // being destroyed.
         let mut child_ref =
             fsys::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
         let res = test.realm_proxy.destroy_child(&mut child_ref).await;
         let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
 
-        let actual_children = get_children(&test.realm).await;
-        let mut expected_children: HashSet<ChildMoniker> = HashSet::new();
+        let actual_children = get_live_children(&test.realm).await;
+        let mut expected_children: HashSet<PartialMoniker> = HashSet::new();
         expected_children.insert("coll:b".into());
         assert_eq!(actual_children, expected_children);
-        assert_eq!("(system(coll:b))", test.hook.print());
+        assert_eq!("(system(coll:b))", hook.print());
 
-        // Recreate "a". Verify "a" is back (but it's a different "a").
+        // Recreate "a" and verify "a" is back (but it's a different "a"). The old "a" is gone
+        // from the client's point of view, but it hasn't been cleaned up yet.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
         let child_decl = fsys::ChildDecl {
             name: Some("a".to_string()),
@@ -636,10 +661,81 @@ mod tests {
         let res = test.realm_proxy.create_child(&mut collection_ref, child_decl).await;
         let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
 
-        assert_eq!("(system(coll:a,coll:b))", test.hook.print());
-        let child_realm = get_child(&test.realm, "coll:a").await;
-        assert!(child_realm.instance_id > old_instance_id);
+        assert_eq!("(system(coll:a,coll:b))", hook.print());
+        let child_realm = get_live_child(&test.realm, "coll:a").await;
+        let instance_id = get_instance_id(&test.realm, "coll:a").await;
         assert_eq!(child_realm.component_url, "test:///a_alt".to_string());
+        assert_eq!(instance_id, 3);
+
+        // The destruction of "a" was arrested during `Stop`. The old "a" should still exist,
+        // although it's not live.
+        assert!(has_child(&test.realm, "coll:a:1").await);
+        assert!(has_child(&test.realm, "coll:a:3").await);
+
+        // Finally, let destruction proceed. The old instance of "a" should be cleaned up.
+        stop_send.send(()).await.expect("failed to send");
+        destroy_recv.next().await.expect("failed to receive");
+        assert!(!has_child(&test.realm, "coll:a:1").await);
+        assert!(has_child(&test.realm, "coll:a:3").await);
+    }
+
+    struct DestroyHook {
+        /// Realm for which to block `on_stop_instance`.
+        moniker: AbsoluteMoniker,
+        /// Receiver on which to wait to unblock `on_stop_instance`.
+        stop_recv: Mutex<mpsc::Receiver<()>>,
+        /// Receiver on which to wait to unblock `on_destroy_instance`.
+        destroy_send: Mutex<mpsc::Sender<()>>,
+    }
+
+    impl DestroyHook {
+        /// Returns `DestroyHook` and channels on which to signal on `on_stop_instance` and
+        /// be signalled for `on_destroy_instance`.
+        fn new(moniker: AbsoluteMoniker) -> (Arc<Self>, mpsc::Sender<()>, mpsc::Receiver<()>) {
+            let (stop_send, stop_recv) = mpsc::channel(0);
+            let (destroy_send, destroy_recv) = mpsc::channel(0);
+            (
+                Arc::new(Self {
+                    moniker,
+                    stop_recv: Mutex::new(stop_recv),
+                    destroy_send: Mutex::new(destroy_send),
+                }),
+                stop_send,
+                destroy_recv,
+            )
+        }
+
+        async fn on_stop_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+            if realm.abs_moniker == self.moniker {
+                let mut recv = self.stop_recv.lock().await;
+                recv.next().await.expect("failed to suspend stop");
+            }
+            Ok(())
+        }
+
+        async fn on_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+            if realm.abs_moniker == self.moniker {
+                let mut send = self.destroy_send.lock().await;
+                send.send(()).await.expect("failed to send destroy signal");
+            }
+            Ok(())
+        }
+
+        fn hooks(hook: Arc<DestroyHook>) -> Vec<Hook> {
+            vec![Hook::StopInstance(hook.clone()), Hook::DestroyInstance(hook.clone())]
+        }
+    }
+
+    impl DestroyInstanceHook for DestroyHook {
+        fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+            Box::pin(self.on_destroy_instance_async(realm))
+        }
+    }
+
+    impl StopInstanceHook for DestroyHook {
+        fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+            Box::pin(self.on_stop_instance_async(realm))
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -667,8 +763,14 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let test =
-            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec!["system"].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Create child "a" in collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -739,7 +841,14 @@ mod tests {
         out_dir.add_service();
         mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
         let urls_run = mock_runner.urls_run.clone();
-        let test = FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec![].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Bind to child and use exposed service.
         let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
@@ -765,7 +874,7 @@ mod tests {
             "test:///eager_resolved".to_string(),
         ];
         assert_eq!(*urls_run.lock().await, expected_urls);
-        assert_eq!("(system(eager))", test.hook.print());
+        assert_eq!("(system(eager))", hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -798,7 +907,14 @@ mod tests {
         out_dir.add_service();
         mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
         let urls_run = mock_runner.urls_run.clone();
-        let test = FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec![].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Add "system" to collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -826,7 +942,7 @@ mod tests {
         let expected_urls =
             vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
         assert_eq!(*urls_run.lock().await, expected_urls);
-        assert_eq!("(coll:system)", test.hook.print());
+        assert_eq!("(coll:system)", hook.print());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -859,7 +975,14 @@ mod tests {
         mock_resolver.add_component("unrunnable", ComponentDecl { ..default_component_decl() });
         let mut mock_runner = MockRunner::new();
         mock_runner.cause_failure("unrunnable");
-        let test = FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec![].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Instance not found.
         {
@@ -938,7 +1061,14 @@ mod tests {
         );
         mock_resolver.add_component("static", default_component_decl());
         let mock_runner = MockRunner::new();
-        let test = FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec![].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Create children "a" and "b" in collection 1, "c" in collection 2.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -1000,7 +1130,14 @@ mod tests {
             },
         );
         let mock_runner = MockRunner::new();
-        let test = FrameworkServiceTest::new(mock_resolver, mock_runner, vec![].into()).await;
+        let hook = Arc::new(TestHook::new());
+        let test = FrameworkServiceTest::new(
+            mock_resolver,
+            mock_runner,
+            vec![].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Collection not found.
         {

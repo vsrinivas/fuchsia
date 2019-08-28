@@ -184,11 +184,11 @@ impl Model {
                 cur_realm.resolve_decl().await?;
                 let cur_state = cur_realm.lock_state().await;
                 let cur_state = cur_state.get();
-                let child_realms = cur_state.live_child_realms();
-                if !child_realms.contains_key(&moniker) {
+                if let Some(r) = cur_state.get_live_child_realm(&moniker) {
+                    r.clone()
+                } else {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
                 }
-                child_realms[moniker].clone()
             }
         }
         cur_realm.resolve_decl().await?;
@@ -299,8 +299,7 @@ impl Model {
         state.set_execution(execution);
         let eager_child_realms: Vec<_> = state
             .live_child_realms()
-            .values()
-            .filter_map(|r| match r.startup {
+            .filter_map(|(_, r)| match r.startup {
                 fsys::StartupMode::Eager => Some(r.clone()),
                 fsys::StartupMode::Lazy => None,
             })

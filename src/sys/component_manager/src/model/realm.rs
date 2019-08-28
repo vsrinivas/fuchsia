@@ -11,10 +11,9 @@ use {
     futures::future::BoxFuture,
     futures::lock::{Mutex, MutexLockFuture},
     std::convert::TryInto,
+    std::iter::Iterator,
     std::{collections::HashMap, sync::Arc},
 };
-
-type ChildRealmMap = HashMap<ChildMoniker, Arc<Realm>>;
 
 /// A realm is a container for an individual component instance and its children.  It is provided
 /// by the parent of the instance or by the component manager itself in the case of the root realm.
@@ -33,9 +32,6 @@ pub struct Realm {
     pub startup: fsys::StartupMode,
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
-    /// The id for this realm's component instance. Used to distinguish multiple instances with the
-    /// same moniker (of which at most one instance is live at a time).
-    pub instance_id: u32,
     /// The component's mutable state.
     state: Mutex<RealmStateHolder>,
 }
@@ -54,7 +50,6 @@ impl Realm {
             component_url,
             // Started by main().
             startup: fsys::StartupMode::Lazy,
-            instance_id: 0,
             state: Mutex::new(RealmStateHolder::new()),
         }
     }
@@ -156,10 +151,10 @@ impl Realm {
             {
                 child_realm
             } else {
-                let child_moniker =
-                    ChildMoniker::new(child_decl.name.clone(), Some(collection_name));
+                let partial_moniker =
+                    PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
                 return Err(ModelError::instance_already_exists(
-                    self.abs_moniker.child(child_moniker),
+                    self.abs_moniker.child(partial_moniker),
                 ));
             }
         };
@@ -168,28 +163,36 @@ impl Realm {
         Ok(())
     }
 
-    /// Removes the dynamic child `child_moniker`.
+    /// Removes the dynamic child `partial_moniker`.
     pub async fn remove_dynamic_child<'a>(
-        &'a self,
-        child_moniker: &'a ChildMoniker,
-        hooks: &'a Hooks,
+        model: Model,
+        realm: Arc<Realm>,
+        partial_moniker: &'a PartialMoniker,
     ) -> Result<(), ModelError> {
-        self.resolve_decl().await?;
+        realm.resolve_decl().await?;
         let child_realm = {
-            let mut state = self.lock_state().await;
+            let mut state = realm.lock_state().await;
             let state = state.get_mut();
-            if let Some(child_realm) = state.child_realms.remove(&child_moniker) {
-                // TODO: Register a `DeleteChild` action instead.
-                state.mark_child_realm_deleting(&child_moniker);
+            let model = model.clone();
+            if let Some(tup) = state.live_child_realms.get(&partial_moniker).map(|t| t.clone()) {
+                let (instance, child_realm) = tup;
+                let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
+                let _ = state
+                    .register_action(
+                        model,
+                        realm.clone(),
+                        Action::DeleteChild(child_moniker.clone()),
+                    )
+                    .await?;
                 child_realm
             } else {
                 return Err(ModelError::instance_not_found(
-                    self.abs_moniker.child(child_moniker.clone()),
+                    realm.abs_moniker.child(partial_moniker.clone()),
                 ));
             }
         };
         // Call hooks outside of lock
-        hooks.on_remove_dynamic_child(child_realm.clone()).await?;
+        model.hooks.on_remove_dynamic_child(child_realm.clone()).await?;
         Ok(())
     }
 
@@ -211,11 +214,10 @@ impl Realm {
 
     /// Destroys this component instance.
     /// REQUIRES: All children have already been destroyed.
-    // TODO: This is a stub. Still need to:
+    // TODO: This is a stub. Need to:
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
     // - Delete the instance's isolated storage
-    pub async fn destroy_instance(realm: Arc<Realm>, hooks: &Hooks) -> Result<(), ModelError> {
-        hooks.on_destroy_instance(realm.clone()).await?;
+    pub async fn destroy_instance(_realm: Arc<Realm>) -> Result<(), ModelError> {
         Ok(())
     }
 }
@@ -226,10 +228,10 @@ pub struct RealmState {
     execution: Option<Execution>,
     /// The component's validated declaration.
     decl: ComponentDecl,
-    /// Realms of all child instances, indexed by child moniker.
-    child_realms: ChildRealmMap,
-    /// Realms of child instances that have not been deleted.
-    live_child_realms: ChildRealmMap,
+    /// Realms of all child instances, indexed by instanced moniker.
+    child_realms: HashMap<ChildMoniker, Arc<Realm>>,
+    /// Realms of child instances that have not been deleted, indexed by child moniker.
+    live_child_realms: HashMap<PartialMoniker, (InstanceId, Arc<Realm>)>,
     /// The component's meta directory. Evaluated on demand by the `resolve_meta_dir`
     /// getter.
     meta_dir: Option<Arc<DirectoryProxy>>,
@@ -240,7 +242,7 @@ pub struct RealmState {
     actions: ActionSet,
     /// The next unique identifier for a dynamic component instance created in the realm.
     /// (Static instances receive identifier 0.)
-    next_dynamic_instance_id: u32,
+    next_dynamic_instance_id: InstanceId,
 }
 
 impl RealmState {
@@ -286,38 +288,45 @@ impl RealmState {
         &self.decl
     }
 
-    /// Returns a reference to the list of live child realms.
-    pub fn live_child_realms(&self) -> &ChildRealmMap {
-        &self.live_child_realms
+    /// Returns an iterator over live child realms.
+    pub fn live_child_realms(&self) -> impl Iterator<Item = (&PartialMoniker, &Arc<Realm>)> {
+        self.live_child_realms.iter().map(|(k, v)| (k, &v.1))
+    }
+
+    /// Returns a reference to a live child.
+    pub fn get_live_child_realm(&self, m: &PartialMoniker) -> Option<Arc<Realm>> {
+        self.live_child_realms.get(m).map(|(_, v)| v.clone())
+    }
+
+    /// Returns a live child's instance id.
+    pub fn get_live_child_instance_id(&self, m: &PartialMoniker) -> Option<InstanceId> {
+        self.live_child_realms.get(m).map(|(i, _)| *i)
     }
 
     /// Returns a reference to the list of all child realms.
-    pub fn all_child_realms(&self) -> &ChildRealmMap {
+    pub fn all_child_realms(&self) -> &HashMap<ChildMoniker, Arc<Realm>> {
         &self.child_realms
     }
 
     /// Returns all deleting child realms.
-    pub fn deleting_child_realms(&self) -> ChildRealmMap {
-        let mut deleting_realms = self.all_child_realms().clone();
-        for m in self.live_child_realms.keys() {
-            deleting_realms.remove(m);
+    pub fn get_deleting_child_realms(&self) -> HashMap<ChildMoniker, Arc<Realm>> {
+        let mut deleting_realms = HashMap::new();
+        for (m, r) in self.all_child_realms().iter() {
+            if self.get_live_child_realm(&m.to_partial()).is_none() {
+                deleting_realms.insert(m.clone(), r.clone());
+            }
         }
         deleting_realms
     }
 
     /// Marks a live child realm deleting. No-op if the child is already deleting.
-    pub fn mark_child_realm_deleting(&mut self, child_moniker: &ChildMoniker) {
-        self.live_child_realms.remove(&child_moniker);
+    pub fn mark_child_realm_deleting(&mut self, partial_moniker: &PartialMoniker) {
+        self.live_child_realms.remove(&partial_moniker);
     }
 
     /// Removes a child realm.
-    ///
-    /// REQUIRES: The realm is deleting.
-    pub fn remove_child_realm(&mut self, child_moniker: &ChildMoniker) {
-        if self.live_child_realms.contains_key(child_moniker) {
-            panic!("cannot remove a live realm");
-        }
-        self.child_realms.remove(child_moniker);
+    pub fn remove_child_realm(&mut self, moniker: &ChildMoniker) {
+        self.child_realms.remove(moniker);
     }
 
     /// Populates `meta_dir`.
@@ -333,27 +342,29 @@ impl RealmState {
         child: &'a ChildDecl,
         collection: Option<String>,
     ) -> Option<Arc<Realm>> {
-        let child_moniker = ChildMoniker::new(child.name.clone(), collection.clone());
-        if !self.child_realms.contains_key(&child_moniker) {
-            let instance_id = if collection.is_some() {
+        let instance_id = match collection {
+            Some(_) => {
                 let id = self.next_dynamic_instance_id;
                 self.next_dynamic_instance_id += 1;
                 id
-            } else {
-                0
-            };
-            let abs_moniker = realm.abs_moniker.child(child_moniker.clone());
+            }
+            None => 0,
+        };
+        let child_moniker =
+            ChildMoniker::new(child.name.clone(), collection.clone(), instance_id);
+        let partial_moniker = child_moniker.to_partial();
+        if self.get_live_child_realm(&partial_moniker).is_none() {
+            let abs_moniker = realm.abs_moniker.child(partial_moniker.clone());
             let child_realm = Arc::new(Realm {
                 resolver_registry: realm.resolver_registry.clone(),
                 default_runner: realm.default_runner.clone(),
                 abs_moniker: abs_moniker,
                 component_url: child.url.clone(),
                 startup: child.startup,
-                instance_id,
                 state: Mutex::new(RealmStateHolder::new()),
             });
-            self.child_realms.insert(child_moniker.clone(), child_realm.clone());
-            self.live_child_realms.insert(child_moniker, child_realm.clone());
+            self.child_realms.insert(child_moniker, child_realm.clone());
+            self.live_child_realms.insert(partial_moniker, (instance_id, child_realm.clone()));
             Some(child_realm)
         } else {
             None

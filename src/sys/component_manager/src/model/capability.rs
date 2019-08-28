@@ -93,13 +93,13 @@ impl RoutedCapability {
     pub fn find_offer_source<'a>(
         &self,
         decl: &'a ComponentDecl,
-        child_moniker: &ChildMoniker,
+        partial_moniker: &PartialMoniker,
     ) -> Option<&'a OfferDecl> {
         decl.offers.iter().find(|&offer| match (self, offer) {
             // Service offered to me that matches a service `use` or `offer` declaration.
             (RoutedCapability::Use(UseDecl::Service(child_use)), OfferDecl::Service(offer)) => {
                 Self::is_offer_service_or_dir_match(
-                    child_moniker,
+                    partial_moniker,
                     &child_use.source_path,
                     &offer.target,
                     &offer.target_path,
@@ -109,7 +109,7 @@ impl RoutedCapability {
                 RoutedCapability::Offer(OfferDecl::Service(child_offer)),
                 OfferDecl::Service(offer),
             ) => Self::is_offer_service_or_dir_match(
-                child_moniker,
+                partial_moniker,
                 &child_offer.source_path,
                 &offer.target,
                 &offer.target_path,
@@ -119,7 +119,7 @@ impl RoutedCapability {
                 RoutedCapability::Use(UseDecl::LegacyService(child_use)),
                 OfferDecl::LegacyService(offer),
             ) => Self::is_offer_service_or_dir_match(
-                child_moniker,
+                partial_moniker,
                 &child_use.source_path,
                 &offer.target,
                 &offer.target_path,
@@ -128,7 +128,7 @@ impl RoutedCapability {
                 RoutedCapability::Offer(OfferDecl::LegacyService(child_offer)),
                 OfferDecl::LegacyService(offer),
             ) => Self::is_offer_service_or_dir_match(
-                child_moniker,
+                partial_moniker,
                 &child_offer.source_path,
                 &offer.target,
                 &offer.target_path,
@@ -136,7 +136,7 @@ impl RoutedCapability {
             // Directory offered to me that matches a directory `use` or `offer` declaration.
             (RoutedCapability::Use(UseDecl::Directory(child_use)), OfferDecl::Directory(offer)) => {
                 Self::is_offer_service_or_dir_match(
-                    child_moniker,
+                    partial_moniker,
                     &child_use.source_path,
                     &offer.target,
                     &offer.target_path,
@@ -146,7 +146,7 @@ impl RoutedCapability {
                 RoutedCapability::Offer(OfferDecl::Directory(child_offer)),
                 OfferDecl::Directory(offer),
             ) => Self::is_offer_service_or_dir_match(
-                child_moniker,
+                partial_moniker,
                 &child_offer.source_path,
                 &offer.target,
                 &offer.target_path,
@@ -154,7 +154,7 @@ impl RoutedCapability {
             // Directory offered to me that matches a `storage` declaration which consumes it.
             (RoutedCapability::Storage(child_storage), OfferDecl::Directory(offer)) => {
                 Self::is_offer_service_or_dir_match(
-                    child_moniker,
+                    partial_moniker,
                     &child_storage.source_path,
                     &offer.target,
                     &offer.target_path,
@@ -163,7 +163,7 @@ impl RoutedCapability {
             // Storage offered to me.
             (RoutedCapability::Use(UseDecl::Storage(child_use)), OfferDecl::Storage(offer)) => {
                 Self::is_offer_storage_match(
-                    child_moniker,
+                    partial_moniker,
                     child_use.type_(),
                     offer.target(),
                     offer.type_(),
@@ -173,7 +173,7 @@ impl RoutedCapability {
                 RoutedCapability::Offer(OfferDecl::Storage(child_offer)),
                 OfferDecl::Storage(offer),
             ) => Self::is_offer_storage_match(
-                child_moniker,
+                partial_moniker,
                 child_offer.type_(),
                 offer.target(),
                 offer.type_(),
@@ -183,17 +183,17 @@ impl RoutedCapability {
     }
 
     fn is_offer_service_or_dir_match(
-        child_moniker: &ChildMoniker,
+        partial_moniker: &PartialMoniker,
         path: &CapabilityPath,
         target: &OfferTarget,
         target_path: &CapabilityPath,
     ) -> bool {
         match target {
-            OfferTarget::Child(target_child_name) => match child_moniker.collection() {
+            OfferTarget::Child(target_child_name) => match partial_moniker.collection() {
                 Some(_) => false,
-                None => target_path == path && target_child_name == child_moniker.name(),
+                None => target_path == path && target_child_name == partial_moniker.name(),
             },
-            OfferTarget::Collection(target_collection_name) => match child_moniker.collection() {
+            OfferTarget::Collection(target_collection_name) => match partial_moniker.collection() {
                 Some(collection) => target_path == path && target_collection_name == collection,
                 None => false,
             },
@@ -201,7 +201,7 @@ impl RoutedCapability {
     }
 
     fn is_offer_storage_match(
-        child_moniker: &ChildMoniker,
+        partial_moniker: &PartialMoniker,
         child_type: fsys::StorageType,
         parent_target: &OfferTarget,
         parent_type: fsys::StorageType,
@@ -209,9 +209,9 @@ impl RoutedCapability {
         // The types must match...
         parent_type == child_type &&
         // ...and the child/collection names must match.
-        match (parent_target, child_moniker.collection()) {
+        match (parent_target, partial_moniker.collection()) {
             (OfferTarget::Child(target_child_name), None) =>
-                target_child_name == child_moniker.name(),
+                target_child_name == partial_moniker.name(),
             (OfferTarget::Collection(target_collection_name), Some(collection)) =>
                 target_collection_name == collection,
             _ => false
