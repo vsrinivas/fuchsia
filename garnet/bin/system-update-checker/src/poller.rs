@@ -4,7 +4,9 @@
 
 use crate::apply::Initiator;
 use crate::config::Config;
-use crate::update_manager::{TargetChannelUpdater, UpdateApplier, UpdateChecker, UpdateManager};
+use crate::update_manager::{
+    CurrentChannelUpdater, TargetChannelUpdater, UpdateApplier, UpdateChecker, UpdateManager,
+};
 use crate::update_monitor::StateChangeCallback;
 use fidl_fuchsia_update::CheckStartedResult;
 use fuchsia_async as fasync;
@@ -12,12 +14,13 @@ use fuchsia_syslog::fx_log_info;
 use futures::prelude::*;
 use std::sync::Arc;
 
-pub fn run_periodic_update_check<T, C, A, S>(
-    manager: Arc<UpdateManager<T, C, A, S>>,
+pub fn run_periodic_update_check<T, Ch, C, A, S>(
+    manager: Arc<UpdateManager<T, Ch, C, A, S>>,
     config: &Config,
 ) -> impl Future<Output = ()>
 where
     T: TargetChannelUpdater,
+    Ch: CurrentChannelUpdater,
     C: UpdateChecker,
     A: UpdateApplier,
     S: StateChangeCallback,
@@ -49,8 +52,8 @@ mod tests {
     use super::*;
     use crate::config::ConfigBuilder;
     use crate::update_manager::tests::{
-        FakeTargetChannelUpdater, FakeUpdateChecker, StateChangeCollector,
-        UnreachableStateChangeCallback, UnreachableUpdateApplier,
+        FakeCurrentChannelUpdater, FakeTargetChannelUpdater, FakeUpdateChecker,
+        StateChangeCollector, UnreachableStateChangeCallback, UnreachableUpdateApplier,
     };
     use fidl_fuchsia_update::ManagerState;
     use fuchsia_async::DurationExt;
@@ -62,9 +65,10 @@ mod tests {
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
 
         let checker = FakeUpdateChecker::new_up_to_date();
-        let manager: UpdateManager<_, _, _, UnreachableStateChangeCallback> =
+        let manager: UpdateManager<_, _, _, _, UnreachableStateChangeCallback> =
             UpdateManager::from_checker_and_applier(
                 FakeTargetChannelUpdater::new(),
+                FakeCurrentChannelUpdater::new(),
                 checker.clone(),
                 UnreachableUpdateApplier,
             );
@@ -84,6 +88,7 @@ mod tests {
         let callback = StateChangeCollector::new();
         let manager = UpdateManager::from_checker_and_applier(
             FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
             checker.clone(),
             UnreachableUpdateApplier,
         );
@@ -133,6 +138,7 @@ mod tests {
         let callback = StateChangeCollector::new();
         let manager = UpdateManager::from_checker_and_applier(
             FakeTargetChannelUpdater::new(),
+            FakeCurrentChannelUpdater::new(),
             checker.clone(),
             UnreachableUpdateApplier,
         );

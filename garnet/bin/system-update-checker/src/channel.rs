@@ -12,6 +12,12 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_url::pkg_url::PkgUrl;
 use fuchsia_zircon as zx;
+use futures::{
+    channel::mpsc,
+    future::{self, Either, FutureExt},
+    sink::SinkExt,
+    stream::StreamExt,
+};
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
@@ -19,14 +25,15 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-pub struct CurrentChannelNotifier<S = ServiceConnector> {
-    service_connector: S,
-    current_channel: String,
-}
+static CURRENT_CHANNEL: &'static str = "current_channel.json";
+static TARGET_CHANNEL: &'static str = "target_channel.json";
 
-impl<S: ServiceConnect> CurrentChannelNotifier<S> {
-    pub fn new(service_connector: S, dir: impl AsRef<Path>) -> Self {
-        let current_channel = read_current_channel(dir.as_ref()).unwrap_or_else(|err| {
+pub fn build_current_channel_manager_and_notifier<S: ServiceConnect>(
+    service_connector: S,
+    dir: impl Into<PathBuf>,
+) -> Result<(CurrentChannelManager, CurrentChannelNotifier<S>), failure::Error> {
+    let path = dir.into();
+    let current_channel = read_current_channel(path.as_ref()).unwrap_or_else(|err| {
             fx_log_err!(
                 "Error reading current_channel, defaulting to the empty string. This is expected before the first OTA. {}",
                 err
@@ -34,54 +41,132 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
             String::new()
         });
 
-        CurrentChannelNotifier { service_connector, current_channel }
+    let (channel_sender, channel_receiver) = mpsc::channel(100);
+
+    Ok((
+        CurrentChannelManager::new(path, channel_sender),
+        CurrentChannelNotifier::new(service_connector, current_channel, channel_receiver),
+    ))
+}
+
+pub struct CurrentChannelNotifier<S = ServiceConnector> {
+    service_connector: S,
+    initial_channel: String,
+    channel_receiver: mpsc::Receiver<String>,
+}
+
+impl<S: ServiceConnect> CurrentChannelNotifier<S> {
+    fn new(
+        service_connector: S,
+        initial_channel: String,
+        channel_receiver: mpsc::Receiver<String>,
+    ) -> Self {
+        CurrentChannelNotifier { service_connector, initial_channel, channel_receiver }
     }
 
-    pub async fn run(self) {
+    async fn notify_cobalt(service_connector: &S, current_channel: String) {
         loop {
-            let cobalt = self.connect().await;
+            let cobalt = Self::connect(service_connector).await;
 
-            fx_log_info!("calling cobalt.SetChannel(\"{}\")", self.current_channel);
+            fx_log_info!("calling cobalt.SetChannel(\"{}\")", current_channel);
 
-            match cobalt.set_channel(&self.current_channel).await {
+            match cobalt.set_channel(&current_channel).await {
                 Ok(CobaltStatus::Ok) => {
-                    break;
+                    return;
                 }
                 Ok(CobaltStatus::EventTooBig) => {
                     fx_log_warn!("cobalt.SetChannel returned Status.EVENT_TOO_BIG, retrying");
-                    self.sleep().await;
                 }
                 Ok(status) => {
                     // Not much we can do about the other status codes but log.
                     fx_log_err!("cobalt.SetChannel returned non-OK status: {:?}", status);
-                    break;
+                    return;
                 }
                 Err(err) => {
                     // channel broken, so log the error and reconnect.
                     fx_log_warn!("cobalt.SetChannel returned error: {}, retrying", err);
-                    self.sleep().await;
+                }
+            }
+
+            Self::sleep().await;
+        }
+    }
+
+    pub async fn run(self) {
+        let Self { service_connector, initial_channel, mut channel_receiver } = self;
+        let mut notify_cobalt_task =
+            Self::notify_cobalt(&service_connector, initial_channel).boxed();
+
+        loop {
+            match future::select(channel_receiver.next(), notify_cobalt_task).await {
+                Either::Left((Some(current_channel), _)) => {
+                    fx_log_warn!(
+                        "notify_cobalt() overrun. Starting again with new channel: `{}`",
+                        current_channel
+                    );
+                    notify_cobalt_task =
+                        Self::notify_cobalt(&service_connector, current_channel).boxed();
+                }
+                Either::Left((None, notify_cobalt_future)) => {
+                    fx_log_warn!(
+                        "all channel_senders have been closed. No new messages will arrive."
+                    );
+                    notify_cobalt_future.await;
+                    return;
+                }
+                Either::Right((_, next_channel_fut)) => {
+                    if let Some(current_channel) = next_channel_fut.await {
+                        notify_cobalt_task =
+                            Self::notify_cobalt(&service_connector, current_channel).boxed();
+                    } else {
+                        fx_log_warn!(
+                            "all channel_senders have been closed. No new messages will arrive."
+                        );
+                        return;
+                    }
                 }
             }
         }
     }
 
-    async fn connect(&self) -> SystemDataUpdaterProxy {
+    async fn connect(service_connector: &S) -> SystemDataUpdaterProxy {
         loop {
-            match self.service_connector.connect_to_service::<SystemDataUpdaterMarker>() {
+            match service_connector.connect_to_service::<SystemDataUpdaterMarker>() {
                 Ok(cobalt) => {
                     return cobalt;
                 }
                 Err(err) => {
                     fx_log_err!("error connecting to cobalt: {}", err);
-                    self.sleep().await
+                    Self::sleep().await
                 }
             }
         }
     }
 
-    async fn sleep(&self) {
+    async fn sleep() {
         let delay = fasync::Time::after(Duration::from_secs(5).into());
         fasync::Timer::new(delay).await;
+    }
+}
+
+#[derive(Clone)]
+pub struct CurrentChannelManager {
+    path: PathBuf,
+    channel_sender: mpsc::Sender<String>,
+}
+
+impl CurrentChannelManager {
+    fn new(path: PathBuf, channel_sender: mpsc::Sender<String>) -> Self {
+        CurrentChannelManager { path, channel_sender }
+    }
+
+    pub async fn update(&mut self) -> Result<(), failure::Error> {
+        let target_channel = read_channel(&self.path.join(TARGET_CHANNEL))?;
+        if target_channel != read_current_channel(&self.path).ok().unwrap_or_else(String::new) {
+            write_channel(&self.path.join(CURRENT_CHANNEL), &target_channel)?;
+            self.channel_sender.send(target_channel).await?;
+        }
+        Ok(())
     }
 }
 
@@ -94,7 +179,7 @@ pub struct TargetChannelManager<S = ServiceConnector> {
 impl<S: ServiceConnect> TargetChannelManager<S> {
     pub fn new(service_connector: S, dir: impl Into<PathBuf>) -> Self {
         let mut path = dir.into();
-        path.push("target_channel.json");
+        path.push(TARGET_CHANNEL);
         let target_channel = read_channel(&path).ok();
 
         Self { service_connector, path, target_channel }
@@ -132,7 +217,7 @@ enum Channel {
 }
 
 fn read_current_channel(p: &Path) -> Result<String, Error> {
-    read_channel(p.join("current_channel.json"))
+    read_channel(p.join(CURRENT_CHANNEL))
 }
 
 fn read_channel(path: impl AsRef<Path>) -> Result<String, Error> {
@@ -230,7 +315,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
 
         fs::write(
-            dir.path().join("current_channel.json"),
+            dir.path().join(CURRENT_CHANNEL),
             r#"{"version":"1","content":{"legacy_amber_source_name":"stable"}}"#,
         )
         .unwrap();
@@ -282,7 +367,7 @@ mod tests {
     fn test_read_current_channel_rejects_invalid_json() {
         let dir = tempfile::tempdir().unwrap();
 
-        fs::write(dir.path().join("current_channel.json"), "no channel here").unwrap();
+        fs::write(dir.path().join(CURRENT_CHANNEL), "no channel here").unwrap();
 
         assert_matches!(read_current_channel(dir.path()), Err(Error::Json(_)));
     }
@@ -290,7 +375,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_current_channel_notifier() {
         let dir = tempfile::tempdir().unwrap();
-        let current_channel_path = dir.path().join("current_channel.json");
+        let current_channel_path = dir.path().join(CURRENT_CHANNEL);
 
         fs::write(
             &current_channel_path,
@@ -299,9 +384,9 @@ mod tests {
         .unwrap();
 
         let (connector, svc_dir) =
-            NamespacedServiceConnector::bind("/test/current_channel_notifier/svc")
+            NamespacedServiceConnector::bind("/test/current_channel_manager/svc")
                 .expect("ns to bind");
-        let c = CurrentChannelNotifier::new(connector, dir.path());
+        let (_, c) = build_current_channel_manager_and_notifier(connector, dir.path()).unwrap();
 
         let mut fs = ServiceFs::new_local();
         let channel = Arc::new(Mutex::new(None));
@@ -337,7 +422,7 @@ mod tests {
         let mut executor = fasync::Executor::new_with_fake_time().unwrap();
 
         let dir = tempfile::tempdir().unwrap();
-        let current_channel_path = dir.path().join("current_channel.json");
+        let current_channel_path = dir.path().join(CURRENT_CHANNEL);
 
         write_channel(&current_channel_path, "stable").unwrap();
 
@@ -448,7 +533,8 @@ mod tests {
         }
 
         let connector = FlakeyServiceConnector::new();
-        let c = CurrentChannelNotifier::new(connector.clone(), dir.path());
+        let (_, c) = build_current_channel_manager_and_notifier(connector.clone(), dir.path())
+            .expect("failed to construct channel_manager");
         let mut task = c.run().boxed();
         assert_eq!(executor.run_until_stalled(&mut task), Poll::Pending);
 
@@ -487,7 +573,8 @@ mod tests {
 
         // Bails out if Cobalt responds with an unexpected status code
         let connector = FlakeyServiceConnector::new();
-        let c = CurrentChannelNotifier::new(connector.clone(), dir.path());
+        let (_, c) = build_current_channel_manager_and_notifier(connector.clone(), dir.path())
+            .expect("failed to construct channel_manager");
         let mut task = c.run().boxed();
         connector.set_flake_mode(FlakeMode::StatusOnCall(CobaltStatus::InvalidArguments));
         assert_eq!(executor.run_until_stalled(&mut task), Poll::Ready(()));
@@ -495,10 +582,77 @@ mod tests {
         assert_eq!(connector.call_count(), 1);
     }
 
+    #[test]
+    fn test_current_channel_manager_writes_channel() {
+        let mut exec = fasync::Executor::new().expect("Unable to create executor");
+
+        let dir = tempfile::tempdir().unwrap();
+        let target_channel_path = dir.path().join(TARGET_CHANNEL);
+        let current_channel_path = dir.path().join(CURRENT_CHANNEL);
+
+        let target_connector = RewriteServiceConnector::new("fuchsia-pkg://devhost/update/0");
+        let mut target_channel_manager =
+            TargetChannelManager::new(target_connector.clone(), dir.path());
+
+        let (current_connector, svc_dir) =
+            NamespacedServiceConnector::bind("/test/current_channel_manager2/svc")
+                .expect("ns to bind");
+        let (mut current_channel_manager, current_channel_notifier) =
+            build_current_channel_manager_and_notifier(current_connector, dir.path()).unwrap();
+
+        let mut fs = ServiceFs::new_local();
+        let channel = Arc::new(Mutex::new(None));
+        let chan = channel.clone();
+
+        fs.add_fidl_service(move |mut stream: SystemDataUpdaterRequestStream| {
+            let chan = chan.clone();
+
+            fasync::spawn_local(async move {
+                while let Some(req) = stream.try_next().await.unwrap_or(None) {
+                    match req {
+                        SystemDataUpdaterRequest::SetChannel { current_channel, responder } => {
+                            *chan.lock() = Some(current_channel);
+                            responder.send(CobaltStatus::Ok).unwrap();
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            })
+        })
+        .serve_connection(svc_dir)
+        .expect("serve_connection");
+
+        fasync::spawn_local(fs.collect());
+
+        let mut notify_fut = current_channel_notifier.run().boxed();
+        assert_eq!(exec.run_until_stalled(&mut notify_fut), Poll::Pending);
+
+        assert_matches!(read_channel(&current_channel_path), Err(_));
+        assert_eq!(channel.lock().as_ref().map(|s| s.as_str()), Some(""));
+
+        exec.run_singlethreaded(target_channel_manager.update())
+            .expect("channel update to succeed");
+        exec.run_singlethreaded(current_channel_manager.update())
+            .expect("current channel update to succeed");
+        assert_eq!(exec.run_until_stalled(&mut notify_fut), Poll::Pending);
+
+        assert_eq!(read_channel(&current_channel_path).unwrap(), "devhost");
+        assert_eq!(channel.lock().as_ref().map(|s| s.as_str()), Some("devhost"));
+
+        // Even if the current_channel is already known, it should be overwritten.
+        write_channel(&target_channel_path, "different").unwrap();
+        exec.run_singlethreaded(current_channel_manager.update())
+            .expect("current channel update to succeed");
+        assert_eq!(exec.run_until_stalled(&mut notify_fut), Poll::Pending);
+
+        assert_eq!(read_channel(&current_channel_path).unwrap(), "different");
+        assert_eq!(channel.lock().as_ref().map(|s| s.as_str()), Some("different"));
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_channel_manager_writes_channel() {
         let dir = tempfile::tempdir().unwrap();
-        let target_channel_path = dir.path().join("target_channel.json");
+        let target_channel_path = dir.path().join(TARGET_CHANNEL);
 
         let connector = RewriteServiceConnector::new("fuchsia-pkg://devhost/update/0");
         let mut channel_manager = TargetChannelManager::new(connector.clone(), dir.path());
@@ -522,7 +676,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_channel_manager_recovers_from_corrupt_data() {
         let dir = tempfile::tempdir().unwrap();
-        let target_channel_path = dir.path().join("target_channel.json");
+        let target_channel_path = dir.path().join(TARGET_CHANNEL);
 
         fs::write(&target_channel_path, r#"invalid json"#).unwrap();
 
