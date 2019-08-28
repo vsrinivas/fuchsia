@@ -151,6 +151,69 @@ FakeAlc5663Hardware CreateFakeAlc5663() {
   return result;
 }
 
+TEST(CalculatePll, SimpleValues) {
+  struct TestCase {
+    uint32_t input_freq;
+    uint32_t desired_freq;
+    PllParameters expected;
+  };
+  for (const TestCase& testcase : (TestCase[]){
+           // Exact fractions, bypass M.
+           {1000, 1000, {/*n=*/2, /*k=*/2, /*m=*/0, /*bypass_m=*/true, /*bypass_k=*/false}},
+           {1000, 2000, {/*n=*/6, /*k=*/2, /*m=*/0, /*bypass_m=*/true, /*bypass_k=*/false}},
+           {1000, 3000, {/*n=*/10, /*k=*/2, /*m=*/0, /*bypass_m=*/true, /*bypass_k=*/false}},
+           {2000, 1000, {/*n=*/0, /*k=*/2, /*m=*/0, /*bypass_m=*/true, /*bypass_k=*/false}},
+           {3000, 1000, {/*n=*/2, /*k=*/2, /*m=*/1, /*bypass_m=*/false, /*bypass_k=*/false}},
+
+           // Exact fractions, use M.
+           {50000, 5000, {/*n=*/0, /*k=*/2, /*m=*/3, /*bypass_m=*/false, /*bypass_k=*/false}},
+           {15000, 10000, {/*n=*/6, /*k=*/2, /*m=*/1, /*bypass_m=*/false, /*bypass_k=*/false}},
+           {13000, 5000, {/*n=*/18, /*k=*/2, /*m=*/11, /*bypass_m=*/false, /*bypass_k=*/false}},
+
+           // Inexact fraction.
+           {48017, 77681, {/*n=*/11, /*k=*/2, /*m=*/0, /*bypass_m=*/false, /*bypass_k=*/false}},
+
+           // Perfect result exists, but intermediate results need to exceed uint32_t.
+           {UINT32_MAX,
+            UINT32_MAX,
+            {/*n=*/2, /*k=*/2, /*m=*/0, /*bypass_m=*/true, /*bypass_k=*/false}},
+           {4294967248,
+            1238932860,
+            {/*n=*/13, /*k=*/2, /*m=*/11, /*bypass_m=*/false, /*bypass_k=*/false}},
+
+           // Desired frequency fits in uint32_t, but the calculated frequency (4337074814)
+           // doesn't fit in a uint32_t.
+           {2863311528,
+            4294967294,
+            {/*n=*/101, /*k=*/2, /*m=*/15, /*bypass_m=*/false, /*bypass_k=*/false}},
+
+           // Saturated M. Would like to divide more, but we can't.
+           {100000, 1, {/*n=*/0, /*k=*/2, /*m=*/15, /*bypass_m=*/false, /*bypass_k=*/false}},
+       }) {
+    PllParameters result;
+    EXPECT_OK(CalculatePllParams(testcase.input_freq, testcase.desired_freq, &result));
+    EXPECT_EQ(result.n, testcase.expected.n);
+    EXPECT_EQ(result.m, testcase.expected.m);
+    EXPECT_EQ(result.k, testcase.expected.k);
+    EXPECT_EQ(result.bypass_m, testcase.expected.bypass_m);
+    EXPECT_EQ(result.bypass_k, testcase.expected.bypass_k);
+  }
+}
+
+TEST(CalculatePll, ZeroInputs) {
+  PllParameters result;
+
+  // Can't support 0 input or output frequencies.
+  EXPECT_EQ(CalculatePllParams(0, 1, &result), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(CalculatePllParams(1, 0, &result), ZX_ERR_INVALID_ARGS);
+}
+
+TEST(CalculatePll, InputClockTooLow) {
+  // Can't amplifiy the clock high enough.
+  PllParameters result;
+  EXPECT_EQ(CalculatePllParams(1, INT_MAX, &result), ZX_ERR_OUT_OF_RANGE);
+}
+
 TEST(Alc5663, BindUnbind) {
   FakeAlc5663Hardware hardware = CreateFakeAlc5663();
 

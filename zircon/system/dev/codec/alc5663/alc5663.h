@@ -58,4 +58,43 @@ class Alc5663Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_A
   Alc5663Client client_;
 };
 
+// Maximum parameter values for the ALC5663's Phase-locked loop (PLL).
+constexpr const uint16_t kPllMaxN = 511;
+constexpr const uint16_t kPllMaxK = 31;
+constexpr const uint16_t kPllMaxM = 15;
+
+// PLL parameters.
+//
+// The PLL takes an input clock with frequency F_in and generates a new clock signal
+// with frequency F_out, as follows:
+//
+//   F_out = (F_in * (N + 2)) / ((M + 2) * (K + 2))
+//
+// The M and K dividers can additionally be bypassed, removing the "(M + 2)"
+// or "(K + 2)" factors respectively.
+struct PllParameters {
+  uint16_t n;
+  uint16_t k;
+  uint16_t m;
+  bool bypass_m;  // If true, don't divide by (M + 2).
+  bool bypass_k;  // If true, don't divide by (K + 2).
+};
+
+// Calculate phase-locked loop (PLL) parameters.
+//
+// In particular, we calculate values of N, M and K such that:
+//
+//   * The output frequency is >= |desired_freq|.
+//   * The output frequency is as close as possible to |desired_freq|.
+//
+// That is, this function will never produce an output frequency smaller
+// than |desired_freq|, but may produce one larger if an exact answer is
+// not available.
+//
+// The ALC5663 manual states outputs should be in the range 2.048MHz to 40MHz,
+// and that K is typically 2.
+//
+// We require |input_freq| and |desired_freq| to be > 0.
+zx_status_t CalculatePllParams(uint32_t input_freq, uint32_t desired_freq, PllParameters* params);
+
 }  // namespace audio::alc5663

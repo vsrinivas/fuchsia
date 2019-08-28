@@ -8,8 +8,11 @@
 #include <lib/device-protocol/i2c.h>
 #include <sys/types.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+
+#include <cmath>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -23,6 +26,78 @@
 #include "alc5663_registers.h"
 
 namespace audio::alc5663 {
+
+namespace {
+// Return |a|*|b|, ensuring we avoid overflow by insisting the result is
+// cast to a type large enough.
+constexpr uint64_t SafeMultiply(uint32_t a, uint32_t b) {
+  return static_cast<uint64_t>(a) * static_cast<uint64_t>(b);
+}
+}  // namespace
+
+zx_status_t CalculatePllParams(uint32_t input_freq, uint32_t desired_freq, PllParameters* params) {
+  // Ensure input_freq and desired_freq are in range.
+  if (input_freq == 0 || desired_freq == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // We fix K to 2 (as suggested by the ALC5663 documentation), and try to
+  // find the best values for N and M such that:
+  //
+  //  * calculated_freq >= desired_freq
+  //
+  //  * calculated_freq is as close as possible to desired_freq.
+  //
+  const uint32_t k = 2;               // ALC5663 document recommends to set k = 2.
+  bool have_result = false;           // True if |result| contains valid PLL settings.
+  PllParameters result = {};          // Best PLL values seen thus far.
+  uint64_t best_calculated_freq = 0;  // Output frequency of PLL values in |result|.
+
+  for (uint32_t n = 0; n <= kPllMaxN; n++) {
+    // Calculate the optimal value of (M + 2) for this N and K.
+    const uint32_t m_plus_two = static_cast<uint32_t>(std::min<uint64_t>(
+        SafeMultiply(input_freq, n + 2) / SafeMultiply(desired_freq, k + 2), kPllMaxM + 2));
+
+    // If (m + 2) == 0, then N is too small to we can scale high enough.
+    if (m_plus_two == 0) {
+      continue;
+    }
+
+    // Calculate the actual frequency.
+    const uint64_t calculated_freq =
+        SafeMultiply(input_freq, n + 2) / SafeMultiply(m_plus_two, k + 2);
+
+    // If this is a better guess than any previous result, keep track of it.
+    if (!have_result || calculated_freq < best_calculated_freq) {
+      have_result = true;
+      result.m = m_plus_two < 2 ? 0 : static_cast<uint16_t>(m_plus_two - 2);
+      result.n = static_cast<uint16_t>(n);
+      result.k = static_cast<uint16_t>(k);
+      result.bypass_m = (m_plus_two == 1);
+      result.bypass_k = false;
+      best_calculated_freq = calculated_freq;
+    }
+
+    // If we have an exact match, we don't need to keep searching.
+    if (calculated_freq == desired_freq) {
+      break;
+    }
+  }
+
+  // If we didn't get a result, it means that no matter how high we make N,
+  // we still can't get an output clock high enough.
+  if (!have_result) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  zxlogf(TRACE,
+         "alc5663 PLL calculation: input frequency=%u, desired frequency=%u, "
+         "calculated frequency=%lu, n=%u, m=%u, k=%u, bypass_m=%d, bypass_k=%u\n",
+         input_freq, desired_freq, best_calculated_freq, result.n, result.m, k, result.bypass_m,
+         false);
+  *params = result;
+  return ZX_OK;
+}
 
 Alc5663Device::Alc5663Device(zx_device_t* parent, ddk::I2cChannel channel)
     : DeviceType(parent), client_(channel) {}
