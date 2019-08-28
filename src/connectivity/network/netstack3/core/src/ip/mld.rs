@@ -464,6 +464,11 @@ mod tests {
         assert_eq!(vec[1], Action::Specific(ImmediateIdleState));
     }
 
+    const MY_IP: SpecifiedAddr<Ipv6Addr> = unsafe {
+        SpecifiedAddr::new_unchecked(Ipv6Addr::new([
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3,
+        ]))
+    };
     const MY_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
     const ROUTER_MAC: Mac = Mac::new([6, 5, 4, 3, 2, 1]);
     const GROUP_ADDR: Ipv6Addr =
@@ -474,7 +479,7 @@ mod tests {
         device: DeviceId,
         resp_time: Duration,
     ) {
-        let my_addr = MY_MAC.to_ipv6_link_local().into_specified();
+        let my_addr = MY_IP;
         let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
         let buffer = Mldv1MessageBuilder::<MulticastListenerQuery>::new_with_max_resp_delay(
             GROUP_ADDR,
@@ -493,7 +498,7 @@ mod tests {
     }
 
     fn receive_mld_report(ctx: &mut Context<DummyEventDispatcher>, device: DeviceId) {
-        let my_addr = MY_MAC.to_ipv6_link_local().into_specified();
+        let my_addr = MY_IP;
         let router_addr = ROUTER_MAC.to_ipv6_link_local().get();
         let buffer = Mldv1MessageBuilder::<MulticastListenerReport>::new(
             MulticastAddr::new(GROUP_ADDR).unwrap(),
@@ -514,11 +519,7 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let dev_id = ctx.state.add_ethernet_device(MY_MAC, 1500);
         crate::device::initialize_device(&mut ctx, dev_id);
-        add_ip_addr_subnet(
-            &mut ctx,
-            dev_id,
-            AddrSubnet::new(MY_MAC.to_ipv6_link_local().get(), 128).unwrap(),
-        );
+        add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(MY_IP.get(), 128).unwrap());
         (ctx, dev_id)
     }
 

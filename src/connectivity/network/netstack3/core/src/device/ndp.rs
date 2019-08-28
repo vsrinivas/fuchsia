@@ -381,6 +381,59 @@ pub(crate) trait NdpDevice: Sized {
                 .get_router_configurations()
                 .get_should_send_advertisements()
     }
+
+    /// Handle the case when a link-local address is resolved.
+    ///
+    /// `link_local_resolved` will start sending periodic router advertisements if `device_id` is
+    /// configured to be an advertising interface.
+    fn link_local_resolved<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) {
+        trace!(
+            "link_local_resolved: link-local address on device {:?} resolved",
+            Self::get_device_id(device_id)
+        );
+
+        if Self::is_router(ctx, device_id) {
+            // If the device is operating as a router, and it is configured to be an advertising
+            // interface, start sending periodic router advertisements.
+            if Self::get_ndp_state(ctx.state(), device_id)
+                .configs
+                .get_router_configurations()
+                .get_should_send_advertisements()
+            {
+                // At this point, we know that `devie_id` is an advertising interface and
+                // has an assigned link-local address. Given this, we know that
+                // `start_advertising_interface` will not panic.
+                start_advertising_interface::<_, Self>(ctx, device_id);
+            }
+        }
+    }
+
+    /// Notifies the device layer that the address is very likely (because DAD
+    /// is not reliable) to be unique, it is time to mark it to be permanent.
+    ///
+    /// If the address was the link-local address, periodic router advertisements
+    /// will be started if `device_id` is an advertising interface.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `addr` is not tentative on the devide identified by `device_id`.
+    fn unique_address_determined_wrapper<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: usize,
+        addr: Ipv6Addr,
+    ) {
+        // Let the device-layer know that `addr` is most likely not already used
+        // on the link.
+        Self::unique_address_determined(ctx.state_mut(), device_id, addr);
+
+        if addr.is_linklocal() {
+            // Here know know that we just resolved a link-local address becuase
+            // we just checked that `addr` is link-local and we know that
+            // `unique_address_determined` would have paniced if `addr` was not
+            // tentative on `device_id`.
+            Self::link_local_resolved(ctx, device_id);
+        }
+    }
 }
 
 /// Cleans up state associated with the device.
@@ -1304,9 +1357,9 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(
                 // that is not tentative on the device with id `device_id`. However, we
                 // can only reach here if `addr` was tentative on `device_id` and we are
                 // performing DAD so we know `unique_address_determined` will not panic.
-                ND::unique_address_determined(ctx.state_mut(), device_id, addr);
+                ND::unique_address_determined_wrapper(ctx, device_id, addr);
             } else {
-                do_duplicate_address_detection::<D, ND>(ctx, device_id, addr, remaining);
+                do_duplicate_address_detection::<D, ND>(ctx, device_id, addr);
             }
         }
         InnerNdpTimerId::RouterSolicitationTransmit => {
@@ -1372,7 +1425,15 @@ pub(crate) fn set_ndp_configurations<D: EventDispatcher, ND: NdpDevice + 'static
 
     // If the device was not a router before, then it won't be a router after any NDP configuration
     // change so we only check router-specific configuration changes if the device is a router.
-    if ND::is_router(ctx, device_id) {
+    //
+    // We also check to make sure the device has a non-tentative link-local address because
+    // if we didn't have a link-local address, we would not have started any router advertisements
+    // to update.
+    if ND::is_router(ctx, device_id)
+        && ND::get_link_local_addr(ctx.state(), device_id)
+            .map(|a| !a.is_tentative())
+            .unwrap_or(false)
+    {
         let old_rc = existing_configs.get_router_configurations();
         let new_rc = get_ndp_configurations::<_, ND>(ctx, device_id).get_router_configurations();
 
@@ -2070,24 +2131,38 @@ fn send_router_solicitation<D: EventDispatcher, ND: NdpDevice>(
 ///
 /// If the device is configured to not do DAD, then this method will
 /// immediately assign `tentative_addr` to the device.
+///
+/// # Panics
+///
+/// Panics if DAD is already being performed on this address.
 pub(crate) fn start_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
     tentative_addr: Ipv6Addr,
 ) {
-    let transmits =
-        ND::get_ndp_state_mut(ctx.state_mut(), device_id).configs.dup_addr_detect_transmits;
+    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+
+    let transmits = ndp_state.configs.dup_addr_detect_transmits;
 
     if let Some(transmits) = transmits {
+        // Must not already be performing DAD on the device.
+        assert!(ndp_state
+            .dad_transmits_remaining
+            .insert(tentative_addr, transmits.get())
+            .is_none());
+
         trace!("ndp::start_duplicate_address_detection: starting duplicate address detection for address {:?} on device {:?}", tentative_addr, ND::get_device_id(device_id));
 
-        do_duplicate_address_detection::<D, ND>(ctx, device_id, tentative_addr, transmits.get());
+        do_duplicate_address_detection::<D, ND>(ctx, device_id, tentative_addr);
     } else {
+        // Must not already be performing DAD on the device.
+        assert!(!ndp_state.dad_transmits_remaining.contains_key(&tentative_addr));
+
         // DAD is turned off since the interface's DUP_ADDR_DETECT_TRANSMIT parameter
         // is `None`.
         trace!("ndp::start_duplicate_address_detection: assigning address {:?} on device {:?} immediately because duplicate address detection is disabled", tentative_addr, ND::get_device_id(device_id));
 
-        ND::unique_address_determined(ctx.state_mut(), device_id, tentative_addr);
+        ND::unique_address_determined_wrapper(ctx, device_id, tentative_addr);
     }
 }
 
@@ -2123,15 +2198,27 @@ pub(crate) fn cancel_duplicate_address_detection<D: EventDispatcher, ND: NdpDevi
         .unwrap();
 }
 
+/// Send another DAD message (Neighbor Solicitation).
+///
+/// # Panics
+///
+/// Panics if the DAD process has not been started for `tentative_addr` on `device_id`.
 fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
     ctx: &mut Context<D>,
     device_id: usize,
     tentative_addr: Ipv6Addr,
-    remaining: u8,
 ) {
     trace!("do_duplicate_address_detection: tentative_addr {:?}", tentative_addr);
 
-    assert!(remaining > 0);
+    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
+
+    // We MUST have already started the DAD process if we reach this point.
+    let remaining = ndp_state.dad_transmits_remaining.get_mut(&tentative_addr).unwrap();
+    assert!(*remaining > 0);
+    *remaining -= 1;
+
+    // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
+    let retrans_timer = ndp_state.retrans_timer;
 
     let src_ll = ND::get_link_layer_addr(ctx.state(), device_id);
     send_ndp_packet::<_, ND, &[u8], _>(
@@ -2142,11 +2229,7 @@ fn do_duplicate_address_detection<D: EventDispatcher, ND: NdpDevice>(
         NeighborSolicitation::new(tentative_addr),
         &[NdpOption::SourceLinkLayerAddress(src_ll.bytes())],
     );
-    let ndp_state = ND::get_ndp_state_mut(ctx.state_mut(), device_id);
-    ndp_state.dad_transmits_remaining.insert(tentative_addr, remaining - 1);
 
-    // Uses same RETRANS_TIMER definition per RFC 4862 section-5.1
-    let retrans_timer = ndp_state.retrans_timer;
     ctx.dispatcher_mut().schedule_timeout(
         retrans_timer,
         NdpTimerId::new_dad_ns_transmission_timer_id::<ND>(device_id, tentative_addr),
@@ -3106,7 +3189,7 @@ mod tests {
         self, get_counter_val, get_dummy_config, get_other_ip_address, parse_ethernet_frame,
         parse_icmp_packet_in_ip_packet_in_ethernet_frame, run_for, set_logger_for_test,
         trigger_next_timer, DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant,
-        DummyNetwork,
+        DummyNetwork, DUMMY_CONFIG_V6,
     };
     use crate::wire::icmp::ndp::{
         options::PrefixInformation, OptionsSerializer, RouterAdvertisement, RouterSolicitation,
@@ -3118,11 +3201,11 @@ mod tests {
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
 
     fn local_ip() -> SpecifiedAddr<Ipv6Addr> {
-        SpecifiedAddr::new(TEST_LOCAL_MAC.to_ipv6_link_local().get()).unwrap()
+        DUMMY_CONFIG_V6.local_ip
     }
 
     fn remote_ip() -> SpecifiedAddr<Ipv6Addr> {
-        SpecifiedAddr::new(TEST_REMOTE_MAC.to_ipv6_link_local().get()).unwrap()
+        DUMMY_CONFIG_V6.remote_ip
     }
 
     fn router_advertisement_message(
@@ -3882,12 +3965,11 @@ mod tests {
         // so they will both give up using that address.
         set_logger_for_test();
         let mac = Mac::new([1, 2, 3, 4, 5, 6]);
-        let addr = AddrSubnet::new(mac.to_ipv6_link_local().get(), 128).unwrap();
+        let addr =
+            AddrSubnet::<_, SpecifiedAddr<_>>::new(mac.to_ipv6_link_local().get(), 128).unwrap();
         let multicast_addr = mac.to_ipv6_link_local().get().to_solicited_node_address();
         let mut local = DummyEventDispatcherBuilder::default();
-        local.add_device(mac);
         let mut remote = DummyEventDispatcherBuilder::default();
-        remote.add_device(mac);
         let device_id = DeviceId::new_ethernet(0);
 
         let mut stack_builder = StackStateBuilder::default();
@@ -3914,8 +3996,17 @@ mod tests {
             },
         );
 
-        add_ip_addr_subnet(net.context("local"), device_id, addr).unwrap();
-        add_ip_addr_subnet(net.context("remote"), device_id, addr).unwrap();
+        // Create the devices (will start DAD at the same time).
+        assert_eq!(
+            net.context("local").state_mut().add_ethernet_device(mac, IPV6_MIN_MTU),
+            device_id
+        );
+        crate::device::initialize_device(net.context("local"), device_id);
+        assert_eq!(
+            net.context("remote").state_mut().add_ethernet_device(mac, IPV6_MIN_MTU),
+            device_id
+        );
+        crate::device::initialize_device(net.context("remote"), device_id);
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
 
@@ -3955,19 +4046,10 @@ mod tests {
         remote.add_device(TEST_REMOTE_MAC);
         let device_id = DeviceId::new_ethernet(0);
 
-        let mut stack_builder = StackStateBuilder::default();
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_max_router_solicitations(None);
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-
-        // We explicitly call `build_with` when building our contexts below because `build` will
-        // set the default NDP parameter DUP_ADDR_DETECT_TRANSMITS to 0 (effectively disabling
-        // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
-        // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
         let mut net = DummyNetwork::new(
             vec![
-                ("local", local.build_with(stack_builder.clone(), DummyEventDispatcher::default())),
-                ("remote", remote.build_with(stack_builder, DummyEventDispatcher::default())),
+                ("local", local.build::<DummyEventDispatcher>()),
+                ("remote", remote.build::<DummyEventDispatcher>()),
             ]
             .into_iter(),
             |ctx, dev| {
@@ -3978,6 +4060,12 @@ mod tests {
                 }
             },
         );
+
+        // Enable DAD.
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_max_router_solicitations(None);
+        crate::device::set_ndp_configurations(net.context("local"), device_id, ndp_configs.clone());
+        crate::device::set_ndp_configurations(net.context("remote"), device_id, ndp_configs);
 
         println!("Setting new IP on local");
 
@@ -4056,16 +4144,19 @@ mod tests {
         let mut stack_builder = StackStateBuilder::default();
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_max_router_solicitations(None);
+        ndp_configs.set_dup_addr_detect_transmits(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, dev_id);
+
+        // Enable DAD.
         EthernetNdpDevice::get_ndp_state_mut(&mut ctx.state_mut(), dev_id.id())
             .set_dad_transmits(NonZeroU8::new(3));
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
         for i in 0..3 {
-            testutil::trigger_next_timer(&mut ctx);
+            assert!(testutil::trigger_next_timer(&mut ctx));
         }
         assert!(EthernetNdpDevice::ipv6_addr_state(ctx.state(), dev_id.id(), &local_ip())
             .unwrap()
@@ -4105,7 +4196,7 @@ mod tests {
         add_ip_addr_subnet(
             net.context("local"),
             device_id,
-            AddrSubnet::new(mac.to_ipv6_link_local().get(), 128).unwrap(),
+            AddrSubnet::new(local_ip().get(), 128).unwrap(),
         )
         .unwrap();
         // during the first and second period, the remote host is still down.
@@ -4114,7 +4205,7 @@ mod tests {
         add_ip_addr_subnet(
             net.context("remote"),
             device_id,
-            AddrSubnet::new(mac.to_ipv6_link_local().get(), 128).unwrap(),
+            AddrSubnet::new(local_ip().get(), 128).unwrap(),
         )
         .unwrap();
         // the local host should have sent out 3 packets while the remote one
@@ -4142,19 +4233,16 @@ mod tests {
 
     #[test]
     fn test_dad_multiple_ips_simultaneously() {
-        let mut stack_builder = StackStateBuilder::default();
-
-        // Most tests do not need NDP's DAD or router solicitation so disable it here.
-        let mut ndp_configs = NdpConfigurations::default();
-        ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
-        ndp_configs.set_max_router_solicitations(None);
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        let mut ctx = DummyEventDispatcherBuilder::default()
-            .build_with(stack_builder, DummyEventDispatcher::default());
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, dev_id);
 
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
+        ndp_configs.set_max_router_solicitations(None);
+        crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
 
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
@@ -4193,15 +4281,15 @@ mod tests {
     fn test_dad_cancel_when_ip_removed() {
         let mut stack_builder = StackStateBuilder::default();
 
-        // Most tests do not need NDP's DAD or router solicitation so disable it here.
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, dev_id);
+
+        // Enable DAD.
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
         ndp_configs.set_max_router_solicitations(None);
-        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        let mut ctx = DummyEventDispatcherBuilder::default()
-            .build_with(stack_builder, DummyEventDispatcher::default());
-        let dev_id = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
-        crate::device::initialize_device(&mut ctx, dev_id);
+        crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
 
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
 
@@ -5339,6 +5427,40 @@ mod tests {
 
     #[test]
     #[should_panic]
+    fn test_send_router_advertisement_without_linklocal() {
+        //
+        // Attempting to send a router advertisement when a device does not yet have a link-local
+        // address should panic.
+        //
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut stack_builder = StackStateBuilder::default();
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_max_router_solicitations(None);
+        stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
+        stack_builder.ipv6_builder().forward(true);
+        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        // Make `device` a router (netstack is configured to forward packets already).
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+
+        // Enable sending router advertisements (`device`) is still not a router though.
+        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+            .configs
+            .router_configurations
+            .set_should_send_advertisements(true);
+
+        // Should panic since `device` is not a router.
+        send_router_advertisement::<_, EthernetNdpDevice>(
+            &mut ctx,
+            device.id(),
+            Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
+        );
+    }
+
+    #[test]
+    #[should_panic]
     fn test_send_router_advertisement_with_should_send_advertisement_unset_panic() {
         //
         // Attempting to send a router advertisements when it is configured to not do so should
@@ -5365,6 +5487,60 @@ mod tests {
             device.id(),
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
+    }
+
+    #[test]
+    fn test_send_router_advertisement_after_dad() {
+        //
+        // Should send router advertisements after DAD (3 transmits) is completed for the
+        // link-local address.
+        //
+
+        let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut stack_builder = StackStateBuilder::default();
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_max_router_solicitations(None);
+        ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
+        stack_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
+        stack_builder.ipv6_builder().forward(true);
+        let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
+        let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        // Make `device` a router (netstack is configured to forward packets already).
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+
+        // Enable sending router advertisements (`device`) is still not a router though.
+        EthernetNdpDevice::get_ndp_state_mut(ctx.state_mut(), device.id())
+            .configs
+            .router_configurations
+            .set_should_send_advertisements(true);
+
+        // Finish up DAD.
+        assert_eq!(
+            EthernetNdpDevice::ipv6_addr_state(
+                ctx.state(),
+                device.id(),
+                &TEST_LOCAL_MAC.to_ipv6_link_local().get()
+            )
+            .unwrap(),
+            AddressState::Tentative
+        );
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(3)), 3);
+        assert_eq!(
+            EthernetNdpDevice::ipv6_addr_state(
+                ctx.state(),
+                device.id(),
+                &TEST_LOCAL_MAC.to_ipv6_link_local().get()
+            )
+            .unwrap(),
+            AddressState::Assigned
+        );
+
+        // Send initial RAs
+        //
+        // 3 packets have already been sent because of DAD.
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 3);
     }
 
     #[test]
@@ -5499,57 +5675,115 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
+        fn confirm_dad_frame_timer(ctx: &mut Context<DummyEventDispatcher>, device: DeviceId) {
+            assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+            assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+            assert_eq!(
+                *ctx.dispatcher().timer_events().last().unwrap().1,
+                NdpTimerId::new_dad_ns_transmission_timer_id::<EthernetNdpDevice>(
+                    device.id(),
+                    TEST_LOCAL_MAC.to_ipv6_link_local().get()
+                )
+            );
+        }
+
         //
-        // Test sending router advertisements.
+        // Test sending router advertisements (after dad).
         //
 
         let mut state_builder = StackStateBuilder::default();
         state_builder.ipv6_builder().forward(true);
-        {
-            let mut ndp_configs = NdpConfigurations::default();
-            ndp_configs.set_dup_addr_detect_transmits(None);
-            ndp_configs.set_max_router_solicitations(None);
-            state_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        }
+        let mut default_ndp_configs = NdpConfigurations::default();
+        default_ndp_configs.set_max_router_solicitations(None);
+        state_builder.device_builder().set_default_ndp_configs(default_ndp_configs.clone());
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let device = ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         crate::device::initialize_device(&mut ctx, device);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+
+        //
+        // Update configurations that affect advertising interface status
+        // before DAD has completed (RAs should not be sent or started).
+        //
 
         // Setting a non-router device to be an advertising interface should do nothing.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Setting a non-advertising interface to a router should do nothing.
+        crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Set to be an advertising interface.
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Setting to be a non-router should end router advertisements (but should start router solicitations)
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Set back to a router.
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Setting to be a non-advertising interface should end router advertisements.
+        crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Set back to being an advertising interface.
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Reset device routing and advertising interface status.
+        crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
+        crate::device::set_ndp_configurations(&mut ctx, device, default_ndp_configs);
+        confirm_dad_frame_timer(&mut ctx, device);
+
+        // Complete DAD.
+        assert!(trigger_next_timer(&mut ctx));
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher().timer_events().count(), 0);
+
+        //
+        // Update configurations that affect advertising interface status
+        // after DAD has completed (RAs may now be sent).
+        //
+
+        // Setting a non-router device to be an advertising interface should do nothing.
+        crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Setting a non-advertising interface to a router should do nothing.
         crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 0);
+        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
-        // Set to be an advertising interface ().
+        // Set to be an advertising interface.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
-        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 0);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 1);
 
         // Setting to be a non-router should end router advertisements.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
-        validate_final_ras(&mut ctx, device, 3);
+        validate_final_ras(&mut ctx, device, 4);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Set back to a router.
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
-        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 6);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 7);
 
         // Setting to be a non-advertising interface should end router advertisements.
         crate::device::set_ndp_configurations(&mut ctx, device, NdpConfigurations::default());
-        validate_final_ras(&mut ctx, device, 9);
+        validate_final_ras(&mut ctx, device, 10);
         assert_eq!(ctx.dispatcher().timer_events().count(), 0);
 
         // Set back to being an advertising interface.
         crate::device::set_ndp_configurations(&mut ctx, device, ndp_configs.clone());
-        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 12);
+        validate_initial_ras_after_enable(&mut ctx, device, &ndp_configs, 13);
     }
 
     #[test]
@@ -6016,10 +6250,15 @@ mod tests {
     #[test]
     fn test_router_discovery() {
         let dummy_config = get_dummy_config::<Ipv6Addr>();
+        let mut state_builder = StackStateBuilder::default();
+        let mut ndp_configs = NdpConfigurations::default();
+        ndp_configs.set_dup_addr_detect_transmits(None);
+        state_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
         let mut host = DummyEventDispatcherBuilder::default()
-            .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
+            .build_with(state_builder, DummyEventDispatcher::default());
         let mut state_builder = StackStateBuilder::default();
         state_builder.ipv6_builder().forward(true);
+        state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut router = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let device = DeviceId::new_ethernet(0);

@@ -176,11 +176,42 @@ impl<D: EventDispatcher> DeviceLayerState<D> {
     }
 }
 
+/// Initialization status of a device.
+#[derive(Debug, PartialEq, Eq)]
+enum InitializationStatus {
+    /// The device is not yet initialized and MUST NOT be used.
+    Uninitialized,
+
+    /// The device is currently being initialized and must only be used by
+    /// the initialization methods.
+    Initializing,
+
+    /// The device is initialized and can operate as normal.
+    Initialized,
+}
+
+impl Default for InitializationStatus {
+    #[inline]
+    fn default() -> InitializationStatus {
+        InitializationStatus::Uninitialized
+    }
+}
+
 /// Common state across devices.
 #[derive(Default)]
 pub(crate) struct CommonDeviceState {
-    /// Is the device initialized?
-    is_initialized: bool,
+    /// The device's initialization status.
+    initialization_status: InitializationStatus,
+}
+
+impl CommonDeviceState {
+    fn is_initialized(&self) -> bool {
+        self.initialization_status == InitializationStatus::Initialized
+    }
+
+    fn is_uninitialized(&self) -> bool {
+        self.initialization_status == InitializationStatus::Uninitialized
+    }
 }
 
 /// Device state.
@@ -262,17 +293,17 @@ impl AddressState {
 }
 
 /// Data associated with an IP addressess on an interface.
-pub struct AddressEntry<A: IpAddress> {
-    addr_sub: AddrSubnet<A>,
+pub struct AddressEntry<S: IpAddress, A: Witness<S> = SpecifiedAddr<S>> {
+    addr_sub: AddrSubnet<S, A>,
     state: AddressState,
 }
 
-impl<A: IpAddress> AddressEntry<A> {
-    pub(crate) fn new(addr_sub: AddrSubnet<A>, state: AddressState) -> Self {
+impl<S: IpAddress, A: Witness<S>> AddressEntry<S, A> {
+    pub(crate) fn new(addr_sub: AddrSubnet<S, A>, state: AddressState) -> Self {
         Self { addr_sub, state }
     }
 
-    pub(crate) fn addr_sub(&self) -> &AddrSubnet<A> {
+    pub(crate) fn addr_sub(&self) -> &AddrSubnet<S, A> {
         &self.addr_sub
     }
 
@@ -321,12 +352,22 @@ pub trait DeviceLayerEventDispatcher<B: BufferMut> {
     ) -> Result<(), S>;
 }
 
+/// Is `device` usable?
+///
+/// That is, is it either initializing or initialized?
+pub(crate) fn is_device_usable<D: EventDispatcher>(
+    state: &StackState<D>,
+    device: DeviceId,
+) -> bool {
+    !get_common_device_state(state, device).is_uninitialized()
+}
+
 /// Is `device` initialized?
 pub(crate) fn is_device_initialized<D: EventDispatcher>(
     state: &StackState<D>,
     device: DeviceId,
 ) -> bool {
-    get_common_device_state(state, device).is_initialized
+    get_common_device_state(state, device).is_initialized()
 }
 
 /// Initialize a device.
@@ -351,10 +392,14 @@ pub(crate) fn is_device_initialized<D: EventDispatcher>(
 pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId) {
     let state = get_common_device_state_mut(ctx.state_mut(), device);
 
-    // `device` must not already be initialized.
-    assert!(!state.is_initialized);
+    // `device` must currently be uninitialized.
+    assert!(state.is_uninitialized());
 
-    state.is_initialized = true;
+    state.initialization_status = InitializationStatus::Initializing;
+
+    match device.protocol {
+        DeviceProtocol::Ethernet => ethernet::initialize_device(ctx, device.id),
+    }
 
     // All nodes should join the all-nodes multicast group.
     join_ip_multicast(ctx, device, MulticastAddr::new(Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS).unwrap());
@@ -381,6 +426,9 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device: Devic
             }
         }
     }
+
+    get_common_device_state_mut(ctx.state_mut(), device).initialization_status =
+        InitializationStatus::Initialized;
 }
 
 /// Remove a device from the device layer.
@@ -429,8 +477,8 @@ where
     A: IpAddress,
     S: Serializer<Buffer = B>,
 {
-    // `device` must be initialized.
-    assert!(is_device_initialized(ctx.state(), device));
+    // `device` must not be uninitialized.
+    assert!(is_device_usable(ctx.state(), device));
 
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::send_ip_frame(ctx, device.id, local_addr, body),
@@ -579,8 +627,8 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     device: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    // `device` must be initialized.
-    assert!(is_device_initialized(ctx.state(), device));
+    // `device` must not be uninitialized.
+    assert!(is_device_usable(ctx.state(), device));
 
     trace!("join_ip_multicast: device {:?} joining multicast {:?}", device, multicast_addr);
 
@@ -604,8 +652,8 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     device: DeviceId,
     multicast_addr: MulticastAddr<A>,
 ) {
-    // `device` must be initialized.
-    assert!(is_device_initialized(ctx.state(), device));
+    // `device` must not be uninitialized.
+    assert!(is_device_usable(ctx.state(), device));
 
     trace!("join_ip_multicast: device {:?} leaving multicast {:?}", device, multicast_addr);
 
@@ -666,11 +714,10 @@ pub fn get_ipv6_link_local_addr<D: EventDispatcher>(
 /// on another device, `is_addr_tentative_on_device` will return `false`.
 pub(crate) fn is_addr_tentative_on_device<D: EventDispatcher, A: IpAddress>(
     state: &StackState<D>,
-    addr: SpecifiedAddr<A>,
+    addr: &SpecifiedAddr<A>,
     device: DeviceId,
 ) -> bool {
-    get_ip_addr_subnets_with_tentative::<_, A>(state, device)
-        .any(|x| (x.inner().addr() == addr) && x.is_tentative())
+    get_ip_addr_state::<_, A>(state, device, addr).map_or(false, |x| x.is_tentative())
 }
 
 /// Get a reference to the common device state for a `device`.
@@ -811,9 +858,12 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
                 MulticastAddr::new(Ipv6::ALL_ROUTERS_LINK_LOCAL_ADDRESS).unwrap(),
             );
 
-            if get_ndp_configurations(ctx, device)
-                .get_router_configurations()
-                .get_should_send_advertisements()
+            // If `device` has a link-local address, and is configured to be an advertising
+            // interface, start advertising.
+            if get_ipv6_link_local_addr(ctx, device).is_some()
+                && get_ndp_configurations(ctx, device)
+                    .get_router_configurations()
+                    .get_should_send_advertisements()
             {
                 match device.protocol {
                     DeviceProtocol::Ethernet => ndp::start_advertising_interface::<
@@ -833,9 +883,10 @@ fn set_ipv6_routing_enabled<D: EventDispatcher>(
         if ip_routing {
             // Make sure that the device was configured to send advertisements before stopping it.
             // If it was never configured to stop advertisements, there should be nothing to stop.
-            if get_ndp_configurations(ctx, device)
-                .get_router_configurations()
-                .get_should_send_advertisements()
+            if get_ipv6_link_local_addr(ctx, device).is_some()
+                && get_ndp_configurations(ctx, device)
+                    .get_router_configurations()
+                    .get_should_send_advertisements()
             {
                 match device.protocol {
                     DeviceProtocol::Ethernet => ndp::stop_advertising_interface::<

@@ -1057,7 +1057,7 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
         // tentative. If the destination address is not the address assigned to
         // the device, or it is not tentative, we are okay to proceed; else, we
         // drop the packet.
-        if crate::device::is_addr_tentative_on_device(ctx.state(), dst_ip, device) {
+        if crate::device::is_addr_tentative_on_device(ctx.state(), &dst_ip, device) {
             // Silently drop as per RFC 4862 section 5.4
             trace!(
                 "receive_ipv6_packet: Dropping packet as it is destined for a tentative address"
@@ -1253,11 +1253,7 @@ fn deliver_ipv6<D: EventDispatcher>(
     // TODO(brunodalbo):
     // Along with the host model described above, we need to be able to have
     // multiple IPs per interface, it becomes imperative for IPv6.
-    crate::device::get_ip_addr_subnets(ctx.state(), device)
-        .map(AddrSubnet::into_addr_subnet)
-        .any(|(addr, _)| dst_ip == addr)
-        || crate::device::get_ipv6_link_local_addr(ctx, device)
-            .map_or(false, |x| x.get() == dst_ip.get())
+    crate::device::get_ip_addr_state(ctx.state(), device, &dst_ip).is_some()
         || dst_ip.deref() == &Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS
         || MulticastAddr::new(dst_ip.get())
             .map_or(false, |a| crate::device::is_in_ip_multicast(ctx, device, a))
@@ -1581,7 +1577,7 @@ where
     // Tentative addresses are not considered bound to an interface in the traditional sense,
     // therefore, no packet should have a source IP set to a tentative address.
     debug_assert!(!SpecifiedAddr::new(src_ip).map_or(false, |src_ip| {
-        crate::device::is_addr_tentative_on_device(ctx.state(), src_ip, device)
+        crate::device::is_addr_tentative_on_device(ctx.state(), &src_ip, device)
     }));
 
     let builder = <A::Version as IpExt>::PacketBuilder::new(
@@ -3072,21 +3068,24 @@ mod tests {
         // DAD) so we use our own custom `StackStateBuilder` to set it to the default value
         // of `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
         let config = get_dummy_config::<Ipv6Addr>();
-        let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
+        let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
-        let device = DeviceId::new_ethernet(0);
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
         let frame_dst = FrameDestination::Unicast;
 
+        let ip = config.local_mac.to_ipv6_link_local().get();
+
         let buf = Buf::new(vec![0; 10], ..)
-            .encapsulate(Ipv6PacketBuilder::new(
-                config.remote_ip,
-                config.local_ip,
-                64,
-                IpProto::Udp,
-            ))
+            .encapsulate(Ipv6PacketBuilder::new(config.remote_ip, ip, 64, IpProto::Udp))
             .serialize_vec_outer()
             .unwrap()
             .into_inner();
+
+        // Received packet should not have been dispatched.
+        receive_ipv6_packet(&mut ctx, device, frame_dst, buf.clone());
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 0);
 
         // Make sure all timers are done (initial DAD to complete on the interface).
         trigger_timers_until(&mut ctx, |_| false);
@@ -3096,7 +3095,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
 
         // Set the new IP (this should trigger DAD).
-        let ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
+        let ip = config.local_ip.get();
         crate::device::add_ip_addr_subnet(&mut ctx, device, AddrSubnet::new(ip, 128).unwrap());
 
         let buf = Buf::new(vec![0; 10], ..)

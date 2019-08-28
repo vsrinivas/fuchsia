@@ -13,8 +13,8 @@ use log::{debug, trace};
 use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{
-    BroadcastAddress, LinkLocalAddr, MulticastAddr, MulticastAddress, SpecifiedAddr,
-    UnicastAddress, Witness,
+    BroadcastAddress, LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress,
+    SpecifiedAddr, UnicastAddress, Witness,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
 use specialize_ip_macro::{specialize_ip, specialize_ip_address};
@@ -25,7 +25,7 @@ use crate::device::arp::{
 };
 use crate::device::ndp::{self, NdpState};
 use crate::device::{
-    is_device_initialized, AddressEntry, AddressError, AddressState, DeviceId, DeviceLayerTimerId,
+    is_device_usable, AddressEntry, AddressError, AddressState, DeviceId, DeviceLayerTimerId,
     FrameDestination, Tentative,
 };
 use crate::wire::arp::peek_arp_types;
@@ -199,6 +199,7 @@ impl EthernetDeviceStateBuilder {
             ipv6_hop_limit: ndp::HOP_LIMIT_DEFAULT,
             ipv4_addr_sub: Vec::new(),
             ipv6_addr_sub: Vec::new(),
+            ipv6_link_local_addr_sub: None,
             ipv4_multicast_groups: HashSet::new(),
             ipv6_multicast_groups,
             link_multicast_groups,
@@ -237,6 +238,11 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     ///
     /// May be tentative (performing NDP's Duplicate Address Detection).
     ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr>>,
+
+    /// Assigned IPv6 link-local address.
+    ///
+    /// May be tentative (performing NDP's Duplicate Address Detection).
+    ipv6_link_local_addr_sub: Option<AddressEntry<Ipv6Addr, LinkLocalAddr<Ipv6Addr>>>,
 
     /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
@@ -352,6 +358,36 @@ impl EthernetIpExt for Ipv4 {
 
 impl EthernetIpExt for Ipv6 {
     const ETHER_TYPE: EtherType = EtherType::Ipv6;
+}
+
+/// Initialize a device.
+///
+/// `initialize_device` sets the link-local address for `device_id` and performs DAD on it.
+///
+/// `device_id` MUST be ready to send packets before `initialize_device` is called.
+pub(crate) fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device_id: usize) {
+    //
+    // Assign a link-local address.
+    //
+
+    let state = get_device_state(ctx.state(), device_id);
+
+    // Must not have a link local address yet.
+    assert!(state.ipv6_link_local_addr_sub.is_none());
+
+    let addr = state.mac.to_ipv6_link_local().get();
+
+    // First, join the solicited-node multicast group for the link-local address.
+    join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
+
+    let state = get_device_state_mut(ctx.state_mut(), device_id);
+
+    // Associate the link-local address to the device, and mark it as Tentative.
+    state.ipv6_link_local_addr_sub =
+        Some(AddressEntry::new(AddrSubnet::new(addr, 128).unwrap(), AddressState::Tentative));
+
+    // Perform Duplicate Address Detection on the link-local address.
+    ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(ctx, device_id, addr);
 }
 
 /// Send an IP packet in an Ethernet frame.
@@ -572,15 +608,36 @@ pub fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
     let state = get_device_state(state, device_id);
 
     #[ipv4addr]
-    let addresses = &state.ipv4_addr_sub;
+    return state.ipv4_addr_sub.iter().find_map(|a| {
+        if a.addr_sub().addr() == *addr {
+            Some(a.state())
+        } else {
+            None
+        }
+    });
 
     #[ipv6addr]
-    let addresses = &state.ipv6_addr_sub;
-
-    addresses.iter().find_map(|a| if a.addr_sub().addr() == *addr { Some(a.state()) } else { None })
+    return state
+        .ipv6_addr_sub
+        .iter()
+        .find_map(|a| if a.addr_sub().addr() == *addr { Some(a.state()) } else { None })
+        .or_else(|| {
+            state.ipv6_link_local_addr_sub.as_ref().and_then(|a| {
+                if a.addr_sub().addr().into_specified() == *addr {
+                    Some(a.state())
+                } else {
+                    None
+                }
+            })
+        });
 }
 
 /// Adds an IP address and associated subnet to this device.
+///
+/// # Panics
+///
+/// Panics if `addr_sub` holds a link-local address.
+// TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr_sub`.
 #[specialize_ip_address]
 pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
@@ -588,6 +645,9 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), AddressError> {
     let addr = addr_sub.addr();
+
+    // MUST NOT be link-local.
+    assert!(!addr.is_linklocal());
 
     if get_ip_addr_state(ctx.state(), device_id, &addr).is_some() {
         return Err(AddressError::AlreadyExists);
@@ -612,12 +672,20 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 }
 
 /// Removes an IP address and associated subnet from this device.
+///
+/// # Panics
+///
+/// Panics if `addr` is a link-local address.
+// TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr`.
 #[specialize_ip_address]
 pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: usize,
     addr: &SpecifiedAddr<A>,
 ) -> Result<(), AddressError> {
+    // MUST NOT be link-local.
+    assert!(!addr.is_linklocal());
+
     #[ipv4addr]
     {
         let state = get_device_state_mut(ctx.state_mut(), device_id);
@@ -677,8 +745,7 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
 /// Get the IPv6 link-local address associated with this device.
 ///
-/// The IPv6 link-local address returned is constructed from this device's MAC
-/// address.
+/// Returns `None` if the address is tentative.
 pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
     ctx: &Context<D>,
     device_id: usize,
@@ -687,7 +754,11 @@ pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
     //  verifications as prefix global addresses, we should keep a state machine
     //  about that check and cache the adopted address. For now, we just compose
     //  the link-local from the ethernet MAC.
-    Some(get_device_state(ctx.state(), device_id).mac.to_ipv6_link_local())
+    get_device_state(ctx.state(), device_id)
+        .ipv6_link_local_addr_sub
+        .as_ref()
+        .map(|a| if a.state().is_assigned() { Some(a.addr_sub().addr()) } else { None })
+        .unwrap_or(None)
 }
 
 /// Add `device` to a multicast group `multicast_addr`.
@@ -989,8 +1060,13 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         state: &StackState<D>,
         device_id: usize,
     ) -> Option<Tentative<Ipv6Addr>> {
-        let state = get_device_state(state, device_id);
-        Some(Tentative::new_permanent(state.mac.to_ipv6_link_local().get()))
+        get_device_state(state, device_id).ipv6_link_local_addr_sub.as_ref().map(|a| {
+            if a.state().is_tentative() {
+                Tentative::new_tentative(a.addr_sub().addr().get())
+            } else {
+                Tentative::new_permanent(a.addr_sub().addr().get())
+            }
+        })
     }
 
     fn get_ipv6_addr<D: EventDispatcher>(
@@ -1002,7 +1078,9 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
         match get_ip_addr_subnet::<_, Ipv6Addr>(state, device_id) {
             Some(addr_sub) => Some(addr_sub.addr().get()),
-            None => Some(get_device_state(state, device_id).mac.to_ipv6_link_local().get()),
+            None => Self::get_link_local_addr(state, device_id)
+                .map(|a| a.try_into_permanent())
+                .unwrap_or(None),
         }
     }
 
@@ -1015,12 +1093,12 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
         if let Some(state) = get_ip_addr_state::<_, Ipv6Addr>(state, device_id, &address) {
             Some(state)
-        } else if get_device_state(state, device_id).mac.to_ipv6_link_local().get() == *address {
-            // TODO(ghanan): perform DAD on link local address instead of assuming
-            //               it is safe to assign.
-            Some(AddressState::Assigned)
         } else {
-            None
+            get_device_state(state, device_id)
+                .ipv6_link_local_addr_sub
+                .as_ref()
+                .map(|a| if a.addr_sub().addr().get() == *address { Some(a.state()) } else { None })
+                .unwrap_or(None)
         }
     }
 
@@ -1030,8 +1108,8 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         next_hop: Ipv6Addr,
         body: S,
     ) -> Result<(), S> {
-        // `device_id` must be initialized.
-        assert!(is_device_initialized(ctx.state(), Self::get_device_id(device_id)));
+        // `device_id` must not be uninitialized.
+        assert!(is_device_usable(ctx.state(), Self::get_device_id(device_id)));
 
         // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
         send_ip_frame(ctx, device_id, SpecifiedAddr::new(next_hop).unwrap(), body)
@@ -1069,8 +1147,21 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != addr);
         let new_size = state.ipv6_addr_sub.len();
 
-        // We must have removed the address.
-        assert_eq!(original_size - new_size, 1);
+        if original_size == new_size {
+            // Address was not a global address, check link-local address.
+            if state
+                .ipv6_link_local_addr_sub
+                .as_mut()
+                .filter(|a| a.addr_sub().addr().get() == addr)
+                .is_some()
+            {
+                state.ipv6_link_local_addr_sub = None;
+            } else {
+                panic!("Duplicate address not known, cannot be removed");
+            }
+        } else {
+            assert_eq!(original_size - new_size, 1);
+        }
 
         // Leave the the solicited-node multicast group.
         leave_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
@@ -1089,10 +1180,14 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             addr
         );
 
-        if let Some(entry) = get_device_state_mut(state, device_id)
-            .ipv6_addr_sub
-            .iter_mut()
-            .find(|a| a.addr_sub().addr().get() == addr)
+        let state = get_device_state_mut(state, device_id);
+
+        if let Some(entry) =
+            state.ipv6_addr_sub.iter_mut().find(|a| a.addr_sub().addr().get() == addr)
+        {
+            entry.mark_permanent();
+        } else if let Some(entry) =
+            state.ipv6_link_local_addr_sub.as_mut().filter(|a| a.addr_sub().addr().get() == addr)
         {
             entry.mark_permanent();
         } else {
