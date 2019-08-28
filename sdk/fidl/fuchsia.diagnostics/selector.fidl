@@ -1,0 +1,64 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.diagnostics;
+
+enum PatternMatcher {
+    WILDCARD = 0;
+    GLOB = 1;
+};
+
+// The set of states that a selection node can exist in. A selection-node
+// is a matcher of a container in a nested hierarchy, such as
+// a match of nested components at a location in the component hierarchy
+// or a match of nodes in an Inspect tree.
+//
+// string_pattern: This is a provided string that defines a pattern to
+//   match against at the current location in a nested hierarchy. The
+//   parser treats wildcards (*) and backslashes (\) as special characters.
+//   If you wish to match against literal wildcards, it must be escaped.
+//   If you wish to match against literal backslashes, they must be escaped.
+//
+//   eg: <curr_node>/abc will match any node contained within curr_node
+//       with the exact name "abc".
+//   eg: <curr_node>/a\* will match any node contained within curr_node
+//       with the exact name "a*".
+//   eg: <curr_node>/a\\* will match any node contained within curr_node
+//       that starts with exactly "a\".
+//   eg: <curr_node>/a* will match any node contained within curr_node
+//       that starts with "a".
+//   eg: <curr_node>/a*b will match any node contained within curr_node
+//       that starts with a and ends with b.
+//   eg: <curr_node>/*b will match any node contained within curr_node
+//       that ends with b.
+//
+// pattern_matcher: This is either a wild-card or a glob.
+//
+//   wildcard: will match all nodes at the current location in the
+//      component hierarchy. These PathSelectionNode types are a result of the
+//      only text provided in the selector-node spot being an escaped star.
+//
+//   glob: will match all nodes at or below the current location in the
+//      component hierarchy. These PathSelectionNode types are a result of
+//      the only text provided in the selector-node spot being two escaped stars.
+xunion PathSelectionNode {
+    string:1024 string_pattern;
+    PatternMatcher pattern_matcher;
+};
+
+/// ComponentSelector encodes path to a component that is being selected for.
+/// The component_hierarchy_path specifies the components or realms that we will
+/// search for our target component, and target_component_node specifies the
+/// component within the nodes matched by component_hierarchy_path that we want
+/// to retrieve as our data source.
+table ComponentSelector {
+    // Vector encoding path from hub to component node(s)
+    // being selector for. If not present, assumed to be a glob
+    // from searching the entire component hierarchy.
+    1: vector<PathSelectionNode>:1024 component_hierarchy_path;
+
+    // Selection node determining which componenents are matches
+    // for the current selector, scoped to whatever path is
+    // provided by the component_hierarchy_path.
+    2: PathSelectionNode target_component_node;
+};
