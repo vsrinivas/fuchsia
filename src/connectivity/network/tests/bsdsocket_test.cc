@@ -897,6 +897,35 @@ TEST(NetStreamTest, GetTcpInfo) {
   ASSERT_EQ(0, close(connfd));
 }
 
+// Test socket reads on disconnected stream sockets.
+TEST(NetStreamTest, DisconnectedRead) {
+  int socketfd;
+  ASSERT_GE(socketfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
+  struct timeval tv = {};
+  // Use minimal non-zero timeout as we expect the blocking recv to return before it
+  // actually starts reading. Without the timeout, the test could deadlock on a blocking
+  // recv, when the underlying code is broken.
+  tv.tv_usec = 1u;
+  EXPECT_EQ(setsockopt(socketfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
+  // Test blocking socket read.
+  EXPECT_EQ(recvfrom(socketfd, nullptr, 0, 0, nullptr, nullptr), -1);
+  EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
+  // Test with MSG_PEEK.
+  EXPECT_EQ(recvfrom(socketfd, nullptr, 0, MSG_PEEK, nullptr, nullptr), -1);
+  EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
+
+  // Test non blocking socket read.
+  int flags;
+  EXPECT_GE(flags = fcntl(socketfd, F_GETFL, 0), 0) << strerror(errno);
+  EXPECT_EQ(fcntl(socketfd, F_SETFL, flags | O_NONBLOCK), 0);
+  EXPECT_EQ(recvfrom(socketfd, nullptr, 0, 0, nullptr, nullptr), -1);
+  EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
+  // Test with MSG_PEEK.
+  EXPECT_EQ(recvfrom(socketfd, nullptr, 0, MSG_PEEK, nullptr, nullptr), -1);
+  EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
+  EXPECT_EQ(close(socketfd), 0) << strerror(errno);
+}
+
 TEST(NetStreamTest, Shutdown) {
   int listener;
   EXPECT_GE(listener = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);

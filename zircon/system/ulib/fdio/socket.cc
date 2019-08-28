@@ -48,6 +48,15 @@ static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
   return status;
 }
 
+static ssize_t zxsio_recvfrom_stream(fdio_t* io, void* data, size_t len, int flags,
+                                     struct sockaddr* __restrict addr,
+                                     socklen_t* __restrict addrlen) {
+  if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
+    return ZX_ERR_NOT_CONNECTED;
+  }
+  return zxsio_recvfrom(io, data, len, flags, addr, addrlen);
+}
+
 static ssize_t zxsio_sendto(fdio_t* io, const void* data, size_t len, int flags,
                             const struct sockaddr* addr, socklen_t addrlen) {
   zxio_socket_t* sio = fdio_get_zxio_socket(io);
@@ -70,7 +79,7 @@ static ssize_t zxsio_recvmsg(fdio_t* io, struct msghdr* msg, int flags) {
 
 static ssize_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags) {
   if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
-    return ZX_ERR_BAD_STATE;
+    return ZX_ERR_NOT_CONNECTED;
   }
   return zxsio_recvmsg(io, msg, flags);
 }
@@ -333,7 +342,7 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_default_get_flags,
     .set_flags = fdio_default_set_flags,
-    .recvfrom = zxsio_recvfrom,
+    .recvfrom = zxsio_recvfrom_stream,
     .sendto = zxsio_sendto,
     .recvmsg = zxsio_recvmsg_stream,
     .sendmsg = zxsio_sendmsg_stream,
