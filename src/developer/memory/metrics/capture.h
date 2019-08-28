@@ -58,8 +58,8 @@ class OS {
 
 class Capture {
  public:
-  static zx_status_t GetCaptureState(CaptureState& state);
-  static zx_status_t GetCapture(Capture& capture, const CaptureState& state, CaptureLevel level);
+  static zx_status_t GetCaptureState(CaptureState* state);
+  static zx_status_t GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level);
 
   zx_time_t time() const { return time_; };
   const zx_info_kmem_stats_t& kmem() const { return kmem_; };
@@ -75,9 +75,9 @@ class Capture {
   const Vmo& vmo_for_koid(zx_koid_t koid) const { return koid_to_vmo_.at(koid); }
 
  private:
-  static zx_status_t GetCaptureState(CaptureState& state, OS& os);
-  static zx_status_t GetCapture(Capture& capture, const CaptureState& state, CaptureLevel level,
-                                OS& os);
+  static zx_status_t GetCaptureState(CaptureState* state, OS* os);
+  static zx_status_t GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level,
+                                OS* os);
   zx_time_t time_;
   zx_info_kmem_stats_t kmem_;
   std::unordered_map<zx_koid_t, const Process> koid_to_process_;

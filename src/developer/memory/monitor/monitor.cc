@@ -49,14 +49,14 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                  bool send_metrics)
     : high_water_(
           "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
-          [this](Capture& c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
+          [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); }),
       prealloc_size_(0),
       logging_(command_line.HasOption("log")),
       tracing_(false),
       delay_(zx::sec(1)),
       dispatcher_(dispatcher),
       component_context_(std::move(context)) {
-  auto s = Capture::GetCaptureState(capture_state_);
+  auto s = Capture::GetCaptureState(&capture_state_);
   if (s != ZX_OK) {
     FXL_LOG(ERROR) << "Error getting capture state: " << zx_status_get_string(s);
     exit(EXIT_FAILURE);
@@ -115,7 +115,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
   trace_observer_.Start(dispatcher_, [this] { UpdateState(); });
   if (logging_) {
     Capture capture;
-    auto s = Capture::GetCapture(capture, capture_state_, KMEM);
+    auto s = Capture::GetCapture(&capture, capture_state_, KMEM);
     if (s != ZX_OK) {
       FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
       exit(EXIT_FAILURE);
@@ -150,7 +150,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
     std::cerr << "Creating Metrics()()\n";
     metrics_ = std::make_unique<Metrics>(
         kMetricsPollFrequency, dispatcher, logger_.get(),
-        [this](Capture& c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
+        [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
   }
 
   SampleAndPost();
@@ -207,7 +207,7 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
       "root", inspect_deprecated::TreeSettings{.initial_size = 4096, .maximum_size = 1024 * 1024});
   auto& root = tree.GetRoot();
   Capture c;
-  Capture::GetCapture(c, capture_state_, VMO);
+  Capture::GetCapture(&c, capture_state_, VMO);
   Summary s(c, Summary::kNameMatches);
   std::ostringstream oss;
   Printer p(oss);
@@ -238,7 +238,7 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
 void Monitor::SampleAndPost() {
   if (logging_ || tracing_ || watchers_.size() > 0) {
     Capture capture;
-    auto s = Capture::GetCapture(capture, capture_state_, KMEM);
+    auto s = Capture::GetCapture(&capture, capture_state_, KMEM);
     if (s != ZX_OK) {
       FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
       return;
@@ -267,7 +267,7 @@ void Monitor::UpdateState() {
       FXL_LOG(INFO) << "Tracing started";
       if (!tracing_) {
         Capture capture;
-        auto s = Capture::GetCapture(capture, capture_state_, KMEM);
+        auto s = Capture::GetCapture(&capture, capture_state_, KMEM);
         if (s != ZX_OK) {
           FXL_LOG(ERROR) << "Error getting capture: " << zx_status_get_string(s);
           return;

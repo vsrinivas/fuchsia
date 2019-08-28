@@ -4,12 +4,13 @@
 
 #include "src/developer/memory/monitor/high_water.h"
 
-#include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/memfs/memfs.h>
+
+#include <gtest/gtest.h>
 #include <src/lib/files/file.h>
 #include <src/lib/fxl/logging.h>
 
@@ -105,7 +106,7 @@ TEST_F(HighWaterUnitTest, Basic) {
                        }}});
   ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
   HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(),
-               [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); });
+               [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/latest.txt"));
   ASSERT_FALSE(files::IsFile(std::string(kMemfsDir) + "/previous.txt"));
   RunLoopUntil([&cs] { return cs.empty(); });
@@ -129,7 +130,7 @@ TEST_F(HighWaterUnitTest, RunTwice) {
                              {.koid = 2, .name = "p1", .vmos = {1}},
                          }}});
     HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(),
-                 [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); });
+                 [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
     RunLoopUntil([&cs] { return cs.empty(); });
     EXPECT_FALSE(hw.GetHighWater().empty());
   }
@@ -148,7 +149,7 @@ TEST_F(HighWaterUnitTest, RunTwice) {
                              {.koid = 2, .name = "p1", .vmos = {1}},
                          }}});
     HighWater hw(kMemfsDir, zx::msec(10), 100, dispatcher(),
-                 [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); });
+                 [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
     RunLoopUntil([&cs] { return cs.empty(); });
     EXPECT_FALSE(hw.GetHighWater().empty());
     EXPECT_FALSE(hw.GetPreviousHighWater().empty());

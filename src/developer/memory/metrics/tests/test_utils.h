@@ -57,9 +57,9 @@ struct OsResponses {
 class CaptureSupplier {
  public:
   explicit CaptureSupplier(std::vector<CaptureTemplate> templates)
-      : templates_(templates), index_(0) {}
+      : templates_(std::move(templates)), index_(0) {}
 
-  zx_status_t GetCapture(Capture& capture, CaptureLevel level);
+  zx_status_t GetCapture(Capture* capture, CaptureLevel level);
   bool empty() const { return index_ == templates_.size(); }
 
  private:
@@ -73,8 +73,8 @@ class TestUtils {
   const static zx_handle_t kSelfHandle;
   const static zx_koid_t kSelfKoid;
 
-  static void CreateCapture(memory::Capture& capture, const CaptureTemplate& t);
-  static zx_status_t GetCapture(Capture& capture, CaptureLevel level, const OsResponses& r);
+  static void CreateCapture(Capture* capture, const CaptureTemplate& t);
+  static zx_status_t GetCapture(Capture* capture, CaptureLevel level, const OsResponses& r);
 
   // Sorted by koid.
   static std::vector<ProcessSummary> GetProcessSummaries(const Summary& summary);

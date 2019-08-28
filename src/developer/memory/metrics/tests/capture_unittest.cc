@@ -69,7 +69,7 @@ const static GetInfoResponse vmos2_info = {
 
 TEST_F(CaptureUnitTest, KMEM) {
   Capture c;
-  auto ret = TestUtils::GetCapture(c, KMEM,
+  auto ret = TestUtils::GetCapture(&c, KMEM,
                                    {
                                        .get_info = {self_info, kmem_info},
                                    });
@@ -81,7 +81,7 @@ TEST_F(CaptureUnitTest, KMEM) {
 TEST_F(CaptureUnitTest, Process) {
   // Process and VMO need to capture the same info.
   Capture c;
-  auto ret = TestUtils::GetCapture(c, VMO,
+  auto ret = TestUtils::GetCapture(&c, VMO,
                                    {.get_info = {self_info, kmem_info, vmos_info, vmos_info},
                                     .get_processes = {{ZX_OK, {proc_cb}}},
                                     .get_property = {proc_prop}});
@@ -100,7 +100,7 @@ TEST_F(CaptureUnitTest, Process) {
 
 TEST_F(CaptureUnitTest, VMO) {
   Capture c;
-  auto ret = TestUtils::GetCapture(c, VMO,
+  auto ret = TestUtils::GetCapture(&c, VMO,
                                    {.get_info = {self_info, kmem_info, vmos_info, vmos_info},
                                     .get_processes = {{ZX_OK, {proc_cb}}},
                                     .get_property = {proc_prop}});
@@ -119,7 +119,7 @@ TEST_F(CaptureUnitTest, VMO) {
 
 TEST_F(CaptureUnitTest, VMODouble) {
   Capture c;
-  auto ret = TestUtils::GetCapture(c, VMO,
+  auto ret = TestUtils::GetCapture(&c, VMO,
                                    {.get_info =
                                         {
                                             self_info,
@@ -158,7 +158,7 @@ TEST_F(CaptureUnitTest, ProcessPropBadState) {
   // If the process disappears we should ignore it and continue.
   Capture c;
   auto ret = TestUtils::GetCapture(
-      c, PROCESS,
+      &c, PROCESS,
       {.get_info = {self_info, kmem_info, vmos2_info, vmos2_info},
        .get_processes = {{ZX_OK, {proc_cb, proc2_cb}}},
        .get_property = {{proc_handle, ZX_PROP_NAME, nullptr, 0, ZX_ERR_BAD_STATE}, proc2_prop}});
@@ -173,7 +173,7 @@ TEST_F(CaptureUnitTest, VMOCountBadState) {
   // If the process disappears we should ignore it and continue.
   Capture c;
   auto ret = TestUtils::GetCapture(
-      c, VMO,
+      &c, VMO,
       {.get_info = {self_info,
                     kmem_info,
                     {proc_handle, ZX_INFO_PROCESS_VMOS, &_vmo, sizeof(_vmo), 1, ZX_ERR_BAD_STATE},
@@ -198,7 +198,7 @@ TEST_F(CaptureUnitTest, VMOGetBadState) {
   // If the process disappears we should ignore it and continue.
   Capture c;
   auto ret = TestUtils::GetCapture(
-      c, VMO,
+      &c, VMO,
       {.get_info = {self_info,
                     kmem_info,
                     vmos_info,

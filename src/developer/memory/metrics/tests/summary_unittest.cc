@@ -17,16 +17,16 @@ using SummaryUnitTest = testing::Test;
 TEST_F(SummaryUnitTest, Single) {
   // One process, one vmo.
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 2, .name = "p1", .vmos = {1}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 2, .name = "p1", .vmos = {1}},
+                                       },
+                               });
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(2U, process_summaries.size());
@@ -50,17 +50,17 @@ TEST_F(SummaryUnitTest, Single) {
 TEST_F(SummaryUnitTest, TwoVmos) {
   // One process, two vmos with same name.
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                          {.koid = 2, .name = "v1", .committed_bytes = 100},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 2, .name = "p1", .vmos = {1, 2}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "v1", .committed_bytes = 100},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 2, .name = "p1", .vmos = {1, 2}},
+                                       },
+                               });
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(2U, process_summaries.size());
@@ -84,14 +84,14 @@ TEST_F(SummaryUnitTest, TwoVmos) {
 TEST_F(SummaryUnitTest, TwoVmoNames) {
   // One process, two vmos with different names.
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                          {.koid = 2, .name = "v2", .committed_bytes = 100},
-                                      },
-                                  .processes = {{.koid = 2, .name = "p1", .vmos = {1, 2}}},
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "v2", .committed_bytes = 100},
+                                       },
+                                   .processes = {{.koid = 2, .name = "p1", .vmos = {1, 2}}},
+                               });
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(2U, process_summaries.size());
@@ -120,14 +120,14 @@ TEST_F(SummaryUnitTest, Parent) {
   // One process, two vmos with different names, one is child.
   Capture c;
   TestUtils::CreateCapture(
-      c, {
-             .vmos =
-                 {
-                     {.koid = 1, .name = "v1", .committed_bytes = 100},
-                     {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
-                 },
-             .processes = {{.koid = 2, .name = "p1", .vmos = {2}}},
-         });
+      &c, {
+              .vmos =
+                  {
+                      {.koid = 1, .name = "v1", .committed_bytes = 100},
+                      {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
+                  },
+              .processes = {{.koid = 2, .name = "p1", .vmos = {2}}},
+          });
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(2U, process_summaries.size());
@@ -155,15 +155,15 @@ TEST_F(SummaryUnitTest, Parent) {
 TEST_F(SummaryUnitTest, TwoProcesses) {
   // Two processes, with different vmos.
   Capture c;
-  TestUtils::CreateCapture(c, {.vmos =
-                                   {
-                                       {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                       {.koid = 2, .name = "v2", .committed_bytes = 100},
-                                   },
-                               .processes = {
-                                   {.koid = 2, .name = "p1", .vmos = {1}},
-                                   {.koid = 3, .name = "p2", .vmos = {2}},
-                               }});
+  TestUtils::CreateCapture(&c, {.vmos =
+                                    {
+                                        {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                        {.koid = 2, .name = "v2", .committed_bytes = 100},
+                                    },
+                                .processes = {
+                                    {.koid = 2, .name = "p1", .vmos = {1}},
+                                    {.koid = 3, .name = "p2", .vmos = {2}},
+                                }});
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(3U, process_summaries.size());
@@ -201,14 +201,14 @@ TEST_F(SummaryUnitTest, TwoProcesses) {
 TEST_F(SummaryUnitTest, TwoProcessesShared) {
   // Two processes, with same vmos.
   Capture c;
-  TestUtils::CreateCapture(c, {.vmos =
-                                   {
-                                       {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                   },
-                               .processes = {
-                                   {.koid = 2, .name = "p1", .vmos = {1}},
-                                   {.koid = 3, .name = "p2", .vmos = {1}},
-                               }});
+  TestUtils::CreateCapture(&c, {.vmos =
+                                    {
+                                        {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                    },
+                                .processes = {
+                                    {.koid = 2, .name = "p1", .vmos = {1}},
+                                    {.koid = 3, .name = "p2", .vmos = {1}},
+                                }});
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(3U, process_summaries.size());
@@ -247,15 +247,15 @@ TEST_F(SummaryUnitTest, TwoProcessesChild) {
   // Two processes, with one vmo shared through parantage.
   Capture c;
   TestUtils::CreateCapture(
-      c, {.vmos =
-              {
-                  {.koid = 1, .name = "v1", .committed_bytes = 100},
-                  {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
-              },
-          .processes = {
-              {.koid = 2, .name = "p1", .vmos = {1}},
-              {.koid = 3, .name = "p2", .vmos = {2}},
-          }});
+      &c, {.vmos =
+               {
+                   {.koid = 1, .name = "v1", .committed_bytes = 100},
+                   {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
+               },
+           .processes = {
+               {.koid = 2, .name = "p1", .vmos = {1}},
+               {.koid = 3, .name = "p2", .vmos = {2}},
+           }});
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(3U, process_summaries.size());
@@ -298,13 +298,13 @@ TEST_F(SummaryUnitTest, MissingParent) {
   // Child VMO with parent koid that's not found.
   Capture c;
   TestUtils::CreateCapture(
-      c, {.vmos =
-              {
-                  {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
-              },
-          .processes = {
-              {.koid = 2, .name = "p1", .vmos = {2}},
-          }});
+      &c, {.vmos =
+               {
+                   {.koid = 2, .name = "v2", .committed_bytes = 100, .parent_koid = 1},
+               },
+           .processes = {
+               {.koid = 2, .name = "p1", .vmos = {2}},
+           }});
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(2U, process_summaries.size());
@@ -324,17 +324,17 @@ TEST_F(SummaryUnitTest, MissingParent) {
 TEST_F(SummaryUnitTest, Kernel) {
   // Test kernel stats.
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .kmem =
-                                      {
-                                          .wired_bytes = 10,
-                                          .total_heap_bytes = 20,
-                                          .mmu_overhead_bytes = 30,
-                                          .ipc_bytes = 40,
-                                          .other_bytes = 50,
-                                          .vmo_bytes = 60,
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .kmem =
+                                       {
+                                           .wired_bytes = 10,
+                                           .total_heap_bytes = 20,
+                                           .mmu_overhead_bytes = 30,
+                                           .ipc_bytes = 40,
+                                           .other_bytes = 50,
+                                           .vmo_bytes = 60,
+                                       },
+                               });
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(1U, process_summaries.size());
@@ -378,20 +378,20 @@ TEST_F(SummaryUnitTest, KernelVmo) {
   // Test kernel that kernel vmo memory that isn't found in
   // user space vmos is listed under the kernel.
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .kmem =
-                                      {
-                                          .vmo_bytes = 110,
-                                      },
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 2, .name = "p1", .vmos = {1}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .kmem =
+                                       {
+                                           .vmo_bytes = 110,
+                                       },
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 2, .name = "p1", .vmos = {1}},
+                                       },
+                               });
   Summary s(c);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(2U, process_summaries.size());
@@ -413,24 +413,24 @@ TEST_F(SummaryUnitTest, NameMatch) {
   // One process, two vmos with same name.
   Capture c;
   TestUtils::CreateCapture(
-      c, {
-             .vmos =
-                 {
-                     {.koid = 1, .name = "blob-12a", .committed_bytes = 100},
-                     {.koid = 2, .name = "blob-de", .committed_bytes = 100},
-                     {.koid = 3, .name = "pthread_t:0x4ce78db2cb38", .committed_bytes = 100},
-                     {.koid = 4, .name = "pthread_t:0x3232fa07cb38", .committed_bytes = 100},
-                     {.koid = 5, .name = "data:libfoo.so", .committed_bytes = 100},
-                     {.koid = 6, .name = "", .committed_bytes = 100},
-                     {.koid = 7, .name = "scudo:primary", .committed_bytes = 100},
-                     {.koid = 8, .name = "scudo:secondary", .committed_bytes = 100},
-                     {.koid = 9, .name = "foo", .committed_bytes = 100},
-                 },
-             .processes =
-                 {
-                     {.koid = 2, .name = "p1", .vmos = {1, 2, 3, 4, 5, 6, 7, 8, 9}},
-                 },
-         });
+      &c, {
+              .vmos =
+                  {
+                      {.koid = 1, .name = "blob-12a", .committed_bytes = 100},
+                      {.koid = 2, .name = "blob-de", .committed_bytes = 100},
+                      {.koid = 3, .name = "pthread_t:0x4ce78db2cb38", .committed_bytes = 100},
+                      {.koid = 4, .name = "pthread_t:0x3232fa07cb38", .committed_bytes = 100},
+                      {.koid = 5, .name = "data:libfoo.so", .committed_bytes = 100},
+                      {.koid = 6, .name = "", .committed_bytes = 100},
+                      {.koid = 7, .name = "scudo:primary", .committed_bytes = 100},
+                      {.koid = 8, .name = "scudo:secondary", .committed_bytes = 100},
+                      {.koid = 9, .name = "foo", .committed_bytes = 100},
+                  },
+              .processes =
+                  {
+                      {.koid = 2, .name = "p1", .vmos = {1, 2, 3, 4, 5, 6, 7, 8, 9}},
+                  },
+          });
   Summary s(c, Summary::kNameMatches);
   auto process_summaries = TestUtils::GetProcessSummaries(s);
   ASSERT_EQ(2U, process_summaries.size());

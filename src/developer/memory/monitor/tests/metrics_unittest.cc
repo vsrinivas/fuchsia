@@ -60,7 +60,7 @@ TEST_F(MetricsUnitTest, All) {
   }});
   cobalt::FakeLogger_Sync logger;
   Metrics m(zx::msec(10), dispatcher(), &logger,
-            [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); });
+            [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(15U, logger.event_count());
 }
@@ -78,7 +78,7 @@ TEST_F(MetricsUnitTest, One) {
   }});
   cobalt::FakeLogger_Sync logger;
   Metrics m(zx::msec(10), dispatcher(), &logger,
-            [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); });
+            [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(1U, logger.event_count());
 }
@@ -98,7 +98,7 @@ TEST_F(MetricsUnitTest, Undigested) {
   }});
   cobalt::FakeLogger_Sync logger;
   Metrics m(zx::msec(10), dispatcher(), &logger,
-            [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); });
+            [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(2U, logger.event_count());
 }

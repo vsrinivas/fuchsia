@@ -70,39 +70,39 @@ class OSImpl : public OS, public TaskEnumerator {
 };
 
 // static.
-zx_status_t Capture::GetCaptureState(CaptureState& state) {
+zx_status_t Capture::GetCaptureState(CaptureState* state) {
   OSImpl osImpl;
-  return GetCaptureState(state, osImpl);
+  return GetCaptureState(state, &osImpl);
 }
 
-zx_status_t Capture::GetCaptureState(CaptureState& state, OS& os) {
-  zx_status_t err = os.GetRootResource(&state.root);
+zx_status_t Capture::GetCaptureState(CaptureState* state, OS* os) {
+  zx_status_t err = os->GetRootResource(&state->root);
   if (err != ZX_OK) {
     return err;
   }
 
   zx_info_handle_basic_t info;
-  err = os.GetInfo(os.ProcessSelf(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  err = os->GetInfo(os->ProcessSelf(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (err != ZX_OK) {
     return err;
   }
 
-  state.self_koid = info.koid;
+  state->self_koid = info.koid;
   return ZX_OK;
 }
 
 // static.
-zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state, CaptureLevel level) {
+zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level) {
   OSImpl osImpl;
-  return GetCapture(capture, state, level, osImpl);
+  return GetCapture(capture, state, level, &osImpl);
 }
 
-zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state, CaptureLevel level,
-                                OS& os) {
+zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, CaptureLevel level,
+                                OS* os) {
   TRACE_DURATION("memory_metrics", "Capture::GetCapture");
-  capture.time_ = os.GetMonotonic();
-  zx_status_t err = os.GetInfo(state.root, ZX_INFO_KMEM_STATS, &capture.kmem_,
-                               sizeof(capture.kmem_), nullptr, nullptr);
+  capture->time_ = os->GetMonotonic();
+  zx_status_t err = os->GetInfo(state.root, ZX_INFO_KMEM_STATS, &capture->kmem_,
+                                sizeof(capture->kmem_), nullptr, nullptr);
   if (err != ZX_OK) {
     return err;
   }
@@ -111,40 +111,40 @@ zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state, Cap
     return ZX_OK;
   }
 
-  err = os.GetProcesses([&state, &capture, &os](int depth, zx_handle_t handle, zx_koid_t koid,
-                                                zx_koid_t parent_koid) {
-    if (koid == state.self_koid) {
-      return ZX_OK;
-    }
+  err = os->GetProcesses(
+      [&state, capture, &os](int depth, zx_handle_t handle, zx_koid_t koid, zx_koid_t parent_koid) {
+        if (koid == state.self_koid) {
+          return ZX_OK;
+        }
 
-    Process process = {.koid = koid};
-    zx_status_t s = os.GetProperty(handle, ZX_PROP_NAME, process.name, ZX_MAX_NAME_LEN);
-    if (s != ZX_OK) {
-      return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
-    }
+        Process process = {.koid = koid};
+        zx_status_t s = os->GetProperty(handle, ZX_PROP_NAME, process.name, ZX_MAX_NAME_LEN);
+        if (s != ZX_OK) {
+          return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
+        }
 
-    size_t num_vmos;
-    s = os.GetInfo(handle, ZX_INFO_PROCESS_VMOS, nullptr, 0, nullptr, &num_vmos);
-    if (s != ZX_OK) {
-      return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
-    }
-    auto vmos = std::make_unique<zx_info_vmo_t[]>(num_vmos);
-    {
-      s = os.GetInfo(handle, ZX_INFO_PROCESS_VMOS, vmos.get(), num_vmos * sizeof(zx_info_vmo_t),
-                     &num_vmos, nullptr);
-      if (s != ZX_OK) {
-        return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
-      }
-    }
-    process.vmos.reserve(num_vmos);
-    for (size_t i = 0; i < num_vmos; i++) {
-      const auto& vmo = vmos[i];
-      capture.koid_to_vmo_.try_emplace(vmo.koid, vmo);
-      process.vmos.push_back(vmo.koid);
-    }
-    capture.koid_to_process_.emplace(koid, process);
-    return ZX_OK;
-  });
+        size_t num_vmos;
+        s = os->GetInfo(handle, ZX_INFO_PROCESS_VMOS, nullptr, 0, nullptr, &num_vmos);
+        if (s != ZX_OK) {
+          return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
+        }
+        auto vmos = std::make_unique<zx_info_vmo_t[]>(num_vmos);
+        {
+          s = os->GetInfo(handle, ZX_INFO_PROCESS_VMOS, vmos.get(),
+                          num_vmos * sizeof(zx_info_vmo_t), &num_vmos, nullptr);
+          if (s != ZX_OK) {
+            return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
+          }
+        }
+        process.vmos.reserve(num_vmos);
+        for (size_t i = 0; i < num_vmos; i++) {
+          const auto& vmo = vmos[i];
+          capture->koid_to_vmo_.try_emplace(vmo.koid, vmo);
+          process.vmos.push_back(vmo.koid);
+        }
+        capture->koid_to_process_.emplace(koid, process);
+        return ZX_OK;
+      });
   return err;
 }
 

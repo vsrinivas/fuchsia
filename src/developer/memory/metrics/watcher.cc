@@ -27,12 +27,12 @@ Watcher::Watcher(zx::duration poll_frequency, uint64_t high_water_threshold,
 void Watcher::CaptureMemory() {
   TRACE_DURATION("memory_metrics", "Watcher::CaptureMemory");
   Capture c;
-  capture_cb_(c, KMEM);
+  capture_cb_(&c, KMEM);
   auto free_bytes = c.kmem().free_bytes;
   if ((free_bytes + high_water_threshold_) <= least_free_bytes_) {
     // Note: memory could have changed between the two captures, so we check
     // again.
-    capture_cb_(c, VMO);
+    capture_cb_(&c, VMO);
     free_bytes = c.kmem().free_bytes;
     if ((free_bytes + high_water_threshold_) <= least_free_bytes_) {
       least_free_bytes_ = free_bytes;

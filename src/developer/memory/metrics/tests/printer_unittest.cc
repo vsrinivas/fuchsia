@@ -31,26 +31,26 @@ void ConfirmLines(std::ostringstream& oss, std::vector<std::string> expected_lin
 
 TEST_F(PrinterUnitTest, PrintCaptureKMEM) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234,
-                                  .kmem = {.total_bytes = 300,
-                                           .free_bytes = 100,
-                                           .wired_bytes = 10,
-                                           .total_heap_bytes = 20,
-                                           .free_heap_bytes = 30,
-                                           .vmo_bytes = 40,
-                                           .mmu_overhead_bytes = 50,
-                                           .ipc_bytes = 60,
-                                           .other_bytes = 70},
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 100, .name = "p1", .vmos = {1}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234,
+                                   .kmem = {.total_bytes = 300,
+                                            .free_bytes = 100,
+                                            .wired_bytes = 10,
+                                            .total_heap_bytes = 20,
+                                            .free_heap_bytes = 30,
+                                            .vmo_bytes = 40,
+                                            .mmu_overhead_bytes = 50,
+                                            .ipc_bytes = 60,
+                                            .other_bytes = 70},
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 100, .name = "p1", .vmos = {1}},
+                                       },
+                               });
   std::ostringstream oss;
   Printer p(oss);
 
@@ -60,35 +60,35 @@ TEST_F(PrinterUnitTest, PrintCaptureKMEM) {
 
 TEST_F(PrinterUnitTest, PrintCaptureVMO) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234,
-                                  .kmem =
-                                      {
-                                          .total_bytes = 300,
-                                          .free_bytes = 100,
-                                          .wired_bytes = 10,
-                                          .total_heap_bytes = 20,
-                                          .free_heap_bytes = 30,
-                                          .vmo_bytes = 40,
-                                          .mmu_overhead_bytes = 50,
-                                          .ipc_bytes = 60,
-                                          .other_bytes = 70,
-                                      },
-                                  .vmos =
-                                      {
-                                          {
-                                              .koid = 1,
-                                              .name = "v1",
-                                              .size_bytes = 100,
-                                              .parent_koid = 200,
-                                              .committed_bytes = 300,
-                                          },
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 100, .name = "p1", .vmos = {1}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234,
+                                   .kmem =
+                                       {
+                                           .total_bytes = 300,
+                                           .free_bytes = 100,
+                                           .wired_bytes = 10,
+                                           .total_heap_bytes = 20,
+                                           .free_heap_bytes = 30,
+                                           .vmo_bytes = 40,
+                                           .mmu_overhead_bytes = 50,
+                                           .ipc_bytes = 60,
+                                           .other_bytes = 70,
+                                       },
+                                   .vmos =
+                                       {
+                                           {
+                                               .koid = 1,
+                                               .name = "v1",
+                                               .size_bytes = 100,
+                                               .parent_koid = 200,
+                                               .committed_bytes = 300,
+                                           },
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 100, .name = "p1", .vmos = {1}},
+                                       },
+                               });
   std::ostringstream oss;
   Printer p(oss);
 
@@ -102,21 +102,21 @@ TEST_F(PrinterUnitTest, PrintCaptureVMO) {
 
 TEST_F(PrinterUnitTest, PrintSummaryKMEM) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234,
-                                  .kmem =
-                                      {
-                                          .total_bytes = 1024 * 1024,
-                                          .free_bytes = 1024,
-                                          .wired_bytes = 2 * 1024,
-                                          .total_heap_bytes = 3 * 1024,
-                                          .free_heap_bytes = 2 * 1024,
-                                          .vmo_bytes = 5 * 1024,
-                                          .mmu_overhead_bytes = 6 * 1024,
-                                          .ipc_bytes = 7 * 1024,
-                                          .other_bytes = 8 * 1024,
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234,
+                                   .kmem =
+                                       {
+                                           .total_bytes = 1024 * 1024,
+                                           .free_bytes = 1024,
+                                           .wired_bytes = 2 * 1024,
+                                           .total_heap_bytes = 3 * 1024,
+                                           .free_heap_bytes = 2 * 1024,
+                                           .vmo_bytes = 5 * 1024,
+                                           .mmu_overhead_bytes = 6 * 1024,
+                                           .ipc_bytes = 7 * 1024,
+                                           .other_bytes = 8 * 1024,
+                                       },
+                               });
 
   std::ostringstream oss;
   Printer p(oss);
@@ -130,23 +130,23 @@ TEST_F(PrinterUnitTest, PrintSummaryKMEM) {
 
 TEST_F(PrinterUnitTest, PrintSummaryPROCESS) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234,
-                                  .kmem =
-                                      {
-                                          .total_bytes = 1024 * 1024,
-                                          .free_bytes = 1024,
-                                          .wired_bytes = 2 * 1024,
-                                          .total_heap_bytes = 3 * 1024,
-                                          .free_heap_bytes = 2 * 1024,
-                                          .vmo_bytes = 5 * 1024,
-                                          .mmu_overhead_bytes = 6 * 1024,
-                                          .ipc_bytes = 7 * 1024,
-                                          .other_bytes = 8 * 1024,
-                                      },
-                                  .vmos = {{.koid = 1, .name = "v1", .committed_bytes = 1024}},
-                                  .processes = {{.koid = 100, .name = "p1", .vmos = {1}}},
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234,
+                                   .kmem =
+                                       {
+                                           .total_bytes = 1024 * 1024,
+                                           .free_bytes = 1024,
+                                           .wired_bytes = 2 * 1024,
+                                           .total_heap_bytes = 3 * 1024,
+                                           .free_heap_bytes = 2 * 1024,
+                                           .vmo_bytes = 5 * 1024,
+                                           .mmu_overhead_bytes = 6 * 1024,
+                                           .ipc_bytes = 7 * 1024,
+                                           .other_bytes = 8 * 1024,
+                                       },
+                                   .vmos = {{.koid = 1, .name = "v1", .committed_bytes = 1024}},
+                                   .processes = {{.koid = 100, .name = "p1", .vmos = {1}}},
+                               });
 
   std::ostringstream oss;
   Printer p(oss);
@@ -162,23 +162,23 @@ TEST_F(PrinterUnitTest, PrintSummaryPROCESS) {
 
 TEST_F(PrinterUnitTest, PrintSummaryVMO) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234,
-                                  .kmem =
-                                      {
-                                          .total_bytes = 1024 * 1024,
-                                          .free_bytes = 1024,
-                                          .wired_bytes = 2 * 1024,
-                                          .total_heap_bytes = 3 * 1024,
-                                          .free_heap_bytes = 2 * 1024,
-                                          .vmo_bytes = 5 * 1024,
-                                          .mmu_overhead_bytes = 6 * 1024,
-                                          .ipc_bytes = 7 * 1024,
-                                          .other_bytes = 8 * 1024,
-                                      },
-                                  .vmos = {{.koid = 1, .name = "v1", .committed_bytes = 1024}},
-                                  .processes = {{.koid = 100, .name = "p1", .vmos = {1}}},
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234,
+                                   .kmem =
+                                       {
+                                           .total_bytes = 1024 * 1024,
+                                           .free_bytes = 1024,
+                                           .wired_bytes = 2 * 1024,
+                                           .total_heap_bytes = 3 * 1024,
+                                           .free_heap_bytes = 2 * 1024,
+                                           .vmo_bytes = 5 * 1024,
+                                           .mmu_overhead_bytes = 6 * 1024,
+                                           .ipc_bytes = 7 * 1024,
+                                           .other_bytes = 8 * 1024,
+                                       },
+                                   .vmos = {{.koid = 1, .name = "v1", .committed_bytes = 1024}},
+                                   .processes = {{.koid = 100, .name = "p1", .vmos = {1}}},
+                               });
 
   std::ostringstream oss;
   Printer p(oss);
@@ -201,21 +201,21 @@ TEST_F(PrinterUnitTest, PrintSummaryVMO) {
 
 TEST_F(PrinterUnitTest, PrintSummaryVMOShared) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234,
-                                  .kmem = {.vmo_bytes = 6 * 1024},
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 1024},
-                                          {.koid = 2, .name = "v2", .committed_bytes = 2 * 1024},
-                                          {.koid = 3, .name = "v3", .committed_bytes = 3 * 1024},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 100, .name = "p1", .vmos = {1, 2}},
-                                          {.koid = 200, .name = "p2", .vmos = {2, 3}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234,
+                                   .kmem = {.vmo_bytes = 6 * 1024},
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 1024},
+                                           {.koid = 2, .name = "v2", .committed_bytes = 2 * 1024},
+                                           {.koid = 3, .name = "v3", .committed_bytes = 3 * 1024},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 100, .name = "p1", .vmos = {1, 2}},
+                                           {.koid = 200, .name = "p2", .vmos = {2, 3}},
+                                       },
+                               });
 
   std::ostringstream oss;
   Printer p(oss);
@@ -236,17 +236,17 @@ TEST_F(PrinterUnitTest, PrintSummaryVMOShared) {
 
 TEST_F(PrinterUnitTest, OutputSummarySingle) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234L * 1000000000L,
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 100, .name = "p1", .vmos = {1}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234L * 1000000000L,
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 100, .name = "p1", .vmos = {1}},
+                                       },
+                               });
   Summary s(c);
 
   std::ostringstream oss;
@@ -267,18 +267,18 @@ TEST_F(PrinterUnitTest, OutputSummarySingle) {
 
 TEST_F(PrinterUnitTest, OutputSummaryKernel) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234L * 1000000000L,
-                                  .kmem =
-                                      {
-                                          .wired_bytes = 10,
-                                          .total_heap_bytes = 20,
-                                          .mmu_overhead_bytes = 30,
-                                          .ipc_bytes = 40,
-                                          .other_bytes = 50,
-                                          .vmo_bytes = 60,
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234L * 1000000000L,
+                                   .kmem =
+                                       {
+                                           .wired_bytes = 10,
+                                           .total_heap_bytes = 20,
+                                           .mmu_overhead_bytes = 30,
+                                           .ipc_bytes = 40,
+                                           .other_bytes = 50,
+                                           .vmo_bytes = 60,
+                                       },
+                               });
   Summary s(c);
 
   std::ostringstream oss;
@@ -303,19 +303,19 @@ TEST_F(PrinterUnitTest, OutputSummaryKernel) {
 
 TEST_F(PrinterUnitTest, OutputSummaryDouble) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234L * 1000000000L,
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                          {.koid = 2, .name = "v2", .committed_bytes = 200},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 100, .name = "p1", .vmos = {1}},
-                                          {.koid = 200, .name = "p2", .vmos = {2}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234L * 1000000000L,
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "v2", .committed_bytes = 200},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 100, .name = "p1", .vmos = {1}},
+                                           {.koid = 200, .name = "p2", .vmos = {2}},
+                                       },
+                               });
   Summary s(c);
 
   std::ostringstream oss;
@@ -343,22 +343,22 @@ TEST_F(PrinterUnitTest, OutputSummaryDouble) {
 
 TEST_F(PrinterUnitTest, OutputSummaryShared) {
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234L * 1000000000L,
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                          {.koid = 2, .name = "v1", .committed_bytes = 100},
-                                          {.koid = 3, .name = "v1", .committed_bytes = 100},
-                                          {.koid = 4, .name = "v2", .committed_bytes = 100},
-                                          {.koid = 5, .name = "v3", .committed_bytes = 200},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 100, .name = "p1", .vmos = {1, 2, 4}},
-                                          {.koid = 200, .name = "p2", .vmos = {2, 3, 5}},
-                                      },
-                              });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234L * 1000000000L,
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 3, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 4, .name = "v2", .committed_bytes = 100},
+                                           {.koid = 5, .name = "v3", .committed_bytes = 200},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 100, .name = "p1", .vmos = {1, 2, 4}},
+                                           {.koid = 200, .name = "p2", .vmos = {2, 3, 5}},
+                                       },
+                               });
   Summary s(c);
 
   std::ostringstream oss;
@@ -389,76 +389,64 @@ TEST_F(PrinterUnitTest, OutputSummaryShared) {
 TEST_F(PrinterUnitTest, PrintDigest) {
   // Test kernel stats.
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .kmem =
-                                      {
-                                          .total_bytes = 1000,
-                                          .wired_bytes = 10,
-                                          .free_bytes = 100,
-                                          .vmo_bytes = 700,
-                                      },
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "a1", .committed_bytes = 100},
-                                          {.koid = 2, .name = "b1", .committed_bytes = 200},
-                                          {.koid = 3, .name = "c1", .committed_bytes = 300},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 1, .name = "p1", .vmos = {1}},
-                                          {.koid = 2, .name = "q1", .vmos = {2}},
-                                      },
-                             });
+  TestUtils::CreateCapture(&c, {
+                                   .kmem =
+                                       {
+                                           .total_bytes = 1000,
+                                           .wired_bytes = 10,
+                                           .free_bytes = 100,
+                                           .vmo_bytes = 700,
+                                       },
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "a1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "b1", .committed_bytes = 200},
+                                           {.koid = 3, .name = "c1", .committed_bytes = 300},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 1, .name = "p1", .vmos = {1}},
+                                           {.koid = 2, .name = "q1", .vmos = {2}},
+                                       },
+                               });
   Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
   std::ostringstream oss;
   Printer p(oss);
   p.PrintDigest(d);
-  ConfirmLines(oss, {
-      "B: 200B",
-      "A: 100B",
-      "Undigested: 300B",
-      "Orphaned: 100B",
-      "Kernel: 10B",
-      "Free: 100B"
-  });
+  ConfirmLines(oss, {"B: 200B", "A: 100B", "Undigested: 300B", "Orphaned: 100B", "Kernel: 10B",
+                     "Free: 100B"});
 }
 
 TEST_F(PrinterUnitTest, OutputDigest) {
   // Test kernel stats.
   Capture c;
-  TestUtils::CreateCapture(c, {
-                                  .time = 1234L * 1000000000L,
-                                  .kmem =
-                                      {
-                                          .total_bytes = 1000,
-                                          .wired_bytes = 10,
-                                          .free_bytes = 100,
-                                          .vmo_bytes = 700,
-                                      },
-                                  .vmos =
-                                      {
-                                          {.koid = 1, .name = "a1", .committed_bytes = 100},
-                                          {.koid = 2, .name = "b1", .committed_bytes = 200},
-                                          {.koid = 3, .name = "c1", .committed_bytes = 300},
-                                      },
-                                  .processes =
-                                      {
-                                          {.koid = 1, .name = "p1", .vmos = {1}},
-                                          {.koid = 2, .name = "q1", .vmos = {2}},
-                                      },
-                             });
+  TestUtils::CreateCapture(&c, {
+                                   .time = 1234L * 1000000000L,
+                                   .kmem =
+                                       {
+                                           .total_bytes = 1000,
+                                           .wired_bytes = 10,
+                                           .free_bytes = 100,
+                                           .vmo_bytes = 700,
+                                       },
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "a1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "b1", .committed_bytes = 200},
+                                           {.koid = 3, .name = "c1", .committed_bytes = 300},
+                                       },
+                                   .processes =
+                                       {
+                                           {.koid = 1, .name = "p1", .vmos = {1}},
+                                           {.koid = 2, .name = "q1", .vmos = {2}},
+                                       },
+                               });
   Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
   std::ostringstream oss;
   Printer p(oss);
   p.OutputDigest(d);
-  ConfirmLines(oss, {
-      "1234,B,200",
-      "1234,A,100",
-      "1234,Undigested,300",
-      "1234,Orphaned,100",
-      "1234,Kernel,10",
-      "1234,Free,100"
-  });
+  ConfirmLines(oss, {"1234,B,200", "1234,A,100", "1234,Undigested,300", "1234,Orphaned,100",
+                     "1234,Kernel,10", "1234,Free,100"});
 }
 
 TEST_F(PrinterUnitTest, FormatSize) {

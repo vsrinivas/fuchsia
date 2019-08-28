@@ -14,9 +14,9 @@
 namespace memory {
 
 // Used by Watcher to capture memory periodically.
-using CaptureFn = fit::function<zx_status_t(Capture &, CaptureLevel)>;
+using CaptureFn = fit::function<zx_status_t(Capture*, CaptureLevel)>;
 // Used by Watcher to notify when new high water marks have been reached.
-using HighWaterFn = fit::function<void (const Capture &)>;
+using HighWaterFn = fit::function<void(const Capture&)>;
 
 // Watches memory usage and reports back when memory reaches a new high.
 class Watcher {

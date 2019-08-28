@@ -4,9 +4,10 @@
 
 #include "src/developer/memory/metrics/watcher.h"
 
-#include <gtest/gtest.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/types.h>
+
+#include <gtest/gtest.h>
 
 #include "lib/gtest/real_loop_fixture.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
@@ -33,7 +34,7 @@ TEST_F(WatcherUnitTest, Initial) {
   std::vector<Capture> high_waters;
   Watcher w(
       zx::duration(ZX_MSEC(1)), 100, dispatcher(),
-      [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); },
+      [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); },
       [&high_waters](const Capture& c) { high_waters.push_back(c); });
   RunLoopUntil([&cs] { return cs.empty(); }, zx::duration::infinite());
   ASSERT_EQ(1U, high_waters.size());
@@ -67,7 +68,7 @@ TEST_F(WatcherUnitTest, TwoHighs) {
   std::vector<Capture> high_waters;
   Watcher w(
       zx::duration(ZX_MSEC(1)), 100, dispatcher(),
-      [&cs](Capture& c, CaptureLevel l) { return cs.GetCapture(c, l); },
+      [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); },
       [&high_waters](const Capture& c) { high_waters.push_back(c); });
   RunLoopUntil([&cs] { return cs.empty(); }, zx::duration::infinite());
   ASSERT_EQ(2U, high_waters.size());

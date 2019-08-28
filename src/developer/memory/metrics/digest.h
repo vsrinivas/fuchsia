@@ -24,10 +24,10 @@ struct BucketMatch {
 
 class Bucket {
  public:
-  Bucket(const std::string& name, uint64_t size) : name_(name), size_(size) {}
+  Bucket(std::string name, uint64_t size) : name_(std::move(name)), size_(size) {}
   const std::string& name() const { return name_; }
   uint64_t size() const { return size_; }
-  const std::vector<zx_koid_t> vmos() const { return vmos_; }
+  const std::vector<zx_koid_t>& vmos() const { return vmos_; }
 
  private:
   explicit Bucket(const BucketMatch& match);

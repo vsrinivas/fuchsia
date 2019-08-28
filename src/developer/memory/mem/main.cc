@@ -51,7 +51,7 @@ int main(int argc, const char** argv) {
   }
 
   CaptureState capture_state;
-  auto s = Capture::GetCaptureState(capture_state);
+  auto s = Capture::GetCaptureState(&capture_state);
   Printer printer(std::cout);
 
   if (s != ZX_OK) {
@@ -61,7 +61,7 @@ int main(int argc, const char** argv) {
 
   if (command_line.HasOption("print")) {
     Capture capture;
-    auto s = Capture::GetCapture(capture, capture_state, VMO);
+    auto s = Capture::GetCapture(&capture, capture_state, VMO);
     if (s != ZX_OK) {
       std::cerr << "Error getting capture: " << zx_status_get_string(s);
       return EXIT_FAILURE;
@@ -92,7 +92,7 @@ int main(int argc, const char** argv) {
     Namer namer(Summary::kNameMatches);
     for (int64_t i = 1; true; i++) {
       Capture capture;
-      auto s = Capture::GetCapture(capture, capture_state, VMO);
+      auto s = Capture::GetCapture(&capture, capture_state, VMO);
       if (s != ZX_OK) {
         std::cerr << "Error getting capture: " << zx_status_get_string(s);
         return EXIT_FAILURE;
@@ -118,7 +118,7 @@ int main(int argc, const char** argv) {
   }
 
   Capture capture;
-  s = Capture::GetCapture(capture, capture_state, VMO);
+  s = Capture::GetCapture(&capture, capture_state, VMO);
   if (s != ZX_OK) {
     std::cerr << "Error getting capture: " << zx_status_get_string(s);
     return EXIT_FAILURE;

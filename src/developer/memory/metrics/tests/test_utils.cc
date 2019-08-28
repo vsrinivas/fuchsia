@@ -78,14 +78,14 @@ class MockOS : public OS {
 };
 
 // static.
-void TestUtils::CreateCapture(memory::Capture& capture, const CaptureTemplate& t) {
-  capture.time_ = t.time;
-  capture.kmem_ = t.kmem;
+void TestUtils::CreateCapture(Capture* capture, const CaptureTemplate& t) {
+  capture->time_ = t.time;
+  capture->kmem_ = t.kmem;
   for (const auto& vmo : t.vmos) {
-    capture.koid_to_vmo_.emplace(vmo.koid, vmo);
+    capture->koid_to_vmo_.emplace(vmo.koid, vmo);
   }
   for (const auto& process : t.processes) {
-    capture.koid_to_process_.emplace(process.koid, process);
+    capture->koid_to_process_.emplace(process.koid, process);
   }
 }
 
@@ -97,15 +97,15 @@ std::vector<ProcessSummary> TestUtils::GetProcessSummaries(const Summary& summar
   return summaries;
 }
 
-zx_status_t TestUtils::GetCapture(Capture& capture, CaptureLevel level, const OsResponses& r) {
+zx_status_t TestUtils::GetCapture(Capture* capture, CaptureLevel level, const OsResponses& r) {
   MockOS os(r);
   CaptureState state;
-  zx_status_t ret = Capture::GetCaptureState(state, os);
+  zx_status_t ret = Capture::GetCaptureState(&state, &os);
   EXPECT_EQ(ZX_OK, ret);
-  return Capture::GetCapture(capture, state, level, os);
+  return Capture::GetCapture(capture, state, level, &os);
 }
 
-zx_status_t CaptureSupplier::GetCapture(Capture& capture, CaptureLevel level) {
+zx_status_t CaptureSupplier::GetCapture(Capture* capture, CaptureLevel level) {
   auto& t = templates_.at(index_);
   t.time = index_++;
   TestUtils::CreateCapture(capture, t);

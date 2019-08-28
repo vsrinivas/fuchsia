@@ -50,7 +50,7 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
 void Metrics::CollectMetrics() {
   TRACE_DURATION("memory_monitor", "Watcher::Metrics::CollectMetrics");
   Capture capture;
-  capture_cb_(capture, KMEM);
+  capture_cb_(&capture, KMEM);
   Digest digest(capture);
 
   std::vector<fuchsia::cobalt::CobaltEvent> events;
