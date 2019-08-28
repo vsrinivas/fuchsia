@@ -14,9 +14,6 @@ using fuchsia.ui.policy;
 /// In one component instance there can only be one BaseShell service instance.
 /// The ViewOwner request is sent to the separate ViewProvider service. This way,
 /// the base shell may be implemented as a flutter component.
-///
-/// Teardown may be initiated by the base shell calling
-/// BaseShellContext.Shutdown(), or by the system shutting down.
 [Discoverable]
 protocol BaseShell {
     Initialize(BaseShellContext base_shell_context,
@@ -40,9 +37,6 @@ protocol BaseShellContext {
     /// Acquires the presentation service, which is assumed to already be
     /// connected to the presenter.
     GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
-
-    /// This requests the shutdown of the basemgr.
-    Shutdown();
 };
 
 // TODO(alexmin): Delete BaseShellParams here and from BaseShell.Initialize().

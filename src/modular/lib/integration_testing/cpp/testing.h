@@ -16,10 +16,6 @@
 namespace modular {
 namespace testing {
 
-// TestStore key used to signal termination of the integration test suite to the
-// DevBaseShell, causing it to call Shutdown().
-constexpr char kTestShutdown[] = "test_shutdown";
-
 // Integration tests that run under DevBaseShell are cut off after this
 // timeout.
 constexpr int kTestTimeoutMilliseconds = 30000;

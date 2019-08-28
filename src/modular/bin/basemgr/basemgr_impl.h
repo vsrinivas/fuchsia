@@ -95,8 +95,7 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |fuchsia::modular::BaseShellContext|
   void GetUserProvider(fidl::InterfaceRequest<fuchsia::modular::UserProvider> request) override;
 
-  // |fuchsia::modular::BaseShellContext|
-  void Shutdown() override;
+  void Shutdown();
 
   // |fuchsia::auth::AuthenticationContextProvider|
   void GetAuthenticationUIContext(
