@@ -5,6 +5,13 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.wlan.ap.policy") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "string-bounds-not-specified",
+    "too-many-nested-libraries",
+    "vector-bounds-not-specified",
+  ]
+
   sdk_category = "internal"
 
   sources = [

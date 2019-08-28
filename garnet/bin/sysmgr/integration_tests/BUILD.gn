@@ -8,6 +8,9 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 fidl("interface") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   name = "test.sysmgr"
   sources = [
     "interface.fidl",

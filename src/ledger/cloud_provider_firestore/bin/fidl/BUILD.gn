@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "string-bounds-not-specified",
+    "too-many-nested-libraries",
+  ]
+
   name = "fuchsia.ledger.cloud.firestore"
 
   sources = [

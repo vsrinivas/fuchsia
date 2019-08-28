@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.dns") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-name",
+    "vector-bounds-not-specified",
+  ]
+
   name = "fuchsia.net.dns"
 
   sources = [

@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.input.accessibility") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "too-many-nested-libraries" ]
+
   sdk_category = "internal"
 
   sources = [

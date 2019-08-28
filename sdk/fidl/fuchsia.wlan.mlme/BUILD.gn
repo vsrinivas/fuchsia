@@ -5,6 +5,14 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.wlan.mlme") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "event-names-must-start-with-on",
+    "invalid-case-for-constant",
+    "invalid-case-for-decl-name",
+    "vector-bounds-not-specified",
+  ]
+
   sdk_category = "internal"
 
   sources = [

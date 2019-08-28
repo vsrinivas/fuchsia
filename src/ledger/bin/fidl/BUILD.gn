@@ -7,6 +7,12 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 import("//src/ledger/bin/fidl/syncable/syncable.gni")
 
 fidl("fidl") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   name = "fuchsia.ledger.internal"
 
   sources = [
@@ -41,6 +47,9 @@ source_set("syncable") {
 }
 
 fidl("cloud-test") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "too-many-nested-libraries" ]
+
   name = "fuchsia.ledger.cloud.test"
 
   sources = [

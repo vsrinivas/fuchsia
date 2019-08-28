@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.auth.account") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   sources = [
     "account_manager.fidl",
   ]

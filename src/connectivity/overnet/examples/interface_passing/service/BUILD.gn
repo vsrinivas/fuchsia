@@ -12,6 +12,9 @@ group("service") {
 }
 
 fidl("interface_passing") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "too-many-nested-libraries" ]
+
   name = "fuchsia.overnet.examples.interfacepassing"
 
   sources = [

@@ -11,6 +11,9 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 fidl("fuchsia.time") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "event-names-must-start-with-on" ]
+
   sources = [
     "deprecated_network_sync.fidl",
     "utc.fidl",

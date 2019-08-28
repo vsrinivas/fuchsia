@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.testing.runner") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-member",
+    "string-bounds-not-specified",
+  ]
+
   sources = [
     "test_runner.fidl",
   ]

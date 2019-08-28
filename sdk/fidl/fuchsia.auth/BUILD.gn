@@ -5,6 +5,13 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.auth") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-name",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   # TODO(jsankey): Split auth interface into public and internal and remove
   # partner sdk dependency for internal interfaces.
   sdk_category = "partner"

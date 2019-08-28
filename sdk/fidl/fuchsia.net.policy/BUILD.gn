@@ -5,6 +5,14 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.policy") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-member",
+    "invalid-case-for-decl-name",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   name = "fuchsia.net.policy"
 
   sources = [

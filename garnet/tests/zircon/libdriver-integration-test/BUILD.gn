@@ -83,6 +83,9 @@ test_package("libdriver-integration-test") {
 }
 
 fidl("mock-device") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "event-names-must-start-with-on" ]
+
   name = "fuchsia.device.mock"
 
   sources = [

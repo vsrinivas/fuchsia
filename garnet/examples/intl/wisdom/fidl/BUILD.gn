@@ -6,6 +6,12 @@ import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
 fidl("wisdom") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "string-bounds-not-specified",
+    "too-many-nested-libraries",
+  ]
+
   name = "fuchsia.examples.intl.wisdom"
   sources = [
     "intl_wisdom.fidl",

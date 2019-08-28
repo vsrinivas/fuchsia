@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("echo") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   name = "fidl.examples.echo"
 
   sources = [

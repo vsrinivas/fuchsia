@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   name = "fuchsia.wlan.device"
 
   sources = [
@@ -18,6 +21,12 @@ fidl("fidl") {
 }
 
 fidl("sme") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   name = "fuchsia.wlan.sme"
 
   sources = [
@@ -31,6 +40,15 @@ fidl("sme") {
 }
 
 fidl("service") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "disallowed-library-name-component",
+    "protocol-name-includes-service",
+    "string-bounds-not-specified",
+    "too-many-nested-libraries",
+    "vector-bounds-not-specified",
+  ]
+
   name = "fuchsia.wlan.device.service"
 
   sources = [
@@ -47,6 +65,13 @@ fidl("service") {
 }
 
 fidl("wlantap") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "event-names-must-start-with-on",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   name = "fuchsia.wlan.tap"
 
   sources = [

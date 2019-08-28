@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.accessibility.tts") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   sdk_category = "experimental"
 
   sources = [

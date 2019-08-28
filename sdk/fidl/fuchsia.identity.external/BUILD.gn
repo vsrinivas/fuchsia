@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.identity.external") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "invalid-copyright-for-platform-source-library" ]
+
   sources = [
     "auth_provider.fidl",
     "common.fidl",

@@ -29,6 +29,11 @@ template("fidl_library") {
     library_name = invoker.name
   }
 
+  excluded_checks = []
+  if (defined(invoker.excluded_checks)) {
+    excluded_checks = invoker.excluded_checks
+  }
+
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
@@ -37,11 +42,13 @@ template("fidl_library") {
   c_header = "$target_gen_dir/$c_stem.h"
   c_server = "$target_gen_dir/$c_stem.server.c"
   coding_tables = "$fidl_stem.tables.cc"
+  lint_stamp_file = "$target_gen_dir/$target_name.linted"
 
   main_target_name = target_name
   response_file_target_name = "${target_name}_response_file"
   compilation_target_name = "${target_name}_compile"
   verification_target_name = "${target_name}_verify"
+  lint_target_name = "${target_name}_lint"
 
   all_deps = []
   if (defined(invoker.deps)) {
@@ -106,6 +113,79 @@ template("fidl_library") {
     }
   }
 
+  action(lint_target_name) {
+    visibility = [ ":*" ]
+
+    script = "//build/fidl/run_and_gen_stamp.sh"
+
+    forward_variables_from(invoker,
+                           [
+                             "sources",
+                             "testonly",
+                           ])
+
+    # run_and_gen_stamp.sh runs this tool, and touches lint_stamp_file if successful
+    tool_with_no_output = "//zircon/public/tool/fidl-lint"
+
+    # Construct the host toolchain version of the tool.
+    host_tool = "${tool_with_no_output}($host_toolchain)"
+
+    # Get the path to the executable.
+    if (!defined(tool_output_name)) {
+      tool_output_name = get_label_info(host_tool, "name")
+    }
+    tool_out_dir = get_label_info(host_tool, "root_out_dir")
+    host_executable = "$tool_out_dir/$tool_output_name"
+
+    deps = [
+      host_tool,
+    ]
+
+    # Add the executable itself as an input.
+    inputs = [
+      host_executable,
+    ]
+
+    outputs = [
+      lint_stamp_file,
+    ]
+
+    fidl_to_lint = []
+    foreach(source, sources) {
+      if (string_replace(source, ".test.", "") == source) {
+        # TODO(fxb/7821): After soft transition to disable failed FIDL lint checks
+        # outside the primary fuchsia source tree, remove this "if" gate and
+        # always add the non-test "source" to the "fidl_to_lint" array, so linting
+        # is enforced on all builds using this toolchain.
+        source_path = "//" + rebase_path(source, "//")
+        if (string_replace(source_path, "//examples/", "") != source_path ||
+            string_replace(source_path, "//garnet/", "") != source_path ||
+            string_replace(source_path, "//peridot/", "") != source_path ||
+            string_replace(source_path, "//sdk/", "") != source_path ||
+            string_replace(source_path, "//src/", "") != source_path) {
+          # Don't automatically lint test.fidl and test.<various>.fidl files
+          fidl_to_lint += [ rebase_path(source, root_build_dir) ]
+        }
+      }
+    }
+
+    args = [ rebase_path(lint_stamp_file, root_build_dir) ]
+    if (fidl_to_lint == []) {
+      args += [ ":" ]  # NOOP - Nothing to lint, but touch the stamp file
+    } else {
+      args += [ rebase_path(host_executable, root_build_dir) ]
+
+      foreach(excluded_check, excluded_checks) {
+        args += [
+          "-e",
+          excluded_check,
+        ]
+      }
+
+      args += fidl_to_lint
+    }
+  }
+
   compiled_action(compilation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
@@ -130,6 +210,7 @@ template("fidl_library") {
     args = [ "@$rebased_response_file" ]
 
     deps = [
+      ":$lint_target_name",
       ":$response_file_target_name",
     ]
   }
@@ -149,6 +230,7 @@ template("fidl_library") {
                            [
                              "testonly",
                              "visibility",
+                             "response_file",
                            ])
 
     # Metadata to allow us to query all FIDL IR files.
@@ -158,6 +240,7 @@ template("fidl_library") {
 
     public_deps = [
       ":$compilation_target_name",
+      ":$lint_target_name",
       ":$response_file_target_name",
     ]
 

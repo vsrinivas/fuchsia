@@ -30,6 +30,12 @@ source_set("test") {
 }
 
 fidl("frobinator") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "event-names-must-start-with-on",
+    "string-bounds-not-specified",
+  ]
+
   name = "fidl.test.frobinator"
 
   sources = [

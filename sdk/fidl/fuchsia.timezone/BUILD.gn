@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.timezone") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "protocol-name-includes-service",
+    "string-bounds-not-specified",
+  ]
+
   sources = [
     "time_service.fidl",
     "time_zone.fidl",

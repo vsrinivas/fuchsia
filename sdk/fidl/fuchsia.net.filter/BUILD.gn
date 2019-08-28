@@ -5,6 +5,14 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.filter") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-constant",
+    "invalid-case-for-decl-member",
+    "invalid-case-for-decl-name",
+    "vector-bounds-not-specified",
+  ]
+
   sources = [
     "commands.fidl",
     "ruleset.fidl",

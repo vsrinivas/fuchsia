@@ -64,6 +64,9 @@ executable("fdio_spawn_helper") {
 }
 
 fidl("fidl_interface") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "protocol-name-includes-service" ]
+
   testonly = true
   name = "fuchsia.zircon.benchmarks"
   sources = [

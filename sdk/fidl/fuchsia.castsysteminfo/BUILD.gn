@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.castsysteminfo") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-member",
+    "string-bounds-not-specified",
+  ]
+
   sdk_category = "partner"
 
   sources = [

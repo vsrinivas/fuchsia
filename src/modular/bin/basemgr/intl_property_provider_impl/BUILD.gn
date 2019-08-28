@@ -8,6 +8,12 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 fidl("fidl") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "too-many-nested-libraries",
+    "vector-bounds-not-specified",
+  ]
+
   name = "fuchsia.modular.intl.internal"
   visibility = [ ":*" ]
   sources = [

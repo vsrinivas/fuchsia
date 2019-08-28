@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.overnet") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "protocol-name-includes-service",
+    "vector-bounds-not-specified",
+  ]
+
   sources = [
     "overnet.fidl",
   ]

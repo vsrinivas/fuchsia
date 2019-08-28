@@ -63,6 +63,12 @@ executable_package("simple_module") {
 }
 
 fidl("interfaces") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "string-bounds-not-specified",
+    "too-many-nested-libraries",
+  ]
+
   name = "fuchsia.modular.examples.simple"
 
   sources = [

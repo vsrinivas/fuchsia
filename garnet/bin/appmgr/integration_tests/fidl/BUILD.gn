@@ -13,6 +13,9 @@ group("fidl") {
 }
 
 fidl("test.component.mockrunner") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   sources = [
     "runner.fidl",
   ]

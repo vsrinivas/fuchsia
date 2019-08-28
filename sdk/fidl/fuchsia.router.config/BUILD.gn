@@ -5,6 +5,14 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.router.config") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-constant",
+    "invalid-case-for-decl-member",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   sdk_category = "experimental"
 
   sources = [

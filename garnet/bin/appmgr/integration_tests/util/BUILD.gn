@@ -16,6 +16,9 @@ group("util") {
 }
 
 fidl("data_file_reader_writer") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   testonly = true
   name = "test.appmgr.integration"
 

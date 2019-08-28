@@ -6,6 +6,9 @@ import("//build/fidl/fidl.gni")
 
 # TODO(alhaad/ukode): Also move these services to a separate repository.
 fidl("fuchsia.modular.auth") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   sdk_category = "partner"
 
   sources = [

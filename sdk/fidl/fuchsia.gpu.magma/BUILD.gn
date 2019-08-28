@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.gpu.magma") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-constant",
+    "vector-bounds-not-specified",
+  ]
+
   sources = [
     "magma.fidl",
   ]

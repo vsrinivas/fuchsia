@@ -5,6 +5,15 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.wlan.service") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "disallowed-library-name-component",
+    "invalid-case-for-decl-member",
+    "invalid-case-for-decl-name",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   sdk_category = "partner"
 
   sources = [

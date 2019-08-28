@@ -5,6 +5,14 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.setui") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-member",
+    "protocol-name-includes-service",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   sources = [
     "mutations.fidl",
     "service.fidl",

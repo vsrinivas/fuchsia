@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.deprecatedtimezone") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "protocol-name-includes-service",
+    "string-bounds-not-specified",
+  ]
+
   sdk_category = "partner"
   sources = [
     "deprecated_time_service.fidl",

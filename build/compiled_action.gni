@@ -104,7 +104,7 @@ template("_compiled_action_target") {
 
     script = "//build/gn_run_binary.sh"
 
-    # Constuct the host toolchain version of the tool.
+    # Construct the host toolchain version of the tool.
     host_tool = "${invoker.tool}($host_toolchain)"
 
     # Get the path to the executable.

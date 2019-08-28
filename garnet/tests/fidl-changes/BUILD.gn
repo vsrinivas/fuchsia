@@ -15,18 +15,27 @@ group("fidl-changes") {
 }
 
 fidl("fidl.test.before") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "event-names-must-start-with-on" ]
+
   sources = [
     "fidl/before.fidl",
   ]
 }
 
 fidl("fidl.test.during") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "event-names-must-start-with-on" ]
+
   sources = [
     "fidl/during.fidl",
   ]
 }
 
 fidl("fidl.test.after") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "event-names-must-start-with-on" ]
+
   sources = [
     "fidl/after.fidl",
   ]

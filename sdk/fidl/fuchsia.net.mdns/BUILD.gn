@@ -5,6 +5,13 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.net.mdns") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "event-names-must-start-with-on",
+    "protocol-name-includes-service",
+    "vector-bounds-not-specified",
+  ]
+
   sdk_category = "partner"
 
   sources = [

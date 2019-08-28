@@ -5,13 +5,16 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.activity") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "string-bounds-not-specified" ]
+
   sdk_category = "partner"
 
   sources = [
     "activity.fidl",
     "provider.fidl",
-    "tracker.fidl",
     "state.fidl",
+    "tracker.fidl",
   ]
 
   public_deps = []

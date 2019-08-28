@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.fonts.experimental") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [ "vector-bounds-not-specified" ]
+
   sdk_category = "experimental"
 
   sources = [

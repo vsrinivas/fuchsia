@@ -5,6 +5,12 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.devicesettings") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-constant",
+    "string-bounds-not-specified",
+  ]
+
   sources = [
     "devicesettings.fidl",
   ]

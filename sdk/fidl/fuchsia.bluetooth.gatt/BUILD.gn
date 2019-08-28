@@ -5,6 +5,14 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.bluetooth.gatt") {
+  # Temporarily disable known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-constant",
+    "protocol-name-includes-service",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   sdk_category = "partner"
 
   sources = [
