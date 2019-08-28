@@ -13,6 +13,7 @@ group("tools") {
     "//src/developer/kcounter_inspect",
     "//tools/fidlcat:fidlcat_host",
     "//tools/kazoo:kazoo_host",
+    "//tools/fidl/fidldoc",
   ]
 }
 

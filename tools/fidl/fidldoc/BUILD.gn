@@ -37,11 +37,13 @@ copy("fidldoc_copy_config") {
   ]
 }
 
-group("fidldoc") {
+install_host_tools("fidldoc") {
   deps = [
     ":fidldoc_bin($host_toolchain)",
     ":fidldoc_copy_config",
   ]
+
+  outputs = ["fidldoc"]
 }
 
 group("tests") {
