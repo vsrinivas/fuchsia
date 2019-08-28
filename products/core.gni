@@ -55,7 +55,6 @@ base_package_labels += [
   "//src/connectivity/bluetooth:core",
   "//src/connectivity/network/mdns/bundles:config",
   "//src/connectivity/network/mdns/bundles:services",
-  "//src/connectivity/network/netdump",
   "//src/connectivity/network/netstack",
   "//src/connectivity/wlan:service",
   "//src/developer/exception_broker",
