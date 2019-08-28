@@ -22,6 +22,4 @@ int main(int argc, const char* const* argv) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     host.Dockyard().ProcessRequests();
   }
-  GT_LOG(INFO) << "Stopping dockyard host";
-  exit(0);
 }

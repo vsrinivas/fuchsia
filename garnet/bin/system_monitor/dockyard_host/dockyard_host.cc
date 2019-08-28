@@ -194,7 +194,7 @@ void DockyardHost::OnPaths(const std::vector<dockyard::PathInfo>& add,
 void DockyardHost::OnStreamSets(const dockyard::StreamSetsResponse& response) {
   auto search = request_id_to_async_query_.find(response.request_id);
   if (search != request_id_to_async_query_.end()) {
-    search->second->response = std::move(response);
+    search->second->response = response;
     search->second->promise.set_value(std::move(search->second));
     request_id_to_async_query_.erase(search);
   } else {
