@@ -224,7 +224,7 @@ static void print_table(task_table_t* table, const ps_options_t* options) {
     if (e->type == 't' && !options->also_show_threads) {
       continue;
     }
-    snprintf(idbuf, id_w + 1, "%*s%c:%s", e->depth * 2, "", e->type, e->koid_str);
+    snprintf(idbuf, id_w + 1, "%*s%c: %s", e->depth * 2, "", e->type, e->koid_str);
 
     // Format the size fields for entry types that need them.
     char pss_bytes_str[MAX_FORMAT_SIZE_LEN] = {};
