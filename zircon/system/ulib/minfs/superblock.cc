@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/superblock.h>
-
-#include <lib/cksum.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,10 +11,10 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #endif
 
-#include <utility>
-
 #include <minfs/block-txn.h>
+#include <minfs/superblock.h>
 
+#include <utility>
 
 namespace minfs {
 
@@ -81,21 +78,13 @@ zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_block
   return ZX_OK;
 }
 
-void SuperblockManager::Write(WriteTxn* txn, UpdateBackupSuperblock write_backup) {
-  UpdateChecksum(MutableInfo());
+void SuperblockManager::Write(WriteTxn* txn) {
 #ifdef __Fuchsia__
   auto data = mapping_.vmo().get();
 #else
   auto data = &info_blk_[0];
 #endif
-  txn->Enqueue(data, 0, kSuperblockStart, 1);
-  if (write_backup == UpdateBackupSuperblock::kUpdate) {
-    if (MutableInfo()->flags & kMinfsFlagFVM) {
-      txn->Enqueue(data, 0, kFvmSuperblockBackup, 1);
-    } else {
-      txn->Enqueue(data, 0, kNonFvmSuperblockBackup, 1);
-    }
-  }
+  txn->Enqueue(data, 0, 0, 1);
 }
 
 }  // namespace minfs
