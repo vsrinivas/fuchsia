@@ -73,10 +73,11 @@ namespace {
 
 // Logs are aranged in a tree that permits going back to the parent.
 struct LogEntry {
-  LogCategory category;
-  FileLineFunction origin;
+  LogCategory category = LogCategory::kNone;
+  FileLineFunction location;
   std::string msg;
-  double time = 0;
+  double start_time = 0;
+  double end_time = 0;
 
   std::vector<std::unique_ptr<LogEntry>> children;
   LogEntry* parent = nullptr;
@@ -85,46 +86,16 @@ struct LogEntry {
   // statement is still valid in memory. We can use this backpointer to flush the statement.
   LogStatement* statement = nullptr;
 };
+inline bool Valid(const LogEntry& entry) { return entry.location.is_valid(); }
 
 LogEntry gRootSlot;
 LogEntry* gCurrentSlot = nullptr;
 
 std::mutex gLogMutex;
 
-// Goes over the logging tree recursively and correctly indents the log messages into |logs|.
-void UnwindLogTree(const LogEntry& slot, std::vector<std::string>* logs, int indent = 0) {
-  logs->emplace_back(LogWithPreamble(slot.category, slot.origin, slot.msg, slot.time, indent));
-  for (auto& child : slot.children) {
-    UnwindLogTree(*child, logs, indent + 1);
-  }
-}
-
-void FillInLogEntry(LogEntry* entry) {
-  if (entry->origin.file().empty()) {
-    if (!entry->statement)
-      return;
-
-    // Refill the slot with the log statement.
-    entry->category = entry->statement->category();
-    entry->origin = entry->statement->origin();
-    entry->msg = entry->statement->GetMsg();
-    entry->time = entry->statement->time();
-    entry->statement = nullptr;
-  }
-}
-
-void TraverseLogTree(LogEntry* slot, std::vector<std::string>* logs, int indent = 0) {
-  FillInLogEntry(slot);
-
-  logs->emplace_back(LogWithPreamble(slot->category, slot->origin, slot->msg, slot->time, indent));
-  for (auto& child_slot : slot->children) {
-    TraverseLogTree(child_slot.get(), logs, indent + 1);
-  }
-}
-
 // Output is dd:hh:mm:ss.<ms>. dd is only showen when non-zero.
-std::string SecondsToString(double ds) {
-  int total_secs = (int)ds;
+std::string SecondsToTimeString(double ds) {
+  int total_secs = static_cast<int>(ds);
   int s = total_secs % 60;
 
   int total_min = total_secs / 60;
@@ -135,13 +106,83 @@ std::string SecondsToString(double ds) {
 
   int d = total_hours / 24;
 
-  int ms = (int)((ds - total_secs) * 1000);
+  int ms = static_cast<int>((ds - total_secs) * 1000);
 
   // We don't want to add days if it's 0, as it adds noise and it will be rare to have them.
   if (d == 0) {
     return fxl::StringPrintf("%02d:%02d:%02d.%03d", h, m, s, ms);
   } else {
     return fxl::StringPrintf("%02d:%02d:%02d:%02d.%03d", d, h, m, s, ms);
+  }
+}
+
+// Output is <sec>.<ms> (eg. 32.453).
+std::string DurationToString(double start, double end) {
+  double diff = end - start;
+  int s = static_cast<int>(diff);
+  int ms = static_cast<int>((diff - s) * 1000000);
+
+  return fxl::StringPrintf("%03d.%06ds", s, ms);
+}
+
+// Format is (depending on whether |entry.location| is valid or not:
+// [<time>][<category>]<indent><log msg>    (location invalid).
+// [<time>][<category>]<indent>[<function>][<file:line>] <log msg>
+std::string LogEntryToStr(const LogEntry& entry, int indent) {
+  auto start_time_str = SecondsToTimeString(entry.start_time);
+  const char* cat_str = LogCategoryToString(entry.category);
+
+  // No location is only timing information.
+  if (!entry.location.is_valid()) {
+    return fxl::StringPrintf("[%s][%10s]%*s%s", start_time_str.c_str(), cat_str, indent, "",
+                             entry.msg.c_str());
+  }
+
+  auto duration_str = DurationToString(entry.start_time, entry.end_time);
+  auto file = files::GetBaseName(entry.location.file());
+  int line = entry.location.line();
+  const char* function = entry.location.function().c_str();
+
+  return fxl::StringPrintf("[%s][%s][%10s]%*s[%s:%d][%s] %s", start_time_str.c_str(),
+                           duration_str.c_str(), cat_str, indent, "", file.c_str(), line, function,
+                           entry.msg.c_str());
+}
+
+// Goes over the logging tree recursively and correctly indents the log messages into |logs|.
+void UnwindLogTree(const LogEntry& entry, std::vector<std::string>* logs, int indent = 0) {
+  logs->emplace_back(LogEntryToStr(entry, indent));
+
+  for (auto& child : entry.children) {
+    UnwindLogTree(*child, logs, indent + 2);
+  }
+}
+
+
+// If the log entry is not filled, it means that it's still in the stack. We use the backpointer it
+// was to the log statement that generated it to fill it. This normally happens then |PopLogEntry|
+// is called, but an exception handler that calls |FlushLogEntries| can also make this happen.
+void FillInLogEntryFromStatement(LogEntry* entry) {
+  if (Valid(*entry))
+    return;
+
+ if (!entry->statement)
+    return;
+
+  // Refill the slot with the log statement.
+  entry->category = entry->statement->category();
+  entry->location= entry->statement->origin();
+  entry->msg = entry->statement->GetMsg();
+  entry->start_time = entry->statement->start_time();
+  entry->end_time = SecondsSinceStart();
+  entry->statement = nullptr;
+}
+
+void TraverseLogTree(LogEntry* entry, std::vector<std::string>* logs, int indent = 0) {
+  FillInLogEntryFromStatement(entry);
+  logs->emplace_back(LogEntryToStr(*entry, indent));
+
+  for (auto& child_entry : entry->children) {
+    TraverseLogTree(child_entry.get(), logs, indent + 2);
   }
 }
 
@@ -164,17 +205,18 @@ void PushLogEntry(LogStatement* statement) {
   gCurrentSlot->statement = statement;
 }
 
-void PopLogEntry(LogCategory category, const FileLineFunction& origin, const std::string& msg,
-                 double time) {
+void PopLogEntry(LogCategory category, const FileLineFunction& location, const std::string& msg,
+                 double start_time, double end_time) {
   std::vector<std::string> logs;
   {
     std::lock_guard<std::mutex> lock(gLogMutex);
 
     // Set the message that's going away to the child.
     gCurrentSlot->category = category;
-    gCurrentSlot->origin = origin;
+    gCurrentSlot->location = location;
     gCurrentSlot->msg = msg;
-    gCurrentSlot->time = time;
+    gCurrentSlot->start_time = start_time;
+    gCurrentSlot->end_time = end_time;
     gCurrentSlot->statement = nullptr;
 
     // While there is still a parent, we're not at the root.
@@ -211,32 +253,6 @@ void FlushLogEntries() {
   fflush(stderr);
 }
 
-// The format is:
-// [<time>][<category>][<function>][<file:line>] <log msg>
-std::string LogWithPreamble(LogCategory category, const FileLineFunction& origin,
-                            const std::string& msg, double time, int indent) {
-  constexpr int kIndentationSize = 2;
-  if (origin.file().empty()) {
-    return fxl::StringPrintf("[%s][%10s]%*s<empty>", SecondsToString(time).c_str(), "<unknown>",
-                             indent * kIndentationSize, " ");
-  }
-
-  auto basename = files::GetBaseName(origin.file());
-  std::string log;
-  if (indent > 0) {
-    log =
-        fxl::StringPrintf("[%s][%10s]%*s[%s][%s:%d] %s", SecondsToString(time).c_str(),
-                          LogCategoryToString(category), indent * kIndentationSize, " ",
-                          origin.function().c_str(), basename.c_str(), origin.line(), msg.c_str());
-  } else {
-    log = fxl::StringPrintf("[%s][%10s][%s][%s:%d] %s", SecondsToString(time).c_str(),
-                            LogCategoryToString(category), origin.function().c_str(),
-                            basename.c_str(), origin.line(), msg.c_str());
-  }
-
-  return log;
-}
-
 const char* LogCategoryToString(LogCategory category) {
   switch (category) {
     case LogCategory::kAgent:
@@ -271,10 +287,12 @@ const char* LogCategoryToString(LogCategory category) {
       return "WorkerPool";
     case LogCategory::kAll:
       return "All";
+    case LogCategory::kNone:
+      return "<none>";
   }
 
   FXL_NOTREACHED();
-  return nullptr;
+  return "<unknown>";
 }
 
 }  // namespace debug_ipc

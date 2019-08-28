@@ -14,7 +14,7 @@ LogStatement::LogStatement(FileLineFunction origin, LogCategory category)
   if (!IsLogCategoryActive(category_))
     return;
 
-  time_ = SecondsSinceStart();
+  start_time_ = SecondsSinceStart();
   should_log_ = true;
   PushLogEntry(this);
 }
@@ -30,7 +30,7 @@ LogStatement::~LogStatement() {
   if (!should_log_)
     return;
 
-  PopLogEntry(category_, origin_, stream_.str(), time_);
+  PopLogEntry(category_, origin_, stream_.str(), start_time_, SecondsSinceStart());
 }
 
 }  // namespace debug_ipc

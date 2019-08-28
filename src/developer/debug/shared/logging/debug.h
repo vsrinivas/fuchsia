@@ -76,6 +76,9 @@ enum class LogCategory {
   // All the previous categories are enabled.
   // Log statements in this category will always be outputting if debug logging is enabled.
   kAll,
+
+  // Used for any log statements for which the category could not be found.
+  kNone,
 };
 const char* LogCategoryToString(LogCategory);
 
@@ -100,14 +103,11 @@ bool IsLogCategoryActive(LogCategory);
 //            having an exception handler in fuchsia and/or a signal handler in linux to flush the
 //            rest of the output in the case of a crash.
 void PushLogEntry(LogStatement* statement);
-void PopLogEntry(LogCategory, const FileLineFunction& origin, const std::string& msg, double time);
+void PopLogEntry(LogCategory, const FileLineFunction& origin, const std::string& msg,
+                 double start_time, double end_time);
 
 // Force the printing of the current entries.
 void FlushLogEntries();
-
-// Creates a preamble with padding that all logging statements should use:
-std::string LogWithPreamble(LogCategory, const FileLineFunction& origin, const std::string& msg,
-                            double time, int indent = 0);
 
 // Timing ------------------------------------------------------------------------------------------
 

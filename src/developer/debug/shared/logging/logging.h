@@ -56,14 +56,13 @@ class LogStatement {
 
   const FileLineFunction& origin() const { return origin_; }
   LogCategory category() const { return category_; }
-  double time() const { return time_; }
-
+  double start_time() const { return start_time_; }
 
  private:
   FileLineFunction origin_;
   LogCategory category_;
   bool should_log_ = false;
-  double time_;     // When the event occurred.
+  double start_time_;
 
   std::ostringstream stream_;
 };
