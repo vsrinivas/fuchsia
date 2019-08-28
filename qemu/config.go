@@ -158,6 +158,7 @@ func CreateInvocation(cfg Config, cmdlineArgs []string) ([]string, error) {
 
 	invocation = append(invocation, "-kernel", cfg.Kernel)
 	invocation = append(invocation, "-initrd", cfg.Initrd)
+	invocation = append(invocation, "-object,iothread,id=iothread0")
 
 	// TODO: maybe we should introduce Device interface with three different
 	// implementations: Drive, Netdev and ISADebugExit to cleanup the code
@@ -165,11 +166,11 @@ func CreateInvocation(cfg Config, cmdlineArgs []string) ([]string, error) {
 
 	for _, d := range cfg.Drives {
 		var drive strings.Builder
-		fmt.Fprintf(&drive, "id=%s,file=%s,format=raw,if=none,cache=none,aio=threads", d.ID, d.File)
+		fmt.Fprintf(&drive, "id=%s,file=%s,format=raw,if=none,cache=unsafe,aio=threads", d.ID, d.File)
 		invocation = append(invocation, "-drive", drive.String())
 
 		var device strings.Builder
-		fmt.Fprintf(&device, "virtio-blk-pci,drive=%s,iothread=io1", d.ID)
+		fmt.Fprintf(&device, "virtio-blk-pci,drive=%s,iothread=iothread0", d.ID)
 		if d.Addr != "" {
 			fmt.Fprintf(&device, ",addr=%s", d.Addr)
 		}
