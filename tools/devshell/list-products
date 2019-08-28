@@ -16,5 +16,9 @@ cd "${FUCHSIA_DIR}"
 product_gnis=($(echo {.,vendor/*}/products/*.gni | xargs -n 1 basename | sort))
 for product in "${product_gnis[@]}"
 do
-  echo "${product%%.gni}"
+  # if there's no vendor/* directory, the list above will have a literal "*.gni"
+  # filename, so filter it out
+  if [[ ! ${product} =~ "*" ]] ; then
+    echo "${product%%.gni}"
+  fi
 done
