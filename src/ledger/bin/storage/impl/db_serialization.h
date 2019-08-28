@@ -78,11 +78,13 @@ class UnsyncedCommitRow {
   static std::string GetKeyFor(CommitIdView commit_id);
 };
 
+// Serialization of rows holding object synchronization status.
+// The methods in this class are valid only for non-inline objects.
 class ObjectStatusRow {
  public:
-  static constexpr fxl::StringView kTransientPrefix = "transient/object_digests/";
-  static constexpr fxl::StringView kLocalPrefix = "local/object_digests/";
-  static constexpr fxl::StringView kSyncedPrefix = "synced/object_digests/";
+  static constexpr fxl::StringView kTransientPrefix = "transient/objects/";
+  static constexpr fxl::StringView kLocalPrefix = "local/objects/";
+  static constexpr fxl::StringView kSyncedPrefix = "synced/objects/";
 
   static std::string GetKeyFor(PageDbObjectStatus object_status,
                                const ObjectIdentifier& object_identifier);

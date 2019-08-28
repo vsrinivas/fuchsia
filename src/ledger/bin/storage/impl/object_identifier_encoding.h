@@ -19,13 +19,22 @@ ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identi
 flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
     flatbuffers::FlatBufferBuilder* builder, const ObjectIdentifier& object_identifier);
 
-// Encode an ObjectIdentifier into a string.
+// Encodes an ObjectIdentifier into a string.
 std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier);
 
-// Decode an ObjectIdentifier from a string. Return |true| in case of success,
+// Decodes an ObjectIdentifier from a string. Returns |true| in case of success,
 // |false| otherwise.
 bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
                             ObjectIdentifier* object_identifier);
+
+// Encodes an ObjectIdentifier for a non-inline piece into a fixed-size string whose prefix is the
+// serialization of its object digest.
+std::string EncodeDigestPrefixedObjectIdentifier(const ObjectIdentifier& object_identifier);
+
+// Decodes an ObjectIdentifier encoded with EncodeDigestPrefixedObjectIdentifier. Returns |true| in
+// case of success, |false| otherwise.
+bool DecodeDigestPrefixedObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
+                                          ObjectIdentifier* object_identifier);
 
 // Returns whether a |ObjectIdentifierStorage| obtained from flatbuffer is
 // valid.

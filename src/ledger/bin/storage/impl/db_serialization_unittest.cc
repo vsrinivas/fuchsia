@@ -57,22 +57,21 @@ TEST_F(DbSerialization, SerializationVersionControl) {
   EXPECT_EQ(UnsyncedCommitRow::GetKeyFor("commit"), "unsynced/commits/commit");
 
   // Object Status row.
-  ObjectIdentifier identifier(1u, ObjectDigest("object"), nullptr);
-  // |ObjectIdentifier|s are serialized using FlatBuffers.
-  std::string identifier_serialization =
-      "\f\0\0\0\b\0\f\0\x4\0\b\0\b\0\0\0\x1\0\0\0\x4\0\0\0\x6\0\0\0object\0\0"_s;
+  ObjectIdentifier identifier(1u, ObjectDigest("0123456789ABCDEF0123456789ABCDEF0"), nullptr);
+  // Identifier is serialized as object-digest concatenated with the serialization of key-index.
+  std::string identifier_serialization = "0123456789ABCDEF0123456789ABCDEF0\x1\0\0\0"_s;
 
   // Object Status: Transient row.
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::TRANSIENT, identifier),
-            fxl::Concatenate({"transient/object_digests/", identifier_serialization}));
+            fxl::Concatenate({"transient/objects/", identifier_serialization}));
 
   // Object Status: Local row.
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::LOCAL, identifier),
-            fxl::Concatenate({"local/object_digests/", identifier_serialization}));
+            fxl::Concatenate({"local/objects/", identifier_serialization}));
 
   // Object Status: Synced row.
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::SYNCED, identifier),
-            fxl::Concatenate({"synced/object_digests/", identifier_serialization}));
+            fxl::Concatenate({"synced/objects/", identifier_serialization}));
 
   // Sync Metadata row.
   EXPECT_EQ(SyncMetadataRow::GetKeyFor("metadata"), "sync_metadata/metadata");

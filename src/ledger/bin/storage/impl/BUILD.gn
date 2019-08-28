@@ -58,6 +58,7 @@ source_set("object_identifier_lib") {
   ]
 
   public_deps = [
+    ":data_serialization",
     ":object_identifier",
     "//peridot/lib/convert",
     "//src/ledger/bin/storage/public",

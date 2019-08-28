@@ -109,7 +109,7 @@ synced to the cloud:
 - Row key: `unsynced/commits/{commit_id}`
 - Row value: `{generation}`
 
-### Value and Tree Node Objects
+### Objects
 Each piece, i.e. part of a value or tree node object, can be in any of the
 following states:
 
@@ -119,10 +119,13 @@ following states:
 
 For each piece, a status row is stored:
 
-- Row key: `{status}/object_digests/{object_piece_identifier}`
+- Row key: `{status}/objects/{object_identifier}`
 - Row value: (empty value)
 
 Where status is one of `transient`, `local`, or `synced`.
+
+`{object_identifier}` is serialized such that it has `{object_digest}` as a
+prefix.
 
 ## Cloud sync metadata
 

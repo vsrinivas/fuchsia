@@ -1321,7 +1321,7 @@ TEST_F(PageStorageTest, AddP2PPiece) {
 
 TEST_F(PageStorageTest, GetObject) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data = MakeObject("Some data");
+    ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     std::unique_ptr<const Object> object =
@@ -1335,7 +1335,7 @@ TEST_F(PageStorageTest, GetObject) {
 
 TEST_F(PageStorageTest, GetObjectPart) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data = MakeObject("_Some data_");
+    ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part =
@@ -1348,7 +1348,7 @@ TEST_F(PageStorageTest, GetObjectPart) {
 
 TEST_F(PageStorageTest, GetObjectPartLargeOffset) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data = MakeObject("_Some data_");
+    ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, data.size * 2, data.size,
@@ -1361,7 +1361,7 @@ TEST_F(PageStorageTest, GetObjectPartLargeOffset) {
 
 TEST_F(PageStorageTest, GetObjectPartLargeMaxSize) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data = MakeObject("_Some data_");
+    ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part =
@@ -1374,7 +1374,7 @@ TEST_F(PageStorageTest, GetObjectPartLargeMaxSize) {
 
 TEST_F(PageStorageTest, GetObjectPartNegativeArgs) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    ObjectData data = MakeObject("_Some data_");
+    ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
     ASSERT_EQ(WriteObject(handler, &data), Status::OK);
 
     fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, -data.size + 1, -1,

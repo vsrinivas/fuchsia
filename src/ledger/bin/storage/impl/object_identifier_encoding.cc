@@ -6,8 +6,11 @@
 
 #include <limits>
 
+#include "src/ledger/bin/storage/impl/constants.h"
+#include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace storage {
 ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identifier_storage,
@@ -49,6 +52,28 @@ bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* facto
     return false;
   }
   *object_identifier = ToObjectIdentifier(storage, factory);
+  return true;
+}
+
+std::string EncodeDigestPrefixedObjectIdentifier(const ObjectIdentifier& object_identifier) {
+  FXL_DCHECK(object_identifier.object_digest().Serialize().size() == kStorageHashSize + 1);
+  return fxl::Concatenate({object_identifier.object_digest().Serialize(),
+                           SerializeData(static_cast<uint32_t>(object_identifier.key_index()))});
+}
+
+bool DecodeDigestPrefixedObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
+                                          ObjectIdentifier* object_identifier) {
+  constexpr size_t kObjectDigestSize = kStorageHashSize + 1;
+  constexpr size_t kKeyIndexSize = sizeof(uint32_t);
+  if (data.size() != kObjectDigestSize + kKeyIndexSize) {
+    return false;
+  }
+  if (!IsDigestValid(data.substr(0, kObjectDigestSize))) {
+    return false;
+  }
+  uint32_t key_index = DeserializeData<uint32_t>(data.substr(kObjectDigestSize, kKeyIndexSize));
+  *object_identifier = factory->MakeObjectIdentifier(
+      key_index, ObjectDigest(data.substr(0, kObjectDigestSize).ToString()));
   return true;
 }
 

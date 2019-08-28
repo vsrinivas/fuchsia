@@ -8,7 +8,9 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
+#include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/testing/test_with_environment.h"
 
 namespace storage {
 namespace {
@@ -53,6 +55,33 @@ TEST(ObjectIdentifierEncodingTest, MissingObjectDigest) {
   ObjectIdentifier object_identifier;
   ASSERT_FALSE(
       DecodeObjectIdentifier(convert::ToStringView(builder), &factory, &object_identifier));
+}
+
+using ObjectIdentifierDigestPrefixedEncodingTest = ledger::TestWithEnvironment;
+
+TEST_F(ObjectIdentifierDigestPrefixedEncodingTest, EncodeDecode) {
+  fake::FakeObjectIdentifierFactory factory;
+  const ObjectIdentifier object_identifier =
+      RandomObjectIdentifier(environment_.random(), &factory);
+  std::string data = EncodeDigestPrefixedObjectIdentifier(object_identifier);
+  ObjectIdentifier output;
+  ASSERT_TRUE(DecodeDigestPrefixedObjectIdentifier(data, &factory, &output));
+  EXPECT_EQ(object_identifier, output);
+}
+
+TEST_F(ObjectIdentifierDigestPrefixedEncodingTest, InvalidInput) {
+  fake::FakeObjectIdentifierFactory factory;
+  ObjectIdentifier output;
+  // Input too short.
+  EXPECT_FALSE(DecodeDigestPrefixedObjectIdentifier("foo", &factory, &output));
+  // Input too long.
+  EXPECT_FALSE(DecodeDigestPrefixedObjectIdentifier("0123456789ABCDEF0123456789ABCDEF012345",
+                                                    &factory, &output));
+  // Invalid object digest.
+  EXPECT_FALSE(
+      DecodeDigestPrefixedObjectIdentifier("\xf"
+                                           "123456789ABCDEF0123456789ABCDEF01234",
+                                           &factory, &output));
 }
 
 }  // namespace

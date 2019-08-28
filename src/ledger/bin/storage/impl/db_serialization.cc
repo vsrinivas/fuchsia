@@ -110,7 +110,8 @@ constexpr fxl::StringView ObjectStatusRow::kSyncedPrefix;
 
 std::string ObjectStatusRow::GetKeyFor(PageDbObjectStatus object_status,
                                        const ObjectIdentifier& object_identifier) {
-  return fxl::Concatenate({GetPrefixFor(object_status), EncodeObjectIdentifier(object_identifier)});
+  return fxl::Concatenate(
+      {GetPrefixFor(object_status), EncodeDigestPrefixedObjectIdentifier(object_identifier)});
 }
 
 fxl::StringView ObjectStatusRow::GetPrefixFor(PageDbObjectStatus object_status) {
