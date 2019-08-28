@@ -667,6 +667,17 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
   // TODO(teisenbe): Should we mark it as failed if this is a forced removal?
   dev->CompleteSuspend(ZX_OK);
 
+  Devhost* dh = dev->host();
+  bool devhost_dying = (dh != nullptr && (dh->flags() & Devhost::Flags::kDying));
+  if (forced || devhost_dying) {
+    // We are force removing all devices in the devhost, so force complete any outstanding tasks.
+    dev->CompleteUnbind(ZX_ERR_UNAVAILABLE);
+    dev->CompleteRemove(ZX_ERR_UNAVAILABLE);
+  } else {
+    // We should not be removing a device while the unbind task is still running.
+    ZX_ASSERT(dev->GetActiveUnbind() == nullptr);
+  }
+
   if (dev->proxy()) {
     if (!kUseUnbindTasks) {
       zx_status_t r = dh_send_remove_device(dev->proxy().get());
@@ -703,7 +714,6 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
   }
 
   // detach from devhost
-  Devhost* dh = dev->host();
   if (dh != nullptr) {
     dev->host()->devices().erase(*dev);
     // Acquire an extra reference to the devhost that gets released below.

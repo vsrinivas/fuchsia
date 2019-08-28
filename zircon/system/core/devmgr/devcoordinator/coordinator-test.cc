@@ -1320,6 +1320,75 @@ TEST_F(UnbindTestCase, ManyConcurrentRemovals) {
   }
 }
 
+TEST_F(UnbindTestCase, ForcedRemovalDuringUnbind) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent", 0 /* protocol id */, "", &parent_index));
+
+  auto* parent_device = device(parent_index);
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(parent_device->device, "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
+  loop()->RunUntilIdle();
+
+  // Don't reply to the unbind request.
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(child_device->remote));
+
+  // Close the parent device's channel to trigger a forced removal of the parent and child.
+  parent_device->remote = zx::channel();
+  loop()->RunUntilIdle();
+
+  // Check that both devices are dead and have no pending unbind or remove tasks.
+  ASSERT_EQ(devmgr::Device::State::kDead, parent_device->device->state());
+  ASSERT_NULL(parent_device->device->GetActiveUnbind());
+  ASSERT_NULL(parent_device->device->GetActiveRemove());
+
+  ASSERT_EQ(devmgr::Device::State::kDead, child_device->device->state());
+  ASSERT_NULL(child_device->device->GetActiveUnbind());
+  ASSERT_NULL(parent_device->device->GetActiveRemove());
+}
+
+TEST_F(UnbindTestCase, ForcedRemovalDuringRemove) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent", 0 /* protocol id */, "", &parent_index));
+
+  auto* parent_device = device(parent_index);
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(parent_device->device, "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(child_device->remote));
+  loop()->RunUntilIdle();
+
+  // Don't reply to the remove request.
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(child_device->remote));
+
+  // Close the parent device's channel to trigger a forced removal of the parent and child.
+  parent_device->remote = zx::channel();
+  loop()->RunUntilIdle();
+
+  // Check that both devices are dead and have no pending unbind or remove tasks.
+  ASSERT_EQ(devmgr::Device::State::kDead, parent_device->device->state());
+  ASSERT_NULL(parent_device->device->GetActiveUnbind());
+  ASSERT_NULL(parent_device->device->GetActiveRemove());
+
+  ASSERT_EQ(devmgr::Device::State::kDead, child_device->device->state());
+  ASSERT_NULL(child_device->device->GetActiveUnbind());
+  ASSERT_NULL(child_device->device->GetActiveRemove());
+}
+
 class SuspendTestCase : public MultipleDeviceTestCase {
  public:
   void SuspendTest(uint32_t flags);

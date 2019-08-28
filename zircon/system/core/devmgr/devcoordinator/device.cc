@@ -302,25 +302,32 @@ zx_status_t Device::SendCompleteRemoval(UnbindCompletion completion) {
   return ZX_OK;
 }
 
-zx_status_t Device::CompleteUnbind() {
-  if (!unbind_completion_) {
+zx_status_t Device::CompleteUnbind(zx_status_t status) {
+  if (!unbind_completion_ && status == ZX_OK) {
     log(ERROR, "devcoordinator: rpc: unexpected unbind reply for '%s'\n", name_.data());
     return ZX_ERR_IO;
   }
   if (unbind_completion_) {
-    unbind_completion_(ZX_OK);
+    unbind_completion_(status);
   }
   active_unbind_ = nullptr;
   return ZX_OK;
 }
 
-zx_status_t Device::CompleteRemove() {
-  if (!remove_completion_) {
+zx_status_t Device::CompleteRemove(zx_status_t status) {
+  if (!remove_completion_ && status == ZX_OK) {
     log(ERROR, "devcoordinator: rpc: unexpected remove reply for '%s'\n", name_.data());
     return ZX_ERR_IO;
   }
-  coordinator->RemoveDevice(fbl::WrapRefPtr(this), false);
+  // If we received an error, it is because we are currently force removing the device.
+  if (status == ZX_OK) {
+    coordinator->RemoveDevice(fbl::WrapRefPtr(this), false);
+  }
   if (remove_completion_) {
+    // If we received an error, it is because we are currently force removing the device.
+    // In that case, all other devices in the devhost will be force removed too,
+    // and they will call CompleteRemove() before the remove task is scheduled to run.
+    // For ancestor dependents in other devhosts, we want them to proceed removal as usual.
     remove_completion_(ZX_OK);
   }
   active_remove_ = nullptr;

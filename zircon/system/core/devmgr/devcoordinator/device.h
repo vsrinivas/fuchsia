@@ -395,9 +395,9 @@ class Device : public fbl::RefCounted<Device>,
   fbl::RefPtr<RemoveTask> GetActiveRemove() { return active_remove_; }
 
   // Run the completion for the outstanding unbind, if any.
-  zx_status_t CompleteUnbind();
+  zx_status_t CompleteUnbind(zx_status_t status = ZX_OK);
   // Run the completion for the outstanding remove, if any.
-  zx_status_t CompleteRemove();
+  zx_status_t CompleteRemove(zx_status_t status = ZX_OK);
 
   // Drops the reference to the task.
   // This should be called if the device will not send an unbind or remove request.

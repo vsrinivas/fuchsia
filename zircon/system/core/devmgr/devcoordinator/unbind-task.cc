@@ -123,6 +123,8 @@ void UnbindTask::Run() {
     // If this unbind task failed, force remove all devices from the devhost.
     bool failed_unbind = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_unbind && device_->state() != Device::State::kDead) {
+      log(ERROR, "%s: unbind task failed, err: %d, force removing device\n",
+          device_->name().data(), status);
       device_->coordinator->RemoveDevice(device_, true /* forced */);
     }
     // The forced removal will schedule new unbind tasks if needed (e.g. for proxy tasks),
