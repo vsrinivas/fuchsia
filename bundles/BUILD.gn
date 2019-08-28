@@ -33,7 +33,7 @@ group("kitchen_sink") {
   public_deps = [
     "//bundles:tests",
     "//peridot/packages:kitchen_sink",
-    "//src",
+    "//src/connectivity/telephony",
     "//topaz",
   ]
 }
