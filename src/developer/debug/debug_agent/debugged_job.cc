@@ -88,10 +88,8 @@ std::set<zx_koid_t> DebuggedJob::ApplyToJob(FilterInfo& filter, zx::job& job) {
   for (auto& child : provider_->GetChildProcesses(job.get())) {
     auto proc_name = provider_->NameForObject(child);
     if (filter.Matches(proc_name)) {
-      DEBUG_LOG(Job) << "New filter " << filter.filter << " matches process " << proc_name
-                     << ". Attaching.";
+      DEBUG_LOG(Job) << "Filter " << filter.filter << " matches process " << proc_name;
       matches.insert(provider_->KoidForObject(child));
-      handler_->OnProcessStart(filter.filter, std::move(child));
     }
   }
 

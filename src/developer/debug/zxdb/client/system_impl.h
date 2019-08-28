@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/debug/zxdb/client/filter_observer.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
 #include "src/lib/fxl/macros.h"
@@ -24,6 +25,7 @@ class SystemSymbolsProxy;
 class TargetImpl;
 
 class SystemImpl final : public System,
+                         public FilterObserver,
                          public SettingStoreObserver,
                          public SystemSymbols::DownloadHandler {
  public:
@@ -81,6 +83,13 @@ class SystemImpl final : public System,
 
   // Add a symbol server for testing purposes.
   void InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> server);
+
+  // Will attach to any process we are not already attached to.
+  void OnFilterMatches(JobContext* job, const std::vector<uint64_t>& matched_pids) override;
+
+  // Searches through for an open slot (Target without an attached process) or creates another one
+  // if none is found. Calls attach on that target, passing |callback| into it.
+  void AttachToProcess(uint64_t pid, Target::Callback callback);
 
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);

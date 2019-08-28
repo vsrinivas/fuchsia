@@ -180,6 +180,10 @@ SystemImpl::SystemImpl(Session* session) : System(session), symbols_(this), weak
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
   settings_.AddObserver(ClientSettings::System::kSymbolRepoPaths, this);
   settings_.AddObserver(ClientSettings::System::kSymbolServers, this);
+
+  // Observe the session for filter matches and attach to any process koid that the system is not
+  // already attached to.
+  session->AddFilterObserver(this);
 }
 
 SystemImpl::~SystemImpl() {
@@ -666,6 +670,48 @@ void SystemImpl::OnSettingChanged(const SettingStore& store, const std::string& 
 void SystemImpl::InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> server) {
   symbol_servers_.push_back(std::move(server));
   AddSymbolServer(symbol_servers_.back().get());
+}
+
+void SystemImpl::OnFilterMatches(JobContext* job, const std::vector<uint64_t>& matched_pids) {
+  // Go over the targets and see if we find a valid one for each pid.
+  for (uint64_t matched_pid : matched_pids) {
+    bool found = false;
+    for (auto& target : targets_) {
+      Process* process = target->GetProcess();
+      if (process && process->GetKoid() == matched_pid) {
+        found = true;
+        break;
+      }
+    }
+
+    // If we found an already attached process, we don't care about this match.
+    if (found)
+      continue;
+
+    AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err) {
+      if (err.has_error()) {
+        FXL_LOG(ERROR) << "Could not attach to process " << matched_pid;
+        return;
+      }
+    });
+  }
+}
+
+void SystemImpl::AttachToProcess(uint64_t pid, Target::Callback callback) {
+  // See if there is a target that is not attached.
+  Target* open_slot = nullptr;
+  for (auto& target : targets_) {
+    if (!target->GetProcess()) {
+      open_slot = target.get();
+      break;
+    }
+  }
+
+  // If no slot was found, we create a new target.
+  if (!open_slot)
+    open_slot = CreateNewTarget(nullptr);
+
+  open_slot->Attach(pid, std::move(callback));
 }
 
 void SystemImpl::ServerStartedInitializing() { servers_initializing_++; }
