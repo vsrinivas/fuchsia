@@ -147,7 +147,7 @@ void AudioCapturerImpl::Shutdown() {
 
   // Make sure we have left the set of active AudioCapturers.
   if (InContainer()) {
-    owner_->device_manager().RemoveAudioCapturer(this);
+    owner_->GetDeviceManager().RemoveAudioCapturer(this);
   }
 
   state_.store(State::Shutdown);

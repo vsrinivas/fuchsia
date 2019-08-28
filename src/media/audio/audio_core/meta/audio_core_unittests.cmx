@@ -3,8 +3,6 @@
         "binary": "test/audio_core_unittests"
     },
     "sandbox": {
-        "features": [
-            "isolated-temp"
-        ]
+        "services": []
     }
 }
