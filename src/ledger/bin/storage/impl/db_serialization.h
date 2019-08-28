@@ -89,6 +89,9 @@ class ObjectStatusRow {
   static std::string GetKeyFor(PageDbObjectStatus object_status,
                                const ObjectIdentifier& object_identifier);
 
+  static std::string GetPrefixFor(PageDbObjectStatus object_status,
+                                  const ObjectDigest& object_digest);
+
  private:
   static fxl::StringView GetPrefixFor(PageDbObjectStatus object_status);
 };

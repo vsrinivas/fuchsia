@@ -50,6 +50,9 @@ class PageDbImpl : public PageDb {
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus* object_status) override;
+  Status GetIdentifiersAndStatuses(
+      coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
+      std::map<ObjectIdentifier, PageDbObjectStatus>* identifier_statuses) override;
   Status GetInboundObjectReferences(coroutine::CoroutineHandler* handler,
                                     const ObjectIdentifier& object_identifier,
                                     ObjectReferencesAndPriority* references) override;

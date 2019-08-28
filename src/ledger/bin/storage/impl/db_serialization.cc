@@ -114,6 +114,11 @@ std::string ObjectStatusRow::GetKeyFor(PageDbObjectStatus object_status,
       {GetPrefixFor(object_status), EncodeDigestPrefixedObjectIdentifier(object_identifier)});
 }
 
+std::string ObjectStatusRow::GetPrefixFor(PageDbObjectStatus object_status,
+                                          const ObjectDigest& object_digest) {
+  return fxl::Concatenate({GetPrefixFor(object_status), object_digest.Serialize()});
+}
+
 fxl::StringView ObjectStatusRow::GetPrefixFor(PageDbObjectStatus object_status) {
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:

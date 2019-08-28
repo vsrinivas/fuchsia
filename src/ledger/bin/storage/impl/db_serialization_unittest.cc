@@ -6,6 +6,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -115,6 +116,17 @@ TEST_F(DbSerialization, ReferenceRow) {
               StartsWith(ReferenceRow::GetCommitKeyPrefixFor(destination)));
   EXPECT_THAT(ReferenceRow::GetKeyForCommit(commit, destination),
               Not(StartsWith(ReferenceRow::GetObjectKeyPrefixFor(destination))));
+}
+
+TEST_F(DbSerialization, ObjectStatusRow) {
+  storage::fake::FakeObjectIdentifierFactory factory;
+  const ObjectIdentifier identifier = RandomObjectIdentifier(environment_.random(), &factory);
+
+  for (PageDbObjectStatus status :
+       {PageDbObjectStatus::TRANSIENT, PageDbObjectStatus::LOCAL, PageDbObjectStatus::SYNCED}) {
+    EXPECT_THAT(ObjectStatusRow::GetKeyFor(status, identifier),
+                StartsWith(ObjectStatusRow::GetPrefixFor(status, identifier.object_digest())));
+  }
 }
 
 }  // namespace

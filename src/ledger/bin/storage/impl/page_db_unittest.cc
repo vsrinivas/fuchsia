@@ -402,6 +402,41 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
   });
 }
 
+TEST_F(PageDbTest, GetIdentifiersAndStatuses) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    // Create 3 distinct object identifiers with 3 different statuses, sharing the same
+    // object digest.
+    const ObjectDigest object_digest = RandomObjectDigest(environment_.random());
+    const ObjectIdentifier identifier_1 =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest);
+    ASSERT_EQ(page_db_.WriteObject(handler,
+                                   DataChunkPiece(identifier_1, DataSource::DataChunk::Create("")),
+                                   PageDbObjectStatus::TRANSIENT, {}),
+              Status::OK);
+    const ObjectIdentifier identifier_2 =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(2u, object_digest);
+    ASSERT_EQ(page_db_.WriteObject(handler,
+                                   DataChunkPiece(identifier_2, DataSource::DataChunk::Create("")),
+                                   PageDbObjectStatus::LOCAL, {}),
+              Status::OK);
+    const ObjectIdentifier identifier_3 =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(3u, object_digest);
+    ASSERT_EQ(page_db_.WriteObject(handler,
+                                   DataChunkPiece(identifier_3, DataSource::DataChunk::Create("")),
+                                   PageDbObjectStatus::SYNCED, {}),
+              Status::OK);
+
+    std::map<ObjectIdentifier, PageDbObjectStatus> identifier_statuses;
+    ASSERT_EQ(page_db_.GetIdentifiersAndStatuses(handler, object_digest, &identifier_statuses),
+              Status::OK);
+
+    EXPECT_THAT(identifier_statuses,
+                UnorderedElementsAre(Pair(identifier_1, PageDbObjectStatus::TRANSIENT),
+                                     Pair(identifier_2, PageDbObjectStatus::LOCAL),
+                                     Pair(identifier_3, PageDbObjectStatus::SYNCED)));
+  });
+}
+
 TEST_F(PageDbTest, SyncMetadata) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {{"foo1", "foo2"},

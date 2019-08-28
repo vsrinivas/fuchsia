@@ -104,8 +104,12 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
   if (previous_object_status >= object_status) {
     return Status::OK;
   }
-  RETURN_ON_ERROR(batch_->Delete(
-      handler, ObjectStatusRow::GetKeyFor(previous_object_status, object_identifier)));
+  // The object might exist already under a different identifier (with the same digest), in which
+  // case there is no status row to delete.
+  if (previous_object_status != PageDbObjectStatus::UNKNOWN) {
+    RETURN_ON_ERROR(batch_->Delete(
+        handler, ObjectStatusRow::GetKeyFor(previous_object_status, object_identifier)));
+  }
   return batch_->Put(handler, ObjectStatusRow::GetKeyFor(object_status, object_identifier), "");
 }
 

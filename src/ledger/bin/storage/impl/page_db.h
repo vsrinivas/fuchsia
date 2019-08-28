@@ -7,6 +7,7 @@
 
 #include <lib/zx/time.h>
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -180,6 +181,11 @@ class PageDb : public PageDbMutator {
   FXL_WARN_UNUSED_RESULT virtual Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                                                         const ObjectIdentifier& object_identifier,
                                                         PageDbObjectStatus* object_status) = 0;
+
+  // Returns all object identifiers and their status for a given |object_digest|.
+  FXL_WARN_UNUSED_RESULT virtual Status GetIdentifiersAndStatuses(
+      coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
+      std::map<ObjectIdentifier, PageDbObjectStatus>* identifier_statuses) = 0;
 
   // Returns inbound object references towards the object with the given id.
   // WARNING: this function is reversing the usual semantics of

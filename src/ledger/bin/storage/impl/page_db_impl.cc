@@ -128,6 +128,30 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
   return Status::OK;
 }
 
+Status PageDbImpl::GetIdentifiersAndStatuses(
+    coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
+    std::map<ObjectIdentifier, PageDbObjectStatus>* identifier_statuses) {
+  identifier_statuses->clear();
+  // Check must be done in ascending order of status, so that a change of status between 2 reads
+  // does not create the case where no key is found.
+  for (PageDbObjectStatus possible_status :
+       {PageDbObjectStatus::TRANSIENT, PageDbObjectStatus::LOCAL, PageDbObjectStatus::SYNCED}) {
+    std::vector<std::string> suffixes;
+    RETURN_ON_ERROR(db_->GetByPrefix(
+        handler, ObjectStatusRow::GetPrefixFor(possible_status, object_digest), &suffixes));
+    for (const std::string& suffix : suffixes) {
+      ObjectIdentifier identifier;
+      if (!DecodeDigestPrefixedObjectIdentifier(
+              fxl::Concatenate({object_digest.Serialize(), suffix}), object_identifier_factory_,
+              &identifier)) {
+        return Status::DATA_INTEGRITY_ERROR;
+      }
+      (*identifier_statuses)[identifier] = possible_status;
+    }
+  }
+  return Status::OK;
+}
+
 Status PageDbImpl::GetInboundObjectReferences(coroutine::CoroutineHandler* handler,
                                               const ObjectIdentifier& object_identifier,
                                               ObjectReferencesAndPriority* references) {
