@@ -73,9 +73,7 @@ std::string BuildIDIndex::FileForBuildID(const std::string& build_id,
 std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
                                             DebugSymbolFileType file_type) {
   for (const auto& source : repo_sources_) {
-    const auto& path = std::filesystem::path(source) / ".build-id";
-
-    auto got = FindInRepoFolder(build_id, path, file_type);
+    auto got = FindInRepoFolder(build_id, source, file_type);
     if (got) {
       return *got;
     }
@@ -122,8 +120,12 @@ void BuildIDIndex::AddSymbolSource(const std::string& path) {
 }
 
 void BuildIDIndex::AddRepoSymbolSource(const std::string& path) {
-  repo_sources_.emplace_back(path);
-  EnsureCacheClean();
+  if (std::find(always_repo_sources_.begin(), always_repo_sources_.end(), path) !=
+      always_repo_sources_.end())
+    return;
+
+  always_repo_sources_.emplace_back(path);
+  ClearCache();
 }
 
 BuildIDIndex::StatusList BuildIDIndex::GetStatus() {
@@ -235,8 +237,8 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
     auto build_id_path = std::filesystem::path(path) / ".build-id";
 
     if (std::filesystem::is_directory(build_id_path, ec)) {
-      repo_sources_.emplace_back(path);
-      status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
+      repo_sources_.emplace_back(build_id_path);
+      status_.emplace_back(build_id_path, BuildIDIndex::kStatusIsFolder);
       return;
     }
 
@@ -291,6 +293,8 @@ void BuildIDIndex::EnsureCacheClean() {
   if (!cache_dirty_)
     return;
 
+  repo_sources_.clear();
+
   for (const auto& build_id_file : build_id_files_)
     LoadOneBuildIDFile(build_id_file);
 
@@ -300,11 +304,11 @@ void BuildIDIndex::EnsureCacheClean() {
   for (const auto& mapping : manual_mappings_)
     build_id_to_files_.insert(mapping);
 
-  for (const auto& path : repo_sources_) {
+  for (const auto& path : always_repo_sources_) {
     std::error_code ec;
-    auto buildid_path = std::filesystem::path(path) / ".build-id";
 
-    if (std::filesystem::is_directory(buildid_path, ec)) {
+    if (std::filesystem::is_directory(path, ec)) {
+      repo_sources_.push_back(path);
       status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
     }
   }

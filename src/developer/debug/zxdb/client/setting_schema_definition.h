@@ -24,6 +24,7 @@ struct ClientSettings {
   struct System {
     static const char* kDebugMode;
     static const char* kSymbolPaths;
+    static const char* kSymbolRepoPaths;
     static const char* kPauseOnLaunch;
     static const char* kPauseOnAttach;
     static const char* kQuitAgentOnExit;

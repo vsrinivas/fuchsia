@@ -82,6 +82,14 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
       as a mapping database from build ID to file path. Otherwise, the path
       will be loaded as an ELF file (if possible).)";
 
+const char kSymbolRepoPathHelp[] = R"(  --symbol-repo-path=<path>
+      Adds the given directory to the symbol search path. Multiple
+      --symbol-repo-path switches can be passed to add multiple locations. the
+      path is always assumed to be a directory, unlike with -s, and the
+      directory is assumed to contain an index of all ELF files in the same
+      style as the .build-id folder as used with the -s option. This is useful
+      if your build ID index is not named .build-id)";
+
 const char kSymbolServerHelp[] = R"(  --symbol-server=<url>
       When symbols are missing, attempt to download them from the given URL.
       will be loaded as an ELF file (if possible).)";
@@ -103,6 +111,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("script-file", 'S', kScriptFileHelp, &CommandLineOptions::script_file);
   parser.AddSwitch("symbol-cache", 0, kSymbolCachePathHelp, &CommandLineOptions::symbol_cache_path);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
+  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp,
+                   &CommandLineOptions::symbol_repo_paths);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
 
   // Special --help switch which doesn't exist in the options structure.

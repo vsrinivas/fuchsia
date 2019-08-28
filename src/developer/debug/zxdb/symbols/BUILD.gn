@@ -192,6 +192,16 @@ copy("copy_test_so") {
   ]
 }
 
+copy("copy_dot_buildid") {
+  sources = [
+    "test_data/libsymbol_test_so.targetso",
+  ]
+
+  outputs = [
+    "$root_out_dir/test_data/zxdb/build_id/.build-id/be/807a2ad9b56020.debug",
+  ]
+}
+
 if (current_toolchain == host_toolchain) {
   copy("copy_test_elf_file") {
     # This file is a small valid ELF file for testing the parser with.
@@ -252,10 +262,12 @@ source_set("tests") {
 
   data_deps = [
     ":copy_test_so",
+    ":copy_dot_buildid",
   ]
 
   metadata = {
-    test_runtime_deps = get_target_outputs(":copy_test_so")
+    test_runtime_deps = get_target_outputs(":copy_test_so") +
+                        get_target_outputs(":copy_dot_buildid")
   }
 }
 

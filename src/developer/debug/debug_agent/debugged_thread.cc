@@ -472,7 +472,6 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       arch::ArchProvider::Get().BreakpointInstructionForSoftwareExceptionAddress(
           *arch::ArchProvider::Get().IPInRegs(regs));
 
-
   ProcessBreakpoint* found_bp = process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (found_bp) {
     if (debug_ipc::IsDebugModeActive())

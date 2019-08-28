@@ -129,6 +129,9 @@ void SetupCommandLineOptions(const CommandLineOptions& options, Session* session
   // Adding it to the settings will trigger the loading of the symbols. Redundant adds are ignored.
   session->system().settings().SetList(ClientSettings::System::kSymbolPaths, std::move(paths));
 
+  session->system().settings().SetList(ClientSettings::System::kSymbolRepoPaths,
+                                       options.symbol_repo_paths);
+
   session->system().settings().SetList(ClientSettings::Target::kBuildDirs, options.build_dirs);
 }
 

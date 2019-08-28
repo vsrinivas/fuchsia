@@ -25,6 +25,12 @@ static const char* kSymbolPathsDescription =
   database from build ID to file path. Otherwise, the path will be loaded as an
   ELF file.)";
 
+const char* ClientSettings::System::kSymbolRepoPaths = "symbol-repo-paths";
+static const char* kSymbolRepoPathsDescription =
+    R"(  List of directories for symbol lookup. Each directory is assumed to
+  contain a ".build-id"-style index of symbol files, but does not need to be
+  named .build-id.)";
+
 const char* ClientSettings::System::kPauseOnLaunch = "pause-on-launch";
 static const char* kPauseOnLaunchDescription =
     R"(  Whether a process launched through zxdb should be stopped on startup.
@@ -61,6 +67,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription, false);
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription, {});
+  schema->AddList(ClientSettings::System::kSymbolRepoPaths, kSymbolRepoPathsDescription, {});
   schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, true);

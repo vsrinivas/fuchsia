@@ -14,6 +14,7 @@ namespace zxdb {
 namespace {
 
 const char kSmallTestBuildID[] = "763feb38b0e37a89964c330c5cf7f7af2ce79e54";
+const char kSymbolTestSoBuildID[] = "be807a2ad9b56020";
 
 std::filesystem::path GetTestDataDir() {
   std::filesystem::path path(GetSelfPath());
@@ -23,6 +24,9 @@ std::filesystem::path GetTestDataDir() {
 }
 
 std::filesystem::path GetSmallTestFile() { return GetTestDataDir() / "small_test_file.elf"; }
+std::filesystem::path GetSymbolTestSoBuildIDPath() {
+  return GetTestDataDir() / "build_id/.build-id/be/807a2ad9b56020.debug";
+}
 
 }  // namespace
 
@@ -49,6 +53,30 @@ TEST(BuildIDIndex, IndexDir) {
   // It should have found the small test file and indexed it.
   EXPECT_EQ(GetSmallTestFile(),
             index.FileForBuildID(kSmallTestBuildID, DebugSymbolFileType::kBinary));
+}
+
+// Index all files in a directory that has a .build-id
+TEST(BuildIDIndex, IndexDirBuildId) {
+  BuildIDIndex index;
+  index.AddSymbolSource(GetTestDataDir() / "build_id");
+
+  // We should be able to look up the test file.
+  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
+            index.FileForBuildID(kSymbolTestSoBuildID, DebugSymbolFileType::kBinary));
+  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
+            index.FileForBuildID(kSymbolTestSoBuildID, DebugSymbolFileType::kDebugInfo));
+}
+
+// Index all files in a specifically-named build ID folder
+TEST(BuildIDIndex, IndexDirBuildIdRepo) {
+  BuildIDIndex index;
+  index.AddRepoSymbolSource(GetTestDataDir() / "build_id/.build-id");
+
+  // We should be able to look up the test file.
+  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
+            index.FileForBuildID(kSymbolTestSoBuildID, DebugSymbolFileType::kBinary));
+  EXPECT_EQ(GetSymbolTestSoBuildIDPath(),
+            index.FileForBuildID(kSymbolTestSoBuildID, DebugSymbolFileType::kDebugInfo));
 }
 
 TEST(BuildIDIndex, ParseIDFile) {

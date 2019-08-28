@@ -178,6 +178,7 @@ SystemImpl::SystemImpl(Session* session) : System(session), symbols_(this), weak
   settings_.AddObserver(ClientSettings::System::kDebugMode, this);
   settings_.AddObserver(ClientSettings::System::kSymbolCache, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
+  settings_.AddObserver(ClientSettings::System::kSymbolRepoPaths, this);
   settings_.AddObserver(ClientSettings::System::kSymbolServers, this);
 }
 
@@ -626,6 +627,12 @@ void SystemImpl::OnSettingChanged(const SettingStore& store, const std::string& 
       } else {
         build_id_index.AddSymbolSource(path);
       }
+    }
+  } else if (setting_name == ClientSettings::System::kSymbolRepoPaths) {
+    auto paths = store.GetList(ClientSettings::System::kSymbolPaths);
+    BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
+    for (const std::string& path : paths) {
+      build_id_index.AddRepoSymbolSource(path);
     }
   } else if (setting_name == ClientSettings::System::kSymbolCache) {
     auto path = store.GetString(setting_name);
