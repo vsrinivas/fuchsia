@@ -410,7 +410,7 @@ mod tests {
 
     struct ActionsTest {
         model: Model,
-        hook: Arc<TestHook>,
+        test_hook: Arc<TestHook>,
         realm_proxy: Option<fsys::RealmProxy>,
     }
 
@@ -419,6 +419,15 @@ mod tests {
             root_component: &'static str,
             components: Vec<(&'static str, ComponentDecl)>,
             realm_moniker: Option<AbsoluteMoniker>,
+        ) -> Self {
+            Self::new_with_hooks(root_component, components, realm_moniker, vec![]).await
+        }
+
+        pub async fn new_with_hooks(
+            root_component: &'static str,
+            components: Vec<(&'static str, ComponentDecl)>,
+            realm_moniker: Option<AbsoluteMoniker>,
+            extra_hooks: Vec<Hook>,
         ) -> Self {
             // Ensure that kernel logging has been set up
             let _ = klog::KernelLogger::init();
@@ -432,7 +441,7 @@ mod tests {
             }
             resolver.register("test".to_string(), Box::new(mock_resolver));
 
-            let hook = Arc::new(TestHook::new());
+            let test_hook = Arc::new(TestHook::new());
             let framework_services = Arc::new(RealFrameworkServiceHost::new());
             let model = Model::new(ModelParams {
                 root_component_url: format!("test:///{}", root_component),
@@ -446,7 +455,8 @@ mod tests {
                 .hooks
                 .install(vec![Hook::RouteFrameworkCapability(framework_services_hook)])
                 .await;
-            model.hooks.install(hook.hooks()).await;
+            model.hooks.install(test_hook.hooks()).await;
+            model.hooks.install(extra_hooks).await;
 
             // Host framework service for root realm, if requested.
             let realm_proxy = if let Some(realm_moniker) = realm_moniker {
@@ -468,7 +478,7 @@ mod tests {
                 None
             };
 
-            Self { model, hook, realm_proxy }
+            Self { model, test_hook, realm_proxy }
         }
 
         async fn look_up(&self, moniker: AbsoluteMoniker) -> Arc<Realm> {
@@ -641,7 +651,7 @@ mod tests {
         assert!(is_shut_down(&realm_b).await);
         {
             let events: Vec<_> = test
-                .hook
+                .test_hook
                 .lifecycle()
                 .into_iter()
                 .filter_map(|e| match e {
@@ -656,7 +666,7 @@ mod tests {
         }
     }
 
-    ///  Shut down "a":
+    /// Shut down `a`:
     ///  a
     ///   \
     ///    b
@@ -732,7 +742,173 @@ mod tests {
         assert!(is_shut_down(&realm_d).await);
         {
             let mut events: Vec<_> = test
-                .hook
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b", "d"].into()),
+            ];
+            assert_eq!(first, expected);
+            assert_eq!(
+                events,
+                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
+            );
+        }
+    }
+
+    /// Shut down `a`:
+    ///  a
+    ///   \
+    ///    b
+    ///   / \
+    ///  c   d
+    ///
+    /// `b` fails to finish shutdown the first time, but succeeds the second time.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_error() {
+        struct StopErrorHook {
+            moniker: AbsoluteMoniker,
+        }
+        impl StopErrorHook {
+            fn new(moniker: AbsoluteMoniker) -> Arc<Self> {
+                Arc::new(Self { moniker })
+            }
+
+            async fn on_shutdown_instance_async(
+                &self,
+                realm: Arc<Realm>,
+            ) -> Result<(), ModelError> {
+                if realm.abs_moniker == self.moniker {
+                    return Err(ModelError::unsupported("ouch"));
+                }
+                Ok(())
+            }
+
+            fn hooks(hook: Arc<StopErrorHook>) -> Vec<Hook> {
+                vec![Hook::StopInstance(hook.clone())]
+            }
+        }
+        impl StopInstanceHook for StopErrorHook {
+            fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+                Box::pin(self.on_shutdown_instance_async(realm))
+            }
+        }
+
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![
+                        ChildDecl {
+                            name: "c".to_string(),
+                            url: "test:///c".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "d".to_string(),
+                            url: "test:///d".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+            ("c", ComponentDecl { ..default_component_decl() }),
+            ("d", ComponentDecl { ..default_component_decl() }),
+        ];
+        let error_hook = StopErrorHook::new(vec!["a", "b"].into());
+        let test = ActionsTest::new_with_hooks(
+            "root",
+            components,
+            None,
+            StopErrorHook::hooks(error_hook.clone()),
+        )
+        .await;
+        let realm_a = test.look_up(vec!["a"].into()).await;
+        let realm_b = test.look_up(vec!["a", "b"].into()).await;
+        let realm_c = test.look_up(vec!["a", "b", "c"].into()).await;
+        let realm_d = test.look_up(vec!["a", "b", "d"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_c).await);
+        assert!(is_executing(&realm_d).await);
+
+        // Register shutdown action on "a", and wait for it. "b"'s realm shuts down, but "b"
+        // returns an error so "a" does not.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect_err("shutdown succeeded unexpectedly");
+        assert!(!is_shut_down(&realm_a).await);
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_shut_down(&realm_c).await);
+        assert!(is_shut_down(&realm_d).await);
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a", "b", "c"].into()),
+                Lifecycle::Stop(vec!["a", "b", "d"].into()),
+            ];
+            assert_eq!(first, expected);
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a", "b"].into())],);
+        }
+
+        // Register shutdown action on "a" again. "b"'s shutdown succeeds (it's a no-op), and
+        // "a" is allowed to shut down this time.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect("shutdown failed");
+        assert!(is_shut_down(&realm_a).await);
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_shut_down(&realm_c).await);
+        assert!(is_shut_down(&realm_d).await);
+        {
+            let mut events: Vec<_> = test
+                .test_hook
                 .lifecycle()
                 .into_iter()
                 .filter_map(|e| match e {
@@ -786,7 +962,7 @@ mod tests {
         assert!(is_destroyed(&realm_a).await);
         {
             let events: Vec<_> = test
-                .hook
+                .test_hook
                 .lifecycle()
                 .into_iter()
                 .filter_map(|e| match e {
@@ -915,7 +1091,7 @@ mod tests {
         // Check order of events.
         {
             let events: Vec<_> = test
-                .hook
+                .test_hook
                 .lifecycle()
                 .into_iter()
                 .filter_map(|e| match e {
@@ -1034,7 +1210,7 @@ mod tests {
         }
         {
             let mut events: Vec<_> = test
-                .hook
+                .test_hook
                 .lifecycle()
                 .into_iter()
                 .filter_map(|e| match e {
@@ -1069,6 +1245,177 @@ mod tests {
                     Lifecycle::Destroy(vec!["a", "b", "d"].into())
                 ]
             );
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Destroy(vec!["a", "b"].into()),
+                    Lifecycle::Destroy(vec!["a"].into())
+                ]
+            );
+        }
+    }
+
+    /// Destroy `a`:
+    ///
+    ///    a*
+    ///     \
+    ///      b
+    ///     / \
+    ///    c   d
+    ///
+    /// `a` fails to destroy the first time, but succeeds the second time.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn destroy_error() {
+        struct DestroyErrorHook {
+            moniker: AbsoluteMoniker,
+        }
+        impl DestroyErrorHook {
+            fn new(moniker: AbsoluteMoniker) -> Arc<Self> {
+                Arc::new(Self { moniker })
+            }
+
+            async fn on_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+                if realm.abs_moniker == self.moniker {
+                    return Err(ModelError::unsupported("ouch"));
+                }
+                Ok(())
+            }
+
+            fn hooks(hook: Arc<DestroyErrorHook>) -> Vec<Hook> {
+                vec![Hook::DestroyInstance(hook.clone())]
+            }
+        }
+        impl DestroyInstanceHook for DestroyErrorHook {
+            fn on(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
+                Box::pin(self.on_destroy_instance_async(realm))
+            }
+        }
+
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![
+                        ChildDecl {
+                            name: "c".to_string(),
+                            url: "test:///c".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "d".to_string(),
+                            url: "test:///d".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+            ("c", ComponentDecl { ..default_component_decl() }),
+            ("d", ComponentDecl { ..default_component_decl() }),
+        ];
+        // The destroy hook is invoked just after the component instance is removed from the
+        // list of children. Therefore, to cause destruction of `a` to fail, fail removal of
+        // `/a/b`.
+        let error_hook = DestroyErrorHook::new(vec!["a", "b"].into());
+        let test = ActionsTest::new_with_hooks(
+            "root",
+            components,
+            None,
+            DestroyErrorHook::hooks(error_hook.clone()),
+        )
+        .await;
+        let realm_root = test.look_up(vec![].into()).await;
+        let realm_a = test.look_up(vec!["a"].into()).await;
+        let realm_b = test.look_up(vec!["a", "b"].into()).await;
+        let realm_c = test.look_up(vec!["a", "b", "c"].into()).await;
+        let realm_d = test.look_up(vec!["a", "b", "d"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_c).await);
+        assert!(is_executing(&realm_d).await);
+
+        // Register delete action on "a", and wait for it. "b"'s realm is deleted, but "b"
+        // returns an error so the delete action on "a" does not succeed.
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+            .await
+            .expect_err("destroy succeeded unexpectedly");
+        assert!(has_child(&realm_root, "a:0").await);
+        assert!(is_destroyed(&realm_b).await);
+        assert!(is_destroyed(&realm_c).await);
+        assert!(is_destroyed(&realm_d).await);
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Destroy(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Destroy(vec!["a", "b", "c"].into()),
+                Lifecycle::Destroy(vec!["a", "b", "d"].into()),
+            ];
+            assert_eq!(first, expected);
+            assert_eq!(events, vec![Lifecycle::Destroy(vec!["a", "b"].into())]);
+        }
+
+        // Register destroy action on "a" again. "b"'s delete succeeds, and "a" is deleted this
+        // time.
+        execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
+            .await
+            .expect("destroy failed");
+        assert!(!has_child(&realm_root, "a:0").await);
+        assert!(is_destroyed(&realm_b).await);
+        assert!(is_destroyed(&realm_c).await);
+        assert!(is_destroyed(&realm_d).await);
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Destroy(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Destroy(vec!["a", "b", "c"].into()),
+                Lifecycle::Destroy(vec!["a", "b", "d"].into()),
+            ];
+            assert_eq!(first, expected);
             assert_eq!(
                 events,
                 vec![
