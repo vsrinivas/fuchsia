@@ -141,12 +141,13 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
   escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number);
 
   bool success = true;
+  timings->RegisterSwapchains(hlas.size());
   for (size_t i = 0; i < hlas.size(); ++i) {
     const bool is_last_hla = (i == hlas.size() - 1);
     HardwareLayerAssignment& hla = hlas[i];
 
     success &= hla.swapchain->DrawAndPresentFrame(
-        timings, hla,
+        timings, i, hla,
         [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()}](
             zx::time target_presentation_time, const escher::ImagePtr& output_image,
             const HardwareLayerAssignment::Item hla_item,

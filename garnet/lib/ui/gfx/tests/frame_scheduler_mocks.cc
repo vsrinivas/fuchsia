@@ -92,9 +92,9 @@ RenderFrameResult MockFrameRenderer::RenderFrame(const FrameTimingsPtr& frame_ti
   last_frame_number_ = frame_number;
 
   ++render_frame_call_count_;
-  size_t swapchain_index = frame_timings->RegisterSwapchain();
+  frame_timings->RegisterSwapchains(1);
   frames_[frame_number] = {.frame_timings = std::move(frame_timings),
-                           .swapchain_index = swapchain_index};
+                           .swapchain_index = 0};
 
   return render_frame_return_value_;
 }

@@ -354,7 +354,7 @@ DisplaySwapchain::~DisplaySwapchain() {
 }
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
-    const FrameTimingsPtr& frame_timings) {
+    const FrameTimingsPtr& frame_timings, size_t swapchain_index) {
   FXL_DCHECK(frame_timings);
   FXL_CHECK(escher_);
   auto render_finished_escher_semaphore = escher::Semaphore::NewExportableSem(device_);
@@ -384,7 +384,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 
   auto record = std::make_unique<FrameRecord>();
   record->frame_timings = frame_timings;
-  record->swapchain_index = frame_timings->RegisterSwapchain();
+  record->swapchain_index = swapchain_index;
   record->render_finished_escher_semaphore = std::move(render_finished_escher_semaphore);
   record->render_finished_event_id = render_finished_event_id;
   record->retired_event = std::move(retired_event);
@@ -405,6 +405,7 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
 }
 
 bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
+                                           size_t swapchain_index,
                                            const HardwareLayerAssignment& hla,
                                            DrawCallback draw_callback) {
   FXL_DCHECK(hla.swapchain == this);
@@ -427,7 +428,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
     }
   }
 
-  auto& frame_record = frames_[next_frame_index_] = NewFrameRecord(frame_timings);
+  auto& frame_record = frames_[next_frame_index_] = NewFrameRecord(frame_timings, swapchain_index);
 
   next_frame_index_ = (next_frame_index_ + 1) % kSwapchainImageCount;
   outstanding_frame_count_++;

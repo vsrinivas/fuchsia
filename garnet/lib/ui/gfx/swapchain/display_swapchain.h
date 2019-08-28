@@ -39,8 +39,8 @@ class DisplaySwapchain : public Swapchain {
   using OnVsyncCallback = fit::function<void(zx::time vsync_timestamp)>;
 
   // |Swapchain|
-  bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings, const HardwareLayerAssignment& hla,
-                           DrawCallback draw_callback) override;
+  bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings, size_t swapchain_index,
+                           const HardwareLayerAssignment& hla, DrawCallback draw_callback) override;
 
   // Register a callback to be called on each vsync.
   // Only allows a single listener at a time.
@@ -78,7 +78,8 @@ class DisplaySwapchain : public Swapchain {
 
     bool presented = false;
   };
-  std::unique_ptr<FrameRecord> NewFrameRecord(const FrameTimingsPtr& frame_timings);
+  std::unique_ptr<FrameRecord> NewFrameRecord(const FrameTimingsPtr& frame_timings,
+                                              size_t swapchain_index);
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler);
 

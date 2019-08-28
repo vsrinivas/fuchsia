@@ -67,21 +67,19 @@ class FrameTimings : public escher::Reffable {
                zx::time target_presentation_time, zx::time latch_time,
                zx::time rendering_started_time);
 
-  // Registers a swapchain that is used as a render target this frame.  Return
-  // an index that can be used to indicate when rendering for that swapchain is
-  // finished, and when the frame is actually presented on that swapchain. Each
-  // swapchain must only call |RegisterSwapchain()| once.
-  // TODO(SCN-1443) Refactor how swapchains and FrameTimings interact.
-  size_t RegisterSwapchain();
+  // Reserves |count| swapchain records, numbered 0 to count-1.
+  // REQUIRES: OnFrame* has not been called.
+  void RegisterSwapchains(size_t count);
 
-  // Called by the updater to record the update done time. This must be later
-  // than or equal to the previously supplied |latch_time|.
-  // Note: there is no associated swapchain because this time is associated for
-  // the frame update CPU work only.
+  // Called by the frame scheduler to record the update done time. This must be later than or equal
+  // to the previously supplied |latch_time|. Note: there is no associated swapchain because this
+  // time is associated for the frame update CPU work only.
   void OnFrameUpdated(zx::time time);
+
   // Called by the swapchain to record the render done time. This must be later
   // than or equal to the previously supplied |rendering_started_time|.
   void OnFrameRendered(size_t swapchain_index, zx::time time);
+
   // Called by the swapchain to record the frame's presentation time. A
   // presented frame is assumed to have been presented on the display, and was
   // not dropped. This must be later  than or equal to the previously supplied
@@ -129,13 +127,16 @@ class FrameTimings : public escher::Reffable {
   // and presentation times.
   void Finalize();
 
-  bool received_all_frame_rendered_callbacks() {
+  bool received_all_frame_rendered_callbacks() const {
     return frame_rendered_count_ == swapchain_records_.size();
   }
 
-  bool received_all_callbacks() {
-    return frame_rendered_count_ == swapchain_records_.size() &&
-           frame_presented_count_ == swapchain_records_.size();
+  bool received_all_frame_presented_callbacks() const {
+    return frame_presented_count_ == swapchain_records_.size();
+  }
+
+  bool received_all_callbacks() const {
+    return received_all_frame_rendered_callbacks() && received_all_frame_presented_callbacks();
   }
 
   struct SwapchainRecord {

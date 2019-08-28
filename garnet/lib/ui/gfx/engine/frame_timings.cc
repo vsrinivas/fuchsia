@@ -19,15 +19,14 @@ FrameTimings::FrameTimings(FrameScheduler* frame_scheduler, uint64_t frame_numbe
       latch_point_time_(latch_time),
       rendering_started_time_(rendering_started_time) {}
 
-size_t FrameTimings::RegisterSwapchain() {
+void FrameTimings::RegisterSwapchains(size_t count) {
   // All swapchains that we are timing must be added before any of them finish.
   // The purpose of this is to verify that we cannot notify the FrameScheduler
   // that the frame has finished before all swapchains have been added.
   FXL_DCHECK(frame_rendered_count_ == 0);
   FXL_DCHECK(frame_presented_count_ == 0);
   FXL_DCHECK(actual_presentation_time_ == kTimeUninitialized);
-  swapchain_records_.push_back({});
-  return swapchain_records_.size() - 1;
+  swapchain_records_.resize(count);
 }
 
 void FrameTimings::OnFrameUpdated(zx::time time) {
@@ -42,7 +41,7 @@ void FrameTimings::OnFrameUpdated(zx::time time) {
 }
 
 void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
-  FXL_DCHECK(swapchain_index < swapchain_records_.size());
+  FXL_CHECK(swapchain_index < swapchain_records_.size());
   FXL_DCHECK(time.get() > 0);
 
   auto& record = swapchain_records_[swapchain_index];
@@ -52,22 +51,30 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx::time time) {
 
   record.frame_rendered_time = time;
   ++frame_rendered_count_;
-  if (time > rendering_finished_time_) {
-    rendering_finished_time_ = time;
+  if (!received_all_frame_rendered_callbacks()) {
+    return;
   }
-  FXL_DCHECK(rendering_finished_time_ >= rendering_started_time_)
-      << "Error, rendering took negative time";
 
   // TODO(SCN-1324): We currently only return the time of the longest received
   // render time. This is not a problem right now, since we only have cases with
   // a single swapchain/display, but need to figure out how to handle the
   // general case.
+  //
+  // That was the last pending render, compute stats.
+  for (const auto& rec : swapchain_records_) {
+    if (rec.frame_rendered_time > rendering_finished_time_) {
+      rendering_finished_time_ = rec.frame_rendered_time;
+    }
+  }
+  FXL_DCHECK(rendering_finished_time_ >= rendering_started_time_)
+      << "Error, rendering took negative time";
+
   // Note: Because there is a delay between when rendering is actually completed
   // and when EventTimestamper generates the timestamp, it's possible that the
   // rendering timestamp is adjusted when the present timestamp is applied. So,
   // the render_done_time might change between the call to the
   // |FrameScheduler::OnFrameRendered| and |finalized()|.
-  if (received_all_frame_rendered_callbacks() && frame_scheduler_) {
+  if (frame_scheduler_) {
     frame_scheduler_->OnFrameRendered(*this);
   }
 
@@ -88,12 +95,17 @@ void FrameTimings::OnFramePresented(size_t swapchain_index, zx::time time) {
 
   record.frame_presented_time = time;
   ++frame_presented_count_;
+  if (!received_all_frame_presented_callbacks()) {
+    return;
+  }
   // TODO(SCN-1324): We currently only return the time of the longest received
   // render time. This is not a problem right now, since we only have cases with
   // a single swapchain/display, but need to figure out how to handle the
   // general case.
-  if (time > actual_presentation_time_) {
-    actual_presentation_time_ = time;
+  for (const auto& rec : swapchain_records_) {
+    if (rec.frame_presented_time > actual_presentation_time_) {
+      actual_presentation_time_ = rec.frame_presented_time;
+    }
   }
 
   if (received_all_callbacks()) {

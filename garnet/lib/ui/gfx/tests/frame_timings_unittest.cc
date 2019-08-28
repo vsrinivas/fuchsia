@@ -23,7 +23,8 @@ class FrameTimingsTest : public ErrorReportingTest {
                                                        /* target presentation */ zx::time(1),
                                                        /* latch point */ zx::time(0),
                                                        /* render started */ zx::time(0));
-    swapchain_index_ = frame_timings_->RegisterSwapchain();
+    frame_timings_->RegisterSwapchains(1);
+    swapchain_index_ = 0;
   }
   void TearDown() override {
     frame_scheduler_.reset();
@@ -198,7 +199,7 @@ TEST(FrameTimings, InitTimestamps) {
   const zx::time render_start_time(12);
   const uint64_t frame_number = 5;
   auto timings = fxl::MakeRefCounted<FrameTimings>(
-      /* frame_scheduler */ nullptr, frame_number, target_present_time, latch_time,
+      /*frame_scheduler=*/nullptr, frame_number, target_present_time, latch_time,
       render_start_time);
 
   FrameTimings::Timestamps init_timestamps = timings->GetTimestamps();
@@ -214,6 +215,17 @@ TEST(FrameTimings, InitTimestamps) {
 
   EXPECT_FALSE(timings->FrameWasDropped());
   EXPECT_EQ(frame_number, timings->frame_number());
+}
+
+TEST(FrameTimingsDeathTest, CannotRecordBeforeRegistering) {
+  const zx::time target_present_time(16);
+  const zx::time latch_time(10);
+  const zx::time render_start_time(12);
+  const uint64_t frame_number = 5;
+  auto timings = fxl::MakeRefCounted<FrameTimings>(
+      /*frame_scheduler=*/nullptr, frame_number, target_present_time, latch_time,
+      render_start_time);
+  EXPECT_DEATH(timings->OnFrameRendered(0, render_start_time + zx::nsec(1)), "[Cc]heck.*swapchain");
 }
 
 }  // namespace test

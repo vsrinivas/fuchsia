@@ -41,12 +41,11 @@ class Swapchain {
                          const escher::SemaphorePtr&)>;
 
   // Returns false if the frame could not be drawn.  Otherwise,
-  //   1. Registers itself with |frame_timings| using
-  //      FrameTimings::AddSwapchain().
-  //   2. Invokes |draw_callback| to draw the frame.
-  //   3. Eventually invokes FrameTimings::OnFrameFinishedRendering() and
+  //   1. Invokes |draw_callback| to draw the frame.
+  //   2. Eventually invokes FrameTimings::OnFrameFinishedRendering() and
   //      FrameTimings::OnFramePresented() on |frame_timings|.
-  virtual bool DrawAndPresentFrame(const FrameTimingsPtr& frame, const HardwareLayerAssignment& hla,
+  virtual bool DrawAndPresentFrame(const FrameTimingsPtr& frame, size_t swapchain_index,
+                                   const HardwareLayerAssignment& hla,
                                    DrawCallback draw_callback) = 0;
 
   // If a swapchain subclass implements this interface has a display,
