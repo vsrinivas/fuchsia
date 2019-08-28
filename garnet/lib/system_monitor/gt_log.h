@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_SYSTEM_MONITOR_GT_LOG_H_
 #define GARNET_LIB_SYSTEM_MONITOR_GT_LOG_H_
 
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -15,7 +16,7 @@
 // Each level will be tagged in the output. Output from levels can be enabled or
 // disabled by ordinal value.
 // This is defined outside of the namespace for user ergonomics.
-enum GuiToolsLogLevel {
+enum class GuiToolsLogLevel : int {
   DEBUG = -1,
   INFO = 0,
   WARNING = 1,
@@ -31,27 +32,30 @@ extern std::ofstream g_no_output_ofstream;
 class Logger {
  public:
   // Write the line prefix.
+  // Note: |out| and |file_path| must not be null.
   Logger(std::ostream* out, GuiToolsLogLevel level, GuiToolsLogLevel limit,
          const char* file_path, int line)
       : out_(out) {
+    assert(out != nullptr);
+    assert(file_path != nullptr);
     if (level < limit) {
       out_ = &g_no_output_ofstream;
       return;
     }
     switch (level) {
-      case FATAL:
+      case GuiToolsLogLevel::FATAL:
         *out_ << "[FATAL]";
         break;
-      case ERROR:
+      case GuiToolsLogLevel::ERROR:
         *out_ << "[ERROR]";
         break;
-      case WARNING:
+      case GuiToolsLogLevel::WARNING:
         *out_ << "[WARNING]";
         break;
-      case INFO:
+      case GuiToolsLogLevel::INFO:
         *out_ << "[INFO]";
         break;
-      case DEBUG:
+      case GuiToolsLogLevel::DEBUG:
         *out_ << "[DEBUG]";
         break;
       default:
@@ -93,7 +97,9 @@ inline std::ostream& GuiToolsLog(GuiToolsLogLevel level) { return std::cout; }
 //
 // A new-line will end each call implicitly. (If std::endl is passed, there will
 // be two '\n' printed.)
-#define GT_LOG(x) \
-  ::gt::Logger(&std::cout, x, ::gt::g_log_level, __FILE__, __LINE__).out()
+#define GT_LOG(x)                                                            \
+  ::gt::Logger(&std::cout, GuiToolsLogLevel::x, ::gt::g_log_level, __FILE__, \
+               __LINE__)                                                     \
+      .out()
 
 #endif  // GARNET_LIB_SYSTEM_MONITOR_GT_LOG_H_
