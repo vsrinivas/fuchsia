@@ -32,7 +32,6 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
   zx_status_t ClockImplGetRate(uint32_t id, uint64_t* out_current_rate);
 
   // Device Protocol Implementation.
-  zx_status_t Bind();
   void DdkUnbind();
   void DdkRelease();
 

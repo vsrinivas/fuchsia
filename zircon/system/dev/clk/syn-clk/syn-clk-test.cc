@@ -185,7 +185,19 @@ TEST(ClkSynTest, AvpllSetRatePll1) {
   audio_region.VerifyAll();
 }
 
-TEST(ClkSynTest, CpuPllSetRate1800) {
+TEST(ClkSynTest, CpuPllSetRateBad) {
+  auto global_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kGlobalSize / 4);
+  auto audio_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kAudioGlobalSize / 4);
+  ddk_mock::MockMmioRegRegion global_region(global_regs.get(), 4, as370::kGlobalSize / 4);
+  ddk_mock::MockMmioRegRegion audio_region(audio_regs.get(), 4, as370::kAudioGlobalSize / 4);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(global_region, audio_region, unused);
+
+  EXPECT_NOT_OK(test.ClockImplSetRate(2, 1'800'000'001));  // Too high.
+  EXPECT_NOT_OK(test.ClockImplSetRate(2, 99'999'999));     // Too low.
+}
+
+TEST(ClkSynTest, CpuPllSetRate1800MHz) {
   auto cpu_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kCpuSize / 4);
   ddk_mock::MockMmioRegRegion cpu_region(cpu_regs.get(), 4, as370::kCpuSize / 4);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
@@ -200,7 +212,7 @@ TEST(ClkSynTest, CpuPllSetRate1800) {
   cpu_region.VerifyAll();
 }
 
-TEST(ClkSynTest, CpuPllSetRate1000) {
+TEST(ClkSynTest, CpuPllSetRate1000MHz) {
   auto cpu_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kCpuSize / 4);
   ddk_mock::MockMmioRegRegion cpu_region(cpu_regs.get(), 4, as370::kCpuSize / 4);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
@@ -211,6 +223,21 @@ TEST(ClkSynTest, CpuPllSetRate1000) {
   cpu_regs[0x200c / 4].ExpectWrite(0x22000000);
 
   EXPECT_OK(test.ClockImplSetRate(2, 1'000'000'000));
+
+  cpu_region.VerifyAll();
+}
+
+TEST(ClkSynTest, CpuPllSetRate400MHz) {
+  auto cpu_regs = std::make_unique<ddk_mock::MockMmioReg[]>(as370::kCpuSize / 4);
+  ddk_mock::MockMmioRegRegion cpu_region(cpu_regs.get(), 4, as370::kCpuSize / 4);
+  ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint32_t), as370::kCpuSize / 4);
+  SynClkTest test(unused, unused, cpu_region);
+
+  cpu_regs[0x2000 / 4].ExpectWrite(0x00403006);
+  cpu_regs[0x2004 / 4].ExpectWrite(0x00000000);
+  cpu_regs[0x200c / 4].ExpectWrite(0x26000000);
+
+  EXPECT_OK(test.ClockImplSetRate(2, 400'000'000));
 
   cpu_region.VerifyAll();
 }

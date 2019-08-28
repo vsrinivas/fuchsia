@@ -92,28 +92,50 @@ zx_status_t SynClk::AvpllClkEnable(bool avpll0, bool enable) {
 }
 
 zx_status_t SynClk::CpuSetRate(uint64_t rate) {
-  if (rate < 1'000'000'000 || rate > 1'800'000'000) {
+  if (rate < 100'000'000 || rate > 1'800'000'000) {
     return ZX_ERR_INVALID_ARGS;
   }
-  auto dn = static_cast<uint32_t>(rate) / 1'000 * 72 / 1'800'000;
-  CPU_WRP_PLL_REG_ctrl::Get()
-      .FromValue(0)
-      .set_FRAC_READY(1)
-      .set_MODE(0)
-      .set_DN(dn)
-      .set_DM(1)
-      .set_RESETN(1)
-      .WriteTo(&cpu_mmio_);
-  CPU_WRP_PLL_REG_ctrl1::Get().FromValue(0).set_FRAC(0).WriteTo(&cpu_mmio_);
-  CPU_WRP_PLL_REG_ctrl3::Get()
-      .FromValue(0)
-      .set_DP1(1)
-      .set_PDDP1(0)
-      .set_DP(1)
-      .set_PDDP(0)
-      .set_SLOPE(0)
-      .WriteTo(&cpu_mmio_);
-  zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u\n", __FILE__, rate, dn, 1, 1);
+  if (rate > 400'000'000) {
+    auto dn = static_cast<uint32_t>(rate) / 1'000 * 72 / 1'800'000;
+    CPU_WRP_PLL_REG_ctrl::Get()
+        .FromValue(0)
+        .set_FRAC_READY(1)
+        .set_MODE(0)
+        .set_DN(dn)
+        .set_DM(1)
+        .set_RESETN(1)
+        .WriteTo(&cpu_mmio_);
+    CPU_WRP_PLL_REG_ctrl1::Get().FromValue(0).set_FRAC(0).WriteTo(&cpu_mmio_);
+    CPU_WRP_PLL_REG_ctrl3::Get()
+        .FromValue(0)
+        .set_DP1(1)
+        .set_PDDP1(0)
+        .set_DP(1)
+        .set_PDDP(0)
+        .set_SLOPE(0)
+        .WriteTo(&cpu_mmio_);
+    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u\n", __FILE__, rate, dn, 1, 1);
+  } else {
+    auto dn = static_cast<uint32_t>(rate) / 1'000 * 48 / 400'000;
+    CPU_WRP_PLL_REG_ctrl::Get()
+        .FromValue(0)
+        .set_FRAC_READY(1)
+        .set_MODE(0)
+        .set_DN(dn)
+        .set_DM(1)
+        .set_RESETN(1)
+        .WriteTo(&cpu_mmio_);
+    CPU_WRP_PLL_REG_ctrl1::Get().FromValue(0).set_FRAC(0).WriteTo(&cpu_mmio_);
+    CPU_WRP_PLL_REG_ctrl3::Get()
+        .FromValue(0)
+        .set_DP1(1)
+        .set_PDDP1(0)
+        .set_DP(3)
+        .set_PDDP(0)
+        .set_SLOPE(0)
+        .WriteTo(&cpu_mmio_);
+    zxlogf(TRACE, "%s %luHz dn %u  dm %u  dp %u\n", __FILE__, rate, dn, 1, 3);
+  }
   return ZX_OK;
 }
 
@@ -270,8 +292,6 @@ zx_status_t SynClk::ClockImplSetRate(uint32_t index, uint64_t hz) {
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
-
-zx_status_t SynClk::Bind() { return ZX_OK; }
 
 void SynClk::DdkUnbind() {
   fbl::AutoLock lock(&lock_);
