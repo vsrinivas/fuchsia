@@ -15,7 +15,6 @@
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.modular.Clipboard",
-            "fuchsia.modular.ContextWriter",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
             "fuchsia.recovery.FactoryReset",

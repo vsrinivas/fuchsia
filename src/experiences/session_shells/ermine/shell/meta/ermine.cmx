@@ -18,7 +18,6 @@
             "fuchsia.memory.Monitor",
             "fuchsia.modular.Clipboard",
             "fuchsia.modular.ComponentContext",
-            "fuchsia.modular.ContextWriter",
             "fuchsia.modular.SessionShellContext",
             "fuchsia.modular.ModuleContext",
             "fuchsia.modular.PuppetMaster",

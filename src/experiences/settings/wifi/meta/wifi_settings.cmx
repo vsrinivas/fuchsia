@@ -6,7 +6,6 @@
         "services": [
             "fuchsia.fonts.Provider",
             "fuchsia.modular.Clipboard",
-            "fuchsia.modular.ContextWriter",
             "fuchsia.logger.LogSink",
             "fuchsia.netstack.Netstack",
             "fuchsia.sys.Environment",

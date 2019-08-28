@@ -8,7 +8,6 @@
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.modular.Clipboard",
-            "fuchsia.modular.ContextWriter",
             "fuchsia.sys.Environment",
             "fuchsia.ui.scenic.Scenic"
         ]

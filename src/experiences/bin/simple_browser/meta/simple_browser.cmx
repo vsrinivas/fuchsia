@@ -27,7 +27,6 @@
             "fuchsia.media.Audio",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.modular.Clipboard",
-            "fuchsia.modular.ContextWriter",
             "fuchsia.modular.ModuleContext",
             "fuchsia.posix.socket.Provider",
             "fuchsia.net.NameLookup",
