@@ -76,7 +76,7 @@ void Dockyard::GetStreamSets(StreamSetsRequest* request) {}
 
 void Dockyard::OnConnection() {}
 
-void Dockyard::StartCollectingFrom(const std::string& device) {}
+bool Dockyard::StartCollectingFrom(const std::string& device) { return true; }
 
 void Dockyard::StopCollectingFromDevice() {}
 

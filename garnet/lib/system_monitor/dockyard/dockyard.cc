@@ -345,8 +345,7 @@ void Dockyard::GetStreamSets(StreamSetsRequest* request) {
 void Dockyard::IgnoreSamples(const IgnoreSamplesRequest& request,
                              IgnoreSamplesCallback callback) {
   std::lock_guard<std::mutex> guard(mutex_);
-  pending_ignore_samples_owned_.emplace_back(std::move(request),
-                                             std::move(callback));
+  pending_ignore_samples_owned_.emplace_back(request, std::move(callback));
 }
 
 void Dockyard::OnConnection() {
@@ -355,12 +354,16 @@ void Dockyard::OnConnection() {
   }
 }
 
-void Dockyard::StartCollectingFrom(const std::string& device) {
+bool Dockyard::StartCollectingFrom(const std::string& device) {
+  if (server_thread_.joinable()) {
+    return false;
+  }
   ResetHarvesterData();
   Initialize();
   server_thread_ = std::thread([this]() { RunGrpcServer(); });
   GT_LOG(INFO) << "Starting collecting from " << device;
   // TODO(smbug.com/39): Connect to the device and start the harvester.
+  return server_thread_.joinable();
 }
 
 void Dockyard::StopCollectingFromDevice() {
@@ -498,7 +501,7 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
     if (search == sample_streams_.end()) {
       samples.push_back(NO_STREAM);
     } else {
-      SampleStream& sample_stream = *search->second.get();
+      SampleStream& sample_stream = *search->second;
       switch (request.render_style) {
         case StreamSetsRequest::SCULPTING:
           ComputeSculpted(dockyard_id, sample_stream, request, &samples);
@@ -939,7 +942,7 @@ std::ostringstream Dockyard::DebugDump() const {
     const auto& sample_list = *stream.second;
     out << "    stream: (" << stream.first << ") " << stream_name << ", "
         << sample_list.size() << " entries {" << std::endl;
-    if (sample_list.size()) {
+    if (!sample_list.empty()) {
       out << "     ";
       // Print the last (most recent) entry.
       auto sample = sample_list.end();

@@ -80,12 +80,12 @@ class SystemMonitorDockyardTest : public ::testing::Test {
 
   void TestDiscardSamplesCallback(const DiscardSamplesResponse& response) {
     ++discard_call_count_;
-    discard_response_ = std::move(response);
+    discard_response_ = response;
   }
 
   void TestStreamSetsCallback(const StreamSetsResponse& response) {
     ++sets_call_count_;
-    response_ = std::move(response);
+    response_ = response;
   }
 
   int32_t name_call_count_;
@@ -695,8 +695,8 @@ TEST_F(SystemMonitorDockyardTest, DockyardIdToString) {
 
 TEST_F(SystemMonitorDockyardTest, ServerListening) {
   // Test for: https://bugs.chromium.org/p/fuchsia/issues/detail?id=72
-  EXPECT_FALSE(IsGrpcServerActive());
-  dockyard_.StartCollectingFrom("apple.banana.carrot.dog");
+  EXPECT_TRUE(dockyard_.StartCollectingFrom("apple-banana-carrot-dog"));
+  EXPECT_FALSE(dockyard_.StartCollectingFrom("apple-banana-carrot-dog"));
   EXPECT_TRUE(IsGrpcServerActive());
   dockyard_.StopCollectingFromDevice();
   EXPECT_FALSE(IsGrpcServerActive());

@@ -55,7 +55,7 @@ constexpr SampleValue SAMPLE_MAX_VALUE = (SampleValue)-3ULL;
 // integer value. To convert the slope integer (slope_value) to floating point:
 // float slope_as_percentage = float(slope_value) * SLOPE_SCALE.
 constexpr SampleValue SLOPE_LIMIT = 1000000ULL;
-constexpr float SLOPE_SCALE = 100.0f / float(SLOPE_LIMIT);
+constexpr float SLOPE_SCALE = 100.0f / static_cast<float>(SLOPE_LIMIT);
 
 // The upper value used to represent zero to one values with integers.
 constexpr SampleValue NORMALIZATION_RANGE = 1000000ULL;
@@ -135,7 +135,7 @@ struct DiscardSamplesRequest {
   // discarded.
   std::vector<DockyardId> dockyard_ids;
 
-  friend std::ostream& operator<<(std::ostream& os,
+  friend std::ostream& operator<<(std::ostream& out,
                                   const DiscardSamplesRequest& request);
 };
 
@@ -147,7 +147,7 @@ struct DiscardSamplesResponse {
   // For matching against a DiscardSamplesRequest::request_id.
   uint64_t request_id;
 
-  friend std::ostream& operator<<(std::ostream& os,
+  friend std::ostream& operator<<(std::ostream& out,
                                   const DiscardSamplesResponse& response);
 };
 
@@ -253,7 +253,7 @@ struct StreamSetsRequest {
 
   bool HasFlag(StreamSetsRequestFlags flag) const;
 
-  friend std::ostream& operator<<(std::ostream& os,
+  friend std::ostream& operator<<(std::ostream& out,
                                   const StreamSetsRequest& request);
 };
 
@@ -276,10 +276,10 @@ struct StreamSetsResponse {
   // the range [0 to SAMPLE_MAX_VALUE]. If no value exists for the column, the
   // value NO_DATA is used.
   // For any DockyardId from StreamSetsRequest::dockyard_ids that isn't found,
-  // the resulting sample will have the value NO_STREAM.
+  // the resulting samples will have the value NO_STREAM.
   std::vector<std::vector<SampleValue>> data_sets;
 
-  friend std::ostream& operator<<(std::ostream& os,
+  friend std::ostream& operator<<(std::ostream& out,
                                   const StreamSetsResponse& response);
 };
 
@@ -289,8 +289,7 @@ class SampleStreamMap
   // Get a reference to the sample stream for the given |dockyard_id|.
   // The stream will be created if necessary.
   SampleStream& StreamRef(DockyardId dockyard_id) {
-    return *emplace(dockyard_id, make_unique<SampleStream>())
-                .first->second.get();
+    return *emplace(dockyard_id, make_unique<SampleStream>()).first->second;
   }
 };
 
@@ -359,7 +358,7 @@ class Dockyard {
   }
   SampleTimeNs HostTimeToDeviceTime(SampleTimeNs host_time_ns) const {
     return host_time_ns + device_time_delta_ns_;
-  };
+  }
 
   // Discard the stream data. The path/ID lookup will remain intact after the
   // discard (i.e. MatchPaths() will still find the paths).
@@ -381,8 +380,13 @@ class Dockyard {
   //
   // Returns a Dockyard ID that corresponds to |dockyard_path|.
   DockyardId GetDockyardId(const std::string& dockyard_path);
+
+  // Determine whether |dockyard_path| is valid (if it exists).
   bool HasDockyardPath(const std::string& dockyard_path,
                        DockyardId* dockyard_id) const;
+
+  // Translate a |dockyard_id| to a |dockyard_path|. |dockyard_path| is an out
+  // value. Returns false if |dockyard_id| is unknown.
   bool GetDockyardPath(DockyardId dockyard_id,
                        std::string* dockyard_path) const;
 
@@ -416,8 +420,15 @@ class Dockyard {
   void OnConnection();
 
   // Start collecting data from a named device. Tip: device names are normally
-  // four short words, such as "duck floor quick rock".
-  void StartCollectingFrom(const std::string& device);
+  // four short words, such as "duck-floor-quick-rock". If |StartCollectingFrom|
+  // was previously called, call |StopCollectingFromDevice| before starting a
+  // new connection (otherwise this call will fail and return false).
+  // Returns true if successful.
+  bool StartCollectingFrom(const std::string& device);
+
+  // The inverse of |StartCollectingFrom|. It's safe to call this regardless of
+  // whether |StartCollectingFrom| succeeded (no work is done unless
+  // |StartCollectingFrom| had succeeded).
   void StopCollectingFromDevice();
 
   OnConnectionCallback SetConnectionHandler(OnConnectionCallback callback);
@@ -565,7 +576,7 @@ class Dockyard {
   SampleValue OverallAverageForStream(DockyardId dockyard_id) const;
 
   // Processes the requests entered by DiscardSamples().
-  void ProcessDiscardSamples(const DiscardSamplesRequest& discard,
+  void ProcessDiscardSamples(const DiscardSamplesRequest& request,
                              DiscardSamplesResponse* response);
 
   // Process a request to ignore samples.
@@ -581,7 +592,7 @@ class Dockyard {
 
   friend class ::SystemMonitorDockyardHostTest;
   friend class ::dockyard::SystemMonitorDockyardTest;
-  friend std::ostream& operator<<(std::ostream& os, const Dockyard& dockyard);
+  friend std::ostream& operator<<(std::ostream& out, const Dockyard& dockyard);
 };
 
 // Merge and print a request and response. It can make debugging easier to have
