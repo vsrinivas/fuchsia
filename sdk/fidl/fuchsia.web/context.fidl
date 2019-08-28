@@ -71,12 +71,9 @@ table CreateContextParams {
     3: string user_agent_product;
     4: string user_agent_version;
 
-    /// Port to be used for remote debugging for connection via the DevTools
-    /// protocol. Setting this to 0 will make the Context use an ephemeral
-    /// port, which can be then queried via the
-    /// Context.GetRemoteDebuggingPort() API.
-    /// This is only for testing purposes and should not be set in production
-    /// code.
+    /// Enables Frames to be created with remote debugging enabled using the DevTools protocol. If
+    /// `port` is 0, then an ephemeral port will be used, which can be queried via the
+    /// [`fuchsia.web.Context/GetRemoteDebuggingPort`] API.
     5: uint16 remote_debugging_port;
 
     /// List of providers whose contents will be served by content:// URLs.
@@ -94,14 +91,25 @@ protocol Context {
     /// `frame`: An interface request that will be bound to the created Frame.
     CreateFrame(request<Frame> frame);
 
+    /// Similar to [`fuchsia.web.Context/CreateFrame`], with extra parameters.
+    [Transitional]
+    CreateFrameWithParams(CreateFrameParams params, request<Frame> frame);
+
     /// Used to observe cookies for sites hosted under this Context.
     [Transitional]
     GetCookieManager(request<CookieManager> manager);
 
-    /// Returns the port used for remote debugging.
-    /// The ContextError will be set to `REMOTE_DEBUGGING_PORT_NOT_OPENED` if
-    /// |remote_debugging_port| was not set in CreateContextParams or the
-    /// remote debugging service failed to start.
-    [Transitional]
+    /// Waits until debugging is available on one or more Frames, and returns the DevTools port
+    /// number. Multiple calls may be queued to received the port number. If the
+    /// [`fuchsia.web.Context`] was  created without debugging enabled, or the remote debugging
+    /// service failed to start, then the [`fuchsia.web.ContextError`] will be set to
+    /// `REMOTE_DEBUGGING_PORT_NOT_OPENED`.
     GetRemoteDebuggingPort() -> (uint16 port) error ContextError;
+};
+
+table CreateFrameParams {
+    /// Set to true to enable remote debugging. The [`fuchsia.web.Frame`] will be closed with
+    /// `ERR_INVALID_ARGS if |remote_debugging_port| was not set in
+    /// [`fuchsia.web.CreateContextParams`].
+    1: bool enable_remote_debugging;
 };
