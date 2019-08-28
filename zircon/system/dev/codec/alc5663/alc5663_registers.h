@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include <hwreg/bitfields.h>
 #include <zircon/types.h>
+
+#include <hwreg/bitfields.h>
 
 //
 // Register definitions taken from:
@@ -25,7 +26,7 @@ struct ResetAndDeviceIdReg {
 
   DEF_SUBBIT(data, 1, device_id);  // Device ID: Reading 0 indicates ALC5663.
 
-  static constexpr uint8_t kAddress = 0x0;
+  static constexpr uint16_t kAddress = 0x0;
 };
 
 // Sidetone (repeating mic signal into speaker output) control and configuration.
@@ -38,7 +39,7 @@ struct SidetoneControlReg {
   DEF_SUBBIT(data, 5, sidetone_boost_sel);        // Sidetone gain (R/W)
   DEF_SUBFIELD(data, 4, 0, sidetone_vol_sel);     // Sidetone volume (R/W)
 
-  static constexpr uint8_t kAddress = 0x18;
+  static constexpr uint16_t kAddress = 0x18;
 };
 
 struct PowerManagementControl1Reg {
@@ -51,7 +52,7 @@ struct PowerManagementControl1Reg {
   DEF_SUBBIT(data, 5, fast_ldo_adcref);
   DEF_SUBBIT(data, 4, pow_adc_l);  // Analog ADC power (R/W)
 
-  static constexpr uint8_t kAddress = 0x61;
+  static constexpr uint16_t kAddress = 0x61;
 };
 
 struct PowerManagementControl2Reg {
@@ -60,7 +61,7 @@ struct PowerManagementControl2Reg {
   DEF_SUBBIT(data, 15, pow_adc_filter);          // ADC digital filter power (R/W)
   DEF_SUBBIT(data, 10, pow_dac_stereo1_filter);  // DAC stereo 1 filter power (R/W)
 
-  static constexpr uint8_t kAddress = 0x62;
+  static constexpr uint16_t kAddress = 0x62;
 };
 
 struct PowerManagementControl3Reg {
@@ -77,7 +78,7 @@ struct PowerManagementControl3Reg {
   DEF_SUBFIELD(data, 3, 2, en_amp_hp);
   DEF_SUBFIELD(data, 1, 0, ldo1_dvo);
 
-  static constexpr uint8_t kAddress = 0x63;
+  static constexpr uint16_t kAddress = 0x63;
 };
 
 struct PowerManagementControl4Reg {
@@ -88,7 +89,7 @@ struct PowerManagementControl4Reg {
   DEF_SUBBIT(data, 10, pow_micbias2);  // MICBIAS2 power (R/W)
   DEF_SUBBIT(data, 1, pow_recmix1);    // RECMIX power (R/W)
 
-  static constexpr uint8_t kAddress = 0x64;
+  static constexpr uint16_t kAddress = 0x64;
 };
 
 struct PowerManagementControl5Reg {
@@ -96,7 +97,7 @@ struct PowerManagementControl5Reg {
 
   DEF_SUBBIT(data, 6, pow_pll);  // PLL power (R/W)
 
-  static constexpr uint8_t kAddress = 0x65;
+  static constexpr uint16_t kAddress = 0x65;
 };
 
 struct I2s1DigitalInterfaceControlReg {
@@ -111,7 +112,7 @@ struct I2s1DigitalInterfaceControlReg {
   DEF_SUBFIELD(data, 5, 4, sel_i2s1_len);
   DEF_SUBFIELD(data, 2, 0, sel_i2s1_format);
 
-  static constexpr uint8_t kAddress = 0x70;
+  static constexpr uint16_t kAddress = 0x70;
 };
 
 }  // namespace audio::alc5663

@@ -15,3 +15,12 @@ for audio data.
 
 This driver is currently just a stub, not actually capable of recording or
 playing audio.
+
+## Errata
+
+Implementation is based on the Realtek ALC5663 datasheet (Revision 0.66,
+2017-04-06). Some differences from the datasheet in the driver implementation
+are as follows:
+
+  * The datasheet states register addresses are 8-bits long (Table 16 and 17,
+    page 28). In practice the register addresses are 16 bits long.

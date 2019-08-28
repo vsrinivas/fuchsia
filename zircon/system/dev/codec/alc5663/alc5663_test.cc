@@ -1,16 +1,17 @@
 #include "alc5663.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
+#include <zircon/errors.h>
+
+#include <cassert>
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/i2c.h>
 #include <fbl/array.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zircon/errors.h>
 #include <zxtest/zxtest.h>
-
-#include <cassert>
-#include <memory>
 
 #include "alc5663_registers.h"
 #include "fake_i2c.h"
@@ -27,15 +28,15 @@ class FakeAlc5663 {
   };
 
   FakeAlc5663()
-      : fake_i2c_([this](uint8_t addr) { return OnRead(addr); },
-                  [this](uint8_t addr, uint16_t data) { OnWrite(addr, data); }) {}
+      : fake_i2c_([this](uint16_t addr) { return OnRead(addr); },
+                  [this](uint16_t addr, uint16_t data) { OnWrite(addr, data); }) {}
 
   i2c_protocol_t GetProto() { return fake_i2c_.GetProto(); }
 
   State state() const { return state_; }
 
  private:
-  uint16_t OnRead(uint8_t addr) {
+  uint16_t OnRead(uint16_t addr) {
     // Driver should not access registers until we have been reset.
     if (state_ == State::kUnknown) {
       ZX_ASSERT(addr == ResetAndDeviceIdReg::kAddress);
@@ -44,7 +45,7 @@ class FakeAlc5663 {
     return 0;
   }
 
-  void OnWrite(uint8_t addr, uint16_t /*data*/) {
+  void OnWrite(uint16_t addr, uint16_t /*data*/) {
     // Driver should not access registers until we have been reset.
     if (state_ == State::kUnknown) {
       ZX_ASSERT(addr == ResetAndDeviceIdReg::kAddress);
@@ -56,7 +57,7 @@ class FakeAlc5663 {
     }
   }
 
-  FakeI2c<uint8_t, uint16_t> fake_i2c_;
+  FakeI2c<uint16_t, uint16_t> fake_i2c_;
   State state_ = State::kUnknown;
 };
 

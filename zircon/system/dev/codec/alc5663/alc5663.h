@@ -4,14 +4,15 @@
 
 #pragma once
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <zircon/types.h>
+
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <zircon/types.h>
 
 #include "i2c_client.h"
 
@@ -20,8 +21,8 @@ namespace audio::alc5663 {
 class Alc5663Device;
 using DeviceType = ddk::Device<Alc5663Device, ddk::Unbindable>;
 
-// ALC5663 uses 8-bit register addresses.
-using Alc5663Client = I2cClient<uint8_t>;
+// ALC5663 uses 16-bit register addresses.
+using Alc5663Client = I2cClient<uint16_t>;
 
 class Alc5663Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_CODEC> {
  public:
