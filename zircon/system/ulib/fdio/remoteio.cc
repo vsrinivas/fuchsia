@@ -9,6 +9,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/unsafe.h>
 #include <string.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
@@ -158,6 +159,64 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
   return fio::Directory::Call::Open(zx::unowned_channel(dir), flags, FDIO_CONNECT_MODE,
                                     fidl::StringView(length, path), std::move(request))
       .status();
+}
+
+__EXPORT
+zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd) {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = fdio_open(path, flags, server.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  int fd;
+  status = fdio_fd_create(client.release(), &fd);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_fd = fd;
+  return ZX_OK;
+}
+
+__EXPORT
+zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd) {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fdio_t* iodir = fdio_unsafe_fd_to_io(dir_fd);
+  if (iodir == NULL) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_handle_t dir_channel = fdio_unsafe_borrow_channel(iodir);
+  if (dir_channel == ZX_HANDLE_INVALID) {
+    fdio_unsafe_release(iodir);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  status = fdio_open_at(dir_channel, path, flags, server.release());
+  fdio_unsafe_release(iodir);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  int fd;
+  status = fdio_fd_create(client.release(), &fd);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_fd = fd;
+  return ZX_OK;
 }
 
 __EXPORT

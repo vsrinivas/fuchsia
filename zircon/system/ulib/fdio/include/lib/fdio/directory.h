@@ -85,6 +85,24 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request);
 zx_status_t fdio_open_at(zx_handle_t directory, const char* path, uint32_t flags,
                          zx_handle_t request);
 
+// Opens the remote object at the given |path| with the given |flags|
+// asynchronously, and on success, binds that channel to a file descriptor,
+// returned via |out_fd|.
+//
+// |flags| is a bit field of |fuchsia.io.OPEN_*|.
+//
+// See |fdio_service_connect| for details.
+zx_status_t fdio_open_fd(const char* path, uint32_t flags, int* out_fd);
+
+// Opens the remote object at the given |path| relative to the given |dir_fd|
+// with the given |flags| asynchronously, and on success, binds that channel to
+// a file descriptor, returned via |out_fd|.
+//
+// |flags| is a bit field of |fuchsia.io.OPEN_*|.
+//
+// See |fdio_service_connect| fort details.
+zx_status_t fdio_open_fd_at(int dir_fd, const char* path, uint32_t flags, int* out_fd);
+
 // Clone the given |node| asynchronously.
 //
 // |node| must be a channel that implements the |fuchsia.io.Node| protocol.
