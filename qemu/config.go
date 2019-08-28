@@ -158,7 +158,7 @@ func CreateInvocation(cfg Config, cmdlineArgs []string) ([]string, error) {
 
 	invocation = append(invocation, "-kernel", cfg.Kernel)
 	invocation = append(invocation, "-initrd", cfg.Initrd)
-	invocation = append(invocation, "-object,iothread,id=iothread0")
+	invocation = append(invocation, "-object", "iothread,id=iothread0")
 
 	// TODO: maybe we should introduce Device interface with three different
 	// implementations: Drive, Netdev and ISADebugExit to cleanup the code
