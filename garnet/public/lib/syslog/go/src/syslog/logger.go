@@ -145,7 +145,7 @@ func ConnectToLogger(c *context.Connector) (zx.Socket, error) {
 }
 
 type LogInitOptions struct {
-	LogLevel                      LogLevel
+	LogLevel                      LogLevel // Accessed atomically.
 	MinSeverityForFileAndLineInfo LogLevel
 	Socket                        zx.Socket
 	Tags                          []string
@@ -181,8 +181,8 @@ func NewLoggerWithDefaults(c *context.Connector, tags ...string) (*Logger, error
 	return NewLogger(LogInitOptions{
 		LogLevel:                      InfoLevel,
 		MinSeverityForFileAndLineInfo: ErrorLevel,
-		Socket: s,
-		Tags:   tags,
+		Socket:                        s,
+		Tags:                          tags,
 	})
 }
 
@@ -288,7 +288,7 @@ func (l *Logger) logToSocket(time zx.Time, logLevel LogLevel, tag, msg string) e
 }
 
 func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format string, a ...interface{}) error {
-	if l.options.LogLevel > logLevel {
+	if LogLevel(atomic.LoadInt32((*int32)(&l.options.LogLevel))) > logLevel {
 		return nil
 	}
 	time := zx.Sys_clock_get_monotonic()
@@ -333,11 +333,11 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 }
 
 func (l *Logger) SetSeverity(logLevel LogLevel) {
-	l.options.LogLevel = logLevel
+	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(logLevel))
 }
 
 func (l *Logger) SetVerbosity(verbosity int) {
-	l.options.LogLevel = LogLevel(-verbosity)
+	atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(-verbosity))
 }
 
 func (l *Logger) Infof(format string, a ...interface{}) error {
@@ -384,7 +384,7 @@ var defaultLogger = &Logger{
 	options: LogInitOptions{
 		LogLevel:                      InfoLevel,
 		MinSeverityForFileAndLineInfo: ErrorLevel,
-		Writer: os.Stderr,
+		Writer:                        os.Stderr,
 	},
 	pid: uint64(os.Getpid()),
 }
@@ -408,13 +408,13 @@ func SetDefaultLogger(l *Logger) {
 
 func SetSeverity(logLevel LogLevel) {
 	if l := GetDefaultLogger(); l != nil {
-		l.options.LogLevel = logLevel
+		atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(logLevel))
 	}
 }
 
 func SetVerbosity(verbosity int) {
 	if l := GetDefaultLogger(); l != nil {
-		l.options.LogLevel = LogLevel(-verbosity)
+		atomic.StoreInt32((*int32)(&l.options.LogLevel), int32(-verbosity))
 	}
 }
 

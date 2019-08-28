@@ -185,6 +185,15 @@ func Main() {
 		},
 	)
 
+	var logService stack.LogService
+	ctx.OutgoingService.AddService(
+		stack.LogName,
+		&stack.LogStub{Impl: &logImpl{logger: l}},
+		func(s fidl.Stub, c zx.Channel) error {
+			_, err := logService.BindingSet.Add(s, c, nil)
+			return err
+		})
+
 	var nameLookupService net.NameLookupService
 	ctx.OutgoingService.AddService(
 		net.NameLookupName,

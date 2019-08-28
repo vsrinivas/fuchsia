@@ -2,7 +2,36 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use clap::arg_enum;
+use fidl_fuchsia_net_stack::{self as netstack};
 use structopt::StructOpt;
+
+// Same as https://docs.rs/log/0.4.8/log/enum.Level.html
+// but it can't be used for clap parsing here since it is external.
+arg_enum! {
+    #[derive(PartialEq, Copy, Clone, Debug)]
+    pub enum LogLevelArg {
+        // See syslog/logger.go for numeric definitions.
+        Trace,
+        Debug,
+        Info ,
+        Warn,
+        Error,
+        Fatal,
+    }
+}
+impl ::std::convert::From<LogLevelArg> for netstack::LogLevelFilter {
+    fn from(arg: LogLevelArg) -> Self {
+        match arg {
+            LogLevelArg::Trace => netstack::LogLevelFilter::Trace,
+            LogLevelArg::Debug => netstack::LogLevelFilter::Debug,
+            LogLevelArg::Info => netstack::LogLevelFilter::Info,
+            LogLevelArg::Warn => netstack::LogLevelFilter::Warn,
+            LogLevelArg::Error => netstack::LogLevelFilter::Error,
+            LogLevelArg::Fatal => netstack::LogLevelFilter::Fatal,
+        }
+    }
+}
 
 #[derive(StructOpt, Debug)]
 pub enum Opt {
@@ -21,6 +50,10 @@ pub enum Opt {
     #[structopt(name = "filter")]
     /// commands for packet filter
     Filter(FilterCmd),
+
+    #[structopt(name = "log")]
+    /// commands for logging
+    Log(LogCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -175,4 +208,17 @@ pub enum FilterCmd {
     #[structopt(name = "set_rdr_rules")]
     /// set rdr rules (see the netfilter::parser library for the RDR rules format)
     SetRdrRules { rules: String },
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub enum LogCmd {
+    /// Syslog severity level / loglevel
+    #[structopt(name = "set-level")]
+    SetLevel {
+        #[structopt(
+            raw(possible_values = "&LogLevelArg::variants()"),
+            raw(case_insensitive = "true")
+        )]
+        log_level: LogLevelArg,
+    },
 }

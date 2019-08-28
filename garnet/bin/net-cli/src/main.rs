@@ -9,7 +9,9 @@ use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
-use fidl_fuchsia_net_stack::{self as netstack, InterfaceInfo, StackMarker, StackProxy};
+use fidl_fuchsia_net_stack::{
+    self as netstack, InterfaceInfo, LogMarker, LogProxy, StackMarker, StackProxy,
+};
 use fidl_fuchsia_net_stack_ext as pretty;
 use fidl_fuchsia_netstack::{NetstackMarker, NetstackProxy};
 use fuchsia_async as fasync;
@@ -31,6 +33,7 @@ fn main() -> Result<(), Error> {
     let netstack =
         connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
     let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
+    let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
 
     let fut = async {
         match opt {
@@ -38,6 +41,7 @@ fn main() -> Result<(), Error> {
             Opt::Fwd(cmd) => do_fwd(cmd, stack).await,
             Opt::Route(cmd) => do_route(cmd, netstack).await,
             Opt::Filter(cmd) => do_filter(cmd, filter).await,
+            Opt::Log(cmd) => do_log(cmd, log).await,
         }
     };
     exec.run_singlethreaded(fut)
@@ -374,6 +378,21 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
                     println!("{:?}", status);
                 }
                 Err(e) => eprintln!("{:?}", e),
+            }
+        }
+    }
+    Ok(())
+}
+
+async fn do_log(cmd: opts::LogCmd, log: LogProxy) -> Result<(), Error> {
+    match cmd {
+        LogCmd::SetLevel { log_level } => {
+            let response =
+                log.set_log_level(log_level.into()).await.context("failed to set log level")?;
+            if let Some(e) = response {
+                eprintln!("failed to set log level to {:?}: {:?}", log_level, e);
+            } else {
+                println!("log level set to {:?}", log_level);
             }
         }
     }

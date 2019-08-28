@@ -120,10 +120,12 @@ static constexpr const char* deprecated_services[] = {
     // Interface to resolve shell commands.
     "fuchsia.process.Resolver", ::llcpp::fuchsia::net::NameLookup::Name,
     ::llcpp::fuchsia::posix::socket::Provider::Name,
-    // Legacy interface for netstack, defined in //garnet
+    // Legacy interface for netstack, defined in //sdk/fidl/
     "fuchsia.netstack.Netstack",
-    // New interface for netstack (WIP), defined in //zircon
-    "fuchsia.net.stack.Stack", "fuchsia.sys.Environment", "fuchsia.sys.Launcher",
+    // New interface for netstack, defined in //zircon/system/fidl/
+    "fuchsia.net.stack.Stack",
+    // Network troubleshooting is needed from serial console.
+    "fuchsia.net.stack.Log", "fuchsia.sys.Environment", "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",
     // We should host the tracing.provider service ourselves instead of
     // routing the request to appmgr.

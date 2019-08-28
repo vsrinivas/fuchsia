@@ -373,3 +373,13 @@ func (ni *stackImpl) DisableIpForwarding() error {
 	ni.ns.mu.Unlock()
 	return nil
 }
+
+type logImpl struct {
+	logger *syslog.Logger
+}
+
+func (li *logImpl) SetLogLevel(level stack.LogLevelFilter) (*stack.Error, error) {
+	li.logger.SetSeverity(syslog.LogLevel(level))
+	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetSyslogLevel: %s", level)
+	return nil, nil
+}

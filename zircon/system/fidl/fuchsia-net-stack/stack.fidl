@@ -184,3 +184,23 @@ protocol Stack {
     /// A status change event is triggered whenever an interface's status changes.
     -> OnInterfaceStatusChange(InterfaceStatusChange info);
 };
+
+// TODO(crbug.com/fuchsia/34987): Deprecate this protocol.
+/// Note LogLevelFilter and protocol Log is transient,
+/// and is planned to be deprecated by logger.fidl's LogLevelFilter.
+/// This definition is to support syslog/logger.go and Netstack2.
+enum LogLevelFilter : int32 {
+    TRACE = -2;
+    DEBUG = -1;
+    INFO = 0;
+    WARN = 1;
+    ERROR = 2;
+    FATAL = 3;
+};
+
+[Discoverable]
+protocol Log {
+    /// Dynamically set a syslog level.
+    /// See syslog/logger.go for level definition.
+    SetLogLevel(LogLevelFilter level) -> (Error? err);
+};
