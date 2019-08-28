@@ -163,38 +163,42 @@ void AudioCoreImpl::NotifyGainMuteChanged() {
   }
 }
 
-float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
+float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage) {
   TRACE_DURATION("audio", "AudioCoreImpl::GetRenderUsageGain");
-  return Gain::GetRenderUsageGain(usage) + Gain::GetRenderUsageGainAdjustment(usage);
+  fuchsia::media::Usage usage;
+  usage.set_render_usage(render_usage);
+  return Gain::Settings().GetUsageGain(std::move(usage));
 }
 
-float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
+float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage) {
   TRACE_DURATION("audio", "AudioCoreImpl::GetCaptureUsageGain");
-  return Gain::GetCaptureUsageGain(usage) + Gain::GetCaptureUsageGainAdjustment(usage);
+  fuchsia::media::Usage usage;
+  usage.set_capture_usage(capture_usage);
+  return Gain::Settings().GetUsageGain(std::move(usage));
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
   AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
-  Gain::SetRenderUsageGain(usage, gain_db);
+  Gain::Settings().SetRenderUsageGain(usage, gain_db);
 }
 
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
   AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
-  Gain::SetCaptureUsageGain(usage, gain_db);
+  Gain::Settings().SetCaptureUsageGain(usage, gain_db);
 }
 
 void AudioCoreImpl::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
                                                  float db_gain) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGainAdjustment");
-  Gain::SetRenderUsageGainAdjustment(usage, db_gain);
+  Gain::Settings().SetRenderUsageGainAdjustment(usage, db_gain);
 }
 
 void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
                                                   float db_gain) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGainAdjustment");
-  Gain::SetCaptureUsageGainAdjustment(usage, db_gain);
+  Gain::Settings().SetCaptureUsageGainAdjustment(usage, db_gain);
 }
 
 void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {

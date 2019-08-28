@@ -14,6 +14,7 @@
 #include "lib/media/cpp/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
+#include "src/media/audio/audio_core/mixer/usage_gain_settings.h"
 
 namespace media::audio {
 
@@ -176,49 +177,12 @@ class Gain {
   // TODO(perley/mpuryear): Handle usage ramping.
   bool IsRamping() { return (source_ramp_duration_ns_ > 0); }
 
-  static void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db);
-  static void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db);
-
-  static float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
-    auto usage_index = fidl::ToUnderlying(usage);
-    return render_usage_gain_[usage_index].load();
-  }
-
-  static float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
-    auto usage_index = fidl::ToUnderlying(usage);
-    return capture_usage_gain_[usage_index].load();
-  }
-
-  static void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db);
-  static void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db);
-
-  static float GetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage) {
-    auto usage_index = fidl::ToUnderlying(usage);
-    return render_usage_gain_adjustment_[usage_index].load();
-  }
-
-  static float GetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage) {
-    auto usage_index = fidl::ToUnderlying(usage);
-    return capture_usage_gain_adjustment_[usage_index].load();
-  }
-
-  float GetUsageGain() {
-    if (usage_.is_render_usage()) {
-      return GetRenderUsageGain(usage_.render_usage()) +
-             GetRenderUsageGainAdjustment(usage_.render_usage());
-    } else {
-      return GetCaptureUsageGain(usage_.capture_usage()) +
-             GetCaptureUsageGainAdjustment(usage_.capture_usage());
-    }
-  }
   void SetUsage(fuchsia::media::Usage usage);
 
- private:
-  static std::atomic<float> render_usage_gain_[fuchsia::media::RENDER_USAGE_COUNT];
-  static std::atomic<float> capture_usage_gain_[fuchsia::media::CAPTURE_USAGE_COUNT];
+  static UsageGainSettings& Settings() { return usage_gain_settings_; }
 
-  static std::atomic<float> render_usage_gain_adjustment_[fuchsia::media::RENDER_USAGE_COUNT];
-  static std::atomic<float> capture_usage_gain_adjustment_[fuchsia::media::CAPTURE_USAGE_COUNT];
+ private:
+  static UsageGainSettings usage_gain_settings_;
 
   // Called by the above GetGainScale variants. For performance reasons, this
   // implementation caches values and recomputes the result only as needed.
@@ -232,11 +196,15 @@ class Gain {
             kMinGainDb);
   }
 
+  float GetUsageGain() {
+    return usage_.has_value() ? usage_gain_settings_.GetUsageGain(*usage_) : kUnityGainDb;
+  }
+
   // TODO(mpuryear): at some point, examine whether using a lock provides better
   // performance and scalability than using these two atomics.
   std::atomic<float> target_src_gain_db_;
   std::atomic<float> target_dest_gain_db_;
-  fuchsia::media::Usage usage_;
+  std::optional<fuchsia::media::Usage> usage_;
 
   float current_src_gain_db_ = kUnityGainDb;
   bool src_mute_ = false;

@@ -28,6 +28,8 @@ source_set("audio_mixer_lib") {
     "output_producer.h",
     "point_sampler.cc",
     "point_sampler.h",
+    "usage_gain_settings.cc",
+    "usage_gain_settings.h",
   ]
 
   public_deps = [
@@ -66,6 +68,7 @@ executable("test") {
     "test/mixer_tests_recap.cc",
     "test/mixer_tests_shared.cc",
     "test/mixer_tests_shared.h",
+    "usage_gain_settings_unittest.cc",
   ]
 
   deps = [

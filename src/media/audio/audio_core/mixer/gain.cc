@@ -11,53 +11,9 @@
 
 namespace media::audio {
 
-constexpr Gain::AScale Gain::kMinScale;
-constexpr Gain::AScale Gain::kUnityScale;
-constexpr Gain::AScale Gain::kMaxScale;
+UsageGainSettings Gain::usage_gain_settings_;
 
-constexpr float Gain::kMinGainDb;
-constexpr float Gain::kUnityGainDb;
-constexpr float Gain::kMaxGainDb;
-
-std::atomic<float> Gain::render_usage_gain_[fuchsia::media::RENDER_USAGE_COUNT];
-std::atomic<float> Gain::capture_usage_gain_[fuchsia::media::CAPTURE_USAGE_COUNT];
-
-std::atomic<float> Gain::render_usage_gain_adjustment_[fuchsia::media::RENDER_USAGE_COUNT];
-std::atomic<float> Gain::capture_usage_gain_adjustment_[fuchsia::media::CAPTURE_USAGE_COUNT];
-
-void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
-  TRACE_DURATION("audio", "Gain::GetRenderUsageGain");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  render_usage_gain_[usage_index].store(clamped_gain_db);
-}
-
-void Gain::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
-  TRACE_DURATION("audio", "Gain::GetCaptureUsageGain");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  capture_usage_gain_[usage_index].store(clamped_gain_db);
-}
-
-void Gain::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) {
-  TRACE_DURATION("audio", "Gain::SetRenderUsageGainAdjustment");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  render_usage_gain_adjustment_[usage_index].store(clamped_gain_db);
-}
-
-void Gain::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
-  TRACE_DURATION("audio", "Gain::SetCaptureUsageGainAdjustment");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  capture_usage_gain_adjustment_[usage_index].store(clamped_gain_db);
-}
-
-void Gain::SetUsage(fuchsia::media::Usage usage) { usage_ = std::move(usage); }
+void Gain::SetUsage(fuchsia::media::Usage usage) { usage_ = {std::move(usage)}; }
 
 // TODO(mpuryear): When we add ramping of another gain stage (dest, or a new
 // stage), refactor to accept a stage index or a pointer to a ramp-struct.

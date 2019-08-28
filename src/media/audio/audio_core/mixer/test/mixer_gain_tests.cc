@@ -29,8 +29,10 @@ class GainTest : public testing::Test {
     fuchsia::media::Usage usage;
     usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);
     gain_.SetUsage(std::move(usage));
-    gain_.SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, Gain::kUnityGainDb);
-    gain_.SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA, Gain::kUnityGainDb);
+    Gain::Settings().SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA,
+                                        Gain::kUnityGainDb);
+    Gain::Settings().SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA,
+                                                  Gain::kUnityGainDb);
 
     rate_1khz_output_ = TimelineRate(1000, ZX_SEC(1));
   }
@@ -48,9 +50,9 @@ class GainTest : public testing::Test {
                        float usage_gain_adjustment_db) {
     gain_.SetSourceGain(source_gain_db);
     gain_.SetDestGain(dest_gain_db);
-    gain_.SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, usage_gain_db);
-    gain_.SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA,
-                                       usage_gain_adjustment_db);
+    Gain::Settings().SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, usage_gain_db);
+    Gain::Settings().SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA,
+                                                  usage_gain_adjustment_db);
 
     EXPECT_EQ(Gain::kMuteScale, gain_.GetGainScale());
 
@@ -176,7 +178,7 @@ TEST_F(GainTest, SourceGainCaching) {
 // MTWN-70 concerns Gain's statefulness. Does it need this complexity?
 TEST_F(GainTest, MaxClamp) {
   // Verify that Usage gain is clamped to 0.0db
-  gain_.SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, Gain::kMaxGainDb);
+  Gain::Settings().SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, Gain::kMaxGainDb);
   EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 
   // Renderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).

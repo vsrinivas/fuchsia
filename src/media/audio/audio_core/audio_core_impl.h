@@ -90,8 +90,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, SystemGainMuteProvider {
   void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
   void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
 
-  float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage);
-  float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage);
+  float GetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage);
+  float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage);
 
   friend class AudioAdmin;
 
