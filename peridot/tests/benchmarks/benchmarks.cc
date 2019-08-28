@@ -7,29 +7,29 @@
 #include "garnet/testing/benchmarking/benchmarking.h"
 #include "peridot/tests/benchmarks/gfx_benchmarks.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
-int main(int argc, const char** argv) {
-  auto maybe_benchmarks_runner =
-      benchmarking::BenchmarksRunner::Create(argc, argv);
-  if (!maybe_benchmarks_runner) {
-    exit(1);
-  }
+namespace {
 
-  auto& benchmarks_runner = *maybe_benchmarks_runner;
+// This is the set of tests whose results will get uploaded to the Catapult
+// perf dashboard by the perf bots on CI.  This is the non-perfcompare
+// case.
+void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner) {
+  FXL_DCHECK(benchmarks_runner);
 
   // Benchmark example, here for demonstration.
-  benchmarks_runner.AddTspecBenchmark(
+  benchmarks_runner->AddTspecBenchmark(
       "benchmark_example",
       "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
 
   // Performance tests implemented in the Zircon repo.
-  benchmarks_runner.AddLibPerfTestBenchmark(
+  benchmarks_runner->AddLibPerfTestBenchmark(
       "zircon.perf_test",
       "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test");
 
   // Performance tests implemented in the Garnet repo (the name
   // "zircon_benchmarks" is now misleading).
-  benchmarks_runner.AddLibPerfTestBenchmark(
+  benchmarks_runner->AddLibPerfTestBenchmark(
       "zircon_benchmarks",
       "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
 
@@ -37,42 +37,42 @@ int main(int argc, const char** argv) {
   // function properly.
 
   // clang-format off
-  benchmarks_runner.AddTspecBenchmark("ledger.add_new_page_after_clear", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_after_clear.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.add_new_page_precached", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_precached.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.add_new_page", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.get_same_page", "/pkgfs/packages/ledger_benchmarks/0/data/get_same_page.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.get_page_id", "/pkgfs/packages/ledger_benchmarks/0/data/get_page_id.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.get_small_entry", "/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.get_small_entry_inline", "/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry_inline.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.get_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/get_big_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.put", "/pkgfs/packages/ledger_benchmarks/0/data/put.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.put_as_reference", "/pkgfs/packages/ledger_benchmarks/0/data/put_as_reference.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.put_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/put_big_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.transaction", "/pkgfs/packages/ledger_benchmarks/0/data/transaction.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.update_entry", "/pkgfs/packages/ledger_benchmarks/0/data/update_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.update_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/update_big_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.update_entry_transactions", "/pkgfs/packages/ledger_benchmarks/0/data/update_entry_transactions.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.delete_entry", "/pkgfs/packages/ledger_benchmarks/0/data/delete_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.delete_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/delete_big_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.delete_entry_transactions", "/pkgfs/packages/ledger_benchmarks/0/data/delete_entry_transactions.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.disk_space_empty_ledger", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_ledger.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.disk_space_empty_pages", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_pages.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.disk_space_entries", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_entries.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.disk_space_small_keys", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_small_keys.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.disk_space_updates", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_updates.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.disk_space_one_commit_per_entry", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_one_commit_per_entry.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.disk_space_cleared_page", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_cleared_page.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.put_memory", "/pkgfs/packages/ledger_benchmarks/0/data/put_memory.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.stories_single_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_single_active.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.stories_many_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_many_active.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.stories_wait_cached", "/pkgfs/packages/ledger_benchmarks/0/data/stories_wait_cached.tspec");
-  benchmarks_runner.AddTspecBenchmark("ledger.stories_memory", "/pkgfs/packages/ledger_benchmarks/0/data/stories_memory.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.add_new_page_after_clear", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_after_clear.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.add_new_page_precached", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_precached.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.add_new_page", "/pkgfs/packages/ledger_benchmarks/0/data/add_new_page.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.get_same_page", "/pkgfs/packages/ledger_benchmarks/0/data/get_same_page.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.get_page_id", "/pkgfs/packages/ledger_benchmarks/0/data/get_page_id.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.get_small_entry", "/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.get_small_entry_inline", "/pkgfs/packages/ledger_benchmarks/0/data/get_small_entry_inline.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.get_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/get_big_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.put", "/pkgfs/packages/ledger_benchmarks/0/data/put.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.put_as_reference", "/pkgfs/packages/ledger_benchmarks/0/data/put_as_reference.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.put_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/put_big_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.transaction", "/pkgfs/packages/ledger_benchmarks/0/data/transaction.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.update_entry", "/pkgfs/packages/ledger_benchmarks/0/data/update_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.update_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/update_big_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.update_entry_transactions", "/pkgfs/packages/ledger_benchmarks/0/data/update_entry_transactions.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.delete_entry", "/pkgfs/packages/ledger_benchmarks/0/data/delete_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.delete_big_entry", "/pkgfs/packages/ledger_benchmarks/0/data/delete_big_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.delete_entry_transactions", "/pkgfs/packages/ledger_benchmarks/0/data/delete_entry_transactions.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_empty_ledger", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_ledger.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_empty_pages", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_empty_pages.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_entries", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_entries.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_small_keys", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_small_keys.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_updates", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_updates.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_one_commit_per_entry", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_one_commit_per_entry.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.disk_space_cleared_page", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_cleared_page.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.put_memory", "/pkgfs/packages/ledger_benchmarks/0/data/put_memory.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.stories_single_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_single_active.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.stories_many_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_many_active.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.stories_wait_cached", "/pkgfs/packages/ledger_benchmarks/0/data/stories_wait_cached.tspec");
+  benchmarks_runner->AddTspecBenchmark("ledger.stories_memory", "/pkgfs/packages/ledger_benchmarks/0/data/stories_memory.tspec");
   // clang-format on
 
   // Run Modular benchmarks.
-  benchmarks_runner.AddTspecBenchmark("modular.story_benchmark",
-                                      "/pkgfs/packages/modular_benchmarks/0/"
-                                      "data/story_benchmark.tspec");
+  benchmarks_runner->AddTspecBenchmark("modular.story_benchmark",
+                                       "/pkgfs/packages/modular_benchmarks/0/"
+                                       "data/story_benchmark.tspec");
 
   // TODO(PT-181, PT-182): The following input latency and graphics benchmarks
   // do not make an effort to close the graphics application being benchmarked
@@ -82,15 +82,15 @@ int main(int argc, const char** argv) {
   // benchmarks. The long term plan is to migrate them away from here and into
   // the e2e testing framework, which is tracked in the TODO bugs.
 
-  std::string benchmarks_bot_name = benchmarks_runner.benchmarks_bot_name();
+  std::string benchmarks_bot_name = benchmarks_runner->benchmarks_bot_name();
 
   // TODO(PT-118): Input latency tests are only currently supported on NUC.
   if (benchmarks_bot_name == "peridot-x64-perf-dawson_canyon") {
     // simplest_app
     {
       constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
-      std::string out_file = benchmarks_runner.MakeTempFile();
-      benchmarks_runner.AddCustomBenchmark(
+      std::string out_file = benchmarks_runner->MakeTempFile();
+      benchmarks_runner->AddCustomBenchmark(
           kLabel,
           {"/bin/run",
            "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
@@ -101,8 +101,8 @@ int main(int argc, const char** argv) {
     // yuv_to_image_pipe
     {
       constexpr const char* kLabel = "fuchsia.input_latency.yuv_to_image_pipe";
-      std::string out_file = benchmarks_runner.MakeTempFile();
-      benchmarks_runner.AddCustomBenchmark(
+      std::string out_file = benchmarks_runner->MakeTempFile();
+      benchmarks_runner->AddCustomBenchmark(
           kLabel,
           {"/bin/run",
            "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
@@ -120,7 +120,65 @@ int main(int argc, const char** argv) {
     exit(1);
   }
 
-  AddGraphicsBenchmarks(&benchmarks_runner);
+  AddGraphicsBenchmarks(benchmarks_runner);
+}
+
+// This is the set of tests that are run by the perfcompare CQ trybot.
+//
+// TODO(35472): Merge this with AddPerfTests() so that perfcompare runs the
+// same set of tests.  Perfcompare currently runs only a subset of the
+// tests.  Part of the reason for running a subset is that the full set
+// takes a long time and might exceed the bot timeout.
+void AddPerfcompareTests(benchmarking::BenchmarksRunner* benchmarks_runner) {
+  FXL_DCHECK(benchmarks_runner);
+
+  // Reduce the number of iterations of each perf test within each process
+  // given that we are launching each process multiple times.
+  std::vector<std::string> extra_args = {"--runs", "100"};
+
+  // Run these processes multiple times in order to account for
+  // between-process variation in results (e.g. due to memory layout chosen
+  // when a process starts).
+  for (int process = 0; process < 6; ++process) {
+    // Performance tests implemented in the Zircon repo.
+    benchmarks_runner->AddLibPerfTestBenchmark(
+        fxl::StringPrintf("zircon.perf_test_process%06d", process),
+        "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test",
+        extra_args);
+
+    // Performance tests implemented in the Garnet repo (the name
+    // "zircon_benchmarks" is now misleading).
+    benchmarks_runner->AddLibPerfTestBenchmark(
+        fxl::StringPrintf("zircon_benchmarks_process%06d", process),
+        "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
+        extra_args);
+  }
+}
+
+}  // namespace
+
+int main(int argc, const char** argv) {
+  bool perfcompare_mode = false;
+  if (argc >= 2 && strcmp(argv[1], "--perfcompare_mode") == 0) {
+    perfcompare_mode = true;
+    // Remove argv[1] from the argument list.
+    for (int i = 2; i < argc; ++i)
+      argv[i - 1] = argv[i];
+    --argc;
+  }
+
+  auto maybe_benchmarks_runner =
+      benchmarking::BenchmarksRunner::Create(argc, argv);
+  if (!maybe_benchmarks_runner) {
+    exit(1);
+  }
+
+  auto& benchmarks_runner = *maybe_benchmarks_runner;
+  if (perfcompare_mode) {
+    AddPerfcompareTests(&benchmarks_runner);
+  } else {
+    AddPerfTests(&benchmarks_runner);
+  }
 
   benchmarks_runner.Finish();
 }

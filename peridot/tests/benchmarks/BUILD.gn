@@ -27,18 +27,6 @@ executable("fuchsia_benchmarks_bin") {
   ]
 }
 
-executable("fuchsia_benchmarks_perfcompare_bin") {
-  output_name = "fuchsia_benchmarks_perfcompare"
-
-  sources = [
-    "benchmarks_perfcompare.cc",
-  ]
-
-  deps = [
-    "//garnet/testing/benchmarking:benchmarking",
-  ]
-}
-
 zircon_extras_manifest("zircon-test-manifest") {
   visibility = [ ":*" ]
   manifest = "tests"
@@ -60,10 +48,6 @@ package("fuchsia_benchmarks") {
       name = "fuchsia_benchmarks"
     },
     {
-      shell = true
-      name = "fuchsia_benchmarks_perfcompare"
-    },
-    {
       name = rebase_path("benchmarks_perfcompare.sh")
       dest = "benchmarks_perfcompare.sh"
     },
@@ -71,7 +55,6 @@ package("fuchsia_benchmarks") {
 
   deps = [
     ":fuchsia_benchmarks_bin",
-    ":fuchsia_benchmarks_perfcompare_bin",
     ":zircon-test-manifest",
   ]
 }
