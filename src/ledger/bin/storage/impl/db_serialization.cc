@@ -8,6 +8,7 @@
 
 #include <limits>
 
+#include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/lib/fxl/strings/concatenate.h"
@@ -71,16 +72,10 @@ std::string ReferenceRow::GetKeyForCommit(CommitIdView source, const ObjectDiges
 }
 
 std::string ReferenceRow::GetKeyPrefixFor(const ObjectDigest& destination) {
-  // Because |destination| can be of arbitrary length and content, we prefix it
-  // with a byte containing its length to avoid collisions. The content of
-  // destination can be arbitrary, but not longer that the size we can
-  // serialize.
-  FXL_DCHECK(destination.Serialize().size() <= std::numeric_limits<uint8_t>::max());
-  return fxl::Concatenate({
-      kPrefix,                                                              //
-      SerializeData(static_cast<uint8_t>(destination.Serialize().size())),  //
-      destination.Serialize(),                                              //
-  });
+  // Check that |destination| size is fixed, ie. |destination| is not a reference to an inline
+  // object, to ensure there is no ambiguity in the encoding.
+  FXL_DCHECK(destination.Serialize().size() == kStorageHashSize + 1);
+  return fxl::Concatenate({kPrefix, destination.Serialize()});
 };
 
 std::string ReferenceRow::GetObjectKeyPrefixFor(const ObjectDigest& destination) {

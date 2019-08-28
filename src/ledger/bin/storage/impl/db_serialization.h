@@ -42,6 +42,8 @@ class ObjectRow {
   static std::string GetKeyFor(const ObjectDigest& object_digest);
 };
 
+// Serialization of rows for reference counting.
+// The methods in this class are valid only for non-inline |destination| pieces.
 class ReferenceRow {
  public:
   static constexpr fxl::StringView kPrefix = "refcounts/";

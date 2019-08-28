@@ -89,18 +89,16 @@ of references between objects, as well as from commits to objects.
 
 For each reference from a piece or object with digest `source_id` to a piece or
 object with digest `destination_id`, a separate row is created. We define
-`length` as a single byte encoding the size of `destination_id`, and `type` as
-either `lazy` for references from a BTree node to a lazy value and `eager`
-otherwise. Then the row is:
-- Row key: `refcounts/{length}{destination_id}/object/{type}/{source_id}`
+`type` as either `lazy` for references from a BTree node to a lazy value and
+`eager` otherwise. Then the row is:
+- Row key: `refcounts/{destination_id}/object/{type}/{source_id}`
 - Row value: (empty value)
 
 ### Commit references
 
 For each reference from a commit with commit id `source_id` to a BTree node with
-digest `destination_id`, a separate row is created. We define `length` as a
-single byte encoding the size of `destination_id`. Then the row is:
-- Row key: `refcounts/{length}{destination_id}/commit/{source_id}`
+digest `destination_id`, a separate row is created:
+- Row key: `refcounts/{destination_id}/commit/{source_id}`
 - Row value: (empty value)
 
 ## Synchronization status

@@ -40,19 +40,18 @@ TEST_F(DbSerialization, SerializationVersionControl) {
   EXPECT_EQ(ObjectRow::GetKeyFor(ObjectDigest("object")), "objects/object");
 
   // Reference row
-  fxl::StringView destination = "destination";
-  char destination_size = static_cast<char>(destination.size());
-  fxl::StringView destination_size_str(&destination_size, 1);
+  // Destination object digest must be exactly 32+1 bytes long (ie. non-inline).
+  EXPECT_EQ(ReferenceRow::GetKeyForObject(ObjectDigest("source"),
+                                          ObjectDigest("0123456789ABCDEF0123456789ABCDEF0"),
+                                          KeyPriority::EAGER),
+            "refcounts/0123456789ABCDEF0123456789ABCDEF0/object/eager/source");
+  EXPECT_EQ(ReferenceRow::GetKeyForObject(ObjectDigest("source"),
+                                          ObjectDigest("0123456789ABCDEF0123456789ABCDEF0"),
+                                          KeyPriority::LAZY),
+            "refcounts/0123456789ABCDEF0123456789ABCDEF0/object/lazy/source");
   EXPECT_EQ(
-      ReferenceRow::GetKeyForObject(ObjectDigest("source"), ObjectDigest("destination"),
-                                    KeyPriority::EAGER),
-      fxl::Concatenate({"refcounts/", destination_size_str, "destination/object/eager/source"}));
-  EXPECT_EQ(
-      ReferenceRow::GetKeyForObject(ObjectDigest("source"), ObjectDigest("destination"),
-                                    KeyPriority::LAZY),
-      fxl::Concatenate({"refcounts/", destination_size_str, "destination/object/lazy/source"}));
-  EXPECT_EQ(ReferenceRow::GetKeyForCommit("source", ObjectDigest("destination")),
-            fxl::Concatenate({"refcounts/", destination_size_str, "destination/commit/source"}));
+      ReferenceRow::GetKeyForCommit("source", ObjectDigest("0123456789ABCDEF0123456789ABCDEF0")),
+      "refcounts/0123456789ABCDEF0123456789ABCDEF0/commit/source");
 
   // Unsynced Commit row.
   EXPECT_EQ(UnsyncedCommitRow::GetKeyFor("commit"), "unsynced/commits/commit");
@@ -117,22 +116,6 @@ TEST_F(DbSerialization, ReferenceRow) {
               StartsWith(ReferenceRow::GetCommitKeyPrefixFor(destination)));
   EXPECT_THAT(ReferenceRow::GetKeyForCommit(commit, destination),
               Not(StartsWith(ReferenceRow::GetObjectKeyPrefixFor(destination))));
-}
-
-TEST_F(DbSerialization, ReferenceRowNoCollision) {
-  // This test needs to rely on the implementation details of ReferencRow. Its
-  // purpose is to fails if we remove the length byte before destination in the
-  // encoding, and there is unfortunately no generic way to construct such a
-  // collision.
-  const ObjectDigest object1 = MakeObjectDigest("");
-  const ObjectDigest object2 = MakeObjectDigest(fxl::Concatenate(
-      {ReferenceRow::kObjectPrefix, ReferenceRow::kEagerPrefix, object1.Serialize()}));
-  EXPECT_EQ(fxl::Concatenate({object2.Serialize(), ReferenceRow::kObjectPrefix,
-                              ReferenceRow::kEagerPrefix, object1.Serialize()}),
-            fxl::Concatenate({object1.Serialize(), ReferenceRow::kObjectPrefix,
-                              ReferenceRow::kEagerPrefix, object2.Serialize()}));
-  EXPECT_NE(ReferenceRow::GetKeyForObject(object1, object2, KeyPriority::EAGER),
-            ReferenceRow::GetKeyForObject(object2, object1, KeyPriority::EAGER));
 }
 
 }  // namespace
