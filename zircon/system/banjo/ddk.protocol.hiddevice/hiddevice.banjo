@@ -1,0 +1,45 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.hiddevice;
+
+using zx;
+
+enum HidReportType : uint8 {
+    INPUT = 1;
+    OUTPUT = 2;
+    FEATURE = 3;
+};
+
+const uint16 HID_MAX_DESC_LEN = 8192;
+const uint16 HID_MAX_REPORT_LEN = 8192;
+const uint16 HID_MAX_REPORT_IDS = 256;
+
+[Layout = "ddk-interface"]
+protocol HidReportListener {
+    /// Sends a single report to the listener.
+    ReceiveReport(vector<uint8>:MAX_REPORT_LEN report);
+};
+
+[Layout = "ddk-protocol"]
+protocol HidDevice {
+    /// Register a listener to begin receiving HID Reports. At the moment only a single listener
+    /// is supported. It is an error to call this without unregistering.
+    RegisterListener(HidReportListener listener) -> (zx.status s);
+
+    /// Unregister the listener.
+    UnregisterListener();
+
+    GetDescriptor() -> (zx.status s, vector<uint8>:MAX_DESC_LEN descriptor);
+
+    /// Request a given report. Can be used to get FEATURE and INPUT reports. Getting an OUTPUT
+    /// report is an error. This should be used most frequently to get FEATURE reports,
+    /// since most devices will send normal INPUT reports through the Listener API.
+    GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, vector<uint8>:MAX_REPORT_LEN
+            report);
+
+    /// Set a given report. Only FEATURE and OUTPUT type reports can be set. Setting an INPUT
+    /// report is an error.
+    SetReport(HidReportType rpt_type, uint8 rpt_id, vector<uint8>:MAX_REPORT_LEN report) -> (zx.status s);
+};

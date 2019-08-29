@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/input/c/fidl.h>
 
 #include <array>
+#include <memory>
 #include <vector>
 
 #include <ddk/binding.h>
@@ -17,6 +18,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/hidbus.h>
+#include <ddktl/protocol/hiddevice.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
@@ -41,7 +43,7 @@ struct HidInstance : public fbl::DoublyLinkedListable<HidInstance*> {
 
 using DeviceType = ddk::Device<HidDevice, ddk::Unbindable, ddk::Openable>;
 
-class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_HID_DEVICE> {
+class HidDevice : public DeviceType, public ddk::HidDeviceProtocol<HidDevice, ddk::base_protocol> {
  public:
   explicit HidDevice(zx_device_t* parent) : DeviceType(parent) {}
   ~HidDevice() = default;
@@ -50,6 +52,21 @@ class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_HID_D
   void DdkRelease();
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   void DdkUnbind();
+
+  // |HidDeviceProtocol|
+  zx_status_t HidDeviceRegisterListener(const hid_report_listener_protocol_t* listener);
+  // |HidDeviceProtocol|
+  void HidDeviceUnregisterListener();
+  // |HidDeviceProtocol|
+  zx_status_t HidDeviceGetDescriptor(uint8_t* out_descriptor_data, size_t descriptor_count,
+                                     size_t* out_descriptor_actual);
+  // |HidDeviceProtocol|
+  zx_status_t HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
+                                 uint8_t* out_report_data, size_t report_count,
+                                 size_t* out_report_actual);
+  // |HidDeviceProtocol|
+  zx_status_t HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
+                                 const uint8_t* report_data, size_t report_count);
 
   static void IoQueue(void* cookie, const void* _buf, size_t len);
 
@@ -98,6 +115,9 @@ class HidDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_HID_D
   fbl::DoublyLinkedList<HidInstance*> instance_list_ __TA_GUARDED(instance_lock_);
 
   std::array<char, ZX_DEVICE_NAME_MAX + 1> name_;
+
+  fbl::Mutex listener_lock_;
+  ddk::HidReportListenerProtocolClient report_listener_ __TA_GUARDED(listener_lock_);
 };
 
 }  // namespace hid_driver

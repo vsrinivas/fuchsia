@@ -10,6 +10,7 @@ driver("hid") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.hiddevice",
     "$zx/system/fidl/fuchsia-hardware-input:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
@@ -34,6 +35,7 @@ test("hid-test") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/banjo/ddk.protocol.hiddevice",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/fidl/fuchsia-hardware-input:c",
     "$zx/system/ulib/ddk",

@@ -286,8 +286,8 @@ zx_status_t HidDevice::ProcessReportDescriptor() {
   reports.sizes = sizes_.data();
   reports.has_rpt_id = false;
 
-  zx_status_t status = hid_lib_parse_reports(hid_report_desc_.data(), hid_report_desc_.size(),
-                                             &reports);
+  zx_status_t status =
+      hid_lib_parse_reports(hid_report_desc_.data(), hid_report_desc_.size(), &reports);
   if (status != ZX_OK) {
     return status;
   }
@@ -473,7 +473,73 @@ void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len) {
       }
       mtx_unlock(&instance.fifo.lock);
     }
+
+    {
+      fbl::AutoLock lock(&hid->listener_lock_);
+      if (hid->report_listener_.is_valid()) {
+        hid->report_listener_.ReceiveReport(rbuf, rlen);
+      }
+    }
   }
+}
+
+zx_status_t HidDevice::HidDeviceRegisterListener(const hid_report_listener_protocol_t* listener) {
+  fbl::AutoLock lock(&listener_lock_);
+
+  if (report_listener_.is_valid()) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  report_listener_ = ddk::HidReportListenerProtocolClient(listener);
+
+  return ZX_OK;
+}
+
+void HidDevice::HidDeviceUnregisterListener() {
+  fbl::AutoLock lock(&listener_lock_);
+  report_listener_.clear();
+}
+
+zx_status_t HidDevice::HidDeviceGetDescriptor(uint8_t* out_descriptor_data, size_t descriptor_count,
+                                              size_t* out_descriptor_actual) {
+  if (descriptor_count < hid_report_desc_.size()) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  memcpy(out_descriptor_data, hid_report_desc_.data(), hid_report_desc_.size());
+  *out_descriptor_actual = hid_report_desc_.size();
+  return ZX_OK;
+}
+
+zx_status_t HidDevice::HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
+                                          uint8_t* out_report_data, size_t report_count,
+                                          size_t* out_report_actual) {
+  input_report_size_t needed = GetReportSizeById(rpt_id, rpt_type);
+  if (needed == 0) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (needed > report_count) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  uint8_t report[HID_MAX_REPORT_LEN];
+  size_t actual = 0;
+  zx_status_t status = hidbus_.GetReport(rpt_type, rpt_id, report, needed, &actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+  memcpy(out_report_data, report, actual);
+  *out_report_actual = actual;
+
+  return ZX_OK;
+}
+
+zx_status_t HidDevice::HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
+                                          const uint8_t* report_data, size_t report_count) {
+  input_report_size_t needed = GetReportSizeById(rpt_id, rpt_type);
+  if (needed < report_count) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  zx_status_t status = hidbus_.SetReport(rpt_type, rpt_id, report_data, report_count);
+  return status;
 }
 
 hidbus_ifc_protocol_ops_t hid_ifc_ops = {
@@ -483,9 +549,8 @@ hidbus_ifc_protocol_ops_t hid_ifc_ops = {
 zx_status_t HidDevice::SetReportDescriptor() {
   hid_report_desc_.resize(HID_MAX_DESC_LEN);
   size_t actual;
-  zx_status_t status = hidbus_.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT,
-                                             hid_report_desc_.data(), hid_report_desc_.size(),
-                                             &actual);
+  zx_status_t status = hidbus_.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT, hid_report_desc_.data(),
+                                             hid_report_desc_.size(), &actual);
   if (status != ZX_OK) {
     return status;
   }

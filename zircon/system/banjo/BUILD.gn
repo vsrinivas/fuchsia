@@ -35,6 +35,7 @@ group("banjo") {
     "ddk.protocol.gpio",
     "ddk.protocol.gpioimpl",
     "ddk.protocol.hidbus",
+    "ddk.protocol.hiddevice",
     "ddk.protocol.i2c",
     "ddk.protocol.i2cimpl",
     "ddk.protocol.intelgpucore",

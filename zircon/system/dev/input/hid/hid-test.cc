@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <ddktl/protocol/hidbus.h>
+#include <hid/ambient-light.h>
 #include <hid/boot.h>
 #include <hid/paradise.h>
 #include <zxtest/zxtest.h>
@@ -82,14 +83,14 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
 
   zx_status_t HidbusGetDescriptor(hid_description_type_t desc_type, void* out_data_buffer,
                                   size_t data_size, size_t* out_data_actual) {
-  if (data_size < report_desc_.size()) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
+    if (data_size < report_desc_.size()) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
 
-  memcpy(out_data_buffer, report_desc_.data(), report_desc_.size());
-  *out_data_actual = report_desc_.size();
+    memcpy(out_data_buffer, report_desc_.data(), report_desc_.size());
+    *out_data_actual = report_desc_.size();
 
-  return ZX_OK;
+    return ZX_OK;
   }
 
   void SetDescriptor(const uint8_t* desc, size_t desc_len) {
@@ -98,11 +99,25 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
 
   zx_status_t HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_id, void* out_data_buffer,
                               size_t data_size, size_t* out_data_actual) {
+    if (rpt_id != last_set_report_id_) {
+      return ZX_ERR_INTERNAL;
+    }
+    if (data_size < last_set_report_.size()) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+
+    memcpy(out_data_buffer, last_set_report_.data(), last_set_report_.size());
+    *out_data_actual = last_set_report_.size();
+
     return ZX_OK;
   }
 
   zx_status_t HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_id, const void* data_buffer,
                               size_t data_size) {
+    last_set_report_id_ = rpt_id;
+    auto data_bytes = reinterpret_cast<const uint8_t*>(data_buffer);
+    last_set_report_ = std::vector<uint8_t>(data_bytes, data_bytes + data_size);
+
     return ZX_OK;
   }
 
@@ -127,6 +142,9 @@ class FakeHidbus : public ddk::HidbusProtocol<FakeHidbus> {
 
  protected:
   std::vector<uint8_t> report_desc_;
+
+  std::vector<uint8_t> last_set_report_;
+  uint8_t last_set_report_id_;
 
   hid_protocol_t hid_protocol_ = HID_PROTOCOL_REPORT;
   hidbus_protocol_t proto_ = {};
@@ -325,6 +343,91 @@ TEST_F(HidDeviceTest, SettingBootModeKbd) {
   for (size_t i = 0; i < boot_kbd_desc_size; i++) {
     ASSERT_EQ(boot_kbd_desc[i], received_desc[i]);
   }
+}
+
+TEST_F(HidDeviceTest, BanjoGetDescriptor) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(fake_hidbus_.GetProto()));
+
+  size_t known_size;
+  const uint8_t* known_descriptor = get_boot_mouse_report_desc(&known_size);
+
+  uint8_t report_descriptor[HID_MAX_DESC_LEN];
+  size_t actual;
+  ASSERT_OK(device_->HidDeviceGetDescriptor(report_descriptor, sizeof(report_descriptor), &actual));
+
+  ASSERT_EQ(known_size, actual);
+  ASSERT_BYTES_EQ(known_descriptor, report_descriptor, known_size);
+}
+
+TEST_F(HidDeviceTest, BanjoRegisterListenerSendReport) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(fake_hidbus_.GetProto()));
+
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+
+  struct ReportCtx {
+    sync_completion_t* completion;
+    uint8_t* known_report;
+  };
+
+  sync_completion_t seen_report;
+  ReportCtx ctx;
+  ctx.completion = &seen_report;
+  ctx.known_report = mouse_report;
+
+  hid_report_listener_protocol_ops_t ops;
+  ops.receive_report = [](void* ctx, const uint8_t* report_list, size_t report_count) {
+    ASSERT_EQ(sizeof(mouse_report), report_count);
+    auto report_ctx = reinterpret_cast<ReportCtx*>(ctx);
+    ASSERT_BYTES_EQ(report_ctx->known_report, report_list, report_count);
+    sync_completion_signal(report_ctx->completion);
+  };
+
+  hid_report_listener_protocol_t listener;
+  listener.ctx = &ctx;
+  listener.ops = &ops;
+
+  ASSERT_OK(device_->HidDeviceRegisterListener(&listener));
+
+  fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+
+  ASSERT_OK(sync_completion_wait(&seen_report, zx::time::infinite().get()));
+  device_->HidDeviceUnregisterListener();
+}
+
+TEST_F(HidDeviceTest, BanjoGetSetReport) {
+  const uint8_t* desc;
+  size_t desc_size = get_ambient_light_report_desc(&desc);
+  fake_hidbus_.SetDescriptor(desc, desc_size);
+
+  hid_info_t info = {};
+  info.device_class = HID_DEVICE_CLASS_OTHER;
+  info.boot_device = false;
+  fake_hidbus_.SetHidInfo(info);
+
+  ASSERT_OK(device_->Bind(fake_hidbus_.GetProto()));
+
+  ambient_light_feature_rpt_t feature_report = {};
+  feature_report.rpt_id = AMBIENT_LIGHT_RPT_ID_FEATURE;
+  // Below value are chosen arbitrarily.
+  feature_report.state = 100;
+  feature_report.interval_ms = 50;
+  feature_report.threshold_high = 40;
+  feature_report.threshold_low = 10;
+
+  ASSERT_OK(device_->HidDeviceSetReport(HID_REPORT_TYPE_FEATURE, AMBIENT_LIGHT_RPT_ID_FEATURE,
+                                        reinterpret_cast<uint8_t*>(&feature_report),
+                                        sizeof(feature_report)));
+
+  ambient_light_feature_rpt_t received_report = {};
+  size_t actual;
+  ASSERT_OK(device_->HidDeviceGetReport(HID_REPORT_TYPE_FEATURE, AMBIENT_LIGHT_RPT_ID_FEATURE,
+                                        reinterpret_cast<uint8_t*>(&received_report),
+                                        sizeof(received_report), &actual));
+
+  ASSERT_EQ(sizeof(received_report), actual);
+  ASSERT_BYTES_EQ(&feature_report, &received_report, actual);
 }
 
 }  // namespace hid_driver
