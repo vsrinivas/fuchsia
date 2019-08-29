@@ -21,11 +21,11 @@ namespace gfx {
 namespace {
 
 constexpr ResourceTypeFlags kHasChildren = ResourceType::kEntityNode | ResourceType::kOpacityNode |
-                                           ResourceType::kScene | ResourceType::kView;
-
+                                           ResourceType::kScene | ResourceType::kViewNode;
 constexpr ResourceTypeFlags kHasTransform = ResourceType::kClipNode | ResourceType::kEntityNode |
                                             ResourceType::kOpacityNode | ResourceType::kScene |
-                                            ResourceType::kShapeNode | ResourceType::kViewHolder;
+                                            ResourceType::kShapeNode | ResourceType::kViewHolder |
+                                            ResourceType::kViewNode;
 constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode | ResourceType::kViewHolder;
 
 }  // anonymous namespace

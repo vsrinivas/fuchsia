@@ -109,7 +109,7 @@ void ViewHolder::OnSceneChanged() {
 bool ViewHolder::CanAddChild(NodePtr child_node) {
   // A ViewHolder can only have a child node that is associated with the
   // connected View.
-  if (!(child_node->type_flags() & ResourceType::kView)) {
+  if (!(child_node->type_flags() & ResourceType::kViewNode)) {
     return false;
   }
 

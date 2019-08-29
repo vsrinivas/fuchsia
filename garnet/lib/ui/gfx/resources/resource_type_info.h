@@ -38,6 +38,7 @@ enum ResourceType : uint64_t {
 
   // Views.
   kView = 1ul << 16,
+  kViewNode = 1ul << 36,
   kViewHolder = 1ul << 17,
 
   // Nodes.

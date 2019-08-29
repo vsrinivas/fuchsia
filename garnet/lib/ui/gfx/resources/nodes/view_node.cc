@@ -10,7 +10,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo ViewNode::kTypeInfo = {ResourceType::kNode | ResourceType::kView,
+const ResourceTypeInfo ViewNode::kTypeInfo = {ResourceType::kNode | ResourceType::kViewNode,
                                               "ViewNode"};
 
 ViewNode::ViewNode(Session* session, fxl::WeakPtr<View> view)
