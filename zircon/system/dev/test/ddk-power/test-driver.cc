@@ -2,28 +2,71 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/power/test/llcpp/fidl.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/alloc_checker.h>
 
+using llcpp::fuchsia::device::DevicePowerState;
+using llcpp::fuchsia::device::DevicePowerStateInfo;
+using llcpp::fuchsia::device::power::test::TestDevice;
+
 class TestPowerDriver;
-using DeviceType = ddk::Device<TestPowerDriver, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<TestPowerDriver, ddk::Unbindable, ddk::Suspendable, ddk::Messageable>;
 class TestPowerDriver : public DeviceType,
-                                    public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD> {
+                        public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD>,
+                        public TestDevice::Interface {
  public:
   TestPowerDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
   void DdkUnbind() { DdkRemove(); }
   void DdkRelease() { delete this; }
+  zx_status_t DdkSuspend(uint32_t flags) {
+    // Set current_power_state to indicate that the suspend is called.
+    current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D1;
+    return ZX_OK;
+  }
+  void AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
+                              AddDeviceWithPowerArgsCompleter::Sync completer) override;
+
+  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync completer) override;
+
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    DdkTransaction transaction(txn);
+    ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
+    return transaction.Status();
+  }
+
+ private:
+  DevicePowerState current_power_state_ = DevicePowerState::DEVICE_POWER_STATE_D0;
 };
 
-zx_status_t TestPowerDriver::Bind() {
-  return DdkAdd("power-test");
+zx_status_t TestPowerDriver::Bind() { return DdkAdd("power-test"); }
+
+void TestPowerDriver::AddDeviceWithPowerArgs(::fidl::VectorView<DevicePowerStateInfo> info,
+                                             AddDeviceWithPowerArgsCompleter::Sync completer) {
+  ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result response;
+  response.set_err(ZX_ERR_NOT_SUPPORTED);
+  completer.Reply(std::move(response));
+}
+
+void TestPowerDriver::GetCurrentDevicePowerState(
+    GetCurrentDevicePowerStateCompleter::Sync completer) {
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
+  result.set_response(
+      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response{
+          .cur_state = current_power_state_,
+      });
+
+  completer.Reply(std::move(result));
 }
 
 zx_status_t test_power_hook_bind(void* ctx, zx_device_t* device) {
@@ -52,4 +95,4 @@ ZIRCON_DRIVER_BEGIN(TestPower, test_power_hook_driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_POWER_TEST),
 ZIRCON_DRIVER_END(TestPower)
-// clang-format on
+    // clang-format on

@@ -553,13 +553,57 @@ zx_status_t devhost_device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) R
   return dev->CloseOp(flags);
 }
 
+zx_status_t devhost_device_get_dev_power_state_from_mapping(const fbl::RefPtr<zx_device>& dev,
+                                    uint32_t flags, fuchsia_device_SystemPowerStateInfo* info) {
+  // TODO(ravoorir) : When the usage of suspend flags is replaced with
+  // system power states, this function will not need the switch case.
+  // Some suspend flags might be translated to system power states with
+  // additional hints (ex: REBOOT/REBOOT_BOOTLOADER/REBOOT_RECOVERY/MEXEC).
+  // For now, each of these flags are treated as an individual state.
+  fuchsia_device_manager_SystemPowerState sys_state;
+  switch (flags & DEVICE_SUSPEND_REASON_MASK) {
+    case DEVICE_SUSPEND_FLAG_REBOOT:
+      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT;
+      break;
+    case DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY:
+      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_RECOVERY;
+      break;
+    case DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER:
+      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_REBOOT_BOOTLOADER;
+      break;
+    case DEVICE_SUSPEND_FLAG_MEXEC:
+      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_MEXEC;
+      break;
+    case DEVICE_SUSPEND_FLAG_POWEROFF:
+      sys_state = fuchsia_device_manager_SystemPowerState_SYSTEM_POWER_STATE_POWEROFF;
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+  const std::array<fuchsia_device_SystemPowerStateInfo,
+    fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& sys_power_states =
+                                        dev->GetSystemPowerStateMapping();
+  *info = sys_power_states[sys_state];
+  return ZX_OK;
+}
+
 zx_status_t devhost_device_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) REQ_DM_LOCK {
   // TODO this should eventually be two-pass using SUSPENDING/SUSPENDED flags
   enum_lock_acquire();
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  // then invoke our suspend hook
-  if (dev->ops->suspend) {
+  // If new suspend hook is implemented, prefer that.
+  if (dev->ops->suspend_new) {
+    fuchsia_device_SystemPowerStateInfo new_state_info;
+    fuchsia_device_DevicePowerState out_state;
+    ApiAutoRelock relock;
+    status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info);
+    if (status == ZX_OK) {
+      status = dev->ops->suspend_new(dev->ctx, new_state_info.dev_state,
+                                     new_state_info.wakeup_enable, &out_state);
+    }
+  } else if (dev->ops->suspend) {
+    // Invoke suspend hook otherwise.
     ApiAutoRelock relock;
     status = dev->ops->suspend(dev->ctx, flags);
   }
