@@ -79,22 +79,25 @@ class PropertyListMatcher : public ::testing::MatcherInterface<const NodeValue&>
 //  EXPECT_THAT(node, AllOf(PropertyList(::testing::IsEmpty())));
 ::testing::Matcher<const NodeValue&> PropertyList(PropertiesMatcher matcher);
 
-// Matches a particular StringProperty with the given name and value.
+// Matches a particular StringProperty with the given name using the given matcher.
 ::testing::Matcher<const PropertyValue&> StringIs(const std::string& name,
-                                                  const std::string& value);
+                                                  ::testing::Matcher<std::string> matcher);
 
-// Matches a particular ByteVectorProperty with the given name and value.
-::testing::Matcher<const PropertyValue&> ByteVectorIs(const std::string& name,
-                                                      const std::vector<uint8_t>& value);
+// Matches a particular ByteVectorProperty with the given name using the given matcher.
+::testing::Matcher<const PropertyValue&> ByteVectorIs(
+    const std::string& name, ::testing::Matcher<std::vector<uint8_t>> matcher);
 
-// Matches a particular IntProperty with the given name and value.
-::testing::Matcher<const PropertyValue&> IntIs(const std::string& name, int64_t value);
+// Matches a particular IntProperty with the given name using the given matcher.
+::testing::Matcher<const PropertyValue&> IntIs(const std::string& name,
+                                               ::testing::Matcher<int64_t> matcher);
 
-// Matches a particular UintProperty with the given name and value.
-::testing::Matcher<const PropertyValue&> UintIs(const std::string& name, uint64_t value);
+// Matches a particular UintProperty with the given name using the given matcher.
+::testing::Matcher<const PropertyValue&> UintIs(const std::string& name,
+                                                ::testing::Matcher<uint64_t> matcher);
 
-// Matches a particular DoubleProperty with the given name and value.
-::testing::Matcher<const PropertyValue&> DoubleIs(const std::string& name, double value);
+// Matches a particular DoubleProperty with the given name using the given matcher.
+::testing::Matcher<const PropertyValue&> DoubleIs(const std::string& name,
+                                                  ::testing::Matcher<double> matcher);
 
 // Matches the values of an integer array.
 ::testing::Matcher<const PropertyValue&> IntArrayIs(const std::string& name,

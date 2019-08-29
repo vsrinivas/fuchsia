@@ -106,45 +106,48 @@ void internal::PropertyListMatcher::DescribeNegationTo(::std::ostream* os) const
 }
 
 ::testing::Matcher<const PropertyValue&> StringIs(const std::string& name,
-                                                  const std::string& value) {
-  return ::testing::AllOf(::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
-                          ::testing::Property(&PropertyValue::format, PropertyFormat::kString),
-                          ::testing::Property(&PropertyValue::Get<StringPropertyValue>,
-                                              ::testing::Property(&StringPropertyValue::value,
-                                                                  ::testing::StrEq(value))));
+                                                  ::testing::Matcher<std::string> matcher) {
+  return ::testing::AllOf(
+      ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
+      ::testing::Property(&PropertyValue::format, PropertyFormat::kString),
+      ::testing::Property(&PropertyValue::Get<StringPropertyValue>,
+                          ::testing::Property(&StringPropertyValue::value, std::move(matcher))));
 }
 
-::testing::Matcher<const PropertyValue&> ByteVectorIs(const std::string& name,
-                                                      const std::vector<uint8_t>& value) {
+::testing::Matcher<const PropertyValue&> ByteVectorIs(
+    const std::string& name, ::testing::Matcher<std::vector<uint8_t>> matcher) {
   return ::testing::AllOf(::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
                           ::testing::Property(&PropertyValue::format, PropertyFormat::kBytes),
                           ::testing::Property(&PropertyValue::Get<ByteVectorPropertyValue>,
                                               ::testing::Property(&ByteVectorPropertyValue::value,
-                                                                  ::testing::Eq(value))));
+                                                                  std::move(matcher))));
 }
 
-::testing::Matcher<const PropertyValue&> IntIs(const std::string& name, int64_t value) {
+::testing::Matcher<const PropertyValue&> IntIs(const std::string& name,
+                                               ::testing::Matcher<int64_t> matcher) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
       ::testing::Property(&PropertyValue::format, PropertyFormat::kInt),
       ::testing::Property(&PropertyValue::Get<IntPropertyValue>,
-                          ::testing::Property(&IntPropertyValue::value, ::testing::Eq(value))));
+                          ::testing::Property(&IntPropertyValue::value, std::move(matcher))));
 }
 
-::testing::Matcher<const PropertyValue&> UintIs(const std::string& name, uint64_t value) {
+::testing::Matcher<const PropertyValue&> UintIs(const std::string& name,
+                                                ::testing::Matcher<uint64_t> matcher) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
       ::testing::Property(&PropertyValue::format, PropertyFormat::kUint),
       ::testing::Property(&PropertyValue::Get<UintPropertyValue>,
-                          ::testing::Property(&UintPropertyValue::value, ::testing::Eq(value))));
+                          ::testing::Property(&UintPropertyValue::value, std::move(matcher))));
 }
 
-::testing::Matcher<const PropertyValue&> DoubleIs(const std::string& name, double value) {
+::testing::Matcher<const PropertyValue&> DoubleIs(const std::string& name,
+                                                  ::testing::Matcher<double> matcher) {
   return ::testing::AllOf(
       ::testing::Property(&PropertyValue::name, ::testing::StrEq(name)),
       ::testing::Property(&PropertyValue::format, PropertyFormat::kDouble),
       ::testing::Property(&PropertyValue::Get<DoublePropertyValue>,
-                          ::testing::Property(&DoublePropertyValue::value, ::testing::Eq(value))));
+                          ::testing::Property(&DoublePropertyValue::value, std::move(matcher))));
 }
 
 ::testing::Matcher<const PropertyValue&> IntArrayIs(
