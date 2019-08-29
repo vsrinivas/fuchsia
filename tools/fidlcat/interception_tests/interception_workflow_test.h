@@ -37,6 +37,10 @@ constexpr uint64_t kFirstThreadKoid = 8764;
 constexpr uint64_t kSecondThreadKoid = 8765;
 
 constexpr uint32_t kHandle = 0xcefa1db0;
+constexpr uint32_t kHandleOut = 0xbde90caf;
+constexpr uint32_t kPort = 0xdf0b2ec1;
+constexpr uint64_t kKey = 1234;
+constexpr uint64_t kKoid = 4252;
 
 class SystemCallTest {
  public:
@@ -325,15 +329,19 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   void PerformDisplayTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall,
                           const char* expected);
 
+  void PerformOneThreadDisplayTest(const char* syscall_name,
+                                   std::unique_ptr<SystemCallTest> syscall, const char* expected);
+
   void PerformInterleavedDisplayTest(const char* syscall_name,
                                      std::unique_ptr<SystemCallTest> syscall, const char* expected);
 
   void PerformTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall1,
                    std::unique_ptr<SystemCallTest> syscall2, ProcessController* controller,
-                   std::unique_ptr<SyscallDecoderDispatcher> dispatcher, bool interleaved_test);
+                   std::unique_ptr<SyscallDecoderDispatcher> dispatcher, bool interleaved_test,
+                   bool multi_thread);
 
   void SimulateSyscall(std::unique_ptr<SystemCallTest> syscall, ProcessController* controller,
-                       bool interleaved_test);
+                       bool interleaved_test, bool multi_thread);
   void TriggerSyscallBreakpoint(uint64_t process_koid, uint64_t thread_koid);
   void TriggerCallerBreakpoint(uint64_t process_koid, uint64_t thread_koid);
 
@@ -349,6 +357,8 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   DisplayOptions display_options_;
   std::stringstream result_;
   std::map<uint64_t, zxdb::Thread*> threads_;
+  // Function which can simulate the fact that the syscall can modify some data.
+  std::function<void()> update_data_;
 };
 
 class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
@@ -428,8 +438,8 @@ class SyscallCheck : public SyscallUse {
       DataForSyscallTest& data = controller_->remote_api()->data();
       FXL_DCHECK(decoder->ArgumentValue(0) == kHandle);  // handle
       FXL_DCHECK(decoder->ArgumentValue(1) == 0);        // options
-      FXL_DCHECK(decoder->ArgumentLoaded(2, data.num_bytes()));
-      uint8_t* bytes = decoder->ArgumentContent(2);
+      FXL_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 2, data.num_bytes()));
+      uint8_t* bytes = decoder->ArgumentContent(Stage::kEntry, 2);
       if (memcmp(bytes, data.bytes(), data.num_bytes()) != 0) {
         std::string result = "bytes not equivalent\n";
         AppendElements(result, bytes, data.bytes(), data.num_bytes());
@@ -437,8 +447,10 @@ class SyscallCheck : public SyscallUse {
         FAIL() << result;
       }
       FXL_DCHECK(decoder->ArgumentValue(3) == data.num_bytes());  // num_bytes
-      FXL_DCHECK(decoder->ArgumentLoaded(4, data.num_handles() * sizeof(zx_handle_t)));
-      zx_handle_t* handles = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(4));
+      FXL_DCHECK(
+          decoder->ArgumentLoaded(Stage::kEntry, 4, data.num_handles() * sizeof(zx_handle_t)));
+      zx_handle_t* handles =
+          reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kEntry, 4));
       if (memcmp(handles, data.handles(), data.num_handles()) != 0) {
         std::string result = "handles not equivalent";
         AppendElements(result, handles, data.handles(), data.num_handles());
@@ -452,9 +464,9 @@ class SyscallCheck : public SyscallUse {
       FXL_DCHECK(decoder->ArgumentValue(0) == kHandle);           // handle
       FXL_DCHECK(decoder->ArgumentValue(1) == 0);                 // options
       FXL_DCHECK(decoder->ArgumentValue(2) == ZX_TIME_INFINITE);  // deadline
-      FXL_DCHECK(decoder->ArgumentLoaded(3, sizeof(zx_channel_call_args_t)));
-      const zx_channel_call_args_t* args =
-          reinterpret_cast<const zx_channel_call_args_t*>(decoder->ArgumentContent(3));
+      FXL_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 3, sizeof(zx_channel_call_args_t)));
+      const zx_channel_call_args_t* args = reinterpret_cast<const zx_channel_call_args_t*>(
+          decoder->ArgumentContent(Stage::kEntry, 3));
       uint8_t* ref_bytes;
       uint32_t ref_num_bytes;
       if (data.use_alternate_data()) {
@@ -465,8 +477,9 @@ class SyscallCheck : public SyscallUse {
         ref_num_bytes = data.num_bytes();
       }
       FXL_DCHECK(args->wr_num_bytes == ref_num_bytes);
-      FXL_DCHECK(decoder->BufferLoaded(uint64_t(args->wr_bytes), args->wr_num_bytes));
-      uint8_t* bytes = decoder->BufferContent(uint64_t(args->wr_bytes));
+      FXL_DCHECK(
+          decoder->BufferLoaded(Stage::kExit, uint64_t(args->wr_bytes), args->wr_num_bytes));
+      uint8_t* bytes = decoder->BufferContent(Stage::kExit, uint64_t(args->wr_bytes));
       if (memcmp(bytes, ref_bytes, ref_num_bytes) != 0) {
         std::string result = "bytes not equivalent\n";
         AppendElements(result, bytes, ref_bytes, ref_num_bytes);

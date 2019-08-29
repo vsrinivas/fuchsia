@@ -53,7 +53,7 @@ void InterceptionWorkflowTest::PerformCheckTest(const char* syscall_name,
 
   PerformTest(syscall_name, std::move(syscall1), std::move(syscall2), &controller,
               std::make_unique<SyscallDecoderDispatcherTest>(decode_options_, &controller),
-              /*interleaved_test=*/false);
+              /*interleaved_test=*/false, /*multi_thread=*/true);
 }
 
 void InterceptionWorkflowTest::PerformDisplayTest(const char* syscall_name,
@@ -64,7 +64,7 @@ void InterceptionWorkflowTest::PerformDisplayTest(const char* syscall_name,
   PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
                   nullptr, decode_options_, display_options_, result_, &controller),
-              /*interleaved_test=*/false);
+              /*interleaved_test=*/false, /*multi_thread=*/true);
   std::string both_results = result_.str();
   // The second output starts with "test_2718"
   size_t split = both_results.find("test_2718");
@@ -104,6 +104,18 @@ void InterceptionWorkflowTest::PerformDisplayTest(const char* syscall_name,
   ASSERT_EQ(str_expected, second);
 }
 
+void InterceptionWorkflowTest::PerformOneThreadDisplayTest(const char* syscall_name,
+                                                           std::unique_ptr<SystemCallTest> syscall,
+                                                           const char* expected) {
+  ProcessController controller(this, session(), loop());
+
+  PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
+              std::make_unique<SyscallDisplayDispatcherTest>(
+                  nullptr, decode_options_, display_options_, result_, &controller),
+              /*interleaved_test=*/false, /*multi_thread=*/false);
+  ASSERT_EQ(expected, result_.str());
+}
+
 void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
     const char* syscall_name, std::unique_ptr<SystemCallTest> syscall, const char* expected) {
   ProcessController controller(this, session(), loop());
@@ -111,7 +123,7 @@ void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
   PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
                   nullptr, decode_options_, display_options_, result_, &controller),
-              /*interleaved_test=*/true);
+              /*interleaved_test=*/true, /*multi_thread=*/true);
   ASSERT_EQ(expected, result_.str());
 }
 
@@ -120,38 +132,49 @@ void InterceptionWorkflowTest::PerformTest(const char* syscall_name,
                                            std::unique_ptr<SystemCallTest> syscall2,
                                            ProcessController* controller,
                                            std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
-                                           bool interleaved_test) {
+                                           bool interleaved_test, bool multi_thread) {
   controller->Initialize(session(), std::move(dispatcher), syscall_name);
 
-  SimulateSyscall(std::move(syscall1), controller, interleaved_test);
+  SimulateSyscall(std::move(syscall1), controller, interleaved_test, multi_thread);
 
-  debug_ipc::MessageLoop::Current()->Run();
+  if (multi_thread) {
+    debug_ipc::MessageLoop::Current()->Run();
+  }
 
   if (syscall2 != nullptr) {
     data_.set_use_alternate_data();
-    SimulateSyscall(std::move(syscall2), controller, interleaved_test);
+    SimulateSyscall(std::move(syscall2), controller, interleaved_test, multi_thread);
   }
 }
 
 void InterceptionWorkflowTest::SimulateSyscall(std::unique_ptr<SystemCallTest> syscall,
-                                               ProcessController* controller,
-                                               bool interleaved_test) {
+                                               ProcessController* controller, bool interleaved_test,
+                                               bool multi_thread) {
   data_.set_syscall(std::move(syscall));
-  if (interleaved_test) {
-    for (uint64_t process_koid : controller->process_koids()) {
-      data_.load_syscall_data();
-      TriggerSyscallBreakpoint(process_koid, controller->thread_koid(process_koid));
-    }
-    for (uint64_t process_koid : controller->process_koids()) {
-      TriggerCallerBreakpoint(process_koid, controller->thread_koid(process_koid));
+  if (multi_thread) {
+    if (interleaved_test) {
+      for (uint64_t process_koid : controller->process_koids()) {
+        data_.load_syscall_data();
+        TriggerSyscallBreakpoint(process_koid, controller->thread_koid(process_koid));
+      }
+      for (uint64_t process_koid : controller->process_koids()) {
+        TriggerCallerBreakpoint(process_koid, controller->thread_koid(process_koid));
+      }
+    } else {
+      for (uint64_t process_koid : controller->process_koids()) {
+        data_.load_syscall_data();
+        uint64_t thread_koid = controller->thread_koid(process_koid);
+        TriggerSyscallBreakpoint(process_koid, thread_koid);
+        TriggerCallerBreakpoint(process_koid, thread_koid);
+      }
     }
   } else {
-    for (uint64_t process_koid : controller->process_koids()) {
-      data_.load_syscall_data();
-      uint64_t thread_koid = controller->thread_koid(process_koid);
-      TriggerSyscallBreakpoint(process_koid, thread_koid);
-      TriggerCallerBreakpoint(process_koid, thread_koid);
+    data_.load_syscall_data();
+    TriggerSyscallBreakpoint(kFirstPid, kFirstThreadKoid);
+    if (update_data_ != nullptr) {
+      update_data_();
     }
+    TriggerCallerBreakpoint(kFirstPid, kFirstThreadKoid);
   }
 }
 

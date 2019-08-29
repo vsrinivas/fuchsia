@@ -209,6 +209,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       PortPacketTypeName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kRights:
+      os << colors.blue;
+      RightsName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kSignals:
       os << colors.blue;
       SignalName(value, os);
@@ -261,6 +266,9 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
       break;
     }
 #endif
+    case SyscallType::kSize:
+      os << colors.blue << value << colors.reset;
+      break;
     case SyscallType::kTime:
       os << DisplayTime(colors, value);
       break;
@@ -554,25 +562,27 @@ class SyscallArgumentBaseTyped : public SyscallArgumentBase {
       : SyscallArgumentBase(index, syscall_type) {}
 
   // Ensures that the argument data will be in memory.
-  virtual void Load(SyscallDecoder* decoder) const {}
+  virtual void Load(SyscallDecoder* decoder, Stage stage) const {}
 
   // True if the argument data is available.
-  virtual bool Loaded(SyscallDecoder* decoder) const { return false; }
+  virtual bool Loaded(SyscallDecoder* decoder, Stage stage) const { return false; }
 
   // True if the argument data is valid (not a null pointer).
-  virtual bool ValueValid(SyscallDecoder* decoder) const { return false; }
+  virtual bool ValueValid(SyscallDecoder* decoder, Stage stage) const { return false; }
 
   // The data for the argument.
-  virtual Type Value(SyscallDecoder* decoder) const { return Type(); }
+  virtual Type Value(SyscallDecoder* decoder, Stage stage) const { return Type(); }
 
   // For buffers, ensures that the buffer will be in memory.
-  virtual void LoadArray(SyscallDecoder* decoder, size_t size) const {}
+  virtual void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) const {}
 
   // For buffers, true if the buffer is available.
-  virtual bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const { return false; }
+  virtual bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const {
+    return false;
+  }
 
   // For buffers, get a pointer on the buffer data.
-  virtual Type* Content(SyscallDecoder* decoder) const { return nullptr; }
+  virtual Type* Content(SyscallDecoder* decoder, Stage stage) const { return nullptr; }
 };
 
 // Defines an basic type argument for a system call.
@@ -586,11 +596,11 @@ class SyscallArgument : public SyscallArgumentBaseTyped<Type> {
   // Redefine index within the class to avoid a compiler error.
   int index() const { return SyscallArgumentBase::index(); }
 
-  bool Loaded(SyscallDecoder* decoder) const override { return true; }
+  bool Loaded(SyscallDecoder* decoder, Stage stage) const override { return true; }
 
-  bool ValueValid(SyscallDecoder* decoder) const override { return true; }
+  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override { return true; }
 
-  Type Value(SyscallDecoder* decoder) const override {
+  Type Value(SyscallDecoder* decoder, Stage stage) const override {
     return Type(decoder->ArgumentValue(index()));
   }
 };
@@ -607,36 +617,36 @@ class SyscallPointerArgument : public SyscallArgumentBaseTyped<Type> {
 
   int index() const { return SyscallArgumentBase::index(); }
 
-  void Load(SyscallDecoder* decoder) const override {
-    decoder->LoadArgument(index(), sizeof(Type));
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    decoder->LoadArgument(stage, index(), sizeof(Type));
   }
 
-  bool Loaded(SyscallDecoder* decoder) const override {
-    return decoder->ArgumentLoaded(index(), sizeof(Type));
+  bool Loaded(SyscallDecoder* decoder, Stage stage) const override {
+    return decoder->ArgumentLoaded(stage, index(), sizeof(Type));
   }
 
-  bool ValueValid(SyscallDecoder* decoder) const override {
-    return decoder->ArgumentContent(index()) != nullptr;
+  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+    return decoder->ArgumentContent(stage, index()) != nullptr;
   }
 
-  Type Value(SyscallDecoder* decoder) const override {
-    uint8_t* content = decoder->ArgumentContent(index());
+  Type Value(SyscallDecoder* decoder, Stage stage) const override {
+    uint8_t* content = decoder->ArgumentContent(stage, index());
     if (content == nullptr) {
       return Type();
     }
     return *reinterpret_cast<Type*>(content);
   }
 
-  void LoadArray(SyscallDecoder* decoder, size_t size) const override {
-    decoder->LoadArgument(index(), size);
+  void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+    decoder->LoadArgument(stage, index(), size);
   }
 
-  bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const override {
-    return decoder->ArgumentLoaded(index(), size);
+  bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+    return decoder->ArgumentLoaded(stage, index(), size);
   }
 
-  Type* Content(SyscallDecoder* decoder) const override {
-    return reinterpret_cast<Type*>(decoder->ArgumentContent(index()));
+  Type* Content(SyscallDecoder* decoder, Stage stage) const override {
+    return reinterpret_cast<Type*>(decoder->ArgumentContent(stage, index()));
   }
 };
 
@@ -651,13 +661,13 @@ class AccessBase {
   virtual SyscallType GetSyscallType() const = 0;
 
   // For buffers, ensures that the buffer will be in memory.
-  virtual void LoadArray(SyscallDecoder* decoder, size_t size) = 0;
+  virtual void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) = 0;
 
   // For buffers, true if the buffer is available.
-  virtual bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const = 0;
+  virtual bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const = 0;
 
   // For buffers, get a pointer on the buffer data.
-  virtual const uint8_t* Uint8Content(SyscallDecoder* decoder) const = 0;
+  virtual const uint8_t* Uint8Content(SyscallDecoder* decoder, Stage stage) const = 0;
 };
 
 // Use to access data for an input or an output.
@@ -667,27 +677,27 @@ class Access : public AccessBase {
   Access() = default;
 
   // Ensures that the data will be in memory.
-  virtual void Load(SyscallDecoder* decoder) const = 0;
+  virtual void Load(SyscallDecoder* decoder, Stage stage) const = 0;
 
   // True if the data is available.
-  virtual bool Loaded(SyscallDecoder* decoder) const = 0;
+  virtual bool Loaded(SyscallDecoder* decoder, Stage stage) const = 0;
 
   // True if the data is valid (not a null pointer).
-  virtual bool ValueValid(SyscallDecoder* decoder) const = 0;
+  virtual bool ValueValid(SyscallDecoder* decoder, Stage stage) const = 0;
 
   // The data.
-  virtual Type Value(SyscallDecoder* decoder) const = 0;
+  virtual Type Value(SyscallDecoder* decoder, Stage stage) const = 0;
 
   // For buffers, get a pointer on the buffer data.
-  virtual const Type* Content(SyscallDecoder* decoder) const = 0;
+  virtual const Type* Content(SyscallDecoder* decoder, Stage stage) const = 0;
 
-  const uint8_t* Uint8Content(SyscallDecoder* decoder) const override {
-    return reinterpret_cast<const uint8_t*>(Content(decoder));
+  const uint8_t* Uint8Content(SyscallDecoder* decoder, Stage stage) const override {
+    return reinterpret_cast<const uint8_t*>(Content(decoder, stage));
   }
 
   // Display the data on a stream (with name and type).
-  void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, std::string_view name,
-               std::ostream& os) const;
+  void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+               std::string_view name, std::ostream& os) const;
 };
 
 // Access to a system call argument. There is a direct access to the value
@@ -705,24 +715,32 @@ class ArgumentAccess : public Access<Type> {
 
   SyscallType GetSyscallType() const override { return argument_->syscall_type(); }
 
-  void Load(SyscallDecoder* decoder) const override { argument_->Load(decoder); }
-
-  bool Loaded(SyscallDecoder* decoder) const override { return argument_->Loaded(decoder); }
-
-  bool ValueValid(SyscallDecoder* decoder) const override { return argument_->ValueValid(decoder); }
-
-  Type Value(SyscallDecoder* decoder) const override { return argument_->Value(decoder); }
-
-  void LoadArray(SyscallDecoder* decoder, size_t size) override {
-    argument_->LoadArray(decoder, size);
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    argument_->Load(decoder, stage);
   }
 
-  bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const override {
-    return argument_->ArrayLoaded(decoder, size);
+  bool Loaded(SyscallDecoder* decoder, Stage stage) const override {
+    return argument_->Loaded(decoder, stage);
   }
 
-  const Type* Content(SyscallDecoder* decoder) const override {
-    return argument_->Content(decoder);
+  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+    return argument_->ValueValid(decoder, stage);
+  }
+
+  Type Value(SyscallDecoder* decoder, Stage stage) const override {
+    return argument_->Value(decoder, stage);
+  }
+
+  void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) override {
+    argument_->LoadArray(decoder, stage, size);
+  }
+
+  bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+    return argument_->ArrayLoaded(decoder, stage, size);
+  }
+
+  const Type* Content(SyscallDecoder* decoder, Stage stage) const override {
+    return argument_->Content(decoder, stage);
   }
 
  private:
@@ -739,25 +757,29 @@ class FieldAccess : public Access<Type> {
 
   SyscallType GetSyscallType() const override { return syscall_type_; }
 
-  void Load(SyscallDecoder* decoder) const override {
-    argument_->LoadArray(decoder, sizeof(ClassType));
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    argument_->LoadArray(decoder, stage, sizeof(ClassType));
   }
 
-  bool Loaded(SyscallDecoder* decoder) const override {
-    return argument_->ArrayLoaded(decoder, sizeof(ClassType));
+  bool Loaded(SyscallDecoder* decoder, Stage stage) const override {
+    return argument_->ArrayLoaded(decoder, stage, sizeof(ClassType));
   }
 
-  bool ValueValid(SyscallDecoder* decoder) const override {
-    return argument_->Content(decoder) != nullptr;
+  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+    return argument_->Content(decoder, stage) != nullptr;
   }
 
-  Type Value(SyscallDecoder* decoder) const override { return get_(argument_->Content(decoder)); }
+  Type Value(SyscallDecoder* decoder, Stage stage) const override {
+    return get_(argument_->Content(decoder, stage));
+  }
 
-  void LoadArray(SyscallDecoder* decoder, size_t size) override {}
+  void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) override {}
 
-  bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const override { return false; }
+  bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+    return false;
+  }
 
-  const Type* Content(SyscallDecoder* decoder) const override { return nullptr; }
+  const Type* Content(SyscallDecoder* decoder, Stage stage) const override { return nullptr; }
 
  private:
   const SyscallPointerArgument<ClassType>* const argument_;
@@ -775,32 +797,32 @@ class PointerFieldAccess : public Access<Type> {
 
   SyscallType GetSyscallType() const override { return syscall_type_; }
 
-  void Load(SyscallDecoder* decoder) const override {}
+  void Load(SyscallDecoder* decoder, Stage stage) const override {}
 
-  bool Loaded(SyscallDecoder* decoder) const override { return false; }
+  bool Loaded(SyscallDecoder* decoder, Stage stage) const override { return false; }
 
-  bool ValueValid(SyscallDecoder* decoder) const override { return false; }
+  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override { return false; }
 
-  Type Value(SyscallDecoder* decoder) const override { return {}; }
+  Type Value(SyscallDecoder* decoder, Stage stage) const override { return {}; }
 
-  void LoadArray(SyscallDecoder* decoder, size_t size) override {
-    argument_->LoadArray(decoder, sizeof(ClassType));
-    ClassType* object = argument_->Content(decoder);
+  void LoadArray(SyscallDecoder* decoder, Stage stage, size_t size) override {
+    argument_->LoadArray(decoder, stage, sizeof(ClassType));
+    ClassType* object = argument_->Content(decoder, stage);
     if (object != nullptr) {
-      decoder->LoadBuffer(reinterpret_cast<uint64_t>(get_(object)), size);
+      decoder->LoadBuffer(stage, reinterpret_cast<uint64_t>(get_(object)), size);
     }
   }
 
-  bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const override {
-    ClassType* object = argument_->Content(decoder);
+  bool ArrayLoaded(SyscallDecoder* decoder, Stage stage, size_t size) const override {
+    ClassType* object = argument_->Content(decoder, stage);
     return (object == nullptr) ||
-           decoder->BufferLoaded(reinterpret_cast<uint64_t>(get_(object)), size);
+           decoder->BufferLoaded(stage, reinterpret_cast<uint64_t>(get_(object)), size);
   }
 
-  const Type* Content(SyscallDecoder* decoder) const override {
-    ClassType* object = argument_->Content(decoder);
+  const Type* Content(SyscallDecoder* decoder, Stage stage) const override {
+    ClassType* object = argument_->Content(decoder, stage);
     return reinterpret_cast<const Type*>(
-        decoder->BufferContent(reinterpret_cast<uint64_t>(get_(object))));
+        decoder->BufferContent(stage, reinterpret_cast<uint64_t>(get_(object))));
   }
 
  private:
@@ -816,7 +838,7 @@ class SyscallInputOutputConditionBase {
   virtual ~SyscallInputOutputConditionBase() = default;
 
   // Ensures that the data will be in memory.
-  virtual void Load(SyscallDecoder* decoder) const = 0;
+  virtual void Load(SyscallDecoder* decoder, Stage stage) const = 0;
 
   // True if the data is valid (not a null pointer).
   virtual bool ValueValid(SyscallDecoder* decoder) const = 0;
@@ -832,7 +854,7 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
   SyscallInputOutputCondition(std::unique_ptr<Access<Type>> access, Type value)
       : access_(std::move(access)), value_(value) {}
 
-  void Load(SyscallDecoder* decoder) const override { access_->Load(decoder); }
+  void Load(SyscallDecoder* decoder, Stage stage) const override { access_->Load(decoder); }
 
   bool ValueValid(SyscallDecoder* decoder) const override { return access_->ValueValid(decoder); }
 
@@ -868,21 +890,22 @@ class SyscallInputOutputBase {
   }
 
   // Ensures that all the data needed to display the input/output is available.
-  virtual void Load(SyscallDecoder* decoder) const {
+  virtual void Load(SyscallDecoder* decoder, Stage stage) const {
     for (const auto& condition : conditions_) {
-      condition->Load(decoder);
+      condition->Load(decoder, stage);
     }
   }
 
   // Displays small inputs or outputs.
   virtual const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                                    const char* separator, std::ostream& os) const {
+                                    Stage stage, const char* separator, std::ostream& os) const {
     return separator;
   }
 
   // Displays large (multi lines) inputs or outputs.
   virtual void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                              std::string_view line_header, int tabs, std::ostream& os) const {}
+                              Stage stage, std::string_view line_header, int tabs,
+                              std::ostream& os) const {}
 
   // True if all the conditions are met.
   bool ConditionsAreTrue(SyscallDecoder* decoder) {
@@ -912,15 +935,16 @@ class SyscallInputOutput : public SyscallInputOutputBase {
                      std::unique_ptr<Access<Type>> access)
       : SyscallInputOutputBase(error_code, name), access_(std::move(access)) {}
 
-  void Load(SyscallDecoder* decoder) const override {
-    SyscallInputOutputBase::Load(decoder);
-    access_->Load(decoder);
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    access_->Load(decoder, stage);
   }
 
   const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                            const char* separator, std::ostream& os) const override {
+                            Stage stage, const char* separator,
+                            std::ostream& os) const override {
     os << separator;
-    access_->Display(dispatcher, decoder, name(), os);
+    access_->Display(dispatcher, decoder, stage, name(), os);
     return ", ";
   }
 
@@ -939,17 +963,54 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
         buffer_(std::move(buffer)),
         class_definition_(class_definition) {}
 
-  void Load(SyscallDecoder* decoder) const override {
-    SyscallInputOutputBase::Load(decoder);
-    buffer_->LoadArray(decoder, sizeof(ClassType));
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    buffer_->LoadArray(decoder, stage, sizeof(ClassType));
   }
 
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
                       std::string_view line_header, int tabs, std::ostream& os) const override;
 
  private:
   // Access to the buffer (raw data) which contains the object.
   const std::unique_ptr<AccessBase> buffer_;
+  // Class definition for the displayed object.
+  const Class<ClassType>* class_definition_;
+};
+
+// An input/output which is an array of objects. This is always displayed outline.
+template <typename ClassType>
+class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputObjectArray(int64_t error_code, std::string_view name,
+                                std::unique_ptr<AccessBase> buffer,
+                                std::unique_ptr<Access<size_t>> buffer_size,
+                                const Class<ClassType>* class_definition)
+      : SyscallInputOutputBase(error_code, name),
+        buffer_(std::move(buffer)),
+        buffer_size_(std::move(buffer_size)),
+        class_definition_(class_definition) {}
+
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    buffer_size_->Load(decoder, stage);
+
+    if (buffer_size_->Loaded(decoder, stage)) {
+      size_t value = buffer_size_->Value(decoder, stage);
+      if (value > 0) {
+        buffer_->LoadArray(decoder, stage, sizeof(ClassType) * value);
+      }
+    }
+  }
+
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+                      std::string_view line_header, int tabs, std::ostream& os) const override;
+
+ private:
+  // Access to the buffer (raw data) which contains the object.
+  const std::unique_ptr<AccessBase> buffer_;
+  // Access to the buffer size.
+  const std::unique_ptr<Access<size_t>> buffer_size_;
   // Class definition for the displayed object.
   const Class<ClassType>* class_definition_;
 };
@@ -972,23 +1033,23 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
         handles_(std::move(handles)),
         num_handles_(std::move(num_handles)) {}
 
-  void Load(SyscallDecoder* decoder) const override {
-    SyscallInputOutputBase::Load(decoder);
-    handle_->Load(decoder);
-    num_bytes_->Load(decoder);
-    num_handles_->Load(decoder);
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    handle_->Load(decoder, stage);
+    num_bytes_->Load(decoder, stage);
+    num_handles_->Load(decoder, stage);
 
-    if (num_bytes_->Loaded(decoder)) {
-      uint32_t value = num_bytes_->Value(decoder);
+    if (num_bytes_->Loaded(decoder, stage)) {
+      uint32_t value = num_bytes_->Value(decoder, stage);
       if (value > 0) {
-        bytes_->LoadArray(decoder, value);
+        bytes_->LoadArray(decoder, stage, value);
       }
     }
 
-    if (num_handles_->Loaded(decoder)) {
-      uint32_t value = num_handles_->Value(decoder);
+    if (num_handles_->Loaded(decoder, stage)) {
+      uint32_t value = num_handles_->Value(decoder, stage);
       if (value > 0) {
-        handles_->LoadArray(decoder, value * sizeof(HandleType));
+        handles_->LoadArray(decoder, stage, value * sizeof(HandleType));
       }
     }
   }
@@ -1014,7 +1075,7 @@ class SyscallFidlMessageHandle : public SyscallFidlMessage<zx_handle_t> {
                                         std::move(num_bytes), std::move(handles),
                                         std::move(num_handles)) {}
 
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
                       std::string_view line_header, int tabs, std::ostream& os) const override;
 };
 
@@ -1030,7 +1091,7 @@ class SyscallFidlMessageHandleInfo : public SyscallFidlMessage<zx_handle_info_t>
                                              std::move(bytes), std::move(num_bytes),
                                              std::move(handles), std::move(num_handles)) {}
 
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
                       std::string_view line_header, int tabs, std::ostream& os) const override;
 };
 
@@ -1102,6 +1163,18 @@ class Syscall {
     return result;
   }
 
+  // Adds an object array input to display.
+  template <typename ClassType>
+  SyscallInputOutputObjectArray<ClassType>* InputObjectArray(
+      std::string_view name, std::unique_ptr<AccessBase> buffer,
+      std::unique_ptr<Access<size_t>> buffer_size, const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObjectArray<ClassType>>(
+        0, name, std::move(buffer), std::move(buffer_size), class_definition);
+    auto result = object.get();
+    inputs_.push_back(std::move(object));
+    return result;
+  }
+
   // Adds an input FIDL message to display.
   void InputFidlMessage(std::string_view name, SyscallFidlType type,
                         std::unique_ptr<Access<zx_handle_t>> handle,
@@ -1128,6 +1201,18 @@ class Syscall {
                                                     const Class<ClassType>* class_definition) {
     auto object = std::make_unique<SyscallInputOutputObject<ClassType>>(
         error_code, name, std::move(buffer), class_definition);
+    auto result = object.get();
+    outputs_.push_back(std::move(object));
+    return result;
+  }
+
+  // Adds an object array output to display.
+  template <typename ClassType>
+  SyscallInputOutputObjectArray<ClassType>* OutputObjectArray(
+      int64_t error_code, std::string_view name, std::unique_ptr<AccessBase> buffer,
+      std::unique_ptr<Access<size_t>> buffer_size, const Class<ClassType>* class_definition) {
+    auto object = std::make_unique<SyscallInputOutputObjectArray<ClassType>>(
+        error_code, name, std::move(buffer), std::move(buffer_size), class_definition);
     auto result = object.get();
     outputs_.push_back(std::move(object));
     return result;
@@ -1277,12 +1362,12 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
 template <typename Type>
 void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                           std::string_view name, std::ostream& os) const {
+                           Stage stage, std::string_view name, std::ostream& os) const {
   const Colors& colors = dispatcher->colors();
   os << name;
   DisplayType(colors, GetSyscallType(), os);
-  if (ValueValid(decoder)) {
-    DisplayValue<Type>(colors, GetSyscallType(), Value(decoder), /*hexa=*/false, os);
+  if (ValueValid(decoder, stage)) {
+    DisplayValue<Type>(colors, GetSyscallType(), Value(decoder, stage), /*hexa=*/false, os);
   } else {
     os << colors.red << "(nullptr)" << colors.reset;
   }
@@ -1290,17 +1375,44 @@ void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder*
 
 template <typename ClassType>
 void SyscallInputOutputObject<ClassType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                         SyscallDecoder* decoder,
+                                                         SyscallDecoder* decoder, Stage stage,
                                                          std::string_view line_header, int tabs,
                                                          std::ostream& os) const {
   const Colors& colors = dispatcher->colors();
   os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name() << ":" << colors.green
      << class_definition_->name() << colors.reset << ": ";
-  auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder));
+  auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
   if (object == nullptr) {
     os << colors.red << "nullptr" << colors.reset;
   } else {
     class_definition_->DisplayObject(object, decoder->arch(), colors, line_header, tabs + 1, os);
+  }
+  os << '\n';
+}
+
+template <typename ClassType>
+void SyscallInputOutputObjectArray<ClassType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
+                                                              SyscallDecoder* decoder,
+                                                              Stage stage,
+                                                              std::string_view line_header,
+                                                              int tabs, std::ostream& os) const {
+  const Colors& colors = dispatcher->colors();
+  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name() << ":" << colors.green
+     << class_definition_->name() << colors.reset << "[]: ";
+  auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
+  if (object == nullptr) {
+    os << colors.red << "nullptr" << colors.reset;
+  } else {
+    os << " {";
+    size_t count = buffer_size_->Value(decoder, stage);
+    const char* separator = "\n";
+    for (size_t i = 0; i < count; ++i) {
+      os << separator << line_header << std::string((tabs + 2) * kTabSize, ' ');
+      class_definition_->DisplayObject(object + i, decoder->arch(), colors, line_header, tabs + 2,
+                                       os);
+      separator = ",\n";
+    }
+    os << '\n' << line_header << std::string((tabs + 1) * kTabSize, ' ') << '}';
   }
   os << '\n';
 }

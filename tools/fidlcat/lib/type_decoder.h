@@ -41,7 +41,9 @@ enum class SyscallType {
   kPacketGuestVcpuType,
   kPacketPageRequestCommand,
   kPortPacketType,
+  kRights,
   kSignals,
+  kSize,
   kStatus,
   kTime,
   kStruct

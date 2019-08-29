@@ -356,8 +356,14 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kPortPacketType:
       os << ":" << colors.green << "zx_port_packet_t::type" << colors.reset << ": ";
       break;
+    case SyscallType::kRights:
+      os << ":" << colors.green << "zx_rights_t" << colors.reset << ": ";
+      break;
     case SyscallType::kSignals:
       os << ":" << colors.green << "signals" << colors.reset << ": ";
+      break;
+    case SyscallType::kSize:
+      os << ":" << colors.green << "size_t" << colors.reset << ": ";
       break;
     case SyscallType::kStatus:
       os << ":" << colors.green << "status_t" << colors.reset << ": ";

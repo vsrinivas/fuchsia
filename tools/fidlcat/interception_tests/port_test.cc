@@ -16,7 +16,6 @@ namespace fidlcat {
 
 std::string ClockExpected(time_t time, const char* format);
 
-constexpr uint64_t kKey = 1234;
 constexpr uint64_t kSignalCount = 2;
 constexpr uint64_t kSource = 0xab1234;
 

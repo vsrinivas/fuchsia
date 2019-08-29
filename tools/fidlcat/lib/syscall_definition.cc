@@ -614,6 +614,37 @@ const ZxPortPacket* ZxPortPacket::GetClass() {
   return instance_;
 }
 
+class ZxWaitItem : public Class<zx_wait_item_t> {
+ public:
+  static const ZxWaitItem* GetClass();
+
+  static zx_handle_t handle(const zx_wait_item_t* from) { return from->handle; }
+  static zx_signals_t waitfor(const zx_wait_item_t* from) { return from->waitfor; }
+  static zx_signals_t pending(const zx_wait_item_t* from) { return from->pending; }
+
+ private:
+  ZxWaitItem() : Class("zx_wait_item_t") {
+    AddField(std::make_unique<ClassField<zx_wait_item_t, zx_handle_t>>(
+        "handle", SyscallType::kHandle, handle));
+    AddField(std::make_unique<ClassField<zx_wait_item_t, zx_signals_t>>(
+        "waitfor", SyscallType::kSignals, waitfor));
+    AddField(std::make_unique<ClassField<zx_wait_item_t, zx_signals_t>>(
+        "pending", SyscallType::kSignals, pending));
+  }
+  ZxWaitItem(const ZxWaitItem&) = delete;
+  ZxWaitItem& operator=(const ZxWaitItem&) = delete;
+  static ZxWaitItem* instance_;
+};
+
+ZxWaitItem* ZxWaitItem::instance_ = nullptr;
+
+const ZxWaitItem* ZxWaitItem::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxWaitItem;
+  }
+  return instance_;
+}
+
 void SyscallDecoderDispatcher::Populate() {
   {
     Syscall* zx_clock_get = Add("zx_clock_get", SyscallReturnType::kStatus);
@@ -663,6 +694,114 @@ void SyscallDecoderDispatcher::Populate() {
     zx_clock_adjust->Input<zx_clock_t>("clock_id",
                                        std::make_unique<ArgumentAccess<zx_clock_t>>(clock_id));
     zx_clock_adjust->Input<int64_t>("offset", std::make_unique<ArgumentAccess<int64_t>>(offset));
+  }
+
+  {
+    Syscall* zx_object_wait_one = Add("zx_object_wait_one", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_wait_one->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto signals = zx_object_wait_one->Argument<zx_signals_t>(SyscallType::kSignals);
+    auto deadline = zx_object_wait_one->Argument<zx_time_t>(SyscallType::kTime);
+    auto observed = zx_object_wait_one->PointerArgument<zx_signals_t>(SyscallType::kSignals);
+    // Inputs
+    zx_object_wait_one->Input<zx_handle_t>("handle",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_wait_one->Input<zx_signals_t>(
+        "signals", std::make_unique<ArgumentAccess<zx_signals_t>>(signals));
+    zx_object_wait_one->Input<zx_time_t>("deadline",
+                                         std::make_unique<ArgumentAccess<zx_time_t>>(deadline));
+    // Outputs
+    zx_object_wait_one->Output<zx_signals_t>(
+        ZX_OK, "observed", std::make_unique<ArgumentAccess<zx_signals_t>>(observed));
+  }
+
+  {
+    Syscall* zx_object_wait_many = Add("zx_object_wait_many", SyscallReturnType::kStatus);
+    // Arguments
+    auto items = zx_object_wait_many->PointerArgument<zx_wait_item_t>(SyscallType::kStruct);
+    auto count = zx_object_wait_many->Argument<size_t>(SyscallType::kSize);
+    auto deadline = zx_object_wait_many->Argument<zx_time_t>(SyscallType::kTime);
+    // Inputs
+    zx_object_wait_many->InputObjectArray<zx_wait_item_t>(
+        "items", std::make_unique<ArgumentAccess<zx_wait_item_t>>(items),
+        std::make_unique<ArgumentAccess<size_t>>(count), ZxWaitItem::GetClass());
+    zx_object_wait_many->Input<zx_time_t>("deadline",
+                                          std::make_unique<ArgumentAccess<zx_time_t>>(deadline));
+    // Outputs
+    zx_object_wait_many->OutputObjectArray<zx_wait_item_t>(
+        ZX_OK, "items", std::make_unique<ArgumentAccess<zx_wait_item_t>>(items),
+        std::make_unique<ArgumentAccess<size_t>>(count), ZxWaitItem::GetClass());
+    zx_object_wait_many->OutputObjectArray<zx_wait_item_t>(
+        ZX_ERR_CANCELED, "items", std::make_unique<ArgumentAccess<zx_wait_item_t>>(items),
+        std::make_unique<ArgumentAccess<size_t>>(count), ZxWaitItem::GetClass());
+  }
+
+  {
+    Syscall* zx_object_wait_async = Add("zx_object_wait_async", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_wait_async->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto port = zx_object_wait_async->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto key = zx_object_wait_async->Argument<uint64_t>(SyscallType::kUint64);
+    auto signals = zx_object_wait_async->Argument<zx_signals_t>(SyscallType::kSignals);
+    auto options = zx_object_wait_async->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_object_wait_async->Input<zx_handle_t>("handle",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_wait_async->Input<zx_handle_t>("port",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(port));
+    zx_object_wait_async->Input<uint64_t>("key", std::make_unique<ArgumentAccess<uint64_t>>(key));
+    zx_object_wait_async->Input<zx_signals_t>(
+        "signals", std::make_unique<ArgumentAccess<zx_signals_t>>(signals));
+    zx_object_wait_async->Input<uint32_t>("options",
+                                          std::make_unique<ArgumentAccess<uint32_t>>(options));
+  }
+
+  {
+    Syscall* zx_object_signal = Add("zx_object_signal", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_signal->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto clear_mask = zx_object_signal->Argument<uint32_t>(SyscallType::kSignals);
+    auto set_mask = zx_object_signal->Argument<uint32_t>(SyscallType::kSignals);
+    // Inputs
+    zx_object_signal->Input<zx_handle_t>("handle",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_signal->Input<uint32_t>("clear_mask",
+                                      std::make_unique<ArgumentAccess<uint32_t>>(clear_mask));
+    zx_object_signal->Input<uint32_t>("set_mask",
+                                      std::make_unique<ArgumentAccess<uint32_t>>(set_mask));
+  }
+
+  {
+    Syscall* zx_object_signal_peer = Add("zx_object_signal_peer", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_signal_peer->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto clear_mask = zx_object_signal_peer->Argument<uint32_t>(SyscallType::kSignals);
+    auto set_mask = zx_object_signal_peer->Argument<uint32_t>(SyscallType::kSignals);
+    // Inputs
+    zx_object_signal_peer->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_signal_peer->Input<uint32_t>("clear_mask",
+                                           std::make_unique<ArgumentAccess<uint32_t>>(clear_mask));
+    zx_object_signal_peer->Input<uint32_t>("set_mask",
+                                           std::make_unique<ArgumentAccess<uint32_t>>(set_mask));
+  }
+
+  {
+    Syscall* zx_object_get_child = Add("zx_object_get_child", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_get_child->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto koid = zx_object_get_child->Argument<uint64_t>(SyscallType::kUint64);
+    auto rights = zx_object_get_child->Argument<zx_rights_t>(SyscallType::kRights);
+    auto out = zx_object_get_child->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_object_get_child->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_get_child->Input<uint64_t>("koid", std::make_unique<ArgumentAccess<uint64_t>>(koid));
+    zx_object_get_child->Input<zx_rights_t>("rights",
+                                            std::make_unique<ArgumentAccess<zx_rights_t>>(rights));
+    // Outputs
+    zx_object_get_child->Output<zx_handle_t>(ZX_OK, "out",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(out));
   }
 
   {

@@ -55,13 +55,14 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
 }
 
 void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                              SyscallDecoder* decoder, std::string_view line_header,
-                                              int tabs, std::ostream& os) const {
-  zx_handle_t handle = handle_->Value(decoder);
-  const uint8_t* bytes = bytes_->Content(decoder);
-  uint32_t num_bytes = num_bytes_->Value(decoder);
-  const zx_handle_t* handles = handles_->Content(decoder);
-  uint32_t num_handles = num_handles_->Value(decoder);
+                                              SyscallDecoder* decoder, Stage stage,
+                                              std::string_view line_header, int tabs,
+                                              std::ostream& os) const {
+  zx_handle_t handle = handle_->Value(decoder, stage);
+  const uint8_t* bytes = bytes_->Content(decoder, stage);
+  uint32_t num_bytes = num_bytes_->Value(decoder, stage);
+  const zx_handle_t* handles = handles_->Content(decoder, stage);
+  uint32_t num_handles = num_handles_->Value(decoder, stage);
   zx_handle_info_t* handle_infos = nullptr;
   if (num_handles > 0) {
     handle_infos = new zx_handle_info_t[num_handles];
@@ -80,14 +81,14 @@ void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatch
 }
 
 void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                  SyscallDecoder* decoder,
+                                                  SyscallDecoder* decoder, Stage stage,
                                                   std::string_view line_header, int tabs,
                                                   std::ostream& os) const {
-  zx_handle_t handle = handle_->Value(decoder);
-  const uint8_t* bytes = bytes_->Content(decoder);
-  uint32_t num_bytes = num_bytes_->Value(decoder);
-  const zx_handle_info_t* handle_infos = handles_->Content(decoder);
-  uint32_t num_handles = num_handles_->Value(decoder);
+  zx_handle_t handle = handle_->Value(decoder, stage);
+  const uint8_t* bytes = bytes_->Content(decoder, stage);
+  uint32_t num_bytes = num_bytes_->Value(decoder, stage);
+  const zx_handle_info_t* handle_infos = handles_->Content(decoder, stage);
+  uint32_t num_handles = num_handles_->Value(decoder, stage);
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->thread()->GetProcess()->GetKoid(), handle, bytes, num_bytes, handle_infos,
           num_handles, type_, os, line_header, tabs)) {

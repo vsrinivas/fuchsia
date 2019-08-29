@@ -31,6 +31,14 @@ class SyscallDecoder;
 class SyscallDecoderDispatcher;
 class SyscallDisplayDispatcher;
 
+// Stage for argument retrieving.
+enum class Stage {
+  // Retrieve arguments at the syscall entry.
+  kEntry,
+  // Retrieve arguments at the syscall exit.
+  kExit
+};
+
 class SyscallUse {
  public:
   SyscallUse() = default;
@@ -58,16 +66,36 @@ class SyscallDecoderArgument {
   // |loaded_values_| is filled with the data bytes. If the size of
   // |loaded_values_| is less than expected, that means that we had a load
   // error.
-  const std::vector<uint8_t>& loaded_values() const { return loaded_values_; }
-  std::vector<uint8_t>& loaded_values() { return loaded_values_; }
-  bool loading() const { return loading_; }
-  void set_loading() { loading_ = true; }
-  void clear_loading() { loading_ = false; }
+  const std::vector<uint8_t>& loaded_values(Stage stage) const {
+    return (stage == Stage::kEntry) ? entry_loaded_values_ : exit_loaded_values_;
+  }
+  std::vector<uint8_t>& loaded_values(Stage stage) {
+    return (stage == Stage::kEntry) ? entry_loaded_values_ : exit_loaded_values_;
+  }
+  bool loading(Stage stage) const {
+    return (stage == Stage::kEntry) ? entry_loading_ : exit_loading_;
+  }
+  void set_loading(Stage stage) {
+    if (stage == Stage::kEntry) {
+      entry_loading_ = true;
+    } else {
+      exit_loading_ = true;
+    }
+  }
+  void clear_loading(Stage stage) {
+    if (stage == Stage::kEntry) {
+      entry_loading_ = false;
+    } else {
+      entry_loading_ = false;
+    }
+  }
 
  private:
   uint64_t value_;
-  std::vector<uint8_t> loaded_values_;
-  bool loading_ = false;
+  std::vector<uint8_t> entry_loaded_values_;
+  std::vector<uint8_t> exit_loaded_values_;
+  bool entry_loading_ = false;
+  bool exit_loading_ = false;
 };
 
 class SyscallDecoderBuffer {
@@ -117,11 +145,11 @@ class SyscallDecoder {
   void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
 
   // Loads the value for a buffer, a struct or an output argument.
-  void LoadArgument(int argument_index, size_t size);
+  void LoadArgument(Stage stage, int argument_index, size_t size);
 
   // True if the argument is loaded correctly.
-  bool ArgumentLoaded(int argument_index, size_t size) const {
-    return decoded_arguments_[argument_index].loaded_values().size() == size;
+  bool ArgumentLoaded(Stage stage, int argument_index, size_t size) const {
+    return decoded_arguments_[argument_index].loaded_values(stage).size() == size;
   }
 
   // Returns the value of an argument for basic types.
@@ -131,25 +159,28 @@ class SyscallDecoder {
 
   // Returns a pointer on the argument content for buffers, structs or
   // output arguments.
-  uint8_t* ArgumentContent(int argument_index) {
+  uint8_t* ArgumentContent(Stage stage, int argument_index) {
     SyscallDecoderArgument& argument = decoded_arguments_[argument_index];
     if (argument.value() == 0) {
       return nullptr;
     }
-    return argument.loaded_values().data();
+    return argument.loaded_values(stage).data();
   }
 
   // Loads a buffer.
-  void LoadBuffer(uint64_t address, size_t size);
+  void LoadBuffer(Stage stage, uint64_t address, size_t size);
 
   // True if the buffer is loaded correctly.
-  bool BufferLoaded(uint64_t address, size_t size) {
-    return (address == 0) ? true : buffers_[address].loaded_values().size() == size;
+  bool BufferLoaded(Stage stage, uint64_t address, size_t size) {
+    return (address == 0)
+               ? true
+               : buffers_[std::make_pair(stage, address)].loaded_values().size() == size;
   }
 
   // Returns a pointer on the loaded buffer.
-  uint8_t* BufferContent(uint64_t address) {
-    return (address == 0) ? nullptr : buffers_[address].loaded_values().data();
+  uint8_t* BufferContent(Stage stage, uint64_t address) {
+    return (address == 0) ? nullptr
+                          : buffers_[std::make_pair(stage, address)].loaded_values().data();
   }
 
   // Display the argument.
@@ -212,7 +243,7 @@ class SyscallDecoder {
   uint64_t entry_sp_ = 0;
   uint64_t return_address_ = 0;
   std::vector<SyscallDecoderArgument> decoded_arguments_;
-  std::map<uint64_t, SyscallDecoderBuffer> buffers_;
+  std::map<std::pair<Stage, uint64_t>, SyscallDecoderBuffer> buffers_;
   uint64_t syscall_return_value_ = 0;
   int pending_request_count_ = 0;
   bool input_arguments_loaded_ = false;

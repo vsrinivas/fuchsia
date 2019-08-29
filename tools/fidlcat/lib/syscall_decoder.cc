@@ -100,20 +100,20 @@ void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8
       });
 }
 
-void SyscallDecoder::LoadArgument(int argument_index, size_t size) {
-  if (decoded_arguments_[argument_index].loading()) {
+void SyscallDecoder::LoadArgument(Stage stage, int argument_index, size_t size) {
+  if (decoded_arguments_[argument_index].loading(stage)) {
     return;
   }
-  decoded_arguments_[argument_index].set_loading();
+  decoded_arguments_[argument_index].set_loading(stage);
   LoadMemory(ArgumentValue(argument_index), size,
-             &decoded_arguments_[argument_index].loaded_values());
+             &decoded_arguments_[argument_index].loaded_values(stage));
 }
 
-void SyscallDecoder::LoadBuffer(uint64_t address, size_t size) {
+void SyscallDecoder::LoadBuffer(Stage stage, uint64_t address, size_t size) {
   if (address == 0) {
     return;
   }
-  SyscallDecoderBuffer& buffer = buffers_[address];
+  SyscallDecoderBuffer& buffer = buffers_[std::make_pair(stage, address)];
   if (buffer.loading()) {
     return;
   }
@@ -226,7 +226,7 @@ void SyscallDecoder::LoadInputs() {
     return;
   }
   for (const auto& input : syscall_->inputs()) {
-    input->Load(this);
+    input->Load(this, Stage::kEntry);
   }
   if (pending_request_count_ > 0) {
     return;
@@ -293,7 +293,7 @@ void SyscallDecoder::LoadOutputs() {
   }
   for (const auto& output : syscall_->outputs()) {
     if (output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) {
-      output->Load(this);
+      output->Load(this, Stage::kExit);
     }
   }
   if (pending_request_count_ > 0) {
@@ -337,7 +337,7 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
   const char* separator = "";
   for (const auto& input : decoder->syscall()->inputs()) {
     if (input->ConditionsAreTrue(decoder)) {
-      separator = input->DisplayInline(dispatcher_, decoder, separator, os_);
+      separator = input->DisplayInline(dispatcher_, decoder, Stage::kEntry, separator, os_);
     }
   }
   os_ << ")\n";
@@ -349,7 +349,8 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
   // Displays the outline input arguments.
   for (const auto& input : decoder->syscall()->inputs()) {
     if (input->ConditionsAreTrue(decoder)) {
-      input->DisplayOutline(dispatcher_, decoder, line_header_, /*tabs=*/1, os_);
+      input->DisplayOutline(dispatcher_, decoder, Stage::kEntry, line_header_, /*tabs=*/1,
+                            os_);
     }
   }
   dispatcher_->set_last_displayed_syscall(this);
@@ -398,7 +399,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   for (const auto& output : decoder->syscall()->outputs()) {
     if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
         output->ConditionsAreTrue(decoder)) {
-      separator = output->DisplayInline(dispatcher_, decoder, separator, os_);
+      separator = output->DisplayInline(dispatcher_, decoder, Stage::kExit, separator, os_);
     }
   }
   if (std::string(" (") != separator) {
@@ -409,7 +410,8 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   for (const auto& output : decoder->syscall()->outputs()) {
     if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
         output->ConditionsAreTrue(decoder)) {
-      output->DisplayOutline(dispatcher_, decoder, line_header_, /*tabs=*/2, os_);
+      output->DisplayOutline(dispatcher_, decoder, Stage::kExit, line_header_, /*tabs=*/2,
+                             os_);
     }
   }
 
