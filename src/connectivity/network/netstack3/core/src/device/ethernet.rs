@@ -4,7 +4,7 @@
 
 //! The Ethernet protocol.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::iter::FilterMap;
 use std::num::NonZeroU8;
 use std::slice::Iter;
@@ -180,18 +180,6 @@ impl EthernetDeviceStateBuilder {
 
     /// Build the `EthernetDeviceState` from this builder.
     pub(crate) fn build<D: EventDispatcher>(self) -> EthernetDeviceState<D> {
-        let solicited_node_link_local_addr =
-            self.mac.to_ipv6_link_local().get().to_solicited_node_address();
-
-        let mut ipv6_multicast_groups = HashSet::new();
-        ipv6_multicast_groups.insert(solicited_node_link_local_addr);
-
-        let mut link_multicast_groups = HashSet::new();
-        link_multicast_groups.insert(MulticastAddr::from(&solicited_node_link_local_addr));
-
-        // TODO(ghanan): Perform NDP's DAD on the link local address BEFORE receiving
-        //               packets destined to it.
-
         EthernetDeviceState {
             mac: self.mac,
             mtu: self.mtu,
@@ -200,9 +188,9 @@ impl EthernetDeviceStateBuilder {
             ipv4_addr_sub: Vec::new(),
             ipv6_addr_sub: Vec::new(),
             ipv6_link_local_addr_sub: None,
-            ipv4_multicast_groups: HashSet::new(),
-            ipv6_multicast_groups,
-            link_multicast_groups,
+            ipv4_multicast_groups: HashMap::new(),
+            ipv6_multicast_groups: HashMap::new(),
+            link_multicast_groups: HashMap::new(),
             ipv4_arp: ArpState::default(),
             ndp: NdpState::new(self.ndp_configs),
             route_ipv4: self.route_ipv4,
@@ -247,13 +235,13 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     ipv6_link_local_addr_sub: Option<AddressEntry<Ipv6Addr, D::Instant, LinkLocalAddr<Ipv6Addr>>>,
 
     /// IPv4 multicast groups this device has joined.
-    ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
+    ipv4_multicast_groups: HashMap<MulticastAddr<Ipv4Addr>, usize>,
 
     /// IPv6 multicast groups this device has joined.
-    ipv6_multicast_groups: HashSet<MulticastAddr<Ipv6Addr>>,
+    ipv6_multicast_groups: HashMap<MulticastAddr<Ipv6Addr>, usize>,
 
     /// Link multicast groups this device has joined.
-    link_multicast_groups: HashSet<MulticastAddr<Mac>>,
+    link_multicast_groups: HashMap<MulticastAddr<Mac>, usize>,
 
     /// IPv4 ARP state.
     ipv4_arp: ArpState<Ipv4Addr, Mac>,
@@ -332,7 +320,7 @@ impl<D: EventDispatcher> EthernetDeviceState<D> {
         (self.mac == *dst_mac)
             || dst_mac.is_broadcast()
             || (MulticastAddr::new(*dst_mac)
-                .map(|a| self.link_multicast_groups.contains(&a))
+                .map(|a| self.link_multicast_groups.contains_key(&a))
                 .unwrap_or(false))
     }
 
@@ -861,10 +849,96 @@ pub(crate) fn get_ipv6_link_local_addr<D: EventDispatcher>(
         .unwrap_or(None)
 }
 
-/// Add `device` to a multicast group `multicast_addr`.
+/// Add `device_id` to a link multicast group `multicast_addr`.
 ///
-/// If `device` is already in the multicast group `multicast_addr`,
-/// `join_ip_multicast` does nothing.
+/// Calling `join_link_multicast` with the same `device_id` and `multicast_addr` is completely safe.
+/// A counter will be kept for the number of times `join_link_multicast` has been called with the
+/// same `device_id` and `multicast_addr` pair. To completely leave a multicast group,
+/// [`leave_link_multicast`] must be called the same number of times `join_link_multicast` has been
+/// called for the same `device_id` and `multicast_addr` pair. The first time `join_link_multicast`
+/// is called for a new `device` and `multicast_addr` pair, the device will actually join the
+/// multicast group.
+///
+/// `join_link_multicast` is different from [`join_ip_multicast`] as `join_link_multicast` joins an
+/// L2 multicast group, whereas `join_ip_multicast` joins an L3 multicast group.
+pub(crate) fn join_link_multicast<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    multicast_addr: MulticastAddr<Mac>,
+) {
+    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+
+    let groups = &mut device_state.link_multicast_groups;
+
+    let counter = groups.entry(multicast_addr).or_insert(0);
+    *counter += 1;
+
+    if *counter == 1 {
+        trace!("ethernet::join_link_multicast: joining link multicast {:?}", multicast_addr,);
+    } else {
+        trace!(
+            "ethernet::join_link_multicast: already joinined link multicast {:?}, counter = {}",
+            multicast_addr,
+            *counter,
+        );
+    }
+}
+
+/// Remove `device_id` from a link multicast group `multicast_addr`.
+///
+/// `leave_link_multicast` will attempt to remove `device_id` from the multicast group
+/// `multicast_addr`. `device_id` may have "joined" the same multicast address multiple times, so
+/// `device_id` will only leave the multicast group once `leave_ip_multicast` has been called for
+/// each corresponding [`join_link_multicast`]. That is, if `join_link_multicast` gets called 3
+/// times and `leave_link_multicast` gets called two times (after all 3 `join_link_multicast`
+/// calls), `device_id` will still be in the multicast group until the next (final) call to
+/// `leave_link_multicast`.
+///
+/// `leave_link_multicast` is different from [`leave_ip_multicast`] as `leave_link_multicast` leaves
+/// an L2 multicast group, whereas `leave_ip_multicast` leaves an L3 multicast group.
+///
+/// # Panics
+///
+/// If `device_id` is not in the multicast group `multicast_addr`.
+fn leave_link_multicast<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    multicast_addr: MulticastAddr<Mac>,
+) {
+    let device_state = get_device_state_mut(ctx.state_mut(), device_id);
+
+    let groups = &mut device_state.link_multicast_groups;
+
+    // Will panic if `device_id` has not yet joined the multicast address.
+    let counter = groups.get_mut(&multicast_addr).unwrap();
+
+    if *counter == 1 {
+        trace!("ethernet::leave_link_multicast: leaving link multicast {:?}", multicast_addr,);
+
+        groups.remove(&multicast_addr);
+    } else {
+        *counter -= 1;
+
+        trace!(
+            "ethernet::leave_link_multicast: not leaving link multicast {:?} as there are still listeners for it, counter = {}",
+            multicast_addr,
+            *counter,
+        );
+    }
+}
+
+/// Add `device_id` to a multicast group `multicast_addr`.
+///
+/// Calling `join_ip_multicast` with the same `device_id` and `multicast_addr` is completely safe.
+/// A counter will be kept for the number of times `join_ip_multicast` has been called with the
+/// same `device_id` and `multicast_addr` pair. To completely leave a multicast group,
+/// [`leave_ip_multicast`] must be called the same number of times `join_ip_multicast` has been
+/// called for the same `device_id` and `multicast_addr` pair. The first time `join_ip_multicast` is
+/// called for a new `device` and `multicast_addr` pair, the device will actually join the multicast
+/// group.
+///
+/// `join_ip_multicast` is different from [`join_link_multicast`] as `join_ip_multicast` joins an
+/// L3 multicast group, whereas `join_link_multicast` joins an L2 multicast group.
 #[specialize_ip_address]
 pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
@@ -872,28 +946,51 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) {
     let device_state = get_device_state_mut(ctx.state_mut(), device_id);
-    let mac = MulticastAddr::from(&multicast_addr);
-
-    trace!(
-        "ethernet::join_ip_multicast: joining IP multicast {:?} and MAC multicast {:?}",
-        multicast_addr,
-        mac
-    );
 
     #[ipv4addr]
-    device_state.ipv4_multicast_groups.insert(multicast_addr);
+    let groups = &mut device_state.ipv4_multicast_groups;
 
     #[ipv6addr]
-    device_state.ipv6_multicast_groups.insert(multicast_addr);
+    let groups = &mut device_state.ipv6_multicast_groups;
 
-    // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
-    device_state.link_multicast_groups.insert(mac);
+    let counter = groups.entry(multicast_addr).or_insert(0);
+    *counter += 1;
+
+    if *counter == 1 {
+        let mac = MulticastAddr::from(&multicast_addr);
+
+        trace!(
+            "ethernet::join_ip_multicast: joining IP multicast {:?} and MAC multicast {:?}",
+            multicast_addr,
+            mac
+        );
+
+        // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
+        join_link_multicast(ctx, device_id, mac);
+    } else {
+        trace!(
+            "ethernet::join_ip_multicast: already joinined IP multicast {:?}, counter = {}",
+            multicast_addr,
+            *counter,
+        );
+    }
 }
 
-/// Remove `device` from a multicast group `multicast_addr`.
+/// Remove `device_id` from a multicast group `multicast_addr`.
 ///
-/// If `device` is not in the multicast group `multicast_addr`,
-/// `leave_ip_multicast` does nothing.
+/// `leave_ip_multicast` will attempt to remove `device_id` from a multicast group `multicast_addr`.
+/// `device_id` may have "joined" the same multicast address multiple times, so `device_id` will
+/// only leave the multicast group once `leave_ip_multicast` has been called for each corresponding
+/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times and
+/// `leave_ip_multicast` gets called two times (after all 3 `join_ip_multicast` calls), `device_id`
+/// will still be in the multicast group until the next (final) call to `leave_ip_multicast`.
+///
+/// `leave_ip_multicast` is different from [`leave_link_multicast`] as `leave_ip_multicast` leaves
+/// an L3 multicast group, whereas `leave_link_multicast` leaves an L2 multicast group.
+///
+/// # Panics
+///
+/// If `device_id` is not currently in the multicast group `multicast_addr`.
 #[specialize_ip_address]
 pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
@@ -903,20 +1000,37 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     let device_state = get_device_state_mut(ctx.state_mut(), device_id);
     let mac = MulticastAddr::from(&multicast_addr);
 
-    trace!(
-        "ethernet::leave_ip_multicast: leaving IP multicast {:?} and MAC multicast {:?}",
-        multicast_addr,
-        mac
-    );
-
-    // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
-    device_state.link_multicast_groups.remove(&mac);
-
     #[ipv4addr]
-    device_state.ipv4_multicast_groups.remove(&multicast_addr);
+    let groups = &mut device_state.ipv4_multicast_groups;
 
     #[ipv6addr]
-    device_state.ipv6_multicast_groups.remove(&multicast_addr);
+    let groups = &mut device_state.ipv6_multicast_groups;
+
+    // Will panic if `device_id` has not yet joined the multicast address.
+    let counter = groups.get_mut(&multicast_addr).unwrap();
+
+    if *counter == 1 {
+        let mac = MulticastAddr::from(&multicast_addr);
+
+        trace!(
+            "ethernet::leave_ip_multicast: leaving IP multicast {:?} and MAC multicast {:?}",
+            multicast_addr,
+            mac
+        );
+
+        groups.remove(&multicast_addr);
+
+        // TODO(ghanan): Make `EventDispatcher` aware of this to maintain a single source of truth.
+        leave_link_multicast(ctx, device_id, mac);
+    } else {
+        *counter -= 1;
+
+        trace!(
+            "ethernet::leave_ip_multicast: not leaving IP multicast {:?} as there are still listeners for it, counter = {}",
+            multicast_addr,
+            *counter,
+        );
+    }
 }
 
 /// Is `device` in the IP multicast group `multicast_addr`?
@@ -929,12 +1043,12 @@ pub(crate) fn is_in_ip_multicast<D: EventDispatcher, A: IpAddress>(
     #[ipv4addr]
     return get_device_state(ctx.state(), device_id)
         .ipv4_multicast_groups
-        .contains(&multicast_addr);
+        .contains_key(&multicast_addr);
 
     #[ipv6addr]
     return get_device_state(ctx.state(), device_id)
         .ipv6_multicast_groups
-        .contains(&multicast_addr);
+        .contains_key(&multicast_addr);
 }
 
 /// Get the MTU associated with this device.
@@ -2002,33 +2116,30 @@ mod tests {
         test_add_remove_ip_addresses::<Ipv6>();
     }
 
+    fn receive_simple_ip_packet_test<A: IpAddress>(
+        ctx: &mut Context<DummyEventDispatcher>,
+        device: DeviceId,
+        src_ip: A,
+        dst_ip: A,
+        expected: usize,
+    ) {
+        let buf = Buf::new(Vec::new(), ..)
+            .encapsulate(<A::Version as IpExt>::PacketBuilder::new(
+                src_ip,
+                dst_ip,
+                64,
+                IpProto::Tcp,
+            ))
+            .serialize_vec_outer()
+            .ok()
+            .unwrap()
+            .into_inner();
+
+        receive_ip_packet::<_, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
+        assert_eq!(get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()), expected);
+    }
+
     fn test_multiple_ip_addresses<I: Ip>() {
-        fn inner_test<A: IpAddress>(
-            ctx: &mut Context<DummyEventDispatcher>,
-            device: DeviceId,
-            src_ip: A,
-            dst_ip: A,
-            expected: usize,
-        ) {
-            let buf = Buf::new(Vec::new(), ..)
-                .encapsulate(<A::Version as IpExt>::PacketBuilder::new(
-                    src_ip,
-                    dst_ip,
-                    64,
-                    IpProto::Tcp,
-                ))
-                .serialize_vec_outer()
-                .ok()
-                .unwrap()
-                .into_inner();
-
-            receive_ip_packet::<_, _, A::Version>(ctx, device, FrameDestination::Unicast, buf);
-            assert_eq!(
-                get_counter_val(ctx, dispatch_receive_ip_packet_name::<A::Version>()),
-                expected
-            );
-        }
-
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
@@ -2042,8 +2153,8 @@ mod tests {
         assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
 
         // Should not receive packets on any ip.
-        inner_test(&mut ctx, device, from_ip, ip1.get(), 0);
-        inner_test(&mut ctx, device, from_ip, ip2.get(), 0);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 0);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 0);
 
         // Add ip1 to device.
         crate::device::add_ip_addr_subnet(
@@ -2056,8 +2167,8 @@ mod tests {
         assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).is_none());
 
         // Should receive packets on ip1 but not ip2
-        inner_test(&mut ctx, device, from_ip, ip1.get(), 1);
-        inner_test(&mut ctx, device, from_ip, ip2.get(), 1);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 1);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 1);
 
         // Add ip2 to device.
         crate::device::add_ip_addr_subnet(
@@ -2070,8 +2181,8 @@ mod tests {
         assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).unwrap().is_assigned());
 
         // Should receive packets on both ips
-        inner_test(&mut ctx, device, from_ip, ip1.get(), 2);
-        inner_test(&mut ctx, device, from_ip, ip2.get(), 3);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 2);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 3);
 
         // Remove ip1
         crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
@@ -2079,8 +2190,8 @@ mod tests {
         assert!(crate::device::get_ip_addr_state(ctx.state(), device, &ip2).unwrap().is_assigned());
 
         // Should receive packets on ip2
-        inner_test(&mut ctx, device, from_ip, ip1.get(), 3);
-        inner_test(&mut ctx, device, from_ip, ip2.get(), 4);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 3);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 4);
     }
 
     #[test]
@@ -2091,5 +2202,155 @@ mod tests {
     #[test]
     fn test_multiple_ipv6_addresses() {
         test_multiple_ip_addresses::<Ipv6>();
+    }
+
+    /// Get a multicast address.
+    #[specialize_ip]
+    fn get_multicast_addr<I: Ip>() -> MulticastAddr<I::Addr> {
+        #[ipv4]
+        return MulticastAddr::new(Ipv4Addr::new([224, 0, 0, 1])).unwrap();
+
+        #[ipv6]
+        return MulticastAddr::new(Ipv6Addr::new([
+            0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+        ]))
+        .unwrap();
+    }
+
+    /// Test that we can join and leave a multicast group, but we only truly leave it after
+    /// calling `leave_ip_multicast` the same number of times as `join_ip_multicast`.
+    fn test_ip_join_leave_multicast_addr_ref_count<I: Ip>() {
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        let multicast_addr = get_multicast_addr::<I>();
+
+        // Should not be in the multicast group yet.
+        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+
+        // Join the multicast group.
+        crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
+        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+
+        // Leave the multicast group.
+        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+
+        // Join the multicst group.
+        crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
+        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+
+        // Join it again...
+        crate::device::join_ip_multicast(&mut ctx, device, multicast_addr);
+        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+
+        // Leave it (still in it because we joined twice).
+        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+        assert!(crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+
+        // Leave it again... (actually left now).
+        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+    }
+
+    #[test]
+    fn test_ipv4_join_leave_multicast_addr_ref_count() {
+        test_ip_join_leave_multicast_addr_ref_count::<Ipv4>();
+    }
+
+    #[test]
+    fn test_ipv6_join_leave_multicast_addr_ref_count() {
+        test_ip_join_leave_multicast_addr_ref_count::<Ipv6>();
+    }
+
+    /// Test leaving a multicast group a device has not yet joined.
+    ///
+    /// # Panics
+    ///
+    /// This method should always panic as leaving an unjoined multicast group is a panic
+    /// condition.
+    fn test_ip_leave_unjoined_multicast<I: Ip>() {
+        let config = get_dummy_config::<I::Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        let multicast_addr = get_multicast_addr::<I>();
+
+        // Should not be in the multicast group yet.
+        assert!(!crate::device::is_in_ip_multicast(&mut ctx, device, multicast_addr));
+
+        // Leave it (this should panic.
+        crate::device::leave_ip_multicast(&mut ctx, device, multicast_addr);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_ipv4_leave_unjoined_multicast() {
+        test_ip_leave_unjoined_multicast::<Ipv4>();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_ipv6_leave_unjoined_multicast() {
+        test_ip_leave_unjoined_multicast::<Ipv6>();
+    }
+
+    #[test]
+    fn test_ipv6_duplicate_solicited_node_address() {
+        //
+        // Test that we still receive packets destined to a solicited-node multicast address of an
+        // IP address we deleted because another (distinct) IP address that is still assigned uses
+        // the same solicited-node multicast address.
+        //
+
+        let config = get_dummy_config::<Ipv6Addr>();
+        let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
+        let device = ctx.state_mut().add_ethernet_device(config.local_mac, crate::ip::IPV6_MIN_MTU);
+        crate::device::initialize_device(&mut ctx, device);
+
+        let ip1 =
+            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1]))
+                .unwrap();
+        let ip2 =
+            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1]))
+                .unwrap();
+        let from_ip = Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 1]);
+
+        // ip1 and ip2 are not equal but their solicited node addresses are the same.
+        assert_ne!(ip1, ip2);
+        assert_eq!(ip1.to_solicited_node_address(), ip2.to_solicited_node_address());
+        let sn_addr = ip1.to_solicited_node_address().get();
+
+        let addr_sub1 = AddrSubnet::new(ip1.get(), 64).unwrap();
+        let addr_sub2 = AddrSubnet::new(ip2.get(), 64).unwrap();
+
+        assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ip_packet"), 0);
+
+        // Add ip1 to the device.
+        //
+        // Should get packets destined for the solicited node address and ip1.
+        crate::device::add_ip_addr_subnet(&mut ctx, device, addr_sub1).unwrap();
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 1);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 1);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 2);
+
+        // Add ip2 to the device.
+        //
+        // Should get packets destined for the solicited node address, ip1 and ip2.
+        crate::device::add_ip_addr_subnet(&mut ctx, device, addr_sub2).unwrap();
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 3);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 4);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 5);
+
+        // Remove ip1 from the device.
+        //
+        // Should get packets destined for the solicited node address and ip2.
+        crate::device::del_ip_addr(&mut ctx, device, &ip1).unwrap();
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip1.get(), 5);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, ip2.get(), 6);
+        receive_simple_ip_packet_test(&mut ctx, device, from_ip, sn_addr, 7);
     }
 }

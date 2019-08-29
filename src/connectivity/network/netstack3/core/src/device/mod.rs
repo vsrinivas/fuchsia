@@ -658,8 +658,13 @@ pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
 /// Add `device` to a multicast group `multicast_addr`.
 ///
-/// If `device` is already in the multicast group `multicast_addr`,
-/// `join_ip_multicast` does nothing.
+/// Calling `join_ip_multicast` with the same `device` and `multicast_addr` is completely safe.
+/// A counter will be kept for the number of times `join_ip_multicast` has been called with the
+/// same `device` and `multicast_addr` pair. To completely leave a multicast group,
+/// [`leave_ip_multicast`] must be called the same number of times `join_ip_multicast` has been
+/// called for the same `device` and `multicast_addr` pair. The first time `join_ip_multicast` is
+/// called for a new `device` and `multicast_addr` pair, the device will actually join the multicast
+/// group.
 ///
 /// # Panics
 ///
@@ -681,14 +686,18 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     }
 }
 
-/// Remove `device` from a multicast group `multicast_addr`.
+/// Attempt to remove `device` from a multicast group `multicast_addr`.
 ///
-/// If `device` is not in the multicast group `multicast_addr`,
-/// `leave_ip_multicast` does nothing.
+/// `leave_ip_multicast` will attempt to remove `device` from a multicast group `multicast_addr`.
+/// `device` may have "joined" the same multicast address multiple times, so `device` will only
+/// leave the multicast group once `leave_ip_multicast` has been called for each corresponding
+/// [`join_ip_multicast`]. That is, if `join_ip_multicast` gets called 3 times and
+/// `leave_ip_multicast` gets called two times (after all 3 `join_ip_multicast` calls), `device`
+/// will still be in the multicast group until the next (final) call to `leave_ip_multicast`.
 ///
 /// # Panics
 ///
-/// Panics if `device` is not initialized.
+/// Panics if `device` is not initialized or `device` is not currently in the multicast group.
 pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
