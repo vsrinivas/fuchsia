@@ -155,6 +155,7 @@ function __fx_env_main() {
 
   # Support command-line auto-completions for the fx command.
   if [[ -z "${ZSH_VERSION}" ]]; then
+
     function __fx_complete_cmd {
       local cmd cur prev
       cmd="${COMP_WORDS[1]}"
@@ -163,14 +164,29 @@ function __fx_env_main() {
       case "${cmd}" in
         set)
           if [[ ${COMP_CWORD} -eq 2 ]]; then
-            COMPREPLY=($(compgen -W "x64 arm64" "${cur}"))
+            __fx_set_compreply_for_product_board "${cur}"
             return
           fi
           ;;
 
-        set-petal)
+        vendor)
           if [[ ${COMP_CWORD} -eq 2 ]]; then
-            COMPREPLY=($(compgen -W "garnet peridot topaz" "${cur}"))
+            # return only vendors that have vendor/*/scripts/devshell/*
+            COMPREPLY=()
+            for v in "${FUCHSIA_DIR}"/vendor/"${cur}"*/scripts/devshell; do
+              v=${v##"${FUCHSIA_DIR}/vendor/"}
+              v=${v%%"/scripts/devshell"}
+              COMPREPLY+=("$v")
+            done
+            return
+
+          elif [[ ${COMP_CWORD} -eq 3 ]]; then
+            COMPREPLY=()
+            for file in "${FUCHSIA_DIR}"/vendor/"${prev}"/scripts/devshell/"${cur}"*; do
+              if [[ -x "${file}" ]]; then
+                COMPREPLY+=("${file##*/}")
+              fi
+            done
             return
           fi
           ;;
@@ -202,14 +218,49 @@ function __fx_env_main() {
       function __fx_complete_build { :; }
     fi
 
+    function __fx_set_compreply_for_product_board {
+      local prefix=$1
+      if [[ "${prefix}" =~ \. ]]; then
+        # product is filled, find a board
+        local product="${prefix%%\.*}"
+        prefix="${prefix##*\.}"
+        for file in "${FUCHSIA_DIR}"/{.,vendor/*}/boards/"${prefix}"*.gni*; do
+          if [[ -f "${file}" ]]; then
+            file="${file##*/}"
+            COMPREPLY+=("${product}.${file%%".gni"}")
+          fi
+        done
+      else
+        # find a product
+        if [[ $(type -t compopt) == 'builtin' ]]; then
+          compopt -o nospace
+        fi
+        for file in "${FUCHSIA_DIR}"/{.,vendor/*}/products/"${prefix}"*.gni*; do
+          if [[ -f "${file}" ]]; then
+            file="${file##*/}"
+            COMPREPLY+=("${file%%".gni"}")
+          fi
+        done
+        if [[ ${#COMPREPLY[@]} -eq 1 ]]; then
+          COMPREPLY=("${COMPREPLY[0]}.")
+        fi
+      fi
+    }
+
     function __fx {
       local fuchsia_tools_dir="$(fx-config-read 2>/dev/null; echo "${FUCHSIA_BUILD_DIR}/tools")"
       COMPREPLY=()
       if [[ ${COMP_CWORD} -eq 1 ]]; then
-        for dir in "${FUCHSIA_DIR}/tools/devshell" "${FUCHSIA_DIR}/tools/devshell/contrib" "${fuchsia_tools_dir}"
-        do
-          COMPREPLY=(${COMPREPLY[*]} $(/bin/ls -dp1 ${dir}/${COMP_WORDS[1]}* 2>/dev/null | \
-            sed -n "s|^${dir}/\([^/]*\)\$|\1|p" | xargs echo))
+        local files cmd
+        cmd="${COMP_WORDS[1]}"
+        files=("${FUCHSIA_DIR}"/tools/devshell/"${cmd}"* "${FUCHSIA_DIR}"/tools/devshell/contrib/"${cmd}"*)
+        if [[ -d "${fuchsia_tools_dir}" ]]; then
+          files+=("${fuchsia_tools_dir}"/"${cmd}"*)
+        fi
+        for file in "${files[@]}"; do
+          if [[ -x "${file}" ]]; then
+            COMPREPLY+=("${file##*/}")
+          fi
         done
       else
         __fx_complete_cmd
