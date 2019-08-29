@@ -28,17 +28,19 @@ pub struct DeviceStorage<T> {
 /// Clients that want to make a breaking change should create a new structure with a new key and
 /// implement conversion/cleanup logic. Adding optional fields to a struct is not breaking, but
 /// removing fields, renaming fields, or adding non-optional fields are.
-pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Copy {
+pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Copy + PartialEq {
     const DEFAULT_VALUE: Self;
     const KEY: &'static str;
 }
 
 impl<T: DeviceStorageCompatible> DeviceStorage<T> {
     pub fn write(&mut self, new_value: T) -> Result<(), Error> {
-        self.current_data = Some(new_value);
-        let mut serialized = Value::Stringval(serde_json::to_string(&new_value).unwrap());
-        self.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
-        self.stash_proxy.commit()?;
+        if self.current_data != Some(new_value) {
+            self.current_data = Some(new_value);
+            let mut serialized = Value::Stringval(serde_json::to_string(&new_value).unwrap());
+            self.stash_proxy.set_value(&prefixed(T::KEY), &mut serialized)?;
+            self.stash_proxy.commit()?;
+        }
         Ok(())
     }
 
@@ -62,23 +64,35 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         } else {
             panic!("Should never have no value");
         }
-
     }
+}
+
+pub trait DeviceStorageFactory {
+    fn get_store<T: DeviceStorageCompatible>(&self) -> Arc<Mutex<DeviceStorage<T>>>;
 }
 
 /// Factory that vends out storage for individual structs.
-pub struct DeviceStorageFactory {
+pub struct StashDeviceStorageFactory {
     store: StoreProxy,
 }
 
-impl DeviceStorageFactory {
-    pub fn new(store: StoreProxy, identity: &str) -> DeviceStorageFactory {
-        store.identify(identity).unwrap();
-        DeviceStorageFactory { store: store }
-    }
+impl StashDeviceStorageFactory {
+    pub fn create(identity: &str, store: StoreProxy) -> StashDeviceStorageFactory {
+        let result = store.identify(identity);
+        match result {
+            Ok(_) => {}
+            Err(_) => {
+                panic!("Was not able to identify with stash");
+            }
+        }
 
+        StashDeviceStorageFactory { store: store }
+    }
+}
+
+impl DeviceStorageFactory for StashDeviceStorageFactory {
     /// Currently, this doesn't support more than one instance of the same struct.
-    pub fn get_store<T: DeviceStorageCompatible>(&self) -> Arc<Mutex<DeviceStorage<T>>> {
+    fn get_store<T: DeviceStorageCompatible>(&self) -> Arc<Mutex<DeviceStorage<T>>> {
         let (accessor_proxy, server_end) = create_proxy().unwrap();
         self.store.create_accessor(false, server_end).unwrap();
 
@@ -90,6 +104,65 @@ fn prefixed(input_string: &str) -> String {
     format!("{}_{}", SETTINGS_PREFIX, input_string)
 }
 
+#[cfg(test)]
+pub mod testing {
+    use super::*;
+    use fidl::encoding::OutOfLine;
+    use fuchsia_async as fasync;
+    use futures::prelude::*;
+
+    /// Storage that does not write to disk, for testing.
+    /// Only supports a single key/value pair
+    pub struct InMemoryStorageFactory {}
+
+    impl InMemoryStorageFactory {
+        pub fn create() -> InMemoryStorageFactory {
+            InMemoryStorageFactory {}
+        }
+    }
+
+    impl DeviceStorageFactory for InMemoryStorageFactory {
+        fn get_store<T: DeviceStorageCompatible>(&self) -> Arc<Mutex<DeviceStorage<T>>> {
+            Arc::new(Mutex::new(DeviceStorage {
+                stash_proxy: spawn_stash_proxy(),
+                current_data: None,
+            }))
+        }
+    }
+
+    fn spawn_stash_proxy() -> StoreAccessorProxy {
+        let (stash_proxy, mut stash_stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoreAccessorMarker>().unwrap();
+
+        fasync::spawn(async move {
+            let mut stored_value: Option<Value> = None;
+            let mut stored_key: Option<String> = None;
+
+            while let Some(req) = stash_stream.try_next().await.unwrap() {
+                #[allow(unreachable_patterns)]
+                match req {
+                    StoreAccessorRequest::GetValue { key, responder } => {
+                        if let Some(key_string) = stored_key {
+                            assert_eq!(key, key_string);
+                        }
+                        stored_key = Some(key);
+
+                        responder.send(stored_value.as_mut().map(OutOfLine)).unwrap();
+                    }
+                    StoreAccessorRequest::SetValue { key, val, control_handle: _ } => {
+                        if let Some(key_string) = stored_key {
+                            assert_eq!(key, key_string);
+                        }
+                        stored_key = Some(key);
+                        stored_value = Some(val);
+                    }
+                    _ => {}
+                }
+            }
+        });
+        stash_proxy
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -103,7 +176,7 @@ mod tests {
     const VALUE1: i32 = 33;
     const VALUE2: i32 = 128;
 
-    #[derive(Clone, Copy, Serialize, Deserialize, Debug)]
+    #[derive(PartialEq, Clone, Copy, Serialize, Deserialize, Debug)]
     struct TestStruct {
         value: i32,
     }
@@ -197,5 +270,4 @@ mod tests {
             request => panic!("Unexpected request: {:?}", request),
         }
     }
-
 }

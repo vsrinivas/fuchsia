@@ -16,6 +16,7 @@ use {
     crate::json_codec::JsonCodec,
     crate::mutation::*,
     crate::registry::base::Registry,
+    crate::registry::device_storage::{DeviceStorageFactory, StashDeviceStorageFactory},
     crate::registry::registry_impl::RegistryImpl,
     crate::registry::service_context::ServiceContext,
     crate::setting_adapter::{MutationHandler, SettingAdapter},
@@ -29,6 +30,7 @@ use {
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::*,
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::StreamExt,
@@ -53,6 +55,8 @@ mod setup;
 mod switchboard;
 mod system;
 
+const STASH_IDENTITY: &str = "settings_service";
+
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["setui-service"]).expect("Can't init logger");
     fx_log_info!("Starting setui-service...");
@@ -63,7 +67,17 @@ fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
 
-    create_fidl_service(fs.dir("svc"), get_all_setting_types(), service_context);
+    let storage_factory = StashDeviceStorageFactory::create(
+        STASH_IDENTITY,
+        connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
+    );
+
+    create_fidl_service(
+        fs.dir("svc"),
+        get_all_setting_types(),
+        service_context,
+        Box::new(storage_factory),
+    );
 
     fs.take_and_serve_directory_handle()?;
     let () = executor.run_singlethreaded(fs.collect());
@@ -75,12 +89,14 @@ fn main() -> Result<(), Error> {
 /// This method generates the necessary infrastructure to support the settings
 /// service (switchboard, registry, etc.) and brings up the components necessary
 /// to support the components specified in the components HashSet.
-fn create_fidl_service<'a>(
+fn create_fidl_service<'a, T: DeviceStorageFactory>(
     mut service_dir: ServiceFsDir<ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
     service_context_handle: Arc<RwLock<ServiceContext>>,
+    storage_factory: Box<T>,
 ) {
     let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
+    let _unboxed_storage_factory = &storage_factory;
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
@@ -203,6 +219,7 @@ fn create_fidl_service<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::registry::device_storage::testing::*;
     use failure::format_err;
     use fidl::endpoints::{ServerEnd, ServiceMarker};
     use fidl_fuchsia_accessibility::*;
@@ -280,6 +297,7 @@ mod tests {
             fs.root_dir(),
             [SettingType::Accessibility].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+            Box::new(InMemoryStorageFactory::create()),
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
@@ -353,9 +371,7 @@ mod tests {
                         }
                         _ => {}
                     }
-
                 }
-
             });
 
             Ok(())
@@ -367,6 +383,7 @@ mod tests {
             fs.root_dir(),
             [SettingType::Display].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+            Box::new(InMemoryStorageFactory::create()),
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
@@ -392,14 +409,11 @@ mod tests {
         display_settings.auto_brightness = Some(true);
         display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
-
         let settings =
             display_proxy.watch().await.expect("watch completed").expect("watch successful");
 
         assert_eq!(settings.auto_brightness, Some(true));
-
     }
-
 
     /// Makes sure that a failing display stream doesn't cause a failure for a different interface.
     #[fuchsia_async::run_singlethreaded(test)]
@@ -425,7 +439,6 @@ mod tests {
                             }
                             _ => {}
                         }
-
                     }
                 });
                 Ok(())
@@ -439,6 +452,7 @@ mod tests {
             fs.root_dir(),
             [SettingType::Display, SettingType::Intl].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+            Box::new(InMemoryStorageFactory::create()),
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
@@ -452,9 +466,7 @@ mod tests {
         let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
         let _settings =
             intl_service.watch().await.expect("watch completed").expect("watch successful");
-
     }
-
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_intl() {
@@ -496,6 +508,7 @@ mod tests {
             fs.root_dir(),
             [SettingType::Intl].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+            Box::new(InMemoryStorageFactory::create()),
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
@@ -535,6 +548,7 @@ mod tests {
             fs.root_dir(),
             [SettingType::System].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(None))),
+            Box::new(InMemoryStorageFactory::create()),
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
@@ -568,6 +582,7 @@ mod tests {
             fs.root_dir(),
             [SettingType::Setup].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(None))),
+            Box::new(InMemoryStorageFactory::create()),
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();

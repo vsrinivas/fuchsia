@@ -5,6 +5,7 @@
 #include <fuchsia/auth/account/cpp/fidl.h>
 #include <fuchsia/devicesettings/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <fuchsia/stash/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
 
@@ -52,6 +53,9 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
   builder.AddServiceFromComponent<fuchsia::devicesettings::DeviceSettingsManager>(
       "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
       "device_settings_manager.cmx");
+  builder.AddServiceFromComponent<fuchsia::stash::Store>(
+      "fuchsia-pkg://fuchsia.com/stash#meta/"
+      "stash.cmx");
 
   bool intercepted = false;
   builder.InterceptBaseShell(
@@ -78,6 +82,9 @@ TEST_F(LoginOverrideTest, AutoLoginGuestOverrideSkipsBaseShell) {
   builder.AddServiceFromComponent<fuchsia::devicesettings::DeviceSettingsManager>(
       "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
       "device_settings_manager.cmx");
+  builder.AddServiceFromComponent<fuchsia::stash::Store>(
+      "fuchsia-pkg://fuchsia.com/stash#meta/"
+      "stash.cmx");
 
   // Base shell should never be launched, so |intercepted_base_shell| should
   // remain false when the session shell launches.
