@@ -17,8 +17,9 @@ std::unique_ptr<DecoderFactory> FidlDecoderFactory::Create(ServiceProvider* serv
   return std::make_unique<FidlDecoderFactory>(service_provider);
 }
 
-FidlDecoderFactory::FidlDecoderFactory(ServiceProvider* service_provider) {
-  codec_factory_ = service_provider->ConnectToService<fuchsia::mediacodec::CodecFactory>();
+FidlDecoderFactory::FidlDecoderFactory(ServiceProvider* service_provider)
+    : service_provider_(service_provider) {
+  codec_factory_ = service_provider_->ConnectToService<fuchsia::mediacodec::CodecFactory>();
 }
 
 FidlDecoderFactory::~FidlDecoderFactory() {}
@@ -44,8 +45,8 @@ void FidlDecoderFactory::CreateDecoder(const StreamType& stream_type,
   codec_factory_->CreateDecoder(std::move(decoder_params), decoder.NewRequest());
   FXL_DCHECK(decoder);
 
-  FidlDecoder::Create(stream_type, std::move(*format_details), std::move(decoder),
-                      std::move(callback));
+  FidlDecoder::Create(service_provider_, stream_type, std::move(*format_details),
+                      std::move(decoder), std::move(callback));
 }
 
 }  // namespace media_player

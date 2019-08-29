@@ -14,21 +14,26 @@
 
 namespace media_player {
 
+constexpr uint32_t kOutputIndex = 0;
+
 // static
-void FidlDecoder::Create(const StreamType& stream_type,
+void FidlDecoder::Create(ServiceProvider* service_provider, const StreamType& stream_type,
                          fuchsia::media::FormatDetails input_format_details,
                          fuchsia::media::StreamProcessorPtr decoder,
                          fit::function<void(std::shared_ptr<Decoder>)> callback) {
-  auto fidl_decoder = std::make_shared<FidlDecoder>(stream_type, std::move(input_format_details));
+  auto fidl_decoder =
+      std::make_shared<FidlDecoder>(service_provider, stream_type, std::move(input_format_details));
   fidl_decoder->Init(std::move(decoder),
                      [fidl_decoder, callback = std::move(callback)](bool succeeded) {
                        callback(succeeded ? fidl_decoder : nullptr);
                      });
 }
 
-FidlDecoder::FidlDecoder(const StreamType& stream_type,
+FidlDecoder::FidlDecoder(ServiceProvider* service_provider, const StreamType& stream_type,
                          fuchsia::media::FormatDetails input_format_details)
-    : medium_(stream_type.medium()), input_format_details_(std::move(input_format_details)) {
+    : service_provider_(service_provider),
+      medium_(stream_type.medium()),
+      input_format_details_(std::move(input_format_details)) {
   FXL_DCHECK(input_format_details_.has_mime_type());
 
   switch (medium_) {
@@ -76,27 +81,38 @@ void FidlDecoder::Init(fuchsia::media::StreamProcessorPtr decoder,
 
 FidlDecoder::~FidlDecoder() { FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_); }
 
-const char* FidlDecoder::label() const { return "fidl decoder"; }
+const char* FidlDecoder::label() const {
+  switch (medium_) {
+    case StreamType::Medium::kAudio:
+      return "fidl audio decoder";
+    case StreamType::Medium::kVideo:
+      return "fidl video decoder";
+    case StreamType::Medium::kText:
+      return "fidl text decoder";
+    case StreamType::Medium::kSubpicture:
+      return "fidl subpicture decoder";
+  }
+}
 
 void FidlDecoder::Dump(std::ostream& os) const {
+  os << label() << fostr::Indent;
   Node::Dump(os);
   // TODO(dalesat): More.
+  os << fostr::Outdent;
 }
 
 void FidlDecoder::ConfigureConnectors() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-  MaybeConfigureInput(nullptr);
-  MaybeConfigureOutput(nullptr);
+  ConfigureInputDeferred();
+  ConfigureOutputDeferred();
 }
 
 void FidlDecoder::OnInputConnectionReady(size_t input_index) {
   FXL_DCHECK(input_index == 0);
-
-  if (add_input_buffers_pending_) {
-    add_input_buffers_pending_ = false;
-    AddInputBuffers();
-  }
+  FXL_DCHECK(input_buffers_.has_current_set());
+  BufferSet& current_set = input_buffers_.current_set();
+  current_set.SetBufferCount(UseInputVmos().GetVmos().size());
 }
 
 void FidlDecoder::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
@@ -170,9 +186,20 @@ void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
 void FidlDecoder::OnOutputConnectionReady(size_t output_index) {
   FXL_DCHECK(output_index == 0);
 
-  if (add_output_buffers_pending_) {
-    add_output_buffers_pending_ = false;
-    AddOutputBuffers();
+  if (allocate_output_buffers_for_decoder_pending_) {
+    allocate_output_buffers_for_decoder_pending_ = false;
+    // We allocate all the buffers on behalf of the outboard decoder. We give
+    // the outboard decoder ownership of these buffers as long as this set is
+    // current. The decoder decides what buffers to use for output. When an
+    // output packet is produced, the player shares ownership of the buffer until
+    // all packets referencing the buffer are recycled. This ownership model
+    // reflects the fact that the outboard decoder is free to use output buffers
+    // as references and even use the same output buffer for multiple packets as
+    // happens with VP9.
+    FXL_DCHECK(output_buffers_.has_current_set());
+    BufferSet& current_set = output_buffers_.current_set();
+    current_set.SetBufferCount(UseOutputVmos().GetVmos().size());
+    current_set.AllocateAllBuffersForDecoder(UseOutputVmos());
   }
 }
 
@@ -218,99 +245,6 @@ void FidlDecoder::InitFailed() {
   }
 }
 
-void FidlDecoder::MaybeConfigureInput(fuchsia::media::StreamBufferConstraints* constraints) {
-  if (constraints == nullptr) {
-    // We have no constraints to apply. Defer the configuration.
-    ConfigureInputDeferred();
-    return;
-  }
-
-  FXL_DCHECK(input_buffers_.has_current_set());
-
-  const bool physically_contiguous_required =
-      constraints->has_is_physically_contiguous_required() &&
-      constraints->is_physically_contiguous_required();
-
-  // Physically-contiguous buffers are temporarily unsupported pending sysmem integration.
-  FXL_CHECK(!physically_contiguous_required);
-
-  BufferSet& current_set = input_buffers_.current_set();
-  ConfigureInputToUseVmos(
-      0, current_set.buffer_count(), current_set.buffer_size(),
-      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
-      ZX_VM_PERM_READ, [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
-        // This callback runs on an arbitrary thread.
-        return current_set.AllocateBuffer(size, payload_vmos);
-      });
-
-  if (InputConnectionReady()) {
-    AddInputBuffers();
-  } else {
-    add_input_buffers_pending_ = true;
-  }
-}
-
-void FidlDecoder::AddInputBuffers() {
-  FXL_DCHECK(InputConnectionReady());
-
-  BufferSet& current_set = input_buffers_.current_set();
-  for (uint32_t index = 0; index < current_set.buffer_count(); ++index) {
-    auto descriptor = current_set.GetBufferDescriptor(index, false, UseInputVmos());
-    outboard_decoder_->AddInputBuffer(std::move(descriptor));
-  }
-}
-
-void FidlDecoder::MaybeConfigureOutput(fuchsia::media::StreamBufferConstraints* constraints) {
-  FXL_DCHECK(constraints == nullptr || constraints->has_per_packet_buffer_bytes_max() &&
-                                           constraints->per_packet_buffer_bytes_max() != 0);
-
-  if (constraints == nullptr) {
-    // We have no constraints to apply. Defer the configuration.
-    ConfigureOutputDeferred();
-    return;
-  }
-
-  FXL_DCHECK(output_buffers_.has_current_set());
-  FXL_DCHECK(output_stream_type_);
-  FXL_DCHECK(constraints->has_very_temp_kludge_bti_handle());
-
-  // TODO(dalesat): Do we need to add some buffers for queueing?
-  BufferSet& current_set = output_buffers_.current_set();
-  bool output_vmos_physically_contiguous = (constraints->has_is_physically_contiguous_required() &&
-                                            constraints->is_physically_contiguous_required());
-  FXL_CHECK(!output_vmos_physically_contiguous);
-
-  ConfigureOutputToUseVmos(
-      0, current_set.buffer_count(), current_set.buffer_size(),
-      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer);
-
-  if (OutputConnectionReady()) {
-    AddOutputBuffers();
-  } else {
-    add_output_buffers_pending_ = true;
-  }
-}
-
-void FidlDecoder::AddOutputBuffers() {
-  FXL_DCHECK(OutputConnectionReady());
-
-  // We allocate all the buffers on behalf of the outboard decoder. We give
-  // the outboard decoder ownership of these buffers as long as this set is
-  // current. The decoder decides what buffers to use for output. When an
-  // output packet is produced, the player shares ownership of the buffer until
-  // all packets referencing the buffer are recycled. This ownership model
-  // reflects the fact that the outboard decoder is free to use output buffers
-  // as references and even use the same output buffer for multiple packets as
-  // happens with VP9.
-  BufferSet& current_set = output_buffers_.current_set();
-  current_set.AllocateAllBuffersForDecoder(UseOutputVmos());
-
-  for (uint32_t index = 0; index < current_set.buffer_count(); ++index) {
-    auto descriptor = current_set.GetBufferDescriptor(index, true, UseOutputVmos());
-    outboard_decoder_->AddOutputBuffer(std::move(descriptor));
-  }
-}
-
 void FidlDecoder::MaybeRequestInputPacket() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
@@ -328,6 +262,8 @@ void FidlDecoder::MaybeRequestInputPacket() {
 
 void FidlDecoder::OnConnectionFailed(zx_status_t error) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+
+  FXL_PLOG(ERROR, error) << "OnConnectionFailed";
 
   InitFailed();
   // TODO(dalesat): Report failure.
@@ -349,11 +285,30 @@ void FidlDecoder::OnInputConstraints(fuchsia::media::StreamBufferConstraints con
   FXL_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
 
-  MaybeConfigureInput(&constraints);
+  bool connection_ready = ConfigureInputToUseSysmemVmos(
+      service_provider_, 0, current_set.packet_count_for_server(), current_set.buffer_size(),
+      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
+      0,  // map_flags
+      [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
+        // This callback runs on an arbitrary thread.
+        return current_set.AllocateBuffer(size, payload_vmos);
+      });
 
-  outboard_decoder_->SetInputBufferSettings(fidl::Clone(current_set.settings()));
+  // Call |Sync| on the sysmem token before passing it to the outboard decoder as part of
+  // |SetInputBufferPartialSettings|. This needs to done to ensure that sysmem recognizes the
+  // token when it arrives. The outboard decoder doesn't do this.
+  input_sysmem_token_ = TakeInputSysmemToken();
+  // TODO(dalesat): Use the BufferCollection::Sync() instead, since token Sync() may go away before
+  // long.
+  input_sysmem_token_->Sync([this, &current_set]() {
+    outboard_decoder_->SetInputBufferPartialSettings(
+        current_set.PartialSettings(std::move(input_sysmem_token_)));
+    InitSucceeded();
+  });
 
-  InitSucceeded();
+  if (connection_ready) {
+    OnInputConnectionReady(0);
+  }
 }
 
 void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints constraints) {
@@ -361,8 +316,7 @@ void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints co
 
   if (constraints.has_buffer_constraints_action_required() &&
       constraints.buffer_constraints_action_required() && !constraints.has_buffer_constraints()) {
-    FXL_LOG(ERROR) << "OnOutputConstraints: constraints action required but "
-                      "constraints missing";
+    FXL_LOG(ERROR) << "OnOutputConstraints: constraints action required but constraints missing";
     InitFailed();
     return;
   }
@@ -370,8 +324,8 @@ void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints co
   if (!constraints.has_buffer_constraints_action_required() ||
       !constraints.buffer_constraints_action_required()) {
     if (init_callback_) {
-      FXL_LOG(ERROR) << "OnOutputConstraints: constraints action not required on "
-                        "initial constraints.";
+      FXL_LOG(ERROR)
+          << "OnOutputConstraints: constraints action not required on initial constraints.";
       InitFailed();
       return;
     }
@@ -385,6 +339,7 @@ void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints co
   }
 
   // Use a single VMO for audio, VMO per buffer for video.
+  FXL_DCHECK(output_stream_type_);
   const bool success =
       output_buffers_.ApplyConstraints(constraints.buffer_constraints(),
                                        output_stream_type_->medium() == StreamType::Medium::kAudio);
@@ -397,21 +352,30 @@ void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints co
   FXL_DCHECK(output_buffers_.has_current_set());
   BufferSet& current_set = output_buffers_.current_set();
 
-  outboard_decoder_->SetOutputBufferSettings(fidl::Clone(current_set.settings()));
+  ConfigureOutputToUseSysmemVmos(
+      service_provider_, 0, current_set.packet_count_for_server(), current_set.buffer_size(),
+      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
+      0);  // map_flags
 
-  if (constraints.has_buffer_constraints() &&
-      (!constraints.buffer_constraints().has_per_packet_buffer_bytes_max() ||
-       constraints.buffer_constraints().per_packet_buffer_bytes_max() == 0)) {
-    FXL_LOG(ERROR) << "Buffer constraints are missing non-zero per packet "
-                      "buffer bytes max";
-    InitFailed();
-    return;
-  }
+  // Call |Sync| on the sysmem token before passing it to the outboard decoder as part of
+  // |SetOutputBufferPartialSettings|. This needs to be done to ensure that sysmem recognizes the
+  // token when it arrives. The outboard decoder doesn't do this.
+  output_sysmem_token_ = TakeOutputSysmemToken();
+  // TODO(dalesat): Use the BufferCollection::Sync() instead, since token Sync() may go away before
+  // long.
+  output_sysmem_token_->Sync([this]() {
+    BufferSet& current_set = output_buffers_.current_set();
+    outboard_decoder_->SetOutputBufferPartialSettings(
+        current_set.PartialSettings(std::move(output_sysmem_token_)));
 
-  // Create the VMOs when we're ready, and add them to the outboard decoder.
-  // Mutable so we can move the vmo handle out.
-  MaybeConfigureOutput(constraints.mutable_buffer_constraints());
-};  // namespace media_player
+    outboard_decoder_->CompleteOutputBufferPartialSettings(current_set.lifetime_ordinal());
+
+    allocate_output_buffers_for_decoder_pending_ = true;
+    if (OutputConnectionReady()) {
+      OnOutputConnectionReady(kOutputIndex);
+    }
+  });
+}
 
 void FidlDecoder::OnOutputFormat(fuchsia::media::StreamOutputFormat format) {
   if (!format.has_format_details()) {

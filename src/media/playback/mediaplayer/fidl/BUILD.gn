@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 source_set("fidl") {
   sources = [
     "buffer_set.cc",
@@ -44,5 +46,22 @@ source_set("fidl") {
     "//src/media/playback/mediaplayer/util",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
+  ]
+}
+
+test("tests") {
+  output_name = "mediaplayer_fidl_tests"
+
+  sources = [
+    "test/buffer_set_test.cc",
+  ]
+
+  deps = [
+    ":fidl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/media/playback/mediaplayer/graph",
   ]
 }

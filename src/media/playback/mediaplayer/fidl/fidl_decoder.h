@@ -18,12 +18,13 @@ class FidlDecoder : public Decoder {
  public:
   // Creates a fidl decoder factory. Calls the callback with the initalized
   // decoder on success. Calls the callback with nullptr on failure.
-  static void Create(const StreamType& stream_type,
+  static void Create(ServiceProvider* service_provider, const StreamType& stream_type,
                      fuchsia::media::FormatDetails input_format_details,
                      fuchsia::media::StreamProcessorPtr decoder,
                      fit::function<void(std::shared_ptr<Decoder>)> callback);
 
-  FidlDecoder(const StreamType& stream_type, fuchsia::media::FormatDetails input_format_details);
+  FidlDecoder(ServiceProvider* service_provider, const StreamType& stream_type,
+              fuchsia::media::FormatDetails input_format_details);
 
   ~FidlDecoder() override;
 
@@ -58,30 +59,6 @@ class FidlDecoder : public Decoder {
   // Notifies that the decoder is not viable. This method does nothing after the
   // first time it or |InitSucceeded| is called.
   void InitFailed();
-
-  // Configures the input as appropriate. |ConfigureConnectors| calls this as
-  // does |OnInputConstraints|. If |constraints| is supplied, this method will
-  // either cache the value (if the node isn't ready) or use it to configure
-  // the input (if the node is ready). If |constraints| is null, there are
-  // cached constraints and the node is ready, this method will configure the
-  // input with the cached constraints and clear the cache.
-  void MaybeConfigureInput(fuchsia::media::StreamBufferConstraints* constraints);
-
-  // Adds input buffers to the outboard decoder. This method must not be called
-  // until the input connection is ready.
-  void AddInputBuffers();
-
-  // Configures the output as appropriate. |ConfigureConnectors| calls this as
-  // does |OnOutputConstraints|. If |constraints| is supplied, this method will
-  // either cache the value (if the node isn't ready) or use it to configure
-  // the output (if the node is ready). If |constraints| is null, there are
-  // cached constraints and the node is ready, this method will configure the
-  // output with the cached constraints and clear the cache.
-  void MaybeConfigureOutput(fuchsia::media::StreamBufferConstraints* constraints);
-
-  // Adds output buffers to the outboard decoder. This method must not be called
-  // until the output connection is ready.
-  void AddOutputBuffers();
 
   // Requests an input packet when appropriate.
   void MaybeRequestInputPacket();
@@ -118,6 +95,7 @@ class FidlDecoder : public Decoder {
 
   FXL_DECLARE_THREAD_CHECKER(thread_checker_);
 
+  ServiceProvider* service_provider_;
   StreamType::Medium medium_;
   fuchsia::media::StreamProcessorPtr outboard_decoder_;
   fuchsia::media::FormatDetails input_format_details_;
@@ -125,8 +103,7 @@ class FidlDecoder : public Decoder {
   bool have_real_output_stream_type_ = false;
   std::unique_ptr<StreamType> output_stream_type_;
   std::unique_ptr<StreamType> revised_output_stream_type_;
-  bool add_input_buffers_pending_ = false;
-  bool add_output_buffers_pending_ = false;
+  bool allocate_output_buffers_for_decoder_pending_ = false;
   uint64_t stream_lifetime_ordinal_ = 1;
   uint64_t output_format_details_version_ordinal_ = 0;
   bool end_of_input_stream_ = false;
@@ -135,6 +112,10 @@ class FidlDecoder : public Decoder {
   media::TimelineRate pts_rate_;
   int64_t next_pts_ = 0;
   bool flushing_ = true;
+
+  // These are used temporarily while their respective |Sync| calls are pending.
+  fuchsia::sysmem::BufferCollectionTokenPtr output_sysmem_token_;
+  fuchsia::sysmem::BufferCollectionTokenPtr input_sysmem_token_;
 
   // Disallow copy and assign.
   FidlDecoder(const FidlDecoder&) = delete;

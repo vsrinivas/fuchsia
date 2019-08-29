@@ -27,6 +27,7 @@ class FidlDecoderFactory : public DecoderFactory {
                      fit::function<void(std::shared_ptr<Decoder>)> callback) override;
 
  private:
+  ServiceProvider* service_provider_;
   fuchsia::mediacodec::CodecFactoryPtr codec_factory_;
 };
 

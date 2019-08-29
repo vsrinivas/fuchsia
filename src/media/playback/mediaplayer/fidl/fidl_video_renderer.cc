@@ -149,10 +149,10 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     }
   }
 
-  // Discard empty packets so they don't confuse the selection logic.
-  // Discard packets that fall outside the program range.
-  if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0) ||
-      packet_pts_ns > max_pts(0)) {
+  // Discard empty packets so they don't confuse the selection logic. We check the size rather than
+  // seeing if the payload is null, because the payload will be null for non-empty payloads that
+  // aren't mapped into local memory. Also discard packets that fall outside the program range.
+  if (flushed_ || packet->size() == 0 || packet_pts_ns < min_pts(0) || packet_pts_ns > max_pts(0)) {
     if (packet->end_of_stream() && presented_packets_not_released_ <= 1) {
       // This is the end-of-stream packet, and it will not be presented,
       // probably because it has no payload. There is at most one packet

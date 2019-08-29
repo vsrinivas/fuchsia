@@ -34,13 +34,13 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
 
   ~BufferSet();
 
-  // Gets the settings for this buffer set. The |buffer_lifetime_ordinal| of
-  // settings is set to the |lifetime_ordinal| value passed into the
-  // constructor.
-  const fuchsia::media::StreamBufferSettings& settings() const {
-    std::lock_guard<std::mutex> locker(mutex_);
-    return settings_;
-  }
+  // Sets the buffer count.
+  void SetBufferCount(uint32_t buffer_count);
+
+  // Gets the partial settings for this buffer set. The |buffer_lifetime_ordinal| of settings is set
+  // to the |lifetime_ordinal| value passed into the constructor.
+  fuchsia::media::StreamBufferPartialSettings PartialSettings(
+      fuchsia::sysmem::BufferCollectionTokenPtr token) const;
 
   // Sets the value passed into the constructor as |single_vmo|.
   bool single_vmo() const {
@@ -51,15 +51,23 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // Returns the buffer lifetime ordinal passed to the constructor.
   uint64_t lifetime_ordinal() const {
     std::lock_guard<std::mutex> locker(mutex_);
-    FXL_DCHECK(settings_.has_buffer_lifetime_ordinal());
-    return settings_.buffer_lifetime_ordinal();
+    return lifetime_ordinal_;
+  }
+
+  uint32_t packet_count_for_server() {
+    std::lock_guard<std::mutex> locker(mutex_);
+    return packet_count_for_server_;
+  }
+
+  uint32_t packet_count_for_client() {
+    std::lock_guard<std::mutex> locker(mutex_);
+    return packet_count_for_client_;
   }
 
   // Returns the size in bytes of the buffers in this set.
   uint32_t buffer_size() const {
     std::lock_guard<std::mutex> locker(mutex_);
-    FXL_DCHECK(settings_.has_per_packet_buffer_bytes());
-    return settings_.per_packet_buffer_bytes();
+    return buffer_size_;
   }
 
   // Returns the number of buffers in the set.
@@ -68,25 +76,8 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
     return buffers_.size();
   }
 
-  // Returns the number of free buffers.
-  uint32_t free_buffer_count() const {
-    std::lock_guard<std::mutex> locker(mutex_);
-    return free_buffer_count_;
-  }
-
-  // Returns a |StreamBuffer| struct for the specified buffer. |writeable|
-  // determines whether the vmo handle in the descriptor should have write
-  // permission.
-  fuchsia::media::StreamBuffer GetBufferDescriptor(uint32_t buffer_index, bool writeable,
-                                                   const PayloadVmos& payload_vmos) const;
-
   // Allocates a buffer.
   fbl::RefPtr<PayloadBuffer> AllocateBuffer(uint64_t size, const PayloadVmos& payload_vmos);
-
-  // Creates a payload buffer on behalf of the outboard decoder and stores
-  // a reference to it. The reference may be released with
-  // |ReleaseBufferForDecoder| or |ReleaseAllDecoderOwnedBuffers|.
-  void CreateBufferForDecoder(uint32_t buffer_index, const PayloadVmos& payload_vmos);
 
   // Adds a reference to the payload buffer on behalf of the outboard decoder.
   // |payload_buffer| cannot be null. This version is used when the client
@@ -130,10 +121,6 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
     fbl::RefPtr<PayloadBuffer> decoder_ref_;
   };
 
-  // Gets the |PayloadVmo| for the specified index.
-  fbl::RefPtr<PayloadVmo> BufferVmo(size_t buffer_index, const PayloadVmos& payload_vmos) const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
-
   // Creates a |PayloadBuffer| for the indicated |buffer_index|.
   fbl::RefPtr<PayloadBuffer> CreateBuffer(uint32_t buffer_index,
                                           const std::vector<fbl::RefPtr<PayloadVmo>>& payload_vmos)
@@ -141,8 +128,14 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
 
   mutable std::mutex mutex_;
 
-  fuchsia::media::StreamBufferSettings settings_ FXL_GUARDED_BY(mutex_);
+  uint64_t lifetime_ordinal_ FXL_GUARDED_BY(mutex_);
   bool single_vmo_ FXL_GUARDED_BY(mutex_);
+  uint64_t buffer_constraints_version_ordinal_ FXL_GUARDED_BY(mutex_);
+  bool single_buffer_mode_ FXL_GUARDED_BY(mutex_);
+  uint32_t packet_count_for_server_ FXL_GUARDED_BY(mutex_);
+  uint32_t packet_count_for_client_ FXL_GUARDED_BY(mutex_);
+  uint32_t buffer_size_ FXL_GUARDED_BY(mutex_);
+
   std::vector<BufferInfo> buffers_ FXL_GUARDED_BY(mutex_);
 
   // |suggest_next_to_allocate_| suggests the next buffer to allocate. When
