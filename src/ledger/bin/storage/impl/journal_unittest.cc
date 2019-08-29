@@ -15,6 +15,7 @@
 #include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 
 namespace storage {
@@ -27,7 +28,7 @@ using ::testing::SizeIs;
 class JournalTest : public ledger::TestWithEnvironment {
  public:
   JournalTest()
-      : encryption_service_(dispatcher()),
+      : encryption_service_(environment_.dispatcher()),
         page_storage_(&environment_, &encryption_service_,
                       std::make_unique<storage::fake::FakeDb>(dispatcher()), "page_id",
                       CommitPruningPolicy::NEVER),
@@ -374,6 +375,148 @@ TEST_F(JournalTest, MergesConsistent) {
     EXPECT_EQ(merge_commit1->GetId(), merge_commit2->GetId());
   }));
 }
+
+// TODO(35653): once we add salt to the commits, check that we get two different trees for deletion
+// too.
+TEST_F(JournalTest, ChangesDifferent) {
+  ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("1", object_identifier_, KeyPriority::EAGER);
+
+    Status status;
+    std::unique_ptr<const Commit> commit1;
+    std::vector<ObjectIdentifier> objects_to_sync;
+    status = journal_->Commit(handler, &commit1, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit1);
+
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("1", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> commit2;
+    status = journal_->Commit(handler, &commit2, &objects_to_sync);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit2);
+
+    EXPECT_NE(commit1->GetRootIdentifier(), commit2->GetRootIdentifier());
+
+    std::vector<Entry> entries1 = GetCommitContents(*commit1);
+    std::vector<Entry> entries2 = GetCommitContents(*commit2);
+
+    EXPECT_EQ(WithoutEntryIds(entries1), WithoutEntryIds(entries2));
+    EXPECT_NE(entries1, entries2);
+  }));
+}
+
+using MergeTestEntry =
+    std::tuple<std::string, std::tuple<uint32_t, uint32_t, std::string>, KeyPriority>;
+using MergeTestParam = std::pair<MergeTestEntry, MergeTestEntry>;
+
+class JournalMergeTest : public JournalTest, public ::testing::WithParamInterface<MergeTestParam> {
+ public:
+  ObjectIdentifier MakeObjectIdentifier(std::tuple<uint32_t, uint32_t, std::string> components) {
+    auto& [key_index, deletion_scope_id, object_digest] = components;
+    return page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
+        key_index, deletion_scope_id, MakeObjectDigest(object_digest));
+  }
+
+  void Put(MergeTestEntry entry) {
+    auto& [key, object_identifier_components, priority] = entry;
+    journal_->Put(key, MakeObjectIdentifier(object_identifier_components), priority);
+  }
+
+  testing::Matcher<Entry> Matches(MergeTestEntry entry) {
+    auto& [key, object_identifier_components, priority] = entry;
+    return MatchesEntry({key, MakeObjectIdentifier(object_identifier_components), priority});
+  }
+};
+
+TEST_P(JournalMergeTest, MergeEntryIdDifferent) {
+  ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    // This test relies on the parameter entries sorting between "0" and "3", and the two being
+    // different.
+    auto [entry_params1, entry_params2] = GetParam();
+
+    // Create 2 commits from the |kFirstPageCommitId|, one with a key "0", and
+    // one with a key "1".
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("0", object_identifier_, KeyPriority::EAGER);
+
+    Status status;
+    std::unique_ptr<const Commit> commit_0;
+    std::vector<ObjectIdentifier> objects_to_sync_0;
+    status = journal_->Commit(handler, &commit_0, &objects_to_sync_0);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit_0);
+
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
+    journal_->Put("1", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> commit_1;
+    std::vector<ObjectIdentifier> objects_to_sync_1;
+    status = journal_->Commit(handler, &commit_1, &objects_to_sync_1);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, commit_1);
+
+    // Create a merge journal, inserting key "3" and the first parameter.
+    SetJournal(
+        JournalImpl::Merge(&environment_, &page_storage_, commit_0->Clone(), commit_1->Clone()));
+    Put(entry_params1);
+    journal_->Put("3", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> merge_commit1;
+    std::vector<ObjectIdentifier> objects_to_sync_merge1;
+    status = journal_->Commit(handler, &merge_commit1, &objects_to_sync_merge1);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, merge_commit1);
+
+    // Create a merge journal, inserting key "3" and the second parameter.
+    SetJournal(
+        JournalImpl::Merge(&environment_, &page_storage_, commit_0->Clone(), commit_1->Clone()));
+    Put(entry_params2);
+    journal_->Put("3", object_identifier_, KeyPriority::EAGER);
+
+    std::unique_ptr<const Commit> merge_commit2;
+    std::vector<ObjectIdentifier> objects_to_sync_merge2;
+    status = journal_->Commit(handler, &merge_commit2, &objects_to_sync_merge2);
+    ASSERT_EQ(status, Status::OK);
+    ASSERT_NE(nullptr, merge_commit2);
+
+    // Get the entries for both commits.
+    std::vector<Entry> entries1 = GetCommitContents(*merge_commit1);
+    std::vector<Entry> entries2 = GetCommitContents(*merge_commit2);
+
+    ASSERT_THAT(entries1, SizeIs(3));
+    ASSERT_THAT(entries2, SizeIs(3));
+    // The entries that were already present are unmodified.
+    // Test key "0"
+    EXPECT_EQ(entries1[0].key, "0");
+    EXPECT_EQ(entries1[0], entries2[0]);
+
+    // Test the parameter entries.
+    EXPECT_THAT(entries1[1], Matches(entry_params1));
+    EXPECT_THAT(entries2[1], Matches(entry_params2));
+    EXPECT_NE(entries1[1].entry_id, entries2[1].entry_id);
+
+    // Entry "3" has different entry ids.
+    EXPECT_EQ(entries1[2].key, "3");
+    EXPECT_EQ(WithoutEntryId(entries1[2]), WithoutEntryId(entries2[2]));
+    EXPECT_NE(entries1[2].entry_id, entries2[2].entry_id);
+  }));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    JournalMergeTest, JournalMergeTest,
+    ::testing::Values(std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("21", {0, 0, "digest"}, KeyPriority::EAGER)),
+                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("2", {1, 0, "digest"}, KeyPriority::EAGER)),
+                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("2", {0, 1, "digest"}, KeyPriority::EAGER)),
+                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("2", {0, 0, "digest2"}, KeyPriority::EAGER)),
+                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::LAZY))));
 
 }  // namespace
 }  // namespace storage

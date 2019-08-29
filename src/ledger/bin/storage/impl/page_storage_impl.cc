@@ -823,6 +823,16 @@ void PageStorageImpl::ObjectIsUntracked(ObjectIdentifier object_identifier,
       });
 }
 
+std::string PageStorageImpl::GetEntryId() { return encryption_service_->GetEntryId(); }
+
+std::string PageStorageImpl::GetEntryIdForMerge(fxl::StringView entry_name,
+                                                CommitIdView left_parent_id,
+                                                CommitIdView right_parent_id,
+                                                fxl::StringView operation_list) {
+  return encryption_service_->GetEntryIdForMerge(entry_name, left_parent_id.ToString(),
+                                                 right_parent_id.ToString(), operation_list);
+}
+
 void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t max_size,
                                      Location location,
                                      fit::function<void(Status, fsl::SizedVmo)> callback) {

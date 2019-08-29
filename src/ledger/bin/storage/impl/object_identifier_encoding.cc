@@ -24,6 +24,13 @@ flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
       convert::ToFlatBufferVector(builder, object_identifier.object_digest().Serialize()));
 }
 
+// This encoding is used:
+// - To name objects in the database. This relies on the encoding of an object identifier always
+//   being the same sequence of bytes.
+// - To store in entry payloads in cloud_sync. This requires us to be able to read back old object
+//   identifiers.
+// - To generate entry ids for merges. If two different encodings can be produced, this will cause
+//   some merges to be duplicated, but they will stay correct.
 std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier) {
   flatbuffers::FlatBufferBuilder builder;
   builder.Finish(ToObjectIdentifierStorage(&builder, object_identifier));

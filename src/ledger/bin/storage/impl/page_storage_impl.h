@@ -55,6 +55,11 @@ class PageStorageImpl : public PageStorage {
   void ObjectIsUntracked(ObjectIdentifier object_identifier,
                          fit::function<void(Status, bool)> callback);
 
+  std::string GetEntryId();
+
+  std::string GetEntryIdForMerge(fxl::StringView entry_name, CommitIdView left_parent_id,
+                                 CommitIdView right_parent_id, fxl::StringView operation_list);
+
   void SetSyncDelegate(PageSyncDelegate* page_sync) override;
 
   // PageStorage:

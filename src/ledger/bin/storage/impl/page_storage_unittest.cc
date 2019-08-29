@@ -672,13 +672,18 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 }
 
 TEST_F(PageStorageTest, AddLocalCommitsReferences) {
-  // Create two commits pointing to the same non-inline object identifier by
-  // creating two identical journals and commiting them. We then check that both
-  // commits are stored as inbound references of said object.
+  // Create two commits with the same root node. This requires creating an intermediate commit:
+  // - insert entry A in the empty page, commit as commit 1
+  // - insert entry B in commit 1, commit as commit 2
+  // - remove entry B in commit 2, commit as commit 3
+  // Then commits 1 and 3 have the same tree with the same entry ids, so will share a root node.
+  // We then check that both commits 1 and 3 are stored as inbound references of their root node.
+
   std::unique_ptr<const Commit> base = GetFirstHead();
   const ObjectData data =
       MakeObject(RandomString(environment_.random(), 65536), InlineBehavior::PREVENT);
   const ObjectIdentifier object_id = data.object_identifier;
+
   std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
   journal->Put("key", object_id, KeyPriority::EAGER);
   bool called;
@@ -690,13 +695,8 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
-  // Advance the clock a bit.
-  RunLoopFor(zx::sec(1));
-
-  ObjectIdentifier root_node1 = commit1->GetRootIdentifier();
-
-  journal = storage_->StartCommit(std::move(base));
-  journal->Put("key", object_id, KeyPriority::EAGER);
+  journal = storage_->StartCommit(commit1->Clone());
+  journal->Put("other", object_id, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal),
                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
@@ -704,15 +704,25 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
-  ObjectIdentifier root_node2 = commit2->GetRootIdentifier();
+  journal = storage_->StartCommit(commit2->Clone());
+  journal->Delete("other");
+  std::unique_ptr<const Commit> commit3;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  ObjectIdentifier root_node1 = commit1->GetRootIdentifier();
+  ObjectIdentifier root_node3 = commit3->GetRootIdentifier();
 
   CommitId id1 = commit1->GetId();
-  CommitId id2 = commit2->GetId();
-  EXPECT_NE(id1, id2);
-  EXPECT_EQ(root_node2, root_node1);
+  CommitId id3 = commit3->GetId();
+  EXPECT_NE(id1, id3);
+  EXPECT_EQ(root_node1, root_node3);
 
-  RunInCoroutine([this, root_node1, id1, id2](CoroutineHandler* handler) {
-    CheckInboundCommitReferences(handler, root_node1, {id1, id2});
+  RunInCoroutine([this, root_node1, id1, id3](CoroutineHandler* handler) {
+    CheckInboundCommitReferences(handler, root_node1, {id1, id3});
   });
 }
 

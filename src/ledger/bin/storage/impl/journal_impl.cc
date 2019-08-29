@@ -16,6 +16,8 @@
 #include "src/ledger/bin/storage/impl/btree/encoding.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
+#include "src/ledger/bin/storage/impl/data_serialization.h"
+#include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -56,6 +58,12 @@ Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
   committed_ = true;
   objects_to_sync->clear();
 
+  std::vector<storage::EntryChange> changes;
+  for (auto [key, entry_change] : journal_entries_) {
+    changes.push_back(std::move(entry_change));
+  }
+  SetEntryIds(&changes);
+
   std::vector<std::unique_ptr<const storage::Commit>> parents;
   if (other_) {
     parents.reserve(2);
@@ -64,11 +72,6 @@ Status JournalImpl::Commit(coroutine::CoroutineHandler* handler,
   } else {
     parents.reserve(1);
     parents.push_back(std::move(base_));
-  }
-
-  std::vector<storage::EntryChange> changes;
-  for (auto [key, entry_change] : journal_entries_) {
-    changes.push_back(std::move(entry_change));
   }
 
   if (cleared_ == JournalContainsClearOperation::NO) {
@@ -132,8 +135,6 @@ Status JournalImpl::CreateCommitFromChanges(
     btree::LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,
     std::unique_ptr<const storage::Commit>* commit,
     std::vector<ObjectIdentifier>* objects_to_sync) {
-  SetEntryIds(&changes);
-
   ObjectIdentifier object_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ledger::Status status = btree::ApplyChanges(handler, page_storage_, std::move(root_identifier),
@@ -209,9 +210,46 @@ void JournalImpl::GetObjectsToSync(
 }
 
 void JournalImpl::SetEntryIds(std::vector<EntryChange>* changes) {
-  for (auto& change : *changes) {
+  if (other_) {
+    SetEntryIdsMergeCommit(changes);
+  } else {
+    SetEntryIdsSimpleCommit(changes);
+  }
+}
+
+void JournalImpl::SetEntryIdsSimpleCommit(std::vector<EntryChange>* changes) {
+  FXL_DCHECK(!other_);
+
+  for (EntryChange& change : *changes) {
     if (!change.deleted) {
-      btree::SetEntryIdIfMissing(&change.entry);
+      change.entry.entry_id = page_storage_->GetEntryId();
+    }
+  }
+}
+
+void JournalImpl::SetEntryIdsMergeCommit(std::vector<EntryChange>* changes) {
+  FXL_DCHECK(other_);
+
+  // Serialize the list of changes.
+  std::string operation_list;
+  if (cleared_ == JournalContainsClearOperation::YES) {
+    operation_list = "cleared";
+  }
+  for (const EntryChange& change : *changes) {
+    const Entry& entry = change.entry;
+    std::string entry_content;
+    if (!change.deleted) {
+      entry_content = SafeConcatenation({entry.priority == KeyPriority::EAGER ? "E" : "L",
+                                         EncodeObjectIdentifier(entry.object_identifier)});
+    }
+    operation_list.append(
+        SafeConcatenation({entry.key, change.deleted ? "D" : "U", entry_content}));
+  }
+
+  for (EntryChange& change : *changes) {
+    if (!change.deleted) {
+      change.entry.entry_id = page_storage_->GetEntryIdForMerge(change.entry.key, base_->GetId(),
+                                                                other_->GetId(), operation_list);
     }
   }
 }
