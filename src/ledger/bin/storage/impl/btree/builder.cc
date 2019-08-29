@@ -51,6 +51,16 @@ uint8_t GetNodeLevel(convert::ExtendedStringView key) {
 
 constexpr NodeLevelCalculator kDefaultNodeLevelCalculator = {&GetNodeLevel};
 
+// The type of diff we are currently applying.
+enum class DiffType {
+  // A diff from the journal. Deletions are matched by key only, insertions of existing keys are
+  // updates.
+  JOURNAL,
+  // A diff from the cloud. Deletions must match exacly, insertions are only valid when the key is
+  // not present.
+  CLOUD,
+};
+
 // Base class for tree nodes during construction. To apply mutations on a tree
 // node, one starts by creating an instance of NodeBuilder from the id of an
 // existing tree node, then applies mutation on it.  Once all mutations are
@@ -74,7 +84,7 @@ class NodeBuilder {
 
   // Apply the given mutation on |node_builder|.
   Status Apply(const NodeLevelCalculator* node_level_calculator, SynchronousStorage* page_storage,
-               EntryChange change, bool* did_mutate);
+               DiffType diff_type, EntryChange change, bool* did_mutate);
 
   // Build the tree node represented by the builder |node_builder| in the
   // storage.
@@ -117,14 +127,14 @@ class NodeBuilder {
 
   // Delete the value with the given |key| from the builder. |key_level| must be
   // greater or equal then the node level.
-  Status Delete(SynchronousStorage* page_storage, uint8_t key_level, std::string key,
-                bool* did_mutate);
+  Status Delete(SynchronousStorage* page_storage, uint8_t key_level, DiffType diff_type,
+                Entry entry, bool* did_mutate);
 
   // Update the tree by adding |entry| (or modifying the value associated to
   // |entry.key| with |entry.value| if |key| is already in the tree).
   // |change_level| must be greater or equal than the node level.
-  Status Update(SynchronousStorage* page_storage, uint8_t change_level, Entry entry,
-                bool* did_mutate);
+  Status Update(SynchronousStorage* page_storage, uint8_t change_level, DiffType diff_type,
+                Entry entry, bool* did_mutate);
 
   // Split the current tree in 2 according to |key|. This method expects that
   // |key| is not in the tree. After the call, the left tree will be in the
@@ -219,11 +229,15 @@ Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,
 }
 
 Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
-                          SynchronousStorage* page_storage, EntryChange change, bool* did_mutate) {
+                          SynchronousStorage* page_storage, DiffType diff_type, EntryChange change,
+                          bool* did_mutate) {
   if (!*this) {
     // If the change is a deletion, and the tree is null, the result is still
     // null.
     if (change.deleted) {
+      if (diff_type == DiffType::CLOUD) {
+        return Status::INVALID_ARGUMENT;
+      }
       *did_mutate = false;
       return Status::OK;
     }
@@ -249,7 +263,7 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
 
     NodeBuilder& child = children_[index];
     RETURN_ON_ERROR(
-        child.Apply(node_level_calculator, page_storage, std::move(change), did_mutate));
+        child.Apply(node_level_calculator, page_storage, diff_type, std::move(change), did_mutate));
     // Suppress warning that |did_mutate| might not be initialized.
     if (!*did_mutate) {  // NOLINT
       return Status::OK;
@@ -265,10 +279,10 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
   }
 
   if (change.deleted) {
-    return Delete(page_storage, change_level, std::move(change.entry.key), did_mutate);
+    return Delete(page_storage, change_level, diff_type, std::move(change.entry), did_mutate);
   }
 
-  return Update(page_storage, change_level, std::move(change.entry), did_mutate);
+  return Update(page_storage, change_level, diff_type, std::move(change.entry), did_mutate);
 }
 
 Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* object_identifier,
@@ -346,8 +360,8 @@ Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
   return Status::OK;
 }
 
-Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level, std::string key,
-                           bool* did_mutate) {
+Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level, DiffType diff_type,
+                           Entry entry, bool* did_mutate) {
   FXL_DCHECK(*this);
   FXL_DCHECK(key_level >= level_);
 
@@ -358,15 +372,25 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level, 
 
   RETURN_ON_ERROR(ComputeContent(page_storage));
 
-  size_t index = GetEntryOrChildIndex(entries_, key);
+  size_t index = GetEntryOrChildIndex(entries_, entry.key);
 
   // The key must be in the current node if it is in the tree.
-  if (index == entries_.size() || entries_[index].key != key) {
-    // The key is not found. Return the current node.
+  if (index == entries_.size() || entries_[index].key != entry.key) {
+    // The key is not found. This is an error if the diff comes from the cloud. Otherwise, return
+    // the current node.
+    if (diff_type == DiffType::CLOUD) {
+      return Status::INVALID_ARGUMENT;
+    }
     *did_mutate = false;
     return Status::OK;
   }
 
+  if (diff_type == DiffType::CLOUD &&
+      (entries_[index].entry_id != entry.entry_id ||
+       entries_[index].object_identifier != entry.object_identifier ||
+       entries_[index].priority != entry.priority)) {
+    return Status::INVALID_ARGUMENT;
+  }
   // Element at |index| must be removed.
   RETURN_ON_ERROR(children_[index].Merge(page_storage, std::move(children_[index + 1])));
 
@@ -383,8 +407,8 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level, 
   return Status::OK;
 }
 
-Status NodeBuilder::Update(SynchronousStorage* page_storage, uint8_t change_level, Entry entry,
-                           bool* did_mutate) {
+Status NodeBuilder::Update(SynchronousStorage* page_storage, uint8_t change_level,
+                           DiffType diff_type, Entry entry, bool* did_mutate) {
   FXL_DCHECK(*this);
   FXL_DCHECK(change_level >= level_);
 
@@ -412,8 +436,11 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage, uint8_t change_leve
   size_t split_index = GetEntryOrChildIndex(entries_, entry.key);
 
   if (split_index < entries_.size() && entries_[split_index].key == entry.key) {
-    // The key is already present in the current entries of the node. The
-    // value must be replaced.
+    // The key is already present in the current entries of the node. If we're applying a diff from
+    // the cloud, this is an error. Otherwise, the value must be replaced.
+    if (diff_type == DiffType::CLOUD) {
+      return Status::INVALID_ARGUMENT;
+    }
 
     // Entries are identical, the change is a no-op.
     if (entries_[split_index].object_identifier == entry.object_identifier &&
@@ -561,13 +588,14 @@ void NodeBuilder::ExtractContent(const TreeNode& node, std::vector<Entry>* entri
 // Apply |changes| on |root|. This is called recursively until |changes| is not
 // valid anymore. At this point, build is called on |root|.
 Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
-                          SynchronousStorage* page_storage, NodeBuilder root,
+                          SynchronousStorage* page_storage, NodeBuilder root, DiffType diff_type,
                           std::vector<EntryChange> changes, ObjectIdentifier* object_identifier,
                           std::set<ObjectIdentifier>* new_identifiers) {
   Status status;
   for (auto& change : changes) {
     bool did_mutate;
-    status = root.Apply(node_level_calculator, page_storage, std::move(change), &did_mutate);
+    status =
+        root.Apply(node_level_calculator, page_storage, diff_type, std::move(change), &did_mutate);
     if (status != Status::OK) {
       return status;
     }
@@ -590,7 +618,27 @@ Status ApplyChanges(coroutine::CoroutineHandler* handler, PageStorage* page_stor
   NodeBuilder root;
   RETURN_ON_ERROR(NodeBuilder::FromIdentifier(&storage, std::move(root_identifier), &root));
   RETURN_ON_ERROR(ApplyChangesOnRoot(node_level_calculator, &storage, std::move(root),
-                                     std::move(changes), new_root_identifier, new_identifiers));
+                                     DiffType::JOURNAL, std::move(changes), new_root_identifier,
+                                     new_identifiers));
+
+  FXL_CHECK(new_root_identifier->object_digest().IsValid());
+  return Status::OK;
+}
+
+Status ApplyChangesFromCloud(coroutine::CoroutineHandler* handler, PageStorage* page_storage,
+                             LocatedObjectIdentifier root_identifier,
+                             std::vector<EntryChange> changes,
+                             ObjectIdentifier* new_root_identifier,
+                             std::set<ObjectIdentifier>* new_identifiers,
+                             const NodeLevelCalculator* node_level_calculator) {
+  FXL_DCHECK(storage::IsDigestValid(root_identifier.identifier.object_digest()));
+  SynchronousStorage storage(page_storage, handler);
+  new_identifiers->clear();
+  NodeBuilder root;
+  RETURN_ON_ERROR(NodeBuilder::FromIdentifier(&storage, std::move(root_identifier), &root));
+  RETURN_ON_ERROR(ApplyChangesOnRoot(node_level_calculator, &storage, std::move(root),
+                                     DiffType::CLOUD, std::move(changes), new_root_identifier,
+                                     new_identifiers));
 
   FXL_CHECK(new_root_identifier->object_digest().IsValid());
   return Status::OK;

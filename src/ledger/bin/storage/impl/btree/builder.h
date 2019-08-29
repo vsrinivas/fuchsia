@@ -28,12 +28,27 @@ struct NodeLevelCalculator {
 // Returns the default algorithm to compute the node level.
 const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 
-// Applies changes provided by |changes| to the B-Tree starting at
-// |root_identifier|. |changes| must provide |EntryChange| objects sorted by
-// their key. |new_root_identifier| will contain the id of the new root and
-// |new_identifiers| the list of ids of all new nodes created after the changes.
-// Existing elements inside |new_identifiers| will be deleted.
+// Applies changes provided by |changes| to the B-Tree starting at |root_identifier|. |changes| must
+// provide |EntryChange| objects sorted by their key. |new_root_identifier| will contain the object
+// identifier of the new root and |new_identifiers| the list of object identifiers of all new nodes
+// created after the changes (not their individual pieces), ie. it will contain the set of nodes of
+// the new tree that were not present in the original tree. Insertions are turned into updates if
+// the key exists, and ignored if they only change the entry id. Deletions only need to mention the
+// key that is being deleted.
 Status ApplyChanges(
+    coroutine::CoroutineHandler* coroutine_handler, PageStorage* page_storage,
+    LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,
+    ObjectIdentifier* new_root_identifier, std::set<ObjectIdentifier>* new_identifiers,
+    const NodeLevelCalculator* node_level_calculator = GetDefaultNodeLevelCalculator());
+
+// Applies changes provided by |changes| to the B-Tree starting at |root_identifier|. The |changes|
+// are applied in order.  |new_root_identifier| will contain the object identifier of the new root
+// and |new_identifiers| the list of object identifiers of all new nodes created after the changes
+// (not their individual pieces), ie. it will contain the set of nodes of the new tree that were not
+// present in the original tree.  Insertions are only valid if the key is not present, and deletions
+// must match the content of the entry exactly.  Returns |INVALID_ARGUMENT| if the changes cannot be
+// applied.
+Status ApplyChangesFromCloud(
     coroutine::CoroutineHandler* coroutine_handler, PageStorage* page_storage,
     LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,
     ObjectIdentifier* new_root_identifier, std::set<ObjectIdentifier>* new_identifiers,

@@ -470,7 +470,37 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
       kSufficientDelay));
   ASSERT_EQ(status, Status::OK);
   EXPECT_EQ(new_root_identifier, root_identifier);
-  // The root and the first child have changed.
+  // Nothing has changed.
+  EXPECT_EQ(new_nodes.size(), 0u);
+}
+
+TEST_F(BTreeUtilsTest, NoOpUpdateEntryId) {
+  // Expected layout (XX is key "keyXX"):
+  //                 [03, 07]
+  //            /       |            \
+  // [00, 01, 02]  [04, 05, 06] [08, 09, 10, 11]
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(11, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Apply all entries again, with different ids.
+  std::vector<EntryChange> entries_with_new_id = golden_entries;
+  for (auto& change : entries_with_new_id) {
+    change.entry.entry_id += "_new";
+  }
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(golden_entries), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(new_root_identifier, root_identifier);
+  // Nothing has changed.
   EXPECT_EQ(new_nodes.size(), 0u);
 }
 
@@ -697,6 +727,356 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   // The empty node is new.
   EXPECT_EQ(new_nodes.size(), 1u);
   EXPECT_TRUE(new_nodes.find(new_root_identifier) != new_nodes.end());
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudInsert) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Add some entries.
+  std::vector<EntryChange> insert_changes;
+  ASSERT_TRUE(CreateEntryChanges({8, 9}, &insert_changes));
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            insert_changes, &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+
+  // Check ApplyChanges gives the same result.
+  ObjectIdentifier expected_root_identifier;
+  std::set<ObjectIdentifier> expected_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            insert_changes, &expected_root_identifier, &expected_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+
+  EXPECT_EQ(new_root_identifier, expected_root_identifier);
+  EXPECT_EQ(new_nodes, expected_nodes);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudDelete) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Delete some entries.
+  std::vector<EntryChange> delete_changes;
+  delete_changes.push_back({golden_entries[2].entry, true});
+  delete_changes.push_back({golden_entries[5].entry, true});
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            delete_changes, &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+
+  // Check ApplyChanges gives the same result.
+  ObjectIdentifier expected_root_identifier;
+  std::set<ObjectIdentifier> expected_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            delete_changes, &expected_root_identifier, &expected_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+
+  EXPECT_EQ(new_root_identifier, expected_root_identifier);
+  EXPECT_EQ(new_nodes, expected_nodes);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudUpdate) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Update an entry.
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back({golden_entries[2].entry, true});
+  update_changes.push_back({{golden_entries[2].entry.key, golden_entries[5].entry.object_identifier,
+                             KeyPriority::LAZY, "new_entry_id"},
+                            false});
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            update_changes, &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+
+  // Check ApplyChanges gives the same result.
+  ObjectIdentifier expected_root_identifier;
+  std::set<ObjectIdentifier> expected_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChanges(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            update_changes, &expected_root_identifier, &expected_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+  EXPECT_EQ(new_root_identifier, expected_root_identifier);
+  EXPECT_EQ(new_nodes, expected_nodes);
+
+  // Check we have the new values.
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
+  std::vector<Entry> expected_entries;
+  for (auto& change : golden_entries) {
+    expected_entries.push_back(change.entry);
+  }
+  expected_entries[2] = update_changes[1].entry;
+  EXPECT_EQ(entries, expected_entries);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudUpdateId) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Change an entries' id.
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back({golden_entries[2].entry, true});
+  update_changes.push_back({{golden_entries[2].entry.key, golden_entries[2].entry.object_identifier,
+                             golden_entries[2].entry.priority, "new_entry_id"},
+                            false});
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            update_changes, &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::OK);
+
+  // Check we have the new values.
+  std::vector<Entry> entries = GetEntriesList(new_root_identifier);
+  std::vector<Entry> expected_entries;
+  for (auto& change : golden_entries) {
+    expected_entries.push_back(change.entry);
+  }
+  expected_entries[2] = update_changes[1].entry;
+  EXPECT_EQ(entries, expected_entries);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudInsertExisting) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Insert an entry that is already present
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back(golden_entries[2]);
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::INVALID_ARGUMENT);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudDeleteNotPresent) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Delete an entry that is not present.
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back(
+      {{"not_present_key", golden_entries[2].entry.object_identifier, KeyPriority::EAGER, "entry"},
+       true});
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::INVALID_ARGUMENT);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudDeleteWrongEntryId) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Delete an entry using the wrong entry id.
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back(golden_entries[2]);
+  update_changes[0].entry.entry_id = "wrong_entry_id";
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::INVALID_ARGUMENT);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudDeleteWrongObjectIdentifier) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Delete an entry using the wrong object identifier
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back(golden_entries[2]);
+  update_changes[0].entry.object_identifier = golden_entries[3].entry.object_identifier;
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::INVALID_ARGUMENT);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudDeleteWrongPriority) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Delete an entry using the wrong priority.
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back(golden_entries[2]);
+  update_changes[0].entry.priority = KeyPriority::LAZY;
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::INVALID_ARGUMENT);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudDoubleInsert) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Add an entry twice.
+  std::vector<EntryChange> update_changes;
+  ASSERT_TRUE(CreateEntryChanges({8, 9}, &update_changes));
+  update_changes.push_back(update_changes[0]);
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::INVALID_ARGUMENT);
+}
+
+TEST_F(BTreeUtilsTest, ApplyChangesFromCloudDoubleDelete) {
+  // Create an initial tree.
+  std::vector<size_t> values({0, 1, 2, 3, 4, 5, 6, 7});
+  std::vector<EntryChange> golden_entries;
+  ASSERT_TRUE(CreateEntryChanges(values, &golden_entries));
+  ObjectIdentifier root_identifier = CreateTree(golden_entries);
+
+  // Delete an entry twice.
+  std::vector<EntryChange> update_changes;
+  update_changes.push_back({golden_entries[2].entry, true});
+  update_changes.push_back({golden_entries[2].entry, true});
+
+  // Apply update.
+  Status status;
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_nodes;
+  ASSERT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) {
+        status = ApplyChangesFromCloud(
+            handler, &fake_storage_, {root_identifier, PageStorage::Location::Local()},
+            std::move(update_changes), &new_root_identifier, &new_nodes, &kTestNodeLevelCalculator);
+      },
+      kSufficientDelay));
+  ASSERT_EQ(status, Status::INVALID_ARGUMENT);
 }
 
 TEST_F(BTreeUtilsTest, GetObjectIdentifiersFromEmpty) {
