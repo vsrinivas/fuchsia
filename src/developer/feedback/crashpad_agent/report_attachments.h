@@ -25,16 +25,6 @@ void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewRep
                                            const fuchsia::feedback::Data& feedback_data,
                                            ManagedRuntimeException* exception);
 
-// Adds the set of file attachments we want in a crash report for kernel panics to the |report|.
-//
-// |feedback_data| may contain attachments that are shared with other feedback reports, e.g., user
-// feedback reports.
-//
-// TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
-void AddKernelPanicAttachments(crashpad::CrashReportDatabase::NewReport* report,
-                               const fuchsia::feedback::Data& feedback_data,
-                               fuchsia::mem::Buffer crash_log);
-
 // Builds the final set of attachments to attach to the crash report and writes them to
 // |crashpad_report|.
 //

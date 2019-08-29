@@ -54,13 +54,6 @@ void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewRep
   }
 }
 
-void AddKernelPanicAttachments(crashpad::CrashReportDatabase::NewReport* report,
-                               const fuchsia::feedback::Data& feedback_data,
-                               fuchsia::mem::Buffer crash_log) {
-  AddFeedbackAttachments(report, feedback_data);
-  AddAttachment("kernel_panic_crash_log", std::move(crash_log), report);
-}
-
 void BuildAttachments(const fuchsia::feedback::CrashReport& report,
                       const fuchsia::feedback::Data& feedback_data,
                       crashpad::CrashReportDatabase::NewReport* crashpad_report) {
