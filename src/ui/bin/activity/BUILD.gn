@@ -29,7 +29,14 @@ source_set("lib") {
   ]
 }
 
-executable("activity") {
+group("tests") {
+  testonly = true
+  deps = [
+    ":activity_test",
+  ]
+}
+
+executable("activity_bin") {
   output_name = "activity"
 
   sources = [
@@ -42,9 +49,9 @@ executable("activity") {
   ]
 }
 
-package("activity_pkg") {
+package("activity") {
   deps = [
-    ":activity",
+    ":activity_bin",
   ]
 
   binaries = [
@@ -62,7 +69,7 @@ package("activity_pkg") {
   ]
 }
 
-executable("tests") {
+executable("activity_test_bin") {
   testonly = true
   output_name = "activity_test"
 
@@ -79,9 +86,9 @@ executable("tests") {
   ]
 }
 
-test_package("activity_test_pkg") {
+test_package("activity_test") {
   deps = [
-    ":tests",
+    ":activity_test_bin",
   ]
   tests = [
     {
