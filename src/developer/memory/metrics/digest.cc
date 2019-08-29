@@ -17,7 +17,7 @@ const std::vector<const BucketMatch> Digest::kDefaultBucketMatches = {
     {"Minfs", "minfs:/data", ".*"},
     {"Blobfs", "blobfs:/blob", ".*"},
     {"Opal", "io.flutter.product_runner.jit", ".*"},
-    {"Web", "/pkg/web_engine_exe", ".*"},
+    {"Web", "web_engine_exe:.*|chromium.cmx", ".*"},
     {"Kronk", "kronk.cmx", ".*"},
     {"Scenic", "scenic.cmx", ".*"},
     {"Amlogic", "devhost:pdev:05:00:f", ".*"},
@@ -25,7 +25,6 @@ const std::vector<const BucketMatch> Digest::kDefaultBucketMatches = {
     {"Amber", "amber.cmx", ".*"},
     {"Pkgfs", "pkgfs", ".*"},
     {"Cast", "cast_agent.cmx", ".*"},
-    {"Chromium", "chromium.cmx", ".*"},
 };
 
 Bucket::Bucket(const BucketMatch& match)

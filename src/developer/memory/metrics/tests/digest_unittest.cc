@@ -13,6 +13,23 @@ namespace test {
 
 using DigestUnitTest = testing::Test;
 
+struct ExpectedBucket {
+  std::string name;
+  uint64_t size;
+};
+
+void ConfirmBuckets(const Digest& digest, const std::vector<ExpectedBucket>& expected_buckets) {
+  auto const& buckets = digest.buckets();
+  ASSERT_EQ(expected_buckets.size(), buckets.size());
+  for (size_t i = 0; i < expected_buckets.size(); i++) {
+    const auto& expected_bucket = expected_buckets.at(i);
+    const auto& bucket = buckets.at(i);
+
+    EXPECT_STREQ(expected_bucket.name.c_str(), bucket.name().c_str());
+    EXPECT_EQ(expected_bucket.size, bucket.size());
+  }
+}
+
 TEST_F(DigestUnitTest, VMONames) {
   Capture c;
   TestUtils::CreateCapture(&c, {
@@ -29,15 +46,8 @@ TEST_F(DigestUnitTest, VMONames) {
                                });
 
   Digest d(c, {{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
-  auto const& buckets = d.buckets();
-  ASSERT_EQ(2U, buckets.size());
+  ConfirmBuckets(d, {{"B", 200U}, {"A", 100U}});
   EXPECT_EQ(0U, d.undigested_vmos().size());
-  auto b = buckets[0];
-  EXPECT_STREQ("B", b.name().c_str());
-  EXPECT_EQ(200U, b.size());
-  b = buckets[1];
-  EXPECT_STREQ("A", b.name().c_str());
-  EXPECT_EQ(100U, b.size());
 }  // namespace test
 
 TEST_F(DigestUnitTest, ProcessNames) {
@@ -56,15 +66,8 @@ TEST_F(DigestUnitTest, ProcessNames) {
                                });
 
   Digest d(c, {{"P", "p.*", ".*"}, {"Q", "q.*", ".*"}});
-  auto const& buckets = d.buckets();
-  ASSERT_EQ(2U, buckets.size());
+  ConfirmBuckets(d, {{"Q", 200U}, {"P", 100U}});
   EXPECT_EQ(0U, d.undigested_vmos().size());
-  auto b = buckets[0];
-  EXPECT_STREQ("Q", b.name().c_str());
-  EXPECT_EQ(200U, b.size());
-  b = buckets[1];
-  EXPECT_STREQ("P", b.name().c_str());
-  EXPECT_EQ(100U, b.size());
 }
 
 TEST_F(DigestUnitTest, Undigested) {
@@ -85,15 +88,7 @@ TEST_F(DigestUnitTest, Undigested) {
   Digest d(c, {{"A", ".*", "a.*"}});
   ASSERT_EQ(1U, d.undigested_vmos().size());
   ASSERT_NE(d.undigested_vmos().end(), d.undigested_vmos().find(2U));
-  auto const& buckets = d.buckets();
-  ASSERT_EQ(2U, buckets.size());
-  auto b = buckets[0];
-  EXPECT_STREQ("A", b.name().c_str());
-  EXPECT_EQ(100U, b.size());
-  b = buckets[1];
-  EXPECT_STREQ("Undigested", b.name().c_str());
-  EXPECT_EQ(200U, b.size());
-
+  ConfirmBuckets(d, {{"A", 100U}, {"Undigested", 200U}});
 }  // namespace test
 
 TEST_F(DigestUnitTest, Kernel) {
@@ -112,15 +107,8 @@ TEST_F(DigestUnitTest, Kernel) {
                                        },
                                });
   Digest d(c, {});
-  auto const& buckets = d.buckets();
   EXPECT_EQ(0U, d.undigested_vmos().size());
-  ASSERT_EQ(2U, buckets.size());
-  auto b = buckets[0];
-  EXPECT_STREQ("Kernel", b.name().c_str());
-  EXPECT_EQ(150U, b.size());
-  b = buckets[1];
-  EXPECT_STREQ("Free", b.name().c_str());
-  EXPECT_EQ(100U, b.size());
+  ConfirmBuckets(d, {{"Kernel", 150U}, {"Free", 100U}});
 }
 
 TEST_F(DigestUnitTest, Orphaned) {
@@ -142,21 +130,8 @@ TEST_F(DigestUnitTest, Orphaned) {
                                        },
                                });
   Digest d(c, {{"A", ".*", "a.*"}});
-  auto const& buckets = d.buckets();
   EXPECT_EQ(0U, d.undigested_vmos().size());
-  ASSERT_EQ(4U, buckets.size());
-  auto b = buckets[0];
-  EXPECT_STREQ("A", b.name().c_str());
-  EXPECT_EQ(100U, b.size());
-  b = buckets[1];
-  EXPECT_STREQ("Orphaned", b.name().c_str());
-  EXPECT_EQ(200U, b.size());
-  b = buckets[2];
-  EXPECT_STREQ("Kernel", b.name().c_str());
-  EXPECT_EQ(0U, b.size());
-  b = buckets[3];
-  EXPECT_STREQ("Free", b.name().c_str());
-  EXPECT_EQ(0U, b.size());
+  ConfirmBuckets(d, {{"A", 100U}, {"Orphaned", 200U}, {"Kernel", 0U}, {"Free", 0U}});
 }
 
 TEST_F(DigestUnitTest, DefaultBuckets) {
@@ -182,6 +157,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 14, .name = "test", .committed_bytes = 14},
                       {.koid = 15, .name = "test", .committed_bytes = 15},
                       {.koid = 16, .name = "test", .committed_bytes = 16},
+                      {.koid = 17, .name = "test", .committed_bytes = 17},
                   },
               .processes =
                   {
@@ -191,30 +167,39 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 4, .name = "minfs:/data", .vmos = {4}},
                       {.koid = 5, .name = "blobfs:/blob", .vmos = {5}},
                       {.koid = 6, .name = "io.flutter.product_runner.jit", .vmos = {6}},
-                      {.koid = 7, .name = "/pkg/web_engine_exe", .vmos = {7}},
-                      {.koid = 8, .name = "kronk.cmx", .vmos = {8}},
-                      {.koid = 9, .name = "scenic.cmx", .vmos = {9}},
-                      {.koid = 10, .name = "devhost:pdev:05:00:f", .vmos = {10}},
-                      {.koid = 11, .name = "netstack.cmx", .vmos = {11}},
-                      {.koid = 12, .name = "amber.cmx", .vmos = {12}},
-                      {.koid = 13, .name = "pkgfs", .vmos = {13}},
-                      {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
-                      {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
-                      {.koid = 16, .name = "new", .vmos = {16}},
+                      {.koid = 7, .name = "kronk.cmx", .vmos = {7}},
+                      {.koid = 8, .name = "scenic.cmx", .vmos = {8}},
+                      {.koid = 9, .name = "devhost:pdev:05:00:f", .vmos = {9}},
+                      {.koid = 10, .name = "netstack.cmx", .vmos = {10}},
+                      {.koid = 11, .name = "amber.cmx", .vmos = {11}},
+                      {.koid = 12, .name = "pkgfs", .vmos = {12}},
+                      {.koid = 13, .name = "cast_agent.cmx", .vmos = {13}},
+                      {.koid = 14, .name = "web_engine_exe:renderer", .vmos = {14}},
+                      {.koid = 15, .name = "web_engine_exe:gpu", .vmos = {15}},
+                      {.koid = 16, .name = "chromium.cmx", .vmos = {16}},
+                      {.koid = 17, .name = "new", .vmos = {17}},
                   },
           });
   Digest d(c);
-  auto const& buckets = d.buckets();
   EXPECT_EQ(1U, d.undigested_vmos().size());
-  ASSERT_EQ(16U, buckets.size());
-  for (uint64_t b = 0; b < 15; b++) {
-    // They will be sorted in reverse order of size.
-    uint64_t m = 15 - b;
-    EXPECT_STREQ(Digest::kDefaultBucketMatches[m - 1].name.c_str(), buckets[b].name().c_str());
-    EXPECT_EQ(m, buckets[b].size());
-  }
-  EXPECT_STREQ("Undigested", buckets[15].name().c_str());
-  EXPECT_EQ(16U, buckets[15].size());
+
+  ConfirmBuckets(d, {
+                        {"Web", 45U},
+                        {"Cast", 13},
+                        {"Pkgfs", 12},
+                        {"Amber", 11U},
+                        {"Netstack", 10U},
+                        {"Amlogic", 9U},
+                        {"Scenic", 8U},
+                        {"Kronk", 7U},
+                        {"Opal", 6U},
+                        {"Blobfs", 5U},
+                        {"Minfs", 4U},
+                        {"Video Buffer", 3U},
+                        {"Graphics", 2U},
+                        {"ZBI Buffer", 1U},
+                        {"Undigested", 17U},
+                    });
 }
 
 }  // namespace test
