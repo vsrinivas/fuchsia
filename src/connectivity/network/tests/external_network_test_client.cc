@@ -86,4 +86,46 @@ TEST(ExternalNetworkTest, Uname) {
 #endif
 }
 
+// Test to ensure UDP send doesn`t error even with ARP timeouts.
+// TODO(fxb.dev/35006): Test needs to be extended or replicated to test
+// against other transport send errors.
+TEST(ExternalNetworkTest, UDPErrSend) {
+  int sendfd;
+  ASSERT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.sin_port = htons(1337);
+  char bytes[64];
+  // Assign to a ssize_t variable to avoid compiler warnings for signedness in the EXPECTs below.
+  ssize_t len = sizeof(bytes);
+  // Precondition sanity check: write completes without error.
+  EXPECT_EQ(sendto(sendfd, bytes, len, 0, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
+            len)
+      << strerror(errno);
+
+  // Send to a routable address to a non-existing remote. This triggers ARP resolution which is
+  // expected to fail, but that failure is expected to leave the socket alive. Before the change
+  // that added this test, the socket would be incorrectly shut down.
+  //
+  // TODO(fxb.dev/20716): explicitly validate that ARP resolution failed.
+  addr.sin_addr.s_addr = htonl(0xd0e0a0d);
+  EXPECT_EQ(sendto(sendfd, bytes, len, 0, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
+            len)
+      << strerror(errno);
+
+  // Wait for more than the ARP timeout (our current ARP reattempt count is 3 for every other
+  // second)
+  // TODO(fxb.dev/20716): Read from the ARP config to get the actual configured reattempt count.
+  sleep(5);
+
+  // Validate that the socket is still writable from the application side.
+  EXPECT_EQ(sendto(sendfd, bytes, len, 0, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)),
+            len)
+      << strerror(errno);
+
+  EXPECT_EQ(close(sendfd), 0) << strerror(errno);
+}
+
 }  // namespace

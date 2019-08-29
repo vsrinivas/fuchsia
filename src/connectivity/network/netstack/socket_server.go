@@ -77,6 +77,7 @@ func (ios *iostate) loopWrite() error {
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
 	defer ios.wq.EventUnregister(&waitEntry)
+
 	for {
 		// TODO: obviously allocating for each read is silly.
 		// A quick hack we can do is store these in a ring buffer,
@@ -141,7 +142,7 @@ func (ios *iostate) loopWrite() error {
 			}
 			v = v[C.FDIO_SOCKET_MSG_HEADER_SIZE:]
 		}
-
+	LoopWrite:
 		for {
 			n, resCh, err := ios.ep.Write(tcpip.SlicePayload(v), opts)
 			if resCh != nil {
@@ -154,29 +155,41 @@ func (ios *iostate) loopWrite() error {
 				<-resCh
 				continue
 			}
-			if err == tcpip.ErrWouldBlock {
-				if ios.transProto != tcp.ProtocolNumber {
-					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
+
+			// TODO(fxb.dev/35006): Handle all transport write errors.
+			switch err {
+			case nil:
+				{
+					if ios.transProto != tcp.ProtocolNumber {
+						if n < int64(len(v)) {
+							panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
+						}
+					}
+					v = v[n:]
+					if len(v) == 0 {
+						break LoopWrite
+					}
 				}
-				// Note that Close should not interrupt this wait.
-				<-notifyCh
-				continue
-			}
-			if err != nil {
-				optsStr := "<TCP>"
-				if to := opts.To; to != nil {
-					optsStr = fmt.Sprintf("%+v", *to)
+			case tcpip.ErrWouldBlock:
+				{
+					if ios.transProto != tcp.ProtocolNumber {
+						panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
+					}
+					// Note that Close should not interrupt this wait.
+					<-notifyCh
+					continue
 				}
-				return fmt.Errorf("Endpoint.Write(%s): %s", optsStr, err)
-			}
-			if ios.transProto != tcp.ProtocolNumber {
-				if n < int64(len(v)) {
-					panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
+			case tcpip.ErrNoLinkAddress:
+				// ARP timeout, drop this packet and continue.
+				break LoopWrite
+			default:
+				{
+					optsStr := "<TCP>"
+					if to := opts.To; to != nil {
+						optsStr = fmt.Sprintf("%+v", *to)
+					}
+					return fmt.Errorf("Endpoint.Write(%s): %s", optsStr, err)
 				}
-			}
-			v = v[n:]
-			if len(v) == 0 {
-				break
 			}
 		}
 	}
@@ -257,6 +270,7 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 					panic(err)
 				}
 			}
+			// TODO(fxb.dev/35006): Handle all transport read errors.
 			switch err {
 			case nil:
 			case tcpip.ErrClosedForReceive:
