@@ -18,6 +18,7 @@ pub enum SettingType {
     Unknown,
     Accessibility,
     Display,
+    DoNotDisturb,
     Intl,
     Setup,
     System,
@@ -29,6 +30,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     let mut set = HashSet::new();
     set.insert(SettingType::Accessibility);
     set.insert(SettingType::Display);
+    set.insert(SettingType::DoNotDisturb);
     set.insert(SettingType::Intl);
     set.insert(SettingType::Setup);
     set.insert(SettingType::System);
@@ -57,6 +59,10 @@ pub enum SettingRequest {
 
     // Setup info requests.
     SetConfigurationInterfaces(ConfigurationInterfaceFlags),
+
+    // Do not disturb requests.
+    SetUserInitiatedDoNotDisturb(bool),
+    SetNightModeInitiatedDoNotDisturb(bool),
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -90,6 +96,18 @@ bitflags! {
     }
 }
 
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub struct DoNotDisturbInfo {
+    pub user_dnd: bool,
+    pub night_mode_dnd: bool,
+}
+
+impl DoNotDisturbInfo {
+    pub const fn new(user_dnd: bool, night_mode_dnd: bool) -> DoNotDisturbInfo {
+        DoNotDisturbInfo { user_dnd: user_dnd, night_mode_dnd: night_mode_dnd }
+    }
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct IntlInfo {
     pub time_zone_id: String,
@@ -119,6 +137,7 @@ pub enum SettingResponse {
     Accessibility(AccessibilityInfo),
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(BrightnessInfo),
+    DoNotDisturb(DoNotDisturbInfo),
     Intl(IntlInfo),
     Setup(SetupInfo),
     System(SystemInfo),

@@ -11,6 +11,8 @@ use {
     crate::default_store::DefaultStore,
     crate::display::spawn_display_controller,
     crate::display::spawn_display_fidl_handler,
+    crate::do_not_disturb::do_not_disturb_controller::spawn_do_not_disturb_controller,
+    crate::do_not_disturb::do_not_disturb_fidl_handler::spawn_do_not_disturb_fidl_handler,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::IntlFidlHandler,
     crate::json_codec::JsonCodec,
@@ -32,7 +34,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
-    fuchsia_syslog::{self as syslog, fx_log_info},
+    fuchsia_syslog::{self as syslog, fx_log_info, fx_log_err},
     futures::StreamExt,
     log::error,
     setui_handler::SetUIHandler,
@@ -44,6 +46,7 @@ mod accessibility;
 mod common;
 mod default_store;
 mod display;
+mod do_not_disturb;
 mod fidl_clone;
 mod intl;
 mod json_codec;
@@ -171,6 +174,25 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
         });
     }
 
+    if components.contains(&SettingType::DoNotDisturb) {
+        let register_result = registry_handle
+            .write()
+            .unwrap()
+            .register(
+                switchboard::base::SettingType::DoNotDisturb,
+                spawn_do_not_disturb_controller(service_context_handle.clone()),
+            );
+        match register_result {
+            Ok(_) => {}
+            Err(e) => fx_log_err!("failed to register do_not_disturb in registry, {:#?}", e)
+        };
+
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: DoNotDisturbRequestStream| {
+            spawn_do_not_disturb_fidl_handler(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
     if components.contains(&SettingType::Intl) {
         registry_handle
             .write()
@@ -230,6 +252,7 @@ mod tests {
 
     enum Services {
         Accessibility(AccessibilityRequestStream),
+        DoNotDisturb(DoNotDisturbRequestStream),
         Timezone(fidl_fuchsia_timezone::TimezoneRequestStream),
         Intl(IntlRequestStream),
     }
@@ -466,6 +489,30 @@ mod tests {
         let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
         let _settings =
             intl_service.watch().await.expect("watch completed").expect("watch successful");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_do_not_disturb() {
+        let mut fs = ServiceFs::new();
+
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::DoNotDisturb].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(None))),
+            Box::new(InMemoryStorageFactory::create()),
+        );
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
+
+        let dnd_proxy = env.connect_to_service::<DoNotDisturbMarker>()
+            .expect("connected to service");
+
+        let mut dnd_settings = DoNotDisturbSettings::empty();
+        dnd_settings.user_initiated_do_not_disturb = Some(true);
+
+        // Set doesn't do anything yet, just make sure it doesn't panic
+        dnd_proxy.set(dnd_settings).await.expect("set completed").expect("set successful");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
