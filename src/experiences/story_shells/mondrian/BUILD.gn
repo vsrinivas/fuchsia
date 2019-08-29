@@ -1,0 +1,88 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//topaz/runtime/dart/flutter_test.gni")
+import("//topaz/runtime/flutter_runner/flutter_app.gni")
+
+flutter_app("mondrian") {
+  package_name = "mondrian"
+  main_dart = "lib/main.dart"
+
+  meta = [
+    {
+      path = rebase_path("meta/mondrian.cmx")
+      dest = "mondrian.cmx"
+    },
+  ]
+
+  sources = [
+    "anim/flux.dart",
+    "anim/sim.dart",
+    "layout/container_layout.dart",
+    "layout/copresent_layout.dart",
+    "layout/pattern_layout.dart",
+    "models/depth_model.dart",
+    "models/inset_manager.dart",
+    "models/layout_model.dart",
+    "models/surface/positioned_surface.dart",
+    "models/surface/surface.dart",
+    "models/surface/surface_form.dart",
+    "models/surface/surface_graph.dart",
+    "models/surface/surface_properties.dart",
+    "models/surface/surface_relation_util.dart",
+    "models/surface/surface_transition.dart",
+    "models/tree/spanning_tree.dart",
+    "models/tree/tree.dart",
+    "story_shell_impl.dart",
+    "widgets/breathing_placeholder.dart",
+    "widgets/gestures.dart",
+    "widgets/isometric_widget.dart",
+    "widgets/mondrian.dart",
+    "widgets/mondrian_child_view.dart",
+    "widgets/mondrian_logo.dart",
+    "widgets/overview.dart",
+    "widgets/surface_director.dart",
+    "widgets/surface_frame.dart",
+    "widgets/surface_relationships.dart",
+    "widgets/surface_resize.dart",
+    "widgets/surface_stage.dart",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/quiver",
+    "//topaz/lib/story_shell:lib.story_shell",
+    "//topaz/public/dart/fidl",
+    "//topaz/public/dart/fuchsia",
+    "//topaz/public/dart/fuchsia_modular",
+    "//topaz/public/dart/fuchsia_scenic_flutter",
+    "//topaz/public/dart/widgets:lib.widgets",
+  ]
+}
+
+flutter_test("mondrian_story_shell_tests") {
+  sources = [
+    "layout/pattern_layout_test.dart",
+    "layout/surface_relationship_test.dart",
+    "layout_test_utils.dart",
+    "model/surface/surface_graph_test.dart",
+    "model/surface/surface_test.dart",
+    "model/tree/spanning_tree_test.dart",
+    "model/tree/tree_test.dart",
+  ]
+
+  deps = [
+    ":mondrian_dart_library",
+    "//sdk/fidl/fuchsia.modular",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+    "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
