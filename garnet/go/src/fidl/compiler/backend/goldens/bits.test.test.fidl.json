@@ -49,7 +49,7 @@
           }
         }
       ],
-      "strict": false
+      "strict": true
     }
   ],
   "const_declarations": [],

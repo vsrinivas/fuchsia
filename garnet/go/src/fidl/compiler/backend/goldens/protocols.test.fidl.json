@@ -47,7 +47,7 @@
           }
         }
       ],
-      "strict": false
+      "strict": true
     }
   ],
   "interface_declarations": [
