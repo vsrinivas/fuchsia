@@ -18,6 +18,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/files/file.h"
 
@@ -89,7 +90,7 @@ std::optional<BenchmarksRunner> BenchmarksRunner::Create(int argc, const char** 
 
 void BenchmarksRunner::AddTspecBenchmark(const std::string& name, const std::string& tspec_file,
                                          const std::string& test_suite) {
-  std::string out_file = JoinPaths({out_dir_, name + ".json"});
+  std::string out_file = MakePerfResultsOutputFilename(name);
   std::vector<std::string> command = {"/bin/trace", "record", "--spec-file=" + tspec_file,
                                       "--benchmark-results-file=" + out_file};
   if (!test_suite.empty()) {
@@ -101,7 +102,7 @@ void BenchmarksRunner::AddTspecBenchmark(const std::string& name, const std::str
 void BenchmarksRunner::AddLibPerfTestBenchmark(const std::string& name,
                                                const std::string& libperftest_binary,
                                                const std::vector<std::string>& extra_args) {
-  std::string out_file = JoinPaths({out_dir_, name + ".json"});
+  std::string out_file = MakePerfResultsOutputFilename(name);
   std::vector<std::string> command = {libperftest_binary, "-p", "--quiet", "--out=" + out_file};
   std::copy(extra_args.begin(), extra_args.end(), std::back_inserter(command));
   AddCustomBenchmark(name, command, out_file);
@@ -173,6 +174,12 @@ void BenchmarksRunner::Finish() {
 
 std::string BenchmarksRunner::MakeTempFile() {
   return JoinPaths({out_dir_, "benchmarking_temp_file_" + std::to_string(next_temp_file_index_++)});
+}
+
+std::string BenchmarksRunner::MakePerfResultsOutputFilename(const std::string& test_name) {
+  std::string filename =
+      fxl::StringPrintf("test%06d_%s.fuchsiaperf.json", next_temp_file_index_++, test_name.c_str());
+  return JoinPaths({out_dir_, filename});
 }
 
 void BenchmarksRunner::WriteSummaryEntry(const std::string& name, const std::string& results_file,

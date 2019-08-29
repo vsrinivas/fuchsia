@@ -60,7 +60,7 @@ void AddGraphicsBenchmarks(benchmarking::BenchmarksRunner* benchmarks_runner) {
   // clang-format on
 
   for (const auto& benchmark_params : benchmark_params_list) {
-    std::string out_file = benchmarks_runner->MakeTempFile();
+    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename("scenic");
     benchmarks_runner->AddCustomBenchmark(
         benchmark_params.benchmark,
         {"/pkgfs/packages/scenic_benchmarks/0/bin/run_scenic_benchmark.sh",

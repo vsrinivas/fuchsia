@@ -34,7 +34,8 @@ int main(int argc, const char** argv) {
       // (Otherwise biotime reads the whole device.)
       auto* kBytesToTransfer = "5G";
 
-      std::string out_file = benchmarks_runner.MakeTempFile();
+      std::string out_file =
+          benchmarks_runner.MakePerfResultsOutputFilename("block_device_throughput");
       benchmarks_runner.AddCustomBenchmark(
           "block_device_throughput",
           {"/boot/bin/biotime", "-total-bytes-to-transfer", kBytesToTransfer, "-output-file",

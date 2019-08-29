@@ -69,7 +69,20 @@ class BenchmarksRunner {
   // Create a new temporary file path.  This is intended to be used by custom
   // benchmarks (see |AddCustomBenchmark|), which need to specify an output
   // file that contains results from running the benchmark.
+  //
+  // TODO: Replace uses of this with MakePerfResultsOutputFilename() and
+  // remove it.
   std::string MakeTempFile();
+
+  // Create a unique filename to which a test can write its perf results
+  // (in Fuchsia's JSON perf results format).  The filename will include
+  // the appropriate filename extension.  For readability, the filename
+  // will include the given test name.
+  //
+  // This is intended to be used by custom benchmarks (see
+  // |AddCustomBenchmark|), which need to specify an output file that
+  // contains results from running the benchmark.
+  std::string MakePerfResultsOutputFilename(const std::string& test_name);
 
   // This is currently only exposed for temporary logic in the garnet
   // filesystem benchmarks.  Please do not use this unless you really need it.
