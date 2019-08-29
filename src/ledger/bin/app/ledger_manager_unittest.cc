@@ -32,6 +32,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
+#include "src/ledger/bin/storage/fake/fake_ledger_storage.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
@@ -71,160 +72,6 @@ PageId SpecificId(const storage::PageId& page_id) {
   return fidl_page_id;
 }
 
-class DelayingCallbacksManager {
- public:
-  DelayingCallbacksManager() {}
-  virtual ~DelayingCallbacksManager() {}
-
-  // Returns true if the PageStorage of the page with the given id should delay
-  // calling the callback of |IsSynced|.
-  virtual bool ShouldDelayIsSyncedCallback(storage::PageIdView page_id) = 0;
-
- private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(DelayingCallbacksManager);
-};
-
-class DelayIsSyncedCallbackFakePageStorage : public storage::fake::FakePageStorage {
- public:
-  explicit DelayIsSyncedCallbackFakePageStorage(
-      Environment* environment, DelayingCallbacksManager* delaying_callbacks_manager,
-      storage::PageId id)
-      : storage::fake::FakePageStorage(environment, id),
-        delaying_callbacks_manager_(delaying_callbacks_manager) {}
-  ~DelayIsSyncedCallbackFakePageStorage() override {}
-
-  void IsSynced(fit::function<void(Status, bool)> callback) override {
-    if (!delaying_callbacks_manager_->ShouldDelayIsSyncedCallback(page_id_)) {
-      storage::fake::FakePageStorage::IsSynced(std::move(callback));
-      return;
-    }
-    is_synced_callback_ = std::move(callback);
-  }
-
-  void IsEmpty(fit::function<void(Status, bool)> callback) override { callback(Status::OK, true); }
-
-  bool IsOnline() override { return false; }
-
-  void CallIsSyncedCallback() {
-    storage::fake::FakePageStorage::IsSynced(std::move(is_synced_callback_));
-  }
-
- private:
-  fit::function<void(Status, bool)> is_synced_callback_;
-  DelayingCallbacksManager* delaying_callbacks_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(DelayIsSyncedCallbackFakePageStorage);
-};
-
-class FakeLedgerStorage : public storage::LedgerStorage, public DelayingCallbacksManager {
- public:
-  explicit FakeLedgerStorage(Environment* environment) : environment_(environment) {}
-  ~FakeLedgerStorage() override {}
-
-  void ListPages(
-      fit::function<void(storage::Status, std::set<storage::PageId>)> callback) override {
-    FXL_NOTREACHED() << "Maybe implement this later on if needed?";
-  }
-
-  void CreatePageStorage(
-      storage::PageId page_id,
-      fit::function<void(Status, std::unique_ptr<storage::PageStorage>)> callback) override {
-    create_page_calls.push_back(std::move(page_id));
-    callback(Status::IO_ERROR, nullptr);
-  }
-
-  void GetPageStorage(
-      storage::PageId page_id,
-      fit::function<void(Status, std::unique_ptr<storage::PageStorage>)> callback) override {
-    get_page_calls.push_back(page_id);
-    async::PostTask(
-        environment_->dispatcher(), [this, callback = std::move(callback), page_id]() mutable {
-          if (should_get_page_fail) {
-            callback(Status::PAGE_NOT_FOUND, nullptr);
-          } else {
-            auto fake_page_storage =
-                std::make_unique<DelayIsSyncedCallbackFakePageStorage>(environment_, this, page_id);
-            // If the page was opened before, restore the previous sync state.
-            fake_page_storage->set_synced(synced_pages_.find(page_id) != synced_pages_.end());
-            page_storages_[std::move(page_id)] = fake_page_storage.get();
-            callback(Status::OK, std::move(fake_page_storage));
-          }
-        });
-  }
-
-  void DeletePageStorage(storage::PageIdView /*page_id*/,
-                         fit::function<void(Status)> callback) override {
-    delete_page_storage_callback = std::move(callback);
-  }
-
-  void ClearCalls() {
-    create_page_calls.clear();
-    get_page_calls.clear();
-    page_storages_.clear();
-  }
-
-  void DelayIsSyncedCallback(storage::PageIdView page_id, bool delay_callback) {
-    if (delay_callback) {
-      pages_with_delayed_callback.insert(page_id.ToString());
-    } else {
-      pages_with_delayed_callback.erase(page_id.ToString());
-    }
-  }
-
-  // DelayingCallbacksManager:
-  bool ShouldDelayIsSyncedCallback(storage::PageIdView page_id) override {
-    return pages_with_delayed_callback.find(page_id.ToString()) !=
-           pages_with_delayed_callback.end();
-  }
-
-  void CallIsSyncedCallback(storage::PageIdView page_id) {
-    auto it = page_storages_.find(page_id.ToString());
-    FXL_CHECK(it != page_storages_.end());
-    it->second->CallIsSyncedCallback();
-  }
-
-  void set_page_storage_synced(storage::PageIdView page_id, bool is_synced) {
-    storage::PageId page_id_string = page_id.ToString();
-    if (is_synced) {
-      synced_pages_.insert(page_id_string);
-    } else {
-      auto it = synced_pages_.find(page_id_string);
-      if (it != synced_pages_.end()) {
-        synced_pages_.erase(it);
-      }
-    }
-
-    FXL_CHECK(page_storages_.find(page_id_string) != page_storages_.end());
-    page_storages_[page_id_string]->set_synced(is_synced);
-  }
-
-  void set_page_storage_offline_empty(storage::PageIdView page_id, bool is_offline_empty) {
-    storage::PageId page_id_string = page_id.ToString();
-    if (is_offline_empty) {
-      offline_empty_pages_.insert(page_id_string);
-    } else {
-      auto it = offline_empty_pages_.find(page_id_string);
-      if (it != offline_empty_pages_.end()) {
-        offline_empty_pages_.erase(it);
-      }
-    }
-  }
-
-  bool should_get_page_fail = false;
-  std::vector<storage::PageId> create_page_calls;
-  std::vector<storage::PageId> get_page_calls;
-  fit::function<void(Status)> delete_page_storage_callback;
-
- private:
-  Environment* const environment_;
-  std::map<storage::PageId, DelayIsSyncedCallbackFakePageStorage*> page_storages_;
-  std::set<storage::PageId> synced_pages_;
-  std::set<storage::PageId> offline_empty_pages_;
-  std::set<storage::PageId> pages_with_delayed_callback;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeLedgerStorage);
-};
-
 class LedgerManagerTest : public TestWithEnvironment {
  public:
   LedgerManagerTest() {}
@@ -234,7 +81,8 @@ class LedgerManagerTest : public TestWithEnvironment {
   // gtest::TestWithEnvironment:
   void SetUp() override {
     TestWithEnvironment::SetUp();
-    std::unique_ptr<FakeLedgerStorage> storage = std::make_unique<FakeLedgerStorage>(&environment_);
+    std::unique_ptr<storage::fake::FakeLedgerStorage> storage =
+        std::make_unique<storage::fake::FakeLedgerStorage>(&environment_);
     storage_ptr = storage.get();
     std::unique_ptr<sync_coordinator::FakeLedgerSync> sync =
         std::make_unique<sync_coordinator::FakeLedgerSync>();
@@ -252,7 +100,7 @@ class LedgerManagerTest : public TestWithEnvironment {
   void ResetLedgerPtr() { ledger_manager_->BindLedger(ledger_.NewRequest()); }
 
  protected:
-  FakeLedgerStorage* storage_ptr;
+  storage::fake::FakeLedgerStorage* storage_ptr;
   sync_coordinator::FakeLedgerSync* sync_ptr;
   inspect_deprecated::Node top_level_node_;
   std::unique_ptr<FakeDiskCleanupManager> disk_cleanup_manager_;
@@ -657,8 +505,8 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> HierarchyMatcher(
                         ChildrenMatch(ElementsAreArray(page_expectations)))))));
 }
 
-// TODO(LE-800): Make FakeLedgerStorage usable as a real LedgerStorage and unify this class with
-// LedgerManagerTest.
+// TODO(LE-800): Make storage::fake::FakeLedgerStorage usable as a real LedgerStorage and unify this
+// class with LedgerManagerTest.
 class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
  public:
   LedgerManagerWithRealStorageTest() = default;

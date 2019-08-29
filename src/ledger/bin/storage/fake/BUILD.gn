@@ -26,6 +26,8 @@ source_set("lib") {
     "fake_journal.h",
     "fake_journal_delegate.cc",
     "fake_journal_delegate.h",
+    "fake_ledger_storage.cc",
+    "fake_ledger_storage.h",
     "fake_object.cc",
     "fake_object.h",
     "fake_object_identifier_factory.cc",
