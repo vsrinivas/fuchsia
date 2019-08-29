@@ -90,6 +90,16 @@ impl TcpListener {
     ) -> io::Result<TcpListener> {
         TcpListener::new(listener)
     }
+
+    /// Returns a reference to the underlying `std::net::TcpListener`.
+    pub fn std(&self) -> &net::TcpListener {
+        self.as_ref()
+    }
+
+    /// Returns the local socket address of the listener.
+    pub fn local_addr(&self) -> io::Result<net::SocketAddr> {
+        self.std().local_addr()
+    }
 }
 
 pub struct Acceptor(Option<TcpListener>);
@@ -238,6 +248,11 @@ impl TcpStream {
         let stream = unsafe { EventedFd::new(stream)? };
 
         Ok(TcpStream { state: ConnectState::Connected, stream })
+    }
+
+    /// Returns a reference to the underlying `std::net::TcpStream`
+    pub fn std(&self) -> &net::TcpStream {
+        self.as_ref()
     }
 }
 
