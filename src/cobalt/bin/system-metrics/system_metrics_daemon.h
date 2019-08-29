@@ -8,15 +8,15 @@
 #ifndef SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_
 #define SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_
 
+#include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <chrono>
 #include <memory>
 #include <thread>
 #include <unordered_map>
 #include <vector>
-
-#include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/async/dispatcher.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher.h"

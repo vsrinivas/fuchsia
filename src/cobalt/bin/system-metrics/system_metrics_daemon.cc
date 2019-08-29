@@ -8,13 +8,6 @@
 
 #include <assert.h>
 #include <fcntl.h>
-
-#include <chrono>
-#include <memory>
-#include <numeric>
-#include <thread>
-#include <vector>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
@@ -22,8 +15,15 @@
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/resource.h>
-#include <trace/event.h>
 #include <zircon/status.h>
+
+#include <chrono>
+#include <memory>
+#include <numeric>
+#include <thread>
+#include <vector>
+
+#include <trace/event.h>
 
 #include "lib/syslog/cpp/logger.h"
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
@@ -195,10 +195,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   // Always log that we are "Up".
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::Up,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::Up, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -211,10 +209,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
   }
   // Log UpOneMinute
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::UpOneMinute,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::UpOneMinute, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -227,10 +223,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
   }
   // Log UpTenMinutes
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::UpTenMinutes,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::UpTenMinutes, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -243,10 +237,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
   }
   // Log UpOneHour
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::UpOneHour,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::UpOneHour, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -263,10 +255,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
   }
   // Log UpTwelveHours.
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::UpTwelveHours,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::UpTwelveHours, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -278,10 +268,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
   }
   // Log UpOneDay.
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::UpOneDay,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::UpOneDay, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -292,10 +280,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
   }
   // Log UpThreeDays.
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::UpThreeDays,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::UpThreeDays, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -306,10 +292,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds 
   }
   // Log UpSixDays.
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (ReinitializeIfPeerClosed(
-      logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-                        Uptime::UpSixDays,
-                        &status)) != ZX_OK) {
+  if (ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                                 Uptime::UpSixDays, &status)) != ZX_OK) {
     return std::chrono::minutes(5);
   }
   if (status != fuchsia::cobalt::Status::OK) {
@@ -333,12 +317,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUptime() {
                             : event_code = FuchsiaUptimeMetricDimensionUptimeRange::TwoWeeksOrMore;
 
   fuchsia::cobalt::Status status;
-  ReinitializeIfPeerClosed(
-      logger_->LogElapsedTime(fuchsia_system_metrics::kFuchsiaUptimeMetricId,
-                              event_code,
-                              "",
-                              up_hours,
-                              &status));
+  ReinitializeIfPeerClosed(logger_->LogElapsedTime(fuchsia_system_metrics::kFuchsiaUptimeMetricId,
+                                                   event_code, "", up_hours, &status));
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "LogCobaltEvent() returned status=" << StatusToString(status);
   }
@@ -359,8 +339,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
   if (!boot_reported_) {
     ReinitializeIfPeerClosed(
         logger_->LogEvent(fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
-                          FuchsiaLifetimeEventsMetricDimensionEvents::Boot,
-                          &status));
+                          FuchsiaLifetimeEventsMetricDimensionEvents::Boot, &status));
     if (status != fuchsia::cobalt::Status::OK) {
       FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
     } else {
@@ -402,8 +381,7 @@ void SystemMetricsDaemon::LogCpuPercentagesToCobalt() {
   }
   // call cobalt FIDL
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events),
-                                                    &status));
+  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "LogCpuPercentagesToCobalt returned status=" << StatusToString(status);
   }
@@ -444,10 +422,8 @@ void SystemMetricsDaemon::LogTemperatureToCobalt() {
   // call cobalt FIDL
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   ReinitializeIfPeerClosed(
-      logger_->LogIntHistogram(fuchsia_system_metrics::kFuchsiaTemperatureExperimentalMetricId,
-                               0,
-                               "",
-                               std::move(temperature_buckets_), &status));
+      logger_->LogIntHistogram(fuchsia_system_metrics::kFuchsiaTemperatureExperimentalMetricId, 0,
+                               "", std::move(temperature_buckets_), &status));
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "LogTemperatureToCobalt returned status=" << StatusToString(status);
   }
@@ -511,8 +487,7 @@ void SystemMetricsDaemon::LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& sta
                        .as_memory_usage(stats.other_bytes));
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events),
-                                                    &status));
+  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "LogMemoryUsage() returned status=" << StatusToString(status);
   }
@@ -576,16 +551,14 @@ void SystemMetricsDaemon::LogMemoryUsageToCobalt(const zx_info_kmem_stats_t& sta
   events.push_back(
       builder.Clone().with_event_code(Breakdown::OtherBytes).as_memory_usage(stats.other_bytes));
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events),
-                                                    &status));
+  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "LogMemoryUsage() returned status=" << StatusToString(status);
   }
   return;
 }
 
-zx_status_t
-SystemMetricsDaemon::ReinitializeIfPeerClosed(zx_status_t zx_status) {
+zx_status_t SystemMetricsDaemon::ReinitializeIfPeerClosed(zx_status_t zx_status) {
   if (zx_status == ZX_ERR_PEER_CLOSED) {
     FX_LOGS(ERROR) << "Logger connection closed. Reconnecting...";
     InitializeLogger();

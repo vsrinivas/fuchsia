@@ -4,10 +4,10 @@
 
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
-#include <future>
-
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
+
+#include <future>
 
 #include "gtest/gtest.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
