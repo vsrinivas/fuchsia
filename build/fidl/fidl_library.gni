@@ -336,6 +336,11 @@ template("fidl_library") {
 
       files = all_files
 
+      # Metadata to allow us to query all FIDL IR and source files.
+      metadata = {
+        fidl_json = [ rebase_path(json_representation, root_build_dir) ]
+      }
+
       non_sdk_deps = [ ":$meta_target_name" ]
 
       deps = []

@@ -53,6 +53,7 @@ template("sdk") {
   verify_meta_target_name = "${target_name}_meta_verify"
   archive_manifest_target_name = "${target_name}_archive_manifest"
   archive_target_name = "${target_name}_archive"
+  fidl_json_target_name = "${target_name}_fidl_json"
 
   if (!is_fuchsia) {
     assert(false, "SDKs can only target Fuchsia")
@@ -342,6 +343,20 @@ template("sdk") {
     public_deps = [
       ":$archive_target_name",
     ]
+  }
+
+  fidl_json_file = "$target_gen_dir/$sdk_name.fidl_json.txt"
+
+  # Generate a helpful list of all of the JSON for the fidl in this SDK
+  generated_file(fidl_json_target_name) {
+    testonly = true
+    deps = [
+      ":$main_target_name",
+    ]
+    outputs = [
+      "$fidl_json_file",
+    ]
+    data_keys = [ "fidl_json" ]
   }
 
   if (defined(invoker.export) && invoker.export) {

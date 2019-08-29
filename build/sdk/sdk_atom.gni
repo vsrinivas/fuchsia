@@ -289,7 +289,11 @@ template("sdk_atom") {
 
   # Builds a manifest representing this element.
   action(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "metadata",
+                           ])
 
     manifest = "$target_gen_dir/$target_name.sdk"
     depfile = "$manifest.d"
