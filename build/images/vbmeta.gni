@@ -98,6 +98,10 @@ template("vbmeta") {
           "${file}",
         ]
       }
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ "//zircon/public/tool/zbi($host_toolchain)" ]
     }
   }
 

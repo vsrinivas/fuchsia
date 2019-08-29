@@ -107,7 +107,9 @@ images = [
     sources = [
       "$zircon_tools_dir/bootserver",
     ]
-    deps = []
+    deps = [
+      "//zircon/public/tool/bootserver($host_toolchain)",
+    ]
   },
 ]
 
@@ -1226,6 +1228,9 @@ if (!bootfs_only) {
     ":blob.blk",
     ":data.blk",
     ":fvm.sparse.blk",
+    "//zircon/public/tool/blobfs($host_toolchain)",
+    "//zircon/public/tool/fvm($host_toolchain)",
+    "//zircon/public/tool/minfs($host_toolchain)",
   ]
   filesystem_sizes_inputs += [
     blob_image_path,

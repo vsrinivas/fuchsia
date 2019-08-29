@@ -11,8 +11,10 @@ import("//build/config/clang/clang.gni")
 # $zircon_root_build_dir before running ninja in $root_build_dir.
 zircon_root_build_dir = "${root_build_dir}.zircon"
 
-# The top-level `tools` Ninja target in Zircon puts the tool binaries here.
-zircon_tools_dir = "$zircon_root_build_dir/tools"
+# Zircon tools get added to that directory by the Fuchsia GN build.
+# When using to a tool from this directory, add the corresponding dependency on
+# `//zircon/public/tool/$tool_name($host_toolchain)`.
+zircon_tools_dir = get_label_info("//zircon/public/tool($host_toolchain)", "root_out_dir")
 
 # Template for running a Zircon host tool as part of the build.
 # This is a thin wrapper to define an `action()` target.
@@ -34,6 +36,7 @@ zircon_tools_dir = "$zircon_root_build_dir/tools"
 template("zircon_tool_action") {
   assert(defined(invoker.tool), "zircon_tool_action() requires `tool`")
   assert(defined(invoker.args), "zircon_tool_action() requires `args`")
+  _dep = "//zircon/public/tool/${invoker.tool}($host_toolchain)"
   _tool = "$zircon_tools_dir/${invoker.tool}"
   action(target_name) {
     inputs = []
@@ -57,5 +60,9 @@ template("zircon_tool_action") {
              clang_prefix,
              rebase_path(_tool, root_build_dir),
            ] + invoker.args
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ _dep ]
   }
 }

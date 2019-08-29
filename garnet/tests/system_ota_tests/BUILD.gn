@@ -18,6 +18,9 @@ copy("copy") {
   outputs = [
     "$root_out_dir/test_data/system_ota_tests/{{source_file_part}}",
   ]
+  deps = [
+    "//zircon/public/tool/netaddr($host_toolchain)",
+  ]
 }
 
 go_library("system_ota_tests_lib") {
