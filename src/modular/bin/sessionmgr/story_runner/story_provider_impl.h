@@ -299,6 +299,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
     fuchsia::modular::internal::StoryDataPtr current_data;
 
     inspect::Node story_node;
+    inspect::IntProperty last_focus_time;
   };
   std::map<std::string, StoryRuntimeContainer> story_runtime_containers_;
 

@@ -167,6 +167,8 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
               });
 
           container.story_node = session_inspect_node_->CreateChild(story_id_.value_or(""));
+          container.last_focus_time = container.story_node.CreateInt(
+              "last_focus_time", container.current_data->story_info().last_focus_time());
 
           auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_,
                                                                             std::move(container));
@@ -752,6 +754,12 @@ void StoryProviderImpl::NotifyStoryWatchers(
     (*i)->OnChange(StoryInfo2ToStoryInfo(story_data->story_info()), story_state,
                    story_visibility_state);
     (*i)->OnChange2(CloneStruct(story_data->story_info()), story_state, story_visibility_state);
+  }
+
+  auto i = story_runtime_containers_.find(story_data->story_info().id());
+  if (i != story_runtime_containers_.end()) {
+    story_runtime_containers_[story_data->story_info().id()].last_focus_time.Set(
+        story_data->story_info().last_focus_time());
   }
 }
 

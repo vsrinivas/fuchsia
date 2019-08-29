@@ -85,6 +85,34 @@ class InspectSessionTest : public modular::testing::TestHarnessFixture {
   modular::testing::FakeSessionShell fake_session_shell_;
 };
 
+class TestStoryProviderWatcher : public fuchsia::modular::StoryProviderWatcher {
+ public:
+  TestStoryProviderWatcher() : binding_(this) {}
+  ~TestStoryProviderWatcher() override = default;
+
+  void OnChange2(fit::function<void(fuchsia::modular::StoryInfo2)> on_change) {
+    on_change_2_ = std::move(on_change);
+  }
+
+  void Watch(fuchsia::modular::StoryProvider* const story_provider) {
+    story_provider->Watch(binding_.NewBinding());
+  }
+
+ private:
+  // |fuchsia::modular::StoryProviderWatcher|
+  void OnDelete(::std::string story_id) override {}
+
+  // |fuchsia::modular::StoryProviderWatcher|
+  void OnChange2(fuchsia::modular::StoryInfo2 story_info, fuchsia::modular::StoryState story_state,
+                 fuchsia::modular::StoryVisibilityState story_visibility_state) override {
+    on_change_2_(std::move(story_info));
+    return;
+  }
+
+  fit::function<void(fuchsia::modular::StoryInfo2)> on_change_2_;
+  fidl::Binding<fuchsia::modular::StoryProviderWatcher> binding_;
+};
+
 TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
   RunHarnessAndInterceptSessionShell();
 
@@ -112,8 +140,7 @@ TEST_F(InspectSessionTest, NodeHierarchyNoStories) {
 TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   RunHarnessAndInterceptSessionShell();
 
-  // Create a new story using PuppetMaster and launch a new story shell,
-  // including a mod with extra info.
+  // Create a new story using PuppetMaster and launch a new story shell.
   fuchsia::modular::PuppetMasterPtr puppet_master;
   fuchsia::modular::StoryPuppetMasterPtr story_master;
 
@@ -126,6 +153,19 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   const char kStoryId[] = "my_story";
 
   puppet_master->ControlStory(kStoryId, story_master.NewRequest());
+
+  // Watch for changes to the session.
+  TestStoryProviderWatcher story_provider_watcher;
+  story_provider_watcher.Watch(fake_session_shell_.story_provider());
+
+  // Keep track of the focus timestamp that we receive for the story.
+  std::vector<int64_t> last_focus_timestamps;
+  story_provider_watcher.OnChange2([&](fuchsia::modular::StoryInfo2 story_info) {
+    ASSERT_TRUE(story_info.has_id());
+    ASSERT_TRUE(story_info.has_last_focus_time());
+    ASSERT_EQ(kStoryId, story_info.id());
+    last_focus_timestamps.push_back(story_info.last_focus_time());
+  });
 
   AddMod add_mod;
   add_mod.mod_name_transitional = "mod1";
@@ -147,11 +187,15 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
   auto hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
 
-  // Check that the story_id is in the hierarchy.
-  EXPECT_THAT(hierarchy, AllOf(inspect::testing::NodeMatches(inspect::testing::NameMatches("root")),
-                               inspect::testing::ChildrenMatch(
-                                   UnorderedElementsAre(AllOf(inspect::testing::NodeMatches(
-                                       AllOf(inspect::testing::NameMatches("my_story"))))))));
+  // Check that the Inspect object tree is correct.
+  EXPECT_THAT(
+      hierarchy,
+      AllOf(
+          inspect::testing::NodeMatches(inspect::testing::NameMatches("root")),
+          inspect::testing::ChildrenMatch(UnorderedElementsAre(AllOf(inspect::testing::NodeMatches(
+              AllOf(inspect::testing::NameMatches("my_story"),
+                    inspect::testing::PropertyList(UnorderedElementsAre(inspect::testing::IntIs(
+                        "last_focus_time", last_focus_timestamps.back()))))))))));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
