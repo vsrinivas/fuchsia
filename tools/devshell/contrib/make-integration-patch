@@ -98,8 +98,14 @@ function read-patches-from-stdin {
     seen_projects[$project]=1
 
     # The patches.json requires host-review.googlesource.com, while Gerrit's download
-    # commands vend host.googlesource.com.
-    host=$(echo "$host" | sed "s/\.googlesource/-review\.googlesource/")
+    # commands vend host.googlesource.com or just host. For example, some
+    # repositories will show up as sso://host/project, in which case we extract
+    # host and need to append -review.googlesource.com to it.
+    if [[ "$host" =~ .*googlesource.* ]]; then
+      host=$(echo "$host" | sed "s/\.googlesource/-review\.googlesource/")
+    else
+      host="$host-review.googlesource.com"
+    fi
 
     if [[ ${first} = false ]]; then
       printf ',\n'
