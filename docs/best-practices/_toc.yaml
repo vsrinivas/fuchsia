@@ -16,5 +16,5 @@ toc:
   path: /docs/best-practices/test_flake_policy.md
 - title: "Respectful Code Policy"
   path: /docs/best-practices/respectful_code.md
-- title: "Fuchsia Channel Usage Policy"
-  path: /docs/best-practices/channel_usage_policy.md
+- title: "Fuchsia Update Channel Usage Policy"
+  path: /docs/best-practices/update_channel_usage_policy.md

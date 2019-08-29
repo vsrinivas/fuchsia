@@ -128,7 +128,7 @@ datagram-like transport that can transfer small messages including
 underlying transport.
 
 -   [Channel Overview](/docs/zircon/objects/channel.md)
--   [Channel Usage Policy](/docs/best-practices/channel_usage_policy.md)
+-   [Update Channel Usage Policy](/docs/best-practices/update_channel_usage_policy.md)
 
 #### **Component** {#component}
 
