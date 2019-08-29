@@ -1,4 +1,1 @@
-disabled_for_asan = [
-  # OV-5
-  "/pkgfs/packages/overnet_tests/0/test/overnet_unittests",
-]
+disabled_for_asan = []
