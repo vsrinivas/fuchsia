@@ -14,6 +14,7 @@
 #include <lib/inspect_deprecated/inspect.h>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/app/background_sync_manager.h"
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
 #include "src/ledger/bin/app/ledger_manager.h"
 #include "src/ledger/bin/app/page_eviction_manager.h"
@@ -36,6 +37,7 @@ namespace ledger {
 
 class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositorySyncableDelegate,
                              public PageEvictionManager::Delegate,
+                             public BackgroundSyncManager::Delegate,
                              public inspect_deprecated::ChildrenManager {
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
@@ -45,6 +47,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                        std::unique_ptr<PageUsageDb> db, std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
+                       std::unique_ptr<BackgroundSyncManager> background_sync_manager,
                        std::vector<PageUsageListener*> page_usage_listeners,
                        inspect_deprecated::Node inspect_node);
   ~LedgerRepositoryImpl() override;
@@ -66,6 +69,9 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
       fit::function<void(Status, PagePredicateResult)> callback) override;
   void DeletePageStorage(fxl::StringView ledger_name, storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override;
+
+  // BackgroundSyncManager::Delegate:
+  void TrySyncClosedPage(fxl::StringView ledger_name, storage::PageIdView page_id) override;
 
   // LedgerRepository:
   void GetLedger(std::vector<uint8_t> ledger_name, fidl::InterfaceRequest<Ledger> ledger_request,
@@ -107,6 +113,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
       ledger_managers_;
   // The DiskCleanupManager relies on the |ledger_managers_| being still alive.
   std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
+  std::unique_ptr<BackgroundSyncManager> background_sync_manager_;
   fit::closure on_empty_callback_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;

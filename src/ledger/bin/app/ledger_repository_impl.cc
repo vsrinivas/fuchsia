@@ -29,14 +29,13 @@ namespace {
 std::string GetDirectoryName(fxl::StringView bytes) { return base64url::Base64UrlEncode(bytes); }
 }  // namespace
 
-LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
-                                           std::unique_ptr<storage::DbFactory> db_factory,
-                                           std::unique_ptr<PageUsageDb> db,
-                                           std::unique_ptr<SyncWatcherSet> watchers,
-                                           std::unique_ptr<sync_coordinator::UserSync> user_sync,
-                                           std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-                                           std::vector<PageUsageListener*> page_usage_listeners,
-                                           inspect_deprecated::Node inspect_node)
+LedgerRepositoryImpl::LedgerRepositoryImpl(
+    DetachedPath content_path, Environment* environment,
+    std::unique_ptr<storage::DbFactory> db_factory, std::unique_ptr<PageUsageDb> db,
+    std::unique_ptr<SyncWatcherSet> watchers, std::unique_ptr<sync_coordinator::UserSync> user_sync,
+    std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
+    std::unique_ptr<BackgroundSyncManager> background_sync_manager,
+    std::vector<PageUsageListener*> page_usage_listeners, inspect_deprecated::Node inspect_node)
     : content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),
@@ -46,6 +45,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
       user_sync_(std::move(user_sync)),
       page_usage_listeners_(std::move(page_usage_listeners)),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
+      background_sync_manager_(std::move(background_sync_manager)),
       coroutine_manager_(environment_->coroutine_service()),
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
@@ -55,6 +55,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environmen
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
+  background_sync_manager_->set_on_empty([this] { CheckEmpty(); });
   // The callback that is to be called once the initialization of this PageUsageDb is completed.
   // The destructor may be called while a coroutine that is responsable for the PageusageDb
   // initialization is executed, so we need to wait until the operation is done and then signal
@@ -135,6 +136,17 @@ void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
   }
   FXL_DCHECK(ledger_manager);
   return ledger_manager->DeletePageStorage(page_id, std::move(callback));
+}
+
+void LedgerRepositoryImpl::TrySyncClosedPage(fxl::StringView ledger_name,
+                                             storage::PageIdView page_id) {
+  LedgerManager* ledger_manager;
+  Status status = GetLedgerManager(ledger_name, &ledger_manager);
+  if (status != Status::OK) {
+    return;
+  }
+  FXL_DCHECK(ledger_manager);
+  return ledger_manager->TrySyncClosedPage(page_id);
 }
 
 // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12326): The disk
@@ -281,12 +293,14 @@ void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher
 
 void LedgerRepositoryImpl::CheckEmpty() {
   if (!closing_ && ledger_managers_.empty() && (bindings_.empty() || close_callback_) &&
-      disk_cleanup_manager_->IsEmpty() && db_->IsInitialized() &&
-      (on_empty_callback_ || close_callback_)) {
+      disk_cleanup_manager_->IsEmpty() && background_sync_manager_->IsEmpty() &&
+      db_->IsInitialized() && (on_empty_callback_ || close_callback_)) {
     closing_ = true;
     // Both PageUsageDb and DbFactory use the filesystem. We need to close them before we can
-    // close ourselves, as well as DiskCleanupManager, since it owns the pointer to the db.
+    // close ourselves, as well as DiskCleanupManager and BackgroungSyncManager, since they use
+    // filesystem via pointer to PageUsageDb.
     disk_cleanup_manager_.reset();
+    background_sync_manager_.reset();
     db_.reset();
     db_factory_->Close(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this]() {
       if (close_callback_) {

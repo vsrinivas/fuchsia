@@ -8,6 +8,7 @@
 #include <lib/async_promise/executor.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
+#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -28,6 +29,7 @@
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/bin/sync_coordinator/testing/fake_ledger_sync.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -78,6 +80,37 @@ class BlockingFakeDbFactory : public storage::DbFactory {
   void Close(fit::closure callback) override {}
 };
 
+// Provides empty implementation of user-level synchronization. Helps to track ledger-level
+// synchronization of pages.
+class FakeUserSync : public sync_coordinator::UserSync {
+ public:
+  FakeUserSync() = default;
+  FakeUserSync(const FakeUserSync&) = delete;
+  FakeUserSync& operator=(const FakeUserSync&) = delete;
+  ~FakeUserSync() = default;
+
+  // Returns the number of times synchronization was started for the given page.
+  int GetSyncCallsCount(storage::PageId page_id) {
+    return ledger_sync_ptr_->GetSyncCallsCount(page_id);
+  }
+
+  // UserSync:
+  void Start() override {}
+
+  void SetWatcher(sync_coordinator::SyncStateWatcher* watcher) override {}
+
+  // Creates a FakeLedgerSync to allow tracking of the page synchronization.
+  std::unique_ptr<sync_coordinator::LedgerSync> CreateLedgerSync(
+      fxl::StringView app_id, encryption::EncryptionService* encryption_service) override {
+    auto ledger_sync = std::make_unique<sync_coordinator::FakeLedgerSync>();
+    ledger_sync_ptr_ = ledger_sync.get();
+    return std::move(ledger_sync);
+  }
+
+ private:
+  sync_coordinator::FakeLedgerSync* ledger_sync_ptr_;
+};
+
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryImplTest() {
@@ -92,11 +125,15 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
         std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
     std::unique_ptr<PageUsageDb> db = std::make_unique<PageUsageDb>(
         environment_.clock(), db_factory.get(), detached_path.SubPath("page_usage_db"));
+    auto background_sync_manager = std::make_unique<BackgroundSyncManager>(&environment_, db.get());
+
+    auto user_sync = std::make_unique<FakeUserSync>();
+    user_sync_ = user_sync.get();
 
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         detached_path.SubPath("ledgers"), &environment_, std::move(db_factory), std::move(db),
-        nullptr, nullptr, std::move(fake_page_eviction_manager),
-        std::vector<PageUsageListener*>{disk_cleanup_manager_},
+        nullptr, std::move(user_sync), std::move(fake_page_eviction_manager),
+        std::move(background_sync_manager), std::vector<PageUsageListener*>{disk_cleanup_manager_},
         attachment_node_.CreateChild(kInspectPathComponent));
   }
 
@@ -105,6 +142,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   FakeDiskCleanupManager* disk_cleanup_manager_;
+  FakeUserSync* user_sync_;
   // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our
   // reads using FIDL, and because we want to use inspect_deprecated::ReadFromFidl for our
   // reads, we need to have these two objects (one parent, one child, both part
@@ -396,10 +434,11 @@ TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
   std::unique_ptr<BlockingFakeDbFactory> db_factory = std::make_unique<BlockingFakeDbFactory>();
   std::unique_ptr<PageUsageDb> db = std::make_unique<PageUsageDb>(
       environment_.clock(), db_factory.get(), detached_path.SubPath("page_usage_database"));
+  auto background_sync_manager = std::make_unique<BackgroundSyncManager>(&environment_, db.get());
 
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       detached_path.SubPath("ledgers"), &environment_, std::move(db_factory), std::move(db),
-      nullptr, nullptr, std::move(fake_page_eviction_manager),
+      nullptr, nullptr, std::move(fake_page_eviction_manager), std::move(background_sync_manager),
       std::vector<PageUsageListener*>{disk_cleanup_manager},
       attachment_node.CreateChild(kInspectPathComponent));
 
@@ -420,6 +459,67 @@ TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
   RunLoopUntilIdle();
   EXPECT_FALSE(on_empty_called);
   EXPECT_FALSE(ptr1_closed);
+}
+
+PageId RandomId(const Environment& environment) {
+  PageId result;
+  environment.random()->Draw(&result.id);
+  return result;
+}
+
+// Verifies that the LedgerRepositoryImpl triggers page sync for a page that exists and was closed.
+TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageSyncStarted) {
+  PagePtr page;
+  PageId id = RandomId(environment_);
+  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
+  // Opens the Ledger and creates LedgerManager.
+  std::string ledger_name = "ledger";
+  ledger::LedgerPtr first_ledger_ptr;
+  ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
+
+  // Opens the page and starts the sync with the cloud for the first time.
+  first_ledger_ptr->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  RunLoopUntilIdle();
+  EXPECT_EQ(user_sync_->GetSyncCallsCount(page_id), 1);
+
+  page.Unbind();
+  RunLoopUntilIdle();
+
+  // Starts the sync of the reopened page.
+  repository_->TrySyncClosedPage(convert::ExtendedStringView(ledger_name),
+                                 convert::ExtendedStringView(id.id));
+  RunLoopUntilIdle();
+  EXPECT_EQ(user_sync_->GetSyncCallsCount(page_id), 2);
+}
+
+// Verifies that the LedgerRepositoryImpl does not trigger the sync for a currently open page.
+TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageWithOpenedPage) {
+  PagePtr page;
+  PageId id = RandomId(environment_);
+  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
+  // Opens the Ledger and creates LedgerManager.
+  std::string ledger_name = "ledger";
+  ledger::LedgerPtr first_ledger_ptr;
+  ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
+
+  // Opens the page and starts the sync with the cloud for the first time.
+  first_ledger_ptr->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  RunLoopUntilIdle();
+  EXPECT_EQ(user_sync_->GetSyncCallsCount(page_id), 1);
+
+  // Tries to reopen the already-open page.
+  repository_->TrySyncClosedPage(convert::ExtendedStringView(ledger_name),
+                                 convert::ExtendedStringView(id.id));
+  RunLoopUntilIdle();
+  EXPECT_EQ(user_sync_->GetSyncCallsCount(page_id), 1);
 }
 
 }  // namespace

@@ -46,6 +46,8 @@ source_set("lib") {
     "active_page_manager.h",
     "active_page_manager_container.cc",
     "active_page_manager_container.h",
+    "background_sync_manager.cc",
+    "background_sync_manager.h",
     "branch_tracker.cc",
     "branch_tracker.h",
     "delaying_facade.h",
@@ -188,6 +190,7 @@ source_set("unittests") {
   sources = [
     "active_page_manager_container_unittest.cc",
     "active_page_manager_unittest.cc",
+    "background_sync_manager_unittest.cc",
     "delaying_facade_unittest.cc",
     "disk_cleanup_manager_unittest.cc",
     "fidl/serialization_size_unittest.cc",

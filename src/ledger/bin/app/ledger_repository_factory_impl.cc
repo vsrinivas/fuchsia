@@ -24,6 +24,7 @@
 
 #include <trace/event.h>
 
+#include "src/ledger/bin/app/background_sync_manager.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/app/serialization_version.h"
@@ -300,6 +301,7 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
                                           repository_information.page_usage_db_path);
 
   auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(environment_, db.get());
+  auto background_sync_manager = std::make_unique<BackgroundSyncManager>(environment_, db.get());
 
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync;
@@ -311,12 +313,15 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
   }
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
+  BackgroundSyncManager* background_sync_manager_ptr = background_sync_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
       repository_information.ledgers_path, environment_, std::move(db_factory), std::move(db),
       std::move(watchers), std::move(user_sync), std::move(disk_cleanup_manager),
-      std::vector<PageUsageListener*>{disk_cleanup_manager_ptr},
+      std::move(background_sync_manager),
+      std::vector<PageUsageListener*>{disk_cleanup_manager_ptr, background_sync_manager_ptr},
       inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
+  background_sync_manager_ptr->SetDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }
 
