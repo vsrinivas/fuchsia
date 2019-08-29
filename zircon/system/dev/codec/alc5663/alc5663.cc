@@ -35,17 +35,29 @@ zx_status_t Alc5663Device::InitializeDevice() {
     return status;
   }
 
-  // Verify the ALC5663 is the right revision.
-  ResetAndDeviceIdReg reset_reg{};
-  status = ReadRegister(&client_, &reset_reg);
+  // Verify vendor ID and version information.
+  VendorIdReg vendor{};
+  status = ReadRegister(&client_, &vendor);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: Could not read device ID.\n");
+    zxlogf(ERROR, "alc5663: Could not read device vendor ID.\n");
     return status;
   }
-  if (reset_reg.device_id() != 0) {
-    zxlogf(ERROR, "alc5663: Unsupported device revision.\n");
+  if (vendor.vendor_id() != VendorIdReg::kVendorRealtek) {
+    zxlogf(ERROR, "alc5663: Unsupported device vendor ID: 0x%04x.\n", vendor.vendor_id());
     return ZX_ERR_NOT_SUPPORTED;
   }
+
+  // Fetch version for logging.
+  VersionIdReg version{};
+  status = ReadRegister(&client_, &version);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "alc5663: Could not read version information.\n");
+    return status;
+  }
+
+  // Log vendor and version.
+  zxlogf(INFO, "Found ALC5663 codec, vendor 0x%04x, version 0x%04x.\n", vendor.vendor_id(),
+         version.version_id());
 
   // Power on everything.
   //

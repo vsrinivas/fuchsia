@@ -115,4 +115,22 @@ struct I2s1DigitalInterfaceControlReg {
   static constexpr uint16_t kAddress = 0x70;
 };
 
+struct VersionIdReg {
+  uint16_t data;
+
+  DEF_SUBFIELD(data, 15, 0, version_id);
+
+  static constexpr uint16_t kAddress = 0xfd;
+};
+
+struct VendorIdReg {
+  uint16_t data;
+
+  static const uint16_t kVendorRealtek = 0x10ec;
+
+  DEF_SUBFIELD(data, 15, 0, vendor_id);
+
+  static constexpr uint16_t kAddress = 0xfe;
+};
+
 }  // namespace audio::alc5663

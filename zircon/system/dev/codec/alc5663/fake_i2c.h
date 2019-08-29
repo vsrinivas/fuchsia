@@ -5,6 +5,10 @@
 #ifndef ZIRCON_SYSTEM_DEV_CODEC_ALC5663_FAKE_I2C_H_
 #define ZIRCON_SYSTEM_DEV_CODEC_ALC5663_FAKE_I2C_H_
 
+#include <endian.h>
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fit/function.h>
+
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/i2c.h>
@@ -14,8 +18,6 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fit/function.h>
 
 namespace audio::alc5663 {
 
@@ -56,6 +58,19 @@ class FakeI2c : ddk::I2cProtocol<FakeI2c<AddressType, DataType>> {
 
 // Implementation details follow.
 
+namespace fake_i2c_internal {
+
+// Convert between host and big endian for the I2C bus.
+inline uint32_t HostToBigEndian(uint32_t val) { return htobe32(val); }
+inline uint16_t HostToBigEndian(uint16_t val) { return htobe16(val); }
+inline uint8_t HostToBigEndian(uint8_t val) { return val; }
+
+inline uint32_t BigEndianToHost(uint32_t val) { return betoh32(val); }
+inline uint16_t BigEndianToHost(uint16_t val) { return betoh16(val); }
+inline uint8_t BigEndianToHost(uint8_t val) { return val; }
+
+}  // namespace fake_i2c_internal
+
 template <typename AddressType, typename DataType>
 void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t op_count,
                                                  i2c_transact_callback callback, void* cookie) {
@@ -66,7 +81,8 @@ void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t
     AddressType addr = (reinterpret_cast<const AddressType*>(op_list[0].data_buffer))[0];
 
     // Issue callback.
-    DataType result = on_read_(addr);
+    DataType result =
+        fake_i2c_internal::HostToBigEndian(on_read_(fake_i2c_internal::BigEndianToHost(addr)));
 
     // Return to caller.
     fbl::Vector<i2c_op_t> result_ops = {{
@@ -91,7 +107,8 @@ void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t
     const auto* payload = reinterpret_cast<const Payload*>(op_list[0].data_buffer);
 
     // Issue callback.
-    on_write_(payload->address, payload->data);
+    on_write_(fake_i2c_internal::BigEndianToHost(payload->address),
+              fake_i2c_internal::BigEndianToHost(payload->data));
 
     // Return to caller.
     fbl::Vector<i2c_op_t> empty_result = {};
