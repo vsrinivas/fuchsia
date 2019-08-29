@@ -5,6 +5,7 @@
 #include "examples/media/audio/tones/tones.h"
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>

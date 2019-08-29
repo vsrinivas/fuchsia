@@ -6,6 +6,7 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
@@ -716,7 +717,7 @@ int main(int argc, char** argv) {
     return res;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::unique_ptr<sys::ComponentContext> startup_context = sys::ComponentContext::Create();
 

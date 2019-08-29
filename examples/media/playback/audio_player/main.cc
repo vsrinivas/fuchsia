@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 
 #include "examples/media/playback/audio_player/audio_player.h"
@@ -16,7 +17,7 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   examples::AudioPlayer audio_player(
       params, [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });

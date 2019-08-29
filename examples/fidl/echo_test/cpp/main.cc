@@ -4,6 +4,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <gtest/gtest.h>
@@ -12,7 +13,7 @@ namespace fidl {
 namespace {
 
 TEST(IntegrationTest, Echo) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto svc = sys::ServiceDirectory::CreateFromNamespace();
 
   fuchsia::sys::LauncherPtr launcher;

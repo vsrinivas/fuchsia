@@ -9,6 +9,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fzl/vmo-mapper.h>
 
 #include <memory>

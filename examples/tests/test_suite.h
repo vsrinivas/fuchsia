@@ -7,6 +7,7 @@
 
 #include <fuchsia/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 
 namespace example {

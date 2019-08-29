@@ -4,6 +4,7 @@
 
 #include <fuchsia/examples/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -20,7 +21,7 @@ class EchoImpl : public fidl::examples::echo::Echo {
 };
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   fidl::ServiceHandler handler;
   fuchsia::examples::MyService::Handler my_service(&handler);

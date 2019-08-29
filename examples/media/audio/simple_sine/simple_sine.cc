@@ -5,6 +5,7 @@
 #include "examples/media/audio/simple_sine/simple_sine.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <math.h>
 
@@ -158,7 +159,7 @@ void MediaApp::Shutdown() {
 }  // namespace examples
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup_context = sys::ComponentContext::Create();
 
   examples::MediaApp media_app(

@@ -37,7 +37,7 @@ This section assumes you are writing an asynchronous component and that
 some part of your component (typically `main.cc`) looks like this:
 
 ```
-async::Loop loop(&kAsyncLoopConfigAttachToThread);
+async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 auto component_context = sys::ComponentContext::Create();
 // ...
 loop.Run();
@@ -56,7 +56,7 @@ initialization work.
 **Change your initialization code to look like the following:**
 
 ```
-async::Loop loop(&kAsyncLoopConfigAttachToThread);
+async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 auto component_context = sys::ComponentContext::Create();
 auto inspector =
       sys::ComponentInspector::Initialize(component_context.get());

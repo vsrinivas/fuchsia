@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <iostream>
@@ -26,7 +27,7 @@ int main(int argc, const char** argv) {
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   // loop is needed by StartupContext.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   examples::MediaApp media_app(sys::ComponentContext::Create());
 
   if (command_line.HasOption("v") || command_line.HasOption("verbose")) {

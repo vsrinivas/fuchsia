@@ -38,7 +38,7 @@ class AsyncLoopForTest {
 
 class AsyncLoopForTestImpl {
  public:
-  AsyncLoopForTestImpl() : loop_(&kAsyncLoopConfigAttachToThread) {}
+  AsyncLoopForTestImpl() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
   ~AsyncLoopForTestImpl() = default;
 
   async::Loop* loop() { return &loop_; }

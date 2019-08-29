@@ -14,6 +14,7 @@ source_set("test_suite_lib") {
     "//sdk/fidl/fuchsia.test",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -22,6 +23,7 @@ executable("passing-test-example") {
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
   sources = [
     "passing_test_example.cc",
@@ -33,6 +35,7 @@ executable("failing-test-example") {
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
   sources = [
     "failing_test_example.cc",
@@ -44,6 +47,7 @@ executable("no-test-example") {
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
   sources = [
     "no_test_example.cc",
@@ -55,6 +59,7 @@ executable("get-tests-hangs-example") {
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
   sources = [
     "get_tests_hangs_example.cc",
@@ -66,6 +71,7 @@ executable("get-tests-closes-channel-example") {
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
   sources = [
     "get_tests_closes_channel_example.cc",
@@ -77,6 +83,7 @@ executable("run-hangs-example") {
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
   sources = [
     "run_hangs_example.cc",
@@ -88,6 +95,7 @@ executable("run-closes-channel-example") {
     ":test_suite_lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
   sources = [
     "run_closes_channel_example.cc",

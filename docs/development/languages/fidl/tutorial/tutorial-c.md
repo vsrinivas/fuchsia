@@ -75,7 +75,7 @@ The example server code is in [//garnet/examples/fidl/echo_server_c/echo_server.
 [29]
 [30]   async_loop_t* loop = NULL;
 [31]   zx_status_t status =
-[32]       async_loop_create(&kAsyncLoopConfigAttachToThread, &loop);
+[32]       async_loop_create(&kAsyncLoopConfigAttachToCurrentThread, &loop);
 [33]   if (status != ZX_OK) {
 [34]     printf("error: async_loop_create returned: %d (%s)\n", status,
 [35]            zx_status_get_string(status));

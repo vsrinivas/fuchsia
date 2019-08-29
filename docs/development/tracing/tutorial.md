@@ -686,13 +686,14 @@ Here's a simple example:
 
 ```cpp
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <trace-provider/provider.h>
 // further includes
 
 int main(int argc, const char** argv) {
   // process argv
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TracelinkProviderWithFdio trace_provider(
       loop.dispatcher(), "my_trace_provider");
 

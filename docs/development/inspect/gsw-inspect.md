@@ -165,7 +165,7 @@ There's a little bit of housekeeping in **main()** that gets that going:
 int main(int argc, const char** argv) {
   // Standard component setup, create an event loop and obtain the
   // |StartupContext|.
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = component::StartupContext::CreateFromStartupInfo();
 
   // Create a root node from the context's object_dir.

@@ -95,6 +95,7 @@ Here are the #include files used in the server implementation:
 ```cpp
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 
 #include "lib/component/cpp/startup_context.h"
