@@ -4,6 +4,7 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/default.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
 #include <lib/vfs/cpp/internal/file.h>
@@ -45,7 +46,7 @@ void CallBindTwiceAndTest(vfs::internal::Connection* connection) {
 
 TEST(ConnectionBindCalledTwice, DirectoryConnection) {
   vfs::PseudoDir dir;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   vfs::internal::DirectoryConnection connection(0, &dir);
 
   CallBindTwiceAndTest(&connection);
@@ -53,7 +54,7 @@ TEST(ConnectionBindCalledTwice, DirectoryConnection) {
 
 TEST(ConnectionBindCalledTwice, FileConnection) {
   DummyTestFile file;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   vfs::internal::FileConnection connection(0, &file);
 
   CallBindTwiceAndTest(&connection);
@@ -61,7 +62,7 @@ TEST(ConnectionBindCalledTwice, FileConnection) {
 
 TEST(ConnectionBindCalledTwice, NodeConnection) {
   vfs::PseudoDir dir;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   vfs::internal::NodeConnection connection(0, &dir);
 
   CallBindTwiceAndTest(&connection);
@@ -85,7 +86,7 @@ class DummyTestNode : public vfs::internal::Node {
 
 TEST(ConenctionTest, ConnectionPassedErrorInClose) {
   DummyTestNode node;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   loop.StartThread("vfs test thread");
   fuchsia::io::NodeSyncPtr ptr;
   ASSERT_EQ(ZX_OK, node.Serve(0, ptr.NewRequest().TakeChannel(), loop.dispatcher()));

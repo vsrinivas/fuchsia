@@ -47,7 +47,7 @@ namespace sys {
 //
 // ```
 // int main(int argc, const char** argv) {
-//   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+//   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 //   auto context = sys::ComponentContext::Create();
 //   my::App app(std::move(context))
 //   loop.Run();
@@ -97,7 +97,7 @@ class ComponentContext final {
   //
   // ```
   // int main(int argc, const char** argv) {
-  //   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  //   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   //   auto context = sys::ComponentContext::Create();
   //   my::App app(std::move(context))
   //   loop.Run();

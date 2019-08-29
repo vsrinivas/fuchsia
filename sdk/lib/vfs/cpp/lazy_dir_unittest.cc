@@ -26,7 +26,7 @@ class TestLazyDir : public vfs::LazyDir {
     std::unique_ptr<vfs::internal::Node> node_;
   };
 
-  TestLazyDir() : next_id_(GetStartingId()), loop_(&kAsyncLoopConfigNoAttachToThread) {
+  TestLazyDir() : next_id_(GetStartingId()), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     loop_.StartThread("vfs test thread");
   }
 

@@ -8,6 +8,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
 
 namespace modular_testing {

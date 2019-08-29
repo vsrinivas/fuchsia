@@ -255,6 +255,7 @@ source_set("test_sources") {
     "//sdk/lib/fidl/cpp/test",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
   ]
 
   public_configs = [ "//sdk/config" ]
@@ -274,6 +275,7 @@ executable("conformance_test") {
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
   ]
 }
@@ -293,6 +295,7 @@ executable("fidl_cpp_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
   ]
 }

@@ -5,6 +5,7 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/message_buffer.h>
 
 #include "gtest/gtest.h"
@@ -44,7 +45,7 @@ TEST(InterfacePtr, Control) {
 }
 
 TEST(InterfacePtr, BindToSpecificDispatcher) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   test::FrobinatorImpl impl;
   Binding<fidl::test::frobinator::Frobinator> binding(&impl);

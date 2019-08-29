@@ -18,6 +18,7 @@ executable("fake_echo_app") {
     "//garnet/examples/fidl/services:echo",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

@@ -4,11 +4,12 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
 int main() {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup_ctx = sys::ComponentContext::Create();
   auto env_runner = startup_ctx->svc()->Connect<fuchsia::sys::Runner>();
   env_runner.set_error_handler([](zx_status_t) {

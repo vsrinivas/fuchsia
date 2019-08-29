@@ -22,7 +22,7 @@ class ServiceTest : public gtest::RealLoopFixture, public fidl::examples::echo::
   ServiceTest()
       : answer_("my_fake_ans"),
         service_name_("echo_service"),
-        second_loop_(&kAsyncLoopConfigNoAttachToThread) {
+        second_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     auto service =
         std::make_unique<vfs::Service>(bindings_.GetHandler(this, second_loop_.dispatcher()));
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -32,7 +33,7 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
  public:
   vfs::internal::Directory* GetDirectoryNode() override { return &dir_; }
 
-  ComposedServiceDirectorySimpleTest() : loop_(&kAsyncLoopConfigNoAttachToThread) {
+  ComposedServiceDirectorySimpleTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     dir_.AddService("echo1", GetFakeService("echo1", loop_.dispatcher()));
     dir_.AddService("echo2", GetFakeService("echo2", loop_.dispatcher()));
     dir_.AddService("echo3", GetFakeService("echo3", loop_.dispatcher()));

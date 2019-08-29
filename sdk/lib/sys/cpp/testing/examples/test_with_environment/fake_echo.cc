@@ -5,6 +5,7 @@
 #include "fake_echo.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 int main(int argc, char** argv) {
@@ -12,7 +13,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Usage: %s <answer>\n", argv[0]);
     return 1;
   }
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   echo::testing::FakeEcho echo;
   echo.SetAnswer(argv[1]);
   auto context = sys::ComponentContext::Create();

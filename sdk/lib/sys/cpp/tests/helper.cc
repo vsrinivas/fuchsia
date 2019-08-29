@@ -6,6 +6,7 @@
 
 #include "fidl/examples/echo/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
+#include "lib/async-loop/default.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/command_line.h"
@@ -53,7 +54,7 @@ class EchoServer : public fidl::examples::echo::Echo {
 
 int main(int argc, const char** argv) {
   std::cout << "Hello from helper proc." << std::endl;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto cmdline = fxl::CommandLineFromArgcArgv(argc, argv);
   if (cmdline.HasOption(kCmdHelp)) {
     std::cout << kUsage;

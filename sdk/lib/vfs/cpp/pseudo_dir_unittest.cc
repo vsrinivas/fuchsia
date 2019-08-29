@@ -177,7 +177,7 @@ TEST_F(PseudoDirUnit, AddAfterRemove) {
 class DirectoryWrapper {
  public:
   DirectoryWrapper(bool start_loop = true)
-      : dir_(std::make_shared<vfs::PseudoDir>()), loop_(&kAsyncLoopConfigNoAttachToThread) {
+      : dir_(std::make_shared<vfs::PseudoDir>()), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     if (start_loop) {
       loop_.StartThread("vfs test thread");
     }

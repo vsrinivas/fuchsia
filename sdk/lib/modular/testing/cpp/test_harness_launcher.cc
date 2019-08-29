@@ -12,7 +12,7 @@ constexpr char kTestHarnessUrl[] =
 }  // namespace
 
 TestHarnessLauncher::TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher)
-    : test_harness_loop_(&kAsyncLoopConfigNoAttachToThread) {
+    : test_harness_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   test_harness_loop_.StartThread();
 
   fuchsia::sys::LaunchInfo launch_info;

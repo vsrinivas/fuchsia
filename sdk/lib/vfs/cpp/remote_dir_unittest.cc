@@ -16,7 +16,7 @@ namespace {
 
 class RemoteDirConnection : public vfs_tests::DirConnection {
  public:
-  RemoteDirConnection() : loop_(&kAsyncLoopConfigNoAttachToThread) {
+  RemoteDirConnection() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     AddFileToPseudoDir("file1");
     AddFileToPseudoDir("file2");
     AddFileToPseudoDir("file3");

@@ -18,7 +18,7 @@ constexpr char kTestHarnessUrl[] =
 class FakeController : public fuchsia::sys::ComponentController {
  public:
   FakeController(fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl)
-      : loop_(&kAsyncLoopConfigNoAttachToThread), binding_(this) {
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), binding_(this) {
     loop_.StartThread();
     binding_.Bind(std::move(ctrl), loop_.dispatcher());
   }

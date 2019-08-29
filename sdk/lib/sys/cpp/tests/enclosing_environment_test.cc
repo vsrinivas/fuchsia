@@ -4,6 +4,7 @@
 
 #include <fuchsia/debugdata/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -146,7 +147,7 @@ TEST_F(EnclosingEnvTest, RespawnService) {
 
 TEST_F(EnclosingEnvTest, EnclosingEnvOnASeperateThread) {
   std::unique_ptr<sys::testing::EnclosingEnvironment> env = nullptr;
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto svc = sys::testing::EnvironmentServices::Create(real_env(), loop.dispatcher());

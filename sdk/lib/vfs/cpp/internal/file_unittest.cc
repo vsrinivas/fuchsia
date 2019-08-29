@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -76,7 +77,7 @@ TEST(File, Control) {
   std::vector<uint8_t> store(12u);
   TestFile file(&store);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   int fd = OpenAsFD(&file, loop.dispatcher());
@@ -108,7 +109,7 @@ TEST(File, Clone) {
   std::vector<uint8_t> store(12u);
   TestFile file(&store);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   int fd = OpenAsFD(&file, loop.dispatcher());

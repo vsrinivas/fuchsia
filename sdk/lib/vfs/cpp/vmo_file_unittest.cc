@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -68,7 +69,7 @@ TEST(VmoFile, Reading) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher());
@@ -92,7 +93,7 @@ TEST(VmoFile, GetAttrReadOnly) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher());
@@ -113,7 +114,7 @@ TEST(VmoFile, GetAttrWritable) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher());
@@ -136,7 +137,7 @@ TEST(VmoFile, ReadOnlyNoSharing) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher());
@@ -169,7 +170,7 @@ TEST(VmoFile, WritableNoSharing) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher(), /*writable=*/true);
@@ -203,7 +204,7 @@ TEST(VmoFile, ReadOnlyDuplicate) {
   zx::vmo test_vmo = MakeTestVmo();
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher());
@@ -240,7 +241,7 @@ TEST(VmoFile, WritableDuplicate) {
   zx::vmo test_vmo = MakeTestVmo();
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher(), /*writable=*/true);
@@ -281,7 +282,7 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher());
@@ -320,7 +321,7 @@ TEST(VmoFile, WritableCopyOnWrite) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher(), /*writable=*/true);
@@ -364,7 +365,7 @@ TEST(VmoFile, VmoWithNoRights) {
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(0, &bad_vmo));
   vfs::VmoFile file(std::move(bad_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher(), /*writable=*/true);
@@ -395,7 +396,7 @@ TEST(VmoFile, UnalignedCopyOnWrite) {
   vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
 
   auto file_ptr = OpenAsFile(&file, loop.dispatcher(), /*writable=*/true);

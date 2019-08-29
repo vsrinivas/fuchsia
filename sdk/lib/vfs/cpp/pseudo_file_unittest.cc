@@ -5,6 +5,7 @@
 #include "lib/vfs/cpp/pseudo_file.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -44,7 +45,7 @@ class FileWrapper {
 
  private:
   FileWrapper(bool write_allowed, std::string initial_str, size_t capacity, bool start_loop)
-      : buffer_(std::move(initial_str)), loop_(&kAsyncLoopConfigNoAttachToThread) {
+      : buffer_(std::move(initial_str)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     auto readFn = [this](std::vector<uint8_t>* output, size_t max_file_size) {
       output->resize(buffer_.length());
       std::copy(buffer_.begin(), buffer_.end(), output->begin());
@@ -623,7 +624,7 @@ class FileWrapperWithFailingWriteFn {
 
  private:
   FileWrapperWithFailingWriteFn(std::string initial_str, size_t capacity, zx_status_t write_error)
-      : buffer_(std::move(initial_str)), loop_(&kAsyncLoopConfigNoAttachToThread) {
+      : buffer_(std::move(initial_str)), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     auto readFn = [this](std::vector<uint8_t>* output, size_t max_file_size) {
       output->resize(buffer_.length());
       std::copy(buffer_.begin(), buffer_.end(), output->begin());
