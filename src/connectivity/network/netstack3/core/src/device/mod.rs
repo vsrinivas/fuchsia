@@ -20,7 +20,7 @@ use specialize_ip_macro::specialize_ip;
 
 use crate::data_structures::{IdMap, IdMapCollectionKey};
 use crate::device::ethernet::{EthernetDeviceState, EthernetDeviceStateBuilder};
-use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
+use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
 
 /// An ID identifying a device.
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -278,6 +278,11 @@ pub enum AddressState {
     /// operations, but has the intention of being assigned in the future
     /// (e.g. once NDP's Duplicate Address Detection is completed).
     Tentative,
+
+    /// The address is considered deprecated on an interface. Existing
+    /// connections using the address will be fine, however new connections
+    /// should not use the deprecated address.
+    Deprecated,
 }
 
 impl AddressState {
@@ -292,15 +297,44 @@ impl AddressState {
     }
 }
 
-/// Data associated with an IP addressess on an interface.
-pub struct AddressEntry<S: IpAddress, A: Witness<S> = SpecifiedAddr<S>> {
-    addr_sub: AddrSubnet<S, A>,
-    state: AddressState,
+/// The type of address configuraion.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AddressConfigurationType {
+    /// Configured by stateless address autoconfiguration.
+    Slaac,
+
+    /// Manually configured.
+    Manual,
 }
 
-impl<S: IpAddress, A: Witness<S>> AddressEntry<S, A> {
-    pub(crate) fn new(addr_sub: AddrSubnet<S, A>, state: AddressState) -> Self {
-        Self { addr_sub, state }
+impl AddressConfigurationType {
+    /// Is this address configured via SLAAC?
+    pub(crate) fn is_slaac(self) -> bool {
+        self == AddressConfigurationType::Slaac
+    }
+
+    /// Is this address configured manually?
+    pub(crate) fn is_manual(self) -> bool {
+        self == AddressConfigurationType::Manual
+    }
+}
+
+/// Data associated with an IP addressess on an interface.
+pub struct AddressEntry<S: IpAddress, T: Instant, A: Witness<S> = SpecifiedAddr<S>> {
+    addr_sub: AddrSubnet<S, A>,
+    state: AddressState,
+    configuration_type: AddressConfigurationType,
+    valid_until: Option<T>,
+}
+
+impl<S: IpAddress, T: Instant, A: Witness<S>> AddressEntry<S, T, A> {
+    pub(crate) fn new(
+        addr_sub: AddrSubnet<S, A>,
+        state: AddressState,
+        configuration_type: AddressConfigurationType,
+        valid_until: Option<T>,
+    ) -> Self {
+        Self { addr_sub, state, configuration_type, valid_until }
     }
 
     pub(crate) fn addr_sub(&self) -> &AddrSubnet<S, A> {
@@ -309,6 +343,14 @@ impl<S: IpAddress, A: Witness<S>> AddressEntry<S, A> {
 
     pub(crate) fn state(&self) -> AddressState {
         self.state
+    }
+
+    pub(crate) fn configuration_type(&self) -> AddressConfigurationType {
+        self.configuration_type
+    }
+
+    pub(crate) fn valid_until(&self) -> Option<T> {
+        self.valid_until
     }
 
     pub(crate) fn mark_permanent(&mut self) {

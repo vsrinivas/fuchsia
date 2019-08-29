@@ -25,8 +25,8 @@ use crate::device::arp::{
 };
 use crate::device::ndp::{self, NdpState};
 use crate::device::{
-    is_device_usable, AddressEntry, AddressError, AddressState, DeviceId, DeviceLayerTimerId,
-    FrameDestination, Tentative,
+    is_device_usable, AddressConfigurationType, AddressEntry, AddressError, AddressState, DeviceId,
+    DeviceLayerTimerId, FrameDestination, Tentative,
 };
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
@@ -232,17 +232,19 @@ pub(crate) struct EthernetDeviceState<D: EventDispatcher> {
     ipv6_hop_limit: NonZeroU8,
 
     /// Assigned IPv4 addresses.
-    ipv4_addr_sub: Vec<AddressEntry<Ipv4Addr>>,
+    // TODO(ghanan): Use `AddrSubnet` instead of `AddressEntry` as IPv4 addresses do not
+    //               need the extra fields in `AddressEntry`.
+    ipv4_addr_sub: Vec<AddressEntry<Ipv4Addr, D::Instant>>,
 
     /// Assigned IPv6 addresses.
     ///
     /// May be tentative (performing NDP's Duplicate Address Detection).
-    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr>>,
+    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, D::Instant>>,
 
     /// Assigned IPv6 link-local address.
     ///
     /// May be tentative (performing NDP's Duplicate Address Detection).
-    ipv6_link_local_addr_sub: Option<AddressEntry<Ipv6Addr, LinkLocalAddr<Ipv6Addr>>>,
+    ipv6_link_local_addr_sub: Option<AddressEntry<Ipv6Addr, D::Instant, LinkLocalAddr<Ipv6Addr>>>,
 
     /// IPv4 multicast groups this device has joined.
     ipv4_multicast_groups: HashSet<MulticastAddr<Ipv4Addr>>,
@@ -382,9 +384,14 @@ pub(crate) fn initialize_device<D: EventDispatcher>(ctx: &mut Context<D>, device
 
     let state = get_device_state_mut(ctx.state_mut(), device_id);
 
-    // Associate the link-local address to the device, and mark it as Tentative.
-    state.ipv6_link_local_addr_sub =
-        Some(AddressEntry::new(AddrSubnet::new(addr, 128).unwrap(), AddressState::Tentative));
+    // Associate the link-local address to the device, and mark it as Tentative, configured by
+    // SLAAC, and not set to expire.
+    state.ipv6_link_local_addr_sub = Some(AddressEntry::new(
+        AddrSubnet::new(addr, 128).unwrap(),
+        AddressState::Tentative,
+        AddressConfigurationType::Slaac,
+        None,
+    ));
 
     // Perform Duplicate Address Detection on the link-local address.
     ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(ctx, device_id, addr);
@@ -537,7 +544,9 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 /// Get the IP address and subnet pais associated with this device.
 ///
 /// Note, tentative IP addresses (addresses which are not yet fully bound to a
-/// device) will not be returned by `get_ip_addr_subnets`.
+/// device) and deprecated IP addresses (addresses which have been assigned but
+/// should no longer be used for new connections) will not be returned by
+/// `get_ip_addr_subnets`.
 ///
 /// Returns an [`Iterator`] of `AddrSubnet<A>`.
 ///
@@ -546,7 +555,10 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 pub(crate) fn get_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
     state: &StackState<D>,
     device_id: usize,
-) -> FilterMap<Iter<AddressEntry<A>>, fn(&AddressEntry<A>) -> Option<AddrSubnet<A>>> {
+) -> FilterMap<
+    Iter<AddressEntry<A, D::Instant>>,
+    fn(&AddressEntry<A, D::Instant>) -> Option<AddrSubnet<A>>,
+> {
     let state = get_device_state(state, device_id);
 
     #[ipv4addr]
@@ -569,6 +581,10 @@ pub(crate) fn get_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
 /// Get the IP address and subnet associated with this device, including tentative
 /// addresses.
 ///
+/// Note, deprecated IP addresses (addresses which have been assigned but should no
+/// longer be used for new connections) will not be returned by
+/// `get_ip_addr_subnets_with_tentative`.
+///
 /// Returns an [`Iterator`] of `Tentative<AddrSubnet<A>>`.
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
@@ -576,7 +592,10 @@ pub(crate) fn get_ip_addr_subnets<D: EventDispatcher, A: IpAddress>(
 pub(crate) fn get_ip_addr_subnets_with_tentative<D: EventDispatcher, A: IpAddress>(
     state: &StackState<D>,
     device_id: usize,
-) -> FilterMap<Iter<AddressEntry<A>>, fn(&AddressEntry<A>) -> Option<Tentative<AddrSubnet<A>>>> {
+) -> FilterMap<
+    Iter<AddressEntry<A, D::Instant>>,
+    fn(&AddressEntry<A, D::Instant>) -> Option<Tentative<AddrSubnet<A>>>,
+> {
     let state = get_device_state(state, device_id);
 
     #[ipv4addr]
@@ -585,31 +604,45 @@ pub(crate) fn get_ip_addr_subnets_with_tentative<D: EventDispatcher, A: IpAddres
     #[ipv6addr]
     let addresses = &state.ipv6_addr_sub;
 
-    addresses.iter().filter_map(|a| {
-        if a.state().is_assigned() {
-            Some(Tentative::new_permanent(*a.addr_sub()))
-        } else if a.state().is_tentative() {
-            Some(Tentative::new_tentative(*a.addr_sub()))
-        } else {
-            None
-        }
+    addresses.iter().filter_map(|a| match a.state() {
+        AddressState::Assigned => Some(Tentative::new_permanent(*a.addr_sub())),
+        AddressState::Tentative => Some(Tentative::new_tentative(*a.addr_sub())),
+        AddressState::Deprecated => None,
     })
 }
 
 /// Get the state of an address on a device.
 ///
 /// Returns `None` if `addr` is not associated with `device_id`.
-#[specialize_ip_address]
 pub fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
     state: &StackState<D>,
     device_id: usize,
     addr: &SpecifiedAddr<A>,
 ) -> Option<AddressState> {
+    get_ip_addr_state_inner(state, device_id, &addr.get(), None)
+}
+
+/// Get the state of an address on a device.
+///
+/// If `configuration_type` is provided, then only the state of an address of that
+/// configuration type will be returned.
+///
+/// Returns `None` if `addr` is not associated with `device_id`.
+// TODO(ghanan): Use `SpecializedAddr` for `addr`.
+#[specialize_ip_address]
+fn get_ip_addr_state_inner<D: EventDispatcher, A: IpAddress>(
+    state: &StackState<D>,
+    device_id: usize,
+    addr: &A,
+    configuration_type: Option<AddressConfigurationType>,
+) -> Option<AddressState> {
     let state = get_device_state(state, device_id);
 
     #[ipv4addr]
     return state.ipv4_addr_sub.iter().find_map(|a| {
-        if a.addr_sub().addr() == *addr {
+        if a.addr_sub().addr().get() == *addr
+            && configuration_type.map_or(true, |x| x == a.configuration_type())
+        {
             Some(a.state())
         } else {
             None
@@ -620,10 +653,20 @@ pub fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
     return state
         .ipv6_addr_sub
         .iter()
-        .find_map(|a| if a.addr_sub().addr() == *addr { Some(a.state()) } else { None })
+        .find_map(|a| {
+            if a.addr_sub().addr().get() == *addr
+                && configuration_type.map_or(true, |x| x == a.configuration_type())
+            {
+                Some(a.state())
+            } else {
+                None
+            }
+        })
         .or_else(|| {
             state.ipv6_link_local_addr_sub.as_ref().and_then(|a| {
-                if a.addr_sub().addr().into_specified() == *addr {
+                if a.addr_sub().addr().get() == *addr
+                    && configuration_type.map_or(true, |x| x == a.configuration_type())
+                {
                     Some(a.state())
                 } else {
                     None
@@ -638,25 +681,49 @@ pub fn get_ip_addr_state<D: EventDispatcher, A: IpAddress>(
 ///
 /// Panics if `addr_sub` holds a link-local address.
 // TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr_sub`.
-#[specialize_ip_address]
 pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: usize,
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), AddressError> {
-    let addr = addr_sub.addr();
+    // Add the IP address and mark it as a manually added address.
+    add_ip_addr_subnet_inner(ctx, device_id, addr_sub, AddressConfigurationType::Manual, None)
+}
+
+/// Adds an IP address and associated subnet to this device.
+///
+/// `configuration_type` is the way this address is being configured.
+/// See [`AddressConfigurationType`] for more details.
+///
+/// # Panics
+///
+/// Panics if `addr_sub` holds a link-local address.
+#[specialize_ip_address]
+fn add_ip_addr_subnet_inner<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    addr_sub: AddrSubnet<A>,
+    configuration_type: AddressConfigurationType,
+    valid_until: Option<D::Instant>,
+) -> Result<(), AddressError> {
+    let addr = addr_sub.addr().get();
 
     // MUST NOT be link-local.
     assert!(!addr.is_linklocal());
 
-    if get_ip_addr_state(ctx.state(), device_id, &addr).is_some() {
+    if get_ip_addr_state_inner(ctx.state(), device_id, &addr, None).is_some() {
         return Err(AddressError::AlreadyExists);
     }
 
     let state = get_device_state_mut(ctx.state_mut(), device_id);
 
     #[ipv4addr]
-    state.ipv4_addr_sub.push(AddressEntry::new(addr_sub, AddressState::Assigned));
+    state.ipv4_addr_sub.push(AddressEntry::new(
+        addr_sub,
+        AddressState::Assigned,
+        configuration_type,
+        valid_until,
+    ));
 
     #[ipv6addr]
     {
@@ -664,8 +731,16 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
         join_ip_multicast(ctx, device_id, addr.to_solicited_node_address());
 
         let state = get_device_state_mut(ctx.state_mut(), device_id);
-        state.ipv6_addr_sub.push(AddressEntry::new(addr_sub, AddressState::Tentative));
-        ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(ctx, device_id, addr.get());
+
+        state.ipv6_addr_sub.push(AddressEntry::new(
+            addr_sub,
+            AddressState::Tentative,
+            configuration_type,
+            valid_until,
+        ));
+
+        // Do Duplicate Address Detection on `addr`.
+        ndp::start_duplicate_address_detection::<D, EthernetNdpDevice>(ctx, device_id, addr);
     }
 
     Ok(())
@@ -677,11 +752,28 @@ pub(crate) fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 ///
 /// Panics if `addr` is a link-local address.
 // TODO(ghanan): Use a witness type to guarantee non-link-local-ness for `addr`.
-#[specialize_ip_address]
 pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device_id: usize,
     addr: &SpecifiedAddr<A>,
+) -> Result<(), AddressError> {
+    del_ip_addr_inner(ctx, device_id, &addr.get(), None)
+}
+
+/// Removes an IP address and associated subnet from this device.
+///
+/// If `configuration_type` is provided, then only an address of that
+/// configuration type will be removed.
+///
+/// # Panics
+///
+/// Panics if `addr` is a link-local address.
+#[specialize_ip_address]
+fn del_ip_addr_inner<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    device_id: usize,
+    addr: &A,
+    configuration_type: Option<AddressConfigurationType>,
 ) -> Result<(), AddressError> {
     // MUST NOT be link-local.
     assert!(!addr.is_linklocal());
@@ -691,7 +783,15 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
         let state = get_device_state_mut(ctx.state_mut(), device_id);
 
         let original_size = state.ipv4_addr_sub.len();
-        state.ipv4_addr_sub.retain(|x| x.addr_sub().addr() != *addr);
+        if let Some(configuration_type) = configuration_type {
+            state.ipv4_addr_sub.retain(|x| {
+                (x.addr_sub().addr().get() != *addr)
+                    && (x.configuration_type() == configuration_type)
+            });
+        } else {
+            state.ipv4_addr_sub.retain(|x| x.addr_sub().addr().get() != *addr);
+        }
+
         let new_size = state.ipv4_addr_sub.len();
 
         if new_size == original_size {
@@ -705,7 +805,9 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
     #[ipv6addr]
     {
-        if let Some(state) = get_ip_addr_state(ctx.state(), device_id, addr) {
+        if let Some(state) =
+            get_ip_addr_state_inner(ctx.state(), device_id, addr, configuration_type)
+        {
             if state.is_tentative() {
                 // Cancel current duplicate address detection for `addr` as we are
                 // removing this IP.
@@ -717,9 +819,7 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
                 // Given this, we know `cancel_duplicate_address_detection` will
                 // not panic.
                 ndp::cancel_duplicate_address_detection::<_, EthernetNdpDevice>(
-                    ctx,
-                    device_id,
-                    addr.get(),
+                    ctx, device_id, *addr,
                 );
             }
         } else {
@@ -729,7 +829,7 @@ pub(crate) fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
         let state = get_device_state_mut(ctx.state_mut(), device_id);
 
         let original_size = state.ipv6_addr_sub.len();
-        state.ipv6_addr_sub.retain(|x| x.addr_sub().addr() != *addr);
+        state.ipv6_addr_sub.retain(|x| x.addr_sub().addr().get() != *addr);
         let new_size = state.ipv6_addr_sub.len();
 
         // Since we just checked earlier if we had the address, we must have removed it
@@ -1056,6 +1156,13 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         get_device_state(state, device_id).mac
     }
 
+    fn get_interface_identifier<D: EventDispatcher>(
+        state: &StackState<D>,
+        device_id: usize,
+    ) -> [u8; 8] {
+        get_device_state(state, device_id).mac.to_eui64()
+    }
+
     fn get_link_local_addr<D: EventDispatcher>(
         state: &StackState<D>,
         device_id: usize,
@@ -1082,6 +1189,13 @@ impl ndp::NdpDevice for EthernetNdpDevice {
                 .map(|a| a.try_into_permanent())
                 .unwrap_or(None),
         }
+    }
+
+    fn get_ipv6_addr_entries<D: EventDispatcher>(
+        state: &StackState<D>,
+        device_id: usize,
+    ) -> Iter<AddressEntry<Ipv6Addr, D::Instant>> {
+        get_device_state(state, device_id).ipv6_addr_sub.iter()
     }
 
     fn ipv6_addr_state<D: EventDispatcher>(
@@ -1225,6 +1339,113 @@ impl ndp::NdpDevice for EthernetNdpDevice {
 
     fn is_router<D: EventDispatcher>(ctx: &Context<D>, device_id: usize) -> bool {
         crate::device::is_router_device::<_, Ipv6>(ctx, Self::get_device_id(device_id))
+    }
+
+    fn add_slaac_addr_sub<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: usize,
+        addr_sub: AddrSubnet<Ipv6Addr>,
+        valid_until: D::Instant,
+    ) -> Result<(), AddressError> {
+        trace!(
+            "ethernet::add_slaac_addr_sub: adding address {:?} on device {:?}",
+            addr_sub,
+            device_id
+        );
+
+        add_ip_addr_subnet_inner(
+            ctx,
+            device_id,
+            addr_sub,
+            AddressConfigurationType::Slaac,
+            Some(valid_until),
+        )
+    }
+
+    fn deprecate_slaac_addr<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: usize,
+        addr: &Ipv6Addr,
+    ) {
+        trace!(
+            "ethernet::deprecate_slaac_addr: deprecating address {:?} on device {:?}",
+            addr,
+            device_id
+        );
+
+        let state = get_device_state_mut(ctx.state_mut(), device_id);
+
+        if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
+            (a.addr_sub().addr().get() == *addr)
+                && a.configuration_type() == AddressConfigurationType::Slaac
+        }) {
+            match entry.state {
+                AddressState::Assigned => {
+                    entry.state = AddressState::Deprecated;
+                }
+                AddressState::Tentative => {
+                    trace!("ethernet::deprecate_slaac_addr: invalidating the deprecated tentative address {:?} on device {:?}", addr, device_id);
+                    // If `addr` is currently tentative on `device_id`, the address should simply
+                    // be invalidated as new connections should not use a deprecated address,
+                    // and we should have no existing connections using a tentative address.
+
+                    // We must have had an invalidation timeout if we just attempted to deprecate.
+                    assert!(ctx
+                        .dispatcher_mut()
+                        .cancel_timeout(ndp::NdpTimerId::new_invalidate_slaac_address_timer_id::<
+                            Self,
+                        >(device_id, *addr),)
+                        .is_some());
+
+                    Self::invalidate_slaac_addr(ctx, device_id, addr);
+                }
+                AddressState::Deprecated => unreachable!(
+                    "We should never attempt to deprecate an already deprecated address"
+                ),
+            }
+        } else {
+            panic!("Address is not configured via SLAAC on this device");
+        }
+    }
+
+    fn invalidate_slaac_addr<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: usize,
+        addr: &Ipv6Addr,
+    ) {
+        trace!(
+            "ethernet::invalidate_slaac_addr: invalidating address {:?} on device {:?}",
+            addr,
+            device_id
+        );
+
+        // `unwrap` will panic if `addr` is not an address configured via SLAAC on `device_id`.
+        del_ip_addr_inner(ctx, device_id, addr, Some(AddressConfigurationType::Slaac)).unwrap();
+    }
+
+    fn update_slaac_addr_valid_until<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: usize,
+        addr: &Ipv6Addr,
+        valid_until: D::Instant,
+    ) {
+        trace!(
+            "ethernet::update_slaac_addr_valid_until: updating address {:?}'s valid until instant to {:?} on device {:?}",
+            addr,
+            valid_until,
+            device_id
+        );
+
+        let state = get_device_state_mut(ctx.state_mut(), device_id);
+
+        if let Some(entry) = state.ipv6_addr_sub.iter_mut().find(|a| {
+            (a.addr_sub().addr().get() == *addr)
+                && a.configuration_type() == AddressConfigurationType::Slaac
+        }) {
+            entry.valid_until = Some(valid_until);
+        } else {
+            panic!("Address is not configured via SLAAC on this device");
+        }
     }
 }
 
