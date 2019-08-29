@@ -16,7 +16,7 @@
 #include "src/developer/feedback/crashpad_agent/crashpad_agent.h"
 
 int main(int argc, const char** argv) {
-  syslog::InitLogger({"crash"});
+  syslog::InitLogger({"feedback"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

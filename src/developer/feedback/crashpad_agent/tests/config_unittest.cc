@@ -85,6 +85,6 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"crash", "test"});
+  syslog::InitLogger({"feedback", "test"});
   return RUN_ALL_TESTS();
 }
