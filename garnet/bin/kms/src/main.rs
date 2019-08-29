@@ -17,11 +17,13 @@ use failure::{Error, ResultExt};
 use fidl_fuchsia_kms::KeyManagerRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_syslog as syslog;
 use futures::prelude::*;
 use log::error;
 use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&["kms"]).expect("syslog init should not fail");
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let key_manager = Arc::new(KeyManager::new());
     let mut fs = ServiceFs::new();

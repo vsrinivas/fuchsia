@@ -390,8 +390,8 @@ impl<'a> Drop for EcPrivateKey<'a> {
 mod tests {
     use super::*;
     use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
-    use mundane::public::rsa::*;
     use mundane::public::ec::*;
+    use mundane::public::rsa::*;
     use mundane::public::*;
 
     #[test]
