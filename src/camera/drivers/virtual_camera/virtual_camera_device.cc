@@ -37,6 +37,7 @@ zx_status_t VirtualCameraDevice::Bind(zx_device_t* device) {
   args.name = "virtual_camera";
   args.ctx = this;
   args.ops = &virtual_camera_device_ops;
+  args.proto_id = ZX_PROTOCOL_CAMERA;
 
   // Add the virtual_audio device node, under parent /dev/test.
   return device_add(device, &args, &dev_node_);

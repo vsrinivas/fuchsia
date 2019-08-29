@@ -17,16 +17,6 @@ namespace camera {
 static const char* kCameraDevicePath = "/dev/class/camera";
 
 CameraManagerImpl::CameraManagerImpl(async::Loop* loop) {
-  // Step #0: Try to connect to /dev/test/virtual_camera
-  FXL_LOG(INFO) << "Adding tests camera devices";
-  int open_result = open("/dev/test", O_DIRECTORY | O_RDONLY);
-  if (open_result >= 0) {
-    fbl::unique_fd dir_fd(open_result);
-    OnDeviceFound(open_result, "/dev/test/virtual_camera");
-  } else {
-    FXL_LOG(INFO) << "/dev/test is not available (" << open_result << ")";
-  }
-
   // Step #1: Begin monitoring for plug/unplug events for pluggable cameras
   bool idle_seen = false;
   device_watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
