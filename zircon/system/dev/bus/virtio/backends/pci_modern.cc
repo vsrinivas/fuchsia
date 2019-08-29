@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
+
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
-#include <inttypes.h>
 
 #include "pci.h"
 
@@ -15,14 +16,47 @@ namespace {
 
 // For reading the virtio specific vendor capabilities that can be PIO or MMIO space
 #define cap_field(offset, field) static_cast<uint8_t>(offset + offsetof(virtio_pci_cap_t, field))
-static void ReadVirtioCap(pci_protocol_t* pci, uint8_t offset, virtio_pci_cap& cap) {
-  pci_config_read8(pci, cap_field(offset, cap_vndr), &cap.cap_vndr);
-  pci_config_read8(pci, cap_field(offset, cap_next), &cap.cap_next);
-  pci_config_read8(pci, cap_field(offset, cap_len), &cap.cap_len);
-  pci_config_read8(pci, cap_field(offset, cfg_type), &cap.cfg_type);
-  pci_config_read8(pci, cap_field(offset, bar), &cap.bar);
-  pci_config_read32(pci, cap_field(offset, offset), &cap.offset);
-  pci_config_read32(pci, cap_field(offset, length), &cap.length);
+static zx_status_t ReadVirtioCap(pci_protocol_t* pci, uint8_t offset, virtio_pci_cap* cap) {
+  zx_status_t status;
+  uint8_t value8;
+  status = pci_config_read8(pci, cap_field(offset, cap_vndr), &value8);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cap->cap_vndr = value8;
+  status = pci_config_read8(pci, cap_field(offset, cap_next), &value8);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cap->cap_next = value8;
+  status = pci_config_read8(pci, cap_field(offset, cap_len), &value8);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cap->cap_len = value8;
+  status = pci_config_read8(pci, cap_field(offset, cfg_type), &value8);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cap->cfg_type = value8;
+  status = pci_config_read8(pci, cap_field(offset, bar), &value8);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cap->bar = value8;
+
+  uint32_t value32;
+  status = pci_config_read32(pci, cap_field(offset, offset), &value32);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cap->offset = value32;
+  status = pci_config_read32(pci, cap_field(offset, length), &value32);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cap->length = value32;
+  return ZX_OK;
 }
 #undef cap_field
 
@@ -101,7 +135,11 @@ zx_status_t PciModernBackend::Init() {
        st = pci_get_next_capability(&pci_, PCI_CAP_ID_VENDOR, off, &off)) {
     virtio_pci_cap_t cap;
 
-    ReadVirtioCap(&pci_, off, cap);
+    st = ReadVirtioCap(&pci_, off, &cap);
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "Failed to read PCI capabilities\n");
+      return st;
+    }
     switch (cap.cfg_type) {
       case VIRTIO_PCI_CAP_COMMON_CFG:
         CommonCfgCallbackLocked(cap);
