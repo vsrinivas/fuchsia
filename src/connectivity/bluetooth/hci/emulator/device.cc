@@ -299,7 +299,7 @@ void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callba
       .ops = &bt_hci_device_ops,
       .proto_id = ZX_PROTOCOL_BT_HCI,
   };
-  zx_status_t status = device_add(parent_, &args, &hci_dev_);
+  zx_status_t status = device_add(emulator_dev_, &args, &hci_dev_);
   if (status != ZX_OK) {
     result.set_err(ftest::EmulatorError::FAILED);
   } else {
