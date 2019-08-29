@@ -86,6 +86,9 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 			return fmt.Errorf("decodeSuccess %s: %s", decodeSuccess.Name, err)
 		}
 
+		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
+			continue
+		}
 		var valueBuilder cppValueBuilder
 		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
 
@@ -129,7 +132,7 @@ type cppValueBuilder struct {
 }
 
 type cppValueBuilderContext struct {
-	key  string
+	key  gidlir.FieldKey
 	decl gidlmixer.Declaration
 }
 
@@ -185,7 +188,7 @@ func (b *cppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDecl
 	b.onObject(value, decl)
 }
 
-func (b *cppValueBuilder) onObjectField(decl gidlmixer.Declaration, key string, f func()) {
+func (b *cppValueBuilder) onObjectField(decl gidlmixer.Declaration, key gidlir.FieldKey, f func()) {
 	oldContext := b.context
 	defer func() {
 		b.context = oldContext
@@ -213,11 +216,14 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecl
 	}
 
 	for _, field := range value.Fields {
+		if field.Key.Name == "" {
+			panic("unknown field not supported")
+		}
 		b.Builder.WriteString("\n")
 
-		fieldDecl, _ := decl.ForKey(field.Name)
+		fieldDecl, _ := decl.ForKey(field.Key)
 
-		b.onObjectField(decl, field.Name, func() {
+		b.onObjectField(decl, field.Key, func() {
 			gidlmixer.Visit(b, field.Value, fieldDecl)
 		})
 
@@ -229,10 +235,10 @@ func (b *cppValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecl
 		switch decl.(type) {
 		case *gidlmixer.StructDecl:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%s%s = std::move(%s);\n", containerVar, accessor, field.Name, b.lastVar))
+				"%s%s%s = std::move(%s);\n", containerVar, accessor, field.Key.Name, b.lastVar))
 		default:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s%sset_%s(std::move(%s));\n", containerVar, accessor, field.Name, b.lastVar))
+				"%s%sset_%s(std::move(%s));\n", containerVar, accessor, field.Key.Name, b.lastVar))
 		}
 	}
 	b.lastVar = containerVar

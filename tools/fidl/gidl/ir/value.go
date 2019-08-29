@@ -15,8 +15,16 @@ package ir
 // - `[]interface{}` for slices of values
 type Value interface{}
 
+type FieldKey struct {
+	// Each field either has Ordinal or Name set.
+	// The Name is set iff Name != "".
+	// If Ordinal is set, this is an "unknown field" in a flexible object.
+	Ordinal uint64
+	Name    string
+}
+
 type Field struct {
-	Name  string
+	Key   FieldKey
 	Value Value
 }
 

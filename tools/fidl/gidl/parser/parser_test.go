@@ -30,8 +30,32 @@ func TestParseValues(t *testing.T) {
 			Name: "SomeObject",
 			Fields: []ir.Field{
 				{
-					Name:  "the_field",
+					Key: ir.FieldKey{
+						Name: "the_field",
+					},
 					Value: uint64(5),
+				},
+			},
+		}},
+		{gidl: `SomeObject { 0x01020304: 5, }`, expectedValue: ir.Object{
+			Name: "SomeObject",
+			Fields: []ir.Field{
+				{
+					Key: ir.FieldKey{
+						Ordinal: 0x01020304,
+					},
+					Value: uint64(5),
+				},
+			},
+		}},
+		{gidl: `SomeObject { f1: 0x01, }`, expectedValue: ir.Object{
+			Name: "SomeObject",
+			Fields: []ir.Field{
+				{
+					Key: ir.FieldKey{
+						Name: "f1",
+					},
+					Value: uint64(1),
 				},
 			},
 		}},
@@ -44,16 +68,22 @@ func TestParseValues(t *testing.T) {
 			Name: "SomeObject",
 			Fields: []ir.Field{
 				{
-					Name: "the_field",
+					Key: ir.FieldKey{
+						Name: "the_field",
+					},
 					Value: ir.Object{
 						Name: "SomeNestedObject",
 						Fields: []ir.Field{
 							{
-								Name:  "foo",
+								Key: ir.FieldKey{
+									Name: "foo",
+								},
 								Value: uint64(5),
 							},
 							{
-								Name:  "bar",
+								Key: ir.FieldKey{
+									Name: "bar",
+								},
 								Value: uint64(7),
 							},
 						},
@@ -136,7 +166,9 @@ func TestParseSuccessCase(t *testing.T) {
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
-						Name:  "first",
+						Key: ir.FieldKey{
+							Name: "first",
+						},
 						Value: "four",
 					},
 				},
@@ -153,7 +185,9 @@ func TestParseSuccessCase(t *testing.T) {
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
-						Name:  "first",
+						Key: ir.FieldKey{
+							Name: "first",
+						},
 						Value: "four",
 					},
 				},
@@ -188,7 +222,9 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
 						{
-							Name:  "first",
+							Key: ir.FieldKey{
+								Name: "first",
+							},
 							Value: "four",
 						},
 					},
@@ -222,7 +258,9 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
-						Name:  "first",
+						Key: ir.FieldKey{
+							Name: "first",
+						},
 						Value: "four",
 					},
 				},
@@ -252,7 +290,9 @@ func TestParseEncodeFailureCase(t *testing.T) {
 				Name: "OneStringOfMaxLengthFive",
 				Fields: []ir.Field{
 					{
-						Name:  "the_string",
+						Key: ir.FieldKey{
+							Name: "the_string",
+						},
 						Value: "bonjour",
 					},
 				},
@@ -311,7 +351,9 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
 						{
-							Name:  "first",
+							Key: ir.FieldKey{
+								Name: "first",
+							},
 							Value: "four",
 						},
 					},
@@ -331,7 +373,9 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 					Name: "OneStringOfMaxLengthFive",
 					Fields: []ir.Field{
 						{
-							Name:  "first",
+							Key: ir.FieldKey{
+								Name: "first",
+							},
 							Value: "four",
 						},
 					},

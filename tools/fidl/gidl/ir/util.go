@@ -65,3 +65,31 @@ func FilterByBinding(input All, binding string) All {
 	}
 	return output
 }
+
+// ContainsUnknownField returns if the value or any subvalue contains an unknown
+// field.
+// Intended to allow bindings that don't support unknown fields to skip test
+// cases that contain them.
+func ContainsUnknownField(value Value) bool {
+	switch value := value.(type) {
+	case Object:
+		for _, f := range value.Fields {
+			if f.Key.Name == "" {
+				return true
+			}
+			if ContainsUnknownField(f.Value) {
+				return true
+			}
+		}
+		return false
+	case []interface{}:
+		for _, v := range value {
+			if ContainsUnknownField(v) {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
+	}
+}

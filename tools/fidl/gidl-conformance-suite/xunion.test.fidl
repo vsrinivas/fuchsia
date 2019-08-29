@@ -45,3 +45,7 @@ struct TestOptionalXUnionInStruct {
 struct TestStrictXUnionInStruct {
     SampleStrictXUnion xu;
 };
+
+struct TestFlexibleXUnionInStruct {
+    SampleXUnion xu;
+};

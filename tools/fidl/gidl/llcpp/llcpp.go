@@ -92,6 +92,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
+		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
+			continue
+		}
 		var valueBuilder llcppValueBuilder
 		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
 		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -110,6 +113,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		decl, err := gidlmixer.ExtractDeclaration(decodeSuccess.Value, fidl)
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
+		}
+		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
+			continue
 		}
 		var valueBuilder llcppValueBuilder
 		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
@@ -141,7 +147,7 @@ type llcppValueBuilder struct {
 	varidx int
 
 	context    gidlmixer.Declaration
-	contextKey string
+	contextKey gidlir.FieldKey
 
 	lastVar string
 }
@@ -221,9 +227,9 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 	b.context = decl
 
 	for _, field := range value.Fields {
-		b.contextKey = field.Name
-		typ, _ := decl.MemberType(field.Name)
-		fieldDecl, _ := decl.ForKey(field.Name)
+		b.contextKey = field.Key
+		typ, _ := decl.MemberType(field.Key)
+		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
@@ -236,10 +242,10 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 
 		if in_heap {
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s->%s = %s;\n", containerVar, field.Name, rhs))
+				"%s->%s = %s;\n", containerVar, field.Key.Name, rhs))
 		} else {
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s.%s = %s;\n", containerVar, field.Name, rhs))
+				"%s.%s = %s;\n", containerVar, field.Key.Name, rhs))
 		}
 	}
 	b.lastVar = containerVar
@@ -261,12 +267,15 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 		"auto %s = llcpp::conformance::%s::Build();\n", builderVar, value.Name))
 
 	for _, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(field.Name)
+		if field.Key.Name == "" {
+			panic("unknown field not supported")
+		}
+		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(&%s);\n", builderVar, field.Name, fieldVar))
+			"%s.set_%s(&%s);\n", builderVar, field.Key.Name, fieldVar))
 	}
 	tableVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
@@ -282,12 +291,15 @@ func (b *llcppValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnion
 		"llcpp::conformance::%s %s;\n", value.Name, containerVar))
 
 	for _, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(field.Name)
+		if field.Key.Name == "" {
+			panic("unknown field not supported")
+		}
+		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(&%s);\n", containerVar, field.Name, fieldVar))
+			"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
 	}
 	b.lastVar = containerVar
 }
@@ -297,11 +309,14 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 	b.Builder.WriteString(fmt.Sprintf(
 		"llcpp::conformance::%s %s;\n", value.Name, containerVar))
 	for _, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(field.Name)
+		if field.Key.Name == "" {
+			panic("unknown field not supported")
+		}
+		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(%s);\n", containerVar, field.Name, fieldVar))
+			"%s.set_%s(%s);\n", containerVar, field.Key.Name, fieldVar))
 	}
 	b.lastVar = containerVar
 }

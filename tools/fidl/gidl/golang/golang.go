@@ -139,6 +139,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 			return nil, fmt.Errorf("encodeSuccess %s: %s", encodeSuccess.Name, err)
 		}
 
+		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
+			continue
+		}
 		var valueBuilder goValueBuilder
 		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
 
@@ -160,6 +163,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 			return nil, fmt.Errorf("decodeSuccess %s: %s", decodeSuccess.Name, err)
 		}
 
+		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
+			continue
+		}
 		var valueBuilder goValueBuilder
 		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
 
@@ -181,6 +187,9 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 			return nil, fmt.Errorf("encodeFailure %s: %s", encodeFailure.Name, err)
 		}
 
+		if gidlir.ContainsUnknownField(encodeFailure.Value) {
+			continue
+		}
 		var valueBuilder goValueBuilder
 		gidlmixer.Visit(&valueBuilder, encodeFailure.Value, decl)
 
@@ -284,20 +293,23 @@ func (b *goValueBuilder) onObject(value gidlir.Object, decl gidlmixer.KeyedDecla
 	b.Builder.WriteString(fmt.Sprintf(
 		"var %s conformance.%s\n", containerVar, value.Name))
 	for _, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(field.Name)
+		if field.Key.Name == "" {
+			panic("unknown field not supported")
+		}
+		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 
 		switch structDecl := decl.(type) {
 		case *gidlmixer.StructDecl:
-			if structDecl.IsKeyNullable(field.Name) {
+			if structDecl.IsKeyNullable(field.Key) {
 				fieldVar = "&" + fieldVar
 			}
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(field.Name), fieldVar))
+				"%s.%s = %s\n", containerVar, fidlcommon.ToUpperCamelCase(field.Key.Name), fieldVar))
 		default:
 			b.Builder.WriteString(fmt.Sprintf(
-				"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(field.Name), fieldVar))
+				"%s.Set%s(%s)\n", containerVar, fidlcommon.ToUpperCamelCase(field.Key.Name), fieldVar))
 		}
 	}
 	b.lastVar = containerVar

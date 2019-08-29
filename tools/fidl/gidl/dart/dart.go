@@ -74,8 +74,8 @@ void main() {
 `))
 
 type tmplInput struct {
-	EncodeSuccessCases       []encodeSuccessCase
-	DecodeSuccessCases       []decodeSuccessCase
+	EncodeSuccessCases []encodeSuccessCase
+	DecodeSuccessCases []decodeSuccessCase
 	EncodeFailureCases []encodeFailureCase
 	DecodeFailureCases []decodeFailureCase
 }
@@ -129,6 +129,9 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
+		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
+			continue
+		}
 		valueStr := visit(encodeSuccess.Value, decl)
 		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
 			Name:      fidlcommon.SingleQuote(encodeSuccess.Name),
@@ -147,6 +150,9 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
+		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
+			continue
+		}
 		valueStr := visit(decodeSuccess.Value, decl)
 		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 			Name:      fidlcommon.SingleQuote(decodeSuccess.Name),
@@ -164,6 +170,9 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
+		}
+		if gidlir.ContainsUnknownField(encodeFailure.Value) {
+			continue
 		}
 		valueStr := visit(encodeFailure.Value, decl)
 		errorCode, err := dartErrorCode(encodeFailure.Err)
@@ -258,18 +267,24 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 func onObject(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 	var args []string
 	for _, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(field.Name)
+		if field.Key.Name == "" {
+			panic("unknown field not supported")
+		}
+		fieldDecl, _ := decl.ForKey(field.Key)
 		val := visit(field.Value, fieldDecl)
-		args = append(args, fmt.Sprintf("%s: %s", fidlcommon.ToLowerCamelCase(field.Name), val))
+		args = append(args, fmt.Sprintf("%s: %s", fidlcommon.ToLowerCamelCase(field.Key.Name), val))
 	}
 	return fmt.Sprintf("%s(%s)", value.Name, strings.Join(args, ", "))
 }
 
 func onUnion(value gidlir.Object, decl gidlmixer.KeyedDeclaration) string {
 	for _, field := range value.Fields {
-		fieldDecl, _ := decl.ForKey(field.Name)
+		if field.Key.Name == "" {
+			panic("unknown field not supported")
+		}
+		fieldDecl, _ := decl.ForKey(field.Key)
 		val := visit(field.Value, fieldDecl)
-		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(field.Name), val)
+		return fmt.Sprintf("%s.with%s(%s)", value.Name, strings.Title(field.Key.Name), val)
 	}
 	// Not currently possible to construct a union/xunion in dart with an invalid value.
 	panic("unions must have a value set")

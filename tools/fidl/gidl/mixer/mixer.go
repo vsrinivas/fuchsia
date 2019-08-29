@@ -21,7 +21,7 @@ func ExtractDeclaration(value interface{}, fidl fidlir.Root) (Declaration, error
 		return nil, err
 	}
 	if err := decl.conforms(value); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("value %v failed to conform to declartion (type %T): %v", value, decl, err)
 	}
 	return decl, nil
 }
@@ -125,9 +125,9 @@ var _ = []Declaration{
 type KeyedDeclaration interface {
 	Declaration
 	// ForKey looks up the type of the member with the given key.
-	MemberType(key string) (fidlir.Type, bool)
+	MemberType(key gidlir.FieldKey) (fidlir.Type, bool)
 	// ForKey looks up the declaration for a specific key.
-	ForKey(key string) (Declaration, bool)
+	ForKey(key gidlir.FieldKey) (Declaration, bool)
 }
 
 // Assert that wrappers conform to the KeyedDeclaration interface.
@@ -217,9 +217,9 @@ type StructDecl struct {
 	schema schema
 }
 
-func (decl *StructDecl) MemberType(key string) (fidlir.Type, bool) {
+func (decl *StructDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
-		if string(member.Name) == key {
+		if string(member.Name) == key.Name {
 			return member.Type, true
 		}
 	}
@@ -227,7 +227,7 @@ func (decl *StructDecl) MemberType(key string) (fidlir.Type, bool) {
 }
 
 // TODO(bprosnitz) Don't repeat this across types.
-func (decl *StructDecl) ForKey(key string) (Declaration, bool) {
+func (decl *StructDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if typ, ok := decl.MemberType(key); ok {
 		return decl.schema.LookupDeclByType(typ)
 	}
@@ -236,9 +236,9 @@ func (decl *StructDecl) ForKey(key string) (Declaration, bool) {
 
 // IsKeyNullable indicates whether this key is optional, i.e. whether it
 // represents an optional field.
-func (decl *StructDecl) IsKeyNullable(key string) bool {
+func (decl *StructDecl) IsKeyNullable(key gidlir.FieldKey) bool {
 	for _, member := range decl.Members {
-		if string(member.Name) == key {
+		if string(member.Name) == key.Name {
 			return member.Type.Nullable
 		}
 	}
@@ -251,10 +251,10 @@ func (decl *StructDecl) conforms(value interface{}) error {
 		return fmt.Errorf("expecting string, found %T (%v)", value, value)
 	case gidlir.Object:
 		for _, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
-				return fmt.Errorf("field %s: unknown", field.Name)
+			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+				return fmt.Errorf("field %s: unknown", field.Key.Name)
 			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Name, err)
+				return fmt.Errorf("field %s: %s", field.Key.Name, err)
 			}
 		}
 		return nil
@@ -267,9 +267,9 @@ type TableDecl struct {
 	schema schema
 }
 
-func (decl *TableDecl) MemberType(key string) (fidlir.Type, bool) {
+func (decl *TableDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
-		if string(member.Name) == key {
+		if string(member.Name) == key.Name || uint64(member.Ordinal) == key.Ordinal {
 			return member.Type, true
 		}
 	}
@@ -277,7 +277,7 @@ func (decl *TableDecl) MemberType(key string) (fidlir.Type, bool) {
 }
 
 // TODO(bprosnitz) Don't repeat this across types.
-func (decl *TableDecl) ForKey(key string) (Declaration, bool) {
+func (decl *TableDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if typ, ok := decl.MemberType(key); ok {
 		return decl.schema.LookupDeclByType(typ)
 	}
@@ -290,10 +290,16 @@ func (decl *TableDecl) conforms(untypedValue interface{}) error {
 		return fmt.Errorf("expecting object, found %T (%v)", untypedValue, untypedValue)
 	case gidlir.Object:
 		for _, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
-				return fmt.Errorf("field %s: unknown", field.Name)
+			if field.Key.Name == "" {
+				if _, ok := decl.ForKey(field.Key); ok {
+					return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
+				}
+				continue
+			}
+			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+				return fmt.Errorf("field %s: unknown", field.Key.Name)
 			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Name, err)
+				return fmt.Errorf("field %s: %s", field.Key.Name, err)
 			}
 		}
 		return nil
@@ -306,9 +312,9 @@ type XUnionDecl struct {
 	schema schema
 }
 
-func (decl *XUnionDecl) MemberType(key string) (fidlir.Type, bool) {
+func (decl *XUnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
-		if string(member.Name) == key {
+		if string(member.Name) == key.Name || uint64(member.Ordinal) == key.Ordinal {
 			return member.Type, true
 		}
 	}
@@ -316,7 +322,7 @@ func (decl *XUnionDecl) MemberType(key string) (fidlir.Type, bool) {
 }
 
 // TODO(bprosnitz) Don't repeat this across types.
-func (decl XUnionDecl) ForKey(key string) (Declaration, bool) {
+func (decl XUnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if typ, ok := decl.MemberType(key); ok {
 		return decl.schema.LookupDeclByType(typ)
 	}
@@ -332,10 +338,16 @@ func (decl XUnionDecl) conforms(untypedValue interface{}) error {
 			return fmt.Errorf("must have one field, found %d", num)
 		}
 		for _, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
-				return fmt.Errorf("field %s: unknown", field.Name)
+			if field.Key.Name == "" {
+				if _, ok := decl.ForKey(field.Key); ok {
+					return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
+				}
+				continue
+			}
+			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+				return fmt.Errorf("field %s: unknown", field.Key.Name)
 			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Name, err)
+				return fmt.Errorf("field %s: %s", field.Key.Name, err)
 			}
 		}
 		return nil
@@ -348,9 +360,9 @@ type UnionDecl struct {
 	schema schema
 }
 
-func (decl *UnionDecl) MemberType(key string) (fidlir.Type, bool) {
+func (decl *UnionDecl) MemberType(key gidlir.FieldKey) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
-		if string(member.Name) == key {
+		if string(member.Name) == key.Name {
 			return member.Type, true
 		}
 	}
@@ -358,7 +370,7 @@ func (decl *UnionDecl) MemberType(key string) (fidlir.Type, bool) {
 }
 
 // TODO(bprosnitz) Don't repeat this across types.
-func (decl UnionDecl) ForKey(key string) (Declaration, bool) {
+func (decl UnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	if typ, ok := decl.MemberType(key); ok {
 		return decl.schema.LookupDeclByType(typ)
 	}
@@ -374,10 +386,10 @@ func (decl UnionDecl) conforms(untypedValue interface{}) error {
 			return fmt.Errorf("must have one field, found %d", num)
 		}
 		for _, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(field.Name); !ok {
-				return fmt.Errorf("field %s: unknown", field.Name)
+			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+				return fmt.Errorf("field %s: unknown", field.Key.Name)
 			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Name, err)
+				return fmt.Errorf("field %s: %s", field.Key.Name, err)
 			}
 		}
 		return nil
