@@ -328,6 +328,13 @@ pub(crate) mod testutil {
         time: DummyInstant,
     }
 
+    impl DummyInstantContext {
+        /// Advance the current time by the given duration.
+        pub(crate) fn sleep(&mut self, dur: Duration) {
+            self.time.offset += dur;
+        }
+    }
+
     impl InstantContext for DummyInstantContext {
         type Instant = DummyInstant;
         fn now(&self) -> DummyInstant {
