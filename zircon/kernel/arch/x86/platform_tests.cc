@@ -15,6 +15,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/platform_access.h>
 #include <ktl/array.h>
+#include <ktl/unique_ptr.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/syscalls/system.h>
@@ -125,6 +126,7 @@ namespace {
   }
 
   static bool test_x64_meltdown_enumeration() {
+    fbl::AllocChecker ac;
     BEGIN_TEST;
 
     {
@@ -175,7 +177,8 @@ namespace {
     }
 
     {
-      // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, old microcode lacks RDCL_NO
+      // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, _but_ old microcode
+      // lacks RDCL_NO. We will misidentify this CPU as having Meltdown.
       cpu_id::TestDataSet data = {};
       data.leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
       data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
@@ -187,10 +190,11 @@ namespace {
       FakeMsrAccess fake_msrs = {};
       {
         cpu_id::FakeCpuId cpu(data);
-        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
       }
 
       // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, reports via RDCL_NO
+      // (with recent microcode updates).
       data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
           (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
 
@@ -200,6 +204,22 @@ namespace {
         cpu_id::FakeCpuId cpu(data);
         EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
       }
+    }
+
+    {
+      // Intel(R) Celeron J4005 (Goldmont+ / Gemini Lake) _does_ have Meltdown,
+      // IA32_ARCH_CAPABILITIES[0] = 0
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x706A1, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
+      data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
+
+      cpu_id::FakeCpuId cpu(*data.get());
+      FakeMsrAccess fake_msrs = {};
+      fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0xA};  // microcode 2c -> Ah; 2e -> 6ah
+      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
     }
 
     END_TEST;

@@ -633,7 +633,7 @@ static const x86_microarch_config_t glm_config{
     .reboot_system = unknown_reboot_system,
     .reboot_reason = unknown_reboot_reason,
     .disable_c1e = false,
-    .has_meltdown = false,
+    .has_meltdown = true,
     .has_l1tf = false,
     .has_mds = false,
     .idle_states =
