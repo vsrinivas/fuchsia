@@ -157,6 +157,19 @@ zx_status_t AmlClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) 
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+
+zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlClock::ClockImplGetNumInputs(uint32_t id, uint32_t* out_num_inputs) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlClock::ClockImplGetInput(uint32_t id, uint32_t* out_input) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 // Note: The clock index taken here are the index of clock
 // from the clock table and not the clock_gates index.
 // This API measures the clk frequency for clk.

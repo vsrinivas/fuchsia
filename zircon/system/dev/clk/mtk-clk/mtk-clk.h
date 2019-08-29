@@ -31,6 +31,10 @@ class MtkClk : public DeviceType, public ddk::ClockImplProtocol<MtkClk, ddk::bas
   zx_status_t ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate, uint64_t* out_best_rate);
   zx_status_t ClockImplGetRate(uint32_t id, uint64_t* out_current_rate);
 
+  zx_status_t ClockImplSetInput(uint32_t id, uint32_t idx);
+  zx_status_t ClockImplGetNumInputs(uint32_t id, uint32_t* out);
+  zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out);
+
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
   zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info);

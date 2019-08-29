@@ -221,6 +221,47 @@ zx_status_t ComponentProxy::ClockGetRate(uint64_t* out_current_rate) {
   return status;
 }
 
+zx_status_t ComponentProxy::ClockSetInput(uint32_t idx) {
+  ClockProxyRequest req = {};
+  ClockProxyResponse resp = {};
+
+  req.header.proto_id = ZX_PROTOCOL_CLOCK;
+  req.op = ClockOp::SET_INPUT;
+  req.input_idx = idx;
+
+  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::ClockGetNumInputs(uint32_t* out_num_inputs) {
+  ClockProxyRequest req = {};
+  ClockProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_CLOCK;
+  req.op = ClockOp::GET_NUM_INPUTS;
+
+  auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+
+  if (status == ZX_OK) {
+    *out_num_inputs = resp.num_inputs;
+  }
+
+  return status;
+}
+
+zx_status_t ComponentProxy::ClockGetInput(uint32_t* out_current_input) {
+  ClockProxyRequest req = {};
+  ClockProxyResponse resp = {};
+  req.header.proto_id = ZX_PROTOCOL_CLOCK;
+  req.op = ClockOp::GET_INPUT;
+
+  auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+
+  if (status == ZX_OK) {
+    *out_current_input = resp.current_input;
+  }
+
+  return status;
+}
+
 zx_status_t ComponentProxy::EthBoardResetPhy() {
   EthBoardProxyRequest req = {};
   ProxyResponse resp = {};

@@ -137,6 +137,18 @@ zx_status_t Msm8x53Clk::ClockImplSetRate(uint32_t id, uint64_t hz) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t Msm8x53Clk::ClockImplSetInput(uint32_t id, uint32_t idx) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Msm8x53Clk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t Msm8x53Clk::ClockImplGetInput(uint32_t id, uint32_t* out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Msm8x53Clk::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate,
                                                     uint64_t* out_best_rate) {
   return ZX_ERR_NOT_SUPPORTED;

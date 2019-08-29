@@ -138,6 +138,18 @@ zx_status_t HisiClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate)
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t HisiClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t HisiClock::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t HisiClock::ClockImplGetInput(uint32_t id, uint32_t* out) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 void HisiClock::DdkUnbind() {
   DeInit();
   DdkRemove();

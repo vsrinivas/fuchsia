@@ -33,6 +33,10 @@ class ClockDevice : public ClockDeviceType,
   zx_status_t ClockQuerySupportedRate(uint64_t max_rate, uint64_t* out_max_supported_rate);
   zx_status_t ClockGetRate(uint64_t* out_current_rate);
 
+  zx_status_t ClockSetInput(uint32_t idx);
+  zx_status_t ClockGetNumInputs(uint32_t* out);
+  zx_status_t ClockGetInput(uint32_t* out);
+
  private:
   const ddk::ClockImplProtocolClient clock_;
   const uint32_t id_;

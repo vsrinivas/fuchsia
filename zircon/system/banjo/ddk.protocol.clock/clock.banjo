@@ -31,4 +31,17 @@ protocol Clock {
 
     /// Returns the current rate that a given clock is running at.
     GetRate() -> (zx.status s, uint64 hz);
+
+    /// Sets the input of this clock by index. I.e. by selecting a mux.
+    /// This clock has N inputs defined 0 through N-1, which are valid arguemts
+    /// as the index to SetInput.
+    SetInput(uint32 idx) -> (zx.status s);
+
+    /// Returns the number of inputs this clock has.
+    /// Any value between 0 and UINT32_MAX is a valid return for this method.
+    /// A Root Oscillator may return 0 for instance, if it has no inputs.
+    GetNumInputs() -> (zx.status s, uint32 n);
+
+    /// Returns the index of the current input of this clock.
+    GetInput() -> (zx.status s, uint32 index);
 };

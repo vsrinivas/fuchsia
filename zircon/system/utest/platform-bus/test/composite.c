@@ -81,6 +81,7 @@ static zx_status_t test_gpio(gpio_protocol_t* gpio) {
 static zx_status_t test_clock(clock_protocol_t* clock) {
   zx_status_t status;
   const uint64_t kOneMegahertz = 1000000;
+  const uint32_t kBad = 0xDEADBEEF;
   uint64_t out_rate = 0;
 
   if ((status = clock_enable(clock)) != ZX_OK) {
@@ -106,6 +107,26 @@ static zx_status_t test_clock(clock_protocol_t* clock) {
 
   if ((status = clock_get_rate(clock, &out_rate)) != ZX_OK) {
     return status;
+  }
+
+  if ((status = clock_set_input(clock, 0)) != ZX_OK) {
+    return status;
+  }
+
+  uint32_t num_inputs = kBad;
+  if ((status = clock_get_num_inputs(clock, &num_inputs)) != ZX_OK) {
+    return status;
+  }
+
+  uint32_t current_input = kBad;
+  if ((status = clock_get_input(clock, &current_input)) != ZX_OK) {
+    return status;
+  }
+
+  // Make sure that the input value was actually set.
+  if (num_inputs == kBad || current_input == kBad) {
+    // The above calls returned ZX_OK but the out value was unchanged?
+    return ZX_ERR_BAD_STATE;
   }
 
   return ZX_OK;

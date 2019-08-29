@@ -7,6 +7,11 @@ library ddk.protocol.clockimpl;
 using zx;
 
 /// Each method in this protocol has a corresponding method in clock.banjo
+/// with an additional ID parameter.
+/// The ID parameter in each method below designates the clock in the system
+/// that the call is intended to target.
+/// Conversely, each instance of ZX_PROTOCOL_CLOCK pertains to only one clock
+/// in the system.
 /// See clock.banjo for documentation for each method.
 [Layout = "ddk-protocol"]
 protocol ClockImpl {
@@ -19,4 +24,9 @@ protocol ClockImpl {
     SetRate(uint32 id, uint64 hz) -> (zx.status s);
     QuerySupportedRate(uint32 id, uint64 hz) -> (zx.status s, uint64 hz);
     GetRate(uint32 id) -> (zx.status s, uint64 hz);
+
+    /// Clock input control.
+    SetInput(uint32 id, uint32 idx) -> (zx.status s);
+    GetNumInputs(uint32 id) -> (zx.status s, uint32 n);
+    GetInput(uint32 id) -> (zx.status s, uint32 index);
 };

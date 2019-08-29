@@ -89,6 +89,12 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
       return clock_.QuerySupportedRate(req->rate, &resp->rate);
     case ClockOp::GET_RATE:
       return clock_.GetRate(&resp->rate);
+    case ClockOp::SET_INPUT:
+      return clock_.SetInput(req->input_idx);
+    case ClockOp::GET_NUM_INPUTS:
+      return clock_.GetNumInputs(&resp->num_inputs);
+    case ClockOp::GET_INPUT:
+      return clock_.GetInput(&resp->current_input);
     default:
       zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
