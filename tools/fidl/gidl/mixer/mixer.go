@@ -124,6 +124,8 @@ var _ = []Declaration{
 
 type KeyedDeclaration interface {
 	Declaration
+	// ForKey looks up the type of the member with the given key.
+	MemberType(key string) (fidlir.Type, bool)
 	// ForKey looks up the declaration for a specific key.
 	ForKey(key string) (Declaration, bool)
 }
@@ -215,12 +217,19 @@ type StructDecl struct {
 	schema schema
 }
 
-// ForKey retrieves a declaration for a key.
-func (decl *StructDecl) ForKey(key string) (Declaration, bool) {
+func (decl *StructDecl) MemberType(key string) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
 		if string(member.Name) == key {
-			return decl.schema.LookupDeclByType(member.Type)
+			return member.Type, true
 		}
+	}
+	return fidlir.Type{}, false
+}
+
+// TODO(bprosnitz) Don't repeat this across types.
+func (decl *StructDecl) ForKey(key string) (Declaration, bool) {
+	if typ, ok := decl.MemberType(key); ok {
+		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }
@@ -258,12 +267,19 @@ type TableDecl struct {
 	schema schema
 }
 
-// ForKey retrieves a declaration for a key.
-func (decl *TableDecl) ForKey(key string) (Declaration, bool) {
+func (decl *TableDecl) MemberType(key string) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
 		if string(member.Name) == key {
-			return decl.schema.LookupDeclByType(member.Type)
+			return member.Type, true
 		}
+	}
+	return fidlir.Type{}, false
+}
+
+// TODO(bprosnitz) Don't repeat this across types.
+func (decl *TableDecl) ForKey(key string) (Declaration, bool) {
+	if typ, ok := decl.MemberType(key); ok {
+		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }
@@ -290,12 +306,19 @@ type XUnionDecl struct {
 	schema schema
 }
 
-// ForKey retrieves a declaration for a key.
-func (decl XUnionDecl) ForKey(key string) (Declaration, bool) {
+func (decl *XUnionDecl) MemberType(key string) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
 		if string(member.Name) == key {
-			return decl.schema.LookupDeclByType(member.Type)
+			return member.Type, true
 		}
+	}
+	return fidlir.Type{}, false
+}
+
+// TODO(bprosnitz) Don't repeat this across types.
+func (decl XUnionDecl) ForKey(key string) (Declaration, bool) {
+	if typ, ok := decl.MemberType(key); ok {
+		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }
@@ -325,12 +348,19 @@ type UnionDecl struct {
 	schema schema
 }
 
-// ForKey retrieves a declaration for a key.
-func (decl UnionDecl) ForKey(key string) (Declaration, bool) {
+func (decl *UnionDecl) MemberType(key string) (fidlir.Type, bool) {
 	for _, member := range decl.Members {
 		if string(member.Name) == key {
-			return decl.schema.LookupDeclByType(member.Type)
+			return member.Type, true
 		}
+	}
+	return fidlir.Type{}, false
+}
+
+// TODO(bprosnitz) Don't repeat this across types.
+func (decl UnionDecl) ForKey(key string) (Declaration, bool) {
+	if typ, ok := decl.MemberType(key); ok {
+		return decl.schema.LookupDeclByType(typ)
 	}
 	return nil, false
 }

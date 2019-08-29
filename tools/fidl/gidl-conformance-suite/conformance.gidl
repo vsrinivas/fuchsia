@@ -9,6 +9,7 @@ success("EmptyStruct") {
 		0x00, // one byte
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
 	],
+	bindings_denylist = [llcpp,],
 }
 
 success("EmptyStructSandwich") {

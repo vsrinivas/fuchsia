@@ -18,6 +18,7 @@ import (
 	gidldart "gidl/dart"
 	gidlgolang "gidl/golang"
 	gidlir "gidl/ir"
+	gidlllcpp "gidl/llcpp"
 	gidlparser "gidl/parser"
 )
 
@@ -25,7 +26,7 @@ import (
 //
 // --json <path>  path to the JSON IR
 // --gidl <path>  path to the GIDL file
-// --language (go|cpp)  language to output
+// --language (dart|go|cpp|llcpp)  language to output
 type GIDLFlags struct {
 	JSONPath *string
 	Language *string
@@ -107,6 +108,11 @@ func main() {
 		}
 	case "cpp":
 		err := gidlcpp.Generate(buf, gidl, fidl)
+		if err != nil {
+			panic(err)
+		}
+	case "llcpp":
+		err := gidlllcpp.Generate(buf, gidl, fidl)
 		if err != nil {
 			panic(err)
 		}

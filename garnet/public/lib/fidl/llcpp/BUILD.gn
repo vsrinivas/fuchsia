@@ -13,12 +13,15 @@ executable("fidl_llcpp_conformance_test_bin") {
 
   sources = [
     "conformance_test.cc",
+    "manual_conformance_test.cc",
+    "test_utils.cc",
   ]
 
   deps = [
     "//sdk/lib/fidl/cpp:fidl_test_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//tools/fidl/gidl-conformance-suite:conformance_fidl_llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",

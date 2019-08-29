@@ -155,25 +155,6 @@ source_set("test_support") {
   ]
 }
 
-# TODO(FIDL-658): There should be a better long-term solution for build rules
-# for GIDL's .fidl files. In the meantime, we keep the build rule for it with
-# the language bindings (i.e. here), rather than in the GIDL directory.
-fidl("conformance_fidl") {
-  name = "conformance"
-
-  testonly = true
-
-  sources = [
-    "//tools/fidl/gidl-conformance-suite/alignment.test.fidl",
-    "//tools/fidl/gidl-conformance-suite/arrays_and_vectors.test.fidl",
-    "//tools/fidl/gidl-conformance-suite/mix_and_match.test.fidl",
-    "//tools/fidl/gidl-conformance-suite/optionals.test.fidl",
-    "//tools/fidl/gidl-conformance-suite/structs.test.fidl",
-    "//tools/fidl/gidl-conformance-suite/tables.test.fidl",
-    "//tools/fidl/gidl-conformance-suite/xunion.test.fidl",
-  ]
-}
-
 fidl("fidl_test") {
   name = "fidl.test.misc"
 
@@ -192,11 +173,11 @@ source_set("conformance_test_sources") {
   ]
 
   deps = [
-    ":conformance_fidl",
     ":cpp_base",
     ":fidl_test",
     ":test_util",
     "//third_party/googletest:gtest",
+    "//tools/fidl/gidl-conformance-suite:conformance_fidl",
   ]
 }
 
