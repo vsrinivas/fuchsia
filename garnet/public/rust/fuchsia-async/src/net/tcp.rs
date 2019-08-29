@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(missing_docs)]
+
 use {
     crate::net::{set_nonblock, EventedFd},
     bytes::{Buf, BufMut},
@@ -40,6 +42,7 @@ impl Deref for TcpListener {
 }
 
 impl TcpListener {
+    /// Creates a new `TcpListener` bound to the provided socket.
     pub fn bind(addr: &SocketAddr) -> io::Result<TcpListener> {
         let sock = match *addr {
             SocketAddr::V4(..) => TcpBuilder::new_v4(),
@@ -49,23 +52,24 @@ impl TcpListener {
         sock.reuse_address(true)?;
         sock.bind(addr)?;
         let listener = sock.listen(1024)?;
-        TcpListener::new(listener)
+        TcpListener::from_std(listener)
     }
 
-    pub fn new(listener: net::TcpListener) -> io::Result<TcpListener> {
-        set_nonblock(listener.as_raw_fd())?;
-
-        unsafe { Ok(TcpListener(EventedFd::new(listener)?)) }
-    }
-
+    /// Consumes this listener and returns a `Future` that resolves to an
+    /// `io::Result<(TcpListener, TcpStream, SocketAddr)>`.
     pub fn accept(self) -> Acceptor {
         Acceptor(Some(self))
     }
 
+    /// Consumes this listener and returns a `Stream` that resolves to elements
+    /// of type `io::Result<(TcpStream, SocketAddr)>`.
     pub fn accept_stream(self) -> AcceptStream {
         AcceptStream(self)
     }
 
+    /// Poll on `accept`ing a new `TcpStream` from this listener.
+    /// This function is mainly intended for usage in manual `Future` or `Stream`
+    /// implementations.
     pub fn async_accept(
         &mut self,
         cx: &mut Context<'_>,
@@ -80,15 +84,17 @@ impl TcpListener {
                     Poll::Ready(Err(e))
                 }
             }
-            Ok((sock, addr)) => Poll::Ready(Ok((TcpStream::from_stream(sock)?, addr))),
+            Ok((sock, addr)) => Poll::Ready(Ok((TcpStream::from_std(sock)?, addr))),
         }
     }
 
-    pub fn from_listener(
+    /// Creates a new instance of `fuchsia_async::net::TcpListener` from an
+    /// `std::net::TcpListener`.
+    pub fn from_std(
         listener: net::TcpListener,
-        _addr: &SocketAddr,
     ) -> io::Result<TcpListener> {
-        TcpListener::new(listener)
+        set_nonblock(listener.as_raw_fd())?;
+        unsafe { Ok(TcpListener(EventedFd::new(listener)?)) }
     }
 
     /// Returns a reference to the underlying `std::net::TcpListener`.
@@ -102,6 +108,7 @@ impl TcpListener {
     }
 }
 
+/// A future which resolves to an `io::Result<(TcpListener, TcpStream, SocketAddr)>`.
 pub struct Acceptor(Option<TcpListener>);
 
 impl Future for Acceptor {
@@ -120,6 +127,7 @@ impl Future for Acceptor {
     }
 }
 
+/// A stream which resolves to an `io::Result<(TcpStream, SocketAddr)>`.
 pub struct AcceptStream(TcpListener);
 
 impl Stream for AcceptStream {
@@ -141,6 +149,11 @@ enum ConnectState {
     Connected,
 }
 
+/// A single TCP connection.
+///
+/// This type and references to it implement the `AsyncRead` and `AsyncWrite`
+/// traits. For more on using this type, see the `AsyncReadExt` and `AsyncWriteExt`
+/// traits.
 pub struct TcpStream {
     state: ConnectState,
     stream: EventedFd<net::TcpStream>,
@@ -155,7 +168,9 @@ impl Deref for TcpStream {
 }
 
 impl TcpStream {
-    pub fn connect(addr: SocketAddr) -> io::Result<Connector> {
+    /// Creates a new `TcpStream` connected to a specific socket address.
+    /// This function returns a future which resolves to an `io::Result<TcpStream>`.
+    pub fn connect(addr: SocketAddr) -> io::Result<TcpConnector> {
         let sock = match addr {
             SocketAddr::V4(..) => TcpBuilder::new_v4(),
             SocketAddr::V6(..) => TcpBuilder::new_v6(),
@@ -167,9 +182,12 @@ impl TcpStream {
         let stream = unsafe { EventedFd::new(stream)? };
         let stream = TcpStream { state: ConnectState::New, stream };
 
-        Ok(Connector { addr, stream: Some(stream) })
+        Ok(TcpConnector { addr, stream: Some(stream) })
     }
 
+    /// Poll on successful connection of this `TcpStream`.
+    /// This function is mainly intended for usage in manual `Future` or `Stream`
+    /// implementations.
     pub fn async_connect(
         &mut self,
         addr: &SocketAddr,
@@ -207,6 +225,7 @@ impl TcpStream {
         }
     }
 
+    /// Polls on attempting to read data from this stream into a `BufMut`.
     pub fn read_buf<B: BufMut>(
         &self,
         buf: &mut B,
@@ -227,6 +246,7 @@ impl TcpStream {
         }
     }
 
+    /// Polls on attempting to write data into this stream from a `Buf`.
     pub fn write_buf<B: Buf>(&self, buf: &mut B, cx: &mut Context<'_>) -> Poll<io::Result<usize>> {
         match (&self.stream).as_ref().write(buf.bytes()) {
             Ok(n) => {
@@ -241,7 +261,8 @@ impl TcpStream {
         }
     }
 
-    fn from_stream(stream: net::TcpStream) -> io::Result<TcpStream> {
+    /// Creates a new `fuchsia_async::net::TcpStream` from a `std::net::TcpStream`.
+    fn from_std(stream: net::TcpStream) -> io::Result<TcpStream> {
         set_nonblock(stream.as_raw_fd())?;
 
         // This is safe because the file descriptor for stream will live as long as the TcpStream.
@@ -294,18 +315,19 @@ impl AsyncWrite for TcpStream {
     // TODO: override poll_vectored_write and call writev on the underlying stream
 }
 
-pub struct Connector {
+/// A future which resolves to a connected `TcpStream`.
+pub struct TcpConnector {
     addr: SocketAddr,
     stream: Option<TcpStream>,
 }
 
-impl Future for Connector {
+impl Future for TcpConnector {
     type Output = io::Result<TcpStream>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
         {
-            let stream = this.stream.as_mut().expect("polled a Connector after completion");
+            let stream = this.stream.as_mut().expect("polled a TcpConnector after completion");
             ready!(stream.async_connect(&this.addr, cx))?;
         }
         let stream = this.stream.take().unwrap();

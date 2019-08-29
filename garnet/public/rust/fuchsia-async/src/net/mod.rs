@@ -5,10 +5,10 @@
 #![allow(missing_docs)]
 
 mod tcp;
-pub use self::tcp::{Connector as TcpConnector, TcpListener, TcpStream};
+pub use self::tcp::*;
 
 mod udp;
-pub use self::udp::UdpSocket;
+pub use self::udp::*;
 
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::io::{self, AsyncRead, AsyncWrite, Initializer};
