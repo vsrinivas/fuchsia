@@ -211,6 +211,65 @@ void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedM
 }
 
 
+::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::Controller_GetPowerStateMapping_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::~Controller_GetPowerStateMapping_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Controller_GetPowerStateMapping_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::MoveImpl_(Controller_GetPowerStateMapping_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result) == ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::PrimarySize);
+}
+
+
+Controller_GetPowerStateMapping_Response& ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Controller_GetPowerStateMapping_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::Controller_GetDevicePowerCaps_Result() {
   tag_ = Tag::Invalid;
 }
@@ -328,6 +387,66 @@ int32_t& ::llcpp::fuchsia::device::Controller_Resume_Result::mutable_err() {
   return err_;
 }
 
+const char DEFAULT_DEVICE_NAME[] = "fuchsia";
+
+::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::Controller_UpdatePowerStateMapping_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::~Controller_UpdatePowerStateMapping_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Controller_UpdatePowerStateMapping_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::MoveImpl_(Controller_UpdatePowerStateMapping_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result) == ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::PrimarySize);
+}
+
+
+Controller_UpdatePowerStateMapping_Response& ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) Controller_UpdatePowerStateMapping_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
 
 namespace {
 
@@ -367,6 +486,13 @@ extern "C" const fidl_type_t fuchsia_device_ControllerRunCompatibilityTestsRespo
 [[maybe_unused]]
 constexpr uint64_t kController_GetDevicePowerCaps_Ordinal = 0x70a9ecf200000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kController_UpdatePowerStateMapping_Ordinal = 0x5200982600000000lu;
+extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
+extern "C" const fidl_type_t fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kController_GetPowerStateMapping_Ordinal = 0x4ca6662900000000lu;
+extern "C" const fidl_type_t fuchsia_device_ControllerGetPowerStateMappingResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_Suspend_Ordinal = 0x5897568300000000lu;
 extern "C" const fidl_type_t fuchsia_device_ControllerSuspendRequestTable;
@@ -1132,6 +1258,131 @@ Controller::UnownedResultOf::GetDevicePowerCaps Controller::Call::GetDevicePower
 }
 
 template <>
+Controller::ResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, UpdatePowerStateMappingRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<UpdatePowerStateMappingRequest*>(_write_bytes);
+  _request.mapping = std::move(mapping);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UpdatePowerStateMappingRequest));
+  ::fidl::DecodedMessage<UpdatePowerStateMappingRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Controller::InPlace::UpdatePowerStateMapping(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+Controller::ResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+  return ResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(mapping));
+}
+
+Controller::ResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::Array<SystemPowerStateInfo, 6> mapping) {
+  return ResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(mapping));
+}
+
+template <>
+Controller::UnownedResultOf::UpdatePowerStateMapping_Impl<Controller::UpdatePowerStateMappingResponse>::UpdatePowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < UpdatePowerStateMappingRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<UpdatePowerStateMappingResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, UpdatePowerStateMappingRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<UpdatePowerStateMappingRequest*>(_request_buffer.data());
+  _request.mapping = std::move(mapping);
+  _request_buffer.set_actual(sizeof(UpdatePowerStateMappingRequest));
+  ::fidl::DecodedMessage<UpdatePowerStateMappingRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Controller::InPlace::UpdatePowerStateMapping(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+Controller::UnownedResultOf::UpdatePowerStateMapping Controller::SyncClient::UpdatePowerStateMapping(::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::UpdatePowerStateMapping(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
+}
+
+Controller::UnownedResultOf::UpdatePowerStateMapping Controller::Call::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::Array<SystemPowerStateInfo, 6> mapping, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::UpdatePowerStateMapping(std::move(_client_end), std::move(_request_buffer), std::move(mapping), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Controller::UpdatePowerStateMappingResponse> Controller::InPlace::UpdatePowerStateMapping(zx::unowned_channel _client_end, ::fidl::DecodedMessage<UpdatePowerStateMappingRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kController_UpdatePowerStateMapping_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::UpdatePowerStateMappingResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<UpdatePowerStateMappingRequest, UpdatePowerStateMappingResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::UpdatePowerStateMappingResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+Controller::ResultOf::GetPowerStateMapping_Impl<Controller::GetPowerStateMappingResponse>::GetPowerStateMapping_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPowerStateMappingRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetPowerStateMappingRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPowerStateMappingRequest));
+  ::fidl::DecodedMessage<GetPowerStateMappingRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Controller::InPlace::GetPowerStateMapping(std::move(_client_end), Super::response_buffer()));
+}
+
+Controller::ResultOf::GetPowerStateMapping Controller::SyncClient::GetPowerStateMapping() {
+  return ResultOf::GetPowerStateMapping(zx::unowned_channel(this->channel_));
+}
+
+Controller::ResultOf::GetPowerStateMapping Controller::Call::GetPowerStateMapping(zx::unowned_channel _client_end) {
+  return ResultOf::GetPowerStateMapping(std::move(_client_end));
+}
+
+template <>
+Controller::UnownedResultOf::GetPowerStateMapping_Impl<Controller::GetPowerStateMappingResponse>::GetPowerStateMapping_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetPowerStateMappingRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetPowerStateMappingRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetPowerStateMappingRequest));
+  ::fidl::DecodedMessage<GetPowerStateMappingRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Controller::InPlace::GetPowerStateMapping(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Controller::UnownedResultOf::GetPowerStateMapping Controller::SyncClient::GetPowerStateMapping(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetPowerStateMapping(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Controller::UnownedResultOf::GetPowerStateMapping Controller::Call::GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetPowerStateMapping(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Controller::GetPowerStateMappingResponse> Controller::InPlace::GetPowerStateMapping(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetPowerStateMappingRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetPowerStateMappingRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kController_GetPowerStateMapping_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::GetPowerStateMappingResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetPowerStateMappingRequest, GetPowerStateMappingResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::GetPowerStateMappingResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
 Controller::ResultOf::Suspend_Impl<Controller::SuspendResponse>::Suspend_Impl(zx::unowned_channel _client_end, DevicePowerState requested_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -1399,6 +1650,29 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       }
       impl->GetDevicePowerCaps(
         Interface::GetDevicePowerCapsCompleter::Sync(txn));
+      return true;
+    }
+    case kController_UpdatePowerStateMapping_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<UpdatePowerStateMappingRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->UpdatePowerStateMapping(std::move(message->mapping),
+        Interface::UpdatePowerStateMappingCompleter::Sync(txn));
+      return true;
+    }
+    case kController_GetPowerStateMapping_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetPowerStateMappingRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetPowerStateMapping(
+        Interface::GetPowerStateMappingCompleter::Sync(txn));
       return true;
     }
     case kController_Suspend_Ordinal:
@@ -1825,6 +2099,64 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::Decod
 }
 
 
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(Controller_UpdatePowerStateMapping_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UpdatePowerStateMappingResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<UpdatePowerStateMappingResponse*>(_write_bytes);
+  _response._hdr.ordinal = kController_UpdatePowerStateMapping_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UpdatePowerStateMappingResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse>(std::move(_response_bytes)));
+}
+
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, Controller_UpdatePowerStateMapping_Result result) {
+  if (_buffer.capacity() < UpdatePowerStateMappingResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<UpdatePowerStateMappingResponse*>(_buffer.data());
+  _response._hdr.ordinal = kController_UpdatePowerStateMapping_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(UpdatePowerStateMappingResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse>(std::move(_buffer)));
+}
+
+void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kController_UpdatePowerStateMapping_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(Controller_GetPowerStateMapping_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPowerStateMappingResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetPowerStateMappingResponse*>(_write_bytes);
+  _response._hdr.ordinal = kController_GetPowerStateMapping_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPowerStateMappingResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_response_bytes)));
+}
+
+void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, Controller_GetPowerStateMapping_Result result) {
+  if (_buffer.capacity() < GetPowerStateMappingResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetPowerStateMappingResponse*>(_buffer.data());
+  _response._hdr.ordinal = kController_GetPowerStateMapping_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(GetPowerStateMappingResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetPowerStateMappingResponse>(std::move(_buffer)));
+}
+
+void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::DecodedMessage<GetPowerStateMappingResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kController_GetPowerStateMapping_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 void Controller::Interface::SuspendCompleterBase::Reply(int32_t status, DevicePowerState out_state) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SuspendResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -1884,7 +2216,6 @@ void Controller::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMessage<Re
   CompleterBase::SendReply(std::move(params));
 }
 
-const char DEFAULT_DEVICE_NAME[] = "fuchsia";
 
 }  // namespace device
 }  // namespace fuchsia

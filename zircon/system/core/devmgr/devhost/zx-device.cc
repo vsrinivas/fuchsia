@@ -53,6 +53,11 @@ const std::array<fuchsia_device_DevicePowerStateInfo,
   return power_states_;
 }
 
+const std::array<fuchsia_device_SystemPowerStateInfo,
+    fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& zx_device::GetSystemPowerStateMapping() const {
+  return system_power_states_mapping_;
+}
+
 zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_states,
                                uint8_t count) {
   if (count < fuchsia_device_MIN_DEVICE_POWER_STATES ||
@@ -83,6 +88,23 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
   return ZX_OK;
 }
 
+zx_status_t zx_device::SetSystemPowerStateMapping(const std::array<fuchsia_device_SystemPowerStateInfo,
+             fuchsia_device_manager_MAX_SYSTEM_POWER_STATES>& mapping) {
+  for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
+    const fuchsia_device_SystemPowerStateInfo* info = &mapping[i];
+    if (!(power_states_[info->dev_state].is_supported)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (info->wakeup_enable && !power_states_[info->dev_state].wakeup_capable) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    // TODO(ravoorir): Validate whether the system can wake up from that state,
+    // when power states make more sense. Currently we cannot compare the
+    // system sleep power states.
+    system_power_states_mapping_[i] = mapping[i];
+  }
+  return ZX_OK;
+}
 
 // We must disable thread-safety analysis due to not being able to statically
 // guarantee the lock holding invariant.  Instead, we acquire the lock if

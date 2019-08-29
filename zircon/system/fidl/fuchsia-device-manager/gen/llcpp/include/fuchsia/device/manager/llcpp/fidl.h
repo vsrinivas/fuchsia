@@ -22,6 +22,16 @@ namespace fuchsia {
 namespace device {
 namespace manager {
 
+enum class SystemPowerState : uint8_t {
+  SYSTEM_POWER_STATE_REBOOT = 0u,
+  SYSTEM_POWER_STATE_REBOOT_BOOTLOADER = 1u,
+  SYSTEM_POWER_STATE_REBOOT_RECOVERY = 2u,
+  SYSTEM_POWER_STATE_REBOOT_POWEROFF = 3u,
+  SYSTEM_POWER_STATE_REBOOT_MEXEC = 4u,
+  SYSTEM_POWER_STATE_REBOOT_SUSPEND_RAM = 5u,
+};
+
+
 class DebugDumper;
 class Administrator;
 class DevhostController;
@@ -705,16 +715,26 @@ class Administrator final {
 
 };
 
-// Check the DDK for all available flags.
+constexpr uint32_t SUSPEND_FLAG_SUSPEND_RAM = 3705406464u;
+
+constexpr uint32_t SUSPEND_FLAG_REBOOT_RECOVERY = 3705405698u;
+
+constexpr uint32_t SUSPEND_FLAG_REBOOT_BOOTLOADER = 3705405697u;
+
+// All available suspend flags
 constexpr uint32_t SUSPEND_FLAG_REBOOT = 3705405696u;
 
 constexpr uint32_t SUSPEND_FLAG_POWEROFF = 3705405952u;
+
+constexpr uint32_t SUSPEND_FLAG_MEXEC = 3705406208u;
 
 // Maximum number of properties that can be attached to a device
 constexpr uint32_t PROPERTIES_MAX = 256u;
 
 // Maximum number of bytes in a metadata payload
 constexpr uint32_t METADATA_MAX = 8192u;
+
+constexpr uint32_t MAX_SYSTEM_POWER_STATES = 6u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;

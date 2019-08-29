@@ -25,6 +25,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <new>
 #include <utility>
 
@@ -36,7 +37,6 @@
 
 #include "devhost.h"
 #include "zx-device.h"
-#include <array>
 
 namespace devmgr {
 
@@ -631,6 +631,39 @@ static zx_status_t fidl_DeviceControllerResume(void* ctx,
   return fuchsia_device_ControllerResume_reply(txn, &result);
 }
 
+static zx_status_t fidl_DeviceControllerUpdatePowerStateMapping(void* ctx,
+                    const fuchsia_device_SystemPowerStateInfo mapping[6], fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  fuchsia_device_Controller_UpdatePowerStateMapping_Result result{};
+  std::array<fuchsia_device_SystemPowerStateInfo,
+      fuchsia_device_manager_MAX_SYSTEM_POWER_STATES> states_mapping;
+  for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
+    states_mapping[i] = mapping[i];
+  }
+  zx_status_t status = conn->dev->SetSystemPowerStateMapping(states_mapping);
+  if (status == ZX_OK) {
+    result.tag = fuchsia_device_Controller_UpdatePowerStateMapping_ResultTag_response;
+  } else {
+    result.tag = fuchsia_device_Controller_UpdatePowerStateMapping_ResultTag_err;
+    result.err = status;
+  }
+  return fuchsia_device_ControllerUpdatePowerStateMapping_reply(txn, &result);
+}
+
+static zx_status_t fidl_DeviceControllerGetPowerStateMapping(void* ctx, fidl_txn_t* txn) {
+  auto conn = static_cast<DevfsConnection*>(ctx);
+  fuchsia_device_Controller_GetPowerStateMapping_Result result{};
+
+  auto& mapping = conn->dev->GetSystemPowerStateMapping();
+  ZX_DEBUG_ASSERT(mapping.size() == fuchsia_device_manager_MAX_SYSTEM_POWER_STATES);
+
+  result.tag = fuchsia_device_Controller_GetPowerStateMapping_ResultTag_response;
+  for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
+    result.response.mapping[i] = mapping[i];
+  }
+  return fuchsia_device_ControllerGetPowerStateMapping_reply(txn, &result);
+}
+
 static zx_status_t fidl_DeviceControllerGetEventHandle(void* ctx, fidl_txn_t* txn) {
   auto conn = static_cast<DevfsConnection*>(ctx);
   zx::eventpair event;
@@ -688,6 +721,8 @@ static const fuchsia_device_Controller_ops_t kDeviceControllerOps = {
     .DebugResume = fidl_DeviceControllerDebugResume,
     .RunCompatibilityTests = fidl_DeviceControllerRunCompatibilityTests,
     .GetDevicePowerCaps = fidl_DeviceControllerGetDevicePowerCaps,
+    .UpdatePowerStateMapping = fidl_DeviceControllerUpdatePowerStateMapping,
+    .GetPowerStateMapping = fidl_DeviceControllerGetPowerStateMapping,
     .Suspend = fidl_DeviceControllerSuspend,
     .Resume = fidl_DeviceControllerResume,
 };
