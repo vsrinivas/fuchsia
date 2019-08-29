@@ -5,13 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("archivist") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/archivist",
-  ]
-}
-
 group("tz-util") {
   testonly = true
   public_deps = [
@@ -183,7 +176,6 @@ group("all") {
     "//garnet/go/src/amber:pkgfs",
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:appmgr",
-    "//garnet/packages/prod:archivist",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:auth",
     "//garnet/packages/prod:banjo",

@@ -8,13 +8,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("archivist_tests") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/archivist:archivist_tests",
-  ]
-}
-
 group("svc") {
   testonly = true
   public_deps = [
@@ -320,7 +313,6 @@ group("all") {
     ":a11y",
     ":acts_tests",
     ":amber",
-    ":archivist_tests",
     ":asio",
     ":async_promise",
     ":ath10k",

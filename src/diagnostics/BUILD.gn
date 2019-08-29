@@ -4,6 +4,7 @@
 
 group("diagnostics") {
   deps = [
+    "archivist",
     # "inspect_validator",
   ]
 }
@@ -11,6 +12,7 @@ group("diagnostics") {
 group("tests") {
   testonly = true
   deps = [
+    "archivist:archivist_tests",
     # "inspect_validator:tests",
     # "transit_bench",
   ]
