@@ -486,23 +486,8 @@ zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
   info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
   info->supported_phys = 0x1f;  // WLAN_INFO_PHY_TYPE_;
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS;
-  info->caps = 0xf;  // WLAN_INFO_HARDWARE_CAPABILITY_;
-  info->bands_count = 1;
-  info->bands[0].band = WLAN_INFO_BAND_2GHZ;
-  // TODO(cphoenix): Once this isn't temp/stub code anymore, remove unnecessary "= 0" lines.
-  info->bands[0].ht_supported = false;
-  info->bands[0].ht_caps.ht_capability_info = 0;
-  info->bands[0].ht_caps.ampdu_params = 0;
-  // info->bands[0].ht_caps.supported_mcs_set[ 16 entries ] = 0;
-  info->bands[0].ht_caps.ht_ext_capabilities = 0;
-  info->bands[0].ht_caps.tx_beamforming_capabilities = 0;
-  info->bands[0].ht_caps.asel_capabilities = 0;
-  info->bands[0].vht_supported = false;
-  info->bands[0].vht_caps.vht_capability_info = 0;
-  info->bands[0].vht_caps.supported_vht_mcs_and_nss_set = 0;
-  // info->bands[0].basic_rates[ 12 entries ] = 0;
-  info->bands[0].supported_channels.base_freq = 0;
-  // info->bands[0].supported_channels.channels[ 64 entries ] = 0;
+  info->caps = 0xf;       // WLAN_INFO_HARDWARE_CAPABILITY_;
+  info->bands_count = 0;  // FIXME #29890 -- Long-term solution needed
   return ZX_OK;
 }
 
