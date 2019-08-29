@@ -687,6 +687,10 @@ int main(int argc, char** argv) {
       log("%sWARNING: Bootserver version '%s' != remote Zedboot version '%s'."
           " Device will not be serviced. Please upgrade Zedboot.%s",
           ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
+      if (fail_fast) {
+        close(s);
+        return -1;
+      }
       continue;
     }
 
