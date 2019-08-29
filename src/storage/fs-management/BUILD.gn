@@ -22,7 +22,10 @@ rustc_library("fs-management") {
 
 generate_manifest("fs-management.manifest") {
   visibility = [ ":*" ]
-  args = [ "--binary=bin/blobfs" ]
+  args = [
+    "--binary=bin/blobfs",
+    "--binary=bin/minfs",
+  ]
 }
 
 manifest_outputs = get_target_outputs(":fs-management.manifest")

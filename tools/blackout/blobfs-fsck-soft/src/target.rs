@@ -18,7 +18,7 @@ use {
     cstr::cstr,
     failure::{bail, Error, ResultExt},
     fdio,
-    fs_management::Blobfs,
+    fs_management::{Blobfs, Filesystem},
     fuchsia_zircon::{self as zx, AsHandleRef},
     std::ffi::CString,
     structopt::StructOpt,
@@ -37,7 +37,11 @@ struct Opts {
 /// the meat of the test run. the wrapping [`test`] function simply blocks on the process
 /// terminating, and will never return except for an error, so it's not suitable for testing the
 /// test.
-fn test_spawn(blobfs: &mut Blobfs, seed: u64, num_ops: u64) -> Result<zx::Process, Error> {
+fn test_spawn(
+    blobfs: &mut Filesystem<Blobfs>,
+    seed: u64,
+    num_ops: u64,
+) -> Result<zx::Process, Error> {
     let root = format!("/test-fs-root-{}", seed);
 
     println!("formatting provided block device with blobfs");
@@ -50,7 +54,7 @@ fn test_spawn(blobfs: &mut Blobfs, seed: u64, num_ops: u64) -> Result<zx::Proces
     launch_generator_process(seed, &root, num_ops)
 }
 
-fn test(blobfs: &mut Blobfs, seed: u64) -> Result<(), Error> {
+fn test(blobfs: &mut Filesystem<Blobfs>, seed: u64) -> Result<(), Error> {
     let process = test_spawn(blobfs, seed, 0)?;
 
     let _signals = process
@@ -61,7 +65,7 @@ fn test(blobfs: &mut Blobfs, seed: u64) -> Result<(), Error> {
     unreachable!();
 }
 
-fn verify(blobfs: &mut Blobfs) -> Result<(), Error> {
+fn verify(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
     println!("verifying disk with fsck");
     blobfs.fsck().context("failed to run fsck")?;
 
