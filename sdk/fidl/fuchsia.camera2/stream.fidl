@@ -1,0 +1,112 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera2;
+
+using fuchsia.sysmem;
+using zx;
+
+/// Maximum number of image formats per stream.
+const uint64 MAX_IMAGE_FORMATS = 256;
+
+/// Status to be set when a frame is signalled available.
+enum FrameStatus {
+    OK = 0;
+    /// An error occurred during the production of a frame.
+    /// No data will be available in the data buffer corresponding to this
+    /// notification.
+    ERROR_FRAME = 1;
+
+    /// No space was available in the data buffer, resulting in a dropped frame.
+    ERROR_BUFFER_FULL = 2;
+};
+
+table FrameMetadata {
+    1: int64 timestamp;
+    /// |image_format_index| references the index into the vector of available
+    /// formats supported by the stream.
+    2: uint32 image_format_index;
+};
+
+/// Sent by the driver to the client when a frame is available for processing,
+/// or an error occurred.
+struct FrameAvailableInfo {
+    /// Non zero if an error occurred.
+    FrameStatus frame_status;
+
+    /// The index of the buffer in the buffer collection.
+    uint32 buffer_id;
+
+    FrameMetadata metadata;
+};
+
+struct FrameRate {
+    /// The frame rate is frames_per_sec_numerator / frames_per_sec_denominator.
+    uint32 frames_per_sec_numerator;
+    uint32 frames_per_sec_denominator;
+};
+
+/// Different Stream types provided by the camera stack.
+bits CameraStreamType : uint32 {
+    /// ML request FR(Full Resolution) stream as well as
+    /// a DS(Down Scaled Resolution) stream for Security Use Case
+    /// which are of fixed resolutions
+    MACHINE_LEARNING = 0x01;
+    /// This is Security Video Stream which could support multiple
+    /// resolutions at runtime.
+    MONITORING = 0x02;
+    FULL_RESOLUTION = 0x04;
+    /// ML request a DS stream for Video Conferencing which is fixed resolution
+    DOWNSCALED_RESOLUTION = 0x08;
+    /// This is Video Conferencing Stream which could support
+    /// multiple resolutions at runtime.
+    VIDEO_CONFERENCE = 0x10;
+};
+
+table StreamProperties {
+    /// These could be one or more of the above mentioned Stream Types
+    1: CameraStreamType stream_type;
+};
+
+protocol Stream {
+    /// Control Operations
+    /// Starts the streaming of frames.
+    Start();
+
+    /// Stops the streaming of frames.
+    Stop();
+
+    /// Unlocks the specified frame, allowing the driver to reuse the memory.
+    ReleaseFrame(uint32 buffer_id);
+
+    /// Sent by the driver to the client when a frame is available for processing,
+    /// or an error occurred.  The frame is considered read-locked by the client
+    /// after this message.  The client must call ReleaseFrame to release the
+    /// read-lock for a non-error frame, or the consumer will eventually run out of buffers.
+    /// If a frame has an error, the client must call AcknowledgeFrameError before
+    /// another OnFrameAvailable will be called with an error frame.
+    -> OnFrameAvailable(FrameAvailableInfo frame);
+
+    /// Provides flow control for receiving frame errors. See OnFrameAvailable comment.
+    AcknowledgeFrameError();
+
+    /// Data operations
+    /// This is used by clients to provide inputs for region of interest
+    /// selection.
+    /// Inputs are the x & y coordinates for the new bounding box.
+    /// For streams which do not support smart framing, this would
+    /// return an error.
+    SetRegionOfInterest(float32 x_min,
+                        float32 y_min,
+                        float32 x_max,
+                        float32 y_max) -> (zx.status s);
+
+    /// Change the image format of the stream. This is called when clients want
+    /// to dynamically change the resolution of the stream while the streaming is
+    /// is going on.
+    SetImageFormat(uint32 image_format_index) -> (zx.status s);
+
+    /// Get the image formats that this stream supports.
+    GetImageFormats() -> (vector<fuchsia.sysmem.ImageFormat_2>:MAX_IMAGE_FORMATS image_formats);
+};

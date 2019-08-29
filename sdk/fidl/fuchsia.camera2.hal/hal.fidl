@@ -1,0 +1,70 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.camera2.hal;
+
+using fuchsia.camera2;
+using fuchsia.sysmem;
+using zx;
+
+/// Maximum number of configurations per device.
+const uint64 MAX_CONFIGURATIONS = 256;
+
+/// Maximum number of streams per config.
+const uint64 MAX_STREAMS = 64;
+
+/// Represents one stream within a particular configuration.
+struct StreamConfig {
+    fuchsia.camera2.FrameRate frame_rate;
+    /// |constraints| should allow for all the image formats listed in image_formats.
+    fuchsia.sysmem.BufferCollectionConstraints constraints;
+
+    /// Properties of the stream:
+    fuchsia.camera2.StreamProperties properties;
+
+    /// We need to specify both the constraints & the image formats because
+    /// there are fixed set of resolutions supported by the Camera Controller
+    /// so a range within the |constraints| won't be sufficient.
+    /// Some streams support multiple resolutions for same configuration
+    /// We would need to change the resolution runtime, without stopping the
+    /// streaming. This provides a list of resolutions a stream would be providing.
+    /// At least one format must be provided.
+    vector<fuchsia.sysmem.ImageFormat_2>:fuchsia.camera2.MAX_IMAGE_FORMATS image_formats;
+};
+
+/// Represents one configuration
+struct Config {
+    // One configuration could have multiple streams.
+    vector<StreamConfig>:MAX_STREAMS stream_config;
+};
+
+/// This is the interface to the camera driver
+/// which allows setting up a given configuration
+/// and setting up a stream.
+[Discoverable]
+protocol Controller {
+    /// Get a list of all available configurations which the camera driver supports.
+    GetConfigs() -> (vector<Config>:MAX_CONFIGURATIONS? configs, zx.status status);
+
+    /// Set a particular configuration and create the requested stream.
+    /// |config_index| : Configuration index from the vector which needs to be applied.
+    /// |stream_type| : Stream types (one of more of |CameraStreamTypes|)
+    /// |buffer_collection| : Buffer collections for the stream.
+    /// |stream| : Stream channel for the stream requested
+    /// |image_format_index| : Image format index which needs to be set up upon creation.
+    /// If there is already an active configuration which is different than the one
+    /// which is requested to be set, then the HAL will be closing all existing streams
+    /// and honor this new setup call.
+    /// If the new stream requested is already part of the existing running configuration
+    /// the HAL will just be creating this new stream while the other stream still exists as is.
+    CreateStream(uint32 config_index,
+                 uint32 stream_type,
+                 uint32 image_format_index,
+                 fuchsia.sysmem.BufferCollectionInfo buffer_collection,
+                 request<fuchsia.camera2.Stream> stream);
+
+    /// Enable/Disable Streaming
+    EnableStreaming();
+    DisableStreaming();
+};
