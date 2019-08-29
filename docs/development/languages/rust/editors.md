@@ -19,21 +19,31 @@ for instructions on making it work better with Rust.
 
 The VS Code plugin uses the RLS (Rust language server) so you'll need to first
 [install rustup](https://rustup.rs/). Next, install [this VSCode plugin].
-You'll also have to tell `rustup` to use the Fuchsia Rust toolchain:
+You need to configure `rustup` to use the Fuchsia Rust toolchain.
+Run this command from your Fuchsia source code root directory.
 
 ```sh
-rustup toolchain link fuchsia /<your Fuchsia root>/prebuilt/third_party/rust/<platform>
+rustup toolchain link fuchsia $(scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN)
 rustup default fuchsia
 ```
 
-Next open File -> Preferences -> Settings (or type Ctrl+Comma). Add the following settings:
+Rust this command to get the paths to use in the following step.
+```sh
+./scripts/youcompleteme/paths.py FUCHSIA_ROOT
+./scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN
+```
+
+From VS Code, Open File, then Preferences, and the Settings.
+Note there are different settings defined for each environment (for example, user vs remote development server).
+In the upper right corner, click an icon whose mouse-over balloon tip says "Open Settings (JSON)".
+Add the following settings:
 
 ```javascript
 {
   "rust.target": "x86_64-fuchsia",
-  "rust.target_dir": "/<your Fuchsia root>/out/cargo_target",
+  "rust.target_dir": "<FUCHSIA_ROOT>/out/cargo_target",
   "rust.unstable_features": true,
-  "rust-client.rlsPath": "/<your Fuchsia root>/prebuilt/third_party/rust/<platform>/bin/rls",
+  "rust-client.rlsPath": "<VS_CODE_TOOLCHAIN>/bin/rls",
   "rust-client.disableRustup": true,
 
   // Some optional settings that may help:

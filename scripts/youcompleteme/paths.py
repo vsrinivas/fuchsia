@@ -96,10 +96,14 @@ def search_ninja_path(root):
     return ninja_dir
   return os.path.join(ninja_dir, 'ninja')
 
+def get_rust_toolchain_path(root):
+  return '%s/third_party/rust/%s' % (root, get_platform())
+
 # We start seaching from the correct buildtools.
 CLANG_PATH = search_clang_path(PREBUILT_PATH)
 GN_PATH = search_gn_path(PREBUILT_PATH)
 NINJA_PATH = search_ninja_path(PREBUILT_PATH)
+VSCODE_RUST_TOOLCHAIN = get_rust_toolchain_path(PREBUILT_PATH)
 
 def main():
   variable_re = re.compile('^[A-Z][A-Z_]*$')
