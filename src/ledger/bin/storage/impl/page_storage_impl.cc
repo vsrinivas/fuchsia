@@ -740,6 +740,24 @@ void PageStorageImpl::NotifyWatchersOfNewCommits(
   }
 }
 
+void PageStorageImpl::GetCommitRootIdentifier(
+    CommitIdView commit_id, fit::function<void(Status, ObjectIdentifier)> callback) {
+  if (auto it = roots_of_commits_being_added_.find(commit_id);
+      it != roots_of_commits_being_added_.end()) {
+    callback(Status::OK, it->second);
+  } else {
+    GetCommit(commit_id, [callback = std::move(callback)](Status status,
+                                                          std::unique_ptr<const Commit> commit) {
+      if (status != Status::OK) {
+        callback(status, {});
+        return;
+      }
+      FXL_DCHECK(commit);
+      callback(Status::OK, commit->GetRootIdentifier());
+    });
+  }
+}
+
 Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Batch* batch,
                                            std::vector<ObjectIdentifier> object_identifiers) {
   std::set<ObjectIdentifier> seen_identifiers;
@@ -1264,6 +1282,16 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
 
   lock.reset();
 
+  // Register the commits as being added, so their CommitId/root ObjectIdentifier is available to
+  // GetObject.
+  // TODO(12356): Once compatibility is not necessary, we can use |Location| to store this
+  // information instead.
+  std::vector<CommitId> commit_ids_being_added;
+  for (const auto& commit : commits) {
+    commit_ids_being_added.push_back(commit->GetId());
+    roots_of_commits_being_added_[commit->GetId()] = commit->GetRootIdentifier();
+  }
+
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
@@ -1282,8 +1310,16 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
     return waiter_status;
   }
 
-  return SynchronousAddCommits(handler, std::move(commits), source, std::vector<ObjectIdentifier>(),
-                               missing_ids);
+  Status status = SynchronousAddCommits(handler, std::move(commits), source,
+                                        std::vector<ObjectIdentifier>(), missing_ids);
+  if (status == Status::OK) {
+    // We only remove the commits from the map once they have been successfully added to storage:
+    // this ensures we never lose a CommitId / root ObjectIdentifier association.
+    for (auto commit_id : commit_ids_being_added) {
+      roots_of_commits_being_added_.erase(commit_id);
+    }
+  }
+  return status;
 }
 
 Status PageStorageImpl::SynchronousGetUnsyncedCommits(

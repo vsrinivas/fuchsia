@@ -193,9 +193,15 @@ class PageStorageImpl : public PageStorage {
                       fit::function<void(Status, fsl::SizedVmo)> callback);
 
   // Notifies the registered watchers of |new_commits|.
-  void NotifyWatchersOfNewCommits(
+  void NotifyWatchersOfNewCommits(const std::vector<std::unique_ptr<const Commit>>& new_commits,
+                                  ChangeSource source);
 
-      const std::vector<std::unique_ptr<const Commit>>& new_commits, ChangeSource source);
+  // Find the root identifier of a commit, even if it is in the process of being added to the
+  // storage. This breaks a circual dependency: |GetObject| needs the root identifier of commits to
+  // apply and check diffs, but we need to get the objects referred to by a commit before adding it
+  // in the storage.
+  void GetCommitRootIdentifier(CommitIdView commit_id,
+                               fit::function<void(Status, ObjectIdentifier)> callback);
 
   // Synchronous versions of API methods using coroutines.
   FXL_WARN_UNUSED_RESULT Status SynchronousInit(coroutine::CoroutineHandler* handler);
@@ -260,6 +266,9 @@ class PageStorageImpl : public PageStorage {
   PageSyncDelegate* page_sync_;
   bool page_is_online_ = false;
   std::unique_ptr<ObjectIdentifier> empty_node_id_ = nullptr;
+  // Temporarily stores the root of commits being added from sync, so they can be used to apply
+  // diffs. A commit will be removed from this set once it is successfully added to the storage.
+  std::map<CommitId, ObjectIdentifier, std::less<>> roots_of_commits_being_added_;
 
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager coroutine_manager_;

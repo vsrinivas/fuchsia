@@ -59,6 +59,16 @@ class PageStorageImplAccessorForTest {
   }
 
   static PageDb& GetDb(const std::unique_ptr<PageStorageImpl>& storage) { return *(storage->db_); }
+
+  static void GetCommitRootIdentifier(const std::unique_ptr<PageStorageImpl>& storage,
+                                      CommitIdView commit_id,
+                                      fit::function<void(Status, ObjectIdentifier)> callback) {
+    storage->GetCommitRootIdentifier(commit_id, std::move(callback));
+  }
+
+  static bool RootCommitIdentifierMapIsEmpty(const std::unique_ptr<PageStorageImpl>& storage) {
+    return storage->roots_of_commits_being_added_.empty();
+  }
 };
 
 namespace {
@@ -2926,6 +2936,126 @@ TEST_F(PageStorageTest, AddLocalCommitsInterrupted) {
   EXPECT_TRUE(RunLoopUntilIdle());
   // The callback is eaten by the destruction of |storage_|, so we are not
   // expecting to be called. However, we do not crash.
+}
+
+TEST_F(PageStorageTest, GetCommitRootIdentifier) {
+  bool called;
+  Status status;
+  std::unique_ptr<const Commit> base_commit = GetFirstHead();
+  std::unique_ptr<Journal> journal = storage_->StartCommit(base_commit->Clone());
+  ObjectIdentifier value = MakeObject("data", InlineBehavior::ALLOW).object_identifier;
+  journal->Put("key", value, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_TRUE(commit);
+
+  ObjectIdentifier root_id = commit->GetRootIdentifier();
+  std::string root_data = TryGetPiece(root_id)->GetData().ToString();
+  CommitId commit_id = commit->GetId();
+  std::string commit_data = commit->GetStorageBytes().ToString();
+  auto commit_id_and_bytes = CommitAndBytesFromCommit(*commit);
+
+  commit.reset();
+  ResetStorage();
+
+  bool sync_delegate_called;
+  fit::closure sync_delegate_call;
+  DelayingFakeSyncDelegate sync(
+      callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
+  storage_->SetSyncDelegate(&sync);
+  sync.AddObject(root_id, root_data);
+
+  // Start adding the remote commit.
+  bool commits_from_sync_called;
+  Status commits_from_sync_status;
+  std::vector<CommitId> missing_ids;
+  storage_->AddCommitsFromSync(std::move(commit_id_and_bytes), ChangeSource::CLOUD,
+                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
+                                                 &commits_from_sync_status, &missing_ids));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(commits_from_sync_called);
+  EXPECT_TRUE(sync_delegate_called);
+  ASSERT_TRUE(sync_delegate_call);
+
+  // AddCommitsFromSync is waiting in GetObject.
+  ObjectIdentifier root_id_from_storage;
+  PageStorageImplAccessorForTest::GetCommitRootIdentifier(
+      storage_, commit_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &root_id_from_storage));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(root_id_from_storage, root_id);
+
+  // Unblock AddCommitsFromSync.
+  sync_delegate_call();
+  RunLoopUntilIdle();
+  EXPECT_TRUE(commits_from_sync_called);
+  EXPECT_EQ(commits_from_sync_status, Status::OK);
+
+  // The map is empty, and the root identifier is fetched from the database.
+  EXPECT_TRUE(PageStorageImplAccessorForTest::RootCommitIdentifierMapIsEmpty(storage_));
+  PageStorageImplAccessorForTest::GetCommitRootIdentifier(
+      storage_, commit_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &root_id_from_storage));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(root_id_from_storage, root_id);
+}
+
+TEST_F(PageStorageTest, GetCommitRootIdentifierFailedToAdd) {
+  bool called;
+  Status status;
+  std::unique_ptr<const Commit> base_commit = GetFirstHead();
+  std::unique_ptr<Journal> journal = storage_->StartCommit(base_commit->Clone());
+  ObjectIdentifier value = MakeObject("data", InlineBehavior::ALLOW).object_identifier;
+  journal->Put("key", value, KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_TRUE(commit);
+
+  ObjectIdentifier root_id = commit->GetRootIdentifier();
+  std::string root_data = TryGetPiece(root_id)->GetData().ToString();
+  CommitId commit_id = commit->GetId();
+  std::string commit_data = commit->GetStorageBytes().ToString();
+  auto commit_id_and_bytes = CommitAndBytesFromCommit(*commit);
+
+  commit.reset();
+  ResetStorage();
+
+  FakeSyncDelegate sync;
+  storage_->SetSyncDelegate(&sync);
+  // We do not add the root object: GetObject will fail.
+
+  // Add the remote commit.
+  bool commits_from_sync_called;
+  Status commits_from_sync_status;
+  std::vector<CommitId> missing_ids;
+  storage_->AddCommitsFromSync(std::move(commit_id_and_bytes), ChangeSource::CLOUD,
+                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
+                                                 &commits_from_sync_status, &missing_ids));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(commits_from_sync_called);
+  EXPECT_EQ(commits_from_sync_status, Status::INTERNAL_NOT_FOUND);
+
+  // The commit id to root identifier mapping is still available.
+  ObjectIdentifier root_id_from_storage;
+  PageStorageImplAccessorForTest::GetCommitRootIdentifier(
+      storage_, commit_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &root_id_from_storage));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(root_id_from_storage, root_id);
 }
 
 }  // namespace
