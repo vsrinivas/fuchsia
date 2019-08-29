@@ -23,7 +23,8 @@ esac
 
 device_addr="$(get-fuchsia-device-addr)"
 if [[ -z "${device_addr}" ]]; then
-  echo >&2 "Device not found"
+  fx-error "Multiple devices or no device found. " \
+    "Try \"fx -d=DEVICE_NAME shell\" or \"fx set-device DEVICE_NAME\""
   exit 1
 fi
 # Note: I know there are people who don't like the host-key message, but DO NOT
