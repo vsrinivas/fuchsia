@@ -23,12 +23,12 @@ class EffectsProcessor {
   EffectsProcessor() = default;
 
   // Allow move.
-  EffectsProcessor(EffectsProcessor&& o) noexcept;
-  EffectsProcessor& operator=(EffectsProcessor&& o) noexcept;
 
-  // Disallow copy.
+  // Disallow copy/move.
   EffectsProcessor(const EffectsProcessor&) = delete;
   EffectsProcessor& operator=(const EffectsProcessor&) = delete;
+  EffectsProcessor(EffectsProcessor&& o) = delete;
+  EffectsProcessor& operator=(EffectsProcessor&& o) = delete;
 
   // Adds an `Effect` to the end of the queue of effects included in this processor.
   //

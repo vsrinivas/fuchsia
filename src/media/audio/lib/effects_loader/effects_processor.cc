@@ -8,23 +8,6 @@
 
 namespace media::audio {
 
-EffectsProcessor::EffectsProcessor(EffectsProcessor&& o) noexcept
-    : effects_chain_(std::move(o.effects_chain_)),
-      channels_in_(o.channels_in_),
-      channels_out_(o.channels_out_) {
-  o.channels_in_ = 0;
-  o.channels_out_ = 0;
-}
-
-EffectsProcessor& EffectsProcessor::operator=(EffectsProcessor&& o) noexcept {
-  effects_chain_ = std::move(o.effects_chain_);
-  channels_in_ = o.channels_in_;
-  channels_out_ = o.channels_out_;
-  o.channels_in_ = 0;
-  o.channels_out_ = 0;
-  return *this;
-}
-
 // Insert an effect instance at the end of the chain.
 zx_status_t EffectsProcessor::AddEffect(Effect e) {
   FXL_DCHECK(e);
