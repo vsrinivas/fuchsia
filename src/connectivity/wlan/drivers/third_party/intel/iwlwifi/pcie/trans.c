@@ -38,6 +38,9 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <ddk/protocol/pci.h>
+#include <hw/pci.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"
@@ -1557,20 +1560,19 @@ static int iwl_trans_pcie_d3_resume(struct iwl_trans* trans, enum iwl_d3_status*
   return -1;
 }
 
-#if 0   // NEEDS_PORTING
-static void iwl_pcie_set_interrupt_capa(struct pci_dev* pdev, struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    int max_irqs, num_irqs, i, ret;
-    uint16_t pci_cmd;
+static zx_status_t iwl_pcie_set_interrupt_capa(struct iwl_trans* trans) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
+  // MSI-X is not yet supported.
+#if 0   // NEEDS_PORTING
     if (!trans->cfg->mq_rx_supported || iwlwifi_mod_params.disable_msix) { goto enable_msi; }
 
-    max_irqs = min_t(uint32_t, num_online_cpus() + 2, IWL_MAX_RX_HW_QUEUES);
-    for (i = 0; i < max_irqs; i++) {
+    int max_irqs = min_t(uint32_t, num_online_cpus() + 2, IWL_MAX_RX_HW_QUEUES);
+    for (int i = 0; i < max_irqs; i++) {
         trans_pcie->msix_entries[i].entry = i;
     }
 
-    num_irqs =
+    int num_irqs =
         pci_enable_msix_range(pdev, trans_pcie->msix_entries, MSIX_MIN_INTERRUPT_VECTORS, max_irqs);
     if (num_irqs < 0) {
         IWL_DEBUG_INFO(trans, "Failed to enable msi-x mode (ret %d). Moving to msi mode.\n",
@@ -1602,20 +1604,26 @@ static void iwl_pcie_set_interrupt_capa(struct pci_dev* pdev, struct iwl_trans* 
     trans_pcie->alloc_vecs = num_irqs;
     trans_pcie->msix_enabled = true;
     return;
-
 enable_msi:
-    ret = pci_enable_msi(pdev);
-    if (ret) {
-        dev_err(&pdev->dev, "pci_enable_msi failed - %d\n", ret);
-        /* enable rfkill interrupt: hw bug w/a */
-        pci_read_config_word(pdev, PCI_COMMAND, &pci_cmd);
-        if (pci_cmd & PCI_COMMAND_INTX_DISABLE) {
-            pci_cmd &= ~PCI_COMMAND_INTX_DISABLE;
-            pci_write_config_word(pdev, PCI_COMMAND, pci_cmd);
-        }
-    }
+#endif  // NEEDS_PORTING
+
+  uint32_t irq_count = 0;
+  if ((pci_query_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_MSI, &irq_count) == ZX_OK) &&
+      (pci_set_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_MSI, 1) == ZX_OK)) {
+    IWL_DEBUG_INFO(trans, "Using MSI mode\n");
+    return ZX_OK;
+  }
+
+  if ((pci_query_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_LEGACY, &irq_count) == ZX_OK) &&
+      (pci_set_irq_mode(trans_pcie->pci, ZX_PCIE_IRQ_MODE_LEGACY, 1) == ZX_OK)) {
+    IWL_DEBUG_INFO(trans, "Using legacy IRQ mode\n");
+    return ZX_OK;
+  }
+
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_pcie_irq_set_affinity(struct iwl_trans* trans) {
     int iter_rx_q, i, ret, cpu, offset;
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -3392,9 +3400,18 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
     }
   }
 #endif
-#if 0  // NEEDS_PORTING
-    iwl_pcie_set_interrupt_capa(pdev, trans);
-#endif  // NEEDS_PORTING
+
+  // Setup interrupts.
+  status = iwl_pcie_set_interrupt_capa(trans);
+  if (status != ZX_OK) {
+    IWL_ERR(trans, "Failed to set interrupt capabilities: %s\n", zx_status_get_string(status));
+    goto out_no_pci;
+  }
+  status = pci_map_interrupt(trans_pcie->pci, 0, &trans_pcie->irq_handle);
+  if (status != ZX_OK) {
+    IWL_ERR(trans, "Failed to map interrupt: %s\n", zx_status_get_string(status));
+    goto out_no_pci;
+  }
 
   trans->hw_id = (device->device_id << 16) + device->subsystem_device_id;
   snprintf(trans->hw_id_str, sizeof(trans->hw_id_str), "PCI ID: 0x%04X:0x%04X", device->device_id,

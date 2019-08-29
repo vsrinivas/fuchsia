@@ -547,6 +547,7 @@ struct iwl_trans_pcie {
   bool debug_rfkill;
   struct isr_statistics isr_stats;
 
+  zx_handle_t irq_handle;
   mtx_t irq_lock;
   mtx_t mutex;
   uint32_t inta_mask;
