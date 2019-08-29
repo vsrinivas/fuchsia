@@ -35,7 +35,7 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
   }
 
   // Node implementation.
-  const char* label() const override { return "stream source sink"; }
+  const char* label() const override { return "simple stream sink"; }
 
   void Dump(std::ostream& os) const override;
 

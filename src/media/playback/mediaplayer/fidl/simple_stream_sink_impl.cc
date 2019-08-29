@@ -4,6 +4,7 @@
 
 #include "src/media/playback/mediaplayer/fidl/simple_stream_sink_impl.h"
 
+#include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 
 namespace media_player {
@@ -32,8 +33,19 @@ SimpleStreamSinkImpl::~SimpleStreamSinkImpl() {
 
 void SimpleStreamSinkImpl::Dump(std::ostream& os) const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  os << label() << fostr::Indent;
   Node::Dump(os);
-  // TODO(dalesat): More.
+  os << fostr::NewLine << "flushing: " << flushing_;
+  os << fostr::NewLine << "last pts: " << AsNs(pts_);
+  os << fostr::NewLine << "payload vmos:";
+  for (auto& [id, info] : payload_vmo_infos_by_id_) {
+    os << fostr::NewLine << "[" << id << "] " << info.vmo_;
+    if (info.packet_count_ != 0) {
+      os << "(" << info.packet_count_ << " packets outstanding)";
+    }
+  }
+
+  os << fostr::Outdent;
 }
 
 void SimpleStreamSinkImpl::ConfigureConnectors() {
