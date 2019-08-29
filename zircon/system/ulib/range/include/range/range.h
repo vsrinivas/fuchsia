@@ -188,6 +188,22 @@ bool Mergable(const R& x, const R& y) {
   return Adjacent(x, y) || Overlap(x, y);
 }
 
+// Returns true if |x| contains |y|.
+// Ex.
+//    ASSERT_TRUE(Contains(Range(1, 10). Range(4, 8)));
+//    ASSERT_TRUE(Contains(Range(1, 10). Range(1, 10)));
+//    ASSERT_FALSE(Contains(Range(4, 8). Range(1, 10)));
+//    ASSERT_FALSE(Contains(Range(1, 10). Range(5, 11)));
+//    ASSERT_FALSE(Contains(Range(4, 8). Range(1, 5)));
+template <typename R>
+bool Contains(const R& x, const R& y) {
+  if (x.Length() == 0 || y.Length() == 0) {
+    return false;
+  }
+
+  return (x.Start() <= y.Start() && x.End() >= y.End());
+}
+
 extern template class Range<uint64_t>;
 extern template bool Overlap<Range<uint64_t>>(const Range<uint64_t>& x, const Range<uint64_t>& y);
 extern template bool Adjacent<Range<uint64_t>>(const Range<uint64_t>& x, const Range<uint64_t>& y);

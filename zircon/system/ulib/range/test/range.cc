@@ -335,6 +335,26 @@ TEST(MergeTest, MergeWithItself) {
   EXPECT_EQ(merged, x);
 }
 
+TEST(ContainsTest, ContainingRange) {
+  ASSERT_TRUE(Contains(Range<uint64_t>(1, 10), Range<uint64_t>(4, 8)));
+}
+
+TEST(ContainsTest, SelfContained) {
+  ASSERT_TRUE(Contains(Range<uint64_t>(1, 10), Range<uint64_t>(1, 10)));
+}
+
+TEST(ContainsTest, ContainedLargerThanContainer) {
+  ASSERT_FALSE(Contains(Range<uint64_t>(4, 8), Range<uint64_t>(1, 10)));
+}
+
+TEST(ContainsTest, ContainerEndSmallerThanContainedEnd) {
+  ASSERT_FALSE(Contains(Range<uint64_t>(1, 10), Range<uint64_t>(5, 11)));
+}
+
+TEST(ContainsTest, ContainerStartLargerThanContainedStart) {
+  ASSERT_FALSE(Contains(Range<uint64_t>(4, 8), Range<uint64_t>(1, 5)));
+}
+
 TEST(CustomRangeTest, CustomKey) {
   Range<uint32_t> range(0, 10);
   EXPECT_EQ(0, range.Start());
@@ -420,16 +440,21 @@ TEST(CustomRangeTest, RejectedMergesDoNotModifyRange) {
   };
   using RangeWithTraits = Range<uint64_t, Container, Traits>;
 
-  Container c1, c2 = {};
+  Container c1, c2 = {}, c3;
   c1.start_ = 0;
   c1.end_ = 5;
   c2.start_ = 5;
   c2.end_ = 10;
+  c3.start_ = 1;
+  c3.end_ = 3;
   RangeWithTraits range1(std::move(c1));
   RangeWithTraits range2(std::move(c2));
+  RangeWithTraits range3(std::move(c3));
 
   EXPECT_TRUE(Adjacent(range1, range2));
   EXPECT_TRUE(Mergable(range1, range2));
+  EXPECT_TRUE(Contains(range1, range3));
+  EXPECT_FALSE(Contains(range2, range3));
 
   ASSERT_STATUS(ZX_ERR_INTERNAL, range1.Merge(range2));
 
