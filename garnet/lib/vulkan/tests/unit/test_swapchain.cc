@@ -4,16 +4,17 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl_test_base.h>
-#include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/channel.h>
-#include <vulkan/vulkan.h>
 
 #include <chrono>
 #include <mutex>
 #include <set>
+
+#include <gtest/gtest.h>
+#include <vulkan/vulkan.h>
 
 class TestSwapchain {
  public:
@@ -156,8 +157,15 @@ class TestSwapchain {
     return create_swapchain_khr_(vk_device_, &create_info, nullptr, swapchain_out);
   }
 
-  void Surface() {
+  void Surface(bool use_dynamic_symbol) {
     ASSERT_TRUE(init_);
+
+    PFN_vkCreateImagePipeSurfaceFUCHSIA f_vkCreateImagePipeSurfaceFUCHSIA =
+        use_dynamic_symbol
+            ? reinterpret_cast<PFN_vkCreateImagePipeSurfaceFUCHSIA>(
+                  vkGetInstanceProcAddr(vk_instance_, "vkCreateImagePipeSurfaceFUCHSIA"))
+            : vkCreateImagePipeSurfaceFUCHSIA;
+    ASSERT_TRUE(f_vkCreateImagePipeSurfaceFUCHSIA);
 
     zx::channel endpoint0, endpoint1;
     EXPECT_EQ(ZX_OK, zx::channel::create(0, &endpoint0, &endpoint1));
@@ -169,7 +177,7 @@ class TestSwapchain {
     };
     VkSurfaceKHR surface;
     EXPECT_EQ(VK_SUCCESS,
-              vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface));
+              f_vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface));
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
@@ -217,7 +225,17 @@ TEST_P(SwapchainTest, Surface) {
     return;
   ASSERT_TRUE(test.init_);
 
-  test.Surface();
+  test.Surface(false);
+}
+
+TEST_P(SwapchainTest, SurfaceDynamicSymbol) {
+  const bool protected_memory = GetParam();
+  TestSwapchain test(protected_memory);
+  if (protected_memory && !test.protected_memory_is_supported_)
+    return;
+  ASSERT_TRUE(test.init_);
+
+  test.Surface(true);
 }
 
 TEST_P(SwapchainTest, Create) {
