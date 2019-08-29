@@ -64,11 +64,11 @@ zx_status_t RebindBlockDevice(DeviceRef* device) {
 }
 
 fidl::BytePart ToBytePart(fbl::Array<uint8_t>* message) {
-  return fidl::BytePart(message->get(), static_cast<uint32_t>(message->size()));
+  return fidl::BytePart(message->data(), static_cast<uint32_t>(message->size()));
 }
 
 fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
-  return fidl::VectorView<uint8_t>(data.size(), const_cast<uint8_t*>(data.get()));
+  return fidl::VectorView<uint8_t>(data.size(), const_cast<uint8_t*>(data.data()));
 }
 
 using FidlGuid = fuchsia_hardware_block_partition_GUID;
@@ -164,14 +164,14 @@ void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) 
 
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
   ASSERT_OK(result->s);
-  memcpy(out_data->get(), result->data.data(), result->data.count());
+  memcpy(out_data->data(), result->data.data(), result->data.count());
 }
 
 void BlockDeviceAdapter::CheckContentsAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
   ASSERT_GT(data.size(), 0, "data::size must be greater than 0.");
   fbl::Array<uint8_t> device_data(new uint8_t[data.size()], data.size());
   ASSERT_NO_FAILURES(ReadAt(offset, &device_data));
-  ASSERT_BYTES_EQ(device_data.get(), data.get(), data.size());
+  ASSERT_BYTES_EQ(device_data.data(), data.data(), data.size());
 }
 
 zx_status_t BlockDeviceAdapter::WaitUntilVisible() const {

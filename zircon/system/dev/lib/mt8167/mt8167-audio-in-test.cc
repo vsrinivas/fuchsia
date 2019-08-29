@@ -25,11 +25,11 @@ class MtAudioInDeviceTest : public MtAudioInDevice {
         fbl::Array(new ddk_mock::MockMmioReg[kClockRegSize], kClockRegSize);
     static fbl::Array<ddk_mock::MockMmioReg> backup_pll_mocks =
         fbl::Array(new ddk_mock::MockMmioReg[kPllRegSize], kPllRegSize);
-    static ddk_mock::MockMmioRegRegion backup_audio_region(backup_audio_mocks.get(),
+    static ddk_mock::MockMmioRegRegion backup_audio_region(backup_audio_mocks.data(),
                                                            sizeof(uint32_t), kAudioRegSize);
-    static ddk_mock::MockMmioRegRegion backup_clock_region(backup_clock_mocks.get(),
+    static ddk_mock::MockMmioRegRegion backup_clock_region(backup_clock_mocks.data(),
                                                            sizeof(uint32_t), kClockRegSize);
-    static ddk_mock::MockMmioRegRegion backup_pll_region(backup_pll_mocks.get(), sizeof(uint32_t),
+    static ddk_mock::MockMmioRegRegion backup_pll_region(backup_pll_mocks.data(), sizeof(uint32_t),
                                                          kPllRegSize);
     ddk::MmioBuffer b1(audio_region ? audio_region->GetMmioBuffer()
                                     : backup_audio_region.GetMmioBuffer());
@@ -63,8 +63,8 @@ TEST(Mt8167AudioInTest, SetRate44100Based) {
   fbl::Array<ddk_mock::MockMmioReg> pll_mocks =
       fbl::Array(new ddk_mock::MockMmioReg[kPllRegSize], kPllRegSize);
 
-  ddk_mock::MockMmioRegRegion clock_region(clock_mocks.get(), sizeof(uint32_t), kClockRegSize);
-  ddk_mock::MockMmioRegRegion pll_region(pll_mocks.get(), sizeof(uint32_t), kPllRegSize);
+  ddk_mock::MockMmioRegRegion clock_region(clock_mocks.data(), sizeof(uint32_t), kClockRegSize);
+  ddk_mock::MockMmioRegRegion pll_region(pll_mocks.data(), sizeof(uint32_t), kPllRegSize);
 
   pll_mocks[0x180 / 4].ExpectRead(0x0000'0000).ExpectWrite(0x0000'0001);    // Enable Aud1.
   clock_mocks[0x044 / 4].ExpectRead(0xffff'ffff).ExpectWrite(0xfffd'ffff);  // Use Aud1.
@@ -89,8 +89,8 @@ TEST(Mt8167AudioInTest, SetRate48000Based) {
   fbl::Array<ddk_mock::MockMmioReg> pll_mocks =
       fbl::Array(new ddk_mock::MockMmioReg[kPllRegSize], kPllRegSize);
 
-  ddk_mock::MockMmioRegRegion clock_region(clock_mocks.get(), sizeof(uint32_t), kClockRegSize);
-  ddk_mock::MockMmioRegRegion pll_region(pll_mocks.get(), sizeof(uint32_t), kPllRegSize);
+  ddk_mock::MockMmioRegRegion clock_region(clock_mocks.data(), sizeof(uint32_t), kClockRegSize);
+  ddk_mock::MockMmioRegRegion pll_region(pll_mocks.data(), sizeof(uint32_t), kPllRegSize);
 
   pll_mocks[0x1a0 / 4].ExpectRead(0x0000'0000).ExpectWrite(0x0000'0001);    // Enable Aud2.
   clock_mocks[0x044 / 4].ExpectRead(0x0000'0000).ExpectWrite(0x0002'0000);  // Use Aud2.
@@ -112,7 +112,7 @@ TEST(Mt8167AudioInTest, SetRate48000Based) {
 TEST(Mt8167AudioInTest, Set32Bits) {
   fbl::Array<ddk_mock::MockMmioReg> audio_mocks =
       fbl::Array(new ddk_mock::MockMmioReg[kAudioRegSize], kAudioRegSize);
-  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.get(), sizeof(uint32_t), kAudioRegSize);
+  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.data(), sizeof(uint32_t), kAudioRegSize);
 
   audio_mocks[0x588 / 4].ExpectWrite(0x1f00'230d);  // TDM IN enabled, i2s, 32 bits, 32 BCK, 2ch.
   auto dev = MtAudioInDeviceTest::Create(&audio_region, nullptr, nullptr);
@@ -124,7 +124,7 @@ TEST(Mt8167AudioInTest, Set32Bits) {
 TEST(Mt8167AudioInTest, Set24Bits) {
   fbl::Array<ddk_mock::MockMmioReg> audio_mocks =
       fbl::Array(new ddk_mock::MockMmioReg[kAudioRegSize], kAudioRegSize);
-  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.get(), sizeof(uint32_t), kAudioRegSize);
+  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.data(), sizeof(uint32_t), kAudioRegSize);
 
   audio_mocks[0x588 / 4].ExpectWrite(0x1700'120d);  // TDM IN enabled, i2s, 24 bits, 24 BCK, 2ch.
   auto dev = MtAudioInDeviceTest::Create(&audio_region, nullptr, nullptr);
@@ -136,7 +136,7 @@ TEST(Mt8167AudioInTest, Set24Bits) {
 TEST(Mt8167AudioInTest, Set16Bits) {
   fbl::Array<ddk_mock::MockMmioReg> audio_mocks =
       fbl::Array(new ddk_mock::MockMmioReg[kAudioRegSize], kAudioRegSize);
-  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.get(), sizeof(uint32_t), kAudioRegSize);
+  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.data(), sizeof(uint32_t), kAudioRegSize);
 
   audio_mocks[0x588 / 4].ExpectWrite(0x0f00'010d);  // TDM IN enabled, i2s, 16 bits, 16 BCK, 2ch.
   auto dev = MtAudioInDeviceTest::Create(&audio_region, nullptr, nullptr);
@@ -148,7 +148,7 @@ TEST(Mt8167AudioInTest, Set16Bits) {
 TEST(Mt8167AudioInTest, InitializeRegisters) {
   fbl::Array<ddk_mock::MockMmioReg> audio_mocks =
       fbl::Array(new ddk_mock::MockMmioReg[kAudioRegSize], kAudioRegSize);
-  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.get(), sizeof(uint32_t), kAudioRegSize);
+  ddk_mock::MockMmioRegRegion audio_region(audio_mocks.data(), sizeof(uint32_t), kAudioRegSize);
 
   audio_mocks[0x010 / 4].ExpectRead(0x0000'0000).ExpectWrite(0x0000'0001);  // Set AFE on.
   audio_mocks[0x000 / 4]

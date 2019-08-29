@@ -241,12 +241,12 @@ zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results, bool
     if (found_addrs != mapped_addrs_count) {
       return ZX_ERR_INVALID_ARGS;
     }
-    memcpy(mapped_addrs, pmo_addrs.get(), found_addrs * sizeof(dev_vaddr_t));
+    memcpy(mapped_addrs, pmo_addrs.data(), found_addrs * sizeof(dev_vaddr_t));
   } else if (contiguous) {
     if (mapped_addrs_count != 1 || !pinned_vmo_.vmo()->is_contiguous()) {
       return ZX_ERR_INVALID_ARGS;
     }
-    *mapped_addrs = pmo_addrs.get()[0];
+    *mapped_addrs = pmo_addrs[0];
   } else {
     const size_t num_pages = pinned_vmo_.size() / PAGE_SIZE;
     if (num_pages != mapped_addrs_count) {

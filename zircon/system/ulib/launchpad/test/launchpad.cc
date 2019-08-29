@@ -123,7 +123,7 @@ void RunWithArgsEnvHandles(unsigned int num_args, unsigned int num_env, unsigned
   for (unsigned int i = 3; i < argc; ++i) {
     argv[i] = "-v";
   }
-  ASSERT_OK(launchpad_set_args(lp, argc, argv.get()), "%s", launchpad_error_message(lp));
+  ASSERT_OK(launchpad_set_args(lp, argc, argv.data()), "%s", launchpad_error_message(lp));
   ASSERT_OK(launchpad_load_from_file(lp, argv[0]), "%s", launchpad_error_message(lp));
 
   // Set the env.
@@ -135,7 +135,7 @@ void RunWithArgsEnvHandles(unsigned int num_args, unsigned int num_env, unsigned
     envp[i] = "A=B";
   }
   envp[num_env - 1] = NULL;
-  ASSERT_OK(launchpad_set_environ(lp, envp.get()), "%s", launchpad_error_message(lp));
+  ASSERT_OK(launchpad_set_environ(lp, envp.data()), "%s", launchpad_error_message(lp));
 
   // Set some handles.
   zx::vmo vmo;

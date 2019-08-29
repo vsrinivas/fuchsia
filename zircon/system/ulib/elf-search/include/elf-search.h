@@ -19,7 +19,7 @@ class ArrayRef {
   ArrayRef() = default;
   template <size_t N>
   ArrayRef(const T (&arr)[N]) : ptr_(arr), sz_(N) {}
-  ArrayRef(const fbl::Array<T>& arr) : ptr_(arr.get()), sz_(arr.size()) {}
+  ArrayRef(const fbl::Array<T>& arr) : ptr_(arr.data()), sz_(arr.size()) {}
   ArrayRef(const T* ptr, size_t sz) : ptr_(ptr), sz_(sz) {}
 
   bool empty() const { return sz_ == 0; }

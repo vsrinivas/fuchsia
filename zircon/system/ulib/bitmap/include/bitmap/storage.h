@@ -36,8 +36,8 @@ class DefaultStorage {
     storage_.reset(arr, size);
     return ZX_OK;
   }
-  void* GetData() { return storage_.get(); }
-  const void* GetData() const { return storage_.get(); }
+  void* GetData() { return storage_.data(); }
+  const void* GetData() const { return storage_.data(); }
 
  private:
   fbl::Array<uint8_t> storage_;

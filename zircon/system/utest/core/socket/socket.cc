@@ -139,17 +139,17 @@ TEST(SocketTest, Signals) {
 
     const size_t kAllSize = 128 * 1024;
     fbl::Array<char> big_buf(new char[kAllSize], kAllSize);
-    ASSERT_NOT_NULL(big_buf.get());
+    ASSERT_NOT_NULL(big_buf.data());
 
-    memset(big_buf.get(), 0x66, kAllSize);
+    memset(big_buf.data(), 0x66, kAllSize);
 
-    EXPECT_OK(local.write(0u, big_buf.get(), kAllSize / 16, &count));
+    EXPECT_OK(local.write(0u, big_buf.data(), kAllSize / 16, &count));
     EXPECT_EQ(count, kAllSize / 16);
 
     EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
     EXPECT_EQ(GetSignals(remote), ZX_SOCKET_READABLE | ZX_SOCKET_WRITABLE);
 
-    EXPECT_OK(remote.read(0u, big_buf.get(), kAllSize, &count));
+    EXPECT_OK(remote.read(0u, big_buf.data(), kAllSize, &count));
     EXPECT_EQ(count, kAllSize / 16);
 
     EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
@@ -287,7 +287,7 @@ TEST(SocketTest, SetThreshholdsAndCheckSignals) {
    */
   bufsize = write_threshold - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 1);
   fbl::Array<char> buf2(new char[bufsize], bufsize);
-  EXPECT_OK(remote.write(0u, buf2.get(), bufsize, &count));
+  EXPECT_OK(remote.write(0u, buf2.data(), bufsize, &count));
   EXPECT_EQ(count, bufsize);
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_READ_THRESHOLD);
   EXPECT_EQ(GetSignals(local_clone),
@@ -301,7 +301,7 @@ TEST(SocketTest, SetThreshholdsAndCheckSignals) {
    */
   bufsize += 10;
   buf2.reset(new char[bufsize], bufsize);
-  EXPECT_OK(local.read(0u, buf2.get(), bufsize, &count));
+  EXPECT_OK(local.read(0u, buf2.data(), bufsize, &count));
   EXPECT_EQ(count, bufsize);
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
   EXPECT_EQ(GetSignals(local_clone), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
@@ -550,7 +550,7 @@ TEST(SocketTest, ShortWrite) {
   const size_t buffer_size = 256 * 1024 + 1;
   fbl::Array<char> buffer(new char[buffer_size], buffer_size);
   size_t written = ~(size_t)0;  // This should get overwritten by the syscall.
-  EXPECT_OK(local.write(0u, buffer.get(), buffer_size, &written));
+  EXPECT_OK(local.write(0u, buffer.data(), buffer_size, &written));
   EXPECT_LT(written, buffer_size);
 }
 
@@ -661,10 +661,10 @@ TEST(SocketTest, DatagramNoShortWrite) {
   EXPECT_GT(buffer_size, 0);
 
   fbl::Array<char> buffer(new char[buffer_size]{}, buffer_size);
-  EXPECT_NOT_NULL(buffer.get());
+  EXPECT_NOT_NULL(buffer.data());
 
   size_t written = ~0u;
-  EXPECT_EQ(local.write(0u, buffer.get(), buffer_size, &written), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(local.write(0u, buffer.data(), buffer_size, &written), ZX_ERR_OUT_OF_RANGE);
   // Since the syscall failed, it should not have overwritten this output
   // parameter.
   EXPECT_EQ(written, ~0u);

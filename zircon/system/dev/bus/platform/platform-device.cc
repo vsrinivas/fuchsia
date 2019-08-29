@@ -516,7 +516,7 @@ zx_status_t PlatformDevice::Start() {
       fbl::Array<uint8_t> data;
       status = bus_->GetBootItem(metadata.zbi_type, metadata.zbi_extra, &data);
       if (status == ZX_OK) {
-        status = DdkAddMetadata(metadata.zbi_type, data.get(), data.size());
+        status = DdkAddMetadata(metadata.zbi_type, data.data(), data.size());
       }
       if (status != ZX_OK) {
         zxlogf(WARN, "%s failed to add metadata for new device\n", __func__);

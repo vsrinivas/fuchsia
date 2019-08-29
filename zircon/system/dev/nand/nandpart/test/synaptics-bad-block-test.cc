@@ -238,7 +238,7 @@ TEST_F(SynapticsBadBlockTest, GetBadBlockList) {
   ASSERT_EQ(bad_blocks.size(), 4);
 
   constexpr uint32_t expected_bad_blocks[] = {2, 4, 5, 11};
-  EXPECT_BYTES_EQ(bad_blocks.get(), expected_bad_blocks, sizeof(expected_bad_blocks));
+  EXPECT_BYTES_EQ(bad_blocks.data(), expected_bad_blocks, sizeof(expected_bad_blocks));
 }
 
 TEST_F(SynapticsBadBlockTest, MarkBlockBad) {

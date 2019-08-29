@@ -337,7 +337,7 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
   actual = 0;
-  status = device_get_metadata(parent, DEVICE_METADATA_BUTTONS_BUTTONS, buttons.get(),
+  status = device_get_metadata(parent, DEVICE_METADATA_BUTTONS_BUTTONS, buttons.data(),
                                buttons.size() * sizeof(buttons_button_config_t), &actual);
   if (status != ZX_OK || actual != buttons.size() * sizeof(buttons_button_config_t)) {
     zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
@@ -357,7 +357,7 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
   actual = 0;
-  status = device_get_metadata(parent, DEVICE_METADATA_BUTTONS_GPIOS, configs.get(),
+  status = device_get_metadata(parent, DEVICE_METADATA_BUTTONS_GPIOS, configs.data(),
                                configs.size() * sizeof(buttons_gpio_config_t), &actual);
   if (status != ZX_OK || actual != configs.size() * sizeof(buttons_gpio_config_t)) {
     zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);

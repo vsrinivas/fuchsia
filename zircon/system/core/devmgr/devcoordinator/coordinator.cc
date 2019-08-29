@@ -543,7 +543,7 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     return ZX_ERR_NO_MEMORY;
   }
   static_assert(sizeof(zx_device_prop_t) == sizeof(props_data[0]));
-  memcpy(props.get(), props_data, props_count * sizeof(zx_device_prop_t));
+  memcpy(props.data(), props_data, props_count * sizeof(zx_device_prop_t));
 
   fbl::AllocChecker ac;
   fbl::String name_str(name, &ac);

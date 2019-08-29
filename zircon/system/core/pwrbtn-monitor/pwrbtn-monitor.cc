@@ -117,14 +117,14 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
   }
 
   size_t actual_size;
-  status = fuchsia_hardware_input_DeviceGetReportDesc(caller.borrow_channel(), raw_desc.get(),
+  status = fuchsia_hardware_input_DeviceGetReportDesc(caller.borrow_channel(), raw_desc.data(),
                                                       raw_desc.size(), &actual_size);
   if (status != ZX_OK || actual_size != raw_desc.size()) {
     return ZX_OK;
   }
 
   hid::DeviceDescriptor* desc;
-  if (hid::ParseReportDescriptor(raw_desc.get(), raw_desc.size(), &desc) != hid::kParseOk) {
+  if (hid::ParseReportDescriptor(raw_desc.data(), raw_desc.size(), &desc) != hid::kParseOk) {
     return ZX_OK;
   }
   auto cleanup_desc = fbl::MakeAutoCall([desc]() { hid::FreeDeviceDescriptor(desc); });
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
 
   // Watch the power button device for reports
   while (true) {
-    ssize_t r = read(info.fd.get(), report.get(), report.size());
+    ssize_t r = read(info.fd.get(), report.data(), report.size());
     if (r < 0) {
       printf("pwrbtn-monitor: got read error %zd, bailing\n", r);
       return 1;

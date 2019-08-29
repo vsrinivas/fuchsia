@@ -32,9 +32,9 @@ TEST(FtlTest, TrivialFlush) {
 
 bool IsEmptyPage(FtlShell* ftl, uint32_t page_num) {
   fbl::Array<uint8_t> buffer(new uint8_t[kPageSize], kPageSize);
-  memset(buffer.get(), 0, buffer.size());
+  memset(buffer.data(), 0, buffer.size());
 
-  if (ftl->volume()->Read(page_num, 1, buffer.get()) != ZX_OK) {
+  if (ftl->volume()->Read(page_num, 1, buffer.data()) != ZX_OK) {
     return false;
   }
 
@@ -66,12 +66,12 @@ TEST(FtlTest, ReadWrite) {
   ASSERT_TRUE(ftl.Init(kDefaultOptions));
 
   fbl::Array<uint8_t> buffer(new uint8_t[kPageSize * 2], kPageSize * 2);
-  memset(buffer.get(), 0x55, buffer.size());
+  memset(buffer.data(), 0x55, buffer.size());
 
-  ASSERT_OK(ftl.volume()->Write(150, 2, buffer.get()));
+  ASSERT_OK(ftl.volume()->Write(150, 2, buffer.data()));
 
-  memset(buffer.get(), 0, buffer.size());
-  ASSERT_OK(ftl.volume()->Read(150, 2, buffer.get()));
+  memset(buffer.data(), 0, buffer.size());
+  ASSERT_OK(ftl.volume()->Read(150, 2, buffer.data()));
 
   for (uint32_t i = 0; i < buffer.size(); i++) {
     ASSERT_EQ(0x55, buffer[i]);
@@ -80,9 +80,9 @@ TEST(FtlTest, ReadWrite) {
 
 zx_status_t WritePage(FtlShell* ftl, uint32_t page_num) {
   fbl::Array<uint8_t> buffer(new uint8_t[kPageSize], kPageSize);
-  memset(buffer.get(), 0x55, buffer.size());
+  memset(buffer.data(), 0x55, buffer.size());
 
-  return ftl->volume()->Write(page_num, 1, buffer.get());
+  return ftl->volume()->Write(page_num, 1, buffer.data());
 }
 
 TEST(FtlTest, ReAttach) {
@@ -90,21 +90,21 @@ TEST(FtlTest, ReAttach) {
   ASSERT_TRUE(ftl.Init(kDefaultOptions));
 
   fbl::Array<uint8_t> buffer(new uint8_t[kPageSize * 2], kPageSize * 2);
-  memset(buffer.get(), 0x55, buffer.size());
+  memset(buffer.data(), 0x55, buffer.size());
 
-  ASSERT_OK(ftl.volume()->Write(150, 2, buffer.get()));
+  ASSERT_OK(ftl.volume()->Write(150, 2, buffer.data()));
 
   ASSERT_TRUE(ftl.ReAttach());
   ASSERT_TRUE(IsEmptyPage(&ftl, 150));
 
   // Try again, this time flushing before removing the volume.
-  ASSERT_OK(ftl.volume()->Write(150, 2, buffer.get()));
+  ASSERT_OK(ftl.volume()->Write(150, 2, buffer.data()));
 
   ASSERT_OK(ftl.volume()->Flush());
   ASSERT_TRUE(ftl.ReAttach());
 
-  memset(buffer.get(), 0, buffer.size());
-  ASSERT_OK(ftl.volume()->Read(150, 2, buffer.get()));
+  memset(buffer.data(), 0, buffer.size());
+  ASSERT_OK(ftl.volume()->Read(150, 2, buffer.data()));
 
   for (uint32_t i = 0; i < buffer.size(); i++) {
     ASSERT_EQ(0x55, buffer[i]);
@@ -188,7 +188,7 @@ void FtlTest::SetUp() {
   ASSERT_OK(volume_->Unmount());
 
   write_counters_.reset(new uint8_t[ftl_.num_pages()], ftl_.num_pages());
-  memset(write_counters_.get(), 0, write_counters_.size());
+  memset(write_counters_.data(), 0, write_counters_.size());
 }
 
 void FtlTest::SingleLoop(PageCount write_size) {
@@ -196,11 +196,11 @@ void FtlTest::SingleLoop(PageCount write_size) {
 
   size_t buffer_size = write_size * ftl_.page_size() / sizeof(uint32_t);
   page_buffer_.reset(new uint32_t[buffer_size], buffer_size);
-  memset(page_buffer_.get(), 0, page_buffer_.size() * sizeof(page_buffer_[0]));
+  memset(page_buffer_.data(), 0, page_buffer_.size() * sizeof(page_buffer_[0]));
 
   // Write pages 5 - 10.
   for (uint32_t page = 5; page < 10; page++) {
-    ASSERT_OK(volume_->Write(page, 1, page_buffer_.get()));
+    ASSERT_OK(volume_->Write(page, 1, page_buffer_.data()));
   }
 
   // Mark pages 5 - 10 as unused.
@@ -211,7 +211,7 @@ void FtlTest::SingleLoop(PageCount write_size) {
     uint32_t count = fbl::min(ftl_.num_pages() - page, write_size);
     PrepareBuffer(page, count);
 
-    ASSERT_OK(volume_->Write(page, count, page_buffer_.get()));
+    ASSERT_OK(volume_->Write(page, count, page_buffer_.data()));
     page += count;
   }
 
@@ -223,7 +223,7 @@ void FtlTest::SingleLoop(PageCount write_size) {
     uint32_t page = static_cast<uint32_t>(rand() % ftl_.num_pages());
     PrepareBuffer(page, 1);
 
-    ASSERT_OK(volume_->Write(page, 1, page_buffer_.get()));
+    ASSERT_OK(volume_->Write(page, 1, page_buffer_.data()));
   }
 
   ASSERT_NO_FATAL_FAILURES(CheckVolume(write_size, ftl_.num_pages()));
@@ -237,7 +237,7 @@ void FtlTest::SingleLoop(PageCount write_size) {
 }
 
 void FtlTest::PrepareBuffer(uint32_t page_num, uint32_t write_size) {
-  uint32_t* key_buffer = page_buffer_.get();
+  uint32_t* key_buffer = page_buffer_.data();
 
   for (; write_size; write_size--, page_num++) {
     write_counters_[page_num]++;
@@ -253,10 +253,10 @@ void FtlTest::PrepareBuffer(uint32_t page_num, uint32_t write_size) {
 void FtlTest::CheckVolume(uint32_t write_size, uint32_t total_pages) {
   for (uint32_t page = 0; page < total_pages;) {
     uint32_t count = fbl::min(total_pages - page, write_size);
-    ASSERT_OK(volume_->Read(page, count, page_buffer_.get()), "page %u", page);
+    ASSERT_OK(volume_->Read(page, count, page_buffer_.data()), "page %u", page);
 
     // Verify each page independently.
-    uint32_t* key_buffer = page_buffer_.get();
+    uint32_t* key_buffer = page_buffer_.data();
     uint32_t* end = key_buffer + ftl_.page_size() / sizeof(uint32_t) * count;
     for (; key_buffer < end; page++) {
       // Get 32-bit data unique to most recent page write.
@@ -296,7 +296,7 @@ void FtlExtendTest::SetUpBaseTest() {
   ASSERT_OK(volume_->Unmount());
 
   write_counters_.reset(new uint8_t[ftl_.num_pages()], ftl_.num_pages());
-  memset(write_counters_.get(), 0, write_counters_.size());
+  memset(write_counters_.data(), 0, write_counters_.size());
 }
 
 TEST_F(FtlExtendTest, ExtendVolume) {

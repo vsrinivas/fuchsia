@@ -144,14 +144,14 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
     size_t length = fbl::min(len_remaining, max_transfer);
     len_remaining -= length;
 
-    block_op_t* bop = reinterpret_cast<block_op_t*>(buffer.get() + (block_op_size_ * i));
+    block_op_t* bop = reinterpret_cast<block_op_t*>(buffer.data() + (block_op_size_ * i));
 
     bop->command = command;
     bop->rw.vmo = vmo;
     bop->rw.length = static_cast<uint32_t>(length);
     bop->rw.offset_dev = dev_offset;
     bop->rw.offset_vmo = vmo_offset;
-    memset(buffer.get() + (block_op_size_ * i) + sizeof(block_op_t), 0,
+    memset(buffer.data() + (block_op_size_ * i) + sizeof(block_op_t), 0,
            block_op_size_ - sizeof(block_op_t));
     vmo_offset += length;
     dev_offset += length;
@@ -161,7 +161,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
 
   if (flushing) {
     block_op_t* bop =
-        reinterpret_cast<block_op_t*>(buffer.get() + (block_op_size_ * num_data_txns));
+        reinterpret_cast<block_op_t*>(buffer.data() + (block_op_size_ * num_data_txns));
     memset(bop, 0, sizeof(*bop));
     bop->command = BLOCKIO_FLUSH;
     Queue(bop, IoCallback, &cookie);

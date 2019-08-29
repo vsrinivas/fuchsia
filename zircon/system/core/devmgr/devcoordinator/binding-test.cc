@@ -19,7 +19,7 @@ class MockDevice : public fbl::RefCounted<MockDevice> {
       : parent_(std::move(parent)), protocol_id_(protocol_id) {
     fbl::Array<zx_device_prop_t> props_array(new zx_device_prop_t[props_count], props_count);
     if (props != nullptr) {
-      memcpy(props_array.get(), props, sizeof(props[0]) * props_count);
+      memcpy(props_array.data(), props, sizeof(props[0]) * props_count);
     } else {
       ASSERT_EQ(props_count, 0);
     }
@@ -56,7 +56,7 @@ using devmgr::internal::MatchParts;
 template <size_t N>
 fbl::Array<const zx_bind_inst_t> MakeBindProgram(const zx_bind_inst_t (&insts)[N]) {
   fbl::Array<zx_bind_inst_t> array(new zx_bind_inst_t[N], N);
-  memcpy(array.get(), insts, N * sizeof(insts[0]));
+  memcpy(array.data(), insts, N * sizeof(insts[0]));
   return array;
 }
 

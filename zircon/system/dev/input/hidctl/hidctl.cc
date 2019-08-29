@@ -154,7 +154,7 @@ zx_status_t HidDevice::HidbusGetDescriptor(hid_description_type_t desc_type, voi
   if (data_size < report_desc_.size()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  memcpy(out_data_buffer, report_desc_.get(), report_desc_.size());
+  memcpy(out_data_buffer, report_desc_.data(), report_desc_.size());
   *out_data_actual = report_desc_.size();
   return ZX_OK;
 }

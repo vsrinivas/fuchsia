@@ -141,7 +141,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
   if (context->pending_write) {
     void* data;
     usb_request_mmap(usb_request, &data);
-    memcpy(context->last_transfer->data.get(), data, context->pending_write);
+    memcpy(context->last_transfer->data.data(), data, context->pending_write);
     context->pending_write = 0;
     complete_cb->callback(complete_cb->ctx, usb_request);
     return;
@@ -153,7 +153,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
       auto packet = context->pending_packets.pop_front();
       size_t len =
           usb_request->size < packet->data.size() ? usb_request->size : packet->data.size();
-      usb_request_copy_to(usb_request, packet->data.get(), len, 0);
+      usb_request_copy_to(usb_request, packet->data.data(), len, 0);
       complete_cb->callback(complete_cb->ctx, usb_request);
     }
     return;
@@ -192,7 +192,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           context->csw.dCSWDataResidue = 0;
           context->csw.dCSWTag = cbw.dCBWTag;
           context->csw.bmCSWStatus = CSW_SUCCESS;
-          memcpy(csw.get(), &context->csw, sizeof(context->csw));
+          memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
         }
       };
@@ -242,7 +242,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           context->csw.bmCSWStatus = CSW_SUCCESS;
           context->transfer_lun = cbw.bCBWLUN;
           context->transfer_type = cbw.CBWCB[0];
-          memcpy(csw.get(), &context->csw, sizeof(context->csw));
+          memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
@@ -258,17 +258,17 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
             reply[1] = 0x80;  // Removable
             reply[2] = 6;     // Version SPC-4
             reply[3] = 0x12;  // Response Data Format
-            memcpy(reply.get() + 8, "Google  ", 8);
-            memcpy(reply.get() + 16, "Zircon UMS      ", 16);
-            memcpy(reply.get() + 32, "1.00", 4);
-            memset(reply.get(), 0, UMS_INQUIRY_TRANSFER_LENGTH);
+            memcpy(reply.data() + 8, "Google  ", 8);
+            memcpy(reply.data() + 16, "Zircon UMS      ", 16);
+            memcpy(reply.data() + 32, "1.00", 4);
+            memset(reply.data(), 0, UMS_INQUIRY_TRANSFER_LENGTH);
             context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(reply)));
             // Push CSW
             fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
             context->csw.dCSWDataResidue = 0;
             context->csw.dCSWTag = cbw.dCBWTag;
             context->csw.bmCSWStatus = CSW_SUCCESS;
-            memcpy(csw.get(), &context->csw, sizeof(context->csw));
+            memcpy(csw.data(), &context->csw, sizeof(context->csw));
             context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
           }
           complete_cb->callback(complete_cb->ctx, usb_request);
@@ -280,7 +280,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           context->csw.dCSWDataResidue = 0;
           context->csw.dCSWTag = cbw.dCBWTag;
           context->csw.bmCSWStatus = CSW_SUCCESS;
-          memcpy(csw.get(), &context->csw, sizeof(context->csw));
+          memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
@@ -293,14 +293,14 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
             scsi_read_capacity_16_t scsi;
             scsi.block_length = htobe32(kBlockSize);
             scsi.lba = htobe64((976562L * (1 + cbw.bCBWLUN)) + UINT32_MAX);
-            memcpy(reply.get(), &scsi, sizeof(scsi));
+            memcpy(reply.data(), &scsi, sizeof(scsi));
             context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(reply)));
             // Push CSW
             fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
             context->csw.dCSWDataResidue = 0;
             context->csw.dCSWTag = cbw.dCBWTag;
             context->csw.bmCSWStatus = CSW_SUCCESS;
-            memcpy(csw.get(), &context->csw, sizeof(context->csw));
+            memcpy(csw.data(), &context->csw, sizeof(context->csw));
             context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
           }
           complete_cb->callback(complete_cb->ctx, usb_request);
@@ -316,14 +316,14 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
           if (cbw.bCBWLUN == 3) {
             scsi.lba = -1;
           }
-          memcpy(reply.get(), &scsi, sizeof(scsi));
+          memcpy(reply.data(), &scsi, sizeof(scsi));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(reply)));
           // Push CSW
           fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)], sizeof(ums_csw_t));
           context->csw.dCSWDataResidue = 0;
           context->csw.dCSWTag = cbw.dCBWTag;
           context->csw.bmCSWStatus = CSW_SUCCESS;
-          memcpy(csw.get(), &context->csw, sizeof(context->csw));
+          memcpy(csw.data(), &context->csw, sizeof(context->csw));
           context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
           complete_cb->callback(complete_cb->ctx, usb_request);
           break;
@@ -337,7 +337,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
               fbl::Array<unsigned char> reply(new unsigned char[sizeof(scsi_read_capacity_10_t)],
                                               sizeof(scsi_read_capacity_10_t));
               scsi_mode_sense_6_data_t scsi = {};
-              memcpy(reply.get(), &scsi, sizeof(scsi));
+              memcpy(reply.data(), &scsi, sizeof(scsi));
               context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(reply)));
               // Push CSW
               fbl::Array<unsigned char> csw(new unsigned char[sizeof(ums_csw_t)],
@@ -345,14 +345,14 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
               context->csw.dCSWDataResidue = 0;
               context->csw.dCSWTag = cbw.dCBWTag;
               context->csw.bmCSWStatus = CSW_SUCCESS;
-              memcpy(csw.get(), &context->csw, sizeof(context->csw));
+              memcpy(csw.data(), &context->csw, sizeof(context->csw));
               context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
               complete_cb->callback(complete_cb->ctx, usb_request);
               break;
             }
             case 0x08: {
               fbl::Array<unsigned char> reply(new unsigned char[20], 20);
-              memset(reply.get(), 0, 20);
+              memset(reply.data(), 0, 20);
               reply[6] = 1 << 2;
               context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(reply)));
               // Push CSW
@@ -361,7 +361,7 @@ static void RequestQueue(void* ctx, usb_request_t* usb_request,
               context->csw.dCSWDataResidue = 0;
               context->csw.dCSWTag = cbw.dCBWTag;
               context->csw.bmCSWStatus = CSW_SUCCESS;
-              memcpy(csw.get(), &context->csw, sizeof(context->csw));
+              memcpy(csw.data(), &context->csw, sizeof(context->csw));
               context->pending_packets.push_back(fbl::MakeRefCounted<Packet>(std::move(csw)));
               complete_cb->callback(complete_cb->ctx, usb_request);
               break;
@@ -457,7 +457,7 @@ bool UmsTestRead() {
     uint8_t xfer_type = i == 0 ? UMS_READ10 : i == 3 ? UMS_READ16 : UMS_READ12;
     EXPECT_EQ(i, parent_dev.transfer_lun);
     EXPECT_EQ(xfer_type, parent_dev.transfer_type);
-    EXPECT_EQ(0, memcmp(reinterpret_cast<void*>(mapped), parent_dev.last_transfer->data.get(),
+    EXPECT_EQ(0, memcmp(reinterpret_cast<void*>(mapped), parent_dev.last_transfer->data.data(),
                         parent_dev.last_transfer->data.size()));
   }
   // Unbind
@@ -508,7 +508,7 @@ bool UmsTestWrite() {
     uint8_t xfer_type = i == 0 ? UMS_WRITE10 : i == 3 ? UMS_WRITE16 : UMS_WRITE12;
     EXPECT_EQ(i, parent_dev.transfer_lun);
     EXPECT_EQ(xfer_type, parent_dev.transfer_type);
-    EXPECT_EQ(0, memcmp(reinterpret_cast<void*>(mapped), parent_dev.last_transfer->data.get(),
+    EXPECT_EQ(0, memcmp(reinterpret_cast<void*>(mapped), parent_dev.last_transfer->data.data(),
                         transaction.op.rw.length * kBlockSize));
   }
   // Unbind

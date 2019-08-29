@@ -37,7 +37,7 @@ class UsbComposite : public UsbCompositeType {
 
   inline const usb_device_descriptor_t* device_descriptor() const { return &device_desc_; }
   inline const usb_configuration_descriptor_t* GetConfigurationDescriptor() const {
-    return reinterpret_cast<usb_configuration_descriptor_t*>(config_desc_.get());
+    return reinterpret_cast<usb_configuration_descriptor_t*>(config_desc_.data());
   }
 
  private:

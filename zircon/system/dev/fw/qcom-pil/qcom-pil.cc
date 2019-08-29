@@ -53,7 +53,7 @@ zx_status_t PilDevice::LoadAuthFirmware(size_t fw_n) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   fbl::Array<Elf32_Phdr> phdrs(new Elf32_Phdr[ehdr.e_phnum], ehdr.e_phnum);
-  metadata.read(phdrs.get(), ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf32_Phdr));
+  metadata.read(phdrs.data(), ehdr.e_phoff, ehdr.e_phnum * sizeof(Elf32_Phdr));
 
   // Copy metadata to the intended physical address.
   status = zx_vmo_read(metadata.get(), mmios_[fw_n]->get(), 0, ROUNDUP(metadata_size, PAGE_SIZE));
@@ -223,7 +223,7 @@ zx_status_t PilDevice::Bind() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, fw_.get(), metadata_size, &actual);
+  status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, fw_.data(), metadata_size, &actual);
   if (status != ZX_OK || metadata_size != actual) {
     zxlogf(ERROR, "%s device_get_metadata failed %d\n", __func__, status);
     return status;

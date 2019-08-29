@@ -289,7 +289,7 @@ zx_status_t PlatformBus::GetBootItem(uint32_t type, uint32_t extra, fbl::Array<u
   }
   if (vmo.is_valid()) {
     fbl::Array<uint8_t> data(new uint8_t[length], length);
-    status = vmo.read(data.get(), 0, data.size());
+    status = vmo.read(data.data(), 0, data.size());
     if (status != ZX_OK) {
       return status;
     }
@@ -522,7 +522,7 @@ zx_status_t PlatformBus::Init() {
     return status;
   }
   if (board_data) {
-    status = DdkAddMetadata(DEVICE_METADATA_BOARD_PRIVATE, board_data.get(), board_data.size());
+    status = DdkAddMetadata(DEVICE_METADATA_BOARD_PRIVATE, board_data.data(), board_data.size());
     if (status != ZX_OK) {
       return status;
     }

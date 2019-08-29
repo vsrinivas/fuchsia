@@ -127,9 +127,9 @@ zx_status_t UsbComposite::AddInterfaceAssoc(const usb_interface_assoc_descriptor
 }
 
 zx_status_t UsbComposite::AddInterfaces() {
-  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.get());
+  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data());
   auto* config = reinterpret_cast<const usb_configuration_descriptor_t*>(header);
-  auto* end = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.get() +
+  auto* end = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data() +
                                                                le16toh(config->wTotalLength));
   header = NextDescriptor(header);
 
@@ -265,9 +265,9 @@ zx_status_t UsbComposite::GetAdditionalDescriptorList(uint8_t last_interface_id,
                                                       size_t* out_desc_actual) {
   *out_desc_actual = 0;
 
-  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.get());
+  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data());
   auto* config = reinterpret_cast<const usb_configuration_descriptor_t*>(header);
-  auto* end = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.get() +
+  auto* end = reinterpret_cast<const usb_descriptor_header_t*>(config_desc_.data() +
                                                                le16toh(config->wTotalLength));
   header = NextDescriptor(header);
 

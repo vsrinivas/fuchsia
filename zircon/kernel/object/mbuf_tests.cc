@@ -81,7 +81,7 @@ fbl::Array<char> ReadHelper(MBufChain* chain, size_t length, MessageType message
     return nullptr;
   }
 
-  if (make_user_in_ptr(memory->in()).copy_array_from_user(buffer.get(), actual) != ZX_OK) {
+  if (make_user_in_ptr(memory->in()).copy_array_from_user(buffer.data(), actual) != ZX_OK) {
     unittest_printf("Failed to copy user memory bytes\n");
     return nullptr;
   }
@@ -97,7 +97,7 @@ fbl::Array<char> ReadHelper(MBufChain* chain, size_t length, MessageType message
 // Returns false if either the size or contents differ.
 bool Equal(const fbl::Array<char>& buffer, const char* str) {
   const size_t length = strlen(str);
-  return buffer.size() == length && memcmp(buffer.get(), str, length) == 0;
+  return buffer.size() == length && memcmp(buffer.data(), str, length) == 0;
 }
 
 static bool initial_state() {

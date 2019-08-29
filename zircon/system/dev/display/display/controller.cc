@@ -286,9 +286,9 @@ void Controller::DisplayControllerInterfaceOnDisplaysChanged(
       zxlogf(INFO, "Out of memory when processing display hotplug\n");
       break;
     }
-    memcpy(info->pixel_formats_.get(), display_params.pixel_format_list,
+    memcpy(info->pixel_formats_.data(), display_params.pixel_format_list,
            display_params.pixel_format_count * sizeof(zx_pixel_format_t));
-    memcpy(info->cursor_infos_.get(), display_params.cursor_info_list,
+    memcpy(info->cursor_infos_.data(), display_params.cursor_info_list,
            display_params.cursor_info_count * sizeof(cursor_info_t));
 
     info->has_edid = display_params.edid_present;
@@ -721,7 +721,7 @@ bool Controller::GetPanelConfig(uint64_t display_id,
         if (!ac.check()) {                                                    \
           return false;                                                       \
         }                                                                     \
-        memcpy(data_out->get(), display.FIELD.get(), sizeof(TYPE) * size);    \
+        memcpy(data_out->data(), display.FIELD.data(), sizeof(TYPE) * size);  \
         return true;                                                          \
       }                                                                       \
     }                                                                         \

@@ -60,7 +60,7 @@ int I2cBus::I2cThread() {
       auto op_list = reinterpret_cast<i2c_op_t*>(txn + 1);
       auto op_count = txn->op_count;
       auto p_writes = reinterpret_cast<uint8_t*>(op_list) + op_count * sizeof(i2c_op_t);
-      uint8_t* p_reads = read_buffer.get();
+      uint8_t* p_reads = read_buffer.data();
 
       ZX_ASSERT(op_count < I2C_MAX_RW_OPS);
       i2c_impl_op_t impl_ops[I2C_MAX_RW_OPS];

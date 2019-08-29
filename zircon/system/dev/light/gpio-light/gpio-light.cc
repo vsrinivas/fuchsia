@@ -33,7 +33,7 @@ zx_status_t GpioLight::MsgGetName(fidl_txn_t* txn, uint32_t index) {
   }
 
   if (names_.size() > 0) {
-    auto* name = names_.get() + index * kNameLength;
+    auto* name = names_.data() + index * kNameLength;
     return fuchsia_hardware_light_LightGetName_reply(txn, ZX_OK, name, strlen(name) + 1);
   } else {
     // Return "gpio-X" if no metadata was provided.
@@ -169,7 +169,7 @@ zx_status_t GpioLight::Init() {
     }
 
     status =
-        device_get_metadata(parent(), DEVICE_METADATA_NAME, names_.get(), metadata_size, &expected);
+        device_get_metadata(parent(), DEVICE_METADATA_NAME, names_.data(), metadata_size, &expected);
     if (status != ZX_OK) {
       return status;
     }

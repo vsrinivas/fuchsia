@@ -270,7 +270,7 @@ zx_status_t NandPartDevice::BadBlockGetBadBlockList(uint32_t* bad_block_list,
   }
 
   const size_t size = sizeof(uint32_t) * fbl::min(*bad_block_count, bad_block_list_len);
-  memcpy(bad_block_list, bad_block_list_.get(), size);
+  memcpy(bad_block_list, bad_block_list_.data(), size);
   return ZX_OK;
 }
 

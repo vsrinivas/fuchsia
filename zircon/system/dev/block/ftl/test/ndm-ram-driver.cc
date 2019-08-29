@@ -56,8 +56,8 @@ const char* NdmRamDriver::Init() {
   size_t volume_size = num_pages * (options_.page_size + options_.eb_size);
   volume_ = fbl::Array<uint8_t>(new uint8_t[volume_size], volume_size);
   flags_ = fbl::Array<uint8_t>(new uint8_t[num_pages], num_pages);
-  memset(volume_.get(), 0xff, volume_size);
-  memset(flags_.get(), 0, num_pages);
+  memset(volume_.data(), 0xff, volume_size);
+  memset(flags_.data(), 0, num_pages);
   if (test_options_.use_half_size) {
     options_.num_blocks /= 2;
   }

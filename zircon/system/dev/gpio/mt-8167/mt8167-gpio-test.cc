@@ -31,7 +31,7 @@ class Mt8167GpioDeviceTest : public Mt8167GpioDevice {
 TEST(GpioTest, NoPull0) {
   fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), kGpioRegCount);
   Mt8167GpioDeviceTest gpio(gpios_mock, unused, unused);
 
@@ -45,7 +45,7 @@ TEST(GpioTest, NoPull0) {
 TEST(GpioTest, NoPullMid) {
   fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), kGpioRegCount);
   Mt8167GpioDeviceTest gpio(gpios_mock, unused, unused);
 
@@ -59,7 +59,7 @@ TEST(GpioTest, NoPullMid) {
 TEST(GpioTest, NoPullHigh) {
   fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), kGpioRegCount);
   Mt8167GpioDeviceTest gpio(gpios_mock, unused, unused);
 
@@ -80,7 +80,7 @@ TEST(GpioTest, OutOfRange) {
 TEST(GpioTest, PullUp) {
   fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), kGpioRegCount);
   Mt8167GpioDeviceTest gpio(gpios_mock, unused, unused);
 
@@ -95,7 +95,7 @@ TEST(GpioTest, PullUp) {
 TEST(GpioTest, PullDown) {
   fbl::Array<ddk_mock::MockMmioReg> gpio_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), kGpioRegCount);
   Mt8167GpioDeviceTest gpio(gpios_mock, unused, unused);
 
@@ -112,8 +112,8 @@ TEST(GpioTest, NoPullIoCfg) {
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
   fbl::Array<ddk_mock::MockMmioReg> iocfg_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kIoCfgRegCount], kIoCfgRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
-  ddk_mock::MockMmioRegRegion iocfg_mock(iocfg_regs.get(), sizeof(uint16_t), kIoCfgRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion iocfg_mock(iocfg_regs.data(), sizeof(uint16_t), kIoCfgRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), 1);  // Fake non-zero size.
   Mt8167GpioDeviceTest gpio(gpios_mock, iocfg_mock, unused);
 
@@ -130,8 +130,8 @@ TEST(GpioTest, PullUpIoCfg) {
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
   fbl::Array<ddk_mock::MockMmioReg> iocfg_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kIoCfgRegCount], kIoCfgRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
-  ddk_mock::MockMmioRegRegion iocfg_mock(iocfg_regs.get(), sizeof(uint16_t), kIoCfgRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion iocfg_mock(iocfg_regs.data(), sizeof(uint16_t), kIoCfgRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), 1);  // Fake non-zero size.
   Mt8167GpioDeviceTest gpio(gpios_mock, iocfg_mock, unused);
 
@@ -149,8 +149,8 @@ TEST(GpioTest, PullDownIoCfg) {
       fbl::Array(new ddk_mock::MockMmioReg[kGpioRegCount], kGpioRegCount);
   fbl::Array<ddk_mock::MockMmioReg> iocfg_regs =
       fbl::Array(new ddk_mock::MockMmioReg[kIoCfgRegCount], kIoCfgRegCount);
-  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.get(), sizeof(uint16_t), kGpioRegCount);
-  ddk_mock::MockMmioRegRegion iocfg_mock(iocfg_regs.get(), sizeof(uint16_t), kIoCfgRegCount);
+  ddk_mock::MockMmioRegRegion gpios_mock(gpio_regs.data(), sizeof(uint16_t), kGpioRegCount);
+  ddk_mock::MockMmioRegRegion iocfg_mock(iocfg_regs.data(), sizeof(uint16_t), kIoCfgRegCount);
   ddk_mock::MockMmioRegRegion unused(nullptr, sizeof(uint16_t), 1);  // Fake non-zero size.
   Mt8167GpioDeviceTest gpio(gpios_mock, iocfg_mock, unused);
 

@@ -249,7 +249,7 @@ TEST(AmlBadBlockTest, GetBadBlockListWithEntriesTest) {
     zx_status_t status = bad_block->GetBadBlockList(start_block, end_block, &bad_blocks);
     ASSERT_OK(status);
     ASSERT_EQ(bad_blocks.size(), expected.size());
-    EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(bad_blocks.get()),
+    EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(bad_blocks.data()),
                     reinterpret_cast<uint8_t*>(expected.data()), expected.size() * sizeof(uint32_t),
                     "");
   };

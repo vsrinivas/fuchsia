@@ -371,7 +371,7 @@ zx_status_t UsbPeripheral::GetDescriptor(uint8_t request_type, uint16_t value, u
     if (length > desc_length) {
       length = desc_length;
     }
-    memcpy(buffer, config_desc_.get(), length);
+    memcpy(buffer, config_desc_.data(), length);
     *out_actual = length;
     return ZX_OK;
   } else if (value >> 8 == USB_DT_STRING) {

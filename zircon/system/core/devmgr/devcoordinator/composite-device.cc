@@ -32,7 +32,7 @@ zx_status_t CompositeDevice::Create(
     uint32_t coresident_device_index, std::unique_ptr<CompositeDevice>* out) {
   fbl::String name_obj(name);
   fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[props.count()], props.count());
-  memcpy(properties.get(), props.data(), props.count() * sizeof(props.data()[0]));
+  memcpy(properties.data(), props.data(), props.count() * sizeof(props.data()[0]));
 
   auto dev = std::make_unique<CompositeDevice>(std::move(name), std::move(properties),
                                                components.count(), coresident_device_index);
@@ -226,7 +226,7 @@ bool CompositeDeviceComponent::TryMatch(const fbl::RefPtr<Device>& dev) {
     return false;
   }
   auto match =
-      ::devmgr::internal::MatchParts(dev, parts_.get(), static_cast<uint32_t>(parts_.size()));
+      ::devmgr::internal::MatchParts(dev, parts_.data(), static_cast<uint32_t>(parts_.size()));
   if (match != ::devmgr::internal::Match::One) {
     return false;
   }

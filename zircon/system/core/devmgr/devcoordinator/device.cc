@@ -128,7 +128,7 @@ zx_status_t Device::CreateComposite(Coordinator* coordinator, Devhost* devhost,
   const auto& composite_props = composite.properties();
   fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[composite_props.size()],
                                      composite_props.size());
-  memcpy(props.get(), composite_props.get(), props.size() * sizeof(props[0]));
+  memcpy(props.data(), composite_props.data(), props.size() * sizeof(props[0]));
 
   auto dev =
       fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(), fbl::String(),
@@ -583,7 +583,7 @@ zx_status_t Device::HandleRead() {
 
 zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   // This function should only be called once
-  ZX_DEBUG_ASSERT(props_.get() == nullptr);
+  ZX_DEBUG_ASSERT(props_.data() == nullptr);
 
   props_ = std::move(props);
   topo_prop_ = nullptr;

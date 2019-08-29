@@ -205,7 +205,7 @@ void UsbAudioStream::ComputePersistentUniqueId() {
                                                &parent_.serial_num()};
   for (const auto str : desc_strings) {
     if (str->size()) {
-      sha.Update(str->get(), str->size());
+      sha.Update(str->data(), str->size());
     }
   }
 
@@ -710,7 +710,7 @@ zx_status_t UsbAudioStream::OnGetStringLocked(dispatcher::Channel* channel,
 
     ::memset(resp.str, 0, sizeof(resp.str));
     if (todo) {
-      ::memcpy(resp.str, str->get(), todo);
+      ::memcpy(resp.str, str->data(), todo);
     }
 
     resp.result = ZX_OK;

@@ -198,7 +198,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       // Don't try to copy if there are no bytes to copy, as the "is
       // user space" check may not handle (_buffer == NULL and len == 0).
       if (num_to_copy &&
-          _buffer.copy_array_to_user(threads.get(), sizeof(zx_koid_t) * num_to_copy) != ZX_OK)
+          _buffer.copy_array_to_user(threads.data(), sizeof(zx_koid_t) * num_to_copy) != ZX_OK)
         return ZX_ERR_INVALID_ARGS;
       if (_actual) {
         zx_status_t status = _actual.copy_to_user(num_to_copy);

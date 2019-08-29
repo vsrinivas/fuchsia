@@ -206,7 +206,7 @@ TEST(AllocatorTest, TestSplitUninitialized) {
 
 fbl::Array<size_t> CreateArray(size_t size) {
   fbl::Array<size_t> array(new size_t[size], size);
-  memset(array.get(), 0, sizeof(size_t) * size);
+  memset(array.data(), 0, sizeof(size_t) * size);
   return array;
 }
 

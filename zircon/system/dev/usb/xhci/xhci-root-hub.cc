@@ -287,7 +287,7 @@ static void xhci_reset_port(xhci_t* xhci, xhci_root_hub_t* rh, int rh_port_index
 
 zx_status_t xhci_root_hub_init(xhci_t* xhci, int rh_index) {
   xhci_root_hub_t* rh = &xhci->root_hubs[rh_index];
-  auto* rh_port_map = xhci->rh_map.get();
+  auto* rh_port_map = xhci->rh_map.data();
   uint8_t rh_ports = xhci->rh_num_ports;
 
   list_initialize(&rh->pending_intr_reqs);

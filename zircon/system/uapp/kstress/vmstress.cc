@@ -194,14 +194,14 @@ int SingleVmoTestInstance::vmo_thread() {
         // read from a random range of the vmo
         Printf("r");
         rand_buffer_range(&off, &len);
-        status = vmo_.read(buf.get(), off, len);
+        status = vmo_.read(buf.data(), off, len);
         CheckVmoThreadError(status, "error reading from vmo");
         break;
       case 35 ... 49:
         // write to a random range of the vmo
         Printf("w");
         rand_buffer_range(&off, &len);
-        status = vmo_.write(buf.get(), off, len);
+        status = vmo_.write(buf.data(), off, len);
         CheckVmoThreadError(status, "error writing to vmo");
         break;
       case 50 ... 74:
@@ -209,7 +209,7 @@ int SingleVmoTestInstance::vmo_thread() {
         if (ptrs_[idx]) {
           Printf("R");
           rand_buffer_range(&off, &len);
-          memcpy(buf.get(), reinterpret_cast<const void*>(ptrs_[idx] + off), len);
+          memcpy(buf.data(), reinterpret_cast<const void*>(ptrs_[idx] + off), len);
         }
         break;
       case 75 ... 99:
@@ -217,7 +217,7 @@ int SingleVmoTestInstance::vmo_thread() {
         if (ptrs_[idx]) {
           Printf("W");
           rand_buffer_range(&off, &len);
-          memcpy(reinterpret_cast<void*>(ptrs_[idx] + off), buf.get(), len);
+          memcpy(reinterpret_cast<void*>(ptrs_[idx] + off), buf.data(), len);
         }
         break;
     }

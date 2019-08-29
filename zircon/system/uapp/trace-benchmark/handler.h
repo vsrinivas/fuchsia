@@ -39,7 +39,7 @@ class BenchmarkHandler : public trace::TraceHandler {
 
   void Start() {
     zx_status_t status =
-        trace_engine_initialize(loop_->dispatcher(), this, mode_, buffer_.get(), buffer_.size());
+        trace_engine_initialize(loop_->dispatcher(), this, mode_, buffer_.data(), buffer_.size());
     ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "trace_engine_initialize returned %s\n",
                         zx_status_get_string(status));
     status = trace_engine_start(TRACE_START_CLEAR_ENTIRE_BUFFER);

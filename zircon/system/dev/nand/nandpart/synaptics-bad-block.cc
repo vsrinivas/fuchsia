@@ -287,7 +287,7 @@ zx_status_t SynapticsBadBlock::ReadBadBlockTable() {
     return status;
   }
 
-  if ((status = data_vmo_.read(bbt_contents_.get(), 0, bbt_contents_.size())) != ZX_OK) {
+  if ((status = data_vmo_.read(bbt_contents_.data(), 0, bbt_contents_.size())) != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to read VMO: %d\n", __func__, status);
   }
 
@@ -295,7 +295,7 @@ zx_status_t SynapticsBadBlock::ReadBadBlockTable() {
 }
 
 zx_status_t SynapticsBadBlock::WriteBadBlockTableToVmo() {
-  zx_status_t status = data_vmo_.write(bbt_contents_.get(), 0, bbt_contents_.size());
+  zx_status_t status = data_vmo_.write(bbt_contents_.data(), 0, bbt_contents_.size());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to write VMO: %d\n", __func__, status);
     return status;
@@ -336,7 +336,7 @@ zx_status_t SynapticsBadBlock::ReadFirstPage(uint32_t block) {
   sync_completion_t completion;
   BlockOperationContext op_ctx = {.completion_event = &completion, .status = ZX_ERR_INTERNAL};
 
-  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.get());
+  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.data());
   nand_op->rw.command = NAND_OP_READ;
   nand_op->rw.data_vmo = data_vmo_.get();
   nand_op->rw.oob_vmo = oob_vmo_.get();
@@ -360,7 +360,7 @@ zx_status_t SynapticsBadBlock::WriteFirstPage(uint32_t block) {
   sync_completion_t completion;
   BlockOperationContext op_ctx = {.completion_event = &completion, .status = ZX_ERR_INTERNAL};
 
-  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.get());
+  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.data());
 
   nand_op->erase.command = NAND_OP_ERASE;
   nand_op->erase.first_block = block;

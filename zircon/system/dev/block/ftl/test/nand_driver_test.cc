@@ -159,7 +159,7 @@ TEST_F(NandDriverTest, Read) {
   fbl::Array<uint8_t> data(new uint8_t[kPageSize * 2], kPageSize * 2);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
 
-  ASSERT_EQ(ftl::kNdmOk, driver->NandRead(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmOk, driver->NandRead(5, 2, data.data(), oob.data()));
 
   nand_operation_t& operation = nand_operation();
   EXPECT_EQ(NAND_OP_READ, operation.command);
@@ -179,7 +179,7 @@ TEST_F(NandDriverTest, ReadFailure) {
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
 
   nand()->set_result(ZX_ERR_BAD_STATE);
-  ASSERT_EQ(ftl::kNdmFatalError, driver->NandRead(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmFatalError, driver->NandRead(5, 2, data.data(), oob.data()));
 }
 
 TEST_F(NandDriverTest, ReadEccUnsafe) {
@@ -190,7 +190,7 @@ TEST_F(NandDriverTest, ReadEccUnsafe) {
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
 
   nand()->set_ecc_bits(kEccBits / 2 + 1);
-  ASSERT_EQ(ftl::kNdmUnsafeEcc, driver->NandRead(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmUnsafeEcc, driver->NandRead(5, 2, data.data(), oob.data()));
 }
 
 TEST_F(NandDriverTest, ReadEccFailure) {
@@ -201,7 +201,7 @@ TEST_F(NandDriverTest, ReadEccFailure) {
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
 
   nand()->set_ecc_bits(kEccBits + 1);
-  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(5, 2, data.data(), oob.data()));
 }
 
 TEST_F(NandDriverTest, Write) {
@@ -210,10 +210,10 @@ TEST_F(NandDriverTest, Write) {
 
   fbl::Array<uint8_t> data(new uint8_t[kPageSize * 2], kPageSize * 2);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
-  memset(data.get(), 'd', data.size());
-  memset(oob.get(), 'o', oob.size());
+  memset(data.data(), 'd', data.size());
+  memset(oob.data(), 'o', oob.size());
 
-  ASSERT_EQ(ftl::kNdmOk, driver->NandWrite(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmOk, driver->NandWrite(5, 2, data.data(), oob.data()));
 
   nand_operation_t& operation = nand_operation();
   EXPECT_EQ(NAND_OP_WRITE, operation.command);
@@ -229,11 +229,11 @@ TEST_F(NandDriverTest, WriteFailure) {
 
   fbl::Array<uint8_t> data(new uint8_t[kPageSize * 2], kPageSize * 2);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
-  memset(data.get(), 'd', data.size());
-  memset(oob.get(), 'e', oob.size());  // Unexpected value.
+  memset(data.data(), 'd', data.size());
+  memset(oob.data(), 'e', oob.size());  // Unexpected value.
   nand()->set_result(ZX_ERR_BAD_STATE);
 
-  ASSERT_EQ(ftl::kNdmFatalError, driver->NandWrite(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmFatalError, driver->NandWrite(5, 2, data.data(), oob.data()));
 }
 
 TEST_F(NandDriverTest, WriteFailureBadBlock) {
@@ -242,10 +242,10 @@ TEST_F(NandDriverTest, WriteFailureBadBlock) {
 
   fbl::Array<uint8_t> data(new uint8_t[kPageSize * 2], kPageSize * 2);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
-  memset(data.get(), 'd', data.size());
-  memset(oob.get(), 'e', oob.size());  // Unexpected value.
+  memset(data.data(), 'd', data.size());
+  memset(oob.data(), 'e', oob.size());  // Unexpected value.
 
-  ASSERT_EQ(ftl::kNdmError, driver->NandWrite(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmError, driver->NandWrite(5, 2, data.data(), oob.data()));
 }
 
 TEST_F(NandDriverTest, Erase) {

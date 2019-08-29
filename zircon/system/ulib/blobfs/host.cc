@@ -180,7 +180,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
     size_recorder->AppendSizeInformation(digest_buf, kBlobfsBlockSize * inode->block_count);
   }
 
-  if ((status = bs->WriteData(inode, info.merkle.get(), data)) != ZX_OK) {
+  if ((status = bs->WriteData(inode, info.merkle.data(), data)) != ZX_OK) {
     return status;
   }
 

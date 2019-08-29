@@ -1588,7 +1588,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
     coded_configs[i].pixel_format.count = config->pixel_formats_.size();
     memcpy(
         builder.NewArray<zx_pixel_format_t>(static_cast<uint32_t>(config->pixel_formats_.size())),
-        config->pixel_formats_.get(), sizeof(zx_pixel_format_t) * config->pixel_formats_.size());
+        config->pixel_formats_.data(), sizeof(zx_pixel_format_t) * config->pixel_formats_.size());
 
     static_assert(
         offsetof(cursor_info_t, width) == offsetof(fuchsia_hardware_display_CursorInfo, width),

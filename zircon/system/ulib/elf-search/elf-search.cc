@@ -62,7 +62,7 @@ class ProcessMemReader {
   }
   template <typename T>
   [[nodiscard]] zx_status_t ReadArray(uintptr_t vaddr, fbl::Array<T>* arr) {
-    return ReadBytes(vaddr, arr->get(), arr->size());
+    return ReadBytes(vaddr, arr->data(), arr->size());
   }
   template <typename T>
   [[nodiscard]] zx_status_t ReadArray(uintptr_t vaddr, T* arr, size_t sz) {
@@ -172,7 +172,7 @@ zx_status_t ForEachModule(const zx::process& process, ModuleAction action) {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = process.get_info(ZX_INFO_PROCESS_MAPS, maps.get(), avail * sizeof(zx_info_maps), &actual,
+  status = process.get_info(ZX_INFO_PROCESS_MAPS, maps.data(), avail * sizeof(zx_info_maps), &actual,
                             &avail);
   if (status != ZX_OK) {
     return status;

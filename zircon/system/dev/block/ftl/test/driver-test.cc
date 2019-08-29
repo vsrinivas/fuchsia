@@ -27,14 +27,14 @@ TEST(DriverTest, ReadWrite) {
   fbl::Array<uint8_t> data(new uint8_t[kPageSize * 2], kPageSize * 2);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize * 2], kOobSize * 2);
 
-  memset(data.get(), 0x55, data.size());
-  memset(oob.get(), 0x66, oob.size());
+  memset(data.data(), 0x55, data.size());
+  memset(oob.data(), 0x66, oob.size());
 
-  ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(5, 2, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(5, 2, data.data(), oob.data()));
 
-  memset(data.get(), 0, data.size());
-  memset(oob.get(), 0, oob.size());
-  ASSERT_EQ(ftl::kNdmOk, driver.NandRead(5, 2, data.get(), oob.get()));
+  memset(data.data(), 0, data.size());
+  memset(oob.data(), 0, oob.size());
+  ASSERT_EQ(ftl::kNdmOk, driver.NandRead(5, 2, data.data(), oob.data()));
 
   for (uint32_t i = 0; i < data.size(); i++) {
     ASSERT_EQ(0x55, data[i]);
@@ -49,10 +49,10 @@ TEST(DriverTest, ReadWrite) {
 bool WritePage(NdmRamDriver* driver, uint32_t page_num) {
   fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
-  memset(data.get(), 0x55, data.size());
-  memset(oob.get(), 0, oob.size());
+  memset(data.data(), 0x55, data.size());
+  memset(oob.data(), 0, oob.size());
 
-  return driver->NandWrite(page_num, 1, data.get(), oob.get()) == ftl::kNdmOk;
+  return driver->NandWrite(page_num, 1, data.data(), oob.data()) == ftl::kNdmOk;
 }
 
 TEST(DriverTest, IsEmpty) {
@@ -66,17 +66,17 @@ TEST(DriverTest, IsEmpty) {
 
   fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
-  memset(data.get(), 0x55, data.size());
-  memset(oob.get(), 0, oob.size());
-  ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(0, 1, data.get(), oob.get()));
+  memset(data.data(), 0x55, data.size());
+  memset(oob.data(), 0, oob.size());
+  ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(0, 1, data.data(), oob.data()));
 
   // Look at both meta-data and buffers.
-  ASSERT_FALSE(driver.IsEmptyPage(0, data.get(), oob.get()));
+  ASSERT_FALSE(driver.IsEmptyPage(0, data.data(), oob.data()));
 
-  memset(data.get(), 0xff, data.size());
-  memset(oob.get(), 0xff, oob.size());
+  memset(data.data(), 0xff, data.size());
+  memset(oob.data(), 0xff, oob.size());
 
-  ASSERT_TRUE(driver.IsEmptyPage(0, data.get(), oob.get()));
+  ASSERT_TRUE(driver.IsEmptyPage(0, data.data(), oob.data()));
 }
 
 TEST(DriverTest, Erase) {
@@ -139,9 +139,9 @@ TEST(DriverTest, ReAttach) {
 
   fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
-  ASSERT_EQ(ftl::kNdmOk, driver.NandRead(5, 1, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmOk, driver.NandRead(5, 1, data.data(), oob.data()));
 
-  ASSERT_FALSE(driver.IsEmptyPage(5, data.get(), oob.get()));
+  ASSERT_FALSE(driver.IsEmptyPage(5, data.data(), oob.data()));
 }
 
 // NdmRamDriver is supposed to inject failures periodically. This tests that it
@@ -158,14 +158,14 @@ TEST(DriverTest, WriteBadBlock) {
   fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
 
-  memset(data.get(), 0, data.size());
-  memset(oob.get(), 0, oob.size());
+  memset(data.data(), 0, data.size());
+  memset(oob.data(), 0, oob.size());
 
   for (int i = 0; i < driver_options.bad_block_interval; i++) {
     ASSERT_EQ(ftl::kNdmOk, driver.NandErase(0));
   }
 
-  ASSERT_EQ(ftl::kNdmError, driver.NandWrite(0, 1, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmError, driver.NandWrite(0, 1, data.data(), oob.data()));
 }
 
 // NdmRamDriver is supposed to inject failures periodically. This tests that it
@@ -182,16 +182,16 @@ TEST(DriverTest, ReadUnsafeEcc) {
   fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
   fbl::Array<uint8_t> oob(new uint8_t[kOobSize], kOobSize);
 
-  memset(data.get(), 0, data.size());
-  memset(oob.get(), 0, oob.size());
-  ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(0, 1, data.get(), oob.get()));
+  memset(data.data(), 0, data.size());
+  memset(oob.data(), 0, oob.size());
+  ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(0, 1, data.data(), oob.data()));
 
   for (int i = 0; i < driver_options.ecc_error_interval; i++) {
-    ASSERT_EQ(ftl::kNdmOk, driver.NandRead(0, 1, data.get(), oob.get()));
+    ASSERT_EQ(ftl::kNdmOk, driver.NandRead(0, 1, data.data(), oob.data()));
   }
 
-  ASSERT_EQ(ftl::kNdmUnsafeEcc, driver.NandRead(0, 1, data.get(), oob.get()));
-  ASSERT_EQ(ftl::kNdmOk, driver.NandRead(0, 1, data.get(), oob.get()));
+  ASSERT_EQ(ftl::kNdmUnsafeEcc, driver.NandRead(0, 1, data.data(), oob.data()));
+  ASSERT_EQ(ftl::kNdmOk, driver.NandRead(0, 1, data.data(), oob.data()));
 }
 
 }  // namespace

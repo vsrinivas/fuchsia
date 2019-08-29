@@ -51,7 +51,7 @@ class UsbFunction : public UsbFunctionType,
 
   inline const usb_descriptor_header_t* GetDescriptors(size_t* out_length) const {
     *out_length = descriptors_.size();
-    return reinterpret_cast<usb_descriptor_header_t*>(descriptors_.get());
+    return reinterpret_cast<usb_descriptor_header_t*>(descriptors_.data());
   }
 
   inline const FunctionDescriptor& GetFunctionDescriptor() const { return function_descriptor_; }

@@ -17,7 +17,7 @@ LogicalToPhysicalMap::LogicalToPhysicalMap(uint32_t copies, uint32_t block_count
   ZX_ASSERT(block_count_ >= bad_blocks_.size());
   ZX_ASSERT(block_count_ % copies_ == 0);
 
-  qsort(bad_blocks_.get(), bad_blocks_.size(), sizeof(uint32_t), [](const void* l, const void* r) {
+  qsort(bad_blocks_.data(), bad_blocks_.size(), sizeof(uint32_t), [](const void* l, const void* r) {
     const auto* left = static_cast<const uint32_t*>(l);
     const auto* right = static_cast<const uint32_t*>(r);
     if (*left < *right) {

@@ -40,7 +40,7 @@ class ScratchPad {
     zx_status_t status = elf_load_prepare(vdso_vmo.get(), nullptr, 0, &header, &phoff);
     if (status == ZX_OK) {
       fbl::Array<elf_phdr_t> phdrs(new elf_phdr_t[header.e_phnum], header.e_phnum);
-      status = elf_load_read_phdrs(vdso_vmo.get(), phdrs.get(), phoff, header.e_phnum);
+      status = elf_load_read_phdrs(vdso_vmo.get(), phdrs.data(), phoff, header.e_phnum);
       if (status == ZX_OK) {
         for (const auto& ph : phdrs) {
           if (ph.p_type == PT_LOAD && (ph.p_type & PF_X)) {
@@ -50,7 +50,7 @@ class ScratchPad {
         }
         if (really_load) {
           status = elf_load_map_segments(
-              root_vmar_.get(), &header, phdrs.get(), vdso_vmo.get(),
+              root_vmar_.get(), &header, phdrs.data(), vdso_vmo.get(),
               segments_vmar ? segments_vmar->reset_and_get_address() : nullptr, &vdso_base_,
               nullptr);
         }

@@ -610,7 +610,7 @@ bool TestGetAllocatedRegions() {
   ASSERT_TRUE(GetAllocations(&vmo, &count));
   ASSERT_TRUE(GetAllocatedBlocks(&actual_blocks));
   fbl::Array<fuchsia_minfs_BlockRegion> buffer(new fuchsia_minfs_BlockRegion[count], count);
-  ASSERT_EQ(vmo.read(buffer.get(), 0, sizeof(fuchsia_minfs_BlockRegion) * count), ZX_OK);
+  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia_minfs_BlockRegion) * count), ZX_OK);
   for (size_t i = 0; i < count; i++) {
     total_blocks += buffer[i].length;
   }
@@ -626,7 +626,7 @@ bool TestGetAllocatedRegions() {
   ASSERT_TRUE(GetAllocations(&vmo, &count));
   ASSERT_TRUE(GetAllocatedBlocks(&actual_blocks));
   buffer.reset(new fuchsia_minfs_BlockRegion[count], count);
-  ASSERT_EQ(vmo.read(buffer.get(), 0, sizeof(fuchsia_minfs_BlockRegion) * count), ZX_OK);
+  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia_minfs_BlockRegion) * count), ZX_OK);
   for (size_t i = 0; i < count; i++) {
     total_blocks += buffer[i].length;
   }

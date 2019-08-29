@@ -63,7 +63,7 @@ class Fixture : private trace::TraceHandler {
     }
 
     zx_status_t status = trace_engine_initialize(loop_.dispatcher(), this, buffering_mode_,
-                                                 buffer_.get(), buffer_.size());
+                                                 buffer_.data(), buffer_.size());
     ZX_DEBUG_ASSERT_MSG(status == ZX_OK, "status=%d", status);
   }
 
@@ -147,7 +147,7 @@ class Fixture : private trace::TraceHandler {
   }
 
   bool ReadRecords(fbl::Vector<trace::Record>* out_records) {
-    return trace_testing::ReadRecords(buffer_.get(), buffer_.size(), out_records);
+    return trace_testing::ReadRecords(buffer_.data(), buffer_.size(), out_records);
   }
 
  private:

@@ -98,7 +98,7 @@ zx_status_t AmlBadBlock::Create(Config config, fbl::RefPtr<BadBlock>* out) {
 zx_status_t AmlBadBlock::EraseBlock(uint32_t block) {
   sync_completion_t completion;
   BlockOperationContext op_ctx = {.completion_event = &completion, .status = ZX_ERR_INTERNAL};
-  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.get());
+  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.data());
   nand_op->erase.command = NAND_OP_ERASE;
   nand_op->erase.first_block = block;
   nand_op->erase.num_blocks = 1;
@@ -156,7 +156,7 @@ zx_status_t AmlBadBlock::WritePages(uint32_t nand_page, uint32_t num_pages) {
   sync_completion_t completion;
   BlockOperationContext op_ctx = {.completion_event = &completion, .status = ZX_ERR_INTERNAL};
 
-  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.get());
+  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.data());
   nand_op->rw.command = NAND_OP_WRITE;
   nand_op->rw.data_vmo = data_vmo_.get();
   nand_op->rw.oob_vmo = oob_vmo_.get();
@@ -215,7 +215,7 @@ zx_status_t AmlBadBlock::WriteBadBlockTable(bool use_new_block) {
 zx_status_t AmlBadBlock::ReadPages(uint32_t nand_page, uint32_t num_pages) {
   sync_completion_t completion;
   BlockOperationContext op_ctx = {.completion_event = &completion, .status = ZX_ERR_INTERNAL};
-  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.get());
+  auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.data());
   nand_op->rw.command = NAND_OP_READ;
   nand_op->rw.data_vmo = data_vmo_.get();
   nand_op->rw.oob_vmo = oob_vmo_.get();

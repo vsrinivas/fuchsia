@@ -172,9 +172,9 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
   zx_status_t status = ZX_OK;
 
   // iterate through our descriptors to find which endpoints should be active
-  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.get());
+  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.data());
   auto* end =
-      reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.get() + descriptors_.size());
+      reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.data() + descriptors_.size());
   int cur_interface = -1;
 
   bool enable_endpoints = false;
@@ -298,7 +298,7 @@ void UsbInterface::UsbGetDescriptors(void* out_descs_buffer, size_t descs_size,
   if (length > descs_size) {
     length = descs_size;
   }
-  memcpy(out_descs_buffer, descriptors_.get(), length);
+  memcpy(out_descs_buffer, descriptors_.data(), length);
   *out_descs_actual = length;
 }
 
@@ -361,7 +361,7 @@ zx_status_t UsbInterface::UsbCompositeClaimInterface(const usb_interface_descrip
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  memcpy(new_descriptors, descriptors_.get(), old_length);
+  memcpy(new_descriptors, descriptors_.data(), old_length);
   memcpy(new_descriptors + old_length, desc, length);
   descriptors_.reset(new_descriptors, new_length);
 
@@ -372,9 +372,9 @@ zx_status_t UsbInterface::UsbCompositeClaimInterface(const usb_interface_descrip
 }
 
 bool UsbInterface::ContainsInterface(uint8_t interface_id) {
-  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.get());
+  auto* header = reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.data());
   auto* end =
-      reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.get() + descriptors_.size());
+      reinterpret_cast<const usb_descriptor_header_t*>(descriptors_.data() + descriptors_.size());
 
   while (header < end) {
     if (header->bDescriptorType == USB_DT_INTERFACE) {

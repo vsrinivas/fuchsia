@@ -314,7 +314,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
       return ZX_ERR_BAD_STATE;
     }
 
-    ssize_t r = read(fd_.get(), data.get(), slice_size_);
+    ssize_t r = read(fd_.get(), data.data(), slice_size_);
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to read data from FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;
@@ -325,7 +325,7 @@ zx_status_t FvmContainer::Extend(size_t disk_size) {
       return ZX_ERR_BAD_STATE;
     }
 
-    r = write(fd.get(), data.get(), slice_size_);
+    r = write(fd.get(), data.data(), slice_size_);
     if (r < 0 || static_cast<size_t>(r) != slice_size_) {
       fprintf(stderr, "Failed to write data to FVM: %ld\n", r);
       return ZX_ERR_BAD_STATE;

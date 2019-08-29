@@ -28,7 +28,7 @@ class SynAudioInDeviceTest : public SynAudioInDevice {
   static std::unique_ptr<SynAudioInDeviceTest> Create(ddk::MockSharedDma* dma) {
     static fbl::Array<ddk_mock::MockMmioReg> unused_mocks =
         fbl::Array(new ddk_mock::MockMmioReg[1], 1);
-    static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.get(), sizeof(uint32_t), 1);
+    static ddk_mock::MockMmioRegRegion unused_region(unused_mocks.data(), sizeof(uint32_t), 1);
     ddk::MmioBuffer b1(unused_region.GetMmioBuffer());
     ddk::MmioBuffer b2(unused_region.GetMmioBuffer());
     ddk::MmioBuffer b3(unused_region.GetMmioBuffer());

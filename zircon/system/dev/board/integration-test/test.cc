@@ -117,7 +117,7 @@ zx_status_t TestBoard::FetchAndDeserialize() {
     pbus_metadata_t metadata = {};
     metadata.type = DEVICE_METADATA_TEST;
     metadata.data_size = entry.metadata_size;
-    metadata.data_buffer = metadata_.get() + metadata_offset;
+    metadata.data_buffer = metadata_.data() + metadata_offset;
     metadata_offset += metadata.data_size;
 
     // Store the metadata and link the device to it.

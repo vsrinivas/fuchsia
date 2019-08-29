@@ -1250,28 +1250,28 @@ static bool vmo_read_write_smoke_test() {
   fbl::AllocChecker ac;
   fbl::Array<uint8_t> a(new (&ac) uint8_t[alloc_size], alloc_size);
   ASSERT_TRUE(ac.check(), "");
-  fill_region(99, a.get(), alloc_size);
+  fill_region(99, a.data(), alloc_size);
 
   // write to it, make sure it seems to work with valid args
-  zx_status_t err = vmo->Write(a.get(), 0, 0);
+  zx_status_t err = vmo->Write(a.data(), 0, 0);
   EXPECT_EQ(ZX_OK, err, "writing to object");
 
-  err = vmo->Write(a.get(), 0, 37);
+  err = vmo->Write(a.data(), 0, 37);
   EXPECT_EQ(ZX_OK, err, "writing to object");
 
-  err = vmo->Write(a.get(), 99, 37);
+  err = vmo->Write(a.data(), 99, 37);
   EXPECT_EQ(ZX_OK, err, "writing to object");
 
   // can't write past end
-  err = vmo->Write(a.get(), 0, alloc_size + 47);
+  err = vmo->Write(a.data(), 0, alloc_size + 47);
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, err, "writing to object");
 
   // can't write past end
-  err = vmo->Write(a.get(), 31, alloc_size + 47);
+  err = vmo->Write(a.data(), 31, alloc_size + 47);
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, err, "writing to object");
 
   // should return an error because out of range
-  err = vmo->Write(a.get(), alloc_size + 99, 42);
+  err = vmo->Write(a.data(), alloc_size + 99, 42);
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, err, "writing to object");
 
   // map the object
@@ -1281,13 +1281,13 @@ static bool vmo_read_write_smoke_test() {
   ASSERT_EQ(ZX_OK, err, "mapping object");
 
   // write to it at odd offsets
-  err = vmo->Write(a.get(), 31, 4197);
+  err = vmo->Write(a.data(), 31, 4197);
   EXPECT_EQ(ZX_OK, err, "writing to object");
-  int cmpres = memcmp(ptr + 31, a.get(), 4197);
+  int cmpres = memcmp(ptr + 31, a.data(), 4197);
   EXPECT_EQ(0, cmpres, "reading from object");
 
   // write to it, filling the object completely
-  err = vmo->Write(a.get(), 0, alloc_size);
+  err = vmo->Write(a.data(), 0, alloc_size);
   EXPECT_EQ(ZX_OK, err, "writing to object");
 
   // test that the data was actually written to it
@@ -1301,17 +1301,17 @@ static bool vmo_read_write_smoke_test() {
   fbl::Array<uint8_t> b(new (&ac) uint8_t[alloc_size], alloc_size);
   ASSERT_TRUE(ac.check(), "can't allocate buffer");
 
-  err = vmo->Read(b.get(), 0, alloc_size);
+  err = vmo->Read(b.data(), 0, alloc_size);
   EXPECT_EQ(ZX_OK, err, "reading from object");
 
   // validate the buffer is valid
-  cmpres = memcmp(b.get(), a.get(), alloc_size);
+  cmpres = memcmp(b.data(), a.data(), alloc_size);
   EXPECT_EQ(0, cmpres, "reading from object");
 
   // read from it at an offset
-  err = vmo->Read(b.get(), 31, 4197);
+  err = vmo->Read(b.data(), 31, 4197);
   EXPECT_EQ(ZX_OK, err, "reading from object");
-  cmpres = memcmp(b.get(), a.get() + 31, 4197);
+  cmpres = memcmp(b.data(), a.data() + 31, 4197);
   EXPECT_EQ(0, cmpres, "reading from object");
   END_TEST;
 }

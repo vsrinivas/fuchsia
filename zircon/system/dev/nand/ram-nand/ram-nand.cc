@@ -80,8 +80,8 @@ fbl::Array<char> ExtractPartitionMap(const fuchsia_hardware_nand_RamNandInfo& in
 
   size_t len = sizeof(zbi_partition_map_t) + sizeof(zbi_partition_t) * dest_partitions;
   fbl::Array<char> buffer(new char[len], len);
-  memset(buffer.get(), 0, len);
-  zbi_partition_map_t* map = reinterpret_cast<zbi_partition_map_t*>(buffer.get());
+  memset(buffer.data(), 0, len);
+  zbi_partition_map_t* map = reinterpret_cast<zbi_partition_map_t*>(buffer.data());
 
   map->block_count = info.nand_info.num_blocks;
   map->block_size = info.nand_info.page_size * info.nand_info.pages_per_block;
@@ -157,7 +157,7 @@ zx_status_t NandDevice::Bind(const fuchsia_hardware_nand_RamNandInfo& info) {
   }
   if (info.export_partition_map) {
     fbl::Array<char> map = ExtractPartitionMap(info);
-    status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, map.get(), map.size());
+    status = DdkAddMetadata(DEVICE_METADATA_PARTITION_MAP, map.data(), map.size());
     if (status != ZX_OK) {
       return status;
     }

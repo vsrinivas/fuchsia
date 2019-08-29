@@ -255,11 +255,11 @@ zx_status_t TestRequest::GetDataUnscattered(fbl::Array<uint8_t>* out_data) {
     for (size_t i = 0; i < Get()->sg_count; ++i) {
       const auto& entry = Get()->sg_list[i];
       size_t len_to_copy = fbl::min(len - total_copied, entry.length);
-      memcpy(buf.get() + total_copied, req_data + entry.offset, len_to_copy);
+      memcpy(buf.data() + total_copied, req_data + entry.offset, len_to_copy);
       total_copied += len_to_copy;
     }
   } else {
-    memcpy(buf.get(), req_data, len);
+    memcpy(buf.data(), req_data, len);
   }
 
   *out_data = std::move(buf);
@@ -309,7 +309,7 @@ zx_status_t UsbTester::BulkLoopback(const fuchsia_hardware_usb_tester_BulkTestPa
   if (out_data.size() != params->len || in_data.size() != params->len) {
     return false;
   }
-  return memcmp(in_data.get(), out_data.get(), params->len) == 0 ? ZX_OK : ZX_ERR_IO;
+  return memcmp(in_data.data(), out_data.data(), params->len) == 0 ? ZX_OK : ZX_ERR_IO;
 }
 
 zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,

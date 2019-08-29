@@ -38,7 +38,7 @@ bool EvaluateBindProgram(const fbl::RefPtr<T>& device, const char* drv_name,
   BindProgramContext ctx;
   ctx.props = &device->props();
   ctx.protocol_id = device->protocol_id();
-  ctx.binding = bind_program.get();
+  ctx.binding = bind_program.data();
   ctx.binding_size = bind_program.size() * sizeof(bind_program[0]);
   ctx.name = drv_name;
   ctx.autobind = autobind ? 1 : 0;

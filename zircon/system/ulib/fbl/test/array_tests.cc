@@ -15,7 +15,7 @@ class DestructorSignaler {
   DestructorSignaler() : array(nullptr), result(nullptr) {}
   ~DestructorSignaler() {
     if (array && result)
-      *result = array->get();
+      *result = array->data();
   }
 
   fbl::Array<DestructorSignaler>* array;
@@ -52,12 +52,12 @@ bool move_to_const_ctor_test() {
   for (uint32_t i = 0; i < kSize; ++i) {
     array[i] = i;
   }
-  uint32_t* array_ptr = array.get();
+  uint32_t* array_ptr = array.data();
 
   fbl::Array<const uint32_t> const_array(std::move(array));
-  EXPECT_NULL(array.get());
+  EXPECT_NULL(array.data());
   EXPECT_EQ(array.size(), 0);
-  EXPECT_EQ(const_array.get(), array_ptr);
+  EXPECT_EQ(const_array.data(), array_ptr);
   EXPECT_EQ(const_array.size(), kSize);
   for (size_t i = 0; i < kSize; ++i) {
     EXPECT_EQ(const_array[i], i);
@@ -74,13 +74,13 @@ bool move_to_const_assignment_test() {
   for (uint32_t i = 0; i < kSize; ++i) {
     array[i] = i;
   }
-  uint32_t* array_ptr = array.get();
+  uint32_t* array_ptr = array.data();
 
   fbl::Array<const uint32_t> const_array;
   const_array = std::move(array);
-  EXPECT_NULL(array.get());
+  EXPECT_NULL(array.data());
   EXPECT_EQ(array.size(), 0);
-  EXPECT_EQ(const_array.get(), array_ptr);
+  EXPECT_EQ(const_array.data(), array_ptr);
   EXPECT_EQ(const_array.size(), kSize);
   for (size_t i = 0; i < kSize; ++i) {
     EXPECT_EQ(const_array[i], i);
