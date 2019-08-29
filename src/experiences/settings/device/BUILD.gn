@@ -34,7 +34,7 @@ flutter_app("device_settings") {
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/widgets:lib.widgets",
-    "//zircon/public/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-device-manager",
   ]
 }
 
@@ -53,6 +53,6 @@ flutter_test("device_settings_tests") {
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/widgets:lib.widgets",
-    "//zircon/public/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-device-manager",
   ]
 }
