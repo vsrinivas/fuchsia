@@ -16,7 +16,6 @@ test("fs") {
     "test-directory.cc",
     "test-dot-dot.c",
     "test-fcntl.cc",
-    "test-get-buffer.cc",
     "test-link.c",
     "test-lseek.cc",
     "test-maxfile.cc",

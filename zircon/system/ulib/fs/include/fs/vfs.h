@@ -52,8 +52,6 @@ inline constexpr bool IsReadable(uint32_t flags) { return flags & ZX_FS_RIGHT_RE
 
 inline constexpr bool HasAdminRight(uint32_t flags) { return flags & ZX_FS_RIGHT_ADMIN; }
 
-inline constexpr bool IsExecutable(uint32_t flags) { return flags & ZX_FS_RIGHT_EXECUTABLE; }
-
 // A storage class for a vdircookie which is passed to Readdir.
 // Common vnode implementations may use this struct as scratch
 // space, or cast it to an alternative structure of the same

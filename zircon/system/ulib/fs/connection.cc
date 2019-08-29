@@ -138,13 +138,11 @@ bool PrevalidateFlags(uint32_t flags, uint32_t* out_flags, bool* out_describe) {
 zx_status_t EnforceHierarchicalRights(uint32_t parent_flags, uint32_t child_flags,
                                       uint32_t* out_flags) {
   if (child_flags & ZX_FS_FLAG_POSIX) {
-    if (!IsWritable(parent_flags) && !IsWritable(child_flags) &&
-        !IsExecutable(parent_flags) && !IsExecutable(child_flags)) {
+    if (!IsWritable(parent_flags) && !IsWritable(child_flags)) {
       // Posix compatibility flag allows the child dir connection to inherit every right from
       // its immediate parent. Here we know there exists a read-only directory somewhere along
       // the Open() chain, so remove this flag to rid the child connection the ability to
-      // inherit read-write right from e.g. crossing a read-write mount point
-      // down the line, or similarly with the execute right.
+      // inherit read-write right from e.g. crossing a read-write mount point down the line.
       child_flags &= ~ZX_FS_FLAG_POSIX;
     }
   }
@@ -208,18 +206,11 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel, fbl::Strin
   }
 
   if (vnode->IsDirectory() && (open_flags & ZX_FS_FLAG_POSIX)) {
-    // Save this before modifying open_flags below.
+    // This is such that POSIX open() can open a directory with O_RDONLY, and still get a
+    // RW directory if the parent directory is RW.
+    // ADMIN right is not inherited. It must be explicitly specified.
     bool admin = open_flags & ZX_FS_RIGHT_ADMIN;
-
-    // This is such that POSIX open() can open a directory with O_RDONLY, and
-    // still get the ZX_FS_RIGHT_{WRITABLE,EXECUTABLE} right if the parent
-    // directory connection has the ZX_FS_RIGHT_{WRITABLE,EXECUTABLE} right
-    // respectively.  With ZX_FS_RIGHT_EXECUTABLE right in particular, it may be
-    // passed to fdio_get_vmo_exec() which requires ZX_FS_RIGHT_EXECUTABLE.
-    // This transfers ZX_FS_RIGHT_WRITABLE and ZX_FS_RIGHT_EXECUTABLE from the parent, if present.
     open_flags |= parent_rights;
-
-    // The ADMIN right is not inherited. It must be explicitly specified.
     open_flags &= ~ZX_FS_RIGHT_ADMIN;
     if (admin) {
       open_flags |= ZX_FS_RIGHT_ADMIN;
@@ -811,8 +802,6 @@ zx_status_t Connection::FileGetBuffer(uint32_t flags, fidl_txn_t* txn) {
   } else if ((flags_ & ZX_FS_FLAG_APPEND) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
     return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
   } else if (!IsWritable(flags_) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
-    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!IsExecutable(flags_) && (flags & fuchsia_io_VMO_FLAG_EXEC)) {
     return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
   } else if (!IsReadable(flags_)) {
     return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
