@@ -650,7 +650,7 @@ int main(int argc, char** argv) {
       log("%sIncompatible version 0x%08X of bootloader "
           "detected from %s, please upgrade your bootloader%s",
           ANSI(RED), msg->arg, sockaddr_str(&ra), ANSI(RESET));
-      if (once) {
+      if (fail_fast) {
         close(s);
         return -1;
       }
