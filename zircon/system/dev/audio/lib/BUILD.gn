@@ -7,7 +7,6 @@
 
 group("lib") {
   deps = [
-    "codec-interface",
     "simple-audio-stream",
   ]
 }

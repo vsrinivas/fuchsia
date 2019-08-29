@@ -2,7 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
+
+#include <lib/device-protocol/pdev.h>
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/simple-audio-stream/simple-audio-stream.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
 
 #include <audio-proto/audio-proto.h>
 #include <ddk/io-buffer.h>
@@ -12,17 +20,11 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/audio.h>
-#include <lib/device-protocol/pdev.h>
 #include <ddktl/protocol/gpio.h>
 #include <dispatcher-pool/dispatcher-timer.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <lib/fzl/pinned-vmo.h>
-#include <lib/simple-audio-stream/simple-audio-stream.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/vmo.h>
 #include <soc/aml-common/aml-tdm-audio.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "tas5720.h"
 
@@ -57,7 +59,7 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
   fbl::RefPtr<dispatcher::Timer> notify_timer_;
   ddk::PDev pdev_ TA_GUARDED(domain_->token());
   metadata::Codec codecs_types_ TA_GUARDED(domain_->token());
-  fbl::Array<fbl::unique_ptr<Codec>> codecs_ TA_GUARDED(domain_->token());
+  fbl::Array<fbl::unique_ptr<Tas5720>> codecs_ TA_GUARDED(domain_->token());
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
   fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
   fbl::unique_ptr<AmlTdmDevice> aml_audio_;
@@ -68,3 +70,5 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
 
 }  // namespace sherlock
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_

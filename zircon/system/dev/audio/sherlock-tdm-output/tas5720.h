@@ -2,33 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_TAS5720_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_TAS5720_H_
+
+#include <lib/device-protocol/i2c-channel.h>
+
+#include <optional>
 
 #include <ddk/debug.h>
 #include <ddk/protocol/i2c.h>
-#include <lib/device-protocol/i2c-channel.h>
 #include <fbl/unique_ptr.h>
-#include <lib/codec-interface/codec-interface.h>
 
 namespace audio {
 
-class Tas5720 final : public Codec {
+class Tas5720 final {
  public:
   static fbl::unique_ptr<Tas5720> Create(ddk::I2cChannel i2c);
 
   explicit Tas5720(const ddk::I2cChannel& i2c) : i2c_(i2c) {}
 
-  bool ValidGain(float gain) const override;
-  zx_status_t SetGain(float gain) override;
-  zx_status_t Init(std::optional<uint8_t> slot) override;
-  zx_status_t Reset() override;
-  zx_status_t Standby() override;
-  zx_status_t ExitStandby() override;
-  float GetGain() const override { return current_gain_; }
-  float GetMinGain() const override { return kMinGain; }
-  float GetMaxGain() const override { return kMaxGain; }
-  float GetGainStep() const override { return kGainStep; }
-  zx_status_t Mute(bool mute) override;
+  bool ValidGain(float gain);
+  zx_status_t SetGain(float gain);
+  bool ValidGain(float gain) const;
+  zx_status_t Init(std::optional<uint8_t> slot);
+  zx_status_t Reset();
+  zx_status_t Standby();
+  zx_status_t ExitStandby();
+  float GetGain() { return current_gain_; }
+  float GetMinGain() { return kMinGain; }
+  float GetMaxGain() { return kMaxGain; }
+  float GetGainStep() { return kGainStep; }
+  zx_status_t Mute(bool mute);
 
  private:
   static constexpr float kMaxGain = 24.0;
@@ -43,3 +47,5 @@ class Tas5720 final : public Codec {
   float current_gain_ = 0;
 };
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_TAS5720_H_

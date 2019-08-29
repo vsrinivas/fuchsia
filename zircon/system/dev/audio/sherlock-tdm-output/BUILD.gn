@@ -13,7 +13,6 @@ driver("sherlock-tdm-output") {
     "$zx/system/banjo/ddk.protocol.i2c",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
-    "$zx/system/dev/audio/lib/codec-interface",
     "$zx/system/dev/audio/lib/simple-audio-stream",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-i2c-channel",

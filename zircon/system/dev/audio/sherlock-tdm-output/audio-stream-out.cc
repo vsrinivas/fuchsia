@@ -68,7 +68,7 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   if (codecs_types_ == metadata::Codec::Tas5720x3) {
     zxlogf(INFO, "audio: using 3 Tas5720 codecs\n");
     fbl::AllocChecker ac;
-    codecs_ = fbl::Array(new (&ac) fbl::unique_ptr<Codec>[3], 3);
+    codecs_ = fbl::Array(new (&ac) fbl::unique_ptr<Tas5720>[3], 3);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
