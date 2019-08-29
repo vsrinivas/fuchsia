@@ -3,184 +3,296 @@
 // found in the LICENSE file.
 
 #include <lib/sync/completion.h>
-
-#include <zircon/syscalls.h>
-#include <zircon/threads.h>
-#include <unittest/unittest.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <sched.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
-#define ITERATIONS 64
+#include <array>
 
-static int sync_completion_thread_wait(void* arg) {
-  auto completion = static_cast<sync_completion_t*>(arg);
-  for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
-    zx_status_t status = sync_completion_wait(completion, ZX_TIME_INFINITE);
-    ASSERT_EQ(status, ZX_OK, "completion wait failed!");
+#include <zxtest/zxtest.h>
+
+namespace {
+
+struct TestThread {
+ public:
+  TestThread() = default;
+  ~TestThread() { Join(true); }
+
+  void StartAndBlock(const char* name, sync_completion_t* completion,
+                     zx::time deadline = zx::time::infinite()) {
+    ZX_ASSERT(completion_ == nullptr);
+    ZX_ASSERT(completion != nullptr);
+
+    deadline_ = deadline;
+
+    auto thunk = [](void* ctx) -> int {
+      auto thiz = reinterpret_cast<TestThread*>(ctx);
+      return thiz->DoBlock();
+    };
+
+    auto result = thrd_create_with_name(&thread_, thunk, this, name);
+    if (result == thrd_success) {
+      completion_ = completion;
+    }
+
+    ASSERT_EQ(thrd_success, result);
   }
 
-  return 0;
-}
+  void Join(bool force) {
+    if (!started()) {
+      return;
+    }
 
-static int sync_completion_thread_signal(void* arg) {
-  auto completion = static_cast<sync_completion_t*>(arg);
-  for (int iteration = 0u; iteration < ITERATIONS; iteration++) {
-    sync_completion_reset(completion);
-    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-    sync_completion_signal(completion);
+    if (force) {
+      ZX_ASSERT(completion_ != nullptr);
+      sync_completion_signal(completion_);
+    }
+
+    int res = thrd_join(thread_, &thread_ret_);
+    ZX_ASSERT(res == thrd_success);
+    completion_ = nullptr;
   }
 
-  return 0;
-}
+  zx_status_t IsBlockedOnFutex(bool* out_is_blocked) const {
+    if (completion_ == nullptr) {
+      return ZX_ERR_BAD_STATE;
+    }
 
-struct CompletionAndCounters {
-  sync_completion_t completion;
-  int started = 0;
-  int finished = 0;
+    zx_info_thread_t info;
+    zx_status_t status = zx_object_get_info(thrd_get_zx_handle(thread_), ZX_INFO_THREAD, &info,
+                                            sizeof(info), nullptr, nullptr);
+    *out_is_blocked = (info.state == ZX_THREAD_STATE_BLOCKED_FUTEX);
+
+    return status;
+  }
+
+  zx_status_t status() const { return status_.load(); }
+  bool woken() const { return woken_.load(); }
+  bool started() const { return (completion_ != nullptr); }
+
+ private:
+  int DoBlock() {
+    status_.store(sync_completion_wait_deadline(completion_, deadline_.get()));
+    woken_.store(true);
+    return 0;
+  }
+
+  thrd_t thread_;
+  int thread_ret_ = 0;
+  zx::time deadline_{zx::time::infinite()};
+
+  sync_completion_t* completion_ = nullptr;
+  std::atomic<zx_status_t> status_;
+  std::atomic<bool> woken_{false};
 };
 
-static int sync_completion_thread_wait_once(void* ctx) {
-  auto cc = static_cast<CompletionAndCounters*>(ctx);
-  __atomic_fetch_add(&cc->started, 1, __ATOMIC_SEQ_CST);
-  zx_status_t status = sync_completion_wait(&cc->completion, ZX_TIME_INFINITE);
-  ASSERT_EQ(status, ZX_OK, "completion wait failed!");
-  __atomic_fetch_add(&cc->finished, 1, __ATOMIC_SEQ_CST);
-  return 0;
+template <size_t N>
+static void CheckAllBlockedOnFutex(const std::array<TestThread, N>& threads,
+                                   bool* out_all_blocked) {
+  *out_all_blocked = true;
+
+  for (const auto& thread : threads) {
+    zx_status_t res = thread.IsBlockedOnFutex(out_all_blocked);
+    ASSERT_OK(res);
+
+    if (!(*out_all_blocked)) {
+      return;
+    }
+  }
 }
 
-static bool test_initializer(void) {
-  BEGIN_TEST;
+template <size_t N>
+static void WaitForAllBlockedOnFutex(const std::array<TestThread, N>& threads) {
+  while (true) {
+    bool done;
+
+    CheckAllBlockedOnFutex(threads, &done);
+
+    if (done) {
+      return;
+    }
+
+    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
+  }
+}
+
+constexpr size_t kMultiWaitThreadCount = 16;
+
+TEST(SyncCompletion, test_initializer) {
   // Let's not accidentally break .bss'd completions
   static sync_completion_t static_completion;
   sync_completion_t completion;
   int status = memcmp(&static_completion, &completion, sizeof(sync_completion_t));
   EXPECT_EQ(status, 0, "completion's initializer is not all zeroes");
-  END_TEST;
 }
 
-#define NUM_THREADS 16
-
-static bool test_completions(void) {
-  BEGIN_TEST;
+template <size_t N>
+void TestWait() {
   sync_completion_t completion;
-  thrd_t signal_thread;
-  thrd_t wait_thread[NUM_THREADS];
+  std::array<TestThread, N> threads;
 
-  for (int idx = 0; idx < NUM_THREADS; idx++) {
-    auto result = thrd_create_with_name(wait_thread + idx, sync_completion_thread_wait, &completion,
-                                        "completion wait");
-    ASSERT_EQ(result, thrd_success);
+  // Start the threads
+  for (auto& thread : threads) {
+    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("completion wait", &completion));
   }
-  auto result = thrd_create_with_name(&signal_thread, sync_completion_thread_signal, &completion,
-                                      "completion signal");
-  ASSERT_EQ(result, thrd_success);
 
-  for (int idx = 0; idx < NUM_THREADS; idx++) {
-    ASSERT_EQ(thrd_join(wait_thread[idx], NULL), thrd_success);
+  // Wait until all of the threads have blocked, then signal the completion.
+  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
+  sync_completion_signal(&completion);
+
+  // Wait for the threads to finish, and verify that they received the proper
+  // wait result.
+  for (auto& thread : threads) {
+    thread.Join(false);
+    ASSERT_OK(thread.status());
   }
-  ASSERT_EQ(thrd_join(signal_thread, NULL), thrd_success);
-
-  END_TEST;
 }
 
-static bool test_timeout(void) {
-  BEGIN_TEST;
-  zx_time_t timeout = 0u;
+TEST(SyncCompletion, test_single_wait) { ASSERT_NO_FATAL_FAILURES(TestWait<1>()); }
+
+TEST(SyncCompletion, test_multi_wait) {
+  ASSERT_NO_FATAL_FAILURES(TestWait<kMultiWaitThreadCount>());
+}
+
+template <size_t N>
+void TestWaitTimeout() {
   sync_completion_t completion;
-  for (int iteration = 0; iteration < 1000; iteration++) {
-    timeout += 2000u;
-    zx_status_t status = sync_completion_wait(&completion, timeout);
-    ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait returned spuriously!");
+  std::array<TestThread, N> threads;
+  zx::time deadline = zx::clock::get_monotonic() + zx::msec(300);
+
+  // Start the threads
+  for (auto& thread : threads) {
+    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("completion wait", &completion, deadline));
   }
-  END_TEST;
+
+  // Don't bother attempting to wait until threads have blocked; doing so will
+  // just introduce a flake race.
+  //
+  // Do not signal the threads, just Wait for them to finish, and verify that
+  // they received a TIMED_OUT error.
+  for (auto& thread : threads) {
+    thread.Join(false);
+    ASSERT_STATUS(thread.status(), ZX_ERR_TIMED_OUT);
+  }
 }
 
-static bool is_blocked_on_futex(thrd_t thread) {
-  zx_info_thread_t info;
-  zx_status_t status = zx_object_get_info(thrd_get_zx_handle(thread), ZX_INFO_THREAD, &info,
-                                          sizeof(info), nullptr, nullptr);
-  ASSERT_EQ(status, ZX_OK);
-  return info.state == ZX_THREAD_STATE_BLOCKED_FUTEX;
+TEST(SyncCompletion, test_timeout_single_wait) { ASSERT_NO_FATAL_FAILURES(TestWaitTimeout<1>()); }
+
+TEST(SyncCompletion, test_timeout_multi_wait) {
+  ASSERT_NO_FATAL_FAILURES(TestWaitTimeout<kMultiWaitThreadCount>());
 }
 
-static bool all_blocked_on_futex(thrd_t threads[], int num) {
-  for (int i = 0; i < num; ++i) {
-    if (!is_blocked_on_futex(threads[i])) {
-      return false;
-    }
+template <size_t N>
+void TestPresignalWait() {
+  sync_completion_t completion;
+  std::array<TestThread, N> threads;
+
+  // Start by signaling the completion initially.
+  sync_completion_signal(&completion);
+
+  // Start the threads
+  for (auto& thread : threads) {
+    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("completion wait", &completion));
   }
-  return true;
+
+  // Wait for the threads to finish, and verify that they received the proper
+  // wait result.
+  for (auto& thread : threads) {
+    thread.Join(false);
+    ASSERT_OK(thread.status());
+  }
+}
+
+TEST(SyncCompletion, test_presignal_single_wait) {
+  ASSERT_NO_FATAL_FAILURES(TestPresignalWait<1>());
+}
+
+TEST(SyncCompletion, test_presignal_multi_wait) {
+  ASSERT_NO_FATAL_FAILURES(TestPresignalWait<kMultiWaitThreadCount>());
+}
+
+template <size_t N>
+void TestResetCycleWait() {
+  sync_completion_t completion;
+  std::array<TestThread, N> threads;
+
+  // Start by signaling, and then resetting the completion initially.
+  sync_completion_signal(&completion);
+  sync_completion_reset(&completion);
+
+  // Start the threads
+  for (auto& thread : threads) {
+    ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("completion wait", &completion));
+  }
+
+  // Wait until all of the threads have blocked, then signal the completion.
+  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
+  sync_completion_signal(&completion);
+
+  // Wait for the threads to finish, and verify that they received the proper
+  // wait result.
+  for (auto& thread : threads) {
+    thread.Join(false);
+    ASSERT_OK(thread.status());
+  }
+}
+
+TEST(SyncCompletion, test_reset_cycle_single_wait) {
+  ASSERT_NO_FATAL_FAILURES(TestResetCycleWait<1>());
+}
+
+TEST(SyncCompletion, test_reset_cycle_multi_wait) {
+  ASSERT_NO_FATAL_FAILURES(TestResetCycleWait<kMultiWaitThreadCount>());
 }
 
 // This test would flake if spurious wake ups from zx_futex_wake() were possible.
 // However, the documentation states that "Zircon's implementation of
 // futexes currently does not generate spurious wakeups itself". If this changes,
 // this test could be relaxed to only assert that threads wake up in the end.
-static bool test_signal_requeue() {
-  BEGIN_TEST;
-  CompletionAndCounters cc;
+TEST(SyncCompletion, test_signal_requeue) {
+  sync_completion_t completion;
+  std::array<TestThread, kMultiWaitThreadCount> threads;
 
-  thrd_t wait_thread[NUM_THREADS];
-  for (int idx = 0; idx < NUM_THREADS; idx++) {
-    auto result = thrd_create(wait_thread + idx, sync_completion_thread_wait_once, &cc);
-    ASSERT_EQ(result, thrd_success);
+  // Start the threads and have them block on the completion.
+  for (auto& thread : threads) {
+    ASSERT_NO_FATAL_FAILURES(
+        thread.StartAndBlock("completion wait", &completion, zx::time::infinite()));
   }
 
-  // Make sure all threads have started
-  while (__atomic_load_n(&cc.started, __ATOMIC_SEQ_CST) != NUM_THREADS) {
-    sched_yield();
-  }
+  // Wait until all the threads have become blocked.
+  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
 
-  // Make sure all threads are blocking on a futex now
-  while (!all_blocked_on_futex(wait_thread, NUM_THREADS)) {
-    sched_yield();
-  }
-
+  // Move them over to a different futex using the re-queue hook.
   zx_futex_t futex = 0;
-  sync_completion_signal_requeue(&cc.completion, &futex, ZX_HANDLE_INVALID);
+  sync_completion_signal_requeue(&completion, &futex, ZX_HANDLE_INVALID);
 
-  // The threads should still be blocked on a futex
-  ASSERT_TRUE(all_blocked_on_futex(wait_thread, NUM_THREADS));
+  // Wait for a bit and make sure no one has woken up yet.  Note that this
+  // clearly cannot catch all possible failures here.  It is a best effort check
+  // only.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 
-  // Wait for a bit and make sure no one has woken up yet
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-  ASSERT_EQ(__atomic_load_n(&cc.finished, __ATOMIC_SEQ_CST), 0);
+  // Requeue is an atomic action.  All of the threads should still be blocked on
+  // a futex (the target futex this time);
+  bool all_blocked;
+  ASSERT_NO_FATAL_FAILURES(CheckAllBlockedOnFutex(threads, &all_blocked));
+  ASSERT_TRUE(all_blocked);
 
   // Now, wake the threads via the requeued futex
-  zx_futex_wake(&futex, UINT32_MAX);
+  ASSERT_OK(zx_futex_wake(&futex, UINT32_MAX));
 
-  // Now the threads should be done
-  for (int idx = 0; idx < NUM_THREADS; idx++) {
-    ASSERT_EQ(thrd_join(wait_thread[idx], NULL), thrd_success);
+  // Wait for the threads to finish, and verify that they received the proper
+  // wait result.
+  for (auto& thread : threads) {
+    thread.Join(false);
+    ASSERT_OK(thread.status());
   }
-  ASSERT_EQ(__atomic_load_n(&cc.finished, __ATOMIC_SEQ_CST), NUM_THREADS);
-
-  END_TEST;
 }
 
-static bool test_completion_signaled() {
-  BEGIN_TEST;
-
-  sync_completion_t sync = {};
-  ASSERT_FALSE(sync_completion_signaled(&sync));
-  sync_completion_signal(&sync);
-  ASSERT_TRUE(sync_completion_signaled(&sync));
-
-  // Test that reset clears whether a completion was signaled.
-  sync_completion_reset(&sync);
-  ASSERT_FALSE(sync_completion_signaled(&sync));
-
-  END_TEST;
-}
-
-BEGIN_TEST_CASE(sync_completion_tests)
-RUN_TEST(test_initializer)
-RUN_TEST(test_completions)
-RUN_TEST(test_timeout)
-RUN_TEST(test_signal_requeue)
-RUN_TEST(test_completion_signaled)
-END_TEST_CASE(sync_completion_tests)
+}  // namespace
