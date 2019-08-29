@@ -68,9 +68,18 @@ std::string JoinPaths(const std::vector<std::string>& paths) {
 
 // static
 std::optional<BenchmarksRunner> BenchmarksRunner::Create(int argc, const char** argv) {
-  if (argc < 3 || std::string(argv[2]) != "--catapult-converter-args") {
-    FXL_LOG(ERROR) << "Error: Missing '--catapult-converter-args' argument";
-    FXL_LOG(ERROR) << "Usage: " << argv[0] << " <output-dir> --catapult-converter-args <args>";
+  auto PrintUsage = [=] {
+    FXL_LOG(ERROR) << "Usage: " << argv[0] << " <output-dir> [--catapult-converter-args <args>]";
+  };
+  if (argc < 2) {
+    FXL_LOG(ERROR) << "Error: Missing output directory argument";
+    PrintUsage();
+    return {};
+  }
+  if (argc >= 3 && std::string(argv[2]) != "--catapult-converter-args") {
+    FXL_LOG(ERROR) << "Error: Unexpected argument '" << argv[2]
+                   << "' instead of '--catapult-converter-args'";
+    PrintUsage();
     return {};
   }
 
@@ -128,17 +137,20 @@ void BenchmarksRunner::AddCustomBenchmark(const std::string& name,
       return;
     }
 
-    std::string catapult_file = results_file + ".catapult_json";
-    int catapult_convert_status =
-        CatapultConvert(results_file, catapult_file, catapult_converter_args_);
-    if (catapult_convert_status != 0) {
-      FXL_LOG(ERROR) << "Failed to run catapult_converter";
-      WriteSummaryEntry(name, results_file, SummaryEntryResult::kFail);
-      return;
-    }
-
     WriteSummaryEntry(name, results_file, SummaryEntryResult::kPass);
-    WriteSummaryEntry(name + ".catapult_json", catapult_file, SummaryEntryResult::kPass);
+
+    if (!catapult_converter_args_.empty()) {
+      std::string catapult_file = results_file + ".catapult_json";
+      int catapult_convert_status =
+          CatapultConvert(results_file, catapult_file, catapult_converter_args_);
+      if (catapult_convert_status != 0) {
+        FXL_LOG(ERROR) << "Failed to run catapult_converter";
+        WriteSummaryEntry(name, results_file, SummaryEntryResult::kFail);
+        return;
+      }
+
+      WriteSummaryEntry(name + ".catapult_json", catapult_file, SummaryEntryResult::kPass);
+    }
   });
 }
 
