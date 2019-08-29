@@ -484,6 +484,7 @@ impl model::DestroyInstanceHook for HubInner {
 mod tests {
     use {
         super::*,
+        crate::startup,
         crate::{
             framework::FrameworkServicesHook,
             model::{
@@ -610,18 +611,23 @@ mod tests {
         resolver.register("test".to_string(), Box::new(mock_resolver));
 
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
-
         let hub = Arc::new(Hub::new(root_component_url.clone()).unwrap());
         hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into())
             .await
             .expect("Unable to open Hub root directory.");
 
+        let startup_args = startup::Arguments {
+            use_builtin_process_launcher: false,
+            root_component_url: "".to_string(),
+        };
         let model = Arc::new(model::Model::new(model::ModelParams {
             root_component_url,
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),
             config: model::ModelConfig::default(),
+            builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
         }));
+
         let framework_services = Arc::new(FrameworkServicesHook::new(
             (*model).clone(),
             Arc::new(mocks::MockFrameworkServiceHost::new()),

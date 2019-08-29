@@ -6,7 +6,7 @@ use {
     crate::{
         directory_broker, framework::FrameworkServicesHook, klog,
         model::routing::generate_storage_path, model::testing::memfs::Memfs,
-        model::testing::mocks::*, model::*,
+        model::testing::mocks::*, model::*, startup,
     },
     cm_rust::{
         CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
@@ -20,6 +20,7 @@ use {
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
     fuchsia_vfs_pseudo_fs::{
         directory, directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
     },
@@ -102,12 +103,30 @@ impl RoutingTest {
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
 
+        let mut builtin_service_fs = ServiceFs::new();
+        builtin_service_fs.add_fidl_service_at(
+            "builtin.Echo",
+            move |mut stream: EchoRequestStream| {
+                fasync::spawn(async move {
+                    while let Some(EchoRequest::EchoString { value, responder }) =
+                        stream.try_next().await.unwrap()
+                    {
+                        responder.send(value.as_ref().map(|s| &**s)).unwrap();
+                    }
+                });
+            },
+        );
+        let builtin_services =
+            startup::BuiltinRootServices::new_with_service_fs(Box::new(builtin_service_fs))
+                .unwrap();
+
         let namespaces = runner.namespaces.clone();
         let model = Model::new(ModelParams {
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             root_default_runner: Arc::new(runner),
             config: ModelConfig::default(),
+            builtin_services: Arc::new(builtin_services),
         });
 
         let framework_services_hook =

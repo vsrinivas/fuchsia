@@ -32,8 +32,10 @@ enum CapabilitySource {
     /// This capability originates from the component instance for the given Realm.
     /// point.
     Component(RoutedCapability, Arc<Realm>),
-    /// This capability originates from component manager's namespace.
+    /// This capability originates from the root component's realm.
     ComponentManagerNamespace(CapabilityPath),
+    /// This capability is a builtin service with the provided name.
+    BuiltinService(String),
     /// This capability originates from component manager itself.
     Framework(FrameworkCapabilityDecl, Arc<Realm>),
     /// This capability originates from a storage declaration in a component's decl.  `StorageDecl`
@@ -96,6 +98,12 @@ async fn open_capability_at_source<'a>(
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
     match source {
+        CapabilitySource::BuiltinService(service_name) => {
+            model
+                .builtin_services
+                .connect_channel_to_service_name(&service_name, server_chan)
+                .map_err(ModelError::capability_discovery_error)?;
+        }
         CapabilitySource::ComponentManagerNamespace(path) => {
             io_util::connect_in_namespace(&path.to_string(), server_chan, FLAGS)
                 .map_err(|e| ModelError::capability_discovery_error(e))?;
@@ -401,9 +409,16 @@ async fn walk_offer_chain<'a>(
 ) -> Result<Option<CapabilitySource>, ModelError> {
     'offerloop: loop {
         if pos.at_componentmgr_realm() {
-            // We are at component manager's own realm, so pull the capability from its namespace.
+            // We are at the root component's realm, so determine if this is a builtin service or
+            // coming from component manager's namespace.
             if let Some(path) = pos.capability.source_path() {
-                return Ok(Some(CapabilitySource::ComponentManagerNamespace(path.clone())));
+                if path.dirname.as_str() == "/svc"
+                    && model.builtin_services.is_available(&path.basename)
+                {
+                    return Ok(Some(CapabilitySource::BuiltinService(path.basename.clone())));
+                } else {
+                    return Ok(Some(CapabilitySource::ComponentManagerNamespace(path.clone())));
+                }
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(
                     "invalid capability type to come from component manager's namespace",

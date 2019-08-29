@@ -37,8 +37,9 @@ fn main() -> Result<(), Error> {
 
     let resolver_registry = startup::available_resolvers()?;
     let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
-    let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+    let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services.clone());
     let params = ModelParams {
+        builtin_services,
         root_component_url: args.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(ElfRunner::new(launcher_connector)),

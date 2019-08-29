@@ -6,6 +6,7 @@ use {
     crate::framework::*,
     crate::model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
     crate::model::*,
+    crate::startup,
     cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,
     std::collections::HashSet,
@@ -23,11 +24,16 @@ async fn new_model_with(
 ) -> Model {
     let mut resolver = ResolverRegistry::new();
     resolver.register("test".to_string(), Box::new(mock_resolver));
+    let startup_args = startup::Arguments {
+        use_builtin_process_launcher: false,
+        root_component_url: "".to_string(),
+    };
     let model = Model::new(ModelParams {
         root_component_url: "test:///root".to_string(),
         root_resolver_registry: resolver,
         root_default_runner: Arc::new(mock_runner),
         config: ModelConfig::default(),
+        builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
     });
     let framework_services = Arc::new(FrameworkServicesHook::new(
         model.clone(),

@@ -340,6 +340,7 @@ mod tests {
         crate::framework::*,
         crate::klog,
         crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
+        crate::startup::{Arguments, BuiltinRootServices},
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
@@ -443,11 +444,14 @@ mod tests {
 
             let test_hook = Arc::new(TestHook::new());
             let framework_services = Arc::new(RealFrameworkServiceHost::new());
+            let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
+            let builtin = BuiltinRootServices::new(&args).unwrap();
             let model = Model::new(ModelParams {
                 root_component_url: format!("test:///{}", root_component),
                 root_resolver_registry: resolver,
                 root_default_runner: Arc::new(runner),
                 config: ModelConfig::default(),
+                builtin_services: Arc::new(builtin),
             });
             let framework_services_hook =
                 Arc::new(FrameworkServicesHook::new(model.clone(), framework_services.clone()));

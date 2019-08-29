@@ -243,6 +243,73 @@ async fn use_from_grandparent() {
     .await;
 }
 
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: offers service /svc/builtin.Echo from realm
+/// b: offers service /svc/builtin.Echo from realm
+/// c: uses /svc/builtin.Echo as /svc/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_builtin_from_grandparent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    source: OfferServiceSource::Realm,
+                    source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
+                    target: OfferTarget::Child("c".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    source: UseSource::Realm,
+                    source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                })],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let framework_services = Arc::new(MockFrameworkServiceHost::new());
+    let test = RoutingTest::new("a", components, framework_services).await;
+    test.check_use(
+        vec!["b", "c"].into(),
+        CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
+    )
+    .await;
+}
+
 ///     a
 ///    /
 ///   b

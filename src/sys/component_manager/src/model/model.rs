@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::{model::*, startup::BuiltinRootServices},
     cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -18,6 +18,8 @@ use {
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
+    /// Builtin services that are available in the root realm.
+    pub builtin_services: Arc<BuiltinRootServices>,
     /// The URL of the root component.
     pub root_component_url: String,
     /// The component resolver registry used in the root realm.
@@ -42,6 +44,8 @@ pub struct Model {
     pub root_realm: Arc<Realm>,
     pub config: ModelConfig,
     pub hooks: Hooks,
+    /// Builtin services that are available in the root realm.
+    pub builtin_services: Arc<BuiltinRootServices>,
 }
 
 /// Holds configuration options for the model.
@@ -73,6 +77,7 @@ impl Model {
             )),
             hooks: Hooks::new(),
             config: params.config,
+            builtin_services: params.builtin_services,
         }
     }
 

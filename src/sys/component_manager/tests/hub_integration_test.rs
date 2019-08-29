@@ -64,11 +64,16 @@ async fn test() -> Result<(), Error> {
     hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
     let hub_test_hook = Arc::new(HubTestHook::new());
 
+    let startup_args = startup::Arguments {
+        use_builtin_process_launcher: false,
+        root_component_url: "".to_string(),
+    };
     let params = ModelParams {
         root_component_url: root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(runner),
         config: model::ModelConfig::default(),
+        builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
     };
 
     let model = Arc::new(Model::new(params));

@@ -56,13 +56,19 @@ async fn main() -> Result<(), Error> {
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
     let hub = Arc::new(Hub::new(args.root_component_url.clone()).unwrap());
     hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
+
     // TODO(fsamuel): It would be nice to refactor some of this code into a helper
     // function to create a Model and install a bunch of default hooks.
+    let startup_args = startup::Arguments {
+        use_builtin_process_launcher: false,
+        root_component_url: "".to_string(),
+    };
     let params = ModelParams {
         root_component_url: args.root_component_url,
         root_resolver_registry: resolver_registry,
         root_default_runner: Arc::new(ElfRunner::new(launcher_connector)),
         config: ModelConfig::default(),
+        builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
     };
     let model = Arc::new(Model::new(params));
     let framework_services = Arc::new(FrameworkServicesHook::new(

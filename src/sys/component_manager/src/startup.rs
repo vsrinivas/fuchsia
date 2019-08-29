@@ -13,13 +13,17 @@ use {
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
+    fidl_fuchsia_process::LauncherMarker,
     fuchsia_async as fasync,
-    fuchsia_component::{client, server::ServiceFs},
+    fuchsia_component::{
+        client,
+        server::{ServiceFs, ServiceObjTrait},
+    },
     fuchsia_runtime::HandleType,
     fuchsia_zircon as zx,
     futures::prelude::*,
     log::*,
-    std::{path::PathBuf, sync::Arc},
+    std::{collections::HashSet, path::PathBuf, sync::Arc},
 };
 
 /// Command line arguments that control component_manager's behavior. Use [Arguments::from_args()]
@@ -142,35 +146,70 @@ pub async fn install_hub_if_possible(model: &Model) -> Result<(), ModelError> {
 
 /// Serves services built into component_manager and provides methods for connecting to those
 /// services.
-///
-/// The available built-in services depends on the configuration provided in Arguments:
-///
-/// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service is
-///   available.
 pub struct BuiltinRootServices {
     services: zx::Channel,
+    available: HashSet<String>,
 }
 
 impl BuiltinRootServices {
+    /// Creates a new BuiltinRootservices. The available built-in services depends on the
+    /// configuration provided in Arguments:
+    ///
+    /// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
+    ///   is available.
     pub fn new(args: &Arguments) -> Result<Self, Error> {
-        let services = Self::serve(args)?;
-        Ok(Self { services })
+        let (services, available) = Self::serve(args)?;
+        Ok(Self { services, available })
+    }
+
+    /// Creates a new BuiltinRootServices that has the set of services provided in the given
+    /// ServiceFs. Services in the ServiceFs should be at the top level, and _not_ in a `svc`
+    /// sub-directory. Only exists for tests.
+    pub(crate) fn new_with_service_fs<T>(mut service_fs: Box<ServiceFs<T>>) -> Result<Self, Error>
+    where
+        T: ServiceObjTrait<Output = ()> + Send + 'static,
+    {
+        let mut available = HashSet::new();
+        for name in service_fs.host_services_list()?.names {
+            available.insert(name.clone());
+        }
+        let (client, server) = zx::Channel::create().context("Failed to create channel")?;
+        service_fs
+            .serve_connection(server)
+            .context("Failed to service builtin service with custom ServiceFs")?;
+        fasync::spawn(service_fs.collect::<()>());
+        Ok(Self { services: client, available })
     }
 
     /// Connect to a built-in FIDL service.
     pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
         let (proxy, server) =
             fidl::endpoints::create_proxy::<S>().context("Failed to create proxy")?;
-        fdio::service_connect_at(&self.services, S::NAME, server.into_channel())
-            .context("Failed to connect built-in service")?;
+        self.connect_channel_to_service_name(S::NAME, server.into_channel())?;
         Ok(proxy)
     }
 
-    fn serve(args: &Arguments) -> Result<zx::Channel, Error> {
+    pub fn connect_channel_to_service_name(
+        &self,
+        path: &str,
+        chan: zx::Channel,
+    ) -> Result<(), Error> {
+        fdio::service_connect_at(&self.services, path, chan)
+            .context("Failed to connect built-in service")?;
+        Ok(())
+    }
+
+    pub fn is_available(&self, service_name: &str) -> bool {
+        self.available.contains(service_name)
+    }
+
+    fn serve(args: &Arguments) -> Result<(zx::Channel, HashSet<String>), Error> {
         let (client, server) = zx::Channel::create().context("Failed to create channel")?;
         let mut fs = ServiceFs::new();
+        let mut available = HashSet::new();
 
         if args.use_builtin_process_launcher {
+            available.insert(LauncherMarker::NAME.to_string());
             fs.add_fidl_service(move |stream| {
                 fasync::spawn(
                     ProcessLauncherService::serve(stream)
@@ -181,7 +220,7 @@ impl BuiltinRootServices {
 
         fs.serve_connection(server).context("Failed to serve builtin services")?;
         fasync::spawn(fs.collect::<()>());
-        Ok(client)
+        Ok((client, available))
     }
 }
 
@@ -189,7 +228,8 @@ impl BuiltinRootServices {
 mod tests {
     use {
         super::*,
-        fidl_fidl_examples_echo::EchoMarker,
+        fidl::endpoints::create_proxy,
+        fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
         fidl_fuchsia_process::{LaunchInfo, LauncherMarker},
     };
 
@@ -255,6 +295,38 @@ mod tests {
             launcher.launch(&mut launch_info).await.expect("FIDL call to launcher failed");
         assert_eq!(zx::Status::from_raw(status), zx::Status::INVALID_ARGS);
         assert_eq!(process, None);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn connect_to_builtin_service_with_custom_service_fs() -> Result<(), Error> {
+        let mut builtin_service_fs = ServiceFs::new();
+        builtin_service_fs.add_fidl_service(move |mut stream: EchoRequestStream| {
+            fasync::spawn(async move {
+                while let Some(EchoRequest::EchoString { value, responder }) =
+                    stream.try_next().await.unwrap()
+                {
+                    responder.send(value.as_ref().map(|s| &**s)).unwrap();
+                }
+            });
+        });
+        let builtin =
+            BuiltinRootServices::new_with_service_fs(Box::new(builtin_service_fs)).unwrap();
+
+        let echo_proxy = builtin.connect_to_service::<EchoMarker>()?;
+        assert_eq!(
+            Some("hippos".to_string()),
+            echo_proxy.echo_string(Some("hippos")).await.expect("failed to echo")
+        );
+
+        let (echo_proxy, echo_server_end) = create_proxy::<EchoMarker>()?;
+        builtin
+            .connect_channel_to_service_name(EchoMarker::NAME, echo_server_end.into_channel())?;
+        assert_eq!(
+            Some("hippos".to_string()),
+            echo_proxy.echo_string(Some("hippos")).await.expect("failed to echo")
+        );
+
         Ok(())
     }
 

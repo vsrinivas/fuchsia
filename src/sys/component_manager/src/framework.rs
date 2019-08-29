@@ -349,7 +349,10 @@ impl RealFrameworkServiceHost {
 mod tests {
     use super::*;
     use {
-        crate::model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*, test_hook::*},
+        crate::{
+            model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*, test_hook::*},
+            startup,
+        },
         cm_rust::{
             self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
             ExposeLegacyServiceDecl, ExposeSource, NativeIntoFidl,
@@ -383,11 +386,18 @@ mod tests {
             let mut config = ModelConfig::default();
             config.list_children_batch_size = 2;
             let framework_services = Arc::new(RealFrameworkServiceHost::new());
+            let startup_args = startup::Arguments {
+                use_builtin_process_launcher: false,
+                root_component_url: "".to_string(),
+            };
             let model = Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
                 root_default_runner: Arc::new(mock_runner),
                 config,
+                builtin_services: Arc::new(
+                    startup::BuiltinRootServices::new(&startup_args).unwrap(),
+                ),
             });
             let framework_services_hook =
                 Arc::new(FrameworkServicesHook::new(model.clone(), framework_services.clone()));
