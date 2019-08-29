@@ -8,8 +8,10 @@ import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_modular/module.dart' as modular;
 import 'package:simple_browser/src/models/tabs_action.dart';
 import 'package:simple_browser/src/models/webpage_action.dart';
+import 'package:webview/webview.dart';
 import 'app.dart';
 import 'src/blocs/tabs_bloc.dart';
+import 'src/blocs/webpage_bloc.dart';
 
 class RootIntentHandler extends modular.IntentHandler {
   final TabsBloc tabsBloc;
@@ -21,7 +23,7 @@ class RootIntentHandler extends modular.IntentHandler {
     /// otherwise add a new one only if the current tabs isn't a "New Tab"
     if (tabsBloc.tabs.value.isEmpty ||
         tabsBloc.currentTab.value.url.value.isNotEmpty) {
-      tabsBloc.request.add(NewTabAction());
+      tabsBloc.request.add(NewTabAction<WebPageBloc>());
     }
     if (intent.action == 'NavigateToUrl') {
       intent.getEntity(name: 'url', type: 'string').getData().then((bytes) {
@@ -34,7 +36,13 @@ class RootIntentHandler extends modular.IntentHandler {
 
 void main() {
   setupLogger(name: 'Browser');
-  final tabsBloc = TabsBloc();
+  final _context = ChromiumWebView.createContext();
+  final tabsBloc = TabsBloc(
+    tabFactory: () => WebPageBloc(context: _context),
+    disposeTab: (tab) {
+      tab.dispose();
+    },
+  );
   modular.Module().registerIntentHandler(RootIntentHandler(tabsBloc));
   runApp(App(tabsBloc: tabsBloc));
 }

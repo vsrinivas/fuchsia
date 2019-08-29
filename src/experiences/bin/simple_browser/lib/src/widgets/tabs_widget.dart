@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import '../blocs/tabs_bloc.dart';
+import '../blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
 
 const double _kTabBarHeight = 24.0;
@@ -11,7 +12,7 @@ const double _kPageTabWidth = 144.0;
 const double _kAddTabWidth = 36.0;
 
 class TabsWidget extends StatelessWidget {
-  final TabsBloc bloc;
+  final TabsBloc<WebPageBloc> bloc;
   const TabsWidget({@required this.bloc});
 
   @override

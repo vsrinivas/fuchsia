@@ -4,11 +4,9 @@
 
 import 'dart:async';
 import 'dart:collection';
-import 'package:fidl_fuchsia_web/fidl_async.dart' as web show ContextProxy;
+import 'package:meta/meta.dart';
 import 'package:flutter/foundation.dart';
-import 'package:webview/webview.dart';
 import '../models/tabs_action.dart';
-import 'webpage_bloc.dart';
 
 // Business logic for browser tabs.
 // Sinks:
@@ -16,44 +14,39 @@ import 'webpage_bloc.dart';
 // Value Notifiers:
 //   Tabs: the list of open tabs.
 //   CurrentTab: the currently focused tab.
-class TabsBloc {
-  final web.ContextProxy _context;
-
-  final _tabsList = <WebPageBloc>[];
+class TabsBloc<T> {
+  final _tabsList = <T>[];
+  final T Function() tabFactory;
+  final void Function(T tab) disposeTab;
 
   // Value Notifiers
-  final ValueNotifier<UnmodifiableListView<WebPageBloc>> tabs =
-      ValueNotifier<UnmodifiableListView<WebPageBloc>>(
-          UnmodifiableListView(<WebPageBloc>[]));
-  final ValueNotifier<WebPageBloc> currentTab =
-      ValueNotifier<WebPageBloc>(null);
+  final ValueNotifier<UnmodifiableListView<T>> tabs =
+      ValueNotifier<UnmodifiableListView<T>>(UnmodifiableListView(<T>[]));
+  final ValueNotifier<T> currentTab = ValueNotifier<T>(null);
 
   // Sinks
-  final _tabsActionController = StreamController<TabsAction>();
-  Sink<TabsAction> get request => _tabsActionController.sink;
+  final _tabsActionController = StreamController<TabsAction<T>>();
+  Sink<TabsAction<T>> get request => _tabsActionController.sink;
 
-  TabsBloc() : _context = ChromiumWebView.createContext() {
+  TabsBloc({@required this.tabFactory, @required this.disposeTab}) {
     _tabsActionController.stream.listen(_handleAction);
   }
 
   void dispose() {
-    for (final tab in _tabsList) {
-      tab.dispose();
-    }
-    _context.ctrl.close();
+    _tabsList.forEach(disposeTab);
     _tabsActionController.close();
   }
 
-  Future<void> _handleAction(TabsAction action) async {
+  void _handleAction(TabsAction<T> action) {
     switch (action.op) {
       case TabsActionType.newTab:
-        final tab = WebPageBloc(context: _context);
+        final tab = tabFactory();
         _tabsList.add(tab);
-        tabs.value = UnmodifiableListView<WebPageBloc>(_tabsList);
+        tabs.value = UnmodifiableListView<T>(_tabsList);
         currentTab.value = tab;
         break;
       case TabsActionType.focusTab:
-        final FocusTabAction focusTab = action;
+        final FocusTabAction<T> focusTab = action;
         currentTab.value = focusTab.tab;
         break;
     }

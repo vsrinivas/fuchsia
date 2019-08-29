@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 import 'package:meta/meta.dart';
-import '../blocs/webpage_bloc.dart';
 
 // Base class for actions handled by the tabs BLoC
-class TabsAction {
+class TabsAction<T> {
   final TabsActionType op;
   const TabsAction(this.op);
 }
@@ -15,12 +14,12 @@ class TabsAction {
 enum TabsActionType { newTab, focusTab }
 
 // Instructs to add a new tab to tab list.
-class NewTabAction extends TabsAction {
+class NewTabAction<T> extends TabsAction<T> {
   const NewTabAction() : super(TabsActionType.newTab);
 }
 
 // Instructs to focus a specific tab.
-class FocusTabAction extends TabsAction {
-  final WebPageBloc tab;
+class FocusTabAction<T> extends TabsAction<T> {
+  final T tab;
   const FocusTabAction({@required this.tab}) : super(TabsActionType.focusTab);
 }
