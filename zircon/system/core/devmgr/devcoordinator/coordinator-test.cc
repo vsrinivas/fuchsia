@@ -1223,6 +1223,32 @@ TEST_F(UnbindTestCase, UnbindSysDevice) {
   ASSERT_NULL(coordinator_.sys_device()->GetActiveRemove());
 }
 
+TEST_F(UnbindTestCase, UnbindWhileRemovingProxy) {
+  // The unbind task should complete immediately.
+  // The remove task is blocked on the platform bus remove task completing.
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(coordinator_.sys_device()->proxy()));
+
+  // Since the sys device is immortal, only its children will be unbound.
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(coordinator_.sys_device()));
+  loop()->RunUntilIdle();
+
+  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
+
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(platform_bus_remote()));
+  loop()->RunUntilIdle();
+
+  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(platform_bus_remote()));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_remote_));
+  loop()->RunUntilIdle();
+
+  ASSERT_NULL(coordinator_.sys_device()->GetActiveUnbind());
+  ASSERT_NULL(coordinator_.sys_device()->GetActiveRemove());
+}
+
 TEST_F(UnbindTestCase, NumRemovals) {
   size_t child_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -1387,6 +1413,50 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringRemove) {
   ASSERT_EQ(devmgr::Device::State::kDead, child_device->device->state());
   ASSERT_NULL(child_device->device->GetActiveUnbind());
   ASSERT_NULL(child_device->device->GetActiveRemove());
+}
+
+TEST_F(UnbindTestCase, RemoveParentWhileRemovingChild) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "parent", 0 /* protocol id */, "", &parent_index));
+
+  auto* parent_device = device(parent_index);
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(parent_device->device, "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  // Add a grandchild so that the child's remove task does not begin running after the
+  // child's unbind task completes.
+  size_t grandchild_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(child_device->device, "grandchild", 0 /* protocol id */, "", &grandchild_index));
+
+  auto* grandchild_device = device(grandchild_index);
+
+  // Start removing the child. Since we are not requesting an unbind
+  // the unbind task will complete immediately. The remove task will be waiting
+  // on the grandchild's remove to complete.
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
+  loop()->RunUntilIdle();
+
+  // Start removing the parent.
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(grandchild_device->remote));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(grandchild_device->remote));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
+  loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
+  loop()->RunUntilIdle();
 }
 
 class SuspendTestCase : public MultipleDeviceTestCase {

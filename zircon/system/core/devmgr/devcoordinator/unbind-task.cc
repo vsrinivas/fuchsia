@@ -50,7 +50,11 @@ void UnbindTask::ScheduleUnbindChildren() {
             .do_unbind = false, .post_on_create = false, .devhost_requested = false});
 
         proxy_unbind_task = device_->proxy()->GetActiveUnbind();
-        proxy_unbind_task->AddDependency(fbl::WrapRefPtr(this));
+        // The proxy's unbind task may have already completed, in which case we only
+        // have to wait on the remove task.
+        if (proxy_unbind_task) {
+          proxy_unbind_task->AddDependency(fbl::WrapRefPtr(this));
+        }
         // The device should not be removed until its children have been removed.
         remove_task->AddDependency(device_->proxy()->GetActiveRemove());
       }
@@ -85,22 +89,24 @@ void UnbindTask::ScheduleUnbindChildren() {
     }
     child.CreateUnbindRemoveTasks(
          UnbindTaskOpts{.do_unbind = true, .post_on_create = false, .devhost_requested = false});
+
+    auto parent = device_->proxy() != nullptr ? device_->proxy() : device_;
+
+    // The child unbind task may have already completed, in which case we only need to wait
+    // for the child's remove task.
     auto child_unbind_task = child.GetActiveUnbind();
-    if (proxy_unbind_task) {
-      child_unbind_task->AddDependency(proxy_unbind_task);
-
-      // If the proxy unbind task exists, so should the remove task.
-      auto proxy_remove_task = device_->proxy()->GetActiveRemove();
-      ZX_ASSERT(proxy_remove_task != nullptr);
-
-      // The device should not be removed until its children have been removed.
-      remove_task->AddDependency(proxy_remove_task);
-    } else {
-      child_unbind_task->AddDependency(fbl::WrapRefPtr(this));
-
-      auto child_remove_task = child.GetActiveRemove();
-      ZX_ASSERT(child_remove_task != nullptr);
-      remove_task->AddDependency(child_remove_task);
+    if (child_unbind_task) {
+      auto parent_unbind_task = parent->GetActiveUnbind();
+      if (parent_unbind_task) {
+        child_unbind_task->AddDependency(parent_unbind_task);
+      }
+    }
+    // Since the child is not dead, the remove task must exist.
+    auto child_remove_task = child.GetActiveRemove();
+    ZX_ASSERT(child_remove_task != nullptr);
+    auto parent_remove_task = parent->GetActiveRemove();
+    if (parent_remove_task) {
+      parent_remove_task->AddDependency(child_remove_task);
     }
   }
 }
