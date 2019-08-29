@@ -90,7 +90,7 @@ func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 	listPacket := mdns.Packet{
 		Header: mdns.Header{QDCount: 1},
 		Questions: []mdns.Question{
-			mdns.Question{
+			{
 				Domain:  fuchsiaService,
 				Type:    mdns.PTR,
 				Class:   mdns.IN,

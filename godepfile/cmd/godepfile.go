@@ -139,7 +139,7 @@ func main() {
 		depnames = append(depnames, path)
 	}
 	sort.Strings(depnames)
-	for path, _ := range deps {
+	for path := range deps {
 		fmt.Printf(" %s", path)
 	}
 	fmt.Printf("\n")

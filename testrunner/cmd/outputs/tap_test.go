@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/tools/cmd/testrunner/outputs"
 	"go.fuchsia.dev/tools/runtests"
 	"go.fuchsia.dev/tools/testrunner"
+	"go.fuchsia.dev/tools/testrunner/cmd/outputs"
 )
 
 func TestTapOutput(t *testing.T) {
