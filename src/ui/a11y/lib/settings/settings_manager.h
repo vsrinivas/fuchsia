@@ -6,7 +6,6 @@
 #define SRC_UI_A11Y_LIB_SETTINGS_SETTINGS_MANAGER_H_
 
 #include <fuchsia/accessibility/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
 
 #include <src/lib/fxl/macros.h>
 
@@ -18,8 +17,6 @@ class SettingsManager : public fuchsia::accessibility::SettingsManager {
   SettingsManager();
   ~SettingsManager() override;
 
-  void AddBinding(fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request);
-
   // |fuchsia::accessibility::SettingsManager|:
   void RegisterSettingProvider(fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider>
                                    settings_provider_request) override;
@@ -28,7 +25,6 @@ class SettingsManager : public fuchsia::accessibility::SettingsManager {
   void Watch(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher) override;
 
  private:
-  fidl::BindingSet<fuchsia::accessibility::SettingsManager> bindings_;
   SettingsProvider settings_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SettingsManager);

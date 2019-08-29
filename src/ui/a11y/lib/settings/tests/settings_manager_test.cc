@@ -5,6 +5,7 @@
 #include "src/ui/a11y/lib/settings/settings_manager.h"
 
 #include <fuchsia/accessibility/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
@@ -56,11 +57,8 @@ class SettingsManagerTest : public gtest::TestLoopFixture {
 
   void SetUp() override {
     TestLoopFixture::SetUp();
-    context_provider_.service_directory_provider()
-        ->AddService<fuchsia::accessibility::SettingsManager>(
-            [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
-              settings_manager_.AddBinding(std::move(request));
-            });
+    context_provider_.service_directory_provider()->AddService(
+        settings_manager_bindings_.GetHandler(&settings_manager_));
 
     RunLoopUntilIdle();
   }
@@ -84,6 +82,7 @@ class SettingsManagerTest : public gtest::TestLoopFixture {
 
   sys::testing::ComponentContextProvider context_provider_;
   a11y::SettingsManager settings_manager_;
+  fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
 };
 
 const fuchsia::accessibility::Settings SettingsManagerTest::default_settings_ = InitSettings();

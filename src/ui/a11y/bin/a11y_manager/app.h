@@ -9,6 +9,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
@@ -60,6 +61,7 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   // A simple Tts engine which logs output.
   a11y::LogEngine log_engine_;
 
+  fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
   fidl::Binding<fuchsia::accessibility::SettingsWatcher> settings_watcher_binding_;
 
   // The gesture manager is instantiated whenever a11y manager starts listening

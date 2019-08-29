@@ -25,11 +25,8 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
 App::~App() = default;
 
 void App::Initialize() {
-  // Add Settings Manager service.
-  startup_context_->outgoing()->AddPublicService<fuchsia::accessibility::SettingsManager>(
-      [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
-        settings_manager_.AddBinding(std::move(request));
-      });
+  startup_context_->outgoing()->AddPublicService(
+      settings_manager_bindings_.GetHandler(&settings_manager_));
 
   // Add Semantics Manager service.
   semantics_manager_.SetDebugDirectory(startup_context_->outgoing()->debug_dir());
