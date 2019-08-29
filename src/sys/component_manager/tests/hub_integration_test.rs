@@ -100,15 +100,15 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec!["echo_server", "hub_client"], list_directory(&children_dir_proxy).await);
+    assert_eq!(vec!["echo_server:0", "hub_client:0"], list_directory(&children_dir_proxy).await);
 
     // These args are from hub_client.cml.
-    assert_eq!("Hippos", read_file(&hub_proxy, "children/hub_client/exec/runtime/args/0").await);
-    assert_eq!("rule!", read_file(&hub_proxy, "children/hub_client/exec/runtime/args/1").await);
+    assert_eq!("Hippos", read_file(&hub_proxy, "children/hub_client:0/exec/runtime/args/0").await);
+    assert_eq!("rule!", read_file(&hub_proxy, "children/hub_client:0/exec/runtime/args/1").await);
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let expose_svc_dir = "children/echo_server/exec/expose/svc";
+    let expose_svc_dir = "children/echo_server:0/exec/expose/svc";
     let expose_svc_dir_proxy = io_util::open_directory(
         &hub_proxy,
         &PathBuf::from(expose_svc_dir.clone()),
@@ -117,7 +117,7 @@ async fn test() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(vec![echo_service_name], list_directory(&expose_svc_dir_proxy).await);
 
-    let in_dir = "children/hub_client/exec/in";
+    let in_dir = "children/hub_client:0/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
     let svc_dir_proxy = io_util::open_directory(
         &hub_proxy,
@@ -172,7 +172,7 @@ async fn test() -> Result<(), Error> {
     // Verify that hub_client's view is able to correctly read the names of the
     // children of the parent echo_realm.
     assert_eq!(
-        hub_directory_listing(vec!["echo_server", "hub_client"]),
+        hub_directory_listing(vec!["echo_server:0", "hub_client:0"]),
         hub_test_hook.observe("/parent_hub/children").await
     );
 

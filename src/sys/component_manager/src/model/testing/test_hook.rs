@@ -47,7 +47,8 @@ impl Eq for ComponentInstance {}
 
 impl ComponentInstance {
     pub async fn print(&self) -> String {
-        let mut s: String = self.abs_moniker.path().last().map_or("", |m| m.as_str()).to_string();
+        let mut s: String =
+            self.abs_moniker.leaf().map_or(String::new(), |m| format!("{}", m.to_partial()));
         let mut children = self.children.lock().await;
         if children.is_empty() {
             return s;
@@ -398,30 +399,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_hook_test() {
-        let a = AbsoluteMoniker::new(vec![PartialMoniker::new("a".to_string(), None)]);
-        let ab = AbsoluteMoniker::new(vec![
-            PartialMoniker::new("a".to_string(), None),
-            PartialMoniker::new("b".to_string(), None),
-        ]);
-        let ac = AbsoluteMoniker::new(vec![
-            PartialMoniker::new("a".to_string(), None),
-            PartialMoniker::new("c".to_string(), None),
-        ]);
-        let abd = AbsoluteMoniker::new(vec![
-            PartialMoniker::new("a".to_string(), None),
-            PartialMoniker::new("b".to_string(), None),
-            PartialMoniker::new("d".to_string(), None),
-        ]);
-        let abe = AbsoluteMoniker::new(vec![
-            PartialMoniker::new("a".to_string(), None),
-            PartialMoniker::new("b".to_string(), None),
-            PartialMoniker::new("e".to_string(), None),
-        ]);
-        let acf = AbsoluteMoniker::new(vec![
-            PartialMoniker::new("a".to_string(), None),
-            PartialMoniker::new("c".to_string(), None),
-            PartialMoniker::new("f".to_string(), None),
-        ]);
+        let a: AbsoluteMoniker = vec!["a:0"].into();
+        let ab: AbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let ac: AbsoluteMoniker = vec!["a:0", "c:0"].into();
+        let abd: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let abe: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let acf: AbsoluteMoniker = vec!["a:0", "c:0", "f:0"].into();
 
         // Try adding parent followed by children then verify the topology string
         // is correct.

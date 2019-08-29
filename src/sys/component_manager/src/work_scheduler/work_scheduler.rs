@@ -270,7 +270,7 @@ impl WorkSchedulerHook {
 mod tests {
     use {
         super::*,
-        crate::model::{AbsoluteMoniker, PartialMoniker},
+        crate::model::{AbsoluteMoniker, ChildMoniker},
     };
 
     /// Time is measured in nanoseconds. This provides a constant symbol for one second.
@@ -301,7 +301,7 @@ mod tests {
     }
 
     fn child(parent: &AbsoluteMoniker, name: &str) -> AbsoluteMoniker {
-        parent.child(PartialMoniker::new(name.to_string(), None))
+        parent.child(ChildMoniker::new(name.to_string(), None, 0))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

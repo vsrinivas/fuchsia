@@ -94,8 +94,8 @@ impl Realm {
             }
 
             meta_use.unwrap().clone()
-            // Don't hold the state lock while performing routing for the meta storage capability, as
-            // the routing logic may want to acquire the lock for this component's state.
+            // Don't hold the state lock while performing routing for the meta storage capability,
+            // as the routing logic may want to acquire the lock for this component's state.
         };
 
         let (meta_client_chan, server_chan) =
@@ -154,7 +154,8 @@ impl Realm {
                 let partial_moniker =
                     PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
                 return Err(ModelError::instance_already_exists(
-                    self.abs_moniker.child(partial_moniker),
+                    self.abs_moniker.clone(),
+                    partial_moniker,
                 ));
             }
         };
@@ -187,7 +188,8 @@ impl Realm {
                 child_realm
             } else {
                 return Err(ModelError::instance_not_found(
-                    realm.abs_moniker.child(partial_moniker.clone()),
+                    realm.abs_moniker.clone(),
+                    partial_moniker.clone(),
                 ));
             }
         };
@@ -308,6 +310,21 @@ impl RealmState {
         &self.child_realms
     }
 
+    /// Extends an absolute moniker with the live child with partial moniker `p`. Returns `None`
+    /// if no matching child was found.
+    pub fn extend_moniker_with(
+        &self,
+        moniker: &AbsoluteMoniker,
+        partial: &PartialMoniker,
+    ) -> Option<AbsoluteMoniker> {
+        match self.get_live_child_instance_id(partial) {
+            Some(instance_id) => {
+                Some(moniker.child(ChildMoniker::from_partial(partial, instance_id)))
+            }
+            None => None,
+        }
+    }
+
     /// Returns all deleting child realms.
     pub fn get_deleting_child_realms(&self) -> HashMap<ChildMoniker, Arc<Realm>> {
         let mut deleting_realms = HashMap::new();
@@ -350,11 +367,10 @@ impl RealmState {
             }
             None => 0,
         };
-        let child_moniker =
-            ChildMoniker::new(child.name.clone(), collection.clone(), instance_id);
+        let child_moniker = ChildMoniker::new(child.name.clone(), collection.clone(), instance_id);
         let partial_moniker = child_moniker.to_partial();
         if self.get_live_child_realm(&partial_moniker).is_none() {
-            let abs_moniker = realm.abs_moniker.child(partial_moniker.clone());
+            let abs_moniker = realm.abs_moniker.child(child_moniker.clone());
             let child_realm = Arc::new(Realm {
                 resolver_registry: realm.resolver_registry.clone(),
                 default_runner: realm.default_runner.clone(),

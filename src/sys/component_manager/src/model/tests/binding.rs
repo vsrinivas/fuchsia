@@ -68,9 +68,9 @@ async fn bind_instance_root_non_existent() {
     let mut mock_resolver = MockResolver::new();
     mock_resolver.add_component("root", default_component_decl());
     let model = new_model(mock_resolver, mock_runner).await;
-    let res = model.look_up_and_bind_instance(vec!["no-such-instance"].into()).await;
+    let res = model.look_up_and_bind_instance(vec!["no-such-instance:0"].into()).await;
     let expected_res: Result<(), ModelError> =
-        Err(ModelError::instance_not_found(vec!["no-such-instance"].into()));
+        Err(ModelError::lookup_not_found(vec!["no-such-instance:0"].into()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_urls = urls_run.lock().await;
     let expected_urls: Vec<String> = vec![];
@@ -105,7 +105,7 @@ async fn bind_instance_child() {
     let hook = Arc::new(TestHook::new());
     let model = new_model_with(mock_resolver, mock_runner, hook.hooks()).await;
     // bind to system
-    assert!(model.look_up_and_bind_instance(vec!["system"].into()).await.is_ok());
+    assert!(model.look_up_and_bind_instance(vec!["system:0"].into()).await.is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
     assert_eq!(*urls_run.lock().await, expected_urls);
 
@@ -122,7 +122,7 @@ async fn bind_instance_child() {
     assert!(actual_children.is_empty());
     assert!(!echo_realm.lock_state().await.is_resolved());
     // bind to echo
-    assert!(model.look_up_and_bind_instance(vec!["echo"].into()).await.is_ok());
+    assert!(model.look_up_and_bind_instance(vec!["echo:0"].into()).await.is_ok());
     let expected_urls =
         vec!["test:///system_resolved".to_string(), "test:///echo_resolved".to_string()];
     assert_eq!(*urls_run.lock().await, expected_urls);
@@ -155,14 +155,14 @@ async fn bind_instance_child_non_existent() {
     mock_resolver.add_component("system", default_component_decl());
     let model = new_model(mock_resolver, mock_runner).await;
     // bind to system
-    assert!(model.look_up_and_bind_instance(vec!["system"].into()).await.is_ok());
+    assert!(model.look_up_and_bind_instance(vec!["system:0"].into()).await.is_ok());
     let expected_urls = vec!["test:///system_resolved".to_string()];
     assert_eq!(*urls_run.lock().await, expected_urls);
 
     // can't bind to logger: it does not exist
-    let moniker: AbsoluteMoniker = vec!["system", "logger"].into();
+    let moniker: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
     let res = model.look_up_and_bind_instance(moniker.clone()).await;
-    let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(moniker));
+    let expected_res: Result<(), ModelError> = Err(ModelError::lookup_not_found(moniker));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_urls = urls_run.lock().await;
     let expected_urls = vec!["test:///system_resolved".to_string()];
@@ -243,7 +243,7 @@ async fn bind_instance_eager_children() {
 
     // Bind to the top component, and check that it and the eager components were started.
     {
-        let res = model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["a".into()])).await;
+        let res = model.look_up_and_bind_instance(AbsoluteMoniker::new(vec!["a:0".into()])).await;
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_urls = urls_run.lock().await;
@@ -304,7 +304,7 @@ async fn bind_instance_no_execute() {
 
     // Bind to the parent component. The child should be started. However, the parent component
     // is non-executable so it is not run.
-    assert!(model.look_up_and_bind_instance(vec!["a"].into()).await.is_ok());
+    assert!(model.look_up_and_bind_instance(vec!["a:0"].into()).await.is_ok());
     let actual_urls = urls_run.lock().await;
     let expected_urls = vec!["test:///b_resolved".to_string()];
     assert_eq!(*actual_urls, expected_urls);
@@ -350,18 +350,18 @@ async fn bind_instance_recursive_child() {
     let model = new_model_with(mock_resolver, mock_runner, hook.hooks()).await;
 
     // bind to logger (before ever binding to system)
-    assert!(model.look_up_and_bind_instance(vec!["system", "logger"].into()).await.is_ok());
+    assert!(model.look_up_and_bind_instance(vec!["system:0", "logger:0"].into()).await.is_ok());
     let expected_urls = vec!["test:///logger_resolved".to_string()];
     assert_eq!(*urls_run.lock().await, expected_urls);
 
     // bind to netstack
-    assert!(model.look_up_and_bind_instance(vec!["system", "netstack"].into()).await.is_ok());
+    assert!(model.look_up_and_bind_instance(vec!["system:0", "netstack:0"].into()).await.is_ok());
     let expected_urls =
         vec!["test:///logger_resolved".to_string(), "test:///netstack_resolved".to_string()];
     assert_eq!(*urls_run.lock().await, expected_urls);
 
     // finally, bind to system
-    assert!(model.look_up_and_bind_instance(vec!["system"].into()).await.is_ok());
+    assert!(model.look_up_and_bind_instance(vec!["system:0"].into()).await.is_ok());
     let expected_urls = vec![
         "test:///logger_resolved".to_string(),
         "test:///netstack_resolved".to_string(),

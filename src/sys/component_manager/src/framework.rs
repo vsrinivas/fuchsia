@@ -458,7 +458,7 @@ mod tests {
         let test = FrameworkServiceTest::new(
             mock_resolver,
             mock_runner,
-            vec!["system"].into(),
+            vec!["system:0"].into(),
             hook.hooks(),
         )
         .await;
@@ -516,7 +516,7 @@ mod tests {
         let test = FrameworkServiceTest::new(
             mock_resolver,
             mock_runner,
-            vec!["system"].into(),
+            vec!["system:0"].into(),
             hook.hooks(),
         )
         .await;
@@ -624,12 +624,12 @@ mod tests {
 
         let hook = Arc::new(TestHook::new());
         let (destroy_hook, mut stop_send, mut destroy_recv) =
-            DestroyHook::new(vec!["system", "coll:a"].into());
+            DestroyHook::new(vec!["system:0", "coll:a:1"].into());
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
         hooks.append(&mut DestroyHook::hooks(destroy_hook));
         let test =
-            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system"].into(), hooks)
+            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks)
                 .await;
 
         // Create children "a" and "b" in collection.
@@ -777,7 +777,7 @@ mod tests {
         let test = FrameworkServiceTest::new(
             mock_resolver,
             mock_runner,
-            vec!["system"].into(),
+            vec!["system:0"].into(),
             hook.hooks(),
         )
         .await;

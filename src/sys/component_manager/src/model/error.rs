@@ -11,12 +11,14 @@ use {
 /// Errors produced by `Model`.
 #[derive(Debug, Fail, Clone)]
 pub enum ModelError {
-    #[fail(display = "component instance not found with moniker {}", moniker)]
-    InstanceNotFound { moniker: AbsoluteMoniker },
-    #[fail(display = "component instance with moniker {} already exists", moniker)]
-    InstanceAlreadyExists { moniker: AbsoluteMoniker },
+    #[fail(display = "component instance {} not found in realm {}", child, moniker)]
+    InstanceNotFound { moniker: AbsoluteMoniker, child: PartialMoniker },
+    #[fail(display = "component instance {} in realm {} already exists", child, moniker)]
+    InstanceAlreadyExists { moniker: AbsoluteMoniker, child: PartialMoniker },
     #[fail(display = "component instance with moniker {} has shut down", moniker)]
     InstanceShutDown { moniker: AbsoluteMoniker },
+    #[fail(display = "component instance {} not found for lookup", moniker)]
+    LookupNotFound { moniker: AbsoluteMoniker },
     #[fail(display = "component collection not found with name {}", name)]
     CollectionNotFound { name: String },
     #[fail(display = "{} is not supported", feature)]
@@ -54,23 +56,27 @@ pub enum ModelError {
         #[fail(cause)]
         err: ClonableError,
     },
-    #[fail(display = "add entry error")]
+    #[fail(display = "failed to add entry {} to {}", entry_name, moniker)]
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
     #[fail(display = "open directory error")]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
 }
 
 impl ModelError {
-    pub fn instance_not_found(moniker: AbsoluteMoniker) -> ModelError {
-        ModelError::InstanceNotFound { moniker }
+    pub fn instance_not_found(moniker: AbsoluteMoniker, child: PartialMoniker) -> ModelError {
+        ModelError::InstanceNotFound { moniker, child }
     }
 
-    pub fn instance_already_exists(moniker: AbsoluteMoniker) -> ModelError {
-        ModelError::InstanceAlreadyExists { moniker }
+    pub fn instance_already_exists(moniker: AbsoluteMoniker, child: PartialMoniker) -> ModelError {
+        ModelError::InstanceAlreadyExists { moniker, child }
     }
 
     pub fn instance_shut_down(moniker: AbsoluteMoniker) -> ModelError {
         ModelError::InstanceShutDown { moniker }
+    }
+
+    pub fn lookup_not_found(moniker: AbsoluteMoniker) -> ModelError {
+        ModelError::LookupNotFound { moniker }
     }
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {

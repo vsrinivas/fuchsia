@@ -529,7 +529,7 @@ mod tests {
         let test = ActionsTest::new("root", components, None).await;
         // Bind to the component, causing it to start. This should cause the realm to have an
         // `Execution`.
-        let realm = test.look_up(vec!["a"].into()).await;
+        let realm = test.look_up(vec!["a:0"].into()).await;
         test.model.bind_instance(realm.clone()).await.expect("could not bind to a");
         assert!(is_executing(&realm).await);
 
@@ -580,7 +580,7 @@ mod tests {
             ("a", default_component_decl()),
             ("b", default_component_decl()),
         ];
-        let test = ActionsTest::new("root", components, Some(vec!["container"].into())).await;
+        let test = ActionsTest::new("root", components, Some(vec!["container:0"].into())).await;
 
         // Create dynamic instances in "coll".
         test.create_dynamic_child("coll", "a").await;
@@ -588,8 +588,8 @@ mod tests {
 
         // Bind to the components, causing them to start. This should cause them to have an
         // `Execution`.
-        let realm_a = test.look_up(vec!["container", "coll:a"].into()).await;
-        let realm_b = test.look_up(vec!["container", "coll:b"].into()).await;
+        let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
+        let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to coll:a");
         test.model.bind_instance(realm_b.clone()).await.expect("could not bind to coll:b");
         assert!(is_executing(&realm_a).await);
@@ -597,7 +597,7 @@ mod tests {
 
         // Register shutdown action, and wait for it. Components should shut down (no more
         // `Execution`).
-        let realm_container = test.look_up(vec!["container"].into()).await;
+        let realm_container = test.look_up(vec!["container:0"].into()).await;
         execute_action(test.model.clone(), realm_container.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
@@ -634,8 +634,8 @@ mod tests {
             ("b", ComponentDecl { ..default_component_decl() }),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a"].into()).await;
-        let realm_b = test.look_up(vec!["a", "b"].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
         assert!(!is_executing(&realm_a).await);
         assert!(!is_executing(&realm_b).await);
 
@@ -665,7 +665,10 @@ mod tests {
                 .collect();
             assert_eq!(
                 events,
-                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into()),]
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into()),
+                ]
             );
         }
     }
@@ -723,10 +726,10 @@ mod tests {
             ("d", ComponentDecl { ..default_component_decl() }),
         ];
         let test = ActionsTest::new("root", components, None).await;
-        let realm_a = test.look_up(vec!["a"].into()).await;
-        let realm_b = test.look_up(vec!["a", "b"].into()).await;
-        let realm_c = test.look_up(vec!["a", "b", "c"].into()).await;
-        let realm_d = test.look_up(vec!["a", "b", "d"].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
@@ -758,13 +761,16 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a", "b", "c"].into()),
-                Lifecycle::Stop(vec!["a", "b", "d"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
             ];
             assert_eq!(first, expected);
             assert_eq!(
                 events,
-                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
             );
         }
     }
@@ -851,7 +857,7 @@ mod tests {
             ("c", ComponentDecl { ..default_component_decl() }),
             ("d", ComponentDecl { ..default_component_decl() }),
         ];
-        let error_hook = StopErrorHook::new(vec!["a", "b"].into());
+        let error_hook = StopErrorHook::new(vec!["a:0", "b:0"].into());
         let test = ActionsTest::new_with_hooks(
             "root",
             components,
@@ -859,10 +865,10 @@ mod tests {
             StopErrorHook::hooks(error_hook.clone()),
         )
         .await;
-        let realm_a = test.look_up(vec!["a"].into()).await;
-        let realm_b = test.look_up(vec!["a", "b"].into()).await;
-        let realm_c = test.look_up(vec!["a", "b", "c"].into()).await;
-        let realm_d = test.look_up(vec!["a", "b", "d"].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
@@ -894,11 +900,11 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a", "b", "c"].into()),
-                Lifecycle::Stop(vec!["a", "b", "d"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
             ];
             assert_eq!(first, expected);
-            assert_eq!(events, vec![Lifecycle::Stop(vec!["a", "b"].into())],);
+            assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0", "b:0"].into())],);
         }
 
         // Register shutdown action on "a" again. "b"'s shutdown succeeds (it's a no-op), and
@@ -924,13 +930,16 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Stop(vec!["a", "b", "c"].into()),
-                Lifecycle::Stop(vec!["a", "b", "d"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
             ];
             assert_eq!(first, expected);
             assert_eq!(
                 events,
-                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
             );
         }
     }
@@ -955,7 +964,7 @@ mod tests {
         // Bind to the component, causing it to start. This should cause the realm to have an
         // `Execution`.
         let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a"].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
         assert!(is_executing(&realm_a).await);
 
@@ -976,7 +985,7 @@ mod tests {
                 .collect();
             assert_eq!(
                 events,
-                vec![Lifecycle::Stop(vec!["a"].into()), Lifecycle::Destroy(vec!["a"].into())],
+                vec![Lifecycle::Stop(vec!["a:0"].into()), Lifecycle::Destroy(vec!["a:0"].into())],
             );
         }
 
@@ -1020,7 +1029,7 @@ mod tests {
             ("a", default_component_decl()),
             ("b", default_component_decl()),
         ];
-        let test = ActionsTest::new("root", components, Some(vec!["container"].into())).await;
+        let test = ActionsTest::new("root", components, Some(vec!["container:0"].into())).await;
 
         // Create dynamic instances in "coll".
         test.create_dynamic_child("coll", "a").await;
@@ -1028,15 +1037,15 @@ mod tests {
 
         // Bind to the components, causing them to start. This should cause them to have an
         // `Execution`.
-        let realm_a = test.look_up(vec!["container", "coll:a"].into()).await;
-        let realm_b = test.look_up(vec!["container", "coll:b"].into()).await;
+        let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
+        let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to coll:a");
         test.model.bind_instance(realm_b.clone()).await.expect("could not bind to coll:b");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
 
         // Register destroy action, and wait for it. Components should be destroyed.
-        let realm_container = test.look_up(vec!["container"].into()).await;
+        let realm_container = test.look_up(vec!["container:0"].into()).await;
         execute_action(test.model.clone(), realm_container.clone(), Action::Destroy)
             .await
             .expect("destroy failed");
@@ -1074,8 +1083,8 @@ mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a"].into()).await;
-        let realm_b = test.look_up(vec!["a", "b"].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
 
         // Register shutdown action on "a", and wait for it. This should cause all components
         // to shut down, in bottom-up order.
@@ -1106,10 +1115,10 @@ mod tests {
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Stop(vec!["a", "b"].into()),
-                    Lifecycle::Stop(vec!["a"].into()),
-                    Lifecycle::Destroy(vec!["a", "b"].into()),
-                    Lifecycle::Destroy(vec!["a"].into()),
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0"].into()),
                 ]
             );
         }
@@ -1179,11 +1188,11 @@ mod tests {
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a"].into()).await;
-        let realm_b = test.look_up(vec!["a", "b"].into()).await;
-        let realm_c = test.look_up(vec!["a", "b", "c"].into()).await;
-        let realm_d = test.look_up(vec!["a", "b", "d"].into()).await;
-        let realm_x = test.look_up(vec!["x"].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let realm_x = test.look_up(vec!["x:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
@@ -1229,14 +1238,17 @@ mod tests {
             assert_eq!(
                 first,
                 vec![
-                    Lifecycle::Stop(vec!["a", "b", "c"].into()),
-                    Lifecycle::Stop(vec!["a", "b", "d"].into())
+                    Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                    Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into())
                 ]
             );
             let next: Vec<_> = events.drain(0..2).collect();
             assert_eq!(
                 next,
-                vec![Lifecycle::Stop(vec!["a", "b"].into()), Lifecycle::Stop(vec!["a"].into())]
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
             );
 
             // The leaves could be destroyed in any order.
@@ -1245,15 +1257,15 @@ mod tests {
             assert_eq!(
                 first,
                 vec![
-                    Lifecycle::Destroy(vec!["a", "b", "c"].into()),
-                    Lifecycle::Destroy(vec!["a", "b", "d"].into())
+                    Lifecycle::Destroy(vec!["a:0", "b:0", "c:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0", "b:0", "d:0"].into())
                 ]
             );
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Destroy(vec!["a", "b"].into()),
-                    Lifecycle::Destroy(vec!["a"].into())
+                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0"].into())
                 ]
             );
         }
@@ -1342,7 +1354,7 @@ mod tests {
         // The destroy hook is invoked just after the component instance is removed from the
         // list of children. Therefore, to cause destruction of `a` to fail, fail removal of
         // `/a/b`.
-        let error_hook = DestroyErrorHook::new(vec!["a", "b"].into());
+        let error_hook = DestroyErrorHook::new(vec!["a:0", "b:0"].into());
         let test = ActionsTest::new_with_hooks(
             "root",
             components,
@@ -1351,10 +1363,10 @@ mod tests {
         )
         .await;
         let realm_root = test.look_up(vec![].into()).await;
-        let realm_a = test.look_up(vec!["a"].into()).await;
-        let realm_b = test.look_up(vec!["a", "b"].into()).await;
-        let realm_c = test.look_up(vec!["a", "b", "c"].into()).await;
-        let realm_d = test.look_up(vec!["a", "b", "d"].into()).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
 
         // Component startup was eager, so they should all have an `Execution`.
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to a");
@@ -1386,14 +1398,14 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Destroy(vec!["a", "b", "c"].into()),
-                Lifecycle::Destroy(vec!["a", "b", "d"].into()),
+                Lifecycle::Destroy(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Destroy(vec!["a:0", "b:0", "d:0"].into()),
             ];
             assert_eq!(first, expected);
-            assert_eq!(events, vec![Lifecycle::Destroy(vec!["a", "b"].into())]);
+            assert_eq!(events, vec![Lifecycle::Destroy(vec!["a:0", "b:0"].into())]);
         }
 
-        // Register destroy action on "a" again. "b"'s delete succeeds, and "a" is deleted this
+        // Register destroy action on "a:0" again. "b:0"'s delete succeeds, and "a:0" is deleted this
         // time.
         execute_action(test.model.clone(), realm_root.clone(), Action::DeleteChild("a:0".into()))
             .await
@@ -1416,15 +1428,15 @@ mod tests {
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
-                Lifecycle::Destroy(vec!["a", "b", "c"].into()),
-                Lifecycle::Destroy(vec!["a", "b", "d"].into()),
+                Lifecycle::Destroy(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Destroy(vec!["a:0", "b:0", "d:0"].into()),
             ];
             assert_eq!(first, expected);
             assert_eq!(
                 events,
                 vec![
-                    Lifecycle::Destroy(vec!["a", "b"].into()),
-                    Lifecycle::Destroy(vec!["a"].into())
+                    Lifecycle::Destroy(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Destroy(vec!["a:0"].into())
                 ]
             );
         }

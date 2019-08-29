@@ -57,10 +57,10 @@ async fn storage_and_dir_from_parent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Cache,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
         },
     )
     .await;
@@ -107,10 +107,10 @@ async fn meta_storage_and_dir_from_parent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into()])),
         },
     )
     .await;
@@ -177,10 +177,10 @@ async fn storage_from_parent_dir_from_grandparent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Data,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
         },
     )
     .await;
@@ -245,10 +245,10 @@ async fn storage_and_dir_from_grandparent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Data,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into(), "c".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into(), "c:0".into()])),
         },
     )
     .await;
@@ -313,10 +313,10 @@ async fn meta_storage_and_dir_from_grandparent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b".into(), "c".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["b:0".into(), "c:0".into()])),
         },
     )
     .await;
@@ -382,10 +382,10 @@ async fn storage_from_parent_dir_from_sibling() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Cache,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
         },
     )
     .await;
@@ -493,34 +493,34 @@ async fn storage_multiple_types() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Cache,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
         },
     )
     .await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into()])),
         },
     )
     .await;
     test.check_use(
-        vec!["c", "d"].into(),
+        vec!["c:0", "d:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Data,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into(), "d".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into(), "d:0".into()])),
         },
     )
     .await;
     test.check_use(
-        vec!["c", "d"].into(),
+        vec!["c:0", "d:0"].into(),
         CheckUse::Storage {
             type_: fsys::StorageType::Meta,
-            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c".into(), "d".into()])),
+            storage_relation: Some(RelativeMoniker::new(vec![], vec!["c:0".into(), "d:0".into()])),
         },
     )
     .await;
@@ -571,12 +571,12 @@ async fn use_the_wrong_type_of_storage() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
     )
     .await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None },
     )
     .await;
@@ -619,7 +619,7 @@ async fn directories_are_not_storage() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
     )
     .await;
@@ -665,12 +665,12 @@ async fn use_storage_when_not_offered() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None },
     )
     .await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None },
     )
     .await;
@@ -747,12 +747,12 @@ async fn dir_offered_from_nonexecutable() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
     )
     .await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation: None },
     )
     .await;

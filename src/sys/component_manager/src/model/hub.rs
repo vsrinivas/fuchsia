@@ -255,10 +255,10 @@ impl HubInner {
         if let Some(controlled) =
             HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
-            if let (Some(name), Some(parent_moniker)) = (abs_moniker.name(), abs_moniker.parent()) {
+            if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
                 instances_map[&parent_moniker]
                     .children_directory
-                    .add_node(&name, controlled, &abs_moniker)
+                    .add_node(leaf.as_str(), controlled, &abs_moniker)
                     .await?;
             }
         }
@@ -681,7 +681,7 @@ mod tests {
             format!("{}_resolved", root_component_url),
             read_file(&hub_proxy, "exec/resolved_url").await
         );
-        assert_eq!("test:///a", read_file(&hub_proxy, "children/a/url").await);
+        assert_eq!("test:///a", read_file(&hub_proxy, "children/a:0/url").await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

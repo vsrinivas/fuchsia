@@ -54,7 +54,7 @@ async fn use_framework_service() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let bind_calls = framework_services.bind_calls.clone();
     let test = RoutingTest::new("a", components, framework_services).await;
-    test.check_use_realm(vec!["b"].into(), bind_calls).await;
+    test.check_use_realm(vec!["b:0"].into(), bind_calls).await;
 }
 
 ///   a
@@ -133,16 +133,16 @@ async fn use_from_parent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
-    test.check_open_file(vec!["b"].into(), "/svc/device".try_into().unwrap()).await
+    test.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await
 }
 
 ///   a
@@ -232,12 +232,12 @@ async fn use_from_grandparent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -304,7 +304,7 @@ async fn use_builtin_from_grandparent() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -405,12 +405,12 @@ async fn use_from_sibling_no_root() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -498,12 +498,12 @@ async fn use_from_sibling_root() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -617,12 +617,12 @@ async fn use_from_niece() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -825,22 +825,22 @@ async fn use_kitchen_sink() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "e"].into(),
+        vec!["b:0", "e:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["b", "e"].into(),
+        vec!["b:0", "e:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["c", "f"].into(),
+        vec!["c:0", "f:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["c", "f"].into(),
+        vec!["c:0", "f:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -907,12 +907,12 @@ async fn use_from_component_manager_namespace() {
     let test = RoutingTest::new("a", components, framework_services).await;
     test.install_hippo_dir();
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -961,12 +961,12 @@ async fn use_not_offered() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     )
     .await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
@@ -1039,12 +1039,12 @@ async fn use_offer_source_not_exposed() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     )
     .await;
     test.check_use(
-        vec!["c"].into(),
+        vec!["c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
@@ -1122,12 +1122,12 @@ async fn use_offer_source_not_offered() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     )
     .await;
     test.check_use(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
@@ -1203,12 +1203,12 @@ async fn use_from_expose() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     )
     .await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
@@ -1273,12 +1273,12 @@ async fn offer_from_non_executable() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     )
     .await;
     test.check_use(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
@@ -1377,7 +1377,7 @@ async fn use_in_collection() {
     let framework_services = Arc::new(RealFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.create_dynamic_child(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         "coll",
         ChildDecl {
             name: "c".to_string(),
@@ -1387,7 +1387,7 @@ async fn use_in_collection() {
     )
     .await;
     test.create_dynamic_child(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         "coll",
         ChildDecl {
             name: "d".to_string(),
@@ -1397,12 +1397,12 @@ async fn use_in_collection() {
     )
     .await;
     test.check_use(
-        vec!["b", "coll:c"].into(),
+        vec!["b:0", "coll:c:1"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use(
-        vec!["b", "coll:d"].into(),
+        vec!["b:0", "coll:d:2"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -1482,7 +1482,7 @@ async fn use_in_collection_not_offered() {
     let framework_services = Arc::new(RealFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.create_dynamic_child(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         "coll",
         ChildDecl {
             name: "c".to_string(),
@@ -1492,12 +1492,12 @@ async fn use_in_collection_not_offered() {
     )
     .await;
     test.check_use(
-        vec!["b", "coll:c"].into(),
+        vec!["b:0", "coll:c:1"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     )
     .await;
     test.check_use(
-        vec!["b", "coll:c"].into(),
+        vec!["b:0", "coll:c:1"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
@@ -1562,12 +1562,12 @@ async fn expose_from_self_and_child() {
     let framework_services = Arc::new(MockFrameworkServiceHost::new());
     let test = RoutingTest::new("a", components, framework_services).await;
     test.check_use_exposed_dir(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Directory { path: "/data/bar/hippo".try_into().unwrap(), should_succeed: true },
     )
     .await;
     test.check_use_exposed_dir(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::LegacyService {
             path: "/svc/bar/hippo".try_into().unwrap(),
             should_succeed: true,
@@ -1575,12 +1575,12 @@ async fn expose_from_self_and_child() {
     )
     .await;
     test.check_use_exposed_dir(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use_exposed_dir(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;
@@ -1634,22 +1634,22 @@ async fn use_not_exposed() {
     let test = RoutingTest::new("a", components, framework_services).await;
     // Capability is only exposed from "c", so it only be usable from there.
     test.check_use_exposed_dir(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
     )
     .await;
     test.check_use_exposed_dir(
-        vec!["b"].into(),
+        vec!["b:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
     test.check_use_exposed_dir(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
     )
     .await;
     test.check_use_exposed_dir(
-        vec!["b", "c"].into(),
+        vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
     )
     .await;

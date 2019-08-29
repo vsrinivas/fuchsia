@@ -189,12 +189,12 @@ impl Model {
                 cur_realm.resolve_decl().await?;
                 let cur_state = cur_realm.lock_state().await;
                 let cur_state = cur_state.get();
-                if let Some(r) = cur_state.get_live_child_realm(&moniker) {
+                if let Some(r) = cur_state.all_child_realms().get(moniker) {
                     r.clone()
                 } else {
-                    return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
+                    return Err(ModelError::lookup_not_found(look_up_abs_moniker.clone()));
                 }
-            }
+            };
         }
         cur_realm.resolve_decl().await?;
         Ok(cur_realm)

@@ -62,7 +62,7 @@ async fn main() -> Result<(), Error> {
 
     let file_proxy = io_util::open_file(
         &memfs_proxy,
-        &PathBuf::from("storage_user/data/hippo"),
+        &PathBuf::from("storage_user:0/data/hippo"),
         OPEN_RIGHT_READABLE,
     )?;
     let read_contents = io_util::read_file(&file_proxy).await?;

@@ -83,7 +83,7 @@ pub async fn route_expose_capability<'a>(
 ) -> Result<(), ModelError> {
     let capability = RoutedCapability::Expose(expose_decl.clone());
     let mut pos =
-        WalkPosition { capability, last_partial_moniker: None, moniker: Some(abs_moniker.clone()) };
+        WalkPosition { capability, last_child_moniker: None, moniker: Some(abs_moniker.clone()) };
     let source = walk_expose_chain(model, &mut pos).await?;
     open_capability_at_source(model, flags, open_mode, String::new(), source, server_chan).await
 }
@@ -185,7 +185,7 @@ pub async fn route_and_open_storage_capability<'a>(
     };
     let mut pos = WalkPosition {
         capability: RoutedCapability::Use(use_decl.clone()),
-        last_partial_moniker: use_abs_moniker.path().last().map(|c| c.clone()),
+        last_child_moniker: use_abs_moniker.path().last().map(|c| c.clone()),
         moniker: Some(parent_moniker),
     };
 
@@ -220,11 +220,22 @@ pub async fn route_and_open_storage_capability<'a>(
             }
         }
         StorageDirectorySource::Child(ref name) => {
-            let moniker = Some(
-                storage_decl_realm.abs_moniker.child(PartialMoniker::new(name.to_string(), None)),
-            );
-            let capability = RoutedCapability::Storage(storage_decl);
-            let mut pos = WalkPosition { capability, last_partial_moniker: None, moniker };
+            let mut pos = {
+                let partial = PartialMoniker::new(name.to_string(), None);
+                let realm_state = storage_decl_realm.lock_state().await;
+                let realm_state = realm_state.get();
+                let moniker = Some(
+                    realm_state
+                        .extend_moniker_with(&storage_decl_realm.abs_moniker, &partial)
+                        .ok_or(ModelError::capability_discovery_error(format_err!(
+                            "no child {} found from component {} for storage directory source",
+                            partial,
+                            pos.moniker().clone(),
+                        )))?,
+                );
+                let capability = RoutedCapability::Storage(storage_decl);
+                WalkPosition { capability, last_child_moniker: None, moniker }
+            };
             match walk_expose_chain(model, &mut pos).await? {
                 CapabilitySource::Component(source_capability, realm) => {
                     (source_capability.source_path().unwrap().clone(), realm)
@@ -347,7 +358,7 @@ struct WalkPosition {
     /// The capability declaration as it's represented in the current component.
     capability: RoutedCapability,
     /// The moniker of the child we came from.
-    last_partial_moniker: Option<PartialMoniker>,
+    last_child_moniker: Option<ChildMoniker>,
     /// The moniker of the component we are currently looking at. `None` for component manager's
     /// realm.
     moniker: Option<AbsoluteMoniker>,
@@ -389,7 +400,7 @@ async fn find_offered_capability_source<'a>(
 ) -> Result<CapabilitySource, ModelError> {
     let mut pos = WalkPosition {
         capability,
-        last_partial_moniker: abs_moniker.path().last().map(|c| c.clone()),
+        last_child_moniker: abs_moniker.path().last().map(|c| c.clone()),
         moniker: abs_moniker.parent(),
     };
     if let Some(source) = walk_offer_chain(model, &mut pos).await? {
@@ -430,8 +441,8 @@ async fn walk_offer_chain<'a>(
         let realm_state = realm_state.get();
         // This `get()` is safe because `look_up_realm` populates this field
         let decl = realm_state.decl();
-        let last_partial_moniker = pos.last_partial_moniker.as_ref().unwrap();
-        if let Some(offer) = pos.capability.find_offer_source(decl, last_partial_moniker) {
+        let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
+        if let Some(offer) = pos.capability.find_offer_source(decl, last_child_moniker) {
             let source = match offer {
                 OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
                 OfferDecl::LegacyService(s) => OfferSource::LegacyService(&s.source),
@@ -460,7 +471,7 @@ async fn walk_offer_chain<'a>(
                     // The offered capability comes from the realm, so follow the
                     // parent
                     pos.capability = RoutedCapability::Offer(offer.clone());
-                    pos.last_partial_moniker = pos.moniker().path().last().map(|c| c.clone());
+                    pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
                     pos.moniker = pos.moniker().parent();
                     continue 'offerloop;
                 }
@@ -480,8 +491,15 @@ async fn walk_offer_chain<'a>(
                     // The offered capability comes from a child, break the loop
                     // and begin walking the expose chain.
                     pos.capability = RoutedCapability::Offer(offer.clone());
+                    let partial = PartialMoniker::new(child_name.to_string(), None);
                     pos.moniker =
-                        Some(pos.moniker().child(PartialMoniker::new(child_name.to_string(), None)));
+                        Some(realm_state.extend_moniker_with(&pos.moniker(), &partial).ok_or(
+                            ModelError::capability_discovery_error(format_err!(
+                                "no child {} found from component {} for offer source",
+                                partial,
+                                pos.moniker().clone(),
+                            )),
+                        )?);
                     return Ok(None);
                 }
                 OfferSource::Storage(OfferStorageSource::Storage(storage_name)) => {
@@ -551,8 +569,15 @@ async fn walk_expose_chain<'a>(
                 ExposeSource::Child(child_name) => {
                     // The offered capability comes from a child, so follow the child.
                     pos.capability = RoutedCapability::Expose(expose.clone());
+                    let partial = PartialMoniker::new(child_name.to_string(), None);
                     pos.moniker =
-                        Some(pos.moniker().child(PartialMoniker::new(child_name.to_string(), None)));
+                        Some(realm_state.extend_moniker_with(&pos.moniker(), &partial).ok_or(
+                            ModelError::capability_discovery_error(format_err!(
+                                "no child {} found from component {} for expose source",
+                                partial,
+                                pos.moniker().clone(),
+                            )),
+                        )?);
                     continue;
                 }
                 ExposeSource::Framework => {
@@ -585,38 +610,77 @@ mod tests {
     #[test]
     fn generate_storage_path_test() {
         for (type_, relative_moniker, expected_output) in vec![
-            (StorageType::Data, RelativeMoniker::new(vec![], vec!["a".into()]), "a/data"),
-            (StorageType::Cache, RelativeMoniker::new(vec![], vec!["a".into()]), "a/cache"),
-            (StorageType::Meta, RelativeMoniker::new(vec![], vec!["a".into()]), "a/meta"),
             (
                 StorageType::Data,
-                RelativeMoniker::new(vec![], vec!["a".into(), "b".into()]),
-                "a/children/b/data",
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1"]),
+                ),
+                "a:1/data",
             ),
             (
                 StorageType::Cache,
-                RelativeMoniker::new(vec![], vec!["a".into(), "b".into()]),
-                "a/children/b/cache",
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1"]),
+                ),
+                "a:1/cache",
             ),
             (
                 StorageType::Meta,
-                RelativeMoniker::new(vec![], vec!["a".into(), "b".into()]),
-                "a/children/b/meta",
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1"]),
+                ),
+                "a:1/meta",
             ),
             (
                 StorageType::Data,
-                RelativeMoniker::new(vec![], vec!["a".into(), "b".into(), "c".into()]),
-                "a/children/b/children/c/data",
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
+                ),
+                "a:1/children/b:2/data",
             ),
             (
                 StorageType::Cache,
-                RelativeMoniker::new(vec![], vec!["a".into(), "b".into(), "c".into()]),
-                "a/children/b/children/c/cache",
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
+                ),
+                "a:1/children/b:2/cache",
             ),
             (
                 StorageType::Meta,
-                RelativeMoniker::new(vec![], vec!["a".into(), "b".into(), "c".into()]),
-                "a/children/b/children/c/meta",
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1", "b:2"]),
+                ),
+                "a:1/children/b:2/meta",
+            ),
+            (
+                StorageType::Data,
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
+                ),
+                "a:1/children/b:2/children/c:3/data",
+            ),
+            (
+                StorageType::Cache,
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
+                ),
+                "a:1/children/b:2/children/c:3/cache",
+            ),
+            (
+                StorageType::Meta,
+                RelativeMoniker::from_absolute(
+                    &AbsoluteMoniker::from(vec![]),
+                    &AbsoluteMoniker::from(vec!["a:1", "b:2", "c:3"]),
+                ),
+                "a:1/children/b:2/children/c:3/meta",
             ),
         ] {
             assert_eq!(
