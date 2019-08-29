@@ -95,6 +95,7 @@ also provides core drivers and Fuchsia's libc implementation.
 
 ## Update and recovery
 
+ - [Software Update System][software-update-system]
  - Verified boot
  - Updater
 
@@ -116,3 +117,4 @@ also provides core drivers and Fuchsia's libc implementation.
 [scenic]: ui/scenic.md
 [input-manager]: ui/input.md
 [flutter]: https://flutter.dev/
+[software-update-system]: /docs/the-book/software_update_system.md

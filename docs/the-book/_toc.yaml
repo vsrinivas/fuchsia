@@ -86,3 +86,5 @@ toc:
   - title: "Flutter (UI toolkit)"
     path: //flutter.io/
     status: external
+- title: "Software Update System"
+  path: /docs/the-book/software_update_system.md
