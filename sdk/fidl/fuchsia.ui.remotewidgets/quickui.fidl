@@ -1,0 +1,99 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.remotewidgets;
+
+/// The value to hold these numeric types.
+union Number {
+    int64 int_value;
+    uint64 uint_value;
+    float64 double_value;
+};
+
+/// Represents a number type in a ui spec with an associated action.
+struct NumberValue {
+    Number value;
+    int32 action = 0;
+};
+
+/// Represents a string type in a ui spec with an associated action.
+struct TextValue {
+    string:64 text;
+    int32 action = 0;
+};
+
+/// Represents a button type in a ui spec with an associated action.
+struct ButtonValue {
+    string:64 label;
+    int32 action = 0;
+};
+
+/// Represents a progress indicator type in a ui spec with an associated action.
+struct ProgressValue {
+    // [0..1] inclusive.
+    float32 value;
+    int32 action = 0;
+};
+
+/// Represents an input type in a ui spec with an associated action.
+struct InputValue {
+    string:1024 text;
+    // 0 = multiline. 1 = Default.
+    int32 lines = 1;
+    int32 action = 0;
+};
+
+/// Represents a grid of strings type in a ui spec with an associated action.
+struct GridValue {
+    byte columns;
+    vector<TextValue>:256 values;
+};
+
+/// Represents a graph type in a ui spec with an associated action.
+struct GraphValue {
+    // [0..1] inclusive.
+    float32 value;
+    // Unit of progress in the x-axis.
+    int32 step;
+    int32 action = 0;
+};
+
+/// Represents a Value that is union of all types.
+union Value {
+    NumberValue number;
+    TextValue text;
+    ProgressValue progress;
+    ButtonValue button;
+    InputValue input;
+    GridValue grid;
+    GraphValue graph;
+};
+
+/// Represents a group of [Value]s with a title.
+struct Group {
+    // The title to show for this UI spec.
+    string:128 title;
+    // List of [Value] objects that form part of this spec.
+    vector<Value>:16 values;
+};
+
+/// Describes a specification of quick UI.
+struct Spec {
+    // List of [Group] objects that form part of this spec.
+    vector<Group>:8 groups;
+};
+
+/// Defines a protocol for a component to provide specs for building UI for
+/// quick settings or notifications, independent of any platform.
+[Discoverable]
+protocol QuickUi {
+    /// Request [Spec] from the provider. The provider should return Spec
+    /// whenever it is ready to. Until then this request remains outstanding,
+    /// aka "hanging get". The provider can return completely different set of
+    /// status on every invocation. The client can provide an optional [Value]
+    /// to allow the provider to customize the returned UI spec. Typically,
+    /// this value was part of previous [Spec] and identifies the part of
+    /// [Spec] the user interacted with.
+    GetSpec(Value? value) -> (Spec spec);
+};
