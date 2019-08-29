@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <map>
-#include <utility>
-#include <vector>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/callback/capture.h>
@@ -14,6 +10,10 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
+
+#include <map>
+#include <utility>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"
@@ -407,16 +407,14 @@ TEST_P(MergingIntegrationTest, Merging) {
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
 
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), {},
-                     std::move(watcher1_ptr));
+  page1->GetSnapshot(snapshot1.NewRequest(), {}, std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   auto watcher2_waiter = NewWaiter();
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
 
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), {},
-                     std::move(watcher2_ptr));
+  page2->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher2_ptr));
 
   page1->StartTransaction();
   page2->StartTransaction();
@@ -502,15 +500,13 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   auto watcher1_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), {},
-                     std::move(watcher1_ptr));
+  page1->GetSnapshot(snapshot1.NewRequest(), {}, std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   auto watcher2_waiter = NewWaiter();
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page2->GetSnapshot(snapshot2.NewRequest(), {},
-                     std::move(watcher2_ptr));
+  page2->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher2_ptr));
 
   page1->StartTransaction();
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"));
@@ -676,8 +672,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -768,8 +763,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -1058,8 +1052,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values), MergeType::MULTIPART));
 
@@ -1092,8 +1085,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher_ptr));
 
   page1->StartTransaction();
   page1->Put(convert::ToArray("name"), convert::ToArray("Alice"));
@@ -1213,8 +1205,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -1291,8 +1282,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  page1->GetSnapshot(snapshot.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values), MergeType::MULTIPART));
 
@@ -1328,8 +1318,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page1->GetSnapshot(snapshot1.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot1.NewRequest(), {}, std::move(watcher_ptr));
 
   page1->StartTransaction();
   page2->StartTransaction();
@@ -1505,8 +1494,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page1->GetSnapshot(snapshot2.NewRequest(), {},
-                     std::move(watcher_ptr));
+  page1->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -1629,14 +1617,12 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(), {},
-                          std::move(watcher1_ptr));
+  page_conn1->GetSnapshot(snapshot1.NewRequest(), {}, std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page_conn2->GetSnapshot(snapshot2.NewRequest(), {},
-                          std::move(watcher2_ptr));
+  page_conn2->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher2_ptr));
 
   page_conn1->StartTransaction();
   page_conn1->Put(convert::ToArray("name"), convert::ToArray("Alice"));
@@ -1724,14 +1710,12 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(), {},
-                          std::move(watcher1_ptr));
+  page_conn1->GetSnapshot(snapshot1.NewRequest(), {}, std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page_conn2->GetSnapshot(snapshot2.NewRequest(), {},
-                          std::move(watcher2_ptr));
+  page_conn2->GetSnapshot(snapshot2.NewRequest(), {}, std::move(watcher2_ptr));
 
   page_conn1->StartTransaction();
   page_conn1->Put(convert::ToArray("name"), convert::ToArray("Alice"));
