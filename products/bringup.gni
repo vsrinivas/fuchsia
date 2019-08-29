@@ -7,9 +7,7 @@ bootfs_only = true
 zircon_enable_kernel_debugging_features = true
 zircon_enable_netsvc_debugging_features = true
 
-# TODO(ZX-4706): Kernel/userboot not properly handling case where cmdline is completely empty or
-# missing, so a dummy argument that nothing uses is added for now.
-kernel_cmdline_args = [ "dummy=arg" ]
+kernel_cmdline_args = []
 
 meta_package_labels = [ "//build/images:config-data" ]
 
