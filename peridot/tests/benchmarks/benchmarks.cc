@@ -82,43 +82,33 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner) {
   // benchmarks. The long term plan is to migrate them away from here and into
   // the e2e testing framework, which is tracked in the TODO bugs.
 
-  std::string benchmarks_bot_name = benchmarks_runner->benchmarks_bot_name();
-
   // TODO(PT-118): Input latency tests are only currently supported on NUC.
-  if (benchmarks_bot_name == "peridot-x64-perf-dawson_canyon") {
-    // simplest_app
-    {
-      constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
-      std::string out_file = benchmarks_runner->MakeTempFile();
-      benchmarks_runner->AddCustomBenchmark(
-          kLabel,
-          {"/bin/run",
-           "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
-           "run_simplest_app_benchmark.cmx",
-           "--out_file", out_file, "--benchmark_label", kLabel},
-          out_file);
-    }
-    // yuv_to_image_pipe
-    {
-      constexpr const char* kLabel = "fuchsia.input_latency.yuv_to_image_pipe";
-      std::string out_file = benchmarks_runner->MakeTempFile();
-      benchmarks_runner->AddCustomBenchmark(
-          kLabel,
-          {"/bin/run",
-           "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
-           "run_yuv_to_image_pipe_benchmark.cmx",
-           "--out_file", out_file, "--benchmark_label", kLabel},
-          out_file);
-    }
-  } else if (benchmarks_bot_name == "peridot-arm64-perf-vim2") {
-    FXL_LOG(INFO) << "Input latency tests skipped on bot '"
-                  << benchmarks_bot_name << '\'';
-  } else {
-    FXL_LOG(ERROR)
-        << "Bot '" << benchmarks_bot_name
-        << "' not recognized: please update benchmarks.cc in peridot.";
-    exit(1);
+#if !defined(__aarch64__)
+  // simplest_app
+  {
+    constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
+    std::string out_file = benchmarks_runner->MakeTempFile();
+    benchmarks_runner->AddCustomBenchmark(
+        kLabel,
+        {"/bin/run",
+         "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
+         "run_simplest_app_benchmark.cmx",
+         "--out_file", out_file, "--benchmark_label", kLabel},
+        out_file);
   }
+  // yuv_to_image_pipe
+  {
+    constexpr const char* kLabel = "fuchsia.input_latency.yuv_to_image_pipe";
+    std::string out_file = benchmarks_runner->MakeTempFile();
+    benchmarks_runner->AddCustomBenchmark(
+        kLabel,
+        {"/bin/run",
+         "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
+         "run_yuv_to_image_pipe_benchmark.cmx",
+         "--out_file", out_file, "--benchmark_label", kLabel},
+        out_file);
+  }
+#endif
 
   AddGraphicsBenchmarks(benchmarks_runner);
 }
