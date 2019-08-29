@@ -44,12 +44,20 @@ static inline void i2c_write_read(const i2c_protocol_t* i2c, const void* write_b
   i2c_transact(i2c, ops, count, transact_cb, cookie);
 }
 
-typedef struct {
+typedef struct i2c_write_read_ctx {
   sync_completion_t completion;
   void* read_buf;
   size_t read_length;
   zx_status_t result;
+#if defined(__cplusplus)
+  i2c_write_read_ctx() : read_buf(nullptr), read_length(0), result(ZX_ERR_INTERNAL) {}
+#endif
 } i2c_write_read_ctx_t;
+
+#if !defined(__cplusplus)
+#define I2C_WRITE_READ_CTX_INIT \
+  ((i2c_write_read_ctx_t){SYNC_COMPLETION_INIT, NULL, 0, ZX_ERR_INTERNAL})
+#endif
 
 static inline void i2c_write_read_sync_cb(void* cookie, zx_status_t status, const i2c_op_t* ops,
                                           size_t cnt) {
@@ -66,8 +74,11 @@ static inline void i2c_write_read_sync_cb(void* cookie, zx_status_t status, cons
 static inline zx_status_t i2c_write_read_sync(const i2c_protocol_t* i2c, const void* write_buf,
                                               size_t write_length, void* read_buf,
                                               size_t read_length) {
+#if !defined(__cplusplus)
+  i2c_write_read_ctx_t ctx = I2C_WRITE_READ_CTX_INIT;
+#else
   i2c_write_read_ctx_t ctx;
-  sync_completion_reset(&ctx.completion);
+#endif
   ctx.read_buf = read_buf;
   ctx.read_length = read_length;
 
