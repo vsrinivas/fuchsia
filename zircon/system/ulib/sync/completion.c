@@ -7,9 +7,10 @@
 #include <stdatomic.h>
 #include <zircon/syscalls.h>
 
-enum {
+enum int32_t {
   UNSIGNALED = 0,
-  SIGNALED = 1,
+  UNSIGNALED_WITH_WAITERS = 1,
+  SIGNALED = 2,
 };
 
 zx_status_t sync_completion_wait(sync_completion_t* completion, zx_duration_t timeout) {
@@ -23,33 +24,62 @@ zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time
   // this could optimistically spin before entering the kernel.
 
   atomic_int* futex = &completion->futex;
+  int32_t prev_value = UNSIGNALED;
 
-  for (;;) {
-    int32_t current_value = atomic_load(futex);
-    if (current_value == SIGNALED) {
+  atomic_compare_exchange_strong(futex, &prev_value, UNSIGNALED_WITH_WAITERS);
+
+  // If we had been signaled, then just get out.  Because of the CMPX, we are
+  // still signaled.
+  if (prev_value == SIGNALED) {
+    return ZX_OK;
+  }
+
+  // There are only two choices here.  The previous state was
+  // UNSIGNALED_WITH_WAITERS (and we changed nothing), or it was UNSIGNALED
+  // (and we just transitioned it to UWW).  Either way, we expect the state to
+  // be UWW by the time we join the wait queue.  If it is anything else
+  // (BAD_STATE), then it must have achieved SIGNALED at some point in the
+  // past.  Likewise (ignoring the race described below), if we get ZX_OK
+  // back, then we must have been woken by some other thread which was
+  // signaling our completion.
+  switch (_zx_futex_wait(futex, UNSIGNALED_WITH_WAITERS, ZX_HANDLE_INVALID, deadline)) {
+    case ZX_OK:
+    case ZX_ERR_BAD_STATE:
       return ZX_OK;
-    }
-    switch (_zx_futex_wait(futex, current_value, ZX_HANDLE_INVALID, deadline)) {
-      case ZX_OK:
-        continue;
-      case ZX_ERR_BAD_STATE:
-        // If we get ZX_ERR_BAD_STATE, the value of the futex changed between
-        // our load and the wait. This could only have happened if we
-        // were signaled.
-        return ZX_OK;
-      case ZX_ERR_TIMED_OUT:
-        return ZX_ERR_TIMED_OUT;
-      case ZX_ERR_INVALID_ARGS:
-      default:
-        __builtin_trap();
-    }
+
+    case ZX_ERR_TIMED_OUT:
+      return ZX_ERR_TIMED_OUT;
+
+    case ZX_ERR_INVALID_ARGS:
+    default:
+      __builtin_trap();
   }
 }
 
 void sync_completion_signal(sync_completion_t* completion) {
   atomic_int* futex = &completion->futex;
-  atomic_store(futex, SIGNALED);
-  _zx_futex_wake(futex, UINT32_MAX);
+  int32_t expected = atomic_load_explicit(futex, memory_order_acquire);
+
+  do {
+    if (expected == SIGNALED) {
+      return;
+    }
+
+    // ASSERT that the state was either or UNSIGNALED or
+    // UNSIGNALED_WITH_WAITERS.  Anything else is an indication of either a bad
+    // pointer being passed to us, or memory corruption.
+    if ((expected != UNSIGNALED) && (expected != UNSIGNALED_WITH_WAITERS)) {
+      __builtin_trap();
+    }
+
+    // Exchange what was with SIGNALED.  If we fail, just restart.
+  } while (!atomic_compare_exchange_weak_explicit(futex, &expected, SIGNALED, memory_order_seq_cst,
+                                                  memory_order_acquire));
+
+  // Success!  If there had been waiters, wake them up now.
+  if (expected == UNSIGNALED_WITH_WAITERS) {
+    _zx_futex_wake(futex, UINT32_MAX);
+  }
 }
 
 void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* requeue_target,
@@ -69,7 +99,17 @@ void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* r
 }
 
 void sync_completion_reset(sync_completion_t* completion) {
-  atomic_store(&completion->futex, UNSIGNALED);
+  atomic_int* futex = &completion->futex;
+  int expected = SIGNALED;
+
+  if (!atomic_compare_exchange_strong(futex, &expected, UNSIGNALED)) {
+    // If we were not SIGNALED, then we had better have been with either
+    // UNSIGNALED, or UNSIGNALED_WITH_WAITERS.  Anything else is an indication
+    // of either a bad pointer being passed, or corruption.
+    if ((expected != UNSIGNALED) && (expected != UNSIGNALED_WITH_WAITERS)) {
+      __builtin_trap();
+    }
+  }
 }
 
 bool sync_completion_signaled(sync_completion_t* completion) {
