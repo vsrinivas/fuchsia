@@ -8,7 +8,7 @@ import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
-const _timeout = Duration(seconds: 60);
+const _timeout = Timeout(Duration(minutes: 1));
 
 void main() {
   sl4f.Sl4f sl4fDriver;
@@ -114,9 +114,7 @@ void main() {
           recurse: true);
       expect(result, 'AlreadyExists');
     });
-  },
-      // This is a large test that waits for the DUT to come up.
-      timeout: Timeout(_timeout));
+  }, timeout: _timeout);
 }
 
 Future<List<String>> listDir(sl4f.Sl4f sl4f, String dir) async {

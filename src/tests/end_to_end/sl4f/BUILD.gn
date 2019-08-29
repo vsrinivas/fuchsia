@@ -7,14 +7,19 @@ import("//build/testing/environments.gni")
 
 dart_test("sl4f_test") {
   sources = [
+    "audio_test.dart",
+    "device_log_test.dart",
     "dump_test.dart",
-    "file_facade_test.dart",
     "performance_test.dart",
+    "scenic_test.dart",
+    "setui_test.dart",
+    "storage_test.dart",
   ]
 
   deps = [
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/logging",
+    "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
   ]
 
