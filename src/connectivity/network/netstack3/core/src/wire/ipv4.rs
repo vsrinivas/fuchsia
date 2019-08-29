@@ -738,7 +738,7 @@ pub(crate) mod options {
 mod tests {
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4;
-    use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
+    use packet::{Buf, FragmentedBuffer, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use super::*;
     use crate::device::ethernet::EtherType;

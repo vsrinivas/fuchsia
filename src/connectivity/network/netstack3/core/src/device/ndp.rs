@@ -3560,7 +3560,7 @@ mod tests {
 
     use net_types::ethernet::Mac;
     use net_types::ip::AddrSubnet;
-    use packet::{Buf, Buffer, ParseBuffer};
+    use packet::{Buf, GrowBuffer, ParseBuffer};
 
     use crate::device::{
         add_ip_addr_subnet, del_ip_addr, ethernet::EthernetNdpDevice, get_ip_addr_state,

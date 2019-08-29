@@ -10,9 +10,11 @@ use std::ops::{Range, RangeBounds};
 use never::Never;
 
 use crate::{
-    canonicalize_range, take_back, take_back_mut, take_front, take_front_mut, Buffer, BufferMut,
-    BufferView, BufferViewMut, EmptyBuf, ParsablePacket, ParseBuffer, ParseBufferMut,
-    SerializeBuffer,
+    canonicalize_range, take_back, take_back_mut, take_front, take_front_mut, BufferMut,
+    BufferView, BufferViewMut, ContiguousBuffer, ContiguousBufferImpl, ContiguousBufferMut,
+    ContiguousBufferMutImpl, EmptyBuf, FragmentedBuffer, FragmentedBufferMut, FragmentedBytes,
+    FragmentedBytesMut, GrowBuffer, GrowBufferMut, ParsablePacket, ParseBuffer, ParseBufferMut,
+    ReusableBuffer, SerializeBuffer, ShrinkBuffer, TargetBuffer,
 };
 
 const MAX_USIZE: usize = core::usize::MAX;
@@ -130,19 +132,44 @@ macro_rules! call_method_on_either {
 // Either variant is present. We assume that doing this match once is more
 // performant than doing it multiple times.
 
-impl<A, B> ParseBuffer for Either<A, B>
+impl<A, B> FragmentedBuffer for Either<A, B>
 where
-    A: ParseBuffer,
-    B: ParseBuffer,
+    A: FragmentedBuffer,
+    B: FragmentedBuffer,
 {
-    fn shrink<R: RangeBounds<usize>>(&mut self, range: R) {
-        call_method_on_either!(self, shrink, range)
-    }
     fn len(&self) -> usize {
         call_method_on_either!(self, len)
     }
-    fn is_empty(&self) -> bool {
-        call_method_on_either!(self, is_empty)
+
+    fn with_bytes<R, F>(&self, f: F) -> R
+    where
+        F: FnOnce(FragmentedBytes) -> R,
+    {
+        call_method_on_either!(self, with_bytes, f)
+    }
+}
+
+impl<A, B> ContiguousBuffer for Either<A, B>
+where
+    A: ContiguousBuffer,
+    B: ContiguousBuffer,
+{
+}
+
+impl<A, B> ContiguousBufferMut for Either<A, B>
+where
+    A: ContiguousBufferMut,
+    B: ContiguousBufferMut,
+{
+}
+
+impl<A, B> ShrinkBuffer for Either<A, B>
+where
+    A: ShrinkBuffer,
+    B: ShrinkBuffer,
+{
+    fn shrink<R: RangeBounds<usize>>(&mut self, range: R) {
+        call_method_on_either!(self, shrink, range)
     }
     fn shrink_front(&mut self, n: usize) {
         call_method_on_either!(self, shrink_front, n)
@@ -150,6 +177,13 @@ where
     fn shrink_back(&mut self, n: usize) {
         call_method_on_either!(self, shrink_back, n)
     }
+}
+
+impl<A, B> ParseBuffer for Either<A, B>
+where
+    A: ParseBuffer,
+    B: ParseBuffer,
+{
     fn parse<'a, P: ParsablePacket<&'a [u8], ()>>(&'a mut self) -> Result<P, P::Error> {
         call_method_on_either!(self, parse)
     }
@@ -159,8 +193,18 @@ where
     ) -> Result<P, P::Error> {
         call_method_on_either!(self, parse_with, args)
     }
-    fn as_buf(&self) -> Buf<&[u8]> {
-        call_method_on_either!(self, as_buf)
+}
+
+impl<A, B> FragmentedBufferMut for Either<A, B>
+where
+    A: FragmentedBufferMut,
+    B: FragmentedBufferMut,
+{
+    fn with_bytes_mut<R, F>(&mut self, f: F) -> R
+    where
+        F: FnOnce(FragmentedBytesMut) -> R,
+    {
+        call_method_on_either!(self, with_bytes_mut, f)
     }
 }
 
@@ -178,15 +222,12 @@ where
     ) -> Result<P, P::Error> {
         call_method_on_either!(self, parse_with_mut, args)
     }
-    fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
-        call_method_on_either!(self, as_buf_mut)
-    }
 }
 
-impl<A, B> Buffer for Either<A, B>
+impl<A, B> GrowBuffer for Either<A, B>
 where
-    A: Buffer,
-    B: Buffer,
+    A: GrowBuffer,
+    B: GrowBuffer,
 {
     fn capacity(&self) -> usize {
         call_method_on_either!(self, capacity)
@@ -208,14 +249,28 @@ where
     }
 }
 
-impl<A, B> BufferMut for Either<A, B>
+impl<A, B> GrowBufferMut for Either<A, B>
 where
-    A: BufferMut,
-    B: BufferMut,
+    A: GrowBufferMut,
+    B: GrowBufferMut,
 {
     fn reset_zero(&mut self) {
         call_method_on_either!(self, reset_zero)
     }
+}
+
+impl<A, B> TargetBuffer for Either<A, B>
+where
+    A: TargetBuffer,
+    B: TargetBuffer,
+{
+    fn with_parts<O, F>(&mut self, f: F) -> O
+    where
+        F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+    {
+        call_method_on_either!(self, with_parts, f)
+    }
+
     fn serialize<BB: PacketBuilder>(&mut self, c: PacketConstraints, builder: BB) {
         call_method_on_either!(self, serialize, c, builder)
     }
@@ -274,7 +329,8 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> Buf<B> {
     }
 }
 
-impl<B: AsRef<[u8]>> ParseBuffer for Buf<B> {
+impl<B: AsRef<[u8]>> ContiguousBufferImpl for Buf<B> {}
+impl<B: AsRef<[u8]>> ShrinkBuffer for Buf<B> {
     fn shrink<R: RangeBounds<usize>>(&mut self, range: R) {
         let len = self.len();
         let mut range = canonicalize_range(len, &range);
@@ -283,9 +339,6 @@ impl<B: AsRef<[u8]>> ParseBuffer for Buf<B> {
         self.range = range;
     }
 
-    fn len(&self) -> usize {
-        self.range.end - self.range.start
-    }
     fn shrink_front(&mut self, n: usize) {
         assert!(n <= self.len());
         self.range.start += n;
@@ -294,15 +347,13 @@ impl<B: AsRef<[u8]>> ParseBuffer for Buf<B> {
         assert!(n <= self.len());
         self.range.end -= n;
     }
+}
+impl<B: AsRef<[u8]>> ParseBuffer for Buf<B> {
     fn parse_with<'a, ParseArgs, P: ParsablePacket<&'a [u8], ParseArgs>>(
         &'a mut self,
         args: ParseArgs,
     ) -> Result<P, P::Error> {
         P::parse(self.buffer_view(), args)
-    }
-    fn as_buf(&self) -> Buf<&[u8]> {
-        // TODO(joshlf): Once we have impl specialization, can we specialize this at all?
-        Buf::new(self.buf.as_ref(), self.range.clone())
     }
 }
 
@@ -313,12 +364,9 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> ParseBufferMut for Buf<B> {
     ) -> Result<P, P::Error> {
         P::parse_mut(self.buffer_view_mut(), args)
     }
-    fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
-        Buf::new(self.buf.as_mut(), self.range.clone())
-    }
 }
 
-impl<B: AsRef<[u8]>> Buffer for Buf<B> {
+impl<B: AsRef<[u8]>> GrowBuffer for Buf<B> {
     fn capacity(&self) -> usize {
         self.buf.as_ref().len()
     }
@@ -337,8 +385,20 @@ impl<B: AsRef<[u8]>> Buffer for Buf<B> {
         self.range.end += n;
     }
 }
-
-impl<B: AsRef<[u8]> + AsMut<[u8]>> BufferMut for Buf<B> {}
+impl<B: AsRef<[u8]> + AsMut<[u8]>> ContiguousBufferMutImpl for Buf<B> {}
+impl<B: AsRef<[u8]> + AsMut<[u8]>> GrowBufferMut for Buf<B> {}
+impl<B: AsRef<[u8]> + AsMut<[u8]>> TargetBuffer for Buf<B> {
+    fn with_parts<O, F>(&mut self, f: F) -> O
+    where
+        F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+    {
+        let (prefix, buf) = self.buf.as_mut().split_at_mut(self.range.start);
+        let (body, suffix) = buf.split_at_mut(self.range.end - self.range.start);
+        let mut body = [body];
+        let body = FragmentedBytesMut::new(&mut body[..]);
+        f(prefix, body, suffix)
+    }
+}
 
 impl<B: AsRef<[u8]>> AsRef<[u8]> for Buf<B> {
     fn as_ref(&self) -> &[u8] {
@@ -674,7 +734,7 @@ pub trait NestedPacketBuilder {
     /// panicking) if `self.try_constraints()` returns `None`. In order to avoid
     /// a panic, the caller must call that method first, and only call
     /// `serialize_into` if it returns `Some`.
-    fn serialize_into<B: BufferMut>(&self, buffer: &mut B);
+    fn serialize_into<B: TargetBuffer>(&self, buffer: &mut B);
 
     /// Encapsulate this `NestedPacketBuilder` inside of another one.
     ///
@@ -734,40 +794,8 @@ impl<PB: PacketBuilder> NestedPacketBuilder for PB {
         Some(self.constraints())
     }
 
-    fn serialize_into<B: BufferMut>(&self, buffer: &mut B) {
-        let c = self.constraints();
-        // SECURITY: Use _zero to ensure we zero padding bytes to prevent
-        // leaking information from packets previously stored in this buffer.
-        let padding = c.min_body_len().saturating_sub(buffer.len());
-        buffer.grow_back_zero(padding);
-
-        let body_len = buffer.len();
-        // These aren't necessary for correctness (grow_xxx_zero will panic
-        // under the same conditions that these assertions will fail), but they
-        // provide nicer error messages for debugging.
-        debug_assert!(
-            buffer.prefix_len() >= c.header_len(),
-            "prefix ({} bytes) too small to serialize header ({} bytes)",
-            buffer.prefix_len(),
-            c.header_len()
-        );
-        debug_assert!(
-            buffer.suffix_len() >= c.footer_len(),
-            "suffix ({} bytes) too small to serialize footer ({} bytes)",
-            buffer.suffix_len(),
-            c.footer_len()
-        );
-        // SECURITY: _zero here is technically unnecessary since it's
-        // PacketBuilder::serialize's responsibility to zero/initialize the
-        // header and footer, but we do it anyway to hedge against non-compliant
-        // PacketBuilder::serialize implementations. If this becomes a
-        // performance issue, we can revisit it, but the optimizer will probably
-        // take care of it for us.
-        buffer.grow_front_zero(c.header_len());
-        buffer.grow_back_zero(c.footer_len());
-
-        let body = c.header_len()..(c.header_len() + body_len);
-        self.serialize(&mut SerializeBuffer { buf: buffer.as_mut(), body });
+    fn serialize_into<B: TargetBuffer>(&self, buffer: &mut B) {
+        buffer.serialize(self.constraints(), self);
     }
 }
 
@@ -866,7 +894,7 @@ impl<I: NestedPacketBuilder, O: NestedPacketBuilder> NestedPacketBuilder for Nes
     }
 
     #[inline]
-    fn serialize_into<B: BufferMut>(&self, buffer: &mut B) {
+    fn serialize_into<B: TargetBuffer>(&self, buffer: &mut B) {
         // `serialize_into` is required to serialize padding, and in particular,
         // to serialize it in the right place, immediately following the body of
         // the packet which imposes the minimum body length requirement. This
@@ -897,7 +925,7 @@ impl<'a, PB: NestedPacketBuilder> NestedPacketBuilder for RefNestedPacketBuilder
         self.0.try_constraints()
     }
 
-    fn serialize_into<B: BufferMut>(&self, buffer: &mut B) {
+    fn serialize_into<B: TargetBuffer>(&self, buffer: &mut B) {
         self.0.serialize_into(buffer)
     }
 }
@@ -933,7 +961,7 @@ impl<PB: NestedPacketBuilder> NestedPacketBuilder for MtuPacketBuilder<PB> {
     }
 
     #[inline]
-    fn serialize_into<B: BufferMut>(&self, buffer: &mut B) {
+    fn serialize_into<B: TargetBuffer>(&self, buffer: &mut B) {
         self.inner.serialize_into(buffer)
     }
 }
@@ -1222,7 +1250,7 @@ pub fn new_buf_vec(len: usize) -> Result<Buf<Vec<u8>>, Never> {
 /// `max_copy_bytes` is meant to be an estimate of how many bytes can be copied
 /// before allocating a new buffer will be cheaper than copying.
 #[inline]
-pub fn try_reuse_buffer<B: BufferMut>(
+pub fn try_reuse_buffer<B: GrowBufferMut + ShrinkBuffer>(
     mut buffer: B,
     prefix: usize,
     suffix: usize,
@@ -1249,7 +1277,7 @@ pub fn try_reuse_buffer<B: BufferMut>(
         // definition, and satisfies the `suffix` constraint since we know
         // that the total buffer capacity is sufficient to hold the total
         // length of the prefix, body, and suffix.
-        buffer.as_mut().copy_within(have_prefix..(have_prefix + have_body), need_prefix);
+        buffer.copy_within(have_prefix..(have_prefix + have_body), need_prefix);
         buffer.shrink(need_prefix..(need_prefix + have_body));
         debug_assert_eq!(buffer.prefix_len(), need_prefix);
         debug_assert!(buffer.suffix_len() >= need_suffix);
@@ -1267,7 +1295,9 @@ pub fn try_reuse_buffer<B: BufferMut>(
 /// O>` will often be just as fast as calling methods on `I`/`O` itself since
 /// Rust can optimize out branching on which enum variant is present. However,
 /// in this case, an impl of `BufferProvider<I, I>` is also provided.
-impl<I: BufferMut, O: BufferMut, A: BufferAlloc<O>> BufferProvider<I, Either<I, O>> for A {
+impl<I: ReusableBuffer, O: ReusableBuffer, A: BufferAlloc<O>> BufferProvider<I, Either<I, O>>
+    for A
+{
     type Error = A::Error;
 
     /// If `buffer` has enough capacity to store `need_prefix + need_suffix +
@@ -1300,7 +1330,8 @@ impl<I: BufferMut, O: BufferMut, A: BufferAlloc<O>> BufferProvider<I, Either<I, 
                     Err(err) => return Err((err, buffer)),
                 };
                 buf.shrink(need_prefix..(need_prefix + have_body));
-                buf.as_mut().copy_from_slice(buffer.as_ref());
+
+                buf.copy_from(&buffer);
                 debug_assert_eq!(buf.prefix_len(), need_prefix);
                 debug_assert!(buf.suffix_len() >= need_suffix);
                 debug_assert_eq!(buf.len(), have_body);
@@ -1311,8 +1342,8 @@ impl<I: BufferMut, O: BufferMut, A: BufferAlloc<O>> BufferProvider<I, Either<I, 
 }
 
 /// All types which implement `BufferAlloc<B>` also implement `BufferProvider<B,
-/// B>` where `B` implements [`BufferMut`].
-impl<B: BufferMut, A: BufferAlloc<B>> BufferProvider<B, B> for A {
+/// B>` where `B` implements [`GrowBufferMut`] and [`ShrinkBuffer`].
+impl<B: ReusableBuffer, A: BufferAlloc<B>> BufferProvider<B, B> for A {
     type Error = A::Error;
 
     /// If `buffer` has enough capacity to store `need_prefix + need_suffix +
@@ -1337,7 +1368,7 @@ pub trait Serializer: Sized {
     //   impl<S: packet::Serializer> Serializer for S where Self::Buffer: BufferMut {}
 
     /// The type of buffers returned from serialization methods on this trait.
-    type Buffer: BufferMut;
+    type Buffer;
 
     /// Serialize this `Serializer`, producing a buffer.
     ///
@@ -1355,7 +1386,7 @@ pub trait Serializer: Sized {
     /// it and allocating a new one.
     ///
     /// [`encapsulate`]: crate::serialize::Serializer::encapsulate
-    fn serialize<B: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, B>>(
+    fn serialize<B: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, B>>(
         self,
         outer: PB,
         provider: P,
@@ -1380,7 +1411,10 @@ pub trait Serializer: Sized {
     fn serialize_vec<PB: NestedPacketBuilder>(
         self,
         outer: PB,
-    ) -> Result<Either<Self::Buffer, Buf<Vec<u8>>>, (SerializeError<Never>, Self)> {
+    ) -> Result<Either<Self::Buffer, Buf<Vec<u8>>>, (SerializeError<Never>, Self)>
+    where
+        Self::Buffer: ReusableBuffer,
+    {
         self.serialize(outer, new_buf_vec)
     }
 
@@ -1401,7 +1435,10 @@ pub trait Serializer: Sized {
     fn serialize_no_alloc<PB: NestedPacketBuilder>(
         self,
         outer: PB,
-    ) -> Result<Self::Buffer, (SerializeError<BufferTooShortError>, Self)> {
+    ) -> Result<Self::Buffer, (SerializeError<BufferTooShortError>, Self)>
+    where
+        Self::Buffer: ReusableBuffer,
+    {
         self.serialize(outer, ()).map(Either::into_a).map_err(|(err, slf)| {
             (
                 match err {
@@ -1422,7 +1459,7 @@ pub trait Serializer: Sized {
     ///
     /// [`serialize`]: crate::serialize::Serializer::serialize
     #[inline]
-    fn serialize_outer<B: BufferMut, P: BufferProvider<Self::Buffer, B>>(
+    fn serialize_outer<B: TargetBuffer, P: BufferProvider<Self::Buffer, B>>(
         self,
         provider: P,
     ) -> Result<B, (SerializeError<P::Error>, Self)> {
@@ -1442,7 +1479,10 @@ pub trait Serializer: Sized {
     #[inline]
     fn serialize_vec_outer(
         self,
-    ) -> Result<Either<Self::Buffer, Buf<Vec<u8>>>, (SerializeError<Never>, Self)> {
+    ) -> Result<Either<Self::Buffer, Buf<Vec<u8>>>, (SerializeError<Never>, Self)>
+    where
+        Self::Buffer: ReusableBuffer,
+    {
         self.serialize_vec(())
     }
 
@@ -1458,7 +1498,10 @@ pub trait Serializer: Sized {
     #[inline]
     fn serialize_no_alloc_outer(
         self,
-    ) -> Result<Self::Buffer, (SerializeError<BufferTooShortError>, Self)> {
+    ) -> Result<Self::Buffer, (SerializeError<BufferTooShortError>, Self)>
+    where
+        Self::Buffer: ReusableBuffer,
+    {
         self.serialize_no_alloc(())
     }
 
@@ -1508,7 +1551,7 @@ impl<I: InnerPacketBuilder, B: BufferMut> Serializer for InnerSerializer<I, B> {
     type Buffer = B;
 
     #[inline]
-    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
+    fn serialize<BB: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
         self,
         outer: PB,
         provider: P,
@@ -1552,7 +1595,7 @@ impl<B: BufferMut> Serializer for B {
     type Buffer = B;
 
     #[inline]
-    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, BB>>(
+    fn serialize<BB: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, BB>>(
         self,
         outer: PB,
         provider: P,
@@ -1606,7 +1649,7 @@ impl<B> TruncatingSerializer<B> {
 impl<B: BufferMut> Serializer for TruncatingSerializer<B> {
     type Buffer = B;
 
-    fn serialize<BB: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
+    fn serialize<BB: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<B, BB>>(
         mut self,
         outer: PB,
         provider: P,
@@ -1662,7 +1705,7 @@ impl<I: Serializer, O: NestedPacketBuilder> Serializer for Nested<I, O> {
     type Buffer = I::Buffer;
 
     #[inline]
-    fn serialize<B: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<I::Buffer, B>>(
+    fn serialize<B: TargetBuffer, PB: NestedPacketBuilder, P: BufferProvider<I::Buffer, B>>(
         self,
         outer: PB,
         provider: P,
@@ -1683,9 +1726,9 @@ impl<I: Serializer, O: NestedPacketBuilder> Serializer for Nested<I, O> {
 
 #[cfg(test)]
 mod tests {
-    use std::fmt::Debug;
-
     use super::*;
+    use crate::Buffer;
+    use std::fmt::Debug;
 
     // DummyPacketBuilder:
     // - Implements PacketBuilder with the stored constraints; it fills the
@@ -1775,10 +1818,17 @@ mod tests {
         truncating: bool,
     }
 
-    impl<S: Serializer + Debug + Clone + Eq> Serializer for VerifyingSerializer<S> {
+    impl<S: Serializer + Debug + Clone + Eq> Serializer for VerifyingSerializer<S>
+    where
+        S::Buffer: ReusableBuffer,
+    {
         type Buffer = S::Buffer;
 
-        fn serialize<B: BufferMut, PB: NestedPacketBuilder, P: BufferProvider<Self::Buffer, B>>(
+        fn serialize<
+            B: TargetBuffer,
+            PB: NestedPacketBuilder,
+            P: BufferProvider<Self::Buffer, B>,
+        >(
             self,
             outer: PB,
             provider: P,
@@ -1828,7 +1878,10 @@ mod tests {
     }
 
     trait SerializerExt: Serializer {
-        fn into_verifying(self, truncating: bool) -> VerifyingSerializer<Self> {
+        fn into_verifying(self, truncating: bool) -> VerifyingSerializer<Self>
+        where
+            Self::Buffer: ReusableBuffer,
+        {
             VerifyingSerializer { ser: self, truncating }
         }
 
@@ -1836,7 +1889,10 @@ mod tests {
             self,
             outer: B,
             truncating: bool,
-        ) -> VerifyingSerializer<Nested<Self, B>> {
+        ) -> VerifyingSerializer<Nested<Self, B>>
+        where
+            Self::Buffer: ReusableBuffer,
+        {
             self.encapsulate(outer).into_verifying(truncating)
         }
 
@@ -1844,7 +1900,10 @@ mod tests {
             self,
             mtu: usize,
             truncating: bool,
-        ) -> VerifyingSerializer<Nested<Self, MtuPacketBuilder<()>>> {
+        ) -> VerifyingSerializer<Nested<Self, MtuPacketBuilder<()>>>
+        where
+            Self::Buffer: ReusableBuffer,
+        {
             self.with_mtu(mtu).into_verifying(truncating)
         }
     }
@@ -2045,7 +2104,7 @@ mod tests {
             footer_len: usize,
             min_body_len: usize,
         ) {
-            let old_body = buffer.as_ref().to_vec();
+            let old_body = buffer.to_flattened_vec();
             println!(
                 "buffer: {:?}, prefix_len: {}, footer_len: {}, min_body_len: {}",
                 buffer, header_len, footer_len, min_body_len,
@@ -2087,13 +2146,14 @@ mod tests {
             footer_len: usize,
             min_body_len: usize,
         ) {
-            let header_bytes = &buffer.as_ref()[..header_len];
-            let body_bytes = &buffer.as_ref()[header_len..header_len + body.len()];
+            let flat = buffer.to_flattened_vec();
+            let header_bytes = &flat[..header_len];
+            let body_bytes = &flat[header_len..header_len + body.len()];
             let padding_len = min_body_len.saturating_sub(body.len());
             let padding_bytes =
-                &buffer.as_ref()[header_len + body.len()..header_len + body.len() + padding_len];
+                &flat[header_len + body.len()..header_len + body.len() + padding_len];
             let total_body_len = body.len() + padding_len;
-            let footer_bytes = &buffer.as_ref()[header_len + total_body_len..];
+            let footer_bytes = &flat[header_len + total_body_len..];
             assert_eq!(buffer.len() - total_body_len, header_len + footer_len);
 
             // DummyPacketBuilder fills its header with 0xFF
@@ -2188,7 +2248,10 @@ mod tests {
     #[test]
     fn test_mtu() {
         // ser is a Serializer that will consume 1 byte of buffer space
-        fn test<S: Serializer + Clone + Debug + Eq>(ser: S) {
+        fn test<S: Serializer + Clone + Debug + Eq>(ser: S)
+        where
+            S::Buffer: ReusableBuffer,
+        {
             // Each of these tests encapsulates ser in a DummyPacketBuilder
             // which consumes 1 byte for the header and one byte for the footer.
             // Thus, the inner serializer will consume 1 byte, while the
@@ -2292,7 +2355,7 @@ mod tests {
             ser: S,
             err: SerializeError<BufferTooShortError>,
         ) where
-            S::Buffer: Debug,
+            S::Buffer: ReusableBuffer + Debug,
         {
             // Serialize with a PacketBuilder with an MTU of 1 so that the body
             // (of length 2) is too large. If `ser` is configured not to

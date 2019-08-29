@@ -396,7 +396,7 @@ impl<B> Debug for UdpPacket<B> {
 mod tests {
     use byteorder::{ByteOrder, NetworkEndian};
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-    use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
+    use packet::{Buf, FragmentedBytesMut, InnerPacketBuilder, ParseBuffer, Serializer};
     use std::num::NonZeroU16;
 
     use super::*;
@@ -607,8 +607,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_serialize_fail_header_too_short() {
+        let mut buf = [0u8; 7];
+        let mut buf = [&mut buf[..]];
+        let buf = FragmentedBytesMut::new(&mut buf[..]);
+        let (head, body, foot) = buf.try_split_contiguous(..).unwrap();
+        let mut buffer = SerializeBuffer::new(head, body, foot);
         UdpPacketBuilder::new(TEST_SRC_IPV4, TEST_DST_IPV4, None, NonZeroU16::new(1).unwrap())
-            .serialize(&mut SerializeBuffer::new(&mut [0; 7][..], ..));
+            .serialize(&mut buffer);
     }
 
     #[test]
