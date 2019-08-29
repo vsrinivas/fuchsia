@@ -66,6 +66,13 @@
 #define USB_CDC_SET_ETHERNET_PACKET_FILTER      0x43
 #define USB_CDC_GET_ETHERNET_STATISTIC          0x44
 
+/* CDC Ethernet Packet Filter Modes Bits */
+#define USB_CDC_PACKET_TYPE_PROMISCUOUS   (1 << 0)
+#define USB_CDC_PACKET_TYPE_ALL_MULTICAST (1 << 1)
+#define USB_CDC_PACKET_TYPE_DIRECTED      (1 << 2)
+#define USB_CDC_PACKET_TYPE_BROADCAST     (1 << 3)
+#define USB_CDC_PACKET_TYPE_MULTICAST     (1 << 4)
+
 /* CDC Class-Specific Requests */
 #define USB_CDC_SEND_ENCAPSULATED_COMMAND   0x00
 #define USB_CDC_GET_ENCAPSULATED_RESPONSE   0x01

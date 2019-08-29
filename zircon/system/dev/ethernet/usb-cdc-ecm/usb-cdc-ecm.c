@@ -32,6 +32,8 @@
 #define ETHERNET_RECV_DELAY 10
 #define ETHERNET_INITIAL_TRANSMIT_DELAY 0
 #define ETHERNET_INITIAL_RECV_DELAY 0
+#define ETHERNET_INITIAL_PACKET_FILTER \
+  (USB_CDC_PACKET_TYPE_DIRECTED | USB_CDC_PACKET_TYPE_BROADCAST | USB_CDC_PACKET_TYPE_MULTICAST)
 
 const char* module_name = "usb-cdc-ecm";
 
@@ -79,6 +81,7 @@ typedef struct {
   // Receive context
   ecm_endpoint_t rx_endpoint;
   uint64_t rx_endpoint_delay;  // wait time between 2 recv requests
+  uint16_t rx_packet_filter;
 } ecm_ctx_t;
 
 typedef struct txn_info {
@@ -435,9 +438,45 @@ static void ecm_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet
   }
 }
 
+static zx_status_t ecm_ethernet_impl_manipulate_bits(ecm_ctx_t* eth, uint16_t mode, bool on) {
+  zx_status_t status = ZX_OK;
+  uint16_t bits = eth->rx_packet_filter;
+
+  if (on) {
+    bits |= mode;
+  } else {
+    bits &= ~mode;
+  }
+
+  status = usb_control_out(&eth->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_CDC_SET_ETHERNET_PACKET_FILTER, bits, 0, ZX_TIME_INFINITE, NULL, 0);
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "usb-cdc-ecm: Set packet filter failed: %d\n", status);
+    return status;
+  }
+  eth->rx_packet_filter = bits;
+  return status;
+}
+
 static zx_status_t ecm_ethernet_impl_set_param(void* cookie, uint32_t param, int32_t value,
                                                const void* data, size_t data_size) {
-  return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t status;
+  ecm_ctx_t* ctx = cookie;
+
+  mtx_lock(&ctx->tx_mutex);
+
+  switch (param) {
+    case ETHERNET_SETPARAM_PROMISC:
+      status = ecm_ethernet_impl_manipulate_bits(ctx, USB_CDC_PACKET_TYPE_PROMISCUOUS, (bool)value);
+      break;
+    default:
+      status = ZX_ERR_NOT_SUPPORTED;
+  }
+
+  mtx_unlock(&ctx->tx_mutex);
+
+  return status;
 }
 
 static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
@@ -628,7 +667,14 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   list_initialize(&ecm_ctx->tx_pending_infos);
   mtx_init(&ecm_ctx->ethernet_mutex, mtx_plain);
   mtx_init(&ecm_ctx->tx_mutex, mtx_plain);
-
+  result = usb_control_out(&ecm_ctx->usb, USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           USB_CDC_SET_ETHERNET_PACKET_FILTER, ETHERNET_INITIAL_PACKET_FILTER, 0,
+                           ZX_TIME_INFINITE, NULL, 0);
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to set initial packet filter: %d\n", module_name, (int)result);
+    goto fail;
+  }
+  ecm_ctx->rx_packet_filter = ETHERNET_INITIAL_PACKET_FILTER;
   ecm_ctx->parent_req_size = usb_get_request_size(&ecm_ctx->usb);
 
   usb_desc_iter_t iter;
