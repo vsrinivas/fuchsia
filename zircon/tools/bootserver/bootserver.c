@@ -254,7 +254,8 @@ void usage(void) {
       "  --fail-fast  exit on first error\n"
       "  --netboot    use the netboot protocol\n"
       "  --tftp       use the tftp protocol (default)\n"
-      "  --nocolor    disable ANSI color (false)\n",
+      "  --nocolor    disable ANSI color (false)\n"
+      "  --allow-zedboot-version-mismatch warn on zedboot version mismatch rather than fail\n",
       appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
   exit(1);
 }
@@ -379,6 +380,7 @@ int main(int argc, char** argv) {
   const char* kernel_fn = NULL;
   const char* ramdisk_fn = NULL;
   int once = 0;
+  bool allow_zedboot_version_mismatch = false;
   int status;
 
   memset(&allowed_addr, 0, sizeof(allowed_addr));
@@ -563,6 +565,8 @@ int main(int argc, char** argv) {
       board_name = argv[2];
       argc--;
       argv++;
+    } else if (!strcmp(argv[1], "--allow-zedboot-version-mismatch")) {
+      allow_zedboot_version_mismatch = true;
     } else if (!strcmp(argv[1], "--")) {
       while (argc > 2) {
         size_t len = strlen(argv[2]);
@@ -684,14 +688,20 @@ int main(int argc, char** argv) {
     }
 
     if (strcmp(BOOTLOADER_VERSION, adv_version)) {
-      log("%sWARNING: Bootserver version '%s' != remote Zedboot version '%s'."
-          " Device will not be serviced. Please upgrade Zedboot.%s",
-          ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
-      if (fail_fast) {
-        close(s);
-        return -1;
+      if (allow_zedboot_version_mismatch) {
+        log("%sWARNING: Bootserver version '%s' != remote Zedboot version '%s'."
+            " Paving may fail.%s",
+            ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
+      } else {
+        log("%sWARNING: Bootserver version '%s' != remote Zedboot version '%s'."
+            " Device will not be serviced. Please upgrade Zedboot.%s",
+            ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
+        if (fail_fast) {
+          close(s);
+          return -1;
+        }
+        continue;
       }
-      continue;
     }
 
     if (adv_nodename) {
