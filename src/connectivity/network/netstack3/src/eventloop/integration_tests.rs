@@ -64,7 +64,7 @@ struct TestData {
     device_status_cache: HashMap<u64, EthernetStatus>,
 }
 
-struct TestStack {
+pub struct TestStack {
     event_loop: EventLoop,
     event_sender: mpsc::UnboundedSender<Event>,
     test_events: Arc<Mutex<Option<mpsc::UnboundedSender<TestEvent>>>>,
@@ -104,7 +104,18 @@ impl TestStack {
         Ok(stack)
     }
 
-    async fn wait_for_interface_online(&mut self, if_id: u64) {
+    pub fn connect_icmp_provider(&self) -> Result<fidl_icmp::ProviderProxy, Error> {
+        let (provider, rs) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_icmp::ProviderMarker>()?;
+        let events =
+            self.event_sender.clone().sink_map_err(|e| panic!("event sender error: {}", e));
+        fasync::spawn_local(
+            rs.map_ok(Event::FidlIcmpProviderEvent).map_err(|_| ()).forward(events).map(|_| ()),
+        );
+        Ok(provider)
+    }
+
+    pub async fn wait_for_interface_online(&mut self, if_id: u64) {
         let check_online = |status: &EthernetStatus| status.contains(EthernetStatus::ONLINE);
         self.wait_for_interface_status(if_id, check_online).await;
     }
@@ -264,14 +275,14 @@ where
     }
 }
 
-struct TestSetup {
+pub struct TestSetup {
     sandbox: sandbox::SandboxProxy,
     nets: Option<fidl::endpoints::ClientEnd<net::SetupHandleMarker>>,
     stacks: Vec<TestStack>,
 }
 
 impl TestSetup {
-    fn get(&mut self, i: usize) -> &mut TestStack {
+    pub fn get(&mut self, i: usize) -> &mut TestStack {
         &mut self.stacks[i]
     }
 
@@ -389,14 +400,14 @@ fn test_ep_name(i: usize) -> String {
     format!("test-ep{}", i)
 }
 
-struct TestSetupBuilder {
+pub struct TestSetupBuilder {
     endpoints: Vec<String>,
     stacks: Vec<StackSetupBuilder>,
 }
 
 impl TestSetupBuilder {
     /// Creates an empty `SetupBuilder`.
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { endpoints: Vec::new(), stacks: Vec::new() }
     }
 
@@ -411,14 +422,14 @@ impl TestSetupBuilder {
     }
 
     /// Ads an endpoint with a given `name`.
-    fn add_named_endpoint(mut self, name: impl Into<String>) -> Self {
+    pub fn add_named_endpoint(mut self, name: impl Into<String>) -> Self {
         self.endpoints.push(name.into());
         self
     }
 
     /// Adds a stack to create upon building. Stack configuration is provided
     /// by [`StackSetupBuilder`].
-    fn add_stack(mut self, stack: StackSetupBuilder) -> Self {
+    pub fn add_stack(mut self, stack: StackSetupBuilder) -> Self {
         self.stacks.push(stack);
         self
     }
@@ -431,7 +442,7 @@ impl TestSetupBuilder {
     }
 
     /// Attempts to build a [`TestSetup`] with the provided configuration.
-    async fn build(self) -> Result<TestSetup, Error> {
+    pub async fn build(self) -> Result<TestSetup, Error> {
         let mut setup = TestSetup::new()?;
         if !self.endpoints.is_empty() {
             let () = setup.configure_network(self.endpoints.into_iter()).await?;
@@ -458,19 +469,19 @@ impl TestSetupBuilder {
 }
 
 /// Shorthand function to create an IPv4 [`AddrSubnetEither`].
-fn new_ipv4_addr_subnet(ip: [u8; 4], prefix: u8) -> AddrSubnetEither {
+pub fn new_ipv4_addr_subnet(ip: [u8; 4], prefix: u8) -> AddrSubnetEither {
     AddrSubnetEither::new(IpAddr::V4(Ipv4Addr::from(ip)), prefix).unwrap()
 }
 
 /// Helper struct to create stack configurations for [`TestSetupBuilder`].
 #[derive(Debug)]
-struct StackSetupBuilder {
+pub struct StackSetupBuilder {
     endpoints: Vec<(String, Option<AddrSubnetEither>)>,
 }
 
 impl StackSetupBuilder {
     /// Creates a new empty stack (no endpoints) configuration.
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { endpoints: Vec::new() }
     }
 
@@ -482,7 +493,7 @@ impl StackSetupBuilder {
 
     /// Adds named endpoint `name` with optional address configuration `address`
     /// to the builder.
-    fn add_named_endpoint(
+    pub fn add_named_endpoint(
         mut self,
         name: impl Into<String>,
         address: Option<AddrSubnetEither>,

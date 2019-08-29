@@ -22,15 +22,18 @@
 //!
 //! # FIDL Worker
 //!
-//! The FIDL part of the event loop implements the fuchsia.net.stack.Stack and
-//! fuchsia.posix.socket.Provider interfaces. The type of the event loop message for a FIDL call is
-//! simply the generated FIDL type. When the event loop starts up, we use `fuchsia_component` to
-//! start a FIDL server that simply sends all of the events it receives to the event loop
-//! (via the sender end of the mpsc queue).
+//! The FIDL part of the event loop implements the following interfaces:
 //!
-//! When `EventLoop` receives this message, it calls the
-//! `handle_fidl_stack_request` or `handle_fidl_socket_provider_request` method, which, depending
-//! on what the request is, either:
+//! * `fuchsia.net.icmp.Provider`
+//! * `fuchsia.net.stack.Stack`
+//! * `fuchsia.posix.socket.Provider`
+//!
+//! The type of the event loop message for a FIDL call is simply the generated FIDL type. When the
+//! event loop starts up, we use `fuchsia_component` to start a FIDL server that simply sends all
+//! of the events it receives to the event loop (via the sender end of the mpsc queue).
+//!
+//! When `EventLoop` receives this message, it calls the appropriate `handle_fidl_*` method, which,
+//! depending on what the request is, either:
 //!
 //! * Responds with the requested information.
 //! * Modifies the state of the netstack in the requested way.
@@ -73,6 +76,7 @@
 
 #![allow(unused)]
 
+mod icmp_provider;
 #[cfg(test)]
 mod integration_tests;
 mod socket;
@@ -95,6 +99,8 @@ use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_io;
 use fidl_fuchsia_net as fidl_net;
+use fidl_fuchsia_net_icmp as fidl_icmp;
+
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
     AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
@@ -106,7 +112,6 @@ use fidl_fuchsia_net_stack::{
     StackMarker, StackRequest, StackRequestStream,
 };
 use fidl_fuchsia_posix_socket as psocket;
-use fidl_fuchsia_posix_socket::ProviderRequest;
 use futures::channel::mpsc;
 use futures::future::{AbortHandle, Abortable};
 use futures::prelude::*;
@@ -226,6 +231,8 @@ impl EthernetWorker {
 /// The events that can trigger an action in the event loop.
 #[derive(Debug)]
 pub enum Event {
+    /// A request from the fuchsia.net.icmp.Provider FIDL interface.
+    FidlIcmpProviderEvent(fidl_icmp::ProviderRequest),
     /// A request from the fuchsia.net.stack.Stack FIDL interface.
     FidlStackEvent(StackRequest),
     /// A request from the fuchsia.posix.socket.Provider FIDL interface.
@@ -312,6 +319,9 @@ impl EventLoop {
                         setup.responder.send(encoded_fidl_error!(Internal), 0);
                     }
                 }
+            }
+            Some(Event::FidlIcmpProviderEvent(req)) => {
+                icmp_provider::handle_request(req).await;
             }
             Some(Event::FidlStackEvent(req)) => {
                 self.handle_fidl_stack_request(req).await;
