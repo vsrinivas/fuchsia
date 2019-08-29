@@ -4,6 +4,13 @@
 
 #include "alc5663.h"
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/device-protocol/i2c.h>
+#include <sys/types.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
@@ -12,12 +19,6 @@
 #include <ddktl/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/i2c.h>
-#include <sys/types.h>
-#include <zircon/assert.h>
-#include <zircon/errors.h>
-#include <zircon/status.h>
 
 #include "alc5663_registers.h"
 
@@ -25,25 +26,6 @@ namespace audio::alc5663 {
 
 Alc5663Device::Alc5663Device(zx_device_t* parent, ddk::I2cChannel channel)
     : DeviceType(parent), client_(channel) {}
-
-zx_status_t Alc5663Device::Bind(fbl::unique_ptr<Alc5663Device> device) {
-  // Initialise the hardware.
-  zx_status_t status = device->InitializeDevice();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: failed to initialize hardware: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  // Add the device.
-  status = device->DdkAdd("alc5663");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "alc5663: could not add device: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  (void)device.release();  // `dev` will be deleted when DdkRelease() is called.
-  return ZX_OK;
-}
 
 zx_status_t Alc5663Device::InitializeDevice() {
   // Reset the device.
@@ -121,28 +103,54 @@ void Alc5663Device::DdkUnbind() {}
 
 void Alc5663Device::DdkRelease() { delete this; }
 
+zx_status_t Alc5663Device::AddChildToParent(fbl::unique_ptr<Alc5663Device> device) {
+  // Add the device.
+  zx_status_t status = device->DdkAdd("alc5663");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "alc5663: could not add device: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  (void)device.release();  // `dev` will be deleted when DdkRelease() is called.
+  return ZX_OK;
+}
+
+zx_status_t Alc5663Device::Bind(zx_device_t* parent, Alc5663Device** created_device) {
+  // Get access to the I2C protocol.
+  ddk::I2cChannel channel;
+  zx_status_t result = ddk::I2cChannel::CreateFromDevice(parent, &channel);
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "alc5663: could not get I2C protocol from parent device: %s\n",
+           zx_status_get_string(result));
+    return result;
+  }
+
+  // Create the codec device.
+  fbl::AllocChecker ac;
+  auto device = fbl::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(parent, channel));
+  if (!ac.check()) {
+    zxlogf(ERROR, "alc5663: out of memory attempting to allocate device\n");
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  // Initialise the hardware.
+  zx_status_t status = device->InitializeDevice();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "alc5663: failed to initialize hardware: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  // Attach to our parent.
+  *created_device = device.get();
+  return Alc5663Device::AddChildToParent(std::move(device));
+}
+
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = [](void* /*ctx*/, zx_device_t* parent) {
-    // Get access to the I2C protocol.
-    ddk::I2cChannel channel(parent);
-    if (!channel.is_valid()) {
-      zxlogf(ERROR, "alc5663: could not get I2C protocol from parent device.\n");
-      // Failure to create the client typically indicates the device is not
-      // supported.
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-
-    // Create the codec device.
-    fbl::AllocChecker ac;
-    auto device = fbl::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(parent, channel));
-    if (!ac.check()) {
-      zxlogf(ERROR, "alc5663: out of memory attempting to allocate device\n");
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    return Alc5663Device::Bind(std::move(device));
+    Alc5663Device* unused;
+    return Alc5663Device::Bind(parent, &unused);
   };
   return ops;
 }();

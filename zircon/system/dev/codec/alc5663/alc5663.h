@@ -30,10 +30,19 @@ class Alc5663Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_A
   Alc5663Device(zx_device_t* parent, ddk::I2cChannel channel);
   ~Alc5663Device() = default;
 
-  // Bind a new Alc5663 to its parent.
+  // Create a new Alc5663Device object, and bind it to the given parent.
+  //
+  // The parent should expose an I2C protocol communicating with ALC5663 codec
+  // hardware.
+  //
+  // On success, an unowned pointer to the created device will be returned in
+  // |created_device|. Ownership of the pointer remains with the DDK.
+  static zx_status_t Bind(zx_device_t* parent, Alc5663Device** created_device);
+
+  // Add a created ALC5663 to its parent.
   //
   // The DDK gains ownership of the device until DdkRelease() is called.
-  static zx_status_t Bind(fbl::unique_ptr<Alc5663Device> device);
+  static zx_status_t AddChildToParent(fbl::unique_ptr<Alc5663Device> device);
 
   // Initialise the hardware.
   zx_status_t InitializeDevice();

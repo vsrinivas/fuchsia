@@ -61,39 +61,52 @@ class FakeAlc5663 {
   State state_ = State::kUnknown;
 };
 
+// Fake ALC5663 codec hardware and associated infrastructure.
+struct FakeAlc5663Hardware {
+  std::unique_ptr<fake_ddk::Bind> fake_ddk;
+  zx_device_t* parent;  // Parent I2C bus.
+  std::unique_ptr<FakeAlc5663> codec;
+};
+
 // Set up the fake DDK instance `ddk` to export the given I2C protocol.
-void SetupI2cProtocol(fake_ddk::Bind* ddk, i2c_protocol_t protocol) {
+FakeAlc5663Hardware CreateFakeAlc5663() {
+  FakeAlc5663Hardware result{};
+
+  // Create the fake DDK.
+  result.fake_ddk = std::make_unique<fake_ddk::Bind>();
+
+  // Create the fake hardware device.
+  result.codec = std::make_unique<FakeAlc5663>();
+
+  // The driver will attempt to bind to the device on an I2C bus.
+  //
+  // Set up a fake parent I2C bus which exposes to the driver a way to talk to
+  // the fake hardware.
+  i2c_protocol_t protocol = result.codec->GetProto();
   fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
   protocols[0] = {ZX_PROTOCOL_I2C, {/*ops=*/protocol.ops, /*ctx=*/protocol.ctx}};
-  ddk->SetProtocols(std::move(protocols));
+  result.fake_ddk->SetProtocols(std::move(protocols));
+
+  // Expose the parent device.
+  result.parent = fake_ddk::kFakeParent;
+
+  return result;
 }
 
 TEST(Alc5663, BindUnbind) {
-  fake_ddk::Bind fake_ddk;
-  FakeAlc5663 fake_alc5663{};
-  SetupI2cProtocol(&fake_ddk, fake_alc5663.GetProto());
-
-  // Create channel.
-  ddk::I2cChannel channel(fake_ddk::kFakeParent);
-  ASSERT_TRUE(channel.is_valid());
+  FakeAlc5663Hardware hardware = CreateFakeAlc5663();
 
   // Create device.
-  fbl::AllocChecker ac;
-  auto device =
-      fbl::unique_ptr<Alc5663Device>(new (&ac) Alc5663Device(fake_ddk::kFakeParent, channel));
-  ASSERT_TRUE(ac.check());
-
-  // Bind.
-  Alc5663Device* device_ptr = device.get();
-  ASSERT_OK(Alc5663Device::Bind(std::move(device)));
+  Alc5663Device* device;
+  ASSERT_OK(Alc5663Device::Bind(hardware.parent, &device));
 
   // Ensure the device was reset.
-  EXPECT_EQ(fake_alc5663.state(), FakeAlc5663::State::kReady);
+  EXPECT_EQ(hardware.codec->state(), FakeAlc5663::State::kReady);
 
   // Shutdown
-  device_ptr->DdkRemove();
-  device_ptr->DdkRelease();
-  EXPECT_TRUE(fake_ddk.Ok());
+  device->DdkRemove();
+  device->DdkRelease();
+  EXPECT_TRUE(hardware.fake_ddk->Ok());
 }
 
 }  // namespace
