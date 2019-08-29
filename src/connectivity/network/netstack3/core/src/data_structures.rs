@@ -14,9 +14,133 @@ pub use id_map_collection::{IdMapCollection, IdMapCollectionKey};
 /// by an internally managed pool of identifiers kept densely packed.
 pub(crate) mod id_map {
 
-    use std::collections::BTreeSet;
-
     type Key = usize;
+
+    /// IdMapEntry where all free blocks are linked together.
+    #[derive(PartialEq, Eq, Debug)]
+    enum IdMapEntry<T> {
+        /// The Entry should either be allocated and contains a value...
+        Allocated(T),
+        /// Or it is not currently used and should be part of a freelist.
+        Free(FreeListLink),
+    }
+
+    /// The link of the doubly-linked free-list.
+    #[derive(PartialEq, Eq, Debug, Clone, Copy)]
+    struct FreeListLink {
+        /// The index of the previous free block in the list.
+        prev: Option<usize>,
+        /// The index of the next free block in the list.
+        next: Option<usize>,
+    }
+
+    impl Default for FreeListLink {
+        /// By default, an entry is not linked into the list.
+        fn default() -> Self {
+            Self { prev: None, next: None }
+        }
+    }
+
+    /// Stores positions of the head and tail of the free-list
+    /// linked by `FreeListLink`.
+    #[derive(PartialEq, Eq, Debug, Clone, Copy)]
+    struct FreeList {
+        /// The index of the first free block.
+        head: usize,
+        /// The index of the last free block.
+        tail: usize,
+    }
+
+    impl FreeList {
+        /// Construct a freelist with only one element.
+        fn singleton(elem: usize) -> FreeList {
+            FreeList { head: elem, tail: elem }
+        }
+    }
+
+    // The following is to mimic the `Option<T>` API.
+    impl<T> IdMapEntry<T> {
+        /// If the entry is allocated, return the reference,
+        /// otherwise, return `None`.
+        fn as_ref(&self) -> Option<&T> {
+            match self {
+                IdMapEntry::Allocated(e) => Some(e),
+                IdMapEntry::Free(_) => None,
+            }
+        }
+
+        /// If the entry is allocated, return the mutable reference,
+        /// otherwise, return `None`.
+        fn as_mut(&mut self) -> Option<&mut T> {
+            match self {
+                IdMapEntry::Allocated(e) => Some(e),
+                IdMapEntry::Free(_) => None,
+            }
+        }
+
+        /// Convert the entry into an option.
+        fn into_option(self) -> Option<T> {
+            match self {
+                IdMapEntry::Allocated(e) => Some(e),
+                IdMapEntry::Free(_) => None,
+            }
+        }
+
+        /// Return whether the entry is allocated.
+        fn is_allocated(&self) -> bool {
+            match self {
+                IdMapEntry::Allocated(_) => true,
+                IdMapEntry::Free(_) => false,
+            }
+        }
+
+        /// Return whether the entry is free.
+        fn is_free(&self) -> bool {
+            !self.is_allocated()
+        }
+
+        /// Return the old entry and replace it with `new`.
+        fn replace(&mut self, new: T) -> IdMapEntry<T> {
+            std::mem::replace(self, IdMapEntry::Allocated(new))
+        }
+
+        /// Take the old allocated entry and replace it with a free entry.
+        ///
+        /// The new free entry's `prev` pointer will be `None`, so the new
+        /// free entry is intended to be inserted at the front of the freelist.
+        /// If the old entry is already free, this is a no-op.
+        fn take_allocated(&mut self, next: Option<usize>) -> Option<T> {
+            if self.is_allocated() {
+                std::mem::replace(self, IdMapEntry::Free(FreeListLink { prev: None, next }))
+                    .into_option()
+            } else {
+                // If it is currently free, we don't want to unlink
+                // the entry and link it back at the head again.
+                None
+            }
+        }
+
+        /// Return the stored value, panic if not allocated.
+        fn unwrap(self) -> T {
+            self.into_option().unwrap()
+        }
+
+        /// Return a mutable reference to the freelist link, panic if allocated.
+        fn freelist_link_mut(&mut self) -> &mut FreeListLink {
+            match self {
+                IdMapEntry::Free(link) => link,
+                _ => unreachable!("An allocated block should never be linked into the free list"),
+            }
+        }
+
+        /// Return a reference to the freelist link, panic if allocated.
+        fn freelist_link(&self) -> &FreeListLink {
+            match self {
+                IdMapEntry::Free(link) => link,
+                _ => unreachable!("An allocated block should never be linked into the free list"),
+            }
+        }
+    }
 
     /// A generic container for `T` keyed by densily packed integers.
     ///
@@ -35,19 +159,26 @@ pub(crate) mod id_map {
     /// specific `id` to an object, and returns the previous object at that `id`
     /// if any.
     pub(crate) struct IdMap<T> {
-        data: Vec<Option<T>>,
-        avail: BTreeSet<Key>,
+        freelist: Option<FreeList>,
+        data: Vec<IdMapEntry<T>>,
     }
 
     impl<T> IdMap<T> {
         /// Creates a new empty [`IdMap`].
         pub(crate) fn new() -> Self {
-            Self { data: Vec::new(), avail: BTreeSet::new() }
+            Self { freelist: None, data: Vec::new() }
         }
 
         /// Returns `true` if there are no items in [`IdMap`].
         pub(crate) fn is_empty(&self) -> bool {
-            !self.data.iter().any(|f| f.is_some())
+            // Because of `compress`, our map is empty if
+            // and only if the underlying vector is empty.
+            // If the underlying vector is not empty but our
+            // map is empty, it must be the case where the
+            // underlying vector contains nothing but free entries,
+            // and all these entries should be reclaimed when
+            // the last allocated entry is removed.
+            self.data.is_empty()
         }
 
         /// Returns a reference to the item indexed by `key`, or `None` if
@@ -69,10 +200,18 @@ pub(crate) mod id_map {
         /// Note: the worst case complexity of `remove` is O(key) if the
         /// backing data structure of the [`IdMap`] is too sparse.
         pub(crate) fn remove(&mut self, key: Key) -> Option<T> {
-            let r = self.data.get_mut(key).and_then(|v| v.take());
+            let old_head = self.freelist.map(|l| l.head);
+            let r = self.data.get_mut(key).and_then(|v| v.take_allocated(old_head));
             if r.is_some() {
-                self.mark_avail(key);
-                // compress will also truncate available keys, if necessary.
+                // If it was allocated, we add the removed entry to the
+                // head of the free-list.
+                match self.freelist.as_mut() {
+                    Some(FreeList { head, .. }) => {
+                        self.data[*head].freelist_link_mut().prev = Some(key);
+                        *head = key;
+                    }
+                    None => self.freelist = Some(FreeList::singleton(key)),
+                }
                 self.compress();
             }
             r
@@ -87,14 +226,50 @@ pub(crate) mod id_map {
         /// larger than the number of items currently held by the [`IdMap`].
         pub(crate) fn insert(&mut self, key: Key, item: T) -> Option<T> {
             if key < self.data.len() {
-                self.mark_unavail(key);
-                self.data[key].replace(item)
-            } else {
-                for idx in self.data.len()..key {
-                    self.mark_avail(idx);
+                if self.data[key].is_free() {
+                    self.freelist_unlink(key);
                 }
-                self.data.resize_with(key, Option::default);
-                self.data.push(Some(item));
+                self.data[key].replace(item).into_option()
+            } else {
+                let start_len = self.data.len();
+                // Fill the gap `start_len .. key` with free entries.
+                // Currently, the free entries introduced by `insert`
+                // is linked at the end of the free list so that hopefully
+                // these free entries near the end will get less likely to
+                // be allocated than those near the beginning, this may help
+                // reduce the memory footprint because we have increased the
+                // chance for the underlying vector to be compressed.
+                // TODO: explore whether we can reorder the list on the fly
+                // to further increase the chance for compressing.
+                for idx in start_len..key {
+                    // These new free entries will be linked to each other, except:
+                    // - the first entry's prev should point to the old tail.
+                    // - the last entry's next should be None.
+                    self.data.push(IdMapEntry::Free(FreeListLink {
+                        prev: if idx == start_len {
+                            self.freelist.map(|l| l.tail)
+                        } else {
+                            Some(idx - 1)
+                        },
+                        next: if idx == key - 1 { None } else { Some(idx + 1) },
+                    }));
+                }
+                // If `key > start_len`, we have inserted at least one free entry,
+                // so we have to update our freelist.
+                if key > start_len {
+                    let new_tail = key - 1;
+                    match self.freelist.as_mut() {
+                        Some(FreeList { tail, .. }) => {
+                            self.data[*tail].freelist_link_mut().next = Some(start_len);
+                            *tail = new_tail;
+                        }
+                        None => {
+                            self.freelist = Some(FreeList::singleton(new_tail));
+                        }
+                    }
+                }
+                // And finally we insert our item into the map.
+                self.data.push(IdMapEntry::Allocated(item));
                 None
             }
         }
@@ -109,35 +284,48 @@ pub(crate) mod id_map {
         /// Note: The worst case complexity of `push` is O(n) where n is the
         /// number of items held by the [`IdMap`]. This can happen if the
         /// internal structure gets fragmented.
-        // NOTE(brunodalbo) We could make push be O(1) if we kept a pool of
-        //  available IDs as a separate vec inside IdMap. We expect that n will
-        //  not get large enough for it to make too much of a difference here,
-        //  but we may want to revisit this decision if it turns out that IdMap
-        //  gets used for larger n's and fragmentation is concentrated at the
-        //  end of the internal vec.
         pub(crate) fn push(&mut self, item: T) -> Key {
-            let k = self.get_avail();
-            self.data[k].replace(item);
-            k
+            if let Some(FreeList { head, .. }) = self.freelist.as_mut() {
+                let ret = *head;
+                let old =
+                    std::mem::replace(self.data.get_mut(ret).unwrap(), IdMapEntry::Allocated(item));
+                // Update the head of the freelist.
+                match old.freelist_link().next {
+                    Some(new_head) => *head = new_head,
+                    None => self.freelist = None,
+                }
+                ret
+            } else {
+                // If we run out of freelist, we simply push a new entry
+                // into the underlying vector.
+                let key = self.data.len();
+                self.data.push(IdMapEntry::Allocated(item));
+                key
+            }
         }
 
         /// Compresses the tail of the internal `Vec`.
         ///
         /// `compress` removes all trailing elements in `data` that are `None`,
-        /// reducing the internal `Vec`.
+        /// shrinking the internal `Vec`.
         fn compress(&mut self) {
+            // First, find the last non-free entry.
             if let Some(idx) = self.data.iter().enumerate().rev().find_map(|(k, v)| {
-                if v.is_some() {
+                if v.is_allocated() {
                     Some(k)
                 } else {
                     None
                 }
             }) {
+                // Remove all the trailing free entries.
+                for i in idx + 1..self.data.len() {
+                    self.freelist_unlink(i);
+                }
                 self.data.truncate(idx + 1);
-                self.truncate_avail(idx);
             } else {
+                // There is nothing left in the vector.
                 self.data.clear();
-                self.avail.clear();
+                self.freelist = None;
             }
         }
 
@@ -156,45 +344,39 @@ pub(crate) mod id_map {
         /// Gets the given key's corresponding entry in the map for in-place
         /// manipulation.
         pub(crate) fn entry(&mut self, key: usize) -> Entry<'_, usize, T> {
-            if key < self.data.len() {
-                let slot = &mut self.data[key];
-                if slot.is_some() {
-                    Entry::Occupied(OccupiedEntry { key, value: slot })
-                } else {
-                    Entry::Vacant(VacantEntry { key, slot: LazyEntry::Allocated(slot) })
+            if key < self.data.len() && self.data[key].is_allocated() {
+                Entry::Occupied(OccupiedEntry { key, id_map: self })
+            } else {
+                Entry::Vacant(VacantEntry { key, id_map: self })
+            }
+        }
+
+        /// Unlink an entry from the freelist.
+        ///
+        /// We want to do so whenever a freed block turns allocated.
+        fn freelist_unlink(&mut self, idx: usize) {
+            let FreeListLink { prev, next } = self.data[idx].freelist_link().clone();
+            match (prev, next) {
+                (Some(prev), Some(next)) => {
+                    // A normal node in the middle of a list.
+                    self.data[prev].freelist_link_mut().next = Some(next);
+                    self.data[next].freelist_link_mut().prev = Some(prev);
                 }
-            } else {
-                Entry::Vacant(VacantEntry { key, slot: LazyEntry::Lazy(self) })
+                (Some(prev), None) => {
+                    // The node at the tail.
+                    self.data[prev].freelist_link_mut().next = next;
+                    self.freelist.as_mut().unwrap().tail = prev;
+                }
+                (None, Some(next)) => {
+                    // The node at the head.
+                    self.data[next].freelist_link_mut().prev = prev;
+                    self.freelist.as_mut().unwrap().head = next;
+                }
+                (None, None) => {
+                    // We are the last node.
+                    self.freelist = None;
+                }
             }
-        }
-
-        /// Gets the lowest available key that does not have an associated value. If no keys are
-        /// available, storage is extended by 1 and the key for the new space is returned. O(n)
-        /// worst case, O(log(n)) average.
-        fn get_avail(&mut self) -> Key {
-            if let Some(k) = self.avail.iter().next() {
-                let mut key = k.clone();
-                self.avail.take(&key).unwrap()
-            } else {
-                self.data.push(None);
-                self.data.len() - 1
-            }
-        }
-
-        /// Returns the given key to the pool of unused keys. O(log(n)) average.
-        fn mark_avail(&mut self, key: Key) {
-            self.avail.insert(key);
-        }
-
-        /// Marks the key as being in use. O(log(n)) average.
-        fn mark_unavail(&mut self, key: Key) {
-            self.avail.remove(&key);
-        }
-
-        /// Truncates the set of available keys, removing all keys equal to or above the given
-        /// value. O(log(n)) average.
-        fn truncate_avail(&mut self, trunc_key: Key) {
-            self.avail.split_off(&trunc_key);
         }
     }
 
@@ -214,15 +396,10 @@ pub(crate) mod id_map {
         }
     }
 
-    enum LazyEntry<'a, T> {
-        Allocated(&'a mut Option<T>),
-        Lazy(&'a mut IdMap<T>),
-    }
-
     /// A view into a vacant entry in a map. It is part of the [`Entry`] enum.
     pub struct VacantEntry<'a, K, T> {
         key: K,
-        slot: LazyEntry<'a, T>,
+        id_map: &'a mut IdMap<T>,
     }
 
     impl<'a, K, T> VacantEntry<'a, K, T> {
@@ -232,16 +409,8 @@ pub(crate) mod id_map {
         where
             K: EntryKey,
         {
-            match self.slot {
-                LazyEntry::Allocated(slot) => {
-                    assert!(slot.replace(value).is_none());
-                    slot.as_mut().unwrap()
-                }
-                LazyEntry::Lazy(id_map) => {
-                    assert!(id_map.insert(self.key.get_key_index(), value).is_none());
-                    id_map.data[self.key.get_key_index()].as_mut().unwrap()
-                }
-            }
+            assert!(self.id_map.insert(self.key.get_key_index(), value).is_none());
+            self.id_map.data[self.key.get_key_index()].as_mut().unwrap()
         }
 
         /// Gets a reference to the key that would be used when inserting a
@@ -271,7 +440,7 @@ pub(crate) mod id_map {
             let idx = self.key.get_key_index();
             let key = f(self.key);
             assert_eq!(idx, key.get_key_index());
-            VacantEntry { key, slot: self.slot }
+            VacantEntry { key, id_map: self.id_map }
         }
     }
 
@@ -279,10 +448,10 @@ pub(crate) mod id_map {
     /// [`Entry`] enum.
     pub struct OccupiedEntry<'a, K, T> {
         key: K,
-        value: &'a mut Option<T>,
+        id_map: &'a mut IdMap<T>,
     }
 
-    impl<'a, K, T> OccupiedEntry<'a, K, T> {
+    impl<'a, K: EntryKey, T> OccupiedEntry<'a, K, T> {
         /// Gets a reference to the key in the entry.
         pub fn key(&self) -> &K {
             &self.key
@@ -291,7 +460,7 @@ pub(crate) mod id_map {
         /// Gets a reference to the value in the entry.
         pub fn get(&self) -> &T {
             // we can unwrap because value is always Some for OccupiedEntry
-            self.value.as_ref().unwrap()
+            self.id_map.get(self.key.get_key_index()).unwrap()
         }
 
         /// Gets a mutable reference to the value in the entry.
@@ -300,7 +469,7 @@ pub(crate) mod id_map {
         /// destruction of the entry value, see [`OccupiedEntry::into_mut`].
         pub fn get_mut(&mut self) -> &mut T {
             // we can unwrap because value is always Some for OccupiedEntry
-            self.value.as_mut().unwrap()
+            self.id_map.get_mut(self.key.get_key_index()).unwrap()
         }
 
         /// Converts the `OccupiedEntry` into a mutable reference to the value
@@ -310,19 +479,19 @@ pub(crate) mod id_map {
         /// [`OccupiedEntry::get_mut`].
         pub fn into_mut(self) -> &'a mut T {
             // we can unwrap because value is always Some for OccupiedEntry
-            self.value.as_mut().unwrap()
+            self.id_map.get_mut(self.key.get_key_index()).unwrap()
         }
 
         /// Sets the value of the entry, and returns the entry's old value.
         pub fn insert(&mut self, value: T) -> T {
             // we can unwrap because value is always Some for OccupiedEntry
-            self.value.replace(value).unwrap()
+            self.id_map.insert(self.key.get_key_index(), value).unwrap()
         }
 
         /// Takes the value out of the entry, and returns it.
         pub fn remove(self) -> T {
             // we can unwrap because value is always Some for OccupiedEntry
-            self.value.take().unwrap()
+            self.id_map.remove(self.key.get_key_index()).unwrap()
         }
 
         /// Changes the key type of this `OccupiedEntry` to another key `X` that
@@ -341,7 +510,7 @@ pub(crate) mod id_map {
             let idx = self.key.get_key_index();
             let key = f(self.key);
             assert_eq!(idx, key.get_key_index());
-            OccupiedEntry { key, value: self.value }
+            OccupiedEntry { key, id_map: self.id_map }
         }
     }
 
@@ -351,7 +520,7 @@ pub(crate) mod id_map {
         Occupied(OccupiedEntry<'a, K, T>),
     }
 
-    impl<'a, K, T> Entry<'a, K, T> {
+    impl<'a, K: EntryKey, T> Entry<'a, K, T> {
         /// Returns a reference to this entry's key.
         pub fn key(&self) -> &K {
             match self {
@@ -429,19 +598,39 @@ pub(crate) mod id_map {
 
     #[cfg(test)]
     mod tests {
+        use super::IdMapEntry::{self, Allocated, Free};
         use super::{Entry, IdMap};
-        use std::collections::BTreeSet;
-        use std::iter::FromIterator;
+        use super::{FreeList, FreeListLink};
+
+        // Smart constructors
+        fn free<T>(prev: usize, next: usize) -> IdMapEntry<T> {
+            Free(FreeListLink { prev: Some(prev), next: Some(next) })
+        }
+
+        fn free_head<T>(next: usize) -> IdMapEntry<T> {
+            Free(FreeListLink { prev: None, next: Some(next) })
+        }
+
+        fn free_tail<T>(prev: usize) -> IdMapEntry<T> {
+            Free(FreeListLink { prev: Some(prev), next: None })
+        }
+
+        fn free_none<T>() -> IdMapEntry<T> {
+            Free(FreeListLink::default())
+        }
 
         #[test]
         fn test_push() {
             let mut map = IdMap::new();
             map.insert(1, 2);
-            assert_eq!(map.data, vec![None, Some(2)]);
+            assert_eq!(map.data, vec![free_none(), Allocated(2)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(0)));
             assert_eq!(map.push(1), 0);
-            assert_eq!(map.data, vec![Some(1), Some(2)]);
+            assert_eq!(map.data, vec![Allocated(1), Allocated(2)]);
+            assert_eq!(map.freelist, None);
             assert_eq!(map.push(3), 2);
-            assert_eq!(map.data, vec![Some(1), Some(2), Some(3)]);
+            assert_eq!(map.data, vec![Allocated(1), Allocated(2), Allocated(3)]);
+            assert_eq!(map.freelist, None);
         }
 
         #[test]
@@ -449,7 +638,8 @@ pub(crate) mod id_map {
             let mut map = IdMap::new();
             map.push(1);
             map.insert(2, 3);
-            assert_eq!(map.data, vec![Some(1), None, Some(3)]);
+            assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(1)));
             assert_eq!(*map.get(0).unwrap(), 1);
             assert!(map.get(1).is_none());
             assert_eq!(*map.get(2).unwrap(), 3);
@@ -461,7 +651,8 @@ pub(crate) mod id_map {
             let mut map = IdMap::new();
             map.push(1);
             map.insert(2, 3);
-            assert_eq!(map.data, vec![Some(1), None, Some(3)]);
+            assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(1)));
             *map.get_mut(2).unwrap() = 10;
             assert_eq!(*map.get(0).unwrap(), 1);
             assert_eq!(*map.get(2).unwrap(), 10);
@@ -484,48 +675,44 @@ pub(crate) mod id_map {
             map.push(1);
             map.push(2);
             map.push(3);
-            assert_eq!(map.data, vec![Some(1), Some(2), Some(3)]);
-            assert_eq!(map.avail, BTreeSet::new());
-
+            assert_eq!(map.data, vec![Allocated(1), Allocated(2), Allocated(3)]);
+            assert_eq!(map.freelist, None);
             assert_eq!(map.remove(1).unwrap(), 2);
-            assert_eq!(map.avail, BTreeSet::from_iter(vec![1].into_iter()));
 
             assert!(map.remove(1).is_none());
-            assert_eq!(map.data, vec![Some(1), None, Some(3)]);
+            assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(1)));
         }
 
         #[test]
         fn test_remove_compress() {
             let mut map = IdMap::new();
-            map.push(1);
+            map.insert(0, 1);
             map.insert(2, 3);
-            assert_eq!(map.data, vec![Some(1), None, Some(3)]);
-            assert_eq!(map.avail, BTreeSet::from_iter(vec![1].into_iter()));
-
+            assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(1)));
             assert_eq!(map.remove(2).unwrap(), 3);
-            assert_eq!(map.data, vec![Some(1)]);
-            assert!(map.avail.is_empty());
-
+            assert_eq!(map.data, vec![Allocated(1)]);
+            assert_eq!(map.freelist, None);
             assert_eq!(map.remove(0).unwrap(), 1);
             assert!(map.data.is_empty());
-            assert!(map.avail.is_empty());
         }
 
         #[test]
         fn test_insert() {
             let mut map = IdMap::new();
             assert!(map.insert(1, 2).is_none());
-            assert_eq!(map.data, vec![None, Some(2)]);
-            assert_eq!(map.avail, BTreeSet::from_iter(vec![0].into_iter()));
+            assert_eq!(map.data, vec![free_none(), Allocated(2)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(0)));
             assert!(map.insert(3, 4).is_none());
-            assert_eq!(map.data, vec![None, Some(2), None, Some(4)]);
-            assert_eq!(map.avail, BTreeSet::from_iter(vec![0, 2].into_iter()));
+            assert_eq!(map.data, vec![free_head(2), Allocated(2), free_tail(0), Allocated(4)]);
+            assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 2 }));
             assert!(map.insert(0, 1).is_none());
-            assert_eq!(map.data, vec![Some(1), Some(2), None, Some(4)]);
-            assert_eq!(map.avail, BTreeSet::from_iter(vec![2].into_iter()));
+            assert_eq!(map.data, vec![Allocated(1), Allocated(2), free_none(), Allocated(4)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(2)));
             assert_eq!(map.insert(3, 5).unwrap(), 4);
-            assert_eq!(map.data, vec![Some(1), Some(2), None, Some(5)]);
-            assert_eq!(map.avail, BTreeSet::from_iter(vec![2].into_iter()));
+            assert_eq!(map.data, vec![Allocated(1), Allocated(2), free_none(), Allocated(5)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(2)));
         }
 
         #[test]
@@ -534,7 +721,19 @@ pub(crate) mod id_map {
             map.insert(1, 0);
             map.insert(3, 1);
             map.insert(6, 2);
-            assert_eq!(map.data, vec![None, Some(0), None, Some(1), None, None, Some(2)]);
+            assert_eq!(
+                map.data,
+                vec![
+                    free_head(2),
+                    Allocated(0),
+                    free(0, 4),
+                    Allocated(1),
+                    free(2, 5),
+                    free_tail(4),
+                    Allocated(2),
+                ]
+            );
+            assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 5 }));
             let mut c = 0;
             for (i, (k, v)) in map.iter().enumerate() {
                 assert_eq!(i, *v as usize);
@@ -550,18 +749,43 @@ pub(crate) mod id_map {
             map.insert(1, 0);
             map.insert(3, 1);
             map.insert(6, 2);
-            assert_eq!(map.data, vec![None, Some(0), None, Some(1), None, None, Some(2)]);
+            assert_eq!(
+                map.data,
+                vec![
+                    free_head(2),
+                    Allocated(0),
+                    free(0, 4),
+                    Allocated(1),
+                    free(2, 5),
+                    free_tail(4),
+                    Allocated(2),
+                ]
+            );
+            assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 5 }));
             for (k, v) in map.iter_mut() {
                 *v += k as u32;
             }
-            assert_eq!(map.data, vec![None, Some(1), None, Some(4), None, None, Some(8)]);
+            assert_eq!(
+                map.data,
+                vec![
+                    free_head(2),
+                    Allocated(1),
+                    free(0, 4),
+                    Allocated(4),
+                    free(2, 5),
+                    free_tail(4),
+                    Allocated(8),
+                ]
+            );
+            assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 5 }));
         }
 
         #[test]
         fn test_entry() {
             let mut map = IdMap::new();
             assert_eq!(*map.entry(1).or_insert(2), 2);
-            assert_eq!(map.data, vec![None, Some(2)]);
+            assert_eq!(map.data, vec![free_none(), Allocated(2)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(0)));
             assert_eq!(
                 *map.entry(1)
                     .and_modify(|v| {
@@ -570,7 +794,8 @@ pub(crate) mod id_map {
                     .or_insert(5),
                 10
             );
-            assert_eq!(map.data, vec![None, Some(10)]);
+            assert_eq!(map.data, vec![free_none(), Allocated(10)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(0)));
             assert_eq!(
                 *map.entry(2)
                     .and_modify(|v| {
@@ -579,14 +804,26 @@ pub(crate) mod id_map {
                     .or_insert(5),
                 5
             );
-            assert_eq!(map.data, vec![None, Some(10), Some(5)]);
+            assert_eq!(map.data, vec![free_none(), Allocated(10), Allocated(5)]);
+            assert_eq!(map.freelist, Some(FreeList::singleton(0)));
             assert_eq!(*map.entry(4).or_default(), 0);
-            assert_eq!(map.data, vec![None, Some(10), Some(5), None, Some(0)]);
+            assert_eq!(
+                map.data,
+                vec![free_head(3), Allocated(10), Allocated(5), free_tail(0), Allocated(0)]
+            );
+            assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 3 }));
             assert_eq!(*map.entry(3).or_insert_with(|| 7), 7);
-            assert_eq!(map.data, vec![None, Some(10), Some(5), Some(7), Some(0)]);
+            assert_eq!(
+                map.data,
+                vec![free_none(), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            );
+            assert_eq!(map.freelist, Some(FreeList::singleton(0)));
             assert_eq!(*map.entry(0).or_insert(1), 1);
-            assert_eq!(map.data, vec![Some(1), Some(10), Some(5), Some(7), Some(0)]);
-
+            assert_eq!(
+                map.data,
+                vec![Allocated(1), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            );
+            assert_eq!(map.freelist, None);
             match map.entry(0) {
                 Entry::Occupied(mut e) => {
                     assert_eq!(*e.key(), 0);
@@ -597,7 +834,11 @@ pub(crate) mod id_map {
                 }
                 _ => panic!("Wrong entry type, should be occupied"),
             }
-            assert_eq!(map.data, vec![None, Some(10), Some(5), Some(7), Some(0)]);
+            assert_eq!(
+                map.data,
+                vec![free_none(), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            );
+            assert_eq!(map.freelist, Some(FreeList::singleton(0)));
 
             match map.entry(0) {
                 Entry::Vacant(mut e) => {
@@ -606,7 +847,79 @@ pub(crate) mod id_map {
                 }
                 _ => panic!("Wrong entry type, should be vacant"),
             }
-            assert_eq!(map.data, vec![Some(4), Some(10), Some(5), Some(7), Some(0)]);
+            assert_eq!(
+                map.data,
+                vec![Allocated(4), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            );
+
+            assert_eq!(map.freelist, None)
+        }
+
+        #[test]
+        fn test_freelist_order() {
+            let mut rng = crate::testutil::new_rng(1234981);
+            use rand::seq::SliceRandom;
+            const NELEMS: usize = 1_000;
+            for _ in 0..1_000 {
+                let mut map = IdMap::new();
+                for i in 0..NELEMS {
+                    assert_eq!(map.push(i), i);
+                }
+                // don't remove the last one to prevent compressing.
+                let mut remove_seq: Vec<usize> = (0..NELEMS - 1).collect();
+                remove_seq.shuffle(&mut rng);
+                for i in &remove_seq {
+                    map.remove(*i);
+                }
+                for i in remove_seq.iter().rev() {
+                    // We should be able to push into the array in the same order.
+                    assert_eq!(map.push(*i), *i);
+                }
+                map.remove(NELEMS - 1);
+                for i in &remove_seq {
+                    map.remove(*i);
+                }
+                assert!(map.is_empty());
+            }
+        }
+
+        #[test]
+        fn test_compress_freelist() {
+            let mut map = IdMap::new();
+            for _ in 0..100 {
+                map.push(0);
+            }
+            for i in 0..100 {
+                map.remove(i);
+            }
+            assert_eq!(map.data.len(), 0);
+            assert_eq!(map.freelist, None);
+        }
+
+        #[test]
+        fn test_insert_beyond_end_freelist() {
+            let mut map = IdMap::new();
+            for i in 0..10 {
+                map.insert(2 * i + 1, 0);
+            }
+            for i in 0..10 {
+                assert_eq!(map.push(1), 2 * i);
+            }
+        }
+
+        #[test]
+        fn test_double_free() {
+            const MAX_KEY: usize = 100;
+            let mut map1 = IdMap::new();
+            map1.insert(MAX_KEY, 2);
+            let mut map2 = IdMap::new();
+            map2.insert(MAX_KEY, 2);
+            for i in 0..MAX_KEY {
+                assert!(map1.remove(i).is_none());
+                // Removing an already free entry should be a no-op.
+                assert_eq!(map1.data, map2.data);
+                assert_eq!(map1.freelist, map2.freelist);
+            }
         }
     }
 }
