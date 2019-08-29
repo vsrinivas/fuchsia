@@ -8,24 +8,21 @@ using CookieName = string;
 
 /// Provides methods for monitoring and accessing browser cookie state.
 protocol CookieManager {
-    /// Observe changes to all cookies named `name` that would be sent in a
-    /// request to `url`.
+    /// Observe changes to all cookies named `name` that would be sent in a request to `url`.
     ///
-    /// If neither `url` nor `name` are set then all cookies are observed.
-    /// If only `url` is set then all cookies for that URL are observed.
-    /// If both are set then only cookies matching both fields are observed.
+    /// If neither `url` nor `name` are set then all cookies are observed. If only `url` is set
+    /// then all cookies for that URL are observed. If both are set then only cookies matching both
+    /// fields are observed.
     ///
-    /// |changes| iterates over a stream of cookie changes. Additions or updates
-    /// are expressed as complete cookies, while deletions are expressed as
-    /// cookies with no |value| set.
+    /// |changes| iterates over a stream of cookie changes. Additions or updates are expressed as
+    /// complete cookies, while deletions are expressed as cookies with no `value` set.
     ObserveCookieChanges(
         Url? url,
         CookieName? name,
         request<CookiesIterator> changes);
 
-    /// Returns a list of Cookies, optionally limited to those matching `url`,
-    /// and optionally `name`.
-    /// |cookies| iterates over the matching cookies, including their |value|s.
+    /// Returns a list of Cookies, optionally limited to those matching `url`, and optionally
+    /// `name`. `cookies` iterates over the matching cookies, including their `value`s.
     GetCookieList(Url? url,
                   CookieName? name,
 		  request<CookiesIterator> cookies);

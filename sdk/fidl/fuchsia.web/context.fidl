@@ -11,41 +11,41 @@ enum ContextError : int32 {
     REMOTE_DEBUGGING_PORT_NOT_OPENED = 1;
 };
 
-/// The top-level service interface which allows for the creation of
-/// Context resources.
-// TODO(WEB-29): Remove ContextProvider in favor of launching Context
-// instances directly.
+/// The top-level service interface which allows for the creation of Context resources.
+// TODO(fxb/29926): Remove ContextProvider in favor of launching Context instances directly.
 [Discoverable]
 protocol ContextProvider {
-    /// Creates a new browser Context whose state is wholly independent and
+    /// Creates a new browser [`fuchsia.web.Context`] whose state is wholly independent and
     /// isolated from other Contexts.
     ///
-    /// `context`: An interface request which will receive a bound Context
-    ///            service.
+    /// - `context`: An interface request which will receive a bound [`fuchsia.web.Context`]
+    ///   service.
     Create(CreateContextParams params, request<Context> context);
 };
 
-/// Defines a provider which hosts resources from a fuchsia.io.Directory.
-/// Content can GET resource files via the provider, but not enumerate
-/// directories. Resources can be accessed by their URLs:
+/// Defines a provider which hosts resources from a [`fuchsia.io.Directory`]. Content can `GET`
+/// resource files via the provider, but not enumerate directories. Resources can be accessed by
+/// their URLs: `fuchsia-dir://<provider-name>/<path/to/resource>`
 ///
-///    content://<provider-name>/<path/to/resource>
+/// By default the MIME types of files are determined automatically by "sniffing" the contents of
+/// the files. No content encoding will be declared, which browsers will interpret as meaning
+/// `"text/plain"`.
 ///
-/// By default the MIME types of files are determined automatically by
-/// "sniffing" the contents of the files. No content encoding will be
-/// declared, which browsers will interpret as meaning "text/plain".
-/// Content type and encoding metadata may optionally be specified explicitly
-/// by metadata/ files which reside alongside the file. Metadata is expressed
-/// in JSON files, named are the files they describe with a "._metadata" suffix.
-/// For example, the file "index.html" would have the a metadata file called
-/// "index.html._metadata", with the following contents:
-///    {
-///      "charset": "utf-8",
-///      "mime": "text/html"
-///    }
+/// Content type and encoding metadata may optionally be specified explicitly by metadata files,
+/// which reside alongside the file. Metadata is expressed in JSON files, named after the files
+/// they describe with a `"._metadata"` suffix.
+///
+/// For example, the file `"index.html"` would have the a metadata file called
+/// `"index.html._metadata"`, with the following contents:
+/// ```
+/// {
+///   "charset": "utf-8",
+///   "mime": "text/html"
+/// }
+/// ```
 table ContentDirectoryProvider {
-    /// Name of the provider.
-    /// Must be non-empty and composed solely of alphanumerics, dots, and dashes.
+    /// Name of the provider. Must be non-empty and composed solely of alphanumerics, dots, and
+    /// dashes.
     1: string:255 name;
 
     /// Directory containing the files served by this provider.
@@ -91,12 +91,13 @@ table CreateContextParams {
     /// - [`fuchsia.ui.input.ImeVisibilityService`]
     1: fuchsia.io.Directory service_directory;
 
-    /// Handle to the directory that will contain the Context's
-    /// persistent data. If it is left unset, then the created Context will be
-    /// stateless, with all of its data discarded upon Context destruction.
-    /// If set, `data_directory` must not be shared with any other Context.
-    // TODO(WEB-28): Provide an API to inform the caller when the
-    // `data_directory` can be safely removed.
+    /// Handle to the directory that will contain the [`fuchsia.web.Context`]'s persistent data. If
+    /// it is left unset, then the created [`fuchsia.web.Context`] will be stateless, with all of
+    /// its data discarded upon [`fuchsia.web.Context`] destruction.
+    ///
+    /// If set, `data_directory` must not be shared with any other [`fuchsia.web.Context`].
+    // TODO(fxb/29925): Provide an API to inform the caller when the `data_directory` can be safely
+    // removed.
     2: fuchsia.io.Directory data_directory;
 
     /// Optional suffix to append to the UserAgent string, to describe the
@@ -110,7 +111,7 @@ table CreateContextParams {
     /// [`fuchsia.web.Context/GetRemoteDebuggingPort`] API.
     5: uint16 remote_debugging_port;
 
-    /// List of providers whose contents will be served by content:// URLs.
+    /// List of providers whose contents will be served by `fuchsia-dir://` URLs.
     6: vector<ContentDirectoryProvider>:100 content_directories;
 
     /// Optional features that should be enabled for this context. Some features may also require
@@ -118,15 +119,15 @@ table CreateContextParams {
     7: ContextFeatureFlags features;
 };
 
-/// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with
-/// a set of Frames.
+/// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of
+/// [`fuchsia.web.Frame`].
 protocol Context {
-    /// Creates a new frame under this Context. Destruction of a Context
-    /// triggers the destruction of all of its associated Frames. Frames can be
-    /// transferred to another component but cannot be shared across multiple
-    /// components.
+    /// Creates a new [`fuchsia.web.Frame`] under this [`fuchsia.web.Context`]. Destruction of a
+    /// [`fuchsia.web.Context`] triggers the destruction of all of its associated
+    /// [`fuchsia.web.Frame`]. [`fuchsia.web.Frame`] can be transferred to another component but
+    /// cannot be shared across multiple components.
     ///
-    /// `frame`: An interface request that will be bound to the created Frame.
+    /// - `frame`: An interface request that will be bound to the created [`fuchsia.web.Frame`].
     CreateFrame(request<Frame> frame);
 
     /// Similar to [`fuchsia.web.Context/CreateFrame`], with extra parameters.
@@ -138,10 +139,11 @@ protocol Context {
     GetCookieManager(request<CookieManager> manager);
 
     /// Waits until debugging is available on one or more Frames, and returns the DevTools port
-    /// number. Multiple calls may be queued to received the port number. If the
-    /// [`fuchsia.web.Context`] was  created without debugging enabled, or the remote debugging
-    /// service failed to start, then the [`fuchsia.web.ContextError`] will be set to
-    /// `REMOTE_DEBUGGING_PORT_NOT_OPENED`.
+    /// number. Multiple calls may be queued to received the port number.
+    ///
+    /// If an error occured, the [`fuchsia.web.ContextError`] will be set to this value:
+    /// - `REMOTE_DEBUGGING_PORT_NOT_OPENED`: |remote_debugging_port| was not set in
+    ///   [`fuchsia.web.CreateContextParams`] or the remote debugging service failed to start.
     GetRemoteDebuggingPort() -> (uint16 port) error ContextError;
 };
 
