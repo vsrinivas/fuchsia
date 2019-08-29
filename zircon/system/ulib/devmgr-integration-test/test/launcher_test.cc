@@ -5,6 +5,8 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
+#include <lib/zx/vmo.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include <zircon/device/vfs.h>
 #include <zxtest/zxtest.h>
 
@@ -50,6 +52,36 @@ TEST(LauncherTest, Namespace) {
 
   fbl::unique_fd fd;
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "test/test", &fd));
+}
+
+TEST(LauncherTest, OutgoingServices) {
+  devmgr_launcher::Args args;
+  args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+  args.driver_search_paths.push_back("/boot/driver");
+  args.use_system_svchost = true;
+
+  IsolatedDevmgr devmgr;
+  ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
+  ASSERT_NE(devmgr.svc_root_dir().get(), ZX_HANDLE_INVALID);
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  // Test we are able to connect to atleast one of the default services.
+  const char* service = "svc/" fuchsia_device_manager_DebugDumper_Name;
+  ASSERT_OK(fdio_service_connect_at(devmgr.svc_root_dir().get(), service, remote.release()));
+
+  zx::vmo debug_vmo;
+  zx_handle_t vmo_dup;
+  size_t vmo_size = 512*512;
+  ASSERT_OK(zx::vmo::create(vmo_size, 0, &debug_vmo));
+  ASSERT_OK(zx_handle_duplicate(debug_vmo.get(), ZX_RIGHTS_IO | ZX_RIGHT_TRANSFER, &vmo_dup));
+  zx_status_t call_status = ZX_OK;
+  uint64_t data_written, data_avail;
+
+  ASSERT_OK(fuchsia_device_manager_DebugDumperDumpTree(local.get(), vmo_dup, &call_status,
+                                                       &data_written, &data_avail));
+  ASSERT_OK(call_status);
 }
 
 }  // namespace devmgr_integration_test

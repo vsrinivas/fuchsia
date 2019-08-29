@@ -21,11 +21,13 @@ class IsolatedDevmgr {
   IsolatedDevmgr& operator=(const IsolatedDevmgr&) = delete;
 
   IsolatedDevmgr(IsolatedDevmgr&& other)
-      : job_(std::move(other.job_)), devfs_root_(std::move(other.devfs_root_)) {}
+      : job_(std::move(other.job_)), svc_root_dir_(std::move(other.svc_root_dir_)),
+      devfs_root_(std::move(other.devfs_root_)) {}
 
   IsolatedDevmgr& operator=(IsolatedDevmgr&& other) {
     job_ = std::move(other.job_);
     devfs_root_ = std::move(other.devfs_root_);
+    svc_root_dir_ = std::move(other.svc_root_dir_);
     return *this;
   }
 
@@ -43,6 +45,7 @@ class IsolatedDevmgr {
   // Get a fd to the root of the isolate devmgr's devfs.  This fd
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devfs_root_; }
+  const zx::channel& svc_root_dir() const { return svc_root_dir_; }
 
   // Borrow the handle to the job containing the isolated devmgr.  This may be
   // used for things like binding to an exception port.
@@ -53,6 +56,9 @@ class IsolatedDevmgr {
  private:
   // Job that contains the devmgr environment
   zx::job job_;
+
+  // Channel for the root of outgoing services
+  zx::channel svc_root_dir_;
 
   // FD to the root of devmgr's devfs
   fbl::unique_fd devfs_root_;

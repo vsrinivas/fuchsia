@@ -10,3 +10,4 @@
 
 // Optional handle to a channel that devmgr will connect to the devfs root after starting
 #define DEVMGR_LAUNCHER_DEVFS_ROOT_HND PA_HND(PA_USER1, 0)
+#define DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND PA_HND(PA_USER1, 1)

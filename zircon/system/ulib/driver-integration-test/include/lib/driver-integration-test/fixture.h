@@ -28,6 +28,10 @@ class IsolatedDevmgr {
     // |use_system_svchost| is true. This argument may be used to allow the isolated devmgr
     // access to drivers from /system/drivers.
     std::vector<std::pair<const char*, zx::channel>> flat_namespace;
+    // Whether or not to use default system /svc or to create a new one.
+    // Only when this is true, the default outgoing services are available.
+    // in IsolatedDevMgr environment.
+    bool use_system_svchost = true;
     // A list of vid/pid/did triplets to spawn in their own devhosts.
     fbl::Vector<board_test::DeviceEntry> device_list;
     // A list of kernel cmdline arguments to pass to the devmgr process.
@@ -48,6 +52,7 @@ class IsolatedDevmgr {
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
+  const zx::channel& svc_root_dir() const { return devmgr_.svc_root_dir(); }
  private:
   devmgr_integration_test::IsolatedDevmgr devmgr_;
 };

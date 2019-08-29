@@ -1238,6 +1238,18 @@ int main(int argc, char** argv) {
       fprintf(stderr, "devcoordinator: failed to connect to /svc\n");
       return 1;
     }
+    // Check if whatever launched devcoordinator gave a channel to be connected to the
+    // outgoing services directory. This is for use in tests to let the test environment see
+    // outgoing services.
+    zx::channel
+        outgoing_svc_dir_client(zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND));
+    if (outgoing_svc_dir_client.is_valid()) {
+      status = coordinator.BindOutgoingServices(std::move(outgoing_svc_dir_client));
+      if (status != ZX_OK) {
+        fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
+        return 1;
+      }
+    }
   } else {
     status = StartSvchost(root_job, require_system, &coordinator, std::move(fshost_client));
     if (status != ZX_OK) {

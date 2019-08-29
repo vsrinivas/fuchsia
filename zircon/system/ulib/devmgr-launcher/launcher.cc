@@ -31,7 +31,8 @@ constexpr const char* kDevmgrPath = "/boot/bin/devcoordinator";
 
 namespace devmgr_launcher {
 
-zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
+zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root,
+                   zx::channel* outgoing_services_root) {
   // Create containing job (and copy to send to devmgr)
   zx::job job, job_copy;
   zx_status_t status = zx::job::create(*zx::job::default_job(), 0, &job);
@@ -61,6 +62,13 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
   // Create channel to connect to devfs
   zx::channel devfs_client, devfs_server;
   status = zx::channel::create(0, &devfs_client, &devfs_server);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Create channel to connect to outgoing services
+  zx::channel outgoing_services_client, outgoing_services_server;
+  status = zx::channel::create(0, &outgoing_services_client, &outgoing_services_server);
   if (status != ZX_OK) {
     return status;
   }
@@ -105,6 +113,11 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
       .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
       .h = {.id = DEVMGR_LAUNCHER_DEVFS_ROOT_HND, .handle = devfs_server.release()},
   });
+  actions.push_back(fdio_spawn_action_t{
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND,
+            .handle = outgoing_services_server.release()},
+  });
 
   for (auto& ns : args.flat_namespace) {
     actions.push_back(fdio_spawn_action_t{
@@ -147,6 +160,7 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
 
   *devmgr_job = std::move(job);
   *devfs_root = std::move(devfs_client);
+  *outgoing_services_root = std::move(outgoing_services_client);
   return ZX_OK;
 }
 

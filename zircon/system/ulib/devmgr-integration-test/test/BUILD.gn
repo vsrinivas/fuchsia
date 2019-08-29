@@ -15,6 +15,7 @@ test("devmgr-integration") {
     "launcher_test.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/fdio",

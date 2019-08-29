@@ -151,7 +151,8 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
 
   IsolatedDevmgr devmgr;
   zx::channel devfs;
-  status = devmgr_launcher::Launch(std::move(args), &devmgr.job_, &devfs);
+  zx::channel outgoing_svc_root;
+  status = devmgr_launcher::Launch(std::move(args), &devmgr.job_, &devfs, &outgoing_svc_root);
   if (status != ZX_OK) {
     return status;
   }
@@ -169,6 +170,7 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
   }
   devmgr.devfs_root_.reset(fd);
 
+  devmgr.svc_root_dir_.reset(outgoing_svc_root.release());
   *out = std::move(devmgr);
   return ZX_OK;
 }
