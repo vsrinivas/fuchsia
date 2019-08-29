@@ -55,7 +55,7 @@ executable("audio_driver_tests_bin") {
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/test:message_transceiver",
     "//src/media/audio/lib/test:test_fixture",
-    "//zircon/public/fidl/fuchsia-hardware-audio",
+    "//zircon/system/fidl/fuchsia-hardware-audio",
     "//zircon/public/lib/fzl",
   ]
 }

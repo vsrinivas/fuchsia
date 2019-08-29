@@ -18,7 +18,7 @@ Example:
 
 ```
 fx fidldoc -v \
-    ./out/x64/fidling/gen/zircon/public/fidl/fuchsia-mem/fuchsia-mem.fidl.json \
+    ./out/x64/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json \
     -c ./out/default/host_x64/fidldoc.config.json
 ```
 
@@ -37,7 +37,7 @@ Example - How to use the `--tag` flag to point to the current git commit or bran
 
 ```
 fx fidldoc -v \
-    ./out/x64/fidling/gen/zircon/public/fidl/fuchsia-mem/fuchsia-mem.fidl.json \
+    ./out/x64/fidling/gen/zircon/system/fidl/fuchsia-mem/fuchsia-mem.fidl.json \
     -c ./out/default/host_x64/fidldoc.config.json \
     --tag $(git rev-parse HEAD)
 ```

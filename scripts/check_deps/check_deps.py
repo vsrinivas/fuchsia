@@ -30,9 +30,10 @@ allowed_deps = [
     '//garnet/public/go/third_party',
     '//garnet/public/lib',
     '//garnet/public/rust',
-    '//zircon/public/lib',
     '//zircon/public/fidl',
+    '//zircon/public/lib',
     '//zircon/public/banjo',
+    '//zircon/system/fidl',
     '//zircon/system/public',
 
     # Tools

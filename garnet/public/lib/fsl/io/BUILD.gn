@@ -24,7 +24,7 @@ source_set("io") {
   public_deps = [
     "//src/lib/files",
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io_c_client",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io_c_client",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",

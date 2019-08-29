@@ -16,7 +16,7 @@ executable("bin") {
   ]
   deps = [
     ":common",
-    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c_client",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c_client",
     "//zircon/public/lib/pretty",
   ]
 }

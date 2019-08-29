@@ -13,6 +13,6 @@ fidl("fuchsia.kms") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

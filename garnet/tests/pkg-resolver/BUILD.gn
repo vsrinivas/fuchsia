@@ -27,9 +27,9 @@ rustc_test("driver") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:tempfile",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/public/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
 }
 

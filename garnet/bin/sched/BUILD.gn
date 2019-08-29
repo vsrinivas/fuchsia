@@ -22,7 +22,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/cmdline",

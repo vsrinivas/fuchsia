@@ -24,6 +24,6 @@ executable("tts_manager_tests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/tts",
-    "//zircon/public/fidl/fuchsia-logger",
+    "//zircon/system/fidl/fuchsia-logger",
   ]
 }

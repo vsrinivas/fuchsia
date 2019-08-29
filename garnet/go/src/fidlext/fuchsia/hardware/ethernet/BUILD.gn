@@ -9,6 +9,6 @@ go_library("fidlext_fuchsia_hardware_ethernet_fake_lib") {
   name = "fidlext/fuchsia/hardware/ethernet"
 
   deps = [
-    "//zircon/public/fidl/fuchsia-hardware-ethernet($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet($go_toolchain)",
   ]
 }

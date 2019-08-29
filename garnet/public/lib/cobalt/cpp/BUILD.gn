@@ -33,6 +33,6 @@ source_set("deprecated_cobalt_logger") {
   deps = [
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

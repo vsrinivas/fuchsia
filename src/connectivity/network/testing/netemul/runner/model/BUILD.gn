@@ -30,7 +30,7 @@ source_set("model") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
-    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger",
   ]
 }
 

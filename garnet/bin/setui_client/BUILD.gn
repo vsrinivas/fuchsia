@@ -41,7 +41,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:structopt",
-    "//zircon/public/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",  ]
+    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",  ]
 }
 
 package("setui_client") {

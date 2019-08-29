@@ -13,7 +13,7 @@ source_set("lib") {
   ]
 
   deps = [
-    "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/public/lib/fzl",
   ]
 

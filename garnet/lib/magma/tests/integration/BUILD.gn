@@ -30,7 +30,7 @@ executable("magma_abi_conformance_tests") {
   if (is_fuchsia) {
     deps += [
       "$magma_build_root/src/libmagma",
-      "//zircon/public/fidl/fuchsia-sysmem",
+      "//zircon/system/fidl/fuchsia-sysmem",
     ]
   }
   if (is_linux) {

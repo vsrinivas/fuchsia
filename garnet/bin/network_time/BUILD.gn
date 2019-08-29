@@ -36,7 +36,7 @@ source_set("lib") {
     "//third_party/boringssl",
     "//third_party/rapidjson",
     "//third_party/roughtime:client_lib",
-    "//zircon/public/fidl/fuchsia-hardware-rtc",
+    "//zircon/system/fidl/fuchsia-hardware-rtc",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
@@ -50,7 +50,7 @@ static_library("time_util_lib") {
     "time_util.h",
   ]
   deps = [
-    "//zircon/public/fidl/fuchsia-hardware-rtc",
+    "//zircon/system/fidl/fuchsia-hardware-rtc",
   ]
 }
 

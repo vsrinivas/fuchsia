@@ -17,7 +17,7 @@ fidl("network") {
   ]
 
   deps = [
-    "//zircon/public/fidl/fuchsia-hardware-ethernet",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet",
   ]
 }
 
@@ -36,7 +36,7 @@ fidl("environment") {
   deps = [
     ":network",
     "//sdk/fidl/fuchsia.sys",
-    "//zircon/public/fidl/fuchsia-logger",
+    "//zircon/system/fidl/fuchsia-logger",
   ]
 }
 
@@ -75,6 +75,6 @@ fidl("devmgr") {
     "devmgr.fidl",
   ]
   deps = [
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 }

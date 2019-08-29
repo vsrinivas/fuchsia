@@ -27,8 +27,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:num-traits",
-    "//zircon/public/fidl/fuchsia-hardware-backlight:fuchsia-hardware-backlight-rustc",
-    "//zircon/public/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-backlight:fuchsia-hardware-backlight-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
   ]
 }
 

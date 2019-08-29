@@ -72,7 +72,7 @@ executable("decryptor_adapter_tests_bin") {
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",

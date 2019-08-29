@@ -19,8 +19,8 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.amber($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//zircon/public/fidl/fuchsia-device-manager($go_toolchain)",
-    "//zircon/public/fidl/fuchsia-io($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-device-manager($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-io($go_toolchain)",
   ]
 }
 

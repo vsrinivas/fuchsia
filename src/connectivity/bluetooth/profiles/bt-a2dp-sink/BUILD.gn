@@ -44,8 +44,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
-    "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
-    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 

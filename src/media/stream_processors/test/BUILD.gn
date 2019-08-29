@@ -39,7 +39,7 @@ rustc_library("stream_processor_test_lib") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:log",
-    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
 
@@ -109,7 +109,7 @@ rustc_test("audio_encoder_test_bin") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:rand",
-    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
 
@@ -141,7 +141,7 @@ rustc_library("video_frame_hasher_lib") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:rand",
-    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
 

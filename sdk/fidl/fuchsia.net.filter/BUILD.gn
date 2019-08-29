@@ -18,6 +18,6 @@ fidl("fuchsia.net.filter") {
     "ruleset.fidl",
   ]
   public_deps = [
-    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net",
   ]
 }

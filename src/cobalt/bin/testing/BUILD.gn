@@ -20,7 +20,7 @@ source_set("fake_logger_lib") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
 

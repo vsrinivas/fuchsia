@@ -28,6 +28,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tempfile",
-    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }

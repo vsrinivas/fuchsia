@@ -27,7 +27,7 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/service/cpp",
     "//sdk/lib/vfs/cpp",
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]

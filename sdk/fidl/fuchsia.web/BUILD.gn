@@ -27,7 +27,7 @@ fidl("fuchsia.web") {
     "//sdk/fidl/fuchsia.media.sessions2",
     "//sdk/fidl/fuchsia.net.http",
     "//sdk/fidl/fuchsia.ui.views",
-    "//zircon/public/fidl/fuchsia-io",
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

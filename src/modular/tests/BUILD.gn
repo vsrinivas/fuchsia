@@ -205,7 +205,7 @@ executable("sessionmgr_integration_test") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gtest_main",
-    "//zircon/public/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-device-manager",
   ]
 }
 

@@ -15,6 +15,6 @@ rustc_library("fuchsia-inspect-contrib") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:parking_lot",
-    "//zircon/public/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
+    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
   ]
 }

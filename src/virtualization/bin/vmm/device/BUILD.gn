@@ -80,7 +80,7 @@ source_set("block") {
   ]
   public_deps = [
     ":device",
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/trace",
   ]
@@ -289,7 +289,7 @@ executable("virtio_net_bin") {
     ":virtio",
     "//garnet/public/lib/async_promise:async_promise",
     "//sdk/fidl/fuchsia.netstack",
-    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet",
   ]
 }
 

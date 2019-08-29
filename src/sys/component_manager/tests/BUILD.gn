@@ -66,7 +66,7 @@ rustc_test("hub_integration_test_bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:url",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   non_rust_deps = [
     "//zircon/public/lib/async",
@@ -168,7 +168,7 @@ rustc_binary("memfs_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/component_manager:lib",
     "//third_party/rust_crates:failure",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   non_rust_deps = [
     "//zircon/public/lib/async",
@@ -194,7 +194,7 @@ rustc_binary("storage_user_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/component_manager:lib",
     "//third_party/rust_crates:failure",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   non_rust_deps = [
     "//zircon/public/lib/async",
@@ -220,7 +220,7 @@ rustc_binary("storage_realm_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//third_party/rust_crates:failure",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -294,7 +294,7 @@ rustc_binary("mock_pkg_resolver_bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

@@ -10,6 +10,6 @@ fidl("fuchsia.vsock") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-hardware-vsock",
+    "//zircon/system/fidl/fuchsia-hardware-vsock",
   ]
 }

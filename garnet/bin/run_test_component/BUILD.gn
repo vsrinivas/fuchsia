@@ -30,13 +30,13 @@ source_set("lib") {
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
     "//third_party/rapidjson",
-    "//zircon/public/fidl/fuchsia-boot",
-    "//zircon/public/fidl/fuchsia-device",
-    "//zircon/public/fidl/fuchsia-kernel",
-    "//zircon/public/fidl/fuchsia-net",
-    "//zircon/public/fidl/fuchsia-net-stack",
-    "//zircon/public/fidl/fuchsia-posix-socket",
-    "//zircon/public/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-boot",
+    "//zircon/system/fidl/fuchsia-device",
+    "//zircon/system/fidl/fuchsia-kernel",
+    "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net-stack",
+    "//zircon/system/fidl/fuchsia-posix-socket",
+    "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }
 
@@ -53,9 +53,9 @@ executable("bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
-    "//zircon/public/fidl/fuchsia-debugdata",
-    "//zircon/public/fidl/fuchsia-logger",
-    "//zircon/public/fidl/fuchsia-process",
+    "//zircon/system/fidl/fuchsia-debugdata",
+    "//zircon/system/fidl/fuchsia-logger",
+    "//zircon/system/fidl/fuchsia-process",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

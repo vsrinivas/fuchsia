@@ -36,9 +36,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:structopt",
-    "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
-    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
-    "//zircon/public/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
+    "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
   with_unit_tests = true
 }

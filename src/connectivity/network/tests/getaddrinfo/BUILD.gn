@@ -30,7 +30,7 @@ rustc_test("getaddrinfo_test") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

@@ -84,7 +84,7 @@ source_set("hermetic_audio_test") {
   ]
 
   deps = [
-    "//zircon/public/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }
 

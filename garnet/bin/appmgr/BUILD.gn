@@ -62,9 +62,9 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
-    "//zircon/public/fidl/fuchsia-device",
-    "//zircon/public/fidl/fuchsia-inspect",
-    "//zircon/public/fidl/fuchsia-process",
+    "//zircon/system/fidl/fuchsia-device",
+    "//zircon/system/fidl/fuchsia-inspect",
+    "//zircon/system/fidl/fuchsia-process",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
@@ -109,12 +109,12 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/fidl/fuchsia-boot",
-    "//zircon/public/fidl/fuchsia-device-manager",
-    "//zircon/public/fidl/fuchsia-kernel",
-    "//zircon/public/fidl/fuchsia-paver",
-    "//zircon/public/fidl/fuchsia-scheduler",
-    "//zircon/public/fidl/fuchsia-virtualconsole",
+    "//zircon/system/fidl/fuchsia-boot",
+    "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-kernel",
+    "//zircon/system/fidl/fuchsia-paver",
+    "//zircon/system/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-virtualconsole",
   ]
 
   # appmgr starts early in the boot sequence before shared libraries from
@@ -152,8 +152,8 @@ executable("tests") {
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/public/fidl/fuchsia-device-manager",
-    "//zircon/public/fidl/fuchsia-kernel",
+    "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-kernel",
     "//zircon/public/lib/memfs",
   ]
 }

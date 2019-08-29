@@ -160,8 +160,8 @@ executable("crashpad_agent_unittest") {
     "//third_party/crashpad/util",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-crash",
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-crash",
+    "//zircon/system/fidl/fuchsia-mem",
     "//zircon/public/lib/zx",
   ]
 }
@@ -179,8 +179,8 @@ executable("crashpad_agent_integration_test") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-crash",
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-crash",
+    "//zircon/system/fidl/fuchsia-mem",
     "//zircon/public/lib/zx",
   ]
 }

@@ -14,6 +14,6 @@ source_set("testing") {
     "//garnet/public/lib/inspect_deprecated:reader",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-inspect",
+    "//zircon/system/fidl/fuchsia-inspect",
   ]
 }

@@ -11,6 +11,6 @@ fidl("fuchsia.factory") {
     "factory.fidl",
   ]
   public_deps = [
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 }

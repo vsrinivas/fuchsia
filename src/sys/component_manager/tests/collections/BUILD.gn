@@ -36,7 +36,7 @@ rustc_binary("collection_realm_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

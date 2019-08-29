@@ -23,6 +23,6 @@ rustc_library("pseudo-fs-mt") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:void",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

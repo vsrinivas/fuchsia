@@ -28,7 +28,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:tempfile",
-    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }
 

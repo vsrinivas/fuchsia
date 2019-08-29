@@ -39,7 +39,7 @@ executable("bin") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty_c",
+    "//zircon/system/fidl/fuchsia-hardware-pty:fuchsia-hardware-pty_c",
   ]
 }
 

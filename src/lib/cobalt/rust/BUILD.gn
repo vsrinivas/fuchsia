@@ -19,7 +19,7 @@ rustc_library("fuchsia-cobalt") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
-    "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
-    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

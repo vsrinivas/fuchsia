@@ -60,7 +60,7 @@ executable("cobalt_testapp") {
     "//third_party/cobalt/src/lib/util:datetime_util",
     "//third_party/cobalt/src/registry:cobalt_registry_proto",
     "//third_party/cobalt/src/registry:id",
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

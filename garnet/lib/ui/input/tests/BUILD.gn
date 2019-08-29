@@ -38,7 +38,7 @@ executable("unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-hardware-display",
+    "//zircon/system/fidl/fuchsia-hardware-display",
     "//zircon/public/lib/hid",
   ]
 }

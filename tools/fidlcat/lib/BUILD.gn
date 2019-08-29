@@ -97,7 +97,7 @@ action("json_for_test") {
     ":fidl-sys($fidl_toolchain)",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp/test:frobinator",
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
   ]
   outputs = [
     "$target_gen_dir/library_loader_test_data.h",
@@ -108,7 +108,7 @@ action("json_for_test") {
     rebase_path(root_build_dir) +
         "/fidling/gen/sdk/lib/fidl/cpp/test/frobinator.fidl.json",
     rebase_path(root_build_dir) +
-        "/fidling/gen/zircon/public/fidl/fuchsia-io/fuchsia-io.fidl.json",
+        "/fidling/gen/zircon/system/fidl/fuchsia-io/fuchsia-io.fidl.json",
     rebase_path(root_build_dir) +
         "/fidling/gen/tools/fidlcat/lib/fidl.fidl.json",
     rebase_path(root_build_dir) +

@@ -20,6 +20,6 @@ fidl("fuchsia.wlan.ap.policy") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.common",
-    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net",
   ]
 }

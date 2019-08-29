@@ -21,7 +21,7 @@ test("component_cpp_unittests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
   ]
@@ -39,7 +39,7 @@ test("component_cpp_testing_unittests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/fidl",
   ]
 }
@@ -55,8 +55,8 @@ test("component_cpp_testing_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-debugdata",
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-debugdata",
+    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/fidl",
   ]
 }

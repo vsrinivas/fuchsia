@@ -33,8 +33,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",
-    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 
@@ -62,8 +62,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:structopt",
-    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

@@ -20,8 +20,8 @@ fidl("fuchsia.net.policy") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-hardware-ethernet",
-    "//zircon/public/fidl/fuchsia-net",
-    "//zircon/public/fidl/fuchsia-net-stack",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet",
+    "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net-stack",
   ]
 }

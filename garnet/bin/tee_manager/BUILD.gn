@@ -42,9 +42,9 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//zircon/public/fidl/fuchsia-hardware-tee:fuchsia-hardware-tee-rustc",
-    "//zircon/public/fidl/fuchsia-tee:fuchsia-tee-rustc",
-    "//zircon/public/fidl/fuchsia-tee-manager:fuchsia-tee-manager-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-tee:fuchsia-hardware-tee-rustc",
+    "//zircon/system/fidl/fuchsia-tee:fuchsia-tee-rustc",
+    "//zircon/system/fidl/fuchsia-tee-manager:fuchsia-tee-manager-rustc",
   ]
 }
 
@@ -63,7 +63,7 @@ source_set("test_common") {
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-tee",
+    "//zircon/system/fidl/fuchsia-tee",
     "//zircon/public/lib/tee-client-api",
   ]
 }

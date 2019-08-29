@@ -22,6 +22,6 @@ fidl("fuchsia.pkg") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 }

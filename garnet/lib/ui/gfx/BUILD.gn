@@ -228,7 +228,7 @@ source_set("gfx") {
     "//garnet/public/lib/inspect_deprecated",
     "//garnet/public/lib/ui/scenic/cpp",
     "//src/ui/lib/escher/util:check_vulkan_support",
-    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
@@ -261,8 +261,8 @@ source_set("display") {
   ]
   public_deps = [
     "//garnet/public/lib/fsl",
-    "//zircon/public/fidl/fuchsia-hardware-display",
-    "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
+    "//zircon/system/fidl/fuchsia-hardware-display",
+    "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
   ]
   deps = [
     ":util",

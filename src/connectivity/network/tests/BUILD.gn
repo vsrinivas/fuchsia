@@ -25,11 +25,11 @@ rustc_test("netstack_fidl_integration_test") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
-    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
-    "//zircon/public/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+    "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
 }
 
@@ -101,7 +101,7 @@ test("netstack_fuchsia_c_api_test") {
   deps = [
     "//garnet/public/lib/netstack/c",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-posix-socket",
+    "//zircon/system/fidl/fuchsia-posix-socket",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
   ]
@@ -126,7 +126,7 @@ test("name_provider_no_network_test") {
     ":device_name_provider",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-device:fuchsia-device_llcpp",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
   ]
 }
 
@@ -138,7 +138,7 @@ test("name_provider_service_not_present_test") {
   deps = [
     ":device_name_provider",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-device",
+    "//zircon/system/fidl/fuchsia-device",
   ]
 }
 

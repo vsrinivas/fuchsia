@@ -13,8 +13,8 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//third_party/rust_crates:bitflags",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 

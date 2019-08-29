@@ -16,7 +16,7 @@ rustc_library("fdio") {
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
-    "//zircon/public/fidl/fuchsia-device:fuchsia-device-rustc",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
   ]
 }
 

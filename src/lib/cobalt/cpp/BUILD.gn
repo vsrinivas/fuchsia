@@ -30,7 +30,7 @@ source_set("cobalt_logger") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/public/lib/fit",
   ]
 
@@ -74,7 +74,7 @@ source_set("project_profile") {
   ]
   configs += [ "//third_party/cobalt:cobalt_config" ]
   public_deps = [
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
   deps = [
     "//garnet/public/lib/fsl",
@@ -89,6 +89,6 @@ source_set("cobalt_event_builder") {
   ]
   configs += [ "//third_party/cobalt:cobalt_config" ]
   public_deps = [
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

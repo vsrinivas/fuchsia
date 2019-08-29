@@ -45,7 +45,7 @@ rustc_library("fuchsia_pkg_testing") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:walkdir",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

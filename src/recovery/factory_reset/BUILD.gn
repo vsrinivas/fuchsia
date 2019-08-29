@@ -18,16 +18,16 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.recovery",
 
     # <factory_reset.h> has #include <fuchsia/device/manager/cpp/fidl.h>
-    "//zircon/public/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-device-manager",
 
     # <factory_reset.h> has #include <fbl/unique_fd.h>
     "//zircon/public/lib/fbl",
   ]
 
   deps = [
-    "//zircon/public/fidl/fuchsia-device:fuchsia-device_c",
-    "//zircon/public/fidl/fuchsia-hardware-block:fuchsia-hardware-block_c",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device_c",
+    "//zircon/system/fidl/fuchsia-hardware-block:fuchsia-hardware-block_c",
+    "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fzl",
@@ -122,8 +122,8 @@ test("factory_reset_unittests") {
   deps = [
     ":lib",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-device-manager",
-    "//zircon/public/fidl/fuchsia-hardware-block-volume:fuchsia-hardware-block-volume_c",
+    "//zircon/system/fidl/fuchsia-device-manager",
+    "//zircon/system/fidl/fuchsia-hardware-block-volume:fuchsia-hardware-block-volume_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/devmgr-integration-test",

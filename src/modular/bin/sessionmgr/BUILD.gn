@@ -230,7 +230,7 @@ source_set("user_intelligence_provider") {
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib:maxwell_internal",
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }
 

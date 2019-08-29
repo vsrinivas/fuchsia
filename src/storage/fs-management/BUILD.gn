@@ -16,7 +16,7 @@ rustc_library("fs-management") {
     "//src/lib/cstr",
     "//src/storage/ramdevice-client",
     "//third_party/rust_crates:failure",
-    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

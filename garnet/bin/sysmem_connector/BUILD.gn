@@ -15,7 +15,7 @@ executable("sysmem_connector_executable") {
 
   deps = [
     "//sdk/lib/sys/cpp",
-    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sysmem-connector",
@@ -54,7 +54,7 @@ executable("sysmem_connector_test_executable") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

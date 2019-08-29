@@ -29,7 +29,7 @@ rustc_test("test") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:rouille",
-    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 

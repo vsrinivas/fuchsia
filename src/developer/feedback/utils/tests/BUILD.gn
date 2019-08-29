@@ -50,6 +50,6 @@ executable("archive_unittest") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

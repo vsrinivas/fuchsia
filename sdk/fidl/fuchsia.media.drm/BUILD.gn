@@ -23,6 +23,6 @@ fidl("fuchsia.media.drm") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

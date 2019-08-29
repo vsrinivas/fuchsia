@@ -495,22 +495,22 @@ template("library") {
               dep = get_label_info(dep, "dir")
               assert(get_path_info(dep, "dir") == "$zx/system/fidl")
               dep = get_label_info(dep, "name")
-              deps += [ "//zircon/public/fidl/${dep}:${dep}_c" ]
+              deps += [ "//zircon/system/fidl/${dep}:${dep}_c" ]
             } else if (get_label_info(dep, "name") == "c.headers") {
               dep = get_label_info(dep, "dir")
               assert(get_path_info(dep, "dir") == "$zx/system/fidl")
               dep = get_label_info(dep, "name")
-              public_deps += [ "//zircon/public/fidl/${dep}:${dep}_c" ]
+              public_deps += [ "//zircon/system/fidl/${dep}:${dep}_c" ]
             } else if (get_label_info(dep, "name") == "llcpp") {
               dep = get_label_info(dep, "dir")
               assert(get_path_info(dep, "dir") == "$zx/system/fidl")
               dep = get_label_info(dep, "name")
-              deps += [ "//zircon/public/fidl/${dep}:${dep}_llcpp" ]
+              deps += [ "//zircon/system/fidl/${dep}:${dep}_llcpp" ]
             } else if (get_label_info(dep, "name") == "llcpp.headers") {
               dep = get_label_info(dep, "dir")
               assert(get_path_info(dep, "dir") == "$zx/system/fidl")
               dep = get_label_info(dep, "name")
-              public_deps += [ "//zircon/public/fidl/${dep}:${dep}_llcpp" ]
+              public_deps += [ "//zircon/system/fidl/${dep}:${dep}_llcpp" ]
             } else if (get_label_info(dep, "name") == "headers") {
               dep = get_path_info(get_label_info(dep, "dir"), "name")
               if (dep != "c" && dep != "llcpp") {

@@ -19,6 +19,6 @@ fidl("fuchsia.net.mdns") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net",
   ]
 }

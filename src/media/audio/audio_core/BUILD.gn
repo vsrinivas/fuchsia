@@ -173,8 +173,8 @@ source_set("audio_core_lib") {
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav_writer:wav_writer",
-    "//zircon/public/fidl/fuchsia-hardware-audio",
-    "//zircon/public/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-hardware-audio",
+    "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -220,8 +220,8 @@ executable("unittest_bin") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-io",
-    "//zircon/public/fidl/fuchsia-scheduler",
+    "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/public/lib/fzl",
   ]
 }

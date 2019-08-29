@@ -20,8 +20,8 @@ source_set("ethertap") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-hardware-ethernet",
-    "//zircon/public/fidl/fuchsia-hardware-ethertap",
+    "//zircon/system/fidl/fuchsia-hardware-ethernet",
+    "//zircon/system/fidl/fuchsia-hardware-ethertap",
   ]
 }
 
@@ -99,6 +99,6 @@ executable("network_test_bin") {
   ]
 
   public_deps = [
-    "//zircon/public/fidl/fuchsia-hardware-ethertap",
+    "//zircon/system/fidl/fuchsia-hardware-ethertap",
   ]
 }

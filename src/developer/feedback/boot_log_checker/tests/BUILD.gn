@@ -47,7 +47,7 @@ executable("reboot_log_handler_unittest") {
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net",
     "//zircon/public/lib/zx",
   ]
 }

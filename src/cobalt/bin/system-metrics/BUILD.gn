@@ -35,9 +35,9 @@ source_set("system_metrics_daemon_lib") {
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:clock",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
-    "//zircon/public/fidl/fuchsia-boot:fuchsia-boot_c",
-    "//zircon/public/fidl/fuchsia-cobalt",
-    "//zircon/public/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+    "//zircon/system/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/trace",
@@ -93,6 +93,6 @@ executable("cobalt_system_metrics_unittests") {
     "//src/cobalt/bin/testing:fake_logger_lib",
     "//src/cobalt/bin/utils:clock",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

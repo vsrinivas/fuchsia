@@ -110,8 +110,8 @@ source_set("source_set") {
     "//src/lib/fxl",
     "//src/lib/inet",
     "//third_party/rapidjson",
-    "//zircon/public/fidl/fuchsia-device",
-    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-device",
+    "//zircon/system/fidl/fuchsia-net",
     "//zircon/public/lib/fit",
   ]
 

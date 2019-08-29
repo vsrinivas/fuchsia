@@ -23,7 +23,7 @@ source_set("vmo") {
 
   public_deps = [
     "//src/lib/fxl",
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-mem",
     "//zircon/public/lib/zx",
   ]
 

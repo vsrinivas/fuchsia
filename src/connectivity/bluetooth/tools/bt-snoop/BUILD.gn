@@ -29,7 +29,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:structopt",
-    "//zircon/public/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth-rustc",
+    "//zircon/system/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth-rustc",
   ]
 }
 

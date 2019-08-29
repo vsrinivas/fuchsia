@@ -25,7 +25,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
-    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

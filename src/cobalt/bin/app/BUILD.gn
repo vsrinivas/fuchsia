@@ -50,8 +50,8 @@ source_set("lib") {
     "//third_party/cobalt/src/system_data",
     "//third_party/cobalt/src/system_data:client_secret",
     "//third_party/cobalt/src/uploader:shipping_manager",
-    "//zircon/public/fidl/fuchsia-cobalt",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/system/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -123,6 +123,6 @@ executable("cobalt_app_unittests") {
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/cobalt/src/logger:logger_test_utils",
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

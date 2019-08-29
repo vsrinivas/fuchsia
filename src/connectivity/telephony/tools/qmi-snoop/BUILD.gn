@@ -16,7 +16,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",
-    "//zircon/public/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
+    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
   ]
 }
 
