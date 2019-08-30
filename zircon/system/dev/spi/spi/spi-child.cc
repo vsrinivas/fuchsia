@@ -19,7 +19,7 @@ void SpiChild::Receive(uint32_t size, ReceiveCompleter::Sync completer) {
   rxdata.reserve(size);
   size_t actual;
   spi_.Exchange(cs_, nullptr, 0, rxdata.begin(), size, &actual);
-  fidl::VectorView<uint8_t> rx_vector(size, rxdata.get());
+  fidl::VectorView<uint8_t> rx_vector(size, rxdata.data());
   completer.Reply(ZX_OK, rx_vector);
 }
 
@@ -29,7 +29,7 @@ void SpiChild::Exchange(fidl::VectorView<uint8_t> txdata, ExchangeCompleter::Syn
   rxdata.reserve(size);
   size_t actual;
   spi_.Exchange(cs_, txdata.data(), size, rxdata.begin(), size, &actual);
-  fidl::VectorView<uint8_t> rx_vector(size, rxdata.get());
+  fidl::VectorView<uint8_t> rx_vector(size, rxdata.data());
   completer.Reply(ZX_OK, rx_vector);
 }
 

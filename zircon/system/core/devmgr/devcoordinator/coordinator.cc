@@ -472,7 +472,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
   boot_args().Collect("driver.", &env);
   env.push_back(nullptr);
   status = dc_launch_devhost(dh.get(), loader_service_connector_,
-                             get_devhost_bin(config_.asan_drivers), name, env.get(), hrpc.release(),
+                             get_devhost_bin(config_.asan_drivers), name, env.data(), hrpc.release(),
                              root_resource(), zx::unowned_job(config_.devhost_job));
   if (status != ZX_OK) {
     zx_handle_close(dh->hrpc());

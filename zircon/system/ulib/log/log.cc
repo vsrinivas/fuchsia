@@ -49,7 +49,7 @@ void log_write_message_helper(log_level_t level, size_t num_tags, const char** t
 
   log_message_t msg = {
       level,
-      static_tags.get(),
+      static_tags.data(),
       static_tags.size(),
       tags_ptr,
       num_tags,

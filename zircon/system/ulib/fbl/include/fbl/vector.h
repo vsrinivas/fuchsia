@@ -208,9 +208,9 @@ class Vector {
     consider_shrinking();
   }
 
-  const T* get() const { return ptr_; }
+  const T* data() const { return ptr_; }
 
-  T* get() { return ptr_; }
+  T* data() { return ptr_; }
 
   bool is_empty() const { return size_ == 0; }
 

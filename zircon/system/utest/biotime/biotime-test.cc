@@ -26,7 +26,7 @@ bool run_biotime(fbl::Vector<const char*>&& args) {
   args.push_back(nullptr);  // fdio_spawn() wants a null-terminated array.
 
   zx::process process;
-  ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, args[0], args.get(),
+  ASSERT_EQ(fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, args[0], args.data(),
                        process.reset_and_get_address()),
             ZX_OK);
 

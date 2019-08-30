@@ -326,7 +326,7 @@ class ParseState {
       report_ids_.push_back(new_report_id, &ac);
       if (!ac.check())
         return kParseNoMemory;
-      table_.report_id = &report_ids_.get()[report_ids_.size() - 1];
+      table_.report_id = &report_ids_[report_ids_.size() - 1];
     }
 
     auto flags = expand_bitfield(data);
@@ -460,7 +460,7 @@ class ParseState {
 
     // Check if we've seen the report id before.
     uint8_t id = static_cast<uint8_t>(data);
-    ReportID* report_ids = report_ids_.get();
+    ReportID* report_ids = report_ids_.data();
     for (size_t i = 0; i < report_ids_.size(); i++) {
       if (report_ids[i].report_id == id) {
         table_.report_id = &report_ids[i];
@@ -474,7 +474,7 @@ class ParseState {
     report_ids_.push_back(new_report_id, &ac);
     if (!ac.check())
       return kParseNoMemory;
-    table_.report_id = &report_ids_.get()[report_ids_.size() - 1];
+    table_.report_id = &report_ids_[report_ids_.size() - 1];
 
     return kParseOk;
   }

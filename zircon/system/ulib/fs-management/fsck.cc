@@ -57,7 +57,7 @@ zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
   zx_handle_t hnd = block_device.release();
   uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
   auto argc = static_cast<int>(argv.size() - 1);
-  status = static_cast<zx_status_t>(cb(argc, argv.get(), &hnd, &id, 1));
+  status = static_cast<zx_status_t>(cb(argc, argv.data(), &hnd, &id, 1));
   return status;
 }
 
@@ -75,7 +75,7 @@ zx_status_t FsckFat(const char* device_path, const fsck_options_t* options, Laun
   argv.push_back(device_path);
   argv.push_back(nullptr);
   auto argc = static_cast<int>(argv.size() - 1);
-  zx_status_t status = static_cast<zx_status_t>(cb(argc, argv.get(), nullptr, nullptr, 0));
+  zx_status_t status = static_cast<zx_status_t>(cb(argc, argv.data(), nullptr, nullptr, 0));
   return status;
 }
 

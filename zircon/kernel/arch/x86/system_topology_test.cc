@@ -71,7 +71,7 @@ bool test_cpus_z840() {
 
   // Ensure the format can be parsed and validated by the system topology library.
   Graph graph;
-  EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.get(), flat_topology.size()), "");
+  EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.data(), flat_topology.size()), "");
 
   END_TEST;
 }
@@ -127,7 +127,7 @@ bool test_cpus_2970wx_x399() {
 
   // Ensure the format can be parsed and validated by the system topology library.
   Graph graph;
-  EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.get(), flat_topology.size()), "");
+  EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.data(), flat_topology.size()), "");
 
   END_TEST;
 }
@@ -192,7 +192,7 @@ bool test_cpus_fallback() {
 
   // Ensure the format can be parsed and validated by the system topology library.
   Graph graph;
-  EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.get(), flat_topology.size()), "");
+  EXPECT_EQ(ZX_OK, Graph::Initialize(&graph, flat_topology.data(), flat_topology.size()), "");
 
   END_TEST;
 }

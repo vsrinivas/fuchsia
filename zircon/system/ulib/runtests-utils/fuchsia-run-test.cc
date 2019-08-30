@@ -368,7 +368,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[], const char* output_di
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   const zx::time start_time = zx::clock::get_monotonic();
   status = fdio_spawn_etc(test_job.get(), FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE,
-                          args[0], args, env_vars_p, fdio_actions.size(), fdio_actions.get(),
+                          args[0], args, env_vars_p, fdio_actions.size(), fdio_actions.data(),
                           process.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "FAILURE: Failed to launch %s: %d (%s): %s\n", test_name, status,

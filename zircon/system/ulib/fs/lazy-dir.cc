@@ -56,7 +56,7 @@ zx_status_t LazyDir::Lookup(fbl::RefPtr<fs::Vnode>* out_vnode, fbl::StringPiece 
 zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, size_t* out_actual) {
   LazyEntryVector entries;
   GetContents(&entries);
-  qsort(entries.get(), entries.size(), sizeof(LazyEntry), CompareLazyDirPtrs);
+  qsort(entries.data(), entries.size(), sizeof(LazyEntry), CompareLazyDirPtrs);
 
   fs::DirentFiller df(dirents, len);
   zx_status_t r = 0;

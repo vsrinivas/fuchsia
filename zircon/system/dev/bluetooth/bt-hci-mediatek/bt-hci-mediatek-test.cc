@@ -140,11 +140,11 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketCmd) {
   fbl::Vector<uint8_t> read_data = {0x14, 0x00, 0x00, 0x00, 0x32, 0xbf, 0x9c, 0x81, 0x70, 0xdd,
                                     0x9a, 0x68, 0xf0, 0x36, 0x06, 0x49, 0x7c, 0x7b, 0x83, 0x21};
   uint8_t expected_read_packet[16];
-  memcpy(expected_read_packet, read_data.get() + 4, read_data.size() - 4);
+  memcpy(expected_read_packet, read_data.data() + 4, read_data.size() - 4);
 
   uint8_t packet[32];
   size_t size = write_data.size() - 8;
-  memcpy(packet, write_data.get() + 8, size);
+  memcpy(packet, write_data.data() + 8, size);
 
   sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
   test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
@@ -168,11 +168,11 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketAcl) {
 
   fbl::Vector<uint8_t> read_data = {0x08, 0x00, 0x00, 0x00, 0xc6, 0x7b, 0x1a, 0x84};
   uint8_t expected_read_packet[4];
-  memcpy(expected_read_packet, read_data.get() + 4, read_data.size() - 4);
+  memcpy(expected_read_packet, read_data.data() + 4, read_data.size() - 4);
 
   uint8_t packet[32];
   size_t size = write_data.size() - 9;
-  memcpy(packet, write_data.get() + 9, size);
+  memcpy(packet, write_data.data() + 9, size);
 
   sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
   test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
@@ -197,7 +197,7 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketEdgeCases) {
 
   uint8_t packet[12];
   size_t size = write_data.size() - 8;
-  memcpy(packet, write_data.get() + 8, size);
+  memcpy(packet, write_data.data() + 8, size);
 
   sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
   test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
@@ -220,7 +220,7 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketFail) {
 
   uint8_t packet[12];
   size_t size = write_data.size() - 8;
-  memcpy(packet, write_data.get() + 8, size);
+  memcpy(packet, write_data.data() + 8, size);
 
   sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
   test.mock_CardRecvPacket().ExpectCall({ZX_OK, 3});
@@ -234,7 +234,7 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketFail) {
   write_data = {0x0c, 0x00, 0x00, 0x00, 0x01, 0x00, 0xfc, 0x04, 0x25, 0xce, 0xd4, 0xf2};
 
   size = write_data.size() - 8;
-  memcpy(packet, write_data.get() + 8, size);
+  memcpy(packet, write_data.data() + 8, size);
 
   sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
   test.mock_CardRecvPacket().ExpectCall({ZX_OK, sizeof(packet) + 5});
@@ -250,7 +250,7 @@ TEST(BtHciMediatekTest, TestCardSendVendorPacketFail) {
   fbl::Vector<uint8_t> read_data = {0x06, 0x00, 0x00, 0x00, 0xa3, 0x2f, 0x2c, 0xf0};
 
   size = write_data.size() - 8;
-  memcpy(packet, write_data.get() + 8, size);
+  memcpy(packet, write_data.data() + 8, size);
 
   sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
   test.mock_CardRecvPacket().ExpectCall({ZX_OK, static_cast<uint32_t>(read_data.size())});
@@ -284,7 +284,7 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePart) {
 
   uint8_t fw_data[32];
   size_t fw_data_size = write_data.size() - 14;
-  memcpy(fw_data, write_data.get() + 14, fw_data_size);
+  memcpy(fw_data, write_data.data() + 14, fw_data_size);
 
   fbl::Vector<uint8_t> read_data;
   for (size_t i = 0; i < sizeof(kExpectedResponse); i++) {
@@ -307,7 +307,7 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePart) {
                 0xc0, 0xa6, 0xb6, 0x01, 0xe1, 0xec, 0x3f, 0xac, 0x57, 0x2f};
 
   fw_data_size = write_data.size() - 14;
-  memcpy(fw_data, write_data.get() + 14, fw_data_size);
+  memcpy(fw_data, write_data.data() + 14, fw_data_size);
 
   for (size_t i = 0; i < sizeof(kExpectedResponse); i++) {
     read_data.push_back(kExpectedResponse[i]);
@@ -327,7 +327,7 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePart) {
                 0x09, 0x00, 0x03, 0x90, 0x8a, 0x05, 0xd6, 0x68, 0x5c, 0x39, 0x81};
 
   fw_data_size = write_data.size() - 14;
-  memcpy(fw_data, write_data.get() + 14, fw_data_size);
+  memcpy(fw_data, write_data.data() + 14, fw_data_size);
 
   for (size_t i = 0; i < sizeof(kExpectedResponse); i++) {
     read_data.push_back(kExpectedResponse[i]);
@@ -360,7 +360,7 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePartFail) {
 
   uint8_t fw_data[8];
   size_t fw_data_size = write_data.size() - 14;
-  memcpy(fw_data, write_data.get() + 14, fw_data_size);
+  memcpy(fw_data, write_data.data() + 14, fw_data_size);
 
   sdio.ExpectFifoWrite(0x18, std::move(write_data), false);
   test.mock_CardRecvPacket().ExpectCall({ZX_OK, 13});
@@ -375,7 +375,7 @@ TEST(BtHciMediatekTest, TestCardSendFirmwarePartFail) {
                 0x09, 0x00, 0x03, 0x7c, 0x4b, 0x8b, 0xd2, 0x73, 0x0d, 0x72, 0x8e};
 
   fw_data_size = write_data.size() - 14;
-  memcpy(fw_data, write_data.get() + 14, fw_data_size);
+  memcpy(fw_data, write_data.data() + 14, fw_data_size);
 
   fbl::Vector<uint8_t> read_data = {0x0c, 0x00, 0x00, 0x00, 0x04, 0xe4,
                                     0x05, 0x02, 0x01, 0x01, 0x00, 0x01};

@@ -151,8 +151,8 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root,
   }
 
   zx::process new_process;
-  status = fdio_spawn_etc(job.get(), flags, kDevmgrPath, argv.get(), nullptr /* environ */,
-                          actions.size(), actions.get(), new_process.reset_and_get_address(),
+  status = fdio_spawn_etc(job.get(), flags, kDevmgrPath, argv.data(), nullptr /* environ */,
+                          actions.size(), actions.data(), new_process.reset_and_get_address(),
                           nullptr /* err_msg */);
   if (status != ZX_OK) {
     return status;

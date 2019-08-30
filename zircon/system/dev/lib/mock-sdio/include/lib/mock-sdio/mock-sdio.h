@@ -157,9 +157,9 @@ class MockSdio : ddk::SdioProtocol<MockSdio> {
     }
 
     if (write) {
-      EXPECT_BYTES_EQ(exp.data.get(), buffer, exp.data.size());
+      EXPECT_BYTES_EQ(exp.data.data(), buffer, exp.data.size());
     } else {
-      memcpy(buffer, exp.data.get(), exp.data.size());
+      memcpy(buffer, exp.data.data(), exp.data.size());
     }
   }
 

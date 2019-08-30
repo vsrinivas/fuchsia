@@ -250,7 +250,7 @@ TEST(AmlBadBlockTest, GetBadBlockListWithEntriesTest) {
     ASSERT_OK(status);
     ASSERT_EQ(bad_blocks.size(), expected.size());
     EXPECT_BYTES_EQ(reinterpret_cast<uint8_t*>(bad_blocks.get()),
-                    reinterpret_cast<uint8_t*>(expected.get()), expected.size() * sizeof(uint32_t),
+                    reinterpret_cast<uint8_t*>(expected.data()), expected.size() * sizeof(uint32_t),
                     "");
   };
   ASSERT_NO_FATAL_FAILURES(check_expected(4, 10, {4, 8}));

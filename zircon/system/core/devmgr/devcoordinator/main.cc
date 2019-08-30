@@ -819,7 +819,7 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
   coordinator->boot_args().Collect("zircon.system", &env);
   env.push_back(nullptr);
 
-  devmgr::devmgr_launch(g_handles.svc_job, "fshost", args.get(), env.get(), -1, handles, types, n,
+  devmgr::devmgr_launch(g_handles.svc_job, "fshost", args.data(), env.data(), -1, handles, types, n,
                         nullptr, FS_BOOT | FS_DEV | FS_SVC);
 }
 
@@ -955,7 +955,7 @@ int service_starter(void* arg) {
       args[3] = "--run";
       args[4] = vcmd.data();
     }
-    devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", args, env.get(), -1, handles, types,
+    devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", args, env.data(), -1, handles, types,
                           handle_count, nullptr, FS_ALL);
   }
 

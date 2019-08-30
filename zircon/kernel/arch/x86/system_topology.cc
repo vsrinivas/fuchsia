@@ -433,7 +433,7 @@ zx_status_t GenerateAndInitSystemTopology() {
     return status;
   }
 
-  return system_topology::Graph::InitializeSystemTopology(topology.get(), topology.size());
+  return system_topology::Graph::InitializeSystemTopology(topology.data(), topology.size());
 }
 
 void SystemTopologyInit(uint32_t) {

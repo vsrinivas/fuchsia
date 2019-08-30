@@ -209,7 +209,7 @@ zx_status_t Mounter::MountNativeFs(const char* binary, zx::channel device,
   }
   argv.push_back("mount");
   argv.push_back(nullptr);
-  return LaunchAndMount(cb, options, argv.get(), static_cast<int>(argv.size() - 1));
+  return LaunchAndMount(cb, options, argv.data(), static_cast<int>(argv.size() - 1));
 }
 
 zx_status_t Mounter::MountFat(zx::channel device, const mount_options_t& options,

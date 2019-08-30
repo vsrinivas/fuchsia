@@ -172,7 +172,7 @@ class FakeBadBlock : public ddk::BadBlockProtocol<FakeBadBlock> {
     if (bad_block_list_len < *bad_block_count) {
       return bad_block_list == nullptr ? ZX_OK : ZX_ERR_BUFFER_TOO_SMALL;
     }
-    memcpy(bad_block_list, grown_bad_blocks_.get(), grown_bad_blocks_.size());
+    memcpy(bad_block_list, grown_bad_blocks_.data(), grown_bad_blocks_.size());
     return result_;
   }
   zx_status_t BadBlockMarkBlockBad(uint32_t block) {

@@ -129,7 +129,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
   if (status != ZX_OK) {
     return status;
   }
-  status = args_vmo.write(boot_args.get(), 0, boot_args.size());
+  status = args_vmo.write(boot_args.data(), 0, boot_args.size());
   if (status != ZX_OK) {
     return status;
   }

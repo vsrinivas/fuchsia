@@ -91,7 +91,7 @@ void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t
         .is_read = false,
         .stop = true,
     }};
-    callback(cookie, ZX_OK, result_ops.get(), result_ops.size());
+    callback(cookie, ZX_OK, result_ops.data(), result_ops.size());
     return;
   }
 
@@ -112,7 +112,7 @@ void FakeI2c<AddressType, DataType>::I2cTransact(const i2c_op_t* op_list, size_t
 
     // Return to caller.
     fbl::Vector<i2c_op_t> empty_result = {};
-    callback(cookie, ZX_OK, empty_result.get(), empty_result.size());
+    callback(cookie, ZX_OK, empty_result.data(), empty_result.size());
     return;
   }
 

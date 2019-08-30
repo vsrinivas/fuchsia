@@ -401,7 +401,7 @@ zx_status_t IntelHDAStreamBase::DoGetStreamFormatsLocked(dispatcher::Channel* ch
     to_send = offsetof(audio_proto::StreamGetFmtsResp, format_ranges) + payload_sz;
 
     resp.first_format_range_ndx = static_cast<uint16_t>(formats_sent);
-    ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
+    ::memcpy(resp.format_ranges, supported_formats_.data() + formats_sent, payload_sz);
 
     res = channel->Write(&resp, sizeof(resp));
     if (res != ZX_OK) {

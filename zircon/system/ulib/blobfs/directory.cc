@@ -220,7 +220,7 @@ zx_status_t Directory::GetAllocatedRegions(fidl_txn_t* txn) const {
   if (allocations != 0) {
     status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);
     if (status == ZX_OK) {
-      status = vmo.write(buffer.get(), 0, sizeof(BlockRegion) * allocations);
+      status = vmo.write(buffer.data(), 0, sizeof(BlockRegion) * allocations);
     }
   }
   return fuchsia_blobfs_BlobfsGetAllocatedRegions_reply(

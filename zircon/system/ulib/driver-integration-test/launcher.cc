@@ -75,7 +75,7 @@ zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, fbl
       }
 
       // Write DeviceEntries to vmo.
-      status = vmo.write(entries.get(), list_size, entry_size);
+      status = vmo.write(entries.data(), list_size, entry_size);
       if (status != ZX_OK) {
         return status;
       }

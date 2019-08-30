@@ -67,7 +67,7 @@ key=value
   ASSERT_EQ(ZX_OK, status);
 
   const char expected[] = "key\0key=value";
-  auto actual = reinterpret_cast<const uint8_t*>(buf.get());
+  auto actual = reinterpret_cast<const uint8_t*>(buf.data());
   ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected), actual, buf.size(), "");
 
   // Parse an invalid config.

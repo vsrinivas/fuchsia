@@ -122,7 +122,7 @@ zx_status_t UsbVideoStream::Bind(const char* devname, usb_interface_descriptor_t
   // A video streaming interface containing a bulk endpoint for streaming
   // shall support only alternate setting zero.
   if (streaming_ep_type_ == USB_ENDPOINT_BULK &&
-      (streaming_settings_.size() > 1 || streaming_settings_.get()->alt_setting != 0)) {
+      (streaming_settings_.size() > 1 || streaming_settings_.data()->alt_setting != 0)) {
     zxlogf(ERROR, "invalid streaming settings for bulk endpoint\n");
     return ZX_ERR_BAD_STATE;
   }

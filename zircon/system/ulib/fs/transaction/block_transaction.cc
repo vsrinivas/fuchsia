@@ -75,7 +75,7 @@ zx_status_t BlockTxn::Transact() {
   }
   zx_status_t status = ZX_OK;
   if (requests_.size() != 0) {
-    status = handler_->Transaction(requests_.get(), requests_.size());
+    status = handler_->Transaction(requests_.data(), requests_.size());
   }
   requests_.reset();
   return status;

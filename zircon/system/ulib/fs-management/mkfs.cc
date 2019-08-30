@@ -59,7 +59,7 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
   zx_handle_t hnd = block_device.release();
   uint32_t id = FS_HANDLE_BLOCK_DEVICE_ID;
   status =
-      static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.get(), &hnd, &id, 1));
+      static_cast<zx_status_t>(cb(static_cast<int>(argv.size() - 1), argv.data(), &hnd, &id, 1));
   return status;
 }
 

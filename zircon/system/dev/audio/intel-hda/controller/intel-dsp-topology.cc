@@ -310,7 +310,7 @@ zx_status_t IntelDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction, const AudioD
       if (format.valid_bit_depth != endpoint_format.config.valid_bits_per_sample) {
         continue;
       }
-      *out_blob = endpoint_format.capabilities.get();
+      *out_blob = endpoint_format.capabilities.data();
       *out_size = endpoint_format.capabilities.size();
       return ZX_OK;
     }

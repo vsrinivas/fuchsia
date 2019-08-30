@@ -58,7 +58,7 @@ double Median(const fbl::Vector<double>& values) {
   for (double value : values) {
     copy.push_back(value);
   }
-  qsort(copy.get(), copy.size(), sizeof(copy[0]), CompareDoubles);
+  qsort(copy.data(), copy.size(), sizeof(copy[0]), CompareDoubles);
 
   size_t index = copy.size() / 2;
   // Interpolate two values if necessary.

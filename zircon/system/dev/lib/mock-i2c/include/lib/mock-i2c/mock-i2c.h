@@ -76,7 +76,7 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
       CheckI2cOp(op_list[i], &read_ops);
     }
 
-    callback(cookie, ZX_OK, read_ops.get(), read_ops.size());
+    callback(cookie, ZX_OK, read_ops.data(), read_ops.size());
   }
 
   zx_status_t I2cGetMaxTransferSize(size_t* out_size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -102,12 +102,12 @@ class MockI2c : ddk::I2cProtocol<MockI2c> {
     ASSERT_EQ(exp.data.size(), op.data_size, "Transaction size mismatch");
 
     if (exp.is_read) {
-      read_ops->push_back({.data_buffer = exp.data.get(),
+      read_ops->push_back({.data_buffer = exp.data.data(),
                            .data_size = exp.data.size(),
                            .is_read = true,
                            .stop = exp.stop});
     } else {
-      EXPECT_EQ(0, memcmp(exp.data.get(), op.data_buffer, exp.data.size()),
+      EXPECT_EQ(0, memcmp(exp.data.data(), op.data_buffer, exp.data.size()),
                 "Transaction data mismatch");
     }
   }

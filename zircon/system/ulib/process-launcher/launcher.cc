@@ -294,11 +294,11 @@ void LauncherImpl::PrepareLaunchpad(const fidl::Message& message, launchpad_t** 
   zx::channel old_ldsvc(launchpad_use_loader_service(lp, ldsvc_.release()));
 
   launchpad_load_from_vmo(lp, info->executable);
-  launchpad_set_args(lp, static_cast<int>(args.size()), args.get());
-  launchpad_set_environ(lp, environs.get());
-  launchpad_set_nametable(lp, nametable.size(), nametable.get());
-  launchpad_add_handles(lp, ids_.size(), reinterpret_cast<zx_handle_t*>(handles_.get()),
-                        ids_.get());
+  launchpad_set_args(lp, static_cast<int>(args.size()), args.data());
+  launchpad_set_environ(lp, environs.data());
+  launchpad_set_nametable(lp, nametable.size(), nametable.data());
+  launchpad_add_handles(lp, ids_.size(), reinterpret_cast<zx_handle_t*>(handles_.data()),
+                        ids_.data());
   // launchpad_add_handles() took ownership of the handles in handles_.
   for (auto& handle : handles_) {
     __UNUSED zx_handle_t old_handle = handle.release();

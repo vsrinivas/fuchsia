@@ -367,7 +367,7 @@ zx_status_t SimpleAudioStream::OnGetStreamFormats(dispatcher::Channel* channel,
     payload_sz = static_cast<uint16_t>(sizeof(resp.format_ranges[0]) * todo);
 
     resp.first_format_range_ndx = formats_sent;
-    ::memcpy(resp.format_ranges, supported_formats_.get() + formats_sent, payload_sz);
+    ::memcpy(resp.format_ranges, supported_formats_.data() + formats_sent, payload_sz);
 
     res = channel->Write(&resp, sizeof(resp));
     if (res != ZX_OK) {

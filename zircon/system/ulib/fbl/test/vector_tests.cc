@@ -165,7 +165,7 @@ bool VectorTestAccessRelease() {
     ASSERT_TRUE(ItemTraits::CheckLiveCount(size));
 
     gen.Reset();
-    ItemType* data = vector.get();
+    ItemType* data = vector.data();
     for (size_t i = 0; i < size; i++) {
       auto base = gen.NextValue();
       // Verify the contents using the [] operator
@@ -822,7 +822,7 @@ bool VectorTestImplicitConversion() {
   END_TEST;
 }
 
-bool VectorGetConstness() {
+bool VectorDataConstness() {
   BEGIN_TEST;
 
   fbl::Vector<int> vector_int;
@@ -830,8 +830,8 @@ bool VectorGetConstness() {
   auto& ref_vector_int = vector_int;
   const auto& const_ref_vector_int = vector_int;
 
-  auto __UNUSED int_ptr = ref_vector_int.get();
-  auto __UNUSED const_int_ptr = const_ref_vector_int.get();
+  auto __UNUSED int_ptr = ref_vector_int.data();
+  auto __UNUSED const_int_ptr = const_ref_vector_int.data();
 
   static_assert(!std::is_const_v<std::remove_pointer_t<decltype(int_ptr)>>);
   static_assert(std::is_const_v<std::remove_pointer_t<decltype(const_int_ptr)>>);
@@ -871,7 +871,7 @@ RUN_FOR_ALL(VectorTestNoAllocCheck)
 RUN_TEST(VectorTestInitializerList<ValueTypeTraits>)
 RUN_TEST(VectorTestInitializerList<RefPtrTraits>)
 RUN_TEST(VectorTestImplicitConversion)
-RUN_TEST(VectorGetConstness)
+RUN_TEST(VectorDataConstness)
 END_TEST_CASE(vector_tests)
 
 }  // namespace fbl::tests

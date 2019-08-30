@@ -825,12 +825,12 @@ static void platform_init_smp(void) {
     ASSERT(found_bp);
   }
 
-  x86_init_smp(apic_ids.get(), static_cast<uint32_t>(apic_ids.size()));
+  x86_init_smp(apic_ids.data(), static_cast<uint32_t>(apic_ids.size()));
 
   // trim the boot cpu out of the apic id list before passing to the AP booting routine
   apic_ids.erase(bsp_apic_id_index);
 
-  x86_bringup_aps(apic_ids.get(), static_cast<uint32_t>(apic_ids.size()));
+  x86_bringup_aps(apic_ids.data(), static_cast<uint32_t>(apic_ids.size()));
 }
 
 zx_status_t platform_mp_prep_cpu_unplug(uint cpu_id) {

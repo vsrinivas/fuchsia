@@ -165,11 +165,11 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
   zx::process proc;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   if (executable.is_valid()) {
-    status = fdio_spawn_vmo(job_copy.get(), spawn_flags, executable.release(), argv, env.get(),
-                            actions.size(), actions.get(), proc.reset_and_get_address(), err_msg);
+    status = fdio_spawn_vmo(job_copy.get(), spawn_flags, executable.release(), argv, env.data(),
+                            actions.size(), actions.data(), proc.reset_and_get_address(), err_msg);
   } else {
-    status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv, env.get(), actions.size(),
-                            actions.get(), proc.reset_and_get_address(), err_msg);
+    status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv, env.data(), actions.size(),
+                            actions.data(), proc.reset_and_get_address(), err_msg);
   }
   if (status != ZX_OK) {
     printf("devcoordinator: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
