@@ -35,18 +35,17 @@ template("prebuilt_test_manifest") {
     prefixed_test_package = "${invoker.package_name_prefix}_${test.package}"
     test_package = test.package
     component_name = test.component_name
-
+    runner = "run"
+    if (defined(test.runner)) {
+      runner = test.runner
+    }
     prebuilt_test_package(prefixed_test_package) {
       archive = "${invoker.archive_dir}/${test_package}.far"
       package = prefixed_test_package
-      tests = [
-        {
-          component_name = component_name
-          forward_variables_from(invoker, [ "environments" ])
-        },
-      ]
+      component_name = component_name
+      runner = runner
+      forward_variables_from(invoker, [ "environments" ])
     }
-
     test_targets += [ ":${prefixed_test_package}" ]
   }
 

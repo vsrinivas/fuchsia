@@ -15,18 +15,16 @@ import("//build/testing/test_spec.gni")
 #   package (required)
 #     [string] Name of the package.
 #
-#   tests (required)
-#     [list of scopes] Defines the component tests in the package.
+#   component_name (required)
+#     [string] Component name to test.
 #
-#     Entries in a scope in the tests list:
+#   runner (required)
+#     [string] The runner used to execute the test(run|run_test_component).
 #
-#       component_name (required)
-#         [string] Component name to test.
+#   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#     [list of scopes] Device environments in which the test should run.
 #
-#       environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
-#         [list of scopes] Device environments in which the test should run.
-#
-#         Environment scope is defined in //build/testing/test_spec.gni
+#     Environment scope is defined in //build/testing/test_spec.gni
 #
 #   deps (optional)
 #     [list of labels]: List of labels that the test depends on.
@@ -34,29 +32,27 @@ import("//build/testing/test_spec.gni")
 template("prebuilt_test_package") {
   assert(defined(invoker.archive), "archive must be defined.")
   assert(defined(invoker.package), "package must be defined.")
-  assert(defined(invoker.tests), "tests must be defined.")
+  assert(defined(invoker.component_name), "component_name must be defined.")
+  assert(defined(invoker.runner), "runner must be defined.")
 
-  _spec_labels = []
-  foreach(test, invoker.tests) {
-    _spec_name = "${target_name}_${test.component_name}_spec"
-    test_spec(_spec_name) {
-      name = "${target_name}"
+  _spec_name = "${target_name}_${invoker.component_name}_spec"
+  test_spec(_spec_name) {
+    name = "${target_name}"
 
-      # "location" is intentionally empty since it's not used for running prebuilt package tests
-      location = ""
-      command = [
-        "run-test-component",
-        "fuchsia-pkg://fuchsia.com/${invoker.package}#meta/${test.component_name}.cmx",
-      ]
+    # "location" is intentionally empty since it's not used for running prebuilt package tests
+    location = ""
+    command = [
+      "${invoker.runner}",
+      "fuchsia-pkg://fuchsia.com/${invoker.package}#meta/${invoker.component_name}.cmx",
+    ]
 
-      forward_variables_from(invoker, [ "deps" ])
-      forward_variables_from(test, [ "environments" ])
-    }
-    _spec_labels += [ ":${_spec_name}" ]
+    forward_variables_from(invoker, [ "deps" ])
+    forward_variables_from(invoker, [ "environments" ])
   }
-
-  prebuilt_package(target_name) {
+  prebuilt_package(invoker.package) {
     archive = invoker.archive
-    deps = _spec_labels
+    deps = [
+      ":${_spec_name}",
+    ]
   }
 }
