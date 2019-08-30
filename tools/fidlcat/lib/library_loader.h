@@ -388,6 +388,7 @@ class Library {
 
   Library& operator=(const Library&) = delete;
   Library(const Library&) = delete;
+  ~Library();
 
  private:
   Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
@@ -414,6 +415,7 @@ class Library {
 //          should be one of the last objects we destroy).
 class LibraryLoader {
  public:
+  friend class Library;
   LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams, LibraryReadError* err);
 
   LibraryLoader& operator=(const LibraryLoader&) = delete;
@@ -458,12 +460,27 @@ class LibraryLoader {
       return;
     }
     std::string library_name = document["name"].GetString();
-    representations_.emplace(std::piecewise_construct, std::forward_as_tuple(library_name),
-                             std::forward_as_tuple(new Library(this, document, ordinal_map_)));
+    if (representations_.find(library_name) == representations_.end()) {
+      representations_.emplace(std::piecewise_construct, std::forward_as_tuple(library_name),
+                               std::forward_as_tuple(new Library(this, document, ordinal_map_)));
+    }
   }
 
-  std::map<std::string, std::unique_ptr<Library>> representations_;
+  void Delete(const Library* library) {
+    // The only way to delete a library is to remove it from representations_, so we don't need to
+    // do that explicitly.  However...
+    for (const auto& iface : library->interfaces()) {
+      for (const auto& method : iface->methods()) {
+        ordinal_map_.erase(method->ordinal());
+        ordinal_map_.erase(method->old_ordinal());
+      }
+    }
+  }
+
+  // Because Delete() above is run whenever a Library is destructed, we want ordinal_map_ to be
+  // intact when a Library is destructed.  Therefore, ordinal_map_ has to come first.
   std::map<Ordinal64, std::unique_ptr<std::vector<const InterfaceMethod*>>> ordinal_map_;
+  std::map<std::string, std::unique_ptr<Library>> representations_;
 };
 
 }  // namespace fidlcat

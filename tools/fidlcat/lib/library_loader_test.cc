@@ -42,6 +42,63 @@ TEST(LibraryLoader, LoadSimple) {
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
 }
 
+// Ensure that, if you load two libraries with the same name, the last one in the list is the one
+// that sticks.
+TEST(LibraryLoader, LoadSecondWins) {
+  fidlcat_test::ExampleMap examples;
+  std::vector<std::unique_ptr<std::istream>> library_files;
+  std::string frobinator_value;
+  const std::string file_to_replace = "frobinator.fidl.json";
+  for (const auto& element : examples.map()) {
+    std::unique_ptr<std::istream> file =
+        std::make_unique<std::istringstream>(std::istringstream(element.second));
+
+    library_files.push_back(std::move(file));
+    if (0 == element.first.compare(element.first.length() - file_to_replace.length(),
+                                   file_to_replace.length(), file_to_replace)) {
+      frobinator_value = element.second;
+    }
+  }
+  ASSERT_NE(frobinator_value, "") << "Frobinator library not found";
+
+  // Duplicate the frobinator entry, replacing the Frob method with a Frog method
+  const std::string old_method = "\"Frob\"";
+  const std::string new_method = "\"Frog\"";
+  size_t pos = frobinator_value.find(old_method);
+  while (pos != std::string::npos) {
+    frobinator_value.replace(pos, old_method.size(), new_method);
+    pos = frobinator_value.find(old_method, pos + new_method.size());
+  }
+  std::unique_ptr<std::istream> file =
+      std::make_unique<std::istringstream>(std::istringstream(frobinator_value));
+  library_files.push_back(std::move(file));
+
+  LibraryReadError err;
+  LibraryLoader loader = LibraryLoader(&library_files, &err);
+  ASSERT_EQ(LibraryReadError::kOk, err.value);
+
+  Library* library_ptr = loader.GetLibraryFromName("fidl.test.frobinator");
+
+  std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
+  const Interface* found_interface = nullptr;
+  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+
+  ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
+
+  // We should find Frog, and not Frob.
+  std::string kReplacedFullMethodName = "fidl.test.frobinator/Frobinator.Frob";
+  const InterfaceMethod* not_found_method = nullptr;
+  found_interface->GetMethodByFullName(kReplacedFullMethodName, &not_found_method);
+
+  ASSERT_EQ(not_found_method, nullptr) << "Found replaced method " << kReplacedFullMethodName;
+
+  std::string kDesiredFullMethodName = "fidl.test.frobinator/Frobinator.Frog";
+  const InterfaceMethod* found_method = nullptr;
+  found_interface->GetMethodByFullName(kDesiredFullMethodName, &found_method);
+
+  ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
+}
+
 TEST(LibraryLoader, LoadFromOrdinal) {
   fidlcat_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;

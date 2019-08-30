@@ -252,6 +252,8 @@ Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
   }
 }
 
+Library::~Library() { enclosing_loader()->Delete(this); }
+
 void Library::DecodeTypes() {
   if (decoded_) {
     return;
@@ -329,7 +331,10 @@ bool Library::GetInterfaceByName(const std::string& name, const Interface** ptr)
 LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams,
                              LibraryReadError* err) {
   err->value = LibraryReadError::kOk;
-  for (const auto& stream : *library_streams) {
+  // Go backwards through the streams; we refuse to load the same library twice, and the last one
+  // wins.
+  for (auto i = library_streams->rbegin(); i != library_streams->rend(); ++i) {
+    const auto& stream = *i;
     std::string ir(std::istreambuf_iterator<char>(*stream), {});
     if (stream->fail()) {
       err->value = LibraryReadError ::kIoError;
