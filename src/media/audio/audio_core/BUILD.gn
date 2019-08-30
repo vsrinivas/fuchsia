@@ -169,17 +169,17 @@ source_set("audio_core_lib") {
     "//sdk/lib/media/cpp:no_converters",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/fxl",
-    "//src/media/audio/audio_core/mixer:audio_mixer_lib",
+    "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/effects_loader",
     "//src/media/audio/lib/logging",
     "//src/media/audio/lib/wav_writer:wav_writer",
-    "//zircon/system/fidl/fuchsia-hardware-audio",
-    "//zircon/system/fidl/fuchsia-scheduler",
     "//zircon/public/lib/audio-proto-utils",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-hardware-audio",
+    "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }
 
@@ -220,9 +220,9 @@ executable("unittest_bin") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-scheduler",
-    "//zircon/public/lib/fzl",
   ]
 }
 
@@ -244,7 +244,7 @@ group("tests") {
 
   deps = [
     ":audio_core_unittests",
-    "mixer:audio_mixer_tests",
+    "mixer:tests",
     "test",
   ]
 }

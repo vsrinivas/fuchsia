@@ -85,26 +85,6 @@ TEST(DataFormats, LinearSampler_Float) {
   EXPECT_NE(nullptr, SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 2, 48000, 4, 44100));
 }
 
-// Create OutputProducer objects for outgoing buffers of type uint8
-TEST(DataFormats, OutputProducer_8) {
-  EXPECT_NE(nullptr, SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2));
-}
-
-// Create OutputProducer objects for outgoing buffers of type int16
-TEST(DataFormats, OutputProducer_16) {
-  EXPECT_NE(nullptr, SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 4));
-}
-
-// Create OutputProducer objects for outgoing buffers of type int24-in-32
-TEST(DataFormats, OutputProducer_24) {
-  EXPECT_NE(nullptr, SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 3));
-}
-
-// Create OutputProducer objects for outgoing buffers of type float
-TEST(DataFormats, OutputProducer_Float) {
-  EXPECT_NE(nullptr, SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1));
-}
-
 //
 // PassThru tests - can audio data flow through the different stages in our
 // system without being altered, using numerous possible configurations?

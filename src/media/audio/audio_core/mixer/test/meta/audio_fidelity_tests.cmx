@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/audio_mixer_tests"
+        "binary": "test/audio_fidelity_tests"
     },
     "sandbox": {
         "services": []

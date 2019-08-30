@@ -1,0 +1,59 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":audio_fidelity_tests",
+  ]
+}
+
+executable("test_bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  output_name = "audio_fidelity_tests"
+
+  sources = [
+    "audio_analysis.cc",
+    "audio_analysis.h",
+    "audio_analysis_tests.cc",
+    "audio_performance.cc",
+    "audio_performance.h",
+    "audio_result.cc",
+    "audio_result.h",
+    "frequency_set.cc",
+    "frequency_set.h",
+    "main.cc",
+    "mixer_bitwise_tests.cc",
+    "mixer_gain_tests.cc",
+    "mixer_range_tests.cc",
+    "mixer_resampling_tests.cc",
+    "mixer_response_tests.cc",
+    "mixer_tests_recap.cc",
+    "mixer_tests_shared.cc",
+    "mixer_tests_shared.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:test_settings",
+    "//src/media/audio/audio_core/mixer",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+test_package("audio_fidelity_tests") {
+  deps = [
+    ":test_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_fidelity_tests"
+      environments = basic_envs
+    },
+  ]
+}

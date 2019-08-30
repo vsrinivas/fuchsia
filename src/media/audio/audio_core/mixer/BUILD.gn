@@ -4,14 +4,7 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-group("mixer") {
-  testonly = true
-  deps = [
-    ":audio_mixer_lib",
-  ]
-}
-
-source_set("audio_mixer_lib") {
+source_set("mixer") {
   public_configs = [ "..:audio_core_config" ]
   sources = [
     "constants.h",
@@ -45,50 +38,39 @@ source_set("audio_mixer_lib") {
   ]
 }
 
-executable("test") {
+group("tests") {
   testonly = true
-  output_name = "audio_mixer_tests"
-
-  sources = [
-    "test/audio_analysis.cc",
-    "test/audio_analysis.h",
-    "test/audio_analysis_tests.cc",
-    "test/audio_performance.cc",
-    "test/audio_performance.h",
-    "test/audio_result.cc",
-    "test/audio_result.h",
-    "test/frequency_set.cc",
-    "test/frequency_set.h",
-    "test/main.cc",
-    "test/mixer_bitwise_tests.cc",
-    "test/mixer_gain_tests.cc",
-    "test/mixer_range_tests.cc",
-    "test/mixer_resampling_tests.cc",
-    "test/mixer_response_tests.cc",
-    "test/mixer_tests_recap.cc",
-    "test/mixer_tests_shared.cc",
-    "test/mixer_tests_shared.h",
-    "usage_gain_settings_unittest.cc",
-  ]
-
   deps = [
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/media/audio/audio_core/mixer:audio_mixer_lib",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
+    ":audio_mixer_unittests",
+    "test",
   ]
 }
 
-test_package("audio_mixer_tests") {
+test_package("audio_mixer_unittests") {
   deps = [
-    ":test",
+    ":unittest_bin",
   ]
 
   tests = [
     {
-      name = "audio_mixer_tests"
+      name = "audio_mixer_unittests"
       environments = basic_envs
     },
+  ]
+}
+
+executable("unittest_bin") {
+  testonly = true
+  output_name = "audio_mixer_unittests"
+
+  sources = [
+    "bookkeeping_unittest.cc",
+    "output_producer_unittest.cc",
+    "usage_gain_settings_unittest.cc",
+  ]
+
+  deps = [
+    ":mixer",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

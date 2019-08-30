@@ -1,50 +1,46 @@
-# Audio Mixer tests
+# Audio Fidelity tests
 
 These tests validate the core of Fuchsia's system audio mixing (our Mixer, OutputProducer and Gain
-objects) at a unit level, using tests in these areas:
+objects), using tests in these areas:
 
-1) **DataFormats**
-2) **Pass-Thru**
-3) **Gain/Mute**
-4) **Volume Ramping**
-5) **Timing**
-6) **Numerical Analysis**
-7) **Noise Floor**
-8) **Frequency Response**
-9) **Signal-to-Noise-and-Distortion (SINAD)**
-10) **Dynamic Range**
+1) **Gain/Mute**
+2) **Volume Ramping**
+3) **Timing**
+4) **Numerical Analysis**
+5) **Noise Floor**
+6) **Frequency Response**
+7) **Signal-to-Noise-and-Distortion (SINAD)**
+8) **Dynamic Range**
+9) **Out-of-Band Rejection**
 
-Items 1 & 2 have been grouped into a file of __bitwise__ tests; items 3 & 4 are located in a file of
-__gain__ tests and include overflow, underflow validation; item 5 is related to interpolation
-precision and is included in __resampling__ tests. Item 6 is a set of test functions related to how
-we analyze our results (such as the Fast Fourier Transform) that have been separated into their own
-__analysis__ source file and tested in their own right. Items 7, 8 & 9 use these test functions to
-perform audio fidelity testing in the frequency domain, ensuring that our processing does not color
-the input (frequency response) nor add additional artifacts (signal-to-noise-and-distortion, or
-SINAD): __response__ tests. Item 10 (__range__ tests) measures the accuracy of our gain control, as
-well as its impact on our noise floor.
-
+Items 1 & 2 are located in a file of __gain__ tests and include overflow, underflow validation; item
+3 is related to interpolation precision and is included in __resampling__ tests. Item 4 is a set of
+test functions related to how we analyze our results (such as the Fast Fourier Transform) that have
+been separated into their own __analysis__ source file and tested in their own right. Items 5, 6 & 7
+use these test functions to perform audio fidelity testing in the frequency domain, ensuring that
+our processing does not color the input (frequency response) nor add additional artifacts (signal-
+to-noise-and-distortion, or SINAD): __response__ tests. Item 8 (__range__ tests) measures the
+accuracy of our gain control, as well as its impact on our noise floor. Item 9 is a variant on
+item 7, specifically how well we reject incoming signals when sample-rate conversion should entirely
+eliminate them.
 
 Future areas for mixer evaluation may include:
 
-11) **Out-of-Band Rejection**
-12) **Impulse Response**
-13) **Phase Response**
+10) **Phase Response**
+11) **Impulse Response**
 
 
-Frequency Response/SINAD and Dynamic Range tests (as well as Noise Floor tests that were previously
-considered transparency tests) have been added as normal unit tests, as they are tightly related to
-mixer and gain objects respectively. Fuller versions of frequency response, SINAD and dynamic range
-tests are included in audio mixer "full profile" tests that can be executed from the command-line by
-adding the __--full__ flag, rather than as a part of the CQ test set.
+Cursory tests of Frequency Response, SINAD, Dynamic Range, Noise Floor and Out-of-Band Rejection
+are part of the normal execution of this binary. Fuller versions are included in "full profile"
+fidelity testing that can be executed from the command-line by adding the __--full__ flag.
 
 
 ## FrequencySet
 
-The frequency-based tests (noise floor, frequency response, sinad and dynamic range) use a series of
-individual sinusoid waves, as inputs to the audio subsystem. Sinusoids are universally used in this
-type of testing, because they are easily and repeatably generated, and they cause predictable
-_responses_.
+The frequency-based tests (noise floor, frequency response, sinad, dynamic range and out-of-band
+rejection) use a series of individual sinusoid waves, as inputs to the audio subsystem. Sinusoids
+are universally used in this type of testing, because they are easily and repeatably generated, and
+they cause predictable _responses_.
 
 Note that although we use waves of various frequencies and amplitudes, we always send only a single
 wave at a time. Future tests such as Intermodulation (SMPTE IM) or Difference Frequency Distortion
@@ -55,7 +51,8 @@ The __summary__ versions of these tests use either a single frequency -- 1000 Hz
 spectrum, using the standard set of _3 frequencies per octave_ (20, 25, 31, 40, 50, 63, 80, 100, 125,
 160, 200, ...) plus a few extra frequencies near 20-24 kHz. Eight additional out-of-band frequencies
 are included, spanning from 25 kHz to 96 kHz, always taking frequency aliasing into account when
-above the sample rate. These out-of-band frequencies are only used in Out-of-Band Rejection tests (formerly measured as a part of SINAD tests).
+above the sample rate. These out-of-band frequencies are only used in Out-of-Band Rejection tests
+(formerly measured as a part of SINAD tests).
 
 Although sinusoids are continuous, we use them to generate _discrete_ signals: a series of snapshots
 _sampled_ at specific instants in time. To characterize a waveform most effectively, it is best to
@@ -120,7 +117,7 @@ out-of-band rejection and dynamic range, the additional digit would be "floored"
 
 ## Performance Profiling
 
-The audio_mixer_tests test binary also contains the ability to profile the performance of the Mixer,
+The audio_fidelity_tests test binary also contains the ability to profile the performance of the Mixer,
 Gain and OutputProducer classes. Use the __--profile__ flag to trigger these micro-benchmark tests,
 which use *zx::clock::get_monotonic()* to measure the time required for a target to execute Mix() or
 ProduceOutput() calls (for Mixer/Gain or OutputProducer objects, respectively) to generate 64k
@@ -143,12 +140,6 @@ behaves _as-implemented_.
 Below, the existing mixer-related bugs are classified in groups related to their stage in the flow
 of audio through the mixer:
 
-**Normalize (Ingest)**
-
-**Rechannel**
-
-**Interpolate**
-
 *   MTWN-87
 
     Today, interpolation and media scheduling is performed using audio sample positions that are
@@ -168,8 +159,6 @@ extensibility.
 new ones with increased fidelity. This would more fully allow clients to make the
 quality-vs.-performance tradeoff themselves.
 
-**Gain**
-
 *   MTWN-70
 
     The Gain object contains two functions, through which clients can provide two (float) values and
@@ -177,14 +166,6 @@ receive a (fixed-point) representation of their product. The documented behavior
 multi-threaded scenarios should be clarified (might be as easy as changing a "should" to a "must").
 Depending on whether single-threaded is a requirement, we will need additional product code and
 tests.
-
-**Accumulate**
-
-**Denormalize (Output)**
-
-**Numerous Stages**
-
-**Interface to AudioRenderers (or other parts of audio_core)**
 
 *   MTWN-88
 

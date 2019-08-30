@@ -12,46 +12,6 @@ namespace media::audio::test {
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
 
-TEST(Bookkeeping, Defaults) {
-  Bookkeeping info;
-
-  EXPECT_EQ(info.step_size, Mixer::FRAC_ONE);
-  EXPECT_EQ(info.rate_modulo, 0u);
-  EXPECT_EQ(info.denominator, 0u);
-  EXPECT_EQ(info.src_pos_modulo, 0u);
-
-  EXPECT_EQ(info.SnapshotDenominatorFromDestTrans(), 1u);
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_time(), 0);
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_time(), 0);
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.subject_delta(), 0u);
-  EXPECT_EQ(info.dest_frames_to_frac_source_frames.reference_delta(), 1u);
-  EXPECT_EQ(info.dest_trans_gen_id, kInvalidGenerationId);
-
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.subject_time(), 0);
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.reference_time(), 0);
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.subject_delta(), 0u);
-  EXPECT_EQ(info.clock_mono_to_frac_source_frames.reference_delta(), 1u);
-  EXPECT_EQ(info.source_trans_gen_id, kInvalidGenerationId);
-}
-
-TEST(Bookkeeping, Clocks) {
-  Bookkeeping info;
-
-  info.dest_frames_to_frac_source_frames = TimelineFunction(0, 1, 44100u, 48000u);
-  EXPECT_EQ(info.SnapshotDenominatorFromDestTrans(), 160u);
-}
-
-TEST(Bookkeeping, Reset) {
-  Bookkeeping info;
-
-  info.mixer = std::make_unique<mixer::NoOp>();
-  info.src_pos_modulo = 4321u;
-  info.Reset();
-  EXPECT_EQ(info.src_pos_modulo, 0u);
-
-  // A later test verifies the clearing of the Mixer's filter cache upon Reset.
-}
-
 //
 // Timing (Resampling) tests
 //
