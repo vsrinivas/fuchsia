@@ -10,6 +10,7 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
 #include <string>
 #include <vector>
 
@@ -66,8 +67,16 @@ bool CreateDirectoryAt(int root_fd, const std::string& full_path) {
 }
 
 bool ReadDirContents(const std::string& path, std::vector<std::string>* out) {
+  return ReadDirContentsAt(AT_FDCWD, path, out);
+}
+
+bool ReadDirContentsAt(int root_fd, const std::string& path, std::vector<std::string>* out) {
   out->clear();
-  DIR* dir = opendir(path.c_str());
+  int fd = openat(root_fd, path.c_str(), O_RDONLY | O_DIRECTORY);
+  if (fd < 0) {
+    return false;
+  }
+  DIR* dir = fdopendir(fd);
   if (!dir) {
     return false;
   }

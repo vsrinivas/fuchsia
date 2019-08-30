@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/files/directory.h"
+
 #include <errno.h>
 #include <fcntl.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/files/unique_fd.h"
@@ -69,6 +70,27 @@ TEST(Directory, ReadDirContents) {
   EXPECT_THAT(contents, ::testing::UnorderedElementsAre(".", "..", "foo", "bar", "baz"));
 #endif
   EXPECT_FALSE(ReadDirContents("bogus", &contents));
+  EXPECT_EQ(errno, ENOENT);
+}
+
+TEST(Directory, ReadDirContentsAt) {
+  ScopedTempDir dir;
+  EXPECT_TRUE(IsDirectory(dir.path()));
+  EXPECT_TRUE(CreateDirectory(fxl::Substitute("$0/foo", dir.path())));
+  EXPECT_TRUE(CreateDirectory(fxl::Substitute("$0/bar", dir.path())));
+  EXPECT_TRUE(CreateDirectory(fxl::Substitute("$0/baz", dir.path())));
+
+  int dir_fd = open(dir.path().c_str(), O_RDONLY | O_DIRECTORY);
+  EXPECT_GE(dir_fd, 0);
+
+  std::vector<std::string> contents;
+  EXPECT_TRUE(ReadDirContentsAt(dir_fd, ".", &contents));
+#if defined(OS_FUCHSIA)
+  EXPECT_THAT(contents, ::testing::UnorderedElementsAre(".", "foo", "bar", "baz"));
+#else
+  EXPECT_THAT(contents, ::testing::UnorderedElementsAre(".", "..", "foo", "bar", "baz"));
+#endif
+  EXPECT_FALSE(ReadDirContentsAt(dir_fd, "bogus", &contents));
   EXPECT_EQ(errno, ENOENT);
 }
 

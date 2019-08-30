@@ -33,6 +33,10 @@ bool CreateDirectoryAt(int root_fd, const std::string& path);
 // List the contents of a directory. If returns false, errno will be set.
 bool ReadDirContents(const std::string& path, std::vector<std::string>* out);
 
+// List the contents of a directory. If returns false, errno will be set. If |path| is relative,
+// resolve it with |root_fd| as reference. See |openat(2)|.
+bool ReadDirContentsAt(int root_fd, const std::string& path, std::vector<std::string>* out);
+
 }  // namespace files
 
 #endif  // LIB_FXL_FILES_DIRECTORY_H_
