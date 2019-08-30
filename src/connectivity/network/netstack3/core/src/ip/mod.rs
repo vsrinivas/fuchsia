@@ -35,7 +35,7 @@ use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpContext, IcmpEventDispatcher,
-    Icmpv4State, Icmpv4StateBuilder, Icmpv6State,
+    Icmpv4Context, Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder, Icmpv6State,
 };
 use crate::ip::igmp::{IgmpContext, IgmpInterface, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
@@ -46,7 +46,9 @@ use crate::ip::reassembly::{
     FragmentProcessingState, IpLayerFragmentCache,
 };
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
-use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions};
+use crate::wire::ipv4::{
+    Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions, Ipv4PacketRaw,
+};
 use crate::wire::ipv6::Ipv6Packet;
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState, TimerId, TimerIdInner};
 
@@ -1727,6 +1729,34 @@ impl<B: BufferMut, D: BufferDispatcher<B>> IcmpContext<Ipv4, B> for Context<D> {
         }
 
         Ok(())
+    }
+}
+
+impl<B: BufferMut, D: BufferDispatcher<B>> Icmpv4Context<B> for Context<D> {
+    fn receive_icmpv4_error(
+        &mut self,
+        original_packet: Ipv4PacketRaw<&[u8]>,
+        error: Icmpv4ErrorCode,
+    ) {
+        // Import this here (rather than for the whole module) to avoid
+        // introducing ambiguities with the methods provided by the IpPacket
+        // trait.
+        use crate::wire::ipv4::Ipv4Header;
+
+        self.increment_counter("Icmpv4Context::receive_icmpv4_error");
+        trace!("Icmpv4Context::receive_icmpv4_error({:?})", error);
+        match original_packet.proto() {
+            IpProto::Icmp => {
+                crate::ip::icmp::receive_icmpv4_socket_error(self, original_packet, error)
+            }
+            IpProto::Udp => {
+                log_unimplemented!((), "receive_icmpv4_error: receive ICMP error for UDP")
+            }
+            _ => trace!(
+                "receive_icmpv4_error: received ICMPv4 error message for unsupported protocol {:?}",
+                original_packet.proto()
+            ),
+        }
     }
 }
 

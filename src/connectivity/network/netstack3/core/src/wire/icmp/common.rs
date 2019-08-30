@@ -74,12 +74,27 @@ pub(crate) struct IcmpEchoRequest {
 }
 
 impl IcmpEchoRequest {
+    /// Constructs a new `IcmpEchoRequest`.
     pub(crate) fn new(id: u16, seq: u16) -> IcmpEchoRequest {
         IcmpEchoRequest { id_seq: IdAndSeq::new(id, seq) }
     }
 
+    /// Constructs an Echo Reply to this Echo Request.
+    ///
+    /// `reply` constructs an `IcmpEchoReply` with the same ID and sequence
+    /// number as the original request.
     pub(crate) fn reply(self) -> IcmpEchoReply {
         IcmpEchoReply { id_seq: self.id_seq }
+    }
+
+    /// The ID of this message.
+    pub(crate) fn id(&self) -> u16 {
+        self.id_seq.id.get()
+    }
+
+    /// The sequence number of this message.
+    pub(crate) fn seq(&self) -> u16 {
+        self.id_seq.seq.get()
     }
 }
 

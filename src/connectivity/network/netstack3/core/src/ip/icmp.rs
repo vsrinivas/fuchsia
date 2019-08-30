@@ -10,6 +10,7 @@ use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{MulticastAddress, SpecifiedAddr, Witness};
 use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
 use specialize_ip_macro::specialize_ip_address;
+use zerocopy::ByteSlice;
 
 use crate::context::{CounterContext, StateContext};
 use crate::device::ndp::NdpPacketHandler;
@@ -20,13 +21,27 @@ use crate::ip::path_mtu::PmtuHandler;
 use crate::ip::{IpDeviceIdContext, IpProto, IPV6_MIN_MTU};
 use crate::transport::ConnAddrMap;
 use crate::wire::icmp::{
-    peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpIpExt, IcmpMessageType,
-    IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode,
-    Icmpv4Packet, Icmpv4ParameterProblem, Icmpv4ParameterProblemCode, Icmpv4TimeExceededCode,
+    peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpIpExt, IcmpMessage,
+    IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
+    IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
+    Icmpv4ParameterProblemCode, Icmpv4RedirectCode, Icmpv4TimeExceededCode,
     Icmpv6DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem,
-    Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody,
+    Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody, OriginalPacket,
 };
+use crate::wire::ipv4::Ipv4PacketRaw;
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
+
+/// An ICMPv4 error type and code.
+///
+/// Each enum variant corresponds to a particular error type, and contains the
+/// possible codes for that error type.
+#[derive(Copy, Clone, Debug)]
+pub(crate) enum Icmpv4ErrorCode {
+    DestUnreachable(Icmpv4DestUnreachableCode),
+    Redirect(Icmpv4RedirectCode),
+    TimeExceeded(Icmpv4TimeExceededCode),
+    ParameterProblem(Icmpv4ParameterProblemCode),
+}
 
 /// A builder for ICMPv4 state.
 #[derive(Copy, Clone)]
@@ -219,8 +234,22 @@ pub(crate) trait IcmpContext<I: IcmpIpExt, B: BufferMut>:
 pub(crate) trait Icmpv4Context<B: BufferMut>:
     IcmpContext<Ipv4, B> + StateContext<(), Icmpv4State>
 {
+    // TODO(joshlf): If we end up needing to respond to these messages with new
+    // outbound packets, then perhaps it'd be worth passing the original buffer
+    // so that it can be reused?
+
+    /// Receive an ICMP(v4) error message.
+    ///
+    /// `original_packet` is the packet that triggered the error. Some of its
+    /// contents - including at least 8 bytes of the packet's body - are
+    /// encapsulated in the error message, and provided here so that the error
+    /// can be associated with a transport-layer socket.
+    fn receive_icmpv4_error(
+        &mut self,
+        original_packet: Ipv4PacketRaw<&[u8]>,
+        error: Icmpv4ErrorCode,
+    );
 }
-impl<B: BufferMut, C: IcmpContext<Ipv4, B> + StateContext<(), Icmpv4State>> Icmpv4Context<B> for C {}
 
 /// The execution context for ICMPv6.
 pub(crate) trait Icmpv6Context<B: BufferMut>:
@@ -331,7 +360,6 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
 
             if dest_unreachable.code() == Icmpv4DestUnreachableCode::FragmentationRequired {
                 let next_hop_mtu = dest_unreachable.message().next_hop_mtu();
-
                 if let Some(next_hop_mtu) = dest_unreachable.message().next_hop_mtu() {
                     // We are updating the path MTU from the destination address
                     // of this `packet` (which is an IP address on this node) to
@@ -381,15 +409,60 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
                         trace!("receive_icmpv4_packet: Original packet buf is too small to get original packet len so ignoring");
                     }
                 }
-            } else {
-                log_unimplemented!((), "ip::icmp::receive_icmpv4_packet: Not implemented for this ICMP destination unreachable code {:?}", dest_unreachable.code());
             }
+
+            receive_icmpv4_error(
+                ctx,
+                &dest_unreachable,
+                Icmpv4ErrorCode::DestUnreachable(dest_unreachable.code()),
+            );
         }
-        _ => log_unimplemented!(
-            (),
-            "ip::icmp::receive_icmpv4_packet: Not implemented for this packet type"
-        ),
+        Icmpv4Packet::TimeExceeded(time_exceeded) => {
+            ctx.increment_counter("receive_icmpv4_packet::time_exceeded");
+            trace!("receive_icmpv4_packet: Received a Time Exceeded message");
+
+            receive_icmpv4_error(
+                ctx,
+                &time_exceeded,
+                Icmpv4ErrorCode::TimeExceeded(time_exceeded.code()),
+            );
+        }
+        Icmpv4Packet::Redirect(redirect) => {
+            log_unimplemented!((), "receive_icmpv4_packet::redirect")
+        }
+        Icmpv4Packet::ParameterProblem(parameter_problem) => {
+            ctx.increment_counter("receive_icmpv4_packet::parameter_problem");
+            trace!("receive_icmpv4_packet: Received a Parameter Problem message");
+
+            receive_icmpv4_error(
+                ctx,
+                &parameter_problem,
+                Icmpv4ErrorCode::ParameterProblem(parameter_problem.code()),
+            );
+        }
     }
+}
+
+/// Receive an ICMP(v4) error message.
+///
+/// `receive_icmpv4_error` handles an incoming ICMP error message by parsing the
+/// original IPv4 packet and then delegating to the context.
+fn receive_icmpv4_error<
+    B: BufferMut,
+    C: Icmpv4Context<B>,
+    BB: ByteSlice,
+    M: IcmpMessage<Ipv4, BB, Body = OriginalPacket<BB>>,
+>(
+    ctx: &mut C,
+    packet: &IcmpPacket<Ipv4, BB, M>,
+    error: Icmpv4ErrorCode,
+) {
+    packet.with_original_packet(|res| match res {
+        Ok(original_packet) => ctx.receive_icmpv4_error(original_packet, error),
+        Err(_) => debug!(
+            "receive_icmpv4_error: Got ICMP error message with unparsable original IPv4 packet"
+        ),
+    })
 }
 
 /// Receive an ICMPv6 packet.
@@ -1182,6 +1255,16 @@ fn receive_icmp_echo_reply<
     }
 }
 
+/// Receive an ICMP(v4) error related to an ICMP socket.
+pub(crate) fn receive_icmpv4_socket_error<B: BufferMut, C: Icmpv4Context<B>>(
+    ctx: &mut C,
+    original_packet: Ipv4PacketRaw<&[u8]>,
+    error: Icmpv4ErrorCode,
+) {
+    trace!("receive_icmpv4_error({:?})", error);
+    log_unimplemented!((), "receive_icmpv4_error");
+}
+
 /// Send an ICMPv4 echo request on an existing connection.
 ///
 /// # Panics
@@ -1654,5 +1737,98 @@ mod tests {
     #[test]
     fn test_icmp_connections_v6() {
         test_icmp_connections::<Ipv6>("receive_icmpv6_packet");
+    }
+
+    /// Test that receiving an ICMP error message results in that error getting
+    /// passed to `Icmpv4Context::receive_icmpv4_error`.
+    ///
+    /// Test that receiving an ICMP error message with the given code and
+    /// message contents, and containing the given original IPv4 packet, results
+    /// in that error getting passed to `Icmpv4Context::receive_icmpv4_error`.
+    /// The error message will be sent from `DUMMY_CONFIG_V4.remote_ip` to
+    /// `DUMMY_CONFIG_V4.local_ip`.
+    ///
+    /// After the error has been received, and the call to
+    /// `receive_icmpv4_error` has been verified (via test counters), `f` is
+    /// called on the context so that the caller can perform whatever extra
+    /// validation they want.
+    fn test_receive_icmp_error_helper<
+        C: Debug,
+        M: for<'a> IcmpMessage<Ipv4, &'a [u8], Code = C> + Debug,
+        F: Fn(&Context<DummyEventDispatcher>),
+    >(
+        original_packet: &mut [u8],
+        code: C,
+        msg: M,
+        f: F,
+    ) {
+        crate::testutil::set_logger_for_test();
+        let buffer = Buf::new(original_packet, ..)
+            .encapsulate(IcmpPacketBuilder::new(
+                DUMMY_CONFIG_V4.remote_ip,
+                DUMMY_CONFIG_V4.local_ip,
+                code,
+                msg,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+            .build::<DummyEventDispatcher>();
+
+        let device = DeviceId::new_ethernet(0);
+        receive_icmpv4_packet(
+            &mut ctx,
+            Some(device),
+            DUMMY_CONFIG_V4.remote_ip.get(),
+            DUMMY_CONFIG_V4.local_ip,
+            buffer,
+        );
+
+        assert_eq!(*ctx.state().test_counters.get("Icmpv4Context::receive_icmpv4_error"), 1);
+        f(&ctx);
+    }
+
+    #[test]
+    fn test_receive_icmpv4_error() {
+        // Test that, when we receive various ICMPv4 error messages, we properly
+        // pass them up to the IP layer (in particular, to
+        // `Icmpv4Context::receive_icmpv4_error`).
+
+        // TODO(joshlf): Once we capture more information from
+        // `Icmpv4Context::receive_icmpv4_error` or other functions, assert more
+        // properties (such as that the received code is actually the one we
+        // sent).
+
+        let mut buffer = Buf::new(&mut [], ..)
+            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
+                DUMMY_CONFIG_V4.local_ip,
+                DUMMY_CONFIG_V4.remote_ip,
+                64,
+                IpProto::Udp,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        test_receive_icmp_error_helper(
+            buffer.as_mut(),
+            Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+            IcmpDestUnreachable::default(),
+            |_| {},
+        );
+
+        test_receive_icmp_error_helper(
+            buffer.as_mut(),
+            Icmpv4TimeExceededCode::TtlExpired,
+            IcmpTimeExceeded::default(),
+            |_| {},
+        );
+
+        test_receive_icmp_error_helper(
+            buffer.as_mut(),
+            Icmpv4ParameterProblemCode::PointerIndicatesError,
+            Icmpv4ParameterProblem::new(0),
+            |_| {},
+        );
     }
 }

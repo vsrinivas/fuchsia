@@ -37,7 +37,8 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
-use crate::wire::ipv4;
+use crate::wire::ipv4::{self, Ipv4PacketRaw};
+use crate::wire::ipv6::Ipv6PacketRaw;
 use crate::wire::records::options::{Options, OptionsImpl};
 use crate::wire::U16;
 
@@ -499,6 +500,34 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B, Body = OriginalPacket<B>>>
 
     pub(crate) fn original_packet(&self) -> &OriginalPacket<B> {
         &self.message_body
+    }
+}
+
+impl<B: ByteSlice, M: IcmpMessage<Ipv4, B, Body = OriginalPacket<B>>> IcmpPacket<Ipv4, B, M> {
+    /// Attempt to partially parse the original packet as an IPv4 packet.
+    ///
+    /// `f` will be invoked on the result of calling `Ipv4PacketRaw::parse` on
+    /// the original packet.
+    pub(crate) fn with_original_packet<O, F: FnOnce(Result<Ipv4PacketRaw<&[u8]>, &[u8]>) -> O>(
+        &self,
+        f: F,
+    ) -> O {
+        let mut bv = self.message_body.0.deref();
+        f(Ipv4PacketRaw::parse(&mut bv, ()).map_err(|_| self.message_body.0.deref()))
+    }
+}
+
+impl<B: ByteSlice, M: IcmpMessage<Ipv6, B, Body = OriginalPacket<B>>> IcmpPacket<Ipv6, B, M> {
+    /// Attempt to partially parse the original packet as an IPv6 packet.
+    ///
+    /// `f` will be invoked on the result of calling `Ipv6PacketRaw::parse` on
+    /// the original packet.
+    pub(crate) fn with_original_packet<O, F: FnOnce(Result<Ipv6PacketRaw<&[u8]>, &[u8]>) -> O>(
+        &self,
+        f: F,
+    ) -> O {
+        let mut bv = self.message_body.0.deref();
+        f(Ipv6PacketRaw::parse(&mut bv, ()).map_err(|_| self.message_body.0.deref()))
     }
 }
 

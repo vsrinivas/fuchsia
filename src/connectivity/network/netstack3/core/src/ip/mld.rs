@@ -56,17 +56,14 @@ impl<D> MldFrameMetadata<D> {
 }
 
 /// The execution context for the Multicast Listener Discovery (MLD) protocol.
-pub(crate) trait MldContext: IpDeviceIdContext
-    + TimerContext<
-        MldReportDelay<<Self as IpDeviceIdContext>::DeviceId>,
-    > + RngContext
+pub(crate) trait MldContext:
+    IpDeviceIdContext
+    + TimerContext<MldReportDelay<<Self as IpDeviceIdContext>::DeviceId>>
+    + RngContext
     + StateContext<
         <Self as IpDeviceIdContext>::DeviceId,
         MldInterface<<Self as InstantContext>::Instant>,
-    > + FrameContext<
-        EmptyBuf,
-        MldFrameMetadata<<Self as IpDeviceIdContext>::DeviceId>,
-    >
+    > + FrameContext<EmptyBuf, MldFrameMetadata<<Self as IpDeviceIdContext>::DeviceId>>
 {
     /// Gets the IPv6 link local address on `device`.
     fn get_ipv6_link_local_addr(&self, device: Self::DeviceId) -> Option<LinkLocalAddr<Ipv6Addr>>;

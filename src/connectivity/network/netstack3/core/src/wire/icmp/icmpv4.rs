@@ -165,6 +165,13 @@ pub(crate) struct Icmpv4Redirect {
     gateway: Ipv4Addr,
 }
 
+impl Icmpv4Redirect {
+    /// Constructs a new `Icmpv4Redirect`.
+    pub(crate) fn new(gateway: Ipv4Addr) -> Icmpv4Redirect {
+        Icmpv4Redirect { gateway }
+    }
+}
+
 impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, OriginalPacket<B>);
 
 create_net_enum! {
