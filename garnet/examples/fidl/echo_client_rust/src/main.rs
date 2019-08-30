@@ -4,24 +4,30 @@
 
 #![feature(async_await)]
 
+use argh::FromArgs;
 use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::EchoMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launcher, launch};
-use structopt::StructOpt;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    #[derive(StructOpt, Debug)]
-    #[structopt(name = "echo_client_rust")]
+    #[allow(dead_code)] // FIXME(cramertj) this shouldn't be required
+    #[derive(FromArgs, Debug)]
+    /// Rust echo client
     struct Opt {
-        #[structopt(long = "server", help = "URL of echo server",
-                    default_value = "fuchsia-pkg://fuchsia.com/echo_server_rust#meta/echo_server_rust.cmx")]
+        /// URL of the echo server to run.
+        #[argh(
+            option,
+            long = "server",
+            default = "\"fuchsia-pkg://fuchsia.com/echo_server_rust#meta/echo_server_rust.cmx\"\
+                .to_string()",
+        )]
         server_url: String,
     }
 
     // Launch the server and connect to the echo service.
-    let Opt { server_url } = Opt::from_args();
+    let Opt { server_url } = argh::from_env();
 
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch(&launcher, server_url, None)
