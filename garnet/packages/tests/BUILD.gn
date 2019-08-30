@@ -339,6 +339,7 @@ group("all") {
     ":elflib",
     ":escher",
     ":examples",
+    ":fdio_spawn",
     ":fidl",
     ":fidl_compatibility_test",
     ":fidl_compatibility_test_server_cpp",
@@ -1333,5 +1334,12 @@ group("go_inspect_tests") {
   testonly = true
   public_deps = [
     "//garnet/go/src/inspect:go_inspect_tests",
+  ]
+}
+
+group("fdio_spawn") {
+  testonly = true
+  public_deps = [
+    "//garnet/tests/fdio_spawn:fdio_spawn_tests",
   ]
 }

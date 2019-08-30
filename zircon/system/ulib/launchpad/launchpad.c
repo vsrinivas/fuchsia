@@ -40,10 +40,6 @@ struct launchpad {
   char* names;
   size_t names_len;
 
-  size_t num_script_args;
-  char* script_args;
-  size_t script_args_len;
-
   zx_handle_t* handles;
   uint32_t* handles_info;
   size_t handle_count;
@@ -104,7 +100,6 @@ void launchpad_destroy(launchpad_t* lp) {
   zx_handle_close_many(lp->handles, lp->handle_count);
   free(lp->handles);
   free(lp->handles_info);
-  free(lp->script_args);
   free(lp->args);
   free(lp->env);
   free(lp->names);
@@ -556,145 +551,16 @@ done:
   return lp->error;
 }
 
-// Find the starting point of the interpreter and the interpreter
-// arguments in a #! script header. Note that the input buffer (line)
-// will be modified to add a NULL after the interpreter name.
-static zx_status_t parse_interp_spec(char* line, char** interp_start, size_t* interp_len,
-                                     char** args_start) {
-  *args_start = NULL;
-
-  // Skip the '#!' prefix
-  char* next_char = line + 2;
-
-  // Skip whitespace
-  next_char += strspn(next_char, " \t");
-
-  // No interpreter specified
-  if (*next_char == '\0')
-    return ZX_ERR_NOT_FOUND;
-
-  *interp_start = next_char;
-
-  // Skip the interpreter name
-  next_char += strcspn(next_char, " \t");
-  *interp_len = next_char - *interp_start;
-
-  if (*next_char == '\0')
-    return ZX_OK;
-
-  *next_char++ = '\0';
-
-  // Look for the args
-  next_char += strspn(next_char, " \t");
-
-  if (*next_char == '\0')
-    return ZX_OK;
-
-  *args_start = next_char;
-  return ZX_OK;
-}
-
 zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
-  if (vmo == ZX_HANDLE_INVALID)
+  if (vmo == ZX_HANDLE_INVALID) {
     return lp_error(lp, ZX_ERR_INVALID_ARGS, "file_load: invalid vmo");
-
-  if (lp->script_args != NULL) {
-    free(lp->script_args);
-    lp->script_args = NULL;
   }
-  lp->script_args_len = 0;
-  lp->num_script_args = 0;
 
-  size_t script_nest_level = 0;
+  zx_status_t status = launchpad_elf_load_body(lp, NULL, 0, vmo);
 
-  char first_line[LP_MAX_INTERP_LINE_LEN + 1];
-  size_t to_read = sizeof(first_line);
-  size_t vmo_size;
-  zx_status_t status = zx_vmo_get_size(vmo, &vmo_size);
   if (status != ZX_OK) {
-    return lp_error(lp, status, "file_load: zx_vmo_get_size() failed");
-  }
-  if (to_read > vmo_size) {
-    to_read = vmo_size;
-  }
-
-  while (1) {
-    // Read enough to get the interpreter specification of a script
-    status = zx_vmo_read(vmo, first_line, 0, to_read);
-
-    // This is not a script -- load as an ELF file
-    if ((status == ZX_OK) && (to_read < 2 || first_line[0] != '#' || first_line[1] != '!'))
-      break;
-
-    zx_handle_close(vmo);
-
-    if (status != ZX_OK)
-      return lp_error(lp, status, "file_load: zx_vmo_read() failed");
-
-    script_nest_level++;
-
-    // No point trying to read an interpreter we're not going to consider
-    if (script_nest_level > LP_MAX_SCRIPT_NEST_LEVEL)
-      return lp_error(lp, ZX_ERR_NOT_SUPPORTED, "file_load: too many levels of script indirection");
-
-    // Normalize the line so that it is NULL-terminated
-    char* newline_pos = memchr(first_line, '\n', to_read);
-    if (newline_pos)
-      *newline_pos = '\0';
-    else if (to_read == sizeof(first_line))
-      return lp_error(lp, ZX_ERR_OUT_OF_RANGE, "file_load: first line of script too long");
-    else
-      first_line[to_read] = '\0';
-
-    char* interp_start;
-    size_t interp_len;
-    char* args_start;
-    status = parse_interp_spec(first_line, &interp_start, &interp_len, &args_start);
-    if (status != ZX_OK)
-      return lp_error(lp, status, "file_load: failed to parse interpreter spec");
-
-    size_t args_len = (args_start == NULL) ? 0 : newline_pos - args_start;
-
-    // Add interpreter and args to start of lp->script_args
-    size_t new_args_len = interp_len + 1;
-    if (args_start != NULL)
-      new_args_len += args_len + 1;
-    char* new_buf = malloc(new_args_len + lp->script_args_len);
-    if (new_buf == NULL)
-      return lp_error(lp, ZX_ERR_NO_MEMORY, "file_load: out of memory");
-
-    memcpy(new_buf, interp_start, interp_len + 1);
-    lp->num_script_args++;
-
-    if (args_start != NULL) {
-      memcpy(&new_buf[interp_len + 1], args_start, args_len + 1);
-      lp->num_script_args++;
-    }
-
-    if (lp->script_args != NULL) {
-      memcpy(&new_buf[new_args_len], lp->script_args, lp->script_args_len);
-      free(lp->script_args);
-    }
-
-    lp->script_args = new_buf;
-    lp->script_args_len += new_args_len;
-
-    // Load the interpreter into memory
-    status = setup_loader_svc(lp);
-    if (status != ZX_OK)
-      return lp_error(lp, status, "file_load: setup_loader_svc() failed");
-
-    status = loader_svc_rpc(lp->special_handles[HND_LDSVC_LOADER], LDMSG_OP_LOAD_SCRIPT_INTERPRETER,
-                            interp_start, interp_len, &vmo);
-    if (status != ZX_OK)
-      return lp_error(lp, status, "file_load: loader_svc_rpc() failed");
-  }
-
-  // Finally, load the interpreter itself
-  status = launchpad_elf_load_body(lp, first_line, to_read, vmo);
-
-  if (status != ZX_OK)
     lp_error(lp, status, "file_load: failed to load ELF file");
+  }
 
   return status;
 }
@@ -790,7 +656,6 @@ static zx_status_t build_message(launchpad_t* lp, size_t num_handles, void** msg
   static_assert(sizeof(zx_proc_args_t) % sizeof(uint32_t) == 0,
                 "handles misaligned in load message");
   msg_size += sizeof(uint32_t) * num_handles;
-  msg_size += lp->script_args_len;
   msg_size += lp->args_len;
   msg_size += lp->env_len;
   msg_size += lp->names_len;
@@ -808,26 +673,23 @@ static zx_status_t build_message(launchpad_t* lp, size_t num_handles, void** msg
   // Include the argument strings so the dynamic linker can use argv[0]
   // in messages it prints.
   header->args_off = header->handle_info_off + sizeof(uint32_t) * num_handles;
-  header->args_num = lp->num_script_args + lp->argc;
+  header->args_num = lp->argc;
   if (header->args_num > 0) {
-    uint8_t* script_args_start = (uint8_t*)msg + header->args_off;
-    memcpy(script_args_start, lp->script_args, lp->script_args_len);
-    uint8_t* args_start = script_args_start + lp->script_args_len;
+    uint8_t* args_start = (uint8_t*)msg + header->args_off;
     memcpy(args_start, lp->args, lp->args_len);
   }
-  size_t total_args_len = lp->script_args_len + lp->args_len;
 
   // Include the environment strings so the dynamic linker can
   // see options like LD_DEBUG or whatnot.
   if (lp->envc > 0) {
-    header->environ_off = header->args_off + total_args_len;
+    header->environ_off = header->args_off + lp->args_len;
     header->environ_num = lp->envc;
     uint8_t* env_start = (uint8_t*)msg + header->environ_off;
     memcpy(env_start, lp->env, lp->env_len);
   }
 
   if (with_names && (lp->namec > 0)) {
-    header->names_off = header->args_off + total_args_len + lp->env_len;
+    header->names_off = header->args_off + lp->args_len + lp->env_len;
     header->names_num = lp->namec;
     uint8_t* names_start = (uint8_t*)msg + header->names_off;
     memcpy(names_start, lp->names, lp->names_len);

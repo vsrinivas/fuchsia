@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/spawn.h>
-
-#include <string>
-#include <vector>
-
 #include <fcntl.h>
 #include <fuchsia/process/c/fidl.h>
 #include <lib/fdio/directory.h>
@@ -15,6 +10,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fdio/spawn.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -30,17 +26,28 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <list>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "private.h"
 
 #define FDIO_RESOLVE_PREFIX "#!resolve "
 #define FDIO_RESOLVE_PREFIX_LEN 10
 
-// It is possible to setup an infinite loop of resolvers. We want to avoid this
-// being a common abuse vector, but also stay out of the way of any complex user
-// setups.
-#define FDIO_SPAWN_MAX_RESOLVE_DEPTH 255
+// It is possible to setup an infinite loop of interpreters. We want to avoid this being a common
+// abuse vector, but also stay out of the way of any complex user setups.
+#define FDIO_SPAWN_MAX_INTERPRETER_DEPTH 255
+
+// Maximum allowed length of a #! shebang directive.
+// This applies to both types of #! directives - both the '#!resolve' special case and the general
+// '#!' case with an arbitrary interpreter - but we use the fuchsia.process/Resolver limit rather
+// than define a separate arbitrary limit.
+#define FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN \
+  (fuchsia_process_MAX_RESOLVE_NAME_SIZE + FDIO_RESOLVE_PREFIX_LEN)
+static_assert(FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN < PAGE_SIZE,
+              "max #! interpreter line length must be less than page size");
 
 #define FDIO_SPAWN_LAUNCH_HANDLE_EXECUTABLE ((size_t)0u)
 #define FDIO_SPAWN_LAUNCH_HANDLE_JOB ((size_t)1u)
@@ -128,9 +135,8 @@ static void report_error(char* err_msg, const char* format, ...) {
   va_end(args);
 }
 
-// resolve_name makes a call to the fuchsia.process.Resolver service and may
-// return a vmo and associated loader service, if the name resolves within the
-// current realm.
+// resolve_name makes a call to the fuchsia.process.Resolver service and may return a vmo and
+// associated loader service, if the name resolves within the current realm.
 static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
                                 zx::channel* out_ldsvc, char* err_msg) {
   zx::channel resolver, resolver_request;
@@ -158,6 +164,159 @@ static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_
     report_error(err_msg, "failed to resolve %.*s", name_len, name);
   }
   return status;
+}
+
+// Find the starting point of the interpreter and the interpreter arguments in a #! script header.
+// Note that the input buffer (line) will be modified to add a NUL after the interpreter name.
+static zx_status_t parse_interp_spec(char* line, char** interp_start, char** args_start) {
+  *args_start = NULL;
+
+  // Skip the '#!' prefix
+  char* next_char = line + 2;
+
+  // Skip whitespace
+  next_char += strspn(next_char, " \t");
+
+  // No interpreter specified
+  if (*next_char == '\0')
+    return ZX_ERR_INVALID_ARGS;
+
+  *interp_start = next_char;
+
+  // Skip the interpreter name
+  next_char += strcspn(next_char, " \t");
+
+  if (*next_char == '\0')
+    return ZX_OK;
+
+  // Add a NUL after the interpreter name
+  *next_char++ = '\0';
+
+  // Look for the args
+  next_char += strspn(next_char, " \t");
+
+  if (*next_char == '\0')
+    return ZX_OK;
+
+  *args_start = next_char;
+  return ZX_OK;
+}
+
+// handle_interpreters checks whether the provided vmo starts with a '#!' directive, and handles
+// appropriately if it does.
+//
+// If a '#!' directive is present, we check whether it is either:
+//   1) a specific '#!resolve' directive, in which case resolve_name is used to resolve the given
+//      executable name into a new executable vmo and appropriate loader service through the
+//      fuchsia.process.Resolver service, or
+//   2) a general '#!' shebang interpreter directive, in which case the given interpreter is loaded
+//      via the current loader service and executable is updated. extra_args will also be appended
+//      to, and these arguments should be added to the front of argv.
+//
+// Directives will be resolved until none are detected, an error is encounted, or a resolution limit
+// is reached. Also, mixing the two types is unsupported.
+//
+// The executable and ldsvc paramters are both inputs to and outputs from this function, and are
+// updated based on the resolved directives. executable must always be valid, and ldsvc must be
+// valid at minimum for the 2nd case above, though it should generally always be valid as well when
+// calling this.
+static zx_status_t handle_interpreters(zx::vmo* executable, zx::channel* ldsvc,
+                                       std::list<std::string>* extra_args, char* err_msg) {
+  extra_args->clear();
+
+  // Mixing #!resolve and general #! within a single spawn is unsupported so that the #!
+  // interpreters can simply be loaded from the current namespace.
+  bool handled_resolve = false;
+  bool handled_shebang = false;
+  for (size_t depth = 0; true; ++depth) {
+    // VMO sizes are page aligned and MAX_INTERPRETER_LINE_LEN < PAGE_SIZE (asserted above), so
+    // there's no use in checking VMO size explicitly here. Either the read fails because the VMO is
+    // zero-sized, and we handle it, or sizeof(line) < vmo_size.
+    char line[FDIO_SPAWN_MAX_INTERPRETER_LINE_LEN];
+    memset(line, 0, sizeof(line));
+    zx_status_t status = executable->read(line, 0, sizeof(line));
+    if (status != ZX_OK) {
+      report_error(err_msg, "error reading executable vmo: %d", status);
+      return status;
+    }
+
+    // If no "#!" prefix is present, we're done; treat this as an ELF file and continue loading.
+    if (line[0] != '#' || line[1] != '!') {
+      break;
+    }
+
+    // Interpreter resolution is not allowed to carry on forever.
+    if (depth == FDIO_SPAWN_MAX_INTERPRETER_DEPTH) {
+      report_error(err_msg, "hit recursion limit resolving interpreters");
+      return ZX_ERR_IO_INVALID;
+    }
+
+    // Find the end of the first line and NUL-terminate it to aid in parsing.
+    char* line_end = reinterpret_cast<char*>(memchr(line, '\n', sizeof(line)));
+    if (line_end) {
+      *line_end = '\0';
+    } else {
+      // If there's no newline, then the script may be a single line and lack a trailing newline.
+      // Look for the actual end of the script.
+      line_end = reinterpret_cast<char*>(memchr(line, '\0', sizeof(line)));
+      if (line_end == NULL) {
+        // This implies that the first line is longer than MAX_INTERPRETER_LINE_LEN.
+        report_error(err_msg, "first line of script is too long");
+        return ZX_ERR_OUT_OF_RANGE;
+      }
+    }
+    size_t line_len = line_end - line;
+
+    if (memcmp(FDIO_RESOLVE_PREFIX, line, FDIO_RESOLVE_PREFIX_LEN) == 0) {
+      // This is a "#!resolve" directive; use fuchsia.process.Resolve to resolve the name into a new
+      // executable and appropriate loader.
+      handled_resolve = true;
+      if (handled_shebang) {
+        report_error(err_msg, "already resolved a #! directive, mixing #!resolve is unsupported");
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      char* name = &line[FDIO_RESOLVE_PREFIX_LEN];
+      size_t name_len = line_len - FDIO_RESOLVE_PREFIX_LEN;
+      status = resolve_name(name, name_len, executable, ldsvc, err_msg);
+      if (status != ZX_OK) {
+        return status;
+      }
+    } else {
+      // This is a general "#!" interpreter directive.
+      handled_shebang = true;
+      if (handled_resolve) {
+        report_error(err_msg, "already resolved a #!resolve directive, mixing #! is unsupported");
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      // Parse the interpreter spec to find the interpreter name and any args, and add those to
+      // extra_args.
+      char* interp_start;
+      char* args_start;
+      status = parse_interp_spec(line, &interp_start, &args_start);
+      if (status != ZX_OK) {
+        report_error(err_msg, "invalid #! interpreter spec");
+        return status;
+      }
+
+      // args_start and interp_start are safe to treat as NUL terminated because parse_interp_spec
+      // adds a NUL at the end of the interpreter name and we added an overall line NUL terminator
+      // above when finding the line end.
+      if (args_start != NULL) {
+        extra_args->emplace_front(args_start);
+      }
+      extra_args->emplace_front(interp_start);
+
+      // Load the specified interpreter from the current namespace.
+      status = load_path(interp_start, executable);
+      if (status != ZX_OK) {
+        report_error(err_msg, "failed to load script interpreter '%s'", interp_start);
+        return status;
+      }
+    }
+  }
+  return ZX_OK;
 }
 
 static zx_status_t send_cstring_array(const zx::channel& launcher, uint64_t ordinal,
@@ -233,19 +392,12 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
     }
   }
 
-  if ((flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0) {
+  // ldsvc may be valid if flags contains FDIO_SPAWN_DEFAULT_LDSVC or if a ldsvc was obtained
+  // through handling a '#!resolve' directive.
+  if (ldsvc.is_valid()) {
     handle_infos[h].handle = FIDL_HANDLE_PRESENT;
     handle_infos[h].id = PA_LDSVC_LOADER;
-    if (!ldsvc.is_valid()) {
-      status = dl_clone_loader_service(ldsvc.reset_and_get_address());
-      if (status != ZX_OK) {
-        report_error(err_msg, "failed to clone library loader service: %d", status);
-        goto cleanup;
-      }
-    }
     handles[h++] = ldsvc.release();
-  } else if (ldsvc.is_valid()) {
-    ldsvc.reset();
   }
 
   if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0) {
@@ -482,8 +634,10 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   zx::channel ldsvc;
   const char* process_name = NULL;
   size_t process_name_size = 0;
+  std::list<std::string> extra_args;
   zx::vmo executable(executable_vmo);
   executable_vmo = ZX_HANDLE_INVALID;
+  bool handle_interpreters_returned_not_found = false;
 
   memset(msg_handles, 0, sizeof(msg_handles));
 
@@ -561,8 +715,14 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   if ((flags & FDIO_SPAWN_CLONE_JOB) != 0)
     ++handle_capacity;
 
-  if ((flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0)
-    ++handle_capacity;
+  // Need to clone ldsvc here so it's available for handle_interpreters.
+  if ((flags & FDIO_SPAWN_DEFAULT_LDSVC) != 0) {
+    status = dl_clone_loader_service(ldsvc.reset_and_get_address());
+    if (status != ZX_OK) {
+      report_error(err_msg, "failed to clone library loader service: %d", status);
+      goto cleanup;
+    }
+  }
 
   if ((flags & FDIO_SPAWN_CLONE_STDIO) != 0)
     handle_capacity += 3;
@@ -585,38 +745,14 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     }
   }
 
-  // resolve vmos containing #!resolve, updating the vmo & ldsvc
-  for (size_t i = 0; true; ++i) {
-    char head[fuchsia_process_MAX_RESOLVE_NAME_SIZE + FDIO_RESOLVE_PREFIX_LEN];
-    ZX_ASSERT(sizeof(head) < PAGE_SIZE);
-    memset(head, 0, sizeof(head));
-    status = executable.read(head, 0, sizeof(head));
-    if (status != ZX_OK) {
-      report_error(err_msg, "error reading executable vmo: %d", status);
-      goto cleanup;
-    }
-    if (memcmp(FDIO_RESOLVE_PREFIX, head, FDIO_RESOLVE_PREFIX_LEN) != 0) {
-      break;
-    }
-
-    // resolves are not allowed to carry on forever.
-    if (i == FDIO_SPAWN_MAX_RESOLVE_DEPTH) {
-      status = ZX_ERR_IO_INVALID;
-      report_error(err_msg, "hit recursion limit resolving name");
-      goto cleanup;
-    }
-
-    char* name = &head[FDIO_RESOLVE_PREFIX_LEN];
-    size_t len = fuchsia_process_MAX_RESOLVE_NAME_SIZE;
-    char* end = reinterpret_cast<char*>(memchr(name, '\n', len));
-    if (end != NULL) {
-      len = end - name;
-    }
-
-    status = resolve_name(name, len, &executable, &ldsvc, err_msg);
-    if (status != ZX_OK) {
-      goto cleanup;
-    }
+  // resolve any '#!' directives that are present, updating executable and ldsvc as needed
+  status = handle_interpreters(&executable, &ldsvc, &extra_args, err_msg);
+  if (status != ZX_OK) {
+    handle_interpreters_returned_not_found = (status == ZX_ERR_NOT_FOUND);
+    goto cleanup;
+  }
+  if (ldsvc.is_valid()) {
+    ++handle_capacity;
   }
 
   status = zx::channel::create(0, &launcher, &launcher_request);
@@ -631,6 +767,22 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     goto cleanup;
   }
 
+  // send any extra arguments from handle_interpreters, then the normal arguments
+  if (!extra_args.empty()) {
+    std::vector<const char*> extra_argv;
+    extra_argv.reserve(extra_args.size() + 1);
+    for (const auto& arg : extra_args) {
+      extra_argv.push_back(arg.c_str());
+    }
+    extra_argv.push_back(nullptr);
+
+    status =
+        send_cstring_array(launcher, fuchsia_process_LauncherAddArgsOrdinal, extra_argv.data());
+    if (status != ZX_OK) {
+      report_error(err_msg, "failed to send extra argument vector: %d", status);
+      goto cleanup;
+    }
+  }
   status = send_cstring_array(launcher, fuchsia_process_LauncherAddArgsOrdinal, argv);
   if (status != ZX_OK) {
     report_error(err_msg, "failed to send argument vector: %d", status);
@@ -801,7 +953,7 @@ cleanup:
   // dependency of launching could not be fulfilled, but clients of spawn_etc
   // and friends could misinterpret this to mean the binary was not found.
   // Instead we remap that specific case to ZX_ERR_INTERNAL.
-  if (status == ZX_ERR_NOT_FOUND) {
+  if (status == ZX_ERR_NOT_FOUND && !handle_interpreters_returned_not_found) {
     return ZX_ERR_INTERNAL;
   }
 

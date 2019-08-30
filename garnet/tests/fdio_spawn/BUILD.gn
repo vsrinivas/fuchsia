@@ -1,0 +1,117 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "fdio_spawn_tests"
+
+  sources = [
+    "resolve_test.cc",
+    "shebang_test.cc",
+    "util.cc",
+    "util.h",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# A simple test utility that returns the integer value provided to it in its first argument.
+executable("return_arg_test_util") {
+  testonly = true
+
+  sources = [
+    "return_arg_util.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+  ]
+}
+
+# TODO(bryanhenry): This is a copy from //src/sys/dash. Ideally we wouldn't need to copy this target
+# around to include bin/sh in packages, but get_target_outputs seems to only work on targets in the
+# current file. See if there's a way to improve this.
+zircon_extras_manifest("dash-bin-manifest") {
+  visibility = [ ":*" ]
+  manifest = "image"
+  patterns = [ "bin/sh" ]
+}
+
+test_package("fdio_spawn_tests") {
+  deps = [
+    ":bin",
+    ":dash-bin-manifest",
+    ":return_arg_test_util",
+  ]
+
+  # This includes bin/sh in the package
+  extra = get_target_outputs(":dash-bin-manifest")
+
+  binaries = [
+    {
+      name = "return_arg_test_util"
+    },
+
+    # These 'binaries' (really just text files with either a "#!resolve" or "#!" directive) are
+    # copied straight out of the source directory into bin/ in the package, but the package template
+    # expects the source path to be relative to root_build_dir, so we first rebase to that.
+    {
+      name = "resolve_once"
+      source = rebase_path("test_bins/resolve_once", root_build_dir)
+    },
+    {
+      name = "resolve_twice"
+      source = rebase_path("test_bins/resolve_twice", root_build_dir)
+    },
+    {
+      name = "resolve_infinite_loop"
+      source = rebase_path("test_bins/resolve_infinite_loop", root_build_dir)
+    },
+    {
+      name = "echo_arguments.sh"
+      source = rebase_path("test_bins/echo_arguments.sh", root_build_dir)
+    },
+    {
+      name = "use_script_as_interpreter"
+      source =
+          rebase_path("test_bins/use_script_as_interpreter", root_build_dir)
+    },
+    {
+      name = "shebang_infinite_loop"
+      source = rebase_path("test_bins/shebang_infinite_loop", root_build_dir)
+    },
+    {
+      name = "attempt_use_shell_outside_package.sh"
+      source = rebase_path("test_bins/attempt_use_shell_outside_package.sh",
+                           root_build_dir)
+    },
+    {
+      name = "too_long_shebang"
+      source = rebase_path("test_bins/too_long_shebang", root_build_dir)
+    },
+    {
+      name = "use_resolve_from_shebang"
+      source = rebase_path("test_bins/use_resolve_from_shebang", root_build_dir)
+    },
+    {
+      name = "use_shebang_from_resolve"
+      source = rebase_path("test_bins/use_shebang_from_resolve", root_build_dir)
+    },
+  ]
+
+  tests = [
+    {
+      name = "fdio_spawn_tests"
+      environments = basic_envs
+    },
+  ]
+}
