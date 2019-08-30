@@ -131,9 +131,11 @@ pub fn brightness_info(auto_brightness: bool, value: Option<f32>) -> BrightnessI
 }
 
 bitflags! {
+    #[derive(Serialize, Deserialize)]
     pub struct ConfigurationInterfaceFlags: u32 {
         const ETHERNET = 1 << 0;
         const WIFI = 1 << 1;
+        const DEFAULT = Self::ETHERNET.bits | Self::WIFI.bits;
     }
 }
 
@@ -166,7 +168,7 @@ pub struct SystemInfo {
     pub login_override_mode: SystemLoginOverrideMode,
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct SetupInfo {
     pub configuration_interfaces: ConfigurationInterfaceFlags,
 }

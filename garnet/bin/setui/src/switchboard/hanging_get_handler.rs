@@ -152,9 +152,7 @@ mod tests {
 
     impl TestSwitchboard {
         fn notify_listener(&self) {
-            println!("here 2!");
             if let Some(setting_type_value) = self.setting_type {
-                println!("here 3!");
                 if let Some(listener_sender) = self.listener.clone() {
                     listener_sender.unbounded_send(setting_type_value).unwrap();
                     return;
@@ -245,7 +243,6 @@ mod tests {
             *current_id.write().unwrap() = ID2;
         }
 
-        println!("here!");
         {
             let switchboard = switchboard_handle.read().unwrap();
             switchboard.notify_listener();

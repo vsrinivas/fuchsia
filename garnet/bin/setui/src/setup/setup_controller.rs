@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::registry::base::{Command, Notifier, State};
+use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::registry::service_context::ServiceContext;
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
@@ -10,31 +11,46 @@ use crate::switchboard::base::{
 };
 use failure::{format_err, Error};
 use fuchsia_async as fasync;
+use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::{Arc, RwLock};
 
+impl DeviceStorageCompatible for SetupInfo {
+    const DEFAULT_VALUE: Self =
+        SetupInfo { configuration_interfaces: ConfigurationInterfaceFlags::DEFAULT };
+    const KEY: &'static str = "setup_info";
+}
+
 pub struct SetupController {
     service_context_handle: Arc<RwLock<ServiceContext>>,
-    interfaces: Option<ConfigurationInterfaceFlags>,
+    info: SetupInfo,
     listen_notifier: Arc<RwLock<Option<Notifier>>>,
+    storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
 }
 
 impl SetupController {
     pub fn spawn(
         service_context_handle: Arc<RwLock<ServiceContext>>,
+        storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
     ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, Error> {
-        let handle = Arc::new(RwLock::new(Self {
-            service_context_handle: service_context_handle,
-            interfaces: None,
-            listen_notifier: Arc::new(RwLock::new(None)),
-        }));
-
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
-        let handle_clone = handle.clone();
         fasync::spawn(async move {
+            let stored_value: SetupInfo;
+            {
+                let mut storage_lock = storage.lock().await;
+                stored_value = storage_lock.get().await;
+            }
+
+            let handle = Arc::new(RwLock::new(Self {
+                service_context_handle: service_context_handle,
+                info: stored_value,
+                listen_notifier: Arc::new(RwLock::new(None)),
+                storage: storage,
+            }));
+
             while let Some(command) = ctrl_rx.next().await {
-                handle_clone.write().unwrap().process_command(command);
+                handle.write().unwrap().process_command(command);
             }
         });
 
@@ -70,22 +86,20 @@ impl SetupController {
         interfaces: ConfigurationInterfaceFlags,
         responder: SettingRequestResponder,
     ) {
-        self.interfaces = Some(interfaces);
+        self.info.configuration_interfaces = interfaces;
         responder.send(Ok(None)).ok();
         if let Some(notifier) = (*self.listen_notifier.read().unwrap()).clone() {
             notifier.unbounded_send(SettingType::Setup).unwrap();
         }
+
+        let storage_clone = self.storage.clone();
+        let info = self.info;
+        fasync::spawn(async move {
+            storage_clone.lock().await.write(info).unwrap();
+        });
     }
 
     fn get(&self, responder: SettingRequestResponder) {
-        let mut flags = ConfigurationInterfaceFlags::empty();
-
-        if let Some(enabled_interfaces) = self.interfaces {
-            flags = flags | enabled_interfaces;
-        }
-
-        responder
-            .send(Ok(Some(SettingResponse::Setup(SetupInfo { configuration_interfaces: flags }))))
-            .ok();
+        responder.send(Ok(Some(SettingResponse::Setup(self.info)))).ok();
     }
 }

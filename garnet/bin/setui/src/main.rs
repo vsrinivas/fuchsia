@@ -99,7 +99,7 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
     storage_factory: Box<T>,
 ) {
     let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
-    let _unboxed_storage_factory = &storage_factory;
+    let unboxed_storage_factory = &storage_factory;
 
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
@@ -228,7 +228,11 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .unwrap()
             .register(
                 switchboard::base::SettingType::Setup,
-                SetupController::spawn(service_context_handle.clone()).unwrap(),
+                SetupController::spawn(
+                    service_context_handle.clone(),
+                    unboxed_storage_factory.get_store::<switchboard::base::SetupInfo>(),
+                )
+                .unwrap(),
             )
             .unwrap();
         let switchboard_handle_clone = switchboard_handle.clone();
@@ -242,6 +246,7 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
 mod tests {
     use super::*;
     use crate::registry::device_storage::testing::*;
+    use crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo};
     use failure::format_err;
     use fidl::endpoints::{ServerEnd, ServiceMarker};
     use fidl_fuchsia_accessibility::*;
@@ -685,20 +690,39 @@ mod tests {
     async fn test_setup() {
         let mut fs = ServiceFs::new();
 
+        let storage_factory = Box::new(InMemoryStorageFactory::create());
+        let store = storage_factory.get_store::<SetupInfo>();
+
+        // Prepopulate initial value
+        {
+            let mut store_lock = store.lock().await;
+            assert!(store_lock
+                .write(SetupInfo { configuration_interfaces: ConfigurationInterfaceFlags::WIFI })
+                .is_ok());
+        }
+
         create_fidl_service(
             fs.root_dir(),
             [SettingType::Setup].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(None))),
-            Box::new(InMemoryStorageFactory::create()),
+            storage_factory,
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
         fasync::spawn(fs.collect());
 
         let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
+
+        // Ensure retrieved value matches set value
+        let settings = setup_service.watch().await.expect("watch completed");
+        assert_eq!(
+            settings.enabled_configuration_interfaces,
+            Some(fidl_fuchsia_settings::ConfigurationInterfaces::Wifi)
+        );
+
         let expected_interfaces = fidl_fuchsia_settings::ConfigurationInterfaces::Ethernet;
 
-        // Ensure setting interface propagates correctly
+        // Ensure setting interface propagates  change correctly
         let mut setup_settings = fidl_fuchsia_settings::SetupSettings::empty();
         setup_settings.enabled_configuration_interfaces = Some(expected_interfaces);
         setup_service.set(setup_settings).await.expect("set completed").expect("set successful");
@@ -706,5 +730,14 @@ mod tests {
         // Ensure retrieved value matches set value
         let settings = setup_service.watch().await.expect("watch completed");
         assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
+
+        // Check to make sure value wrote out to store correctly.
+        {
+            let mut store_lock = store.lock().await;
+            assert_eq!(
+                store_lock.get().await.configuration_interfaces,
+                ConfigurationInterfaceFlags::ETHERNET
+            );
+        }
     }
 }
