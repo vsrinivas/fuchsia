@@ -12,3 +12,4 @@ pub mod buffer;
 pub mod client;
 pub mod device;
 pub mod error;
+pub mod timer;

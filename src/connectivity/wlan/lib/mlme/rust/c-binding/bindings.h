@@ -91,6 +91,25 @@ typedef struct {
   mlme_in_buf_t (*get_buffer)(uintptr_t min_len);
 } mlme_buffer_provider_ops_t;
 
+typedef struct {
+  uint64_t _0;
+} wlan_scheduler_event_id_t;
+
+/**
+ * A scheduler to schedule and cancel timeouts.
+ */
+typedef struct {
+  void *cookie;
+  /**
+   * Requests to schedule an event. Returns a a unique ID used to cancel the scheduled event.
+   */
+  wlan_scheduler_event_id_t (*schedule)(void *cookie, int64_t deadline);
+  /**
+   * Cancels a previously scheduled event.
+   */
+  void (*cancel)(void *cookie, wlan_scheduler_event_id_t id);
+} wlan_scheduler_ops_t;
+
 extern "C" void client_sta_delete(wlan_client_sta_t *sta);
 
 extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, const uint8_t *data_frame,
