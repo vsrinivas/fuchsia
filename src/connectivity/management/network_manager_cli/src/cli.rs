@@ -664,32 +664,32 @@ async fn do_set<T: Write>(
         }
 
         Set::DhcpConfig { lan, dhcp_config } => {
-            printer.println(format!("{:?}, {:?}", lan, dhcp_config));
+            printer.println(format!("Not Implemented {:?}, {:?}", lan, dhcp_config));
             Ok(())
         }
 
         Set::DnsConfig { dns_config } => {
-            printer.println(format!("{:?}", dns_config));
+            printer.println(format!("Not Implemented {:?}", dns_config));
             Ok(())
         }
 
         Set::DnsForwarder { lan, enabled } => {
-            printer.println(format!("{:?}, {:?}", lan, enabled));
+            printer.println(format!("Not Implemented {:?}, {:?}", lan, enabled));
             Ok(())
         }
 
         Set::Route { route } => {
-            printer.println(format!("{:?}", route));
+            printer.println(format!("Not Implemented {:?}", route));
             Ok(())
         }
 
         Set::SecurityConfig { feature } => {
-            printer.println(format!("{:?}", feature));
+            printer.println(format!("Not Implemented {:?}", feature));
             Ok(())
         }
 
         Set::PortForward { rule } => {
-            printer.println(format!("{:?}", rule));
+            printer.println(format!("Not Implemented {:?}", rule));
             Ok(())
         }
 

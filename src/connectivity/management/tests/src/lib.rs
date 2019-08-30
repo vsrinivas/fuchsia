@@ -30,11 +30,12 @@ use std::str;
 struct Test {
     command: String,
     expected: String,
+    description: String,
 }
 
 impl Test {
-    fn new<A: Into<String>, B: Into<String>>(command: A, expected: B) -> Self {
-        Self { command: command.into(), expected: expected.into() }
+    fn new<A: Into<String>, B: Into<String>>(command: A, expected: B, description: A) -> Self {
+        Self { command: command.into(), expected: expected.into(), description: description.into() }
     }
 }
 
@@ -44,9 +45,9 @@ struct TestSuite {
 }
 
 macro_rules! test_suite {
-    [$( ($cmd:expr,$expected:expr), )*] => {
+    [$( ($cmd:expr,$expected:expr,$description:expr), )*] => {
         TestSuite {
-            tests: vec![ $(Test::new($cmd,$expected),)*]
+            tests: vec![ $(Test::new($cmd,$expected,$description),)*]
         }
     };
 }
@@ -154,16 +155,17 @@ fn connect_network_manager(
 }
 
 async fn add_ethernet_device(
-    netstack_proxy: fidl_fuchsia_netstack::NetstackProxy,
+    netstack_proxy: &fidl_fuchsia_netstack::NetstackProxy,
     device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
+    name: &str,
 ) -> Result<(), Error> {
-    let name = "/mock_device";
+    let device_name = format!("/mock_device/{}", name);
     let id = netstack_proxy
         .add_ethernet_device(
-            name,
+            &device_name,
             &mut fidl_fuchsia_netstack::InterfaceConfig {
-                name: name.to_string(),
-                filepath: "/fake/filepath/for_test".to_string(),
+                name: device_name.to_string(),
+                filepath: format!("/fake/filepath/for_test/{}", name),
                 metric: 0,
                 ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
             },
@@ -187,28 +189,85 @@ async fn add_ethernet_device(
     Ok(())
 }
 
+async fn exec_cmd(env: &ManagedEnvironmentProxy, command: &str) -> String {
+    let (router_admin, router_state) =
+        connect_network_manager(&env).expect("Failed to connect from managed environment");
+
+    let mut printer = Printer::new(Vec::new());
+    let cmd = match make_cmd(command) {
+        Ok(cmd) => cmd,
+        Err(e) => return format!("{:?}", e),
+    };
+
+    let actual_output;
+    actual_output = match run_cmd(cmd, router_admin, router_state, &mut printer).await {
+        Ok(_) =>
+        // TODO(cgibson): Figure out a way to add this as a helper method on `Printer`.
+        {
+            str::from_utf8(&printer.into_inner().unwrap()).unwrap().to_string()
+        }
+
+        Err(e) => format!("{:?}", e),
+    };
+    actual_output
+}
+
+struct Device {
+    env: ManagedEnvironmentProxy,
+    _sandbox: SandboxProxy,
+    _endpoint: EndpointProxy,
+}
+
+async fn test_device() -> Device {
+    let sandbox = connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
+    let network_context = get_network_context(&sandbox).expect("failed to get network context");
+    let endpoint_manager =
+        get_endpoint_manager(&network_context).expect("failed to get endpoint manager");
+    let endpoint = create_endpoint(stringify!(test_interface), &endpoint_manager)
+        .await
+        .expect("failed to create endpoint");
+    let env = create_managed_env(&sandbox).expect("Failed to create environment with services");
+    let netstack_proxy = connect_to_sandbox_service::<fidl_fuchsia_netstack::NetstackMarker>(&env)
+        .expect("failed to connect to netstack");
+    let device = endpoint.get_ethernet_device().await.expect("failed to get ethernet device");
+    add_ethernet_device(&netstack_proxy, device, "port1")
+        .await
+        .expect("error adding ethernet device");
+    let device = endpoint.get_ethernet_device().await.expect("failed to get ethernet device");
+    add_ethernet_device(&netstack_proxy, device, "port2")
+        .await
+        .expect("error adding ethernet device");
+    let device = endpoint.get_ethernet_device().await.expect("failed to get ethernet device");
+    add_ethernet_device(&netstack_proxy, device, "port3")
+        .await
+        .expect("error adding ethernet device");
+    Device { env, _sandbox: sandbox, _endpoint: endpoint }
+}
+
 #[fasync::run_singlethreaded]
 #[test]
-async fn test_show_commands() {
+async fn test_commands() {
     // The pair is constructed of the CLI command to test, and it's expected output as a
     // regular expression parsable by the Regex crate.
-    let show_commands = test_suite![
+    let commands = test_suite![
         // ("command to test", "expected regex match statement"),
         ("show dhcpconfig 0",
-         "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}"),
-         ("show dnsconfig", "Get DNS config"),
-         ("show filterstate", "0 filters installed.*"),
+         "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}",""),
+         ("show dnsconfig", "Get DNS config",""),
+         ("show filterstate", "0 filters installed.*",""),
          ("show forwardstate 0",
-          "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}"),
+          "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}",""),
           ("show lanconfig 0",
-           "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\} Response: \\(LanProperties \\{ address_v4: None, enable_dhcp_server: None, dhcp_config: None, address_v6: None, enable_dns_forwarder: None, enable: None \\}, Some\\(Error \\{ code: NotSupported, description: None \\}\\)"),
+           "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\} Response: \\(LanProperties \\{ address_v4: None, enable_dhcp_server: None, dhcp_config: None, address_v6: None, enable_dns_forwarder: None, enable: None \\}, Some\\(Error \\{ code: NotSupported, description: None \\}\\)",""),
            ("show ports",
-            "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" }"),
-            ("show routes", "Response: \\[\\]"),
-            ("show wans", "Response: \\[\\]"),
+            "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+            ""),
+            ("show routes", "Response: \\[\\]",""),
+            ("show wans", "Response: \\[\\]",""),
     ];
 
-    for test in show_commands.tests {
+    let router = test_device().await;
+    for test in commands.tests {
         let sandbox = connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
         let network_context = get_network_context(&sandbox).expect("failed to get network context");
         let endpoint_manager =
@@ -221,24 +280,10 @@ async fn test_show_commands() {
         let netstack_proxy =
             connect_to_sandbox_service::<fidl_fuchsia_netstack::NetstackMarker>(&env)
                 .expect("failed to connect to netstack");
-        let _ = add_ethernet_device(netstack_proxy, device).await;
-        let (router_admin, router_state) =
-            connect_network_manager(&env).expect("Failed to connect from managed environment");
-
-        let mut printer = Printer::new(Vec::new());
-        let cmd = match make_cmd(&test.command) {
-            Ok(cmd) => cmd,
-            Err(e) => panic!("Failed to parse command: '{}', because: {}", test.command, e),
-        };
-
-        let actual_output;
-        match run_cmd(cmd, router_admin, router_state, &mut printer).await {
-            Ok(_) => {
-                // TODO(cgibson): Figure out a way to add this as a helper method on `Printer`.
-                actual_output = str::from_utf8(&printer.into_inner().unwrap()).unwrap().to_string();
-            }
-            Err(e) => panic!("Running command '{}' failed: {:?}", test.command, e),
-        }
+        add_ethernet_device(&netstack_proxy, device, "port1")
+            .await
+            .expect("error adding ethernet device");
+        let actual_output = exec_cmd(&router.env, &test.command).await;
         println!("command: {}", test.command);
         println!("actual: {:?}", actual_output);
         let re = Regex::new(&test.expected).unwrap();
@@ -248,35 +293,846 @@ async fn test_show_commands() {
 
 #[fasync::run_singlethreaded]
 #[test]
+async fn test_add_wan() {
+    // The pair is constructed of the CLI command to test, and it's expected output as a
+    // regular expression parsable by the Regex crate.
+    let error_message =
+        "Response: \\(None, Some\\(Error \\{ code: AlreadyExists, description: None \\}\\)\\)";
+
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement"),
+        // There should be two ports.
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+        ("show wans", "Response: \\[\\]\n","There should be no WANs created yet."),
+        (" add wan wan1 --ports 2 3", error_message,"add wan interface with two ports; should fail."),
+        (" add wan wan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
+        (" add wan wan1 --ports 5", error_message,"add wan interface using not existing port; should fail."),
+        (" add wan wan1 --ports 2", error_message,"add wan interface using already used port; should fail."),
+        (" add wan wan1 --ports 3", error_message,"add wan interface using name currently in use; should fail."),
+        (" add wan wan2 --ports 3", "Response: \\(Some\\(Id \\{ uuid: \\[7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), None\\)\n","add second wan interface using existing port; should succeed."),
+        ("show wans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}, Lif \\{ element: Some\\(Id \\{ uuid: \\[7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan2\"\\), port_ids: Some\\(\\[3\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "There should be two WAN interfaces."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_remove_wan() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", "comment"),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+        ("show wans", "Response: \\[\\]\n","There should be no WANs created yet."),
+        (" add wan wan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
+        (" add wan wan2 --ports 4", "Response: \\(Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
+        ("show wans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}, Lif \\{ element: Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan2\"\\), port_ids: Some\\(\\[4\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "There should be two WAN interfaces."),
+        (" remove wan 7",
+         "NotFound",
+         "remove non existing wan"),
+        (" remove wan 5",
+         "Response: None\n",
+          "remove first wan"),
+        ("show wans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan2\"\\), port_ids: Some\\(\\[4\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+          "verify there is only one wan"),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_add_lan() {
+    let error_message =
+        "Response: \\(None, Some\\(Error \\{ code: AlreadyExists, description: None \\}\\)\\)";
+
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", "comment"),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+        ("show lans", "Response: \\[\\]\n","There should be no LANs created yet."),
+        // TODO(dpradilla) FIX (" add lan lan1 --ports 2 3", error_message,"add lan interface with two ports; should fail."),
+        (" add lan lan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add lan interface using existing port; should succeed."),
+        (" add lan lan1 --ports 3", error_message,"add lan interface using name currently in use; should fail."),
+        (" add lan lan2 --ports 2 3", error_message,"add lan interface with two ports, one of them in use; should fail."),
+        (" add lan lan2 --ports 3 5", error_message,"add lan interface with two ports, one of them invalid; should fail."),
+        // TODO(dpradilla): test fails when adding 3 4
+        (" add lan lan2 --ports 4", "Response: \\(Some\\(Id \\{ uuid: \\[7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), None\\)\n","add lan interface with two valid ports; should succeed."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}, Lif \\{ element: Some\\(Id \\{ uuid: \\[7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan2\"\\), port_ids: Some\\(\\[4\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
+         "There should be two LAN interfaces."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_remove_lan() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", "comment"),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+        ("show lans", "Response: \\[\\]\n","There should be no LANs created yet."),
+        (" add lan lan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add lan interface using existing port; should succeed."),
+        (" add lan lan2 --ports 4", "Response: \\(Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), None\\)\n","add lan interface using existing port; should succeed."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}, Lif \\{ element: Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan2\"\\), port_ids: Some\\(\\[4\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
+         "There should be two LAN interfaces."),
+        (" remove lan 7",
+         "NotFound",
+         "remove non existing lan"),
+        (" remove lan 5",
+         "Response: None\n",
+          "remove first lan"),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan2\"\\), port_ids: Some\\(\\[4\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
+          "verify there is only one lan"),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_lan_dhcp() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add lan lan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add lan interface using existing port; should succeed."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
+         "interface up."),
+        (" set lan-dhcp 5 up",
+         "enable_dhcp_server: Some\\(true\\)",
+         "server up."),
+        ("show lan 5",
+         // TODO(b/35640): fix state not saved.
+         "enable_dhcp_server: Some\\(false\\)",
+         "server shows up."),
+        (" set lan-dhcp 5 down",
+         "enable_dhcp_server: Some\\(false\\)",
+         "change to down."),
+        ("show lan 5",
+         "enable_dhcp_server: Some\\(false\\)",
+         "interface down."),
+        (" set lan-dhcp 6 up",
+         "NotFound",
+         "change ip to non existing LAN."),
+        ("show lan 6",
+         "NotFound",
+         "show non existing LAN."),
+        (" set lan-dhcp 5 up",
+         "enable_dhcp_server: Some\\(true\\)",
+         "interface up."),
+        ("show lan 5",
+         "enable_dhcp_server: Some\\(false\\)",
+         "interface up."),
+        (" set lan-dhcp 5 up",
+         "enable_dhcp_server: Some\\(true\\)",
+         "interface up."),
+        ("show lan 5",
+         "enable_dhcp_server: Some\\(false\\)",
+         "interface up."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 5 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
+         "interface up."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_lan_ip() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add lan lan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add lan interface using existing port; should succeed."),
+        (" set lan-ip 5 1.1.1.2/23",
+         "address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 2\\] \\}\\)\\), prefix_length: Some\\(23\\) \\}\\), enable_dhcp_server: None, dhcp_config",
+         "set ip and gateway."),
+        ("show lan 5",
+         "address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 2\\] \\}\\)\\), prefix_length: Some\\(23\\) \\}\\), enable_dhcp_server: Some\\(false\\), dhcp_config",
+         "show ip."),
+        (" set lan-ip 5 2.2.2.2/24",
+         "address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), enable_dhcp_server: None, dhcp_config",
+         "change ip."),
+        ("show lan 5",
+         "address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), enable_dhcp_server: Some\\(false\\), dhcp_config",
+         "show new ip."),
+        (" set lan-ip 6 3.3.3.2/24",
+         "NotFound",
+         "change ip to non existing LAN."),
+        ("show lan 6",
+         "NotFound",
+         "show non existing LAN."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 3 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]",
+         "lan should be manual config to 2.2.2.2/24."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_lan_state() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add lan lan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add lan interface using existing port; should succeed."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
+         "interface up."),
+        (" set lan-state 5 up",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show lan 5",
+         "enable: Some\\(true\\)",
+         "show ip."),
+        (" set lan-state 5 down",
+         "enable: Some\\(false\\)",
+         "change to down."),
+        ("show lan 5",
+         "enable: Some\\(false\\)",
+         "interface down."),
+        (" set lan-state 6 up",
+         "NotFound",
+         "change ip to non existing LAN."),
+        ("show lan 6",
+         "NotFound",
+         "show non existing LAN."),
+        (" set lan-state 5 up",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show lan 5",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        (" set lan-state 5 up",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show lan 5",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show lans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 5 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(true\\) \\}\\)\\) \\}\\]\n",
+         "interface up."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_wan_connection() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "wan1 is present."),
+        (" set wan-connection 5 direct",
+         "connection_type: Some\\(Direct\\).+\nResponse: None",
+         "direct."),
+        ("show wan 5",
+         "connection_type: Some\\(Direct\\), connection_parameters: None",
+         "pptp."),
+        ("set wan-connection 5 pppoe user password 1.2.3.4",
+         "connection_type: Some\\(PpPoE\\), connection_parameters: Some\\(Pppoe\\(Pppoe \\{ credentials: Some\\(Credentials \\{ user: Some\\(\"user\"\\), password: Some\\(\"password\"\\).+\n.+NotFound",
+         "pppoe."),
+        ("show wan 5",
+         "connection_type: Some\\(Direct\\), connection_parameters: None",
+         "pppoe."),
+        ("set wan-connection 5 l2tp user password 1.2.3.4",
+         "connection_type: Some\\(L2Tp\\), connection_parameters: Some\\(L2tp\\(L2tp \\{ credentials: Some\\(Credentials \\{ user: Some\\(\"user\"\\), password: Some\\(\"password\"\\).+\n.+NotFound",
+         "l2tp."),
+        ("show wan 5",
+         "connection_type: Some\\(Direct\\), connection_parameters: None",
+         "l2tp."),
+        ("set wan-connection 5 pptp user password 1.2.3.4",
+         "connection_type: Some\\(Pptp\\), connection_parameters: Some\\(Pptp\\(Pptp \\{ credentials: Some\\(Credentials \\{ user: Some\\(\"user\"\\), password: Some\\(\"password\"\\).+\n.+NotFound",
+         "pptp."),
+        ("show wan 5",
+         "connection_type: Some\\(Direct\\), connection_parameters: None",
+         "pptp."),
+        (" set wan-connection 5 direct",
+         "connection_type: Some\\(Direct\\).+\nResponse: None",
+         "back to direct."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 3 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "one direct connection wan."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_wan_ip() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+        (" add wan wan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
+        ("show wan 5",
+         "address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None",
+         "no ip configured"),
+        (" set wan-ip 5 dhcp",
+         "address_method: Some\\(Automatic\\), address_v4: None, gateway_v4: None",
+         "configure dhcp."),
+        ("show wan 5",
+         "address_method: Some\\(Automatic\\), address_v4: None, gateway_v4: None",
+         "dhcp configured"),
+        (" set wan-ip 5 manual 1.1.1.2/24 1.1.1.1",
+          "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 1\\] \\}\\)\\)",
+         "manual ip and gateway."),
+        ("show wan 5",
+         // TODO(b/35641): Fix, gateway not being set.
+          //"address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 1\\] \\}\\)\\)",
+          "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: ",
+         "manual ip and gateway."),
+        (" set wan-ip 5 manual 2.2.2.2/24 2.2.2.1",
+          "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 1\\] \\}\\)\\)",
+         "change manual ip and gateway."),
+        ("show wan 5",
+         // TODO(b/35641): Fix, gateway not being set.
+          "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: ",
+         "manual ip and gateway."),
+        (" set wan-ip 5 manual 1.1.1.2/24",
+         "No gateway IP address provided for manual config",
+         "incomplete command"),
+        ("show wan 5",
+         // TODO(b/35641): Fix, gateway not being set.
+          "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: ",
+         "should still be 2.2.2.2."),
+        (" set wan-ip 5 manual 2.2.2.2/24 2.2.2.5",
+          "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 5\\] \\}\\)\\)",
+         "modifying gateway."),
+        (" set wan-ip 5 manual 2.2.2.2/24 1.1.1.1",
+         // TODO(b/35642): FIX, this should fail as gw is on different subnet.
+          "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[1, 1, 1, 1\\] \\}\\)\\)",
+         "manual ip and gateway."),
+        ("show wans",
+         // TODO(b/35642): FIX, this should fail as gw is on different subnet.
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 6 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "wan should be manual config to 2.2.2.2/24 gw 2.2.2.1."),
+        (" set wan-ip 5 dhcp",
+         "address_method: Some\\(Automatic\\), address_v4: None, gateway_v4: None",
+         "set it back to dhcp."),
+        ("show wan 5",
+         // TODO(b/35643) FIX - Still in manual ip mode.
+         "address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[2, 2, 2, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: None",
+         "dhcp configured, no ip"),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_wan_mac() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", "comment"),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+        ("show wans", "Response: \\[\\]\n","There should be no WANs created yet."),
+        (" add wan wan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
+        (" add wan wan2 --ports 4", "Response: \\(Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
+        ("show wans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}, Lif \\{ element: Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan2\"\\), port_ids: Some\\(\\[4\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "There should be two WAN interfaces."),
+        (" set wan-mac 7 02:bb:10:22:3e:00",
+         "NotFound",
+         "non existing wan"),
+        (" set wan-mac 5 02:gh:bb:10:22:3e",
+         "Invalid character",
+         "invalid address"),
+        // TODO(dpradilla): FIX mcast MAC should fail
+         (" set wan-mac 5 01:cd:bb:10:22:3e",
+         "clone_mac: Some\\(MacAddress \\{ octets: \\[1, 205, 187, 16, 34, 62\\].+\n.+NotFound",
+         "mcast address"),
+        (" set wan-mac 6 02:bb:10:22:3e:00",
+         "clone_mac: Some\\(MacAddress \\{ octets: \\[2, 187, 16, 34, 62, 0\\].+\n.+NotFound",
+         "valid mac"),
+         // TODO(idpradilla): fix changes are not saved.
+        ("show wans",
+         "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}, Lif \\{ element: Some\\(Id \\{ uuid: \\[6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan2\"\\), port_ids: Some\\(\\[4\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+          "verify only one WAN changed its MAC."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_wan_state() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "interface up."),
+        (" set wan-state 5 up",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show wan 5",
+         // TODO(b/35644): fix - state not saved
+         "enable: Some\\(false\\)",
+         "show ip."),
+        (" set wan-state 5 down",
+         "enable: Some\\(false\\)",
+         "change to down."),
+        ("show wan 5",
+         "enable: Some\\(false\\)",
+         "interface down."),
+        (" set wan-state 6 up",
+         "NotFound",
+         "change ip to non existing LAN."),
+        ("show wan 6",
+         "NotFound",
+         "show non existing LAN."),
+        (" set wan-state 5 up",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show wan 5",
+         "enable: Some\\(false\\)",
+         "interface up."),
+        (" set wan-state 5 up",
+         "enable: Some\\(true\\)",
+         "interface up."),
+        ("show wan 5",
+         "enable: Some\\(false\\)",
+         "interface up."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 5 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "interface up."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
 async fn test_filters() {
     let commands = test_suite![
-        ("show filterstate", "0 filters installed"),
-        ("set filter allow 0.0.0.0/0 22-22 0.0.0.0/0 22-22", "Response: \\(None, None\\)"),
-        ("show filterstate", "2 filters installed\n\\[FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Tcp\\) \\} \\}, FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Udp\\) \\} \\}\\]"),
+        ("show filterstate", "0 filters installed",""),
+        ("set filter allow 0.0.0.0/0 22-22 0.0.0.0/0 22-22", "Response: \\(None, None\\)",""),
+        ("show filterstate", "2 filters installed\n\\[FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Tcp\\) \\} \\}, FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Udp\\) \\} \\}\\]",""),
     ];
 
     let sandbox = connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
     let env = create_managed_env(&sandbox).expect("Failed to create environment with services");
     for test in commands.tests {
-        let (router_admin, router_state) =
-            connect_network_manager(&env).expect("Failed to connect from managed environment");
-        let mut printer = Printer::new(Vec::new());
-        let cmd = match make_cmd(&test.command) {
-            Ok(cmd) => cmd,
-            Err(e) => panic!("Failed to parse command: '{}', because: {}", test.command, e),
-        };
-
-        let actual_output;
-        match run_cmd(cmd, router_admin, router_state, &mut printer).await {
-            Ok(_) => {
-                // TODO(cgibson): Figure out a way to add this as a helper method on `Printer`.
-                actual_output = str::from_utf8(&printer.into_inner().unwrap()).unwrap().to_string();
-            }
-            Err(e) => panic!("Running command '{}' failed: {:?}", test.command, e),
-        }
+        let actual_output = exec_cmd(&env, &test.command).await;
         println!("command: {}", test.command);
         println!("actual: {:?}", actual_output);
         let re = Regex::new(&test.expected).unwrap();
         assert!(re.is_match(&actual_output));
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_port_forward() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         ""),
+        ("set port-forward x",
+         "Not Implemented",
+         ""),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "no changes."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_route() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         ""),
+        ("set route x",
+         "Not Implemented",
+         ""),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "no changes."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_security_config() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         ""),
+        ("set security-config x",
+         "Not Implemented",
+         ""),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "no changes."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_dhcp_config() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         ""),
+        ("set dhcp-config 6  x",
+         "Not Implemented",
+         ""),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "no changes."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_dns_config() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         ""),
+        ("set dns-config x",
+         "Not Implemented",
+         ""),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "no changes."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
+    }
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn test_dns_forwarder() {
+    let commands = test_suite![
+        // ("command to test", "expected regex match statement", description),
+        ("show ports",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "test starts with three ports present."),
+         (" add wan wan1 --ports 2",
+    "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
+    "add wan interface using existing port; should succeed."),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         ""),
+        ("set dns-forwarder 6 true",
+         "Not Implemented",
+         ""),
+        ("show wans",
+"Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
+         "no changes."),
+    ];
+
+    let router = test_device().await;
+    for test in commands.tests {
+        let actual_output = exec_cmd(&router.env, &test.command).await;
+        println!("command: {} - {}", test.command, test.description);
+        let re = Regex::new(&test.expected)
+            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+        assert!(
+            re.is_match(&actual_output),
+            "{} failed. Want: {:?}, got {:?}",
+            test.command,
+            test.expected,
+            actual_output
+        );
     }
 }
