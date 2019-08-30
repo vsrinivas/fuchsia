@@ -7,9 +7,11 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
+use std::time::{Duration, Instant};
+
+use net_types::ip::Ipv4;
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
 use rand_xorshift::XorShiftRng;
-use std::time::{Duration, Instant};
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
@@ -28,8 +30,16 @@ use crate::wire::ipv4::{
 };
 use crate::{EventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId};
 
+// NOTE: Extra tests that are too expensive to run during benchmarks can be
+// added by gating them on the `debug_assertions` configuration option. This
+// option is disabled when running `cargo check`, but enabled when running
+// `cargo test`.
+
 #[derive(Default)]
-struct BenchmarkEventDispatcher;
+struct BenchmarkEventDispatcher {
+    #[cfg(debug_assertions)]
+    frames_sent: usize,
+}
 
 impl UdpEventDispatcher for BenchmarkEventDispatcher {}
 
@@ -42,6 +52,10 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
         frame: S,
     ) -> Result<(), S> {
         black_box(frame.serialize_no_alloc_outer()).map_err(|(_, ser)| ser)?;
+        #[cfg(debug_assertions)]
+        {
+            self.frames_sent += 1;
+        }
         Ok(())
     }
 }
@@ -108,7 +122,8 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     state_builder.device_builder().set_default_ndp_configs(ndp_configs);
 
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-        .build_with::<BenchmarkEventDispatcher>(state_builder, BenchmarkEventDispatcher);
+        .build_with::<BenchmarkEventDispatcher>(state_builder, BenchmarkEventDispatcher::default());
+    crate::device::set_routing_enabled::<_, Ipv4>(&mut ctx, DeviceId::new_ethernet(0), true);
 
     assert!(
         frame_size
@@ -137,12 +152,25 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let device = DeviceId::new_ethernet(0);
     let mut buf = buf.as_mut();
     let range = 0..buf.len();
+
+    #[cfg(debug_assertions)]
+    let mut iters = 0;
     b.iter(|| {
+        #[cfg(debug_assertions)]
+        {
+            iters += 1;
+        }
         black_box(receive_frame(
             black_box(&mut ctx),
             black_box(device),
             black_box(Buf::new(&mut buf[..], range.clone())),
         ));
+
+        #[cfg(debug_assertions)]
+        {
+            assert_eq!(ctx.dispatcher().frames_sent, iters);
+        }
+
         // Since we modified the buffer in-place, it now has the wrong source
         // and destination MAC addresses and IP TTL. We reset them to their
         // original values as efficiently as we can to avoid affecting the
