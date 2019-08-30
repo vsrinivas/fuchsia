@@ -15,11 +15,6 @@ TEST(CommandLineOptionsTest, Default) {
   EXPECT_EQ(ParseModeFromArgcArgv(1, argv), Mode::DEFAULT);
 }
 
-TEST(CommandLineOptionsTest, Minimal) {
-  const char* argv[] = {"bugreport", "--minimal"};
-  EXPECT_EQ(ParseModeFromArgcArgv(2, argv), Mode::MINIMAL);
-}
-
 TEST(CommandLineOptionsTest, Help) {
   const char* argv[] = {"bugreport", "--help"};
   EXPECT_EQ(ParseModeFromArgcArgv(2, argv), Mode::HELP);
@@ -61,9 +56,6 @@ void PrintTo(const Mode& mode, std::ostream* os) {
       return;
     case Mode::HELP:
       *os << "HELP";
-      return;
-    case Mode::MINIMAL:
-      *os << "MINIMAL";
       return;
     case Mode::DEFAULT:
       *os << "DEFAULT";

@@ -12,7 +12,6 @@ enum class Mode {
   FAILURE,
   HELP,
   DEFAULT,
-  MINIMAL,
 };
 
 Mode ParseModeFromArgcArgv(int argc, const char* const* argv);

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/mem/cpp/fidl.h>
+#include <lib/fsl/vmo/file.h>
+#include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include "src/developer/feedback/bugreport/bug_report_schema.h"
 #include "src/developer/feedback/bugreport/bug_reporter.h"
-#include "src/lib/files/file.h"
+#include "src/developer/feedback/utils/archive.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace fuchsia {
 namespace bugreport {
@@ -20,33 +20,26 @@ class BugReporterIntegrationTest : public testing::Test {
  public:
   void SetUp() override {
     environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace();
-    ASSERT_TRUE(tmp_dir_.NewTempFile(&json_path_));
+    ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_));
   }
 
  protected:
   std::shared_ptr<::sys::ServiceDirectory> environment_services_;
-  std::string json_path_;
+  std::string bugreport_path_;
 
  private:
   files::ScopedTempDir tmp_dir_;
 };
 
 TEST_F(BugReporterIntegrationTest, SmokeTest) {
-  ASSERT_TRUE(MakeBugReport(environment_services_,
-                            /*attachment_allowlist=*/{}, json_path_.data()));
+  ASSERT_TRUE(MakeBugReport(environment_services_, bugreport_path_.data()));
 
-  std::string output;
-  ASSERT_TRUE(files::ReadFileToString(json_path_, &output));
-
-  // JSON verification.
-  // We check that the output is a valid JSON and that it matches the schema.
-  rapidjson::Document document;
-  ASSERT_FALSE(document.Parse(output.c_str()).HasParseError());
-  rapidjson::Document document_schema;
-  ASSERT_FALSE(document_schema.Parse(kBugReportJsonSchema).HasParseError());
-  rapidjson::SchemaDocument schema(document_schema);
-  rapidjson::SchemaValidator validator(schema);
-  EXPECT_TRUE(document.Accept(validator));
+  // We simply assert that we can unpack the bugreport archive.
+  fsl::SizedVmo vmo;
+  ASSERT_TRUE(fsl::VmoFromFilename(bugreport_path_, &vmo));
+  fuchsia::mem::Buffer buffer = std::move(vmo).ToTransport();
+  std::vector<::fuchsia::feedback::Attachment> unpacked_attachments;
+  ASSERT_TRUE(::feedback::Unpack(buffer, &unpacked_attachments));
 }
 
 }  // namespace

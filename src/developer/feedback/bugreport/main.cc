@@ -26,13 +26,9 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     case Mode::HELP:
       return EXIT_SUCCESS;
-    case Mode::MINIMAL:
-      attachment_allowlist = {"annotations.json", "inspect.json"};
     case Mode::DEFAULT:
       auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
 
-      return fuchsia::bugreport::MakeBugReport(environment_services, attachment_allowlist)
-                 ? EXIT_SUCCESS
-                 : EXIT_FAILURE;
+      return fuchsia::bugreport::MakeBugReport(environment_services) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 }

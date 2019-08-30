@@ -40,12 +40,6 @@ executable("main") {
   ]
 }
 
-source_set("bug_report_schema") {
-  sources = [
-    "bug_report_schema.h",
-  ]
-}
-
 source_set("command_line_options") {
   sources = [
     "command_line_options.cc",
@@ -68,10 +62,7 @@ source_set("src") {
   ]
 
   deps = [
-    ":bug_report_schema",
-    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.feedback",
-    "//third_party/rapidjson",
     "//zircon/public/lib/zx",
   ]
 }
@@ -79,18 +70,6 @@ source_set("src") {
 # Host side client -------------------------------------------------------------
 
 if (current_toolchain == host_toolchain) {
-  source_set("client_lib") {
-    sources = [
-      "client/bug_report_handler.cc",
-      "client/bug_report_handler.h",
-    ]
-
-    deps = [
-      "//src/lib/fxl",
-      "//third_party/rapidjson",
-    ]
-  }
-
   sdk_executable("client") {
     category = "partner"
 
@@ -101,7 +80,6 @@ if (current_toolchain == host_toolchain) {
     ]
 
     deps = [
-      ":client_lib",
       "//src/lib/fxl",
     ]
   }

@@ -9,9 +9,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
-#include <map>
-#include <string>
-
 #include "src/lib/fxl/logging.h"
 
 namespace fuchsia {
@@ -21,9 +18,8 @@ namespace bugreport {
 // fuchsia::feedback::DataProvider::GetData().
 class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
  public:
-  StubFeedbackDataProvider(const std::map<std::string, std::string>& annotations,
-                           const std::map<std::string, std::string>& attachments)
-      : annotations_(annotations), attachments_(attachments) {}
+  StubFeedbackDataProvider(fuchsia::feedback::Attachment attachment_bundle)
+      : attachment_bundle_(std::move(attachment_bundle)) {}
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
@@ -38,8 +34,7 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
   }
 
  private:
-  const std::map<std::string, std::string> annotations_;
-  const std::map<std::string, std::string> attachments_;
+  fuchsia::feedback::Attachment attachment_bundle_;
 
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings_;
 };

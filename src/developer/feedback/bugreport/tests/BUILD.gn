@@ -38,15 +38,12 @@ executable("bugreport_unittest") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/feedback/bugreport:bug_report_schema",
     "//src/developer/feedback/bugreport:src",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
@@ -61,12 +58,13 @@ executable("bugreport_integration_test") {
   ]
 
   deps = [
-    "//src/developer/feedback/bugreport:bug_report_schema",
+    "//garnet/public/lib/fsl",
     "//src/developer/feedback/bugreport:src",
+    "//src/developer/feedback/utils:archive",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-mem",
   ]
 }
 
@@ -82,26 +80,4 @@ executable("command_line_options_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
-}
-
-if (current_toolchain == host_toolchain) {
-  group("bugreport_client_tests") {
-    testonly = true
-
-    deps = [
-      ":bugreport_handler_unittest",
-    ]
-  }
-
-  test("bugreport_handler_unittest") {
-    sources = [
-      "bug_report_handler_unittest.cc",
-    ]
-
-    deps = [
-      "//src/developer/feedback/bugreport:client_lib",
-      "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
-    ]
-  }
 }

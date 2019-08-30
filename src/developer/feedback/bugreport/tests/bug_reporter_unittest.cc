@@ -6,22 +6,19 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zircon/errors.h>
 
-#include <map>
 #include <memory>
 #include <string>
 
-#include "src/developer/feedback/bugreport/bug_report_schema.h"
 #include "src/developer/feedback/bugreport/tests/stub_feedback_data_provider.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
-#include "third_party/rapidjson/include/rapidjson/document.h"
-#include "third_party/rapidjson/include/rapidjson/schema.h"
 
 namespace fuchsia {
 namespace bugreport {
@@ -38,12 +35,11 @@ class BugReporterTest : public gtest::RealLoopFixture {
               ZX_OK);
   }
 
-  void SetUp() override { ASSERT_TRUE(tmp_dir_.NewTempFile(&json_path_)); }
+  void SetUp() override { ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_)); }
 
  protected:
-  void ResetFeedbackDataProvider(const std::map<std::string, std::string>& annotations,
-                                 const std::map<std::string, std::string>& attachments) {
-    stub_feedback_data_provider_.reset(new StubFeedbackDataProvider(annotations, attachments));
+  void ResetFeedbackDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
+    stub_feedback_data_provider_.reset(new StubFeedbackDataProvider(std::move(attachment_bundle)));
     FXL_CHECK(service_directory_provider_.AddService(stub_feedback_data_provider_->GetHandler()) ==
               ZX_OK);
   }
@@ -53,7 +49,7 @@ class BugReporterTest : public gtest::RealLoopFixture {
 
  protected:
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
-  std::string json_path_;
+  std::string bugreport_path_;
 
  private:
   std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
@@ -61,67 +57,19 @@ class BugReporterTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(BugReporterTest, Basic) {
-  ResetFeedbackDataProvider(/*annotations=*/
-                            {
-                                {"annotation.1.key", "annotation.1.value"},
-                                {"annotation.2.key", "annotation.2.value"},
-                                {"annotation.3.key", "annotation.3.value"},
-                            },
-                            /*attachments=*/{
-                                {"attachment.1.key", "attachment.1.value"},
-                                {"attachment.2.key", "attachment.2.value"},
-                            });
+  const std::string payload = "technically a ZIP archive, but it doesn't matter for the unit test";
 
-  ASSERT_TRUE(MakeBugReport(service_directory_provider_.service_directory(),
-                            /*attachment_allowlist=*/{}, json_path_.data()));
+  fuchsia::feedback::Attachment attachment_bundle;
+  attachment_bundle.key = "unused";
+  ASSERT_TRUE(fsl::VmoFromString(payload, &attachment_bundle.value));
+  ResetFeedbackDataProvider(std::move(attachment_bundle));
 
-  std::string output;
-  ASSERT_TRUE(files::ReadFileToString(json_path_, &output));
+  ASSERT_TRUE(
+      MakeBugReport(service_directory_provider_.service_directory(), bugreport_path_.data()));
 
-  // JSON verification.
-  // We check that the output is a valid JSON and that it matches the schema.
-  rapidjson::Document document;
-  ASSERT_FALSE(document.Parse(output.c_str()).HasParseError());
-  rapidjson::Document document_schema;
-  ASSERT_FALSE(document_schema.Parse(kBugReportJsonSchema).HasParseError());
-  rapidjson::SchemaDocument schema(document_schema);
-  rapidjson::SchemaValidator validator(schema);
-  EXPECT_TRUE(document.Accept(validator));
-
-  // Content verification.
-  ASSERT_TRUE(document.HasMember("attachment.1.key"));
-  ASSERT_TRUE(document.HasMember("attachment.2.key"));
-  ASSERT_TRUE(document["attachment.1.key"].IsString());
-  ASSERT_TRUE(document["attachment.2.key"].IsString());
-  EXPECT_STREQ(document["attachment.1.key"].GetString(), "attachment.1.value");
-  EXPECT_STREQ(document["attachment.2.key"].GetString(), "attachment.2.value");
-}
-
-TEST_F(BugReporterTest, RestrictedAttachments) {
-  ResetFeedbackDataProvider(/*annotations=*/
-                            {
-                                {"annotation.key", "unused"},
-                            },
-                            /*attachments=*/{
-                                {"attachment.key.filtered", "unused"},
-                                {"attachment.key.kept", "unused"},
-                            });
-
-  ASSERT_TRUE(MakeBugReport(service_directory_provider_.service_directory(),
-                            /*attachment_allowlist=*/
-                            {
-                                "attachment.key.kept",
-                                "attachment.key.ignored",
-                            },
-                            json_path_.data()));
-
-  std::string output;
-  ASSERT_TRUE(files::ReadFileToString(json_path_, &output));
-  rapidjson::Document document;
-  ASSERT_FALSE(document.Parse(output.c_str()).HasParseError());
-  ASSERT_FALSE(document.HasMember("attachment.key.filtered"));
-  ASSERT_TRUE(document.HasMember("attachment.key.kept"));
-  ASSERT_FALSE(document.HasMember("attachment.key.ignored"));
+  std::string bugreport;
+  ASSERT_TRUE(files::ReadFileToString(bugreport_path_, &bugreport));
+  EXPECT_STREQ(bugreport.c_str(), payload.c_str());
 }
 
 }  // namespace

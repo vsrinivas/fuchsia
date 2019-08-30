@@ -13,17 +13,12 @@ namespace {
 
 constexpr char kUsage[] = R"($0
 
-    Dumps in stdout a JSON file containing all the feedback data collected from
+    Dumps in stdout an archive file containing all the feedback data collected from
     fuchsia.feedback.DataProvider.
 
 Usage:
 
-  $0 [--minimal]
-
-Arguments:
-
-    --minimal    Restricts the output to the annotations and the Inspect data
-                 only (no logs, no build snapshot, etc.).
+  $0 [--help]
 
 )";
 
@@ -37,9 +32,7 @@ Mode ParseModeFromArgcArgv(int argc, const char* const* argv) {
     return Mode::HELP;
   }
 
-  if (command_line.HasOption("minimal")) {
-    return Mode::MINIMAL;
-  } else if (!command_line.options().empty() || !pos_args.empty()) {
+  if (!command_line.options().empty() || !pos_args.empty()) {
     fprintf(stderr, "Unexpected option. Usage: %s\n",
             fxl::Substitute(kUsage, command_line.argv0()).c_str());
     return Mode::FAILURE;
