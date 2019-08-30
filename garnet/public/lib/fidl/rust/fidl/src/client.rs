@@ -6,8 +6,6 @@
 
 //! An implementation of a client for a fidl interface.
 
-#[allow(unused_imports)]
-// for AsHandleRef (see https://github.com/rust-lang/rust/issues/53682)
 use {
     crate::{
         encoding::{
@@ -16,7 +14,7 @@ use {
         },
         Error,
     },
-    fuchsia_async::{self as fasync, temp::TempFutureExt},
+    fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         future::{self, AndThen, Either, Future, FutureExt, Ready, TryFutureExt},
