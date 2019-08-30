@@ -90,5 +90,26 @@ TEST_F(OpteeSmokeTest, VerifyTeeConnectivity) {
   ASSERT_EQ(op.params[3].tmpref.size, kDerivedKeySize);
 }
 
+TEST_F(OpteeSmokeTest, SupportsNullMemoryReferences) {
+  // Both input and output null memory references should be supported.
+  TEEC_Operation op = {};
+  op.params[0].tmpref.buffer = 0;
+  op.params[0].tmpref.size = 0;
+  op.params[3].tmpref.buffer = 0;
+  op.params[3].tmpref.size = 0;
+  op.paramTypes =
+      TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_MEMREF_TEMP_OUTPUT);
+
+  OperationResult op_result;
+  op_result.result = TEEC_InvokeCommand(
+      GetSession(), kKeysafeGetHardwareDerivedKeyCmdID, &op, &op_result.return_origin);
+
+  // The TA is not expected to succeed given this input. It is sufficient to verify that
+  // the error origin is not the api or the comms.
+  ASSERT_TRUE(IsTeecSuccess(op_result)
+              || ((op_result.return_origin != TEEC_ORIGIN_API)
+                  && (op_result.return_origin != TEEC_ORIGIN_COMMS)));
+}
+
 }  // namespace test
 }  // namespace optee

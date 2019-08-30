@@ -148,11 +148,10 @@ static TEEC_Result preprocess_temporary_memref(uint32_t param_type,
   zx_handle_t vmo;
 
   if (!temp_memory_ref->buffer) {
-    // A null buffer marked as output is a valid request to determine the necessary size of the
-    // output buffer. It is an error for any sort of input.
-    if (is_direction_input(direction)) {
-      return TEEC_ERROR_BAD_PARAMETERS;
-    }
+    // A null buffer indicates a null memory reference.
+    // For example, an output null memory reference is a valid request to
+    // determine the necessary size of the output buffer.
+    // The TA may associate whatever specific meaning with null memory references.
     vmo = ZX_HANDLE_INVALID;
   } else {
     // We either have data to input or have a buffer to output data to, so create a VMO for it.

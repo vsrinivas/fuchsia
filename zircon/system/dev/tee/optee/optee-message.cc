@@ -120,18 +120,14 @@ zx_status_t Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
       return ZX_ERR_INVALID_ARGS;
   }
 
-  // If an invalid VMO was provided, but the buffer is only an output, this is just a size check.
+  // If an invalid VMO was provided, this is a null memory reference.
   if (!vmo.is_valid()) {
-    if (IsParameterInput(buffer.direction)) {
-      return ZX_ERR_INVALID_ARGS;
-    } else {
-      // No need to allocate a temporary buffer from the shared memory pool,
-      out_param->attribute = attribute;
-      out_param->payload.temporary_memory.buffer = 0;
-      out_param->payload.temporary_memory.size = buffer.size;
-      out_param->payload.temporary_memory.shared_memory_reference = 0;
-      return ZX_OK;
-    }
+    // No need to allocate a temporary buffer from the shared memory pool,
+    out_param->attribute = attribute;
+    out_param->payload.temporary_memory.buffer = 0;
+    out_param->payload.temporary_memory.size = buffer.size;
+    out_param->payload.temporary_memory.shared_memory_reference = 0;
+    return ZX_OK;
   }
 
   // For most buffer types, we must allocate a temporary shared memory buffer within the physical
