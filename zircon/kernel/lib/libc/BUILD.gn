@@ -6,6 +6,7 @@ source_set("libc") {
   sources = [
     "atexit.c",
     "atoi.c",
+    "atomic.cc",
     "bsearch.c",
     "cxa_atexit.cc",
     "cxa_pure_virtual.cc",
@@ -21,6 +22,7 @@ source_set("libc") {
   ]
   deps = [
     ":ctype",
+    ":tests",
     "$zx/kernel/lib/heap",
     "$zx/kernel/lib/io",
     "string",
@@ -30,5 +32,15 @@ source_set("libc") {
 source_set("ctype") {
   sources = [
     "ctype.c",
+  ]
+}
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [
+    "atomic_tests.cc",
+  ]
+  deps = [
+    "$zx/kernel/lib/unittest",
   ]
 }
