@@ -269,9 +269,9 @@ pub struct ConnectionLostInfo {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PreviousDisconnectInfo {
-    ssid: Ssid,
-    disconnect_cause: DisconnectCause,
-    disconnect_at: zx::Time,
+    pub ssid: Ssid,
+    pub disconnect_cause: DisconnectCause,
+    pub disconnect_at: zx::Time,
 }
 
 #[derive(Debug, Clone, PartialEq)]

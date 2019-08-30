@@ -432,6 +432,7 @@ pub fn log_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats
     log_connect_attempts_stats(sender, connect_stats);
     log_connect_result_stats(sender, connect_stats);
     log_time_to_connect_stats(sender, connect_stats);
+    log_connection_gap_time_stats(sender, connect_stats);
 }
 
 fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
@@ -782,6 +783,38 @@ fn log_time_to_connect_stats(sender: &mut CobaltSender, connect_stats: &ConnectS
     }
 }
 
+pub fn log_connection_gap_time_stats(sender: &mut CobaltSender, connect_stats: &ConnectStats) {
+    if connect_stats.result != ConnectResult::Success {
+        return;
+    }
+
+    let ssid = match &connect_stats.candidate_network {
+        Some(bss) => &bss.ssid,
+        None => {
+            warn!("No candidate_network in successful connect stats");
+            return;
+        }
+    };
+
+    if let Some(previous_disconnect_info) = &connect_stats.previous_disconnect_info {
+        let duration = connect_stats.connect_end_at - previous_disconnect_info.disconnect_at;
+        let ssids_dim = if ssid == &previous_disconnect_info.ssid {
+            metrics::ConnectionGapTimeBreakdownMetricDimensionSsids::SameSsid
+        } else {
+            metrics::ConnectionGapTimeBreakdownMetricDimensionSsids::DifferentSsids
+        };
+        let previous_disconnect_cause_dim =
+            convert_disconnect_cause(&previous_disconnect_info.disconnect_cause);
+
+        sender.log_elapsed_time(metrics::CONNECTION_GAP_TIME_METRIC_ID, (), duration.into_micros());
+        sender.log_elapsed_time(
+            metrics::CONNECTION_GAP_TIME_BREAKDOWN_METRIC_ID,
+            [ssids_dim as u32, previous_disconnect_cause_dim as u32],
+            duration.into_micros(),
+        )
+    }
+}
+
 pub fn log_connection_milestone(sender: &mut CobaltSender, info: &ConnectionMilestoneInfo) {
     use metrics::ConnectionCountByDurationMetricDimensionConnectedTime::*;
 
@@ -848,7 +881,7 @@ mod tests {
         wlan_sme::client::{
             info::{
                 ConnectStats, ConnectionLostInfo, ConnectionMilestone, ConnectionMilestoneInfo,
-                ScanEndStats, ScanResult, ScanStartStats,
+                DisconnectCause, PreviousDisconnectInfo, ScanEndStats, ScanResult, ScanStartStats,
             },
             ConnectFailure, ConnectResult, SelectNetworkFailure,
         },
@@ -983,6 +1016,8 @@ mod tests {
             metrics::ESTABLISH_RSNA_TIME_METRIC_ID,
             metrics::ESTABLISH_RSNA_TIME_PER_RSSI_METRIC_ID,
             metrics::CONNECTION_QUEUED_TIME_METRIC_ID,
+            metrics::CONNECTION_GAP_TIME_METRIC_ID,
+            metrics::CONNECTION_GAP_TIME_BREAKDOWN_METRIC_ID,
         };
         while let Ok(Some(event)) = cobalt_receiver.try_next() {
             assert!(expected_metrics.contains(&event.metric_id), "unexpected event: {:?}", event);
@@ -1243,7 +1278,11 @@ mod tests {
             candidate_network: Some(fake_bss_description()),
             attempts: 1,
             last_ten_failures: vec![],
-            previous_disconnect_info: None,
+            previous_disconnect_info: Some(PreviousDisconnectInfo {
+                ssid: fake_bss_description().ssid,
+                disconnect_cause: DisconnectCause::Manual,
+                disconnect_at: now - 10.seconds(),
+            }),
         }
     }
 

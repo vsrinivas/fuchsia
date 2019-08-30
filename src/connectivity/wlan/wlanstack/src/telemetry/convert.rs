@@ -7,7 +7,10 @@ use {
     log::warn,
     wlan_common::bss::Protection,
     wlan_metrics_registry as metrics,
-    wlan_sme::client::{info::ScanResult, ConnectFailure, ConnectResult, SelectNetworkFailure},
+    wlan_sme::client::{
+        info::{DisconnectCause, ScanResult},
+        ConnectFailure, ConnectResult, SelectNetworkFailure,
+    },
 };
 
 pub(super) fn convert_connect_failure(
@@ -231,6 +234,16 @@ pub(super) fn convert_select_network_failure(
         SelectNetworkFailure::InvalidPasswordArg => InvalidPasswordArg,
         SelectNetworkFailure::NoCompatibleNetwork => NoCompatibleNetwork,
         SelectNetworkFailure::InternalError => InternalError,
+    }
+}
+
+pub(super) fn convert_disconnect_cause(
+    disconnect_cause: &DisconnectCause,
+) -> metrics::ConnectionGapTimeBreakdownMetricDimensionPreviousDisconnectCause {
+    use metrics::ConnectionGapTimeBreakdownMetricDimensionPreviousDisconnectCause::*;
+    match disconnect_cause {
+        DisconnectCause::Manual => Manual,
+        DisconnectCause::Drop => Drop,
     }
 }
 
