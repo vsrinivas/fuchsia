@@ -310,7 +310,7 @@ mod tests {
         super::{Blobfs, Filesystem, Minfs},
         fuchsia_zircon::HandleBased,
         ramdevice_client::RamdiskClient,
-        std::io::{Read, Write},
+        std::io::{Read, Seek, Write},
     };
 
     fn ramdisk_blobfs(block_size: u64) -> (RamdiskClient, Filesystem<Blobfs>) {
@@ -339,6 +339,7 @@ mod tests {
         blobfs.format().expect("failed to format blobfs");
 
         // force fsck to fail by stomping all over one of blobfs's metadata blocks after formatting
+        // TODO(35860): corrupt something other than the superblock
         let device_channel = ramdisk.open().expect("failed to get channel to device");
         let mut file = fdio::create_fd(device_channel.into_handle())
             .expect("failed to convert to file descriptor");
@@ -394,7 +395,7 @@ mod tests {
 
     #[test]
     fn minfs_format_fsck_success() {
-        let block_size = 512;
+        let block_size = 8192;
         let (ramdisk, minfs) = ramdisk_minfs(block_size);
 
         minfs.format().expect("failed to format minfs");
@@ -405,7 +406,7 @@ mod tests {
 
     #[test]
     fn minfs_format_fsck_fail() {
-        let block_size = 512;
+        let block_size = 8192;
         let (ramdisk, minfs) = ramdisk_minfs(block_size);
 
         minfs.format().expect("failed to format minfs");
@@ -414,8 +415,18 @@ mod tests {
         let device_channel = ramdisk.open().expect("failed to get channel to device");
         let mut file = fdio::create_fd(device_channel.into_handle())
             .expect("failed to convert to file descriptor");
-        let mut bytes: Vec<u8> = std::iter::repeat(0xff).take(block_size as usize).collect();
-        file.write(&mut bytes).expect("failed to write to device");
+
+        // when minfs isn't on an fvm, the location for it's bitmap offset is the 8th block.
+        // TODO(35861): parse the superblock for this offset and the block size.
+        let bitmap_block_offset = 8;
+        let bitmap_offset = block_size * bitmap_block_offset;
+
+        let mut stomping_bytes: Vec<u8> =
+            std::iter::repeat(0xff).take(block_size as usize).collect();
+        let actual_offset =
+            file.seek(std::io::SeekFrom::Start(bitmap_offset)).expect("failed to seek to bitmap");
+        assert_eq!(actual_offset, bitmap_offset);
+        file.write(&mut stomping_bytes).expect("failed to write to device");
 
         minfs.fsck().expect_err("fsck succeeded when it shouldn't have");
 
@@ -424,14 +435,13 @@ mod tests {
 
     #[test]
     fn minfs_format_mount_write_remount_read_unmount() {
-        let block_size = 512;
+        let block_size = 8192;
         let mount_point = "/test-fs-root";
         let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
 
         minfs.format().expect("failed to format minfs");
         minfs.mount(mount_point).expect("failed to mount minfs");
 
-        // pre-generated merkle test fixture data
         let filename = "test_file";
         let content = String::from("test content").into_bytes();
         let path = format!("{}/{}", mount_point, filename);
