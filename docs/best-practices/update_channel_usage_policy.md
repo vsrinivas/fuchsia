@@ -1,4 +1,4 @@
-# Fuchsia Channel Usage Policy
+# Fuchsia Update Channel Usage Policy
 
 This document codifies the policy for using *Update Channel* information in
 Fuchsia.
@@ -13,7 +13,7 @@ well as any other Fuchsia supported components.
 
 ## Policy
 
-Clients looking to obtain approvals for use of Channel APIs must conform to the
+Clients looking to obtain approvals for use of Update Channel APIs must conform to the
 following requirements:
 
 *   The channel information cannot be used in conditional logic
@@ -23,7 +23,7 @@ following requirements:
     *   This implies that additional clients should not by-pass the policy by
         reading cached channel information.
 
-## Channel Use within Fuchsia Platform
+## Update Channel Use within Fuchsia Platform
 
 Within the Fuchsia “stem,” the use of channels MUST conform to the defined
 policy. Also, the following properties MUST apply:
@@ -35,7 +35,7 @@ policy. Also, the following properties MUST apply:
     authoritative component and should not use this information to alter runtime
     behavior.
 
-## Channel Use within the SDK
+## Update Channel Use within the SDK
 
 Users of channel information in the SDK for Fuchsia components MUST follow the
 defined policy. The following properties MUST apply:
