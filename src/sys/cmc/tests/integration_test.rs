@@ -3,8 +3,9 @@ use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, OfferDecl, OfferLegacyServiceDecl, OfferServiceDecl, RealmRef, Ref,
-    SelfRef, StartupMode, UseDecl, UseLegacyServiceDecl, UseServiceDecl,
+    ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
+    OfferLegacyServiceDecl, OfferServiceDecl, RealmRef, Ref, SelfRef, StartupMode, UseDecl,
+    UseLegacyServiceDecl, UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -35,11 +36,26 @@ fn main() {
                 target_path: Some("/svc/fuchsia.fonts.LegacyProvider".to_string()),
             }),
         ];
-        let exposes = vec![ExposeDecl::Directory(ExposeDirectoryDecl {
-            source: Some(Ref::Self_(SelfRef {})),
-            source_path: Some("/volumes/blobfs".to_string()),
-            target_path: Some("/volumes/blobfs".to_string()),
-        })];
+        let exposes = vec![
+            ExposeDecl::Service(ExposeServiceDecl {
+                source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
+                target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                target: Some(Ref::Realm(RealmRef {})),
+            }),
+            ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
+                source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
+                target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                target: Some(Ref::Realm(RealmRef {})),
+            }),
+            ExposeDecl::Directory(ExposeDirectoryDecl {
+                source: Some(Ref::Self_(SelfRef {})),
+                source_path: Some("/volumes/blobfs".to_string()),
+                target_path: Some("/volumes/blobfs".to_string()),
+                target: Some(Ref::Framework(FrameworkRef {})),
+            }),
+        ];
         let offers = vec![
             OfferDecl::Service(OfferServiceDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),

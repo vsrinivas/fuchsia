@@ -497,8 +497,8 @@ mod tests {
         crate::startup,
         cm_rust::{
             self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-            ExposeLegacyServiceDecl, ExposeSource, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
-            UseSource,
+            ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
+            UseLegacyServiceDecl, UseSource,
         },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::{
@@ -858,11 +858,13 @@ mod tests {
                             source: ExposeSource::Self_,
                             source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                             target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                            target: ExposeTarget::Realm,
                         }),
                         ExposeDecl::Directory(ExposeDirectoryDecl {
                             source: ExposeSource::Self_,
                             source_path: CapabilityPath::try_from("/data/baz").unwrap(),
                             target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            target: ExposeTarget::Realm,
                         }),
                     ],
                     ..default_component_decl()

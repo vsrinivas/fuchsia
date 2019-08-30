@@ -4,8 +4,8 @@
 
 library fuchsia.sys2;
 
-/// Declares a capability exposed to a component's containing realm, such as a
-/// legacy service exposed by the component or one of its children at runtime.
+/// Declares a capability exposed to either a component's containing realm or to the framework.
+/// For example, a legacy service exposed by the component at runtime.
 xunion ExposeDecl {
     ExposeServiceDecl service;
     ExposeLegacyServiceDecl legacy_service;
@@ -32,6 +32,10 @@ table ExposeServiceDecl {
     ///
     /// Must be an absolute path starting with /.
     3: string:MAX_PATH_LENGTH target_path;
+
+    /// The destination to which the service is exposed: either the component's realm or the
+    /// framework.
+    4: Ref target;
 };
 
 /// Declares a legacy service exposed to a component's containing realm, such as
@@ -52,6 +56,10 @@ table ExposeLegacyServiceDecl {
     ///
     /// Must be an absolute path starting with /.
     3: string:MAX_PATH_LENGTH target_path;
+
+    /// The destination to which the legacy service is exposed: either the component's realm or the
+    /// framework.
+    4: Ref target;
 };
 
 /// Declares a directory exposed to a component's containing realm, such as a
@@ -69,4 +77,8 @@ table ExposeDirectoryDecl {
     ///
     /// Must be an absolute path starting with /.
     3: string:MAX_PATH_LENGTH target_path;
+
+    /// The destination to which the directory is exposed: either the component's realm or the
+    /// framework.
+    4: Ref target;
 };

@@ -9,9 +9,9 @@ use {
     },
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, OfferDecl, OfferDirectoryDecl,
-        OfferDirectorySource, OfferLegacyServiceDecl, OfferServiceSource, OfferTarget, UseDecl,
-        UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
+        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
+        OfferDirectoryDecl, OfferDirectorySource, OfferLegacyServiceDecl, OfferServiceSource,
+        OfferTarget, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::{TryFrom, TryInto},
@@ -388,11 +388,13 @@ async fn use_from_sibling_no_root() {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 ..default_component_decl()
@@ -463,11 +465,13 @@ async fn use_from_sibling_root() {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 ..default_component_decl()
@@ -559,11 +563,13 @@ async fn use_from_niece() {
                         source: ExposeSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/data/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -600,11 +606,13 @@ async fn use_from_niece() {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 ..default_component_decl()
@@ -694,6 +702,7 @@ async fn use_kitchen_sink() {
                     source: ExposeSource::Child("d".to_string()),
                     source_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 children: vec![
                     ChildDecl {
@@ -750,6 +759,7 @@ async fn use_kitchen_sink() {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/data/foo_from_d").unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 ..default_component_decl()
             },
@@ -798,6 +808,7 @@ async fn use_kitchen_sink() {
                     source: ExposeSource::Child("h".to_string()),
                     source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 children: vec![ChildDecl {
                     name: "h".to_string(),
@@ -814,6 +825,7 @@ async fn use_kitchen_sink() {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 ..default_component_decl()
             },
@@ -1186,11 +1198,13 @@ async fn use_from_expose() {
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         source: ExposeSource::Self_,
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         source: ExposeSource::Self_,
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 ..default_component_decl()
@@ -1524,11 +1538,13 @@ async fn expose_from_self_and_child() {
                         source: ExposeSource::Child("c".to_string()),
                         source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/bar/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Child("c".to_string()),
                         source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/bar/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 children: vec![ChildDecl {
@@ -1547,11 +1563,13 @@ async fn expose_from_self_and_child() {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 ..default_component_decl()
@@ -1618,11 +1636,13 @@ async fn use_not_exposed() {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/data/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target: ExposeTarget::Realm,
                     }),
                 ],
                 ..default_component_decl()

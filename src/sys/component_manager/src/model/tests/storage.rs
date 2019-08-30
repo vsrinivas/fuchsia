@@ -6,10 +6,10 @@ use {
     crate::model::moniker::RelativeMoniker,
     crate::model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*},
     cm_rust::{
-        self, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource, OfferDecl,
-        OfferDirectoryDecl, OfferDirectorySource, OfferStorage, OfferStorageDecl,
-        OfferStorageSource, OfferTarget, StorageDecl, StorageDirectorySource, UseDecl,
-        UseStorageDecl,
+        self, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
+        ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferDirectorySource, OfferStorage,
+        OfferStorageDecl, OfferStorageSource, OfferTarget, StorageDecl, StorageDirectorySource,
+        UseDecl, UseStorageDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::TryInto,
@@ -366,6 +366,7 @@ async fn storage_from_parent_dir_from_sibling() {
                     source_path: "/data".try_into().unwrap(),
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 ..default_component_decl()
             },
@@ -449,6 +450,7 @@ async fn storage_multiple_types() {
                     source_path: "/data".try_into().unwrap(),
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 ..default_component_decl()
             },

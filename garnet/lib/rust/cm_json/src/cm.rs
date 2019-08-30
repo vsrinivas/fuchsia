@@ -171,6 +171,16 @@ pub struct UseStorage {
     pub target_path: Option<Path>,
 }
 
+/// Exposed capability destination. See [`ExposeTargetDecl`].
+///
+/// [`ExposeTargetDecl`]: ../../fidl_fuchsia_sys2/enum.ExposeTargetDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum ExposeTarget {
+    Realm,
+    Framework,
+}
+
 /// Exposed capability. See [`ExposeDecl`].
 ///
 /// [`ExposeDecl`]: ../../fidl_fuchsia_sys2/enum.ExposeDecl.html
@@ -190,6 +200,7 @@ pub struct ExposeService {
     pub source: Ref,
     pub source_path: Path,
     pub target_path: Path,
+    pub target: ExposeTarget,
 }
 
 /// Exposed legacy service capability. See [`ExposeLegacyServiceDecl`].
@@ -200,6 +211,7 @@ pub struct ExposeLegacyService {
     pub source: Ref,
     pub source_path: Path,
     pub target_path: Path,
+    pub target: ExposeTarget,
 }
 
 /// Exposed directory capability. See [`ExposeDirectoryDecl`].
@@ -210,6 +222,7 @@ pub struct ExposeDirectory {
     pub source: Ref,
     pub source_path: Path,
     pub target_path: Path,
+    pub target: ExposeTarget,
 }
 
 /// Offered capability. See [`OfferDecl`].

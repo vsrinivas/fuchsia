@@ -79,6 +79,15 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
     }
 }
 
+impl CmInto<fsys::Ref> for cm::ExposeTarget {
+    fn cm_into(self) -> Result<fsys::Ref, Error> {
+        Ok(match self {
+            cm::ExposeTarget::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            cm::ExposeTarget::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+        })
+    }
+}
+
 impl CmInto<fsys::OfferDecl> for cm::Offer {
     fn cm_into(self) -> Result<fsys::OfferDecl, Error> {
         Ok(match self {
@@ -135,6 +144,7 @@ impl CmInto<fsys::ExposeServiceDecl> for cm::ExposeService {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
+            target: Some(self.target.cm_into()?),
         })
     }
 }
@@ -145,6 +155,7 @@ impl CmInto<fsys::ExposeLegacyServiceDecl> for cm::ExposeLegacyService {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
+            target: Some(self.target.cm_into()?),
         })
     }
 }
@@ -155,6 +166,7 @@ impl CmInto<fsys::ExposeDirectoryDecl> for cm::ExposeDirectory {
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
             target_path: Some(self.target_path.into()),
+            target: Some(self.target.cm_into()?),
         })
     }
 }
@@ -637,7 +649,8 @@ mod tests {
                                 }
                             },
                             "source_path": "/loggers/fuchsia.logger.Log",
-                            "target_path": "/svc/fuchsia.logger.Log"
+                            "target_path": "/svc/fuchsia.logger.Log",
+                            "target": "realm"
                         }
                     },
                     {
@@ -648,7 +661,8 @@ mod tests {
                                 }
                             },
                             "source_path": "/loggers/fuchsia.logger.LegacyLog",
-                            "target_path": "/svc/fuchsia.logger.LegacyLog"
+                            "target_path": "/svc/fuchsia.logger.LegacyLog",
+                            "target": "realm"
                         }
                     },
                     {
@@ -657,7 +671,8 @@ mod tests {
                                 "self": {}
                             },
                             "source_path": "/volumes/blobfs",
-                            "target_path": "/volumes/blobfs"
+                            "target_path": "/volumes/blobfs",
+                            "target": "framework"
                         }
                     }
                 ],
@@ -678,6 +693,7 @@ mod tests {
                             collection: None,
                         })),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                     }),
                     fsys::ExposeDecl::LegacyService(fsys::ExposeLegacyServiceDecl {
                         source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
@@ -686,11 +702,13 @@ mod tests {
                             collection: None,
                         })),
                         target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                     }),
                     fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                         source_path: Some("/volumes/blobfs".to_string()),
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         target_path: Some("/volumes/blobfs".to_string()),
+                        target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                     }),
                 ];
                 let children = vec![
@@ -1165,7 +1183,8 @@ mod tests {
                                 "self": {}
                             },
                             "source_path": "/volumes/blobfs",
-                            "target_path": "/volumes/blobfs"
+                            "target_path": "/volumes/blobfs",
+                            "target": "realm"
                         }
                     }
                 ],
@@ -1238,6 +1257,7 @@ mod tests {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
                         source_path: Some("/volumes/blobfs".to_string()),
                         target_path: Some("/volumes/blobfs".to_string()),
+                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                     }),
                 ];
                 let offers = vec![

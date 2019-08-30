@@ -265,6 +265,7 @@ fidl_into_struct!(ExposeServiceDecl, ExposeServiceDecl, fsys::ExposeServiceDecl,
                       source: ExposeSource,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
+                      target: ExposeTarget,
                   });
 fidl_into_struct!(ExposeLegacyServiceDecl, ExposeLegacyServiceDecl, fsys::ExposeLegacyServiceDecl,
                   fsys::ExposeLegacyServiceDecl,
@@ -272,6 +273,7 @@ fidl_into_struct!(ExposeLegacyServiceDecl, ExposeLegacyServiceDecl, fsys::Expose
                       source: ExposeSource,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
+                      target: ExposeTarget,
                   });
 fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
                   fsys::ExposeDirectoryDecl,
@@ -279,6 +281,7 @@ fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirector
                       source: ExposeSource,
                       source_path: CapabilityPath,
                       target_path: CapabilityPath,
+                      target: ExposeTarget,
                   });
 
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
@@ -711,6 +714,34 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeSource {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum ExposeTarget {
+    Realm,
+    Framework,
+}
+
+impl FidlIntoNative<ExposeTarget> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> ExposeTarget {
+        match self {
+            Some(dest) => match dest {
+                fsys::Ref::Realm(_) => ExposeTarget::Realm,
+                fsys::Ref::Framework(_) => ExposeTarget::Framework,
+                _ => panic!("invalid ExposeTarget variant"),
+            },
+            None => ExposeTarget::Realm,
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for ExposeTarget {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            ExposeTarget::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            ExposeTarget::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum OfferServiceSource {
     Realm,
     Self_,
@@ -1078,6 +1109,7 @@ mod tests {
                        })),
                        source_path: Some("/svc/netstack".to_string()),
                        target_path: Some("/svc/mynetstack".to_string()),
+                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                    }),
                    fsys::ExposeDecl::LegacyService(fsys::ExposeLegacyServiceDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1086,6 +1118,7 @@ mod tests {
                        })),
                        source_path: Some("/svc/legacy_netstack".to_string()),
                        target_path: Some("/svc/legacy_mynetstack".to_string()),
+                       target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                    }),
                    fsys::ExposeDecl::Directory(fsys::ExposeDirectoryDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1094,6 +1127,7 @@ mod tests {
                        })),
                        source_path: Some("/data/dir".to_string()),
                        target_path: Some("/data".to_string()),
+                       target: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                    }),
                ]),
                offers: Some(vec![
@@ -1207,16 +1241,19 @@ mod tests {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_path: "/svc/netstack".try_into().unwrap(),
                             target_path: "/svc/mynetstack".try_into().unwrap(),
+                            target: ExposeTarget::Realm,
                         }),
                         ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
+                            target: ExposeTarget::Realm,
                         }),
                         ExposeDecl::Directory(ExposeDirectoryDecl {
                             source: ExposeSource::Child("netstack".to_string()),
                             source_path: "/data/dir".try_into().unwrap(),
                             target_path: "/data".try_into().unwrap(),
+                            target: ExposeTarget::Framework,
                         }),
                     ],
                     offers: vec![

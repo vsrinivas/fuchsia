@@ -141,23 +141,27 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
         let source = extract_expose_source(expose)?;
         let target_path =
             extract_target_path(expose, expose).ok_or(Error::internal(format!("no capability")))?;
+        let target = extract_expose_target(expose)?;
         let out = if let Some(p) = expose.service() {
             Ok(cm::Expose::Service(cm::ExposeService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_path)?,
+                target,
             }))
         } else if let Some(p) = expose.legacy_service() {
             Ok(cm::Expose::LegacyService(cm::ExposeLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_path)?,
+                target,
             }))
         } else if let Some(p) = expose.directory() {
             Ok(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_path)?,
+                target,
             }))
         } else {
             Err(Error::internal(format!("no capability")))
@@ -429,6 +433,22 @@ where
     }
 }
 
+fn extract_expose_target(in_obj: &cml::Expose) -> Result<cm::ExposeTarget, Error> {
+    match &in_obj.to {
+        Some(dest) => {
+            let dest = dest.as_str();
+            if dest == "realm" {
+                Ok(cm::ExposeTarget::Realm)
+            } else if dest == "framework" {
+                Ok(cm::ExposeTarget::Framework)
+            } else {
+                Err(Error::internal(format!("invalid exposed dest: \"{}\"", dest)))
+            }
+        }
+        None => Ok(cm::ExposeTarget::Realm),
+    }
+}
+
 fn str_to_storage_type(s: &str) -> Result<cm::StorageType, Error> {
     match s {
         "data" => Ok(cm::StorageType::Data),
@@ -595,9 +615,10 @@ mod tests {
                     {
                       "legacy_service": "/loggers/fuchsia.logger.LegacyLog",
                       "from": "#logger",
-                      "as": "/svc/fuchsia.logger.LegacyLog"
+                      "as": "/svc/fuchsia.logger.LegacyLog",
+                      "to": "realm"
                     },
-                    { "directory": "/volumes/blobfs", "from": "self" },
+                    { "directory": "/volumes/blobfs", "from": "self", "to": "framework" },
                     { "directory": "/hub", "from": "framework" }
                 ],
                 "children": [
@@ -617,7 +638,8 @@ mod tests {
                     }
                 },
                 "source_path": "/loggers/fuchsia.logger.Log",
-                "target_path": "/svc/fuchsia.logger.Log"
+                "target_path": "/svc/fuchsia.logger.Log",
+                "target": "realm"
             }
         },
         {
@@ -628,7 +650,8 @@ mod tests {
                     }
                 },
                 "source_path": "/loggers/fuchsia.logger.LegacyLog",
-                "target_path": "/svc/fuchsia.logger.LegacyLog"
+                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "target": "realm"
             }
         },
         {
@@ -637,7 +660,8 @@ mod tests {
                     "self": {}
                 },
                 "source_path": "/volumes/blobfs",
-                "target_path": "/volumes/blobfs"
+                "target_path": "/volumes/blobfs",
+                "target": "framework"
             }
         },
         {
@@ -646,7 +670,8 @@ mod tests {
                     "framework": {}
                 },
                 "source_path": "/hub",
-                "target_path": "/hub"
+                "target_path": "/hub",
+                "target": "realm"
             }
         }
     ],
@@ -1109,7 +1134,8 @@ mod tests {
                     "self": {}
                 },
                 "source_path": "/volumes/blobfs",
-                "target_path": "/volumes/blobfs"
+                "target_path": "/volumes/blobfs",
+                "target": "realm"
             }
         }
     ],

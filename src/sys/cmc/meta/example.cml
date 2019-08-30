@@ -15,8 +15,20 @@
   ],
   "expose": [
     {
+      "service": "/loggers/fuchsia.logger.Log",
+      "from": "#logger",
+      "as": "/svc/fuchsia.logger.Log",
+    },
+    {
+      "legacy_service": "/loggers/fuchsia.logger.LegacyLog",
+      "from": "#logger",
+      "as": "/svc/fuchsia.logger.LegacyLog",
+      "to": "realm",
+    },
+    {
       "directory": "/volumes/blobfs",
       "from": "self",
+      "to": "framework",
     },
   ],
   "offer": [

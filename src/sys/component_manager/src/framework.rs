@@ -354,7 +354,7 @@ mod tests {
         },
         cm_rust::{
             self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-            ExposeLegacyServiceDecl, ExposeSource, NativeIntoFidl,
+            ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
         },
         fidl::endpoints,
         fidl_fidl_examples_echo as echo,
@@ -828,6 +828,7 @@ mod tests {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 children: vec![ChildDecl {
                     name: "eager".to_string(),
@@ -895,6 +896,7 @@ mod tests {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    target: ExposeTarget::Realm,
                 })],
                 ..default_component_decl()
             },

@@ -408,6 +408,7 @@ impl<'a> ValidationContext<'a> {
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
+                    e.target.as_ref(),
                     prev_target_paths,
                 );
             }
@@ -417,6 +418,7 @@ impl<'a> ValidationContext<'a> {
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
+                    e.target.as_ref(),
                     prev_target_paths,
                 );
             }
@@ -426,6 +428,7 @@ impl<'a> ValidationContext<'a> {
                     e.source.as_ref(),
                     e.source_path.as_ref(),
                     e.target_path.as_ref(),
+                    e.target.as_ref(),
                     prev_target_paths,
                 );
             }
@@ -441,6 +444,7 @@ impl<'a> ValidationContext<'a> {
         source: Option<&fsys::Ref>,
         source_path: Option<&String>,
         target_path: Option<&'a String>,
+        target: Option<&fsys::Ref>,
         prev_child_target_paths: &mut HashSet<&'a str>,
     ) {
         match source {
@@ -456,6 +460,18 @@ impl<'a> ValidationContext<'a> {
             },
             None => {
                 self.errors.push(Error::missing_field(decl, "source"));
+            }
+        }
+        match target {
+            Some(r) => match r {
+                fsys::Ref::Realm(_) => {}
+                fsys::Ref::Framework(_) => {}
+                _ => {
+                    self.errors.push(Error::invalid_field(decl, "target"));
+                }
+            },
+            None => {
+                self.errors.push(Error::missing_field(decl, "target"));
             }
         }
         check_path(source_path, decl, "source_path", &mut self.errors);
@@ -799,10 +815,11 @@ mod tests {
         super::*,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
-            ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeServiceDecl, OfferDecl,
-            OfferDirectoryDecl, OfferLegacyServiceDecl, OfferServiceDecl, OfferStorageDecl,
-            RealmRef, Ref, SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl,
-            UseDirectoryDecl, UseLegacyServiceDecl, UseServiceDecl, UseStorageDecl,
+            ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeServiceDecl,
+            FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferLegacyServiceDecl, OfferServiceDecl,
+            OfferStorageDecl, RealmRef, Ref, SelfRef, StartupMode, StorageDecl, StorageRef,
+            StorageType, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseServiceDecl,
+            UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -1177,28 +1194,34 @@ mod tests {
                         source: None,
                         source_path: None,
                         target_path: None,
+                        target: None,
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: None,
                         source_path: None,
                         target_path: None,
+                        target: None,
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: None,
                         source_path: None,
                         target_path: None,
+                        target: None,
                     }),
                 ]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::missing_field("ExposeServiceDecl", "source"),
+                Error::missing_field("ExposeServiceDecl", "target"),
                 Error::missing_field("ExposeServiceDecl", "source_path"),
                 Error::missing_field("ExposeServiceDecl", "target_path"),
                 Error::missing_field("ExposeLegacyServiceDecl", "source"),
+                Error::missing_field("ExposeLegacyServiceDecl", "target"),
                 Error::missing_field("ExposeLegacyServiceDecl", "source_path"),
                 Error::missing_field("ExposeLegacyServiceDecl", "target_path"),
                 Error::missing_field("ExposeDirectoryDecl", "source"),
+                Error::missing_field("ExposeDirectoryDecl", "target"),
                 Error::missing_field("ExposeDirectoryDecl", "source_path"),
                 Error::missing_field("ExposeDirectoryDecl", "target_path"),
             ])),
@@ -1214,6 +1237,7 @@ mod tests {
                         })),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/logger".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1222,6 +1246,7 @@ mod tests {
                         })),
                         source_path: Some("/svc/legacy_logger".to_string()),
                         target_path: Some("/svc/legacy_logger".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1230,6 +1255,7 @@ mod tests {
                         })),
                         source_path: Some("/data".to_string()),
                         target_path: Some("/data".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                 ]);
                 decl
@@ -1251,6 +1277,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1259,6 +1286,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1267,6 +1295,7 @@ mod tests {
                         })),
                         source_path: Some("foo/".to_string()),
                         target_path: Some("/".to_string()),
+                        target: Some(Ref::Framework(FrameworkRef {})),
                     }),
                 ]);
                 decl
@@ -1283,6 +1312,48 @@ mod tests {
                 Error::invalid_field("ExposeDirectoryDecl", "target_path"),
             ])),
         },
+        test_validate_exposes_invalid_source_target => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: None,
+                        source_path: Some("/a".to_string()),
+                        target_path: Some("/b".to_string()),
+                        target: None,
+                    }),
+                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: Some(Ref::Realm(RealmRef {})),
+                        source_path: Some("/c".to_string()),
+                        target_path: Some("/d".to_string()),
+                        target: Some(Ref::Self_(SelfRef {})),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Collection(CollectionRef {name: "z".to_string()})),
+                        source_path: Some("/e".to_string()),
+                        target_path: Some("/f".to_string()),
+                        target: Some(Ref::Collection(CollectionRef {name: "z".to_string()})),
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        source_path: Some("/g".to_string()),
+                        target_path: Some("/h".to_string()),
+                        target: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ExposeServiceDecl", "source"),
+                Error::missing_field("ExposeServiceDecl", "target"),
+                Error::invalid_field("ExposeLegacyServiceDecl", "source"),
+                Error::invalid_field("ExposeLegacyServiceDecl", "target"),
+                Error::invalid_field("ExposeDirectoryDecl", "source"),
+                Error::invalid_field("ExposeDirectoryDecl", "target"),
+                Error::invalid_field("ExposeDirectoryDecl", "source"),
+                Error::invalid_field("ExposeDirectoryDecl", "target"),
+            ])),
+        },
         test_validate_exposes_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
@@ -1294,6 +1365,7 @@ mod tests {
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1302,6 +1374,7 @@ mod tests {
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1310,6 +1383,7 @@ mod tests {
                         })),
                         source_path: Some(format!("/{}", "a".repeat(1024))),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                 ]);
                 decl
@@ -1337,6 +1411,7 @@ mod tests {
                         })),
                         source_path: Some("/loggers/fuchsia.logger.Log".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1345,6 +1420,7 @@ mod tests {
                         })),
                         source_path: Some("/loggers/fuchsia.logger.LegacyLog".to_string()),
                         target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -1353,6 +1429,7 @@ mod tests {
                         })),
                         source_path: Some("/data/netstack".to_string()),
                         target_path: Some("/data".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                 ]);
                 decl
@@ -1371,11 +1448,13 @@ mod tests {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                     ExposeDecl::Directory(ExposeDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
                         source_path: Some("/svc/logger2".to_string()),
                         target_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
                     }),
                 ]);
                 decl

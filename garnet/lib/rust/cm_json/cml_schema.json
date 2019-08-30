@@ -224,6 +224,15 @@
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
+          },
+          "to": {
+            "title": "Exposed capability target type",
+            "description": "The sort of destination that may receive the exposed capability. Either \"realm\" or \"framework\". Defaults to: \"realm\"",
+            "pattern": "^(realm|framework)$",
+            "examples": [
+              "realm",
+              "framework"
+            ]
           }
         }
       }

@@ -81,6 +81,7 @@ pub struct Expose {
     pub directory: Option<String>,
     pub from: String,
     pub r#as: Option<String>,
+    pub to: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
