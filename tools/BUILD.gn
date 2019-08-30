@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("tools") {
+  testonly = true
+
+  public_deps = [
+    "//tools/fidl/fidldoc",
+    "//tools/fidlcat:fidlcat_host",
+    "//tools/kazoo:kazoo_host",
+    "//tools/size_checker/cmd:size_checker($host_toolchain)",
+  ]
+}
+
 group("tests") {
   testonly = true
 
@@ -11,5 +22,6 @@ group("tests") {
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
     "//tools/fidlcat:fidlcat_tests",
     "//tools/kazoo:kazoo_host_tests($host_toolchain)",
+    "//tools/size_checker/cmd:size_checker_tests($host_toolchain)",
   ]
 }

@@ -1,0 +1,84 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # The input to the size checker.
+  # The build system will produce a JSON file to be consumed by the size checker, which is a GI host
+  # test that will check and prevent integration of subsystems that are over their space allocation.
+  # The input consists of the following keys:
+  #
+  # asset_ext(string array): a list of extensions that should be considered as assets.
+  #
+  # asset_limit(number): maximum size (in bytes) allocated for the assets.
+  #
+  # core_limit(number): maximum size (in bytes) allocated for the core system and/or services.
+  # This is sort of a "catch all" component that consists of all the area / packages that weren't
+  # specified in the components list below.
+  #
+  # components(object array): a list of component objects. Each object should contain the following keys:
+  #
+  #   component(string): name of the component.
+  #
+  #   src(string array): path of the area / package to be included as part of the component.
+  #   The path should be relative to the build directory.
+  #   The target may also be a directory, in which case all blobs under that directory will be taken
+  #   into account.
+  #
+  #   limit(number): maximum size (in bytes) allocated for the component.
+  #
+  # Example:
+  # size_checker_input = {
+  #   asset_ext = [ ".ttf" ]
+  #   asset_limit = 10240
+  #   core_limit = 10240
+  #   components = [
+  #     {
+  #       component = "Foo"
+  #       src = [ "obj/topaz/runtime/foo_runner" ]
+  #       limit = 10240
+  #     },
+  #     {
+  #       component = "Bar"
+  #       src = [ "obj/build/images" ]
+  #       limit = 20480
+  #     },
+  #   ]
+  # }
+  size_checker_input = {
+  }
+}
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/images/boot.gni")
+
+generated_file("size_checker_json") {
+  outputs = [
+    "$root_build_dir/size_checker.json",
+  ]
+  contents = size_checker_input
+  output_conversion = "json"
+}
+
+go_library("size_checker_lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/size_checker/cmd"
+}
+
+go_binary("size_checker") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/size_checker/cmd"
+
+  deps = [
+    ":size_checker_lib",
+  ]
+
+  non_go_deps = [ ":size_checker_json" ]
+}
+
+go_test("size_checker_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/size_checker/cmd" ]
+  deps = [
+    ":size_checker_lib",
+  ]
+}
