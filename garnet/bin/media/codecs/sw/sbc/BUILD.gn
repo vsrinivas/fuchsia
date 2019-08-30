@@ -31,7 +31,6 @@ executable("codec_runner_sw_sbc") {
     "//garnet/bin/media/codecs/sw:codec_adapter_sw",
     "//garnet/bin/media/codecs/sw:codec_runner_sw",
     "//garnet/lib/media/codec_impl",
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//third_party/android/platform/system/bt/embdrv/sbc:sbc_encoder",
   ]

@@ -8,7 +8,6 @@ executable("vulkan_is_supported") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//src/ui/lib/escher/util:check_vulkan_support",
   ]
 }

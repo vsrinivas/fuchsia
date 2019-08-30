@@ -12,7 +12,6 @@ executable("snapshot") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",

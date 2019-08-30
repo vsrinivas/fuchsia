@@ -32,7 +32,6 @@ source_set("intl_property_provider_impl") {
 
   deps = [
     ":locale_util",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",

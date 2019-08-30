@@ -11,7 +11,6 @@
 #include <memory>
 #include <unordered_map>
 
-#include "lib/component/cpp/startup_context.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "src/lib/fxl/macros.h"
 

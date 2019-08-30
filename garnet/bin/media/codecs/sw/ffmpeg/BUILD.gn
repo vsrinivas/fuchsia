@@ -34,7 +34,6 @@ executable("codec_runner_sw_ffmpeg") {
     "//garnet/bin/media/codecs/sw:codec_adapter_sw",
     "//garnet/bin/media/codecs/sw:codec_runner_sw",
     "//garnet/lib/media/codec_impl",
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/media/lib/ffmpeg",
   ]

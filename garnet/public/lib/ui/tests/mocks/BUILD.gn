@@ -13,9 +13,10 @@ source_set("mocks") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 }
