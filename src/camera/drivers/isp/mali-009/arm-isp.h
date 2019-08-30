@@ -130,6 +130,8 @@ class ArmIspDevice : public IspDeviceType,
   void IspLoadSeq_settings_context();
   void IspLoadCustomSequence();
 
+  bool IsIspConfigInitialized() { return initialized_; }
+
  private:
   zx_status_t InitIsp();
   zx_status_t IspContextInit();
@@ -147,6 +149,7 @@ class ArmIspDevice : public IspDeviceType,
   void CopyMeteringInfo(uint8_t config_space);
   zx_status_t SetPort(uint8_t kMode);
   bool IsFrameProcessingInProgress();
+  zx_status_t SetupIspConfig();
 
   zx_status_t StartStreaming();
   zx_status_t StopStreaming();
@@ -175,6 +178,7 @@ class ArmIspDevice : public IspDeviceType,
   thrd_t irq_thread_;
   zx::bti bti_;
   std::atomic<bool> running_;
+  bool initialized_ = false;
 
   // Thread for processing work for each frame.
   int FrameProcessingThread();

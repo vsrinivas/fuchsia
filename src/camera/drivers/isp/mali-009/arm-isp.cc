@@ -305,19 +305,6 @@ zx_status_t ArmIspDevice::IspContextInit() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = DmaManager::Create(bti_, isp_mmio_local_, DmaManager::Stream::FullResolution,
-                                          &full_resolution_dma_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Unable to start Full Resolution DMA Module \n", __func__);
-    return status;
-  }
-  status =
-      DmaManager::Create(bti_, isp_mmio_local_, DmaManager::Stream::Downscaled, &downscaled_dma_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Unable to start Downscaled DMA Module \n", __func__);
-    return status;
-  }
-
   // We are setting up assuming kWDR_MODE_LINEAR as default mode
   IspLoadSeq_linear();
 
@@ -386,6 +373,23 @@ zx_status_t ArmIspDevice::InitIsp() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  zx_status_t status = DmaManager::Create(bti_, isp_mmio_local_, DmaManager::Stream::FullResolution,
+                                          &full_resolution_dma_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Unable to start Full Resolution DMA Module \n", __func__);
+    return status;
+  }
+  status =
+      DmaManager::Create(bti_, isp_mmio_local_, DmaManager::Stream::Downscaled, &downscaled_dma_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Unable to start Downscaled DMA Module \n", __func__);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ArmIspDevice::SetupIspConfig() {
   // Mask all IRQs
   IspGlobalInterrupt_MaskVector::Get().ReadFrom(&isp_mmio_).mask_all().WriteTo(&isp_mmio_);
 
@@ -548,14 +552,11 @@ zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // TODO(braval): This is here only for testing purposes for initial bring up
-  // phase
   status = isp_device->InitIsp();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to Initialize ISP\n", __func__);
     return status;
   }
-  // isp_device->StartStreaming();
 
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_ISP},
@@ -691,6 +692,15 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_t* 
                                                 const frame_rate_t* rate, stream_type_t type,
                                                 const output_stream_callback_t* stream,
                                                 output_stream_protocol_t* out_s) {
+  if (!IsIspConfigInitialized()) {
+    zx_status_t status = SetupIspConfig();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to Setup ISP\n", __func__);
+      return status;
+    }
+    initialized_ = true;
+  }
+
   // TODO(CAM-79): Set frame rate in sensor
   auto frame_ready_callback = [stream](fuchsia_camera_common_FrameAvailableEvent event) {
     // TODO(CAM-80): change the output_stream_callback_t so it uses all the
