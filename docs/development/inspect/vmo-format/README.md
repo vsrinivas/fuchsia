@@ -1,368 +1,422 @@
 
-# Inspection VMO Heap Format
+# Inspection File Format
 
 [TOC]
 
-# Buddy-Allocated Heap
-The [VMO] is treated as a heap using [buddy allocation][buddy].
+This document describes the **Component Inspection File Format** (Inspect Format).
 
-The minimum block size is 16 bytes (`MIN_BLOCK_SIZE`) and the maximum block
-size is 2048 bytes (`MAX_BLOCK_SIZE`).
+Files formatted using the Inspect Format are known as **Inspect Files**,
+which commonly have a `.inspect` file extension.
 
-There are 8 possible block orders (`NUM_ORDERS`), numbered 0...7, corresponding
-to blocks of sizes 16, 32, 64, 128, 256, 512, 1024, and 2048 respectively.
 
-All blocks are aligned on 16-byte boundaries, and addressing within the VMO
-is in terms of 16-byte blocks (`offset = index * 16`).
+# Overview
 
-## Block header
+[Component Inspection][inspect] provides components with the ability to
+expose structured, hierarchical information about their state at runtime.
+
+Components host a mapped Virtual Memory Object ([VMO]) using the Inspect
+Format to expose an **Inspect Hierarchy** containing this internal state.
+
+An Inspect Hierarchy consists of nested **Nodes** containing typed **Properties**.
+
+## Goals
+
+The Inspect Format described in this document has the following goals:
+
+- **Low-overhead mutations to data**
+
+The Inspect File Format allows data to be changed in-place. For instance,
+the overhead of incrementing an integer is ~2 atomic increments.
+
+- **Support a non-static hierarchy**
+
+The hierarchy stored in an Inspect File can be modified at
+runtime. Children can be added or removed from the hierarchy at any
+time. In this way, the hierarchy can closely represent the hierarchy of
+objects in the component's working set.
+
+- **Single writer, multiple reader concurrency without explicit synchronization**
+
+Readers operating concurrently with the writer map the VMO and attempt to
+take a snapshot of the data. Writers indicate being in a critical section
+though a *generation counter* that requires no explicit synchronization
+with readers. Readers use the generation counter to determine when a
+snapshot of the VMO is consistent and may be safely read.
+
+- **Data may remain available after component termination**
+
+A reader may maintain a handle to the VMO containing Inspect data even
+after the writing component terminates.
+
+[inspect]: /docs/development/inspect/README.md
+
+## Terminology
+
+This section defines common terminology used in this document.
+
+* Inspect File - A bounded sequence of bytes using the format described in this document.
+* Inspect VMO - An Inspect File stored in a Virtual Memory Object (VMO).
+* Block - A sized section of an Inspect File. Blocks have an Index and an Order.
+* Index - A unique identifier for a particular Block. `byte_offset = index * 16`
+* Order - The size of a block given as a bit shift from the minimum
+          size. `size_in_bytes = 16 << order`. Separates blocks into
+          classes by their (power of two) size.
+* Node  - A named value in the hierarchy under which other values may
+          be nested. Only Nodes may be parents in the Hierarchy.
+* Property - A named value that contains typed data (e.g. String,
+             Integer, etc).
+* Hierarchy - A tree of Nodes, descending from a single "root" node, that
+              may each contain Properties. An Inspect File contains a
+              single Hierarchy.
+
+This document uses MUST, SHOULD/RECOMMENDED, and MAY keywords as defined in [RFC 2119][rfc2119]
+
+All bit field diagrams are stored in little-endian ordering.
+
+[rfc2119]: https://www.ietf.org/rfc/rfc2119.txt
+
+# Blocks
+
+Inspect files are split into a number of `Blocks` whose size must be a
+power of 2.
+
+The minimum block size must be 16 bytes (`MIN_BLOCK_SIZE`) and the
+maximum block size must be a multiple of 16 bytes. Implementers are
+recommended specify a maximum block size less than the size of a page
+(typically 4096 bytes). In our reference implementation, the maximum
+block size is 2048 bytes (`MAX_BLOCK_SIZE`).
+
+All blocks must be aligned on 16-byte boundaries, and addressing within
+the VMO is in terms of an Index, specifying a 16-byte offsets (`offset =
+index * 16`).
+
+We use 28 bits for indexes, so Inspect Files may be at most 4GiB.
 
 A `block_header` consists of 16 bytes as follows:
 
 ![Figure: Block header organization](blockheader.png)
 
-# Type headers
+Each block has an `order`, specifying its size.
 
-There are currently 11 types defined in
-[//zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h][block.h]:
+If the maximum block size is 2048 bytes, then there are 8 possible block
+orders (`NUM_ORDERS`), numbered 0...7, corresponding to blocks of sizes
+16, 32, 64, 128, 256, 512, 1024, and 2048 bytes respectively.
 
-enum             | value | type name
------------------|-------|----------------
-`kFree`          | 0     | `FREE`
-`kReserved`      | 1     | `RESERVED`
-`kHeader`        | 2     | `HEADER`
-`kObjectValue`   | 3     | `OBJECT_VALUE`
-`kIntValue`      | 4     | `INT_VALUE`
-`kUintValue`     | 5     | `UINT_VALUE`
-`kDoubleValue`   | 6     | `DOUBLE_VALUE`
-`kPropertyValue` | 7     | `PROPERTY_VALUE`
-`kExtent`        | 8     | `EXTENT`
-`kName`          | 9     | `NAME`
-`kTombstone`     | 10    | `TOMBSTONE`
+Each block also has a type, which is used to determine how the rest of
+the bytes in the block are to be interpreted.
 
-Each type interprets the payload differently, as follows.
+## Buddy Allocation
 
-## FREE:
+This block layout permits efficient allocation of blocks using [buddy
+allocation][buddy]. Buddy allocation is the recommended allocation
+strategy, but it is not a requirement for using the Inspect Format.
+
+# Types
+
+All the supported types are defined in
+[//zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h][block.h]
+which fall into categories as follows:
+
+enum             | value | type name | category
+-----------------|-------|----------------|-------
+`kFree`          | 0     | `FREE`             | Internal
+`kReserved`      | 1     | `RESERVED`         | Internal
+`kHeader`        | 2     | `HEADER`           | Header
+`kNodeValue`     | 3     | `NODE_VALUE`       | Value
+`kIntValue`      | 4     | `INT_VALUE`        | Value
+`kUintValue`     | 5     | `UINT_VALUE`       | Value
+`kDoubleValue`   | 6     | `DOUBLE_VALUE`     | Value
+`kPropertyValue` | 7     | `PROPERTY_VALUE`   | Value
+`kExtent`        | 8     | `EXTENT`           | Extent
+`kName`          | 9     | `NAME`             | Name
+`kTombstone`     | 10    | `TOMBSTONE`        | Value
+`kArrayValue`    | 11    | `ARRAY_VALUE`      | Value
+`kLinkValue`     | 12    | `LINK_VALUE`       | Value
+
+* *Internal* - These types are provided for implementing block allocation, and
+they must be ignored by readers.
+
+* *Header* - This type allows readers to detect Inspect Files and reason
+about snapshot consistency. This block must exist at index 0.
+
+* *Value* - These types appear directly in the hierarchy. Values must have a *Name*
+and a parent (which must be a `NODE_VALUE`).
+
+* *Extent* - This type stores long binary data that may not fit in a single block.
+
+* *Name* - This type stores binary data that fits in a single block,
+and it is typically used to store the name of values.
+
+Each type interprets the payload differently, as follows:
+
+* [FREE](#free)
+* [RESERVED](#reserved)
+* [HEADER](#header)
+* [Common VALUE fields](#value)
+* [NODE\_VALUE](#node)
+* [INT\_VALUE](#numeric)
+* [UINT\_VALUE](#numeric)
+* [DOUBLE\_VALUE](#numeric)
+* [PROPERTY\_VALUE](#property)
+* [EXTENT](#extent)
+* [NAME](#name)
+* [TOMBSTONE](#node)
+* [ARRAY\_VALUE](#array)
+* [LINK](#link)
+
+## FREE {#free}
 
 ![Figure: Free block](freeblock.png)
 
-`FREE` blocks contain the index of the next free block of the same order.
-Free blocks create singly linked lists of free blocks of each size for
-fast allocation. The end of the list is reached when NextFreeBlock points
-to a location that is either not `FREE` or not of the same order.
+A `FREE` block is available for allocation. Importantly, the zero-valued
+block (16 bytes of `\0`) is interpreted as a `FREE` block of order 0,
+so buffers may simply be zeroed to free all blocks.
 
-## RESERVED:
+Writer implementations may use the unused bits from 8..63 of `FREE`
+blocks for any purpose. Writer implementation must set all other unused
+bits to 0.
+
+It is recommended that writers use the location specified above to store
+the index of the next free block of the same order. Using this field,
+free blocks may create singly linked lists of free blocks of each size
+for fast allocation. The end of the list is reached when NextFreeBlock
+points to a location that is either not `FREE` or not of the same order
+(commonly the Header block at index 0).
+
+## RESERVED {#reserved}
 
 ![Figure: Reserved block](reservedblock.png)
 
-`RESERVED` blocks are simply available to be changed to a different type.
-It is an optional transitional state between the allocation of a block and
-setting its type that is useful for correctness checking of
-implementations (to ensure that blocks that are about to be used are not
-treated as free).
+`RESERVED` blocks are simply available to be changed to a different
+type.  It is an optional transitional state between the allocation of a
+block and setting its type that is useful for correctness checking of
+implementations (to ensure that blocks that are about to be used are
+not treated as free).
 
-## HEADER:
+## HEADER {#header}
 
 ![Figure: Header block](headerblock.png)
 
-There is one `HEADER` block at the beginning of the VMO region.
-It consists  of a **Magic Number** ("INSP"), a **Version** (currently 0),
-and the **Generation Count** for concurrency control.
+There must be one `HEADER` block at the beginning of the file. It consists
+of a **Magic Number** ("INSP"), a **Version** (currently 0), and the
+**Generation Count** for concurrency control. The first byte of the header
+must not be a valid ASCII character.
 
-This will always appear at index 0 in the VMO, so the index 0 will always
-be an invalid index regardless of what other type is expected; 0 may then
-serve as an invalid index for use as a sentinel value.
+See the [next section](#concurrency) for how concurrency control must be
+implemented using the generation count.
 
-## *_VALUE:
+## \*\_VALUE {#value}
 
 ![Figure: general value block](generalvalue.png)
 
 Values all start with the same prefix, consisting of the index of the
-parent for the value and the index of the name used to refer to the value.
+parent for the value and the index of the name associated with the value.
 
 The payload is interpreted differently depending on the type of value, as
-below:
+below.
 
-## OBJECT_VALUE and TOMBSTONE:
+## NODE\_VALUE and TOMBSTONE {#node}
 
-![Figure: Object and Tombstone blocks](objtombblock.png)
+![Figure: Node and Tombstone blocks](objtombblock.png)
 
-`OBJECT_VALUE` blocks contain a reference count that is incremented when it
-is referenced as a parent and decremented when the referencing value is
-deleted.
-Objects are anchor points for further nesting.
-The `ParentID` field of values may only refer to blocks of type `OBJECT_VALUE`.
+Nodes are anchor points for further nesting, and the `ParentID` field
+of values must only refer to blocks of type `NODE_VALUE`.
 
-A deleted object becomes a new, special type called `TOMBSTONE`, which is
-only deleted when its refcount becomes 0.
+`NODE_VALUE` blocks support optional *reference counting* and *tombstoning*
+to permit efficient implementations as follows:
 
-## {INT,UINT,DOUBLE}_VALUE:
+The `Refcount` field may contain the number of values referencing a given
+`NODE_VALUE` as their parent. On deletion, the `NODE_VALUE` becomes a new
+special type called `TOMBSTONE`. `TOMBSTONE`s are deleted only when their
+`Refcount` is 0.
+
+This allows for writer implementations that do not need to explicitly
+keep track of children for Nodes, and it prevents the following scenario:
+
+```
+// "b" has a parent "a"
+Index | Value
+0     | HEADER
+1     | NODE "a", parent 0
+2     | NODE "b", parent 1
+
+/* delete "a", allocate "c" as a child of "b" which reuses index 1 */
+
+// "b"'s parent is now suddenly "c", introducing a cycle!
+Index | Value
+0     | HEADER
+1     | NODE "c", parent 2
+2     | NODE "b", parent 1
+```
+
+## \{INT,UINT,DOUBLE\}\_VALUE {#numeric}
 
 ![Figure: Numeric type block](numericblock.png)
 
-Numeric `VALUE` blocks all contain the 64-bit numeric type inlined.
+Numeric `VALUE` blocks all contain the 64-bit numeric type inlined into
+the second 8 bytes of the block.
 
-## PROPERTY_VALUE:
+## PROPERTY\_VALUE {#property}
 
 ![Figure: Property value block](stringblock.png)
 
-`PROPERTY_VALUE` blocks contain the index of the first `EXTENT` block holding
-the string data, and they contain the total length of the string across
-all extents.
+General `PROPERTY_VALUE` blocks reference arbitrary byte data across
+one or more linked `EXTENT` blocks.
 
-## EXTENT:
+`PROPERTY_VALUE` blocks contain the index of the first `EXTENT` block holding
+the binary data, and they contain the total length of the data in bytes
+across all extents.
+
+The format flags specify how the byte data should be interpreted,
+as follows:
+
+Enum    | Value | Meaning
+----    | ----  | ----
+kUtf8   | 0     | The byte data may be interpreted as a UTF-8 string.
+kBinary | 1     | The byte data is arbitrary binary data and may not be printable.
+
+## EXTENT {#extent}
 
 ![Figure: Extent block](extentblock.png)
 
-`EXTENT` blocks contain a string payload and the index of the next `EXTENT`
-in the chain.
-Strings are retrieved by reading each `EXTENT` in order until **Total Length**
-bytes are read.
+`EXTENT` blocks contain an arbitrary byte data payload and the index of
+the next `EXTENT` in the chain. The byte data for a property is retrieved
+by reading each `EXTENT` in order until **Total Length** bytes are read.
 
-## NAME:
+## NAME {#name}
 
 ![Figure: Name block](nameblock.png)
 
 `NAME` blocks give objects and values a human-readable identifier. They
 consist of a UTF-8 payload that fits entirely within the given block.
 
-# Algorithms
+## ARRAY\_VALUE {#array}
 
-> Note: These algorithms may be incomplete
+![Figure: Array block](arrayblock.png)
 
-The `InspectState` consists of the following data:
+`ARRAY_VALUE` blocks contain an array of specifically 64-bit numeric
+values.  The **Stored Value Type** field is interpreted exactly like
+the **Type** field, but may only indicate `INT_VALUE`, `UINT_VALUE`, or
+`DOUBLE_VALUE`.
 
-Name                 | Type          | Description
----------------------|---------------|----------------------------------------------------------------------------------------------
-`vmo`                | `zx::vmo`     | VMO mapped into the address space of this program.
-`vmo_size`           | `uint64_t   ` | Size of the VMO, in bytes.
-`vmo_data`           | `void*`       | Mapped vmo buffer.
-`free_blocks`        | `uint64_t[8]` | Pointer to the first free block of the order given by the index into the array. Indices are multiplied by 16 to give the byte offset. A pointer pointing to either an invalid region or a block that is not FREE and of the right order is treated as representing the end of the list.
-`generation_counter` | `uint64_t*`   | Pointer to the generation count for updates.
+Exactly **Count** entries of the given **Stored Value Type** appear in
+the bytes at offset 16 into the block.
 
-## Limits
+The **Display Format** field is used to affect how the array should be
+displayed, and it is interpreted as follows:
 
-```c
-MIN_SIZE = 1 << 4  // 16 bytes
-MAX_SIZE = 1 << 11 // 2048 bytes
-NUM_ORDERS = 8
-BLOCK_HEADER_SIZE = 16
-EXTENT_VALUE_OFFSET = 4 // Value starts at byte 4
-NAME_VALUE_OFFSET = 1   // Value starts at byte 1
+Enum                  | Value | Description
+---------             | ----  | ----
+kFlat                 | 0     | Display as an ordered flat array with no additional formatting.
+kLinearHistogram      | 1     | Interpret the first two entries as `floor` and `step_size` parameters for a linear histogram, as defined below.
+kExponentialHistogram | 2     | Interpret the first three entries as `floor`, `initial_step`, and `step_multiplier` for an exponential histogram, as defined below.
+
+### Linear Histogram
+
+The array is a linear histogram that stores its parameters inline and
+contains both an overflow and underflow bucket.
+
+The first two elements are parameters `floor` and `step_size`, respectively
+(as defined below).
+
+The number of buckets (N) is implicitly `Count - 4`.
+
+The remaining elements are buckets:
+
+```
+2:     (-inf, floor),
+3:     [floor, floor+step_size),
+i+3:   [floor + step_size*i, floor + step_size*(i+1)),
+...
+N+3:   [floor+step_size*N, +inf)
 ```
 
-## Lock
+### Exponential Histogram
 
-```c
-if (generation_counter)
-  atomically_increment(generation_counter, acquire_ordering);
+The array is an exponential histogram that stores its parameters inline
+and contains both an overflow and underflow bucket.
+
+The first three elements are parameters `floor`, `initial_step`, and
+`step_multiplier` respectively (as defined below).
+
+The number of buckets (N) is implicitly Count - 5.
+
+The remaining are buckets:
+
+```
+3:     (-inf, floor),
+4:     [floor, floor+initial_step),
+i+4:   [floor + initial_step * step_multiplier^i, floor + initial_step * step_multiplier^(i+1))
+N+4:   [floor + initial_step * step_multiplier^N, +inf)
 ```
 
-Locks the region against concurrent reads by setting the generation to an
-odd number. During initialization this does nothing.
+## LINK\_VALUE {#link}
 
-## Unlock
+![Figure: Link block](linkblock.png)
 
-```c
-if (generation_counter)
-  atomically_increment(generation_counter, release_ordering);
+`LINK_VALUE` blocks allow nodes to support children that are present
+in a separate Inspect File.
+
+The **Content Index** specifies another `NAME` block whose contents
+are a unique identifier referring to another Inspect File. Readers are
+expected to obtain a bundle of `(Identifier, File)` pairs (through either
+a directory read or another interface) and they may attempt to follow
+links by splicing the trees together using the stored identifiers.
+
+The **Disposition Flags** instruct readers on how to splice the trees, as follows:
+
+Enum               | Value | Description
+----               | ----  | ----
+kChildDisposition  | 0     | The hierarchy stored in the linked file should be a child of the `LINK_VALUE`'s parent.
+kInlineDisposition | 1     | The children and properties of the root stored in the linked file should be added to the `LINK_VALUE`'s parent.
+
+For example:
+
+```
+// root.inspect
+root:
+  int_value = 10
+  child = LINK("other.inspect")
+
+// other.inspect
+root:
+  test = "Hello World"
+  next:
+    value = 0
+
+
+// kChildDisposition produces:
+root:
+  int_value = 10
+  child:
+    test = "Hello World"
+    next:
+      value = 0
+
+// kInlineDisposition produces:
+root:
+  int_value = 10
+  test = "Hello World"
+  next:
+    value = 0
 ```
 
-Unlocks the region allowing concurrent reads by setting the generation to
-a new even number.
-During initialization this does nothing.
+Note: In all cases the name of the root node in the linked file is ignored.
 
-## WithLock
-Below, `WithLock` designates an algorithm that must occur between a single
-iteration of `Lock` and `Unlock`.
-It is up to the implementer to ensure that nested calls to `WithLock`
-algorithms only lock and unlock once.
+In the event of a collision in child names between a Node and values being
+added by its inline linked child, precedence is reader defined. Most
+readers, however, would find it useful to have linked values take
+precedence so they may override the original values.
 
-## type Block
+# Concurrency Control {#concurrency}
 
-A `Block` is an offset into the VMO.
-Dereferencing this offset is assumed to give access to a `block_header` with
-getters and setters for the various fields specified above.
+Writers must use a global version counter so that readers can
+detect in-flight modifications and modifications between reads without
+communicating with the writer. This supports single-writer multi-reader
+concurrency.
 
-Assume `block.size = MIN_SIZE << block.order`
-
-## SetBlock
-
-This denotes pseudocode describing what changes to make to a block, it is
-assumed the block header is set to 0 before the described changes.
-
-## Buddy
-
-```c
-Buddy(Block block):
-  // This common buddy allocation algorithm calculates the buddy of a block of a
-  // given size.
-  return ((block * MIN_SIZE) XOR block.size)
-```
-
-## IsFreeBlock
-
-```c
-IsFreeBlock(Block block, int expected_order):
-  // Ensure the block index is within the bounds of the VMO,
-  // that the block is free, and (optionally) that the order matches what is
-  // expected
-  return (block >= 0 &&
-          block < vmo_size/MIN_SIZE &&
-          block.type == FREE &&
-          block.order == expected_order)
-```
-
-## RemoveFreeBlock
-
-```c
-RemoveFreeBlock(Block block):
-  // If the block is at the head of the list, short circuit.
-  if free_blocks[block.order] == block:
-    free_blocks[block.order] = block.next_free
-    return
-
-  // Iterate through the list and unlink the block when it is found.
-  current_block := free_blocks[block.order];
-  while (IsFreeBlock(current_block)):
-    if current_block.next_free == block:
-      current_block.next_free = block.next_free
-      return
-```
-
-## SplitBlock
-
-```c
-@WithLock
-SplitBlock(Block block):
-  // Remove the block from its current free list.
-  RemoveFree(block);
-
-  // Reduce the order of the block, and find its new buddy.
-  block.order -= 1
-  buddy := Buddy(block)
-
-  // Set both blocks to free with the new order.
-  SetBlock(block, type=FREE, order=block.order)
-  SetBlock(buddy, type=FREE, order=block.order)
-
-  // Prepend [block, buddy] onto the free list.
-  buddy.next_free = free_blocks[buddy.order]
-  block.next_free = buddy
-  free_blocks[block.order] = block
-```
-
-## GrowVmo
-
-```c
-@WithLock
-GrowVmo(size_t size):
-  old_size := vmo_size
-  vmo_data, vmo_size = Grow vmo to size, remap, get new size
-  next_free_block := free_blocks[NUM_ORDERS-1]
-  // Store all of the new blocks in the free list in ascending order.
-  for block = vmo_size - MAX_SIZE; block >= old_size; block -= MAX_SIZE:
-    block.SetBlock(type=FREE, order=NUM_ORDERS-1, next_free=next_free_block)
-    next_free_block = block
-  free_blocks[NUM_ORDERS-1] = next_free_block
-```
-
-## Allocate
-
-```c
-@WithLock
-Allocate(size_t size):
-  order := Minimum order that can contain size
-
-  // No free blocks to accommodate the size, grow the VMO to create more.
-  if not any(IsFreeBlock(free_blocks[i], i) for i in range(order, NUM_ORDERS):
-    GrowVmo(vmo_size*2)
-
-  // Find the first block with order >= the desired order
-  block := first(free_blocks[i] for i in range(order, NUM_ORDERS) where
-                 IsFreeBlock(free_blocks[i], i))
-
-  // If the block is too big, split until it is the right size.
-  while block.order > order:
-    SplitBlock(block)
-
-  // Remove that block from the free list and allocate it.
-  RemoveFree(block)
-  block.SetBlock(type=ALLOCATED, order=block.order)
-  return block
-```
-
-## Free (and merge if possible)
-
-```c
-@WithLock
-Free(Block block):
-  buddy := Buddy(block)
-  // As long as the buddy of this block is free, keep merging blocks.
-  while buddy.type == FREE && block.order < NUM_ORDERS - 1:
-    // Ensure we only merge with the left most block.
-    if buddy < block:
-     tmp := buddy
-     buddy = block
-     block = tmp
-    RemoveFree(buddy)
-    block.order += 1
-    buddy = Buddy(block)
-  // Free the block and put it at the head of the free list.
-  block.SetBlock(type=FREE, order=block.order, next_free =
-                                               free_blocks[block.order])
-  free_blocks[block.order] = block
-```
-
-## Initialize
-
-```c
-// Initial size is a valid VMO size that is a multiple of MAX_SIZE.
-Initialize(size_t initial_size):
-  for i in range(NUM_ORDERS):
-    free_blocks[i] = 0  // Invalid for all but the maximum size block.
-  GrowVmo(initial_size);
-  block := Allocate(MIN_SIZE);
-  // The first order 0 block in the region is special; it contains a region header
-  // consisting of a magic number in the first 8 bytes and the
-  // generation count in the second 8 bytes.
-  // We may now use 0 as the sentinel value for all free lists.
-  block.SetBlock(type=HEADER,
-                 magic="INSP",
-                 version=0,
-                 generation=0);
-  generation_count = &block.generation;
-```
-
-## FreeExtents
-
-```c
-// Iteratively free all extents including and following the given one.
-@WithLock
-FreeExtents(Block extent):
-  assert(extent.type == EXTENT);
-  cur_extent := extent
-  while cur_extent != 0:
-    next_extent = cur_extent.next_extent
-    Free(cur_extent)
-    cur_extent = next_extent
-```
-
-# Lock-free Update Strategy
-
-We propose a mechanism for multiple readers and single writer.
-We can use a global version counter so that readers can detect in-flight
-modifications and modifications between reads.
-
-Readers:
-
-1. spinlock until the version number is even (no concurrent write),
-2. copy the entire VMO buffer, and
-3. check that the version number from step 1 is the same as in the copy.
-   As long as the version numbers match, the client may read their local
-   copy to construct the shared state.
-   If the version numbers do not match, the client may retry the whole
-   process.
+The strategy is for writers to increment a global *generation counter*
+both when they begin and when they end a write operation.
 
 This is a simple strategy with a significant benefit: between incrementing
 the version number for beginning and ending a write the writer can perform
@@ -370,8 +424,49 @@ any number of operations on the buffer without regard for atomicity of
 data updates.
 
 The main drawback is that reads could be delayed indefinitely due to a
-frequently updating writer, but readers can have mitigations in place in
-practice.
+frequently updating writer, but readers can have mitigations in place
+in practice.
+
+## Reader Algorithm
+
+Readers use the following algorithm to obtain a consistent snapshot of
+an Inspect VMO:
+
+1. Spinlock until the version number is even (no concurrent write),
+2. Copy the entire VMO buffer, and
+3. Check that the version number from the buffer is equal to the version
+number from step 1.
+
+As long as the version numbers match, the client may read their local
+copy to construct the shared state.
+If the version numbers do not match, the client may retry the whole
+process.
+
+
+## Writer Lock Algorithm
+
+Writers lock an Inspect VMO for modification by doing the following:
+
+```c
+atomically_increment(generation_counter, acquire_ordering);
+```
+
+This locks the file against concurrent reads by setting the generation to an
+odd number. Acquire ordering ensures that loads are not reordered before
+this change.
+
+## Writer Unlock Algorithm
+
+Writers unlock an Inspect VMO following modification by doing the
+following:
+
+```c
+atomically_increment(generation_counter, release_ordering);
+```
+
+Unlock the file allowing concurrent reads by setting the generation to
+a new even number. Release ordering ensures that writes to the file are
+visible before the generation count update is visible.
 
 <!-- xrefs -->
 [buddy]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
