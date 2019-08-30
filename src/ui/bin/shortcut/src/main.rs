@@ -7,7 +7,7 @@
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
-use fuchsia_async;
+use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
 use futures::lock::Mutex;
@@ -20,8 +20,8 @@ const SERVER_THREADS: usize = 2;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["shortcut"]).expect("shortcut syslog init should not fail");
-    let mut executor = fuchsia_async::Executor::new()
-        .context("Creating fuchsia_async executor for Shortcut failed")?;
+    let mut executor =
+        fasync::Executor::new().context("Creating fuchsia_async executor for Shortcut failed")?;
 
     let store = Arc::new(Mutex::new(registry::RegistryStore::default()));
 
@@ -32,7 +32,7 @@ fn main() -> Result<(), Error> {
             // which to make new clones.
             let store = store.clone();
             move |stream| {
-                fuchsia_async::spawn(
+                fasync::spawn(
                     registry_server(stream, store.clone())
                         .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
                 );
@@ -43,7 +43,7 @@ fn main() -> Result<(), Error> {
             // which to make new clones.
             let store = Arc::clone(&store);
             move |stream| {
-                fuchsia_async::spawn(
+                fasync::spawn(
                     manager_server(stream, store.clone())
                         .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
                 );
@@ -76,9 +76,10 @@ async fn registry_server(
                 registry.subscriber =
                     Some(registry::Subscriber { view_ref, listener: listener.into_proxy()? });
             }
-            ui_shortcut::RegistryRequest::RegisterShortcut { shortcut, .. } => {
+            ui_shortcut::RegistryRequest::RegisterShortcut { shortcut, responder, .. } => {
                 // TODO: validation
                 registry.shortcuts.push(shortcut);
+                responder.send()?;
             }
         }
     }
@@ -108,26 +109,19 @@ async fn manager_server(
 #[cfg(test)]
 mod test {
 
-    use failure::{Error, ResultExt};
+    use super::*;
     use fidl_fuchsia_ui_input2 as ui_input;
-    use fidl_fuchsia_ui_shortcut as ui_shortcut;
     use fidl_fuchsia_ui_views as ui_views;
-    use fuchsia_async;
     use fuchsia_component::client::{launch, launcher};
     use fuchsia_zircon as zx;
-    use futures::future;
-    use futures::StreamExt;
 
     static COMPONENT_URL: &str = "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx";
     static TEST_SHORTCUT_ID: u32 = 123;
 
-    #[test]
-    #[ignore]
-    fn test_as_client() -> Result<(), Error> {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_as_client() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["shortcut"])
             .expect("shortcut syslog init should not fail");
-
-        let mut executor = fuchsia_async::Executor::new()?;
 
         let launcher = launcher().context("Failed to open launcher service")?;
 
@@ -157,52 +151,49 @@ mod test {
             key: Some(ui_input::Key::A),
             use_priority: None,
         };
-        registry.register_shortcut(shortcut).expect("register_shortcut");
+        registry.register_shortcut(shortcut).await.expect("register_shortcut");
 
-        // get event loop to deliver readiness notifications to channels
-        // this fixes race condition when test is executed before listeners is registered.
-        let _ = executor.run_until_stalled(&mut future::pending::<()>());
-
-        let test = async move {
-            // Process key event that *does not* trigger a shortcut.
-            let event = ui_input::KeyEvent {
-                key: None,
-                modifiers: None,
-                phase: Some(ui_input::KeyEventPhase::Pressed),
-            };
-
-            let was_handled =
-                manager.handle_key_event(event).await.expect("handle_key_event false");
-
-            assert_eq!(false, was_handled);
-
-            // Process key event that triggers a shortcut.
-            let event = ui_input::KeyEvent {
-                key: Some(ui_input::Key::A),
-                modifiers: None,
-                phase: Some(ui_input::KeyEventPhase::Pressed),
-            };
-
-            let was_handled = manager.handle_key_event(event);
-
-            // React to one shortcut activation message from the listener stream.
-            if let Some(Ok(req)) = listener_stream.next().await {
-                match req {
-                    ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {
-                        assert_eq!(id, TEST_SHORTCUT_ID);
-                        responder.send(true).expect("responding from shortcut listener")
-                    }
-                };
-            } else {
-                panic!("Error from listener_stream.next()");
-            }
-
-            let was_handled = was_handled.await.expect("handle_key_event true");
-            // Expect key event to be handled.
-            assert_eq!(true, was_handled);
+        // Process key event that *does not* trigger a shortcut.
+        let event = ui_input::KeyEvent {
+            key: None,
+            modifiers: None,
+            phase: Some(ui_input::KeyEventPhase::Pressed),
         };
 
-        executor.run_singlethreaded(test);
+        let was_handled = manager.handle_key_event(event).await.expect("handle_key_event false");
+
+        assert_eq!(false, was_handled);
+
+        // Process key event that triggers a shortcut.
+        let event = ui_input::KeyEvent {
+            key: Some(ui_input::Key::A),
+            modifiers: None,
+            phase: Some(ui_input::KeyEventPhase::Pressed),
+        };
+
+        // The order is important here, as handle_key_event() dispatches the key
+        // to be processed by the manager, which is expected to result in listener_stream
+        // message in the next block.
+        // At the same time, handle_key_event should return true, which is validated
+        // later.
+        let was_handled_fut = manager.handle_key_event(event);
+
+        // React to one shortcut activation message from the listener stream.
+        if let Some(Ok(req)) = listener_stream.next().await {
+            match req {
+                ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {
+                    assert_eq!(id, TEST_SHORTCUT_ID);
+                    responder.send(true).expect("responding from shortcut listener")
+                }
+            };
+        } else {
+            panic!("Error from listener_stream.next()");
+        }
+
+        let was_handled = was_handled_fut.await.expect("handle_key_event true");
+        // Expect key event to be handled.
+        assert_eq!(true, was_handled);
+
         Ok(())
     }
 }

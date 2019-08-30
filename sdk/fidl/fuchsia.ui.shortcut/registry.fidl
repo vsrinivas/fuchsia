@@ -14,10 +14,10 @@ using fuchsia.ui.views;
 [Discoverable]
 protocol Registry {
     /// Set shortcut activation listener.
-    SetView(fuchsia.ui.views.ViewRef viewRef, Listener listener);
+    SetView(fuchsia.ui.views.ViewRef view_ref, Listener listener);
 
     /// Register new trigger for the listener.
-    RegisterShortcut(Shortcut shortcut);
+    RegisterShortcut(Shortcut shortcut) -> ();
 };
 
 /// Shortcut descriptor.

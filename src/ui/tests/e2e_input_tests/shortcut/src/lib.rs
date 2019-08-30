@@ -10,7 +10,7 @@ use fidl_fuchsia_ui_policy as ui_policy;
 use fidl_fuchsia_ui_scenic as ui_scenic;
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
 use fidl_fuchsia_ui_views as ui_views;
-use fuchsia_async;
+use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_scenic as scenic;
 use fuchsia_zircon as zx;
@@ -20,12 +20,10 @@ use std::time::Duration;
 
 static TEST_SHORTCUT_ID: u32 = 123;
 
-#[test]
-fn shortcut_detection() -> Result<(), Error> {
+#[fasync::run_singlethreaded(test)]
+async fn shortcut_detection() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["shortcut"])
         .expect("shortcut e2e syslog init should not fail");
-
-    let mut executor = fuchsia_async::Executor::new()?;
 
     let presenter = connect_to_service::<ui_policy::PresenterMarker>()
         .context("Failed to connect to Presentation service")?;
@@ -48,37 +46,36 @@ fn shortcut_detection() -> Result<(), Error> {
         key: Some(ui_input::Key::A),
         use_priority: None,
     };
-    registry.register_shortcut(shortcut).expect("register_shortcut");
+    registry.register_shortcut(shortcut).await.expect("register_shortcut");
 
-    executor.run_singlethreaded(async move {
-        let mut token_pair = scenic::ViewTokenPair::new().expect("create ViewTokenPair");
+    let mut token_pair = scenic::ViewTokenPair::new().expect("create ViewTokenPair");
 
-        presenter.present_view(&mut token_pair.view_holder_token, None).expect("present_view");
+    presenter.present_view(&mut token_pair.view_holder_token, None).expect("present_view");
 
-        let scenic = connect_to_service::<ui_scenic::ScenicMarker>().expect("connect to Scenic");
-        scenic.get_display_info().await.expect("get_display_info");
+    let scenic = connect_to_service::<ui_scenic::ScenicMarker>().expect("connect to Scenic");
+    scenic.get_display_info().await.expect("get_display_info");
 
-        input_synthesis::keyboard_event_command(0x04, Duration::from_millis(0)).await
-            .expect("keyboard_event_command injects input");
+    input_synthesis::keyboard_event_command(0x04, Duration::from_millis(0))
+        .await
+        .expect("keyboard_event_command injects input");
 
-        // Wait for shortcut listener callback to be activated.
-        match listener_stream.next().await {
-            Some(Ok(req)) => {
-                match req {
-                    ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {
-                        assert_eq!(id, TEST_SHORTCUT_ID);
-                        responder.send(true).expect("responding from shortcut listener")
-                    }
-                };
-            }
-            Some(Err(e)) => {
-                panic!("Error from listener_stream.next(): {:}", e);
-            }
-            _ => {
-                panic!("Error from listener_stream.next(): empty stream");
-            }
+    // Wait for shortcut listener callback to be activated.
+    match listener_stream.next().await {
+        Some(Ok(req)) => {
+            match req {
+                ui_shortcut::ListenerRequest::OnShortcut { id, responder, .. } => {
+                    assert_eq!(id, TEST_SHORTCUT_ID);
+                    responder.send(true).expect("responding from shortcut listener")
+                }
+            };
         }
-    });
+        Some(Err(e)) => {
+            panic!("Error from listener_stream.next(): {:}", e);
+        }
+        _ => {
+            panic!("Error from listener_stream.next(): empty stream");
+        }
+    }
 
     Ok(())
 }
