@@ -7,9 +7,7 @@ import '../blocs/tabs_bloc.dart';
 import '../blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
 
-const double _kTabBarHeight = 24.0;
-const double _kPageTabWidth = 144.0;
-const double _kAddTabWidth = 36.0;
+const double _kTabBarHeight = 16.0;
 
 class TabsWidget extends StatelessWidget {
   final TabsBloc<WebPageBloc> bloc;
@@ -17,23 +15,28 @@ class TabsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: _kTabBarHeight,
-      color: Colors.black,
-      child: AnimatedBuilder(
-        animation:
-            Listenable.merge([bloc.tabsNotifier, bloc.currentTabNotifier]),
-        builder: (_, __) => Row(
-          children: <Widget>[..._buildPageTabs(), _buildPlusTab()],
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: Listenable.merge([bloc.tabsNotifier, bloc.currentTabNotifier]),
+      builder: (_, __) => bloc.tabs.length > 1
+          ? Container(
+              height: _kTabBarHeight,
+              color: Theme.of(context).accentColor,
+              padding: EdgeInsets.symmetric(vertical: 1.0),
+              child: Row(
+                children: _buildPageTabs(context: context)
+                    .map((tab) => Expanded(child: tab, flex: 1))
+                    .toList(),
+              ),
+            )
+          : Offstage(),
     );
   }
 
-  Iterable<Widget> _buildPageTabs() => bloc.tabs.map(
+  Iterable<Widget> _buildPageTabs({BuildContext context}) => bloc.tabs.map(
         (tab) => AnimatedBuilder(
           animation: tab.pageTitleNotifier,
           builder: (_, __) => _buildTab(
+            context: context,
             title: tab.pageTitle ?? 'NEW TAB',
             selected: tab == bloc.currentTab,
             onSelect: () {
@@ -43,25 +46,20 @@ class TabsWidget extends StatelessWidget {
         ),
       );
 
-  Widget _buildPlusTab() => _buildTab(
-      title: '+',
-      selected: false,
-      width: _kAddTabWidth,
-      onSelect: () {
-        bloc.request.add(NewTabAction());
-      });
-
   Widget _buildTab({
+    BuildContext context,
     String title,
     bool selected,
     VoidCallback onSelect,
-    double width = _kPageTabWidth,
+    double width,
   }) {
     return GestureDetector(
       onTap: onSelect,
       child: Container(
         width: width,
-        color: selected ? Colors.white : Colors.black,
+        color: selected
+            ? Theme.of(context).primaryColor
+            : Theme.of(context).accentColor,
         padding: EdgeInsets.symmetric(horizontal: 4.0),
         child: Center(
           child: Text(
@@ -70,9 +68,10 @@ class TabsWidget extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontFamily: 'RobotoMono',
-              fontSize: 14.0,
-              fontWeight: FontWeight.bold,
-              color: selected ? Colors.black : Color(0xFF8A8A8A),
+              fontSize: 11.0,
+              color: selected
+                  ? Theme.of(context).accentColor
+                  : Theme.of(context).primaryColor,
             ),
           ),
         ),
