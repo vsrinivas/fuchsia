@@ -25,12 +25,11 @@ const char kAttachmentDartStackTraceFilename[] = "DartError";
 
 void AddFeedbackAttachments(crashpad::CrashReportDatabase::NewReport* report,
                             const fuchsia::feedback::Data& feedback_data) {
-  if (!feedback_data.has_attachments()) {
+  if (!feedback_data.has_attachment_bundle()) {
     return;
   }
-  for (const auto& attachment : feedback_data.attachments()) {
-    AddAttachment(attachment.key, attachment.value, report);
-  }
+  AddAttachment(feedback_data.attachment_bundle().key, feedback_data.attachment_bundle().value,
+                report);
 }
 
 }  // namespace

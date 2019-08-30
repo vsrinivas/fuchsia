@@ -237,10 +237,9 @@ namespace {
 
 std::map<std::string, fuchsia::mem::Buffer> MakeAttachments(Data* feedback_data) {
   std::map<std::string, fuchsia::mem::Buffer> attachments;
-  if (feedback_data->has_attachments()) {
-    for (auto& attachment : *feedback_data->mutable_attachments()) {
-      attachments[attachment.key] = std::move(attachment.value);
-    }
+  if (feedback_data->has_attachment_bundle()) {
+    auto* attachment_bundle = feedback_data->mutable_attachment_bundle();
+    attachments[attachment_bundle->key] = std::move(attachment_bundle->value);
   }
   return attachments;
 }

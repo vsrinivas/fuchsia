@@ -161,10 +161,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     // We expect as attachments the ones returned by the feedback::DataProvider and the extra ones
     // specific to the crash analysis flow under test.
     std::vector<std::string> expected_attachments = expected_extra_attachments;
-    if (stub_feedback_data_provider_) {
-      expected_attachments.insert(expected_attachments.begin(),
-                                  stub_feedback_data_provider_->attachment_keys().begin(),
-                                  stub_feedback_data_provider_->attachment_keys().end());
+    if (stub_feedback_data_provider_ && stub_feedback_data_provider_->has_attachment_bundle_key()) {
+      expected_attachments.push_back(stub_feedback_data_provider_->attachment_bundle_key());
     }
 
     std::vector<std::string> attachments;

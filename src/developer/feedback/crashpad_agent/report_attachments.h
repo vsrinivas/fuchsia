@@ -28,9 +28,10 @@ void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewRep
 // Builds the final set of attachments to attach to the crash report and writes them to
 // |crashpad_report|.
 //
-// * Most attachments are shared across all crash reports, e.g., |feedback_data|.attachments().
+// * Most attachments are shared across all crash reports, e.g.,
+//   |feedback_data|.attachment_bundle().
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
-// * Adds any attachments in the GenericCrashReport from |report|.
+// * Adds any attachments from |report|.
 void BuildAttachments(const fuchsia::feedback::CrashReport& report,
                       const fuchsia::feedback::Data& feedback_data,
                       crashpad::CrashReportDatabase::NewReport* crashpad_report);
