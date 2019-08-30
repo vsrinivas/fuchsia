@@ -21,9 +21,9 @@ directories `fuchsia`.
 curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?format=TEXT" | base64 --decode | bash
 ```
 
-This script will set up your development environment to track the HEAD of the
-`fuchsia` repository. If you wish to track a different repository at HEAD, you can
-use the `fx set-petal` command.
+This script will set up your development environment to track the Global
+Integration version for all repositories. If you wish to track a specific
+repository at top-of-tree/HEAD, you can use the `fx set-petal` command.
 
 ### Setting up environment variables
 

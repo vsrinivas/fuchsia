@@ -1,45 +1,17 @@
-# Working on multiple projects
-
-## Switching between projects
-
-When you bootstrapped your development environment (see
-[getting source][getting-source]), you selected a project. Your development
-environment views that project at the latest revision and views the dependencies
-at specific revisions in the past.
-
-If you want to switch to working on a different project, either to get the source
-code for higher projects in your source tree or to see lower projects at more recent
-revisions, you have two choices:
-
-1. You can bootstrap a new development environment for that project using
-   [the same instructions you used originally][getting-source].
-2. You can modify your existing development environment using the
-   `fx set-petal <project>` command. This command edits the `jiri` metadata for
-   your source tree to refer to the new project and prints instructions for how to
-   actually get the source and build the newly configured project.
-
-## Changes that span projects
-
-Fuchsia is divided into a number of projects. Each project views the
-previous projects at pinned revisions, which means changes that land in one
-project are not immediately visible to the upper projects.
-
-When making a change that spans projects, you need to think about when the
-different projects will see the different parts of you change. For example,
-suppose you want to change an interface in Zircon and affects clients in Garnet.
-When you land your change in Zircon, people building Garnet will not see your
-change immediately. Instead, they will start seeing your change once Garnet
-updates its revision pin for Zircon.
+# Working across different petals
 
 ## Hard and Soft Transitions
 
-This section outlines how to make the breaking changes mentioned above.
+Because it is not possible to atomically commit a change to multiple Git
+repositories at once, coordinating changes that affect multiple petals - for
+example, an API or ABI change in the Fuchsia tree that affects callers in Topaz
+or Experiences - requires either a soft or hard transition.
 
 ### Terminology:
 
 * *D* - A project used in the Fuchsia tree.
 * *P* - Another project used in the Fuchsia tree with a direct dependency on `D`.
-For example, `D` might be Zircon, and `P` might be Garnet.
+For example, `D` might be Fuchsia, and `P` might be Topaz or Experiences.
 * *integration* - The internal integration repository.
 
 ### Soft transitions (preferred)

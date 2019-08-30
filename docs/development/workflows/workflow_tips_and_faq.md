@@ -214,7 +214,11 @@ logs, connecting to shells on devices, and many other operations.
 
 ## Q: Will a git rebase to origin/master mess up my jiri-updated (i.e. synchronized) view of the repository?
 
-A: No, if jiri is managing up to the *same petal* as your repository.
+A: Yes, unless jiri is configured to sync the rebased repository/petal to HEAD
+instead of the globally integrated version. This is not the case if you use the
+current/new default bootstrap setup, which tracks global integration for all
+repos, but may be the case if you set up your checkout in the past or used `fx
+set-petal X`.
 
 When working at petal X (accomplished with `fx set-petal X`), `jiri update` will
 rebase the local branches in repo X onto HEAD of origin/master. But other
@@ -237,9 +241,9 @@ If you have a particular commit that you want jiri to honor, download its
 
 A: Can't, sorry. Try to arrange your CLs to not break each petal during a
 transition (i.e., do a [soft
-transition](multilayer_changes.md#soft-transitions-preferred)). But sometimes
+transition](working_across_petals.md#soft-transitions-preferred)). But sometimes
 you will necessarily break things; aim to minimize the duration of breakage
-(i.e., a [hard transition](multilayer_changes.md#hard-transitions)).
+(i.e., a [hard transition](working_across_petals.md#hard-transitions)).
 
 Example scenario: I have an interface defined in stem, and it is implemented in
 another petal. If I change the interface, am I doomed to break other petals?
@@ -323,7 +327,7 @@ tools with the MacOS Application Firewall.
 
 ## Q: When/how do I make a soft vs hard transition when changing APIs?
 
-See [this section](multilayer_changes.md#hard-and-soft-transitions) about hard
+See [this section](working_across_petals.md#hard-and-soft-transitions) about hard
 and soft transitions.
 
 ## Q: How do I update a FIDL protocol?

@@ -5,9 +5,15 @@
 
 ### configure jiri to manage a specific petal
 
-## usage: fx set-petal fuchsia|topaz
-## Configures jiri to fetch the source code for the given petal and its
-## dependencies.
+## usage: fx set-petal none|fuchsia|topaz
+##
+## "none" configures jiri to fetch all repos at the global integration version,
+## and is the recommended default.
+##
+## Other values configure jiri to fetch that specific petal's repo at
+## top-of-tree (HEAD) instead of the globally integration version. This means a
+## "jiri update" will pull down committed but not yet integrated changes, which
+## will be faster but may be less stable.
 
 set -e
 
@@ -21,7 +27,8 @@ fi
 petal="$1"
 
 if [[ "${petal}" != "fuchsia" ]] &&
-   [[ "${petal}" != "topaz" ]]; then
+   [[ "${petal}" != "topaz" ]] &&
+   [[ "${petal}" != "none" ]]; then
   fx-command-help
   exit 1
 fi
@@ -40,10 +47,16 @@ fi
 cd "${FUCHSIA_DIR}"
 rm -f -- "${FUCHSIA_DIR}/.jiri_manifest"
 "${jiri}" import -name=integration flower https://fuchsia.googlesource.com/integration
-"${jiri}" override "${petal}" "https://fuchsia.googlesource.com/${petal}"
 
-echo "Configured jiri for ${petal}. Run these commands to update your tree:"
+if [[ "${petal}" != "none" ]]; then
+  "${jiri}" override "${petal}" "https://fuchsia.googlesource.com/${petal}"
+  echo "Configured jiri for ${petal}."
+else
+  echo "Configured jiri for no petal/global integration."
+fi
 
+
+echo "Run these commands to update your tree:"
 cat <<END
  * jiri update -gc     # Updates your source tree to contain ${petal} and
                        # removes unneeded repositories.

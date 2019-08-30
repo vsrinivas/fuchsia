@@ -25,7 +25,6 @@ curl -s "https://fuchsia.googlesource.com/jiri/+/master/scripts/bootstrap_jiri?f
 cd fuchsia
 
 .jiri_root/bin/jiri import -name=integration flower https://fuchsia.googlesource.com/integration
-.jiri_root/bin/jiri override fuchsia https://fuchsia.googlesource.com/fuchsia
 .jiri_root/bin/jiri update
 
 echo "Done creating a Platform Source Tree at \"$(pwd)\"."

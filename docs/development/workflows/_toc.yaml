@@ -14,8 +14,8 @@ toc:
   path: /docs/development/workflows/libfuzzer.md
 - title: "Multi device setup"
   path: /docs/development/workflows/multi_device.md
-- title: "Working on multiple projects"
-  path: /docs/development/workflows/multilayer_changes.md
+- title: "Working across different petals"
+  path: /docs/development/workflows/working_across_petals.md
 - title: "Developing with Fuchsia packages"
   path: /docs/development/workflows/package_update.md
 - title: "Putting Fuchsia on a device"

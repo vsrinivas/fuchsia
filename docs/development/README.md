@@ -14,7 +14,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [fx workflows](workflows/fx.md)
  - [Multiple device setup](workflows/multi_device.md)
  - [Pushing a package](workflows/package_update.md)
- - [Changes that span layers](workflows/multilayer_changes.md)
+ - [Working across different petals](workflows/working_across_petals.md)
  - [Debugging](workflows/debugging.md)
  - [LibFuzzer-based fuzzing](workflows/libfuzzer.md)
  - [Build system](build/README.md)

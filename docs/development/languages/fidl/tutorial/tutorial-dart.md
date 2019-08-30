@@ -39,10 +39,7 @@ The examples are in Topaz at:
 You can build the code via the following:
 
 ```sh
-# You'll need Topaz for Dart
-fx set-petal topaz
-# Also include garnet examples when building Topaz
-fx set x64
+fx set core.x64 --with //topaz/packages/examples:fidl
 fx build
 ```
 

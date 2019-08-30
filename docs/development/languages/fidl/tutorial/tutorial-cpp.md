@@ -39,7 +39,7 @@ protocol Echo {
 You can build the code via the following:
 
 ```sh
-fx set-petal garnet
+fx set core.x64 --with //garnet/packages/examples:fidl
 fx build
 ```
 
