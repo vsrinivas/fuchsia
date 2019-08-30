@@ -8,16 +8,12 @@
 
 namespace accessibility_test {
 
-MockSemanticProvider::MockSemanticProvider(sys::ComponentContext* context,
-                                           fuchsia::ui::views::ViewRef view_ref)
-    : view_ref_(std::move(view_ref)) {
-  context->svc()->Connect(manager_.NewRequest());
-  manager_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Cannot connect to SemanticsManager with status:" << status;
-  });
-  fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> listener_handle;
-  action_listener_.Bind(&listener_handle);
-  manager_->RegisterView(std::move(view_ref_), std::move(listener_handle), tree_ptr_.NewRequest());
+MockSemanticProvider::MockSemanticProvider(
+    fuchsia::accessibility::semantics::SemanticsManager* manager,
+    fuchsia::ui::views::ViewRef view_ref) {
+  manager->RegisterView(std::move(view_ref),
+                        action_listener_bindings_.AddBinding(&action_listener_),
+                        tree_ptr_.NewRequest());
 }
 
 void MockSemanticProvider::UpdateSemanticNodes(

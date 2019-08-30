@@ -4,14 +4,7 @@
 
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_action_listener.h"
 
-#include <lib/syslog/cpp/logger.h>
-
 namespace accessibility_test {
-
-void MockSemanticActionListener::Bind(
-    fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> *listener) {
-  bindings_.AddBinding(this, listener->NewRequest());
-}
 
 void MockSemanticActionListener::SetHitTestResult(int node_id) { hit_test_node_id_ = node_id; }
 

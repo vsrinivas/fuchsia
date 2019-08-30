@@ -16,13 +16,10 @@
 namespace a11y {
 class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
-  SemanticsManager();
+  // On initialization, this class exposes the services defined in
+  // |fuchsia.accessibility.semantics.SemanticsManager|
+  explicit SemanticsManager(sys::ComponentContext* startup_context);
   ~SemanticsManager() override;
-
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request);
-
-  void SetDebugDirectory(vfs::PseudoDir* debug_dir);
 
   // Provides the manager a way to query a node if it already knows
   // what view id and node id it wants to query for. This method returns
@@ -64,7 +61,7 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
 
   bool enabled_ = false;
 
-  vfs::PseudoDir* debug_dir_ = nullptr;
+  vfs::PseudoDir* const debug_dir_;
 };
 }  // namespace a11y
 

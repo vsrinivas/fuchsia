@@ -23,7 +23,7 @@ class MockSemanticProvider {
   // On initialization, MockSemanticProvider tries to connect to
   // |fuchsia::accessibility::SemanticsManager| service in |context_| and
   // registers with it's view_ref, binding and interface request.
-  explicit MockSemanticProvider(sys::ComponentContext* context,
+  explicit MockSemanticProvider(fuchsia::accessibility::semantics::SemanticsManager* manager,
                                 fuchsia::ui::views::ViewRef view_ref);
   ~MockSemanticProvider() = default;
 
@@ -40,17 +40,13 @@ class MockSemanticProvider {
   void SetHitTestResult(uint32_t hit_test_result);
 
  private:
-  // Pointer to semantics manager service.
-  fuchsia::accessibility::semantics::SemanticsManagerPtr manager_;
-
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
 
-  // ViewRef of the Semantic Tree.
-  fuchsia::ui::views::ViewRef view_ref_;
-
   MockSemanticActionListener action_listener_;
+  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticActionListener>
+      action_listener_bindings_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticProvider);
 };
 

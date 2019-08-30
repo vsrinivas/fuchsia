@@ -7,10 +7,7 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/component_context.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
 namespace accessibility_test {
@@ -35,12 +32,7 @@ class MockSemanticActionListener
   // HitTest() is called.
   void SetHitTestResult(int node_id);
 
-  void Bind(
-      fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> *listener);
-
  private:
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticActionListener> bindings_;
-
   // Node id which will be returned when HitTest() is called.
   uint32_t hit_test_node_id_ = 1;
 

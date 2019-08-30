@@ -19,7 +19,7 @@ using fuchsia::accessibility::semantics::Action;
 using fuchsia::accessibility::semantics::Hit;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::SemanticActionListener;
-using fuchsia::accessibility::semantics::SemanticsManagerPtr;
+using fuchsia::accessibility::semantics::SemanticsManager;
 using fuchsia::accessibility::semantics::SemanticTreePtr;
 
 class MockSemanticListener : public SemanticActionListener {
@@ -27,11 +27,8 @@ class MockSemanticListener : public SemanticActionListener {
   // Mock for Semantic Action Listener, which will be
   // responsible for performing Hit test.
   //
-  // On initialization, MockSemanticListener tries to connect to
-  // |fuchsia::accessibility::SemanticsManager| service in |context_| and
-  // registers with it's view_ref, binding and interface request.
-  explicit MockSemanticListener(sys::ComponentContext* context,
-                                fuchsia::ui::views::ViewRef view_ref);
+  // On initialization, MockSemanticListener registers its view with the given manager.
+  explicit MockSemanticListener(SemanticsManager* manager, fuchsia::ui::views::ViewRef view_ref);
   ~MockSemanticListener() override = default;
 
   void UpdateSemanticNodes(std::vector<Node> nodes);
@@ -48,8 +45,6 @@ class MockSemanticListener : public SemanticActionListener {
   // |fuchsia::accessibility::semantics::SemanticActionListener|
   void HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) override;
 
-  sys::ComponentContext* context_;
-  SemanticsManagerPtr manager_;
   SemanticTreePtr tree_ptr_;
   fidl::BindingSet<SemanticActionListener> bindings_;
   fuchsia::ui::views::ViewRef view_ref_;

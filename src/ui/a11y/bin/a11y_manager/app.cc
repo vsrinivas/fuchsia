@@ -13,29 +13,15 @@ const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(std::unique_ptr<sys::ComponentContext> context)
     : startup_context_(std::move(context)),
-      // TtsManager publishes the services it offers upon initialization.
+      // The following services publish themselves upon initialization.
+      semantics_manager_(startup_context_.get()),
       tts_manager_(startup_context_.get()),
       // For now, we use a simple Tts Engine which only logs the output.
       // On initialization, it registers itself with the Tts manager.
       log_engine_(startup_context_.get()),
       settings_watcher_binding_(this) {
-  Initialize();
-}
-
-App::~App() = default;
-
-void App::Initialize() {
   startup_context_->outgoing()->AddPublicService(
       settings_manager_bindings_.GetHandler(&settings_manager_));
-
-  // Add Semantics Manager service.
-  semantics_manager_.SetDebugDirectory(startup_context_->outgoing()->debug_dir());
-  startup_context_->outgoing()
-      ->AddPublicService<fuchsia::accessibility::semantics::SemanticsManager>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request) {
-            semantics_manager_.AddBinding(std::move(request));
-          });
 
   // Register ourselves as a settings watcher.
   settings_manager_.Watch(settings_watcher_binding_.NewBinding());
@@ -48,6 +34,8 @@ void App::Initialize() {
                    << zx_status_get_string(status);
   });
 }
+
+App::~App() = default;
 
 fuchsia::accessibility::SettingsPtr App::GetSettings() {
   auto settings_ptr = fuchsia::accessibility::Settings::New();
@@ -88,8 +76,8 @@ void App::OnScreenReaderEnabled(bool enabled) {
 
   // Reset ScreenReader.
   if (enabled) {
-    screen_reader_ = std::make_unique<a11y::ScreenReader>(
-        &semantics_manager_, &tts_manager_, gesture_manager_.get());
+    screen_reader_ = std::make_unique<a11y::ScreenReader>(&semantics_manager_, &tts_manager_,
+                                                          gesture_manager_.get());
   } else {
     screen_reader_.reset();
   }

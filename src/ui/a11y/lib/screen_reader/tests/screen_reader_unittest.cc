@@ -32,6 +32,8 @@ constexpr int kMaxLogBufferSize = 1024;
 
 class ScreenReaderTest : public gtest::RealLoopFixture {
  public:
+  ScreenReaderTest() : semantics_manager_(context_provider_.context()) {}
+
   void SetUp() override {
     RealLoopFixture::SetUp();
 
@@ -44,20 +46,10 @@ class ScreenReaderTest : public gtest::RealLoopFixture {
         .reference = std::move(a),
     });
 
-    // Set Semantics Manager Debug Directory.
-    semantics_manager_.SetDebugDirectory(context_provider_.context()->outgoing()->debug_dir());
-
-    // Add Semantics Manager service.
-    context_provider_.service_directory_provider()->AddService<SemanticsManager>(
-        [this](fidl::InterfaceRequest<SemanticsManager> request) {
-          semantics_manager_.AddBinding(std::move(request));
-        });
-    RunLoopUntilIdle();
-
     fuchsia::ui::views::ViewRef view_ref_connection;
     fidl::Clone(view_ref_, &view_ref_connection);
     semantic_listener_ = std::make_unique<accessibility_test::MockSemanticListener>(
-        context_provider_.context(), std::move(view_ref_connection));
+        &semantics_manager_, std::move(view_ref_connection));
     RunLoopUntilIdle();
 
     // Initialize Screen Reader.
@@ -68,11 +60,11 @@ class ScreenReaderTest : public gtest::RealLoopFixture {
   AccessibilityPointerEvent GetDefaultPointerEvent();
   void CreateOnOneFngerTapAction();
 
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<a11y::TtsManager> tts_manager_;
   a11y::SemanticsManager semantics_manager_;
   a11y::GestureManager gesture_manager_;
   std::unique_ptr<accessibility_test::MockSemanticListener> semantic_listener_;
-  sys::testing::ComponentContextProvider context_provider_;
   fuchsia::ui::views::ViewRef view_ref_;
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
 };

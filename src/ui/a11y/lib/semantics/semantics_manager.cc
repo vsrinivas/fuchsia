@@ -7,17 +7,17 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
 
+#include "src/lib/fxl/logging.h"
+
 namespace a11y {
 
-SemanticsManager::SemanticsManager() = default;
-SemanticsManager::~SemanticsManager() = default;
-
-void SemanticsManager::SetDebugDirectory(vfs::PseudoDir* debug_dir) { debug_dir_ = debug_dir; }
-
-void SemanticsManager::AddBinding(
-    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request) {
-  bindings_.AddBinding(this, std::move(request));
+SemanticsManager::SemanticsManager(sys::ComponentContext* startup_context)
+    : debug_dir_(startup_context->outgoing()->debug_dir()) {
+  FXL_DCHECK(startup_context);
+  startup_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
+
+SemanticsManager::~SemanticsManager() = default;
 
 void SemanticsManager::RegisterView(
     fuchsia::ui::views::ViewRef view_ref,

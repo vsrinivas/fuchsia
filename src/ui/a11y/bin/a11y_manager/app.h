@@ -37,8 +37,6 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   fuchsia::accessibility::SettingsPtr GetSettings();
 
  private:
-  void Initialize();
-
   // Helper function to copy given settings to member variable.
   void SetSettings(fuchsia::accessibility::Settings provided_settings);
 
