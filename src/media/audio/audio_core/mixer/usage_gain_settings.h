@@ -24,14 +24,14 @@ class UsageGainSettings {
 
   // Gets the gain that should affect all audio elements of the given usage, taking into account the
   // category gain and adjustment.
-  float GetUsageGain(const fuchsia::media::Usage& usage);
+  float GetUsageGain(const fuchsia::media::Usage& usage) const;
 
  private:
-  float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage);
-  float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage);
+  float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) const;
+  float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) const;
 
-  float GetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage);
-  float GetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage);
+  float GetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage) const;
+  float GetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage) const;
 
   std::atomic<float> render_usage_gain_[fuchsia::media::RENDER_USAGE_COUNT] = {};
   std::atomic<float> capture_usage_gain_[fuchsia::media::CAPTURE_USAGE_COUNT] = {};
