@@ -42,11 +42,6 @@ class KeyService {
  public:
   explicit KeyService(async_dispatcher_t* dispatcher, std::string namespace_id);
 
-  // Retrieves the master key.
-  // TODO(mariagl): Stop providing master keys, migrate the methods that rely on them to the
-  // corresponding derived keys.
-  void GetMasterKey(uint32_t key_index, fit::function<void(Status, std::string)> callback);
-
   // Retrieves the reference key associated to the given namespace and reference
   // key. If the id is not yet associated with a reference key, generates a new
   // one and associates it with the id before returning.
@@ -75,6 +70,8 @@ class KeyService {
   void GenerateMasterKey(uint32_t key_index, fit::function<void(Status, std::string)> callback);
 
   async_dispatcher_t* const dispatcher_;
+
+  // Id of the namespace for which the keys are generated.
   const std::string namespace_id_;
 
   // Master keys indexed by key_index.

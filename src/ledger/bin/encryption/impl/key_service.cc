@@ -28,11 +28,6 @@ KeyService::KeyService(async_dispatcher_t* dispatcher, std::string namespace_id)
                    [this](auto k, auto c) { GenerateMasterKey(std::move(k), std::move(c)); }),
       weak_factory_(this) {}
 
-void KeyService::GetMasterKey(uint32_t key_index,
-                              fit::function<void(Status, std::string)> callback) {
-  master_keys_.Get(key_index, std::move(callback));
-}
-
 void KeyService::GetReferenceKey(const std::string& namespace_id,
                                  const std::string& reference_key_id,
                                  fit::function<void(const std::string&)> callback) {

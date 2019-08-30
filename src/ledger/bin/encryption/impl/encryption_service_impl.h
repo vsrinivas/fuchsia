@@ -55,28 +55,20 @@ class EncryptionServiceImpl : public EncryptionService {
   using DeletionScopeSeed = std::pair<size_t, std::string>;
 
   uint32_t GetCurrentKeyIndex();
-  void GetReferenceKey(storage::ObjectIdentifier object_identifier,
-                       fit::function<void(const std::string&)> callback);
 
   void Encrypt(size_t key_index, std::string data,
                fit::function<void(Status, std::string)> callback);
   void Decrypt(size_t key_index, std::string encrypted_data,
                fit::function<void(Status, std::string)> callback);
 
-  void FetchNamespaceKey(size_t key_index, fit::function<void(Status, std::string)> callback);
-  void FetchReferenceKey(DeletionScopeSeed deletion_scope_seed,
-                         fit::function<void(Status, std::string)> callback);
-
   ledger::Environment* const environment_;
   const std::string namespace_id_;
   std::unique_ptr<KeyService> key_service_;
 
-  // Master keys indexed by key_index.
-  cache::LRUCache<uint32_t, std::string, Status> master_keys_;
-  // Namespace keys indexed by key_index.
-  cache::LRUCache<uint32_t, std::string, Status> namespace_keys_;
-  // Reference keys indexed by deletion scope seed.
-  cache::LRUCache<DeletionScopeSeed, std::string, Status> reference_keys_;
+  // Encryption keys indexed by key_index.
+  cache::LRUCache<uint32_t, std::string, Status> encryption_keys_;
+  // Remote id keys indexed by key_index.
+  cache::LRUCache<uint32_t, std::string, Status> remote_id_keys_;
 
   // A key used for hash permutation in chunking.
   cache::LazyValue<std::string, Status> chunking_key_;

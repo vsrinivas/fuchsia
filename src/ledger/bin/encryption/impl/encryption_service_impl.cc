@@ -32,21 +32,15 @@ namespace {
 // TODO(mariagl): Use this for the backward compatibility.
 constexpr uint32_t kEncryptionVersion = 0;
 
-// The default encryption values. Only used until real encryption is
-// implemented: LE-286
-
 // Use max_int32 - 1 for default deletion scoped id. max_int32 has a special
 // meaning in the specification and is used to have per object deletion scope.
 constexpr uint32_t kDefaultDeletionScopeId = std::numeric_limits<uint32_t>::max() - 1;
-// Special deletion scope id that produces a per-object deletion scope.
-constexpr uint32_t kPerObjectDeletionScopedId = std::numeric_limits<uint32_t>::max();
 
 // Entry id size in bytes.
 constexpr size_t kEntryIdSize = 32u;
 
 // Cache size values.
 constexpr size_t kKeyIndexCacheSize = 10u;
-constexpr size_t kReferenceKeysCacheSize = 10u;
 
 // Checks whether the given |storage_bytes| are a valid serialization of an
 // encrypted commit.
@@ -64,13 +58,13 @@ EncryptionServiceImpl::EncryptionServiceImpl(ledger::Environment* environment,
     : environment_(environment),
       namespace_id_(std::move(namespace_id)),
       key_service_(std::make_unique<KeyService>(environment_->dispatcher(), namespace_id_)),
-      master_keys_(
+      encryption_keys_(
           kKeyIndexCacheSize, Status::OK,
-          [this](auto k, auto c) { key_service_->GetMasterKey(std::move(k), std::move(c)); }),
-      namespace_keys_(kKeyIndexCacheSize, Status::OK,
-                      [this](auto k, auto c) { FetchNamespaceKey(std::move(k), std::move(c)); }),
-      reference_keys_(kReferenceKeysCacheSize, Status::OK,
-                      [this](auto k, auto c) { FetchReferenceKey(std::move(k), std::move(c)); }),
+          [this](auto k, auto c) { key_service_->GetEncryptionKey(std::move(k), std::move(c)); }),
+      remote_id_keys_(kKeyIndexCacheSize, Status::OK,
+                      [this](auto k, auto c) {
+                        key_service_->GetRemoteObjectIdKey(std::move(k), std::move(c));
+                      }),
       chunking_key_(Status::OK, [this](auto c) { key_service_->GetChunkingKey(std::move(c)); }) {}
 
 EncryptionServiceImpl::~EncryptionServiceImpl() {}
@@ -131,13 +125,17 @@ void EncryptionServiceImpl::DecryptCommit(convert::ExtendedStringView storage_by
 
 void EncryptionServiceImpl::GetObjectName(storage::ObjectIdentifier object_identifier,
                                           fit::function<void(Status, std::string)> callback) {
-  GetReferenceKey(object_identifier, [object_identifier, callback = std::move(callback)](
-                                         const std::string& reference_key) {
-    callback(
-        Status::OK,
-        HMAC256KDF(fxl::Concatenate({reference_key, object_identifier.object_digest().Serialize()}),
-                   kDerivedKeySize));
-  });
+  remote_id_keys_.Get(
+      object_identifier.key_index(),
+      [object_identifier = std::move(object_identifier), callback = std::move(callback)](
+          Status status, std::string remote_object_id_key) {
+        if (status != Status::OK) {
+          callback(status, "");
+          return;
+        }
+        callback(Status::OK,
+                 SHA256HMAC(remote_object_id_key, object_identifier.object_digest().Serialize()));
+      });
 }
 
 void EncryptionServiceImpl::EncryptObject(storage::ObjectIdentifier object_identifier,
@@ -154,88 +152,40 @@ void EncryptionServiceImpl::DecryptObject(storage::ObjectIdentifier object_ident
 
 uint32_t EncryptionServiceImpl::GetCurrentKeyIndex() { return kDefaultKeyIndex; }
 
-void EncryptionServiceImpl::GetReferenceKey(storage::ObjectIdentifier object_identifier,
-                                            fit::function<void(const std::string&)> callback) {
-  std::string deletion_scope_seed;
-  if (object_identifier.deletion_scope_id() == kPerObjectDeletionScopedId) {
-    deletion_scope_seed = object_identifier.object_digest().Serialize();
-  } else {
-    const uint32_t deletion_scope_id = object_identifier.deletion_scope_id();
-    deletion_scope_seed =
-        std::string(reinterpret_cast<const char*>(&deletion_scope_id), sizeof(deletion_scope_id));
-  }
-  DeletionScopeSeed seed = {object_identifier.key_index(), std::move(deletion_scope_seed)};
-  reference_keys_.Get(seed, [callback = std::move(callback)](
-                                Status status, const std::string& value) { callback(value); });
-}
-
 void EncryptionServiceImpl::Encrypt(size_t key_index, std::string data,
                                     fit::function<void(Status, std::string)> callback) {
-  master_keys_.Get(key_index,
-                   [environment = environment_, data = std::move(data),
-                    callback = std::move(callback)](Status status, const std::string& key) {
-                     if (status != Status::OK) {
-                       callback(status, "");
-                       return;
-                     }
-                     std::string encrypted_data;
-                     if (!AES128GCMSIVEncrypt(environment->random(), key, data, &encrypted_data)) {
-                       callback(Status::INTERNAL_ERROR, "");
-                       return;
-                     }
-                     callback(Status::OK, std::move(encrypted_data));
-                   });
-}
-
-void EncryptionServiceImpl::Decrypt(size_t key_index, std::string encrypted_data,
-                                    fit::function<void(Status, std::string)> callback) {
-  master_keys_.Get(key_index,
-                   [encrypted_data = std::move(encrypted_data), callback = std::move(callback)](
-                       Status status, const std::string& key) {
-                     if (status != Status::OK) {
-                       callback(status, "");
-                       return;
-                     }
-                     std::string data;
-                     if (!AES128GCMSIVDecrypt(key, encrypted_data, &data)) {
-                       callback(Status::INTERNAL_ERROR, "");
-                       return;
-                     }
-                     callback(Status::OK, std::move(data));
-                   });
-}
-
-void EncryptionServiceImpl::FetchNamespaceKey(size_t key_index,
-                                              fit::function<void(Status, std::string)> callback) {
-  master_keys_.Get(key_index, [this, callback = std::move(callback)](
-                                  Status status, const std::string& master_key) {
-    if (status != Status::OK) {
-      callback(status, "");
-      return;
-    }
-    callback(Status::OK,
-             HMAC256KDF(fxl::Concatenate({master_key, namespace_id_}), kDerivedKeySize));
-  });
-}
-
-void EncryptionServiceImpl::FetchReferenceKey(DeletionScopeSeed deletion_scope_seed,
-                                              fit::function<void(Status, std::string)> callback) {
-  namespace_keys_.Get(
-      deletion_scope_seed.first,
-      [this, deletion_scope_seed = std::move(deletion_scope_seed), callback = std::move(callback)](
-          Status status, const std::string& namespace_key) mutable {
+  encryption_keys_.Get(
+      key_index, [environment = environment_, data = std::move(data),
+                  callback = std::move(callback)](Status status, const std::string& key) {
         if (status != Status::OK) {
           callback(status, "");
           return;
         }
-        key_service_->GetReferenceKey(
-            namespace_id_,
-            HMAC256KDF(fxl::Concatenate({namespace_key, deletion_scope_seed.second}),
-                       kDerivedKeySize),
-            [callback = std::move(callback)](std::string reference_key) {
-              callback(Status::OK, std::move(reference_key));
-            });
+        std::string encrypted_data;
+        if (!AES128GCMSIVEncrypt(environment->random(), key, data, &encrypted_data)) {
+          callback(Status::INTERNAL_ERROR, "");
+          return;
+        }
+        callback(Status::OK, std::move(encrypted_data));
       });
+}
+
+void EncryptionServiceImpl::Decrypt(size_t key_index, std::string encrypted_data,
+                                    fit::function<void(Status, std::string)> callback) {
+  encryption_keys_.Get(key_index,
+                       [encrypted_data = std::move(encrypted_data), callback = std::move(callback)](
+                           Status status, const std::string& key) {
+                         if (status != Status::OK) {
+                           callback(status, "");
+                           return;
+                         }
+                         std::string data;
+                         if (!AES128GCMSIVDecrypt(key, encrypted_data, &data)) {
+                           callback(Status::INTERNAL_ERROR, "");
+                           return;
+                         }
+                         callback(Status::OK, std::move(data));
+                       });
 }
 
 void EncryptionServiceImpl::GetChunkingPermutation(
