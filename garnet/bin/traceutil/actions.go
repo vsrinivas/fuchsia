@@ -17,7 +17,7 @@ import (
 	"github.com/golang/glog"
 )
 
-const defaultCategories = "app,benchmark,gfx,input,kernel:meta,kernel:sched,ledger,magma,modular,motown,view,flutter,dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,dart:gc,dart:isolate,dart:profiler,dart:vm"
+const defaultCategories = "app,audio,benchmark,gfx,input,kernel:meta,kernel:sched,ledger,magma,modular,motown,view,flutter,dart,dart:compiler,dart:dart,dart:debugger,dart:embedder,dart:gc,dart:isolate,dart:profiler,dart:vm"
 
 type captureTraceConfig struct {
 	Categories    string
