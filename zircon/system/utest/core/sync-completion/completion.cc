@@ -18,6 +18,7 @@
 
 #include <zxtest/zxtest.h>
 
+#if 0
 namespace {
 
 struct TestThread {
@@ -296,3 +297,4 @@ TEST(SyncCompletion, test_signal_requeue) {
 }
 
 }  // namespace
+#endif
