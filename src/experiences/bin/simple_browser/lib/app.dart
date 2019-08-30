@@ -26,10 +26,10 @@ class App extends StatelessWidget {
               TabsWidget(bloc: tabsBloc),
               Expanded(
                 child: AnimatedBuilder(
-                  animation: tabsBloc.currentTab,
-                  builder: (_, __) => tabsBloc.currentTab.value == null
+                  animation: tabsBloc.currentTabNotifier,
+                  builder: (_, __) => tabsBloc.currentTab == null
                       ? Offstage()
-                      : _buildContent(tabsBloc.currentTab.value),
+                      : _buildContent(tabsBloc.currentTab),
                 ),
               )
             ],

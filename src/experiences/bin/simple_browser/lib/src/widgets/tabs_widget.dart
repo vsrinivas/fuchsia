@@ -21,7 +21,8 @@ class TabsWidget extends StatelessWidget {
       height: _kTabBarHeight,
       color: Colors.black,
       child: AnimatedBuilder(
-        animation: Listenable.merge([bloc.tabs, bloc.currentTab]),
+        animation:
+            Listenable.merge([bloc.tabsNotifier, bloc.currentTabNotifier]),
         builder: (_, __) => Row(
           children: <Widget>[..._buildPageTabs(), _buildPlusTab()],
         ),
@@ -29,12 +30,12 @@ class TabsWidget extends StatelessWidget {
     );
   }
 
-  Iterable<Widget> _buildPageTabs() => bloc.tabs.value.map(
+  Iterable<Widget> _buildPageTabs() => bloc.tabs.map(
         (tab) => AnimatedBuilder(
-          animation: tab.pageTitle,
+          animation: tab.pageTitleNotifier,
           builder: (_, __) => _buildTab(
-            title: tab.pageTitle.value ?? 'NEW TAB',
-            selected: tab == bloc.currentTab.value,
+            title: tab.pageTitle ?? 'NEW TAB',
+            selected: tab == bloc.currentTab,
             onSelect: () {
               bloc.request.add(FocusTabAction(tab: tab));
             },

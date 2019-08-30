@@ -25,11 +25,23 @@ class WebPageBloc extends web.NavigationEventListener {
   ChildViewConnection get childViewConnection => _webView.childViewConnection;
 
   // Value Notifiers
-  final ValueNotifier<String> url = ValueNotifier<String>('');
-  final ValueNotifier<bool> forwardState = ValueNotifier<bool>(false);
-  final ValueNotifier<bool> backState = ValueNotifier<bool>(false);
-  final ValueNotifier<bool> isLoadedState = ValueNotifier<bool>(true);
-  final ValueNotifier<String> pageTitle = ValueNotifier<String>(null);
+  final ValueNotifier<String> _url = ValueNotifier<String>('');
+  final ValueNotifier<bool> _forwardState = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _backState = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isLoadedState = ValueNotifier<bool>(true);
+  final ValueNotifier<String> _pageTitle = ValueNotifier<String>(null);
+
+  ChangeNotifier get urlNotifier => _url;
+  ChangeNotifier get forwardStateNotifier => _forwardState;
+  ChangeNotifier get backStateNotifier => _backState;
+  ChangeNotifier get isLoadedStateNotifier => _isLoadedState;
+  ChangeNotifier get pageTitleNotifier => _pageTitle;
+
+  String get url => _url.value;
+  bool get forwardState => _forwardState.value;
+  bool get backState => _backState.value;
+  bool get isLoadedState => _isLoadedState.value;
+  String get pageTitle => _pageTitle.value;
 
   // Sinks
   final _webPageActionController = StreamController<WebPageAction>();
@@ -56,19 +68,19 @@ class WebPageBloc extends web.NavigationEventListener {
   Future<Null> onNavigationStateChanged(web.NavigationState event) async {
     if (event.url != null) {
       log.info('url loaded: ${event.url}');
-      url.value = event.url;
+      _url.value = event.url;
     }
     if (event.canGoForward != null) {
-      forwardState.value = event.canGoForward;
+      _forwardState.value = event.canGoForward;
     }
     if (event.canGoBack != null) {
-      backState.value = event.canGoBack;
+      _backState.value = event.canGoBack;
     }
     if (event.isMainDocumentLoaded != null) {
-      isLoadedState.value = event.isMainDocumentLoaded;
+      _isLoadedState.value = event.isMainDocumentLoaded;
     }
     if (event.title != null) {
-      pageTitle.value = event.title;
+      _pageTitle.value = event.title;
     }
   }
 

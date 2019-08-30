@@ -20,9 +20,15 @@ class TabsBloc<T> {
   final void Function(T tab) disposeTab;
 
   // Value Notifiers
-  final ValueNotifier<UnmodifiableListView<T>> tabs =
+  final ValueNotifier<UnmodifiableListView<T>> _tabs =
       ValueNotifier<UnmodifiableListView<T>>(UnmodifiableListView(<T>[]));
-  final ValueNotifier<T> currentTab = ValueNotifier<T>(null);
+  final ValueNotifier<T> _currentTab = ValueNotifier<T>(null);
+
+  ChangeNotifier get tabsNotifier => _tabs;
+  ChangeNotifier get currentTabNotifier => _currentTab;
+
+  UnmodifiableListView<T> get tabs => _tabs.value;
+  T get currentTab => _currentTab.value;
 
   // Sinks
   final _tabsActionController = StreamController<TabsAction<T>>();
@@ -42,12 +48,12 @@ class TabsBloc<T> {
       case TabsActionType.newTab:
         final tab = tabFactory();
         _tabsList.add(tab);
-        tabs.value = UnmodifiableListView<T>(_tabsList);
-        currentTab.value = tab;
+        _tabs.value = UnmodifiableListView<T>(_tabsList);
+        _currentTab.value = tab;
         break;
       case TabsActionType.focusTab:
         final FocusTabAction<T> focusTab = action;
-        currentTab.value = focusTab.tab;
+        _currentTab.value = focusTab.tab;
         break;
     }
   }

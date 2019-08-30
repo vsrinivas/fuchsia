@@ -14,21 +14,20 @@ import 'src/blocs/tabs_bloc.dart';
 import 'src/blocs/webpage_bloc.dart';
 
 class RootIntentHandler extends modular.IntentHandler {
-  final TabsBloc tabsBloc;
+  final TabsBloc<WebPageBloc> tabsBloc;
   RootIntentHandler(this.tabsBloc);
 
   @override
   void handleIntent(modular.Intent intent) {
     /// if there are no tabs, add one
     /// otherwise add a new one only if the current tabs isn't a "New Tab"
-    if (tabsBloc.tabs.value.isEmpty ||
-        tabsBloc.currentTab.value.url.value.isNotEmpty) {
+    if (tabsBloc.tabs.isEmpty || tabsBloc.currentTab.url.isNotEmpty) {
       tabsBloc.request.add(NewTabAction<WebPageBloc>());
     }
     if (intent.action == 'NavigateToUrl') {
       intent.getEntity(name: 'url', type: 'string').getData().then((bytes) {
         final url = utf8.decode(bytes);
-        tabsBloc.currentTab.value.request.add(NavigateToAction(url: url));
+        tabsBloc.currentTab.request.add(NavigateToAction(url: url));
       });
     }
   }

@@ -16,20 +16,20 @@ void main() {
     final tb = TabsBloc(tabFactory: () => 'a');
     await _newTab(tb);
 
-    expect(tb.tabs.value.length, 1, reason: "doesn't have 1 tab");
+    expect(tb.tabs.length, 1, reason: "doesn't have 1 tab");
   });
 
   // Add 2 tabs, see that there are 2 tabs and that focus is on the second
   test('add 2 tabs', () async {
     TabsBloc tb;
-    tb = TabsBloc(tabFactory: () => 'tab ${tb.tabs.value.length}');
+    tb = TabsBloc(tabFactory: () => 'tab ${tb.tabs.length}');
     await _newTab(tb);
     await _newTab(tb);
 
-    expect(tb.tabs.value.length, 2, reason: "doesn't have 2 tabs");
+    expect(tb.tabs.length, 2, reason: "doesn't have 2 tabs");
     expect(
-      tb.currentTab.value,
-      tb.tabs.value.last,
+      tb.currentTab,
+      tb.tabs.last,
       reason: 'not focused on new tab',
     );
   });
@@ -37,17 +37,17 @@ void main() {
   // Add 2 tabs, focs on the first, see that the focus is on the first, and its value one is correct
   test('add 2 tabs and focus on first tab', () async {
     TabsBloc tb;
-    tb = TabsBloc(tabFactory: () => 'tab ${tb.tabs.value.length}');
+    tb = TabsBloc(tabFactory: () => 'tab ${tb.tabs.length}');
     await _newTab(tb);
     await _newTab(tb);
-    await _focusTab(tb, tb.tabs.value.first);
+    await _focusTab(tb, tb.tabs.first);
 
     expect(
-      tb.currentTab.value,
-      tb.tabs.value.first,
+      tb.currentTab,
+      tb.tabs.first,
       reason: 'not focused on first tab',
     );
-    expect(tb.currentTab.value, 'tab 0', reason: 'unexpected tab content');
+    expect(tb.currentTab, 'tab 0', reason: 'unexpected tab content');
   });
 }
 
@@ -76,13 +76,13 @@ Future _addActionAndAwait(
 /// adds a new tab to a [TabsBloc] and awaits completion with [TabsBloc.tabs]
 Future _newTab<T>(TabsBloc<T> tb) => _addActionAndAwait(
       tb,
-      tb.tabs,
+      tb.tabsNotifier,
       NewTabAction<T>(),
     );
 
 /// sets focus to a tab in [TabsBloc] and awaits completion with [TabsBloc.currentTab]
 Future _focusTab<T>(TabsBloc tb, T tab) => _addActionAndAwait(
       tb,
-      tb.currentTab,
+      tb.currentTabNotifier,
       FocusTabAction<T>(tab: tab),
     );

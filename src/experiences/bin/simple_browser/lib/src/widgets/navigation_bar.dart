@@ -32,7 +32,7 @@ class _NavigationBarState extends State<NavigationBar> {
     _focusNode = FocusNode();
     _controller = TextEditingController();
     _focusNode.addListener(_onFocusChange);
-    widget.bloc.url.addListener(_onUrlChanged);
+    widget.bloc.urlNotifier.addListener(_onUrlChanged);
     super.initState();
   }
 
@@ -42,16 +42,16 @@ class _NavigationBarState extends State<NavigationBar> {
       ..removeListener(_onFocusChange)
       ..dispose();
     _controller.dispose();
-    widget.bloc.url.removeListener(_onUrlChanged);
+    widget.bloc.urlNotifier.removeListener(_onUrlChanged);
     super.dispose();
   }
 
   @override
   void didUpdateWidget(NavigationBar oldWidget) {
     if (oldWidget.bloc != widget.bloc) {
-      oldWidget.bloc.url.removeListener(_onUrlChanged);
-      widget.bloc.url.addListener(_onUrlChanged);
-      _controller.text = widget.bloc.url.value;
+      oldWidget.bloc.urlNotifier.removeListener(_onUrlChanged);
+      widget.bloc.urlNotifier.addListener(_onUrlChanged);
+      _controller.text = widget.bloc.url;
       _updateFocus();
     }
     super.didUpdateWidget(oldWidget);
@@ -73,7 +73,7 @@ class _NavigationBarState extends State<NavigationBar> {
   }
 
   void _onUrlChanged() {
-    _controller.text = widget.bloc.url.value;
+    _controller.text = widget.bloc.url;
     _updateFocus();
   }
 
@@ -122,9 +122,9 @@ class _NavigationBarState extends State<NavigationBar> {
 
   Widget _buildLoadingIndicator() {
     return AnimatedBuilder(
-      animation: widget.bloc.isLoadedState,
+      animation: widget.bloc.isLoadedStateNotifier,
       builder: (context, snapshot) {
-        return widget.bloc.isLoadedState.value
+        return widget.bloc.isLoadedState
             ? Offstage()
             : SizedBox(
                 width: double.infinity,
@@ -146,17 +146,25 @@ class _NavigationBarState extends State<NavigationBar> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              _buildHistoryButton(
-                title: 'BCK',
-                onTap: () => widget.bloc.request.add(GoBackAction()),
-                enabledState: widget.bloc.backState,
-              ),
+              AnimatedBuilder(
+                  animation: widget.bloc.backStateNotifier,
+                  builder: (_, __) {
+                    return _buildHistoryButton(
+                      title: 'BCK',
+                      onTap: () => widget.bloc.request.add(GoBackAction()),
+                      isEnabled: widget.bloc.backState,
+                    );
+                  }),
               SizedBox(width: 8.0),
-              _buildHistoryButton(
-                title: 'FWD',
-                onTap: () => widget.bloc.request.add(GoForwardAction()),
-                enabledState: widget.bloc.forwardState,
-              ),
+              AnimatedBuilder(
+                  animation: widget.bloc.forwardStateNotifier,
+                  builder: (_, __) {
+                    return _buildHistoryButton(
+                      title: 'FWD',
+                      onTap: () => widget.bloc.request.add(GoForwardAction()),
+                      isEnabled: widget.bloc.forwardState,
+                    );
+                  }),
             ],
           ),
         ),
@@ -168,31 +176,25 @@ class _NavigationBarState extends State<NavigationBar> {
   Widget _buildHistoryButton({
     @required String title,
     @required VoidCallback onTap,
-    @required ValueNotifier<bool> enabledState,
+    @required bool isEnabled,
   }) {
-    return AnimatedBuilder(
-      animation: enabledState,
-      builder: (context, snapshot) {
-        final isEnabled = enabledState.value;
-        return GestureDetector(
-          onTap: isEnabled ? onTap : null,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Center(
-              child: Opacity(
-                opacity: isEnabled ? 1.0 : 0.54,
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+    return GestureDetector(
+      onTap: isEnabled ? onTap : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        child: Center(
+          child: Opacity(
+            opacity: isEnabled ? 1.0 : 0.54,
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
