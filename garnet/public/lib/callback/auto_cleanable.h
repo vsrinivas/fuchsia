@@ -154,11 +154,6 @@ class AutoCleanableMap {
     return map_.find(x);
   }
 
-  template <class KR>
-  V& operator[](const KR& x) {
-    return emplace(x, V()).first->second;
-  }
-
   iterator begin() { return map_.begin(); }
 
   const_iterator begin() const { return map_.begin(); }
