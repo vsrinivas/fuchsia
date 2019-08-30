@@ -51,6 +51,11 @@ impl TeeDeviceConnection {
             &connector_proxy.as_handle_ref(),
             zx::Signals::CHANNEL_PEER_CLOSED,
         )
+        // TODO(godtamit): `on_closed_fut` may outlive the connector_proxy,
+        // and won't fire ever if all references to `connector_proxy` are dropped.
+        // Change this instead to abort the async task below if something goes wrong,
+        // causing the connection to be aborted.
+        .extend_lifetime()
         .map(|res| res.map(|_| ()))
         .unwrap_or_else(|e| fx_log_err!("{:?}", e));
 

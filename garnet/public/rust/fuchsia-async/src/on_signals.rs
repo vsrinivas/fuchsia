@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use std::fmt;
-use std::marker::Unpin;
+use std::marker::PhantomData;
 use std::mem;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -57,12 +57,18 @@ impl PacketReceiver for OnSignalsReceiver {
 
 /// A future that completes when some set of signals become available on a Handle.
 #[must_use = "futures do nothing unless polled"]
-pub struct OnSignals(Result<ReceiverRegistration<OnSignalsReceiver>, zx::Status>);
+pub struct OnSignals<'a> {
+    state: Result<ReceiverRegistration<OnSignalsReceiver>, zx::Status>,
+    // Prevent the `OnSignals` from living longer than the handle from which it was created.
+    // This prevents bugs due to signals not being received for handles dropped or sent to
+    // other processes.
+    marker: PhantomData<&'a ()>,
+}
 
-impl OnSignals {
+impl<'a> OnSignals<'a> {
     /// Creates a new `OnSignals` object which will receive notifications when
     /// any signals in `signals` occur on `handle`.
-    pub fn new<T>(handle: &T, signals: zx::Signals) -> Self
+    pub fn new<T>(handle: &'a T, signals: zx::Signals) -> Self
     where
         T: AsHandleRef,
     {
@@ -79,24 +85,39 @@ impl OnSignals {
             zx::WaitAsyncOpts::Once,
         );
 
-        OnSignals(res.map(|()| receiver).map_err(Into::into))
+        OnSignals {
+            state: res.map(|()| receiver).map_err(Into::into),
+            marker: PhantomData,
+        }
+    }
+
+    /// This function allows the `OnSignals` object to live for the `'static` lifetime.
+    ///
+    /// It is functionally a no-op, but callers of this method should note that
+    /// `OnSignals` will not fire if the handle that was used to create it is dropped or
+    /// transferred to another process.
+    pub fn extend_lifetime(self) -> OnSignals<'static> {
+        OnSignals {
+            state: self.state,
+            marker: PhantomData,
+        }
     }
 }
 
-impl Unpin for OnSignals {}
+impl Unpin for OnSignals<'_> {}
 
-impl Future for OnSignals {
+impl Future for OnSignals<'_> {
     type Output = Result<zx::Signals, zx::Status>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let reg = self
-            .0
+            .state
             .as_mut()
             .map_err(|e| mem::replace(e, zx::Status::OK))?;
         reg.receiver().get_signals(cx).map(Ok)
     }
 }
 
-impl fmt::Debug for OnSignals {
+impl fmt::Debug for OnSignals<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "OnSignals")
     }

@@ -271,7 +271,7 @@ struct ClientInner {
     rx_depth: u32,
     tx_depth: u32,
     tx_pending: Mutex<(Vec<buffer::FifoEntry>, Option<Waker>)>,
-    signals: Mutex<fasync::OnSignals>,
+    signals: Mutex<fasync::OnSignals<'static>>,
 }
 
 impl ClientInner {
@@ -283,7 +283,7 @@ impl ClientInner {
         let sys::Fifos { rx, tx, rx_depth, tx_depth } = fifos;
         let rx_fifo = fasync::Fifo::from_fifo(rx)?;
         let tx_fifo = fasync::Fifo::from_fifo(tx)?;
-        let signals = Mutex::new(fasync::OnSignals::new(&rx_fifo, zx::Signals::USER_0));
+        let signals = Mutex::new(fasync::OnSignals::new(&rx_fifo, zx::Signals::USER_0).extend_lifetime());
         Ok(ClientInner {
             dev,
             pool,
@@ -305,7 +305,7 @@ impl ClientInner {
     }
 
     fn register_signals(&self) {
-        *self.signals.lock().unwrap() = fasync::OnSignals::new(&self.rx_fifo, zx::Signals::USER_0);
+        *self.signals.lock().unwrap() = fasync::OnSignals::new(&self.rx_fifo, zx::Signals::USER_0).extend_lifetime();
     }
 
     /// Check for Ethernet device status changes.
