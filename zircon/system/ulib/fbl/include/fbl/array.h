@@ -79,6 +79,8 @@ class Array {
     other.count_ = c;
   }
 
+  T* get() const { return ptr_; }
+
   T* data() const { return ptr_; }
 
   explicit operator bool() const { return static_cast<bool>(ptr_); }
