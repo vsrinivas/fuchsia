@@ -525,43 +525,8 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		route       tcpip.Route
 		metric      routes.Metric
 		dynamic     bool
-		shouldPanic bool
 		shouldError bool
 	}{
-		{
-			// TODO(NET-2244): don't panic when given invalid route destinations
-			name: "zero-length destination",
-			route: tcpip.Route{
-				Destination: func() tcpip.Subnet {
-					subnet, err := tcpip.NewSubnet("", "")
-					if err != nil {
-						t.Fatal(err)
-					}
-					return subnet
-				}(),
-				Gateway: testV4Address,
-				NIC:     ifState.nicid,
-			},
-			metric:      routes.Metric(0),
-			shouldPanic: true,
-		},
-		{
-			// TODO(NET-2244): don't panic when given invalid route destinations
-			name: "invalid destination",
-			route: tcpip.Route{
-				Destination: func() tcpip.Subnet {
-					subnet, err := tcpip.NewSubnet("\xff", "\xff")
-					if err != nil {
-						t.Fatal(err)
-					}
-					return subnet
-				}(),
-				Gateway: testV4Address,
-				NIC:     ifState.nicid,
-			},
-			metric:      routes.Metric(0),
-			shouldPanic: true,
-		},
 		{
 			name: "IPv4 destination no NIC invalid gateway",
 			route: tcpip.Route{
@@ -601,14 +566,6 @@ func TestAddRouteParameterValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				if got := r != nil; got != test.shouldPanic {
-					t.Logf("recover() = %v", r)
-					t.Errorf("got (recover() != nil) = %t; want = %t", got, test.shouldPanic)
-				}
-			}()
-
 			err := ns.AddRoute(test.route, test.metric, test.dynamic)
 			if got := err != nil; got != test.shouldError {
 				t.Logf("err = %v", err)

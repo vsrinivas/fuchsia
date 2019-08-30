@@ -180,14 +180,6 @@ func (ns *Netstack) AddRoutesLocked(rs []tcpip.Route, metric routes.Metric, dyna
 	}
 
 	for _, r := range rs {
-		switch len(r.Destination.ID()) {
-		case header.IPv4AddressSize, header.IPv6AddressSize:
-		default:
-			// TODO(NET-2244): update this to return an error; panicing here enables syzkaller to find
-			// the given state management bug more quickly.
-			panic(fmt.Sprintf("invalid destination for route: %+v\nroute table: %+v", r, ns.mu.routeTable.GetExtendedRouteTable()))
-		}
-
 		// If we don't have an interface set, find it using the gateway address.
 		if r.NIC == 0 {
 			nic, err := ns.mu.routeTable.FindNIC(r.Gateway)
