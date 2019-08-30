@@ -13,5 +13,6 @@ group("dart_unittests") {
   testonly = true
   deps = [
     "ermine/shell:ermine_unittests($host_toolchain)",
+    "//src/experiences/lib/quickui:quickui_unittests($host_toolchain)",
   ]
 }
