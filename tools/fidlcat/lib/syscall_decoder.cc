@@ -226,7 +226,9 @@ void SyscallDecoder::LoadInputs() {
     return;
   }
   for (const auto& input : syscall_->inputs()) {
-    input->Load(this, Stage::kEntry);
+    if (input->ConditionsAreTrue(this, Stage::kEntry)) {
+      input->Load(this, Stage::kEntry);
+    }
   }
   if (pending_request_count_ > 0) {
     return;
@@ -292,7 +294,8 @@ void SyscallDecoder::LoadOutputs() {
     return;
   }
   for (const auto& output : syscall_->outputs()) {
-    if (output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) {
+    if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
+        output->ConditionsAreTrue(this, Stage::kExit)) {
       output->Load(this, Stage::kExit);
     }
   }
@@ -336,7 +339,7 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
   os_ << line_header_ << decoder->syscall()->name() << '(';
   const char* separator = "";
   for (const auto& input : decoder->syscall()->inputs()) {
-    if (input->ConditionsAreTrue(decoder)) {
+    if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
       separator = input->DisplayInline(dispatcher_, decoder, Stage::kEntry, separator, os_);
     }
   }
@@ -348,9 +351,8 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 
   // Displays the outline input arguments.
   for (const auto& input : decoder->syscall()->inputs()) {
-    if (input->ConditionsAreTrue(decoder)) {
-      input->DisplayOutline(dispatcher_, decoder, Stage::kEntry, line_header_, /*tabs=*/1,
-                            os_);
+    if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
+      input->DisplayOutline(dispatcher_, decoder, Stage::kEntry, line_header_, /*tabs=*/1, os_);
     }
   }
   dispatcher_->set_last_displayed_syscall(this);
@@ -398,7 +400,7 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   const char* separator = " (";
   for (const auto& output : decoder->syscall()->outputs()) {
     if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-        output->ConditionsAreTrue(decoder)) {
+        output->ConditionsAreTrue(decoder, Stage::kExit)) {
       separator = output->DisplayInline(dispatcher_, decoder, Stage::kExit, separator, os_);
     }
   }
@@ -409,9 +411,8 @@ void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
   // Displays the outline output arguments.
   for (const auto& output : decoder->syscall()->outputs()) {
     if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-        output->ConditionsAreTrue(decoder)) {
-      output->DisplayOutline(dispatcher_, decoder, Stage::kExit, line_header_, /*tabs=*/2,
-                             os_);
+        output->ConditionsAreTrue(decoder, Stage::kExit)) {
+      output->DisplayOutline(dispatcher_, decoder, Stage::kExit, line_header_, /*tabs=*/2, os_);
     }
   }
 

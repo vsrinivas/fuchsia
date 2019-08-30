@@ -477,8 +477,7 @@ class SyscallCheck : public SyscallUse {
         ref_num_bytes = data.num_bytes();
       }
       FXL_DCHECK(args->wr_num_bytes == ref_num_bytes);
-      FXL_DCHECK(
-          decoder->BufferLoaded(Stage::kExit, uint64_t(args->wr_bytes), args->wr_num_bytes));
+      FXL_DCHECK(decoder->BufferLoaded(Stage::kExit, uint64_t(args->wr_bytes), args->wr_num_bytes));
       uint8_t* bytes = decoder->BufferContent(Stage::kExit, uint64_t(args->wr_bytes));
       if (memcmp(bytes, ref_bytes, ref_num_bytes) != 0) {
         std::string result = "bytes not equivalent\n";

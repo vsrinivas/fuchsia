@@ -172,9 +172,8 @@ class SyscallDecoder {
 
   // True if the buffer is loaded correctly.
   bool BufferLoaded(Stage stage, uint64_t address, size_t size) {
-    return (address == 0)
-               ? true
-               : buffers_[std::make_pair(stage, address)].loaded_values().size() == size;
+    return (address == 0) ? true
+                          : buffers_[std::make_pair(stage, address)].loaded_values().size() == size;
   }
 
   // Returns a pointer on the loaded buffer.

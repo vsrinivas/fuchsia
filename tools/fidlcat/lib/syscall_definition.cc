@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <zircon/system/public/zircon/errors.h>
+#include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
 
 #include <cstdint>
@@ -36,6 +37,792 @@ class ZxChannelCallArgs {
   }
 };
 
+class ZxX86_64ExcData : public Class<zx_x86_64_exc_data_t> {
+ public:
+  static const ZxX86_64ExcData* GetClass();
+
+  static uint64_t vector(const zx_x86_64_exc_data_t* from) { return from->vector; }
+  static uint64_t err_code(const zx_x86_64_exc_data_t* from) { return from->err_code; }
+  static uint64_t cr2(const zx_x86_64_exc_data_t* from) { return from->cr2; }
+
+ private:
+  ZxX86_64ExcData() : Class("zx_x86_64_exc_data_t") {
+    AddField(std::make_unique<ClassField<zx_x86_64_exc_data_t, uint64_t>>(
+        "vector", SyscallType::kUint64, vector));
+    AddField(std::make_unique<ClassField<zx_x86_64_exc_data_t, uint64_t>>(
+        "err_code", SyscallType::kUint64, err_code));
+    AddField(std::make_unique<ClassField<zx_x86_64_exc_data_t, uint64_t>>(
+        "cr2", SyscallType::kUint64, cr2));
+  }
+  ZxX86_64ExcData(const ZxX86_64ExcData&) = delete;
+  ZxX86_64ExcData& operator=(const ZxX86_64ExcData&) = delete;
+  static ZxX86_64ExcData* instance_;
+};
+
+ZxX86_64ExcData* ZxX86_64ExcData::instance_ = nullptr;
+
+const ZxX86_64ExcData* ZxX86_64ExcData::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxX86_64ExcData;
+  }
+  return instance_;
+}
+
+class ZxArm64ExcData : public Class<zx_arm64_exc_data_t> {
+ public:
+  static const ZxArm64ExcData* GetClass();
+
+  static uint32_t esr(const zx_arm64_exc_data_t* from) { return from->esr; }
+  static uint64_t far(const zx_arm64_exc_data_t* from) { return from->far; }
+
+ private:
+  ZxArm64ExcData() : Class("zx_arm64_exc_data_t") {
+    AddField(std::make_unique<ClassField<zx_arm64_exc_data_t, uint32_t>>(
+        "esr", SyscallType::kUint32, esr));
+    AddField(std::make_unique<ClassField<zx_arm64_exc_data_t, uint64_t>>(
+        "far", SyscallType::kUint64, far));
+  }
+  ZxArm64ExcData(const ZxArm64ExcData&) = delete;
+  ZxArm64ExcData& operator=(const ZxArm64ExcData&) = delete;
+  static ZxArm64ExcData* instance_;
+};
+
+ZxArm64ExcData* ZxArm64ExcData::instance_ = nullptr;
+
+const ZxArm64ExcData* ZxArm64ExcData::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxArm64ExcData;
+  }
+  return instance_;
+}
+
+class ZxExceptionContext : public Class<zx_exception_context_t> {
+ public:
+  static const ZxExceptionContext* GetClass();
+
+  static const zx_x86_64_exc_data_t* x86_64(const zx_exception_context_t* from) {
+    return &from->arch.u.x86_64;
+  }
+  static const zx_arm64_exc_data_t* arm_64(const zx_exception_context_t* from) {
+    return &from->arch.u.arm_64;
+  }
+
+ private:
+  ZxExceptionContext() : Class("zx_exception_context_t") {
+    AddField(std::make_unique<ClassClassField<zx_exception_context_t, zx_x86_64_exc_data_t>>(
+        "arch.x86_64", x86_64, ZxX86_64ExcData::GetClass()));
+    AddField(std::make_unique<ClassClassField<zx_exception_context_t, zx_arm64_exc_data_t>>(
+        "arch.arm_64", arm_64, ZxArm64ExcData::GetClass()));
+  }
+  ZxExceptionContext(const ZxExceptionContext&) = delete;
+  ZxExceptionContext& operator=(const ZxExceptionContext&) = delete;
+  static ZxExceptionContext* instance_;
+};
+
+ZxExceptionContext* ZxExceptionContext::instance_ = nullptr;
+
+const ZxExceptionContext* ZxExceptionContext::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxExceptionContext;
+  }
+  return instance_;
+}
+
+class ZxExceptionHeader : public Class<zx_exception_header_t> {
+ public:
+  static const ZxExceptionHeader* GetClass();
+
+  static uint32_t size(const zx_exception_header_t* from) { return from->size; }
+  static zx_excp_type_t type(const zx_exception_header_t* from) { return from->type; }
+
+ private:
+  ZxExceptionHeader() : Class("zx_exception_header_t") {
+    AddField(std::make_unique<ClassField<zx_exception_header_t, uint32_t>>(
+        "size", SyscallType::kUint32, size));
+    AddField(std::make_unique<ClassField<zx_exception_header_t, zx_excp_type_t>>(
+        "type", SyscallType::kUint32, type));
+  }
+  ZxExceptionHeader(const ZxExceptionHeader&) = delete;
+  ZxExceptionHeader& operator=(const ZxExceptionHeader&) = delete;
+  static ZxExceptionHeader* instance_;
+};
+
+ZxExceptionHeader* ZxExceptionHeader::instance_ = nullptr;
+
+const ZxExceptionHeader* ZxExceptionHeader::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxExceptionHeader;
+  }
+  return instance_;
+}
+
+class ZxExceptionReport : public Class<zx_exception_report_t> {
+ public:
+  static const ZxExceptionReport* GetClass();
+
+  static const zx_exception_header_t* header(const zx_exception_report_t* from) {
+    return &from->header;
+  }
+  static const zx_exception_context_t* context(const zx_exception_report_t* from) {
+    return &from->context;
+  }
+
+ private:
+  ZxExceptionReport() : Class("zx_exception_report_t") {
+    AddField(std::make_unique<ClassClassField<zx_exception_report_t, zx_exception_header_t>>(
+        "header", header, ZxExceptionHeader::GetClass()));
+    AddField(std::make_unique<ClassClassField<zx_exception_report_t, zx_exception_context_t>>(
+        "context", context, ZxExceptionContext::GetClass()));
+  }
+  ZxExceptionReport(const ZxExceptionReport&) = delete;
+  ZxExceptionReport& operator=(const ZxExceptionReport&) = delete;
+  static ZxExceptionReport* instance_;
+};
+
+ZxExceptionReport* ZxExceptionReport::instance_ = nullptr;
+
+const ZxExceptionReport* ZxExceptionReport::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxExceptionReport;
+  }
+  return instance_;
+}
+
+class ZxInfoBti : public Class<zx_info_bti_t> {
+ public:
+  static const ZxInfoBti* GetClass();
+
+  static uint64_t minimum_contiguity(const zx_info_bti_t* from) { return from->minimum_contiguity; }
+  static uint64_t aspace_size(const zx_info_bti_t* from) { return from->aspace_size; }
+
+ private:
+  ZxInfoBti() : Class("zx_info_bti_t") {
+    AddField(std::make_unique<ClassField<zx_info_bti_t, uint64_t>>(
+        "minimum_contiguity", SyscallType::kUint64, minimum_contiguity));
+    AddField(std::make_unique<ClassField<zx_info_bti_t, uint64_t>>(
+        "aspace_size", SyscallType::kUint64, aspace_size));
+  }
+  ZxInfoBti(const ZxInfoBti&) = delete;
+  ZxInfoBti& operator=(const ZxInfoBti&) = delete;
+  static ZxInfoBti* instance_;
+};
+
+ZxInfoBti* ZxInfoBti::instance_ = nullptr;
+
+const ZxInfoBti* ZxInfoBti::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoBti;
+  }
+  return instance_;
+}
+
+class ZxInfoCpuStats : public Class<zx_info_cpu_stats_t> {
+ public:
+  static const ZxInfoCpuStats* GetClass();
+
+  static uint32_t cpu_number(const zx_info_cpu_stats_t* from) { return from->cpu_number; }
+  static uint32_t flags(const zx_info_cpu_stats_t* from) { return from->flags; }
+  static zx_duration_t idle_time(const zx_info_cpu_stats_t* from) { return from->idle_time; }
+  static uint64_t reschedules(const zx_info_cpu_stats_t* from) { return from->reschedules; }
+  static uint64_t context_switches(const zx_info_cpu_stats_t* from) {
+    return from->context_switches;
+  }
+  static uint64_t irq_preempts(const zx_info_cpu_stats_t* from) { return from->irq_preempts; }
+  static uint64_t preempts(const zx_info_cpu_stats_t* from) { return from->preempts; }
+  static uint64_t yields(const zx_info_cpu_stats_t* from) { return from->yields; }
+  static uint64_t ints(const zx_info_cpu_stats_t* from) { return from->ints; }
+  static uint64_t timer_ints(const zx_info_cpu_stats_t* from) { return from->timer_ints; }
+  static uint64_t timers(const zx_info_cpu_stats_t* from) { return from->timers; }
+  static uint64_t syscalls(const zx_info_cpu_stats_t* from) { return from->syscalls; }
+  static uint64_t reschedule_ipis(const zx_info_cpu_stats_t* from) { return from->reschedule_ipis; }
+  static uint64_t generic_ipis(const zx_info_cpu_stats_t* from) { return from->generic_ipis; }
+
+ private:
+  ZxInfoCpuStats() : Class("zx_info_cpu_stats_t") {
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint32_t>>(
+        "cpu_number", SyscallType::kUint32, cpu_number));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint32_t>>(
+        "flags", SyscallType::kUint32, flags));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, zx_duration_t>>(
+        "idle_time", SyscallType::kDuration, idle_time));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "reschedules", SyscallType::kUint64, reschedules));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "context_switches", SyscallType::kUint64, context_switches));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "irq_preempts", SyscallType::kUint64, irq_preempts));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "preempts", SyscallType::kUint64, preempts));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "yields", SyscallType::kUint64, yields));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "ints", SyscallType::kUint64, ints));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "timer_ints", SyscallType::kUint64, timer_ints));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "timers", SyscallType::kUint64, timers));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "syscalls", SyscallType::kUint64, syscalls));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "reschedule_ipis", SyscallType::kUint64, reschedule_ipis));
+    AddField(std::make_unique<ClassField<zx_info_cpu_stats_t, uint64_t>>(
+        "generic_ipis", SyscallType::kUint64, generic_ipis));
+  }
+  ZxInfoCpuStats(const ZxInfoCpuStats&) = delete;
+  ZxInfoCpuStats& operator=(const ZxInfoCpuStats&) = delete;
+  static ZxInfoCpuStats* instance_;
+};
+
+ZxInfoCpuStats* ZxInfoCpuStats::instance_ = nullptr;
+
+const ZxInfoCpuStats* ZxInfoCpuStats::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoCpuStats;
+  }
+  return instance_;
+}
+
+class ZxInfoHandleBasic : public Class<zx_info_handle_basic_t> {
+ public:
+  static const ZxInfoHandleBasic* GetClass();
+
+  static zx_koid_t koid(const zx_info_handle_basic_t* from) { return from->koid; }
+  static zx_rights_t rights(const zx_info_handle_basic_t* from) { return from->rights; }
+  static zx_obj_type_t type(const zx_info_handle_basic_t* from) { return from->type; }
+  static zx_koid_t related_koid(const zx_info_handle_basic_t* from) { return from->related_koid; }
+  static zx_obj_props_t props(const zx_info_handle_basic_t* from) { return from->props; }
+
+ private:
+  ZxInfoHandleBasic() : Class("zx_info_handle_basic_t") {
+    AddField(std::make_unique<ClassField<zx_info_handle_basic_t, zx_koid_t>>(
+        "koid", SyscallType::kKoid, koid));
+    AddField(std::make_unique<ClassField<zx_info_handle_basic_t, zx_rights_t>>(
+        "rights", SyscallType::kRights, rights));
+    AddField(std::make_unique<ClassField<zx_info_handle_basic_t, zx_obj_type_t>>(
+        "type", SyscallType::kObjType, type));
+    AddField(std::make_unique<ClassField<zx_info_handle_basic_t, zx_koid_t>>(
+        "related_koid", SyscallType::kKoid, related_koid));
+    AddField(std::make_unique<ClassField<zx_info_handle_basic_t, zx_obj_props_t>>(
+        "props", SyscallType::kObjProps, props));
+  }
+  ZxInfoHandleBasic(const ZxInfoHandleBasic&) = delete;
+  ZxInfoHandleBasic& operator=(const ZxInfoHandleBasic&) = delete;
+  static ZxInfoHandleBasic* instance_;
+};
+
+ZxInfoHandleBasic* ZxInfoHandleBasic::instance_ = nullptr;
+
+const ZxInfoHandleBasic* ZxInfoHandleBasic::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoHandleBasic;
+  }
+  return instance_;
+}
+
+class ZxInfoHandleCount : public Class<zx_info_handle_count_t> {
+ public:
+  static const ZxInfoHandleCount* GetClass();
+
+  static uint32_t handle_count(const zx_info_handle_count_t* from) { return from->handle_count; }
+
+ private:
+  ZxInfoHandleCount() : Class("zx_info_handle_count_t") {
+    AddField(std::make_unique<ClassField<zx_info_handle_count_t, uint32_t>>(
+        "handle_count", SyscallType::kUint32, handle_count));
+  }
+  ZxInfoHandleCount(const ZxInfoHandleCount&) = delete;
+  ZxInfoHandleCount& operator=(const ZxInfoHandleCount&) = delete;
+  static ZxInfoHandleCount* instance_;
+};
+
+ZxInfoHandleCount* ZxInfoHandleCount::instance_ = nullptr;
+
+const ZxInfoHandleCount* ZxInfoHandleCount::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoHandleCount;
+  }
+  return instance_;
+}
+
+class ZxInfoJob : public Class<zx_info_job_t> {
+ public:
+  static const ZxInfoJob* GetClass();
+
+  static int64_t return_code(const zx_info_job_t* from) { return from->return_code; }
+  static bool exited(const zx_info_job_t* from) { return from->exited; }
+  static bool kill_on_oom(const zx_info_job_t* from) { return from->kill_on_oom; }
+  static bool debugger_attached(const zx_info_job_t* from) { return from->debugger_attached; }
+
+ private:
+  ZxInfoJob() : Class("zx_info_job_t") {
+    AddField(std::make_unique<ClassField<zx_info_job_t, int64_t>>(
+        "return_code", SyscallType::kInt64, return_code));
+    AddField(
+        std::make_unique<ClassField<zx_info_job_t, bool>>("exited", SyscallType::kBool, exited));
+    AddField(std::make_unique<ClassField<zx_info_job_t, bool>>("kill_on_oom", SyscallType::kBool,
+                                                               kill_on_oom));
+    AddField(std::make_unique<ClassField<zx_info_job_t, bool>>(
+        "debugger_attached", SyscallType::kBool, debugger_attached));
+  }
+  ZxInfoJob(const ZxInfoJob&) = delete;
+  ZxInfoJob& operator=(const ZxInfoJob&) = delete;
+  static ZxInfoJob* instance_;
+};
+
+ZxInfoJob* ZxInfoJob::instance_ = nullptr;
+
+const ZxInfoJob* ZxInfoJob::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoJob;
+  }
+  return instance_;
+}
+
+class ZxInfoKmemStats : public Class<zx_info_kmem_stats_t> {
+ public:
+  static const ZxInfoKmemStats* GetClass();
+
+  static size_t total_bytes(const zx_info_kmem_stats_t* from) { return from->total_bytes; }
+  static size_t free_bytes(const zx_info_kmem_stats_t* from) { return from->free_bytes; }
+  static size_t wired_bytes(const zx_info_kmem_stats_t* from) { return from->wired_bytes; }
+  static size_t total_heap_bytes(const zx_info_kmem_stats_t* from) {
+    return from->total_heap_bytes;
+  }
+  static size_t free_heap_bytes(const zx_info_kmem_stats_t* from) { return from->free_heap_bytes; }
+  static size_t vmo_bytes(const zx_info_kmem_stats_t* from) { return from->vmo_bytes; }
+  static size_t mmu_overhead_bytes(const zx_info_kmem_stats_t* from) {
+    return from->mmu_overhead_bytes;
+  }
+  static size_t other_bytes(const zx_info_kmem_stats_t* from) { return from->other_bytes; }
+
+ private:
+  ZxInfoKmemStats() : Class("zx_info_kmem_stats_t") {
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "total_bytes", SyscallType::kSize, total_bytes));
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "free_bytes", SyscallType::kSize, free_bytes));
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "wired_bytes", SyscallType::kSize, wired_bytes));
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "total_heap_bytes", SyscallType::kSize, total_heap_bytes));
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "free_heap_bytes", SyscallType::kSize, free_heap_bytes));
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "vmo_bytes", SyscallType::kSize, vmo_bytes));
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "mmu_overhead_bytes", SyscallType::kSize, mmu_overhead_bytes));
+    AddField(std::make_unique<ClassField<zx_info_kmem_stats_t, size_t>>(
+        "other_bytes", SyscallType::kSize, other_bytes));
+  }
+  ZxInfoKmemStats(const ZxInfoKmemStats&) = delete;
+  ZxInfoKmemStats& operator=(const ZxInfoKmemStats&) = delete;
+  static ZxInfoKmemStats* instance_;
+};
+
+ZxInfoKmemStats* ZxInfoKmemStats::instance_ = nullptr;
+
+const ZxInfoKmemStats* ZxInfoKmemStats::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoKmemStats;
+  }
+  return instance_;
+}
+
+class ZxInfoProcess : public Class<zx_info_process_t> {
+ public:
+  static const ZxInfoProcess* GetClass();
+
+  static int64_t return_code(const zx_info_process_t* from) { return from->return_code; }
+  static bool started(const zx_info_process_t* from) { return from->started; }
+  static bool exited(const zx_info_process_t* from) { return from->exited; }
+  static bool debugger_attached(const zx_info_process_t* from) { return from->debugger_attached; }
+
+ private:
+  ZxInfoProcess() : Class("zx_info_process_t") {
+    AddField(std::make_unique<ClassField<zx_info_process_t, int64_t>>(
+        "return_code", SyscallType::kInt64, return_code));
+    AddField(std::make_unique<ClassField<zx_info_process_t, bool>>("started", SyscallType::kBool,
+                                                                   started));
+    AddField(std::make_unique<ClassField<zx_info_process_t, bool>>("exited", SyscallType::kBool,
+                                                                   exited));
+    AddField(std::make_unique<ClassField<zx_info_process_t, bool>>(
+        "debugger_attached", SyscallType::kBool, debugger_attached));
+  }
+  ZxInfoProcess(const ZxInfoProcess&) = delete;
+  ZxInfoProcess& operator=(const ZxInfoProcess&) = delete;
+  static ZxInfoProcess* instance_;
+};
+
+ZxInfoProcess* ZxInfoProcess::instance_ = nullptr;
+
+const ZxInfoProcess* ZxInfoProcess::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoProcess;
+  }
+  return instance_;
+}
+
+class ZxInfoProcessHandleStats : public Class<zx_info_process_handle_stats_t> {
+ public:
+  static const ZxInfoProcessHandleStats* GetClass();
+
+  static std::pair<const uint32_t*, int> handle_count(const zx_info_process_handle_stats_t* from) {
+    return std::make_pair(reinterpret_cast<const uint32_t*>(from->handle_count),
+                          sizeof(from->handle_count) / sizeof(uint32_t));
+  }
+
+ private:
+  ZxInfoProcessHandleStats() : Class("zx_info_process_handle_stats_t") {
+    AddField(std::make_unique<
+             ClassField<zx_info_process_handle_stats_t, std::pair<const uint32_t*, int>>>(
+        "handle_count", SyscallType::kUint32ArrayDecimal, handle_count));
+  }
+  ZxInfoProcessHandleStats(const ZxInfoProcessHandleStats&) = delete;
+  ZxInfoProcessHandleStats& operator=(const ZxInfoProcessHandleStats&) = delete;
+  static ZxInfoProcessHandleStats* instance_;
+};
+
+ZxInfoProcessHandleStats* ZxInfoProcessHandleStats::instance_ = nullptr;
+
+const ZxInfoProcessHandleStats* ZxInfoProcessHandleStats::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoProcessHandleStats;
+  }
+  return instance_;
+}
+
+class ZxInfoResource : public Class<zx_info_resource_t> {
+ public:
+  static const ZxInfoResource* GetClass();
+
+  static zx_rsrc_kind_t kind(const zx_info_resource_t* from) { return from->kind; }
+  static uint32_t flags(const zx_info_resource_t* from) { return from->flags; }
+  static uint64_t base(const zx_info_resource_t* from) { return from->base; }
+  static size_t size(const zx_info_resource_t* from) { return from->size; }
+  static std::pair<const char*, size_t> name(const zx_info_resource_t* from) {
+    return std::make_pair(reinterpret_cast<const char*>(from->name), sizeof(from->name));
+  }
+
+ private:
+  ZxInfoResource() : Class("zx_info_resource_t") {
+    AddField(std::make_unique<ClassField<zx_info_resource_t, zx_rsrc_kind_t>>(
+        "kind", SyscallType::kRsrcKind, kind));
+    AddField(std::make_unique<ClassField<zx_info_resource_t, uint32_t>>(
+        "flags", SyscallType::kUint32, flags));
+    AddField(std::make_unique<ClassField<zx_info_resource_t, uint64_t>>(
+        "base", SyscallType::kUint64, base));
+    AddField(
+        std::make_unique<ClassField<zx_info_resource_t, size_t>>("size", SyscallType::kSize, size));
+    AddField(std::make_unique<ClassField<zx_info_resource_t, std::pair<const char*, size_t>>>(
+        "name", SyscallType::kCharArray, name));
+  }
+  ZxInfoResource(const ZxInfoResource&) = delete;
+  ZxInfoResource& operator=(const ZxInfoResource&) = delete;
+  static ZxInfoResource* instance_;
+};
+
+ZxInfoResource* ZxInfoResource::instance_ = nullptr;
+
+const ZxInfoResource* ZxInfoResource::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoResource;
+  }
+  return instance_;
+}
+
+class ZxInfoSocket : public Class<zx_info_socket_t> {
+ public:
+  static const ZxInfoSocket* GetClass();
+
+  static uint32_t options(const zx_info_socket_t* from) { return from->options; }
+  static size_t rx_buf_max(const zx_info_socket_t* from) { return from->rx_buf_max; }
+  static size_t rx_buf_size(const zx_info_socket_t* from) { return from->rx_buf_size; }
+  static size_t rx_buf_available(const zx_info_socket_t* from) { return from->rx_buf_available; }
+  static size_t tx_buf_max(const zx_info_socket_t* from) { return from->tx_buf_max; }
+  static size_t tx_buf_size(const zx_info_socket_t* from) { return from->tx_buf_size; }
+
+ private:
+  ZxInfoSocket() : Class("zx_info_socket_t") {
+    AddField(std::make_unique<ClassField<zx_info_socket_t, uint32_t>>(
+        "options", SyscallType::kUint32, options));
+    AddField(std::make_unique<ClassField<zx_info_socket_t, size_t>>(
+        "rx_buf_max", SyscallType::kSize, rx_buf_max));
+    AddField(std::make_unique<ClassField<zx_info_socket_t, size_t>>(
+        "rx_buf_size", SyscallType::kSize, rx_buf_size));
+    AddField(std::make_unique<ClassField<zx_info_socket_t, size_t>>(
+        "rx_buf_available", SyscallType::kSize, rx_buf_available));
+    AddField(std::make_unique<ClassField<zx_info_socket_t, size_t>>(
+        "tx_buf_max", SyscallType::kSize, tx_buf_max));
+    AddField(std::make_unique<ClassField<zx_info_socket_t, size_t>>(
+        "tx_buf_size", SyscallType::kSize, tx_buf_size));
+  }
+  ZxInfoSocket(const ZxInfoSocket&) = delete;
+  ZxInfoSocket& operator=(const ZxInfoSocket&) = delete;
+  static ZxInfoSocket* instance_;
+};
+
+ZxInfoSocket* ZxInfoSocket::instance_ = nullptr;
+
+const ZxInfoSocket* ZxInfoSocket::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoSocket;
+  }
+  return instance_;
+}
+
+class ZxInfoTaskStats : public Class<zx_info_task_stats_t> {
+ public:
+  static const ZxInfoTaskStats* GetClass();
+
+  static size_t mem_mapped_bytes(const zx_info_task_stats_t* from) {
+    return from->mem_mapped_bytes;
+  }
+  static size_t mem_private_bytes(const zx_info_task_stats_t* from) {
+    return from->mem_private_bytes;
+  }
+  static size_t mem_shared_bytes(const zx_info_task_stats_t* from) {
+    return from->mem_shared_bytes;
+  }
+  static size_t mem_scaled_shared_bytes(const zx_info_task_stats_t* from) {
+    return from->mem_scaled_shared_bytes;
+  }
+
+ private:
+  ZxInfoTaskStats() : Class("zx_info_task_stats_t") {
+    AddField(std::make_unique<ClassField<zx_info_task_stats_t, size_t>>(
+        "mem_mapped_bytes", SyscallType::kSize, mem_mapped_bytes));
+    AddField(std::make_unique<ClassField<zx_info_task_stats_t, size_t>>(
+        "mem_private_bytes", SyscallType::kSize, mem_private_bytes));
+    AddField(std::make_unique<ClassField<zx_info_task_stats_t, size_t>>(
+        "mem_shared_bytes", SyscallType::kSize, mem_shared_bytes));
+    AddField(std::make_unique<ClassField<zx_info_task_stats_t, size_t>>(
+        "mem_scaled_shared_bytes", SyscallType::kSize, mem_scaled_shared_bytes));
+  }
+  ZxInfoTaskStats(const ZxInfoTaskStats&) = delete;
+  ZxInfoTaskStats& operator=(const ZxInfoTaskStats&) = delete;
+  static ZxInfoTaskStats* instance_;
+};
+
+ZxInfoTaskStats* ZxInfoTaskStats::instance_ = nullptr;
+
+const ZxInfoTaskStats* ZxInfoTaskStats::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoTaskStats;
+  }
+  return instance_;
+}
+
+class ZxCpuSet : public Class<zx_cpu_set_t> {
+ public:
+  static const ZxCpuSet* GetClass();
+
+  static std::pair<const uint64_t*, int> mask(const zx_cpu_set_t* from) {
+    return std::make_pair(reinterpret_cast<const uint64_t*>(from->mask),
+                          sizeof(from->mask) / sizeof(uint64_t));
+  }
+
+ private:
+  ZxCpuSet() : Class("zx_cpu_set_t") {
+    AddField(std::make_unique<ClassField<zx_cpu_set_t, std::pair<const uint64_t*, int>>>(
+        "mask", SyscallType::kUint64ArrayHexa, mask));
+  }
+  ZxCpuSet(const ZxCpuSet&) = delete;
+  ZxCpuSet& operator=(const ZxCpuSet&) = delete;
+  static ZxCpuSet* instance_;
+};
+
+ZxCpuSet* ZxCpuSet::instance_ = nullptr;
+
+const ZxCpuSet* ZxCpuSet::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxCpuSet;
+  }
+  return instance_;
+}
+
+class ZxInfoThread : public Class<zx_info_thread_t> {
+ public:
+  static const ZxInfoThread* GetClass();
+
+  static uint32_t state(const zx_info_thread_t* from) { return from->state; }
+  static uint32_t wait_exception_channel_type(const zx_info_thread_t* from) {
+    return from->wait_exception_channel_type;
+  }
+  static const zx_cpu_set_t* cpu_affinity_mask(const zx_info_thread_t* from) {
+    return &from->cpu_affinity_mask;
+  }
+
+ private:
+  ZxInfoThread() : Class("zx_info_thread_t") {
+    AddField(std::make_unique<ClassField<zx_info_thread_t, uint32_t>>(
+        "state", SyscallType::kThreadState, state));
+    AddField(std::make_unique<ClassField<zx_info_thread_t, uint32_t>>(
+        "wait_exception_channel_type", SyscallType::kExceptionChannelType,
+        wait_exception_channel_type));
+    AddField(std::make_unique<ClassClassField<zx_info_thread_t, zx_cpu_set_t>>(
+        "cpu_affinity_mask", cpu_affinity_mask, ZxCpuSet::GetClass()));
+  }
+  ZxInfoThread(const ZxInfoThread&) = delete;
+  ZxInfoThread& operator=(const ZxInfoThread&) = delete;
+  static ZxInfoThread* instance_;
+};
+
+ZxInfoThread* ZxInfoThread::instance_ = nullptr;
+
+const ZxInfoThread* ZxInfoThread::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoThread;
+  }
+  return instance_;
+}
+
+class ZxInfoThreadStats : public Class<zx_info_thread_stats_t> {
+ public:
+  static const ZxInfoThreadStats* GetClass();
+
+  static zx_duration_t total_runtime(const zx_info_thread_stats_t* from) {
+    return from->total_runtime;
+  }
+  static uint32_t last_scheduled_cpu(const zx_info_thread_stats_t* from) {
+    return from->last_scheduled_cpu;
+  }
+
+ private:
+  ZxInfoThreadStats() : Class("zx_info_thread_stats_t") {
+    AddField(std::make_unique<ClassField<zx_info_thread_stats_t, zx_duration_t>>(
+        "total_runtime", SyscallType::kDuration, total_runtime));
+    AddField(std::make_unique<ClassField<zx_info_thread_stats_t, uint32_t>>(
+        "last_scheduled_cpu", SyscallType::kUint32, last_scheduled_cpu));
+  }
+  ZxInfoThreadStats(const ZxInfoThreadStats&) = delete;
+  ZxInfoThreadStats& operator=(const ZxInfoThreadStats&) = delete;
+  static ZxInfoThreadStats* instance_;
+};
+
+ZxInfoThreadStats* ZxInfoThreadStats::instance_ = nullptr;
+
+const ZxInfoThreadStats* ZxInfoThreadStats::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoThreadStats;
+  }
+  return instance_;
+}
+
+class ZxInfoTimer : public Class<zx_info_timer_t> {
+ public:
+  static const ZxInfoTimer* GetClass();
+
+  static uint32_t options(const zx_info_timer_t* from) { return from->options; }
+  static zx_time_t deadline(const zx_info_timer_t* from) { return from->deadline; }
+  static zx_duration_t slack(const zx_info_timer_t* from) { return from->slack; }
+
+ private:
+  ZxInfoTimer() : Class("zx_info_timer_t") {
+    AddField(std::make_unique<ClassField<zx_info_timer_t, uint32_t>>(
+        "options", SyscallType::kUint32, options));
+    AddField(std::make_unique<ClassField<zx_info_timer_t, zx_time_t>>(
+        "deadline", SyscallType::kMonotonicTime, deadline));
+    AddField(std::make_unique<ClassField<zx_info_timer_t, zx_duration_t>>(
+        "slack", SyscallType::kDuration, slack));
+  }
+  ZxInfoTimer(const ZxInfoTimer&) = delete;
+  ZxInfoTimer& operator=(const ZxInfoTimer&) = delete;
+  static ZxInfoTimer* instance_;
+};
+
+ZxInfoTimer* ZxInfoTimer::instance_ = nullptr;
+
+const ZxInfoTimer* ZxInfoTimer::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoTimer;
+  }
+  return instance_;
+}
+
+class ZxInfoVmar : public Class<zx_info_vmar_t> {
+ public:
+  static const ZxInfoVmar* GetClass();
+
+  static uintptr_t base(const zx_info_vmar_t* from) { return from->base; }
+  static size_t len(const zx_info_vmar_t* from) { return from->len; }
+
+ private:
+  ZxInfoVmar() : Class("zx_info_vmar_t") {
+    AddField(std::make_unique<ClassField<zx_info_vmar_t, uintptr_t>>("base", SyscallType::kUintptr,
+                                                                     base));
+    AddField(std::make_unique<ClassField<zx_info_vmar_t, size_t>>("len", SyscallType::kSize, len));
+  }
+  ZxInfoVmar(const ZxInfoVmar&) = delete;
+  ZxInfoVmar& operator=(const ZxInfoVmar&) = delete;
+  static ZxInfoVmar* instance_;
+};
+
+ZxInfoVmar* ZxInfoVmar::instance_ = nullptr;
+
+const ZxInfoVmar* ZxInfoVmar::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoVmar;
+  }
+  return instance_;
+}
+
+class ZxInfoVmo : public Class<zx_info_vmo_t> {
+ public:
+  static const ZxInfoVmo* GetClass();
+
+  static zx_koid_t koid(const zx_info_vmo_t* from) { return from->koid; }
+  static std::pair<const char*, size_t> name(const zx_info_vmo_t* from) {
+    return std::make_pair(reinterpret_cast<const char*>(from->name), sizeof(from->name));
+  }
+  static uint64_t size_bytes(const zx_info_vmo_t* from) { return from->size_bytes; }
+  static zx_koid_t parent_koid(const zx_info_vmo_t* from) { return from->parent_koid; }
+  static size_t num_children(const zx_info_vmo_t* from) { return from->num_children; }
+  static size_t num_mappings(const zx_info_vmo_t* from) { return from->num_mappings; }
+  static size_t share_count(const zx_info_vmo_t* from) { return from->share_count; }
+  static uint32_t flags(const zx_info_vmo_t* from) { return from->flags; }
+  static uint64_t committed_bytes(const zx_info_vmo_t* from) { return from->committed_bytes; }
+  static zx_rights_t handle_rights(const zx_info_vmo_t* from) { return from->handle_rights; }
+  static uint32_t cache_policy(const zx_info_vmo_t* from) { return from->cache_policy; }
+
+ private:
+  ZxInfoVmo() : Class("zx_info_vmo_t") {
+    AddField(
+        std::make_unique<ClassField<zx_info_vmo_t, zx_koid_t>>("koid", SyscallType::kKoid, koid));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, std::pair<const char*, size_t>>>(
+        "name", SyscallType::kCharArray, name));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, uint64_t>>(
+        "size_bytes", SyscallType::kUint64, size_bytes));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, zx_koid_t>>(
+        "parent_koid", SyscallType::kKoid, parent_koid));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, size_t>>("num_children", SyscallType::kSize,
+                                                                 num_children));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, size_t>>("num_mappings", SyscallType::kSize,
+                                                                 num_mappings));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, size_t>>("share_count", SyscallType::kSize,
+                                                                 share_count));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, uint32_t>>("flags", SyscallType::kVmoType,
+                                                                   flags));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, uint64_t>>(
+        "committed_bytes", SyscallType::kUint64, committed_bytes));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, zx_rights_t>>(
+        "handle_rights", SyscallType::kRights, handle_rights));
+    AddField(std::make_unique<ClassField<zx_info_vmo_t, uint32_t>>(
+        "cache_policy", SyscallType::kCachePolicy, cache_policy));
+  }
+  ZxInfoVmo(const ZxInfoVmo&) = delete;
+  ZxInfoVmo& operator=(const ZxInfoVmo&) = delete;
+  static ZxInfoVmo* instance_;
+};
+
+ZxInfoVmo* ZxInfoVmo::instance_ = nullptr;
+
+const ZxInfoVmo* ZxInfoVmo::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoVmo;
+  }
+  return instance_;
+}
+
 class ZxPacketUser : public Class<zx_packet_user_t> {
  public:
   static const ZxPacketUser* GetClass();
@@ -60,13 +847,13 @@ class ZxPacketUser : public Class<zx_packet_user_t> {
  private:
   ZxPacketUser() : Class("zx_packet_user_t") {
     AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint64_t*, int>>>(
-        "u64", SyscallType::kUint64Array, u64));
+        "u64", SyscallType::kUint64ArrayHexa, u64));
     AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint32_t*, int>>>(
-        "u32", SyscallType::kUint32Array, u32));
+        "u32", SyscallType::kUint32ArrayHexa, u32));
     AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint16_t*, int>>>(
-        "u16", SyscallType::kUint16Array, u16));
+        "u16", SyscallType::kUint16ArrayHexa, u16));
     AddField(std::make_unique<ClassField<zx_packet_user_t, std::pair<const uint8_t*, int>>>(
-        "u8", SyscallType::kUint8Array, c8));
+        "u8", SyscallType::kUint8ArrayHexa, c8));
   }
   ZxPacketUser(const ZxPacketUser&) = delete;
   ZxPacketUser& operator=(const ZxPacketUser&) = delete;
@@ -258,12 +1045,12 @@ class ZxPacketGuestMemX86 : public Class<zx_packet_guest_mem_x86_t> {
         "inst_len", SyscallType::kUint8, inst_len));
     AddField(
         std::make_unique<ClassField<zx_packet_guest_mem_x86_t, std::pair<const uint8_t*, int>>>(
-            "inst_buf", SyscallType::kUint8Array, inst_buf));
+            "inst_buf", SyscallType::kUint8ArrayHexa, inst_buf));
     AddField(std::make_unique<ClassField<zx_packet_guest_mem_x86_t, uint8_t>>(
         "default_operand_size", SyscallType::kUint8, default_operand_size));
     AddField(
         std::make_unique<ClassField<zx_packet_guest_mem_x86_t, std::pair<const uint8_t*, int>>>(
-            "reserved", SyscallType::kUint8Array, reserved));
+            "reserved", SyscallType::kUint8ArrayHexa, reserved));
   }
   ZxPacketGuestMemX86(const ZxPacketGuestMemX86&) = delete;
   ZxPacketGuestMemX86& operator=(const ZxPacketGuestMemX86&) = delete;
@@ -312,7 +1099,7 @@ class ZxPacketGuestIo : public Class<zx_packet_guest_io_t> {
     AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint32_t>>(
         "u32", SyscallType::kUint32, u32));
     AddField(std::make_unique<ClassField<zx_packet_guest_io_t, std::pair<const uint8_t*, int>>>(
-        "data", SyscallType::kUint8Array, data));
+        "data", SyscallType::kUint8ArrayHexa, data));
     AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint64_t>>(
         "reserved0", SyscallType::kUint64, reserved0));
     AddField(std::make_unique<ClassField<zx_packet_guest_io_t, uint64_t>>(
@@ -784,6 +1571,120 @@ void SyscallDecoderDispatcher::Populate() {
                                            std::make_unique<ArgumentAccess<uint32_t>>(clear_mask));
     zx_object_signal_peer->Input<uint32_t>("set_mask",
                                            std::make_unique<ArgumentAccess<uint32_t>>(set_mask));
+  }
+
+  {
+    Syscall* zx_object_get_info = Add("zx_object_get_info", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_object_get_info->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto topic =
+        zx_object_get_info->Argument<zx_object_info_topic_t>(SyscallType::kObjectInfoTopic);
+    auto buffer = zx_object_get_info->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto buffer_size = zx_object_get_info->Argument<size_t>(SyscallType::kSize);
+    zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
+    zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_object_get_info->Input<zx_handle_t>("handle",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_object_get_info->Input<uint32_t>("topic", std::make_unique<ArgumentAccess<uint32_t>>(topic));
+    zx_object_get_info->Input<size_t>("buffer_size",
+                                      std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    // Outputs
+    zx_object_get_info
+        ->OutputObject<zx_info_handle_basic_t>(ZX_OK, "info",
+                                               std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                               ZxInfoHandleBasic::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_HANDLE_BASIC);
+    zx_object_get_info
+        ->OutputObject<zx_info_handle_count_t>(ZX_OK, "info",
+                                               std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                               ZxInfoHandleCount::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_HANDLE_COUNT);
+    zx_object_get_info
+        ->OutputObject<zx_info_process_handle_stats_t>(
+            ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxInfoProcessHandleStats::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS_HANDLE_STATS);
+    zx_object_get_info
+        ->OutputObject<zx_info_job_t>(
+            ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxInfoJob::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_JOB);
+    zx_object_get_info
+        ->OutputObject<zx_info_process_t>(ZX_OK, "info",
+                                          std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                          ZxInfoProcess::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS);
+    zx_object_get_info
+        ->OutputObject<zx_info_thread_t>(ZX_OK, "info",
+                                         std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                         ZxInfoThread::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_THREAD);
+    zx_object_get_info
+        ->OutputObject<zx_exception_report_t>(ZX_OK, "info",
+                                              std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                              ZxExceptionReport::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_THREAD_EXCEPTION_REPORT);
+    zx_object_get_info
+        ->OutputObject<zx_info_thread_stats_t>(ZX_OK, "info",
+                                               std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                               ZxInfoThreadStats::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_THREAD_STATS);
+    zx_object_get_info
+        ->OutputObject<zx_info_cpu_stats_t>(ZX_OK, "info",
+                                            std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                            ZxInfoCpuStats::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_CPU_STATS);
+    zx_object_get_info
+        ->OutputObject<zx_info_vmar_t>(ZX_OK, "info",
+                                       std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                       ZxInfoVmar::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_VMAR);
+    zx_object_get_info
+        ->OutputObject<zx_info_vmo_t>(
+            ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxInfoVmo::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_VMO);
+    zx_object_get_info
+        ->OutputObject<zx_info_socket_t>(ZX_OK, "info",
+                                         std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                         ZxInfoSocket::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_SOCKET);
+    zx_object_get_info
+        ->OutputObject<zx_info_timer_t>(ZX_OK, "info",
+                                        std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                        ZxInfoTimer::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_TIMER);
+    zx_object_get_info
+        ->OutputObject<zx_info_task_stats_t>(ZX_OK, "info",
+                                             std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                             ZxInfoTaskStats::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_TASK_STATS);
+    zx_object_get_info
+        ->OutputObject<zx_info_kmem_stats_t>(ZX_OK, "info",
+                                             std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                             ZxInfoKmemStats::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_KMEM_STATS);
+    zx_object_get_info
+        ->OutputObject<zx_info_resource_t>(ZX_OK, "info",
+                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                           ZxInfoResource::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_RESOURCE);
+    zx_object_get_info
+        ->OutputObject<zx_info_bti_t>(
+            ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer), ZxInfoBti::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic), ZX_INFO_BTI);
   }
 
   {

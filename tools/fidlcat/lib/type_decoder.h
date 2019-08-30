@@ -6,7 +6,9 @@
 #define TOOLS_FIDLCAT_LIB_TYPE_DECODER_H_
 
 #include <zircon/system/public/zircon/rights.h>
+#include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
+#include <zircon/system/public/zircon/syscalls/resource.h>
 #include <zircon/system/public/zircon/types.h>
 
 #include <cinttypes>
@@ -25,27 +27,47 @@ constexpr int kCharatersPerByte = 2;
 // Types for syscall arguments.
 enum class SyscallType {
   kBool,
+  kCharArray,
   kInt64,
   kUint8,
-  kUint8Array,
+  kUint8Hexa,
+  kUint8ArrayDecimal,
+  kUint8ArrayHexa,
   kUint16,
-  kUint16Array,
+  kUint16Hexa,
+  kUint16ArrayDecimal,
+  kUint16ArrayHexa,
   kUint32,
-  kUint32Array,
+  kUint32Hexa,
+  kUint32ArrayDecimal,
+  kUint32ArrayHexa,
   kUint64,
-  kUint64Array,
+  kUint64Hexa,
+  kUint64ArrayDecimal,
+  kUint64ArrayHexa,
+  kCachePolicy,
   kClock,
   kDuration,
+  kExceptionChannelType,
   kGpAddr,
   kHandle,
+  kKoid,
+  kMonotonicTime,
+  kObjectInfoTopic,
+  kObjProps,
+  kObjType,
   kPacketGuestVcpuType,
   kPacketPageRequestCommand,
   kPortPacketType,
   kRights,
+  kRsrcKind,
   kSignals,
   kSize,
   kStatus,
+  kThreadState,
   kTime,
+  kUintptr,
+  kVmoType,
   kStruct
 };
 
@@ -76,15 +98,22 @@ struct Colors {
   const char* const yellow_background;
 };
 
+void CachePolicyName(uint32_t cache_policy, std::ostream& os);
 void ClockName(zx_clock_t clock, std::ostream& os);
+void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
+void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
 void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
 void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);
 void PacketPageRequestCommandName(uint16_t command, std::ostream& os);
 void PortPacketTypeName(uint32_t type, std::ostream& os);
 void RightsName(zx_rights_t rights, std::ostream& os);
+void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
+void SignalName(zx_signals_t signals, std::ostream& os);
 void StatusName(zx_status_t status, std::ostream& os);
 void StatusName(const Colors& colors, zx_status_t status, std::ostream& os);
-void SignalName(zx_signals_t signals, std::ostream& os);
+void ThreadStateName(uint32_t state, std::ostream& os);
+void TopicName(uint32_t topic, std::ostream& os);
+void VmoTypeName(uint32_t type, std::ostream& os);
 void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os);
 void DisplayType(const Colors& colors, SyscallType type, std::ostream& os);
 

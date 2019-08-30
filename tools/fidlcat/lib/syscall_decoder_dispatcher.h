@@ -40,13 +40,13 @@ class Class;
 
 // Display a value on a stream.
 template <typename ValueType>
-void DisplayValue(const Colors& /*colors*/, SyscallType type, ValueType /*value*/, bool /*hexa*/,
+void DisplayValue(const Colors& /*colors*/, SyscallType type, ValueType /*value*/,
                   std::ostream& os) {
   os << "unimplemented generic value " << static_cast<uint32_t>(type);
 }
 
 template <>
-inline void DisplayValue<bool>(const Colors& colors, SyscallType type, bool value, bool /*hexa*/,
+inline void DisplayValue<bool>(const Colors& colors, SyscallType type, bool value,
                                std::ostream& os) {
   switch (type) {
     case SyscallType::kBool:
@@ -59,8 +59,29 @@ inline void DisplayValue<bool>(const Colors& colors, SyscallType type, bool valu
 }
 
 template <>
+inline void DisplayValue<std::pair<const char*, size_t>>(const Colors& colors, SyscallType type,
+                                                         std::pair<const char*, size_t> value,
+                                                         std::ostream& os) {
+  switch (type) {
+    case SyscallType::kCharArray:
+      os << colors.red << '"';
+      for (size_t i = 0; i < value.second; ++i) {
+        if (value.first[i] == 0) {
+          break;
+        }
+        os << value.first[i];
+      }
+      os << '"' << colors.reset;
+      break;
+    default:
+      os << "unimplemented char array value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
 inline void DisplayValue<int32_t>(const Colors& colors, SyscallType type, int32_t value,
-                                  bool /*hexa*/, std::ostream& os) {
+                                  std::ostream& os) {
   switch (type) {
     case SyscallType::kStatus:
       StatusName(colors, value, os);
@@ -73,12 +94,15 @@ inline void DisplayValue<int32_t>(const Colors& colors, SyscallType type, int32_
 
 template <>
 inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_t value,
-                                  bool /*hexa*/, std::ostream& os) {
+                                  std::ostream& os) {
   switch (type) {
     case SyscallType::kInt64:
       os << colors.blue << value << colors.reset;
       break;
     case SyscallType::kDuration:
+      os << DisplayDuration(colors, value);
+      break;
+    case SyscallType::kMonotonicTime:
       os << DisplayDuration(colors, value);
       break;
     case SyscallType::kTime:
@@ -91,18 +115,18 @@ inline void DisplayValue<int64_t>(const Colors& colors, SyscallType type, int64_
 }
 
 template <>
-inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_t value, bool hexa,
+inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_t value,
                                   std::ostream& os) {
   switch (type) {
     case SyscallType::kUint8:
-      if (hexa) {
-        std::vector<char> buffer(sizeof(uint8_t) * kCharatersPerByte + 1);
-        snprintf(buffer.data(), buffer.size(), "%02x", value);
-        os << colors.blue << buffer.data() << colors.reset;
-      } else {
-        os << colors.blue << static_cast<uint32_t>(value) << colors.reset;
-      }
+      os << colors.blue << static_cast<uint32_t>(value) << colors.reset;
       break;
+    case SyscallType::kUint8Hexa: {
+      std::vector<char> buffer(sizeof(uint8_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%02x", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
     case SyscallType::kPacketGuestVcpuType:
       os << colors.blue;
       PacketGuestVcpuTypeName(value, os);
@@ -117,13 +141,17 @@ inline void DisplayValue<uint8_t>(const Colors& colors, SyscallType type, uint8_
 template <>
 inline void DisplayValue<std::pair<const uint8_t*, int>>(const Colors& colors, SyscallType type,
                                                          std::pair<const uint8_t*, int> value,
-                                                         bool /*hexa*/, std::ostream& os) {
+                                                         std::ostream& os) {
   switch (type) {
-    case SyscallType::kUint8Array: {
+    case SyscallType::kUint8ArrayDecimal:
+    case SyscallType::kUint8ArrayHexa: {
       const char* separator = "";
       for (int i = 0; i < value.second; ++i) {
         os << separator;
-        DisplayValue(colors, SyscallType::kUint8, value.first[i], /*hexa=*/true, os);
+        DisplayValue(
+            colors,
+            (type == SyscallType::kUint8ArrayHexa) ? SyscallType::kUint8Hexa : SyscallType::kUint8,
+            value.first[i], os);
         separator = ", ";
       }
       break;
@@ -136,17 +164,17 @@ inline void DisplayValue<std::pair<const uint8_t*, int>>(const Colors& colors, S
 
 template <>
 inline void DisplayValue<uint16_t>(const Colors& colors, SyscallType type, uint16_t value,
-                                   bool hexa, std::ostream& os) {
+                                   std::ostream& os) {
   switch (type) {
     case SyscallType::kUint16:
-      if (hexa) {
-        std::vector<char> buffer(sizeof(uint16_t) * kCharatersPerByte + 1);
-        snprintf(buffer.data(), buffer.size(), "%04x", value);
-        os << colors.blue << buffer.data() << colors.reset;
-      } else {
-        os << colors.blue << value << colors.reset;
-      }
+      os << colors.blue << value << colors.reset;
       break;
+    case SyscallType::kUint16Hexa: {
+      std::vector<char> buffer(sizeof(uint16_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%04x", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
     case SyscallType::kPacketPageRequestCommand:
       os << colors.blue;
       PacketPageRequestCommandName(value, os);
@@ -161,13 +189,17 @@ inline void DisplayValue<uint16_t>(const Colors& colors, SyscallType type, uint1
 template <>
 inline void DisplayValue<std::pair<const uint16_t*, int>>(const Colors& colors, SyscallType type,
                                                           std::pair<const uint16_t*, int> value,
-                                                          bool /*hexa*/, std::ostream& os) {
+                                                          std::ostream& os) {
   switch (type) {
-    case SyscallType::kUint16Array: {
+    case SyscallType::kUint16ArrayDecimal:
+    case SyscallType::kUint16ArrayHexa: {
       const char* separator = "";
       for (int i = 0; i < value.second; ++i) {
         os << separator;
-        DisplayValue(colors, SyscallType::kUint16, value.first[i], /*hexa=*/true, os);
+        DisplayValue(colors,
+                     (type == SyscallType::kUint16ArrayHexa) ? SyscallType::kUint16Hexa
+                                                             : SyscallType::kUint16,
+                     value.first[i], os);
         separator = ", ";
       }
       break;
@@ -180,20 +212,30 @@ inline void DisplayValue<std::pair<const uint16_t*, int>>(const Colors& colors, 
 
 template <>
 inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint32_t value,
-                                   bool hexa, std::ostream& os) {
+                                   std::ostream& os) {
   switch (type) {
     case SyscallType::kUint32:
-      if (hexa) {
-        std::vector<char> buffer(sizeof(uint32_t) * kCharatersPerByte + 1);
-        snprintf(buffer.data(), buffer.size(), "%08x", value);
-        os << colors.blue << buffer.data() << colors.reset;
-      } else {
-        os << colors.blue << value << colors.reset;
-      }
+      os << colors.blue << value << colors.reset;
+      break;
+    case SyscallType::kUint32Hexa: {
+      std::vector<char> buffer(sizeof(uint32_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%08x", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
+    case SyscallType::kCachePolicy:
+      os << colors.red;
+      CachePolicyName(value, os);
+      os << colors.reset;
       break;
     case SyscallType::kClock:
       os << colors.red;
       ClockName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kExceptionChannelType:
+      os << colors.blue;
+      ExceptionChannelTypeName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kHandle: {
@@ -204,6 +246,21 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       DisplayHandle(colors, handle_info, os);
       break;
     }
+    case SyscallType::kObjectInfoTopic:
+      os << colors.blue;
+      TopicName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kObjProps:
+      os << colors.blue;
+      ObjPropsName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kObjType:
+      os << colors.blue;
+      ObjTypeName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kPortPacketType:
       os << colors.blue;
       PortPacketTypeName(value, os);
@@ -214,9 +271,24 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       RightsName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kRsrcKind:
+      os << colors.blue;
+      RsrcKindName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kSignals:
       os << colors.blue;
       SignalName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kThreadState:
+      os << colors.blue;
+      ThreadStateName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kVmoType:
+      os << colors.blue;
+      VmoTypeName(value, os);
       os << colors.reset;
       break;
     default:
@@ -228,13 +300,17 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
 template <>
 inline void DisplayValue<std::pair<const uint32_t*, int>>(const Colors& colors, SyscallType type,
                                                           std::pair<const uint32_t*, int> value,
-                                                          bool /*hexa*/, std::ostream& os) {
+                                                          std::ostream& os) {
   switch (type) {
-    case SyscallType::kUint32Array: {
+    case SyscallType::kUint32ArrayDecimal:
+    case SyscallType::kUint32ArrayHexa: {
       const char* separator = "";
       for (int i = 0; i < value.second; ++i) {
         os << separator;
-        DisplayValue(colors, SyscallType::kUint32, value.first[i], /*hexa=*/true, os);
+        DisplayValue(colors,
+                     (type == SyscallType::kUint32ArrayHexa) ? SyscallType::kUint32Hexa
+                                                             : SyscallType::kUint32,
+                     value.first[i], os);
         separator = ", ";
       }
       break;
@@ -247,17 +323,17 @@ inline void DisplayValue<std::pair<const uint32_t*, int>>(const Colors& colors, 
 
 template <>
 inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint64_t value,
-                                   bool hexa, std::ostream& os) {
+                                   std::ostream& os) {
   switch (type) {
     case SyscallType::kUint64:
-      if (hexa) {
-        std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
-        snprintf(buffer.data(), buffer.size(), "%016lx", value);
-        os << colors.blue << buffer.data() << colors.reset;
-      } else {
-        os << colors.blue << value << colors.reset;
-      }
+      os << colors.blue << value << colors.reset;
       break;
+    case SyscallType::kUint64Hexa: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
 #ifndef __MACH__
     case SyscallType::kGpAddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
@@ -266,12 +342,25 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
       break;
     }
 #endif
+    case SyscallType::kKoid:
+      os << colors.red << value << colors.reset;
+      break;
+#ifndef __MACH__
     case SyscallType::kSize:
       os << colors.blue << value << colors.reset;
       break;
+#endif
     case SyscallType::kTime:
       os << DisplayTime(colors, value);
       break;
+#ifndef __MACH__
+    case SyscallType::kUintptr: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
+#endif
     default:
       os << "unimplemented uint64_t value " << static_cast<uint32_t>(type);
       break;
@@ -281,13 +370,17 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
 template <>
 inline void DisplayValue<std::pair<const uint64_t*, int>>(const Colors& colors, SyscallType type,
                                                           std::pair<const uint64_t*, int> value,
-                                                          bool /*hexa*/, std::ostream& os) {
+                                                          std::ostream& os) {
   switch (type) {
-    case SyscallType::kUint64Array: {
+    case SyscallType::kUint64ArrayDecimal:
+    case SyscallType::kUint64ArrayHexa: {
       const char* separator = "";
       for (int i = 0; i < value.second; ++i) {
         os << separator;
-        DisplayValue(colors, SyscallType::kUint64, value.first[i], /*hexa=*/true, os);
+        DisplayValue(colors,
+                     (type == SyscallType::kUint64ArrayHexa) ? SyscallType::kUint64Hexa
+                                                             : SyscallType::kUint64,
+                     value.first[i], os);
         separator = ", ";
       }
       break;
@@ -301,10 +394,19 @@ inline void DisplayValue<std::pair<const uint64_t*, int>>(const Colors& colors, 
 #ifdef __MACH__
 template <>
 inline void DisplayValue<uintptr_t>(const Colors& colors, SyscallType type, uintptr_t value,
-                                    bool /*hexa*/, std::ostream& os) {
+                                    std::ostream& os) {
   switch (type) {
     case SyscallType::kGpAddr: {
       std::vector<char> buffer(sizeof(uintptr_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
+    case SyscallType::kSize:
+      os << colors.blue << value << colors.reset;
+      break;
+    case SyscallType::kUintptr: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
       break;
@@ -438,8 +540,7 @@ class ClassField : public ClassFieldBase<ClassType> {
                std::string_view line_header, int tabs, std::ostream& os) const override {
     os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name();
     DisplayType(colors, ClassFieldBase<ClassType>::syscall_type(), os);
-    DisplayValue<Type>(colors, ClassFieldBase<ClassType>::syscall_type(), get_(object),
-                       /*hex=*/false, os);
+    DisplayValue<Type>(colors, ClassFieldBase<ClassType>::syscall_type(), get_(object), os);
     os << '\n';
   }
 
@@ -841,10 +942,10 @@ class SyscallInputOutputConditionBase {
   virtual void Load(SyscallDecoder* decoder, Stage stage) const = 0;
 
   // True if the data is valid (not a null pointer).
-  virtual bool ValueValid(SyscallDecoder* decoder) const = 0;
+  virtual bool ValueValid(SyscallDecoder* decoder, Stage stage) const = 0;
 
   // True if the condition is satisfied.
-  virtual bool True(SyscallDecoder* decoder) const = 0;
+  virtual bool True(SyscallDecoder* decoder, Stage stage) const = 0;
 };
 
 // Condition that a syscall argument must meet.
@@ -854,11 +955,15 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
   SyscallInputOutputCondition(std::unique_ptr<Access<Type>> access, Type value)
       : access_(std::move(access)), value_(value) {}
 
-  void Load(SyscallDecoder* decoder, Stage stage) const override { access_->Load(decoder); }
+  void Load(SyscallDecoder* decoder, Stage stage) const override { access_->Load(decoder, stage); }
 
-  bool ValueValid(SyscallDecoder* decoder) const override { return access_->ValueValid(decoder); }
+  bool ValueValid(SyscallDecoder* decoder, Stage stage) const override {
+    return access_->ValueValid(decoder, stage);
+  }
 
-  bool True(SyscallDecoder* decoder) const override { return access_->Value(decoder) == value_; }
+  bool True(SyscallDecoder* decoder, Stage stage) const override {
+    return access_->Value(decoder, stage) == value_;
+  }
 
  private:
   // Access to the syscall argument.
@@ -908,9 +1013,9 @@ class SyscallInputOutputBase {
                               std::ostream& os) const {}
 
   // True if all the conditions are met.
-  bool ConditionsAreTrue(SyscallDecoder* decoder) {
+  bool ConditionsAreTrue(SyscallDecoder* decoder, Stage stage) {
     for (const auto& condition : conditions_) {
-      if (!condition->True(decoder)) {
+      if (!condition->True(decoder, stage)) {
         return false;
       }
     }
@@ -941,8 +1046,7 @@ class SyscallInputOutput : public SyscallInputOutputBase {
   }
 
   const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-                            Stage stage, const char* separator,
-                            std::ostream& os) const override {
+                            Stage stage, const char* separator, std::ostream& os) const override {
     os << separator;
     access_->Display(dispatcher, decoder, stage, name(), os);
     return ", ";
@@ -1367,7 +1471,7 @@ void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder*
   os << name;
   DisplayType(colors, GetSyscallType(), os);
   if (ValueValid(decoder, stage)) {
-    DisplayValue<Type>(colors, GetSyscallType(), Value(decoder, stage), /*hexa=*/false, os);
+    DisplayValue<Type>(colors, GetSyscallType(), Value(decoder, stage), os);
   } else {
     os << colors.red << "(nullptr)" << colors.reset;
   }
@@ -1392,8 +1496,7 @@ void SyscallInputOutputObject<ClassType>::DisplayOutline(SyscallDisplayDispatche
 
 template <typename ClassType>
 void SyscallInputOutputObjectArray<ClassType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                                                              SyscallDecoder* decoder,
-                                                              Stage stage,
+                                                              SyscallDecoder* decoder, Stage stage,
                                                               std::string_view line_header,
                                                               int tabs, std::ostream& os) const {
   const Colors& colors = dispatcher->colors();
