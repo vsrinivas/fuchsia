@@ -80,5 +80,5 @@ static constexpr uint32_t AML_ECC_BCH60_1K = 7;
 // serial, adopt short mode and 8bit ecc.
 static constexpr uint32_t AML_ECC_BCH_SHORT = 8;
 
-static constexpr uint32_t AML_WRITE_PAGE_TIMEOUT = 2;
+static constexpr uint32_t AML_WRITE_PAGE_TIMEOUT = 50;
 static constexpr uint32_t AML_ERASE_BLOCK_TIMEOUT = 400;
