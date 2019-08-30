@@ -414,5 +414,41 @@ TEST(Alc5663, CheckClocksConfigured) {
   EXPECT_TRUE(hardware.fake_ddk->Ok());
 }
 
+TEST(Alc5663, CheckOutputsEnabled) {
+  FakeAlc5663Hardware hardware = CreateFakeAlc5663();
+
+  // Create device.
+  Alc5663Device* device;
+  ASSERT_OK(Alc5663Device::Bind(hardware.parent, &device));
+
+  // Without a full model of the hardware, it is hard to test if output is correctly
+  // configured. Instead, we simply test that a small set of output-related registers
+  // have been correctly configured.
+
+  // Check power settings.
+  EXPECT_EQ(hardware.codec->ReadRegister<PowerManagementControl1Reg>().pow_dac_l_1(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<PowerManagementControl1Reg>().pow_dac_r_1(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<PowerManagementControl2Reg>().pow_dac_stereo1_filter(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<PowerManagementControl3Reg>().en_l_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<PowerManagementControl3Reg>().en_r_hp(), 1);
+
+  // Check amplifier settings.
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl1Reg>().enable_l_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl1Reg>().enable_r_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl1Reg>().pow_capless_l(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl1Reg>().pow_capless_r(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl1Reg>().pow_pump_l_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl1Reg>().pow_pump_r_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl2Reg>().output_r_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl2Reg>().output_l_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl3Reg>().pow_reg_l_hp(), 1);
+  EXPECT_EQ(hardware.codec->ReadRegister<HpAmpControl3Reg>().pow_reg_r_hp(), 1);
+
+  // Shutdown
+  device->DdkRemove();
+  device->DdkRelease();
+  EXPECT_TRUE(hardware.fake_ddk->Ok());
+}
+
 }  // namespace
 }  // namespace audio::alc5663

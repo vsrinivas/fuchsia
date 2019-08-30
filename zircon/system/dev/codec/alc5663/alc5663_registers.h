@@ -13,10 +13,17 @@
 //
 //   ALC5663 (ALC5663-CG)
 //   32bits Hi-Fi Digital Audio Headphone Amplifier
-//   Revision 0.6
-//   26 January 2016
+//   Revision 0.9
+//   6 April 2017
 //   Realtek Semiconductor Corp.
 //
+// Some register definitions are marked with "(??)". These are definitions that are
+// not referenced in the datasheet above, but are nevertheless required for audio
+// output to work. The values were derived by comparing the I2C register values of
+// an ALC5663 codec playing audio on a working system against the values specified
+// by the ALC5663 datasheets. The names and field locations of such registers are
+// guesses based on inspecting datasheets of other Realtek codecs, and empirically
+// trying different values. Fields marked with "(??)" should not be trusted.
 
 namespace audio::alc5663 {
 
@@ -52,6 +59,44 @@ struct SidetoneControlReg {
   DEF_SUBFIELD(data, 4, 0, sidetone_vol_sel);     // Sidetone volume (R/W)
 
   static constexpr uint16_t kAddress = 0x18;
+};
+
+// Stereo DAC digital volume.
+//
+// Digital volume can be set from 0 (-65.625dB) to 0xaf (0dB) with
+// 0.375dB per step.
+struct StereoDacDigitalVolumeReg {
+  uint16_t data;
+
+  DEF_SUBFIELD(data, 15, 8, vol_dac1_l);  // Left channel digital volume
+  DEF_SUBFIELD(data, 7, 0, vol_dac1_r);   // Right channel digital volume
+
+  static constexpr uint16_t kAddress = 0x19;
+};
+
+// Stereo DAC Digital Mixer Control.
+struct StereoDacDigitalMixerControl {
+  uint16_t data;
+
+  DEF_SUBBIT(data, 15, mute_dacl1_mixl);         // Mute DACL to DAC Mixer L
+  DEF_SUBBIT(data, 14, gain_dacl1_to_stereo_l);  // Apply -6dB gain from DAC L to DAC Mixer L
+  DEF_SUBBIT(data, 13, mute_dacr1_mixl);         // Mute DACR to DAC Mixer L
+  DEF_SUBBIT(data, 12, gain_dacr1_to_stereo_l);  // Apply -6dB gain from DAC R to DAC Mixer L
+  DEF_SUBBIT(data, 7, mute_dacl1_mixr);          // Mute DACL to DAC Mixer R
+  DEF_SUBBIT(data, 6, gain_dacl1_to_stereo_r);   // Apply -6dB gain from DAC L to DAC Mixer R
+  DEF_SUBBIT(data, 5, mute_dacr1_mixr);          // Mute DACR to DAC Mixer R
+  DEF_SUBBIT(data, 4, gain_dacr1_to_stereo_r);   // Apply -6dB gain from DAC R to DAC Mixer R
+
+  static constexpr uint16_t kAddress = 0x2a;
+};
+
+struct BypassStereoDacMixerControlReg {
+  uint16_t data;
+
+  DEF_SUBBIT(data, 3, dacl1_source);  // Select DACL Source. (0 == bypass mixers, 1 == use mixers)
+  DEF_SUBBIT(data, 2, dacr1_source);  // Select DACR Source. (0 == bypass mixers, 1 == use mixers)
+
+  static constexpr uint16_t kAddress = 0x2d;
 };
 
 struct PowerManagementControl1Reg {
@@ -110,6 +155,15 @@ struct PowerManagementControl5Reg {
   DEF_SUBBIT(data, 6, pow_pll);  // PLL power (R/W)
 
   static constexpr uint16_t kAddress = 0x65;
+};
+
+struct PowerManagementControlMisc {
+  uint16_t data;
+
+  static constexpr uint16_t kEnable = 0xef;
+  DEF_SUBFIELD(data, 15, 8, gating);  // Clock gating (??)
+
+  static constexpr uint16_t kAddress = 0x6e;
 };
 
 struct I2s1DigitalInterfaceControlReg {
@@ -249,6 +303,49 @@ struct AsrcControl2Reg {
 
   static constexpr uint16_t kAddress = 0x84;
 };
+struct AsrcControl4Reg {
+  uint16_t data;
+
+  static constexpr uint32_t kSampleRate48000 = 0x2;
+  DEF_SUBFIELD(data, 5, 4, asrc_i2s1_mode);  // ASRC clock source / I2S rate (??)
+
+  static constexpr uint16_t kAddress = 0x86;
+};
+
+// Output amplifier.
+struct HpAmpControl1Reg {
+  uint16_t data;
+
+  DEF_SUBBIT(data, 13, enable_l_hp);  // Enable left channel HP output (??)
+  DEF_SUBBIT(data, 12, enable_r_hp);  // Enable right channel HP output (??)
+
+  DEF_SUBBIT(data, 5, pow_pump_l_hp);  // Left charge pump power
+  DEF_SUBBIT(data, 4, pow_pump_r_hp);  // Right charge pump power
+  DEF_SUBBIT(data, 1, pow_capless_l);  // Left capless block power
+  DEF_SUBBIT(data, 0, pow_capless_r);  // Right capless block power
+
+  static constexpr uint16_t kAddress = 0x8e;
+};
+struct HpAmpControl2Reg {
+  uint16_t data;
+
+  DEF_SUBBIT(data, 11, output_l_hp);  // Enable capless HP L output
+  DEF_SUBBIT(data, 10, output_r_hp);  // Enable capless HP R output
+
+  // Overcurrent protection (OCP).
+  DEF_SUBBIT(data, 2, overcurrent_protection_hp);  // Enable HP OCP
+  DEF_SUBFIELD(data, 1, 0, overcurrent_limit_hp);  // HP OCP threshold
+
+  static constexpr uint16_t kAddress = 0x91;
+};
+struct HpAmpControl3Reg {
+  uint16_t data;
+
+  DEF_SUBBIT(data, 9, pow_reg_l_hp);  // HP AMP L VEE regulator power
+  DEF_SUBBIT(data, 8, pow_reg_r_hp);  // HP AMP R VEE regulator power
+
+  static constexpr uint16_t kAddress = 0x92;
+};
 
 struct InternalClockControlReg {
   uint16_t data;
@@ -257,6 +354,14 @@ struct InternalClockControlReg {
   DEF_SUBBIT(data, 8, pow_clock_1mhz);   // Enable 1MHz internal clock.
 
   static constexpr uint16_t kAddress = 0x94;
+};
+
+struct GeneralControlReg {
+  uint16_t data;
+
+  DEF_SUBBIT(data, 0, digital_gate_ctrl);  // MCLK gating.
+
+  static constexpr uint16_t kAddress = 0xfa;
 };
 
 struct VersionIdReg {
@@ -275,6 +380,15 @@ struct VendorIdReg {
   DEF_SUBFIELD(data, 15, 0, vendor_id);
 
   static constexpr uint16_t kAddress = 0xfe;
+};
+
+struct DacRefLdoControlReg {
+  uint16_t data;
+
+  DEF_SUBBIT(data, 9, pow_ldo_dacrefl);  // Power DACREF L LDO
+  DEF_SUBBIT(data, 1, pow_ldo_dacrefr);  // Power DACREF R LDO
+
+  static constexpr uint16_t kAddress = 0x112;
 };
 
 }  // namespace audio::alc5663

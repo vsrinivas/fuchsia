@@ -210,6 +210,76 @@ zx_status_t SetUpDeviceClocks(Alc5663Client* client, uint32_t sample_rate,
   if (result != ZX_OK) {
     return result;
   }
+  result = MapRegister<AsrcControl4Reg>(
+      client, [](auto reg) { return reg.set_asrc_i2s1_mode(AsrcControl4Reg::kSampleRate48000); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Activate clocks.
+  result = MapRegister<PowerManagementControlMisc>(
+      client, [](auto reg) { return reg.set_gating(PowerManagementControlMisc::kEnable); });
+  if (result != ZX_OK) {
+    return result;
+  }
+  result =
+      MapRegister<GeneralControlReg>(client, [](auto reg) { return reg.set_digital_gate_ctrl(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  return ZX_OK;
+}
+
+// Enable audio output of the ALC5663 codec.
+zx_status_t EnableAudioOutput(Alc5663Client* client) {
+  // Bypass the output mixers that mix in sidetone, allow L/R channel swaps.
+  zx_status_t result = MapRegister<BypassStereoDacMixerControlReg>(
+      client, [](auto reg) { return reg.set_dacl1_source(0).set_dacr1_source(0); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Power on outputs.
+  result = MapRegister<PowerManagementControl1Reg>(
+      client, [](auto reg) { return reg.set_en_i2s1(1).set_pow_dac_l_1(1).set_pow_dac_r_1(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Power on the amplifiers.
+  result = MapRegister<HpAmpControl1Reg>(client, [](auto reg) {
+    return reg.set_pow_pump_l_hp(1)
+        .set_pow_pump_r_hp(1)
+        .set_pow_capless_l(1)
+        .set_pow_capless_r(1)
+        .set_enable_l_hp(1)
+        .set_enable_r_hp(1);
+  });
+  if (result != ZX_OK) {
+    return result;
+  }
+  result = MapRegister<HpAmpControl2Reg>(
+      client, [](auto reg) { return reg.set_output_l_hp(1).set_output_r_hp(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+  result = MapRegister<HpAmpControl3Reg>(
+      client, [](auto reg) { return reg.set_pow_reg_l_hp(1).set_pow_reg_r_hp(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+  result = MapRegister<DacRefLdoControlReg>(
+      client, [](auto reg) { return reg.set_pow_ldo_dacrefl(1).set_pow_ldo_dacrefr(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Set digital volume to mid-range.
+  result = MapRegister<StereoDacDigitalVolumeReg>(client, [](auto reg) {
+    // 128 == ~ -17.625dB.
+    return reg.set_vol_dac1_l(128).set_vol_dac1_r(128);
+  });
 
   return ZX_OK;
 }
@@ -290,6 +360,12 @@ zx_status_t Alc5663Device::InitializeDevice() {
   // TODO(fxb/35648): Allow this to be configured at runtime.
   status = SetUpDeviceClocks(&client_, /*sample_rate=*/kSampleRate,
                              /*bclk_frequency=*/(kSampleRate * kBitsPerChannel * kNumChannels));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Set up audio outputs.
+  status = EnableAudioOutput(&client_);
   if (status != ZX_OK) {
     return status;
   }
