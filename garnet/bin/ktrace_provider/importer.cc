@@ -4,11 +4,12 @@
 
 #include "garnet/bin/ktrace_provider/importer.h"
 
+#include <zircon/syscalls.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/time/time_point.h>
-#include <zircon/syscalls.h>
 
 #include "garnet/bin/ktrace_provider/reader.h"
 
@@ -1144,6 +1145,8 @@ const trace_string_ref_t& Importer::GetCategoryForGroup(uint32_t group) {
       return ipc_category_ref_;
     case KTRACE_GRP_IRQ:
       return irq_category_ref_;
+    case KTRACE_GRP_SYSCALL:
+      return syscall_category_ref_;
     case KTRACE_GRP_PROBE:
       return probe_category_ref_;
     case KTRACE_GRP_ARCH:

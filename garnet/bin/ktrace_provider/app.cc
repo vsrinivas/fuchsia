@@ -5,18 +5,18 @@
 #include "garnet/bin/ktrace_provider/app.h"
 
 #include <fcntl.h>
-#include <unistd.h>
-
 #include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <unistd.h>
+#include <zircon/status.h>
+#include <zircon/syscalls/log.h>
+
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
-#include <zircon/status.h>
-#include <zircon/syscalls/log.h>
 
 #include "garnet/bin/ktrace_provider/device_reader.h"
 #include "garnet/bin/ktrace_provider/importer.h"
@@ -41,6 +41,7 @@ constexpr KTraceCategory kGroupCategories[] = {
     {"kernel:irq", KTRACE_GRP_IRQ},
     {"kernel:probe", KTRACE_GRP_PROBE},
     {"kernel:arch", KTRACE_GRP_ARCH},
+    {"kernel:syscall", KTRACE_GRP_SYSCALL},
 };
 
 // Meta category to retain current contents of ktrace buffer.

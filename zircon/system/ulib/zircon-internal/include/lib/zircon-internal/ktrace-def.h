@@ -20,10 +20,10 @@ KTRACE_DEF(0x025, NAME, PROBE_NAME, META)      // num, 0, name[]
 KTRACE_DEF(0x026, NAME, VCPU_META, META)       // meta, 0, name[]
 KTRACE_DEF(0x027, NAME, VCPU_EXIT_META, META)  // meta, 0, name[]
 
-KTRACE_DEF(0x030, 16B, IRQ_ENTER, IRQ)      // (irqn << 8) | cpu
-KTRACE_DEF(0x031, 16B, IRQ_EXIT, IRQ)       // (irqn << 8) | cpu
-KTRACE_DEF(0x032, 16B, SYSCALL_ENTER, IRQ)  // (n << 8) | cpu
-KTRACE_DEF(0x033, 16B, SYSCALL_EXIT, IRQ)   // (n << 8) | cpu
+KTRACE_DEF(0x030, 16B, IRQ_ENTER, IRQ)          // (irqn << 8) | cpu
+KTRACE_DEF(0x031, 16B, IRQ_EXIT, IRQ)           // (irqn << 8) | cpu
+KTRACE_DEF(0x032, 16B, SYSCALL_ENTER, SYSCALL)  // (n << 8) | cpu
+KTRACE_DEF(0x033, 16B, SYSCALL_EXIT, SYSCALL)   // (n << 8) | cpu
 
 KTRACE_DEF(0x034, 32B, PAGE_FAULT, IRQ)       // virtual_address_hi, virtual_address_lo, flags, cpu
 KTRACE_DEF(0x035, 32B, PAGE_FAULT_EXIT, IRQ)  // virtual_address_hi, virtual_address_lo, flags, cpu

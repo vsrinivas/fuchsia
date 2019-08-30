@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_ZIRCON_INTERNAL_KTRACE_H_
+#define LIB_ZIRCON_INTERNAL_KTRACE_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -57,6 +58,7 @@ __BEGIN_CDECLS
 #define KTRACE_GRP_IRQ            0x020
 #define KTRACE_GRP_PROBE          0x040
 #define KTRACE_GRP_ARCH           0x080
+#define KTRACE_GRP_SYSCALL        0x100
 
 #define KTRACE_GRP_TO_MASK(grp)   ((grp) << 20)
 
@@ -142,3 +144,5 @@ enum {
 #define KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID ((uint32_t)0x80000000)
 
 __END_CDECLS
+
+#endif  // LIB_ZIRCON_INTERNAL_KTRACE_H_
