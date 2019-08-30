@@ -24,6 +24,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -175,19 +176,31 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     // TODO(thatguy): we should ensure that the local cached copy is always
     // up to date no matter what.
     fuchsia::modular::ModuleDataPtr module_data;
+
     std::unique_ptr<ModuleContextImpl> module_context_impl;
     std::unique_ptr<ModuleControllerImpl> module_controller_impl;
-    fuchsia::ui::views::ViewHolderToken module_pending_view_holder_token;
+
+    // Token passed to the story shell for displaying non-embedded modules.
+    // This is set when the module is launched, and moved into |view_connection| once
+    // the module is connected to the story shell, or pended to be connected.
+    // Only set for non-embedded modules.
+    std::optional<fuchsia::ui::views::ViewHolderToken> pending_view_holder_token;
+
+    // The module's view (surface ID and view token) that was connected to the story shell.
+    // Only set for non-embedded, non-pending modules.
+    std::optional<fuchsia::modular::ViewConnection> view_connection;
+
+    // Metadata for the module's surface that was connected to the story shell.
+    // Only set for non-embedded, non-pending modules.
+    std::optional<fuchsia::modular::SurfaceInfo2> surface_info;
   };
 
   // A module's story shell-related information that we pend until we are able
   // to pass it off to the story shell.
   struct PendingViewForStoryShell {
     std::vector<std::string> module_path;
-    fuchsia::modular::ModuleManifestPtr module_manifest;
-    fuchsia::modular::SurfaceRelationPtr surface_relation;
-    fuchsia::modular::ModuleSource module_source;
-    fuchsia::ui::views::ViewHolderToken view_holder_token;
+    fuchsia::modular::ViewConnection view_connection;
+    fuchsia::modular::SurfaceInfo2 surface_info;
   };
 
   // |StoryController|

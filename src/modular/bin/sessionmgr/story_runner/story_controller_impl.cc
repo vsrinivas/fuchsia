@@ -25,6 +25,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <src/lib/fxl/logging.h>
@@ -131,7 +132,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
   LaunchModuleCall(
       StoryControllerImpl* const story_controller_impl, fuchsia::modular::ModuleData module_data,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
-      fuchsia::ui::views::ViewToken view_token, ResultCall result_call)
+      std::optional<fuchsia::ui::views::ViewToken> view_token, ResultCall result_call)
       : Operation("StoryControllerImpl::LaunchModuleCall", std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)),
@@ -194,12 +195,12 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     // Launch the child application with a newly-constructed ViewTokenPair if
     // no token was already provided.
-    if (view_token_.value) {
+    if (view_token_) {
       // ModuleControllerImpl's constructor launches the child application.
       running_mod_info.module_controller_impl = std::make_unique<ModuleControllerImpl>(
           story_controller_impl_, story_controller_impl_->story_environment_->GetLauncher(),
           std::move(module_config), running_mod_info.module_data.get(), std::move(service_list),
-          std::move(view_token_));
+          std::move(*view_token_));
     } else {
       auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
@@ -208,7 +209,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
           story_controller_impl_, story_controller_impl_->story_environment_->GetLauncher(),
           std::move(module_config), running_mod_info.module_data.get(), std::move(service_list),
           std::move(view_token));
-      running_mod_info.module_pending_view_holder_token = std::move(view_holder_token);
+      running_mod_info.pending_view_holder_token = std::move(view_holder_token);
     }
 
     // Modules added/started through PuppetMaster don't have a module
@@ -260,7 +261,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
   fuchsia::modular::ModuleData module_data_;
-  fuchsia::ui::views::ViewToken view_token_;
+  std::optional<fuchsia::ui::views::ViewToken> view_token_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request_;
   const zx_time_t start_time_;
 };
@@ -364,7 +365,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     operation_queue_.Add(std::make_unique<LaunchModuleCall>(
         story_controller_impl_, fidl::Clone(module_data_), std::move(module_controller_request_),
-        fuchsia::ui::views::ViewToken(), [this, flow] { LoadModuleManifest(flow); }));
+        /*view_token=*/std::nullopt, [this, flow] { LoadModuleManifest(flow); }));
   }
 
   void LoadModuleManifest(FlowToken flow) {
@@ -390,42 +391,45 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
         story_controller_impl_->FindRunningModInfo(module_data_.module_path);
     FXL_CHECK(running_mod_info);  // This was just created in LaunchModuleCall.
 
-    if (module_data_.module_path.size() == 1) {
-      // This is a root module; pass it's view on to the story shell.
-      ConnectViewToStoryShell(flow, "",
-                              std::move(running_mod_info->module_pending_view_holder_token));
-      return;
-    }
-
+    std::string anchor_surface_id;
     auto* const anchor = story_controller_impl_->FindAnchor(running_mod_info);
     if (anchor) {
-      const auto anchor_surface_id = ModulePathToSurfaceID(anchor->module_data->module_path);
-      if (story_controller_impl_->connected_views_.count(anchor_surface_id)) {
-        ConnectViewToStoryShell(flow, anchor_surface_id,
-                                std::move(running_mod_info->module_pending_view_holder_token));
-        return;
-      }
+      anchor_surface_id = ModulePathToSurfaceID(anchor->module_data->module_path);
     }
 
-    auto manifest_clone = fuchsia::modular::ModuleManifest::New();
-    fidl::Clone(module_manifest_, &manifest_clone);
+    const auto surface_id = ModulePathToSurfaceID(module_data_.module_path);
 
-    fuchsia::modular::SurfaceRelationPtr surface_relation_clone;
+    fuchsia::modular::ViewConnection view_connection;
+    view_connection.surface_id = surface_id;
+    view_connection.view_holder_token = std::move(*running_mod_info->pending_view_holder_token);
+
+    fuchsia::modular::SurfaceInfo2 surface_info;
+    surface_info.set_parent_id(anchor_surface_id);
     if (module_data_.surface_relation) {
-      surface_relation_clone = fuchsia::modular::SurfaceRelation::New();
-      module_data_.surface_relation->Clone(surface_relation_clone.get());
+      surface_info.set_surface_relation(*fidl::Clone(module_data_.surface_relation));
     }
+    if (module_manifest_) {
+      surface_info.set_module_manifest(std::move(*module_manifest_));
+    }
+    surface_info.set_module_source(module_data_.module_source);
 
-    story_controller_impl_->pending_story_shell_views_.emplace(
-        ModulePathToSurfaceID(module_data_.module_path),
-        PendingViewForStoryShell{module_data_.module_path, std::move(manifest_clone),
-                                 std::move(surface_relation_clone), module_data_.module_source,
-                                 std::move(running_mod_info->module_pending_view_holder_token)});
+    // If this is a root module, or the anchor module is connected to the story shell,
+    // connect this module to the story shell. Otherwise, pend it to connect once the anchor
+    // module is ready.
+    if (module_data_.module_path.size() == 1 ||
+        story_controller_impl_->connected_views_.count(anchor_surface_id)) {
+      ConnectViewToStoryShell(flow, std::move(view_connection), std::move(surface_info));
+    } else {
+      story_controller_impl_->pending_story_shell_views_.emplace(
+          ModulePathToSurfaceID(module_data_.module_path),
+          PendingViewForStoryShell{module_data_.module_path, std::move(view_connection),
+                                   std::move(surface_info)});
+    }
   }
 
-  void ConnectViewToStoryShell(FlowToken flow, fidl::StringPtr anchor_surface_id,
-                               fuchsia::ui::views::ViewHolderToken view_holder_token) {
-    if (!view_holder_token.value) {
+  void ConnectViewToStoryShell(FlowToken flow, fuchsia::modular::ViewConnection view_connection,
+                               fuchsia::modular::SurfaceInfo2 surface_info) {
+    if (!view_connection.view_holder_token.value) {
       FXL_LOG(WARNING) << "The module ViewHolder token is not valid, so it "
                           "can't be sent to the story shell.";
       return;
@@ -433,19 +437,6 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     const auto surface_id = ModulePathToSurfaceID(module_data_.module_path);
 
-    fuchsia::modular::ViewConnection view_connection;
-    view_connection.surface_id = surface_id;
-    view_connection.view_holder_token = std::move(view_holder_token);
-
-    fuchsia::modular::SurfaceInfo2 surface_info;
-    surface_info.set_parent_id(anchor_surface_id.value_or(""));
-    if (module_data_.surface_relation) {
-      surface_info.set_surface_relation(*module_data_.surface_relation);
-    }
-    if (module_manifest_) {
-      surface_info.set_module_manifest(std::move(*module_manifest_));
-    }
-    surface_info.set_module_source(module_data_.module_source);
     story_controller_impl_->story_shell_->AddSurface3(std::move(view_connection),
                                                       std::move(surface_info));
 
@@ -592,11 +583,11 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
 class StoryControllerImpl::StopModuleCall : public Operation<> {
  public:
-  StopModuleCall(StoryStorage* const story_storage, const std::vector<std::string>& module_path,
+  StopModuleCall(StoryStorage* const story_storage, std::vector<std::string> module_path,
                  fit::function<void()> done)
       : Operation("StoryControllerImpl::StopModuleCall", std::move(done)),
         story_storage_(story_storage),
-        module_path_(module_path) {}
+        module_path_(std::move(module_path)) {}
 
  private:
   void Run() override {
@@ -620,11 +611,10 @@ class StoryControllerImpl::StopModuleCall : public Operation<> {
 class StoryControllerImpl::StopModuleAndStoryIfEmptyCall : public Operation<> {
  public:
   StopModuleAndStoryIfEmptyCall(StoryControllerImpl* const story_controller_impl,
-                                const std::vector<std::string>& module_path,
-                                fit::function<void()> done)
+                                std::vector<std::string> module_path, fit::function<void()> done)
       : Operation("StoryControllerImpl::StopModuleAndStoryIfEmptyCall", std::move(done)),
         story_controller_impl_(story_controller_impl),
-        module_path_(module_path) {}
+        module_path_(std::move(module_path)) {}
 
  private:
   void Run() override {
@@ -757,7 +747,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
   AddIntentCall(
       StoryControllerImpl* const story_controller_impl, AddModParams add_mod_params,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request,
-      fuchsia::ui::views::ViewToken view_token, ResultCall result_call)
+      std::optional<fuchsia::ui::views::ViewToken> view_token, ResultCall result_call)
       : Operation("StoryControllerImpl::AddIntentCall", std::move(result_call)),
         story_controller_impl_(story_controller_impl),
         add_mod_params_(std::move(add_mod_params)),
@@ -765,7 +755,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
         module_controller_request_(std::move(module_controller_request)) {}
 
  private:
-  void Run() {
+  void Run() override {
     FlowToken flow{this, &start_module_status_};
     AddAddModOperation(
         &operation_queue_, story_controller_impl_->story_storage_,
@@ -789,7 +779,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
   void LaunchModuleIfStoryRunning(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
       // TODO(thatguy): Should we be checking surface_relation also?
-      if (!view_token_.value) {
+      if (!view_token_) {
         operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
             story_controller_impl_, std::move(module_data_), std::move(module_controller_request_),
             [flow] {}));
@@ -821,7 +811,7 @@ class StoryControllerImpl::AddIntentCall : public Operation<fuchsia::modular::St
   // Some of the fields in add_mod_params_ are used to initialize module_data_
   // in AddModuleFromResult().
   AddModParams add_mod_params_;
-  fuchsia::ui::views::ViewToken view_token_;
+  std::optional<fuchsia::ui::views::ViewToken> view_token_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller_request_;
 
   // Created by AddModuleFromResult, and ultimately written to story state.
@@ -1127,7 +1117,7 @@ void StoryControllerImpl::AddModuleToStory(
     fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(std::make_unique<AddIntentCall>(
       this, std::move(add_mod_params), std::move(module_controller_request),
-      fuchsia::ui::views::ViewToken() /* view_token */, std::move(callback)));
+      /*view_token=*/std::nullopt, std::move(callback)));
 }
 
 void StoryControllerImpl::ProcessPendingStoryShellViews() {
@@ -1160,7 +1150,7 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
       continue;
     }
 
-    if (!kv.second.view_holder_token.value) {
+    if (!kv.second.view_connection.view_holder_token.value) {
       FXL_LOG(WARNING) << "The module ViewHolder token is not valid, so it "
                           "can't be sent to the story shell.";
       // Erase the pending view in this case, as it will never become valid.
@@ -1169,19 +1159,9 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
     }
 
     const auto surface_id = ModulePathToSurfaceID(kv.second.module_path);
-    fuchsia::modular::ViewConnection view_connection;
-    view_connection.surface_id = surface_id;
-    view_connection.view_holder_token = std::move(kv.second.view_holder_token);
-    fuchsia::modular::SurfaceInfo2 surface_info;
-    surface_info.set_parent_id(anchor_surface_id);
-    if (kv.second.surface_relation) {
-      surface_info.set_surface_relation(*kv.second.surface_relation);
-    }
-    if (kv.second.module_manifest) {
-      surface_info.set_module_manifest(std::move(*kv.second.module_manifest));
-    }
-    surface_info.set_module_source(std::move(kv.second.module_source));
-    story_shell_->AddSurface3(std::move(view_connection), std::move(surface_info));
+
+    story_shell_->AddSurface3(std::move(kv.second.view_connection),
+                              std::move(kv.second.surface_info));
     connected_views_.emplace(surface_id);
 
     added_keys.push_back(kv.first);
