@@ -4,19 +4,20 @@
 
 // This file describes the on-disk format of MinFS
 
-#pragma once
+#ifndef MINFS_FORMAT_H_
+#define MINFS_FORMAT_H_
+
+#include <assert.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <zircon/types.h>
+
+#include <limits>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
 #include <fbl/macros.h>
-
-#include <zircon/types.h>
-
-#include <assert.h>
-#include <limits.h>
-#include <limits>
-#include <stdbool.h>
-#include <stdint.h>
 
 // clang-format off
 
@@ -32,7 +33,9 @@ typedef uint32_t ino_t;
 
 constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsVersion        = 0x00000007;
+constexpr uint32_t kMinfsMajorVersionOld     = 0x00000007;
+constexpr uint32_t kMinfsMajorVersion        = 0x00000008;
+constexpr uint32_t kMinfsMinorVersion        = 0x00000000;
 
 constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
@@ -68,44 +71,86 @@ constexpr uint32_t kMinfsMagicDir  = MinfsMagic(kMinfsTypeDir);
 constexpr uint32_t kMinfsMagicFile = MinfsMagic(kMinfsTypeFile);
 constexpr uint32_t MinfsMagicType(uint32_t n) { return n & 0xFF; }
 
-constexpr size_t kFVMBlockInodeBmStart = 0x10000;
-constexpr size_t kFVMBlockDataBmStart  = 0x20000;
-constexpr size_t kFVMBlockInodeStart   = 0x30000;
-constexpr size_t kFVMBlockJournalStart = 0x40000;
-constexpr size_t kFVMBlockDataStart    = 0x50000;
+// Superblock location.
+constexpr size_t kSuperblockStart               = 0;
+
+// NonFVM and FVM backup superblock locations.
+constexpr size_t kNonFvmSuperblockBackup        = 7;
+constexpr size_t kFvmSuperblockBackup           = 0x40000;
+
+constexpr size_t kFVMBlockInodeBmStart          = 0x10000;
+constexpr size_t kFVMBlockDataBmStart           = 0x20000;
+constexpr size_t kFVMBlockInodeStart            = 0x30000;
+constexpr size_t kFVMBlockJournalStart          = kFvmSuperblockBackup + 1;
+constexpr size_t kFVMBlockDataStart             = 0x50000;
 
 constexpr blk_t kJournalEntryHeaderMaxBlocks = 2040;
 
-struct Superblock {
+//TODO(ZX-4623): Remove this code after migration to version 8.
+struct SuperblockOld {
     uint64_t magic0;
     uint64_t magic1;
     uint32_t version;
     uint32_t flags;
-    uint32_t block_size;    // 8K typical
-    uint32_t inode_size;    // 256
-    uint32_t block_count;   // total number of data blocks
-    uint32_t inode_count;   // total number of inodes
-    uint32_t alloc_block_count; // total number of allocated data blocks
-    uint32_t alloc_inode_count; // total number of allocated inodes
-    blk_t ibm_block;           // first blockno of inode allocation bitmap
-    blk_t abm_block;           // first blockno of block allocation bitmap
-    blk_t ino_block;           // first blockno of inode table
-    blk_t journal_start_block; // first blockno available for journal
-    blk_t dat_block;           // first blockno available for file data
-    // The following flags are only valid with (flags & kMinfsFlagFVM):
-    uint64_t slice_size;     // Underlying slice size
-    uint64_t vslice_count;   // Number of allocated underlying slices
-    uint32_t ibm_slices;     // Slices allocated to inode bitmap
-    uint32_t abm_slices;     // Slices allocated to block bitmap
-    uint32_t ino_slices;     // Slices allocated to inode table
-    uint32_t journal_slices; // Slices allocated to journal section
-    uint32_t dat_slices;     // Slices allocated to file data section
+    uint32_t block_size;    // 8K typical.
+    uint32_t inode_size;    // 256.
+    uint32_t block_count;   // total number of data blocks.
+    uint32_t inode_count;   // total number of inodes.
+    uint32_t alloc_block_count; // total number of allocated data blocks.
+    uint32_t alloc_inode_count; // total number of allocated inodes.
+    blk_t ibm_block;           // first blockno of inode allocation bitmap.
+    blk_t abm_block;           // first blockno of block allocation bitmap.
+    blk_t ino_block;           // first blockno of inode table.
+    blk_t journal_start_block; // first blockno available for journal.
+    blk_t dat_block;           // first blockno available for file data.
+    // The following fields are only valid with (flags & kMinfsFlagFVM):
+    uint64_t slice_size;     // Underlying slice size.
+    uint64_t vslice_count;   // Number of allocated underlying slices.
+    uint32_t ibm_slices;     // Slices allocated to inode bitmap.
+    uint32_t abm_slices;     // Slices allocated to block bitmap.
+    uint32_t ino_slices;     // Slices allocated to inode table.
+    uint32_t journal_slices; // Slices allocated to journal section.
+    uint32_t dat_slices;     // Slices allocated to file data section.
 
     ino_t unlinked_head;    // Index to the first unlinked (but open) inode.
     ino_t unlinked_tail;    // Index to the last unlinked (but open) inode.
 };
 
-static_assert(sizeof(Superblock) <= kMinfsBlockSize,
+struct Superblock {
+    uint64_t magic0;
+    uint64_t magic1;
+    uint32_t version_major;
+    uint32_t version_minor;
+    uint32_t checksum;        // Crc32 checksum of the contents of the info block.
+    uint32_t generation_count;// Generation count of backup superblock for debugging purpose.
+    uint32_t flags;
+    uint32_t block_size;    // 8K typical.
+    uint32_t inode_size;    // 256.
+    uint32_t block_count;   // total number of data blocks.
+    uint32_t inode_count;   // total number of inodes.
+    uint32_t alloc_block_count; // total number of allocated data blocks.
+    uint32_t alloc_inode_count; // total number of allocated inodes.
+    uint32_t ibm_block;           // first blockno of inode allocation bitmap.
+    uint32_t abm_block;           // first blockno of block allocation bitmap.
+    uint32_t ino_block;           // first blockno of inode table.
+    uint32_t journal_start_block; // first blockno available for journal.
+    uint32_t dat_block;           // first blockno available for file data.
+    // The following fields are only valid with (flags & kMinfsFlagFVM):
+    uint32_t slice_size;     // Underlying slice size.
+    uint32_t vslice_count;   // Number of allocated underlying slices.
+    uint32_t ibm_slices;     // Slices allocated to inode bitmap.
+    uint32_t abm_slices;     // Slices allocated to block bitmap.
+    uint32_t ino_slices;     // Slices allocated to inode table.
+    uint32_t journal_slices; // Slices allocated to journal section.
+    uint32_t dat_slices;     // Slices allocated to file data section.
+
+    uint32_t unlinked_head;    // Index to the first unlinked (but open) inode.
+    uint32_t unlinked_tail;    // Index to the last unlinked (but open) inode.
+
+    uint32_t reserved[2019];
+};
+
+static_assert(sizeof(Superblock) == kMinfsBlockSize,
               "minfs info size is wrong");
 // Notes:
 // - the inode bitmap, block bitmap, inode table, journal, and data
@@ -272,3 +317,5 @@ constexpr uint64_t NonDataBlocks(const Superblock& info) {
 }
 
 } // namespace minfs
+
+#endif  // MINFS_FORMAT_H_

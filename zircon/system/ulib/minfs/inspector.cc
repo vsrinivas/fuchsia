@@ -131,100 +131,116 @@ void SuperBlockObject::GetValue(const void** out_buffer, size_t* out_buffer_size
 std::unique_ptr<disk_inspector::DiskObject> SuperBlockObject::GetElementAt(uint32_t index) const {
   switch (index) {
     case 0: {
-      // uint64_t magic0
+      // uint64_t magic0.
       return CreateUint64DiskObj("magic0", &(sb_.magic0));
     }
     case 1: {
-      // uint64_t magic1
+      // uint64_t magic1.
       return CreateUint64DiskObj("magic1", &(sb_.magic1));
     }
     case 2: {
-      // uint32_t version
-      return CreateUint32DiskObj("version", &(sb_.version));
+      // uint32_t version_major.
+      return CreateUint32DiskObj("version_major", &(sb_.version_major));
     }
     case 3: {
-      // uint32_t flags
-      return CreateUint32DiskObj("flags", &(sb_.flags));
+      // uint32_t version_minor.
+      return CreateUint32DiskObj("version_minor", &(sb_.version_minor));
     }
     case 4: {
-      // uint32_t block_size
-      return CreateUint32DiskObj("block_size", &(sb_.block_size));
+      // uint32_t flags.
+      return CreateUint32DiskObj("flags", &(sb_.flags));
     }
     case 5: {
-      // uint32_t inode_size
-      return CreateUint32DiskObj("inode_size", &(sb_.inode_size));
+      // uint32_t block_size.
+      return CreateUint32DiskObj("block_size", &(sb_.block_size));
     }
     case 6: {
-      // uint32_t block_count
-      return CreateUint32DiskObj("block_count", &(sb_.block_count));
+      // uint32_t inode_size.
+      return CreateUint32DiskObj("inode_size", &(sb_.inode_size));
     }
     case 7: {
-      // uint32_t inode_count
-      return CreateUint32DiskObj("inode_count", &(sb_.inode_count));
+      // uint32_t block_count.
+      return CreateUint32DiskObj("block_count", &(sb_.block_count));
     }
     case 8: {
-      // uint32_t alloc_block_count
-      return CreateUint32DiskObj("alloc_block_count", &(sb_.alloc_block_count));
+      // uint32_t inode_count.
+      return CreateUint32DiskObj("inode_count", &(sb_.inode_count));
     }
     case 9: {
-      // uint32_t alloc_inode_count
-      return CreateUint32DiskObj("alloc_inode_count", &(sb_.alloc_inode_count));
+      // uint32_t alloc_block_count.
+      return CreateUint32DiskObj("alloc_block_count", &(sb_.alloc_block_count));
     }
     case 10: {
-      // uint32_t/blk_t ibm_block
-      return CreateUint32DiskObj("ibm_block", &(sb_.ibm_block));
+      // uint32_t alloc_inode_count.
+      return CreateUint32DiskObj("alloc_inode_count", &(sb_.alloc_inode_count));
     }
     case 11: {
-      // uint32_t/blk_t abm_block
-      return CreateUint32DiskObj("abm_block", &(sb_.abm_block));
+      // uint32_t/blk_t ibm_block.
+      return CreateUint32DiskObj("ibm_block", &(sb_.ibm_block));
     }
     case 12: {
-      // uint32_t/blk_t ino_block
-      return CreateUint32DiskObj("ino_block", &(sb_.ino_block));
+      // uint32_t/blk_t abm_block.
+      return CreateUint32DiskObj("abm_block", &(sb_.abm_block));
     }
     case 13: {
-      // uint32_t/blk_t journal_start_block
-      return CreateUint32DiskObj("journal_start_block", &(sb_.journal_start_block));
+      // uint32_t/blk_t ino_block.
+      return CreateUint32DiskObj("ino_block", &(sb_.ino_block));
     }
     case 14: {
-      // uint32_t/blk_t dat_block
-      return CreateUint32DiskObj("dat_block", &(sb_.dat_block));
+      // uint32_t/blk_t journal_start_block.
+      return CreateUint32DiskObj("journal_start_block", &(sb_.journal_start_block));
     }
     case 15: {
-      // uint64_t slice_size
-      return CreateUint64DiskObj("slice_size", &(sb_.slice_size));
+      // uint32_t/blk_t dat_block.
+      return CreateUint32DiskObj("dat_block", &(sb_.dat_block));
     }
     case 16: {
-      // uint64_t vslice_count
-      return CreateUint64DiskObj("vslice_count", &(sb_.vslice_count));
+      // uint32_t slice_size.
+      return CreateUint32DiskObj("slice_size", &(sb_.slice_size));
     }
     case 17: {
-      // uint32_t ibm_slices
-      return CreateUint32DiskObj("ibm_slices", &(sb_.ibm_slices));
+      // uint32_t vslice_count.
+      return CreateUint32DiskObj("vslice_count", &(sb_.vslice_count));
     }
     case 18: {
-      // uint32_t abm_slices
-      return CreateUint32DiskObj("abm_slices", &(sb_.abm_slices));
+      // uint32_t ibm_slices.
+      return CreateUint32DiskObj("ibm_slices", &(sb_.ibm_slices));
     }
     case 19: {
-      // uint32_t ino_slices
-      return CreateUint32DiskObj("ino_slices", &(sb_.ino_slices));
+      // uint32_t abm_slices.
+      return CreateUint32DiskObj("abm_slices", &(sb_.abm_slices));
     }
     case 20: {
-      // uint32_t journal_slices
-      return CreateUint32DiskObj("journal_slices", &(sb_.journal_slices));
+      // uint32_t ino_slices.
+      return CreateUint32DiskObj("ino_slices", &(sb_.ino_slices));
     }
     case 21: {
-      // uint32_t dat_slices
-      return CreateUint32DiskObj("dat_slices", &(sb_.dat_slices));
+      // uint32_t journal_slices.
+      return CreateUint32DiskObj("journal_slices", &(sb_.journal_slices));
     }
     case 22: {
-      // uint32_t/ino_t unlinked_head
-      return CreateUint32DiskObj("unlinked_head", &(sb_.unlinked_head));
+      // uint32_t dat_slices.
+      return CreateUint32DiskObj("dat_slices", &(sb_.dat_slices));
     }
     case 23: {
-      // uint32_t/ino_t unlinked_tail
+      // uint32_t/ino_t unlinked_head.
+      return CreateUint32DiskObj("unlinked_head", &(sb_.unlinked_head));
+    }
+    case 24: {
+      // uint32_t/ino_t unlinked_tail.
       return CreateUint32DiskObj("unlinked_tail", &(sb_.unlinked_tail));
+    }
+    case 25: {
+      //  uint32_t checksum.
+      return CreateUint32DiskObj("checksum", &(sb_.checksum));
+    }
+    case 26: {
+      //  uint32_t generation_count.
+      return CreateUint32DiskObj("generation_count", &(sb_.generation_count));
+    }
+    case 27: {
+      // uint32_t reserved[].
+      return CreateUint32ArrayDiskObj("reserved", sb_.reserved, 1);
     }
   }
   return nullptr;
@@ -237,23 +253,23 @@ void JournalObject::GetValue(const void** out_buffer, size_t* out_buffer_size) c
 std::unique_ptr<disk_inspector::DiskObject> JournalObject::GetElementAt(uint32_t index) const {
   switch (index) {
     case 0: {
-      // uint64_t magic
+      // uint64_t magic.
       return CreateUint64DiskObj("magic", &(journal_info_->magic));
     }
     case 1: {
-      // uint64_t reserved0
+      // uint64_t reserved0.
       return CreateUint64DiskObj("reserved0", &(journal_info_->reserved0));
     }
     case 2: {
-      // uint64_t reserved1
+      // uint64_t reserved1.
       return CreateUint64DiskObj("reserved1", &(journal_info_->reserved1));
     }
     case 3: {
-      // uint64_t reserved2
+      // uint64_t reserved2.
       return CreateUint64DiskObj("reserved2", &(journal_info_->reserved2));
     }
     case 4: {
-      // uint64_t reserved3
+      // uint64_t reserved3.
       return CreateUint64DiskObj("reserved3", &(journal_info_->reserved3));
     }
   }
@@ -292,13 +308,13 @@ zx_status_t Inspector::CreateRoot(std::unique_ptr<Bcache> bc,
                                   std::unique_ptr<disk_inspector::DiskObject>* out) {
   zx_status_t status = ZX_OK;
   char data[kMinfsBlockSize];
-  if (bc->Readblk(0, data) < 0) {
+  if (bc->Readblk(kSuperblockStart, data) < 0) {
     FS_TRACE_ERROR("minfsInspector: could not read superblock\n");
     return ZX_ERR_IO;
   }
-  const Superblock* info = reinterpret_cast<const Superblock*>(data);
+  Superblock* info = reinterpret_cast<Superblock*>(data);
   std::unique_ptr<Minfs> fs;
-  if ((status = Minfs::Create(std::move(bc), info, &fs, IntegrityCheck::kNone)) != ZX_OK) {
+  if ((status = Minfs::Create(std::move(bc), info, IntegrityCheck::kNone, &fs)) != ZX_OK) {
     FS_TRACE_ERROR("minfsInspector: Create Failed to Create Minfs: %d\n", status);
     return status;
   }

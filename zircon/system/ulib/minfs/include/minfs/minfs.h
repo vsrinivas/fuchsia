@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef MINFS_MINFS_H_
+#define MINFS_MINFS_H_
 
 #include <inttypes.h>
 
@@ -18,10 +19,10 @@
 #include <lib/async/dispatcher.h>
 #endif
 
+#include <utility>
+
 #include <minfs/bcache.h>
 #include <minfs/format.h>
-
-#include <utility>
 
 namespace minfs {
 
@@ -35,6 +36,14 @@ enum class IntegrityCheck {
   // Validate structures (locally) before usage. This is the
   // recommended option for mounted filesystems.
   kAll,
+};
+
+// Indicates whether to update backup superblock.
+enum class UpdateBackupSuperblock {
+  // Do not write the backup superblock.
+  kNoUpdate,
+  // Update the backup superblock.
+  kUpdate,
 };
 
 struct MountOptions {
@@ -54,15 +63,21 @@ inline zx_status_t Mkfs(fbl::unique_ptr<Bcache> bc) { return Mkfs({}, std::move(
 
 #ifdef __Fuchsia__
 
-// Mount the filesystem backed by |bc| using the VFS layer |vfs|,
+// Creates a Bcache using |fd| and updates the readonly flag.
+zx_status_t CreateBcache(fbl::unique_fd fd, bool* out_readonly,
+                         fbl::unique_ptr<minfs::Bcache>* out);
+
+// Mount the filesystem backed by |device_fd| using the VFS layer |vfs|,
 // and serve the root directory under the provided |mount_channel|.
 //
 // This function does not start the async_dispatcher_t object owned by |vfs|;
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
 zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispatcher,
-                          fbl::unique_ptr<Bcache> bc, zx::channel mount_channel,
+                          fbl::unique_fd device_fd, zx::channel mount_channel,
                           fbl::Closure on_unmount);
 #endif
 
 }  // namespace minfs
+
+#endif  // MINFS_MINFS_H_
