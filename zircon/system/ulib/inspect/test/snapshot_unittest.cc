@@ -5,14 +5,16 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
 
-using inspect::Block;
-using inspect::BlockType;
-using inspect::HeaderBlockFields;
 using inspect::Snapshot;
+using inspect::internal::Block;
+using inspect::internal::BlockType;
+using inspect::internal::HeaderBlockFields;
+using inspect::internal::kMagicNumber;
 
 TEST(Snapshot, ValidRead) {
   fzl::OwnedVmoMapper vmo;
@@ -22,7 +24,7 @@ TEST(Snapshot, ValidRead) {
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 0;
 
   Snapshot snapshot;
@@ -44,7 +46,7 @@ TEST(Snapshot, InvalidWritePending) {
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 1;
 
   Snapshot snapshot;
@@ -61,7 +63,7 @@ TEST(Snapshot, ValidPendingSkipCheck) {
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 1;
 
   Snapshot snapshot;
@@ -78,7 +80,7 @@ TEST(Snapshot, InvalidGenerationChange) {
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 0;
 
   Snapshot snapshot;
@@ -96,7 +98,7 @@ TEST(Snapshot, ValidGenerationChangeSkipCheck) {
   header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], inspect::kMagicNumber, 4);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 0;
 
   Snapshot snapshot;

@@ -14,7 +14,7 @@
 namespace inspect {
 
 // Settings to configure a specific Inspector.
-struct InspectSettings {
+struct InspectSettings final {
   // The maximum size of the created VMO, in bytes.
   //
   // The size must be non-zero, and it will be rounded up to the next page size.
@@ -56,7 +56,7 @@ class Inspector final {
   std::unique_ptr<Node> root_;
 
   // The internal state for this inspector.
-  std::shared_ptr<State> state_;
+  std::shared_ptr<internal::State> state_;
 };
 
 // Generate a unique name with the given prefix.

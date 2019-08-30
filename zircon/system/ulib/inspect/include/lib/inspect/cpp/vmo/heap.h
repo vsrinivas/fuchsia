@@ -11,6 +11,7 @@
 #include <zircon/assert.h>
 
 namespace inspect {
+namespace internal {
 
 // A buddy-allocated heap of blocks stored in a VMO.
 //
@@ -24,7 +25,7 @@ namespace inspect {
 // satisfy requests.
 //
 // This class is not thread safe.
-class Heap {
+class Heap final {
  public:
   // Create a new heap that allocates out of the given |vmo|.
   //
@@ -89,6 +90,7 @@ bool Heap::IsFreeBlock(BlockIndex block, size_t expected_order) const {
   return GetType(b) == BlockType::kFree && GetOrder(b) == expected_order;
 }
 
+}  // namespace internal
 }  // namespace inspect
 
 #endif  // LIB_INSPECT_CPP_VMO_HEAP_H_

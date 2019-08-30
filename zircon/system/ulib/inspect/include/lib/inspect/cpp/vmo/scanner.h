@@ -9,6 +9,7 @@
 #include <zircon/types.h>
 
 namespace inspect {
+namespace internal {
 
 // Read blocks out of the buffer.
 // For each block that it found, this function calls the callback function
@@ -18,6 +19,7 @@ namespace inspect {
 zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
                        const std::function<void(BlockIndex, const Block*)>& callback);
 
+}  // namespace internal
 }  // namespace inspect
 
 #endif  // LIB_INSPECT_CPP_VMO_SCANNER_H_

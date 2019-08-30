@@ -32,7 +32,7 @@ namespace inspect {
 //   &snapshot);
 class Snapshot final {
  public:
-  struct Options {
+  struct Options final {
     // The number of attempts to read a consistent snapshot.
     // Reading fails if the number of attempts exceeds this number.
     int read_attempts;
@@ -77,10 +77,6 @@ class Snapshot final {
   // Returns the size of the snapshot.
   size_t size() const { return buffer_.size(); }
 
-  // Get a pointer to a block in the buffer by index.
-  // Returns nullptr if the index is out of bounds.
-  const Block* GetBlock(BlockIndex index) const;
-
  private:
   // Read from the VMO into a buffer.
   static zx_status_t Read(const zx::vmo& vmo, size_t size, uint8_t* buffer);
@@ -95,6 +91,12 @@ class Snapshot final {
   // The buffer storing the snapshot.
   std::vector<uint8_t> buffer_;
 };
+
+namespace internal {
+// Get a pointer to a block in the snapshot by index.
+// Returns nullptr if the index is out of bounds.
+const Block* GetBlock(const Snapshot* snapshot, BlockIndex index);
+}  // namespace internal
 
 }  // namespace inspect
 

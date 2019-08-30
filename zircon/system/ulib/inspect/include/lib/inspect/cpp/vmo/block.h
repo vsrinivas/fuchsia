@@ -12,6 +12,7 @@
 #include <type_traits>
 
 namespace inspect {
+namespace internal {
 
 enum class BlockType {
   kFree = 0,
@@ -78,7 +79,7 @@ constexpr BlockOrder FitOrder(size_t size) {
 }
 
 // Structure of the block header and payload.
-struct Block {
+struct Block final {
   union {
     uint64_t header;
     char header_data[8];
@@ -97,7 +98,7 @@ static_assert(sizeof(Block) == kMinOrderSize,
 
 // Describes the layout of a bit-field packed into a 64-bit word.
 template <size_t begin, size_t end>
-struct Field {
+struct Field final {
   static_assert(begin < sizeof(uint64_t) * 8, "begin is out of bounds");
   static_assert(end < sizeof(uint64_t) * 8, "end is out of bounds");
   static_assert(begin <= end, "begin must not be larger than end");
@@ -126,43 +127,43 @@ struct BlockFields {
   using Type = Field<4, 7>;
 };
 
-struct HeaderBlockFields : public BlockFields {
+struct HeaderBlockFields final : public BlockFields {
   using Version = Field<8, 31>;
   using MagicNumber = Field<32, 63>;
 };
 
-struct FreeBlockFields : public BlockFields {
+struct FreeBlockFields final : public BlockFields {
   using NextFreeBlock = Field<8, 35>;
 };
 
 // Describes the fields common to all value blocks.
-struct ValueBlockFields : public BlockFields {
+struct ValueBlockFields final : public BlockFields {
   using ParentIndex = Field<8, 35>;
   using NameIndex = Field<36, 63>;
 };
 
-struct PropertyBlockPayload {
+struct PropertyBlockPayload final {
   using TotalLength = Field<0, 31>;
   using ExtentIndex = Field<32, 59>;
   using Flags = Field<60, 63>;
 };
 
 // Describes the fields for ARRAY_VALUE payloads.
-struct ArrayBlockPayload {
+struct ArrayBlockPayload final {
   using EntryType = Field<0, 3>;
   using Flags = Field<4, 7>;
   using Count = Field<8, 15>;
 };
 
-struct ExtentBlockFields : public BlockFields {
+struct ExtentBlockFields final : public BlockFields {
   using NextExtentIndex = Field<8, 35>;
 };
 
-struct NameBlockFields : public BlockFields {
+struct NameBlockFields final : public BlockFields {
   using Length = Field<8, 19>;
 };
 
-struct LinkBlockPayload {
+struct LinkBlockPayload final {
   using ContentIndex = Field<0, 19>;
   using Flags = Field<60, 63>;
 };
@@ -201,6 +202,7 @@ constexpr T* GetArraySlot(BlockType* block, size_t index) {
 
 constexpr size_t kMaxPayloadSize = kMaxOrderSize - sizeof(Block::header);
 
+}  // namespace internal
 }  // namespace inspect
 
 #endif  // LIB_INSPECT_CPP_VMO_BLOCK_H_

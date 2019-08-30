@@ -10,6 +10,9 @@
 #include <memory>
 #include <sstream>
 
+using inspect::internal::Heap;
+using inspect::internal::State;
+
 namespace inspect {
 
 namespace {

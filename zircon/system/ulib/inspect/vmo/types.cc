@@ -6,6 +6,8 @@
 #include <lib/inspect/cpp/vmo/state.h>
 #include <lib/inspect/cpp/vmo/types.h>
 
+using inspect::internal::ArrayBlockFormat;
+
 namespace inspect {
 
 template <>

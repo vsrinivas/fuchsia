@@ -29,7 +29,7 @@ constexpr char kHealthUnhealthy[] = "UNHEALTHY";
 // consists of "status" and "message" properties. Nodes implementing
 // fuchsia.inspect.Health can be aggregated in health checking scripts
 // inspecttem-wide.
-class NodeHealth {
+class NodeHealth final {
  public:
   // Constructs a new NodeHealth object that wraps a health designation for the
   // given node.

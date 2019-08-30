@@ -4,14 +4,17 @@
 
 #include <lib/inspect/cpp/vmo/scanner.h>
 #include <zircon/types.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
 
-using inspect::Block;
-using inspect::BlockIndex;
-using inspect::BlockType;
-using inspect::ScanBlocks;
+using inspect::internal::Block;
+using inspect::internal::BlockFields;
+using inspect::internal::BlockIndex;
+using inspect::internal::BlockType;
+using inspect::internal::kMinOrderSize;
+using inspect::internal::ScanBlocks;
 
 TEST(Scanner, ReadEmpty) {
   uint8_t buf[1024];
@@ -20,7 +23,7 @@ TEST(Scanner, ReadEmpty) {
   size_t count = 0;
   EXPECT_TRUE(ZX_OK ==
               ScanBlocks(buf, 1024, [&count](BlockIndex index, const Block* block) { count++; }));
-  EXPECT_EQ(1024 / inspect::kMinOrderSize, count);
+  EXPECT_EQ(1024 / kMinOrderSize, count);
 }
 
 TEST(Scanner, ReadMisaligned) {
@@ -30,17 +33,16 @@ TEST(Scanner, ReadMisaligned) {
   size_t count = 0;
   EXPECT_TRUE(ZX_ERR_OUT_OF_RANGE ==
               ScanBlocks(buf, 1020, [&count](BlockIndex index, const Block* block) { count++; }));
-  EXPECT_EQ(1024 / inspect::kMinOrderSize - 1, count);
+  EXPECT_EQ(1024 / kMinOrderSize - 1, count);
 }
 
 TEST(Scanner, ReadSingle) {
-  uint8_t buf[inspect::kMinOrderSize];
-  memset(buf, 0, inspect::kMinOrderSize);
+  uint8_t buf[kMinOrderSize];
+  memset(buf, 0, kMinOrderSize);
 
   size_t count = 0;
   BlockIndex last_index = 0xFFFFFF;
-  EXPECT_TRUE(ZX_OK ==
-              ScanBlocks(buf, inspect::kMinOrderSize, [&](BlockIndex index, const Block* block) {
+  EXPECT_TRUE(ZX_OK == ScanBlocks(buf, kMinOrderSize, [&](BlockIndex index, const Block* block) {
                 count++;
                 last_index = index;
               }));
@@ -49,15 +51,15 @@ TEST(Scanner, ReadSingle) {
 }
 
 TEST(Scanner, ReadOutOfBounds) {
-  uint8_t buf[inspect::kMinOrderSize];
-  memset(buf, 0, inspect::kMinOrderSize);
+  uint8_t buf[kMinOrderSize];
+  memset(buf, 0, kMinOrderSize);
   Block* block = reinterpret_cast<Block*>(buf);
-  block->header = inspect::BlockFields::Order::Make(1);
+  block->header = BlockFields::Order::Make(1);
 
   size_t count = 0;
-  EXPECT_TRUE(ZX_ERR_OUT_OF_RANGE ==
-              ScanBlocks(buf, inspect::kMinOrderSize,
-                         [&count](BlockIndex index, const Block* block) { count++; }));
+  EXPECT_TRUE(
+      ZX_ERR_OUT_OF_RANGE ==
+      ScanBlocks(buf, kMinOrderSize, [&count](BlockIndex index, const Block* block) { count++; }));
   EXPECT_EQ(0u, count);
 }
 

@@ -90,7 +90,7 @@ class Reader {
 };
 
 std::string Reader::GetAndValidateName(BlockIndex index) {
-  const Block* block = snapshot_.GetBlock(index);
+  const Block* block = internal::GetBlock(&snapshot_, index);
   if (!block) {
     return nullptr;
   }
@@ -284,7 +284,7 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
   std::vector<uint8_t> buf(total_length);
 
   BlockIndex cur_extent = PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64);
-  auto* extent = snapshot_.GetBlock(cur_extent);
+  auto* extent = internal::GetBlock(&snapshot_, cur_extent);
   while (remaining_length > 0) {
     if (!extent || GetType(extent) != BlockType::kExtent) {
       break;
@@ -293,13 +293,13 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
     memcpy(&buf[current_offset], extent->payload.data, len);
     remaining_length -= len;
     current_offset += len;
-    extent =
-        snapshot_.GetBlock(ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header));
+    extent = internal::GetBlock(
+        &snapshot_, ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header));
   }
 
   auto& parent_properties = parent->hierarchy.node().properties();
   if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
-      static_cast<uint8_t>(inspect::PropertyBlockFormat::kBinary)) {
+      static_cast<uint8_t>(PropertyBlockFormat::kBinary)) {
     parent_properties.emplace_back(
         inspect::PropertyValue(std::move(name), inspect::ByteVectorPropertyValue(buf)));
   } else {

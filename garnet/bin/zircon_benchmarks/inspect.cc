@@ -26,6 +26,8 @@ const size_t kExponentialStepMultiplier = 2;
 using inspect::Inspector;
 using inspect::Node;
 using inspect::internal::NumericProperty;
+using inspect::internal::BlockIndex;
+using inspect::internal::Heap;
 
 template <typename T>
 NumericProperty<T> CreateMetric(Node* root);
@@ -223,12 +225,12 @@ bool TestHeapExtend(perftest::RepeatState *state) {
   state->DeclareStep("Destroy");
 
   while (state->KeepRunning()) {
-    inspect::BlockIndex index[513];
+    BlockIndex index[513];
     if (zx::vmo::create(1<<21, 0, &vmo) != ZX_OK) {
       return false;
     }
 
-    auto heap = inspect::Heap(std::move(vmo));
+    auto heap = Heap(std::move(vmo));
     state->NextStep();
 
     for (int i = 0; i < 512; i++) {

@@ -8,6 +8,7 @@
 #include <zircon/types.h>
 
 namespace inspect {
+namespace internal {
 
 // The size for order 0.
 constexpr size_t kMinOrderShift = 4;
@@ -34,6 +35,7 @@ constexpr size_t OrderToSize(T order) {
 
 constexpr size_t IndexForOffset(size_t offset) { return offset / kMinOrderSize; }
 
+}  // namespace internal
 }  // namespace inspect
 
 #endif  // LIB_INSPECT_CPP_VMO_LIMITS_H_

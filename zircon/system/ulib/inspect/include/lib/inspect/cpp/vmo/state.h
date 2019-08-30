@@ -13,6 +13,7 @@
 #include <mutex>
 
 namespace inspect {
+namespace internal {
 
 // |State| wraps a |Heap| and implements the Inspect File API on top of
 // that heap. This class contains the low-level operations necessary to
@@ -201,6 +202,7 @@ class State final {
   BlockIndex header_ __TA_GUARDED(mutex_);
 };
 
+}  // namespace internal
 }  // namespace inspect
 
 #endif  // LIB_INSPECT_CPP_VMO_STATE_H_

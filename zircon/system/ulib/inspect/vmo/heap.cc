@@ -6,6 +6,7 @@
 #include <zircon/process.h>
 
 namespace inspect {
+namespace internal {
 
 namespace {
 // Get the "buddy" for a given |Block|. Buddies may be merged together if they are both free.
@@ -204,4 +205,5 @@ zx_status_t Heap::Extend(size_t new_size) {
   return ZX_OK;
 }
 
+}  // namespace internal
 }  // namespace inspect

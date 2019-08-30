@@ -6,6 +6,7 @@
 #include <lib/inspect/cpp/vmo/scanner.h>
 
 namespace inspect {
+namespace internal {
 
 zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
                        const std::function<void(BlockIndex, const Block*)>& callback) {
@@ -33,4 +34,5 @@ zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
   return ZX_OK;
 }
 
+}  // namespace internal
 }  // namespace inspect

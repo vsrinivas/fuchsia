@@ -8,6 +8,7 @@
 #include <functional>
 
 namespace inspect {
+namespace internal {
 
 // Helper class to support RAII locking of the generation count.
 class AutoGenerationIncrement final {
@@ -801,4 +802,5 @@ zx_status_t State::CreateName(const std::string& name, BlockIndex* out) {
   return ZX_OK;
 }
 
+}  // namespace internal
 }  // namespace inspect

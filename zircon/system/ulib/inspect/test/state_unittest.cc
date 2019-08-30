@@ -19,33 +19,35 @@
 
 namespace {
 
-using inspect::ArrayBlockFormat;
-using inspect::ArrayBlockPayload;
-using inspect::Block;
-using inspect::BlockIndex;
-using inspect::BlockType;
 using inspect::ByteVectorProperty;
 using inspect::DoubleArray;
 using inspect::DoubleProperty;
-using inspect::ExtentBlockFields;
-using inspect::HeaderBlockFields;
-using inspect::Heap;
 using inspect::IntArray;
 using inspect::IntProperty;
-using inspect::kNumOrders;
 using inspect::Link;
-using inspect::LinkBlockDisposition;
-using inspect::LinkBlockPayload;
-using inspect::NameBlockFields;
 using inspect::Node;
-using inspect::PropertyBlockFormat;
-using inspect::PropertyBlockPayload;
 using inspect::Snapshot;
-using inspect::State;
 using inspect::StringProperty;
 using inspect::UintArray;
 using inspect::UintProperty;
-using inspect::ValueBlockFields;
+using inspect::internal::ArrayBlockFormat;
+using inspect::internal::ArrayBlockPayload;
+using inspect::internal::Block;
+using inspect::internal::BlockIndex;
+using inspect::internal::BlockType;
+using inspect::internal::ExtentBlockFields;
+using inspect::internal::HeaderBlockFields;
+using inspect::internal::Heap;
+using inspect::internal::kMagicNumber;
+using inspect::internal::kNumOrders;
+using inspect::internal::LinkBlockDisposition;
+using inspect::internal::LinkBlockPayload;
+using inspect::internal::NameBlockFields;
+using inspect::internal::PropertyBlockFormat;
+using inspect::internal::PropertyBlockPayload;
+using inspect::internal::ScanBlocks;
+using inspect::internal::State;
+using inspect::internal::ValueBlockFields;
 
 zx::vmo MakeVmo(size_t size) {
   zx::vmo ret;
@@ -126,7 +128,7 @@ Block MakeHeader(uint64_t generation) {
   Block ret;
   ret.header = HeaderBlockFields::Type::Make(BlockType::kHeader) |
                HeaderBlockFields::Order::Make(0) | HeaderBlockFields::Version::Make(0);
-  memcpy(&ret.header_data[4], inspect::kMagicNumber, 4);
+  memcpy(&ret.header_data[4], kMagicNumber, 4);
   ret.payload.u64 = generation;
   return ret;
 }
@@ -139,15 +141,14 @@ Snapshot SnapshotAndScan(const zx::vmo& vmo,
   Snapshot snapshot;
   Snapshot::Create(vmo, &snapshot);
   if (snapshot) {
-    inspect::ScanBlocks(snapshot.data(), snapshot.size(),
-                        [&](BlockIndex index, const Block* block) {
-                          if (inspect::GetType(block) == BlockType::kFree) {
-                            *free_blocks += 1;
-                          } else {
-                            *allocated_blocks += 1;
-                          }
-                          blocks->insert(std::make_unique<ScannedBlock>(index, block));
-                        });
+    ScanBlocks(snapshot.data(), snapshot.size(), [&](BlockIndex index, const Block* block) {
+      if (GetType(block) == BlockType::kFree) {
+        *free_blocks += 1;
+      } else {
+        *allocated_blocks += 1;
+      }
+      blocks->insert(std::make_unique<ScannedBlock>(index, block));
+    });
   }
   return snapshot;
 }
@@ -1218,10 +1219,9 @@ TEST(State, LinkTest) {
 
   // root will be at block index 1
   Node root = state->CreateNode("root", 0);
-  Link link = state->CreateLink("link", 1u /* root index */, "/test",
-                                inspect::LinkBlockDisposition::kChild);
-  Link link2 = state->CreateLink("link2", 1u /* root index */, "/test",
-                                 inspect::LinkBlockDisposition::kInline);
+  Link link = state->CreateLink("link", 1u /* root index */, "/test", LinkBlockDisposition::kChild);
+  Link link2 =
+      state->CreateLink("link2", 1u /* root index */, "/test", LinkBlockDisposition::kInline);
 
   fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;
@@ -1277,8 +1277,7 @@ TEST(State, LinkContentsAllocationFailure) {
   // root will be at block index 1
   Node root = state->CreateNode("root", 0);
   std::string name(2000, 'a');
-  Link link =
-      state->CreateLink(name, 1u /* root index */, name, inspect::LinkBlockDisposition::kChild);
+  Link link = state->CreateLink(name, 1u /* root index */, name, LinkBlockDisposition::kChild);
 
   fbl::WAVLTree<BlockIndex, fbl::unique_ptr<ScannedBlock>> blocks;
   size_t free_blocks, allocated_blocks;

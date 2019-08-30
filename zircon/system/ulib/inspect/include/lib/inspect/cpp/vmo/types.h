@@ -12,11 +12,11 @@
 #include <vector>
 
 namespace inspect {
-
 class Node;
-class State;
 
 namespace internal {
+class State;
+
 // A property containing a templated numeric type. All methods wrap the
 // corresponding functionality on |State|, and concrete
 // implementations are available only for int64_t, uint64_t and double.
@@ -47,18 +47,19 @@ class NumericProperty final {
   explicit operator bool() { return state_ != nullptr; }
 
  private:
-  friend class ::inspect::State;
-  NumericProperty(std::shared_ptr<State> state, BlockIndex name, BlockIndex value)
+  friend class ::inspect::internal::State;
+  NumericProperty(std::shared_ptr<internal::State> state, internal::BlockIndex name,
+                  internal::BlockIndex value)
       : state_(std::move(state)), name_index_(name), value_index_(value) {}
 
   // Reference to the state containing this metric.
-  std::shared_ptr<State> state_;
+  std::shared_ptr<internal::State> state_;
 
   // Index of the name block in the state.
-  BlockIndex name_index_;
+  internal::BlockIndex name_index_;
 
   // Index of the value block in the state.
-  BlockIndex value_index_;
+  internal::BlockIndex value_index_;
 };
 
 // A value containing an array of numeric types. All methods wrap the
@@ -91,18 +92,19 @@ class ArrayValue final {
   explicit operator bool() { return state_ != nullptr; }
 
  private:
-  friend class ::inspect::State;
-  ArrayValue(std::shared_ptr<State> state, BlockIndex name, BlockIndex value)
+  friend class ::inspect::internal::State;
+  ArrayValue(std::shared_ptr<internal::State> state, internal::BlockIndex name,
+             internal::BlockIndex value)
       : state_(std::move(state)), name_index_(name), value_index_(value) {}
 
   // Reference to the state containing this value.
-  std::shared_ptr<State> state_;
+  std::shared_ptr<internal::State> state_;
 
   // Index of the name block in the state.
-  BlockIndex name_index_;
+  internal::BlockIndex name_index_;
 
   // Index of the value block in the state.
-  BlockIndex value_index_;
+  internal::BlockIndex value_index_;
 };
 
 template <typename T>
@@ -237,18 +239,19 @@ class Property final {
   void Set(const T& value);
 
  private:
-  friend class ::inspect::State;
-  Property(std::shared_ptr<State> state, BlockIndex name, BlockIndex value)
+  friend class ::inspect::internal::State;
+  Property(std::shared_ptr<internal::State> state, internal::BlockIndex name,
+           internal::BlockIndex value)
       : state_(std::move(state)), name_index_(name), value_index_(value) {}
 
   // Reference to the state containing this property.
-  std::shared_ptr<State> state_;
+  std::shared_ptr<internal::State> state_;
 
   // Index of the name block in the state.
-  BlockIndex name_index_;
+  internal::BlockIndex name_index_;
 
   // Index of the value block in the state.
-  BlockIndex value_index_;
+  internal::BlockIndex value_index_;
 };
 
 }  // namespace internal
@@ -289,21 +292,22 @@ class Link final {
   explicit operator bool() { return state_ != nullptr; }
 
  private:
-  friend class ::inspect::State;
-  Link(std::shared_ptr<State> state, BlockIndex name, BlockIndex value, BlockIndex content)
+  friend class ::inspect::internal::State;
+  Link(std::shared_ptr<internal::State> state, internal::BlockIndex name,
+       internal::BlockIndex value, internal::BlockIndex content)
       : state_(std::move(state)), name_index_(name), value_index_(value), content_index_(content) {}
 
   // Reference to the state containing this value.
-  std::shared_ptr<State> state_;
+  std::shared_ptr<internal::State> state_;
 
   // Index of the name block in the state.
-  BlockIndex name_index_;
+  internal::BlockIndex name_index_;
 
   // Index of the value block in the state.
-  BlockIndex value_index_;
+  internal::BlockIndex value_index_;
 
   // Index of the content block in the state.
-  BlockIndex content_index_;
+  internal::BlockIndex content_index_;
 };
 
 // A node under which properties, metrics, and other nodes may be nested.
@@ -410,18 +414,19 @@ class Node final {
   explicit operator bool() { return state_ != nullptr; }
 
  private:
-  friend class ::inspect::State;
-  Node(std::shared_ptr<State> state, BlockIndex name, BlockIndex value)
+  friend class ::inspect::internal::State;
+  Node(std::shared_ptr<internal::State> state, internal::BlockIndex name,
+       internal::BlockIndex value)
       : state_(std::move(state)), name_index_(name), value_index_(value) {}
 
   // Reference to the state containing this metric.
-  std::shared_ptr<State> state_;
+  std::shared_ptr<internal::State> state_;
 
   // Index of the name block in the state.
-  BlockIndex name_index_;
+  internal::BlockIndex name_index_;
 
   // Index of the value block in the state.
-  BlockIndex value_index_;
+  internal::BlockIndex value_index_;
 };
 
 }  // namespace inspect

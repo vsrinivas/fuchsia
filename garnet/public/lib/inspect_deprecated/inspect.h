@@ -600,11 +600,11 @@ class Node final {
   explicit Node(component::ExposedObject object);
 
   [[nodiscard]] IntArray CreateIntArray(std::string name, size_t slots,
-                                        ::inspect::ArrayBlockFormat format);
+                                        ::inspect::internal::ArrayBlockFormat format);
   [[nodiscard]] UIntArray CreateUIntArray(std::string name, size_t slots,
-                                          ::inspect::ArrayBlockFormat format);
+                                          ::inspect::internal::ArrayBlockFormat format);
   [[nodiscard]] DoubleArray CreateDoubleArray(std::string name, size_t slots,
-                                              ::inspect::ArrayBlockFormat format);
+                                              ::inspect::internal::ArrayBlockFormat format);
 
   fit::internal::variant<fit::internal::monostate, component::ExposedObject, ::inspect::Node>
       object_;

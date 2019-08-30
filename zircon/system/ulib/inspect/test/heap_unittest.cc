@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/inspect/cpp/vmo/heap.h>
+#include <lib/inspect/cpp/vmo/scanner.h>
+
 #include <iostream>
 #include <vector>
 
 #include <fbl/string_printf.h>
-#include <lib/inspect/cpp/vmo/heap.h>
-#include <lib/inspect/cpp/vmo/scanner.h>
 #include <zxtest/zxtest.h>
 
 namespace {
 
-using inspect::Block;
-using inspect::BlockIndex;
-using inspect::BlockType;
-using inspect::Heap;
-using inspect::ScanBlocks;
+using inspect::internal::Block;
+using inspect::internal::BlockIndex;
+using inspect::internal::BlockType;
+using inspect::internal::Heap;
+using inspect::internal::ScanBlocks;
 
 zx::vmo MakeVmo(size_t size) {
   zx::vmo ret;
