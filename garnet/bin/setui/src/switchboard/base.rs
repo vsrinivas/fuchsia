@@ -6,6 +6,7 @@ use bitflags::bitflags;
 use failure::Error;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
+use serde_derive::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 pub type SettingResponseResult = Result<Option<SettingResponse>, Error>;
@@ -46,6 +47,7 @@ pub enum SettingRequest {
 
     // Accessibility requests.
     SetAudioDescription(bool),
+    SetColorCorrection(ColorBlindnessType),
 
     // Display requests.
     SetBrightness(f32),
@@ -65,9 +67,48 @@ pub enum SettingRequest {
     SetNightModeInitiatedDoNotDisturb(bool),
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub enum AccessibilityInfo {
-    AudioDescription(bool),
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct AccessibilityInfo {
+    pub audio_description: bool,
+    pub color_correction: ColorBlindnessType,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum ColorBlindnessType {
+    /// No color blindness.
+    None,
+
+    /// Red-green color blindness due to reduced sensitivity to red light.
+    Protanomaly,
+
+    /// Red-green color blindness due to reduced sensitivity to green light.
+    Deuteranomaly,
+
+    /// Blue-yellow color blindness. It is due to reduced sensitivity to blue
+    /// light.
+    Tritanomaly,
+}
+
+impl From<fidl_fuchsia_settings::ColorBlindnessType> for ColorBlindnessType {
+    fn from(color_blindness_type: fidl_fuchsia_settings::ColorBlindnessType) -> Self {
+        match color_blindness_type {
+            fidl_fuchsia_settings::ColorBlindnessType::None => ColorBlindnessType::None,
+            fidl_fuchsia_settings::ColorBlindnessType::Protanomaly => ColorBlindnessType::Protanomaly,
+            fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly => ColorBlindnessType::Deuteranomaly,
+            fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly => ColorBlindnessType::Tritanomaly,
+        }
+    }
+}
+
+impl From<ColorBlindnessType> for fidl_fuchsia_settings::ColorBlindnessType {
+    fn from(color_blindness_type: ColorBlindnessType) -> Self {
+        match color_blindness_type {
+            ColorBlindnessType::None => fidl_fuchsia_settings::ColorBlindnessType::None,
+            ColorBlindnessType::Protanomaly => fidl_fuchsia_settings::ColorBlindnessType::Protanomaly,
+            ColorBlindnessType::Deuteranomaly => fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly,
+            ColorBlindnessType::Tritanomaly => fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly,
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]

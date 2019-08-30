@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::switchboard::base::{
-        AccessibilityInfo, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-        Switchboard,
+        SettingRequest, SettingResponse, SettingResponseResult, SettingType, Switchboard,
     },
     crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
@@ -18,6 +17,7 @@ use {
     std::convert::TryFrom,
     std::sync::{Arc, RwLock},
 };
+
 type AccessibilityHangingGetHandler =
     Arc<Mutex<HangingGetHandler<AccessibilitySettings, AccessibilityWatchResponder>>>;
 
@@ -32,11 +32,8 @@ impl From<SettingResponse> for AccessibilitySettings {
         if let SettingResponse::Accessibility(info) = response {
             let mut accessibility_settings = AccessibilitySettings::empty();
 
-            match info {
-                AccessibilityInfo::AudioDescription(value) => {
-                    accessibility_settings.audio_description = Some(value);
-                }
-            }
+            accessibility_settings.audio_description = Some(info.audio_description);
+            accessibility_settings.color_correction = Some(info.color_correction.into());
 
             return accessibility_settings;
         }
@@ -52,13 +49,22 @@ impl TryFrom<AccessibilitySettings> for SettingRequest {
         if let Some(audio_description) = settings.audio_description {
             return Ok(SettingRequest::SetAudioDescription(audio_description));
         }
+        if let Some(color_correction) = settings.color_correction {
+            return Ok(SettingRequest::SetColorCorrection(color_correction.into()));
+        }
 
         Err("Failed to convert AccessibilitySettings to SettingRequest")
     }
 }
 
 fn to_request(settings: AccessibilitySettings) -> Option<SettingRequest> {
-    settings.audio_description.map(SettingRequest::SetAudioDescription)
+    let mut request = None;
+    if let Some(audio_description) = settings.audio_description {
+        request = Some(SettingRequest::SetAudioDescription(audio_description));
+    } else if let Some(color_correction) = settings.color_correction {
+        request = Some(SettingRequest::SetColorCorrection(color_correction.into()));
+    }
+    request
 }
 
 pub fn spawn_accessibility_fidl_handler(

@@ -4,10 +4,11 @@
 use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::service_context::ServiceContext,
-    crate::switchboard::base::{AccessibilityInfo, SettingRequest, SettingResponse, SettingType},
-    failure::format_err,
+    crate::switchboard::base::{
+        AccessibilityInfo, ColorBlindnessType, SettingRequest, SettingResponse, SettingType,
+    },
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_accessibility::{SettingsManagerMarker, SettingsManagerStatus},
+    fidl_fuchsia_accessibility::{ColorCorrection, SettingsManagerMarker, SettingsManagerStatus},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::stream::StreamExt,
@@ -28,9 +29,26 @@ pub fn spawn_accessibility_controller(
 
     fasync::spawn(
         async move {
-            // Locally persist audio description value.
+            let service_result =
+                service_context_handle.read().unwrap().connect::<SettingsManagerMarker>();
+
+            let accessibility_service = match service_result {
+                Ok(service) => service,
+                Err(err) => {
+                    return Err(err);
+                }
+            };
+
+            // Register ourselves as a provider to a11y service to write values.
+            let (provider_proxy, server_end) = create_proxy()?;
+            accessibility_service.register_setting_provider(server_end)?;
+
+            // Locally remember accessibility info.
             // TODO(go/fxb/25465): persist value.
-            let mut stored_audio_description: bool = false;
+            let mut stored_accessibility_info: AccessibilityInfo = AccessibilityInfo {
+                audio_description: false,
+                color_correction: ColorBlindnessType::None,
+            };
 
             while let Some(command) = accessibility_handler_rx.next().await {
                 match command {
@@ -46,59 +64,56 @@ pub fn spawn_accessibility_controller(
                         #[allow(unreachable_patterns)]
                         match request {
                             SettingRequest::SetAudioDescription(audio_description) => {
-                                let service_result = service_context_handle
-                                    .read()
-                                    .unwrap()
-                                    .connect::<SettingsManagerMarker>();
+                                let status = provider_proxy
+                                    .set_screen_reader_enabled(audio_description.into())
+                                    .await?;
+                                match status {
+                                    SettingsManagerStatus::Ok => {
+                                        stored_accessibility_info.audio_description =
+                                            audio_description;
+                                        let _ = responder.send(Ok(None));
 
-                                let accessibility_service = match service_result {
-                                    Ok(service) => service,
-                                    Err(err) => {
-                                        let _ = responder.send(Err(format_err!(
-                                            "Error getting accessibility service: {:?}",
-                                            err
-                                        )));
-                                        return Ok(());
-                                    }
-                                };
-
-                                // Register ourselves as a provider to a11y service to write values.
-                                let (provider_proxy, server_end) = create_proxy()?;
-                                let register_result =
-                                    accessibility_service.register_setting_provider(server_end);
-                                match register_result {
-                                    Ok(_) => {
-                                        let status = provider_proxy
-                                            .set_screen_reader_enabled(audio_description.into())
-                                            .await?;
-                                        match status {
-                                            SettingsManagerStatus::Ok => {
-                                                stored_audio_description = audio_description;
-                                                let _ = responder.send(Ok(None));
-                                            }
-                                            SettingsManagerStatus::Error => {
-                                                let _ = responder.send(Err(format_err!(
-                                                    "error setting value in accessibility service"
-                                                )));
-                                            }
-                                        }
+                                        // Notify listeners of value change.
                                         if let Some(notifier) =
                                             (*notifier_lock.read().unwrap()).clone()
                                         {
                                             notifier.unbounded_send(SettingType::Accessibility)?;
                                         }
                                     }
-                                    Err(err) => {
-                                        let _ = responder.send(Err(format_err!(
-                                            "Error registering as settings provider: {:?}",
-                                            err
+                                    SettingsManagerStatus::Error => {
+                                        let _ = responder.send(Err(failure::err_msg(
+                                            "error setting value in accessibility service",
+                                        )));
+                                    }
+                                }
+                            }
+                            SettingRequest::SetColorCorrection(color_correction) => {
+                                let status = provider_proxy
+                                    .set_color_correction(color_correction.into())
+                                    .await?;
+                                match status {
+                                    SettingsManagerStatus::Ok => {
+                                        stored_accessibility_info.color_correction =
+                                            color_correction;
+                                        let _ = responder.send(Ok(None));
+
+                                        // Notify listeners of value change.
+                                        if let Some(notifier) =
+                                            (*notifier_lock.read().unwrap()).clone()
+                                        {
+                                            notifier.unbounded_send(SettingType::Accessibility)?;
+                                        }
+                                    }
+                                    SettingsManagerStatus::Error => {
+                                        let _ = responder.send(Err(failure::err_msg(
+                                            "error setting value in accessibility service",
                                         )));
                                     }
                                 }
                             }
                             SettingRequest::Get => {
                                 let _ = responder.send(Ok(Some(SettingResponse::Accessibility(
-                                    AccessibilityInfo::AudioDescription(stored_audio_description),
+                                    stored_accessibility_info.clone(),
                                 ))));
                             }
                             _ => panic!("Unexpected command to accessibility"),
@@ -113,4 +128,17 @@ pub fn spawn_accessibility_controller(
             }),
     );
     accessibility_handler_tx
+}
+
+/// Converts from the SetUI-internal ColorBlindnessType to the accessibility service's
+/// ColorCorrection.
+impl From<ColorBlindnessType> for ColorCorrection {
+    fn from(color_blindness_type: ColorBlindnessType) -> Self {
+        match color_blindness_type {
+            ColorBlindnessType::None => ColorCorrection::Disabled,
+            ColorBlindnessType::Protanomaly => ColorCorrection::CorrectProtanomaly,
+            ColorBlindnessType::Deuteranomaly => ColorCorrection::CorrectDeuteranomaly,
+            ColorBlindnessType::Tritanomaly => ColorCorrection::CorrectTritanomaly,
+        }
+    }
 }

@@ -245,6 +245,7 @@ mod tests {
     use failure::format_err;
     use fidl::endpoints::{ServerEnd, ServiceMarker};
     use fidl_fuchsia_accessibility::*;
+    use fidl_fuchsia_settings::ColorBlindnessType;
     use fuchsia_zircon as zx;
     use futures::prelude::*;
 
@@ -258,11 +259,10 @@ mod tests {
     }
 
     // TODO(fxb/35254): move out of main.rs
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_accessibility() {
-        const INITIAL_AUDIO_DESCRIPTION: bool = false;
-        const CHANGED_AUDIO_DESCRIPTION: bool = true;
-
+    async fn create_test_accessibility_env(
+        initial_audio_description: bool,
+        initial_color_correction: ColorCorrection,
+    ) -> fuchsia_component::server::NestedEnvironment {
         // Fake accessibility service for test.
         let service_gen = move |service_name: &str, channel: zx::Channel| {
             if service_name != SettingsManagerMarker::NAME {
@@ -270,7 +270,9 @@ mod tests {
             }
 
             let stored_audio_description: Arc<RwLock<bool>> =
-                Arc::new(RwLock::new(INITIAL_AUDIO_DESCRIPTION.into()));
+                Arc::new(RwLock::new(initial_audio_description));
+            let stored_color_correction: Arc<RwLock<ColorCorrection>> =
+                Arc::new(RwLock::new(initial_color_correction));
 
             // Handle calls to RegisterSettingProvider.
             let mut manager_stream =
@@ -284,6 +286,7 @@ mod tests {
                             control_handle: _,
                         } => {
                             let stored_audio_description_clone = stored_audio_description.clone();
+                            let stored_color_correction_clone = stored_color_correction.clone();
 
                             // Handle set calls on the provider that was registered.
                             let mut provider_stream =
@@ -298,6 +301,14 @@ mod tests {
                                         } => {
                                             *stored_audio_description_clone.write().unwrap() =
                                                 screen_reader_enabled;
+                                            responder.send(SettingsManagerStatus::Ok).unwrap();
+                                        }
+                                        SettingsProviderRequest::SetColorCorrection {
+                                            color_correction,
+                                            responder,
+                                        } => {
+                                            *stored_color_correction_clone.write().unwrap() =
+                                                color_correction;
                                             responder.send(SettingsManagerStatus::Ok).unwrap();
                                         }
                                         _ => {}
@@ -326,6 +337,21 @@ mod tests {
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
         fasync::spawn(fs.collect());
 
+        env
+    }
+
+    // TODO(fxb/35254): move out of main.rs
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_accessibility_audio_description() {
+        const INITIAL_AUDIO_DESCRIPTION: bool = false;
+        const CHANGED_AUDIO_DESCRIPTION: bool = true;
+
+        const INITIAL_COLOR_CORRECTION: ColorCorrection = ColorCorrection::Disabled;
+
+        let env =
+            create_test_accessibility_env(INITIAL_AUDIO_DESCRIPTION, INITIAL_COLOR_CORRECTION)
+                .await;
+
         // Fetch the initial audio description value.
         let accessibility_proxy = env.connect_to_service::<AccessibilityMarker>().unwrap();
         let settings =
@@ -345,6 +371,40 @@ mod tests {
         let settings =
             accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
         assert_eq!(settings.audio_description, Some(CHANGED_AUDIO_DESCRIPTION));
+    }
+
+    // TODO(fxb/35254): move out of main.rs
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_accessibility_color_correction() {
+        const INITIAL_AUDIO_DESCRIPTION: bool = false;
+        const INITIAL_COLOR_CORRECTION: ColorCorrection = ColorCorrection::Disabled;
+
+        const INITIAL_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::None;
+        const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
+
+        let env =
+            create_test_accessibility_env(INITIAL_AUDIO_DESCRIPTION, INITIAL_COLOR_CORRECTION)
+                .await;
+
+        // Fetch the initial color correction value.
+        let accessibility_proxy = env.connect_to_service::<AccessibilityMarker>().unwrap();
+        let settings =
+            accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
+        assert_eq!(settings.color_correction, Some(INITIAL_COLOR_BLINDNESS_TYPE));
+
+        // Set the color correction value.
+        let mut accessibility_settings = AccessibilitySettings::empty();
+        accessibility_settings.color_correction = Some(CHANGED_COLOR_BLINDNESS_TYPE);
+        accessibility_proxy
+            .set(accessibility_settings)
+            .await
+            .expect("set completed")
+            .expect("set successful");
+
+        // Verify the value we set is returned when watching.
+        let settings =
+            accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
+        assert_eq!(settings.color_correction, Some(CHANGED_COLOR_BLINDNESS_TYPE));
     }
 
     /// Tests that the FIDL calls result in appropriate commands sent to the switchboard
