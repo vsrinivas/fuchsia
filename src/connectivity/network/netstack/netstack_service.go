@@ -92,10 +92,13 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 		broadaddr[i] |= ^mask[i]
 	}
 
-	addresses := ifs.ns.getAddressesLocked(ifs.nicid)
-	ipv6addrs := make([]fidlnet.Subnet, 0, len(addresses))
+	nicInfo, ok := ifs.ns.mu.stack.NICInfo()[ifs.nicid]
+	if !ok {
+		panic(fmt.Sprintf("NIC [%d] not found in %+v", ifs.nicid, nicInfo))
+	}
+	ipv6addrs := make([]fidlnet.Subnet, 0, len(nicInfo.ProtocolAddresses))
 
-	for _, address := range addresses {
+	for _, address := range nicInfo.ProtocolAddresses {
 		if address.Protocol == ipv6.ProtocolNumber {
 			ipv6addrs = append(ipv6addrs, fidlnet.Subnet{
 				Addr:      fidlconv.ToNetIpAddress(address.AddressWithPrefix.Address),
@@ -316,8 +319,13 @@ func (ni *netstackImpl) SetInterfaceAddress(nicid uint32, address fidlnet.IpAddr
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		return netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}, nil
 	}
-	if err := ni.ns.addInterfaceAddress(tcpip.NICID(nicid), protocolAddr); err != nil {
+
+	found, err := ni.ns.addInterfaceAddress(tcpip.NICID(nicid), protocolAddr)
+	if err != nil {
 		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, nil
+	}
+	if !found {
+		return netstack.NetErr{Status: netstack.StatusUnknownInterface}, nil
 	}
 	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
@@ -330,18 +338,36 @@ func (ni *netstackImpl) RemoveInterfaceAddress(nicid uint32, address fidlnet.IpA
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		return netstack.NetErr{Status: netstack.StatusParseError, Message: "prefix length exceeds address length"}, nil
 	}
-	if err := ni.ns.removeInterfaceAddress(tcpip.NICID(nicid), protocolAddr); err != nil {
+
+	found, err := ni.ns.removeInterfaceAddress(tcpip.NICID(nicid), protocolAddr)
+	if err != nil {
 		return netstack.NetErr{Status: netstack.StatusUnknownError, Message: err.Error()}, nil
 	}
-
+	if !found {
+		return netstack.NetErr{Status: netstack.StatusUnknownInterface}, nil
+	}
 	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 
-// SetInterfaceMetric updates the metric of an interface.
+// SetInterfaceMetric changes the metric for an interface and updates all
+// routes tracking that interface metric. This takes the lock.
 func (ni *netstackImpl) SetInterfaceMetric(nicid uint32, metric uint32) (result netstack.NetErr, err error) {
-	if err := ni.ns.UpdateInterfaceMetric(tcpip.NICID(nicid), routes.Metric(metric)); err != nil {
-		return netstack.NetErr{Status: netstack.StatusUnknownInterface, Message: err.Error()}, nil
+	syslog.Infof("update interface metric for NIC %d to metric=%d", nicid, metric)
+
+	nic := tcpip.NICID(nicid)
+	m := routes.Metric(metric)
+
+	ni.ns.mu.Lock()
+	defer ni.ns.mu.Unlock()
+
+	ifState, ok := ni.ns.mu.ifStates[nic]
+	if !ok {
+		return netstack.NetErr{Status: netstack.StatusUnknownInterface}, nil
 	}
+	ifState.updateMetric(m)
+
+	ni.ns.mu.routeTable.UpdateMetricByInterface(nic, m)
+	ni.ns.mu.stack.SetRouteTable(ni.ns.mu.routeTable.GetNetstackTable())
 	return netstack.NetErr{Status: netstack.StatusOk}, nil
 }
 

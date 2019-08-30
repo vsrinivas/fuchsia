@@ -516,8 +516,12 @@ func TestAddRouteParameterValidation(t *testing.T) {
 		t.Fatalf("got ns.addEth(_) = _, %s want = _, nil", err)
 	}
 
-	if err := ns.addInterfaceAddress(ifState.nicid, addr); err != nil {
-		t.Fatalf("ns.addInterfaceAddress(%d, %s) = %s", ifState.nicid, addr.AddressWithPrefix, err)
+	found, err := ns.addInterfaceAddress(ifState.nicid, addr)
+	if err != nil {
+		t.Fatalf("ns.addInterfaceAddress(%d, %s) = _, %s", ifState.nicid, addr.AddressWithPrefix, err)
+	}
+	if !found {
+		t.Fatalf("ns.addInterfaceAddress(%d, %s) = %t, _", ifState.nicid, addr.AddressWithPrefix, found)
 	}
 
 	tests := []struct {

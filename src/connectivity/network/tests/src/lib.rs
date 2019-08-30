@@ -312,8 +312,8 @@ async fn add_del_interface_address() -> Result {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn add_interface_address_errors() -> Result {
-    let name = stringify!(add_interface_address_errors);
+async fn add_remove_interface_address_errors() -> Result {
+    let name = stringify!(add_remove_interface_address_errors);
 
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
@@ -322,7 +322,10 @@ async fn add_interface_address_errors() -> Result {
     let managed_environment = create_netstack_environment(&sandbox, name.to_string())
         .context("failed to create netstack environment")?;
     let stack = connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&managed_environment)
-        .context("failed to connect to netstack")?;
+        .context("failed to connect to stack")?;
+    let netstack =
+        connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&managed_environment)
+            .context("failed to connect to netstack")?;
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
     let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
@@ -332,7 +335,8 @@ async fn add_interface_address_errors() -> Result {
         prefix_len: 0,
     };
 
-    // NET-2234 (crash on interface not found).
+    // Don't crash on interface not found.
+
     let error = stack
         .add_interface_address(max_id + 1, &mut interface_address)
         .await
@@ -343,7 +347,24 @@ async fn add_interface_address_errors() -> Result {
         &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::NotFound }
     );
 
-    // NET-2334 (crash on invalid prefix length).
+    let error = netstack
+        .remove_interface_address(
+            std::convert::TryInto::try_into(max_id + 1).expect("should fit"),
+            &mut interface_address.ip_address,
+            interface_address.prefix_len,
+        )
+        .await
+        .context("failed to call add interface address")?;
+    assert_eq!(
+        error,
+        fidl_fuchsia_netstack::NetErr {
+            status: fidl_fuchsia_netstack::Status::UnknownInterface,
+            message: "".to_string(),
+        },
+    );
+
+    // Don't crash on invalid prefix length.
+
     interface_address.prefix_len = 43;
     let error = stack
         .add_interface_address(max_id, &mut interface_address)
@@ -353,6 +374,22 @@ async fn add_interface_address_errors() -> Result {
     assert_eq!(
         error.as_ref(),
         &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::InvalidArgs }
+    );
+
+    let error = netstack
+        .remove_interface_address(
+            std::convert::TryInto::try_into(max_id).expect("should fit"),
+            &mut interface_address.ip_address,
+            interface_address.prefix_len,
+        )
+        .await
+        .context("failed to call add interface address")?;
+    assert_eq!(
+        error,
+        fidl_fuchsia_netstack::NetErr {
+            status: fidl_fuchsia_netstack::Status::ParseError,
+            message: "prefix length exceeds address length".to_string(),
+        },
     );
 
     Ok(())

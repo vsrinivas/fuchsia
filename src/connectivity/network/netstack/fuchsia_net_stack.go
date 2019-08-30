@@ -77,9 +77,13 @@ func getInterfaceInfo(ifs *ifState, addresses []tcpip.ProtocolAddress) stack.Int
 func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	ns.mu.Lock()
 	out := make([]stack.InterfaceInfo, 0, len(ns.mu.ifStates))
+	nicInfos := ns.mu.stack.NICInfo()
 	for _, ifs := range ns.mu.ifStates {
-		addresses := ns.getAddressesLocked(ifs.nicid)
-		out = append(out, getInterfaceInfo(ifs, addresses))
+		nicInfo, ok := nicInfos[ifs.nicid]
+		if !ok {
+			panic(fmt.Sprintf("NIC [%d] not found in %+v", ifs.nicid, nicInfo))
+		}
+		out = append(out, getInterfaceInfo(ifs, nicInfo.ProtocolAddresses))
 	}
 	ns.mu.Unlock()
 
@@ -120,8 +124,11 @@ func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error)
 		ns.mu.Unlock()
 		return nil, &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
-	addresses := ns.getAddressesLocked(ifs.nicid)
-	interfaceInfo := getInterfaceInfo(ifs, addresses)
+	nicInfo, ok := ns.mu.stack.NICInfo()[ifs.nicid]
+	if !ok {
+		panic(fmt.Sprintf("NIC [%d] not found in %+v", ifs.nicid, nicInfo))
+	}
+	interfaceInfo := getInterfaceInfo(ifs, nicInfo.ProtocolAddresses)
 	ns.mu.Unlock()
 
 	return &interfaceInfo, nil
@@ -175,19 +182,13 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
 	}
-	nicid := tcpip.NICID(id)
-
-	ns.mu.Lock()
-	_, ok := ns.mu.ifStates[nicid]
-	ns.mu.Unlock()
-
-	if !ok {
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
-	}
-
-	if err := ns.addInterfaceAddress(nicid, protocolAddr); err != nil {
-		syslog.Errorf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, nicid, err)
+	found, err := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr)
+	if err != nil {
+		syslog.Errorf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
 		return &stack.Error{Type: stack.ErrorTypeBadState}
+	}
+	if !found {
+		return &stack.Error{Type: stack.ErrorTypeNotFound}
 	}
 	return nil
 }
@@ -197,21 +198,14 @@ func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
 	}
-	nicid := tcpip.NICID(id)
-
-	ns.mu.Lock()
-	_, ok := ns.mu.ifStates[nicid]
-	ns.mu.Unlock()
-
-	if !ok {
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
-	}
-
-	if err := ns.removeInterfaceAddress(nicid, protocolAddr); err != nil {
-		syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, nicid, err)
+	found, err := ns.removeInterfaceAddress(tcpip.NICID(id), protocolAddr)
+	if err != nil {
+		syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
 		return &stack.Error{Type: stack.ErrorTypeInternal}
 	}
-
+	if !found {
+		return &stack.Error{Type: stack.ErrorTypeNotFound}
+	}
 	return nil
 }
 

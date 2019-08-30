@@ -238,32 +238,18 @@ func (ns *Netstack) UpdateRoutesByInterfaceLocked(nicid tcpip.NICID, action rout
 	ns.mu.stack.SetRouteTable(ns.mu.routeTable.GetNetstackTable())
 }
 
-// UpdateInterfaceMetric changes the metric for an interface and updates all
-// routes tracking that interface metric. This takes the lock.
-func (ns *Netstack) UpdateInterfaceMetric(nicid tcpip.NICID, metric routes.Metric) error {
-	syslog.Infof("update interface metric for NIC %d to metric=%d", nicid, metric)
-
-	ns.mu.Lock()
-	defer ns.mu.Unlock()
-
-	ifState, ok := ns.mu.ifStates[tcpip.NICID(nicid)]
-	if !ok {
-		return fmt.Errorf("error getting ifState for NIC %d, not in map", nicid)
-	}
-	ifState.updateMetric(metric)
-
-	ns.mu.routeTable.UpdateMetricByInterface(nicid, metric)
-	ns.mu.stack.SetRouteTable(ns.mu.routeTable.GetNetstackTable())
-	return nil
-}
-
-func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) error {
+func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
 	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
 	syslog.Infof("removing static IP %s from NIC %d, deleting subnet route %+v", addr.AddressWithPrefix, nic, route)
 
 	ns.mu.Lock()
+	info, ok := ns.mu.stack.NICInfo()[nic]
+	if !ok {
+		ns.mu.Unlock()
+		return false, nil
+	}
 	if err := func() error {
-		if _, found := ns.findAddress(nic, addr); !found {
+		if _, found := findAddress(info.ProtocolAddresses, addr); !found {
 			return fmt.Errorf("address %s doesn't exist on NIC ID %d", addr.AddressWithPrefix, nic)
 		}
 
@@ -280,22 +266,27 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 		return nil
 	}(); err != nil {
 		ns.mu.Unlock()
-		return err
+		return true, err
 	}
 
 	interfaces := ns.getNetInterfaces2Locked()
 	ns.mu.Unlock()
 	ns.OnInterfacesChanged(interfaces)
-	return nil
+	return true, nil
 }
 
-func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) error {
+func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (bool, error) {
 	route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
 	syslog.Infof("adding static IP %s to NIC %d, creating subnet route %+v with metric=<not-set>, dynamic=false", addr.AddressWithPrefix, nic, route)
 
 	ns.mu.Lock()
+	info, ok := ns.mu.stack.NICInfo()[nic]
+	if !ok {
+		ns.mu.Unlock()
+		return false, nil
+	}
 	if err := func() error {
-		if a, found := ns.findAddress(nic, addr); found {
+		if a, found := findAddress(info.ProtocolAddresses, addr); found {
 			if a.AddressWithPrefix.PrefixLen == addr.AddressWithPrefix.PrefixLen {
 				return fmt.Errorf("address %s already exists on NIC ID %d", addr.AddressWithPrefix, nic)
 			}
@@ -316,13 +307,13 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 		return nil
 	}(); err != nil {
 		ns.mu.Unlock()
-		return err
+		return true, err
 	}
 
 	interfaces := ns.getNetInterfaces2Locked()
 	ns.mu.Unlock()
 	ns.OnInterfacesChanged(interfaces)
-	return nil
+	return true, nil
 }
 
 func (ifs *ifState) updateMetric(metric routes.Metric) {
@@ -704,21 +695,10 @@ func (ns *Netstack) addEndpoint(
 	return ifs, nil
 }
 
-func (ns *Netstack) getAddressesLocked(nic tcpip.NICID) []tcpip.ProtocolAddress {
-	nicInfo := ns.mu.stack.NICInfo()
-	info, ok := nicInfo[nic]
-	if !ok {
-		panic(fmt.Sprintf("NIC [%d] not found in %+v", nic, nicInfo))
-	}
-	return info.ProtocolAddresses
-}
-
-// findAddress finds the given address in the addresses currently assigned to
-// the NIC. Note that no duplicate addresses exist on a NIC.
-func (ns *Netstack) findAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress) (tcpip.ProtocolAddress, bool) {
+func findAddress(addrs []tcpip.ProtocolAddress, addr tcpip.ProtocolAddress) (tcpip.ProtocolAddress, bool) {
 	// Ignore prefix length.
 	addr.AddressWithPrefix.PrefixLen = 0
-	for _, a := range ns.getAddressesLocked(nic) {
+	for _, a := range addrs {
 		a.AddressWithPrefix.PrefixLen = 0
 		if a == addr {
 			return a, true
