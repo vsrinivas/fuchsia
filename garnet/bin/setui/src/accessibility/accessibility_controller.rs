@@ -3,23 +3,32 @@
 // found in the LICENSE file.
 use {
     crate::registry::base::{Command, Notifier, State},
+    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::{
-        AccessibilityInfo, ColorBlindnessType, SettingRequest, SettingResponse, SettingType,
+        AccessibilityInfo, ColorBlindnessType, SettingRequest, SettingRequestResponder,
+        SettingResponse, SettingType,
     },
     fidl::endpoints::create_proxy,
     fidl_fuchsia_accessibility::{ColorCorrection, SettingsManagerMarker, SettingsManagerStatus},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::lock::Mutex,
     futures::stream::StreamExt,
     futures::TryFutureExt,
     std::sync::{Arc, RwLock},
 };
 
+impl DeviceStorageCompatible for AccessibilityInfo {
+    const DEFAULT_VALUE: Self =
+        AccessibilityInfo { audio_description: false, color_correction: ColorBlindnessType::None };
+    const KEY: &'static str = "accessibility_info";
+}
+
 /// Controller that handles commands for SettingType::Accessibility.
-/// TODO(fxb/35252): store persistently
 pub fn spawn_accessibility_controller(
     service_context_handle: Arc<RwLock<ServiceContext>>,
+    storage: Arc<Mutex<DeviceStorage<AccessibilityInfo>>>,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (accessibility_handler_tx, mut accessibility_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
@@ -43,12 +52,12 @@ pub fn spawn_accessibility_controller(
             let (provider_proxy, server_end) = create_proxy()?;
             accessibility_service.register_setting_provider(server_end)?;
 
-            // Locally remember accessibility info.
-            // TODO(go/fxb/25465): persist value.
-            let mut stored_accessibility_info: AccessibilityInfo = AccessibilityInfo {
-                audio_description: false,
-                color_correction: ColorBlindnessType::None,
-            };
+            // Local copy of persisted audio description value.
+            let mut stored_value: AccessibilityInfo;
+            {
+                let mut storage_lock = storage.lock().await;
+                stored_value = storage_lock.get().await;
+            }
 
             while let Some(command) = accessibility_handler_rx.next().await {
                 match command {
@@ -69,9 +78,13 @@ pub fn spawn_accessibility_controller(
                                     .await?;
                                 match status {
                                     SettingsManagerStatus::Ok => {
-                                        stored_accessibility_info.audio_description =
-                                            audio_description;
-                                        let _ = responder.send(Ok(None));
+                                        stored_value.audio_description = audio_description;
+                                        persist_accessibility_info(
+                                            stored_value,
+                                            storage.clone(),
+                                            responder,
+                                        )
+                                        .await;
 
                                         // Notify listeners of value change.
                                         if let Some(notifier) =
@@ -93,9 +106,13 @@ pub fn spawn_accessibility_controller(
                                     .await?;
                                 match status {
                                     SettingsManagerStatus::Ok => {
-                                        stored_accessibility_info.color_correction =
-                                            color_correction;
-                                        let _ = responder.send(Ok(None));
+                                        stored_value.color_correction = color_correction;
+                                        persist_accessibility_info(
+                                            stored_value,
+                                            storage.clone(),
+                                            responder,
+                                        )
+                                        .await;
 
                                         // Notify listeners of value change.
                                         if let Some(notifier) =
@@ -113,7 +130,7 @@ pub fn spawn_accessibility_controller(
                             }
                             SettingRequest::Get => {
                                 let _ = responder.send(Ok(Some(SettingResponse::Accessibility(
-                                    stored_accessibility_info.clone(),
+                                    stored_value.clone(),
                                 ))));
                             }
                             _ => panic!("Unexpected command to accessibility"),
@@ -128,6 +145,19 @@ pub fn spawn_accessibility_controller(
             }),
     );
     accessibility_handler_tx
+}
+
+async fn persist_accessibility_info(
+    info: AccessibilityInfo,
+    storage: Arc<Mutex<DeviceStorage<AccessibilityInfo>>>,
+    responder: SettingRequestResponder,
+) {
+    let write_request = storage.lock().await.write(info);
+    let _ = match write_request {
+        Ok(_) => responder.send(Ok(None)),
+        Err(err) => responder
+            .send(Err(failure::format_err!("failed to persist accessibility_info:{}", err))),
+    };
 }
 
 /// Converts from the SetUI-internal ColorBlindnessType to the accessibility service's

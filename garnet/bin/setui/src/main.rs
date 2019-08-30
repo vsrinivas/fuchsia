@@ -148,7 +148,10 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .unwrap()
             .register(
                 switchboard::base::SettingType::Accessibility,
-                spawn_accessibility_controller(service_context_handle.clone()),
+                spawn_accessibility_controller(
+                    service_context_handle.clone(),
+                    unboxed_storage_factory.get_store::<switchboard::base::AccessibilityInfo>(),
+                ),
             )
             .unwrap();
 
@@ -249,7 +252,8 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
 mod tests {
     use super::*;
     use crate::registry::device_storage::testing::*;
-    use crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo};
+    use crate::registry::device_storage::DeviceStorageFactory;
+    use crate::switchboard::base::{AccessibilityInfo,ConfigurationInterfaceFlags, SetupInfo};
     use failure::format_err;
     use fidl::endpoints::{ServerEnd, ServiceMarker};
     use fidl_fuchsia_accessibility::*;
@@ -270,6 +274,7 @@ mod tests {
     async fn create_test_accessibility_env(
         initial_audio_description: bool,
         initial_color_correction: ColorCorrection,
+        storage_factory: Box<InMemoryStorageFactory>,
     ) -> fuchsia_component::server::NestedEnvironment {
         // Fake accessibility service for test.
         let service_gen = move |service_name: &str, channel: zx::Channel| {
@@ -339,7 +344,7 @@ mod tests {
             fs.root_dir(),
             [SettingType::Accessibility].iter().cloned().collect(),
             Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
-            Box::new(InMemoryStorageFactory::create()),
+            storage_factory,
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
@@ -356,9 +361,20 @@ mod tests {
 
         const INITIAL_COLOR_CORRECTION: ColorCorrection = ColorCorrection::Disabled;
 
-        let env =
-            create_test_accessibility_env(INITIAL_AUDIO_DESCRIPTION, INITIAL_COLOR_CORRECTION)
-                .await;
+        let expected_struct = AccessibilityInfo {
+            audio_description: CHANGED_AUDIO_DESCRIPTION,
+            color_correction: switchboard::base::ColorBlindnessType::None,
+        };
+
+        let factory = Box::new(InMemoryStorageFactory::create());
+        let store = factory.get_store::<AccessibilityInfo>();
+
+        let env = create_test_accessibility_env(
+            INITIAL_AUDIO_DESCRIPTION,
+            INITIAL_COLOR_CORRECTION,
+            factory,
+        )
+        .await;
 
         // Fetch the initial audio description value.
         let accessibility_proxy = env.connect_to_service::<AccessibilityMarker>().unwrap();
@@ -375,6 +391,11 @@ mod tests {
             .expect("set completed")
             .expect("set successful");
 
+        // Verify the value we set is persisted in DeviceStorage.
+        let mut store_lock = store.lock().await;
+        let retrieved_struct = store_lock.get().await;
+        assert_eq!(expected_struct, retrieved_struct);
+
         // Verify the value we set is returned when watching.
         let settings =
             accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
@@ -390,9 +411,20 @@ mod tests {
         const INITIAL_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::None;
         const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
 
-        let env =
-            create_test_accessibility_env(INITIAL_AUDIO_DESCRIPTION, INITIAL_COLOR_CORRECTION)
-                .await;
+        let expected_struct = AccessibilityInfo {
+            audio_description: INITIAL_AUDIO_DESCRIPTION,
+            color_correction: switchboard::base::ColorBlindnessType::Tritanomaly,
+        };
+
+        let factory = Box::new(InMemoryStorageFactory::create());
+        let store = factory.get_store::<AccessibilityInfo>();
+
+        let env = create_test_accessibility_env(
+            INITIAL_AUDIO_DESCRIPTION,
+            INITIAL_COLOR_CORRECTION,
+            factory,
+        )
+        .await;
 
         // Fetch the initial color correction value.
         let accessibility_proxy = env.connect_to_service::<AccessibilityMarker>().unwrap();
@@ -408,6 +440,11 @@ mod tests {
             .await
             .expect("set completed")
             .expect("set successful");
+
+        // Verify the value we set is persisted in DeviceStorage.
+        let mut store_lock = store.lock().await;
+        let retrieved_struct = store_lock.get().await;
+        assert_eq!(expected_struct, retrieved_struct);
 
         // Verify the value we set is returned when watching.
         let settings =
