@@ -18,16 +18,11 @@ clients can access through the hub.
 The component instance tree is reflected in the hierarchy of the hub. A given
 [realm's](realms.md) hub can be accessed by successively traversing instances
 down the `children/` subdirectory. Moreover, the root of a hub directory is
-always scoped to a particular realm.
-
-The hub's structure is  **scope constrained**. The hub is organized as a
-directory hierarchy whose structure mirrors the component instance tree. In
-particular, a `children/` subdirectory corresponds to a particular
-[realm](realms.md). Having opened a directory representing a realm, a client can
-obtain information about the realm itself, its child realms, and its component
-instances, but it cannot obtain any information about the realm's parent. This
-structure makes it easy to constrain the parts of the hub particular clients
-can access.
+always scoped to a particular realm. Having opened a directory representing a
+realm, a client can obtain information about the realm itself, its child realms,
+and its component instances, but it cannot obtain any information about the
+realm's parent. This structure makes it easy to constrain the parts of the hub
+particular clients can access.
 
 ## Schema
 
@@ -70,7 +65,7 @@ by opening the provided path.
 instance itself. A component can connect directly to these services from the Hub by opening the
 provided path.
 
-+ **exec/runtime/**: iInformation about the instance's runtime environment
++ **exec/runtime/**: Information about the instance's runtime environment
 supplied by its runner (e.g. ELF runner, Dart runner), organized by topic.
 
 + **exec/runtime/elf/**: Information about the instance's main process
