@@ -81,15 +81,35 @@ executable("device_unittest") {
   ]
 }
 
+executable("impl_unittest") {
+  output_name = "wlanif_impl_unittest"
+
+  testonly = true
+
+  sources = [
+    "impl_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/protocol",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 unittest_package("wlanif_unittest") {
   deps = [
     ":convert_unittest",
     ":device_unittest",
+    ":impl_unittest",
   ]
 
   tests = [
     {
       name = "wlanif_device_unittest"
+      environments = basic_envs
+    },
+    {
+      name = "wlanif_impl_unittest"
       environments = basic_envs
     },
   ]

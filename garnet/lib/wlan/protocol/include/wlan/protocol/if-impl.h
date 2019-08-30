@@ -475,7 +475,7 @@ enum {
   WLANIF_MLME_STATS_TYPE_AP,
 };
 
-typedef union wlanif_mlme_stats {
+typedef struct wlanif_mlme_stats {
   uint8_t tag;  // WLANIF_MLME_STATS_TYPE_*
   union {
     wlanif_client_mlme_stats_t client_mlme_stats;
