@@ -8,9 +8,7 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/component_context.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_action_listener.h"
 

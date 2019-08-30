@@ -8,9 +8,9 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
-#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -48,7 +48,7 @@ class ScreenReaderTest : public gtest::RealLoopFixture {
 
     fuchsia::ui::views::ViewRef view_ref_connection;
     fidl::Clone(view_ref_, &view_ref_connection);
-    semantic_listener_ = std::make_unique<accessibility_test::MockSemanticListener>(
+    semantic_provider_ = std::make_unique<accessibility_test::MockSemanticProvider>(
         &semantics_manager_, std::move(view_ref_connection));
     RunLoopUntilIdle();
 
@@ -64,7 +64,7 @@ class ScreenReaderTest : public gtest::RealLoopFixture {
   std::unique_ptr<a11y::TtsManager> tts_manager_;
   a11y::SemanticsManager semantics_manager_;
   a11y::GestureManager gesture_manager_;
-  std::unique_ptr<accessibility_test::MockSemanticListener> semantic_listener_;
+  std::unique_ptr<accessibility_test::MockSemanticProvider> semantic_provider_;
   fuchsia::ui::views::ViewRef view_ref_;
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
 };
@@ -137,11 +137,11 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  semantic_listener_->UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider_->UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  semantic_listener_->Commit();
+  semantic_provider_->Commit();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
@@ -152,9 +152,7 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
   accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 
-  Hit hit;
-  hit.set_node_id(0);
-  semantic_listener_->SetHitTestingResult(&hit);
+  semantic_provider_->SetHitTestResult(0);
 
   // Create OnOneFingerTap Action.
   CreateOnOneFngerTapAction();

@@ -7,7 +7,6 @@
 
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 namespace accessibility_test {
 // Fake engine class to listen for incoming requests by the Tts Manager.

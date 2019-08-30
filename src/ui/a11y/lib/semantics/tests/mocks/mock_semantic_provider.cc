@@ -4,8 +4,6 @@
 
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 
-#include <lib/syslog/cpp/logger.h>
-
 namespace accessibility_test {
 
 MockSemanticProvider::MockSemanticProvider(

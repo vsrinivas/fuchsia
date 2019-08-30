@@ -9,8 +9,8 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include <src/ui/a11y/lib/screen_reader/tests/mocks/mock_semantic_listener.h>
 #include <src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h>
+#include <src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h>
 
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
@@ -47,7 +47,6 @@ class ExploreActionTest : public gtest::RealLoopFixture {
                              [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
                                EXPECT_TRUE(result.is_response());
                              });
-    RunLoopUntilIdle();
 
     // Create ViewRef eventpair.
     zx::eventpair a, b;
@@ -58,7 +57,7 @@ class ExploreActionTest : public gtest::RealLoopFixture {
 
     fuchsia::ui::views::ViewRef view_ref_connection;
     fidl::Clone(view_ref_, &view_ref_connection);
-    semantic_listener_ = std::make_unique<accessibility_test::MockSemanticListener>(
+    semantic_provider_ = std::make_unique<accessibility_test::MockSemanticProvider>(
         &semantics_manager_, std::move(view_ref_connection));
     RunLoopUntilIdle();
   }
@@ -70,7 +69,7 @@ class ExploreActionTest : public gtest::RealLoopFixture {
   a11y::ScreenReaderAction::ActionContext action_context_;
   fuchsia::ui::views::ViewRef view_ref_;
   std::unique_ptr<a11y::TtsManager> tts_manager_;
-  std::unique_ptr<accessibility_test::MockSemanticListener> semantic_listener_;
+  std::unique_ptr<accessibility_test::MockSemanticProvider> semantic_provider_;
 };
 
 // Create a test node with only a node id and a label.
@@ -107,11 +106,11 @@ TEST_F(ExploreActionTest, ReadLabel) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  semantic_listener_->UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider_->UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  semantic_listener_->Commit();
+  semantic_provider_->Commit();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
@@ -125,9 +124,7 @@ TEST_F(ExploreActionTest, ReadLabel) {
   a11y::ExploreAction::ActionData action_data;
   action_data.koid = a11y::GetKoid(view_ref_);
 
-  Hit hit;
-  hit.set_node_id(0);
-  semantic_listener_->SetHitTestingResult(&hit);
+  semantic_provider_->SetHitTestResult(0);
 
   // Call ExploreAction Run()
   explore_action.Run(action_data);
