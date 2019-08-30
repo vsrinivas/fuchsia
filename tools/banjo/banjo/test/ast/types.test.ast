@@ -4053,6 +4053,48 @@ BanjoAst {
                             [],
                         ),
                         ty: Handle {
+                            ty: Clock,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "clock_handle",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: MsiAllocation,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "msi_allocation_handle",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: MsiInterrupt,
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "msi_interrupt_handle",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
                             ty: Handle,
                             reference: true,
                         },
@@ -4353,6 +4395,48 @@ BanjoAst {
                         ident: Ident {
                             namespace: None,
                             name: "nullable_pmt_handle",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: Clock,
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_clock_handle",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: MsiAllocation,
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_msi_allocation_handle",
+                        },
+                        val: None,
+                    },
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Handle {
+                            ty: MsiInterrupt,
+                            reference: true,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "nullable_msi_interrupt_handle",
                         },
                         val: None,
                     },

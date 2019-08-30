@@ -71,7 +71,8 @@ handle_type = { "handle" ~ ( "<" ~ handle_subtype ~ ">" )? ~ reference? }
 handle_subtype = { "process" | "thread" | "vmo" | "channel" | "eventpair" | "port" |
                  "interrupt" | "log" | "socket" | "resource" | "event" |
                  "job" | "vmar" | "fifo" | "guest" | "timer" | "bti" | "profile" |
-                 "debuglog" | "vcpu" | "iommu" | "pager" | "pmt" }
+                 "debuglog" | "vcpu" | "iommu" | "pager" | "pmt" | "clock" |
+                 "msi_allocation" | "msi_interrupt" }
 
 compound_ident = ${ ident ~ ("." ~ ident)* }
 ident = @{ ("@")? ~ (alpha | digit | "_")+ }

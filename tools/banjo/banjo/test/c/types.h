@@ -397,6 +397,9 @@ struct handles {
     zx_handle_t iommu_handle;
     zx_handle_t pager_handle;
     zx_handle_t pmt_handle;
+    zx_handle_t clock_handle;
+    zx_handle_t msi_allocation_handle;
+    zx_handle_t msi_interrupt_handle;
     zx_handle_t nullable_handle_handle;
     zx_handle_t nullable_process_handle;
     zx_handle_t nullable_thread_handle;
@@ -419,6 +422,9 @@ struct handles {
     zx_handle_t nullable_iommu_handle;
     zx_handle_t nullable_pager_handle;
     zx_handle_t nullable_pmt_handle;
+    zx_handle_t nullable_clock_handle;
+    zx_handle_t nullable_msi_allocation_handle;
+    zx_handle_t nullable_msi_interrupt_handle;
 };
 
 union this_is_a_union {

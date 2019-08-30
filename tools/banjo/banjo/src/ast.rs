@@ -195,6 +195,9 @@ pub enum HandleTy {
     IoMmu,
     Pager,
     Pmt,
+    Clock,
+    MsiAllocation,
+    MsiInterrupt,
 }
 
 #[derive(PartialEq, Eq, Clone, Serialize, Debug, Hash, PartialOrd, Ord)]
@@ -312,6 +315,9 @@ impl Ty {
                                 "iommu" => HandleTy::IoMmu,
                                 "pager" => HandleTy::Pager,
                                 "pmt" => HandleTy::Pmt,
+                                "clock" => HandleTy::Clock,
+                                "msi_allocation" => HandleTy::MsiAllocation,
+                                "msi_interrupt" => HandleTy::MsiInterrupt,
                                 _e => {
                                     return Err(ParseError::UnrecognizedType(
                                         inner_pair.as_str().to_string(),
