@@ -33,8 +33,6 @@ RebootLogHandler::RebootLogHandler(std::shared_ptr<::sys::ServiceDirectory> serv
 
 namespace {
 
-enum class CrashType { KERNEL_PANIC, OOM };
-
 bool ExtractCrashType(const std::string& reboot_log, CrashType* crash_type) {
   std::istringstream iss(reboot_log);
   std::string first_line;
@@ -107,6 +105,11 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
 
   // We then wait for the network to be reachable before handing it off to the
   // crash reporter.
+  return WaitForNetworkToBeReachable().and_then(
+      [this, crash_type] { return FileCrashReport(crash_type); });
+}
+
+fit::promise<void> RebootLogHandler::WaitForNetworkToBeReachable() {
   connectivity_ = services_->Connect<fuchsia::net::Connectivity>();
   connectivity_.set_error_handler([this](zx_status_t status) {
     if (!network_reachable_.completer) {
@@ -128,52 +131,53 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
     network_reachable_.completer.complete_ok();
   };
 
-  // We hand the reboot log off to the crash reporter.
-  return network_reachable_.consumer.promise_or(fit::error()).and_then([this, crash_type] {
-    crash_reporter_ = services_->Connect<fuchsia::feedback::CrashReporter>();
-    crash_reporter_.set_error_handler([this](zx_status_t status) {
-      if (!crash_reporting_done_.completer) {
-        return;
-      }
+  return network_reachable_.consumer.promise_or(fit::error());
+}
 
-      FX_PLOGS(ERROR, status) << "lost connection to fuchsia.feedback.CrashReporter";
-      crash_reporting_done_.completer.complete_error();
-    });
+fit::promise<void> RebootLogHandler::FileCrashReport(const CrashType crash_type) {
+  crash_reporter_ = services_->Connect<fuchsia::feedback::CrashReporter>();
+  crash_reporter_.set_error_handler([this](zx_status_t status) {
+    if (!crash_reporting_done_.completer) {
+      return;
+    }
 
-    // Build the crash report attachment.
-    fuchsia::feedback::Attachment attachment;
-    attachment.key = "reboot_crash_log";
-    attachment.value = std::move(reboot_log_).ToTransport();
-    std::vector<fuchsia::feedback::Attachment> attachments;
-    attachments.push_back(std::move(attachment));
-
-    // Build the crash report.
-    fuchsia::feedback::GenericCrashReport generic_report;
-    generic_report.set_crash_signature(Signature(crash_type));
-    fuchsia::feedback::SpecificCrashReport specific_report;
-    specific_report.set_generic(std::move(generic_report));
-    fuchsia::feedback::CrashReport report;
-    report.set_program_name(ProgramName(crash_type));
-    report.set_specific_report(std::move(specific_report));
-    report.set_attachments(std::move(attachments));
-
-    crash_reporter_->File(
-        std::move(report), [this](fuchsia::feedback::CrashReporter_File_Result result) {
-          if (!crash_reporting_done_.completer) {
-            return;
-          }
-
-          if (result.is_err()) {
-            FX_PLOGS(ERROR, result.err())
-                << "failed to file a crash report for crash extracted from reboot log";
-            crash_reporting_done_.completer.complete_error();
-          } else {
-            crash_reporting_done_.completer.complete_ok();
-          }
-        });
-
-    return crash_reporting_done_.consumer.promise_or(fit::error());
+    FX_PLOGS(ERROR, status) << "lost connection to fuchsia.feedback.CrashReporter";
+    crash_reporting_done_.completer.complete_error();
   });
+
+  // Build the crash report attachment.
+  fuchsia::feedback::Attachment attachment;
+  attachment.key = "reboot_crash_log";
+  attachment.value = std::move(reboot_log_).ToTransport();
+  std::vector<fuchsia::feedback::Attachment> attachments;
+  attachments.push_back(std::move(attachment));
+
+  // Build the crash report.
+  fuchsia::feedback::GenericCrashReport generic_report;
+  generic_report.set_crash_signature(Signature(crash_type));
+  fuchsia::feedback::SpecificCrashReport specific_report;
+  specific_report.set_generic(std::move(generic_report));
+  fuchsia::feedback::CrashReport report;
+  report.set_program_name(ProgramName(crash_type));
+  report.set_specific_report(std::move(specific_report));
+  report.set_attachments(std::move(attachments));
+
+  crash_reporter_->File(
+      std::move(report), [this](fuchsia::feedback::CrashReporter_File_Result result) {
+        if (!crash_reporting_done_.completer) {
+          return;
+        }
+
+        if (result.is_err()) {
+          FX_PLOGS(ERROR, result.err())
+              << "failed to file a crash report for crash extracted from reboot log";
+          crash_reporting_done_.completer.complete_error();
+        } else {
+          crash_reporting_done_.completer.complete_ok();
+        }
+      });
+
+  return crash_reporting_done_.consumer.promise_or(fit::error());
 }
 
 }  // namespace feedback

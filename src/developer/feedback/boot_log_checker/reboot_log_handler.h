@@ -26,6 +26,9 @@ namespace feedback {
 fit::promise<void> HandleRebootLog(const std::string& filepath,
                                    std::shared_ptr<::sys::ServiceDirectory> services);
 
+// The type of crashes we expect in the reboot log and want file crash reports for.
+enum class CrashType { KERNEL_PANIC, OOM };
+
 // Wraps around fuchsia::net::ConnectivityPtr and fuchsia::crash::Analyzer to handle establishing
 // the connection, losing the connection, waiting for the callback, etc.
 //
@@ -37,6 +40,9 @@ class RebootLogHandler {
   fit::promise<void> Handle(const std::string& filepath);
 
  private:
+  fit::promise<void> WaitForNetworkToBeReachable();
+  fit::promise<void> FileCrashReport(CrashType crash_type);
+
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of Handle().
   bool has_called_handle_ = false;
