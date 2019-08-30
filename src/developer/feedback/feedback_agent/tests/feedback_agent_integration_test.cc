@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <zircon/errors.h>
 
+#include <regex>
+
 #include "garnet/public/lib/fostr/fidl/fuchsia/feedback/formatting.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
@@ -234,6 +236,7 @@ void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_provide
   ASSERT_GE(child_jobs.size(), 1u);
 
   uint32_t num_feedback_agents = 0u;
+  const std::regex data_provider_regex("data_provider_\\d{3}");
   for (const auto& child_job : child_jobs) {
     auto processes = GetChildProcesses(child_job.get());
     ASSERT_GE(processes.size(), 1u);
@@ -245,7 +248,7 @@ void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_provide
       if (process_name == "feedback_agent.cmx") {
         contains_feedback_agent = true;
         num_feedback_agents++;
-      } else if (process_name == "/pkg/bin/data_provider") {
+      } else if (std::regex_match(process_name, data_provider_regex)) {
         num_data_providers++;
       }
     }

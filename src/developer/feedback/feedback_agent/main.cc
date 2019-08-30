@@ -14,8 +14,11 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> SpawnNewDataProvider() {
-  return [](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+#include "src/lib/fxl/strings/string_printf.h"
+
+fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> SpawnNewDataProvider(
+    int* total_num_connections) {
+  return [total_num_connections](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
     // We spawn a new process to which we forward the channel of the incoming request so it can
     // handle it.
     //
@@ -25,14 +28,16 @@ fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> SpawnNewDataProvi
     actions.h.id = PA_HND(PA_USER0, 0);
     actions.h.handle = request.TakeChannel().release();
 
+    const std::string process_name =
+        fxl::StringPrintf("data_provider_%03d", ++(*total_num_connections));
     const char* args[] = {
-        "/pkg/bin/data_provider",
+        process_name.c_str(),
         nullptr,
     };
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};
     const zx_status_t spawn_status =
-        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, args[0], args, nullptr, 1, &actions,
-                       nullptr, err_msg);
+        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/pkg/bin/data_provider", args,
+                       nullptr, 1, &actions, nullptr, err_msg);
     if (spawn_status != ZX_OK) {
       FX_PLOGS(ERROR, spawn_status)
           << "Failed to spawn data provider to handle incoming request: " << err_msg;
@@ -49,7 +54,8 @@ int main(int argc, const char** argv) {
   // incoming request. This has the advantage of tying each request to a different process that can
   // be cleaned up once it is done or after a timeout and take care of dangling threads for
   // instance, cf. CF-756.
-  context->outgoing()->AddPublicService(SpawnNewDataProvider());
+  int total_num_connections = 0;
+  context->outgoing()->AddPublicService(SpawnNewDataProvider(&total_num_connections));
 
   loop.Run();
 
