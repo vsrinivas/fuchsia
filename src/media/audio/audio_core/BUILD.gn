@@ -5,6 +5,7 @@
 import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
 
 declare_args() {
   # Set to |true| to enable collecting execution traces of audio_core.
@@ -55,6 +56,11 @@ action_foreach("generate_schemas") {
     "schema/audio_device_settings_schema.jsx",
     "schema/audio_policy_schema.jsx",
   ]
+}
+
+metrics_registry("media_metrics_registry") {
+  project_name = "media"
+  generate_cc = true
 }
 
 package("audio_core") {
@@ -155,6 +161,7 @@ source_set("audio_core_lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
@@ -162,6 +169,7 @@ source_set("audio_core_lib") {
 
   deps = [
     ":generate_schemas",
+    ":media_metrics_registry",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/fidl/fuchsia.media",

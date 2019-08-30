@@ -19,6 +19,8 @@ int main(int argc, const char** argv) {
 #ifndef NTRACE
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 #endif
+
+  // Initialize our telemetry reporter (which optimizes to nothing if ENABLE_REPORTER is set to 0).
   auto component_context = sys::ComponentContext::Create();
   REP(Init(component_context.get()));
 

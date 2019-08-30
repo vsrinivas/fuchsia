@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_REPORTER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_REPORTER_H_
 
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/inspect_deprecated/component.h>
 #include <lib/sys/cpp/component_context.h>
@@ -48,7 +49,10 @@ class AudioCapturerImpl;
 // thread access will be required when traffic metrics are added.
 //
 // TODO(dalesat): Add traffic metrics.
-// TODO(dalesat): Add cobalt logging.
+//
+// TODO(35741): Allow Cobalt and Inspect to be independently disabled. We may limit Inspect to
+// pre-release or developer builds, whereas Cobalt would be enabled even in production.
+//
 class Reporter {
  public:
   static Reporter& Singleton();
@@ -109,7 +113,14 @@ class Reporter {
                                    fuchsia::media::audio::RampType ramp_type);
   void SettingCapturerMute(const AudioCapturerImpl& capturer, bool muted);
 
+  // Logs an Underflow event to cobalt. output_duration_missed is the amount of time by which we
+  // missed a time-critical write into the output buffer.
+  void OutputUnderflow(zx_duration_t output_duration_missed, zx_time_t uptime_to_underflow);
+
  private:
+  void InitInspect();
+  void InitCobalt();
+
   struct Device {
     Device(inspect_deprecated::Node node) : node_(std::move(node)) {
       gain_db_ = node_.CreateDoubleMetric("gain db", 0.0);
@@ -206,6 +217,10 @@ class Reporter {
   std::unordered_map<const AudioCapturerImpl*, Capturer> capturers_;
   uint64_t next_renderer_name_ = 0;
   uint64_t next_capturer_name_ = 0;
+
+  // Connection to cobalt to log telemetry
+  fuchsia::cobalt::LoggerFactoryPtr cobalt_factory_;
+  fuchsia::cobalt::LoggerPtr cobalt_logger_;
 };
 
 #define REP(x) media::audio::Reporter::Singleton().x

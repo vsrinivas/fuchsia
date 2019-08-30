@@ -5,6 +5,9 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_device.h"
+#include "src/media/audio/audio_core/media_metrics_registry.cb.h"
+
+using namespace audio_output_underflow_duration_metric_dimension_time_since_boot_scope;
 
 namespace media::audio {
 
@@ -21,6 +24,11 @@ void Reporter::Init(sys::ComponentContext* component_context) {
   FXL_DCHECK(!component_context_);
   component_context_ = component_context;
 
+  InitInspect();
+  InitCobalt();
+}
+
+void Reporter::InitInspect() {
   inspector_ = inspect_deprecated::ComponentInspector::Initialize(component_context_);
   inspect_deprecated::Node& root_node = inspector_->root_tree()->GetRoot();
   failed_to_open_device_count_ = root_node.CreateUIntMetric("count of failures to open device", 0);
@@ -35,6 +43,24 @@ void Reporter::Init(sys::ComponentContext* component_context) {
   inputs_node_ = root_node.CreateChild("input devices");
   renderers_node_ = root_node.CreateChild("renderers");
   capturers_node_ = root_node.CreateChild("capturers");
+}
+
+void Reporter::InitCobalt() {
+  component_context_->svc()->Connect(cobalt_factory_.NewRequest());
+  if (!cobalt_factory_) {
+    FXL_LOG(ERROR) << "audio_core could not connect to cobalt. No metrics will be captured.";
+    return;
+  }
+
+  cobalt_factory_->CreateLoggerFromProjectName(
+      "media", fuchsia::cobalt::ReleaseStage::GA, cobalt_logger_.NewRequest(),
+      [this](fuchsia::cobalt::Status status) {
+        if (status != fuchsia::cobalt::Status::OK) {
+          FXL_PLOG(ERROR, fidl::ToUnderlying(status))
+              << "audio_core could not create Cobalt logger";
+          cobalt_logger_ = nullptr;
+        }
+      });
 }
 
 void Reporter::FailedToOpenDevice(const std::string& name, bool is_input, int err) {
@@ -327,6 +353,48 @@ std::string Reporter::NextCapturerName() {
   std::ostringstream os;
   os << ++next_capturer_name_;
   return os.str();
+}
+
+void Reporter::OutputUnderflow(zx_duration_t output_underflow_duration,
+                               zx_time_t uptime_to_underflow) {
+  // Bucket this into exponentially-increasing time since system boot.
+  // By default, bucket the overflow into the last bucket: "more than 8 minutes after startup".
+
+  int bucket = UpMoreThan64m;
+
+  if (uptime_to_underflow < ZX_SEC(15)) {
+    bucket = UpLessThan15s;
+  } else if (uptime_to_underflow < ZX_SEC(30)) {
+    bucket = UpLessThan30s;
+  } else if (uptime_to_underflow < ZX_MIN(1)) {
+    bucket = UpLessThan1m;
+  } else if (uptime_to_underflow < ZX_MIN(2)) {
+    bucket = UpLessThan2m;
+  } else if (uptime_to_underflow < ZX_MIN(4)) {
+    bucket = UpLessThan4m;
+  } else if (uptime_to_underflow < ZX_MIN(8)) {
+    bucket = UpLessThan8m;
+  } else if (uptime_to_underflow < ZX_MIN(16)) {
+    bucket = UpLessThan16m;
+  } else if (uptime_to_underflow < ZX_MIN(32)) {
+    bucket = UpLessThan32m;
+  } else if (uptime_to_underflow < ZX_MIN(64)) {
+    bucket = UpLessThan64m;
+  }
+
+  if (!cobalt_logger_) {
+    FXL_LOG(ERROR) << "UNDERFLOW: Failed to obtain the Cobalt logger";
+    return;
+  }
+
+  cobalt_logger_->LogElapsedTime(kAudioOutputUnderflowDurationMetricId, bucket, "",
+                                 output_underflow_duration, [](fuchsia::cobalt::Status status) {
+                                   if (status != fuchsia::cobalt::Status::OK &&
+                                       status != fuchsia::cobalt::Status::BUFFER_FULL) {
+                                     FXL_PLOG(ERROR, fidl::ToUnderlying(status))
+                                         << "Cobalt logger returned an error";
+                                   }
+                                 });
 }
 
 #endif  // ENABLE_REPORTER
