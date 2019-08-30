@@ -1649,10 +1649,8 @@ impl<'a> SerializeBuffer<'a> {
     }
 
     /// Gets the bytes of the body.
-    // NOTE(brunodalbo): We're panicking here if the body is not contiguous so that we
-    // can migrate downstream dependencies more gradually.
-    pub fn body(&mut self) -> &mut [u8] {
-        self.body.try_get_contiguous_mut().unwrap()
+    pub fn body(&mut self) -> &mut FragmentedBytesMut<'a> {
+        &mut self.body
     }
 
     /// Gets the bytes of the footer.
@@ -1667,33 +1665,14 @@ impl<'a> SerializeBuffer<'a> {
     /// `footer` methods borrow this `SerializeBuffer`, this is the only way to
     /// construct and operate on references to more than one section of the
     /// buffer at a time.
-    pub fn parts(&mut self) -> (&mut [u8], &mut [u8], &mut [u8]) {
-        // NOTE(brunodalbo): We're panicking here if the body is not contiguous so that we
-        // can migrate downstream dependencies more gradually.
-        (self.header.as_mut(), self.body.try_get_contiguous_mut().unwrap(), self.footer.as_mut())
+    pub fn parts(&mut self) -> (&mut [u8], &mut FragmentedBytesMut<'a>, &mut [u8]) {
+        (self.header.as_mut(), &mut self.body, self.footer.as_mut())
     }
-}
 
-// NOTE(brunodalbo): This implementation will go away and is only here to
-// provide a softer migration of downstream dependencies
-impl<'a> AsRef<[u8]> for SerializeBuffer<'a> {
-    fn as_ref(&self) -> &[u8] {
-        let body = self.body.try_get_contiguous().unwrap();
-        assert_eq!(self.header.as_ptr() as usize + self.header.len(), body.as_ptr() as usize);
-        assert_eq!(body.as_ptr() as usize + body.len(), self.footer.as_ptr() as usize);
-        let total_len = body.len() + self.header.len() + self.footer.len();
-        unsafe { std::slice::from_raw_parts(self.header.as_ptr(), total_len) }
-    }
-}
-// NOTE(brunodalbo): This implementation will go away and is only here to
-// provide a softer migration of downstream dependencies
-impl<'a> AsMut<[u8]> for SerializeBuffer<'a> {
-    fn as_mut(&mut self) -> &mut [u8] {
-        let body = self.body.try_get_contiguous().unwrap();
-        assert_eq!(self.header.as_ptr() as usize + self.header.len(), body.as_ptr() as usize);
-        assert_eq!(body.as_ptr() as usize + body.len(), self.footer.as_ptr() as usize);
-        let total_len = body.len() + self.header.len() + self.footer.len();
-        unsafe { std::slice::from_raw_parts_mut(self.header.as_mut_ptr(), total_len) }
+    /// Gets the total length of this `SerializeBuffer`, it's equal to the sum
+    /// of the lengths of header, body, and footer.
+    pub fn len(&self) -> usize {
+        self.header.len() + self.body.len() + self.footer.len()
     }
 }
 

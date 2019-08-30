@@ -72,7 +72,7 @@ use std::ops::Deref;
 use byteorder::{ByteOrder, NetworkEndian};
 use internet_checksum::Checksum;
 use net_types::ip::IpAddress;
-use packet::BufferView;
+use packet::{BufferView, SerializeBuffer};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
@@ -143,6 +143,31 @@ where
     for p in parts {
         checksum.add_bytes(p);
     }
+    Some(checksum.checksum())
+}
+
+/// Compute the checksum used by TCP and UDP.
+///
+/// Same as [`compute_transport_checksum_parts`] but gets the parts from a
+/// `SerializeBuffer`.
+pub(crate) fn compute_transport_checksum_serialize<A: IpAddress>(
+    src_ip: A,
+    dst_ip: A,
+    proto: IpProto,
+    buffer: &mut SerializeBuffer,
+) -> Option<[u8; 2]> {
+    // See for details:
+    // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
+    let mut checksum = Checksum::new();
+    let transport_len = buffer.len();
+    update_transport_checksum_pseudo_header(&mut checksum, src_ip, dst_ip, proto, transport_len)
+        .ok()?;
+
+    checksum.add_bytes(buffer.header());
+    for p in buffer.body().iter_fragments() {
+        checksum.add_bytes(p);
+    }
+    checksum.add_bytes(buffer.footer());
     Some(checksum.checksum())
 }
 

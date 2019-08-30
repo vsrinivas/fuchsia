@@ -20,7 +20,7 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::IpProto;
 use crate::transport::tcp::TcpOption;
 use crate::wire::records::options::{Options, OptionsRaw};
-use crate::wire::{compute_transport_checksum, compute_transport_checksum_parts};
+use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
 use crate::wire::{FromRaw, MaybeParsed, U16, U32};
 
 use self::options::TcpOptionsImpl;
@@ -398,52 +398,44 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
     }
 
     fn serialize(&self, buffer: &mut SerializeBuffer) {
-        let (mut header, body, _) = buffer.parts();
+        let mut header = buffer.header();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
 
         // SECURITY: Use _zero constructor to ensure we zero memory to
         // prevent leaking information from packets previously stored in
         // this buffer.
-        let hdr_prefix =
+        let mut hdr_prefix =
             header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for TCP header");
-        // create a 0-byte slice for the options since we don't support
-        // serializing options yet (NET-955)
-        let options =
-            Options::parse(&mut [][..]).expect("parsing an empty options slice should not fail");
-        let mut segment = TcpSegment { hdr_prefix, options, body };
 
-        segment.hdr_prefix.src_port = U16::new(self.src_port);
-        segment.hdr_prefix.dst_port = U16::new(self.dst_port);
-        segment.hdr_prefix.seq_num = U32::new(self.seq_num);
-        segment.hdr_prefix.ack = U32::new(self.ack_num);
+        hdr_prefix.src_port = U16::new(self.src_port);
+        hdr_prefix.dst_port = U16::new(self.dst_port);
+        hdr_prefix.seq_num = U32::new(self.seq_num);
+        hdr_prefix.ack = U32::new(self.ack_num);
         // Data Offset is hard-coded to 5 until we support serializing
         // options.
-        segment.hdr_prefix.data_offset_reserved_flags = U16::new((5u16 << 12) | self.flags);
-        segment.hdr_prefix.window_size = U16::new(self.window_size);
+        hdr_prefix.data_offset_reserved_flags = U16::new((5u16 << 12) | self.flags);
+        hdr_prefix.window_size = U16::new(self.window_size);
         // We don't support setting the Urgent Pointer.
-        segment.hdr_prefix.urg_ptr = U16::ZERO;
+        hdr_prefix.urg_ptr = U16::ZERO;
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.
-        segment.hdr_prefix.checksum = [0, 0];
+        hdr_prefix.checksum = [0, 0];
 
-        // NOTE: We stop using segment at this point so that it no longer
-        // borrows the buffer, and we can use the buffer directly.
-        let segment_len = buffer.as_ref().len();
         #[rustfmt::skip]
-        let checksum = compute_transport_checksum(
+        let checksum = compute_transport_checksum_serialize(
             self.src_ip,
             self.dst_ip,
             IpProto::Tcp,
-            buffer.as_ref(),
+            buffer,
         )
         .unwrap_or_else(|| {
             panic!(
                 "total TCP segment length of {} bytes overflows length field of pseudo-header",
-                segment_len
+                buffer.len()
             )
         });
-        buffer.as_mut()[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
+        buffer.header()[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
     }
 }
 
@@ -539,6 +531,7 @@ mod tests {
     use crate::ip::IpProto;
     use crate::testutil::benchmarks::{black_box, Bencher};
     use crate::testutil::*;
+    use crate::wire::compute_transport_checksum;
     use crate::wire::ethernet::EthernetFrame;
     use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
     use crate::wire::ipv6::Ipv6Packet;

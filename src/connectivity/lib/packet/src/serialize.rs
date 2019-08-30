@@ -2479,4 +2479,129 @@ mod tests {
         test_expect_realloc(0..9, 1, 1);
         test_expect_realloc(1..10, 1, 1);
     }
+
+    /// Simple Vec-backed buffer to test fragmented buffers implementation.
+    ///
+    /// `ScatterGatherBuf` keeps:
+    /// - an inner buffer `inner`, which is always part of its body.
+    /// - extra backing memory in `data`.
+    ///
+    /// `data` has two "root" regions, marked by the midpoint `mid`. Everything
+    /// left of `mid` is this buffer's prefix, and after `mid` is this buffer's
+    /// suffix.
+    ///
+    /// The `range` field keeps the range in `data` that contains *filled*
+    /// prefix and suffix information. `range.start` is always less than or
+    /// equal to `mid` and `range.end` is always greater than or equal to `mid`,
+    /// such that growing the front of the buffer means decrementing
+    /// `range.start` and growing the back of the buffer means incrementing
+    /// `range.end`.
+    ///
+    ///  At any time this buffer's parts are:
+    /// - Free prefix data in range `0..range.start`.
+    /// - Used prefix data (now part of body) in range `range.start..mid`.
+    /// - Inner buffer body in `inner`.
+    /// - Used suffix data (now part of body) in range `mid..range.end`.
+    /// - Free suffix data in range `range.end..`
+    struct ScatterGatherBuf<B> {
+        data: Vec<u8>,
+        mid: usize,
+        range: Range<usize>,
+        inner: B,
+    }
+
+    impl<B: BufferMut> FragmentedBuffer for ScatterGatherBuf<B> {
+        fn len(&self) -> usize {
+            self.inner.len() + (self.range.end - self.range.start)
+        }
+
+        fn with_bytes<R, F>(&self, f: F) -> R
+        where
+            F: FnOnce(FragmentedBytes<'_>) -> R,
+        {
+            let (_, rest) = self.data.split_at(self.range.start);
+            let (prefix_b, rest) = rest.split_at(self.mid - self.range.start);
+            let (suffix_b, _) = rest.split_at(self.range.end - self.mid);
+            let mut bytes = [prefix_b, self.inner.as_ref(), suffix_b];
+            f(FragmentedBytes::new(&mut bytes[..]))
+        }
+    }
+
+    impl<B: BufferMut> FragmentedBufferMut for ScatterGatherBuf<B> {
+        fn with_bytes_mut<R, F>(&mut self, f: F) -> R
+        where
+            F: FnOnce(FragmentedBytesMut<'_>) -> R,
+        {
+            let (_, rest) = self.data.split_at_mut(self.range.start);
+            let (prefix_b, rest) = rest.split_at_mut(self.mid - self.range.start);
+            let (suffix_b, _) = rest.split_at_mut(self.range.end - self.mid);
+            let mut bytes = [prefix_b, self.inner.as_mut(), suffix_b];
+            f(FragmentedBytesMut::new(&mut bytes[..]))
+        }
+    }
+
+    impl<B: BufferMut> GrowBuffer for ScatterGatherBuf<B> {
+        fn prefix_len(&self) -> usize {
+            self.range.start
+        }
+
+        fn suffix_len(&self) -> usize {
+            self.data.len() - self.range.end
+        }
+
+        fn grow_front(&mut self, n: usize) {
+            self.range.start -= n;
+        }
+
+        fn grow_back(&mut self, n: usize) {
+            self.range.end += n;
+            assert!(self.range.end <= self.data.len());
+        }
+    }
+
+    impl<B: BufferMut> GrowBufferMut for ScatterGatherBuf<B> {}
+
+    impl<B: BufferMut> TargetBuffer for ScatterGatherBuf<B> {
+        fn with_parts<O, F>(&mut self, f: F) -> O
+        where
+            F: for<'a> FnOnce(&'a mut [u8], FragmentedBytesMut<'a>, &'a mut [u8]) -> O,
+        {
+            let (prefix, rest) = self.data.split_at_mut(self.range.start);
+            let (prefix_b, rest) = rest.split_at_mut(self.mid - self.range.start);
+            let (suffix_b, suffix) = rest.split_at_mut(self.range.end - self.mid);
+            let mut bytes = [prefix_b, self.inner.as_mut(), suffix_b];
+            f(prefix, bytes.as_fragmented_byte_slice(), suffix)
+        }
+    }
+
+    struct ScatterGatherProvider;
+
+    impl<B: BufferMut> BufferProvider<B, ScatterGatherBuf<B>> for ScatterGatherProvider {
+        type Error = Never;
+
+        fn reuse_or_realloc(
+            self,
+            buffer: B,
+            prefix: usize,
+            suffix: usize,
+        ) -> Result<ScatterGatherBuf<B>, (Self::Error, B)> {
+            let inner = buffer;
+            let data = vec![0; prefix + suffix];
+            let range = Range { start: prefix, end: prefix };
+            let mid = prefix;
+            Ok(ScatterGatherBuf { inner, data, range, mid })
+        }
+    }
+
+    #[test]
+    fn test_scatter_gather_serialize() {
+        // Assert that a buffer composed of different allocations can be used as
+        // a serialization target, while reusing an internal body buffer.
+        let buf = Buf::new(vec![10, 20, 30, 40, 50], ..);
+        let pb = DummyPacketBuilder::new(3, 2, 0, MAX_USIZE);
+        let ser = buf.encapsulate(pb);
+        let result = ser.serialize_outer(ScatterGatherProvider {}).unwrap();
+        let flattened = result.to_flattened_vec();
+        assert_eq!(&flattened[..], &[0xFF, 0xFF, 0xFF, 10, 20, 30, 40, 50, 0xFE, 0xFE]);
+    }
 }

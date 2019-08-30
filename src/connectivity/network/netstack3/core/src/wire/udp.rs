@@ -20,7 +20,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, IpVersionMarker};
-use crate::wire::{compute_transport_checksum, compute_transport_checksum_parts};
+use crate::wire::{compute_transport_checksum_parts, compute_transport_checksum_serialize};
 use crate::wire::{FromRaw, MaybeParsed, U16};
 
 pub(crate) const HEADER_BYTES: usize = 8;
@@ -338,19 +338,20 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
     fn serialize(&self, buffer: &mut SerializeBuffer) {
         // See for details: https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 
-        let (mut header, body, _) = buffer.parts();
+        let total_len = buffer.len();
+        let mut header = buffer.header();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
 
         // SECURITY: Use _zero constructor to ensure we zero memory to
         // prevent leaking information from packets previously stored in
         // this buffer.
-        let header = header.take_obj_front_zero::<Header>().expect("too few bytes for UDP header");
-        let mut packet = UdpPacket { header, body };
+        let mut header =
+            header.take_obj_front_zero::<Header>().expect("too few bytes for UDP header");
 
-        packet.header.src_port = U16::new(self.src_port.map(NonZeroU16::get).unwrap_or(0));
-        packet.header.dst_port = U16::new(self.dst_port.get());
-        let total_len = packet.total_packet_len();
+        header.src_port = U16::new(self.src_port.map(NonZeroU16::get).unwrap_or(0));
+        header.dst_port = U16::new(self.dst_port.get());
+
         let len_field = total_len.try_into().unwrap_or_else(|_| {
             if A::Version::VERSION.is_v6() {
                 // See comment in max_body_len
@@ -361,26 +362,23 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
                 total_len)
             }
         });
-        packet.header.length = U16::new(len_field);
+        header.length = U16::new(len_field);
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.
-        packet.header.checksum = [0, 0];
+        header.checksum = [0, 0];
 
-        // NOTE: We stop using packet at this point so that it no longer borrows
-        // the buffer, and we can use the buffer directly.
-        let packet_len = buffer.as_ref().len();
         let mut checksum =
-            compute_transport_checksum(self.src_ip, self.dst_ip, IpProto::Udp, buffer.as_ref())
+            compute_transport_checksum_serialize(self.src_ip, self.dst_ip, IpProto::Udp, buffer)
                 .unwrap_or_else(|| {
                     panic!(
-                    "total UDP packet length of {} bytes overflows length field of pseudo-header",
-                    packet_len
-                )
+                "total UDP packet length of {} bytes overflows length field of pseudo-header",
+                total_len
+            )
                 });
         if checksum == [0, 0] {
             checksum = [0xFF, 0xFF];
         }
-        buffer.as_mut()[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
+        buffer.header()[CHECKSUM_RANGE].copy_from_slice(&checksum[..]);
     }
 }
 

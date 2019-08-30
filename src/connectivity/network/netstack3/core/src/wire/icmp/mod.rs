@@ -31,7 +31,8 @@ use internet_checksum::Checksum;
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use never::Never;
 use packet::{
-    BufferView, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
+    AsFragmentedByteSlice, BufferView, FragmentedByteSlice, PacketBuilder, PacketConstraints,
+    ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -491,6 +492,37 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     }
 }
 
+fn compute_checksum_fragmented<
+    I: IcmpIpExt,
+    B: ByteSlice,
+    BB: packet::Fragment,
+    M: IcmpMessage<I, B>,
+>(
+    header: &Header<M>,
+    message_body: &FragmentedByteSlice<BB>,
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+) -> Option<[u8; 2]> {
+    let mut c = Checksum::new();
+    if I::VERSION.is_v6() {
+        c.add_bytes(src_ip.bytes());
+        c.add_bytes(dst_ip.bytes());
+        let icmpv6_len = mem::size_of::<Header<M>>() + message_body.len();
+        let mut len_bytes = [0; 4];
+        NetworkEndian::write_u32(&mut len_bytes, icmpv6_len.try_into().ok()?);
+        c.add_bytes(&len_bytes[..]);
+        c.add_bytes(&[0, 0, 0]);
+        c.add_bytes(&[IpProto::Icmpv6.into()]);
+    }
+    c.add_bytes(&[header.prefix.msg_type, header.prefix.code]);
+    c.add_bytes(&header.prefix.checksum);
+    c.add_bytes(header.message.as_bytes());
+    for p in message_body.iter_fragments() {
+        c.add_bytes(p);
+    }
+    Some(c.checksum())
+}
+
 impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     /// Compute the checksum, including the checksum field itself.
     ///
@@ -502,22 +534,8 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
         src_ip: I::Addr,
         dst_ip: I::Addr,
     ) -> Option<[u8; 2]> {
-        let mut c = Checksum::new();
-        if I::VERSION.is_v6() {
-            c.add_bytes(src_ip.bytes());
-            c.add_bytes(dst_ip.bytes());
-            let icmpv6_len = mem::size_of::<Header<M>>() + message_body.len();
-            let mut len_bytes = [0; 4];
-            NetworkEndian::write_u32(&mut len_bytes, icmpv6_len.try_into().ok()?);
-            c.add_bytes(&len_bytes[..]);
-            c.add_bytes(&[0, 0, 0]);
-            c.add_bytes(&[IpProto::Icmpv6.into()]);
-        }
-        c.add_bytes(&[header.prefix.msg_type, header.prefix.code]);
-        c.add_bytes(&header.prefix.checksum);
-        c.add_bytes(header.message.as_bytes());
-        c.add_bytes(message_body);
-        Some(c.checksum())
+        let mut body = [message_body];
+        compute_checksum_fragmented(header, &body.as_fragmented_byte_slice(), src_ip, dst_ip)
     }
 }
 
@@ -636,18 +654,13 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
         header.prefix.set_msg_type(M::TYPE);
         header.prefix.code = self.code.into();
         header.message = self.msg;
-        let checksum = IcmpPacket::<I, B, M>::compute_checksum(
-            &header,
-            message_body,
-            self.src_ip,
-            self.dst_ip,
-        )
-        .unwrap_or_else(|| {
-            panic!(
-                "total ICMP packet length of {} overflows 32-bit length field of pseudo-header",
-                header.bytes().len() + message_body.len(),
-            )
-        });
+        let checksum = compute_checksum_fragmented(&header, message_body, self.src_ip, self.dst_ip)
+            .unwrap_or_else(|| {
+                panic!(
+                    "total ICMP packet length of {} overflows 32-bit length field of pseudo-header",
+                    header.bytes().len() + message_body.len(),
+                )
+            });
         header.prefix.checksum = checksum;
     }
 }

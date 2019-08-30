@@ -22,8 +22,8 @@ use std::mem;
 use internet_checksum::Checksum;
 use net_types::ip::Ipv4Addr;
 use packet::{
-    BufferView, InnerPacketBuilder, PacketBuilder, PacketConstraints, ParsablePacket,
-    ParseMetadata, SerializeBuffer,
+    AsFragmentedByteSlice, BufferView, FragmentedByteSlice, InnerPacketBuilder, PacketBuilder,
+    PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -148,7 +148,11 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
 }
 
 impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
-    fn serialize_headers(&self, mut headers_buff: &mut [u8], body: &[u8]) {
+    fn serialize_headers<BB: packet::Fragment>(
+        &self,
+        mut headers_buff: &mut [u8],
+        body: &FragmentedByteSlice<BB>,
+    ) {
         use packet::BufferViewMut;
         let mut bytes = &mut headers_buff;
         // SECURITY: Use _zero constructors to ensure we zero memory to prevent
@@ -162,7 +166,7 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
             bytes.take_obj_front_zero::<M::FixedHeader>().expect("too few bytes for IGMP message");
         *header = self.message_header;
 
-        let checksum = IgmpMessage::<B, M>::compute_checksum(&header_prefix, &header.bytes(), body);
+        let checksum = compute_checksum_fragmented(&header_prefix, &header.bytes(), body);
         header_prefix.checksum = checksum;
     }
 }
@@ -175,7 +179,8 @@ impl<B, M: MessageType<B, VariableBody = ()>> InnerPacketBuilder for IgmpPacketB
     }
 
     fn serialize(&self, buffer: &mut [u8]) {
-        self.serialize_headers(buffer, &[]);
+        let empty = FragmentedByteSlice::<&'static [u8]>::new_empty();
+        self.serialize_headers(buffer, &empty);
     }
 }
 
@@ -253,14 +258,25 @@ impl<B: ByteSlice, M: MessageType<B>> IgmpMessage<B, M> {
     }
 }
 
+fn compute_checksum_fragmented<BB: packet::Fragment>(
+    header_prefix: &HeaderPrefix,
+    header: &[u8],
+    body: &FragmentedByteSlice<BB>,
+) -> [u8; 2] {
+    let mut c = Checksum::new();
+    c.add_bytes(&[header_prefix.msg_type, header_prefix.max_resp_code]);
+    c.add_bytes(&header_prefix.checksum);
+    c.add_bytes(header);
+    for p in body.iter_fragments() {
+        c.add_bytes(p);
+    }
+    c.checksum()
+}
+
 impl<B, M: MessageType<B>> IgmpMessage<B, M> {
     fn compute_checksum(header_prefix: &HeaderPrefix, header: &[u8], body: &[u8]) -> [u8; 2] {
-        let mut c = Checksum::new();
-        c.add_bytes(&[header_prefix.msg_type, header_prefix.max_resp_code]);
-        c.add_bytes(&header_prefix.checksum);
-        c.add_bytes(header);
-        c.add_bytes(body);
-        c.checksum()
+        let mut body = [body];
+        compute_checksum_fragmented(header_prefix, header, &body.as_fragmented_byte_slice())
     }
 }
 

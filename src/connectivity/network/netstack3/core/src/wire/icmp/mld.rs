@@ -15,8 +15,7 @@ use std::time::Duration;
 
 use net_types::ip::{Ipv6, Ipv6Addr};
 use net_types::MulticastAddr;
-use packet::serialize::{InnerPacketBuilder, PacketBuilder};
-use packet::{PacketConstraints, SerializeBuffer};
+use packet::serialize::InnerPacketBuilder;
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
@@ -224,17 +223,6 @@ impl<M: Mldv1MessageType> InnerPacketBuilder for Mldv1MessageBuilder<M> {
 
     fn serialize(&self, mut buf: &mut [u8]) {
         self.serialize_message(buf);
-    }
-}
-
-impl<M: Mldv1MessageType> PacketBuilder for Mldv1MessageBuilder<M> {
-    fn constraints(&self) -> PacketConstraints {
-        PacketConstraints::new(0, 0, size_of::<Mldv1Message>(), size_of::<Mldv1Message>())
-    }
-
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
-        let (_, body, _) = buffer.parts();
-        self.serialize_message(body);
     }
 }
 

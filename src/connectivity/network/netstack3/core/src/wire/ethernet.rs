@@ -204,30 +204,27 @@ impl PacketBuilder for EthernetFrameBuilder {
         // length of the body in bytes. We don't need to validate this because
         // the EtherType enum has no variants with values in that range.
 
-        let (mut header, mut body, _) = buffer.parts();
+        let total_len = buffer.header().len() + buffer.body().len();
+        let mut header = buffer.header();
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
 
-        let mut frame = {
-            // SECURITY: Use _zero constructors to ensure we zero memory to
-            // prevent leaking information from packets previously stored in
-            // this buffer.
-            let hdr_prefix = header
-                .take_obj_front_zero::<HeaderPrefix>()
-                .expect("too few bytes for Ethernet header");
-            let ethertype =
-                header.take_obj_front_zero().expect("too few bytes for Ethernet header");
-            EthernetFrame { hdr_prefix, tag: None, ethertype, body }
-        };
+        // SECURITY: Use _zero constructors to ensure we zero memory to
+        // prevent leaking information from packets previously stored in
+        // this buffer.
+        let mut hdr_prefix = header
+            .take_obj_front_zero::<HeaderPrefix>()
+            .expect("too few bytes for Ethernet header");
+        let mut ethertype =
+            header.take_obj_front_zero::<U16>().expect("too few bytes for Ethernet header");
 
-        let total_len = frame.total_frame_len();
         if total_len < 60 {
             panic!("total frame size of {} bytes is below minimum frame size of 60", total_len);
         }
 
-        frame.hdr_prefix.src_mac = self.src_mac;
-        frame.hdr_prefix.dst_mac = self.dst_mac;
-        *frame.ethertype = U16::new(self.ethertype);
+        hdr_prefix.src_mac = self.src_mac;
+        hdr_prefix.dst_mac = self.dst_mac;
+        ethertype.set(self.ethertype);
     }
 }
 
@@ -408,12 +405,10 @@ mod tests {
     #[should_panic]
     fn test_serialize_panic() {
         // create with a body which is below the minimum length
-        let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
+        let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN - 1];
         let mut b = [&mut buf[..]];
         let buf = b.as_fragmented_byte_slice();
-        let (head, body, foot) = buf
-            .try_split_contiguous((ETHERNET_MIN_FRAME_LEN - (ETHERNET_MIN_BODY_LEN_WITH_TAG - 1))..)
-            .unwrap();
+        let (head, body, foot) = buf.try_split_contiguous(ETHERNET_HDR_LEN_NO_TAG..).unwrap();
         let mut buffer = SerializeBuffer::new(head, body, foot);
         EthernetFrameBuilder::new(
             Mac::new([0, 1, 2, 3, 4, 5]),
