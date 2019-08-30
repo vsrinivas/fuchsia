@@ -48,7 +48,8 @@ class FakeDebugData : public fuchsia::debugdata::DebugData {
   uint64_t call_count_ = 0;
 };
 
-TEST(Run, ExposesDebugDataService) {
+// TODO(35434): Fix and enable.
+TEST(Run, DISABLED_ExposesDebugDataService) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
