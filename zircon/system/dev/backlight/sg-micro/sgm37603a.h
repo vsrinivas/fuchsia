@@ -5,13 +5,18 @@
 #ifndef ZIRCON_SYSTEM_DEV_BACKLIGHT_SG_MICRO_SGM37603A_H_
 #define ZIRCON_SYSTEM_DEV_BACKLIGHT_SG_MICRO_SGM37603A_H_
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/gpio.h>
 #include <fuchsia/hardware/backlight/c/fidl.h>
 #include <lib/device-protocol/i2c-channel.h>
 
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/gpio.h>
+
 namespace backlight {
+
+// TODO(rashaeqbal): We can set a 12-bit brightness value with I2C. Bump up this max and change the
+// I2C writes accordingly.
+constexpr uint8_t kMaxBrightnessRegValue = 0xFF;
 
 class Sgm37603a;
 using DeviceType = ddk::Device<Sgm37603a, ddk::Messageable>;
@@ -33,8 +38,8 @@ class Sgm37603a : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BACKL
   virtual zx_status_t EnableBacklight();
   virtual zx_status_t DisableBacklight();
 
-  zx_status_t GetBacklightState(bool* power, uint8_t* brightness);
-  zx_status_t SetBacklightState(bool power, uint8_t brightness);
+  zx_status_t GetBacklightState(bool* power, double* brightness);
+  zx_status_t SetBacklightState(bool power, double brightness);
 
  private:
   static zx_status_t GetState(void* ctx, fidl_txn_t* txn);
@@ -48,7 +53,7 @@ class Sgm37603a : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_BACKL
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient reset_gpio_;
   bool enabled_ = false;
-  uint8_t brightness_ = 0;
+  double brightness_ = 0.0;
 };
 
 }  // namespace backlight

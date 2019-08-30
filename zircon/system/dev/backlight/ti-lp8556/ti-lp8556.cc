@@ -3,68 +3,60 @@
 // found in the LICENSE file.
 #include "ti-lp8556.h"
 
+#include <lib/device-protocol/i2c.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <lib/device-protocol/i2c.h>
 
 namespace ti {
-
-namespace {
-constexpr uint8_t kBacklightControlReg = 0x0;
-constexpr uint8_t kDeviceControlReg = 0x1;
-constexpr uint8_t kCfg2Reg = 0xA2;
-
-constexpr uint8_t kBacklightOn = 0x05;
-constexpr uint8_t kBacklightOff = 0x04;
-constexpr uint8_t kCfg2Default = 0x20;
-}  // namespace
-
-zx_status_t Lp8556Device::Bind() {
-  // Obtain I2C protocol needed to control backlight
-  auto status = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c_);
-  if (status != ZX_OK) {
-    LOG_ERROR("Could not obtain I2C protocol\n");
-    return status;
-  }
-
-  status = DdkAdd("ti-lp8556");
-  if (status != ZX_OK) {
-    LOG_ERROR("Could not add device\n");
-    return status;
-  }
-  return ZX_OK;
-}
 
 void Lp8556Device::DdkUnbind() { DdkRemove(); }
 
 void Lp8556Device::DdkRelease() { delete this; }
 
-zx_status_t Lp8556Device::GetBacklightState(bool* power, uint8_t* brightness) {
+zx_status_t Lp8556Device::GetBacklightState(bool* power, double* brightness) {
   *power = power_;
   *brightness = brightness_;
   return ZX_OK;
 }
 
-zx_status_t Lp8556Device::SetBacklightState(bool power, uint8_t brightness) {
+zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
+  brightness = fbl::max(brightness, 0.0);
+  brightness = fbl::min(brightness, 1.0);
+
   if (brightness != brightness_) {
     uint8_t buf[2];
     buf[0] = kBacklightControlReg;
-    buf[1] = brightness;
-    i2c_write_sync(&i2c_, buf, 2);
+    buf[1] = static_cast<uint8_t>(brightness * kMaxBrightnessRegValue);
+    zx_status_t status = i2c_.WriteSync(buf, sizeof(buf));
+    if (status != ZX_OK) {
+      LOG_ERROR("Failed to set brightness register\n");
+      return status;
+    }
   }
 
   if (power != power_) {
     uint8_t buf[2];
     buf[0] = kDeviceControlReg;
     buf[1] = power ? kBacklightOn : kBacklightOff;
-    i2c_write_sync(&i2c_, buf, 2);
+    zx_status_t status = i2c_.WriteSync(buf, sizeof(buf));
+    if (status != ZX_OK) {
+      LOG_ERROR("Failed to set device control register\n");
+      return status;
+    }
+
     if (power) {
       buf[0] = kCfg2Reg;
       buf[1] = kCfg2Default;
-      i2c_write_sync(&i2c_, buf, 2);
+      status = i2c_.WriteSync(buf, sizeof(buf));
+      if (status != ZX_OK) {
+        LOG_ERROR("Failed to set cfg2 register\n");
+        return status;
+      }
     }
   }
 
@@ -77,13 +69,13 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, uint8_t brightness) {
 static zx_status_t GetState(void* ctx, fidl_txn_t* txn) {
   fuchsia_hardware_backlight_State state;
   auto& self = *static_cast<ti::Lp8556Device*>(ctx);
-  self.GetBacklightState(&state.on, &state.brightness);
+  self.GetBacklightState(&state.backlight_on, &state.brightness);
   return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
 }
 
 static zx_status_t SetState(void* ctx, const fuchsia_hardware_backlight_State* state) {
   auto& self = *static_cast<ti::Lp8556Device*>(ctx);
-  self.SetBacklightState(state->on, state->brightness);
+  self.SetBacklightState(state->backlight_on, state->brightness);
   return ZX_OK;
 }
 
@@ -97,17 +89,30 @@ zx_status_t Lp8556Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
+  // Obtain I2C protocol needed to control backlight
+  i2c_protocol_t i2c;
+  auto status = device_get_protocol(parent, ZX_PROTOCOL_I2C, &i2c);
+  if (status != ZX_OK) {
+    LOG_ERROR("Could not obtain I2C protocol\n");
+    return status;
+  }
+  ddk::I2cChannel i2c_channel(&i2c);
+
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<ti::Lp8556Device>(&ac, parent);
+  auto dev = fbl::make_unique_checked<ti::Lp8556Device>(&ac, parent, std::move(i2c_channel));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  auto status = dev->Bind();
-  if (status == ZX_OK) {
-    // devmgr is now in charge of memory for dev
-    __UNUSED auto ptr = dev.release();
+  status = dev->DdkAdd("ti-lp8556");
+  if (status != ZX_OK) {
+    LOG_ERROR("Could not add device\n");
+    return status;
   }
+
+  // devmgr is now in charge of memory for dev
+  __UNUSED auto ptr = dev.release();
+
   return status;
 }
 

@@ -22,7 +22,7 @@ zx_status_t get_state(void* ctx, fidl_txn_t* txn) {
   fuchsia_hardware_backlight_State state;
   {
     fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
-    static_cast<i915::display_ref_t*>(ctx)->display_device->GetBacklightState(&state.on,
+    static_cast<i915::display_ref_t*>(ctx)->display_device->GetBacklightState(&state.backlight_on,
                                                                               &state.brightness);
   }
   return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
@@ -31,7 +31,7 @@ zx_status_t get_state(void* ctx, fidl_txn_t* txn) {
 zx_status_t set_state(void* ctx, const fuchsia_hardware_backlight_State* state) {
   fbl::AutoLock lock(&static_cast<i915::display_ref_t*>(ctx)->mtx);
 
-  static_cast<i915::display_ref_t*>(ctx)->display_device->SetBacklightState(state->on,
+  static_cast<i915::display_ref_t*>(ctx)->display_device->SetBacklightState(state->backlight_on,
                                                                             state->brightness);
   return ZX_OK;
 }
@@ -166,7 +166,7 @@ void DisplayDevice::InitBacklight() {
       LOG_WARN("Failed to add backlight (%d)\n", status);
     }
 
-    SetBacklightState(true, 255);
+    SetBacklightState(true, 1.0);
   }
 }
 

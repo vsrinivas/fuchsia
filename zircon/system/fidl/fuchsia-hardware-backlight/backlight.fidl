@@ -4,18 +4,24 @@
 
 library fuchsia.hardware.backlight;
 
+// TODO(rashaeqbal): Add units in State to indicate normalized units / nits
 struct State {
-    bool on;
-    // The unitless brightness value on a linear scale where 0 is the minimum
-    // brightness and 255 is the maximum brightness.
-    uint8 brightness;
+    bool backlight_on;
+    /// The unitless brightness value on a linear scale where 0.0 is the minimum
+    /// brightness and 1.0 is the maximum brightness - represents the current /
+    /// desired brightness as a percentage within the supported range.
+    float64 brightness;
 };
 
 [Layout = "Simple"]
 protocol Device {
-    // Gets the current backlight brightness
+    /// Gets the current backlight brightness
     GetState() -> (State state);
 
-    // Sets the current backlight brightness
+    // TODO(rashaeqbal): Return errors on failure
+    /// Sets the current backlight brightness
     SetState(State state);
+
+    // TODO(rashaeqbal): Add a call to query the supported brightness range,
+    // will be useful when we support brightness changes in nits.
 };

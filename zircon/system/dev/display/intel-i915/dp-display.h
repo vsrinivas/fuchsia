@@ -94,8 +94,8 @@ class DpDisplay : public DisplayDevice {
 
   bool HandleHotplug(bool long_pulse) override;
   bool HasBacklight() override;
-  void SetBacklightState(bool power, uint8_t brightness) override;
-  void GetBacklightState(bool* power, uint8_t* brightness) override;
+  void SetBacklightState(bool power, double brightness) override;
+  void GetBacklightState(bool* power, double* brightness) override;
 
   uint8_t dpcd_capability(uint16_t addr) { return dpcd_capabilities_[addr - dpcd::DPCD_CAP_START]; }
   uint8_t dpcd_edp_capability(uint16_t addr) {

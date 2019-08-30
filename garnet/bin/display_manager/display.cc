@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 #include "display.h"
-#include "src/lib/fxl/logging.h"
 
 #include <fcntl.h>
 #include <fuchsia/hardware/backlight/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace display {
 
 #define DEVICE_PATH "/dev/class/backlight/000"
-#define BRIGHTNESS_BASE 255;
 
 Display::Display(zx::channel channel) : channel_(std::move(channel)) {}
 
@@ -46,14 +46,13 @@ bool Display::GetBrightness(double* brightness) {
     return false;
   }
 
-  *brightness = (state.brightness * 1.0f) / BRIGHTNESS_BASE;
+  *brightness = state.brightness;
   return true;
 }
 
 bool Display::SetBrightness(double brightness) {
-  const uint32_t adjustBrightness = brightness * BRIGHTNESS_BASE;
-  fuchsia_hardware_backlight_State state = {.on = brightness > 0,
-                                            .brightness = (uint8_t)adjustBrightness};
+  fuchsia_hardware_backlight_State state = {.backlight_on = brightness > 0,
+                                            .brightness = brightness};
   zx_status_t status = fuchsia_hardware_backlight_DeviceSetState(channel_.get(), &state);
 
   if (status != ZX_OK) {

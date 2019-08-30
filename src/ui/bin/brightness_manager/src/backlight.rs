@@ -22,13 +22,13 @@ pub fn open_backlight() -> Result<BacklightProxy, Error> {
 
 pub async fn get_brightness(backlight: &BacklightProxy) -> Result<u8, Error> {
     let backlight_info = backlight.get_state().await?;
-    Ok(backlight_info.brightness)
+    Ok((backlight_info.brightness * 255.0) as u8)
 }
 
 pub fn set_brightness(backlight: &BacklightProxy, nits: u16) -> Result<(), Error> {
     backlight.set_state(&mut BacklightState {
-        on: nits != 0,
-        brightness: nits as u8,
+        backlight_on: nits != 0,
+        brightness: nits as f64 / 255.0,
     })?;
     Ok(())
 }

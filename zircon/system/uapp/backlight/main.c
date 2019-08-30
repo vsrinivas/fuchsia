@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
       printf("Get backlight state failed %d\n", status);
       return -1;
     }
-    printf("Backlight:%s Brightness:%d\n", state.on ? "on" : "off", state.brightness);
+    printf("Backlight:%s Brightness:%f\n", state.backlight_on ? "on" : "off", state.brightness);
     return 0;
   }
 
@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     on = true;
   }
 
-  fuchsia_hardware_backlight_State state = {.on = on, .brightness = (uint8_t)brightness};
+  fuchsia_hardware_backlight_State state = {.backlight_on = on, .brightness = (uint8_t)brightness};
   zx_status_t status = fuchsia_hardware_backlight_DeviceSetState(channel, &state);
   if (status != ZX_OK) {
     printf("Set brightness failed %d\n", status);

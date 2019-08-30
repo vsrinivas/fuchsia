@@ -8,6 +8,7 @@
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
+#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
 
@@ -85,7 +86,7 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = device->SetBacklightState(true, 255);
+  status = device->SetBacklightState(true, 1.0);
   if (status != ZX_OK) {
     return status;
   }
@@ -133,13 +134,13 @@ zx_status_t Sgm37603a::DisableBacklight() {
 zx_status_t Sgm37603a::GetState(void* ctx, fidl_txn_t* txn) {
   fuchsia_hardware_backlight_State state;
   auto& self = *static_cast<backlight::Sgm37603a*>(ctx);
-  self.GetBacklightState(&state.on, &state.brightness);
+  self.GetBacklightState(&state.backlight_on, &state.brightness);
   return fuchsia_hardware_backlight_DeviceGetState_reply(txn, &state);
 }
 
 zx_status_t Sgm37603a::SetState(void* ctx, const fuchsia_hardware_backlight_State* state) {
   auto& self = *static_cast<backlight::Sgm37603a*>(ctx);
-  self.SetBacklightState(state->on, state->brightness);
+  self.SetBacklightState(state->backlight_on, state->brightness);
   return ZX_OK;
 }
 
@@ -147,13 +148,13 @@ zx_status_t Sgm37603a::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_backlight_Device_dispatch(this, txn, msg, &fidl_ops_);
 }
 
-zx_status_t Sgm37603a::GetBacklightState(bool* power, uint8_t* brightness) {
+zx_status_t Sgm37603a::GetBacklightState(bool* power, double* brightness) {
   *power = enabled_;
   *brightness = brightness_;
   return ZX_OK;
 }
 
-zx_status_t Sgm37603a::SetBacklightState(bool power, uint8_t brightness) {
+zx_status_t Sgm37603a::SetBacklightState(bool power, double brightness) {
   if (!power) {
     enabled_ = false;
     brightness_ = 0;
@@ -168,9 +169,12 @@ zx_status_t Sgm37603a::SetBacklightState(bool power, uint8_t brightness) {
     }
   }
 
+  brightness = fbl::max(brightness, 0.0);
+  brightness = fbl::min(brightness, 1.0);
+
   const uint8_t brightness_regs[][2] = {
       {kBrightnessLsb, 0},
-      {kBrightnessMsb, brightness},
+      {kBrightnessMsb, static_cast<uint8_t>(brightness * kMaxBrightnessRegValue)},
   };
 
   for (size_t i = 0; i < countof(brightness_regs); i++) {

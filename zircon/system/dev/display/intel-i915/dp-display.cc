@@ -4,11 +4,12 @@
 
 #include "dp-display.h"
 
-#include <ddk/driver.h>
 #include <endian.h>
 #include <math.h>
 #include <string.h>
 #include <zircon/assert.h>
+
+#include <ddk/driver.h>
 
 #include "intel-i915.h"
 #include "macros.h"
@@ -1317,18 +1318,20 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
 
 bool DpDisplay::HasBacklight() { return controller()->igd_opregion().IsEdp(ddi()); }
 
-void DpDisplay::SetBacklightState(bool power, uint8_t brightness) {
+void DpDisplay::SetBacklightState(bool power, double brightness) {
   SetBacklightOn(power);
 
+  brightness = fbl::max(brightness, 0.0);
+  brightness = fbl::min(brightness, 1.0);
+
   double range = 1.0f - controller()->igd_opregion().GetMinBacklightBrightness();
-  double percent = static_cast<double>(brightness) / 255.0f;
-  SetBacklightBrightness((range * percent) +
+  SetBacklightBrightness((range * brightness) +
                          controller()->igd_opregion().GetMinBacklightBrightness());
 }
 
-void DpDisplay::GetBacklightState(bool* power, uint8_t* brightness) {
+void DpDisplay::GetBacklightState(bool* power, double* brightness) {
   *power = IsBacklightOn();
-  *brightness = static_cast<uint8_t>(GetBacklightBrightness() * 255);
+  *brightness = GetBacklightBrightness();
 }
 
 bool DpDisplay::CheckPixelRate(uint64_t pixel_rate) {

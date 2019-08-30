@@ -8,3 +8,16 @@ group("backlight") {
     "ti-lp8556",
   ]
 }
+
+test("backlight-test") {
+  testonly = true
+  output_name = "backlight-test"
+  sources = [
+    "backlight-test.cc",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-backlight:c",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}

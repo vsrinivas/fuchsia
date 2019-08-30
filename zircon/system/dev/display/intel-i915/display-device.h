@@ -5,10 +5,11 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_DISPLAY_DEVICE_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_DISPLAY_DEVICE_H_
 
-#include <ddk/protocol/display/controller.h>
-#include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
+
+#include <ddk/protocol/display/controller.h>
+#include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
 
 #include "gtt.h"
@@ -67,8 +68,8 @@ class DisplayDevice {
   void set_is_hdmi(bool is_hdmi) { is_hdmi_ = is_hdmi; }
 
   virtual bool HasBacklight() { return false; }
-  virtual void SetBacklightState(bool power, uint8_t brightness) {}
-  virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
+  virtual void SetBacklightState(bool power, double brightness) {}
+  virtual void GetBacklightState(bool* power, double* brightness) {}
 
   virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;
 

@@ -4,8 +4,9 @@
 
 #include "sgm37603a.h"
 
-#include <fbl/vector.h>
 #include <lib/mock-i2c/mock-i2c.h>
+
+#include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
 namespace backlight {
@@ -100,22 +101,24 @@ TEST(BacklightTest, Brightness) {
   mock_i2c::MockI2c mock_i2c;
   MockSgm37603a test(ddk::I2cChannel(mock_i2c.GetProto()));
 
-  EXPECT_OK(test.SetBacklightState(false, 127));
+  EXPECT_OK(test.SetBacklightState(false, 0.5));
   EXPECT_TRUE(test.disable_called());
 
   test.Reset();
   ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
   bool power = true;
-  uint8_t brightness = 255;
+  double brightness = 1.0;
 
   EXPECT_OK(test.GetBacklightState(&power, &brightness));
   EXPECT_FALSE(power);
   EXPECT_EQ(0, brightness);
 
-  mock_i2c.ExpectWriteStop({0x1a, 0}).ExpectWriteStop({0x19, 127});
+  brightness = 0.5;
+  uint8_t brightness_value = static_cast<uint8_t>(brightness * kMaxBrightnessRegValue);
+  mock_i2c.ExpectWriteStop({0x1a, 0}).ExpectWriteStop({0x19, brightness_value});
 
-  EXPECT_OK(test.SetBacklightState(true, 127));
+  EXPECT_OK(test.SetBacklightState(true, brightness));
   EXPECT_TRUE(test.enable_called());
 
   test.Reset();
@@ -123,7 +126,7 @@ TEST(BacklightTest, Brightness) {
 
   EXPECT_OK(test.GetBacklightState(&power, &brightness));
   EXPECT_TRUE(power);
-  EXPECT_EQ(127, brightness);
+  EXPECT_EQ(0.5, brightness);
 
   mock_i2c.ExpectWriteStop({0x1a, 0}).ExpectWriteStop({0x19, 0});
 
