@@ -22,9 +22,8 @@ namespace {
 storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id,
                                              storage::PageStorage* storage) {
   uint32_t key_index = fb_object_id->key_index();
-  uint32_t deletion_scope_id = fb_object_id->deletion_scope_id();
   return storage->GetObjectIdentifierFactory()->MakeObjectIdentifier(
-      key_index, deletion_scope_id, storage::ObjectDigest(fb_object_id->digest()));
+      key_index, storage::ObjectDigest(fb_object_id->digest()));
 }
 }  // namespace
 
@@ -442,7 +441,7 @@ void PageCommunicatorImpl::BuildObjectRequestBuffer(flatbuffers::FlatBufferBuild
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
   flatbuffers::Offset<ObjectId> object_id = CreateObjectId(
-      *buffer, object_identifier.key_index(), object_identifier.deletion_scope_id(),
+      *buffer, object_identifier.key_index(),
       convert::ToFlatBufferVector(buffer, object_identifier.object_digest().Serialize()));
   flatbuffers::Offset<ObjectRequest> object_request = CreateObjectRequest(
       *buffer, buffer->CreateVector(std::vector<flatbuffers::Offset<ObjectId>>({object_id})));
@@ -618,7 +617,6 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
   for (const ObjectResponseHolder& object_response : object_responses) {
     flatbuffers::Offset<ObjectId> fb_object_id =
         CreateObjectId(*buffer, object_response.identifier.key_index(),
-                       object_response.identifier.deletion_scope_id(),
                        convert::ToFlatBufferVector(
                            buffer, object_response.identifier.object_digest().Serialize()));
     if (object_response.piece) {

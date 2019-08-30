@@ -30,10 +30,10 @@ INSTANTIATE_TEST_SUITE_P(
     EntryPayloadEncodingTest, EntryPayloadEncodingTest,
     ::testing::Values(
         storage::Entry{"entry_name",
-                       storage::ObjectIdentifier(12, 24, storage::ObjectDigest("bananas"), nullptr),
+                       storage::ObjectIdentifier(12, storage::ObjectDigest("bananas"), nullptr),
                        storage::KeyPriority::EAGER, "entry_id"},
         storage::Entry{"lazy_entry",
-                       storage::ObjectIdentifier(0, 0, storage::ObjectDigest("apple"), nullptr),
+                       storage::ObjectIdentifier(0, storage::ObjectDigest("apple"), nullptr),
                        storage::KeyPriority::LAZY, "entry_id2"}));
 
 TEST(EntryPayloadEncodingTest, ManuallyBuilt) {
@@ -41,7 +41,7 @@ TEST(EntryPayloadEncodingTest, ManuallyBuilt) {
 
   flatbuffers::FlatBufferBuilder builder;
   storage::ObjectIdentifier object_identifier =
-      storage::ObjectIdentifier(12, 24, storage::ObjectDigest("bananas"), nullptr);
+      storage::ObjectIdentifier(12, storage::ObjectDigest("bananas"), nullptr);
   auto entry_name = convert::ToFlatBufferVector(&builder, "entry_name");
   auto object_identifier_off = convert::ToFlatBufferVector(
       &builder, factory.ObjectIdentifierToStorageBytes(object_identifier));
@@ -63,7 +63,7 @@ TEST(EntryPayloadEncodingTest, NoName) {
   flatbuffers::FlatBufferBuilder builder;
   auto object_identifier = convert::ToFlatBufferVector(
       &builder, factory.ObjectIdentifierToStorageBytes(
-                    storage::ObjectIdentifier(12, 24, storage::ObjectDigest("bananas"), nullptr)));
+                    storage::ObjectIdentifier(12, storage::ObjectDigest("bananas"), nullptr)));
   EntryPayloadBuilder entry_builder(builder);
   entry_builder.add_object_identifier(object_identifier);
   entry_builder.add_priority(KeyPriority_EAGER);

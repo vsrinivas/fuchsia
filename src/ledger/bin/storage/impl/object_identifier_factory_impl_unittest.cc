@@ -23,17 +23,17 @@ TEST_F(ObjectIdentifierFactoryImplTest, CountsAndCleansUp) {
   EXPECT_EQ(factory.count(digest), 0);
   EXPECT_EQ(factory.size(), 0);
 
-  auto identifier_1 = factory.MakeObjectIdentifier(0u, 0u, digest);
+  auto identifier_1 = factory.MakeObjectIdentifier(0u, digest);
   EXPECT_EQ(factory.count(digest), 1);
   EXPECT_EQ(factory.size(), 1);
 
   // Tracking is per-digest, not per-identifier.
-  auto identifier_2 = factory.MakeObjectIdentifier(1u, 2u, digest);
+  auto identifier_2 = factory.MakeObjectIdentifier(1u, digest);
   EXPECT_EQ(factory.count(digest), 2);
   EXPECT_EQ(factory.size(), 1);
 
   // Distinct digests are tracked separately.
-  auto identifier_3 = factory.MakeObjectIdentifier(0u, 0u, another_digest);
+  auto identifier_3 = factory.MakeObjectIdentifier(0u, another_digest);
   EXPECT_EQ(factory.count(digest), 2);
   EXPECT_EQ(factory.count(another_digest), 1);
   EXPECT_EQ(factory.size(), 2);
@@ -80,7 +80,7 @@ TEST_F(ObjectIdentifierFactoryImplTest, ObjectOutlivingFactory) {
     EXPECT_EQ(factory.count(digest), 0);
     EXPECT_EQ(factory.size(), 0);
 
-    identifier = factory.MakeObjectIdentifier(0u, 0u, digest);
+    identifier = factory.MakeObjectIdentifier(0u, digest);
     EXPECT_EQ(factory.count(digest), 1);
     EXPECT_EQ(factory.size(), 1);
     EXPECT_EQ(identifier.factory(), &factory);
@@ -92,7 +92,7 @@ TEST_F(ObjectIdentifierFactoryImplTest, ObjectOutlivingFactory) {
 
 TEST_F(ObjectIdentifierFactoryImplTest, DecodingInvalidObjectDigest) {
   const ObjectDigest digest("INVALID");
-  ObjectIdentifier identifier(0, 1, digest, nullptr);
+  ObjectIdentifier identifier(0, digest, nullptr);
   ObjectIdentifierFactoryImpl factory;
   std::string encoded = factory.ObjectIdentifierToStorageBytes(identifier);
   ASSERT_FALSE(factory.MakeObjectIdentifierFromStorageBytes(encoded, &identifier));

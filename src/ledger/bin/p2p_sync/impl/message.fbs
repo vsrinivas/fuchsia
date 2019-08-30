@@ -55,7 +55,6 @@ table CommitResponse {
 
 table ObjectId {
   key_index: uint;
-  deletion_scope_id: uint;
   digest: [ubyte];
 }
 

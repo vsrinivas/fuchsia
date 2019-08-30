@@ -37,11 +37,10 @@ bool FakeObjectIdentifierFactory::IsLive(const ObjectDigest& digest) const {
 }
 
 ObjectIdentifier FakeObjectIdentifierFactory::MakeObjectIdentifier(uint32_t key_index,
-                                                                   uint32_t deletion_scope_id,
                                                                    ObjectDigest object_digest) {
   auto [it, inserted] =
       tokens_.emplace(object_digest, std::make_shared<TokenImpl>(weak_factory_.GetWeakPtr()));
-  return ObjectIdentifier(key_index, deletion_scope_id, std::move(object_digest), it->second);
+  return ObjectIdentifier(key_index, std::move(object_digest), it->second);
 }
 
 bool FakeObjectIdentifierFactory::MakeObjectIdentifierFromStorageBytes(

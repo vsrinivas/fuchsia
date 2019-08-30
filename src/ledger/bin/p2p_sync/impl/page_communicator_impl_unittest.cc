@@ -43,7 +43,7 @@ p2p_provider::P2PClientId MakeP2PClientId(uint8_t id) { return p2p_provider::P2P
 // as an opaque identifier for p2p. It does not need to be tracked either because we are using a
 // fake PageStorage that does not perform garbage collection.
 storage::ObjectIdentifier MakeObjectIdentifier(std::string object_digest) {
-  return storage::ObjectIdentifier(0, 0, storage::ObjectDigest(std::move(object_digest)), nullptr);
+  return storage::ObjectIdentifier(0, storage::ObjectDigest(std::move(object_digest)), nullptr);
 }
 
 class FakeCommit : public storage::CommitEmptyImpl {
@@ -239,7 +239,7 @@ void BuildObjectRequestBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::Strin
   fb_object_ids.reserve(object_ids.size());
   for (const storage::ObjectIdentifier& object_id : object_ids) {
     fb_object_ids.emplace_back(
-        CreateObjectId(*buffer, object_id.key_index(), object_id.deletion_scope_id(),
+        CreateObjectId(*buffer, object_id.key_index(),
                        convert::ToFlatBufferVector(buffer, object_id.object_digest().Serialize())));
   }
   flatbuffers::Offset<ObjectRequest> object_request =
@@ -264,7 +264,7 @@ void BuildObjectResponseBuffer(
     bool is_synced = std::get<2>(object_tuple);
 
     flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
-        *buffer, object_identifier.key_index(), object_identifier.deletion_scope_id(),
+        *buffer, object_identifier.key_index(),
         convert::ToFlatBufferVector(buffer, object_identifier.object_digest().Serialize()));
     if (!data.empty()) {
       flatbuffers::Offset<Data> fb_data =
@@ -434,7 +434,6 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   const ObjectRequest* object_request = static_cast<const ObjectRequest*>(request->request());
   EXPECT_EQ(object_request->object_ids()->size(), 1u);
   EXPECT_EQ(object_request->object_ids()->begin()->key_index(), 0u);
-  EXPECT_EQ(object_request->object_ids()->begin()->deletion_scope_id(), 0u);
   EXPECT_EQ(convert::ExtendedStringView(object_request->object_ids()->begin()->digest()), "foo");
 }
 

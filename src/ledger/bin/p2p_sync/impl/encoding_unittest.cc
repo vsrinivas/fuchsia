@@ -47,7 +47,7 @@ TEST(ParseMessageTest, Valid_ObjectResponseNoObject) {
       CreateNamespacePageId(buffer, convert::ToFlatBufferVector(&buffer, "namespace_id"),
                             convert::ToFlatBufferVector(&buffer, "page_id"));
   flatbuffers::Offset<ObjectId> fb_object_id =
-      CreateObjectId(buffer, 1, 3, convert::ToFlatBufferVector(&buffer, "digest"));
+      CreateObjectId(buffer, 1, convert::ToFlatBufferVector(&buffer, "digest"));
   std::vector<flatbuffers::Offset<Object>> fb_objects;
   fb_objects.emplace_back(CreateObject(buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
   flatbuffers::Offset<ObjectResponse> object_response =

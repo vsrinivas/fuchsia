@@ -8,7 +8,6 @@ namespace storage;
 // as the information needed to hide its name and encrypt its content.
 table ObjectIdentifierStorage {
   key_index: uint;
-  deletion_scope_id: uint;
   object_digest: [ubyte];
 }
 

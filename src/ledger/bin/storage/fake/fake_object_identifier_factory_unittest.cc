@@ -20,15 +20,15 @@ TEST(FakeObjectIdentifierFactoryImpl, LiveIsCorrect) {
   EXPECT_FALSE(factory.IsLive(digest));
   EXPECT_FALSE(factory.IsLive(another_digest));
 
-  auto identifier_1 = factory.MakeObjectIdentifier(0u, 0u, digest);
+  auto identifier_1 = factory.MakeObjectIdentifier(0u, digest);
   EXPECT_TRUE(factory.IsLive(digest));
   EXPECT_FALSE(factory.IsLive(another_digest));
 
-  auto identifier_2 = factory.MakeObjectIdentifier(1u, 2u, digest);
+  auto identifier_2 = factory.MakeObjectIdentifier(1u, digest);
   EXPECT_TRUE(factory.IsLive(digest));
   EXPECT_FALSE(factory.IsLive(another_digest));
 
-  auto identifier_3 = factory.MakeObjectIdentifier(0u, 0u, another_digest);
+  auto identifier_3 = factory.MakeObjectIdentifier(0u, another_digest);
   EXPECT_TRUE(factory.IsLive(digest));
   EXPECT_TRUE(factory.IsLive(another_digest));
 
@@ -49,7 +49,7 @@ TEST(FakeObjectIdentifierFactoryImpl, LiveIsCorrect) {
   EXPECT_TRUE(factory.IsLive(another_digest));
 
   // Re-creating an expired is working as expected.
-  identifier_2 = factory.MakeObjectIdentifier(1u, 2u, digest);
+  identifier_2 = factory.MakeObjectIdentifier(1u, digest);
   EXPECT_TRUE(factory.IsLive(digest));
   EXPECT_TRUE(factory.IsLive(another_digest));
 
@@ -71,7 +71,7 @@ TEST(FakeObjectIdentifierFactoryImpl, IdentifierReturnsCorrectFactory) {
 
   {
     FakeObjectIdentifierFactory factory;
-    identifier = factory.MakeObjectIdentifier(0u, 0u, ObjectDigest(""));
+    identifier = factory.MakeObjectIdentifier(0u, ObjectDigest(""));
     EXPECT_EQ(identifier.factory(), &factory);
   }
   // Factory expired.

@@ -18,7 +18,7 @@ class StringObject : public Object {
   ~StringObject() override {}
 
   ObjectIdentifier GetIdentifier() const override {
-    return ObjectIdentifier(1u, 2u, ObjectDigest("digest"), nullptr);
+    return ObjectIdentifier(1u, ObjectDigest("digest"), nullptr);
   }
 
   Status GetData(fxl::StringView* data) const override {

@@ -306,7 +306,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   // Reallocates a fresh identifier tracked by the current storage's factory.
   void RetrackIdentifier(ObjectIdentifier* identifier) {
     *identifier = storage_->GetObjectIdentifierFactory()->MakeObjectIdentifier(
-        identifier->key_index(), identifier->deletion_scope_id(), identifier->object_digest());
+        identifier->key_index(), identifier->object_digest());
   }
 
  protected:

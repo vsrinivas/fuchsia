@@ -103,8 +103,7 @@ class ObjectIdentifier {
   ObjectIdentifier();
 
   // Constructs an object identifier. If |token| is nullptr, the object is untracked.
-  ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id, ObjectDigest object_digest,
-                   std::shared_ptr<Token> token);
+  ObjectIdentifier(uint32_t key_index, ObjectDigest object_digest, std::shared_ptr<Token> token);
 
   ObjectIdentifier(const ObjectIdentifier&);
   ObjectIdentifier& operator=(const ObjectIdentifier&);
@@ -112,7 +111,6 @@ class ObjectIdentifier {
   ObjectIdentifier& operator=(ObjectIdentifier&&);
 
   uint32_t key_index() const { return key_index_; }
-  uint32_t deletion_scope_id() const { return deletion_scope_id_; }
   const ObjectDigest& object_digest() const { return object_digest_; }
   // Returns the factory that currently tracks this object identifier. Returns nullptr if untracked,
   // either because the factory expired or because the identifier was never tracked.
@@ -123,7 +121,6 @@ class ObjectIdentifier {
   friend bool operator<(const ObjectIdentifier&, const ObjectIdentifier&);
 
   uint32_t key_index_;
-  uint32_t deletion_scope_id_;
   ObjectDigest object_digest_;
   std::shared_ptr<Token> token_;
 };
@@ -139,8 +136,7 @@ class ObjectIdentifierFactory {
   // Creates an object identifier.
   // This function must called only from the thread that created this |ObjectIdentifierFactory|.
   // Destruction of the returned identifier must happen on the same thread too.
-  virtual ObjectIdentifier MakeObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
-                                                ObjectDigest object_digest) = 0;
+  virtual ObjectIdentifier MakeObjectIdentifier(uint32_t key_index, ObjectDigest object_digest) = 0;
 
   // Creates an object identifier from its serialization.
   // This function must called only from the thread that created this |ObjectIdentifierFactory|.

@@ -33,7 +33,7 @@ class JournalTest : public ledger::TestWithEnvironment {
                       std::make_unique<storage::fake::FakeDb>(dispatcher()), "page_id",
                       CommitPruningPolicy::NEVER),
         object_identifier_(page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
-            0u, 0u, MakeObjectDigest("value"))) {}
+            0u, MakeObjectDigest("value"))) {}
 
   ~JournalTest() override {}
 
@@ -160,7 +160,7 @@ TEST_F(JournalTest, MultiplePutsDeletes) {
 
     ObjectIdentifier object_identifier_2 =
         page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
-            0u, 0u, MakeObjectDigest("another value"));
+            0u, MakeObjectDigest("another value"));
     journal_->Put("0", object_identifier_2, KeyPriority::EAGER);
 
     std::unique_ptr<const Commit> commit;
@@ -408,16 +408,15 @@ TEST_F(JournalTest, ChangesDifferent) {
   }));
 }
 
-using MergeTestEntry =
-    std::tuple<std::string, std::tuple<uint32_t, uint32_t, std::string>, KeyPriority>;
+using MergeTestEntry = std::tuple<std::string, std::tuple<uint32_t, std::string>, KeyPriority>;
 using MergeTestParam = std::pair<MergeTestEntry, MergeTestEntry>;
 
 class JournalMergeTest : public JournalTest, public ::testing::WithParamInterface<MergeTestParam> {
  public:
-  ObjectIdentifier MakeObjectIdentifier(std::tuple<uint32_t, uint32_t, std::string> components) {
-    auto& [key_index, deletion_scope_id, object_digest] = components;
+  ObjectIdentifier MakeObjectIdentifier(std::tuple<uint32_t, std::string> components) {
+    auto& [key_index, object_digest] = components;
     return page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
-        key_index, deletion_scope_id, MakeObjectDigest(object_digest));
+        key_index, MakeObjectDigest(object_digest));
   }
 
   void Put(MergeTestEntry entry) {
@@ -507,16 +506,14 @@ TEST_P(JournalMergeTest, MergeEntryIdDifferent) {
 
 INSTANTIATE_TEST_SUITE_P(
     JournalMergeTest, JournalMergeTest,
-    ::testing::Values(std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
-                                     MergeTestEntry("21", {0, 0, "digest"}, KeyPriority::EAGER)),
-                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
-                                     MergeTestEntry("2", {1, 0, "digest"}, KeyPriority::EAGER)),
-                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
-                                     MergeTestEntry("2", {0, 1, "digest"}, KeyPriority::EAGER)),
-                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
-                                     MergeTestEntry("2", {0, 0, "digest2"}, KeyPriority::EAGER)),
-                      std::make_pair(MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::EAGER),
-                                     MergeTestEntry("2", {0, 0, "digest"}, KeyPriority::LAZY))));
+    ::testing::Values(std::make_pair(MergeTestEntry("2", {0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("21", {0, "digest"}, KeyPriority::EAGER)),
+                      std::make_pair(MergeTestEntry("2", {0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("2", {1, "digest"}, KeyPriority::EAGER)),
+                      std::make_pair(MergeTestEntry("2", {0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("2", {0, "digest2"}, KeyPriority::EAGER)),
+                      std::make_pair(MergeTestEntry("2", {0, "digest"}, KeyPriority::EAGER),
+                                     MergeTestEntry("2", {0, "digest"}, KeyPriority::LAZY))));
 
 }  // namespace
 }  // namespace storage

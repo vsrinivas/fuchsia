@@ -93,10 +93,9 @@ long ObjectIdentifierFactoryImpl::count(const ObjectDigest& digest) const {
 int ObjectIdentifierFactoryImpl::size() const { return tokens_.size(); }
 
 ObjectIdentifier ObjectIdentifierFactoryImpl::MakeObjectIdentifier(uint32_t key_index,
-                                                                   uint32_t deletion_scope_id,
                                                                    ObjectDigest object_digest) {
   auto token = GetToken(object_digest);
-  return ObjectIdentifier(key_index, deletion_scope_id, std::move(object_digest), std::move(token));
+  return ObjectIdentifier(key_index, std::move(object_digest), std::move(token));
 }
 
 bool ObjectIdentifierFactoryImpl::MakeObjectIdentifierFromStorageBytes(

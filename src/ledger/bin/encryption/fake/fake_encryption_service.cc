@@ -29,7 +29,7 @@ constexpr size_t kEntryIdSize = 32u;
 
 storage::ObjectIdentifier MakeDefaultObjectIdentifier(storage::ObjectIdentifierFactory* factory,
                                                       storage::ObjectDigest digest) {
-  return factory->MakeObjectIdentifier(1u, 1u, std::move(digest));
+  return factory->MakeObjectIdentifier(1u, std::move(digest));
 }
 
 uint64_t DefaultPermutation(uint64_t chunk_window_hash) { return 1 + chunk_window_hash; }

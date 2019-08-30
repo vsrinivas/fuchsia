@@ -47,15 +47,11 @@ std::ostream& operator<<(std::ostream& os, const ObjectDigest& e) {
 }
 
 ObjectIdentifier::ObjectIdentifier()
-    : key_index_(0), deletion_scope_id_(0), object_digest_(ObjectDigest()), token_(nullptr) {}
+    : key_index_(0), object_digest_(ObjectDigest()), token_(nullptr) {}
 
-ObjectIdentifier::ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
-                                   ObjectDigest object_digest,
+ObjectIdentifier::ObjectIdentifier(uint32_t key_index, ObjectDigest object_digest,
                                    std::shared_ptr<ObjectIdentifier::Token> token)
-    : key_index_(key_index),
-      deletion_scope_id_(deletion_scope_id),
-      object_digest_(std::move(object_digest)),
-      token_(std::move(token)) {}
+    : key_index_(key_index), object_digest_(std::move(object_digest)), token_(std::move(token)) {}
 
 ObjectIdentifier::ObjectIdentifier(const ObjectIdentifier&) = default;
 ObjectIdentifier::ObjectIdentifier(ObjectIdentifier&&) = default;
@@ -66,20 +62,19 @@ ObjectIdentifier& ObjectIdentifier::operator=(ObjectIdentifier&&) = default;
 ObjectIdentifier::Token::~Token() {}
 
 bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
-  return std::tie(lhs.key_index_, lhs.deletion_scope_id_, lhs.object_digest_) ==
-         std::tie(rhs.key_index_, rhs.deletion_scope_id_, rhs.object_digest_);
+  return std::tie(lhs.key_index_, lhs.object_digest_) ==
+         std::tie(rhs.key_index_, rhs.object_digest_);
 }
 
 bool operator!=(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) { return !(lhs == rhs); }
 
 bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
-  return std::tie(lhs.key_index_, lhs.deletion_scope_id_, lhs.object_digest_) <
-         std::tie(rhs.key_index_, rhs.deletion_scope_id_, rhs.object_digest_);
+  return std::tie(lhs.key_index_, lhs.object_digest_) <
+         std::tie(rhs.key_index_, rhs.object_digest_);
 }
 
 std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e) {
   return os << "ObjectIdentifier{key_index: " << e.key_index()
-            << ", deletion_scope_id: " << e.deletion_scope_id()
             << ", object_digest: " << e.object_digest() << "}";
 }
 

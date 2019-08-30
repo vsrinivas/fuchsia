@@ -10,7 +10,7 @@ namespace storage {
 namespace {
 
 TEST(StorageMatcher, MatchesDigest) {
-  ObjectIdentifier id = ObjectIdentifier(0, 1, ObjectDigest("hello"), nullptr);
+  ObjectIdentifier id = ObjectIdentifier(0, ObjectDigest("hello"), nullptr);
   EXPECT_THAT(id, MatchesDigest("hello"));
   EXPECT_THAT(id, Not(MatchesDigest("hexllo")));
 
@@ -19,7 +19,7 @@ TEST(StorageMatcher, MatchesDigest) {
 }
 
 TEST(StorageMatcher, MatchesEntry2Parameters) {
-  ObjectIdentifier id = ObjectIdentifier(0, 1, ObjectDigest("hello"), nullptr);
+  ObjectIdentifier id = ObjectIdentifier(0, ObjectDigest("hello"), nullptr);
   Entry entry = {"key", id, KeyPriority::EAGER, EntryId("id")};
 
   EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello")}));
@@ -29,7 +29,7 @@ TEST(StorageMatcher, MatchesEntry2Parameters) {
 }
 
 TEST(StorageMatcher, MatchesEntry3Parameters) {
-  Entry entry = {"key", ObjectIdentifier(0, 1, ObjectDigest("hello"), nullptr), KeyPriority::EAGER,
+  Entry entry = {"key", ObjectIdentifier(0, ObjectDigest("hello"), nullptr), KeyPriority::EAGER,
                  EntryId("id")};
 
   EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::EAGER}));

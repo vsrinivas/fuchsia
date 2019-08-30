@@ -73,8 +73,7 @@ void SetEntryIdIfMissing(Entry* entry) {
 
   entry->entry_id = encryption::SHA256WithLengthHash(SafeConcatenation(
       {entry->key, fxl::NumberToString(object_id.key_index()),
-       fxl::NumberToString(object_id.deletion_scope_id()), object_id.object_digest().Serialize(),
-       entry->priority == KeyPriority::EAGER ? "E" : "L"}));
+       object_id.object_digest().Serialize(), entry->priority == KeyPriority::EAGER ? "E" : "L"}));
 }
 
 bool CheckValidTreeNodeSerialization(fxl::StringView data) {

@@ -17,8 +17,7 @@ namespace {
 TEST(FakeObjectTest, FakePiece) {
   FakeObjectIdentifierFactory factory;
   const std::string content = "some content";
-  const ObjectIdentifier identifier =
-      factory.MakeObjectIdentifier(1u, 2u, ObjectDigest("some digest"));
+  const ObjectIdentifier identifier = factory.MakeObjectIdentifier(1u, ObjectDigest("some digest"));
   const FakePiece piece(identifier, content);
 
   EXPECT_EQ(piece.GetData(), content);
@@ -31,8 +30,7 @@ TEST(FakeObjectTest, FakePiece) {
 TEST(FakeObjectTest, FakeObject) {
   FakeObjectIdentifierFactory factory;
   const std::string content = "some content";
-  const ObjectIdentifier identifier =
-      factory.MakeObjectIdentifier(1u, 2u, ObjectDigest("some digest"));
+  const ObjectIdentifier identifier = factory.MakeObjectIdentifier(1u, ObjectDigest("some digest"));
   const FakeObject object(std::make_unique<FakePiece>(identifier, content));
 
   fxl::StringView data;

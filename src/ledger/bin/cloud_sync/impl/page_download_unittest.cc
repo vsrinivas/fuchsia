@@ -53,7 +53,7 @@ storage::ObjectIdentifier MakeObjectIdentifier() {
   // The returned value does not need to be valid (wrt. internal storage constraints) as it is only
   // used as an opaque identifier for cloud_sync. It does not need to be tracked either because we
   // use |TestPageStorage|, a fake storage that does not perform garbage collection.
-  return storage::ObjectIdentifier(1u, 1u, storage::ObjectDigest("object_digest"), nullptr);
+  return storage::ObjectIdentifier(1u, storage::ObjectDigest("object_digest"), nullptr);
 }
 
 constexpr zx::duration kTestBackoffInterval = zx::msec(50);
@@ -505,7 +505,7 @@ class PageDownloadDiffTest
     diff.mutable_base_state()->set_at_commit(convert::ToArray("base1"));
 
     changes.push_back(
-        {{"key1", storage::ObjectIdentifier(1u, 4u, storage::ObjectDigest("digest1"), nullptr),
+        {{"key1", storage::ObjectIdentifier(1u, storage::ObjectDigest("digest1"), nullptr),
           storage::KeyPriority::EAGER, "entry1"},
          false});
     cloud_provider::DiffEntry entry1;
@@ -516,7 +516,7 @@ class PageDownloadDiffTest
     diff.mutable_changes()->push_back(std::move(entry1));
 
     changes.push_back(
-        {{"key1", storage::ObjectIdentifier(0u, 0u, storage::ObjectDigest("digest2"), nullptr),
+        {{"key1", storage::ObjectIdentifier(0u, storage::ObjectDigest("digest2"), nullptr),
           storage::KeyPriority::LAZY, "entry2"},
          true});
     cloud_provider::DiffEntry entry2;

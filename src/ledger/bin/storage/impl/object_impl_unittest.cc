@@ -32,7 +32,7 @@ using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
 ObjectIdentifier CreateObjectIdentifier(ObjectIdentifierFactory* factory, ObjectDigest digest) {
-  return factory->MakeObjectIdentifier(1u, 2u, std::move(digest));
+  return factory->MakeObjectIdentifier(1u, std::move(digest));
 }
 
 ::testing::AssertionResult CheckObjectValue(const Object& object, ObjectIdentifier identifier,

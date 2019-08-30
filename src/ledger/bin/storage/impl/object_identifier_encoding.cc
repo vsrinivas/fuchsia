@@ -13,14 +13,14 @@ namespace storage {
 ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identifier_storage,
                                     ObjectIdentifierFactory* object_identifier_factory) {
   return object_identifier_factory->MakeObjectIdentifier(
-      object_identifier_storage->key_index(), object_identifier_storage->deletion_scope_id(),
+      object_identifier_storage->key_index(),
       ObjectDigest(object_identifier_storage->object_digest()));
 }
 
 flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
     flatbuffers::FlatBufferBuilder* builder, const ObjectIdentifier& object_identifier) {
   return CreateObjectIdentifierStorage(
-      *builder, object_identifier.key_index(), object_identifier.deletion_scope_id(),
+      *builder, object_identifier.key_index(),
       convert::ToFlatBufferVector(builder, object_identifier.object_digest().Serialize()));
 }
 

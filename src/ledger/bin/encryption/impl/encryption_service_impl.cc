@@ -32,10 +32,6 @@ namespace {
 // TODO(mariagl): Use this for the backward compatibility.
 constexpr uint32_t kEncryptionVersion = 0;
 
-// Use max_int32 - 1 for default deletion scoped id. max_int32 has a special
-// meaning in the specification and is used to have per object deletion scope.
-constexpr uint32_t kDefaultDeletionScopeId = std::numeric_limits<uint32_t>::max() - 1;
-
 // Entry id size in bytes.
 constexpr size_t kEntryIdSize = 32u;
 
@@ -71,8 +67,7 @@ EncryptionServiceImpl::~EncryptionServiceImpl() {}
 
 storage::ObjectIdentifier EncryptionServiceImpl::MakeObjectIdentifier(
     storage::ObjectIdentifierFactory* factory, storage::ObjectDigest digest) {
-  return factory->MakeObjectIdentifier(GetCurrentKeyIndex(), kDefaultDeletionScopeId,
-                                       std::move(digest));
+  return factory->MakeObjectIdentifier(GetCurrentKeyIndex(), std::move(digest));
 }
 
 void EncryptionServiceImpl::EncryptCommit(std::string commit_storage,
