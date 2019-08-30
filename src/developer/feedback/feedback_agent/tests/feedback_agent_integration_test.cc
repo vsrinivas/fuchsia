@@ -173,6 +173,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                   MatchesKey(kAnnotationBuildVersion),
                   MatchesKey(kAnnotationChannel),
                   MatchesKey(kAnnotationDeviceBoardName),
+                  MatchesKey(kAnnotationDeviceUptime),
               }));
 
   ASSERT_TRUE(out_result.response().data.has_attachments());

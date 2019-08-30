@@ -17,6 +17,9 @@ test_package("feedback_utils_tests") {
     {
       name = "archive_unittest"
     },
+    {
+      name = "time_unittest"
+    },
   ]
 
   resources = [
@@ -29,6 +32,7 @@ test_package("feedback_utils_tests") {
 
   deps = [
     ":archive_unittest",
+    ":time_unittest",
   ]
 }
 
@@ -51,5 +55,19 @@ executable("archive_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("time_unittest") {
+  testonly = true
+
+  sources = [
+    "time_unittest.cc",
+  ]
+
+  deps = [
+    "//src/developer/feedback/utils:time",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }

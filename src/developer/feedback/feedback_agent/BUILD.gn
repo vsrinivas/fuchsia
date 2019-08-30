@@ -136,6 +136,7 @@ source_set("src") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/developer/feedback/utils:archive",
+    "//src/developer/feedback/utils:time",
     "//src/lib/files",
     "//third_party/libpng",
     "//third_party/rapidjson",

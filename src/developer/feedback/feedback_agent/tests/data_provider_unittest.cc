@@ -54,6 +54,7 @@ const std::set<std::string> kDefaultAnnotations = {
     kAnnotationBuildBoard,   kAnnotationBuildLatestCommitDate,
     kAnnotationBuildProduct, kAnnotationBuildVersion,
     kAnnotationChannel,      kAnnotationDeviceBoardName,
+    kAnnotationDeviceUptime,
 };
 const std::set<std::string> kDefaultAttachments = {
     kAttachmentBuildSnapshot,
@@ -450,13 +451,17 @@ TEST_F(DataProviderImplTest, GetData_AnnotationsAsAttachment) {
     },
     "$5": {
       "type": "string"
+    },
+    "$6": {
+      "type": "string"
     }
   },
   "additionalProperties": false
 })",
                                             kAnnotationBuildBoard, kAnnotationBuildLatestCommitDate,
                                             kAnnotationBuildProduct, kAnnotationBuildVersion,
-                                            kAnnotationChannel, kAnnotationDeviceBoardName))
+                                            kAnnotationChannel, kAnnotationDeviceBoardName,
+                                            kAnnotationDeviceUptime))
                      .HasParseError());
     rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
@@ -590,6 +595,15 @@ TEST_F(DataProviderImplTest, GetData_Channel) {
   ASSERT_TRUE(result.response().data.has_annotations());
   EXPECT_THAT(result.response().data.annotations(),
               testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
+}
+
+TEST_F(DataProviderImplTest, GetData_Uptime) {
+  DataProvider_GetData_Result result = GetData();
+
+  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.response().data.has_annotations());
+  EXPECT_THAT(result.response().data.annotations(),
+              testing::Contains(MatchesKey(kAnnotationDeviceUptime)));
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {

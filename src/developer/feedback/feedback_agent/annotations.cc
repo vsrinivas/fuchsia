@@ -12,13 +12,16 @@
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/promise.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <string>
 
 #include "src/developer/feedback/feedback_agent/channel_provider_ptr.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
@@ -59,6 +62,18 @@ fit::promise<std::string> GetDeviceBoardName() {
   return fit::make_ok_promise(out_board_name.value_or(""));
 }
 
+fit::promise<std::string> GetDeviceUptime() {
+  const std::optional<std::string> uptime =
+      ::feedback::FormatDuration(zx::nsec(zx_clock_get_monotonic()));
+
+  if (!uptime) {
+    FX_LOGS(ERROR) << "got negative uptime from zx_clock_get_monotonig()";
+    return fit::make_result_promise<std::string>(fit::error());
+  }
+
+  return fit::make_ok_promise(uptime.value());
+}
+
 fit::promise<std::string> ReadStringFromFile(const std::string& filepath) {
   std::string content;
   if (!files::ReadFileToString(filepath, &content)) {
@@ -73,6 +88,8 @@ fit::promise<std::string> BuildValue(const std::string& key, async_dispatcher_t*
                                      const zx::duration timeout) {
   if (key == kAnnotationDeviceBoardName) {
     return GetDeviceBoardName();
+  } else if (key == kAnnotationDeviceUptime) {
+    return GetDeviceUptime();
   } else if (key == kAnnotationBuildBoard) {
     return ReadStringFromFile("/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {

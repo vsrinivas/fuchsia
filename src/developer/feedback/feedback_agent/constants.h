@@ -14,6 +14,7 @@ constexpr char kAnnotationBuildProduct[] = "build.product";
 constexpr char kAnnotationBuildVersion[] = "build.version";
 constexpr char kAnnotationChannel[] = "channel";
 constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
+constexpr char kAnnotationDeviceUptime[] = "device.uptime";
 
 constexpr char kAttachmentAnnotations[] = "annotations.json";
 constexpr char kAttachmentBuildSnapshot[] = "build.snapshot.xml";

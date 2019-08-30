@@ -23,3 +23,20 @@ source_set("archive") {
 
   visibility = [ "//src/developer/feedback/*" ]
 }
+
+source_set("time") {
+  sources = [
+    "time.cc",
+    "time.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
