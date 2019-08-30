@@ -28,7 +28,7 @@ group("bin") {
     "logger",
     "media",
     "memory_monitor",
-    "netcfg",
+    "netcfg:filter_config", # TODO(35705): Delete after soft transition.
     "network-speed-test",
     "network_settings_server",
     "network_time",

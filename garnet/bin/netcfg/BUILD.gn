@@ -1,92 +1,14 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+#
+# WARNING: This file was machine-generated from previous json files and
+# will eventually be deleted.
 
-import("//build/config.gni")
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-
-rustc_binary("bin") {
-  with_unit_tests = true
-  edition = "2018"
-
-  deps = [
-    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
-    "//garnet/lib/rust/fidl_fuchsia_net_ext",
-    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
-    "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
-    "//garnet/lib/rust/netfilter",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.net.dns:fuchsia.net.dns-rustc",
-    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
-    "//sdk/fidl/fuchsia.net.policy:fuchsia.net.policy-rustc",
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
-    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
-    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
-  ]
-
-  name = "netcfg"
-}
-
-package("netcfg") {
-  deps = [
-    ":bin",
-  ]
-
-  binary = "netcfg"
-
-  meta = [
-    {
-      path = rebase_path("meta/netcfg.cmx")
-      dest = "netcfg.cmx"
-    },
-  ]
-}
-
-config_data("filter_config") {
-  for_pkg = "netcfg"
-  sources = [
-    rebase_path("config/default.json"),
-  ]
-  outputs = [
-    "default.json",
-  ]
-}
-
-config_data("config") {
-  for_pkg = "sysmgr"
-  sources = [
-    "netcfg.config",
-  ]
-}
-
-test_package("netcfg_tests") {
-  deps = [
-    ":bin_test",
-  ]
-  tests = [
-    {
-      name = "netcfg_bin_test"
-      dest = "netcfg_bin_test"
-      environments = basic_envs
-    },
+# For soft transition.
+# TODO(35705): Delete this BUILD.gn
+group("filter_config") {
+  public_deps = [
+    "//src/connectivity/network/netcfg:filter_config",
   ]
 }

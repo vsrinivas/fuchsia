@@ -31,9 +31,9 @@ group("bluetooth_hid") {
 group("netcfg") {
   testonly = true
   public_deps = [
-    "//garnet/bin/netcfg",
-    "//garnet/bin/netcfg:config",
     "//garnet/packages/config:services",
+    "//src/connectivity/network/netcfg",
+    "//src/connectivity/network/netcfg:config",
   ]
 }
 
@@ -81,8 +81,8 @@ group("scenic") {
 group("network") {
   testonly = true
   public_deps = [
+    ":netcfg",
     "//garnet/bin/http",
-    "//garnet/packages/prod:netcfg",
     "//garnet/packages/prod:netstack",
   ]
 }
@@ -173,6 +173,7 @@ group("all") {
   testonly = true
   public_deps = [
     ":drivers",
+    ":netcfg",
     "//garnet/go/src/amber:pkgfs",
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:appmgr",
@@ -217,7 +218,6 @@ group("all") {
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:memory_monitor",
-    "//garnet/packages/prod:netcfg",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:netstack3",
     "//garnet/packages/prod:netstack_tools",
@@ -331,7 +331,7 @@ group("memory_monitor") {
 group("netstack") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:netcfg",
+    ":netcfg",
     "//src/connectivity/network/netstack",
   ]
 }

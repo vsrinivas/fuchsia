@@ -152,13 +152,6 @@ group("cpuperf_provider") {
   ]
 }
 
-group("netcfg_tests") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/netcfg:netcfg_tests",
-  ]
-}
-
 group("odu_tests") {
   testonly = true
   public_deps = [
@@ -374,7 +367,6 @@ group("all") {
     ":magma",
     ":media",
     ":memory_metrics",
-    ":netcfg_tests",
     ":netemul",
     ":netfilter",
     ":netstack",
