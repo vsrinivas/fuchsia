@@ -64,7 +64,7 @@ executable("fdio_spawn_helper") {
 }
 
 fidl("fidl_interface") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "protocol-name-includes-service" ]
 
   testonly = true

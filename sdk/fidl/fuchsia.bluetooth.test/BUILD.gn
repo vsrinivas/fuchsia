@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.bluetooth.test") {
   sdk_category = "internal"
 
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "vector-bounds-not-specified" ]
 
   sources = [

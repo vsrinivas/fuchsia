@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "string-bounds-not-specified" ]
 
   name = "fuchsia.wlan.device"
@@ -21,7 +21,7 @@ fidl("fidl") {
 }
 
 fidl("sme") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "string-bounds-not-specified",
     "vector-bounds-not-specified",
@@ -40,7 +40,7 @@ fidl("sme") {
 }
 
 fidl("service") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "disallowed-library-name-component",
     "protocol-name-includes-service",
@@ -65,7 +65,7 @@ fidl("service") {
 }
 
 fidl("wlantap") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "event-names-must-start-with-on",
     "string-bounds-not-specified",

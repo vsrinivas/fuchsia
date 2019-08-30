@@ -63,7 +63,7 @@ executable_package("simple_module") {
 }
 
 fidl("interfaces") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "string-bounds-not-specified",
     "too-many-nested-libraries",

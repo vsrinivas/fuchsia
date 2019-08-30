@@ -55,7 +55,7 @@ executable("modular_lib_unittests") {
 }
 
 fidl("maxwell_internal") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "string-bounds-not-specified" ]
 
   name = "fuchsia.maxwell.internal"

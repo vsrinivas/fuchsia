@@ -143,7 +143,7 @@ source_set("view_host") {
 }
 
 fidl("app_client_unittest_fidl") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "protocol-name-includes-service",
     "too-many-nested-libraries",
@@ -187,7 +187,7 @@ source_set("app_client_unittest") {
 }
 
 fidl("json_xdr_unittest_fidl") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [
     "string-bounds-not-specified",
     "too-many-nested-libraries",

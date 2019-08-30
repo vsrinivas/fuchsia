@@ -15,7 +15,7 @@ group("fidl-changes") {
 }
 
 fidl("fidl.test.before") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "event-names-must-start-with-on" ]
 
   sources = [
@@ -24,7 +24,7 @@ fidl("fidl.test.before") {
 }
 
 fidl("fidl.test.during") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "event-names-must-start-with-on" ]
 
   sources = [
@@ -33,7 +33,7 @@ fidl("fidl.test.during") {
 }
 
 fidl("fidl.test.after") {
-  # Temporarily disable known FIDL lint violations in this target
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "event-names-must-start-with-on" ]
 
   sources = [
