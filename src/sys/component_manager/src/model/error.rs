@@ -46,11 +46,6 @@ pub enum ModelError {
         #[fail(cause)]
         err: RunnerError,
     },
-    #[fail(display = "framework service error")]
-    FrameworkServiceError {
-        #[fail(cause)]
-        err: FrameworkServiceError,
-    },
     #[fail(display = "capability discovery error")]
     CapabilityDiscoveryError {
         #[fail(cause)]
@@ -120,11 +115,5 @@ impl From<ResolverError> for ModelError {
 impl From<RunnerError> for ModelError {
     fn from(err: RunnerError) -> Self {
         ModelError::RunnerError { err }
-    }
-}
-
-impl From<FrameworkServiceError> for ModelError {
-    fn from(err: FrameworkServiceError) -> Self {
-        ModelError::FrameworkServiceError { err }
     }
 }

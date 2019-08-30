@@ -8,7 +8,6 @@ mod capability;
 pub mod dir_tree;
 pub mod error;
 mod exposed_dir;
-pub mod framework_services;
 pub mod hooks;
 pub mod hub;
 mod model;
@@ -24,7 +23,6 @@ pub mod testing;
 pub(crate) mod tests;
 
 pub use self::{
-    actions::*, capability::*, dir_tree::*, error::*, exposed_dir::*, framework_services::*,
-    hooks::*, hub::*, model::*, moniker::*, namespace::*, realm::*, resolver::*, routing::*,
-    routing_facade::*, runner::*,
+    actions::*, capability::*, dir_tree::*, error::*, exposed_dir::*, hooks::*, hub::*, model::*,
+    moniker::*, namespace::*, realm::*, resolver::*, routing::*, routing_facade::*, runner::*,
 };

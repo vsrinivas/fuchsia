@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::framework::*,
     crate::model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
     crate::model::*,
     crate::startup,
@@ -35,11 +34,8 @@ async fn new_model_with(
         config: ModelConfig::default(),
         builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
     });
-    let framework_services = Arc::new(FrameworkServicesHook::new(
-        model.clone(),
-        Arc::new(MockFrameworkServiceHost::new()),
-    ));
-    model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    model.hooks.install(realm_service_host.hooks()).await;
     model.hooks.install(additional_hooks).await;
     model
 }

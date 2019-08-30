@@ -411,7 +411,7 @@ mod tests {
 
     struct ActionsTest {
         model: Model,
-        test_hook: Arc<TestHook>,
+        test_hook: TestHook,
         realm_proxy: Option<fsys::RealmProxy>,
     }
 
@@ -442,8 +442,6 @@ mod tests {
             }
             resolver.register("test".to_string(), Box::new(mock_resolver));
 
-            let test_hook = Arc::new(TestHook::new());
-            let framework_services = Arc::new(RealFrameworkServiceHost::new());
             let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
             let builtin = BuiltinRootServices::new(&args).unwrap();
             let model = Model::new(ModelParams {
@@ -453,12 +451,9 @@ mod tests {
                 config: ModelConfig::default(),
                 builtin_services: Arc::new(builtin),
             });
-            let framework_services_hook =
-                Arc::new(FrameworkServicesHook::new(model.clone(), framework_services.clone()));
-            model
-                .hooks
-                .install(vec![Hook::RouteFrameworkCapability(framework_services_hook)])
-                .await;
+            let realm_service_host = RealmServiceHost::new(model.clone());
+            model.hooks.install(realm_service_host.hooks()).await;
+            let test_hook = TestHook::new();
             model.hooks.install(test_hook.hooks()).await;
             model.hooks.install(extra_hooks).await;
 
@@ -470,10 +465,9 @@ mod tests {
                     .look_up_realm(&realm_moniker)
                     .await
                     .expect(&format!("could not look up {}", realm_moniker));
-                let model = model.clone();
                 fasync::spawn(async move {
-                    framework_services
-                        .serve_realm_service(model.clone(), realm, stream)
+                    realm_service_host
+                        .serve(realm, stream)
                         .await
                         .expect("failed serving realm service");
                 });

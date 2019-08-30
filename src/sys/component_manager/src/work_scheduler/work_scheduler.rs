@@ -6,8 +6,8 @@ use {
     crate::{
         framework::FrameworkCapability,
         model::{
-            error::ModelError, framework_services::FrameworkServiceError,
-            hooks::RouteFrameworkCapabilityHook, AbsoluteMoniker, Realm,
+            error::ModelError, hooks::RouteFrameworkCapabilityHook,
+            AbsoluteMoniker, Realm,
         },
     },
     cm_rust::{CapabilityPath, FrameworkCapabilityDecl},
@@ -16,11 +16,7 @@ use {
     futures::{future::BoxFuture, lock::Mutex, TryStreamExt},
     lazy_static::lazy_static,
     log::warn,
-    std::{
-        cmp::Ordering,
-        convert::TryInto,
-        sync::Arc,
-    },
+    std::{cmp::Ordering, convert::TryInto, sync::Arc},
 };
 
 lazy_static! {
@@ -77,9 +73,11 @@ impl WorkItem {
     /// Attempt to unpack identifying info (`abs_moniker`, `id`) + `WorkRequest` into a `WorkItem`.
     /// Errors:
     /// - INVALID_ARGUMENTS: Missing or invalid `work_request.start` value.
-    fn try_new(abs_moniker: &AbsoluteMoniker, id: &str, work_request: &fsys::WorkRequest)
-        -> Result<Self, fsys::Error>
-    {
+    fn try_new(
+        abs_moniker: &AbsoluteMoniker,
+        id: &str,
+        work_request: &fsys::WorkRequest,
+    ) -> Result<Self, fsys::Error> {
         let next_deadline_monotonic = match &work_request.start {
             None => Err(fsys::Error::InvalidArguments),
             Some(start) => match start {
@@ -162,21 +160,14 @@ impl WorkSchedulerCapability {
         WorkSchedulerCapability { work_scheduler: work_scheduler, abs_moniker: abs_moniker }
     }
 
-    fn err(err: Error) -> ModelError {
-        ModelError::from(FrameworkServiceError::service_error(
-            "WorkScheduler service interrupted",
-            err,
-        ))
-    }
-
     /// Service `open` invocation via an event loop that dispatches FIDL operations to
     /// `work_scheduler`.
     async fn open_async(
         work_scheduler: Arc<WorkScheduler>,
         abs_moniker: &AbsoluteMoniker,
         mut stream: fsys::WorkSchedulerRequestStream,
-    ) -> Result<(), ModelError> {
-        while let Some(request) = stream.try_next().await.map_err(Self::err)? {
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
             match request {
                 fsys::WorkSchedulerRequest::ScheduleWork {
                     responder,
@@ -186,11 +177,11 @@ impl WorkSchedulerCapability {
                 } => {
                     let mut result =
                         work_scheduler.schedule_work(abs_moniker, &work_id, &work_request).await;
-                    responder.send(&mut result).map_err(Self::err)?;
+                    responder.send(&mut result)?;
                 }
                 fsys::WorkSchedulerRequest::CancelWork { responder, work_id, .. } => {
                     let mut result = work_scheduler.cancel_work(abs_moniker, &work_id).await;
-                    responder.send(&mut result).map_err(Self::err)?;
+                    responder.send(&mut result)?;
                 }
             }
         }

@@ -714,8 +714,10 @@ mod tests {
         assert_eq!(false, sibling.is_self());
         assert_eq!(".\\a:1/b:2", format!("{}", sibling));
 
-        let cousin =
-            RelativeMoniker::from_absolute(&vec!["a0:1", "a:1"].into(), &vec!["b0:2", "b:2"].into());
+        let cousin = RelativeMoniker::from_absolute(
+            &vec!["a0:1", "a:1"].into(),
+            &vec!["b0:2", "b:2"].into(),
+        );
         assert_eq!(false, cousin.is_self());
         assert_eq!(".\\a:1\\a0:1/b0:2/b:2", format!("{}", cousin));
 

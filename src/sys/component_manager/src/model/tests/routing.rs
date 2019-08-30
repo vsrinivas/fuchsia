@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        framework::RealFrameworkServiceHost,
+        framework::RealmServiceHost,
         model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*},
     },
     cm_rust::{
@@ -14,10 +14,7 @@ use {
         UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
     },
     fidl_fuchsia_sys2 as fsys,
-    std::{
-        convert::{TryFrom, TryInto},
-        sync::Arc,
-    },
+    std::convert::{TryFrom, TryInto},
 };
 
 ///   a
@@ -51,9 +48,9 @@ async fn use_framework_service() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let bind_calls = framework_services.bind_calls.clone();
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let bind_calls = realm_service_host.bind_calls();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use_realm(vec!["b:0"].into(), bind_calls).await;
 }
 
@@ -130,8 +127,8 @@ async fn use_from_parent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -229,8 +226,8 @@ async fn use_from_grandparent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -301,8 +298,8 @@ async fn use_builtin_from_grandparent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
@@ -402,8 +399,8 @@ async fn use_from_sibling_no_root() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -495,8 +492,8 @@ async fn use_from_sibling_root() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -614,8 +611,8 @@ async fn use_from_niece() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -822,8 +819,8 @@ async fn use_kitchen_sink() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "e:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -903,8 +900,8 @@ async fn use_from_component_manager_namespace() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.install_hippo_dir();
     test.check_use(
         vec!["b:0"].into(),
@@ -958,8 +955,8 @@ async fn use_not_offered() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1036,8 +1033,8 @@ async fn use_offer_source_not_exposed() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1119,8 +1116,8 @@ async fn use_offer_source_not_offered() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1200,8 +1197,8 @@ async fn use_from_expose() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1270,8 +1267,8 @@ async fn offer_from_non_executable() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1373,9 +1370,10 @@ async fn use_in_collection() {
             },
         ),
     ];
-    // `RealFrameworkServiceHost` is needed to create dynamic children.
-    let framework_services = Arc::new(RealFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    // `RealmServiceHost` is needed to create dynamic children.
+    let test = RoutingTest::new("a", components, vec![]).await;
+    let realm_service_host = RealmServiceHost::new(test.model.clone());
+    test.model.hooks.install(realm_service_host.hooks()).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),
         "coll",
@@ -1478,9 +1476,10 @@ async fn use_in_collection_not_offered() {
             },
         ),
     ];
-    // `RealFrameworkServiceHost` is needed to create dynamic children.
-    let framework_services = Arc::new(RealFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    // `RealmServiceHost` is needed to create dynamic children.
+    let test = RoutingTest::new("a", components, vec![]).await;
+    let realm_service_host = RealmServiceHost::new(test.model.clone());
+    test.model.hooks.install(realm_service_host.hooks()).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),
         "coll",
@@ -1559,8 +1558,8 @@ async fn expose_from_self_and_child() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
         CheckUse::Directory { path: "/data/bar/hippo".try_into().unwrap(), should_succeed: true },
@@ -1630,8 +1629,8 @@ async fn use_not_exposed() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     // Capability is only exposed from "c", so it only be usable from there.
     test.check_use_exposed_dir(
         vec!["b:0"].into(),

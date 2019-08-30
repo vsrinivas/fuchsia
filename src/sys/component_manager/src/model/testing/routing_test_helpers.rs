@@ -4,9 +4,8 @@
 
 use {
     crate::{
-        directory_broker, framework::FrameworkServicesHook, klog,
-        model::routing::generate_storage_path, model::testing::memfs::Memfs,
-        model::testing::mocks::*, model::*, startup,
+        directory_broker, klog, model::routing::generate_storage_path,
+        model::testing::memfs::Memfs, model::testing::mocks::*, model::*, startup,
     },
     cm_rust::{
         CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
@@ -86,7 +85,7 @@ impl RoutingTest {
     pub async fn new(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        framework_services: Arc<dyn FrameworkServiceHost>,
+        additional_hooks: Vec<Hook>,
     ) -> Self {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
@@ -129,9 +128,7 @@ impl RoutingTest {
             builtin_services: Arc::new(builtin_services),
         });
 
-        let framework_services_hook =
-            Arc::new(FrameworkServicesHook::new(model.clone(), framework_services));
-        model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services_hook)]).await;
+        model.hooks.install(additional_hooks).await;
         Self { components, model, namespaces, memfs }
     }
 

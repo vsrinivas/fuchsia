@@ -484,22 +484,17 @@ impl model::DestroyInstanceHook for HubInner {
 mod tests {
     use {
         super::*,
-        crate::startup,
-        crate::{
-            framework::FrameworkServicesHook,
-            model::{
-                self,
-                hub::Hub,
-                testing::mocks,
-                testing::{
-                    test_helpers::*,
-                    test_hook::HubInjectionTestHook,
-                    test_utils::{
-                        dir_contains, list_directory, list_directory_recursive, read_file,
-                    },
-                },
+        crate::model::{
+            self,
+            hub::Hub,
+            testing::mocks,
+            testing::{
+                test_helpers::*,
+                test_hook::HubInjectionTestHook,
+                test_utils::{dir_contains, list_directory, list_directory_recursive, read_file},
             },
         },
+        crate::startup,
         cm_rust::{
             self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
             ExposeLegacyServiceDecl, ExposeSource, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
@@ -627,12 +622,8 @@ mod tests {
             config: model::ModelConfig::default(),
             builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
         }));
-
-        let framework_services = Arc::new(FrameworkServicesHook::new(
-            (*model).clone(),
-            Arc::new(mocks::MockFrameworkServiceHost::new()),
-        ));
-        model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
+        let realm_service_host = mocks::MockRealmServiceHost::new();
+        model.hooks.install(realm_service_host.hooks()).await;
         model.hooks.install(hub.hooks()).await;
         model.hooks.install(additional_hooks).await;
 

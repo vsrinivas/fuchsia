@@ -12,9 +12,9 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::prelude::*,
+    lazy_static::lazy_static,
     log::*,
-    std::cmp,
-    std::sync::Arc,
+    std::{cmp, convert::TryInto, sync::Arc},
 };
 
 /// The service-side of a framework capability implements this trait.
@@ -36,22 +36,19 @@ pub trait FrameworkCapability: Send + Sync {
     ) -> BoxFuture<Result<(), ModelError>>;
 }
 
-// The default implementation for framework services.
-pub struct DefaultFrameworkCapability {
-    model: Model,
-    framework_services: Arc<dyn FrameworkServiceHost>,
-    realm: Arc<Realm>,
-    capability_path: CapabilityPath,
+lazy_static! {
+    pub static ref REALM_SERVICE: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
 }
 
-impl DefaultFrameworkCapability {
-    pub fn new(
-        model: Model,
-        framework_services: Arc<dyn FrameworkServiceHost>,
-        realm: Arc<Realm>,
-        capability_path: CapabilityPath,
-    ) -> Self {
-        DefaultFrameworkCapability { model, framework_services, realm, capability_path }
+// The default implementation for framework services.
+pub struct RealmServiceCapability {
+    realm: Arc<Realm>,
+    host: RealmServiceHost,
+}
+
+impl RealmServiceCapability {
+    pub fn new(realm: Arc<Realm>, host: RealmServiceHost) -> Self {
+        Self { realm, host }
     }
 
     pub async fn open_async(
@@ -61,19 +58,22 @@ impl DefaultFrameworkCapability {
         _relative_path: String,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        FrameworkServiceHost::serve(
-            self.framework_services.clone(),
-            self.model.clone(),
-            self.realm.clone(),
-            self.capability_path.clone(),
-            server_end,
-        )
-        .await?;
+        let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
+            .into_stream()
+            .expect("could not convert channel into stream");
+        let realm = self.realm.clone();
+        let host = self.host.clone();
+        fasync::spawn(async move {
+            if let Err(e) = host.serve(realm, stream).await {
+                // TODO: Set an epitaph to indicate this was an unexpected error.
+                warn!("serve_realm failed: {}", e);
+            }
+        });
         Ok(())
     }
 }
 
-impl FrameworkCapability for DefaultFrameworkCapability {
+impl FrameworkCapability for RealmServiceCapability {
     fn open(
         &self,
         flags: u32,
@@ -85,15 +85,32 @@ impl FrameworkCapability for DefaultFrameworkCapability {
     }
 }
 
-pub struct FrameworkServicesHook {
-    model: Model,
-    framework_services: Arc<dyn FrameworkServiceHost>,
+#[derive(Clone)]
+pub struct RealmServiceHost {
+    inner: Arc<RealmServiceHostInner>,
 }
 
-// FrameworkServicesHook is a Hook that injects framework services.
-impl FrameworkServicesHook {
-    pub fn new(model: Model, framework_services: Arc<dyn FrameworkServiceHost>) -> Self {
-        FrameworkServicesHook { model, framework_services }
+pub struct RealmServiceHostInner {
+    model: Model,
+}
+
+// RealmServiceHost is a Hook that injects framework services.
+impl RealmServiceHost {
+    pub fn new(model: Model) -> Self {
+        Self { inner: Arc::new(RealmServiceHostInner::new(model)) }
+    }
+
+    pub fn hooks(&self) -> Vec<Hook> {
+        // List the hooks the Hub implements here.
+        vec![Hook::RouteFrameworkCapability(Arc::new(self.clone()))]
+    }
+
+    pub async fn serve(
+        &self,
+        realm: Arc<Realm>,
+        stream: fsys::RealmRequestStream,
+    ) -> Result<(), Error> {
+        self.inner.serve(realm, stream).await
     }
 
     pub async fn on_route_framework_capability_async<'a>(
@@ -104,25 +121,21 @@ impl FrameworkServicesHook {
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
         // do here.
-        let capability_path = match (&capability, capability_decl) {
-            (None, FrameworkCapabilityDecl::LegacyService(source_path)) => source_path.clone(),
+        match (&capability, capability_decl) {
+            (None, FrameworkCapabilityDecl::LegacyService(capability_path))
+                if *capability_path == *REALM_SERVICE =>
+            {
+                return Ok(Some(
+                    Box::new(RealmServiceCapability::new(realm.clone(), self.clone()))
+                        as Box<dyn FrameworkCapability>,
+                ));
+            }
             _ => return Ok(capability),
-        };
-
-        if FRAMEWORK_SERVICES.iter().find(|p| ***p == capability_path).is_some() {
-            return Ok(Some(Box::new(DefaultFrameworkCapability::new(
-                self.model.clone(),
-                self.framework_services.clone(),
-                realm.clone(),
-                capability_path,
-            ))));
         }
-
-        Ok(capability)
     }
 }
 
-impl RouteFrameworkCapabilityHook for FrameworkServicesHook {
+impl RouteFrameworkCapabilityHook for RealmServiceHost {
     fn on<'a>(
         &'a self,
         realm: Arc<Realm>,
@@ -133,31 +146,13 @@ impl RouteFrameworkCapabilityHook for FrameworkServicesHook {
     }
 }
 
-/// Provides the implementation of `FrameworkServiceHost` which is used in production.
-pub struct RealFrameworkServiceHost {}
+impl RealmServiceHostInner {
+    pub fn new(model: Model) -> Self {
+        Self { model }
+    }
 
-impl FrameworkServiceHost for RealFrameworkServiceHost {
-    fn serve_realm_service(
+    async fn serve(
         &self,
-        model: Model,
-        realm: Arc<Realm>,
-        stream: fsys::RealmRequestStream,
-    ) -> BoxFuture<Result<(), FrameworkServiceError>> {
-        Box::pin(async move {
-            Self::do_serve_realm_service(model, realm, stream)
-                .await
-                .map_err(|e| FrameworkServiceError::service_error(REALM_SERVICE.to_string(), e))
-        })
-    }
-}
-
-impl RealFrameworkServiceHost {
-    pub fn new() -> Self {
-        RealFrameworkServiceHost {}
-    }
-
-    async fn do_serve_realm_service(
-        model: Model,
         realm: Arc<Realm>,
         mut stream: fsys::RealmRequestStream,
     ) -> Result<(), Error> {
@@ -165,21 +160,25 @@ impl RealFrameworkServiceHost {
             match request {
                 fsys::RealmRequest::CreateChild { responder, collection, decl } => {
                     let mut res =
-                        Self::create_child(model.clone(), realm.clone(), collection, decl).await;
+                        Self::create_child(self.model.clone(), realm.clone(), collection, decl)
+                            .await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::BindChild { responder, child, exposed_dir } => {
                     let mut res =
-                        Self::bind_child(model.clone(), realm.clone(), child, exposed_dir).await;
+                        Self::bind_child(self.model.clone(), realm.clone(), child, exposed_dir)
+                            .await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::DestroyChild { responder, child } => {
-                    let mut res = Self::destroy_child(model.clone(), realm.clone(), child).await;
+                    let mut res =
+                        Self::destroy_child(self.model.clone(), realm.clone(), child).await;
                     responder.send(&mut res)?;
                 }
                 fsys::RealmRequest::ListChildren { responder, collection, iter } => {
                     let mut res =
-                        Self::list_children(model.clone(), realm.clone(), collection, iter).await;
+                        Self::list_children(self.model.clone(), realm.clone(), collection, iter)
+                            .await;
                     responder.send(&mut res)?;
                 }
             }
@@ -368,12 +367,12 @@ mod tests {
         std::path::PathBuf,
     };
 
-    struct FrameworkServiceTest {
+    struct RealmServiceTest {
         realm: Arc<Realm>,
         realm_proxy: fsys::RealmProxy,
     }
 
-    impl FrameworkServiceTest {
+    impl RealmServiceTest {
         async fn new(
             mock_resolver: MockResolver,
             mock_runner: MockRunner,
@@ -385,7 +384,6 @@ mod tests {
             resolver.register("test".to_string(), Box::new(mock_resolver));
             let mut config = ModelConfig::default();
             config.list_children_batch_size = 2;
-            let framework_services = Arc::new(RealFrameworkServiceHost::new());
             let startup_args = startup::Arguments {
                 use_builtin_process_launcher: false,
                 root_component_url: "".to_string(),
@@ -399,12 +397,8 @@ mod tests {
                     startup::BuiltinRootServices::new(&startup_args).unwrap(),
                 ),
             });
-            let framework_services_hook =
-                Arc::new(FrameworkServicesHook::new(model.clone(), framework_services.clone()));
-            model
-                .hooks
-                .install(vec![Hook::RouteFrameworkCapability(framework_services_hook)])
-                .await;
+            let realm_service_host = RealmServiceHost::new(model.clone());
+            model.hooks.install(realm_service_host.hooks()).await;
             model.hooks.install(hooks).await;
 
             // Look up and bind to realm.
@@ -416,15 +410,14 @@ mod tests {
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
             {
                 let realm = realm.clone();
-                let model = model.clone();
                 fasync::spawn(async move {
-                    framework_services
-                        .serve_realm_service(model.clone(), realm, stream)
+                    realm_service_host
+                        .serve(realm, stream)
                         .await
                         .expect("failed serving realm service");
                 });
             }
-            FrameworkServiceTest { realm, realm_proxy }
+            RealmServiceTest { realm, realm_proxy }
         }
     }
 
@@ -454,8 +447,8 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
+        let hook = TestHook::new();
+        let test = RealmServiceTest::new(
             mock_resolver,
             mock_runner,
             vec!["system:0"].into(),
@@ -512,8 +505,8 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
+        let hook = TestHook::new();
+        let test = RealmServiceTest::new(
             mock_resolver,
             mock_runner,
             vec!["system:0"].into(),
@@ -629,8 +622,7 @@ mod tests {
         hooks.append(&mut hook.hooks());
         hooks.append(&mut DestroyHook::hooks(destroy_hook));
         let test =
-            FrameworkServiceTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks)
-                .await;
+            RealmServiceTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks).await;
 
         // Create children "a" and "b" in collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -773,8 +765,8 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
+        let hook = TestHook::new();
+        let test = RealmServiceTest::new(
             mock_resolver,
             mock_runner,
             vec!["system:0"].into(),
@@ -851,14 +843,9 @@ mod tests {
         out_dir.add_service();
         mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
         let urls_run = mock_runner.urls_run.clone();
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
-            mock_resolver,
-            mock_runner,
-            vec![].into(),
-            hook.hooks(),
-        )
-        .await;
+        let hook = TestHook::new();
+        let test =
+            RealmServiceTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
         // Bind to child and use exposed service.
         let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
@@ -917,14 +904,9 @@ mod tests {
         out_dir.add_service();
         mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
         let urls_run = mock_runner.urls_run.clone();
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
-            mock_resolver,
-            mock_runner,
-            vec![].into(),
-            hook.hooks(),
-        )
-        .await;
+        let hook = TestHook::new();
+        let test =
+            RealmServiceTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
         // Add "system" to collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -985,14 +967,9 @@ mod tests {
         mock_resolver.add_component("unrunnable", ComponentDecl { ..default_component_decl() });
         let mut mock_runner = MockRunner::new();
         mock_runner.cause_failure("unrunnable");
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
-            mock_resolver,
-            mock_runner,
-            vec![].into(),
-            hook.hooks(),
-        )
-        .await;
+        let hook = TestHook::new();
+        let test =
+            RealmServiceTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
         // Instance not found.
         {
@@ -1071,14 +1048,9 @@ mod tests {
         );
         mock_resolver.add_component("static", default_component_decl());
         let mock_runner = MockRunner::new();
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
-            mock_resolver,
-            mock_runner,
-            vec![].into(),
-            hook.hooks(),
-        )
-        .await;
+        let hook = TestHook::new();
+        let test =
+            RealmServiceTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
         // Create children "a" and "b" in collection 1, "c" in collection 2.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -1140,14 +1112,9 @@ mod tests {
             },
         );
         let mock_runner = MockRunner::new();
-        let hook = Arc::new(TestHook::new());
-        let test = FrameworkServiceTest::new(
-            mock_resolver,
-            mock_runner,
-            vec![].into(),
-            hook.hooks(),
-        )
-        .await;
+        let hook = TestHook::new();
+        let test =
+            RealmServiceTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
         // Collection not found.
         {

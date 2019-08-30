@@ -4,8 +4,9 @@
 
 use {
     crate::directory_broker::RoutingFn,
+    crate::framework::{FrameworkCapability, REALM_SERVICE},
     crate::model::*,
-    cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
+    cm_rust::{ComponentDecl, ExposeDecl, FrameworkCapabilityDecl, UseDecl},
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
@@ -15,9 +16,11 @@ use {
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
+    fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::prelude::*,
+    log::*,
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
@@ -193,33 +196,114 @@ impl Runner for MockRunner {
     }
 }
 
-pub struct MockFrameworkServiceHost {
-    /// List of calls to `BindChild` with component's relative moniker.
-    pub bind_calls: Arc<Mutex<Vec<String>>>,
+// The default implementation for framework services.
+pub struct MockRealmServiceCapability {
+    realm: Arc<Realm>,
+    host: MockRealmServiceHost,
 }
 
-impl FrameworkServiceHost for MockFrameworkServiceHost {
-    fn serve_realm_service(
+impl MockRealmServiceCapability {
+    pub fn new(realm: Arc<Realm>, host: MockRealmServiceHost) -> Self {
+        Self { realm, host }
+    }
+
+    pub async fn open_async(
         &self,
-        _model: Model,
-        realm: Arc<Realm>,
-        stream: fsys::RealmRequestStream,
-    ) -> BoxFuture<Result<(), FrameworkServiceError>> {
-        Box::pin(async move {
-            self.do_serve_realm_service(realm, stream)
-                .await
-                .expect(&format!("serving {} failed", REALM_SERVICE.to_string()));
-            Ok(())
-        })
+        _flags: u32,
+        _open_mode: u32,
+        _relative_path: String,
+        server_end: zx::Channel,
+    ) -> Result<(), ModelError> {
+        let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
+            .into_stream()
+            .expect("could not convert channel into stream");
+        let realm = self.realm.clone();
+        let host = self.host.clone();
+        fasync::spawn(async move {
+            if let Err(e) = host.inner.serve(realm, stream).await {
+                // TODO: Set an epitaph to indicate this was an unexpected error.
+                warn!("serve_realm failed: {}", e);
+            }
+        });
+        Ok(())
     }
 }
 
-impl MockFrameworkServiceHost {
+impl FrameworkCapability for MockRealmServiceCapability {
+    fn open(
+        &self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        server_chan: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
+    }
+}
+
+#[derive(Clone)]
+pub struct MockRealmServiceHost {
+    inner: Arc<MockRealmServiceHostInner>,
+}
+
+impl MockRealmServiceHost {
     pub fn new() -> Self {
-        MockFrameworkServiceHost { bind_calls: Arc::new(Mutex::new(vec![])) }
+        Self { inner: Arc::new(MockRealmServiceHostInner::new()) }
     }
 
-    async fn do_serve_realm_service(
+    pub fn hooks(&self) -> Vec<Hook> {
+        // List the hooks the Hub implements here.
+        vec![Hook::RouteFrameworkCapability(Arc::new(self.clone()))]
+    }
+
+    pub fn bind_calls(&self) -> Arc<Mutex<Vec<String>>> {
+        self.inner.bind_calls.clone()
+    }
+
+    pub async fn on_route_framework_capability_async<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        capability_decl: &'a FrameworkCapabilityDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+        // If some other capability has already been installed, then there's nothing to
+        // do here.
+        match (&capability, capability_decl) {
+            (None, FrameworkCapabilityDecl::LegacyService(capability_path))
+                if *capability_path == *REALM_SERVICE =>
+            {
+                return Ok(Some(Box::new(MockRealmServiceCapability::new(
+                    realm.clone(),
+                    self.clone(),
+                )) as Box<dyn FrameworkCapability>));
+            }
+            _ => return Ok(capability),
+        }
+    }
+}
+
+impl RouteFrameworkCapabilityHook for MockRealmServiceHost {
+    fn on<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        capability_decl: &'a FrameworkCapabilityDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+        Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
+    }
+}
+
+pub struct MockRealmServiceHostInner {
+    /// List of calls to `BindChild` with component's relative moniker.
+    bind_calls: Arc<Mutex<Vec<String>>>,
+}
+
+impl MockRealmServiceHostInner {
+    pub fn new() -> Self {
+        Self { bind_calls: Arc::new(Mutex::new(vec![])) }
+    }
+
+    async fn serve(
         &self,
         realm: Arc<Realm>,
         mut stream: fsys::RealmRequestStream,

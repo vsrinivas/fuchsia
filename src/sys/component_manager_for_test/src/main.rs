@@ -7,9 +7,8 @@
 use {
     component_manager_lib::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::{FrameworkServicesHook, RealFrameworkServiceHost},
+        framework::RealmServiceHost,
         model::{
-            hooks::*,
             testing::test_utils::list_directory,
             AbsoluteMoniker, //self,AbsoluteMoniker
             Hub,
@@ -71,12 +70,9 @@ async fn main() -> Result<(), Error> {
         builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
     };
     let model = Arc::new(Model::new(params));
-    let framework_services = Arc::new(FrameworkServicesHook::new(
-        (*model).clone(),
-        Arc::new(RealFrameworkServiceHost::new()),
-    ));
+    let realm_service_host = RealmServiceHost::new((*model).clone());
+    model.hooks.install(realm_service_host.hooks()).await;
     model.hooks.install(hub.hooks()).await;
-    model.hooks.install(vec![Hook::RouteFrameworkCapability(framework_services)]).await;
 
     match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
         Ok(()) => {

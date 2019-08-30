@@ -13,7 +13,6 @@ use {
     },
     fidl_fuchsia_sys2 as fsys,
     std::convert::TryInto,
-    std::sync::Arc,
 };
 
 ///   a
@@ -54,8 +53,8 @@ async fn storage_and_dir_from_parent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage {
@@ -104,8 +103,8 @@ async fn meta_storage_and_dir_from_parent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage {
@@ -174,8 +173,8 @@ async fn storage_from_parent_dir_from_grandparent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
@@ -242,8 +241,8 @@ async fn storage_and_dir_from_grandparent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
@@ -310,8 +309,8 @@ async fn meta_storage_and_dir_from_grandparent() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
@@ -379,8 +378,8 @@ async fn storage_from_parent_dir_from_sibling() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Storage {
@@ -490,8 +489,8 @@ async fn storage_multiple_types() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Storage {
@@ -568,8 +567,8 @@ async fn use_the_wrong_type_of_storage() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
@@ -616,8 +615,8 @@ async fn directories_are_not_storage() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
@@ -662,8 +661,8 @@ async fn use_storage_when_not_offered() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None },
@@ -744,8 +743,8 @@ async fn dir_offered_from_nonexecutable() {
             },
         ),
     ];
-    let framework_services = Arc::new(MockFrameworkServiceHost::new());
-    let test = RoutingTest::new("a", components, framework_services).await;
+    let realm_service_host = MockRealmServiceHost::new();
+    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
