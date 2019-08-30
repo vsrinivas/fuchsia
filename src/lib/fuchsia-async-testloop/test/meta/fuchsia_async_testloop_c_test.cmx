@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/fuchsia_async_testloop_c_test"
+    }
+}

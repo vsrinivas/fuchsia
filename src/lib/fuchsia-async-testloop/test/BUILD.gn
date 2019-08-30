@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_staticlib.gni")
+import("//build/test/test_package.gni")
+
+rustc_staticlib("guest") {
+  name = "guest"
+  edition = "2018"
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/fuchsia-async-testloop",
+    "//third_party/rust_crates:libc",
+  ]
+  source_root = "guest.rs"
+}
+
+executable("fuchsia_async_testloop_c_test") {
+  output_name = "fuchsia_async_testloop_c_test"
+  sources = [
+    "host_test.cc",
+  ]
+  deps = [
+    ":guest",
+    "//garnet/public/lib/gtest:gtest",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-testing",
+  ]
+  testonly = true
+}
+
+test_package("fuchsia-async-testloop-tests") {
+  deps = [
+    ":fuchsia_async_testloop_c_test",
+  ]
+  tests = [
+    {
+      name = "fuchsia_async_testloop_c_test"
+    },
+  ]
+}
