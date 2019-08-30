@@ -17,10 +17,6 @@ constexpr uint64_t kLoader_LoadObject_Ordinal = 0x18d35e6000000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLoader_LoadScriptInterpreter_Ordinal = 0x32cc7f4e00000000lu;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadScriptInterpreterRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadScriptInterpreterResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kLoader_Config_Ordinal = 0x1adeb78d00000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
@@ -144,74 +140,6 @@ Loader::UnownedResultOf::LoadObject Loader::Call::LoadObject(zx::unowned_channel
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Loader::LoadObjectResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Loader::ResultOf::LoadScriptInterpreter_Impl<Loader::LoadScriptInterpreterResponse>::LoadScriptInterpreter_Impl(zx::unowned_channel _client_end, ::fidl::StringView interpreter_name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadScriptInterpreterRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  LoadScriptInterpreterRequest _request = {};
-  _request.interpreter_name = std::move(interpreter_name);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LoadScriptInterpreterRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Loader::InPlace::LoadScriptInterpreter(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Loader::ResultOf::LoadScriptInterpreter Loader::SyncClient::LoadScriptInterpreter(::fidl::StringView interpreter_name) {
-  return ResultOf::LoadScriptInterpreter(zx::unowned_channel(this->channel_), std::move(interpreter_name));
-}
-
-Loader::ResultOf::LoadScriptInterpreter Loader::Call::LoadScriptInterpreter(zx::unowned_channel _client_end, ::fidl::StringView interpreter_name) {
-  return ResultOf::LoadScriptInterpreter(std::move(_client_end), std::move(interpreter_name));
-}
-
-template <>
-Loader::UnownedResultOf::LoadScriptInterpreter_Impl<Loader::LoadScriptInterpreterResponse>::LoadScriptInterpreter_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView interpreter_name, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < LoadScriptInterpreterRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<LoadScriptInterpreterResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  LoadScriptInterpreterRequest _request = {};
-  _request.interpreter_name = std::move(interpreter_name);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LoadScriptInterpreterRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Loader::InPlace::LoadScriptInterpreter(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Loader::UnownedResultOf::LoadScriptInterpreter Loader::SyncClient::LoadScriptInterpreter(::fidl::BytePart _request_buffer, ::fidl::StringView interpreter_name, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LoadScriptInterpreter(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(interpreter_name), std::move(_response_buffer));
-}
-
-Loader::UnownedResultOf::LoadScriptInterpreter Loader::Call::LoadScriptInterpreter(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView interpreter_name, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LoadScriptInterpreter(std::move(_client_end), std::move(_request_buffer), std::move(interpreter_name), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Loader::LoadScriptInterpreterResponse> Loader::InPlace::LoadScriptInterpreter(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadScriptInterpreterRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Loader::LoadScriptInterpreterResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<LoadScriptInterpreterRequest, LoadScriptInterpreterResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Loader::LoadScriptInterpreterResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -518,18 +446,6 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
         Interface::LoadObjectCompleter::Sync(txn));
       return true;
     }
-    case kLoader_LoadScriptInterpreter_Ordinal:
-    {
-      auto result = ::fidl::DecodeAs<LoadScriptInterpreterRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->LoadScriptInterpreter(std::move(message->interpreter_name),
-        Interface::LoadScriptInterpreterCompleter::Sync(txn));
-      return true;
-    }
     case kLoader_Config_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ConfigRequest>(msg);
@@ -621,37 +537,6 @@ void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::BytePart _buffer,
 void Loader::Interface::LoadObjectCompleterBase::Reply(::fidl::DecodedMessage<LoadObjectResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kLoader_LoadObject_Ordinal;
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Loader::Interface::LoadScriptInterpreterCompleterBase::Reply(int32_t rv, ::zx::vmo object) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadScriptInterpreterResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<LoadScriptInterpreterResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
-  _response.rv = std::move(rv);
-  _response.object = std::move(object);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadScriptInterpreterResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LoadScriptInterpreterResponse>(std::move(_response_bytes)));
-}
-
-void Loader::Interface::LoadScriptInterpreterCompleterBase::Reply(::fidl::BytePart _buffer, int32_t rv, ::zx::vmo object) {
-  if (_buffer.capacity() < LoadScriptInterpreterResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<LoadScriptInterpreterResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
-  _response.rv = std::move(rv);
-  _response.object = std::move(object);
-  _buffer.set_actual(sizeof(LoadScriptInterpreterResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LoadScriptInterpreterResponse>(std::move(_buffer)));
-}
-
-void Loader::Interface::LoadScriptInterpreterCompleterBase::Reply(::fidl::DecodedMessage<LoadScriptInterpreterResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_LoadScriptInterpreter_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

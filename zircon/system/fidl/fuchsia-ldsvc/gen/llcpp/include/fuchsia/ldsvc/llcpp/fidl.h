@@ -24,8 +24,6 @@ class Loader;
 
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadObjectResponseTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadScriptInterpreterRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderLoadScriptInterpreterResponseTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneRequestTable;
@@ -68,35 +66,6 @@ class Loader final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = LoadObjectResponse;
-  };
-
-  struct LoadScriptInterpreterResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t rv;
-    ::zx::vmo object;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderLoadScriptInterpreterResponseTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct LoadScriptInterpreterRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView interpreter_name;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderLoadScriptInterpreterRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 1024;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = LoadScriptInterpreterResponse;
   };
 
   struct ConfigResponse final {
@@ -246,22 +215,6 @@ class Loader final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class LoadScriptInterpreter_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      LoadScriptInterpreter_Impl(zx::unowned_channel _client_end, ::fidl::StringView interpreter_name);
-      ~LoadScriptInterpreter_Impl() = default;
-      LoadScriptInterpreter_Impl(LoadScriptInterpreter_Impl&& other) = default;
-      LoadScriptInterpreter_Impl& operator=(LoadScriptInterpreter_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class Config_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -329,7 +282,6 @@ class Loader final {
    public:
     using Done = Done_Impl;
     using LoadObject = LoadObject_Impl<LoadObjectResponse>;
-    using LoadScriptInterpreter = LoadScriptInterpreter_Impl<LoadScriptInterpreterResponse>;
     using Config = Config_Impl<ConfigResponse>;
     using Clone = Clone_Impl<CloneResponse>;
     using DebugPublishDataSink = DebugPublishDataSink_Impl<DebugPublishDataSinkResponse>;
@@ -360,22 +312,6 @@ class Loader final {
       ~LoadObject_Impl() = default;
       LoadObject_Impl(LoadObject_Impl&& other) = default;
       LoadObject_Impl& operator=(LoadObject_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class LoadScriptInterpreter_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      LoadScriptInterpreter_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView interpreter_name, ::fidl::BytePart _response_buffer);
-      ~LoadScriptInterpreter_Impl() = default;
-      LoadScriptInterpreter_Impl(LoadScriptInterpreter_Impl&& other) = default;
-      LoadScriptInterpreter_Impl& operator=(LoadScriptInterpreter_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -452,7 +388,6 @@ class Loader final {
    public:
     using Done = Done_Impl;
     using LoadObject = LoadObject_Impl<LoadObjectResponse>;
-    using LoadScriptInterpreter = LoadScriptInterpreter_Impl<LoadScriptInterpreterResponse>;
     using Config = Config_Impl<ConfigResponse>;
     using Clone = Clone_Impl<CloneResponse>;
     using DebugPublishDataSink = DebugPublishDataSink_Impl<DebugPublishDataSinkResponse>;
@@ -479,12 +414,6 @@ class Loader final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::LoadObject LoadObject(::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer);
-
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::LoadScriptInterpreter LoadScriptInterpreter(::fidl::StringView interpreter_name);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::LoadScriptInterpreter LoadScriptInterpreter(::fidl::BytePart _request_buffer, ::fidl::StringView interpreter_name, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Config Config(::fidl::StringView config);
@@ -530,12 +459,6 @@ class Loader final {
     static UnownedResultOf::LoadObject LoadObject(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView object_name, ::fidl::BytePart _response_buffer);
 
     // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::LoadScriptInterpreter LoadScriptInterpreter(zx::unowned_channel _client_end, ::fidl::StringView interpreter_name);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LoadScriptInterpreter LoadScriptInterpreter(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView interpreter_name, ::fidl::BytePart _response_buffer);
-
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Config Config(zx::unowned_channel _client_end, ::fidl::StringView config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -570,8 +493,6 @@ class Loader final {
     static ::fidl::internal::StatusAndError Done(zx::unowned_channel _client_end);
 
     static ::fidl::DecodeResult<LoadObjectResponse> LoadObject(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadObjectRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<LoadScriptInterpreterResponse> LoadScriptInterpreter(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LoadScriptInterpreterRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<ConfigResponse> Config(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer);
 
@@ -608,20 +529,6 @@ class Loader final {
     using LoadObjectCompleter = ::fidl::Completer<LoadObjectCompleterBase>;
 
     virtual void LoadObject(::fidl::StringView object_name, LoadObjectCompleter::Sync _completer) = 0;
-
-    class LoadScriptInterpreterCompleterBase : public _Base {
-     public:
-      void Reply(int32_t rv, ::zx::vmo object);
-      void Reply(::fidl::BytePart _buffer, int32_t rv, ::zx::vmo object);
-      void Reply(::fidl::DecodedMessage<LoadScriptInterpreterResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using LoadScriptInterpreterCompleter = ::fidl::Completer<LoadScriptInterpreterCompleterBase>;
-
-    virtual void LoadScriptInterpreter(::fidl::StringView interpreter_name, LoadScriptInterpreterCompleter::Sync _completer) = 0;
 
     class ConfigCompleterBase : public _Base {
      public:
@@ -723,23 +630,6 @@ static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::LoadObjectResponse)
     == ::llcpp::fuchsia::ldsvc::Loader::LoadObjectResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::LoadObjectResponse, rv) == 16);
 static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::LoadObjectResponse, object) == 20);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterRequest)
-    == ::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterRequest, interpreter_name) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterResponse)
-    == ::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterResponse, rv) == 16);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::LoadScriptInterpreterResponse, object) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::ldsvc::Loader::ConfigRequest> : public std::true_type {};

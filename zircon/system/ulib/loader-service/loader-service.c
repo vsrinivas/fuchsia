@@ -209,19 +209,11 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
       }
       status = svc->ops->load_object(svc->ctx, data, &rsp_handle);
       break;
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
     case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
-      // When loading a script interpreter or debug configuration file,
-      // we expect an absolute path.
+      // When loading a debug configuration file, we expect an absolute path.
       if (data[0] != '/') {
-        fprintf(stderr, "dlsvc: invalid %s '%s' is not an absolute path\n",
-                req.header.ordinal == LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD ||
-                        req.header.ordinal == LDMSG_OP_LOAD_SCRIPT_INTERPRETER
-                    ? "script interpreter"
-                    : "debug config file",
-                data);
+        fprintf(stderr, "dlsvc: invalid debug config file, '%s' is not an absolute path\n", data);
         status = ZX_ERR_NOT_FOUND;
         break;
       }

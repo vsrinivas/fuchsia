@@ -23,10 +23,6 @@ protocol Loader {
     // handle containing the file.
     LoadObject(string:1024 object_name) -> (zx.status rv, handle<vmo>? object);
 
-    // The program loader sends the script `interpreter_name` from
-    // hashbang and gets back a VMO to execute in place of the script.
-    LoadScriptInterpreter(string:1024 interpreter_name) -> (zx.status rv, handle<vmo>? object);
-
     // The dynamic linker sends a `config` identifying its load
     // configuration.  This is intended to affect how later
     // `LoadObject` requests decide what particular implementation

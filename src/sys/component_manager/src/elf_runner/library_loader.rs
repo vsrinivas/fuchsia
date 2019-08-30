@@ -46,10 +46,6 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                         warn!("failed to load object: {:?}", errors);
                         responder.send(zx::sys::ZX_ERR_NOT_FOUND, None)?;
                     }
-                    LoaderRequest::LoadScriptInterpreter { interpreter_name: _, responder } => {
-                        // Unimplemented
-                        responder.control_handle().shutdown();
-                    }
                     LoaderRequest::Config { config, responder } => {
                         match parse_config_string(&lib_proxy, &config) {
                             Ok(new_search_path) => {

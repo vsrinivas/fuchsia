@@ -551,20 +551,6 @@ done:
   return lp->error;
 }
 
-zx_status_t launchpad_file_load(launchpad_t* lp, zx_handle_t vmo) {
-  if (vmo == ZX_HANDLE_INVALID) {
-    return lp_error(lp, ZX_ERR_INVALID_ARGS, "file_load: invalid vmo");
-  }
-
-  zx_status_t status = launchpad_elf_load_body(lp, NULL, 0, vmo);
-
-  if (status != ZX_OK) {
-    lp_error(lp, status, "file_load: failed to load ELF file");
-  }
-
-  return status;
-}
-
 zx_status_t launchpad_elf_load(launchpad_t* lp, zx_handle_t vmo) {
   if (vmo == ZX_HANDLE_INVALID)
     return lp_error(lp, ZX_ERR_INVALID_ARGS, "elf_load: invalid vmo");
@@ -1072,8 +1058,8 @@ zx_status_t launchpad_ready_set(launchpad_t* lp, launchpad_start_data_t* data,
   return status;
 }
 
-static zx_status_t launchpad_file_load_with_vdso(launchpad_t* lp, zx_handle_t vmo) {
-  launchpad_file_load(lp, vmo);
+zx_status_t launchpad_load_from_vmo(launchpad_t* lp, zx_handle_t vmo) {
+  launchpad_elf_load(lp, vmo);
   launchpad_load_vdso(lp, ZX_HANDLE_INVALID);
   return launchpad_add_vdso_vmo(lp);
 }
@@ -1082,12 +1068,8 @@ zx_status_t launchpad_load_from_file(launchpad_t* lp, const char* path) {
   zx_handle_t vmo;
   zx_status_t status = launchpad_vmo_from_file(path, &vmo);
   if (status == ZX_OK) {
-    return launchpad_file_load_with_vdso(lp, vmo);
+    return launchpad_load_from_vmo(lp, vmo);
   } else {
     return lp_error(lp, status, "launchpad_vmo_from_file failure");
   }
-}
-
-zx_status_t launchpad_load_from_vmo(launchpad_t* lp, zx_handle_t vmo) {
-  return launchpad_file_load_with_vdso(lp, vmo);
 }

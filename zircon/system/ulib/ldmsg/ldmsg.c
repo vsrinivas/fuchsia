@@ -26,11 +26,9 @@ zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* 
       req->clone.object = FIDL_HANDLE_PRESENT;
       return ZX_OK;
     case LDMSG_OP_LOAD_OBJECT:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_CONFIG:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
     case LDMSG_OP_LOAD_OBJECT_OLD:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
     case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
       offset = sizeof(fidl_string_t);
@@ -79,11 +77,9 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
       *len_out = 0;
       return ZX_OK;
     case LDMSG_OP_LOAD_OBJECT:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_CONFIG:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
     case LDMSG_OP_LOAD_OBJECT_OLD:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
     case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
 
@@ -120,10 +116,8 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
 size_t ldmsg_rsp_get_size(ldmsg_rsp_t* rsp) {
   switch (rsp->header.ordinal) {
     case LDMSG_OP_LOAD_OBJECT:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
     case LDMSG_OP_DEBUG_LOAD_CONFIG:
     case LDMSG_OP_LOAD_OBJECT_OLD:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
     case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
     case LDMSG_OP_CONFIG:
     case LDMSG_OP_CLONE:

@@ -29,16 +29,6 @@ static zx_status_t ldsvc_LoadObject(void* ctx, const char* object_name_data,
   return fuchsia_ldsvc_LoaderLoadObject_reply(txn, 42, event);
 }
 
-static zx_status_t ldsvc_LoadScriptInterpreter(void* ctx, const char* interpreter_name_data,
-                                               size_t interpreter_name_size, fidl_txn_t* txn) {
-  size_t len = strlen("script interpreter");
-  ASSERT_EQ(len, interpreter_name_size, "");
-  EXPECT_EQ(0, memcmp(interpreter_name_data, "script interpreter", len), "");
-  zx_handle_t event = ZX_HANDLE_INVALID;
-  EXPECT_EQ(ZX_OK, zx_event_create(0, &event), "");
-  return fuchsia_ldsvc_LoaderLoadScriptInterpreter_reply(txn, 43, event);
-}
-
 static zx_status_t ldsvc_Config(void* ctx, const char* config_data, size_t config_size,
                                 fidl_txn_t* txn) {
   size_t len = strlen("my config");
@@ -75,7 +65,6 @@ static zx_status_t ldsvc_DebugLoadConfig(void* ctx, const char* config_name_data
 static const fuchsia_ldsvc_Loader_ops_t kOps = {
     .Done = ldsvc_Done,
     .LoadObject = ldsvc_LoadObject,
-    .LoadScriptInterpreter = ldsvc_LoadScriptInterpreter,
     .Config = ldsvc_Config,
     .Clone = ldsvc_Clone,
     .DebugPublishDataSink = ldsvc_DebugPublishDataSink,
@@ -167,18 +156,6 @@ static bool loader_test(void) {
   }
 
   {
-    const char* interpreter_name = "script interpreter";
-    zx_status_t rv = ZX_OK;
-    zx_handle_t object = ZX_HANDLE_INVALID;
-    ASSERT_EQ(ZX_OK,
-              fuchsia_ldsvc_LoaderLoadScriptInterpreter(client, interpreter_name,
-                                                        strlen(interpreter_name), &rv, &object),
-              "");
-    ASSERT_EQ(43, rv, "");
-    ASSERT_EQ(ZX_OK, zx_handle_close(object), "");
-  }
-
-  {
     const char* config = "my config";
     zx_status_t rv = ZX_OK;
     ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderConfig(client, config, strlen(config), &rv), "");
@@ -243,10 +220,6 @@ static bool ordinals_are_consistent(void) {
   static_assert(LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectOrdinal ||
                     LDMSG_OP_LOAD_OBJECT == fuchsia_ldsvc_LoaderLoadObjectGenOrdinal,
                 "LoadObject ordinals need to match");
-  static_assert(
-      LDMSG_OP_LOAD_SCRIPT_INTERPRETER == fuchsia_ldsvc_LoaderLoadScriptInterpreterOrdinal ||
-          LDMSG_OP_LOAD_SCRIPT_INTERPRETER == fuchsia_ldsvc_LoaderLoadScriptInterpreterGenOrdinal,
-      "LoadScript ordinals need to match");
   static_assert(LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigOrdinal ||
                     LDMSG_OP_CONFIG == fuchsia_ldsvc_LoaderConfigGenOrdinal,
                 "Config ordinals need to match");
@@ -315,8 +288,6 @@ static bool ldmsg_functions_are_consistent(void) {
 
   check_string_round_trip(fuchsia_ldsvc_LoaderLoadObjectOrdinal,
                           &fuchsia_ldsvc_LoaderLoadObjectRequestTable);
-  check_string_round_trip(fuchsia_ldsvc_LoaderLoadScriptInterpreterOrdinal,
-                          &fuchsia_ldsvc_LoaderLoadScriptInterpreterRequestTable);
   check_string_round_trip(fuchsia_ldsvc_LoaderConfigOrdinal,
                           &fuchsia_ldsvc_LoaderConfigRequestTable);
   check_string_round_trip(fuchsia_ldsvc_LoaderDebugLoadConfigOrdinal,
@@ -340,7 +311,6 @@ static bool replies_are_consistent(void) {
   ASSERT_EQ(ZX_OK, zx_event_create(0, &event), "");
 
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderLoadObject_reply(&txn, 42, event), "");
-  ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderLoadScriptInterpreter_reply(&txn, 43, event), "");
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderConfig_reply(&txn, 44), "");
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderClone_reply(&txn, 45), "");
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDebugPublishDataSink_reply(&txn, 46), "");

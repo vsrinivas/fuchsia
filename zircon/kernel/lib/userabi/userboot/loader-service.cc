@@ -99,11 +99,6 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
       rsp.rv = ZX_ERR_NOT_SUPPORTED;
       goto error_reply;
 
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER_OLD:
-    case LDMSG_OP_LOAD_SCRIPT_INTERPRETER:
-      fail(log_->get(), "loader-service received LOAD_SCRIPT_INTERP request");
-      break;
-
     case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
     case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK: {
       if (hcount != 1) {
