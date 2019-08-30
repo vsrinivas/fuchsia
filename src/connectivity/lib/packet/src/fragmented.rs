@@ -34,6 +34,22 @@ pub trait Fragment: ByteSlice {
     fn empty() -> Self;
 }
 
+/// A type that can produce a `FragmentedByteSlice` view of itself.
+pub trait AsFragmentedByteSlice<B: Fragment> {
+    /// Generates a `FragmentedByteSlice` view of `self`.
+    fn as_fragmented_byte_slice(&mut self) -> FragmentedByteSlice<'_, B>;
+}
+
+impl<O, B> AsFragmentedByteSlice<B> for O
+where
+    B: Fragment,
+    O: AsMut<[B]>,
+{
+    fn as_fragmented_byte_slice(&mut self) -> FragmentedByteSlice<'_, B> {
+        FragmentedByteSlice::new(self.as_mut())
+    }
+}
+
 impl<'a> Fragment for &'a [u8] {
     fn take_front(&mut self, n: usize) -> Self {
         take_front(self, n)
@@ -484,7 +500,7 @@ mod tests {
                 let (a, x) = buff.split_at(i);
                 let (b, c) = x.split_at(j - i);
                 let mut frags = [a, b, c];
-                f(FragmentedBytes::new(&mut frags[..]));
+                f(frags.as_fragmented_byte_slice());
             }
         }
     }
@@ -499,7 +515,7 @@ mod tests {
                 let (a, x) = buff.split_at_mut(i);
                 let (b, c) = x.split_at_mut(j - i);
                 let mut frags = [a, b, c];
-                f(FragmentedBytesMut::new(&mut frags[..]));
+                f(frags.as_fragmented_byte_slice());
             }
         }
     }
@@ -528,8 +544,7 @@ mod tests {
         });
 
         // check equality for the empty slice case.
-        let mut bytes = [];
-        let bytes = FragmentedBytes::new(&mut bytes[..]);
+        let bytes = FragmentedBytes::new_empty();
         assert!(!bytes.eq_slice([1_u8, 2, 3, 4, 5].as_ref()));
         assert!(bytes.eq_slice(&[]));
     }
@@ -640,9 +655,8 @@ mod tests {
         let mut a = [0; 2];
         let mut b = [0; 2];
         let mut frags = [a.as_mut(), b.as_mut()];
-        let mut dst = FragmentedBytesMut::new(&mut frags[..]);
         with_fragments(|src| {
-            dst.copy_from(&src);
+            frags.as_fragmented_byte_slice().copy_from(&src);
         });
     }
 
@@ -654,9 +668,8 @@ mod tests {
         let mut a = [0; 5];
         let mut b = [0; 2];
         let mut frags = [a.as_mut(), b.as_mut()];
-        let mut dst = FragmentedBytesMut::new(&mut frags[..]);
         with_fragments(|src| {
-            dst.copy_from(&src);
+            frags.as_fragmented_byte_slice().copy_from(&src);
         });
     }
 
@@ -743,7 +756,7 @@ mod tests {
         // otherwise we should be able to get the contiguous bytes:
         let mut single = [1_u8, 2, 3, 4, 5];
         let mut single = [&mut single[..]];
-        let mut single = FragmentedByteSlice::new(&mut single[..]);
+        let mut single = single.as_fragmented_byte_slice();
         assert_eq!(single.try_get_contiguous().unwrap(), &[1, 2, 3, 4, 5][..]);
         assert_eq!(single.try_get_contiguous_mut().unwrap(), &[1, 2, 3, 4, 5][..]);
         assert_eq!(single.try_into_contiguous().unwrap(), &[1, 2, 3, 4, 5][..]);
@@ -755,7 +768,7 @@ mod tests {
 
         // try with a single continuous slice
         let mut refs = [&data[..]];
-        let frag = FragmentedBytes::new(&mut refs[..]);
+        let frag = refs.as_fragmented_byte_slice();
         let (head, body, foot) = frag.try_split_contiguous(2..4).unwrap();
         assert_eq!(head, &data[..2]);
         assert_eq!(&body.to_flattened_vec()[..], &data[2..4]);
@@ -763,7 +776,7 @@ mod tests {
 
         // try splitting just part of the header
         let mut refs = [&data[0..3], &data[3..]];
-        let frag = FragmentedBytes::new(&mut refs[..]);
+        let frag = refs.as_fragmented_byte_slice();
         let (head, body, foot) = frag.try_split_contiguous(2..6).unwrap();
         assert_eq!(head, &data[..2]);
         assert_eq!(&body.to_flattened_vec()[..], &data[2..]);
@@ -771,7 +784,7 @@ mod tests {
 
         // try splitting just part of the footer
         let mut refs = [&data[0..3], &data[3..]];
-        let frag = FragmentedBytes::new(&mut refs[..]);
+        let frag = refs.as_fragmented_byte_slice();
         let (head, body, foot) = frag.try_split_contiguous(..4).unwrap();
         assert!(head.is_empty());
         assert_eq!(&body.to_flattened_vec()[..], &data[..4]);
@@ -779,14 +792,14 @@ mod tests {
 
         // try completely extracting both:
         let mut refs = [&data[0..3], &data[3..]];
-        let frag = FragmentedBytes::new(&mut refs[..]);
+        let frag = refs.as_fragmented_byte_slice();
         let (head, body, foot) = frag.try_split_contiguous(3..3).unwrap();
         assert_eq!(head, &data[0..3]);
         assert_eq!(body.len(), 0);
         assert_eq!(foot, &data[3..]);
 
         // try getting contiguous bytes from an empty FragmentedByteSlice:
-        let frag = FragmentedBytes::new(&mut []);
+        let frag = FragmentedBytes::new_empty();
         let (head, body, foot) = frag.try_split_contiguous(..).unwrap();
         assert!(head.is_empty());
         assert!(body.is_empty());
@@ -798,7 +811,7 @@ mod tests {
     fn test_split_contiguous_out_of_bounds() {
         let data = [1_u8, 2, 3, 4, 5, 6];
         let mut refs = [&data[..]];
-        let frag = FragmentedBytes::new(&mut refs[..]);
+        let frag = refs.as_fragmented_byte_slice();
         let _ = frag.try_split_contiguous(2..8);
     }
 
@@ -811,7 +824,7 @@ mod tests {
         assert!(empty.is_empty());
         let empty = [0_u8; 0];
         let mut empty = [&empty[..]];
-        let empty = FragmentedByteSlice::new(&mut empty[..]);
+        let empty = empty.as_fragmented_byte_slice();
         assert!(empty.is_empty());
     }
 }

@@ -10,11 +10,12 @@ use std::ops::{Range, RangeBounds};
 use never::Never;
 
 use crate::{
-    canonicalize_range, take_back, take_back_mut, take_front, take_front_mut, BufferMut,
-    BufferView, BufferViewMut, ContiguousBuffer, ContiguousBufferImpl, ContiguousBufferMut,
-    ContiguousBufferMutImpl, EmptyBuf, FragmentedBuffer, FragmentedBufferMut, FragmentedBytes,
-    FragmentedBytesMut, GrowBuffer, GrowBufferMut, ParsablePacket, ParseBuffer, ParseBufferMut,
-    ReusableBuffer, SerializeBuffer, ShrinkBuffer, TargetBuffer,
+    canonicalize_range, take_back, take_back_mut, take_front, take_front_mut,
+    AsFragmentedByteSlice, BufferMut, BufferView, BufferViewMut, ContiguousBuffer,
+    ContiguousBufferImpl, ContiguousBufferMut, ContiguousBufferMutImpl, EmptyBuf, FragmentedBuffer,
+    FragmentedBufferMut, FragmentedBytes, FragmentedBytesMut, GrowBuffer, GrowBufferMut,
+    ParsablePacket, ParseBuffer, ParseBufferMut, ReusableBuffer, SerializeBuffer, ShrinkBuffer,
+    TargetBuffer,
 };
 
 const MAX_USIZE: usize = core::usize::MAX;
@@ -394,9 +395,8 @@ impl<B: AsRef<[u8]> + AsMut<[u8]>> TargetBuffer for Buf<B> {
     {
         let (prefix, buf) = self.buf.as_mut().split_at_mut(self.range.start);
         let (body, suffix) = buf.split_at_mut(self.range.end - self.range.start);
-        let mut body = [body];
-        let body = FragmentedBytesMut::new(&mut body[..]);
-        f(prefix, body, suffix)
+        let mut body = [&mut body[..]];
+        f(prefix, body.as_fragmented_byte_slice(), suffix)
     }
 }
 

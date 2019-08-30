@@ -234,7 +234,7 @@ impl PacketBuilder for EthernetFrameBuilder {
 #[cfg(test)]
 mod tests {
     use packet::{
-        Buf, FragmentedBytesMut, InnerPacketBuilder, ParseBuffer, SerializeBuffer, Serializer,
+        AsFragmentedByteSlice, Buf, InnerPacketBuilder, ParseBuffer, SerializeBuffer, Serializer,
     };
 
     use super::*;
@@ -409,8 +409,8 @@ mod tests {
     fn test_serialize_panic() {
         // create with a body which is below the minimum length
         let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
-        let mut buf = [&mut buf[..]];
-        let buf = FragmentedBytesMut::new(&mut buf[..]);
+        let mut b = [&mut buf[..]];
+        let buf = b.as_fragmented_byte_slice();
         let (head, body, foot) = buf
             .try_split_contiguous((ETHERNET_MIN_FRAME_LEN - (ETHERNET_MIN_BODY_LEN_WITH_TAG - 1))..)
             .unwrap();
