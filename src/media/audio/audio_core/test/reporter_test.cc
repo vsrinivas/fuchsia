@@ -28,8 +28,8 @@ class ReporterTest : public gtest::TestLoopFixture {
   }
 
   inspect_deprecated::ObjectHierarchy GetHierarchy() {
-    zx::vmo duplicate;
-    if (under_test_.tree().GetVmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate) != ZX_OK) {
+    zx::vmo duplicate = under_test_.tree().DuplicateVmo();
+    if (duplicate.get() == ZX_HANDLE_INVALID) {
       return inspect_deprecated::ObjectHierarchy();
     }
 

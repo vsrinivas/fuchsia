@@ -186,6 +186,20 @@ bool State::Copy(zx::vmo* vmo) const {
   return true;
 }
 
+bool State::CopyBytes(std::vector<uint8_t>* out) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  size_t size = heap_->size();
+  if (size == 0) {
+    return false;
+  }
+
+  out->resize(size);
+  memcpy(out->data(), heap_->data(), size);
+
+  return true;
+}
+
 IntProperty State::CreateIntProperty(const std::string& name, BlockIndex parent, int64_t value) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());

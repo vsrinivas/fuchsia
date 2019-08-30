@@ -12,7 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect_deprecated/inspect.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/vfs/cpp/internal/file.h>
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <lib/zx/time.h>
@@ -156,10 +156,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
   SampleAndPost();
 }
 
-Monitor::~Monitor() {
-  // TODO(CF-257).
-  root_object_.set_children_callback(nullptr);
-}
+Monitor::~Monitor() {}
 
 void Monitor::Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
   fuchsia::memory::WatcherPtr watcher_proxy = watcher.Bind();
@@ -202,10 +199,8 @@ void Monitor::PrintHelp() {
 }
 
 zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
-  inspect_deprecated::Inspector inspector;
-  auto tree = inspector.CreateTree(
-      "root", inspect_deprecated::TreeSettings{.initial_size = 4096, .maximum_size = 1024 * 1024});
-  auto& root = tree.GetRoot();
+  inspect::Inspector inspector("root", inspect::InspectSettings{.maximum_size = 1024 * 1024});
+  auto& root = inspector.GetRoot();
   Capture c;
   Capture::GetCapture(&c, capture_state_, VMO);
   Summary s(c, Summary::kNameMatches);
@@ -216,23 +211,24 @@ zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
   auto current_string = oss.str();
   auto high_water_string = high_water_.GetHighWater();
   auto previous_high_water_string = high_water_.GetPreviousHighWater();
-  inspect_deprecated::StringProperty current, high_water, previous_high_water;
+  inspect::StringProperty current, high_water, previous_high_water;
 
   if (!current_string.empty()) {
-    current = root.CreateStringProperty("current", current_string);
+    current = root.CreateString("current", current_string);
   }
   if (!high_water_string.empty()) {
-    high_water = root.CreateStringProperty("high_water", high_water_string);
+    high_water = root.CreateString("high_water", high_water_string);
   }
   if (!previous_high_water_string.empty()) {
-    previous_high_water =
-        root.CreateStringProperty("high_water_previous_boot", previous_high_water_string);
+    previous_high_water = root.CreateString("high_water_previous_boot", previous_high_water_string);
   }
 
-  size_t size;
-  tree.GetVmo().get_size(&size);
-  output->resize(size);
-  return tree.GetVmo().read(output->data(), 0, size);
+  *output = inspector.CopyBytes();
+  if (output->empty()) {
+    return ZX_ERR_INTERNAL;
+  } else {
+    return ZX_OK;
+  }
 }
 
 void Monitor::SampleAndPost() {

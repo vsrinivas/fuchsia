@@ -6,6 +6,7 @@
 #include <lib/inspect_deprecated/inspect.h>
 #include <lib/inspect_deprecated/query/source.h>
 #include <lib/vfs/cpp/vmo_file.h>
+
 #include <src/lib/files/file.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/join_strings.h>
@@ -95,7 +96,7 @@ class SourceTestVmo : public TestFixture {
   SourceTestVmo()
       : inspector_(),
         tree_(inspector_.CreateTree("root")),
-        vmo_file_(zx::unowned_vmo(tree_.GetVmo()), 0, 4096),
+        vmo_file_(tree_.DuplicateVmo(), 0, 4096),
         test_data_(std::move(tree_.GetRoot())) {
     ZX_ASSERT(vmo_file_.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
                               file_ptr_.NewRequest().TakeChannel()) == ZX_OK);
@@ -157,7 +158,7 @@ class SourceTestFile : public SourceTestVmo {
   // Writes the contents of the VMO backed by test data into a file at |path|.
   // Returns the resulting file name, or a string error.
   fit::result<std::string, std::string> WriteFromVmo(const std::string& path) {
-    const zx::vmo& vmo = tree_.GetVmo();
+    zx::vmo vmo = tree_.DuplicateVmo();
     uint64_t vmo_size;
     zx_status_t status = vmo.get_size(&vmo_size);
     if (status != ZX_OK) {

@@ -48,6 +48,11 @@ class State final {
   // Returns true on success, false otherwise.
   bool Copy(zx::vmo* vmo) const;
 
+  // Obtain a copy of the bytes in the VMO backing this state.
+  //
+  // Returns true on success, false otherwise.
+  bool CopyBytes(std::vector<uint8_t>* out) const;
+
   // Create a new |IntProperty| in the Inspect VMO. The returned value releases
   // the property when destroyed.
   IntProperty CreateIntProperty(const std::string& name, BlockIndex parent, int64_t value);

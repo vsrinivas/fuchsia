@@ -21,7 +21,7 @@ TEST(Inspect, CreateDeleteActive) {
 
   {
     auto inspector = std::make_unique<Inspector>("root");
-    EXPECT_TRUE(inspector->GetVmo().is_ok());
+    EXPECT_TRUE(inspector->DuplicateVmo().get() != ZX_HANDLE_INVALID);
     EXPECT_TRUE(bool(*inspector));
     node = inspector->GetRoot().CreateChild("node");
     Node child = node.CreateChild("child");
@@ -34,6 +34,38 @@ TEST(Inspect, CreateDeleteActive) {
   EXPECT_TRUE(bool(child));
 }
 
+TEST(Inspect, CreateCopyVmo) {
+  // Make a 16MB heap.
+  auto inspector = std::make_unique<Inspector>(
+      "root");
+
+  // Store a string.
+  std::string s = "abcd";
+  auto property = inspector->GetRoot().CreateString("string", s);
+  auto result = inspect::ReadFromVmo(inspector->CopyVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  EXPECT_EQ(s, hierarchy.node().properties()[0].Get<inspect::StringPropertyValue>().value());
+}
+
+TEST(Inspect, CreateCopyBytes) {
+  // Make a 16MB heap.
+  auto inspector = std::make_unique<Inspector>(
+      "root");
+
+  // Store a string.
+  std::string s = "abcd";
+  auto property = inspector->GetRoot().CreateString("string", s);
+
+  auto bytes = inspector->CopyBytes();
+  auto result = inspect::ReadFromBuffer(std::move(bytes));
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  EXPECT_EQ(s, hierarchy.node().properties()[0].Get<inspect::StringPropertyValue>().value());
+}
+
 TEST(Inspect, CreateLargeHeap) {
   // Make a 16MB heap.
   auto inspector = std::make_unique<Inspector>(
@@ -42,7 +74,7 @@ TEST(Inspect, CreateLargeHeap) {
   // Store a 4MB string.
   std::string s(4 * 1024 * 1024, 'a');
   auto property = inspector->GetRoot().CreateString("big_string", s);
-  auto result = inspect::ReadFromVmo(*inspector->GetVmo().take_value());
+  auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 
@@ -51,7 +83,7 @@ TEST(Inspect, CreateLargeHeap) {
 
 TEST(Inspect, CreateInvalidSize) {
   auto inspector = std::make_unique<Inspector>("root", inspect::InspectSettings{.maximum_size = 0});
-  EXPECT_FALSE(inspector->GetVmo().is_ok());
+  EXPECT_TRUE(inspector->DuplicateVmo().get() == ZX_HANDLE_INVALID);
   EXPECT_FALSE(bool(inspector->GetRoot()));
   EXPECT_FALSE(bool(*inspector));
 }
@@ -73,7 +105,7 @@ TEST(Inspect, CreateWithVmoReadOnly) {
   EXPECT_FALSE(bool(inspector));
 }
 
-TEST(Inspect, CreateWithVmoDuplicate) {
+TEST(Inspect, CreateWithVmoDuplicateVmo) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(4096 /* size */, 0, &vmo));
 
@@ -97,7 +129,7 @@ TEST(Inspect, CreateWithDirtyVmo) {
   ASSERT_TRUE(bool(inspector));
   auto val = inspector.GetRoot().CreateUint("test", 100);
 
-  auto result = inspect::ReadFromVmo(*inspector.GetVmo().take_value());
+  auto result = inspect::ReadFromVmo(inspector.DuplicateVmo());
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 

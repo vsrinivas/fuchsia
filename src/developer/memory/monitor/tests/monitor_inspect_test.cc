@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gmock/gmock.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/inspect_deprecated/reader.h>
-#include <lib/inspect_deprecated/testing/inspect.h>
+#include <lib/inspect/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <fs/vnode.h>
+#include <gmock/gmock.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/glob.h>
 #include <src/lib/fxl/strings/substitute.h>
-#include <stdlib.h>
-#include <string.h>
 
 namespace component {
 namespace {
@@ -21,8 +23,10 @@ namespace {
 using ::fxl::Substitute;
 using sys::testing::EnclosingEnvironment;
 using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::UnorderedElementsAre;
-using namespace inspect_deprecated::testing;
+using namespace inspect::testing;
 
 constexpr char kTestComponent[] =
     "fuchsia-pkg://fuchsia.com/memory_monitor_inspect_integration_tests#meta/"
@@ -65,7 +69,7 @@ class InspectTest : public sys::testing::TestWithEnvironment {
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
-  fit::result<inspect_deprecated::ObjectHierarchy> GetInspectHierarchy() {
+  fit::result<inspect::Hierarchy> GetInspectHierarchy() {
     files::Glob glob(Substitute("/hub/r/$1/*/c/$0/*/out/objects/root.inspect", kTestProcessName,
                                 fxl::StringView(test_case_)));
     if (glob.size() == 0) {
@@ -103,10 +107,11 @@ class InspectTest : public sys::testing::TestWithEnvironment {
     // fbl::Array takes ownership of the file path, but uses delete[] instead of
     // delete.  To avoid the error ASan would give us if we simply transferred
     // ownership, we copy the array to something that can use delete[].
-    uint8_t* new_buf = new uint8_t[buf.second];
-    memcpy(new_buf, buf.first, buf.second);
+    std::vector<uint8_t> new_buf;
+    new_buf.resize(buf.second);
+    memcpy(new_buf.data(), buf.first, buf.second);
     free(buf.first);
-    return inspect_deprecated::ReadFromBuffer(fbl::Array(new_buf, buf.second));
+    return inspect::ReadFromBuffer(std::move(new_buf));
   }
 
  private:
@@ -122,8 +127,8 @@ TEST_F(InspectTest, FirstLaunch) {
   EXPECT_THAT(
       hierarchy,
       AllOf(NodeMatches(AllOf(NameMatches("root"), PropertyList(UnorderedElementsAre(
-                                                       StringPropertyExists("current"),
-                                                       StringPropertyExists("high_water")))))));
+                                                       StringIs("current", Not(IsEmpty())),
+                                                       StringIs("high_water", Not(IsEmpty()))))))));
 }
 
 TEST_F(InspectTest, SecondLaunch) {
@@ -134,19 +139,19 @@ TEST_F(InspectTest, SecondLaunch) {
   EXPECT_THAT(
       hierarchy,
       AllOf(NodeMatches(AllOf(NameMatches("root"), PropertyList(UnorderedElementsAre(
-                                                       StringPropertyExists("current"),
-                                                       StringPropertyExists("high_water")))))));
+                                                       StringIs("current", Not(IsEmpty())),
+                                                       StringIs("high_water", Not(IsEmpty()))))))));
   CheckShutdown();
   Connect();
   result = GetInspectHierarchy();
   ASSERT_TRUE(result.is_ok());
   hierarchy = result.take_value();
   EXPECT_THAT(hierarchy,
-              AllOf(NodeMatches(
-                  AllOf(NameMatches("root"), PropertyList(UnorderedElementsAre(
-                                                 StringPropertyExists("current"),
-                                                 StringPropertyExists("high_water_previous_boot"),
-                                                 StringPropertyExists("high_water")))))));
+              AllOf(NodeMatches(AllOf(NameMatches("root"),
+                                      PropertyList(UnorderedElementsAre(
+                                          StringIs("current", Not(IsEmpty())),
+                                          StringIs("high_water_previous_boot", Not(IsEmpty())),
+                                          StringIs("high_water", Not(IsEmpty()))))))));
 }
 
 }  // namespace

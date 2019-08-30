@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/inspect_deprecated/component.h>
-#include <sdk/lib/vfs/cpp/vmo_file.h>
 
 #include <memory>
+
+#include <sdk/lib/vfs/cpp/vmo_file.h>
 
 namespace inspect_deprecated {
 
@@ -20,9 +21,7 @@ std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
 
   auto inspector = std::shared_ptr<ComponentInspector>(new ComponentInspector());
 
-  zx::vmo read_only_vmo;
-  ZX_ASSERT(inspector->root_tree()->GetVmo().duplicate(
-                ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, &read_only_vmo) == ZX_OK);
+  zx::vmo read_only_vmo = inspector->root_tree_.DuplicateVmo();
   auto vmo_file = std::make_unique<vfs::VmoFile>(std::move(read_only_vmo), 0, 4096);
   ZX_ASSERT(startup_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
                 "root.inspect", std::move(vmo_file)) == ZX_OK);

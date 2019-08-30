@@ -5,8 +5,6 @@
 #include "lib/inspect_deprecated/query/read.h"
 
 #include <fuchsia/io/cpp/fidl.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -17,6 +15,9 @@
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/vfs/cpp/vmo_file.h>
+
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <src/lib/fxl/strings/join_strings.h>
 
 #include "fixture.h"
@@ -59,7 +60,7 @@ class ReadTest : public TestFixture {
         std::make_unique<vfs::Service>(bindings_.GetHandler(fidl_dir_.object().get())));
 
     root_dir_.AddEntry("root.inspect",
-                       std::make_unique<vfs::VmoFile>(zx::unowned_vmo(tree_.GetVmo()), 0, 4096));
+                       std::make_unique<vfs::VmoFile>(tree_.DuplicateVmo(), 0, 4096));
 
     fuchsia::io::DirectoryPtr ptr;
     root_dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,

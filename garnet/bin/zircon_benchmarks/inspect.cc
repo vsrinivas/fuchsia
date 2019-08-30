@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/inspect/cpp/vmo/heap.h>
+#include <zircon/syscalls.h>
+
 #include <cmath>
 #include <iostream>
 #include <sstream>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/inspect/cpp/vmo/heap.h>
 #include <perftest/perftest.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <zircon/syscalls.h>
 
 namespace {
 
@@ -25,9 +26,9 @@ const size_t kExponentialStepMultiplier = 2;
 
 using inspect::Inspector;
 using inspect::Node;
-using inspect::internal::NumericProperty;
 using inspect::internal::BlockIndex;
 using inspect::internal::Heap;
+using inspect::internal::NumericProperty;
 
 template <typename T>
 NumericProperty<T> CreateMetric(Node* root);
@@ -215,7 +216,7 @@ bool TestProperty(perftest::RepeatState* state, int size) {
 }
 
 // Measure how long it takes to allocate and extend a heap.
-bool TestHeapExtend(perftest::RepeatState *state) {
+bool TestHeapExtend(perftest::RepeatState* state) {
   zx::vmo vmo;
 
   state->DeclareStep("Create 1MB VMO");
@@ -226,7 +227,7 @@ bool TestHeapExtend(perftest::RepeatState *state) {
 
   while (state->KeepRunning()) {
     BlockIndex index[513];
-    if (zx::vmo::create(1<<21, 0, &vmo) != ZX_OK) {
+    if (zx::vmo::create(1 << 21, 0, &vmo) != ZX_OK) {
       return false;
     }
 

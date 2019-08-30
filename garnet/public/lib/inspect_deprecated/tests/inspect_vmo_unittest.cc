@@ -21,8 +21,8 @@ using namespace inspect_deprecated::testing;
 
 // Convenience function for reading an ObjectHierarchy snapshot from a Tree.
 ObjectHierarchy GetHierarchy(const inspect_deprecated::Tree& tree) {
-  zx::vmo duplicate;
-  if (tree.GetVmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate) != ZX_OK) {
+  zx::vmo duplicate = tree.DuplicateVmo();
+  if (duplicate.get() == ZX_HANDLE_INVALID) {
     return ObjectHierarchy();
   }
   auto ret = inspect_deprecated::ReadFromVmo(std::move(duplicate));

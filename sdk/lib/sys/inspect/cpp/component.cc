@@ -21,11 +21,8 @@ std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
 
   auto inspector = std::shared_ptr<ComponentInspector>(new ComponentInspector());
 
-  zx::vmo read_only_vmo;
-  auto vmo = inspector->inspector()->GetVmo();
-  if (vmo.is_ok()) {
-    ZX_ASSERT(vmo.take_value()->duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP,
-                                          &read_only_vmo) == ZX_OK);
+  zx::vmo read_only_vmo = inspector->inspector()->DuplicateVmo();
+  if (read_only_vmo.get() != ZX_HANDLE_INVALID) {
     auto vmo_file = std::make_unique<vfs::VmoFile>(std::move(read_only_vmo), 0, 4096);
     ZX_ASSERT(startup_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
                   "root.inspect", std::move(vmo_file)) == ZX_OK);

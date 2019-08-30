@@ -264,20 +264,13 @@ zx_status_t VmoToInspectMapper::GetInspectVMO(zx::vmo* vmo) {
     return update_status;
   }
 
-  auto result = inspector_.GetVmo();
-  ZX_ASSERT(result.is_ok());
+  *vmo = inspector_.DuplicateVmo();
 
-  const zx::vmo* inspector_vmo = result.value();
-
-  uint64_t size;
-  ZX_ASSERT(inspector_vmo->get_size(&size) == ZX_OK);
-
-  // TODO(scottmg): Probably just READ|MAP?
-  zx_status_t status = inspector_vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, vmo);
-  if (status != ZX_OK) {
-    return status;
+  if (vmo->get() != ZX_HANDLE_INVALID) {
+    return ZX_OK;
+  } else {
+    return ZX_ERR_INTERNAL;
   }
-  return ZX_OK;
 }
 
 }  // namespace kcounter

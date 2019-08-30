@@ -40,7 +40,7 @@ TEST_F(EchoConnectionTest, EchoString_MultipleRequests) {
   echo_->EchoString("Hello World!", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("Hello World!", message);
-  auto hierarchy_result = inspect_deprecated::ReadFromVmo(inspect_tree_.GetVmo());
+  auto hierarchy_result = inspect_deprecated::ReadFromVmo(inspect_tree_.DuplicateVmo());
   ASSERT_TRUE(hierarchy_result.is_ok());
   EXPECT_THAT(hierarchy_result.take_value(),
               ChildrenMatch(::testing::ElementsAre(NodeMatches(
@@ -52,7 +52,7 @@ TEST_F(EchoConnectionTest, EchoString_MultipleRequests) {
   echo_->EchoString("Hello Again!", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("Hello Again!", message);
-  hierarchy_result = inspect_deprecated::ReadFromVmo(inspect_tree_.GetVmo());
+  hierarchy_result = inspect_deprecated::ReadFromVmo(inspect_tree_.DuplicateVmo());
   ASSERT_TRUE(hierarchy_result.is_ok());
   EXPECT_THAT(hierarchy_result.take_value(),
               ChildrenMatch(::testing::ElementsAre(NodeMatches(
@@ -67,7 +67,7 @@ TEST_F(EchoConnectionTest, EchoString_Empty) {
   echo_->EchoString("", [&](::fidl::StringPtr retval) { message = retval; });
   RunLoopUntilIdle();
   EXPECT_EQ("", message);
-  auto hierarchy_result = inspect_deprecated::ReadFromVmo(inspect_tree_.GetVmo());
+  auto hierarchy_result = inspect_deprecated::ReadFromVmo(inspect_tree_.DuplicateVmo());
   ASSERT_TRUE(hierarchy_result.is_ok());
   EXPECT_THAT(hierarchy_result.take_value(),
               ChildrenMatch(::testing::ElementsAre(NodeMatches(

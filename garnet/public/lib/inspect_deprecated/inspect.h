@@ -635,8 +635,8 @@ class Tree final {
   // Get the root object for this Tree.
   Node& GetRoot() const;
 
-  // Get a reference to the VMO backing this tree.
-  const zx::vmo& GetVmo() const;
+  // Duplicate and return the backing VMO for this tree.
+  zx::vmo DuplicateVmo() const;
 
  private:
   friend class Inspector;

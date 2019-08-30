@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect_deprecated/reader.h>
 #include <lib/inspect_deprecated/testing/inspect.h>
 #include <zircon/types.h>
+
+#include <gtest/gtest.h>
 
 using inspect::Inspector;
 using testing::UnorderedElementsAre;
@@ -35,11 +36,11 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
   dump_prop.Set(std::vector<uint8_t>(dump, dump + 4000));
 
   inspect::Snapshot snapshot;
-  ASSERT_EQ(ZX_OK, inspect::Snapshot::Create(*inspector->GetVmo().value(), &snapshot));
+  ASSERT_EQ(ZX_OK, inspect::Snapshot::Create(inspector->DuplicateVmo(), &snapshot));
 
   std::vector<fit::result<inspect_deprecated::ObjectHierarchy>> hierarchies;
   hierarchies.emplace_back(inspect_deprecated::ReadFromSnapshot(std::move(snapshot)));
-  hierarchies.emplace_back(inspect_deprecated::ReadFromVmo(*inspector->GetVmo().value()));
+  hierarchies.emplace_back(inspect_deprecated::ReadFromVmo(inspector->DuplicateVmo()));
   for (auto& root : hierarchies) {
     ASSERT_TRUE(root.is_ok());
     EXPECT_THAT(

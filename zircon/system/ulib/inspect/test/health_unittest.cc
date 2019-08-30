@@ -4,6 +4,7 @@
 
 #include <lib/inspect/cpp/health.h>
 #include <lib/inspect/cpp/reader.h>
+
 #include <zxtest/zxtest.h>
 
 #include "lib/inspect/cpp/hierarchy.h"
@@ -34,7 +35,7 @@ TEST(InspectHealth, Default) {
   auto inspector = inspect::Inspector("root");
   auto health = inspect::NodeHealth(&inspector.GetRoot());
 
-  auto hierarchy = inspect::ReadFromVmo(*inspector.GetVmo().take_value()).take_value();
+  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
   auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
@@ -50,7 +51,7 @@ TEST(InspectHealth, Ok) {
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.Ok();
 
-  auto hierarchy = inspect::ReadFromVmo(*inspector.GetVmo().take_value()).take_value();
+  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
   auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
@@ -67,7 +68,7 @@ TEST(InspectHealth, UnhealthyToStartingUp) {
   health.Unhealthy("test");
   health.StartingUp();
 
-  auto hierarchy = inspect::ReadFromVmo(*inspector.GetVmo().take_value()).take_value();
+  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
   auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
@@ -83,7 +84,7 @@ TEST(InspectHealth, Unhealthy) {
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.Unhealthy("test");
 
-  auto hierarchy = inspect::ReadFromVmo(*inspector.GetVmo().take_value()).take_value();
+  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
   auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
@@ -101,7 +102,7 @@ TEST(InspectHealth, StartingUpReason) {
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.StartingUp("test");
 
-  auto hierarchy = inspect::ReadFromVmo(*inspector.GetVmo().take_value()).take_value();
+  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
   auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());
@@ -119,7 +120,7 @@ TEST(InspectHealth, CustomMessage) {
   auto health = inspect::NodeHealth(&inspector.GetRoot());
   health.SetStatus("BAD CONFIG", "test");
 
-  auto hierarchy = inspect::ReadFromVmo(*inspector.GetVmo().take_value()).take_value();
+  auto hierarchy = inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
   auto* health_subtree = hierarchy.GetByPath({inspect::kHealthNodeName});
   ASSERT_TRUE(health_subtree != nullptr);
   EXPECT_STR_EQ(inspect::kHealthNodeName, health_subtree->name().c_str());

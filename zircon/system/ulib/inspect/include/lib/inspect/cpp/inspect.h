@@ -39,9 +39,20 @@ class Inspector final {
   // If an invalid VMO is passed all Node operations will will have no effect.
   Inspector(const std::string& name, zx::vmo vmo);
 
-  // Returns a pointer to the VMO backing this inspector's tree if one exists, otherwise return
-  // fit::error.
-  fit::result<const zx::vmo*> GetVmo() const;
+  // Returns a duplicated read-only version of the VMO backing this inspector.
+  zx::vmo DuplicateVmo() const;
+
+  // Returns a copied version of the VMO backing this inspector.
+  //
+  // The returned copy will always be a consistent snapshot of the inspector state, truncated to
+  // include only relevant pages from the underlying VMO.
+  zx::vmo CopyVmo() const;
+
+  // Returns a copy of the bytes of the VMO backing this inspector.
+  //
+  // The returned bytes will always be a consistent snapshot of the inspector state, truncated to
+  // include only relevant bytes from the underlying VMO.
+  std::vector<uint8_t> CopyBytes() const;
 
   // Returns a reference to the root node owned by this inspector.
   Node& GetRoot() const;

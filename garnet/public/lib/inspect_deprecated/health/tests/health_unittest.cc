@@ -20,7 +20,7 @@ TEST(InspectHealth, Default) {
   auto tree = inspect_deprecated::Inspector().CreateTree("test");
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.GetVmo()).take_value();
+  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
   auto* node = hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
   ASSERT_TRUE(node != nullptr);
   EXPECT_THAT(*node, NodeMatches(AllOf(NameMatches(inspect_deprecated::kHealthNodeName),
@@ -33,7 +33,7 @@ TEST(InspectHealth, Ok) {
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.Ok();
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.GetVmo()).take_value();
+  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
   auto* node = hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
   ASSERT_TRUE(node != nullptr);
   EXPECT_THAT(*node, NodeMatches(AllOf(NameMatches(inspect_deprecated::kHealthNodeName),
@@ -47,7 +47,7 @@ TEST(InspectHealth, UnhealthyToStartingUp) {
   health.Unhealthy("test");
   health.StartingUp();
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.GetVmo()).take_value();
+  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
   auto* node = hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
   ASSERT_TRUE(node != nullptr);
   EXPECT_THAT(*node, NodeMatches(AllOf(NameMatches(inspect_deprecated::kHealthNodeName),
@@ -60,7 +60,7 @@ TEST(InspectHealth, Unhealthy) {
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.Unhealthy("test");
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.GetVmo()).take_value();
+  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
   auto* node = hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
   ASSERT_TRUE(node != nullptr);
   EXPECT_THAT(
@@ -75,7 +75,7 @@ TEST(InspectHealth, StartingUpReason) {
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.StartingUp("test");
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.GetVmo()).take_value();
+  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
   auto* node = hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
   ASSERT_TRUE(node != nullptr);
   EXPECT_THAT(*node, NodeMatches(AllOf(
@@ -90,7 +90,7 @@ TEST(InspectHealth, CustomMessage) {
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.SetStatus("BAD CONFIG", "test");
 
-  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.GetVmo()).take_value();
+  auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
   auto* node = hierarchy.GetByPath({inspect_deprecated::kHealthNodeName});
   ASSERT_TRUE(node != nullptr);
   EXPECT_THAT(*node, NodeMatches(AllOf(

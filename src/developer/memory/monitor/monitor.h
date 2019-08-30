@@ -8,7 +8,6 @@
 #include <fuchsia/memory/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/inspect_deprecated/deprecated/object_dir.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
@@ -30,9 +29,8 @@ class MonitorUnitTest;
 
 class Monitor : public fuchsia::memory::Monitor {
  public:
-   Monitor(std::unique_ptr<sys::ComponentContext> context,
-                   const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher,
-                   bool send_metrics);
+  Monitor(std::unique_ptr<sys::ComponentContext> context, const fxl::CommandLine& command_line,
+          async_dispatcher_t* dispatcher, bool send_metrics);
   ~Monitor();
   void Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) override;
   static const char kTraceName[];
@@ -66,7 +64,6 @@ class Monitor : public fuchsia::memory::Monitor {
   fidl::BindingSet<fuchsia::memory::Monitor> bindings_;
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;
-  component::ObjectDir root_object_;
   std::unique_ptr<Metrics> metrics_;
 
   friend class test::MonitorUnitTest;

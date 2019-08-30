@@ -73,13 +73,14 @@ executable("test-inspect") {
   ]
 
   deps = [
-    "//garnet/public/lib/inspect_deprecated:reader",
-    "//garnet/public/lib/inspect_deprecated/testing",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/inspect",
   ]
 }
 

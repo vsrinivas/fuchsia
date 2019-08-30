@@ -379,7 +379,7 @@ Tree::Tree()
 Tree::Tree(::inspect::Inspector inspector)
     : inspector_(std::move(inspector)), root_(std::make_unique<Node>(&inspector_.GetRoot())) {}
 
-const zx::vmo& Tree::GetVmo() const { return *inspector_.GetVmo().value(); }
+zx::vmo Tree::DuplicateVmo() const { return inspector_.DuplicateVmo(); }
 
 Node& Tree::GetRoot() const { return *root_; }
 

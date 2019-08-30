@@ -61,12 +61,28 @@ Inspector::Inspector(const std::string& name, zx::vmo vmo) : root_(std::make_uni
   *root_ = state_->CreateNode(name, 0 /* parent */);
 }
 
-fit::result<const zx::vmo*> Inspector::GetVmo() const {
-  if (!state_) {
-    return fit::error();
+zx::vmo Inspector::DuplicateVmo() const {
+  zx::vmo ret;
+
+  if (state_) {
+    state_->GetVmo().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, &ret);
   }
 
-  return fit::ok(&state_->GetVmo());
+  return ret;
+}
+
+zx::vmo Inspector::CopyVmo() const {
+  zx::vmo ret;
+
+  state_->Copy(&ret);
+
+  return ret;
+}
+
+std::vector<uint8_t> Inspector::CopyBytes() const {
+  std::vector<uint8_t> ret;
+  state_->CopyBytes(&ret);
+  return ret;
 }
 
 Node& Inspector::GetRoot() const { return *root_; }
