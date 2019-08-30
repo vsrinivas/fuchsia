@@ -7,12 +7,15 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <limits>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+
+#include <limits>
+#include <utility>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
@@ -20,9 +23,6 @@
 #include <minfs/format.h>
 #include <minfs/host.h>
 #include <minfs/minfs.h>
-#include <zircon/assert.h>
-
-#include <utility>
 
 #include "minfs-private.h"
 
@@ -135,11 +135,21 @@ static const minfs::MountOptions kDefaultMountOptions = {
 };
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
-  int r = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root) == ZX_OK ? 0 : -1;
-  if (r == 0) {
-    fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+  zx_status_t status = ZX_OK;
+  minfs::Superblock info = {};
+  status = LoadSuperblock(bc.get(), &info);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("error: could not read info block: %d\n", status);
+    return status;
   }
-  return r;
+
+  status = minfs::Mount(std::move(bc), kDefaultMountOptions, &info, &fakeFs.fake_root);
+  if (status == ZX_OK) {
+    fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+    return 0;
+  }
+
+  return -1;
 }
 
 int emu_create_bcache(const char* path, fbl::unique_ptr<minfs::Bcache>* out_bc) {

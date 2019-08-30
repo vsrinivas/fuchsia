@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <minfs/fsck.h>
+
+#include <lib/cksum.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <utility>
 
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
-#include <minfs/fsck.h>
 
 #include "minfs-private.h"
-#include <utility>
 
 namespace minfs {
 
@@ -627,7 +629,7 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* inf
     return status;
   }
   fbl::unique_ptr<Minfs> fs;
-  if ((status = Minfs::Create(std::move(bc), info, &fs, IntegrityCheck::kAll)) != ZX_OK) {
+  if ((status = Minfs::Create(std::move(bc), info, IntegrityCheck::kAll, &fs)) != ZX_OK) {
     FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
     return status;
   }
@@ -636,34 +638,204 @@ zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* inf
   return ZX_OK;
 }
 
-zx_status_t LoadSuperblock(fbl::unique_ptr<Bcache>& bc, Superblock* out) {
-  zx_status_t status;
-
-  char data[kMinfsBlockSize];
-  if (bc->Readblk(0, data) < 0) {
-    FS_TRACE_ERROR("minfs: could not read info block\n");
-    return ZX_ERR_IO;
-  }
-  const Superblock* info = reinterpret_cast<const Superblock*>(data);
-  DumpInfo(info);
+// Write Superblock and Backup Superblock to disk.
 #ifdef __Fuchsia__
-  status = CheckSuperblock(info, bc->device(), bc->Maxblk());
+zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transaction_handler,
+                                               block_client::BlockDevice* device,
+                                               Superblock* info) {
 #else
-  status = CheckSuperblock(info, bc->Maxblk());
+zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transaction_handler,
+                                               Superblock* info) {
+#endif
+#ifdef __Fuchsia__
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  const size_t kVmoBlocks = 1;
+  zx_status_t status = CreateAndRegisterVmo(device, &vmo, kVmoBlocks, &vmoid);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Prepare fifo transaction for write.
+  status = vmo.write(info, 0, sizeof(*info));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  block_fifo_request_t request[2];
+
+  const uint32_t disk_blocks_per_fs_block =
+      kMinfsBlockSize / transaction_handler->DeviceBlockSize();
+  request[0].opcode = BLOCKIO_WRITE;
+  request[0].vmoid = vmoid.id;
+  request[0].group = transaction_handler->BlockGroupID();
+  request[0].length = disk_blocks_per_fs_block;
+  request[0].vmo_offset = 0;
+  request[0].dev_offset = kSuperblockStart * disk_blocks_per_fs_block;
+
+  request[1].opcode = BLOCKIO_WRITE;
+  request[1].vmoid = vmoid.id;
+  request[1].group = transaction_handler->BlockGroupID();
+  request[1].length = disk_blocks_per_fs_block;
+  request[1].vmo_offset = 0;
+  if ((info->flags & kMinfsFlagFVM) == 0) {
+    request[1].dev_offset = kNonFvmSuperblockBackup * disk_blocks_per_fs_block;
+  } else {
+    request[1].dev_offset = kFvmSuperblockBackup * disk_blocks_per_fs_block;
+  }
+  status = device->FifoTransaction(request, 2);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  request[0].opcode = BLOCKIO_CLOSE_VMO;
+  return (device->FifoTransaction(&request[0], 1));
+#else
+  zx_status_t status = transaction_handler->Writeblk(kSuperblockStart, info);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if ((info->flags & kMinfsFlagFVM) == 0) {
+    status = transaction_handler->Writeblk(kNonFvmSuperblockBackup, info);
+  } else {
+    status = transaction_handler->Writeblk(kFvmSuperblockBackup, info);
+  }
+  return status;
+#endif
+}
+
+// Reads backup superblock from correct location depending on whether filesystem has FVM support.
+#ifdef __Fuchsia__
+zx_status_t ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
+                                 block_client::BlockDevice* device, uint32_t max_blocks,
+                                 uint32_t backup_location, Superblock* out_backup) {
+  zx_status_t status = device->ReadBlock(backup_location, kMinfsBlockSize, out_backup);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = CheckSuperblock(out_backup, device, max_blocks);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Found a valid backup superblock. Confirm if the FVM flags are set in the backup superblock.
+  if ((backup_location == kFvmSuperblockBackup) &&
+      ((out_backup->flags & kMinfsFlagFVM) == 0)) {
+    return ZX_ERR_BAD_STATE;
+  } else if ((backup_location == kNonFvmSuperblockBackup) &&
+             ((out_backup->flags & kMinfsFlagFVM) != 0)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
+}
+#endif
+
+// Repairs superblock from backup.
+#ifdef __Fuchsia__
+zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
+                             block_client::BlockDevice* device, uint32_t max_blocks,
+                             Superblock* info_out) {
+  Superblock backup_info;
+  // Try the FVM backup location first.
+  zx_status_t status = ReadBackupSuperblock(transaction_handler, device, max_blocks,
+                                            kFvmSuperblockBackup, &backup_info);
+
+  if (status != ZX_OK) {
+    // Try the non-fvm backup superblock location.
+    status = ReadBackupSuperblock(transaction_handler, device, max_blocks,
+                                  kNonFvmSuperblockBackup, &backup_info);
+  }
+
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Fsck::RepairSuperblock failed. Unrepairable superblock: %d\n", status);
+    return status;
+  }
+  FS_TRACE_INFO("Superblock corrupted. Repairing filesystem from backup superblock.\n");
+
+  // Try to reconstruct alloc_*_counts of the backup superblock, since the
+  // alloc_*_counts might be out-of-sync with the actual values.
+  status = ReconstructAllocCounts(transaction_handler, device, &backup_info);
+
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Fsck::ReconstructAllocCounts failed. Unrepairable superblock: %d\n", status);
+    return status;
+  }
+  // Recalculate checksum.
+  UpdateChecksum(&backup_info);
+
+  // Update superblock and backup superblock.
+  status = WriteSuperBlockAndBackupSuperblock(transaction_handler, device, &backup_info);
+
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Fsck::RepairSuperblock failed to repair superblock from backup :%d", status);
+  }
+
+  // Updating in-memory info.
+  memcpy(info_out, &backup_info, sizeof(backup_info));
+  return status;
+}
+#endif
+
+ // TODO(ZX-4623): Remove this code after migration to major version 8 and replace calling sites
+ // with LoadSuperblock.
+ // Loads the superblock and upgrades if needed from version 7 to version 8.
+zx_status_t LoadAndUpgradeSuperblock(Bcache* bc, bool is_fs_writable, Superblock* out_info) {
+  zx_status_t status = bc->Readblk(kSuperblockStart, out_info);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: could not read info block.\n");
+    return status;
+  }
+
+  if (is_fs_writable) {
+    if (out_info->version_major == kMinfsMajorVersionOld) {
+      FS_TRACE_INFO("minfs: Soft upgrade to version 8.\n");
+      // Upgrade the superblock.
+#ifdef __Fuchsia__
+      status = UpgradeSuperblock(bc, bc->device(), out_info);
+#else
+      status = UpgradeSuperblock(bc, out_info);
+#endif
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("minfs: failed to upgrade on-disk filesystem to newer version %d\n", status);
+        return status;
+      }
+    }
+  }
+  DumpInfo(out_info);
+#ifdef __Fuchsia__
+  status = CheckSuperblock(out_info, bc->device(), bc->Maxblk());
+#else
+  status = CheckSuperblock(out_info, bc->Maxblk());
 #endif
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Fsck: check_info failure: %d\n", status);
     return status;
   }
+  return ZX_OK;
+}
 
-  memcpy(out, info, sizeof(*out));
+zx_status_t LoadSuperblock(Bcache* bc, Superblock* out_info) {
+  zx_status_t status = bc->Readblk(kSuperblockStart, out_info);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: could not read info block.\n");
+    return status;
+  }
+  DumpInfo(out_info);
+#ifdef __Fuchsia__
+  status = CheckSuperblock(out_info, bc->device(), bc->Maxblk());
+#else
+  status = CheckSuperblock(out_info, bc->Maxblk());
+#endif
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Fsck: check_info failure: %d\n", status);
+    return status;
+  }
   return ZX_OK;
 }
 
 zx_status_t UsedDataSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
   zx_status_t status;
   Superblock info = {};
-  if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
+  if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
     return status;
   }
 
@@ -674,7 +846,7 @@ zx_status_t UsedDataSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
 zx_status_t UsedInodes(fbl::unique_ptr<Bcache>& bc, uint64_t* out_inodes) {
   zx_status_t status;
   Superblock info = {};
-  if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
+  if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
     return status;
   }
 
@@ -685,7 +857,7 @@ zx_status_t UsedInodes(fbl::unique_ptr<Bcache>& bc, uint64_t* out_inodes) {
 zx_status_t UsedSize(fbl::unique_ptr<Bcache>& bc, uint64_t* out_size) {
   zx_status_t status;
   Superblock info = {};
-  if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
+  if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
     return status;
   }
 
@@ -788,11 +960,25 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
   return ZX_OK;
 }
 
-zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
-  zx_status_t status;
+zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair fsck_repair) {
   Superblock info = {};
-  if ((status = LoadSuperblock(bc, &info)) != ZX_OK) {
-    return status;
+
+  // TODO(ZX-4623): Remove this code after migration to major version 8 and replace with
+  // LoadSuperblock.
+  zx_status_t status = LoadAndUpgradeSuperblock(bc.get(), fsck_repair == minfs::Repair::kEnabled,
+                                                &info);
+  if (status != ZX_OK) {
+    if (fsck_repair == Repair::kDisabled) {
+      FS_TRACE_ERROR("Fsck: LoadSuperblock failure: %d\n", status);
+      return status;
+    }
+#ifdef __Fuchsia__
+    status = RepairSuperblock(bc.get(), bc->device(), bc->Maxblk(), &info);
+#endif
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("Fsck: RepairSuperblock failure: %d\n", status);
+      return status;
+    }
   }
 
   MinfsChecker chk;
@@ -822,8 +1008,10 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc) {
   status |= (status != ZX_OK) ? 0 : r;
   r = chk.CheckAllocatedCounts();
   status |= (status != ZX_OK) ? 0 : r;
-  r = chk.CheckJournal();
-  status |= (status != ZX_OK) ? 0 : r;
+
+  // TODO(ZX-4623): Uncomment this check for journal after safe migration to major version 8.
+  // r = chk.CheckJournal();
+  // status |= (status != ZX_OK) ? 0 : r;
 
   // TODO: check allocated inodes that were abandoned
   // TODO: check allocated blocks that were not accounted for

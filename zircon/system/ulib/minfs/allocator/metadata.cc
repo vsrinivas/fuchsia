@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utility>
-
 #include "metadata.h"
+
+#include <utility>
 
 namespace minfs {
 
 AllocatorFvmMetadata::AllocatorFvmMetadata() = default;
 AllocatorFvmMetadata::AllocatorFvmMetadata(uint32_t* data_slices, uint32_t* metadata_slices,
-                                           uint64_t slice_size)
+                                           uint32_t slice_size)
     : data_slices_(data_slices), metadata_slices_(metadata_slices), slice_size_(slice_size) {}
 AllocatorFvmMetadata::AllocatorFvmMetadata(AllocatorFvmMetadata&&) = default;
 AllocatorFvmMetadata& AllocatorFvmMetadata::operator=(AllocatorFvmMetadata&&) = default;

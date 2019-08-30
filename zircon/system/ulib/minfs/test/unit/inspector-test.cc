@@ -5,10 +5,12 @@
 // Tests minfs inspector behavior.
 
 #include <minfs/inspector.h>
-#include "minfs-private.h"
-#include "inspector-private.h"
+
 #include <lib/disk-inspector/disk-inspector.h>
 #include <zxtest/zxtest.h>
+
+#include "inspector-private.h"
+#include "minfs-private.h"
 
 namespace minfs {
 namespace {
@@ -94,7 +96,8 @@ TEST(InspectorTest, TestSuperblock) {
   Superblock sb;
   sb.magic0 = kMinfsMagic0;
   sb.magic1 = kMinfsMagic1;
-  sb.version = kMinfsVersion;
+  sb.version_major = kMinfsMajorVersion;
+  sb.version_minor = kMinfsMinorVersion;
   sb.flags = kMinfsFlagClean;
   sb.block_size = kMinfsBlockSize;
   sb.inode_size = kMinfsInodeSize;
@@ -116,18 +119,22 @@ TEST(InspectorTest, TestSuperblock) {
 
   std::unique_ptr<disk_inspector::DiskObject> obj2 = superblock->GetElementAt(2);
   obj2->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(kMinfsMajorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
 
   std::unique_ptr<disk_inspector::DiskObject> obj3 = superblock->GetElementAt(3);
   obj3->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsFlagClean, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(kMinfsMinorVersion, *(reinterpret_cast<const uint32_t*>(buffer)));
 
   std::unique_ptr<disk_inspector::DiskObject> obj4 = superblock->GetElementAt(4);
   obj4->GetValue(&buffer, &size);
-  ASSERT_EQ(kMinfsBlockSize, *(reinterpret_cast<const uint32_t*>(buffer)));
+  ASSERT_EQ(kMinfsFlagClean, *(reinterpret_cast<const uint32_t*>(buffer)));
 
   std::unique_ptr<disk_inspector::DiskObject> obj5 = superblock->GetElementAt(5);
   obj5->GetValue(&buffer, &size);
+  ASSERT_EQ(kMinfsBlockSize, *(reinterpret_cast<const uint32_t*>(buffer)));
+
+  std::unique_ptr<disk_inspector::DiskObject> obj6 = superblock->GetElementAt(6);
+  obj6->GetValue(&buffer, &size);
   ASSERT_EQ(kMinfsInodeSize, *(reinterpret_cast<const uint32_t*>(buffer)));
 }
 

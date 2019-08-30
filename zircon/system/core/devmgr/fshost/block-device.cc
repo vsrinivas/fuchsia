@@ -234,7 +234,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
         fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
         return status;
       }
-      status = minfs::Fsck(std::move(bc));
+      status = minfs::Fsck(std::move(bc), minfs::Repair::kEnabled);
 
       if (status != ZX_OK) {
         mounter_->mutable_metrics()->LogMinfsCorruption();

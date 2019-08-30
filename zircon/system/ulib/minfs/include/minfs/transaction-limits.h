@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef MINFS_TRANSACTION_LIMITS_H_
+#define MINFS_TRANSACTION_LIMITS_H_
 
 #include "format.h"
 
@@ -55,8 +56,9 @@ class TransactionLimits {
   blk_t GetRecommendedJournalBlocks() const { return rec_journal_blocks_; }
 
   // Maximum number of superblock blocks that can be modified within one transaction.
-  // Since there is only 1 superblock, there can be only 1 block updated on each transaction.
-  static constexpr blk_t kMaxSuperblockBlocks = 1;
+  // Since there are 2 superblocks (original and backup),
+  // there can be 2 blocks updated on each transaction.
+  static constexpr blk_t kMaxSuperblockBlocks = 2;
 
   // TODO(planders): Enforce all of the following limits.
   //                 (Perhaps by tracking modified counts within the Transaction).
@@ -100,3 +102,5 @@ class TransactionLimits {
 };
 
 }  // namespace minfs
+
+#endif  // MINFS_TRANSACTION_LIMITS_H_

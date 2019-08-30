@@ -5,6 +5,7 @@
 group("test") {
   testonly = true
   deps = [
+    ":minfs-integration",
     ":minfs-unit",
   ]
 }
@@ -12,10 +13,10 @@ group("test") {
 test("minfs-unit") {
   test_group = "fs"
   sources = [
-    "format-test.cc",
-    "inspector-test.cc",
-    "superblock-test.cc",
-    "work-queue-test.cc",
+    "unit/format-test.cc",
+    "unit/inspector-test.cc",
+    "unit/superblock-test.cc",
+    "unit/work-queue-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",
@@ -31,4 +32,19 @@ test("minfs-unit") {
   ]
   include_dirs = [ "$zx/system/ulib/minfs" ]
   configs += [ "$zx/public/gn/config:static-libc++" ]
+}
+
+test("minfs-integration") {
+  test_group = "fs"
+  sources = [
+    "integration/backup-superblock.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fs-management",
+    "$zx/system/ulib/fs-test-utils",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
 }
