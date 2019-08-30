@@ -16,6 +16,7 @@ fidl("fuchsia.router.config") {
   sdk_category = "experimental"
 
   sources = [
+    "common.fidl",
     "dns.fidl",
     "event.fidl",
     "lan.fidl",

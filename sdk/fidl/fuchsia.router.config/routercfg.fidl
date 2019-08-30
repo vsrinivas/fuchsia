@@ -15,13 +15,6 @@ table Device {
     3: DeviceConfig config;
 };
 
-struct Id {
-    // each config element has unique id
-    array<uint8>:16 uuid;
-    // global config DB version # (increments w/ each change)
-    uint64 version;
-};
-
 /// Topology allows indicating which ports are part of a LAN interface and which ports are part of a WAN interface.
 /// All ports part of a given LAN or WAN are bridged among themselves and an Switch Virtual Interface (SVI)
 /// is created for cpu to get packets (our current bridge).
