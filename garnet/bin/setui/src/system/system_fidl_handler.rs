@@ -3,18 +3,40 @@
 // found in the LICENSE file.
 use {
     crate::switchboard::base::*,
+    crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
+    futures::lock::Mutex,
     futures::prelude::*,
     std::sync::{Arc, RwLock},
 };
+
+impl Sender<SystemSettings> for SystemWatchResponder {
+    fn send_response(self, data: SystemSettings) {
+        self.send(&mut Ok(data)).unwrap();
+    }
+}
+
+impl From<SettingResponse> for SystemSettings {
+    fn from(response: SettingResponse) -> Self {
+        if let SettingResponse::System(info) = response {
+            let mut system_settings = fidl_fuchsia_settings::SystemSettings::empty();
+            system_settings.mode =
+                Some(fidl_fuchsia_settings::LoginOverride::from(info.login_override_mode));
+            system_settings
+        } else {
+            panic!("incorrect value sent to system");
+        }
+    }
+}
 
 pub fn spawn_system_fidl_handler(
     switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
     mut stream: SystemRequestStream,
 ) {
-    let switchboard_lock = switchboard_handle.clone();
+    let hanging_get_handler: Arc<Mutex<HangingGetHandler<SystemSettings, SystemWatchResponder>>> =
+        HangingGetHandler::create(switchboard_handle.clone(), SettingType::System);
 
     fasync::spawn(async move {
         while let Ok(Some(req)) = stream.try_next().await {
@@ -30,25 +52,8 @@ pub fn spawn_system_fidl_handler(
                     }
                 }
                 SystemRequest::Watch { responder } => {
-                    let (response_tx, response_rx) =
-                        futures::channel::oneshot::channel::<SettingResponseResult>();
-                    {
-                        let mut switchboard = switchboard_lock.write().unwrap();
-                        switchboard
-                            .request(SettingType::System, SettingRequest::Get, response_tx)
-                            .unwrap();
-                    }
-
-                    // TODO(go/fxb/35307): Support hanging get.
-                    if let Ok(Some(SettingResponse::System(info))) = response_rx.await.unwrap() {
-                        let mut system_settings = fidl_fuchsia_settings::SystemSettings::empty();
-                        system_settings.mode = Some(fidl_fuchsia_settings::LoginOverride::from(
-                            info.login_override_mode,
-                        ));
-                        responder.send(&mut Ok(system_settings)).unwrap();
-                    } else {
-                        panic!("incorrect value sent to system");
-                    }
+                    let mut hanging_get_lock = hanging_get_handler.lock().await;
+                    hanging_get_lock.watch(responder).await;
                 }
                 _ => {}
             }

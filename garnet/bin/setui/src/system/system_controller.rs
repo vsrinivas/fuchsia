@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::registry::base::Command, crate::switchboard::base::*, fuchsia_async as fasync,
+    crate::registry::base::{Command, Notifier, State},
+    crate::switchboard::base::*,
+    fuchsia_async as fasync,
     futures::StreamExt,
+    std::sync::{Arc, RwLock},
 };
 
 pub fn spawn_system_controller() -> futures::channel::mpsc::UnboundedSender<Command> {
@@ -13,10 +16,20 @@ pub fn spawn_system_controller() -> futures::channel::mpsc::UnboundedSender<Comm
     // TODO(go/fxb/25465): Replace this stored value with persisted storage once it's available.
     let mut stored_login_override_mode = fidl_fuchsia_settings::LoginOverride::None;
 
+    // TODO(go/fxb/35532): Replace with parking_lot::RwLock.
+    let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
+
     fasync::spawn(async move {
         while let Some(command) = system_handler_rx.next().await {
             match command {
-                Command::ChangeState(_state) => {}
+                Command::ChangeState(state) => match state {
+                    State::Listen(notifier) => {
+                        *notifier_lock.write().unwrap() = Some(notifier);
+                    }
+                    State::EndListen => {
+                        *notifier_lock.write().unwrap() = None;
+                    }
+                },
                 Command::HandleRequest(request, responder) =>
                 {
                     #[allow(unreachable_patterns)]
@@ -25,6 +38,14 @@ pub fn spawn_system_controller() -> futures::channel::mpsc::UnboundedSender<Comm
                             stored_login_override_mode =
                                 fidl_fuchsia_settings::LoginOverride::from(mode);
                             responder.send(Ok(None)).unwrap();
+
+                            {
+                                if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+                                    notifier
+                                        .unbounded_send(SettingType::System)
+                                        .expect("failed to send system setting notification");
+                                }
+                            }
                         }
                         SettingRequest::Get => {
                             responder
