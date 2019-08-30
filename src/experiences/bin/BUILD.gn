@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 group("bin") {
-
   deps = [
     "hello_experiences",
+    "simple_browser",
   ]
 }
 
@@ -14,5 +14,6 @@ group("dart_unittests") {
 
   deps = [
     "hello_experiences:hello_experiences_unittests($host_toolchain)",
+    "simple_browser:simple_browser_unittests($host_toolchain)",
   ]
 }
