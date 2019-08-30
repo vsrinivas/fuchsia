@@ -230,6 +230,15 @@ impl<T> MaybeParsed<T, T> {
             MaybeParsed::Incomplete(bytes)
         }
     }
+
+    /// Consumes this `MaybeParsed` and return its contained value if both the
+    /// `Complete` and `Incomplete` variants contain the same type.
+    pub(crate) fn into_inner(self) -> T {
+        match self {
+            MaybeParsed::Complete(c) => c,
+            MaybeParsed::Incomplete(i) => i,
+        }
+    }
 }
 
 impl<C, I> MaybeParsed<C, I> {

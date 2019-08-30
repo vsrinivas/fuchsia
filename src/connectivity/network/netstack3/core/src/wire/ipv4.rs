@@ -413,6 +413,17 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4PacketRaw<B> {
     }
 }
 
+impl<B: ByteSlice> Ipv4PacketRaw<B> {
+    /// Return the body.
+    ///
+    /// `body` [`MaybeParsed::Complete`] if the entire body is present (as
+    /// determined by the header's "total length" and "internet header length"
+    /// fields), and [`MaybeParsed::Incomplete`] otherwise.
+    pub(crate) fn body(&self) -> MaybeParsed<&[u8], &[u8]> {
+        self.body.as_ref().map(|b| b.deref()).map_incomplete(|b| b.deref())
+    }
+}
+
 pub(crate) type Options<B> = crate::wire::records::options::Options<B, Ipv4OptionsImpl>;
 pub(crate) type OptionsSerializer<'a, I> =
     crate::wire::records::options::OptionsSerializer<'a, Ipv4OptionsImpl, Ipv4Option<'a>, I>;

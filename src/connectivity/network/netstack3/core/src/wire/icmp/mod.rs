@@ -21,7 +21,7 @@ pub(crate) use self::icmpv6::*;
 
 use std::cmp;
 use std::convert::{TryFrom, TryInto};
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem;
 use std::ops::Deref;
@@ -40,9 +40,9 @@ use crate::ip::IpProto;
 use crate::wire::ipv4::{self, Ipv4PacketRaw};
 use crate::wire::ipv6::Ipv6PacketRaw;
 use crate::wire::records::options::{Options, OptionsImpl};
-use crate::wire::U16;
+use crate::wire::{FromRaw, U16};
 
-#[derive(Default, Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Copy, Clone, Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct HeaderPrefix {
     msg_type: u8,
@@ -335,7 +335,7 @@ pub trait IcmpMessageType: TryFrom<u8> + Into<u8> + Copy {
     fn is_err(self) -> bool;
 }
 
-#[derive(FromBytes, Unaligned)]
+#[derive(Copy, Clone, Debug, FromBytes, Unaligned)]
 #[repr(C)]
 struct Header<M> {
     prefix: HeaderPrefix,
@@ -353,30 +353,40 @@ unsafe impl<M: AsBytes + Unaligned> AsBytes for Header<M> {
     fn only_derive_is_allowed_to_implement_this_trait() {}
 }
 
+/// A partially parsed and not yet validated ICMP packet.
+///
+/// An `IcmpPacketRaw` provides minimal parsing of an ICMP packet. Namely, it
+/// only requires that the header and message (in ICMPv6, these are both
+/// considered part of the header) are present, and that the header has the
+/// expected message type. The body may be missing (or an unexpected body may be
+/// present). Other than the message type, no header, message, or body field
+/// values will be validated.
+///
+/// [`IcmpPacket`] provides a [`FromRaw`] implementation that can be used to
+/// validate an [`IcmpPacketRaw`].
+#[derive(Debug)]
+pub(crate) struct IcmpPacketRaw<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
+    header: LayoutVerified<B, Header<M>>,
+    message_body: B,
+    _marker: PhantomData<I>,
+}
+
+impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacketRaw<I, B, M> {
+    /// Get the ICMP message.
+    pub(crate) fn message(&self) -> &M {
+        &self.header.message
+    }
+}
+
 /// An ICMP packet.
 ///
 /// An `IcmpPacket` shares its underlying memory with the byte slice it was
 /// parsed from, meaning that no copying or extra allocation is necessary.
+#[derive(Debug)]
 pub(crate) struct IcmpPacket<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> {
     header: LayoutVerified<B, Header<M>>,
     message_body: M::Body,
     _marker: PhantomData<I>,
-}
-
-impl<
-        I: IcmpIpExt,
-        B: ByteSlice,
-        MB: fmt::Debug + MessageBody<B>,
-        M: IcmpMessage<I, B, Body = MB> + fmt::Debug,
-    > fmt::Debug for IcmpPacket<I, B, M>
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("IcmpPacket")
-            .field("header", &self.header.prefix)
-            .field("message", &self.header.message)
-            .field("message_body", &self.message_body)
-            .finish()
-    }
 }
 
 /// Arguments required to parse an ICMP packet.
@@ -392,8 +402,8 @@ impl<A: IpAddress> IcmpParseArgs<A> {
     }
 }
 
-impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpParseArgs<I::Addr>>
-    for IcmpPacket<I, B, M>
+impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, ()>
+    for IcmpPacketRaw<I, B, M>
 {
     type Error = ParseError;
 
@@ -401,17 +411,30 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
         ParseMetadata::from_packet(self.header.bytes().len(), self.message_body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, args: IcmpParseArgs<I::Addr>) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> ParseResult<Self> {
         let header = buffer
             .take_obj_front::<Header<M>>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         let message_body = buffer.into_rest();
-        if !M::Body::EXPECTS_BODY && !message_body.is_empty() {
-            return debug_err!(Err(ParseError::Format), "unexpected message body");
-        }
-
         if header.prefix.msg_type != M::TYPE.into() {
             return debug_err!(Err(ParseError::NotExpected), "unexpected message type");
+        }
+        Ok(IcmpPacketRaw { header, message_body, _marker: PhantomData })
+    }
+}
+
+impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>>
+    FromRaw<IcmpPacketRaw<I, B, M>, IcmpParseArgs<I::Addr>> for IcmpPacket<I, B, M>
+{
+    type Error = ParseError;
+
+    fn try_from_raw_with(
+        raw: IcmpPacketRaw<I, B, M>,
+        args: IcmpParseArgs<I::Addr>,
+    ) -> ParseResult<Self> {
+        let IcmpPacketRaw { header, message_body, _marker } = raw;
+        if !M::Body::EXPECTS_BODY && !message_body.is_empty() {
+            return debug_err!(Err(ParseError::Format), "unexpected message body");
         }
         M::code_from_u8(header.prefix.code).ok_or_else(debug_err_fn!(
             ParseError::Format,
@@ -424,7 +447,21 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
         let message_body = M::Body::parse(message_body)?;
-        Ok(IcmpPacket { header, message_body, _marker: PhantomData })
+        Ok(IcmpPacket { header, message_body, _marker })
+    }
+}
+
+impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpParseArgs<I::Addr>>
+    for IcmpPacket<I, B, M>
+{
+    type Error = ParseError;
+
+    fn parse_metadata(&self) -> ParseMetadata {
+        ParseMetadata::from_packet(self.header.bytes().len(), self.message_body.len(), 0)
+    }
+
+    fn parse<BV: BufferView<B>>(mut buffer: BV, args: IcmpParseArgs<I::Addr>) -> ParseResult<Self> {
+        IcmpPacketRaw::parse(buffer, ()).and_then(|p| IcmpPacket::try_from_raw_with(p, args))
     }
 }
 
@@ -639,5 +676,61 @@ struct IdAndSeq {
 impl IdAndSeq {
     fn new(id: u16, seq: u16) -> IdAndSeq {
         IdAndSeq { id: U16::new(id), seq: U16::new(seq) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use packet::ParseBuffer;
+
+    use super::*;
+
+    #[test]
+    fn test_partial_parse() {
+        // Test various behaviors of parsing the `IcmpPacketRaw` type.
+
+        let reference_header = Header {
+            prefix: HeaderPrefix {
+                msg_type: <IcmpEchoRequest as IcmpMessage<Ipv4, &[u8]>>::TYPE.into(),
+                code: 0,
+                checksum: [0, 0],
+            },
+            message: IcmpEchoRequest::new(1, 1),
+        };
+
+        // Test that a too-short header is always rejected even if its contents
+        // are otherwise valid (the checksum here is probably invalid, but we
+        // explicitly check that it's a `Format` error, not a `Checksum`
+        // error).
+        let mut buf = &reference_header.as_bytes()[..7];
+        assert_eq!(
+            buf.parse::<IcmpPacketRaw<Ipv4, _, IcmpEchoRequest>>().unwrap_err(),
+            ParseError::Format
+        );
+
+        // Test that a properly-sized header is rejected if the message type is wrong.
+        let mut header = reference_header;
+        header.prefix.msg_type = <IcmpEchoReply as IcmpMessage<Ipv4, &[u8]>>::TYPE.into();
+        let mut buf = header.as_bytes();
+        assert_eq!(
+            buf.parse::<IcmpPacketRaw<Ipv4, _, IcmpEchoRequest>>().unwrap_err(),
+            ParseError::NotExpected
+        );
+
+        // Test that an invalid code is accepted.
+        let mut header = reference_header;
+        header.prefix.code = 0xFF;
+        let mut buf = header.as_bytes();
+        assert!(buf.parse::<IcmpPacketRaw<Ipv4, _, IcmpEchoRequest>>().is_ok());
+
+        // Test that an invalid checksum is accepted. Instead of calculating the
+        // correct checksum, we just provide two different checksums. They can't
+        // both be valid.
+        let mut buf = reference_header.as_bytes();
+        assert!(buf.parse::<IcmpPacketRaw<Ipv4, _, IcmpEchoRequest>>().is_ok());
+        let mut header = reference_header;
+        header.prefix.checksum = [1, 1];
+        let mut buf = header.as_bytes();
+        assert!(buf.parse::<IcmpPacketRaw<Ipv4, _, IcmpEchoRequest>>().is_ok());
     }
 }
