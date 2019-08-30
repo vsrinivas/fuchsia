@@ -22,7 +22,11 @@ namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(async_dispatcher_t* dispatcher,
                                        const SystemGainMuteProvider& system_gain_mute)
-    : dispatcher_(dispatcher), system_gain_mute_(system_gain_mute) {}
+    : dispatcher_(dispatcher),
+      system_gain_mute_(system_gain_mute),
+      // TODO(35145): Use a dispatcher here appropriate for blocking operations such as disk IO
+      // instead of the main service dispatcher.
+      device_settings_persistence_(dispatcher_) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -32,8 +36,8 @@ AudioDeviceManager::~AudioDeviceManager() {
 // Configure this admin singleton object to manage audio device instances.
 zx_status_t AudioDeviceManager::Init() {
   TRACE_DURATION("audio", "AudioDeviceManager::Init");
-  // Give AudioDeviceSettings a chance to ensure its storage is happy.
-  AudioDeviceSettings::Initialize();
+
+  device_settings_persistence_.Initialize();
 
   // Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
@@ -73,7 +77,7 @@ void AudioDeviceManager::Shutdown() {
   // Step #1: Stop monitoring plug/unplug events and cancel any pending settings
   // commit task.  We are shutting down and no longer care about these things.
   plug_detector_.Stop();
-  commit_settings_task_.Cancel();
+  device_settings_persistence_.CancelPendingWriteback();
 
   // Step #2: Shut down each active AudioCapturer in the system.
   while (!audio_capturers_.is_empty()) {
@@ -97,7 +101,7 @@ void AudioDeviceManager::Shutdown() {
   while (!devices_.is_empty()) {
     auto device = devices_.pop_front();
     device->Shutdown();
-    FinalizeDeviceSettings(*device);
+    device_settings_persistence_.FinalizeDeviceSettings(*device->device_settings());
   }
 
   // Step #6: Shut down the throttle output.
@@ -154,27 +158,16 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
   // If these settings are not unique, then copy the settings of the device we
   // conflict with, and use them without persistence. Currently, when device
   // instances conflict, we persist only the first instance's settings.
-  DeviceSettingsSet::iterator collision;
   fbl::RefPtr<AudioDeviceSettings> settings = device->device_settings();
   FXL_DCHECK(settings != nullptr);
-  if (persisted_device_settings_.insert_or_find(settings, &collision)) {
-    settings->InitFromDisk();
-  } else {
-    const uint8_t* id = settings->uid().data;
-    char id_buf[33];
-    std::snprintf(id_buf, sizeof(id_buf),
-                  "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", id[0], id[1],
-                  id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12],
-                  id[13], id[14], id[15]);
-    FXL_LOG(WARNING) << "Warning: Device ID (" << device->token()
-                     << ") shares a persistent unique ID (" << id_buf
-                     << ") with another device in the system.  Initial Settings will be cloned "
-                        "from this device, and not persisted";
-    settings->InitFromClone(*collision);
+  zx_status_t status = device_settings_persistence_.LoadSettings(settings);
+  if (status != ZX_OK) {
+    FXL_PLOG(DFATAL, status) << "Unable to load device settings; "
+                             << "device will not use persisted settings";
   }
 
   // Is this device configured to be ignored? If so, remove (don't activate) it.
-  if (settings->ignore_device()) {
+  if (settings->Ignored()) {
     REP(IgnoringDevice(*device));
     RemoveDevice(device);
     return;
@@ -230,7 +223,7 @@ void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) 
   UpdateDefaultDevice(device->is_input());
 
   // Commit (or schedule a commit for) any dirty settings.
-  CommitDirtySettings();
+  device_settings_persistence_.CommitDirtySettings();
 }
 
 void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
@@ -251,7 +244,7 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   // TODO(mpuryear): Persist any final remaining device-effect settings?
 
   device->Shutdown();
-  FinalizeDeviceSettings(*device);
+  device_settings_persistence_.FinalizeDeviceSettings(*device->device_settings());
 
   // TODO(mpuryear): Delete this device instance's EffectsProcessor here?
 
@@ -362,7 +355,7 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
   REP(SettingDeviceGainInfo(*dev, gain_info, set_flags));
   dev->SetGainInfo(gain_info, set_flags);
   NotifyDeviceGainChanged(*dev);
-  CommitDirtySettings();
+  device_settings_persistence_.CommitDirtySettings();
 }
 
 void AudioDeviceManager::GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) {
@@ -480,7 +473,7 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type t
   // not currently outweigh the complexity of maintaining this index.
   for (auto& obj : devices_) {
     auto& device = static_cast<AudioDevice&>(obj);
-    if ((device.type() != type) || device.device_settings()->disallow_auto_routing()) {
+    if ((device.type() != type) || device.device_settings()->AutoRoutingDisabled()) {
       continue;
     }
 
@@ -706,17 +699,6 @@ void AudioDeviceManager::LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& de
   }
 }
 
-void AudioDeviceManager::FinalizeDeviceSettings(const AudioDevice& device) {
-  TRACE_DURATION("audio", "AudioDeviceManager::FinalizeDeviceSettings");
-  const auto& settings = device.device_settings();
-  if ((settings == nullptr) || !settings->InContainer()) {
-    return;
-  }
-
-  settings->Commit(true);
-  persisted_device_settings_.erase(*settings);
-}
-
 void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::NotifyDeviceGainChanged");
   fuchsia::media::AudioGainInfo info;
@@ -754,29 +736,7 @@ void AudioDeviceManager::UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>
   FXL_DCHECK(device != nullptr);
   REP(SettingDeviceGainInfo(*device, set_cmd, set_flags));
   device->SetGainInfo(set_cmd, set_flags);
-  CommitDirtySettings();
-}
-
-void AudioDeviceManager::CommitDirtySettings() {
-  TRACE_DURATION("audio", "AudioDeviceManager::CommitDirtySettings");
-  zx::time next = zx::time::infinite();
-
-  for (auto& settings : persisted_device_settings_) {
-    zx::time tmp = settings.Commit();
-    if (tmp < next) {
-      next = tmp;
-    }
-  }
-
-  // If our commit task is waiting to fire, try to cancel it.
-  if (commit_settings_task_.is_pending()) {
-    commit_settings_task_.Cancel();
-  }
-
-  // If we need to update in the future, schedule a commit task to do so.
-  if (next != zx::time::infinite()) {
-    commit_settings_task_.PostForTime(dispatcher_, next);
-  }
+  device_settings_persistence_.CommitDirtySettings();
 }
 
 void AudioDeviceManager::AddDeviceByChannel(::zx::channel device_channel, std::string device_name,

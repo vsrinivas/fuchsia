@@ -13,17 +13,17 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
-#include <rapidjson/schema.h>
 
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace media::audio {
 
 class AudioDevice;
 class AudioDriver;
+struct HwGainState;
 
-class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings>,
-                            public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDeviceSettings>> {
+class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings> {
  public:
   struct GainState {
     float gain_db = 0.0f;
@@ -32,32 +32,28 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings>,
     bool agc_enabled = false;
   };
 
-  static fbl::RefPtr<AudioDeviceSettings> Create(const AudioDriver& drv, bool is_input) {
-    return fbl::AdoptRef(new AudioDeviceSettings(drv, is_input));
-  }
+  static fbl::RefPtr<AudioDeviceSettings> Create(const AudioDriver& drv, bool is_input);
 
-  static void Initialize();
-  static void EnableDeviceSettings(bool enabled) { writes_enabled_ = enabled; }
-
-  // Initialize this object from persisted settings on disk, or (if that fails) create a new
-  // settings file with the current initial settings.
-  zx_status_t InitFromDisk();
+  AudioDeviceSettings(const audio_stream_unique_id_t& uid, const HwGainState& hw, bool is_input);
 
   // Initialize this object with the contents of another instance with the same unique
   // id. Do not make any attempt to persist these settings to disk from now on.
   void InitFromClone(const AudioDeviceSettings& other);
-
-  // Commit dirty settings to storage if needed. Return the next time we should commit settings, or
-  // zx::time::infinite() if settings are now clean and do not need a future commit time.
-  zx::time Commit(bool force = false);
 
   // Simple accessors for constant properties
   const audio_stream_unique_id_t& uid() const { return uid_; }
   bool is_input() const { return is_input_; }
 
   // Simple accessors for persisted properties
-  bool ignore_device() const { return ignore_device_; }
-  bool disallow_auto_routing() const { return disallow_auto_routing_; }
+  bool Ignored() const { return ignored_; }
+  void SetIgnored(bool ignored);
+  bool AutoRoutingDisabled() const { return auto_routing_disabled_; }
+  void SetAutoRoutingDisabled(bool auto_routing_disabled);
+
+  void set_observer(fit::function<void(const AudioDeviceSettings*)> observer) {
+    FXL_DCHECK(!observer_);
+    observer_ = std::move(observer);
+  }
 
   // Disallow copy/move construction/assignment
   AudioDeviceSettings(const AudioDeviceSettings&) = delete;
@@ -104,17 +100,7 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings>,
   //////////////////////////////////////////////////////////////////////////////
 
  private:
-  AudioDeviceSettings(const AudioDriver& drv, bool is_input);
-
-  zx_status_t Deserialize(const fbl::unique_fd& storage);
-  zx_status_t Serialize();
-  void UpdateCommitTimeouts();
-  void CancelCommitTimeouts();
-  void CreateSettingsPath(const std::string& prefix, char* out_path, size_t out_path_len);
-
-  static bool writes_enabled_;
-  static bool initialized_;
-  static std::unique_ptr<rapidjson::SchemaDocument> file_schema_;
+  void NotifyObserver();
 
   const audio_stream_unique_id_t uid_;
   const bool is_input_;
@@ -122,28 +108,8 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings>,
   const bool can_agc_;
 
   // These should only be accessed from the AudioDeviceManager's message loop thread.
-  fbl::unique_fd storage_;
-  bool ignore_device_ = false;
-  bool disallow_auto_routing_ = false;
-
-  // Members which control the dirty/clean status of the settings relative to storage, and which
-  // control the Nagle-ish commit limiter.
-  //
-  // We introduce two absolute timeouts, next_commit_time and max_commit_time. When settings are
-  // clean (in sync with storage), both will be infinite. Anytime a change is introduced, the
-  // timeouts are updated as follows.
-  //
-  // 1) If max is infinite, it is set to now + MaxUpdateDelay, otherwise it is unchanged.
-  // 2) next gets set to min(now + UpdateDelay, max_commit_time)
-  //
-  // When now >= next, it is time to commit. The general idea here is to wait a short amount of time
-  // before committing the settings to storage, because another change may be arriving very soon.
-  // This said, if the settings are constantly changing, they will need to eventually be committed.
-  // The UpdateDelay determines the maximum possible rate at which the settings will be committed,
-  // while MaxUpdateDelay determines the minimum commit rate in the event that the settings are
-  // constantly changing.
-  zx::time next_commit_time_ = zx::time::infinite();
-  zx::time max_commit_time_ = zx::time::infinite();
+  bool ignored_ = false;
+  bool auto_routing_disabled_ = false;
 
   // The settings_lock_ protects any settings state which needs to be set by the AudioDeviceManager
   // and observed atomically by the mix domain threads. Any state which is used only by the
@@ -153,6 +119,8 @@ class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings>,
   GainState gain_state_ FXL_GUARDED_BY(settings_lock_);
   audio_set_gain_flags_t gain_state_dirty_flags_ FXL_GUARDED_BY(settings_lock_) =
       static_cast<audio_set_gain_flags_t>(0);
+
+  fit::function<void(const AudioDeviceSettings*)> observer_;
 };
 
 }  // namespace media::audio

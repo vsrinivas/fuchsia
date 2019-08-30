@@ -37,7 +37,7 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_co
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
 
-  AudioDeviceSettings::EnableDeviceSettings(options.enable_device_settings_writeback);
+  device_manager().EnableDeviceSettings(options.enable_device_settings_writeback);
 
 #ifdef NDEBUG
   Logging::Init(fxl::LOG_WARNING);
@@ -210,7 +210,7 @@ void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy po
 void AudioCoreImpl::EnableDeviceSettings(bool enabled) {
   TRACE_DURATION("audio", "AudioCoreImpl::EnableDeviceSettings");
   AUD_VLOG(TRACE) << " (enabled: " << enabled << ")";
-  AudioDeviceSettings::EnableDeviceSettings(enabled);
+  device_manager().EnableDeviceSettings(enabled);
 }
 
 void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,

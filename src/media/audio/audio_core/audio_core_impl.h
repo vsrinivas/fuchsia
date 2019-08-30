@@ -69,7 +69,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, SystemGainMuteProvider {
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
   // Accessor for our encapsulated device manager.
-  AudioDeviceManager& GetDeviceManager() { return device_manager_; }
+  AudioDeviceManager& device_manager() { return device_manager_; }
 
   float system_gain_db() const override { return system_gain_db_; }
   bool system_muted() const override { return system_muted_; }
