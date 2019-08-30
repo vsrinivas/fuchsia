@@ -14,7 +14,7 @@
 #include <lib/ui/scenic/cpp/resources.h>
 #include <src/lib/fxl/macros.h>
 
-#include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
+#include "src/ui/scenic/lib/scenic/util/rk4_spring_simulation.h"
 
 namespace root_presenter {
 

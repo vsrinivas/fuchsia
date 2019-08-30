@@ -9,16 +9,16 @@
 #include <lib/fit/single_threaded_executor.h>
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-#include "garnet/lib/ui/gfx/gfx_system.h"
+#include "src/ui/scenic/lib/gfx/gfx_system.h"
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
-#include "garnet/lib/ui/input/input_system.h"
+#include "src/ui/scenic/lib/input/input_system.h"
 #endif
 
-#include "garnet/lib/ui/gfx/api/internal_snapshot_impl.h"
-#include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
-#include "garnet/lib/ui/gfx/engine/frame_predictor.h"
+#include "src/ui/scenic/lib/gfx/api/internal_snapshot_impl.h"
+#include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/gfx/engine/frame_predictor.h"
 
 namespace {
 

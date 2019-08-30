@@ -4,7 +4,7 @@
 
 #include "src/lib/ui/input/gesture.h"
 
-#include <lib/ui/gfx/cpp/math.h>
+#include "garnet/public/lib/ui/gfx/cpp/math.h"
 
 namespace input {
 

@@ -19,7 +19,6 @@ source_set("settings") {
   ]
 
   deps = [
-    "//garnet/lib/ui/gfx",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
@@ -27,5 +26,6 @@ source_set("settings") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/ui/scenic/lib/gfx",
   ]
 }

@@ -41,7 +41,7 @@ struct, via DeviceState.
 
 It forwards InputEvents **to** Scenic to be routed to the correct destination
 based on hit testing. Scenic will send an InputEvent to a
-[View](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/ui/gfx/resources/view.h)
+[View](https://fuchsia.googlesource.com/fuchsia/+/master/src/ui/scenic/lib/gfx/resources/view.h)
 over its
 [SessionListener](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.ui.scenic/session.fidl),
 as a

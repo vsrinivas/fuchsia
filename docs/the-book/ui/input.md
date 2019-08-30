@@ -115,7 +115,7 @@ dispatch to each UI client.
 Scenic accepts commands from a client over its session. RootPresenter is a
 privileged client that may submit input commands, each of which encapsulates an
 `InputEvent`. The Scenic-side implementation of session logic has an
-[`InputCommandDispatcher`](/garnet/lib/ui/input/input_system.h)
+[`InputCommandDispatcher`](/src/ui/scenic/lib/input/input_system.h)
 that farms out different types of events to appropriate dispatch logic.
 
 We outline some representative event flows below.

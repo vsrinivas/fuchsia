@@ -1,0 +1,233 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":apptests",
+    ":pixeltests",
+    ":unittests",
+    ":viewstate_apptests",
+  ]
+}
+
+source_set("mocks") {
+  testonly = true
+  sources = [
+    "frame_scheduler_mocks.cc",
+    "frame_scheduler_mocks.h",
+    "mocks.cc",
+    "mocks.h",
+  ]
+  public_deps = [
+    ":util",
+    "//garnet/public/lib/inspect_deprecated",
+    "//src/ui/scenic/lib/gfx",
+  ]
+}
+
+source_set("testing_deps") {
+  testonly = true
+  sources = [
+    "error_reporting_test.cc",
+    "error_reporting_test.h",
+    "frame_scheduler_test.cc",
+    "frame_scheduler_test.h",
+    "gfx_test.cc",
+    "gfx_test.h",
+    "session_handler_test.cc",
+    "session_handler_test.h",
+    "session_test.cc",
+    "session_test.h",
+    "vk_session_test.cc",
+    "vk_session_test.h",
+  ]
+  public_deps = [
+    ":mocks",
+    ":util",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/inspect_deprecated",
+    "//garnet/public/lib/inspect_deprecated:reader",
+    "//garnet/public/lib/inspect_deprecated/testing",
+    "//garnet/public/lib/ui/input/cpp",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/ui/lib/escher",
+    "//src/ui/lib/escher/test:gtest_escher",
+    "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/gfx",
+    "//src/ui/scenic/lib/scenic/tests:testing_deps",
+    "//src/ui/scenic/lib/scenic/util",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("util") {
+  testonly = true
+  sources = [
+    "util.cc",
+    "util.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl",
+    "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/scenic/util",
+  ]
+}
+
+executable("unittests") {
+  output_name = "gfx_unittests"
+
+  testonly = true
+  sources = [
+    "camera_unittest.cc",
+    "compositor_unittest.cc",
+    "default_frame_scheduler_unittest.cc",
+    "dump_visitor_unittest.cc",
+    "duration_predictor_unittest.cc",
+    "escher_vulkan_smoke_test.cc",
+    "frame_predictor_unittest.cc",
+    "frame_stats_unittest.cc",
+    "frame_timings_unittest.cc",
+    "gfx_command_applier_unittest.cc",
+    "hardware_layer_assignment_unittest.cc",
+    "hittest_global_unittest.cc",
+    "host_image_unittest.cc",
+    "image_pipe_unittest.cc",
+    "import_unittest.cc",
+    "memory_unittest.cc",
+    "node_unittest.cc",
+    "object_linker_unittest.cc",
+    "pose_buffer_unit_test.cc",
+    "resource_linker_unittest.cc",
+    "run_all_unittests.cc",
+    "scene_graph_unittest.cc",
+    "scene_unittest.cc",
+    "session_handler_unittest.cc",
+    "session_unittest.cc",
+    "shape_unittest.cc",
+    "size_change_hint_unittest.cc",
+    "snapshotter_unittest.cc",
+    "stereo_camera_unittest.cc",
+    "view_clipping_unittest.cc",
+    "view_tree_unittest.cc",
+    "view_unittest.cc",
+  ]
+  deps = [
+    ":testing_deps",
+    "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/gfx:object_linker",
+    "//third_party/googletest:gmock",
+  ]
+  include_dirs = [ "//src/ui/lib/escher" ]
+}
+
+executable("apptests") {
+  output_name = "gfx_apptests"
+
+  testonly = true
+  sources = [
+    "gfx_apptest.cc",
+  ]
+  deps = [
+    ":testing_deps",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+executable("pixeltests") {
+  output_name = "gfx_pixeltests"
+
+  testonly = true
+  sources = [
+    "scenic_pixel_test.cc",
+  ]
+  include_dirs = [ "//src/ui/lib/escher" ]
+  deps = [
+    ":testing_deps",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//garnet/testing/views",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/lib/escher",
+    "//src/ui/lib/glm_workaround",
+    "//src/ui/lib/yuv",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+executable("viewstate_apptests") {
+  output_name = "gfx_viewstate_apptests"
+
+  testonly = true
+  sources = [
+    "gfx_viewstate_apptest.cc",
+  ]
+  include_dirs = [ "//src/ui/lib/escher" ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/testing/views",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/lib/glm_workaround",
+  ]
+}
+
+executable("mock_pose_buffer_provider_cc") {
+  output_name = "mock_pose_buffer_provider"
+
+  sources = [
+    "mock_pose_buffer_provider.cc",
+    "mock_pose_buffer_provider.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/ui/lib/glm_workaround",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+package("mock_pose_buffer_provider") {
+  meta = [
+    {
+      path = "meta/mock_pose_buffer_provider.cmx"
+      dest = "mock_pose_buffer_provider.cmx"
+    },
+  ]
+
+  deps = [
+    ":mock_pose_buffer_provider_cc",
+  ]
+
+  binary = "mock_pose_buffer_provider"
+}

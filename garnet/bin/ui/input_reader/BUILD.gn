@@ -20,7 +20,7 @@ source_set("input_reader") {
     "//zircon/public/lib/trace",
   ]
 
-  configs += [ "//garnet/lib/ui/gfx:swapchain" ]
+  configs += [ "//src/ui/scenic/lib/gfx:swapchain" ]
 
   public_deps = [
     ":device",

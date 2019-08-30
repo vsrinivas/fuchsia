@@ -100,10 +100,6 @@ exceptions = {
     ],
     '//src/ui': [
         '//garnet/bin/ui',
-        '//garnet/lib/ui',
-    ],
-    '//src/ui/a11y': [
-        '//garnet/lib/ui/gfx',
     ],
     '//src/ui/examples/escher': [
         '//garnet/bin/ui',

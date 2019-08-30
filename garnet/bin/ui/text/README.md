@@ -94,7 +94,7 @@ There are a number of FIDL protocols used by input methods and text input on Fuc
     - Holds the `TextField` protocol, and other related v2 input method protocols and structs.
 - `sdk/fidl/fuchsia.ui.text.testing`
     - Holds the `TextFieldTestSuite` protocol and related structs.
-- `garnet/lib/ui/text/common`
+- `src/ui/scenic/lib/text/common`
     - Helper functions and structs used across the various text projects. 
 - `topaz/bin/xi`
     - Binaries for the Xi editor.

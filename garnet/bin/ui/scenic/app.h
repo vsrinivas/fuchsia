@@ -10,11 +10,11 @@
 
 #include <memory>
 
-#include "garnet/lib/ui/gfx/engine/engine.h"
-#include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
-#include "garnet/lib/ui/scenic/scenic.h"
 #include "garnet/public/lib/async_promise/executor.h"
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/scenic/lib/gfx/engine/engine.h"
+#include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
+#include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl {
 

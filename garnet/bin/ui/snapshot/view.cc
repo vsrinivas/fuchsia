@@ -4,9 +4,9 @@
 
 #include "garnet/bin/ui/snapshot/view.h"
 
-#include "garnet/lib/ui/gfx/snapshot/version.h"
 #include "lib/fsl/vmo/vector.h"
 #include "src/lib/ui/scenic/cpp/host_memory.h"
+#include "src/ui/scenic/lib/gfx/snapshot/version.h"
 
 namespace snapshot {
 

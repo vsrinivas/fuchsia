@@ -14,8 +14,6 @@
 
 #include <trace-provider/provider.h>
 
-#include "garnet/lib/ui/gfx/snapshot/snapshot_generated.h"
-#include "garnet/lib/ui/gfx/snapshot/version.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
 #include "rapidjson/document.h"
@@ -24,6 +22,8 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/gfx/snapshot/snapshot_generated.h"
+#include "src/ui/scenic/lib/gfx/snapshot/version.h"
 #include "third_party/cobalt/src/lib/crypto_util/base64.h"
 
 using cobalt::crypto::Base64Encode;

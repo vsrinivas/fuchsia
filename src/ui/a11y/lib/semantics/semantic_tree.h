@@ -16,8 +16,8 @@
 
 #include <src/lib/fxl/macros.h>
 
-#include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/scenic/lib/gfx/util/unwrap.h"
 
 namespace a11y {
 
