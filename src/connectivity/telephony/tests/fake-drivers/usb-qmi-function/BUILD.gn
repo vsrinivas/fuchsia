@@ -29,7 +29,7 @@ driver_module("qmi_function") {
     "usb-qmi-function.h",
   ]
   deps = [
-    "//zircon/public/banjo/ddk.protocol.usb.function",
+    "//zircon/system/banjo/ddk.protocol.usb.function",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fdio",

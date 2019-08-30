@@ -102,7 +102,7 @@ source_set("core") {
   deps = [
     ":debug",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
     "//zircon/public/lib/ddk",
   ]
   public_deps = [
@@ -111,8 +111,8 @@ source_set("core") {
 
     # TODO: we should try to refactor Device so this isn't required outside of the :sim target
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
-    "//zircon/public/banjo/ddk.protocol.ethernet",
-    "//zircon/public/banjo/ddk.protocol.wlanphyimpl",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
@@ -153,7 +153,7 @@ source_set("sdio") {
   ]
   deps = [
     ":debug",
-    "//zircon/public/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
@@ -163,8 +163,8 @@ source_set("sdio") {
     ":core",
     ":firmware",
     ":linuxisms",
-    "//zircon/public/banjo/ddk.protocol.gpio",
-    "//zircon/public/banjo/ddk.protocol.sdio",
+    "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.sdio",
     "//zircon/public/lib/ddk",
   ]
 }

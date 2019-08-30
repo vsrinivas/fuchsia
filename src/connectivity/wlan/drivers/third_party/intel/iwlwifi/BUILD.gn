@@ -78,12 +78,12 @@ source_set("pcie") {
   deps = [
     ":core",
     "//garnet/lib/wlan/protocol",
-    "//zircon/public/banjo/ddk.protocol.wlanphyimpl",
+    "//zircon/system/banjo/ddk.protocol.wlanphyimpl",
     "//zircon/public/lib/driver",
   ]
 
   public_deps = [
-    "//zircon/public/banjo/ddk.protocol.pci",
+    "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/sync",

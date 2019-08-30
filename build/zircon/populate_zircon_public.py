@@ -30,8 +30,8 @@ def main():
     for dir in legacy_dirs:
         top_dir = os.path.dirname(dir)
         dirs[top_dir] = dirs.get(top_dir, []) + [os.path.basename(dir)]
-    assert set(dirs.keys()) == PUBLIC_DIRS, (
-        "%r from JSON should match %r" % (set(dirs.keys()), PUBLIC_DIRS))
+    assert set(dirs.keys()).issubset(PUBLIC_DIRS), (
+        "%r from JSON should be a subset of %r" % (set(dirs.keys()), PUBLIC_DIRS))
     template_stat = os.lstat(TEMPLATE_FILE)
     for top_dir, subdirs in dirs.iteritems():
         top_dir = os.path.join(ZIRCON_PUBLIC, top_dir)

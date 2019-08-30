@@ -13,12 +13,12 @@ driver_module("gdc-driver") {
   ]
   deps = [
     ":gdc-task",
-    "//zircon/public/banjo/ddk.protocol.clock",
-    "//zircon/public/banjo/ddk.protocol.composite",
-    "//zircon/public/banjo/ddk.protocol.gdc",
-    "//zircon/public/banjo/ddk.protocol.platform.bus",
-    "//zircon/public/banjo/ddk.protocol.platform.device",
-    "//zircon/public/banjo/ddk.protocol.sysmem",
+    "//zircon/system/banjo/ddk.protocol.clock",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.gdc",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -66,7 +66,7 @@ source_set("gdc-task") {
     "task.cc",
   ]
   deps = [
-    "//zircon/public/banjo/ddk.protocol.gdc",
+    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/ddk",

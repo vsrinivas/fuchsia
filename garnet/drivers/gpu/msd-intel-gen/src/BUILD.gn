@@ -71,6 +71,6 @@ source_set("src") {
   ]
 
   public_deps = [
-    "//zircon/public/banjo/ddk.protocol.intelgpucore",
+    "//zircon/system/banjo/ddk.protocol.intelgpucore",
   ]
 }

@@ -16,7 +16,7 @@ source_set("modules") {
   ]
 
   public_deps = [
-    "//zircon/public/banjo/ddk.protocol.camerasensor",
+    "//zircon/system/banjo/ddk.protocol.camerasensor",
     "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/ddk",
@@ -40,7 +40,7 @@ source_set("sensor-module") {
   ]
 
   public_deps = [
-    "//zircon/public/banjo/ddk.protocol.camerasensor",
+    "//zircon/system/banjo/ddk.protocol.camerasensor",
     "//zircon/system/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/ddk",

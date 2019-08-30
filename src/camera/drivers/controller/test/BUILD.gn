@@ -13,11 +13,11 @@ executable("controller-test") {
   ]
   deps = [
     "//src/camera/drivers/test_utils",
-    "//zircon/public/banjo/ddk.protocol.gdc",
-    "//zircon/public/banjo/ddk.protocol.isp",
-    "//zircon/public/banjo/ddk.protocol.platform.bus",
-    "//zircon/public/banjo/ddk.protocol.platform.device",
-    "//zircon/public/banjo/ddk.protocol.sysmem",
+    "//zircon/system/banjo/ddk.protocol.gdc",
+    "//zircon/system/banjo/ddk.protocol.isp",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

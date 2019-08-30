@@ -27,8 +27,8 @@ driver_module("wlan_driver") {
   deps = [
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_server",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//zircon/public/banjo/ddk.hw.wlan.wlaninfo",
-    "//zircon/public/banjo/ddk.protocol.ethernet",
+    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
+    "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver",
