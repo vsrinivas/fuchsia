@@ -4,13 +4,11 @@
 
 #include "blobfs_test.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <limits.h>
-#include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
@@ -49,9 +47,8 @@ BlobfsTest::BlobfsTest(FsTestType type)
     : type_(type), environment_(g_environment), device_path_(environment_->device_path()) {}
 
 void BlobfsTest::SetUp() {
-  ASSERT_TRUE(mkdir(kMountPath, 0755) == 0 || errno == EEXIST, "Could not create mount point");
   ASSERT_OK(
-      mkfs(device_path_.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options));
+      mkfs(device_path_.c_str(), format_type(), launch_stdio_sync, &default_mkfs_options));
   Mount();
 }
 
@@ -86,7 +83,7 @@ void BlobfsTest::Mount() {
 
   // fd consumed by mount. By default, mount waits until the filesystem is
   // ready to accept commands.
-  ASSERT_OK(mount(fd.release(), kMountPath, DISK_FORMAT_BLOBFS, &options, launch_stdio_async));
+  ASSERT_OK(mount(fd.release(), mount_path(), format_type(), &options, launch_stdio_async));
   mounted_ = true;
 }
 
@@ -97,7 +94,7 @@ void BlobfsTest::Unmount() {
 
   // Unmount will propagate the result of sync; for cases where the filesystem is disconnected
   // from the underlying device, ZX_ERR_IO_REFUSED is expected.
-  zx_status_t status = umount(kMountPath);
+  zx_status_t status = umount(mount_path());
   ASSERT_TRUE(status == ZX_OK || status == ZX_ERR_IO_REFUSED);
   mounted_ = false;
 }
@@ -110,7 +107,7 @@ zx_status_t BlobfsTest::CheckFs() {
       .force = true,
       .apply_journal = true,
   };
-  return fsck(device_path_.c_str(), DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync);
+  return fsck(device_path_.c_str(), format_type(), &test_fsck_options, launch_stdio_sync);
 }
 
 void BlobfsTest::CheckInfo() {

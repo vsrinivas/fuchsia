@@ -9,6 +9,7 @@
 #include <blobfs/format.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
+#include <fs-management/mount.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <zxtest/zxtest.h>
 
@@ -43,6 +44,8 @@ class BlobfsTest : public zxtest::Test {
 
   void set_read_only(bool read_only) { read_only_ = read_only; }
   const std::string& device_path() const { return device_path_; }
+  disk_format_type format_type() const { return environment_->format_type(); }
+  const char* mount_path() const { return environment_->mount_path(); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsTest);
 

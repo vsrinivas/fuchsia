@@ -4,8 +4,10 @@
 
 #include "environment.h"
 
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
 #include <fuchsia/device/c/fidl.h>
@@ -63,6 +65,8 @@ void Environment::SetUp() {
     ramdisk_ = std::make_unique<RamDisk>(block_size_, block_count_);
     path_.assign(ramdisk_->path());
   }
+  ASSERT_TRUE(mkdir(config_.mount_path, 0755) == 0 || errno == EEXIST);
+  printf("dir created at %s\n", config_.mount_path);
 }
 
 void Environment::TearDown() { ramdisk_.reset(); }

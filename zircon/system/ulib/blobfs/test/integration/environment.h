@@ -8,6 +8,7 @@
 
 #include <fbl/macros.h>
 #include <fs-management/fvm.h>
+#include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
@@ -41,6 +42,8 @@ class Environment : public zxtest::Environment {
  public:
   struct TestConfig {
     const char* path;  // Path to an existing device.
+    const char* mount_path;
+    disk_format_type format_type;
     bool use_journal = true;
   };
 
@@ -52,6 +55,10 @@ class Environment : public zxtest::Environment {
   void TearDown() override;
 
   bool use_journal() const { return config_.use_journal; }
+
+  disk_format_type format_type() const { return config_.format_type; }
+
+  const char* mount_path() const { return config_.mount_path; }
 
   uint64_t disk_size() const { return block_size_ * block_count_; }
 

@@ -11,6 +11,7 @@
 #include <lib/memfs/memfs.h>
 #include <zxtest/zxtest.h>
 
+#include "blobfs_test.h"
 #include "environment.h"
 
 constexpr char kUsageMessage[] = R"""(
@@ -71,6 +72,8 @@ int main(int argc, char** argv) {
     printf("%s\n", kUsageMessage);
     return -1;
   }
+  config.mount_path = kMountPath;
+  config.format_type = DISK_FORMAT_BLOBFS;
 
   auto parent = std::make_unique<Environment>(config);
   g_environment = parent.get();
