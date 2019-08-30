@@ -12,7 +12,10 @@ Make sure that you are building with optimizations (`fx set --release` or `is_de
 
 Generate a Cargo.toml for your editor to use:
 
-`fx gen-cargo //src/diagnostics/transit_bench:bin`
+```
+fx build //src/diagnostics/transit_bench:bin_cargo
+fx gen-cargo //src/diagnostics/transit_bench:bin
+```
 
 ### Documentation
 

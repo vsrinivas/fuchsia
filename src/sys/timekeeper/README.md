@@ -12,7 +12,10 @@ developing with Rust](fuchsia-rust-docs).
 
 Generate a Cargo.toml for your editor to use:
 
-`fx gen-cargo //src/sys/timekeeper:bin`
+```
+fx build //src/sys/timekeeper:bin_cargo
+fx gen-cargo //src/sys/timekeeper:bin
+```
 
 ### Documentation
 

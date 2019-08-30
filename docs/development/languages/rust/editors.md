@@ -2,11 +2,39 @@
 
 [TOC]
 
+## Generating Cargo.toml files for use by editors
+
+Many editors require Cargo.toml files in order to understand how your Rust
+project is structured. These files can be generated using the following
+commands, where `//garnet/foo/path/to/target:label` is the GN target that
+you want to work on:
+
+```
+fx build //garnet/foo/path/to/target:label_cargo
+fx gen-cargo //garnet/foo/path/to/target:label
+```
+
+Note that this label must point to a `rustc_...` GN template, not a Fuchsia package or other GN
+target. For example:
+
+```
+rustc_binary("some_label") {
+   ...
+}
+```
+
+The above target, declared in `//src/bin/foo/BUILD.gn`, could be used with `gen-cargo`
+via the following commands:
+
+```
+fx build //src/bin/foo:some_label_cargo
+fx gen-cargo //src/bin/foo:some_label
+```
+
 ## Intellij
 
 See instructions on [the Intellij Rust site](https://intellij-rust.github.io/).
-Run `fx gen-cargo //garnet/foo/path/to/target:label` for the GN target that you want to work on and
-open the corresponding directory.
+Finally, follow the steps above to generate a Cargo.toml file for use by Intellij.
 
 ## VIM
 
@@ -52,8 +80,7 @@ Add the following settings:
 }
 ```
 
-Finally, run `fx gen-cargo //garnet/foo/path/to/target:label` for the GN target
-that you want to work on and open the corresponding directory in VSCode.
+Finally, follow the steps above to generate a Cargo.toml file for use by VSCode.
 
 [this VSCode plugin]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust
 
@@ -95,8 +122,8 @@ using are Fuchsia versions of those.  From your fuchsia root, type:
 rustup toolchain link fuchsia $PWD/prebuilt/third_party/rust/linux-x64 && rustup default fuchsia
 ```
 
-Run `fx gen-cargo //garnet/foo/path/to/target:label` for the GN target that you
-want to work on.
+Finally, follow the steps at the top of this page to generate a Cargo.toml for the GN target
+that you want to work on.
 
 You can [read about](http://www.flycheck.org/en/latest/user/error-reports.html)
 adjusting flycheck to display your errors as you like.  Type `C-h v

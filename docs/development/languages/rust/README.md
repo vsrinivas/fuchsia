@@ -34,8 +34,12 @@ A `Cargo.toml` file can be automatically generated for `rustc_library` and
 `rustc_binary` targets based on their .gn file definitions by running:
 
 ```sh
+fx build path/from/fuchsia_/root/to/target:label_cargo
 fx gen-cargo path/from/fuchsia/root/to/target:label
 ```
+
+Note that the label you use must be the GN label for a `rustc_...` GN template
+invocation, not a Fuchsia package or other GN rule.
 
 Or, if you're already in a directory with a single Rust target:
 
