@@ -109,6 +109,10 @@ source_set("mlme") {
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
+    # Needed in order to link rust wlan-mlme, which depends on fuchsia-syslog, which has
+    # non_rust_deps = ["//zircon/public/lib/syslog"]
+    # Noting that non_rust_deps do not propagate.
+    "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
   ]
 
