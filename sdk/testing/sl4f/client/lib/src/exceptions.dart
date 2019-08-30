@@ -15,8 +15,9 @@ class JsonRpcException implements Exception {
   }
 }
 
-/// Any exception when dealing with the SL4F server itself. For example failing
-/// to start or terminate the server.
+/// Any exception when dealing with the SL4F server itself.
+///
+/// For example failing to start or terminate the server.
 class Sl4fException implements Exception {
   String error;
   Sl4fException(this.error);
@@ -24,5 +25,18 @@ class Sl4fException implements Exception {
   @override
   String toString() {
     return 'Error when handling SL4F: $error';
+  }
+}
+
+/// An exception when forwarding ports from or to the DUT.
+class PortForwardException implements Exception {
+  final String from;
+  final String to;
+  final String error;
+  PortForwardException(this.from, this.to, this.error);
+
+  @override
+  String toString() {
+    return 'Error forwarding $from -> $to: $error';
   }
 }

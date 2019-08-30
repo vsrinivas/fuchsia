@@ -8,6 +8,8 @@ import 'dart:io';
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 
+import 'exceptions.dart';
+
 class Ssh {
   static const _sshUser = 'fuchsia';
 
@@ -43,12 +45,14 @@ class Ssh {
 
   /// Runs the command given by [cmd] on the target using ssh.
   ///
-  /// It can optionally send input via [stdin], and can optionally incrementally emit output
-  /// via [stdoutConsumer] and [stderrConsumer].
+  /// It can optionally send input via [stdin], and can optionally incrementally
+  /// emit output via [stdoutConsumer] and [stderrConsumer].
   ///
   /// If the exit code is nonzero, diagnostic warnings are logged.
-  Future<ProcessResult> runWithOutput(
-      String cmd, {String stdin, StreamConsumer<String> stdoutConsumer, StreamConsumer<String> stderrConsumer}) async {
+  Future<ProcessResult> runWithOutput(String cmd,
+      {String stdin,
+      StreamConsumer<String> stdoutConsumer,
+      StreamConsumer<String> stderrConsumer}) async {
     final process = await start(cmd);
 
     if (stdin != null) {
@@ -58,26 +62,28 @@ class Ssh {
     final localStdoutAll = StringBuffer();
     final localStderrAll = StringBuffer();
 
-    final localStdoutStream = process.stdout.transform(systemEncoding.decoder).map(
-      (String data) {
-        localStdoutAll.write(data);
-        return data;
-      }
-    );
-    final localStderrStream = process.stderr.transform(systemEncoding.decoder).map(
-      (String data) {
-        localStderrAll.write(data);
-        return data;
-      }
-    );
+    final localStdoutStream =
+        process.stdout.transform(systemEncoding.decoder).map((String data) {
+      localStdoutAll.write(data);
+      return data;
+    });
+    final localStderrStream =
+        process.stderr.transform(systemEncoding.decoder).map((String data) {
+      localStderrAll.write(data);
+      return data;
+    });
 
-    final Future<void> stdoutFuture = (stdoutConsumer != null) ? localStdoutStream.pipe(stdoutConsumer) : localStdoutStream.drain();
-    final Future<void> stderrFuture = (stderrConsumer != null) ? localStderrStream.pipe(stderrConsumer) : localStderrStream.drain();
+    final Future<void> stdoutFuture = (stdoutConsumer != null)
+        ? localStdoutStream.pipe(stdoutConsumer)
+        : localStdoutStream.drain();
+    final Future<void> stderrFuture = (stderrConsumer != null)
+        ? localStderrStream.pipe(stderrConsumer)
+        : localStderrStream.drain();
 
     Future<void> flushAndCloseStdin() async {
-        // These two need to be sequenced in order.
-        await process.stdin.flush();
-        await process.stdin.close();
+      // These two need to be sequenced in order.
+      await process.stdin.flush();
+      await process.stdin.close();
     }
 
     // This waits for stdin, stdout, stderr to all be done.  It's important that
@@ -108,41 +114,100 @@ class Ssh {
 
   /// Runs the command given by [cmd] on the target using ssh.
   ///
-  /// It can optionally send input via [stdin]. If the exit code is nonzero, diagnostic warnings
-  /// are logged.
+  /// It can optionally send input via [stdin]. If the exit code is nonzero,
+  /// diagnostic warnings are logged.
   Future<ProcessResult> run(String cmd, {String stdin}) async {
     return runWithOutput(cmd, stdin: stdin);
   }
 
-  @visibleForTesting
-  List<String> makeArgs(String cmd) {
-    List<String> sshKeyArg = [];
-    if (sshKeyPath != null) {
-      // Private key file path.
-      sshKeyArg = ['-i', sshKeyPath];
+  /// Forwards TCP connections from the local [port] to the DUT's [remotePort].
+  ///
+  /// If [port] is not provided, an unused port will be allocated.
+  /// The return value is the local forwarded port, or [PortForwardException] is
+  /// thrown in case of error.
+  Future<int> forwardPort({@required int remotePort, int port}) async {
+    port ??= await _pickUnusedPort();
+    _log.fine('Forwarding TCP port: localhost:$port -> $target:$remotePort');
+    final result = await Process.run(
+        'ssh', makeForwardArgs(port, remotePort, cancel: false),
+        runInShell: true);
+    if (result.exitCode != 0) {
+      throw PortForwardException(
+          'localhost:$port',
+          '$target:$remotePort',
+          'Failed to initiate Port Forward. '
+              'STDOUT: "${result.stdout}". STDERR: "${result.stderr}".');
     }
-    return sshKeyArg +
-        [
-          // Don't check known_hosts.
-          '-o', 'UserKnownHostsFile=/dev/null',
-          // Auto add the fingerprint of remote host.
-          '-o', 'StrictHostKeyChecking=no',
-          // Timeout to connect, short so the logs can make sense.
-          '-o', 'ConnectTimeout=2',
-          // These five arguments allow ssh to reuse its connection.
-          '-o', 'ControlPersist=yes',
-          '-o', 'ControlMaster=auto',
-          '-o', 'ControlPath=/tmp/fuchsia--%r@%h:%p',
-          '-o', 'ServerAliveInterval=1',
-          '-o', 'ServerAliveCountMax=1',
-          // These two arguments determine the connection timeout,
-          // in the case the ssh connection gets lost.
-          // They say if the target doesn't respond within 10 seconds, six
-          // times in a row, terminate the connection.
-          '-o', 'ServerAliveInterval=10',
-          '-o', 'ServerAliveCountMax=6',
-          '$_sshUser@$target',
-          cmd
-        ];
+    return port;
+  }
+
+  /// Cancels a TCP port forward.
+  ///
+  /// Completes to PortForwardException in case of failure.
+  Future<void> cancelPortForward(
+      {@required int remotePort, @required int port}) async {
+    _log.fine('Canceling TCP port forward: '
+        'localhost:$port -> $target:$remotePort');
+
+    final result = await Process.run(
+        'ssh', makeForwardArgs(port, remotePort, cancel: true),
+        runInShell: true);
+    if (result.exitCode != 0) {
+      throw PortForwardException(
+          'localhost:$port',
+          '$target:$remotePort',
+          'Failed to Cancel Port Forward. '
+              'STDOUT: "${result.stdout}". STDERR: "${result.stderr}".');
+    }
+  }
+
+  List<String> _makeBaseArgs() =>
+      [
+        // Don't check known_hosts.
+        '-o', 'UserKnownHostsFile=/dev/null',
+        // Auto add the fingerprint of remote host.
+        '-o', 'StrictHostKeyChecking=no',
+        // Timeout to connect, short so the logs can make sense.
+        '-o', 'ConnectTimeout=2',
+        // These five arguments allow ssh to reuse its connection.
+        '-o', 'ControlPersist=yes',
+        '-o', 'ControlMaster=auto',
+        '-o', 'ControlPath=/tmp/fuchsia--%r@%h:%p',
+        '-o', 'ServerAliveInterval=1',
+        '-o', 'ServerAliveCountMax=1',
+        // These two arguments determine the connection timeout,
+        // in the case the ssh connection gets lost.
+        // They say if the target doesn't respond within 10 seconds, six
+        // times in a row, terminate the connection.
+        '-o', 'ServerAliveInterval=10',
+        '-o', 'ServerAliveCountMax=6',
+        '$_sshUser@$target',
+      ] +
+      (sshKeyPath != null ? ['-i', sshKeyPath] : []);
+
+  @visibleForTesting
+  List<String> makeArgs(String cmd) => _makeBaseArgs() + [cmd];
+
+  @visibleForTesting
+  List<String> makeForwardArgs(int localPort, int remotePort,
+          {bool cancel = false}) =>
+      _makeBaseArgs() +
+      [
+        // Do Not run a command.
+        '-N',
+        // TCP port forward from local to remote.
+        '-L', 'localhost:$localPort:localhost:$remotePort',
+        // Forwarding with -O makes sure we are reusing the same connection.
+        '-O', cancel ? 'cancel' : 'forward',
+      ];
+
+  Future<int> _pickUnusedPort() async {
+    // Use bind to allocate an unused port in the local port range (see ip(7)).
+    // Then we unbind from that port to allow SSH to use it.
+    final socket = await ServerSocket.bind('localhost', 0);
+    final port = socket.port;
+    await socket.close();
+
+    return port;
   }
 }

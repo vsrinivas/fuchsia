@@ -50,7 +50,7 @@ class WebDriverConnector {
   io.Process _chromedriverProcess;
 
   /// A mapping from an exposed port number to an open WebDriver session.
-  Map<int, _WebDriverSession> _webDriverSessions;
+  Map<int, WebDriver> _webDriverSessions;
 
   WebDriverConnector(String chromeDriverPath, Sl4f sl4f,
       {ProcessHelper processHelper, WebDriverHelper webDriverHelper})
@@ -73,26 +73,26 @@ class WebDriverConnector {
   void tearDown() {
     _chromedriverProcess?.kill();
     _chromedriverProcess = null;
-    for (var session in _webDriverSessions.values) {
-      session.portForwardingProcess.kill();
+    for (final session in _webDriverSessions.entries) {
+      _sl4f.ssh.cancelPortForward(port: session.key, remotePort: session.key);
     }
     _webDriverSessions = {};
   }
 
   /// Get all nonEmpty Urls obtained from current _webDriverSessions.
   Iterable<String> get sessionsUrls => _webDriverSessions.values
-      .map((session) => session.webDriver.currentUrl)
+      .map((webDriver) => webDriver.currentUrl)
       .where((url) => url.isNotEmpty);
 
   /// Searches for Chrome contexts based on the host of the currently displayed
   /// page, and returns `WebDriver` connections to the found contexts.
   Future<List<WebDriver>> webDriversForHost(String host) async {
+    _log.info('Finding webdrivers for $host');
     await _updateWebDriverSessions();
 
     return List.from(_webDriverSessions.values
-        .where(
-            (session) => Uri.parse(session.webDriver.currentUrl).host == host)
-        .map((session) => session.webDriver));
+        .where((webDriver) => Uri.parse(webDriver.currentUrl).host == host)
+        .map((webDriver) => webDriver));
   }
 
   /// Starts Chromedriver on the host.
@@ -123,41 +123,25 @@ class WebDriverConnector {
     var portsResult = await _sl4f.request('webdriver_facade.GetDevToolsPorts');
     var ports = Set.from(portsResult['ports']);
 
-    // terminate and remove port forwarding for any ports that aren't open anymore
+    // Remove port forwarding for any ports that aren't open anymore.
     _webDriverSessions.removeWhere((port, session) {
       if (!ports.contains(port)) {
-        session.portForwardingProcess.kill();
+        _sl4f.ssh.cancelPortForward(port: port, remotePort: port);
         return true;
-      } else {
-        return false;
       }
+      return false;
     });
 
     // Add new sessions for new ports.  For a given Chrome context listening on
     // port p on the DuT, we forward localhost:p to DuT:p, and create a
     // WebDriver instance pointing to localhost:p.
-    for (var port in ports) {
+    for (final port in ports) {
       if (!_webDriverSessions.containsKey(port)) {
-        var forwardProcess = await _processHelper.start(
-            'ssh',
-            [
-              '-i',
-              _sl4f.ssh.sshKeyPath,
-              '-N',
-              '-o',
-              'UserKnownHostsFile=/dev/null',
-              '-o',
-              'StrictHostKeyChecking=no',
-              '-L',
-              '$port:localhost:$port',
-              _sl4f.target,
-            ],
-            runInShell: true);
+        await _sl4f.ssh.forwardPort(port: port, remotePort: port);
+        final webDriver =
+            _webDriverHelper.createDriver(port, _chromedriverPort);
 
-        var webDriver = _webDriverHelper.createDriver(port, _chromedriverPort);
-
-        _webDriverSessions.putIfAbsent(
-            port, () => _WebDriverSession(webDriver, forwardProcess));
+        _webDriverSessions.putIfAbsent(port, () => webDriver);
       }
     }
   }
@@ -169,9 +153,8 @@ class ProcessHelper {
 
   /// Start a new process.
   Future<io.Process> start(String cmd, List<String> args,
-      {bool runInShell = false}) async {
-    return await io.Process.start(cmd, args, runInShell: runInShell);
-  }
+          {bool runInShell = false}) =>
+      io.Process.start(cmd, args, runInShell: runInShell);
 }
 
 /// A wrapper around static WebDriver creation methods.
@@ -181,22 +164,11 @@ class WebDriverHelper {
   /// Create a new WebDriver pointing to Chromedriver on the given uri and with
   /// given desired capabilities.
   WebDriver createDriver(int devToolsPort, int chromedriverPort) {
-    var chromeOptions = {'debuggerAddress': 'localhost:$devToolsPort'};
-    var capabilities = sync_io.Capabilities.chrome;
+    final chromeOptions = {'debuggerAddress': 'localhost:$devToolsPort'};
+    final capabilities = sync_io.Capabilities.chrome;
     capabilities[sync_io.Capabilities.chromeOptions] = chromeOptions;
     return sync_io.createDriver(
         desired: capabilities,
         uri: Uri.parse('http://localhost:$_chromedriverPort'));
   }
-}
-
-/// A wrapper around WebDriver object that also holds the port forwarding process.
-class _WebDriverSession {
-  /// WebDriver connection.
-  final WebDriver webDriver;
-
-  /// Handle to the process forwarding the port from the host to DuT.
-  final io.Process portForwardingProcess;
-
-  _WebDriverSession(this.webDriver, this.portForwardingProcess);
 }

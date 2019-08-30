@@ -538,6 +538,74 @@
           "name": "JsonRpcException",
           "type": "ClassDeclarationImpl"
         },
+        "PortForwardException": {
+          "ConstructorDeclarationImpl": {
+            "PortForwardException": {
+              "FieldFormalParameterImpl": {
+                "this.error": {
+                  "name": "this.error",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.from": {
+                  "name": "this.from",
+                  "type": "FieldFormalParameterImpl"
+                },
+                "this.to": {
+                  "name": "this.to",
+                  "type": "FieldFormalParameterImpl"
+                }
+              },
+              "name": "PortForwardException",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ImplementsClause": {
+            "Exception": {
+              "name": "Exception",
+              "type": "interface"
+            }
+          },
+          "MethodDeclarationImpl": {
+            "toString": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "toString",
+              "returnType": "String",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "VariableDeclarationImpl": {
+            "error": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "error",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "from": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "from",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            },
+            "to": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "to",
+              "type": "VariableDeclarationImpl",
+              "varType": "String"
+            }
+          },
+          "name": "PortForwardException",
+          "type": "ClassDeclarationImpl"
+        },
         "Sl4fException": {
           "ConstructorDeclarationImpl": {
             "Sl4fException": {
@@ -1774,6 +1842,86 @@
             }
           },
           "MethodDeclarationImpl": {
+            "cancelPortForward": {
+              "SimpleFormalParameterImpl": {
+                "port": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "port",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "remotePort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "remotePort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "cancelPortForward",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "forwardPort": {
+              "SimpleFormalParameterImpl": {
+                "port": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "port",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "remotePort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "remotePort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "forwardPort",
+              "returnType": "Future<int>",
+              "type": "MethodDeclarationImpl"
+            },
             "makeArgs": {
               "SimpleFormalParameterImpl": {
                 "cmd": {
@@ -1797,6 +1945,60 @@
               "isSetter": false,
               "isStatic": false,
               "name": "makeArgs",
+              "returnType": "List<String>",
+              "type": "MethodDeclarationImpl"
+            },
+            "makeForwardArgs": {
+              "SimpleFormalParameterImpl": {
+                "cancel": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "cancel",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "bool"
+                },
+                "localPort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "localPort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "remotePort": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "remotePort",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "makeForwardArgs",
               "returnType": "List<String>",
               "type": "MethodDeclarationImpl"
             },
@@ -2598,20 +2800,6 @@
             },
             "sessionsUrls": {
               "SimpleFormalParameterImpl": {
-                "session": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "session",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "null"
-                },
                 "url": {
                   "isConst": false,
                   "isFinal": false,
@@ -2623,6 +2811,20 @@
                   "isRequiredNamed": false,
                   "isRequiredPositional": true,
                   "name": "url",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "null"
+                },
+                "webDriver": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "webDriver",
                   "type": "SimpleFormalParameterImpl",
                   "varType": "null"
                 }
@@ -2662,7 +2864,7 @@
                   "type": "SimpleFormalParameterImpl",
                   "varType": "String"
                 },
-                "session": {
+                "webDriver": {
                   "isConst": false,
                   "isFinal": false,
                   "isOptional": false,
@@ -2672,7 +2874,7 @@
                   "isRequired": true,
                   "isRequiredNamed": false,
                   "isRequiredPositional": true,
-                  "name": "session",
+                  "name": "webDriver",
                   "type": "SimpleFormalParameterImpl",
                   "varType": "null"
                 }

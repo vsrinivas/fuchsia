@@ -11,10 +11,8 @@ void main(List<String> args) {
       final ssh = Ssh('1.2.3.4', '/path/to/p/key');
 
       final args = ssh.makeArgs('foo');
-      expect(
-          args,
-          containsAllInOrder(
-              ['-i', '/path/to/p/key', 'fuchsia@1.2.3.4', 'foo']));
+      expect(args, containsAllInOrder(['-i', '/path/to/p/key']));
+      expect(args, containsAllInOrder(['fuchsia@1.2.3.4', 'foo']));
     });
 
     test('args does not include key path when using agent', () async {
@@ -23,6 +21,22 @@ void main(List<String> args) {
       final args = ssh.makeArgs('foo');
       expect(args, containsAllInOrder(['fuchsia@1.2.3.4', 'foo']));
       expect(args, isNot(contains('-i')));
+    });
+
+    test('port forwarding args includes ports', () async {
+      final ssh = Ssh('1.2.3.4', '/path/to/p/key');
+
+      final args = ssh.makeForwardArgs(1, 2);
+      expect(args, containsAllInOrder(['-L', 'localhost:1:localhost:2']));
+      expect(args, containsAllInOrder(['-O', 'forward']));
+    });
+
+    test('cancelling port forwarding args includes ports', () async {
+      final ssh = Ssh('1.2.3.4', '/path/to/p/key');
+
+      final args = ssh.makeForwardArgs(1, 2, cancel: true);
+      expect(args, containsAllInOrder(['-L', 'localhost:1:localhost:2']));
+      expect(args, containsAllInOrder(['-O', 'cancel']));
     });
   });
 }

@@ -26,7 +26,11 @@ void main(List<String> args) {
 
   setUp(() {
     sl4f = MockSl4f();
-    when(sl4f.ssh).thenReturn(MockSsh());
+    final mockSsh = MockSsh();
+    when(sl4f.ssh).thenReturn(mockSsh);
+    when(mockSsh.forwardPort(
+            port: anyNamed('port'), remotePort: anyNamed('remotePort')))
+        .thenAnswer((inv) => Future.value(inv.namedArguments[#port]));
     processHelper = MockProcessHelper();
     webDriverHelper = MockWebDriverHelper();
     webDriverConnector = WebDriverConnector('path/to/chromedriver', sl4f,
@@ -34,16 +38,17 @@ void main(List<String> args) {
   });
 
   test('webDriversForHost filters by host', () async {
-    var openContexts = {
+    final openContexts = {
       20000: 'https://www.test.com/path/1',
       20001: 'https://www.example.com/path/1',
       20002: 'https://www.test.com/path/2',
       20003: 'https://www.example.com/path/2'
     };
     mockAvailableWebDrivers(webDriverHelper, sl4f, openContexts);
-    var webDrivers = await webDriverConnector.webDriversForHost('www.test.com');
+    final webDrivers =
+        await webDriverConnector.webDriversForHost('www.test.com');
     expect(webDrivers.length, 2);
-    var webDriverCurrentUrls =
+    final webDriverCurrentUrls =
         Set.from(webDrivers.map((webDriver) => webDriver.currentUrl));
     expect(webDriverCurrentUrls,
         {'https://www.test.com/path/1', 'https://www.test.com/path/2'});
@@ -59,12 +64,12 @@ void main(List<String> args) {
 /// Set up mocks as if there are chrome contexts with the given ports exposing a url.
 void mockAvailableWebDrivers(MockWebDriverHelper webDriverHelper, MockSl4f sl4f,
     Map<int, String> portToUrl) {
-  var portList = {'ports': List.from(portToUrl.keys)};
+  final portList = {'ports': List.from(portToUrl.keys)};
   print(portList);
   when(sl4f.request('webdriver_facade.GetDevToolsPorts'))
       .thenAnswer((_) => Future.value(portList));
   when(webDriverHelper.createDriver(any, any)).thenAnswer((invocation) {
-    var devToolsPort = invocation.positionalArguments.first;
+    final devToolsPort = invocation.positionalArguments.first;
     WebDriver webDriver = MockWebDriver();
     when(webDriver.currentUrl).thenReturn(portToUrl[devToolsPort]);
     return webDriver;
