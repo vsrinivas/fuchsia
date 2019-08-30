@@ -23,6 +23,7 @@
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/temperature_fetcher.h"
 #include "src/cobalt/bin/utils/clock.h"
+#include "third_party/cobalt/src/registry/buckets_config.h"
 
 // A daemon to send system metrics to Cobalt.
 //
@@ -90,6 +91,11 @@ class SystemMetricsDaemon {
   // If it fails, attempt again after 1 minute. Repeat the process
   // |remaining_attempts| times.
   void LogTemperatureIfSupported(int remaining_attempts);
+
+  // Bucket config is for getting the histogram bucket index given temperature
+  // in Celsius. The arguments should be the same as in Cobalt metrics.yaml file.
+  void InitializeTemperatureBucketConfig(int32_t bucket_floor, int32_t num_buckets,
+                                         int32_t step_size);
 
   // Calls LogTemperature,
   // then uses the |dispatcher| passed to the constructor to schedule
@@ -185,8 +191,11 @@ class SystemMetricsDaemon {
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
   std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher_;
   std::vector<double> cpu_percentages_;
-  std::unordered_map<int32_t, uint64_t> temperature_map_;
+  std::unordered_map<uint32_t, uint32_t> temperature_map_;
   uint32_t temperature_map_size_ = 0;
+  // The bucket config is used to calculate the histogram bucket index for a given temperature.
+  // Usage: temperature_bucket_config_->BucketIndex(temperature)
+  std::unique_ptr<cobalt::config::IntegerBucketConfig> temperature_bucket_config_;
 
  protected:
   // This function should only be used in test to change temperature fetcher.

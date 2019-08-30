@@ -35,8 +35,11 @@
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 
 using cobalt::CobaltEventBuilder;
+using cobalt::IntegerBuckets;
+using cobalt::LinearIntegerBuckets;
 using cobalt::StatusToString;
 using cobalt::TemperatureFetchStatus;
+using cobalt::config::IntegerBucketConfig;
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::HistogramBucket;
 using fuchsia::cobalt::Logger_Sync;
@@ -54,6 +57,12 @@ namespace {
 std::chrono::seconds SecondsBeforeNextHour(std::chrono::seconds uptime) {
   return std::chrono::seconds(3600 - (uptime.count() % 3600));
 }
+
+// These constants are copied from fuchsia_system_metrics/metrics.yaml
+constexpr int32_t kTemperatureMetricBucketFloor = 0;
+constexpr int32_t kTemperatureMetricNumBuckets = 80;
+constexpr int32_t kTemperatureMetricStepSize = 1;
+
 }  // namespace
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
@@ -129,6 +138,8 @@ void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
       FX_LOGS(INFO) << "Stop further attempt to read or log temperature as it is not supported.";
       return;
     case TemperatureFetchStatus::SUCCEED:
+      InitializeTemperatureBucketConfig(kTemperatureMetricBucketFloor, kTemperatureMetricNumBuckets,
+                                        kTemperatureMetricStepSize);
       RepeatedlyLogTemperature();
       return;
     case TemperatureFetchStatus::FAIL:
@@ -144,6 +155,17 @@ void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
       }
       return;
   }
+}
+
+void SystemMetricsDaemon::InitializeTemperatureBucketConfig(int32_t bucket_floor,
+                                                            int32_t num_buckets,
+                                                            int32_t step_size) {
+  IntegerBuckets temperature_bucket_proto;
+  LinearIntegerBuckets* linear = temperature_bucket_proto.mutable_linear();
+  linear->set_floor(bucket_floor);
+  linear->set_num_buckets(num_buckets);
+  linear->set_step_size(step_size);
+  temperature_bucket_config_ = IntegerBucketConfig::CreateFromProto(temperature_bucket_proto);
 }
 
 void SystemMetricsDaemon::RepeatedlyLogTemperature() {
@@ -400,7 +422,8 @@ std::chrono::seconds SystemMetricsDaemon::LogTemperature() {
   if (TemperatureFetchStatus::SUCCEED != status) {
     FX_LOGS(ERROR) << "Temperature fetch failed.";
   }
-  temperature_map_[temperature]++;
+  uint32_t bucket_index = temperature_bucket_config_->BucketIndex(temperature);
+  temperature_map_[bucket_index]++;
   temperature_map_size_++;
   if (temperature_map_size_ == 6) {  // Flush every minute.
     LogTemperatureToCobalt();

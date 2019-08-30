@@ -40,6 +40,9 @@ typedef FuchsiaUptimeMetricDimensionUptimeRange UptimeRange;
 static constexpr int kHour = 3600;
 static constexpr int kDay = 24 * kHour;
 static constexpr int kWeek = 7 * kDay;
+constexpr int32_t kTemperatureMetricBucketFloor = 0;
+constexpr int32_t kTemperatureMetricNumBuckets = 80;
+constexpr int32_t kTemperatureMetricStepSize = 1;
 }  // namespace
 
 class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
@@ -74,6 +77,16 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   void RepeatedlyLogUptime() { return daemon_->RepeatedlyLogUptime(); }
 
+  void InitializeTemperatureBucketConfig(int32_t bucket_floor, int32_t num_buckets,
+                                         int32_t step_size) {
+    daemon_->InitializeTemperatureBucketConfig(bucket_floor, num_buckets, step_size);
+  }
+
+  // Calls BucketIndex on temperature_bucket_config_.
+  uint32_t GetTemperatureBucketGivenTemperature(int64_t temperature) {
+    return (daemon_->temperature_bucket_config_)->BucketIndex(temperature);
+  }
+
   seconds LogMemoryUsage() { return daemon_->LogMemoryUsage(); }
 
   seconds LogCpuUsage() {
@@ -84,6 +97,8 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   }
 
   seconds LogTemperature() {
+    daemon_->InitializeTemperatureBucketConfig(
+        kTemperatureMetricBucketFloor, kTemperatureMetricNumBuckets, kTemperatureMetricStepSize);
     daemon_->temperature_map_[40] = 1;
     daemon_->temperature_map_[45] = 2;
     daemon_->temperature_map_[48] = 1;
@@ -530,6 +545,22 @@ TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
   // in 1 FIDL call, and return 1 second.
   EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
   CheckValues(cobalt::kLogCobaltEvents, 1, -1, -1, 60);
+}
+
+// Tests that temperature_bucket_config_ created will put extreme temperature data into
+// overflow or underflow buckets accordingly.
+TEST_F(SystemMetricsDaemonTest, TemperatureBucketConfig) {
+  fake_logger_.reset();
+  InitializeTemperatureBucketConfig(kTemperatureMetricBucketFloor, kTemperatureMetricNumBuckets,
+                                    kTemperatureMetricStepSize);
+
+  EXPECT_EQ(GetTemperatureBucketGivenTemperature(-25), uint32_t(0));
+  EXPECT_EQ(GetTemperatureBucketGivenTemperature(-1), uint32_t(0));
+  EXPECT_EQ(GetTemperatureBucketGivenTemperature(0), uint32_t(1));
+  EXPECT_EQ(GetTemperatureBucketGivenTemperature(1), uint32_t(2));
+  EXPECT_EQ(GetTemperatureBucketGivenTemperature(79), uint32_t(80));
+  EXPECT_EQ(GetTemperatureBucketGivenTemperature(80), uint32_t(81));
+  EXPECT_EQ(GetTemperatureBucketGivenTemperature(100), uint32_t(81));
 }
 
 // Tests the method LogTemperature(). Uses a local FakeLogger_Sync and
