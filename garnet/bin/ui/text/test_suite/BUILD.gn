@@ -12,7 +12,6 @@ rustc_binary("test_suite") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/ui/text/common:text_common",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
@@ -21,6 +20,7 @@ rustc_binary("test_suite") {
     "//garnet/public/rust/mundane",
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
+    "//src/ui/lib/text",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",

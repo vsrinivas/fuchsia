@@ -8,7 +8,7 @@ use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use std::collections::HashSet;
 use std::convert::TryInto;
-use text_common::text_field_state::TextFieldState;
+use text::text_field_state::TextFieldState;
 
 pub struct TextFieldWrapper {
     proxy: txt::TextFieldProxy,
@@ -265,25 +265,31 @@ mod test {
             .expect("Should have created stream and control handle");
         control_handle.send_on_update(default_state(0).into()).expect("Should have sent update");
         fuchsia_async::spawn(async {
-            let mut wrapper = TextFieldWrapper::new(proxy).await
-                .expect("Should have created text field wrapper");
+            let mut wrapper =
+                TextFieldWrapper::new(proxy).await.expect("Should have created text field wrapper");
             wrapper.simple_insert("meow!").await.expect("Should have inserted successfully");
         });
-        let (revision, _ch) = stream.try_next().await
+        let (revision, _ch) = stream
+            .try_next()
+            .await
             .expect("Waiting for message failed")
             .expect("Should have sent message")
             .into_begin_edit()
             .expect("Expected BeginEdit");
         assert_eq!(revision, 4);
 
-        let (_range, new_text, _ch) = stream.try_next().await
+        let (_range, new_text, _ch) = stream
+            .try_next()
+            .await
             .expect("Waiting for message failed")
             .expect("Should have sent message")
             .into_replace()
             .expect("Expected Replace");
         assert_eq!(new_text, "meow!");
 
-        let _responder = stream.try_next().await
+        let _responder = stream
+            .try_next()
+            .await
             .expect("Waiting for message failed")
             .expect("Should have sent message")
             .into_commit_edit()

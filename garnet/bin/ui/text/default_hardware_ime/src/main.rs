@@ -18,7 +18,7 @@ use std::collections::VecDeque;
 use std::convert::TryInto;
 use std::fs;
 use std::sync::Arc;
-use text_common::text_field_state::TextFieldState;
+use text::text_field_state::TextFieldState;
 
 const DEFAULT_LAYOUT_PATH: &'static str = "/pkg/data/us.json";
 const MAX_QUEUED_INPUTS: usize = 100;

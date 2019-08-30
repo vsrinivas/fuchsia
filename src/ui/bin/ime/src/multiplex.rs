@@ -11,7 +11,7 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 use std::convert::TryInto;
 use std::sync::Arc;
-use text_common::text_field_state::TextFieldState;
+use text::text_field_state::TextFieldState;
 
 /// Multiplexes multiple TextFieldRequestStreams into a single TextFieldProxy. This is not quite as
 /// easy as just forwarding each request — we need to broadcast events from the Proxy to every

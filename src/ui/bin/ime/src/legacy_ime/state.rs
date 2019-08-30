@@ -15,7 +15,7 @@ use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use std::char;
 use std::collections::HashMap;
 use std::ops::Range;
-use text_common::text_field_state::TextFieldState;
+use text::text_field_state::TextFieldState;
 
 /// The internal state of the IME, held within `LegacyIme` inside `Arc<Mutex<ImeState>>`, so it can
 /// be accessed from multiple message handler async tasks. Methods that aren't message handlers
