@@ -22,6 +22,7 @@ mod archive;
 mod collection;
 mod configs;
 mod diagnostics;
+mod selectors;
 
 static ARCHIVE_PATH: &str = "/data/archive";
 static ARCHIVE_CONFIG_FILE: &str = "/config/data/archivist_config.json";
