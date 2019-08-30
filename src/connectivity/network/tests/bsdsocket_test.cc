@@ -978,7 +978,8 @@ enum sendMethod {
 //      (2) 0, when we abort a blocked recv
 //      (3) -1, on failure of both of the above operations.
 static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flags,
-                               struct sockaddr_in* addr, socklen_t* addrlen, int socketType) {
+                               struct sockaddr_in* addr, socklen_t* addrlen, int socketType,
+                               std::chrono::duration<double> timeout) {
   std::future<ssize_t> recv = std::async(std::launch::async, [recvfd, buf, len, flags]() {
     ssize_t readlen;
     memset(buf, 0, len);
@@ -986,7 +987,7 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
     return readlen;
   });
 
-  if (recv.wait_for(std::chrono::milliseconds(kTimeout)) == std::future_status::ready) {
+  if (recv.wait_for(timeout) == std::future_status::ready) {
     return recv.get();
   }
 
@@ -995,6 +996,8 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
     case SOCK_STREAM: {
       // shutdown() would unblock the receiver thread with recv returning 0.
       EXPECT_EQ(shutdown(recvfd, SHUT_RD), 0) << strerror(errno);
+      // We do not use 'timeout' because that maybe short here. We expect to succeed and hence use a
+      // known large timeout to ensure the test does not hang in case underlying code is broken.
       EXPECT_EQ(recv.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
       EXPECT_EQ(recv.get(), 0);
       break;
@@ -1011,6 +1014,7 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
       EXPECT_EQ(sendto(sendfd, nullptr, 0, 0, reinterpret_cast<struct sockaddr*>(addr), *addrlen),
                 0)
           << strerror(errno);
+      // We use a known large timeout for the same reason as for the above case.
       EXPECT_EQ(recv.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
       EXPECT_EQ(recv.get(), 0);
       break;
@@ -1068,9 +1072,12 @@ TEST_P(DatagramSendTest, DatagramSend) {
       break;
     }
   }
-  EXPECT_EQ(
-      asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen, SOCK_DGRAM),
-      (ssize_t)strlen(msg));
+  auto expect_success_timeout = std::chrono::milliseconds(kTimeout);
+  auto start = std::chrono::steady_clock::now();
+  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen,
+                            SOCK_DGRAM, expect_success_timeout),
+            (ssize_t)strlen(msg));
+  auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_STREQ(recvbuf, msg);
   EXPECT_EQ(close(sendfd), 0) << strerror(errno);
 
@@ -1094,9 +1101,9 @@ TEST_P(DatagramSendTest, DatagramSend) {
       break;
     }
   }
-  EXPECT_EQ(
-      asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen, SOCK_DGRAM),
-      (ssize_t)strlen(msg));
+  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen,
+                            SOCK_DGRAM, expect_success_timeout),
+            (ssize_t)strlen(msg));
   EXPECT_STREQ(recvbuf, msg);
 
   // Test sending to an address that is different from what we're connected to.
@@ -1120,9 +1127,11 @@ TEST_P(DatagramSendTest, DatagramSend) {
   // Expect blocked receiver and try to recover it by sending a packet to the
   // original connected sockaddr.
   addr.sin_port = htons(ntohs(addr.sin_port) - 1);
-  EXPECT_EQ(
-      asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen, SOCK_DGRAM),
-      (ssize_t)0);
+  // As we expect failure, to keep the recv wait time minimal, we base it on the time taken for a
+  // successful recv.
+  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen,
+                            SOCK_DGRAM, success_rcv_duration * 10),
+            (ssize_t)0);
 
   EXPECT_EQ(close(sendfd), 0) << strerror(errno);
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
@@ -1526,20 +1535,23 @@ TEST_P(NetSocketTest, SocketPeekTest) {
             sendlen)
       << strerror(errno);
 
+  auto expect_success_timeout = std::chrono::milliseconds(kTimeout);
+  auto start = std::chrono::steady_clock::now();
   // First peek on first byte.
-  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, 1, MSG_PEEK, &addr,
-                            &addrlen, socketType),
+  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, 1, MSG_PEEK, &addr, &addrlen, socketType,
+                            expect_success_timeout),
             1);
+  auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_EQ(recvbuf[0], sendbuf[0]);
 
   // Second peek across first 2 packets and drain them from the socket receive queue.
   // Toggle the flags to MSG_PEEK every other iteration.
   ssize_t torecv = sizeof(recvbuf);
   for (int i = 0; torecv > 0; i++) {
-    int flags = i%2 ? 0 : MSG_PEEK;
+    int flags = i % 2 ? 0 : MSG_PEEK;
     ssize_t readLen = 0;
-    EXPECT_EQ(readLen = asyncSocketRead(recvfd, sendfd, recvbuf,
-                                        sizeof(recvbuf), flags, &addr, &addrlen, socketType),
+    EXPECT_EQ(readLen = asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), flags, &addr,
+                                        &addrlen, socketType, expect_success_timeout),
               expectReadLen);
     if (HasFailure()) {
       break;
@@ -1557,8 +1569,11 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   }
 
   // Third peek on empty socket receive buffer, expect failure.
-  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, 1, MSG_PEEK, &addr,
-                            &addrlen, socketType),
+  //
+  // As we expect failure, to keep the recv wait time minimal, we base it on the time taken for a
+  // successful recv.
+  EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, 1, MSG_PEEK, &addr, &addrlen, socketType,
+                            success_rcv_duration * 10),
             0);
   EXPECT_EQ(recvbuf[0], 0);
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
