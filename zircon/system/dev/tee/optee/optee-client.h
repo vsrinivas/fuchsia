@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_
+#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_
+
+#include <fuchsia/tee/c/fidl.h>
+#include <lib/zx/channel.h>
 
 #include <atomic>
 #include <filesystem>
@@ -15,15 +19,13 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
-#include <fuchsia/tee/c/fidl.h>
-#include <lib/zx/channel.h>
 
 #include "optee-controller.h"
 
 namespace optee {
 
 class OpteeClient;
-using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable>;
+using OpteeClientBase = ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable, ddk::Unbindable>;
 using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 
 // The Optee driver allows for simultaneous access from different processes. The OpteeClient object
@@ -46,12 +48,10 @@ class OpteeClient : public OpteeClientBase,
 
   zx_status_t DdkClose(uint32_t flags);
   void DdkRelease();
+  void DdkUnbind();
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-  // If the Controller is unbound, we need to notify all clients that the device is no longer
-  // available. The Controller will invoke this function so that any subsequent calls on the
-  // client will notify the caller that the peer has closed.
-  void MarkForClosing() { needs_to_close_ = true; }
+  void Shutdown();
 
   // FIDL Handlers
   zx_status_t GetOsInfo(fidl_txn_t* txn) const;
@@ -219,7 +219,6 @@ class OpteeClient : public OpteeClientBase,
   static fuchsia_tee_Device_ops_t kFidlOps;
 
   OpteeController* controller_;
-  bool needs_to_close_ = false;
   SharedMemoryList allocated_shared_memory_;
   std::atomic<uint64_t> next_file_system_object_id_{1};
 
@@ -236,3 +235,5 @@ class OpteeClient : public OpteeClientBase,
 };
 
 }  // namespace optee
+
+#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_

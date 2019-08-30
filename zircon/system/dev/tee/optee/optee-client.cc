@@ -2,14 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-#include <libgen.h>
-#include <string>
-#include <utility>
-#include <vector>
+#include "optee-client.h"
 
-#include <ddk/debug.h>
-#include <fbl/string_buffer.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/tee/manager/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -17,10 +11,18 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
-#include <tee-client-api/tee-client-types.h>
+#include <libgen.h>
 #include <zircon/time.h>
 
-#include "optee-client.h"
+#include <algorithm>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <ddk/debug.h>
+#include <fbl/string_buffer.h>
+#include <tee-client-api/tee-client-types.h>
+
 #include "optee-smc.h"
 
 namespace {
@@ -341,34 +343,34 @@ fuchsia_tee_Device_ops_t OpteeClient::kFidlOps = {
 };
 
 zx_status_t OpteeClient::DdkClose(uint32_t flags) {
-  controller_->RemoveClient(this);
+  // Because each client instance should map to just one client and the client has closed, this
+  // instance can safely shut down.
+  Shutdown();
   return ZX_OK;
 }
 
-void OpteeClient::DdkRelease() {
-  // devmgr has given up ownership, so we must clean ourself up.
-  //
-  // Try and cleanly close all sessions
-  std::vector<uint32_t> session_ids(open_sessions_.size());
-  session_ids.assign(open_sessions_.begin(), open_sessions_.end());
+void OpteeClient::DdkRelease() { delete this; }
 
-  for (uint32_t id : session_ids) {
-    // Regardless of CloseSession response, continue closing all other sessions
-    __UNUSED zx_status_t status = CloseSession(id);
+void OpteeClient::DdkUnbind() { Shutdown(); }
+
+void OpteeClient::Shutdown() {
+  if (controller_ != nullptr) {
+    // Try and cleanly close all sessions
+    std::vector<uint32_t> session_ids(open_sessions_.size());
+    session_ids.assign(open_sessions_.begin(), open_sessions_.end());
+
+    for (uint32_t id : session_ids) {
+      // Regardless of CloseSession response, continue closing all other sessions
+      __UNUSED zx_status_t status = CloseSession(id);
+    }
   }
 
-  // Clear memory list, which releases all memory blocks back to their respective pools
-  allocated_shared_memory_.clear();
-
-  delete this;
+  // For sanity's sake, mark the controller_ as null to ensure that nothing else gets called.
+  controller_ = nullptr;
 }
 
 zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  if (needs_to_close_) {
-    // The underlying channel is owned by the devhost and thus we do not need to directly close
-    // it. This check exists for the scenario where we are in the process of unbinding the
-    // parent device and cannot fulfill any requests any more. The underlying channel will be
-    // closed by devhost once the unbind is complete.
+  if (controller_ == nullptr) {
     return ZX_ERR_PEER_CLOSED;
   }
   return fuchsia_tee_Device_dispatch(this, txn, msg, &kFidlOps);

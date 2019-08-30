@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "optee-controller.h"
+
 #include <inttypes.h>
-#include <limits>
+#include <lib/fidl-utils/bind.h>
 #include <string.h>
+
+#include <limits>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -15,11 +19,9 @@
 #include <ddk/protocol/composite.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/fidl-utils/bind.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "optee-client.h"
-#include "optee-controller.h"
 
 namespace optee {
 
@@ -294,21 +296,8 @@ zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
   return ZX_OK;
 }
 
-void OpteeController::AddClient(OpteeClient* client) {
-  fbl::AutoLock lock(&clients_lock_);
-  clients_.push_back(client);
-}
-
-void OpteeController::CloseClients() {
-  fbl::AutoLock lock(&clients_lock_);
-  for (auto& client : clients_) {
-    client.MarkForClosing();
-  }
-}
-
 void OpteeController::DdkUnbind() {
-  CloseClients();
-  // Unpublish our device node.
+  // Initiate the removal of this device and all of its children.
   DdkRemove();
 }
 
@@ -343,8 +332,7 @@ zx_status_t OpteeController::ConnectDevice(zx_handle_t service_provider,
   }
 
   // devmgr is now in charge of the memory for the tee client
-  OpteeClient* client_ptr = client.release();
-  AddClient(client_ptr);
+  __UNUSED OpteeClient* client_ptr = client.release();
 
   return ZX_OK;
 }
@@ -362,14 +350,6 @@ zx_status_t OpteeController::GetOsInfo(fidl_txn_t* txn) const {
   os_info.revision = os_revision_;
   os_info.is_global_platform_compliant = true;
   return fuchsia_tee_DeviceGetOsInfo_reply(txn, &os_info);
-}
-
-void OpteeController::RemoveClient(OpteeClient* client) {
-  fbl::AutoLock lock(&clients_lock_);
-  ZX_DEBUG_ASSERT(client != nullptr);
-  if (client->InContainer()) {
-    clients_.erase(*client);
-  }
 }
 
 uint32_t OpteeController::CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) {

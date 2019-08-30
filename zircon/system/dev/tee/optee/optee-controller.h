@@ -2,9 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_
+#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_
 
+#include <fuchsia/hardware/tee/c/fidl.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/resource.h>
+
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
@@ -13,10 +19,6 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/tee/c/fidl.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/resource.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "optee-message.h"
 #include "optee-smc.h"
@@ -60,8 +62,6 @@ class OpteeController : public OpteeControllerBase, public OpteeControllerProtoc
   // Client FIDL commands
   zx_status_t GetOsInfo(fidl_txn_t* txn) const;
 
-  void RemoveClient(OpteeClient* client);
-
   uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler);
 
   SharedMemoryManager::DriverMemoryPool* driver_pool() const {
@@ -77,8 +77,6 @@ class OpteeController : public OpteeControllerBase, public OpteeControllerProtoc
   zx_status_t ValidateApiRevision() const;
   zx_status_t GetOsRevision();
   zx_status_t ExchangeCapabilities();
-  void AddClient(OpteeClient* client);
-  void CloseClients();
   zx_status_t InitializeSharedMemory();
   zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
 
@@ -89,9 +87,9 @@ class OpteeController : public OpteeControllerBase, public OpteeControllerProtoc
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
   fuchsia_tee_OsRevision os_revision_ = {};
-  fbl::Mutex clients_lock_;
-  fbl::DoublyLinkedList<OpteeClient*> clients_ TA_GUARDED(clients_lock_);
   fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;
 };
 
 }  // namespace optee
+
+#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_
