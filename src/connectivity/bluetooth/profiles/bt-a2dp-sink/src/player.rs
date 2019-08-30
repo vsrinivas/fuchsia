@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_media_playback::{
         PlayerEvent, PlayerEventStream, PlayerMarker, PlayerProxy, SourceMarker,
     },
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::{stream, StreamExt},
 };
 
@@ -126,12 +126,16 @@ impl SbcHeader {
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
-    // TODO(jamuraa): add encoding parameters for this (SetConfiguration)
     pub async fn new(codec: String) -> Result<Player, Error> {
         let player = fuchsia_component::client::connect_to_service::<PlayerMarker>()
             .context("Failed to connect to media player")?;
-        let (source_client, source) = fidl::endpoints::create_endpoints()?;
-        let source_proxy = source_client.into_proxy()?;
+        Self::from_proxy(codec, player).await
+    }
+
+    /// Build a Player given a PlayerProxy.
+    /// Used in tests.
+    async fn from_proxy(codec: String, player: PlayerProxy) -> Result<Player, Error> {
+        let (source_proxy, source) = fidl::endpoints::create_proxy()?;
         player.create_elementary_source(0, false, false, None, source)?;
 
         let audio_stream_type = AudioStreamType {
@@ -146,21 +150,12 @@ impl Player {
             encoding_parameters: None,
         };
 
-        let (stream_source, stream_source_sink) = fidl::endpoints::create_endpoints()?;
-        let stream_source = stream_source.into_proxy()?;
-        source_proxy.add_stream(&mut stream_type, 44100, 1, stream_source_sink)?;
+        let (stream_source, stream_source_server) = fidl::endpoints::create_proxy()?;
+        source_proxy.add_stream(&mut stream_type, 44100, 1, stream_source_server)?;
 
-        // TODO: vmar map this for faster access.
         let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
 
-        stream_source.add_payload_buffer(
-            0,
-            buffer.create_child(
-                zx::VmoChildOptions::COPY_ON_WRITE,
-                0,
-                DEFAULT_BUFFER_LEN as u64,
-            )?,
-        )?;
+        stream_source.add_payload_buffer(0, buffer.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;
 
         let mut player_event_stream = player.take_event_stream();
 
@@ -306,6 +301,16 @@ impl Drop for Player {
 mod tests {
     use super::*;
 
+    use {
+        fidl::endpoints::{create_proxy_and_stream, RequestStream},
+        fidl_fuchsia_media::{SimpleStreamSinkRequest, SimpleStreamSinkRequestStream},
+        fidl_fuchsia_media_playback::{
+            ElementarySourceRequest, PlayerMarker, PlayerRequest, PlayerRequestStream, PlayerStatus,
+        },
+        fuchsia_async as fasync,
+        futures::Poll,
+    };
+
     #[test]
     fn test_frame_length() {
         // 44.1, 16 blocks, Joint Stereo, Loudness, 8 subbands, 53 bitpool (Android P)
@@ -334,6 +339,124 @@ mod tests {
         assert_eq!(53, head.bitpool());
         assert_eq!(HEADER2_FRAMELEN, head.frame_length().unwrap());
         assert_eq!(HEADER2_FRAMELEN, Player::find_sbc_frame_len(&header2).unwrap());
+    }
+
+    /// Runs through the setup sequence of a Player, returning the player,
+    /// SimpleStreamSinkRequestStream and PlayerRequestStream that it is communicating with, and
+    /// the VMO payload buffer that was provided to the SimpleStreamSink.
+    fn setup_player(
+        exec: &mut fasync::Executor,
+    ) -> (Player, SimpleStreamSinkRequestStream, PlayerRequestStream, zx::Vmo) {
+        let (player_proxy, mut player_request_stream) =
+            create_proxy_and_stream::<PlayerMarker>().expect("proxy pair creation");
+        let mut player_new_fut = Box::pin(Player::from_proxy("test".to_string(), player_proxy));
+
+        assert!(exec.run_until_stalled(&mut player_new_fut).is_pending());
+
+        let player_req = exec
+            .run_singlethreaded(player_request_stream.select_next_some())
+            .expect("player request");
+
+        let mut source_request_stream = match player_req {
+            PlayerRequest::CreateElementarySource { source_request, .. } => source_request,
+            _ => panic!("should be CreateElementarySource"),
+        }
+        .into_stream()
+        .expect("a source request stream to be created from the request");
+
+        let source_req = exec
+            .run_singlethreaded(source_request_stream.select_next_some())
+            .expect("a source request");
+
+        let mut sink_request_stream = match source_req {
+            ElementarySourceRequest::AddStream { sink_request, .. } => sink_request,
+            _ => panic!("should be AddStream"),
+        }
+        .into_stream()
+        .expect("a sink request stream to be created from the request");
+
+        let sink_req =
+            exec.run_singlethreaded(sink_request_stream.select_next_some()).expect("sink request");
+
+        let sink_vmo = match sink_req {
+            SimpleStreamSinkRequest::AddPayloadBuffer { payload_buffer, .. } => payload_buffer,
+            _ => panic!("should have a PayloadBuffer"),
+        };
+
+        let player_req = exec
+            .run_singlethreaded(player_request_stream.select_next_some())
+            .expect("player request");
+
+        match player_req {
+            PlayerRequest::SetSource { .. } => (),
+            _ => panic!("should be CreateElementarySource"),
+        };
+
+        player_request_stream
+            .control_handle()
+            .send_on_status_changed(&mut PlayerStatus {
+                duration: 0,
+                can_pause: false,
+                can_seek: false,
+                has_audio: true,
+                has_video: false,
+                ready: true,
+                metadata: None,
+                problem: None,
+                audio_connected: true,
+                video_connected: false,
+                video_size: None,
+                pixel_aspect_ratio: None,
+                timeline_function: None,
+                end_of_stream: false,
+            })
+            .expect("status changed to send");
+
+        let player = match exec.run_until_stalled(&mut player_new_fut) {
+            Poll::Ready(Ok(player)) => player,
+            _ => panic!("player should be done"),
+        };
+        (player, sink_request_stream, player_request_stream, sink_vmo)
+    }
+
+    #[test]
+    fn test_player_setup() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        setup_player(&mut exec);
+    }
+
+    #[test]
+    /// Tests that the creation of a player executes with the expected interaction with the
+    /// Player and stream setup.
+    /// This tests that the buffer is sent correctly and that data "sent" through the shared
+    /// VMO is readable by the receiver of the VMO.
+    /// We do this by mocking the Player and SimpleSourceStream interfaces that are used.
+    fn test_send_frame() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        let (mut player, mut sink_request_stream, _, sink_vmo) = setup_player(&mut exec);
+
+        let payload = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+        player.send_frame(payload).expect("send happens okay");
+
+        let sink_req =
+            exec.run_singlethreaded(sink_request_stream.select_next_some()).expect("sink request");
+
+        let (offset, size) = match sink_req {
+            SimpleStreamSinkRequest::SendPacketNoReply { packet, .. } => {
+                (packet.payload_offset, packet.payload_size as usize)
+            }
+            _ => panic!("should have received a packet"),
+        };
+
+        let mut recv = Vec::with_capacity(size);
+        recv.resize(size, 0);
+
+        sink_vmo.read(recv.as_mut_slice(), offset).expect("should be able to read packet data");
+
+        assert_eq!(recv, payload, "received didn't match payload");
     }
 
     #[test]

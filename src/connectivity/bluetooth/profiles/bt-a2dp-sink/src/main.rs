@@ -183,33 +183,37 @@ impl Streams {
     async fn build(inspect: &mut ManagedNode) -> Result<Streams, Error> {
         let mut s = Streams::new();
         // TODO(BT-533): detect codecs, add streams for each codec
-        if let Ok(_player) = player::Player::new(AUDIO_ENCODING_SBC.to_string()).await {
-            let sbc_stream = avdtp::StreamEndpoint::new(
-                SBC_SEID,
-                avdtp::MediaType::Audio,
-                avdtp::EndpointType::Sink,
-                vec![
-                    avdtp::ServiceCapability::MediaTransport,
-                    avdtp::ServiceCapability::MediaCodec {
-                        media_type: avdtp::MediaType::Audio,
-                        codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
-                        // SBC Codec Specific Information Elements:
-                        // These are the mandatory support in sink.
-                        // Byte 0:
-                        //  - Sampling Frequencies: 44.1kHz, 48.0kHz
-                        //  - Channel modes: All (MONO, DUAL CHANNEL, STEREO, JOINT STEREO)
-                        // Byte 1:
-                        //  - Block length: all (4, 8, 12, 16)
-                        //  - Subbands: all (4, 8)
-                        //  - Allocation Method: all (SNR and loudness)
-                        // Byte 2-3: Minimum and maximum bitpool value. This is just the minimum to the max.
-                        // TODO(jamuraa): there should be a way to build this data in a structured way (bt-a2dp?)
-                        codec_extra: vec![0x3F, 0xFF, 2, 250],
-                    },
-                ],
-            )?;
-            s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
+        // SBC is required
+        if let Err(e) = player::Player::new(AUDIO_ENCODING_SBC.to_string()).await {
+            fx_log_warn!("Can't play required SBC audio: {}", e);
+            return Err(e);
         }
+        let sbc_stream = avdtp::StreamEndpoint::new(
+            SBC_SEID,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Sink,
+            vec![
+                avdtp::ServiceCapability::MediaTransport,
+                avdtp::ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::new(AUDIO_CODEC_SBC),
+                    // SBC Codec Specific Information Elements:
+                    // These are the mandatory support in sink.
+                    // Byte 0:
+                    //  - Sampling Frequencies: 44.1kHz, 48.0kHz
+                    //  - Channel modes: All (MONO, DUAL CHANNEL, STEREO, JOINT STEREO)
+                    // Byte 1:
+                    //  - Block length: all (4, 8, 12, 16)
+                    //  - Subbands: all (4, 8)
+                    //  - Allocation Method: all (SNR and loudness)
+                    // Byte 2-3: Minimum and maximum bitpool value. This is just the minimum to the max.
+                    // TODO(jamuraa): there should be a way to build this data in a structured way (bt-a2dp?)
+                    codec_extra: vec![0x3F, 0xFF, 2, 250],
+                },
+            ],
+        )?;
+        s.insert(sbc_stream, AUDIO_ENCODING_SBC.to_string());
+
         s.construct_inspect_data(inspect);
         Ok(s)
     }
@@ -709,5 +713,21 @@ mod tests {
 
         assert!(res.as_ref().unwrap().suspend_sender.is_none());
         assert_eq!(encoding, res.as_ref().unwrap().encoding);
+    }
+
+    #[test]
+    /// Streams::build should fail because it can't start the SBC encoder, because MediaPlayer
+    /// isn't available in the test environment.
+    fn test_sbc_unavailable_error() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        let inspect = inspect::Inspector::new();
+        let mut stream_inspect =
+            ManagedNode::new(inspect.root().create_child("local stream endpoints"));
+        let mut streams_fut = Box::pin(Streams::build(&mut stream_inspect));
+
+        let streams = exec.run_singlethreaded(&mut streams_fut);
+
+        assert!(streams.is_err(), "Stream building should fail when it can't reach MediaPlayer");
     }
 }
