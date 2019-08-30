@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_METADATA_H_
-#define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_METADATA_H_
+#pragma once
 
 #include <bitmap/storage.h>
 #include <fbl/function.h>
@@ -18,7 +17,7 @@ namespace minfs {
 class AllocatorFvmMetadata {
  public:
   AllocatorFvmMetadata();
-  AllocatorFvmMetadata(uint32_t* data_slices, uint32_t* metadata_slices, uint32_t slice_size);
+  AllocatorFvmMetadata(uint32_t* data_slices, uint32_t* metadata_slices, uint64_t slice_size);
   AllocatorFvmMetadata(AllocatorFvmMetadata&&);
   AllocatorFvmMetadata& operator=(AllocatorFvmMetadata&&);
   ~AllocatorFvmMetadata();
@@ -114,5 +113,3 @@ class AllocatorMetadata {
 };
 
 }  // namespace minfs
-
-#endif  // ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_METADATA_H_

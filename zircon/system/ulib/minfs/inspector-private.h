@@ -5,14 +5,13 @@
 // This file includes necessary methods for inspecting various on-disk structures
 // of a MinFS filesystem.
 
-#ifndef ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_PRIVATE_H_
-#define ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_PRIVATE_H_
+#pragma once
 
-#include <lib/disk-inspector/common-types.h>
 #include <sys/stat.h>
 
-#include <fbl/unique_fd.h>
+#include <lib/disk-inspector/common-types.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/unique_fd.h>
 #include <minfs/format.h>
 
 #include "allocator/inode-manager.h"
@@ -25,7 +24,7 @@ constexpr uint32_t kRootNumElements = 3;
 constexpr char kRootName[] = "minfs-root";
 
 // Total number of fields in the on-disk superblock structure.
-constexpr uint32_t kSuperblockNumElements = 28;
+constexpr uint32_t kSuperblockNumElements = 24;
 constexpr char kSuperBlockName[] = "superblock";
 
 // Total number of fields in the on-disk inode structure.
@@ -178,5 +177,3 @@ class RootObject : public disk_inspector::DiskObject {
 };
 
 }  // namespace minfs
-
-#endif  // ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_PRIVATE_H_

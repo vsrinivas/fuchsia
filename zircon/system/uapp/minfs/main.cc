@@ -32,13 +32,10 @@
 namespace {
 
 int Fsck(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
-  if (options.readonly) {
-    return Fsck(std::move(bc), minfs::Repair::kDisabled);
-  }
-  return Fsck(std::move(bc), minfs::Repair::kEnabled);
+  return Fsck(std::move(bc));
 }
 
-int Mount(fbl::unique_fd device_fd, const minfs::MountOptions& options) {
+int Mount(fbl::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
   zx::channel root(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
   if (!root) {
     FS_TRACE_ERROR("minfs: Could not access startup handle to mount point\n");
@@ -53,7 +50,7 @@ int Mount(fbl::unique_fd device_fd, const minfs::MountOptions& options) {
     FS_TRACE_WARN("minfs: Unmounted\n");
   };
   zx_status_t status;
-  if ((status = MountAndServe(options, loop.dispatcher(), std::move(device_fd), std::move(root),
+  if ((status = MountAndServe(options, loop.dispatcher(), std::move(bc), std::move(root),
                               std::move(loop_quit)) != ZX_OK)) {
     if (options.verbose) {
       fprintf(stderr, "minfs: Failed to mount: %d\n", status);
@@ -184,7 +181,6 @@ int main(int argc, char** argv) {
   // Block device passed by handle
   zx::channel device = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
   int device_fd = -1;
-
   zx_status_t status = fdio_fd_create(device.release(), &device_fd);
   if (status != ZX_OK) {
     fprintf(stderr, "blobfs: Could not access block device\n");
@@ -192,18 +188,33 @@ int main(int argc, char** argv) {
   }
   fbl::unique_fd fd(device_fd);
 
-  if (strcmp(cmd, "mount") == 0) {
-    return Mount(std::move(fd), options);
+  off_t device_size = 0;
+  bool block_readonly = false;
+  status = GetInfo(fd, &device_size, &block_readonly);
+  if (status != ZX_OK) {
+    return status;
   }
 
+  options.readonly = options.readonly || block_readonly;
+
+  if (device_size == 0) {
+    fprintf(stderr, "minfs: failed to access block device\n");
+    return usage();
+  }
+  size_t block_count = device_size / minfs::kMinfsBlockSize;
+
   fbl::unique_ptr<minfs::Bcache> bc;
-  if (CreateBcache(std::move(fd), &options.readonly, &bc) != ZX_OK) {
+  if (minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(block_count), &bc) != ZX_OK) {
     fprintf(stderr, "minfs: error: cannot create block cache\n");
     return -1;
   }
 
+  if (!strcmp(cmd, "mount")) {
+    return Mount(std::move(bc), options);
+  }
+
   for (unsigned i = 0; i < fbl::count_of(CMDS); i++) {
-    if (strcmp(cmd, CMDS[i].name) == 0) {
+    if (!strcmp(cmd, CMDS[i].name)) {
       int r = CMDS[i].func(std::move(bc), options);
       if (options.verbose) {
         fprintf(stderr, "minfs: %s completed with result: %d\n", cmd, r);

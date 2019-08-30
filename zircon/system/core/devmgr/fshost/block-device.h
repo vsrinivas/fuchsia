@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_DEVICE_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_DEVICE_H_
-
-#include <zircon/types.h>
+#pragma once
 
 #include <memory>
 #include <optional>
 
-#include <fbl/algorithm.h>
-#include <fbl/string_buffer.h>
 #include <fs-management/mount.h>
+#include <zircon/types.h>
 
 #include "block-device-interface.h"
 #include "filesystem-mounter.h"
@@ -49,5 +45,3 @@ class BlockDevice final : public BlockDeviceInterface {
 };
 
 }  // namespace devmgr
-
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_BLOCK_DEVICE_H_
