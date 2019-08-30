@@ -457,7 +457,15 @@ impl TestSetupBuilder {
                 // get the endpoint from the sandbox config:
                 let endpoint = setup.get_endpoint(&ep_name).await?;
                 let cli = stack.connect_stack()?;
-                let if_id = stack.run_future(configure_stack(cli, endpoint, addr)).await?;
+                let if_id = stack.run_future(add_stack_endpoint(&cli, endpoint)).await?;
+                // We'll ALWAYS await for the newly created interface to come up
+                // online before returning, so users of `TestSetupBuilder` can
+                // be 100% sure of the state once the setup is done.
+                stack.wait_for_interface_online(if_id).await;
+                if let Some(addr) = addr {
+                    stack.run_future(configure_endpoint_address(&cli, if_id, addr)).await?;
+                }
+
                 stack.endpoint_ids.insert(ep_name, if_id);
             }
 
@@ -503,10 +511,9 @@ impl StackSetupBuilder {
     }
 }
 
-async fn configure_stack(
-    cli: fidl_fuchsia_net_stack::StackProxy,
+async fn add_stack_endpoint(
+    cli: &fidl_fuchsia_net_stack::StackProxy,
     endpoint: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
-    addr: Option<AddrSubnetEither>,
 ) -> Result<u64, Error> {
     // add interface:
     let if_id = cli
@@ -514,12 +521,14 @@ async fn configure_stack(
         .await
         .squash_result()
         .context("Add ethernet interface")?;
+    Ok(if_id)
+}
 
-    let addr = match addr {
-        Some(a) => a,
-        None => return Ok(if_id),
-    };
-
+async fn configure_endpoint_address(
+    cli: &fidl_fuchsia_net_stack::StackProxy,
+    if_id: u64,
+    addr: AddrSubnetEither,
+) -> Result<(), Error> {
     // add address:
     let () = cli
         .add_interface_address(if_id, &mut addr.into_fidl())
@@ -541,7 +550,7 @@ async fn configure_stack(
         .squash_result()
         .context("Add forwarding entry")?;
 
-    Ok(if_id)
+    Ok(())
 }
 
 fn new_endpoint_setup(name: String) -> net::EndpointSetup {
@@ -761,7 +770,14 @@ async fn test_ethernet_link_up_down() {
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    assert!(t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap().is_active());
+    let device_info = t.get(0).event_loop.ctx.dispatcher().get_device_info(if_id).unwrap();
+    assert!(device_info.is_active());
+
+    // call directly into core to prove that the device was correctly
+    // initialized (core will panic if we try to use the device and initialize
+    // hasn't been called)
+    let core_id = device_info.core_id().unwrap();
+    netstack3_core::receive_frame(&mut t.get(0).event_loop.ctx, core_id, Buf::new(&mut [], ..));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -800,6 +816,11 @@ async fn test_list_interfaces() {
             .await
             .squash_result()
             .expect("Add interface succeeds");
+        // NOTE(brunodalbo) wait for interface to come online before trying to
+        // add the address. We currently don't support adding addresses for
+        // offline interfaces, because they're removed from core. This wait can
+        // be removed once we allow that.
+        t.get(0).wait_for_interface_online(if_id).await;
         let () = t
             .get(0)
             .run_future(stack.add_interface_address(if_id, &mut if_ip))

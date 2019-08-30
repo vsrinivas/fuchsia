@@ -300,18 +300,32 @@ impl EventLoop {
             Some(Event::EthSetupEvent(setup)) => {
                 let (state, disp) = self.ctx.state_and_dispatcher();
                 let client_stream = setup.client.get_stream();
-                let eth_id =
-                    state.add_ethernet_device(Mac::new(setup.info.mac.octets), setup.info.mtu);
-                match disp
-                    .devices
-                    .add_active_device(eth_id, CommonInfo::new(setup.path, setup.client, true))
-                {
+
+                let online = setup
+                    .client
+                    .get_status()
+                    .await
+                    .map(|s| s.contains(EthernetStatus::ONLINE))
+                    .unwrap_or(false);
+
+                let id = if online {
+                    let eth_id =
+                        state.add_ethernet_device(Mac::new(setup.info.mac.octets), setup.info.mtu);
+                    disp.devices
+                        .add_active_device(eth_id, CommonInfo::new(setup.path, setup.client, true))
+                } else {
+                    Some(disp.devices.add_device(CommonInfo::new(setup.path, setup.client, true)))
+                };
+                match id {
                     Some(id) => {
                         let eth_worker = EthernetWorker::new(id, client_stream);
                         eth_worker.spawn(self.ctx.dispatcher().event_send.clone());
-
-                        initialize_device(&mut self.ctx, eth_id);
-
+                        // If we have a core_id associated with id, that means
+                        // the device was added in the active state, so we must
+                        // initialize it using the new core_id.
+                        if let Some(core_id) = self.ctx.dispatcher_mut().devices.get_core_id(id) {
+                            initialize_device(&mut self.ctx, core_id);
+                        }
                         setup.responder.send(None, id);
                     }
                     None => {
@@ -748,6 +762,10 @@ impl EventLoop {
         match disp.devices.activate_device(id, generate_core_id) {
             Ok(device_info) => {
                 handle_device_state(device_info);
+                // we can unwrap core_id here because activate_device just succeeded.
+                let core_id = device_info.core_id().unwrap();
+                // don't forget to initialize the device in core!
+                initialize_device(&mut self.ctx, core_id);
                 Ok(())
             }
             Err(toggle_error) => {

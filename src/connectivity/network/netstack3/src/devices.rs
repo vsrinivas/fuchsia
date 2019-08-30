@@ -115,8 +115,6 @@ where
     /// The new device will *not* have a `core_id` allocated, that can be done
     /// by calling [`Devices::activate_device`] with the newly created
     /// [`BindingId`].
-    // TODO: remove when this starts to be used in eventloop.
-    #[cfg(test)]
     pub fn add_device(&mut self, info: I) -> BindingId {
         let id = self.alloc_id();
         self.inactive_devices.insert(id, DeviceInfo { id, core_id: None, info });
