@@ -214,7 +214,8 @@ TEST(SyncCompletion, test_presignal_single_wait) {
   ASSERT_NO_FATAL_FAILURES(TestPresignalWait<1>());
 }
 
-TEST(SyncCompletion, test_presignal_multi_wait) {
+// TODO(35820): Fix and enable.
+TEST(SyncCompletion, DISABLED_test_presignal_multi_wait) {
   ASSERT_NO_FATAL_FAILURES(TestPresignalWait<kMultiWaitThreadCount>());
 }
 
