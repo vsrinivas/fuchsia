@@ -164,7 +164,10 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .unwrap()
             .register(
                 switchboard::base::SettingType::Display,
-                spawn_display_controller(service_context_handle.clone()),
+                spawn_display_controller(
+                    service_context_handle.clone(),
+                    unboxed_storage_factory.get_store::<switchboard::base::DisplayInfo>(),
+                ),
             )
             .unwrap();
 

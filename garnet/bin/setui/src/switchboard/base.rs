@@ -111,21 +111,18 @@ impl From<ColorBlindnessType> for fidl_fuchsia_settings::ColorBlindnessType {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
-pub enum BrightnessInfo {
-    ManualBrightness(f32),
-    AutoBrightness,
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct DisplayInfo {
+    /// The last brightness value that was manually set
+    pub manual_brightness_value: f32,
+    pub auto_brightness: bool,
 }
 
-/// Creates a brightness info enum.
-pub fn brightness_info(auto_brightness: bool, value: Option<f32>) -> BrightnessInfo {
-    if auto_brightness {
-        BrightnessInfo::AutoBrightness
-    } else {
-        if let Some(brightness_value) = value {
-            BrightnessInfo::ManualBrightness(brightness_value)
-        } else {
-            panic!("No brightness specified for manual brightness")
+impl DisplayInfo {
+    pub const fn new(auto_brightness: bool, manual_brightness_value: f32) -> DisplayInfo {
+        DisplayInfo {
+            manual_brightness_value: manual_brightness_value,
+            auto_brightness: auto_brightness,
         }
     }
 }
@@ -179,7 +176,7 @@ pub enum SettingResponse {
     Unknown,
     Accessibility(AccessibilityInfo),
     /// Response to a request to get current brightness state.AccessibilityEncoder
-    Brightness(BrightnessInfo),
+    Brightness(DisplayInfo),
     DoNotDisturb(DoNotDisturbInfo),
     Intl(IntlInfo),
     Setup(SetupInfo),

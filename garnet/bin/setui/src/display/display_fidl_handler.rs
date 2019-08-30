@@ -23,14 +23,10 @@ impl From<SettingResponse> for DisplaySettings {
         if let SettingResponse::Brightness(info) = response {
             let mut display_settings = fidl_fuchsia_settings::DisplaySettings::empty();
 
-            match info {
-                BrightnessInfo::ManualBrightness(value) => {
-                    display_settings.brightness_value = Some(value);
-                    display_settings.auto_brightness = Some(false);
-                }
-                BrightnessInfo::AutoBrightness => {
-                    display_settings.auto_brightness = Some(true);
-                }
+            display_settings.auto_brightness = Some(info.auto_brightness);
+
+            if !info.auto_brightness {
+                display_settings.brightness_value = Some(info.manual_brightness_value);
             }
 
             display_settings

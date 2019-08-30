@@ -3,19 +3,27 @@
 // found in the LICENSE file.
 use {
     crate::registry::base::{Command, Notifier, State},
+    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::registry::service_context::ServiceContext,
-    crate::switchboard::base::{brightness_info, SettingRequest, SettingResponse, SettingType},
+    crate::switchboard::base::{DisplayInfo, SettingRequest, SettingResponse, SettingType},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    futures::lock::Mutex,
     futures::StreamExt,
     std::sync::{Arc, RwLock},
 };
 
+impl DeviceStorageCompatible for DisplayInfo {
+    const DEFAULT_VALUE: Self =
+        DisplayInfo::new(false /*auto_brightness_enabled*/, 0.5 /*brightness_value*/);
+    const KEY: &'static str = "display_info";
+}
+
 /// Controller that handles commands for SettingType::Display.
 /// TODO(ejia): refactor out common code
-/// TODO(ejia): store persistently
 pub fn spawn_display_controller(
     service_context_handle: Arc<RwLock<ServiceContext>>,
+    storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (display_handler_tx, mut display_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
@@ -23,40 +31,26 @@ pub fn spawn_display_controller(
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
 
     fasync::spawn(async move {
-
         let brightness_service = service_context_handle
             .read()
             .expect("got service context handle")
             .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
             .expect("connected to brightness");
 
+        // Load and set value
+        // TODO(fxb/25388): handle at explicit initialization time instead of on spawn
         // TODO(fxb/35004): Listen to changes using hanging get as well
-        // TODO(fxb/35336): Currently, brightness isn't supported on all platforms and so brightness
-        // service is expected to fail. Dummy values on fail should be removed when we handl
-        // platforms.
-        // TODO(fxb/25466): Handle errors in a comprehensive way.
-        let auto_brightness = match brightness_service.watch_auto_brightness().await {
-            Ok(auto_brightness) => auto_brightness,
+        let stored_value: DisplayInfo;
+        {
+            let mut storage_lock = storage.lock().await;
+            stored_value = storage_lock.get().await;
+        }
+        match set_brightness(stored_value, &brightness_service, storage.clone()).await {
+            Ok(_) => {}
             Err(e) => {
-                fx_log_err!("failed getting auto-brightness, {}", e);
-                false
+                fx_log_err!("failed to set brightness: {}", e);
             }
-        };
-
-        let brightness_value = match brightness_service.watch_current_brightness().await {
-            Ok(brightness_value) => brightness_value,
-            Err(e) => {
-                fx_log_err!("failed getting brightness_value, {}", e);
-                0.5
-            }
-        };
-
-        // last set brightness is needed to give a value when turning off auto brightness
-        let last_set_brightness = Arc::new(RwLock::new(brightness_value));
-
-        // TODO(ejia): replace with persistent state
-        let brightness_state =
-            Arc::new(RwLock::new(brightness_info(auto_brightness, Some(brightness_value))));
+        }
 
         while let Some(command) = display_handler_rx.next().await {
             match command {
@@ -72,49 +66,48 @@ pub fn spawn_display_controller(
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetBrightness(brightness_value) => {
-
-                            *last_set_brightness.write().unwrap() = brightness_value;
-                            *brightness_state.write().unwrap() =
-                                brightness_info(false, Some(brightness_value));
-
-                            brightness_service
-                                .set_manual_brightness(brightness_value)
-                                .unwrap_or_else(move |e| {
-                                    fx_log_err!("failed setting brightness_value, {}", e);
-                                });
+                            set_brightness(
+                                DisplayInfo::new(
+                                    false, /*auto_brightness_enabled*/
+                                    brightness_value,
+                                ),
+                                &brightness_service,
+                                storage.clone(),
+                            )
+                            .await
+                            .unwrap_or_else(move |e| {
+                                fx_log_err!("failed setting brightness_value, {}", e);
+                            });
 
                             responder.send(Ok(None)).unwrap();
-                            if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
-                                notifier.unbounded_send(SettingType::Display).unwrap();
-                            }
+                            notify(notifier_lock.clone());
                         }
                         SettingRequest::SetAutoBrightness(auto_brightness_enabled) => {
-                            if auto_brightness_enabled {
-                                *brightness_state.write().unwrap() = brightness_info(true, None);
-                                brightness_service.set_auto_brightness().unwrap_or_else(move |e| {
-                                    fx_log_err!("failed setting auto_brightness_value, {}", e);
-                                });
-                            } else {
-                                let brightness_value = *last_set_brightness.read().unwrap();
-                                *brightness_state.write().unwrap() =
-                                    brightness_info(false, Some(brightness_value));
-                                brightness_service
-                                    .set_manual_brightness(brightness_value)
-                                    .unwrap_or_else(move |e| {
-                                        fx_log_err!("failed setting brightness_value, {}", e);
-                                    });
+                            let brightness_value: f32;
+                            {
+                                let mut storage_lock = storage.lock().await;
+                                let stored_value = storage_lock.get().await;
+                                brightness_value = stored_value.manual_brightness_value;
                             }
+
+                            set_brightness(
+                                DisplayInfo::new(auto_brightness_enabled, brightness_value),
+                                &brightness_service,
+                                storage.clone(),
+                            )
+                            .await
+                            .unwrap_or_else(move |e| {
+                                fx_log_err!("failed setting brightness_value, {}", e);
+                            });
+
                             responder.send(Ok(None)).unwrap();
-                            // TODO: watch for changes on current brightness and notify changes
-                            // that way instead.
-                            if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
-                                notifier.unbounded_send(SettingType::Display).unwrap();
-                            }
+                            notify(notifier_lock.clone());
                         }
                         SettingRequest::Get => {
+                            let mut storage_lock = storage.lock().await;
                             responder
                                 .send(Ok(Some(SettingResponse::Brightness(
-                                    *brightness_state.read().unwrap(),
+                                    storage_lock.get().await,
                                 ))))
                                 .unwrap();
                         }
@@ -125,4 +118,27 @@ pub fn spawn_display_controller(
         }
     });
     display_handler_tx
+}
+
+async fn set_brightness(
+    info: DisplayInfo,
+    brightness_service: &fidl_fuchsia_ui_brightness::ControlProxy,
+    storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
+) -> Result<(), fidl::Error> {
+    storage.lock().await.write(info).unwrap_or_else(move |e| {
+        fx_log_err!("failed storing brightness, {}", e);
+    });
+    if info.auto_brightness {
+        brightness_service.set_auto_brightness()
+    } else {
+        brightness_service.set_manual_brightness(info.manual_brightness_value)
+    }
+}
+
+// TODO(fxb/35459): watch for changes on current brightness and notify changes
+// that way instead.
+fn notify(notifier_lock: Arc<RwLock<Option<Notifier>>>) {
+    if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+        notifier.unbounded_send(SettingType::Display).unwrap();
+    }
 }

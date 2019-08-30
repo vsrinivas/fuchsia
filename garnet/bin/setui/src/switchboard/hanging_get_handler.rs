@@ -171,9 +171,7 @@ mod tests {
     impl From<SettingResponse> for TestStruct {
         fn from(response: SettingResponse) -> Self {
             if let SettingResponse::Brightness(info) = response {
-                if let BrightnessInfo::ManualBrightness(value) = info {
-                    return TestStruct { id: value };
-                }
+                return TestStruct { id: info.manual_brightness_value };
             }
             panic!("bad response");
         }
@@ -191,9 +189,7 @@ mod tests {
 
             let value = *self.id_to_send.read().unwrap();
             callback
-                .send(Ok(Some(SettingResponse::Brightness(BrightnessInfo::ManualBrightness(
-                    value,
-                )))))
+                .send(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(false, value)))))
                 .unwrap();
             Ok(())
         }
