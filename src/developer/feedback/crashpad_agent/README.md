@@ -11,13 +11,6 @@ We control via JSON configuration files whether we upload the Crashpad reports
 to a crash server and if so, to which crash server. By default, we create a
 Crashpad report, but we do not upload it.
 
-## Adding report annotations
-
-We collect various info in addition to the stack trace, e.g., process names,
-board names, that we add as annotations to the crash reports. To add a new
-annotation, simply add a new field in the map returned by
-[::fuchsia::crash::MakeDefaultAnnotations()](https://fuchsia.googlesource.com/fuchsia/+/master/src/developer/crashpad_agent/report_annotations.h).
-
 ## Testing
 
 To test your changes, on a real device, we have some unit tests and some helper
@@ -34,7 +27,7 @@ Then, after running each one of the helper programs (see commands in sections
 below), you should then look each time for the following line in the syslog:
 
 ```sh
-(host)$ fx syslog --tag crash
+(host)$ fx syslog --tag feedback
 ...
 successfully uploaded crash report at $URL...
 ...
