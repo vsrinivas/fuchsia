@@ -71,7 +71,7 @@ DockyardHost::GetSamples(const std::vector<dockyard::DockyardId>& path_ids) {
   // Create a query instance.
   auto emplacement = std::make_unique<AsyncQuery>();
   auto iter = request_id_to_async_query_.emplace(
-      emplacement->request.request_id(), std::move(emplacement));
+      emplacement->request.RequestId(), std::move(emplacement));
   if (!iter.second) {
     GT_LOG(ERROR) << "Failed to emplace query (might be out of"
                      " memory).";
@@ -192,12 +192,12 @@ void DockyardHost::OnPaths(const std::vector<dockyard::PathInfo>& add,
 }
 
 void DockyardHost::OnStreamSets(const dockyard::StreamSetsResponse& response) {
-  auto search = request_id_to_async_query_.find(response.request_id);
+  auto search = request_id_to_async_query_.find(response.RequestId());
   if (search != request_id_to_async_query_.end()) {
     search->second->response = response;
     search->second->promise.set_value(std::move(search->second));
     request_id_to_async_query_.erase(search);
   } else {
-    GT_LOG(INFO) << "Did not find request_id " << response.request_id;
+    GT_LOG(INFO) << "Did not find RequestId " << response.RequestId();
   }
 }

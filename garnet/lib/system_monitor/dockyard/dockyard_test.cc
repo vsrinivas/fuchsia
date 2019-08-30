@@ -776,7 +776,7 @@ TEST_F(SystemMonitorDockyardTest, IgnoreSamples) {
   ignore.suffix = ":iTest";
   dockyard_.IgnoreSamples(
       ignore, [ignore](const dockyard::IgnoreSamplesResponse& response) {
-        EXPECT_EQ(ignore.request_id(), response.request_id);
+        EXPECT_EQ(ignore.RequestId(), response.RequestId());
       });
   dockyard_.ProcessRequests();
 
@@ -807,7 +807,7 @@ TEST_F(SystemMonitorDockyardTest, IgnoreSamples) {
   dockyard_.ProcessRequests();
 
   // Check results.
-  EXPECT_EQ(request.request_id(), response_.request_id);
+  EXPECT_EQ(request.RequestId(), response_.RequestId());
   EXPECT_EQ(10ULL, response_.lowest_value);
   EXPECT_EQ(100ULL, response_.highest_value);
   ASSERT_EQ(1UL, response_.data_sets.size());
@@ -852,7 +852,7 @@ TEST_F(SystemMonitorDockyardTest, Discard) {
   dockyard_.ProcessRequests();
 
   EXPECT_EQ(1, discard_call_count_);
-  EXPECT_EQ(discard.request_id(), discard_response_.request_id);
+  EXPECT_EQ(discard.RequestId(), discard_response_.RequestId());
 
   // Add pending request.
   StreamSetsRequest request;
@@ -865,7 +865,7 @@ TEST_F(SystemMonitorDockyardTest, Discard) {
   dockyard_.ProcessRequests();
 
   // Check results.
-  EXPECT_EQ(request.request_id(), response_.request_id);
+  EXPECT_EQ(request.RequestId(), response_.RequestId());
   EXPECT_EQ(1, discard_call_count_);
   EXPECT_EQ(0, name_call_count_);
   EXPECT_EQ(1, sets_call_count_);

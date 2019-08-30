@@ -10,7 +10,7 @@
 // See //garnet/lib/system_monitor/dockyard/dockyard.cc for the actual code.
 namespace dockyard {
 
-uint64_t RequestId::next_request_id_;
+uint64_t MessageRequest::next_request_id_ = 0u;
 
 Dockyard::Dockyard() {}
 

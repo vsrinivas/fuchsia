@@ -65,7 +65,7 @@ SampleTimeNs CalcTimeForStride(const StreamSetsRequest& request,
 
 }  // namespace
 
-uint64_t RequestId::next_request_id_;
+uint64_t MessageRequest::next_request_id_;
 
 bool StreamSetsRequest::HasFlag(StreamSetsRequestFlags flag) const {
   return (flags & flag) != 0;
@@ -74,7 +74,7 @@ bool StreamSetsRequest::HasFlag(StreamSetsRequestFlags flag) const {
 std::ostream& operator<<(std::ostream& out,
                          const DiscardSamplesRequest& request) {
   out << "DiscardSamplesRequest {" << std::endl;
-  out << "  request_id: " << request.request_id() << std::endl;
+  out << "  RequestId: " << request.RequestId() << std::endl;
   out << "  start_time_ns: " << request.start_time_ns << std::endl;
   out << "  end_time_ns:   " << request.end_time_ns << std::endl;
   out << "    delta time in seconds: "
@@ -93,14 +93,14 @@ std::ostream& operator<<(std::ostream& out,
 std::ostream& operator<<(std::ostream& out,
                          const DiscardSamplesResponse& response) {
   out << "DiscardSamplesResponse {" << std::endl;
-  out << "  request_id: " << response.request_id << std::endl;
+  out << "  RequestId: " << response.RequestId() << std::endl;
   out << "}" << std::endl;
   return out;
 }
 
 std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
   out << "StreamSetsRequest {" << std::endl;
-  out << "  request_id: " << request.request_id() << std::endl;
+  out << "  RequestId: " << request.RequestId() << std::endl;
   out << "  start_time_ns: " << request.start_time_ns << std::endl;
   out << "  end_time_ns:   " << request.end_time_ns << std::endl;
   out << "    delta time in seconds: "
@@ -125,7 +125,7 @@ std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
 std::ostream& operator<<(std::ostream& out,
                          const StreamSetsResponse& response) {
   out << "StreamSetsResponse {" << std::endl;
-  out << "  request_id: " << response.request_id << std::endl;
+  out << "  RequestId: " << response.RequestId() << std::endl;
   out << "  lowest_value: " << response.lowest_value << std::endl;
   out << "  highest_value: " << response.highest_value << std::endl;
   out << "  data_sets (" << response.data_sets.size() << "): [" << std::endl;
@@ -455,7 +455,7 @@ OnDiscardSamplesCallback Dockyard::SetDiscardSamplesHandler(
 void Dockyard::ProcessDiscardSamples(const DiscardSamplesRequest& request,
                                      DiscardSamplesResponse* response) {
   std::lock_guard<std::mutex> guard(mutex_);
-  response->request_id = request.request_id();
+  response->SetRequestId(request.RequestId());
   for (DockyardId dockyard_id : request.dockyard_ids) {
     auto search = sample_streams_.find(dockyard_id);
     if (search == sample_streams_.end()) {
@@ -487,14 +487,14 @@ void Dockyard::ProcessDiscardSamples(const DiscardSamplesRequest& request,
 void Dockyard::ProcessIgnoreSamples(const IgnoreSamplesRequest& request,
                                     IgnoreSamplesResponse* response) {
   std::lock_guard<std::mutex> guard(mutex_);
-  response->request_id = request.request_id();
+  response->SetRequestId(request.RequestId());
   IgnoreSamplesLocked(request.prefix, request.suffix);
 }
 
 void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
                                     StreamSetsResponse* response) const {
   std::lock_guard<std::mutex> guard(mutex_);
-  response->request_id = request.request_id();
+  response->SetRequestId(request.RequestId());
   for (const auto& dockyard_id : request.dockyard_ids) {
     std::vector<SampleValue> samples;
     auto search = sample_streams_.find(dockyard_id);
@@ -976,12 +976,12 @@ std::ostringstream DebugPrintQuery(const Dockyard& dockyard,
                                    const StreamSetsResponse& response) {
   std::ostringstream out;
   out << "StreamSets Query {" << std::endl;
-  if (request.request_id() != response.request_id) {
-    out << "  request_id mismatch: " << request.request_id() << " vs. "
-        << response.request_id << std::endl;
+  if (request.RequestId() != response.RequestId()) {
+    out << "  RequestId mismatch: " << request.RequestId() << " vs. "
+        << response.RequestId() << std::endl;
     return out;
   }
-  out << "  request_id: " << request.request_id() << std::endl;
+  out << "  RequestId: " << request.RequestId() << std::endl;
   out << "  start_time_ns: " << request.start_time_ns << std::endl;
   out << "  end_time_ns:   " << request.end_time_ns << std::endl;
   out << "    delta time in seconds: "

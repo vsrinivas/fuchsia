@@ -93,18 +93,41 @@ struct PathInfo {
   std::string path;
 };
 
-// Context identifier for a message. Used to match a response to a request.
-class RequestId {
- public:
-  RequestId() : request_id_(++next_request_id_) {}
+// A message to or from the dockyard.
+struct Message {
+  // The request ID normally matches a request to a response. In the case of a
+  // 'push' message with no request, the ID will be |NULL_REQUEST_ID|.
+  static constexpr uint64_t NULL_REQUEST_ID = {0u};
 
-  uint64_t operator()() const { return request_id_; }
+  Message(uint64_t id) : request_id_(id) {}
+
+  // Context identifier for a message. Used to match a response to a request.
+  uint64_t RequestId() const { return request_id_; }
+
+ protected:
+  // Context identifier for a message. Used to match a response to a request.
+  uint64_t request_id_;
+};
+
+// A message to the dockyard. The response to this message will arrive as a
+// |MessageResponse| with a matching |RequestId()|.
+struct MessageRequest : public Message {
+  MessageRequest() : Message(++next_request_id_) {}
 
  private:
   // There is no rollover (wrap around) guard for the ID value. It's expected
   // that a 64 bit integer is large enough to eliminate concern about it.
   static uint64_t next_request_id_;
-  uint64_t request_id_;
+};
+
+// A message from the dockyard.
+struct MessageResponse : public Message {
+  MessageResponse() : Message(Message::NULL_REQUEST_ID) {}
+
+  // The request ID defaults to a 'push' message with a null request ID. If this
+  // is a response to a specific request, set the request ID to the request's
+  // request ID.
+  void SetRequestId(uint64_t id) { request_id_ = id; }
 };
 
 // To delete/remove samples from a sample stream, create a DiscardSamplesRequest
@@ -118,12 +141,8 @@ class RequestId {
 // Note: Set an |OnDiscardSamplesCallback| with |SetDiscardSamplesHandler()|
 //       before using the request to be sure of getting the message that the
 //       request is complete.
-struct DiscardSamplesRequest {
+struct DiscardSamplesRequest : public MessageRequest {
   DiscardSamplesRequest() = default;
-
-  // For matching against a DiscardSamplesResponse::request_id. Be sure to
-  // retain this request to properly interpret the |DiscardSamplesResponse|.
-  RequestId request_id;
 
   // Request that samples are for time range |start_time..end_time|. Defaults to
   // all samples (time zero to kSampleTimeInfinite). If there is no positive
@@ -142,11 +161,7 @@ struct DiscardSamplesRequest {
 // A |DiscardSamplesResponse| is a reply for an individual
 // |DiscardSamplesRequest|.
 // See: DiscardSamplesRequest.
-struct DiscardSamplesResponse {
-  DiscardSamplesResponse() = default;
-  // For matching against a DiscardSamplesRequest::request_id.
-  uint64_t request_id;
-
+struct DiscardSamplesResponse : public MessageResponse {
   friend std::ostream& operator<<(std::ostream& out,
                                   const DiscardSamplesResponse& response);
 };
@@ -155,11 +170,8 @@ struct DiscardSamplesResponse {
 // IgnoreSamplesRequest that will match the beginning and ending of the stream
 // paths to ignore.
 // See: IgnoreSamplesRequest.
-struct IgnoreSamplesRequest {
+struct IgnoreSamplesRequest : public MessageRequest {
   IgnoreSamplesRequest() = default;
-
-  // For matching against a IgnoreSamplesRequest::request_id.
-  RequestId request_id;
 
   std::string prefix;
   std::string suffix;
@@ -168,12 +180,7 @@ struct IgnoreSamplesRequest {
 // An |IgnoreSamplesResponse| is a reply for an individual
 // |IgnoreSamplesRequest|.
 // See: IgnoreSamplesRequest.
-struct IgnoreSamplesResponse {
-  IgnoreSamplesResponse() = default;
-
-  // For matching against a IgnoreSamplesRequest::request_id.
-  uint64_t request_id;
-};
+struct IgnoreSamplesResponse : public MessageResponse {};
 
 // A stream set is a portion of a sample stream. This request allows for
 // requesting multiple stream sets in a single request. The results will arrive
@@ -184,7 +191,7 @@ struct IgnoreSamplesResponse {
 //       request is complete.
 //
 // See: StreamSetsResponse.
-struct StreamSetsRequest {
+struct StreamSetsRequest : public MessageRequest {
   enum RenderStyle {
     // When smoothing across samples, use a wider set of samples, including
     // samples that are just outside of the sample set range. E.g. if the range
@@ -228,10 +235,6 @@ struct StreamSetsRequest {
         render_style(AVERAGE_PER_COLUMN),
         flags(0) {}
 
-  // For matching against a StreamSetsResponse::request_id. Be sure to retain
-  // this request to properly interpret the |StreamSetsResponse|.
-  RequestId request_id;
-
   // Request graph data for time range |start_time..end_time| that has
   // |sample_count| values for each set. If the sample stream has more or less
   // samples for that time range, virtual samples will be generated based on
@@ -259,11 +262,7 @@ struct StreamSetsRequest {
 
 // A |StreamSetsResponse| is a reply for an individual |StreamSetsRequest|.
 // See: StreamSetsRequest.
-struct StreamSetsResponse {
-  StreamSetsResponse() = default;
-  // For matching against a StreamSetsRequest::request_id.
-  uint64_t request_id;
-
+struct StreamSetsResponse : public MessageResponse {
   // The low and high all-time values for all sample streams requested. All-time
   // means that these low and high points might not appear in the |data_sets|
   // below. "All sample streams" means that these points may not appear in the
