@@ -602,7 +602,13 @@ Linter::Linter()
       (const raw::ConstDeclaration& element) {
         linter.CheckCase("constants", element.identifier, case_check, case_type);
         linter.CheckRepeatedName("constant", element.identifier);
+        linter.in_const_declaration_ = true;
       });
+
+  callbacks_.OnExitConstDeclaration(
+      [& linter = *this]
+      //
+      (const raw::ConstDeclaration& element) { linter.in_const_declaration_ = false; });
 
   callbacks_.OnEnumMember(
       [& linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
@@ -826,11 +832,13 @@ Linter::Linter()
           return;
         }
         auto type = to_string(element.identifier->components[0]);
-        if (type == "string" && element.maybe_size == nullptr) {
-          linter.AddFinding(element.identifier, string_bounds_check);
-        }
-        if (type == "vector" && element.maybe_size == nullptr) {
-          linter.AddFinding(element.identifier, vector_bounds_check);
+        if (!linter.in_const_declaration_) {
+          if (type == "string" && element.maybe_size == nullptr) {
+            linter.AddFinding(element.identifier, string_bounds_check);
+          }
+          if (type == "vector" && element.maybe_size == nullptr) {
+            linter.AddFinding(element.identifier, vector_bounds_check);
+          }
         }
       });
   // clang-format on

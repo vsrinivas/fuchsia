@@ -88,6 +88,9 @@ class LintingTreeCallbacks {
   void OnConstDeclaration(fit::function<void(const raw::ConstDeclaration&)> callback) {
     const_declaration_callbacks_.push_back(std::move(callback));
   }
+  void OnExitConstDeclaration(fit::function<void(const raw::ConstDeclaration&)> callback) {
+    exit_const_declaration_callbacks_.push_back(std::move(callback));
+  }
   void OnEnumDeclaration(fit::function<void(const raw::EnumDeclaration&)> callback) {
     enum_declaration_callbacks_.push_back(std::move(callback));
   }
@@ -178,6 +181,7 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::BitsDeclaration&)>> exit_bits_declaration_callbacks_;
   std::vector<fit::function<void(const raw::BitsMember&)>> bits_member_callbacks_;
   std::vector<fit::function<void(const raw::ConstDeclaration&)>> const_declaration_callbacks_;
+  std::vector<fit::function<void(const raw::ConstDeclaration&)>> exit_const_declaration_callbacks_;
   std::vector<fit::function<void(const raw::EnumDeclaration&)>> enum_declaration_callbacks_;
   std::vector<fit::function<void(const raw::EnumDeclaration&)>> exit_enum_declaration_callbacks_;
   std::vector<fit::function<void(const raw::EnumMember&)>> enum_member_callbacks_;

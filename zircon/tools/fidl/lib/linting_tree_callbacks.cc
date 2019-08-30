@@ -64,6 +64,9 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
         callback(*element.get());
       }
       DeclarationOrderTreeVisitor::OnConstDeclaration(element);
+      for (auto& callback : callbacks_.exit_const_declaration_callbacks_) {
+        callback(*element.get());
+      }
       ProcessGapText(element->end_);
     }
     void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override {

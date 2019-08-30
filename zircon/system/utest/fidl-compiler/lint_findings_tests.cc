@@ -1917,6 +1917,8 @@ bool string_bounds_not_specified() {
       .source_template(R"FIDL(
 library fidl.a;
 
+const string TEST_STRING = "A const string";
+
 struct SomeStruct {
   ${TEST} test_string;
 };
@@ -1930,6 +1932,16 @@ struct SomeStruct {
 
   test.substitute("TEST", "string");
   ASSERT_FINDINGS(test);
+
+  test.source_template(R"FIDL(
+library fidl.a;
+
+const ${TEST} TEST_STRING = "A const string";
+
+)FIDL");
+
+  test.substitute("TEST", "string");
+  ASSERT_NO_FINDINGS(test);
 
   test.source_template(R"FIDL(
 library fidl.a;

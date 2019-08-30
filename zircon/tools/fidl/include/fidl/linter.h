@@ -220,6 +220,9 @@ class Linter {
   // 4 digits assumed to be the intended copyright date.
   std::string copyright_date_;
 
+  // true if a const declaration was entered, and not yet exited.
+  bool in_const_declaration_ = false;
+
   // The first name in the FIDL library declaration; for example, for:
   //   library fidl.types;
   // |library_prefix_| will be "fidl"
