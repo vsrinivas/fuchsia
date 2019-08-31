@@ -48,22 +48,28 @@ AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     AudioCoreImpl* owner) {
-  return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request), owner));
+  return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request),
+                                             owner->dispatcher(), &owner->device_manager(),
+                                             &owner->audio_admin()));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    AudioCoreImpl* owner)
+    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager, AudioAdmin* admin)
     : AudioObject(Type::AudioCapturer),
       usage_(fuchsia::media::AudioCaptureUsage::FOREGROUND),
       binding_(this, std::move(audio_capturer_request)),
-      owner_(owner),
+      dispatcher_(dispatcher),
+      device_manager_(*device_manager),
+      admin_(*admin),
       state_(State::WaitingForVmo),
       loopback_(loopback),
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false),
       underflow_count_(0u),
       partial_underflow_count_(0u) {
+  FXL_DCHECK(admin);
+  FXL_DCHECK(device_manager);
   REP(AddingCapturer(*this));
 
   std::vector<fuchsia::media::AudioCaptureUsage> allowed_usages;
@@ -100,9 +106,9 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   REP(RemovingCapturer(*this));
 }
 
-void AudioCapturerImpl::ReportStart() { owner_->UpdateCapturerState(usage_, true, this); }
+void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }
 
-void AudioCapturerImpl::ReportStop() { owner_->UpdateCapturerState(usage_, false, this); }
+void AudioCapturerImpl::ReportStop() { admin_.UpdateCapturerState(usage_, false, this); }
 
 void AudioCapturerImpl::SetInitialFormat(fuchsia::media::AudioStreamType format) {
   TRACE_DURATION("audio", "AudioCapturerImpl::SetInitialFormat");
@@ -147,7 +153,7 @@ void AudioCapturerImpl::Shutdown() {
 
   // Make sure we have left the set of active AudioCapturers.
   if (InContainer()) {
-    owner_->device_manager().RemoveAudioCapturer(this);
+    device_manager_.RemoveAudioCapturer(this);
   }
 
   state_.store(State::Shutdown);
@@ -885,8 +891,8 @@ zx_status_t AudioCapturerImpl::Process() {
 
     // If we need to poke the service thread, do so.
     if (wakeup_service_thread) {
-      owner_->ScheduleMainThreadTask(
-          [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishBuffersThunk(); });
+      async::PostTask(dispatcher_,
+                      [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishBuffersThunk(); });
     }
 
     // If we are in async mode, and we just finished a buffer, queue a new
@@ -1377,8 +1383,7 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // Transition to the AsyncStoppingCallbackPending state, and signal the
   // service thread so it can complete the stop operation.
   state_.store(State::AsyncStoppingCallbackPending);
-  owner_->ScheduleMainThreadTask(
-      [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
+  async::PostTask(dispatcher_, [thiz = fbl::WrapRefPtr(this)]() { thiz->FinishAsyncStopThunk(); });
 }
 
 bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
@@ -1424,7 +1429,7 @@ void AudioCapturerImpl::ShutdownFromMixDomain() {
   mix_domain_->DeactivateFromWithinDomain();
   state_.store(State::Shutdown);
 
-  owner_->ScheduleMainThreadTask([thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
+  async::PostTask(dispatcher_, [thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
 }
 
 void AudioCapturerImpl::FinishAsyncStopThunk() {

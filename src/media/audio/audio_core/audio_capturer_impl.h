@@ -30,6 +30,7 @@
 namespace media::audio {
 
 class AudioCoreImpl;
+class AudioAdmin;
 
 class AudioCapturerImpl : public AudioObject,
                           public fuchsia::media::AudioCapturer,
@@ -148,7 +149,8 @@ class AudioCapturerImpl : public AudioObject,
 
   AudioCapturerImpl(bool loopback,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-                    AudioCoreImpl* owner);
+                    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager,
+                    AudioAdmin* admin);
 
   // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;
@@ -204,7 +206,9 @@ class AudioCapturerImpl : public AudioObject,
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;
-  AudioCoreImpl* owner_ = nullptr;
+  async_dispatcher_t* dispatcher_;
+  AudioDeviceManager& device_manager_;
+  AudioAdmin& admin_;
   std::atomic<State> state_;
   const bool loopback_;
 

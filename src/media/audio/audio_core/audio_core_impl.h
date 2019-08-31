@@ -65,11 +65,9 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, SystemGainMuteProvider {
     async::PostTask(dispatcher_, std::move(task));
   }
 
-  // Direct access to the service's async_t
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
-
-  // Accessor for our encapsulated device manager.
   AudioDeviceManager& device_manager() { return device_manager_; }
+  AudioAdmin& audio_admin() { return audio_admin_; }
 
   float system_gain_db() const override { return system_gain_db_; }
   bool system_muted() const override { return system_muted_; }
@@ -81,11 +79,6 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, SystemGainMuteProvider {
                       fuchsia::media::Behavior behavior) final;
   void ResetInteractions() final;
   void LoadDefaults() final;
-
-  void UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
-                           fuchsia::media::AudioRenderer* renderer);
-  void UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
-                           fuchsia::media::AudioCapturer* capturer);
 
   void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
   void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;

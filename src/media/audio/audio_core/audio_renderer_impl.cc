@@ -42,21 +42,29 @@ static constexpr uint16_t kRenderUnderflowErrorInterval = 100;
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     AudioCoreImpl* owner) {
-  return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), owner));
+  return fbl::AdoptRef(new AudioRendererImpl(std::move(audio_renderer_request), owner->dispatcher(),
+                                             &owner->device_manager(), &owner->audio_admin(),
+                                             owner->vmar()));
 }
 
 AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-    AudioCoreImpl* owner)
+    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager, AudioAdmin* admin,
+    fbl::RefPtr<fzl::VmarManager> vmar)
     : AudioObject(Type::AudioRenderer),
       usage_(fuchsia::media::AudioRenderUsage::MEDIA),
-      owner_(owner),
+      dispatcher_(dispatcher),
+      device_manager_(*device_manager),
+      admin_(*admin),
+      vmar_(std::move(vmar)),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
       ref_clock_to_frac_frames_(0, 0, {0, 1}),
       underflow_count_(0u),
       partial_underflow_count_(0u) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
+  FXL_DCHECK(admin);
+  FXL_DCHECK(device_manager);
   REP(AddingRenderer(*this));
   AUD_VLOG_OBJ(TRACE, this);
 
@@ -86,9 +94,9 @@ AudioRendererImpl::~AudioRendererImpl() {
   REP(RemovingRenderer(*this));
 }
 
-void AudioRendererImpl::ReportStart() { owner_->UpdateRendererState(usage_, true, this); }
+void AudioRendererImpl::ReportStart() { admin_.UpdateRendererState(usage_, true, this); }
 
-void AudioRendererImpl::ReportStop() { owner_->UpdateRendererState(usage_, false, this); }
+void AudioRendererImpl::ReportStop() { admin_.UpdateRendererState(usage_, false, this); }
 
 void AudioRendererImpl::Shutdown() {
   TRACE_DURATION("audio", "AudioRendererImpl::Shutdown");
@@ -120,7 +128,7 @@ void AudioRendererImpl::Shutdown() {
 
   // Make sure we have left the set of active AudioRenderers.
   if (InContainer()) {
-    owner_->device_manager().RemoveAudioRenderer(this);
+    device_manager_.RemoveAudioRenderer(this);
   }
 }
 
@@ -411,7 +419,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   // AudioRenderers, and notifying users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
-  owner_->device_manager().SelectOutputsForAudioRenderer(this);
+  device_manager_.SelectOutputsForAudioRenderer(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
@@ -446,7 +454,7 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   // some clients currently rely on being able to update the payload buffer without first calling
   // |RemovePayloadBuffer|.
   payload_buffers_[id] = vmo_mapper;
-  zx_status_t res = vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, owner_->vmar());
+  zx_status_t res = vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, vmar_);
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed to map payload buffer";
     return;
@@ -647,8 +655,8 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Create the packet.
   auto packet_ref =
-      fbl::MakeRefCounted<AudioPacketRef>(payload_buffer, owner_->dispatcher(), std::move(callback),
-                                          packet, frame_count << kPtsFractionalBits, start_pts);
+      fbl::MakeRefCounted<AudioPacketRef>(payload_buffer, dispatcher_, std::move(callback), packet,
+                                          frame_count << kPtsFractionalBits, start_pts);
 
   // The end pts is the value we will use for the next packet's start PTS, if the user does not
   // provide an explicit PTS.
@@ -686,7 +694,7 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // at the proper time.
   fbl::RefPtr<PendingFlushToken> flush_token;
   if (callback != nullptr) {
-    flush_token = PendingFlushToken::Create(owner_->dispatcher(), std::move(callback));
+    flush_token = PendingFlushToken::Create(dispatcher_, std::move(callback));
   }
 
   // Tell each link to flush. If link is currently processing pending data, it will take a reference

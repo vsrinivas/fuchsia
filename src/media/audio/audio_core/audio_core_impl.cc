@@ -229,16 +229,4 @@ void AudioCoreImpl::ResetInteractions() {
   audio_admin_.ResetInteractions();
 }
 
-void AudioCoreImpl::UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
-                                        fuchsia::media::AudioRenderer* renderer) {
-  TRACE_DURATION("audio", "AudioCoreImpl::UpdateRendererState");
-  audio_admin_.UpdateRendererState(usage, active, renderer);
-}
-
-void AudioCoreImpl::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bool active,
-                                        fuchsia::media::AudioCapturer* capturer) {
-  TRACE_DURATION("audio", "AudioCoreImpl::UpdateCapturerState");
-  audio_admin_.UpdateCapturerState(usage, active, capturer);
-}
-
 }  // namespace media::audio

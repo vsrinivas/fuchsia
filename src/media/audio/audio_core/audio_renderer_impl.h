@@ -25,6 +25,7 @@ namespace media::audio {
 
 constexpr bool kEnableRendererWavWriters = false;
 
+class AudioAdmin;
 class AudioCoreImpl;
 
 class AudioRendererImpl : public AudioObject,
@@ -136,7 +137,8 @@ class AudioRendererImpl : public AudioObject,
   friend class GainControlBinding;
 
   AudioRendererImpl(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
-                    AudioCoreImpl* owner);
+                    async_dispatcher_t* dispatcher, AudioDeviceManager* device_manager,
+                    AudioAdmin* admin, fbl::RefPtr<fzl::VmarManager> vmar);
 
   ~AudioRendererImpl() override;
 
@@ -148,7 +150,11 @@ class AudioRendererImpl : public AudioObject,
   void ReportStart();
   void ReportStop();
 
-  AudioCoreImpl* owner_ = nullptr;
+  async_dispatcher_t* dispatcher_;
+  AudioDeviceManager& device_manager_;
+  AudioAdmin& admin_;
+  fbl::RefPtr<fzl::VmarManager> vmar_;
+
   fidl::Binding<fuchsia::media::AudioRenderer> audio_renderer_binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl, std::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
