@@ -144,8 +144,12 @@ Note that fidlcat needs two sources of information to work:
    running in-tree, the symbols should be provided to fidlcat automatically.
    Otherwise, you can provide fidlcat a symbol path, which can be a text file
    that maps build ids to debug symbols, an explicit ELF file path, or a
-   directory it will scan for ELF files and index. This can be provided to
-   fidlcat with the `-s` flag.
+   directory it will scan for ELF files and index. The -s flag can take a) a
+   directory containing ELF files, b) a directory containing a .build_id
+   subfolder adhering to the standard for such subfolders, or c) an ELF file.
+   An alternate flag, --symbol-repo-paths, can be used to pass a directory
+   containing the contents of a build_id folder (this is useful if the directory
+   is not named .build_id).
 
  * Second, it needs the intermediate representation for the FIDL it ingests, so
    it can produce readable output. If you are running in-tree, the IR should be

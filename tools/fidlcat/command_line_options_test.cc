@@ -116,6 +116,7 @@ TEST_F(CommandLineOptionsTest, BadOptionsTest) {
 TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   std::string fidl_ir_path = "blah.fidl.json";
   std::string symbol_path = "path/to/debug/symbols";
+  std::string symbol_repo_path = "path/to/debug/symbols/repo";
   std::string remote_pid = "3141";
   std::string connect = "localhost:8080";
   std::vector<const char*> argv = {"fakebinary",
@@ -123,6 +124,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                                    fidl_ir_path.c_str(),
                                    "-s",
                                    symbol_path.c_str(),
+                                   "--symbol-repo-path",
+                                   symbol_repo_path.c_str(),
                                    "--connect",
                                    connect.c_str(),
                                    "--remote-pid",
@@ -150,6 +153,7 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   ASSERT_EQ(connect, *options.connect);
   ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
+  ASSERT_EQ(symbol_repo_path, options.symbol_repo_paths[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
   ASSERT_EQ(2, options.stack_level);
 

@@ -150,7 +150,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   InterceptionWorkflow workflow;
-  workflow.Initialize(options.symbol_paths,
+  workflow.Initialize(options.symbol_paths, options.symbol_repo_paths,
                       std::make_unique<SyscallDisplayDispatcher>(&loader, decode_options,
                                                                  display_options, std::cout));
 

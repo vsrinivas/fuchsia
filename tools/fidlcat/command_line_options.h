@@ -17,6 +17,7 @@ struct CommandLineOptions {
   std::vector<std::string> remote_pid;
   std::vector<std::string> remote_name;
   std::vector<std::string> symbol_paths;
+  std::vector<std::string> symbol_repo_paths;
   std::vector<std::string> fidl_ir_paths;
   std::vector<std::string> syscall_filters;
   std::vector<std::string> exclude_syscall_filters;

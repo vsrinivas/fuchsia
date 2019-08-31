@@ -168,7 +168,7 @@ InterceptionWorkflow::~InterceptionWorkflow() {
 }
 
 void InterceptionWorkflow::Initialize(
-    const std::vector<std::string>& symbol_paths,
+    const std::vector<std::string>& symbol_paths, const std::vector<std::string>& symbol_repo_paths,
     std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher) {
   syscall_decoder_dispatcher_ = std::move(syscall_decoder_dispatcher);
   // 1) Set up symbol index.
@@ -193,6 +193,11 @@ void InterceptionWorkflow::Initialize(
   // Redundant adds are ignored.
   session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolPaths,
                                         std::move(paths));
+
+  if (!symbol_repo_paths.empty()) {
+    session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolRepoPaths,
+                                          symbol_repo_paths);
+  }
 
   // 2) Ensure that the session correctly reads data off of the loop.
   buffer_.set_data_available_callback([this]() { session_->OnStreamReadable(); });

@@ -72,6 +72,14 @@ const char* const kSymbolPathHelp = R"(  --symbol-path=<path>
       as a mapping database from build ID to file path. Otherwise, the path
       will be loaded as an ELF file (if possible).)";
 
+const char kSymbolRepoPathHelp[] = R"(  --symbol-repo-path=<path>
+      Adds the given directory to the symbol search path. Multiple
+      --symbol-repo-path switches can be passed to add multiple locations. the
+      path is always assumed to be a directory, unlike with -s, and the
+      directory is assumed to contain an index of all ELF files in the same
+      style as the .build-id folder as used with the -s option. This is useful
+      if your build ID index is not named .build-id)";
+
 const char* const kSyscallFilterHelp = R"(  --syscalls
       A regular expression which selects the syscalls to decode and display.
       Can be passed multiple times.
@@ -175,6 +183,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("remote-name", 'f', kRemoteNameHelp, &CommandLineOptions::remote_name);
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp, &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
+  parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp,
+                   &CommandLineOptions::symbol_repo_paths);
   parser.AddSwitch("syscalls", 0, kSyscallFilterHelp, &CommandLineOptions::syscall_filters);
   parser.AddSwitch("exclude-syscalls", 0, kExcludeSyscallFilterHelp,
                    &CommandLineOptions::exclude_syscall_filters);
