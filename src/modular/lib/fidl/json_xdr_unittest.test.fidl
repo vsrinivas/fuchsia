@@ -134,3 +134,15 @@ table FillWithDefaultValues {
     13: Enum enum;
     14: vector<string> vector_of_strings;
 };
+
+// Used to test that HasField() and the pattern documented in the json_xdr.h
+// header for that method work as expected, preserving the set/unset state of
+// FIDL table optional fields between the FIDL table data representation and
+// the JSON representation.
+table ObjectWithOptionalFields {
+    1: string string;
+    2: bool bool;
+    3: int32 int32;
+    4: Enum enum;
+    5: vector<string> vector_of_strings;
+};

@@ -216,6 +216,29 @@ class XdrContext {
   // copy of the filter function for the previous version number.
   bool Version(uint32_t version);
 
+  // For optional fields, such as in FIDL tables. Returns true if either:
+  //   * op is TO_JSON and the given "data_has_value" boolean is true; or
+  //   * op is FROM_JSON and the JSON field exists.
+  // Returns false otherwise.
+  //
+  // |field| is the name of the JSON field to be read or written to
+  // |data_has_value| used only if writing TO_JSON, this indicates the
+  // source data has a value for the field.
+  //
+  // Returns: true if the source contains the field, false otherwise
+  //
+  // Example:
+  //   if (xdr->HasField("field", data->has_field()))
+  //     xdr->Field("field", data->mutable_field());
+  //   else
+  //     data->clear_field();
+  bool HasField(const char field[], bool data_has_value) {
+    if (op_ == XdrOp::TO_JSON) {
+      return data_has_value;
+    }
+    return value_->HasMember(field);
+  }
+
   // A field of a struct. The value type V is assumed to be one of the
   // primitive JSON data types. If anything else is passed here and
   // not to the method below with a custom filter, the rapidjson code
@@ -807,6 +830,7 @@ void XdrWrite(JsonDoc* const doc, D* const data, XdrFilterList<V> filter_version
 template <typename D, typename V>
 void XdrWrite(std::string* const json, D* const data, XdrFilterList<V> filter_versions) {
   JsonDoc doc;
+  doc.SetObject();  // Allows empty objects (produces "{}"), such as an uninitialized FIDL table
   XdrWrite(&doc, data, filter_versions);
   *json = JsonValueToString(doc);
 }

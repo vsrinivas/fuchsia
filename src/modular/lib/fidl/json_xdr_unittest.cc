@@ -973,5 +973,124 @@ TEST(Xdr, IgnoreDefaults) {
   EXPECT_EQ(v, t1.vector_of_strings());
 }
 
+template <typename ObjectWithOptionalFields>
+void XdrObjectWithOptionalFields_v1(XdrContext* const xdr,
+                                    json_xdr_unittest::ObjectWithOptionalFields* const data) {
+  if (xdr->HasField("string", data->has_string()))
+    xdr->Field("string", data->mutable_string());
+  else
+    data->clear_string();
+  if (xdr->HasField("bool", data->has_bool()))
+    xdr->Field("bool", data->mutable_bool_());
+  else
+    data->clear_bool();
+  if (xdr->HasField("int32", data->has_int32()))
+    xdr->Field("int32", data->mutable_int32());
+  else
+    data->clear_int32();
+  if (xdr->HasField("enum", data->has_enum()))
+    xdr->Field("enum", data->mutable_enum_());
+  else
+    data->clear_enum();
+  if (xdr->HasField("vector_of_strings", data->has_vector_of_strings()))
+    xdr->Field("vector_of_strings", data->mutable_vector_of_strings());
+  else
+    data->clear_vector_of_strings();
+}
+
+constexpr XdrFilterType<json_xdr_unittest::ObjectWithOptionalFields>
+    XdrObjectWithOptionalFieldsType[] = {
+        XdrObjectWithOptionalFields_v1<json_xdr_unittest::ObjectWithOptionalFields>,
+        nullptr,
+};
+
+TEST(Xdr, OptionalFields) {
+  // Do not write or read fields that have no value, such as uninitialized fidl table fields.
+  // Use Has<Field>("field", data_has_value) to avoid calling "mutable_<field>()", which might
+  // otherwise mutate the object by giving the field a default value (turning a has_<field>_ from
+  // false to true).
+  std::string json0;
+  json_xdr_unittest::ObjectWithOptionalFields data;
+  XdrWrite(&json0, &data, XdrObjectWithOptionalFieldsType);
+  EXPECT_EQ("{}", json0);
+
+  json_xdr_unittest::ObjectWithOptionalFields t1;
+  EXPECT_TRUE(XdrRead(json0, &t1, XdrObjectWithOptionalFieldsType));
+  EXPECT_FALSE(t1.has_string());
+  EXPECT_FALSE(t1.has_bool());
+  EXPECT_FALSE(t1.has_int32());
+  EXPECT_FALSE(t1.has_enum());
+  EXPECT_FALSE(t1.has_vector_of_strings());
+  EXPECT_TRUE(fidl::Equals(data, t1));
+
+  data.set_int32(12345);
+  XdrWrite(&json0, &data, XdrObjectWithOptionalFieldsType);
+  EXPECT_EQ(R"JSON({"int32":12345})JSON", json0);
+
+  json_xdr_unittest::ObjectWithOptionalFields t2;
+  EXPECT_TRUE(XdrRead(json0, &t2, XdrObjectWithOptionalFieldsType));
+  EXPECT_FALSE(t2.has_string());
+  EXPECT_FALSE(t2.has_bool());
+  EXPECT_TRUE(t2.has_int32());
+  EXPECT_FALSE(t2.has_enum());
+  EXPECT_FALSE(t2.has_vector_of_strings());
+  EXPECT_EQ(t2.int32(), 12345);
+  EXPECT_TRUE(fidl::Equals(data, t2));
+
+  data.set_bool_(true);
+  data.clear_int32();
+  XdrWrite(&json0, &data, XdrObjectWithOptionalFieldsType);
+  EXPECT_EQ(R"JSON({"bool":true})JSON", json0);
+
+  json_xdr_unittest::ObjectWithOptionalFields t3;
+  EXPECT_TRUE(XdrRead(json0, &t3, XdrObjectWithOptionalFieldsType));
+  EXPECT_FALSE(t3.has_string());
+  EXPECT_TRUE(t3.has_bool());
+  EXPECT_EQ(t3.bool_(), true);
+  EXPECT_FALSE(t3.has_int32());
+  EXPECT_FALSE(t3.has_enum());
+  EXPECT_FALSE(t3.has_vector_of_strings());
+  EXPECT_TRUE(fidl::Equals(data, t3));
+
+  json_xdr_unittest::ObjectWithOptionalFields t4;
+  t4.set_bool_(false);  // These should get overwritten by the JSON values in XdrRead.
+  t4.set_int32(99999);  // Missing JSON fields should clear_<field>().
+  EXPECT_TRUE(XdrRead(json0, &t4, XdrObjectWithOptionalFieldsType));
+  EXPECT_FALSE(t4.has_string());
+  EXPECT_TRUE(t4.has_bool());
+  EXPECT_EQ(t4.bool_(), true);
+  EXPECT_FALSE(t4.has_int32());
+  EXPECT_FALSE(t4.has_enum());
+  EXPECT_FALSE(t4.has_vector_of_strings());
+  EXPECT_TRUE(fidl::Equals(data, t4));
+
+  data.set_string("new string");
+  data.set_bool_(false);
+  data.set_int32(30);
+  data.set_enum_(json_xdr_unittest::Enum::ONE);
+  std::vector<std::string> v = {"new", "vector"};
+  data.set_vector_of_strings(v);
+  XdrWrite(&json0, &data, XdrObjectWithOptionalFieldsType);
+  EXPECT_EQ(R"({"string":"new string","bool":false,"int32":30,"enum":1,)"
+            R"("vector_of_strings":["new","vector"]})",
+            json0);
+
+  json_xdr_unittest::ObjectWithOptionalFields t5;
+  EXPECT_TRUE(XdrRead(json0, &t5, XdrObjectWithOptionalFieldsType));
+  EXPECT_TRUE(t5.has_string());
+  EXPECT_EQ(t5.string(), "new string");
+  EXPECT_TRUE(t5.has_bool());
+  EXPECT_EQ(t5.bool_(), false);
+  EXPECT_TRUE(t5.has_int32());
+  EXPECT_EQ(t5.int32(), 30);
+  EXPECT_TRUE(t5.has_enum());
+  EXPECT_EQ(t5.enum_(), json_xdr_unittest::Enum::ONE);
+  EXPECT_TRUE(t5.has_vector_of_strings());
+  ASSERT_EQ(t5.vector_of_strings().size(), 2u);
+  EXPECT_EQ(t5.vector_of_strings()[0], "new");
+  EXPECT_EQ(t5.vector_of_strings()[1], "vector");
+  EXPECT_TRUE(fidl::Equals(data, t5));
+}
+
 }  // namespace
 }  // namespace modular
