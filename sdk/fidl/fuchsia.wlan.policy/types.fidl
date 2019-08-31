@@ -49,6 +49,18 @@ xunion Credential {
     bytes psk;
 };
 
+/// Operating band for wlan control request and status updates.
+enum OperatingBand {
+    /// Allows for band switching depending on device operating mode and environment.
+    ANY = 1;
+
+    /// Restricted to 2.4 GHz bands only.
+    ONLY_2_4GHZ = 2;
+
+    /// Restricted to 5 GHz bands only.
+    ONLY_5GHZ = 3;
+};
+
 /// Empty struct used in place of optional values.
 // TODO: FIDL-589
 struct Empty {

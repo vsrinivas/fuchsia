@@ -11,6 +11,7 @@ fidl("fuchsia.wlan.policy") {
   sdk_category = "internal"
 
   sources = [
+    "access_point_provider.fidl",
     "client_provider.fidl",
     "types.fidl",
   ]

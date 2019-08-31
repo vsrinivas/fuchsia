@@ -1,0 +1,112 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.policy;
+
+using fuchsia.wlan.common;
+
+/// The AccessPointProvider API provides a mechanism for access point
+/// control and is intended to be called by applications or entities representing
+/// the user (ex, Settings). This API is not intended to be called by other
+/// applications to change wlan state without explicit user control.
+///
+/// The second aim of this API design is to eliminate the "last-caller wins"
+/// paradigm by limiting the number of controlling applications.  A single caller
+/// at a time is permitted to make API calls that impact wlan state.
+[Discoverable]
+protocol AccessPointProvider {
+    /// Control channel used by a single caller to trigger wlan access point (ap) mode
+    /// state changes.  The caller also provides a channel to receive wlan ap updates.
+    /// Only one caller can have the control channel open at a time.  Attempts to
+    /// register as a controller while there is an active control registration
+    /// will result in the new caller's provided channel being closed.
+    GetController(request<AccessPointController> requests, AccessPointStateUpdates updates);
+};
+
+/// The AccessPointListener API provides a mechanism for callers to receive state change
+/// updates about wlan access point operation.
+[Discoverable]
+protocol AccessPointListener {
+    /// Registration for callers to receive wlan access point (ap) mode state updates.
+    GetListener(AccessPointStateUpdates updates);
+};
+
+/// AccessPointControllers allow the caller to trigger wlan state changes.  This
+/// includes whether the device will act as an access point and provide a wlan
+/// network for other co-located devices.
+protocol AccessPointController {
+    /// Enables wlan to initiate AccessPoint operation using the provided network
+    /// configuration, connectivity mode and band.
+    StartAccessPoint(NetworkConfig config, ConnectivityMode mode, OperatingBand band)
+        -> (fuchsia.wlan.common.RequestStatus status);
+
+    /// Deactivate AccessPoint operation for a specified network configuration.
+    StopAccessPoint(NetworkConfig config) -> (fuchsia.wlan.common.RequestStatus status);
+
+    /// Deactivates all AccessPoints currently operating on the device.
+    StopAllAccessPoints();
+};
+
+/// AccessPoint operation status changes along with associated connection status.
+protocol AccessPointStateUpdates {
+    /// Updates registered listeners with the current summary of wlan access point
+    /// operating states.  This will be called when there are changes with active
+    /// access point networks - both the number of access points and their
+    /// individual activity.  Registered listeners are responsible for deciding
+    /// what information has changed (this is dependent on when they last
+    /// acknowledged the update).
+    // NOLINTNEXTLINE vector-bounds-not-specified
+    OnAccessPointStateUpdate(vector<AccessPointState> access_points) -> ();
+};
+
+/// Information about the individual operating access points.  This includes limited
+/// information about any connected clients.
+table AccessPointState {
+    /// Current access point operating state
+    1: OperatingState state;
+
+    /// Requested operating connectivity mode
+    2: ConnectivityMode mode;
+
+    /// Access point operating band.
+    3: OperatingBand band;
+
+    /// Access point operating frequency (in MHz).
+    4: uint32 frequency;
+
+    /// Information about connected clients
+    5: ConnectedClientInformation clients;
+};
+
+/// Connectivity operating mode for the access point.
+enum ConnectivityMode {
+    /// Allows for connectivity between co-located devices.  Local only access points do not
+    /// forward traffic to other network connections.
+    LOCAL_ONLY = 1;
+
+    /// Allows for full connectivity with traffic potentially being forwarded
+    /// to other network connections (ex., tethering mode).
+    UNRESTRICTED = 2;
+};
+
+/// Current detailed operating state for an access point.
+enum OperatingState {
+    /// Access point operation failed.  Access points that enter the failed state will
+    /// have one update informing registered listeners of the failure and then an
+    /// additional update with the access point removed from the list.
+    FAILED = 1;
+
+    /// Access point operation is starting up.
+    STARTING = 2;
+
+    /// Access point operation is active.
+    ACTIVE = 3;
+};
+
+/// Connected client information.  This is initially limited to the number of
+/// connected clients.
+table ConnectedClientInformation {
+    /// Number of connected clients
+    1: uint8 count;
+};
