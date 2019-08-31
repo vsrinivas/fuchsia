@@ -6,6 +6,7 @@ group("all") {
   testonly = true
   public_deps = [
     "//tools/blackout/blobfs-fsck-soft",
+    "//tools/blackout/minfs-fsck",
   ]
 }
 

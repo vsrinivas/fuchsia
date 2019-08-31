@@ -1,0 +1,64 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("minfs-fsck-host") {
+    testonly = true
+    edition = "2018"
+    deps = [
+      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:structopt",
+      "//tools/blackout/blackout:blackout-host",
+    ]
+    source_root = "src/host.rs"
+  }
+}
+
+rustc_binary("minfs-fsck-target-bin") {
+  testonly = true
+  edition = "2018"
+  deps = [
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/storage/fs-management",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:structopt",
+    "//tools/blackout/blackout:blackout-target",
+  ]
+  source_root = "src/target.rs"
+}
+
+generate_manifest("minfs.manifest") {
+  visibility = [ ":*" ]
+  args = [ "--binary=bin/minfs" ]
+}
+minfs_manifest_outputs = get_target_outputs(":minfs.manifest")
+minfs_manifest_file = minfs_manifest_outputs[0]
+
+package("minfs-fsck-target") {
+  testonly = true
+  extra = [ minfs_manifest_file ]
+  deps = [
+    ":minfs-fsck-target-bin",
+    ":minfs.manifest",
+  ]
+  binary = "minfs_fsck_target_bin"
+  meta = [
+    {
+      path = rebase_path("meta/minfs_fsck_target.cmx")
+      dest = "minfs_fsck_target.cmx"
+    },
+  ]
+}
+
+group("minfs-fsck") {
+  testonly = true
+  public_deps = [
+    ":minfs-fsck-host($host_toolchain)",
+    ":minfs-fsck-target",
+  ]
+}

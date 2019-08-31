@@ -7,6 +7,7 @@
 #![deny(missing_docs)]
 
 use {
+    rand::{distributions, rngs::StdRng, Rng, SeedableRng},
     structopt::StructOpt,
 };
 
@@ -31,4 +32,14 @@ pub enum CommonCommand {
     /// Run the test step.
     #[structopt(name = "test")]
     Test,
+}
+
+/// Generate a random file name. It will be 17 characters long, start with an 'a' to confirm it's a
+/// valid file name, and contain random letters and numbers.
+pub fn generate_name(seed: u64) -> String {
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    let mut name = String::from("a");
+    name.push_str(&rng.sample_iter(&distributions::Alphanumeric).take(16).collect::<String>());
+    name
 }

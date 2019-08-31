@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
