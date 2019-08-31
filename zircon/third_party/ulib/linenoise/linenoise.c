@@ -303,14 +303,16 @@ static int getCursorPosition(int ifd, int ofd) {
     return cols;
 }
 
-/* Try to get the number of columns in the current terminal, or assume 80
- * if it fails. */
+/* Try to get the number of columns in the current terminal, or assume
+ * the last successful columns if it fails. */
 static int getColumns(int ifd, int ofd) {
 #ifdef __Fuchsia__
     int tty = isatty(STDIN_FILENO);
     zx_status_t status;
     zx_status_t call_status;
     fuchsia_hardware_pty_WindowSize wsz;
+    static int last_cols = 80;
+
     if (tty) {
         fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
         call_status = fuchsia_hardware_pty_DeviceGetWindowSize(
@@ -328,12 +330,21 @@ static int getColumns(int ifd, int ofd) {
 
         /* Get the initial position so we can restore it later. */
         start = getCursorPosition(ifd,ofd);
-        if (start == -1) goto failed;
+        if (start == -1) {
+            return last_cols;
+        }
 
         /* Go to right margin and get position. */
-        if (write(ofd,"\x1b[999C",6) != 6) goto failed;
+        if (write(ofd,"\x1b[999C",6) != 6) {
+            return last_cols;
+        }
         cols = getCursorPosition(ifd,ofd);
-        if (cols == -1) goto failed;
+        // A common failure is cols == 1, when terminal is processing output.
+        if (cols == -1 || cols == 1) {
+            cols = last_cols;
+        } else {
+            last_cols = cols;
+        }
 
         /* Restore position. */
         if (cols > start) {
@@ -351,9 +362,6 @@ static int getColumns(int ifd, int ofd) {
         return ws.ws_col;
 #endif
     }
-
-failed:
-    return 80;
 }
 
 /* Clear the screen. Used to handle ctrl+l */
@@ -550,12 +558,16 @@ static void refreshSingleLine(struct linenoiseState *l) {
     size_t pos = l->pos;
     struct abuf ab;
 
-    while((plen+pos) >= l->cols) {
+    if (plen > l->cols) {
+        plen = l->cols;
+    }
+
+    while((plen+pos) >= l->cols && len) {
         buf++;
         len--;
         pos--;
     }
-    while (plen+len > l->cols) {
+    while (plen+len > l->cols && len) {
         len--;
     }
 
@@ -564,7 +576,7 @@ static void refreshSingleLine(struct linenoiseState *l) {
     snprintf(seq,64,"\r");
     abAppend(&ab,seq,strlen(seq));
     /* Write the prompt and the current buffer content */
-    abAppend(&ab,l->prompt,strlen(l->prompt));
+    abAppend(&ab,l->prompt,plen);
     abAppend(&ab,buf,len);
     /* Show hits if any. */
     refreshShowHints(&ab,l,plen);
