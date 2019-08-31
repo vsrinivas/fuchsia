@@ -78,16 +78,12 @@ func fromTransProto(o tcpip.TransportProtocolNumber) (filter.SocketProtocol, err
 
 func toTransProto(o filter.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
 	switch o {
-	case filter.SocketProtocolIp:
-		return tcpip.TransportProtocolNumber(0), ErrBadProtocol
 	case filter.SocketProtocolIcmp:
 		return header.ICMPv4ProtocolNumber, nil
 	case filter.SocketProtocolTcp:
 		return header.TCPProtocolNumber, nil
 	case filter.SocketProtocolUdp:
 		return header.UDPProtocolNumber, nil
-	case filter.SocketProtocolIpv6:
-		return tcpip.TransportProtocolNumber(0), ErrBadProtocol
 	case filter.SocketProtocolIcmpv6:
 		return header.ICMPv6ProtocolNumber, nil
 	default:
@@ -164,6 +160,14 @@ func fromRule(o *Rule) (filter.Rule, error) {
 		}
 		dstSubnet = &subnet
 	}
+	srcPortRange := filter.PortRange{Start: o.srcPortRange.start, End: o.srcPortRange.end}
+	if srcPortRange.Start > srcPortRange.End {
+		return filter.Rule{}, ErrBadPortRange
+	}
+	dstPortRange := filter.PortRange{Start: o.dstPortRange.start, End: o.dstPortRange.end}
+	if dstPortRange.Start > dstPortRange.End {
+		return filter.Rule{}, ErrBadPortRange
+	}
 	return filter.Rule{
 		Action:               action,
 		Direction:            direction,
@@ -171,10 +175,10 @@ func fromRule(o *Rule) (filter.Rule, error) {
 		Proto:                transProto,
 		SrcSubnet:            srcSubnet,
 		SrcSubnetInvertMatch: o.srcSubnetInvertMatch,
-		SrcPort:              o.srcPort,
+		SrcPortRange:         srcPortRange,
 		DstSubnet:            dstSubnet,
 		DstSubnetInvertMatch: o.dstSubnetInvertMatch,
-		DstPort:              o.dstPort,
+		DstPortRange:         dstPortRange,
 		Nic:                  uint32(o.nic),
 		Log:                  o.log,
 		KeepState:            o.keepState,
@@ -203,6 +207,14 @@ func toRule(o *filter.Rule) (Rule, error) {
 		subnet := fidlconv.ToTCPIPSubnet(*o.DstSubnet)
 		dstSubnet = &subnet
 	}
+	srcPortRange := PortRange{start: o.SrcPortRange.Start, end: o.SrcPortRange.End}
+	if !srcPortRange.IsValid() {
+		return Rule{}, ErrBadPortRange
+	}
+	dstPortRange := PortRange{start: o.DstPortRange.Start, end: o.DstPortRange.End}
+	if !dstPortRange.IsValid() {
+		return Rule{}, ErrBadPortRange
+	}
 	return Rule{
 		action:               action,
 		direction:            direction,
@@ -210,10 +222,10 @@ func toRule(o *filter.Rule) (Rule, error) {
 		transProto:           transProto,
 		srcSubnet:            srcSubnet,
 		srcSubnetInvertMatch: o.SrcSubnetInvertMatch,
-		srcPort:              o.SrcPort,
+		srcPortRange:         srcPortRange,
 		dstSubnet:            dstSubnet,
 		dstSubnetInvertMatch: o.DstSubnetInvertMatch,
-		dstPort:              o.DstPort,
+		dstPortRange:         dstPortRange,
 		nic:                  tcpip.NICID(o.Nic),
 		log:                  o.Log,
 		keepState:            o.KeepState,
@@ -320,13 +332,26 @@ func fromRDR(o *RDR) (filter.Rdr, error) {
 	if err != nil {
 		return filter.Rdr{}, err
 	}
+	dstPortRange := filter.PortRange{Start: o.dstPortRange.start, End: o.dstPortRange.end}
+	if dstPortRange.Start > dstPortRange.End {
+		return filter.Rdr{}, ErrBadPortRange
+	}
+	dstPortRangeLen := dstPortRange.End - dstPortRange.Start
+	newDstPortRange := filter.PortRange{Start: o.newDstPortRange.start, End: o.newDstPortRange.end}
+	if newDstPortRange.Start > newDstPortRange.End {
+		return filter.Rdr{}, ErrBadPortRange
+	}
+	newDstPortRangeLen := newDstPortRange.End - newDstPortRange.Start
+	if dstPortRangeLen != newDstPortRangeLen {
+		return filter.Rdr{}, ErrBadPortRange
+	}
 	return filter.Rdr{
-		Proto:      transProto,
-		DstAddr:    dstAddr,
-		DstPort:    o.dstPort,
-		NewDstAddr: newDstAddr,
-		NewDstPort: o.newDstPort,
-		Nic:        uint32(o.nic),
+		Proto:           transProto,
+		DstAddr:         dstAddr,
+		DstPortRange:    dstPortRange,
+		NewDstAddr:      newDstAddr,
+		NewDstPortRange: newDstPortRange,
+		Nic:             uint32(o.nic),
 	}, nil
 }
 
@@ -343,13 +368,26 @@ func toRDR(o *filter.Rdr) (RDR, error) {
 	if err != nil {
 		return RDR{}, err
 	}
+	dstPortRange := PortRange{start: o.DstPortRange.Start, end: o.DstPortRange.End}
+	dstPortRangeLen, err := dstPortRange.Length()
+	if err != nil {
+		return RDR{}, err
+	}
+	newDstPortRange := PortRange{start: o.NewDstPortRange.Start, end: o.NewDstPortRange.End}
+	newDstPortRangeLen, err := newDstPortRange.Length()
+	if err != nil {
+		return RDR{}, err
+	}
+	if dstPortRangeLen != newDstPortRangeLen {
+		return RDR{}, ErrBadPortRange
+	}
 	return RDR{
-		transProto: transProto,
-		dstAddr:    dstAddr,
-		dstPort:    o.DstPort,
-		newDstAddr: newDstAddr,
-		newDstPort: o.NewDstPort,
-		nic:        tcpip.NICID(o.Nic),
+		transProto:      transProto,
+		dstAddr:         dstAddr,
+		dstPortRange:    dstPortRange,
+		newDstAddr:      newDstAddr,
+		newDstPortRange: newDstPortRange,
+		nic:             tcpip.NICID(o.Nic),
 	}, nil
 }
 

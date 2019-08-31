@@ -257,13 +257,13 @@ func (f *Filter) runForUDP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 	switch dir {
 	case Incoming:
 		if rdr = f.matchRDR(header.UDPProtocolNumber, dstAddr, dstPort); rdr != nil {
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "RDR rule matched: proto: %d, dstAddr: %s, dstPort: %d, newDstAddr: %s, newDstPort: %d, nic: %d", rdr.transProto, rdr.dstAddr, rdr.dstPort, rdr.newDstAddr, rdr.newDstPort, rdr.nic)
+			syslog.VLogTf(syslog.DebugVerbosity, tag, "RDR rule matched: proto: %d, dstAddr: %s, dstPortRange: %v, newDstAddr: %s, newDstPortRange: %v, nic: %d", rdr.transProto, rdr.dstAddr, rdr.dstPortRange, rdr.newDstAddr, rdr.newDstPortRange, rdr.nic)
 			// Rewrite dstAddr and dstPort in the packet.
 			// The original values are saved in origAddr and origPort.
 			origAddr = dstAddr
 			dstAddr = rdr.newDstAddr
 			origPort = dstPort
-			dstPort = rdr.newDstPort
+			dstPort = rdr.newDstPort(dstPort)
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "RDR: rewrite orig(%s:%d) with new(%s:%d)", origAddr, origPort, dstAddr, dstPort)
 			switch netProto {
 			case header.IPv4ProtocolNumber:
@@ -394,7 +394,7 @@ func (f *Filter) runForTCP(dir Direction, netProto tcpip.NetworkProtocolNumber, 
 			origAddr = dstAddr
 			dstAddr = rdr.newDstAddr
 			origPort = dstPort
-			dstPort = rdr.newDstPort
+			dstPort = rdr.newDstPort(dstPort)
 			switch netProto {
 			case header.IPv4ProtocolNumber:
 				rewritePacketTCPv4(dstAddr, dstPort, false, hdr, transportHeader)
@@ -475,9 +475,9 @@ func (f *Filter) matchMain(dir Direction, transProto tcpip.TransportProtocolNumb
 		if r.direction == dir &&
 			r.transProto == transProto &&
 			(r.srcSubnet == nil || r.srcSubnet.Contains(srcAddr) != r.srcSubnetInvertMatch) &&
-			(r.srcPort == 0 || r.srcPort == srcPort) &&
+			r.srcPortRange.Contains(srcPort) &&
 			(r.dstSubnet == nil || r.dstSubnet.Contains(dstAddr) != r.dstSubnetInvertMatch) &&
-			(r.dstPort == 0 || r.dstPort == dstPort) {
+			r.dstPortRange.Contains(dstPort) {
 			rm = r
 			if r.quick {
 				break
@@ -505,9 +505,7 @@ func (f *Filter) matchRDR(transProto tcpip.TransportProtocolNumber, dstAddr tcpi
 	defer f.rulesetRDR.RUnlock()
 	for i := range f.rulesetRDR.v {
 		r := &f.rulesetRDR.v[i]
-		if r.transProto == transProto &&
-			r.dstAddr == dstAddr &&
-			r.dstPort == dstPort {
+		if r.transProto == transProto && r.dstAddr == dstAddr && r.dstPortRange.Contains(dstPort) {
 			return r
 		}
 	}

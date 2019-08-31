@@ -51,6 +51,33 @@ func (action Action) String() string {
 	}
 }
 
+// PortRange specifies an inclusive range of port numbers.
+type PortRange struct {
+	start uint16
+	end   uint16
+}
+
+func (p *PortRange) IsValid() bool {
+	if p.start == 0 {
+		return p.end == 0
+	}
+	return p.start <= p.end
+}
+
+func (p *PortRange) Contains(n uint16) bool {
+	return *p == PortRange{} || p.start <= n && n <= p.end
+}
+
+func (p *PortRange) Length() (uint16, error) {
+	if !p.IsValid() {
+		return 0, ErrBadPortRange
+	}
+	if *p == (PortRange{}) {
+		return 0, nil
+	}
+	return p.end - p.start + 1, nil
+}
+
 // Rule describes the conditions and the action of a rule.
 type Rule struct {
 	action               Action
@@ -59,10 +86,10 @@ type Rule struct {
 	transProto           tcpip.TransportProtocolNumber
 	srcSubnet            *tcpip.Subnet
 	srcSubnetInvertMatch bool // If true, matches any address that is NOT contained in the subnet.
-	srcPort              uint16
+	srcPortRange         PortRange
 	dstSubnet            *tcpip.Subnet
 	dstSubnetInvertMatch bool // If true, matches any address that is NOT contained in the subnet.
-	dstPort              uint16
+	dstPortRange         PortRange
 	nic                  tcpip.NICID
 	log                  bool
 	keepState            bool
@@ -80,12 +107,36 @@ type NAT struct {
 // RDR is a special rule for Redirector, which forwards an incoming packet
 // to a machine inside the firewall.
 type RDR struct {
-	transProto tcpip.TransportProtocolNumber
-	dstAddr    tcpip.Address
-	dstPort    uint16
-	newDstAddr tcpip.Address
-	newDstPort uint16
-	nic        tcpip.NICID
+	transProto      tcpip.TransportProtocolNumber
+	dstAddr         tcpip.Address
+	dstPortRange    PortRange
+	newDstAddr      tcpip.Address
+	newDstPortRange PortRange
+	nic             tcpip.NICID
+}
+
+func (rdr *RDR) IsValid() bool {
+	if !rdr.dstPortRange.IsValid() || !rdr.newDstPortRange.IsValid() {
+		return false
+	}
+	dstPortRangeLen, err := rdr.dstPortRange.Length()
+	if err != nil {
+		return false
+	}
+	newDstPortRangeLen, err := rdr.newDstPortRange.Length()
+	if err != nil {
+		return false
+	}
+	if dstPortRangeLen == 0 || newDstPortRangeLen == 0 {
+		return false
+	}
+	return dstPortRangeLen == newDstPortRangeLen
+}
+
+// When n is the Nth port in the range defined by rdr.dstPortRange, newDstPortRange
+// returns the Nth port in the range defined by rdr.newDstPortRange.
+func (rdr *RDR) newDstPort(n uint16) uint16 {
+	return n - rdr.dstPortRange.start + rdr.newDstPortRange.start
 }
 
 type RulesetMain struct {

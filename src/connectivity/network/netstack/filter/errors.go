@@ -21,4 +21,5 @@ var (
 	ErrUnknownDirection   = Error{Msg: "Unknown Direction"}
 	ErrUnknownAddressType = Error{Msg: "Unknown Address Type"}
 	ErrBadAddress         = Error{Msg: "Bad address"}
+	ErrBadPortRange       = Error{Msg: "Bad Port Range"}
 )

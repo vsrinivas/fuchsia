@@ -47,16 +47,17 @@ func (fi *filterImpl) GetRules() ([]filter.Rule, uint32, filter.Status, error) {
 	generation := fi.filter.rulesetMain.generation
 	fi.filter.rulesetMain.RUnlock()
 	if err != nil {
-		// This error should not happen.
-		syslog.Errorf("GetRules error %v", err)
+		syslog.Errorf("GetRules: %s", err)
 		return []filter.Rule{}, 0, filter.StatusErrInternal, nil
 	}
 	return nrs, generation, filter.StatusOk, nil
 }
 
 func (fi *filterImpl) UpdateRules(nrs []filter.Rule, generation uint32) (filter.Status, error) {
+	// toRules validates rules during the conversion.
 	rs, err := toRules(nrs)
 	if err != nil {
+		syslog.Errorf("UpdateRules: %s", err)
 		return filter.StatusErrBadRule, nil
 	}
 	fi.filter.rulesetMain.Lock()
@@ -75,8 +76,7 @@ func (fi *filterImpl) GetNatRules() ([]filter.Nat, uint32, filter.Status, error)
 	generation := fi.filter.rulesetNAT.generation
 	fi.filter.rulesetNAT.RUnlock()
 	if err != nil {
-		// This error should not happen.
-		syslog.Errorf("GetNATRules error %v", err)
+		syslog.Errorf("GetNATRules: %s", err)
 		return []filter.Nat{}, 0, filter.StatusErrInternal, nil
 	}
 	return nns, generation, filter.StatusOk, nil
@@ -85,6 +85,7 @@ func (fi *filterImpl) GetNatRules() ([]filter.Nat, uint32, filter.Status, error)
 func (fi *filterImpl) UpdateNatRules(nns []filter.Nat, generation uint32) (filter.Status, error) {
 	ns, err := toNATs(nns)
 	if err != nil {
+		syslog.Errorf("UpdateNatRules: %s", err)
 		return filter.StatusErrBadRule, nil
 	}
 	fi.filter.rulesetNAT.Lock()
@@ -103,16 +104,17 @@ func (fi *filterImpl) GetRdrRules() ([]filter.Rdr, uint32, filter.Status, error)
 	generation := fi.filter.rulesetRDR.generation
 	fi.filter.rulesetRDR.RUnlock()
 	if err != nil {
-		// This error should not happen.
-		syslog.Errorf("GetRdrRules error %v", err)
+		syslog.Errorf("GetRdrRules: %s", err)
 		return []filter.Rdr{}, 0, filter.StatusErrInternal, nil
 	}
 	return nrs, generation, filter.StatusOk, nil
 }
 
 func (fi *filterImpl) UpdateRdrRules(nrs []filter.Rdr, generation uint32) (filter.Status, error) {
+	// toRDRs validates rules during the conversion.
 	rs, err := toRDRs(nrs)
 	if err != nil {
+		syslog.Errorf("UpdateRdrRules: %s", err)
 		return filter.StatusErrBadRule, nil
 	}
 	fi.filter.rulesetRDR.Lock()

@@ -39,9 +39,9 @@ rdr_rules = { SOI ~ (rdr ~ ";")+ ~ EOI }
 rdr = {
      "rdr" ~
      proto ~
-     "to" ~ ipaddr ~ "port" ~ port ~
+     "to" ~ ipaddr ~ port_range ~
      "->" ~
-     "to" ~ ipaddr ~ "port" ~ port
+     "to" ~ ipaddr ~ port_range
 }
 
 action = { pass | drop | dropreset }
@@ -60,8 +60,8 @@ proto = { "proto" ~ (tcp | udp | icmp) }
   udp = { "udp" }
   icmp = { "icmp" }
 
-src = { ("from" ~ invertible_subnet? ~ ("port" ~ port)?)? }
-dst = { ("to" ~ invertible_subnet? ~ ("port" ~ port)?)? }
+src = { ("from" ~ invertible_subnet? ~ port_range?)? }
+dst = { ("to" ~ invertible_subnet? ~ port_range?)? }
 
 invertible_subnet = { not? ~ subnet }
   not = { "!" }
@@ -74,7 +74,10 @@ ipaddr = { ipv4addr | ipv6addr }
 
 prefix_len = @{ ASCII_DIGIT+ }
 
-port = @{ ASCII_DIGIT+ }
+port_range = { port ~ port_num | range ~ port_num ~ ":" ~ port_num }
+  port = { "port" }
+  range = { "range" }
+  port_num = @{ ASCII_DIGIT+ }
 
 log = { ("log")? }
 
@@ -127,34 +130,39 @@ fn parse_proto(pair: Pair<Rule>) -> filter::SocketProtocol {
     }
 }
 
-fn parse_src(pair: Pair<Rule>) -> Result<(Option<Box<net::Subnet>>, bool, u16), Error> {
+fn parse_src(
+    pair: Pair<Rule>,
+) -> Result<(Option<Box<net::Subnet>>, bool, filter::PortRange), Error> {
     assert_eq!(pair.as_rule(), Rule::src);
     parse_src_or_dst(pair)
 }
 
-fn parse_dst(pair: Pair<Rule>) -> Result<(Option<Box<net::Subnet>>, bool, u16), Error> {
+fn parse_dst(
+    pair: Pair<Rule>,
+) -> Result<(Option<Box<net::Subnet>>, bool, filter::PortRange), Error> {
     assert_eq!(pair.as_rule(), Rule::dst);
     parse_src_or_dst(pair)
 }
 
-fn parse_src_or_dst(pair: Pair<Rule>) -> Result<(Option<Box<net::Subnet>>, bool, u16), Error> {
+fn parse_src_or_dst(
+    pair: Pair<Rule>,
+) -> Result<(Option<Box<net::Subnet>>, bool, filter::PortRange), Error> {
     let mut inner = pair.into_inner();
-    let (subnet, invert_match, port) = match inner.next() {
+    match inner.next() {
         Some(pair) => match pair.as_rule() {
             Rule::invertible_subnet => {
                 let (subnet, invert_match) = parse_invertible_subnet(pair)?;
                 let port = match inner.next() {
-                    Some(pair) => parse_port(pair)?,
-                    None => 0,
+                    Some(pair) => parse_port_range(pair)?,
+                    None => filter::PortRange { start: 0, end: 0 },
                 };
-                (Some(Box::new(subnet)), invert_match, port)
+                Ok((Some(Box::new(subnet)), invert_match, port))
             }
-            Rule::port => (None, false, parse_port(pair)?),
+            Rule::port_range => Ok((None, false, parse_port_range(pair)?)),
             _ => unreachable!(),
         },
-        None => (None, false, 0),
-    };
-    Ok((subnet, invert_match, port))
+        None => Ok((None, false, filter::PortRange { start: 0, end: 0 })),
+    }
 }
 
 fn parse_invertible_subnet(pair: Pair<Rule>) -> Result<(net::Subnet, bool), Error> {
@@ -201,8 +209,25 @@ fn parse_prefix_len(pair: Pair<Rule>) -> Result<u8, Error> {
     pair.as_str().parse::<u8>().map_err(Error::Num)
 }
 
-fn parse_port(pair: Pair<Rule>) -> Result<u16, Error> {
-    assert_eq!(pair.as_rule(), Rule::port);
+fn parse_port_range(pair: Pair<Rule>) -> Result<filter::PortRange, Error> {
+    assert_eq!(pair.as_rule(), Rule::port_range);
+    let mut inner = pair.into_inner();
+    let pair = inner.next().unwrap();
+    match pair.as_rule() {
+        Rule::port => {
+            let port_num = parse_port_num(inner.next().unwrap())?;
+            Ok(filter::PortRange { start: port_num, end: port_num })
+        }
+        Rule::range => {
+            let port_start = parse_port_num(inner.next().unwrap())?;
+            let port_end = parse_port_num(inner.next().unwrap())?;
+            Ok(filter::PortRange { start: port_start, end: port_end })
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn parse_port_num(pair: Pair<Rule>) -> Result<u16, Error> {
     pair.as_str().parse::<u16>().map_err(Error::Num)
 }
 
@@ -235,8 +260,8 @@ fn parse_rule(pair: Pair<Rule>) -> Result<filter::Rule, Error> {
     let direction = parse_direction(pairs.next().unwrap());
     let quick = parse_quick(pairs.next().unwrap());
     let proto = parse_proto(pairs.next().unwrap());
-    let (src_subnet, src_subnet_invert_match, src_port) = parse_src(pairs.next().unwrap())?;
-    let (dst_subnet, dst_subnet_invert_match, dst_port) = parse_dst(pairs.next().unwrap())?;
+    let (src_subnet, src_subnet_invert_match, src_port_range) = parse_src(pairs.next().unwrap())?;
+    let (dst_subnet, dst_subnet_invert_match, dst_port_range) = parse_dst(pairs.next().unwrap())?;
     let log = parse_log(pairs.next().unwrap());
     let keep_state = parse_state(pairs.next().unwrap());
 
@@ -247,10 +272,10 @@ fn parse_rule(pair: Pair<Rule>) -> Result<filter::Rule, Error> {
         proto: proto,
         src_subnet: src_subnet,
         src_subnet_invert_match: src_subnet_invert_match,
-        src_port: src_port,
+        src_port_range: src_port_range,
         dst_subnet: dst_subnet,
         dst_subnet_invert_match: dst_subnet_invert_match,
-        dst_port: dst_port,
+        dst_port_range: dst_port_range,
         nic: 0, // TODO: Support NICID (currently always 0 (= any))
         log: log,
         keep_state: keep_state,
@@ -279,16 +304,16 @@ fn parse_rdr(pair: Pair<Rule>) -> Result<filter::Rdr, Error> {
 
     let proto = parse_proto(pairs.next().unwrap());
     let dst_addr = parse_ipaddr(pairs.next().unwrap())?;
-    let dst_port = parse_port(pairs.next().unwrap())?;
+    let dst_port_range = parse_port_range(pairs.next().unwrap())?;
     let new_dst_addr = parse_ipaddr(pairs.next().unwrap())?;
-    let new_dst_port = parse_port(pairs.next().unwrap())?;
+    let new_dst_port_range = parse_port_range(pairs.next().unwrap())?;
 
     Ok(filter::Rdr {
         proto: proto,
         dst_addr: dst_addr,
-        dst_port: dst_port,
+        dst_port_range: dst_port_range,
         new_dst_addr: new_dst_addr,
-        new_dst_port: new_dst_port,
+        new_dst_port_range: new_dst_port_range,
         nic: 0, // TODO: Support NICID.
     })
 }
@@ -397,7 +422,7 @@ mod test {
     }
 
     #[test]
-    fn test_lines() {
+    fn test_simple_rule() {
         test_parse_line_to_rules(
             "pass in proto tcp;",
             &[filter::Rule {
@@ -407,15 +432,19 @@ mod test {
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
-                src_port: 0,
+                src_port_range: filter::PortRange { start: 0, end: 0 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_multiple_rules() {
         test_parse_line_to_rules(
             "pass in proto tcp; drop out proto udp;",
             &[
@@ -426,10 +455,10 @@ mod test {
                     proto: filter::SocketProtocol::Tcp,
                     src_subnet: None,
                     src_subnet_invert_match: false,
-                    src_port: 0,
+                    src_port_range: filter::PortRange { start: 0, end: 0 },
                     dst_subnet: None,
                     dst_subnet_invert_match: false,
-                    dst_port: 0,
+                    dst_port_range: filter::PortRange { start: 0, end: 0 },
                     nic: 0,
                     log: false,
                     keep_state: true,
@@ -441,16 +470,20 @@ mod test {
                     proto: filter::SocketProtocol::Udp,
                     src_subnet: None,
                     src_subnet_invert_match: false,
-                    src_port: 0,
+                    src_port_range: filter::PortRange { start: 0, end: 0 },
                     dst_subnet: None,
                     dst_subnet_invert_match: false,
-                    dst_port: 0,
+                    dst_port_range: filter::PortRange { start: 0, end: 0 },
                     nic: 0,
                     log: false,
                     keep_state: true,
                 },
             ],
         );
+    }
+
+    #[test]
+    fn test_rule_with_from_v4_address() {
         test_parse_line_to_rules(
             "pass in proto tcp from 1.2.3.4/24;",
             &[filter::Rule {
@@ -463,15 +496,19 @@ mod test {
                     prefix_len: 24,
                 })),
                 src_subnet_invert_match: false,
-                src_port: 0,
+                src_port_range: filter::PortRange { start: 0, end: 0 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_from_port() {
         test_parse_line_to_rules(
             "pass in proto tcp from port 10000;",
             &[filter::Rule {
@@ -481,15 +518,41 @@ mod test {
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
-                src_port: 10000,
+                src_port_range: filter::PortRange { start: 10000, end: 10000 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_from_range() {
+        test_parse_line_to_rules(
+            "pass in proto tcp from range 10000:10010;",
+            &[filter::Rule {
+                action: filter::Action::Pass,
+                direction: filter::Direction::Incoming,
+                quick: false,
+                proto: filter::SocketProtocol::Tcp,
+                src_subnet: None,
+                src_subnet_invert_match: false,
+                src_port_range: filter::PortRange { start: 10000, end: 10010 },
+                dst_subnet: None,
+                dst_subnet_invert_match: false,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
+                nic: 0,
+                log: false,
+                keep_state: true,
+            }],
+        );
+    }
+
+    #[test]
+    fn test_rule_with_from_v4_address_port() {
         test_parse_line_to_rules(
             "pass in proto tcp from 1.2.3.4/24 port 10000;",
             &[filter::Rule {
@@ -502,15 +565,19 @@ mod test {
                     prefix_len: 24,
                 })),
                 src_subnet_invert_match: false,
-                src_port: 10000,
+                src_port_range: filter::PortRange { start: 10000, end: 10000 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_from_not_v4_address_port() {
         test_parse_line_to_rules(
             "pass in proto tcp from !1.2.3.4/24 port 10000;",
             &[filter::Rule {
@@ -523,15 +590,19 @@ mod test {
                     prefix_len: 24,
                 })),
                 src_subnet_invert_match: true,
-                src_port: 10000,
+                src_port_range: filter::PortRange { start: 10000, end: 10000 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_from_v6_address_port() {
         test_parse_line_to_rules(
             "pass in proto tcp from 1234:5678::/32 port 10000;",
             &[filter::Rule {
@@ -546,15 +617,19 @@ mod test {
                     prefix_len: 32,
                 })),
                 src_subnet_invert_match: false,
-                src_port: 10000,
+                src_port_range: filter::PortRange { start: 10000, end: 10000 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_to_v6_address_port() {
         test_parse_line_to_rules(
             "pass in proto tcp to 1234:5678::/32 port 10000;",
             &[filter::Rule {
@@ -564,7 +639,7 @@ mod test {
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
-                src_port: 0,
+                src_port_range: filter::PortRange { start: 0, end: 0 },
                 dst_subnet: Some(Box::new(net::Subnet {
                     addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: [0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -572,12 +647,16 @@ mod test {
                     prefix_len: 32,
                 })),
                 dst_subnet_invert_match: false,
-                dst_port: 10000,
+                dst_port_range: filter::PortRange { start: 10000, end: 10000 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_from_v6_address_port_to_v4_address_port() {
         test_parse_line_to_rules(
             "pass in proto tcp from 1234:5678::/32 port 10000 to 1.2.3.4/8 port 1000;",
             &[filter::Rule {
@@ -592,18 +671,22 @@ mod test {
                     prefix_len: 32,
                 })),
                 src_subnet_invert_match: false,
-                src_port: 10000,
+                src_port_range: filter::PortRange { start: 10000, end: 10000 },
                 dst_subnet: Some(Box::new(net::Subnet {
                     addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                     prefix_len: 8,
                 })),
                 dst_subnet_invert_match: false,
-                dst_port: 1000,
+                dst_port_range: filter::PortRange { start: 1000, end: 1000 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_log_no_state() {
         test_parse_line_to_rules(
             "pass in proto tcp log no state;",
             &[filter::Rule {
@@ -613,15 +696,19 @@ mod test {
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
-                src_port: 0,
+                src_port_range: filter::PortRange { start: 0, end: 0 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: true,
                 keep_state: false,
             }],
         );
+    }
+
+    #[test]
+    fn test_rule_with_keep_state() {
         test_parse_line_to_rules(
             "pass in quick proto tcp keep state;",
             &[filter::Rule {
@@ -631,15 +718,19 @@ mod test {
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: None,
                 src_subnet_invert_match: false,
-                src_port: 0,
+                src_port_range: filter::PortRange { start: 0, end: 0 },
                 dst_subnet: None,
                 dst_subnet_invert_match: false,
-                dst_port: 0,
+                dst_port_range: filter::PortRange { start: 0, end: 0 },
                 nic: 0,
                 log: false,
                 keep_state: true,
             }],
         );
+    }
+
+    #[test]
+    fn test_nat_rule_with_from_v4_subnet_to_v4_address() {
         test_parse_line_to_nat_rules(
             "nat proto tcp from 1.2.3.0/24 -> from 192.168.1.1;",
             &[filter::Nat {
@@ -652,25 +743,33 @@ mod test {
                 nic: 0,
             }],
         );
+    }
+
+    #[test]
+    fn test_rdr_rule_with_to_v4_address_port_to_v4_address_port() {
         test_parse_line_to_rdr_rules(
             "rdr proto tcp to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;",
             &[filter::Rdr {
                 proto: filter::SocketProtocol::Tcp,
                 dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
-                dst_port: 10000,
+                dst_port_range: filter::PortRange { start: 10000, end: 10000 },
                 new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
-                new_dst_port: 20000,
+                new_dst_port_range: filter::PortRange { start: 20000, end: 20000 },
                 nic: 0,
             }],
         );
+    }
+
+    #[test]
+    fn test_rdr_rule_with_to_v4_address_range_to_v4_address_range() {
         test_parse_line_to_rdr_rules(
-            "rdr proto tcp to 1.2.3.4 port 1 -> to 192.168.1.1 port 20000;",
+            "rdr proto tcp to 1.2.3.4 range 10000:10005 -> to 192.168.1.1 range 20000:20005;",
             &[filter::Rdr {
                 proto: filter::SocketProtocol::Tcp,
                 dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
-                dst_port: 1,
+                dst_port_range: filter::PortRange { start: 10000, end: 10005 },
                 new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
-                new_dst_port: 20000,
+                new_dst_port_range: filter::PortRange { start: 20000, end: 20005 },
                 nic: 0,
             }],
         );

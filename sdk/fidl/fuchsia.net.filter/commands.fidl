@@ -4,12 +4,16 @@
 
 library fuchsia.net.filter;
 
+/// Status codes for commands.
 enum Status {
-    ok = 0;
-    err_internal = 1;
-    err_generation_mismatch = 2;
-    err_bad_rule = 3;
+    OK = 0;
+    ERR_INTERNAL = 1;
+    ERR_GENERATION_MISMATCH = 2;
+    ERR_BAD_RULE = 3;
 };
+
+/// The maximum number of rules.
+const uint32 MAX_RULES = 128;
 
 [Discoverable]
 protocol Filter {
@@ -21,14 +25,14 @@ protocol Filter {
     IsEnabled() -> (bool enabled);
 
     /// GetRules gets the current rules. They do not include NAT or RDR rules.
-    /// (use GetNATRules or GetRDRRules instead).
+    /// (use GetNatRules or GetRdrRules instead).
     ///
     /// GetRules also returns a generation number associated with the current
     /// rules.
-    GetRules() -> (vector<Rule> rules, uint32 generation, Status status);
+    GetRules() -> (vector<Rule>:MAX_RULES rules, uint32 generation, Status status);
 
     /// UpdateRules updates the current rules. It does not update NAT or RDR rules
-    /// (use UpdateNATRules or UpdateRDRRules instead).
+    /// (use UpdateNatRules or UpdateRdrRules instead).
     ///
     /// UpdateRules takes a generation number that is previously returned from
     /// GetRules. To successfully update the current rules, the generation number
@@ -36,30 +40,30 @@ protocol Filter {
     ///
     /// If somebody else has updated the rules since the previous GetRules, the
     /// generation number won't match and err_generation_mismatch will be returned.
-    UpdateRules(vector<Rule> rules, uint32 generation) -> (Status status);
+    UpdateRules(vector<Rule>:MAX_RULES rules, uint32 generation) -> (Status status);
 
-    /// GetNATRules gets the current NAT rules.
+    /// GetNatRules gets the current NAT rules.
     ///
-    /// It also returns a generation number that can be passed to UpdateNATRules.
+    /// It also returns a generation number that can be passed to UpdateNatRules.
     ///
-    GetNATRules() -> (vector<NAT> rules, uint32 generation, Status status);
+    GetNatRules() -> (vector<Nat>:MAX_RULES rules, uint32 generation, Status status);
 
-    /// UpdateNATRules updates the current NAT rules.
+    /// UpdateNatRules updates the current NAT rules.
     ///
-    /// It takes a generation number that is returned from GetNATRules. To
+    /// It takes a generation number that is returned from GetNatRules. To
     /// successfully update the current rules, the generation number passed to
-    /// UpdateNATRules needs to be up-to-date.
-    UpdateNATRules(vector<NAT> rules, uint32 generation) -> (Status status);
+    /// UpdateNatRules needs to be up-to-date.
+    UpdateNatRules(vector<Nat>:MAX_RULES rules, uint32 generation) -> (Status status);
 
-    /// GetRDRRules gets the current RDR rules.
+    /// GetRdrRules gets the current RDR rules.
     ///
-    /// It also returns a generation number that can be passed to UpdateRDRRules.
-    GetRDRRules() -> (vector<RDR> rules, uint32 generation, Status status);
+    /// It also returns a generation number that can be passed to UpdateRdrRules.
+    GetRdrRules() -> (vector<Rdr>:MAX_RULES rules, uint32 generation, Status status);
 
-    /// UpdateRDRRules updates the previous RDR rules with new rules.
+    /// UpdateRdrRules updates the previous RDR rules with new rules.
     ///
-    /// It takes a generation number that is returned from GetRDRRules. To
+    /// It takes a generation number that is returned from GetRdrRules. To
     /// successfully update the current rules, the generation number passed to
-    /// UpdateRDRRules needs to be up-to-date.
-    UpdateRDRRules(vector<RDR> rules, uint32 generation) -> (Status status);
+    /// UpdateRdrRules needs to be up-to-date.
+    UpdateRdrRules(vector<Rdr>:MAX_RULES rules, uint32 generation) -> (Status status);
 };

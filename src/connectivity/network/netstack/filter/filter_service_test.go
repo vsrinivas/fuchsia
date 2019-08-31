@@ -30,12 +30,12 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 	trs1, err := fromRules([]Rule{
 		{
-			action:     Drop,
-			direction:  Incoming,
-			transProto: header.TCPProtocolNumber,
-			srcSubnet:  &srcSubnet1,
-			srcPort:    100,
-			log:        true,
+			action:       Drop,
+			direction:    Incoming,
+			transProto:   header.TCPProtocolNumber,
+			srcSubnet:    &srcSubnet1,
+			srcPortRange: PortRange{100, 100},
+			log:          true,
 		},
 	})
 	if err != nil {
@@ -47,12 +47,12 @@ func TestGetAndUpdateRules(t *testing.T) {
 	}
 	trs2, err := fromRules([]Rule{
 		{
-			action:     Pass,
-			direction:  Incoming,
-			transProto: header.UDPProtocolNumber,
-			srcSubnet:  &srcSubnet2,
-			srcPort:    100,
-			log:        true,
+			action:       Pass,
+			direction:    Incoming,
+			transProto:   header.UDPProtocolNumber,
+			srcSubnet:    &srcSubnet2,
+			srcPortRange: PortRange{100, 100},
+			log:          true,
 		},
 	})
 	if err != nil {
@@ -246,11 +246,11 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	// 0. Prepare test rules.
 	trs1, err := fromRDRs([]RDR{
 		{
-			transProto: header.UDPProtocolNumber,
-			dstAddr:    testRouterNICAddr2,
-			dstPort:    testRouterPort,
-			newDstAddr: testLanNICAddr,
-			newDstPort: testLanPort,
+			transProto:      header.UDPProtocolNumber,
+			dstAddr:         testRouterNICAddr2,
+			dstPortRange:    PortRange{testRouterPort, testRouterPort},
+			newDstAddr:      testLanNICAddr,
+			newDstPortRange: PortRange{testLanPort, testLanPort},
 		},
 	})
 	if err != nil {
@@ -258,11 +258,11 @@ func TestGetAndUpdateRdrRules(t *testing.T) {
 	}
 	trs2, err := fromRDRs([]RDR{
 		{
-			transProto: header.TCPProtocolNumber,
-			dstAddr:    testRouterNICAddr2,
-			dstPort:    testRouterPort,
-			newDstAddr: testLanNICAddr,
-			newDstPort: testLanPort,
+			transProto:      header.TCPProtocolNumber,
+			dstAddr:         testRouterNICAddr2,
+			dstPortRange:    PortRange{testRouterPort, testRouterPort},
+			newDstAddr:      testLanNICAddr,
+			newDstPortRange: PortRange{testLanPort, testLanPort},
 		},
 	})
 	if err != nil {

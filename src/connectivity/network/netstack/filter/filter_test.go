@@ -25,12 +25,23 @@ var srcSubnet = func() tcpip.Subnet {
 
 var ruleset1 = []Rule{
 	{
-		action:     Drop,
-		direction:  Incoming,
-		transProto: header.TCPProtocolNumber,
-		srcSubnet:  &srcSubnet,
-		srcPort:    100,
-		log:        testing.Verbose(),
+		action:       Drop,
+		direction:    Incoming,
+		transProto:   header.TCPProtocolNumber,
+		srcSubnet:    &srcSubnet,
+		srcPortRange: PortRange{100, 100},
+		log:          testing.Verbose(),
+	},
+}
+
+var ruleset1a = []Rule{
+	{
+		action:       Drop,
+		direction:    Incoming,
+		transProto:   header.TCPProtocolNumber,
+		srcSubnet:    &srcSubnet,
+		srcPortRange: PortRange{100, 101},
+		log:          testing.Verbose(),
 	},
 }
 
@@ -42,12 +53,12 @@ var ruleset2 = []Rule{
 		log:        testing.Verbose(),
 	},
 	{
-		action:     Pass,
-		direction:  Incoming,
-		transProto: header.UDPProtocolNumber,
-		srcSubnet:  &srcSubnet,
-		srcPort:    100,
-		log:        testing.Verbose(),
+		action:       Pass,
+		direction:    Incoming,
+		transProto:   header.UDPProtocolNumber,
+		srcSubnet:    &srcSubnet,
+		srcPortRange: PortRange{100, 100},
+		log:          testing.Verbose(),
 	},
 }
 
@@ -69,6 +80,36 @@ func TestRun(t *testing.T) {
 				return tcpV4Packet([]byte("payload"), &tcpParams{
 					srcAddr: "\x0a\x00\x00\x00",
 					srcPort: 100,
+					dstAddr: "\x0a\x00\x00\x02",
+					dstPort: 200,
+				})
+			},
+			Drop,
+		},
+		{
+			"TcpDropInRange",
+			ruleset1a,
+			Incoming,
+			header.IPv4ProtocolNumber,
+			func() (buffer.Prependable, buffer.VectorisedView) {
+				return tcpV4Packet([]byte("payload"), &tcpParams{
+					srcAddr: "\x0a\x00\x00\x00",
+					srcPort: 100,
+					dstAddr: "\x0a\x00\x00\x02",
+					dstPort: 200,
+				})
+			},
+			Drop,
+		},
+		{
+			"TcpDropInRange",
+			ruleset1a,
+			Incoming,
+			header.IPv4ProtocolNumber,
+			func() (buffer.Prependable, buffer.VectorisedView) {
+				return tcpV4Packet([]byte("payload"), &tcpParams{
+					srcAddr: "\x0a\x00\x00\x00",
+					srcPort: 101,
 					dstAddr: "\x0a\x00\x00\x02",
 					dstPort: 200,
 				})
