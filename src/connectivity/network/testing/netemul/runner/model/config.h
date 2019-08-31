@@ -7,11 +7,13 @@
 
 #include <lib/json/json_parser.h>
 #include <lib/zx/time.h>
-#include <src/lib/fxl/macros.h>
 
 #include <vector>
 
+#include <src/lib/fxl/macros.h>
+
 #include "environment.h"
+#include "guest.h"
 #include "network.h"
 
 namespace netemul {
@@ -30,6 +32,7 @@ class Config {
   const std::vector<Network>& networks() const;
   const Environment& environment() const;
   Environment& environment();
+  const std::vector<Guest>& guests() const;
   const std::string& default_url() const;
   bool disabled() const;
   zx::duration timeout() const;
@@ -38,6 +41,7 @@ class Config {
  private:
   std::vector<Network> networks_;
   Environment environment_;
+  std::vector<Guest> guests_;
   std::string default_url_;
   bool disabled_;
   zx::duration timeout_;

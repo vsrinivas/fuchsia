@@ -12,6 +12,8 @@ source_set("model") {
     "endpoint.h",
     "environment.cc",
     "environment.h",
+    "guest.cc",
+    "guest.h",
     "launch_app.cc",
     "launch_app.h",
     "launch_service.cc",

@@ -42,6 +42,16 @@ TEST_F(ModelTest, ParseTest) {
       R"(
     {
       "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/default.cmx",
+      "guest": [
+        {
+          "label": "test_guest",
+          "url": "fuchsia-pkg://fuchsia.com/test_guest#meta/test_guest.cmx",
+          "networks": ["test-net"],
+          "files": {
+            "/pkg/data/test.sh": "/root/test_copy.sh"
+          }
+        }
+      ],
       "environment": {
         "children": [
           {
@@ -146,6 +156,14 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_TRUE(root_env.test().empty());
   EXPECT_TRUE(root_env.apps().empty());
   EXPECT_EQ(root_env.setup().size(), 1ul);
+
+  // check the guests
+  EXPECT_EQ(config.guests().size(), 1ul);
+  EXPECT_EQ(config.guests()[0].guest_label(), "test_guest");
+  EXPECT_EQ(config.guests()[0].guest_image_url(),
+            "fuchsia-pkg://fuchsia.com/test_guest#meta/test_guest.cmx");
+  EXPECT_EQ(config.guests()[0].networks().size(), 1ul);
+  EXPECT_EQ(config.guests()[0].files().size(), 1ul);
 
   // check the devices
   EXPECT_EQ(root_env.devices()[0], "ep0");
@@ -406,6 +424,18 @@ TEST_F(ModelTest, InvalidKeys) {
   ExpectFailedParse(
       R"({ "networks" : [ {"name" : "net", "endpoints" : [{"name" : "ep", "foo" : "bar"}] }] })",
       "Bad endpoint key accepted");
+}
+
+TEST_F(ModelTest, InvalidGuestConfig) {
+  ExpectFailedParse(R"({"guest" : {}})", "Guest model accepted non-array guest config");
+  ExpectFailedParse(R"({"guest" : [{"files" : ["file1", "file2"]}]})",
+                    "Guest model accepted non-object file definitions");
+  ExpectFailedParse(R"({"guest" : [{"networks" : ["net1", "net2"]}]})",
+                    "Guest model accepted too many ethertap networks");
+  ExpectFailedParse(R"({"guest" : [{"networks" : [{}] }]})",
+                    "Guest model accepted non-string network name");
+  ExpectFailedParse(R"({"guest" : [{"bogus_key" : []}]})",
+                    "Guest model accepted too many ethertap networks");
 }
 
 }  // namespace testing

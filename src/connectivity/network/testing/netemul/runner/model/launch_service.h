@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_LAUNCH_SERVICE_H_
 
 #include <lib/json/json_parser.h>
+
 #include <src/lib/fxl/macros.h>
 
 #include "launch_app.h"
@@ -17,6 +18,8 @@ class LaunchService {
  public:
   explicit LaunchService(std::string name);
   LaunchService(LaunchService&& other) = default;
+  LaunchService(std::string name, std::string url, std::vector<std::string> arguments)
+      : name_(std::move(name)), launch_(std::move(url), std::move(arguments)) {}
 
   bool ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser);
 

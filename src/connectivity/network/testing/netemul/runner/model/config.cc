@@ -18,6 +18,7 @@ static const char* kCapture = "capture";
 static const char* kCaptureAlways = "ALWAYS";
 static const char* kCaptureOnError = "ON_ERROR";
 static const char* kCaptureNo = "NO";
+static const char* kGuest = "guest";
 
 const char Config::Facet[] = "fuchsia.netemul";
 
@@ -97,6 +98,18 @@ bool Config::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* json
         json_parser->ReportError("\"capture\" must be a Boolean or String value");
         return false;
       }
+    } else if (i->name == kGuest) {
+      if (!i->value.IsArray()) {
+        json_parser->ReportError("config guest must be an array");
+        return false;
+      }
+      const auto& guests = i->value.GetArray();
+      for (auto g = guests.Begin(); g != guests.End(); g++) {
+        auto& guest = guests_.emplace_back();
+        if (!guest.ParseFromJSON(*g, json_parser)) {
+          return false;
+        }
+      }
     } else {
       json_parser->ReportError(
           fxl::StringPrintf("Unrecognized config member \"%s\"", i->name.GetString()));
@@ -120,6 +133,8 @@ bool Config::disabled() const { return disabled_; }
 zx::duration Config::timeout() const { return timeout_; }
 
 CaptureMode Config::capture() const { return capture_mode_; }
+
+const std::vector<Guest>& Config::guests() const { return guests_; }
 
 }  // namespace config
 }  // namespace netemul

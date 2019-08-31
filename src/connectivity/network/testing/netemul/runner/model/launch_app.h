@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_MODEL_LAUNCH_APP_H_
 
 #include <lib/json/json_parser.h>
+
 #include <src/lib/fxl/macros.h>
 
 namespace netemul {
@@ -15,6 +16,8 @@ class LaunchApp {
  public:
   LaunchApp() = default;
   LaunchApp(LaunchApp&& other) = default;
+  LaunchApp(std::string url, std::vector<std::string> arguments)
+      : url_(std::move(url)), arguments_(std::move(arguments)) {}
 
   bool ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser);
 

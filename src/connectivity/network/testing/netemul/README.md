@@ -211,6 +211,7 @@ test run. You can save the dump in hex format and then convert it to binary with
 | setup            | Array of [LaunchArgs](#launchargs)      | Collection of setup processes to run. Setup processes will run sequentially and synchronously (sandbox waits for it to exit **successfully**) before the tests are executed. Any *setup* process that fails will cause the sandbox to exit with a failure status. |
 | inherit_services | Boolean                                 | Whether to inherit the parent environment's service configuration. Defaults to **true**.                                                                                                                                                                          |
 | logger_options   | [LoggerOptions](#loggeroptions)         | Options for environment specific logger.
+| guest            | Array of [Guest](#guest)                | Collection of guest VM's to create.
 
 ### LaunchArgs
 
@@ -262,6 +263,17 @@ In that case, it's as if only the *url* field had been specified.
 | verbosity     | Integer             | Log verbosity level (default: 0)                                                |
 | tags          | Array of Strings    | Tags required to show log (empty array means no filters on tags) (default: [])  |
 
+
+### Guest
+
+| Field         | Type                  | Description                                             |
+|---------------|-----------------------|---------------------------------------------------------|
+| label         | String                | Name used to identify a specific VM instance.           |
+| url           | String                | .cmx package that encapsulates guest binaries.          |
+| files         | Dictionary of Strings | Maps input data file path to guest VM destination path. |
+| networks      | Array of Strings      | Ethertap networks that guest should be connected to.    |
+
+> Note that only one `guest` is allowed. Also, `networks` cannot contain more than a single entry.
 
 ## Helpers
 
