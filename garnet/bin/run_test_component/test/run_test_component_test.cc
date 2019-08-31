@@ -10,6 +10,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <sys/stat.h>
 #include <zircon/status.h>
@@ -29,9 +30,9 @@ TEST(Run, TestHermeticEnv) {
 
 class FakeDebugData : public fuchsia::debugdata::DebugData {
  public:
-  void Publish(std::string data_sink, ::zx::vmo data) override { call_count_++; }
+  void Publish(std::string /*unused*/, ::zx::vmo /*unused*/) override { call_count_++; }
 
-  void LoadConfig(std::string config_name, LoadConfigCallback callback) override {
+  void LoadConfig(std::string /*unused*/, LoadConfigCallback /*unused*/) override {
     call_count_++;
     // not implemented
   }
@@ -48,10 +49,9 @@ class FakeDebugData : public fuchsia::debugdata::DebugData {
   uint64_t call_count_ = 0;
 };
 
-// TODO(35434): Fix and enable.
-TEST(Run, DISABLED_ExposesDebugDataService) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+using RunFixture = gtest::RealLoopFixture;
 
+TEST_F(RunFixture, ExposesDebugDataService) {
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
 
   // It is not possible to use the /bin trampoline unless
@@ -63,15 +63,15 @@ TEST(Run, DISABLED_ExposesDebugDataService) {
   zx::job job;
   uint32_t flags = FDIO_SPAWN_DEFAULT_LDSVC | (FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_NAMESPACE);
 
-  sys::testing::ServiceDirectoryProvider service_provider(loop.dispatcher());
+  sys::testing::ServiceDirectoryProvider service_provider(dispatcher());
   FakeDebugData debugdata;
-  service_provider.AddService(debugdata.GetHandler(loop.dispatcher()));
+  service_provider.AddService(debugdata.GetHandler(dispatcher()));
 
   auto allow_parent_service = [&service_provider,
-                               env_services = env_services](std::string service_name) {
+                               env_services = env_services](const std::string& service_name) {
     service_provider.AddService(
         std::make_unique<vfs::Service>([env_services, service_name = service_name](
-                                           zx::channel channel, async_dispatcher_t* dispatcher) {
+                                           zx::channel channel, async_dispatcher_t* /*unused*/) {
           env_services->Connect(service_name, std::move(channel));
         }),
         service_name);
@@ -123,26 +123,5 @@ TEST(Run, DISABLED_ExposesDebugDataService) {
                                   run_process.reset_and_get_address(), err_msg))
       << err_msg;
 
-  loop.StartThread();
-
-  // Wait for the "run-test-component" program to exit.
-  EXPECT_EQ(ZX_OK,
-            zx_object_wait_one(run_process.get(), ZX_TASK_TERMINATED, ZX_TIME_INFINITE, nullptr));
-
-  // Check that it succeeded.
-  zx_info_process_t proc_info;
-  EXPECT_EQ(ZX_OK, zx_object_get_info(run_process.get(), ZX_INFO_PROCESS, &proc_info,
-                                      sizeof(proc_info), nullptr, nullptr));
-
-  EXPECT_EQ(0, proc_info.return_code);
-
-  loop.Shutdown();
-
-  // Spin our loop to receive any message the "run" program sent to the launcher
-  // service from its environment.
-  loop.RunUntilIdle();
-
-  // our test component might try to connect to real debugData service when profiling is on, so to
-  // be safe test that DebugData was called atleast once.
-  EXPECT_GE(debugdata.call_count(), 1u);
+  RunLoopUntil([&]() { return debugdata.call_count() >= 1u; });
 }

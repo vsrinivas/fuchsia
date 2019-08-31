@@ -45,7 +45,7 @@ Usage: run_test_component <test_url> [arguments...]
        identifies a test component. Example:
           fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello.cmx
 
-       if *test_matcher* is provided, this tool will use component index 
+       if *test_matcher* is provided, this tool will use component index
        to find matching component. If multiple urls are found, it will
        print corresponding component URLs and exit.  If there is only
        one match, it will generate a component URL and execute the test.
@@ -205,7 +205,7 @@ int main(int argc, const char** argv) {
     sys::testing::EnvironmentServices::ParentOverrides parent_overrides;
     parent_overrides.debug_data_service_ =
         std::make_shared<vfs::Service>([namespace_services = namespace_services](
-                                           zx::channel channel, async_dispatcher_t* dispatcher) {
+                                           zx::channel channel, async_dispatcher_t* /*unused*/) {
           namespace_services->Connect(fuchsia::debugdata::DebugData::Name_, std::move(channel));
         });
 
@@ -240,22 +240,25 @@ int main(int argc, const char** argv) {
 
   launcher->CreateComponent(std::move(parse_result.launch_info), controller.NewRequest());
 
-  controller.events().OnTerminated = [&program_name, &loop](int64_t return_code,
-                                                            TerminationReason termination_reason) {
-    if (termination_reason != TerminationReason::EXITED) {
-      fprintf(stderr, "%s: %s\n", program_name.c_str(),
-              sys::HumanReadableTerminationReason(termination_reason).c_str());
-    }
+  int64_t ret_code = 1;
 
-    // Wait and process all messages in the queue.
-    loop.Quit();
-    loop.ResetQuit();
-    loop.RunUntilIdle();
+  controller.events().OnTerminated =
+      [&ret_code, &program_name, &loop](int64_t return_code, TerminationReason termination_reason) {
+        if (termination_reason != TerminationReason::EXITED) {
+          fprintf(stderr, "%s: %s\n", program_name.c_str(),
+                  sys::HumanReadableTerminationReason(termination_reason).c_str());
+        }
 
-    zx_process_exit(return_code);
-  };
+        ret_code = return_code;
+
+        loop.Quit();
+      };
 
   loop.Run();
-  fprintf(stderr, "run-test-component: premature loop exit\n");
-  return 1;
+
+  // Wait and process all messages in the queue.
+  loop.ResetQuit();
+  loop.RunUntilIdle();
+
+  return ret_code;
 }

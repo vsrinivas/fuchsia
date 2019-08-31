@@ -12,6 +12,9 @@ int main(int argc, const char** argv) {
   auto env_services = sys::ServiceDirectory::CreateFromNamespace();
   fuchsia::debugdata::DebugDataPtr ptr;
   env_services->Connect(ptr.NewRequest());
-  ptr->LoadConfig("some_name", [](zx::vmo) {});
+  ptr->LoadConfig("some_name", [](zx::vmo /*unused*/) {});
+
+  // run until this is killed by caller.
+  loop.Run();
   return 0;
 }
