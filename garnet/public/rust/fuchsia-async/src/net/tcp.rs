@@ -90,9 +90,7 @@ impl TcpListener {
 
     /// Creates a new instance of `fuchsia_async::net::TcpListener` from an
     /// `std::net::TcpListener`.
-    pub fn from_std(
-        listener: net::TcpListener,
-    ) -> io::Result<TcpListener> {
+    pub fn from_std(listener: net::TcpListener) -> io::Result<TcpListener> {
         set_nonblock(listener.as_raw_fd())?;
         unsafe { Ok(TcpListener(EventedFd::new(listener)?)) }
     }
@@ -344,16 +342,49 @@ mod tests {
             io::{AsyncReadExt, AsyncWriteExt},
             stream::StreamExt,
         },
-        std::io::{Error, ErrorKind},
+        net2::TcpBuilder,
+        std::{
+            io::{Error, ErrorKind},
+            net::{self, Ipv4Addr, SocketAddr},
+        },
     };
 
     #[test]
-    fn connect_to_unbound_endpoint() {
+    fn choose_listen_port() {
+        let _exec = Executor::new().expect("could not create executor");
+        let addr_request = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
+        let listener = TcpListener::bind(&addr_request).expect("could not create listener");
+        let actual_addr = listener.local_addr().expect("local_addr query to succeed");
+        assert_eq!(actual_addr.ip(), addr_request.ip());
+        assert_ne!(actual_addr.port(), 0);
+    }
+
+    #[test]
+    fn choose_listen_port_from_std() {
+        let _exec = Executor::new().expect("could not create executor");
+        let addr_request = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
+        let inner = net::TcpListener::bind(&addr_request).expect("could not create inner listener");
+        let listener = TcpListener::from_std(inner).expect("could not create listener");
+        let actual_addr = listener.local_addr().expect("local_addr query to succeed");
+        assert_eq!(actual_addr.ip(), addr_request.ip());
+        assert_ne!(actual_addr.port(), 0);
+    }
+
+    #[test]
+    fn connect_to_nonlistening_endpoint() {
         let mut exec = Executor::new().expect("could not create executor");
 
-        let addr = "127.0.0.1:29996".parse().unwrap();
-        let connector = TcpStream::connect(addr).expect("could not create server");
+        // bind to a port to find an unused one, but don't start listening.
+        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
+        let socket = TcpBuilder::new_v4().unwrap();
+        let addr = socket
+            .bind(addr)
+            .expect("could not bind")
+            .local_addr()
+            .expect("local_addr query to succeed");
 
+        // connecting to the nonlistening port should fail.
+        let connector = TcpStream::connect(addr).expect("could not create client");
         let fut = async move {
             let res = connector.await;
             assert!(res.is_err());
@@ -367,11 +398,13 @@ mod tests {
     fn send_recv() {
         let mut exec = Executor::new().expect("could not create executor");
 
-        let addr = "127.0.0.1:29997".parse().unwrap();
+        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
+        let listener = TcpListener::bind(&addr).expect("could not create listener");
+        let addr = listener.local_addr().expect("local_addr query to succeed");
+        let mut listener = listener.accept_stream();
+
         let query = b"ping";
         let response = b"pong";
-        let mut listener =
-            TcpListener::bind(&addr).expect("could not create listener").accept_stream();
 
         let server = async move {
             let (mut socket, _clientaddr) =
@@ -389,7 +422,7 @@ mod tests {
         };
 
         let client = async move {
-            let connector = TcpStream::connect(addr).expect("could not create server");
+            let connector = TcpStream::connect(addr).expect("could not create client");
             let mut socket = connector.await.expect("client to connect to server");
 
             socket.write_all(&query[..]).await.expect("client write to succeed");
