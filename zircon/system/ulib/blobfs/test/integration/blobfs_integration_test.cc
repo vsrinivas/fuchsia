@@ -22,7 +22,7 @@
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
-#include "blobfs_test.h"
+#include "fixtures.h"
 #include "test_support.h"
 
 namespace {

@@ -11,7 +11,7 @@
 #include <lib/memfs/memfs.h>
 #include <zxtest/zxtest.h>
 
-#include "blobfs_test.h"
+#include "fixtures.h"
 #include "environment.h"
 
 constexpr char kUsageMessage[] = R"""(
