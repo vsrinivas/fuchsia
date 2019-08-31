@@ -249,7 +249,13 @@ fi
 declare -r cmd_and_args="$@"
 shift # Removes the command name.
 
-track-command-execution "${command_name}" "$@" &
+if [[ "${command_name}" != "vendor" || $# -lt 2 ]]; then
+  metric_name="${command_name}"
+else
+  metric_name="vendor/$1/$2"
+fi
+
+track-command-execution "${metric_name}" "$@" &
 declare -r start_time="$SECONDS"
 "${command_path}" "$@"
 declare -r retval=$?
