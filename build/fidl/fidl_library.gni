@@ -341,7 +341,10 @@ template("fidl_library") {
         fidl_json = [ rebase_path(json_representation, root_build_dir) ]
       }
 
-      non_sdk_deps = [ ":$meta_target_name" ]
+      non_sdk_deps = [
+        ":$meta_target_name",
+        ":$compilation_target_name",
+      ]
 
       deps = []
       foreach(dep, all_deps) {
