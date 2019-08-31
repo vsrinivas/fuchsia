@@ -221,6 +221,11 @@ class StatisticsTest(TempDirTestCase):
             self.GenerateData(stddev_across_iters=100),
             '980 +/- 73')
 
+    # Test the case where just a single value is produced per process run.
+    def test_confidence_interval_with_single_value_per_process(self):
+        self.CheckConfidenceInterval(
+            [[[100]], [[101]]], '100 +/- 31')
+
 
 class PerfCompareTest(TempDirTestCase):
 

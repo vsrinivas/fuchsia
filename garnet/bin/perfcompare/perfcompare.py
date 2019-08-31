@@ -131,6 +131,22 @@ def RawResultsFromDir(filename):
                 yield ReadJsonFile(os.path.join(filename, name))
 
 
+# Takes a list of values that are collected from consecutive runs of a
+# test.  For libperftest tests, those are test runs within a process.
+#
+# Returns the mean of the values, but excluding the first run.  We treat
+# the initial run as a warmup run.  The initial run is often slower than
+# later runs, so it would skew the mean if we included it.  The
+# RoundTrip_*_MultiProcess tests are an extreme case, because the first run
+# waits for a subprocess to start up.  See https://crbug.com/fuchsia/23105.
+def MeanExcludingWarmup(values):
+    # Some tests report a single value per process run.  For those tests,
+    # we use that value and don't discard it.
+    if len(values) == 1:
+        return values[0]
+    return Mean(values[1:])
+
+
 # Takes a list of filenames of perf test results, each representing the
 # results from one boot of Fuchsia, and each in the format accepted by
 # RawResultsFromDir().
@@ -142,13 +158,7 @@ def ResultsFromDirs(filenames):
         results_for_boot = {}
         for process_run_results in RawResultsFromDir(boot_results_path):
             for test_case in process_run_results:
-                # Skip the running time from the test's initial run within
-                # the process; treat it as a warmup run.  The initial run
-                # is often slower than later runs, so it would skew the
-                # mean if we included it.  The RoundTrip_*_MultiProcess
-                # tests are an extreme case, because the first run waits
-                # for a subprocess to start up.  See PT-244.
-                new_value = Mean(test_case['values'][1:])
+                new_value = MeanExcludingWarmup(test_case['values'])
                 results_for_boot.setdefault(test_case['label'], []).append(
                     new_value)
         for label, values in results_for_boot.iteritems():
