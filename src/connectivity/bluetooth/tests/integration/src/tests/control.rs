@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    failure::{format_err, Error},
+    fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters},
     fuchsia_bluetooth::{
         expectation::{
             self,
@@ -11,6 +12,7 @@ use {
             Predicate,
         },
         hci_emulator::Emulator,
+        types::Address,
     },
 };
 
@@ -18,10 +20,6 @@ use crate::harness::control::{
     activate_fake_host, control_expectation, control_timeout, ControlHarness, ControlState,
     FAKE_HCI_ADDRESS,
 };
-
-// TODO(BT-229): Currently these tests rely on fakes that are hard-coded in the fake
-// HCI driver. Remove these once it is possible to set up mock devices programmatically.
-const FAKE_LE_DEVICE_ADDR: &str = "00:00:00:00:00:01";
 
 async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
@@ -71,18 +69,36 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
 }
 
 async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
-    let (_host, _hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
+    let (_host, hci) = activate_fake_host(control.clone(), "bt-hci-integration").await?;
+
+    // Insert a fake peer to test connection and disconnection.
+    let peer_address = Address::Random([1, 0, 0, 0, 0, 0]);
+    let peer_address_string = peer_address.to_string();
+    let peer_params = LowEnergyPeerParameters {
+        address: Some(peer_address.into()),
+        connectable: Some(true),
+        advertisement: Some(AdvertisingData {
+            data: vec![0x02, 0x01, 0x02], // Flags field set to "general discoverable"
+        }),
+        scan_response: None,
+    };
+    let (_peer, remote) = fidl::endpoints::create_proxy()?;
+    let _ = hci
+        .emulator()
+        .add_low_energy_peer(peer_params, remote)
+        .await?
+        .map_err(|e| format_err!("Failed to register fake peer: {:#?}", e))?;
 
     control.aux().request_discovery(true).await?;
     let state = control
         .when_satisfied(
-            control_expectation::peer_exists(expectation::peer::address(FAKE_LE_DEVICE_ADDR)),
+            control_expectation::peer_exists(expectation::peer::address(&peer_address_string)),
             control_timeout(),
         )
         .await?;
 
     // We can safely unwrap here as this is guarded by the previous expectation
-    let peer = state.peers.iter().find(|(_, d)| &d.address == FAKE_LE_DEVICE_ADDR).unwrap().0;
+    let peer = state.peers.iter().find(|(_, d)| &d.address == &peer_address_string).unwrap().0;
 
     control.aux().connect(peer).await?;
 

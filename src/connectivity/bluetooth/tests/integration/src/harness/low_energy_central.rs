@@ -13,7 +13,7 @@ use {
     futures::{Future, TryFutureExt, TryStreamExt},
 };
 
-use crate::harness::{control::ActivatedFakeHost, TestHarness};
+use crate::harness::{control::ActivatedFakeHost, EmulatorHarnessAux, TestHarness};
 
 /// Sets up the test environment and the given test case.
 /// Each integration test case is asynchronous and must return a Future that completes with the
@@ -25,17 +25,17 @@ where
 {
     // Don't drop the ActivatedFakeHost until the end of this function
     let fake_host = ActivatedFakeHost::new("bt-hci-integration-le-0").await?;
-
     let proxy = fuchsia_component::client::connect_to_service::<CentralMarker>()
         .context("Failed to connect to BLE Central service")?;
 
-    let state = CentralHarness::new(proxy.clone());
+    let harness =
+        CentralHarness::new(CentralHarnessAux { proxy, emulator: fake_host.emulator().clone() });
     fasync::spawn(
-        handle_central_events(state.clone())
+        handle_central_events(harness.clone())
             .unwrap_or_else(|e| eprintln!("Error handling central events: {:?}", e)),
     );
 
-    let result = test(state).await;
+    let result = test(harness).await;
 
     fake_host.release().await?;
 
@@ -75,10 +75,11 @@ impl Default for CentralState {
     }
 }
 
-pub type CentralHarness = ExpectationHarness<CentralState, CentralProxy>;
+pub type CentralHarness = ExpectationHarness<CentralState, CentralHarnessAux>;
+type CentralHarnessAux = EmulatorHarnessAux<CentralProxy>;
 
 async fn handle_central_events(harness: CentralHarness) -> Result<(), Error> {
-    let mut events = harness.aux().take_event_stream();
+    let mut events = harness.aux().proxy().take_event_stream();
 
     while let Some(e) = events.try_next().await? {
         match e {

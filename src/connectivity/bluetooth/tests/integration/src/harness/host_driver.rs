@@ -24,7 +24,7 @@ use {
     std::{borrow::Borrow, collections::HashMap, path::PathBuf},
 };
 
-use crate::harness::TestHarness;
+use crate::harness::{EmulatorHarnessAux, TestHarness};
 
 const TIMEOUT_SECONDS: i64 = 10; // in seconds
 
@@ -66,7 +66,8 @@ pub async fn expect_no_peer(host: &HostDriverHarness, id: String) -> Result<(), 
     Ok(())
 }
 
-pub type HostDriverHarness = ExpectationHarness<HostState, (HostProxy, Option<Emulator>)>;
+pub type HostDriverHarness = ExpectationHarness<HostState, HostDriverHarnessAux>;
+type HostDriverHarnessAux = EmulatorHarnessAux<HostProxy>;
 
 pub struct HostState {
     // Access to the bt-host device under test.
@@ -90,7 +91,7 @@ impl Clone for HostState {
 }
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
-async fn new_host_harness() -> Result<HostDriverHarness, Error> {
+async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
     let emulator = Emulator::create("bt-integration-test-host").await?;
     let host_dev = emulator.publish_and_wait_for_host(Emulator::default_settings()).await?;
 
@@ -102,10 +103,11 @@ async fn new_host_harness() -> Result<HostDriverHarness, Error> {
     let host_path = host_dev.path().to_path_buf();
     let peers = HashMap::new();
 
-    Ok(ExpectationHarness::init(
-        (host_proxy, Some(emulator)),
+    let harness = ExpectationHarness::init(
+        HostDriverHarnessAux { proxy: host_proxy, emulator: emulator.emulator().clone() },
         HostState { host_path, host_info, peers },
-    ))
+    );
+    Ok((harness, emulator))
 }
 
 // Returns a Future that resolves when the state of any RemoteDevice matches `target`.
@@ -153,7 +155,7 @@ impl TestHarness for HostDriverHarness {
 
 // Returns a Future that handles Host interface events.
 async fn handle_host_events(harness: HostDriverHarness) -> Result<(), Error> {
-    let mut events = harness.aux().0.take_event_stream();
+    let mut events = harness.aux().proxy().take_event_stream();
 
     while let Some(e) = events.try_next().await? {
         match e {
@@ -193,21 +195,23 @@ where
     F: FnOnce(HostDriverHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
-    let host_test = new_host_harness().await?;
+    let (harness, emulator) = new_host_harness().await?;
 
     // Start processing events in a background task.
     fasync::spawn(
-        handle_host_events(host_test.clone())
+        handle_host_events(harness.clone())
             .unwrap_or_else(|e| eprintln!("Error handling host events: {:?}", e)),
     );
 
     // Run the test and obtain the test result.
-    let result = test_func(host_test.clone()).await;
+    let result = test_func(harness.clone()).await;
 
     // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
     let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration()).await?;
-    let host_path = &host_test.read().host_path;
-    host_test.aux().1 = None;
+    let host_path = &harness.read().host_path;
+
+    drop(emulator);
     watcher.watch_removed(host_path).await?;
+
     result
 }

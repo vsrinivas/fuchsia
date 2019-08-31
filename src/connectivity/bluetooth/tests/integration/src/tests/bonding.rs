@@ -57,7 +57,7 @@ async fn add_bonds(
     state: &HostDriverHarness,
     mut bonds: Vec<BondingData>,
 ) -> Result<(Status), Error> {
-    state.aux().0.add_bonded_devices(&mut bonds.iter_mut()).err_into().await
+    state.aux().proxy().add_bonded_devices(&mut bonds.iter_mut()).err_into().await
 }
 
 const TEST_ID1: &str = "1234";
@@ -70,7 +70,7 @@ const TEST_NAME2: &str = "Name2";
 // Tests initializing bonded LE devices.
 async fn test_add_bonded_devices_success(test_state: HostDriverHarness) -> Result<(), Error> {
     // Devices should be initially empty.
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(vec![], devices)?;
 
     let bond_data1 = new_le_bond_data(TEST_ID1, TEST_ADDR1, TEST_NAME1, true /* has LTK */);
@@ -90,7 +90,7 @@ async fn test_add_bonded_devices_success(test_state: HostDriverHarness) -> Resul
     expect_host_peer(&test_state, expected1).await?;
     expect_host_peer(&test_state, expected2).await?;
 
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(2, devices.len())?;
     expect_true!(devices.iter().any(|dev| dev.address == TEST_ADDR1))?;
     expect_true!(devices.iter().any(|dev| dev.address == TEST_ADDR2))?;
@@ -103,7 +103,7 @@ async fn test_add_bonded_devices_success(test_state: HostDriverHarness) -> Resul
 
 async fn test_add_bonded_devices_no_ltk_fails(test_state: HostDriverHarness) -> Result<(), Error> {
     // Devices should be initially empty.
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(vec![], devices)?;
 
     // Inserting a bonded device without a LTK should fail.
@@ -111,7 +111,7 @@ async fn test_add_bonded_devices_no_ltk_fails(test_state: HostDriverHarness) -> 
     let status = add_bonds(&test_state, vec![bond_data]).await?;
     expect_true!(status.error.is_some())?;
 
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(vec![], devices)?;
 
     Ok(())
@@ -121,7 +121,7 @@ async fn test_add_bonded_devices_duplicate_entry(
     test_state: HostDriverHarness,
 ) -> Result<(), Error> {
     // Devices should be initially empty.
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(vec![], devices)?;
 
     // Initialize one entry.
@@ -135,7 +135,7 @@ async fn test_add_bonded_devices_duplicate_entry(
         .and(expectation::peer::bonded(true));
 
     expect_host_peer(&test_state, expected.clone()).await?;
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(1, devices.len())?;
 
     // Adding an entry with the existing id should fail.
@@ -155,7 +155,7 @@ async fn test_add_bonded_devices_duplicate_entry(
 // but reports an error.
 async fn test_add_bonded_devices_invalid_entry(test_state: HostDriverHarness) -> Result<(), Error> {
     // Devices should be initially empty.
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(vec![], devices)?;
 
     // Add one entry with no LTK (invalid) and one with (valid). This should create an entry for the
@@ -170,7 +170,7 @@ async fn test_add_bonded_devices_invalid_entry(test_state: HostDriverHarness) ->
         .and(expectation::peer::bonded(true));
 
     expect_host_peer(&test_state, expected.clone()).await?;
-    let devices = test_state.aux().0.list_devices().await?;
+    let devices = test_state.aux().proxy().list_devices().await?;
     expect_eq!(1, devices.len())?;
     expect_remote_device(&test_state, TEST_ADDR2, &expected)?;
 

@@ -5,7 +5,6 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_bluetooth_le::{PeripheralMarker, PeripheralProxy},
-    fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
@@ -15,7 +14,7 @@ use {
     pin_utils::pin_mut,
 };
 
-use crate::harness::{control::ActivatedFakeHost, TestHarness};
+use crate::harness::{control::ActivatedFakeHost, EmulatorHarnessAux, TestHarness};
 
 /// A snapshot of the current LE peripheral procedure states of the controller.
 #[derive(Clone)]
@@ -37,26 +36,8 @@ impl Default for PeripheralState {
     }
 }
 
-pub struct PeripheralHarnessAux {
-    proxy: PeripheralProxy,
-    emulator: HciEmulatorProxy,
-}
-
-impl PeripheralHarnessAux {
-    fn new(proxy: PeripheralProxy, emulator: HciEmulatorProxy) -> PeripheralHarnessAux {
-        PeripheralHarnessAux { proxy, emulator }
-    }
-
-    pub fn proxy(&self) -> &PeripheralProxy {
-        &self.proxy
-    }
-
-    pub fn emulator(&self) -> &HciEmulatorProxy {
-        &self.emulator
-    }
-}
-
 pub type PeripheralHarness = ExpectationHarness<PeripheralState, PeripheralHarnessAux>;
+type PeripheralHarnessAux = EmulatorHarnessAux<PeripheralProxy>;
 
 impl TestHarness for PeripheralHarness {
     fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
@@ -78,7 +59,8 @@ where
     let host = ActivatedFakeHost::new("bt-integration-le-peripheral").await?;
     let proxy = fuchsia_component::client::connect_to_service::<PeripheralMarker>()
         .context("Failed to connect to BLE Peripheral service")?;
-    let state = PeripheralHarness::new(PeripheralHarnessAux::new(proxy, host.emulator().clone()));
+    let state =
+        PeripheralHarness::new(PeripheralHarnessAux { proxy, emulator: host.emulator().clone() });
 
     // Initialize the state update watcher and the test run tasks.
     let watch = watch_advertising_state(state.clone());

@@ -26,10 +26,6 @@ using bt::testing::FakePeer;
 namespace bt_hci_emulator {
 namespace {
 
-const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic, {0x01, 0x00, 0x00, 0x00, 0x00, 0x00});
-const DeviceAddress kAddress1(DeviceAddress::Type::kBREDR, {0x02, 0x00, 0x00, 0x00, 0x00, 0x00});
-const DeviceAddress kAddress2(DeviceAddress::Type::kLEPublic, {0x03, 0x00, 0x00, 0x00, 0x00, 0x00});
-
 FakeController::Settings SettingsFromFidl(const ftest::EmulatorSettings& input) {
   FakeController::Settings settings;
   if (input.has_hci_config() && input.hci_config() == ftest::HciConfig::LE_ONLY) {
@@ -136,36 +132,6 @@ zx_status_t Device::Bind() {
   }
 
   fake_device_ = fbl::AdoptRef(new FakeController());
-
-  // A Sample LE remote peer for le-scan to pick up.
-  // TODO(BT-229): add tooling for adding/removing fake devices
-  const auto kAdvData0 = bt::CreateStaticByteBuffer(
-      // Flags
-      0x02, 0x01, 0x02,
-
-      // Complete 16-bit service UUIDs
-      0x05, 0x03, 0x0d, 0x18, 0x0f, 0x18,
-
-      // Complete local name
-      0x05, 0x09, 'F', 'a', 'k', 'e');
-  auto peer = std::make_unique<FakePeer>(kAddress0, true, true);
-  peer->SetAdvertisingData(kAdvData0);
-  fake_device_->AddPeer(std::move(peer));
-
-  // A Sample BR/EDR remote peer to interact with.
-  peer = std::make_unique<FakePeer>(kAddress1, false, false);
-  // A Toy Game
-  peer->set_class_of_device(bt::DeviceClass({0x14, 0x08, 0x00}));
-  fake_device_->AddPeer(std::move(peer));
-
-  // Add a LE peer that always fails to connect.
-  // TODO(BT-229): Allow this to be created programmatically by
-  // clients of this driver.
-  peer = std::make_unique<FakePeer>(kAddress2, true, true);
-  peer->SetAdvertisingData(kAdvData0);
-  peer->set_connect_response(bt::hci::StatusCode::kConnectionTimeout);
-  fake_device_->AddPeer(std::move(peer));
-
   fake_device_->SetAdvertisingStateCallback(
       fit::bind_member(this, &Device::OnLegacyAdvertisingStateChanged), loop_.dispatcher());
 

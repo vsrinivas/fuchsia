@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error, Fail, ResultExt},
+    failure::{err_msg, format_err, Error, Fail, ResultExt},
+    fidl_fuchsia_bluetooth_test::{
+        AdvertisingData, HciEmulatorProxy, LowEnergyPeerParameters, PeerProxy,
+    },
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_bluetooth::{error::Error as BTError, expectation::asynchronous::ExpectableStateExt},
+    fuchsia_bluetooth::{
+        error::Error as BTError, expectation::asynchronous::ExpectableStateExt, types::Address,
+    },
     fuchsia_zircon::{Duration, DurationNum},
     futures::TryFutureExt,
 };
@@ -60,9 +65,31 @@ fn scan_timeout() -> Duration {
     10.seconds()
 }
 
+async fn add_fake_le_peer(proxy: &HciEmulatorProxy, address: &Address) -> Result<PeerProxy, Error> {
+    let (local, remote) = fidl::endpoints::create_proxy()?;
+    let params = LowEnergyPeerParameters {
+        address: Some(address.clone().into()),
+        connectable: Some(true),
+        advertisement: Some(AdvertisingData {
+            data: vec![
+                0x02, 0x01, 0x02, // Flags field set to "general discoverable"
+                0x05, 0x09, 'F' as u8, 'a' as u8, 'k' as u8,
+                'e' as u8, // Complete local name set to "Fake"
+            ],
+        }),
+        scan_response: None,
+    };
+    let _ = proxy
+        .add_low_energy_peer(params, remote)
+        .await?
+        .map_err(|e| format_err!("Failed to register fake peer: {:?}", e))?;
+    Ok(local)
+}
+
 async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
     let status = central
         .aux()
+        .proxy()
         .start_scan(None)
         .map_err(|e| e.context("FIDL error sending command").into())
         .on_timeout(scan_timeout().after_now(), move || Err(err_msg("Timed out")))
@@ -75,6 +102,9 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
 }
 
 async fn test_enable_scan(central: CentralHarness) -> Result<(), Error> {
+    let emulator = central.aux().emulator().clone();
+    let address = Address::Random([1, 0, 0, 0, 0, 0]);
+    let _peer = add_fake_le_peer(&emulator, &address).await?;
     start_scan(&central).await?;
     let _ = central
         .when_satisfied(
@@ -88,7 +118,7 @@ async fn test_enable_scan(central: CentralHarness) -> Result<(), Error> {
 async fn test_enable_and_disable_scan(central: CentralHarness) -> Result<(), Error> {
     start_scan(&central).await?;
     let _ = central.when_satisfied(central_expectation::scan_enabled(), scan_timeout()).await?;
-    let _ = central.aux().stop_scan()?;
+    let _ = central.aux().proxy().stop_scan()?;
     let _ = central.when_satisfied(central_expectation::scan_disabled(), scan_timeout()).await?;
     Ok(())
 }
