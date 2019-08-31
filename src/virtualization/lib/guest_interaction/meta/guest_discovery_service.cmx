@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.virtualization.Manager",
+            "fuchsia.virtualization.Realm",
+            "fuchsia.logger.LogSink",
+            "fuchsia.netemul.guest.GuestInteractionService",
+            "fuchsia.netemul.network.Endpoint"
+        ]
+    }
+}

@@ -3,18 +3,13 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/net/stack/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/component/cpp/environment_services_helper.h>
-#include <lib/component/cpp/testing/test_util.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fzl/fdio.h>
 #include <lib/sys/cpp/file_descriptor.h>
-#include <lib/sys/cpp/testing/enclosing_environment.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
-#include <unistd.h>
+#include <threads.h>
 
 #include <map>
 
@@ -28,28 +23,9 @@
 #include "src/virtualization/lib/grpc/fdio_util.h"
 #include "src/virtualization/lib/guest_interaction/client/client_impl.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
+#include "src/virtualization/lib/guest_interaction/test/integration_test_lib.h"
 
 static constexpr size_t kBufferSize = 100;
-
-static constexpr char kGuestLabel[] = "debian_guest";
-static constexpr char kGuestManagerUrl[] =
-    "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
-static constexpr char kDebianGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
-
-// The host will copy kTestScriptSource to kGuestScriptDestination on the
-// guest.  The host will then ask the guest to exec kGuestScriptDestination
-// and feed kTestScriptInput to the guest process's stdin.  The script will
-// will echo kTestStdout to stdout, kTestStderr to stderr, and kTestScriptInput
-// to  kGuestFileOutputLocation.  The host will
-// download the file to kHostOuputCopyLocation.
-static constexpr char kTestScriptSource[] = "/pkg/data/test_script.sh";
-static constexpr char kGuestScriptDestination[] = "/root/input/test_script.sh";
-static constexpr char kTestStdout[] = "stdout";
-static constexpr char kTestStderr[] = "stderr";
-static constexpr char kTestScriptInput[] = "hello world\n";
-static constexpr char kGuestFileOutputLocation[] = "/root/output/script_output.txt";
-static constexpr char kHostOuputCopyLocation[] = "/data/copy";
 
 std::string drain_socket(zx::socket socket) {
   std::string out_string;
@@ -70,65 +46,11 @@ std::string drain_socket(zx::socket socket) {
   return out_string;
 }
 
-class GuestInteractionTest : public sys::testing::TestWithEnvironment {
- public:
-  void CreateEnvironment() {
-    ASSERT_TRUE(services_ && !env_);
-
-    env_ = CreateNewEnclosingEnvironment("GuestInteractionEnvironment", std::move(services_));
-  }
-
-  void LaunchDebianGuest() {
-    // Launch the Debian guest
-    fuchsia::virtualization::LaunchInfo guest_launch_info;
-    guest_launch_info.url = kDebianGuestUrl;
-    guest_launch_info.args.emplace({"--virtio-gpu=false", "--virtio-net=true"});
-
-    fuchsia::virtualization::ManagerPtr guest_environment_manager;
-    fuchsia::virtualization::GuestPtr guest_instance_controller;
-    cid_ = -1;
-
-    env_->ConnectToService(guest_environment_manager.NewRequest());
-    guest_environment_manager->Create(kGuestLabel, realm_.NewRequest());
-    realm_->LaunchInstance(std::move(guest_launch_info), guest_instance_controller.NewRequest(),
-                           [&](uint32_t callback_cid) { cid_ = callback_cid; });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return cid_ >= 0; }, zx::sec(5)));
-
-    // Start a GuestConsole.  When the console starts, it waits until it
-    // receives some sensible output from the guest to ensure that the guest is
-    // usable.
-    zx::socket socket;
-    guest_instance_controller->GetSerial([&socket](zx::socket s) { socket = std::move(s); });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&socket] { return socket.is_valid(); }, zx::sec(30)));
-
-    GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
-    zx_status_t status = serial.Start();
-    ASSERT_TRUE(status == ZX_OK);
-  }
-
-  uint32_t cid_;
-  fuchsia::virtualization::RealmPtr realm_;
-  std::unique_ptr<sys::testing::EnvironmentServices> services_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
-  MockNetstack mock_netstack_;
-
- protected:
-  void SetUp() {
-    services_ = CreateServices();
-
-    // Add Netstack services
-    services_->AddService(mock_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
-    services_->AddService(mock_netstack_.GetHandler(), fuchsia::net::stack::Stack::Name_);
-
-    // Add guest service
-    fuchsia::sys::LaunchInfo guest_manager_launch_info;
-    guest_manager_launch_info.url = kGuestManagerUrl;
-    guest_manager_launch_info.out = sys::CloneFileDescriptor(1);
-    guest_manager_launch_info.err = sys::CloneFileDescriptor(2);
-    services_->AddServiceWithLaunchInfo(std::move(guest_manager_launch_info),
-                                        fuchsia::virtualization::Manager::Name_);
-  }
-};
+static int run_grpc_client(void* client_to_run) {
+  ClientImpl<PosixPlatform>* client_impl = (ClientImpl<PosixPlatform>*)client_to_run;
+  client_impl->Run();
+  return 0;
+}
 
 TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   CreateEnvironment();
@@ -157,13 +79,13 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   zx_status_t open_status = fdio_open(kTestScriptSource, ZX_FS_RIGHT_READABLE, put_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 
-  OperationStatus transfer_status = OperationStatus::OK;
-  client.Put(std::move(put_remote), kGuestScriptDestination, [&](OperationStatus put_result) {
+  zx_status_t transfer_status = ZX_ERR_IO;
+  client.Put(std::move(put_remote), kGuestScriptDestination, [&](zx_status_t put_result) {
     transfer_status = put_result;
     client.Stop();
   });
   client.Run();
-  ASSERT_EQ(transfer_status, OperationStatus::OK);
+  ASSERT_EQ(transfer_status, ZX_OK);
 
   // Run the bash script in the guest.  The script will write to stdout and
   // stderr.  The script will also block waiting to receive input from stdin.
@@ -181,17 +103,6 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   uint32_t bytes_written = 0;
   int32_t stdin_fd = ConvertSocketToNonBlockingFd(std::move(stdin_writer));
 
-  while (bytes_written < to_write.size()) {
-    size_t curr_bytes_written =
-        write(stdin_fd, &(to_write.c_str()[bytes_written]), to_write.size() - bytes_written);
-    if (curr_bytes_written < 0) {
-      break;
-    }
-
-    bytes_written += curr_bytes_written;
-  }
-  close(stdin_fd);
-
   // Run the bash script on the guest.
   std::string command = "/bin/sh ";
   command.append(kGuestScriptDestination);
@@ -199,24 +110,59 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
                                               {"STDERR_STRING", kTestStderr}};
   std::string std_out;
   std::string std_err;
-  OperationStatus exec_status = OperationStatus::OK;
+  zx_status_t exec_started_status = ZX_ERR_PEER_CLOSED;
+  zx_status_t exec_terminated_status = ZX_ERR_PEER_CLOSED;
+  bool exec_started = false;
+  bool exec_terminated = false;
   int32_t ret_code = -1;
+
+  fuchsia::netemul::guest::CommandListenerPtr listener;
+  listener.events().OnStarted = [&](zx_status_t status) {
+    exec_started_status = status;
+    if (status == ZX_OK) {
+      while (bytes_written < to_write.size()) {
+        size_t curr_bytes_written =
+            write(stdin_fd, &(to_write.c_str()[bytes_written]), to_write.size() - bytes_written);
+        if (curr_bytes_written < 0) {
+          break;
+        }
+
+        bytes_written += curr_bytes_written;
+      }
+    }
+    client.Stop();
+    close(stdin_fd);
+    exec_started = true;
+  };
+  listener.events().OnTerminated = [&](zx_status_t exec_result, int32_t exit_code) {
+    exec_terminated_status = exec_result;
+    ret_code = exit_code;
+
+    std_out = drain_socket(std::move(stdout_reader));
+    std_err = drain_socket(std::move(stderr_reader));
+    client.Stop();
+    exec_terminated = true;
+  };
+
   client.Exec(command, env_vars, std::move(stdin_reader), std::move(stdout_writer),
-              std::move(stderr_writer), [&](OperationStatus exec_result, int32_t exit_code) {
-                exec_status = exec_result;
-                ret_code = exit_code;
+              std::move(stderr_writer), listener.NewRequest());
 
-                std_out = drain_socket(std::move(stdout_reader));
-                std_err = drain_socket(std::move(stderr_reader));
+  // Ensure that the process started cleanly.
+  thrd_t client_run_thread;
+  thrd_create_with_name(&client_run_thread, run_grpc_client, &client, "gRPC run");
+  RunLoopUntil([&exec_started] { return exec_started; });
+  int32_t thread_ret_code;
+  thrd_join(client_run_thread, &thread_ret_code);
 
-                client.Stop();
-              });
-
-  client.Run();
+  ASSERT_EQ(exec_started_status, ZX_OK);
 
   // Ensure the gRPC operation completed successfully and validate the stdout
   // and stderr.
-  ASSERT_EQ(exec_status, OperationStatus::OK);
+  thrd_create_with_name(&client_run_thread, run_grpc_client, &client, "gRPC run");
+  RunLoopUntil([&exec_terminated] { return exec_terminated; });
+  thrd_join(client_run_thread, &thread_ret_code);
+
+  ASSERT_EQ(exec_terminated_status, ZX_OK);
   ASSERT_EQ(fxl::TrimString(std_out, "\n"), fxl::StringView(kTestStdout));
   ASSERT_EQ(fxl::TrimString(std_err, "\n"), fxl::StringView(kTestStderr));
 
@@ -229,13 +175,13 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
                           get_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 
-  transfer_status = OperationStatus::OK;
-  client.Get(kGuestFileOutputLocation, std::move(get_remote), [&](OperationStatus get_result) {
+  transfer_status = ZX_ERR_IO;
+  client.Get(kGuestFileOutputLocation, std::move(get_remote), [&](zx_status_t get_result) {
     transfer_status = get_result;
     client.Stop();
   });
   client.Run();
-  ASSERT_EQ(transfer_status, OperationStatus::OK);
+  ASSERT_EQ(transfer_status, ZX_OK);
 
   // Verify the contents that were communicated through stdin.
   std::string output_string;
@@ -282,7 +228,7 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   std::string file_contents;
   for (int i = 0; i < 2 * CHUNK_SIZE; i++) {
-    file_contents.push_back(i % (('z' - 'A') + 'A'));
+    file_contents.push_back(i % ('z' - 'A') + 'A');
   }
   fbl::unique_fd fd = fbl::unique_fd(open(test_file, O_WRONLY | O_TRUNC | O_CREAT));
   uint32_t bytes_written = 0;
@@ -299,13 +245,13 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   zx_status_t open_status = fdio_open(test_file, ZX_FS_RIGHT_READABLE, put_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 
-  OperationStatus transfer_status = OperationStatus::OK;
-  client.Put(std::move(put_remote), guest_destination, [&](OperationStatus put_result) {
+  zx_status_t transfer_status = ZX_ERR_IO;
+  client.Put(std::move(put_remote), guest_destination, [&](zx_status_t put_result) {
     transfer_status = put_result;
     client.Stop();
   });
   client.Run();
-  ASSERT_EQ(transfer_status, OperationStatus::OK);
+  ASSERT_EQ(transfer_status, ZX_OK);
 
   // Copy back the file that was sent to the guest.
   zx::channel get_local, get_remote;
@@ -315,8 +261,8 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
                           get_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 
-  transfer_status = OperationStatus::OK;
-  client.Get(guest_destination, std::move(get_remote), [&](OperationStatus get_result) {
+  transfer_status = ZX_ERR_IO;
+  client.Get(guest_destination, std::move(get_remote), [&](zx_status_t get_result) {
     transfer_status = get_result;
     client.Stop();
   });

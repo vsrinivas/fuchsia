@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_TEST_LIB_H_
-#define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_TEST_LIB_H_
+#ifndef SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_OPERATION_TEST_LIB_H_
+#define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_OPERATION_TEST_LIB_H_
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -55,6 +56,8 @@ class AsyncEndToEndTest : public testing::TestWithParam<TestScenario> {
 
   void SetUp() override {
     client_cq_ = std::make_unique<grpc::CompletionQueue>();
+    ASSERT_EQ(loop_.ResetQuit(), ZX_OK);
+    ASSERT_EQ(loop_.StartThread(), ZX_OK);
 
     // Setup server
     BuildAndStartServer();
@@ -73,6 +76,8 @@ class AsyncEndToEndTest : public testing::TestWithParam<TestScenario> {
       ;
 
     stub_.reset();
+    loop_.Quit();
+    loop_.JoinThreads();
   }
 
   void BuildAndStartServer() {
@@ -89,11 +94,23 @@ class AsyncEndToEndTest : public testing::TestWithParam<TestScenario> {
     stub_ = GuestInteractionService::NewStub(channel);
   }
 
+  void WaitForCallback(zx_status_t* returned_status, zx_status_t desired_status) {
+    for (uint32_t i = 0; i < callback_wait_time_; i++) {
+      if (*returned_status == desired_status) {
+        break;
+      }
+      sleep(1);
+    }
+    ASSERT_EQ(*returned_status, desired_status);
+  }
+
   std::unique_ptr<grpc::ServerCompletionQueue> server_cq_;
   std::unique_ptr<grpc::CompletionQueue> client_cq_;
   std::unique_ptr<GuestInteractionService::Stub> stub_;
   std::unique_ptr<grpc::Server> server_;
   std::unique_ptr<GuestInteractionService::AsyncService> service_;
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigAttachToThread);
+  uint32_t callback_wait_time_ = 5;  // Number of seconds to wait for Exec fidl responses to run.
 };
 
-#endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_TEST_LIB_H_
+#endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_OPERATION_TEST_LIB_H_

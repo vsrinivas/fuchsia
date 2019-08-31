@@ -1,0 +1,58 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.netemul.guest;
+
+using fuchsia.io;
+using zx;
+
+const uint32 GUEST_INTERACTION_MAX_LENGTH = 1024;
+const string DEFAULT_REALM = "gis_default";
+
+/// Enables discovery of guest VM's for control in tests.
+[Discoverable]
+protocol GuestDiscovery {
+    /// Finds the guest VM specified by realm name/guest name pair and connects to it to enable
+    /// file transfers and execution of commands.  If `realm_name` is null, `DEFAULT_REALM` is
+    /// used instead.
+    GetGuest(string:GUEST_INTERACTION_MAX_LENGTH? realm_name,
+             string:GUEST_INTERACTION_MAX_LENGTH guest_name,
+             request<GuestInteraction> guest);
+};
+
+/// Represents a key/value pair to be injected into an environment where a command is executed.
+struct EnvironmentVariable {
+    string:GUEST_INTERACTION_MAX_LENGTH key;
+    string:GUEST_INTERACTION_MAX_LENGTH value;
+};
+
+protocol CommandListener {
+    /// Signal to a client that is attempting to exec inside of a guest whether
+    /// or not the subprocess was successfully started.
+    -> OnStarted(zx.status status);
+
+    /// Signal to a client that the Exec request has completed.
+    -> OnTerminated(zx.status status, int32 return_code);
+};
+
+protocol GuestInteraction {
+    /// Take a local file from the Fuchsia host and transfer it to a destination
+    /// location on the guest under test.
+    PutFile(fuchsia.io.File local_file, string:GUEST_INTERACTION_MAX_LENGTH remote_path)
+        -> (zx.status status);
+
+    /// Pull a file from the guest under test and copy it to the specified
+    /// location on the Fuchsia host.
+    GetFile(string:GUEST_INTERACTION_MAX_LENGTH remote_path, fuchsia.io.File local_file)
+        -> (zx.status status);
+
+    /// Execute command on the guest under test and return the resulting output,
+    /// error, and return code.
+    ExecuteCommand(string:GUEST_INTERACTION_MAX_LENGTH command,
+                   vector<EnvironmentVariable>:GUEST_INTERACTION_MAX_LENGTH env,
+                   handle<socket>? stdin,
+                   handle<socket>? stdout,
+                   handle<socket>? stderr,
+                   request<CommandListener> command_listener);
+};

@@ -22,7 +22,8 @@ class ClientImpl {
   void Get(const std::string& source, zx::channel channel, TransferCallback callback);
   void Put(zx::channel source_channel, const std::string& destination, TransferCallback callback);
   void Exec(const std::string& command, const std::map<std::string, std::string>& env_vars,
-            zx::socket std_in, zx::socket std_out, zx::socket std_err, ExecCallback callback);
+            zx::socket std_in, zx::socket std_out, zx::socket std_err,
+            fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> listener);
   void Run();
   void Stop();
 
@@ -95,14 +96,17 @@ void ClientImpl<T>::Put(zx::channel source_channel, const std::string& destinati
 template <class T>
 void ClientImpl<T>::Exec(const std::string& command,
                          const std::map<std::string, std::string>& env_vars, zx::socket std_in,
-                         zx::socket std_out, zx::socket std_err, ExecCallback callback) {
+                         zx::socket std_out, zx::socket std_err,
+                         fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> req) {
   // Convert the provided zx::sockets into FD's.
   int32_t stdin_fd = ConvertSocketToNonBlockingFd(std::move(std_in));
   int32_t stdout_fd = ConvertSocketToNonBlockingFd(std::move(std_out));
   int32_t stderr_fd = ConvertSocketToNonBlockingFd(std::move(std_err));
 
+  std::unique_ptr<ListenerInterface> listener = std::make_unique<ListenerInterface>(std::move(req));
+
   ExecCallData<T>* call_data =
-      new ExecCallData<T>(command, env_vars, stdin_fd, stdout_fd, stderr_fd, std::move(callback));
+      new ExecCallData<T>(command, env_vars, stdin_fd, stdout_fd, stderr_fd, std::move(listener));
   call_data->rw_ = stub_->AsyncExec(call_data->ctx_.get(), &cq_, call_data);
 }
 

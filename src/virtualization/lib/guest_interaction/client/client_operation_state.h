@@ -5,19 +5,52 @@
 #ifndef SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_
 #define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_
 
+#include <lib/fidl/cpp/binding.h>
 #include <zircon/system/ulib/fit/include/lib/fit/function.h>
 
 #include <grpc/support/log.h>
 #include <src/lib/fxl/logging.h>
 
+#include "fuchsia/netemul/guest/cpp/fidl.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/platform_interface/platform_interface.h"
 #include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"
 
 #include <grpc++/grpc++.h>
 
-using ExecCallback = fit::function<void(OperationStatus status, int ret_code)>;
-using TransferCallback = fit::function<void(OperationStatus status)>;
+using TransferCallback = fit::function<void(zx_status_t status)>;
+
+static inline zx_status_t translate_rpc_status(OperationStatus status) {
+  switch (status) {
+    case OperationStatus::OK:
+      return ZX_OK;
+    case OperationStatus::GRPC_FAILURE:
+      return ZX_ERR_PEER_CLOSED;
+    case OperationStatus::CLIENT_MISSING_FILE_FAILURE:
+      return ZX_ERR_NOT_FOUND;
+    case OperationStatus::CLIENT_CREATE_FILE_FAILURE:
+      return ZX_ERR_ACCESS_DENIED;
+    case OperationStatus::CLIENT_FILE_READ_FAILURE:
+      return ZX_ERR_IO;
+    case OperationStatus::CLIENT_FILE_WRITE_FAILURE:
+      return ZX_ERR_IO;
+    case OperationStatus::SERVER_MISSING_FILE_FAILURE:
+      return ZX_ERR_NOT_FOUND;
+    case OperationStatus::SERVER_CREATE_FILE_FAILURE:
+      return ZX_ERR_ACCESS_DENIED;
+    case OperationStatus::SERVER_FILE_READ_FAILURE:
+      return ZX_ERR_IO;
+    case OperationStatus::SERVER_FILE_WRITE_FAILURE:
+      return ZX_ERR_IO;
+    case OperationStatus::SERVER_EXEC_COMMAND_PARSE_FAILURE:
+      return ZX_ERR_INVALID_ARGS;
+    case OperationStatus::SERVER_EXEC_FORK_FAILURE:
+      return ZX_ERR_INTERNAL;
+    default:
+      FXL_LOG(ERROR) << "Unknown gRPC transfer status: " << status;
+      return ZX_ERR_BAD_STATE;
+  }
+}
 
 // Manages the transfer of a file from the guest VM to the Fuchsia host.
 //
@@ -105,9 +138,9 @@ void GetCallData<T>::Proceed(bool ok) {
     case FINISH:
       platform_interface_.CloseFile(fd_);
       if (ok || exit_status_ != OperationStatus::OK) {
-        callback_(exit_status_);
+        callback_(translate_rpc_status(exit_status_));
       } else {
-        callback_(OperationStatus::GRPC_FAILURE);
+        callback_(translate_rpc_status(OperationStatus::GRPC_FAILURE));
       }
       delete this;
       return;
@@ -204,9 +237,24 @@ void PutCallData<T>::Finish() {
   if (fd_ > 0) {
     platform_interface_.CloseFile(fd_);
   }
-  callback_(exit_status_);
+  callback_(translate_rpc_status(exit_status_));
   delete this;
 }
+
+class ListenerInterface : fuchsia::netemul::guest::CommandListener {
+ public:
+  explicit ListenerInterface(fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> req)
+      : binding_(this, std::move(req)) {}
+
+  void OnStarted(zx_status_t status) { binding_.events().OnStarted(status); }
+
+  void OnTerminated(zx_status_t status, int32_t ret_code) {
+    binding_.events().OnTerminated(status, ret_code);
+  }
+
+ private:
+  fidl::Binding<fuchsia::netemul::guest::CommandListener> binding_;
+};
 
 // Pump incoming stdin into the child process managed by the guest service.
 template <class T>
@@ -238,7 +286,7 @@ class ExecReadCallData final : public CallData {
   ExecReadCallData(
       int32_t std_out, int32_t std_err, const std::shared_ptr<grpc::ClientContext>& ctx,
       const std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>>& rw,
-      ExecCallback callback);
+      std::unique_ptr<ListenerInterface> listener);
 
   void Proceed(bool ok) override;
 
@@ -251,7 +299,7 @@ class ExecReadCallData final : public CallData {
   int32_t stderr_;
   std::shared_ptr<grpc::ClientContext> ctx_;
   std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>> reader_;
-  ExecCallback callback_;
+  std::unique_ptr<ListenerInterface> listener_;
   int32_t ret_val_;
 
   ExecResponse response_;
@@ -267,7 +315,8 @@ template <class T>
 class ExecCallData final : public CallData {
  public:
   ExecCallData(const std::string& command, const std::map<std::string, std::string>& env_vars,
-               int32_t std_in, int32_t std_out, int32_t std_err, ExecCallback callback);
+               int32_t std_in, int32_t std_out, int32_t std_err,
+               std::unique_ptr<ListenerInterface> listener);
 
   void Proceed(bool ok) override;
 
@@ -281,7 +330,7 @@ class ExecCallData final : public CallData {
   int32_t stdin_;
   int32_t stdout_;
   int32_t stderr_;
-  ExecCallback callback_;
+  std::unique_ptr<ListenerInterface> listener_;
   std::string command_;
   std::vector<ExecEnv> env_;
 };
@@ -356,12 +405,12 @@ template <class T>
 ExecReadCallData<T>::ExecReadCallData(
     int32_t std_out, int32_t std_err, const std::shared_ptr<grpc::ClientContext>& ctx,
     const std::shared_ptr<grpc::ClientAsyncReaderWriterInterface<ExecRequest, ExecResponse>>& rw,
-    ExecCallback callback)
+    std::unique_ptr<ListenerInterface> listener)
     : stdout_(std_out),
       stderr_(std_err),
       ctx_(ctx),
       reader_(rw),
-      callback_(std::move(callback)),
+      listener_(std::move(listener)),
       ret_val_(0),
       status_(READ) {
   reader_->Read(&response_, this);
@@ -380,7 +429,7 @@ void ExecReadCallData<T>::Proceed(bool ok) {
       operation_status_ = OperationStatus::GRPC_FAILURE;
     }
     Finish();
-    callback_(operation_status_, ret_val_);
+    listener_->OnTerminated(translate_rpc_status(operation_status_), ret_val_);
     delete this;
     return;
   }
@@ -408,12 +457,13 @@ void ExecReadCallData<T>::Finish() {
 template <class T>
 ExecCallData<T>::ExecCallData(const std::string& command,
                               const std::map<std::string, std::string>& env_vars, int32_t std_in,
-                              int32_t std_out, int32_t std_err, ExecCallback callback)
+                              int32_t std_out, int32_t std_err,
+                              std::unique_ptr<ListenerInterface> listener)
     : ctx_(std::make_shared<grpc::ClientContext>()),
       stdin_(std_in),
       stdout_(std_out),
       stderr_(std_err),
-      callback_(std::move(callback)),
+      listener_(std::move(listener)),
       command_(std::move(command)),
       env_(std::move(EnvMapToVector(env_vars))) {}
 
@@ -423,10 +473,14 @@ void ExecCallData<T>::Proceed(bool ok) {
     platform_interface_.CloseFile(stdin_);
     platform_interface_.CloseFile(stdout_);
     platform_interface_.CloseFile(stderr_);
-    callback_(OperationStatus::GRPC_FAILURE, 0);
+
+    listener_->OnStarted(ZX_ERR_INTERNAL);
+    listener_->OnTerminated(translate_rpc_status(OperationStatus::GRPC_FAILURE), 0);
   } else {
-    new ExecWriteCallData<T>(command_, env_, stdin_, ctx_, rw_);
-    new ExecReadCallData<T>(stdout_, stderr_, ctx_, rw_, std::move(callback_));
+    listener_->OnStarted(ZX_OK);
+
+    new ExecWriteCallData<T>(std::move(command_), std::move(env_), stdin_, ctx_, rw_);
+    new ExecReadCallData<T>(stdout_, stderr_, ctx_, rw_, std::move(listener_));
   }
   delete this;
 }

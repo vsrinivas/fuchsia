@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
+
 #include <gtest/gtest.h>
 #include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/lib/guest_interaction/client/client_operation_state.h"
-#include "test_lib.h"
+#include "src/virtualization/lib/guest_interaction/test/operation_test_lib.h"
 
 #include <grpc++/grpc++.h>
 
@@ -34,13 +36,13 @@ TEST_F(AsyncEndToEndTest, GetMissingFile) {
                        server_cq_.get(), this);
 
   // Create components required to perform a client Get request.
-  OperationStatus operation_status = OperationStatus::OK;
+  zx_status_t operation_status = ZX_OK;
   GetRequest get_request;
   get_request.set_source("/some/bogus/path");
 
   uint32_t fake_fd = 0;
   GetCallData<FakePlatform>* client_call_data = new GetCallData<FakePlatform>(
-      fake_fd, [&operation_status](OperationStatus status) { operation_status = status; });
+      fake_fd, [&operation_status](zx_status_t status) { operation_status = status; });
 
   client_call_data->reader_ =
       stub_->AsyncGet(&(client_call_data->ctx_), get_request, client_cq_.get(), client_call_data);
@@ -72,7 +74,7 @@ TEST_F(AsyncEndToEndTest, GetMissingFile) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::SERVER_MISSING_FILE_FAILURE);
+  ASSERT_EQ(operation_status, ZX_ERR_NOT_FOUND);
 }
 
 TEST_F(AsyncEndToEndTest, SmallFile) {
@@ -90,13 +92,13 @@ TEST_F(AsyncEndToEndTest, SmallFile) {
                        server_cq_.get(), this);
 
   // Create components required to perform a client Get request.
-  OperationStatus operation_status = OperationStatus::GRPC_FAILURE;
+  zx_status_t operation_status = ZX_ERR_PEER_CLOSED;
   GetRequest get_request;
   get_request.set_source("/some/small/file");
 
   uint32_t fake_fd = 0;
   GetCallData<FakePlatform>* client_call_data = new GetCallData<FakePlatform>(
-      fake_fd, [&operation_status](OperationStatus status) { operation_status = status; });
+      fake_fd, [&operation_status](zx_status_t status) { operation_status = status; });
   client_call_data->reader_ =
       stub_->AsyncGet(&(client_call_data->ctx_), get_request, client_cq_.get(), client_call_data);
 
@@ -136,7 +138,7 @@ TEST_F(AsyncEndToEndTest, SmallFile) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::OK);
+  ASSERT_EQ(operation_status, ZX_OK);
 }
 
 TEST_F(AsyncEndToEndTest, LargeFile) {
@@ -154,13 +156,13 @@ TEST_F(AsyncEndToEndTest, LargeFile) {
                        server_cq_.get(), this);
 
   // Create components required to perform a client Get request.
-  OperationStatus operation_status = OperationStatus::GRPC_FAILURE;
+  zx_status_t operation_status = ZX_ERR_PEER_CLOSED;
   GetRequest get_request;
   get_request.set_source("/some/small/file");
 
   uint32_t fake_fd = 0;
   GetCallData<FakePlatform>* client_call_data = new GetCallData<FakePlatform>(
-      fake_fd, [&operation_status](OperationStatus status) { operation_status = status; });
+      fake_fd, [&operation_status](zx_status_t status) { operation_status = status; });
   client_call_data->reader_ =
       stub_->AsyncGet(&(client_call_data->ctx_), get_request, client_cq_.get(), client_call_data);
 
@@ -213,7 +215,7 @@ TEST_F(AsyncEndToEndTest, LargeFile) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::OK);
+  ASSERT_EQ(operation_status, ZX_OK);
 }
 
 TEST_F(AsyncEndToEndTest, BrokenWrite) {
@@ -231,13 +233,13 @@ TEST_F(AsyncEndToEndTest, BrokenWrite) {
                        server_cq_.get(), this);
 
   // Create components required to perform a client Get request.
-  OperationStatus operation_status = OperationStatus::GRPC_FAILURE;
+  zx_status_t operation_status = ZX_ERR_PEER_CLOSED;
   GetRequest get_request;
   get_request.set_source("/some/small/file");
 
   uint32_t fake_fd = 0;
   GetCallData<FakePlatform>* client_call_data = new GetCallData<FakePlatform>(
-      fake_fd, [&operation_status](OperationStatus status) { operation_status = status; });
+      fake_fd, [&operation_status](zx_status_t status) { operation_status = status; });
   client_call_data->reader_ =
       stub_->AsyncGet(&(client_call_data->ctx_), get_request, client_cq_.get(), client_call_data);
 
@@ -272,7 +274,7 @@ TEST_F(AsyncEndToEndTest, BrokenWrite) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::CLIENT_FILE_WRITE_FAILURE);
+  ASSERT_EQ(operation_status, ZX_ERR_IO);
 }
 
 TEST_F(AsyncEndToEndTest, GrpcFailure) {
@@ -290,13 +292,13 @@ TEST_F(AsyncEndToEndTest, GrpcFailure) {
                        server_cq_.get(), this);
 
   // Create components required to perform a client Get request.
-  OperationStatus operation_status = OperationStatus::GRPC_FAILURE;
+  zx_status_t operation_status = ZX_OK;
   GetRequest get_request;
   get_request.set_source("/some/small/file");
 
   uint32_t fake_fd = 0;
   GetCallData<FakePlatform>* client_call_data = new GetCallData<FakePlatform>(
-      fake_fd, [&operation_status](OperationStatus status) { operation_status = status; });
+      fake_fd, [&operation_status](zx_status_t status) { operation_status = status; });
   client_call_data->reader_ =
       stub_->AsyncGet(&(client_call_data->ctx_), get_request, client_cq_.get(), client_call_data);
 
@@ -314,7 +316,7 @@ TEST_F(AsyncEndToEndTest, GrpcFailure) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::GRPC_FAILURE);
+  ASSERT_EQ(operation_status, ZX_ERR_PEER_CLOSED);
 }
 
 // Client Put State Machine Test Cases
@@ -331,7 +333,7 @@ TEST_F(AsyncEndToEndTest, PutReadFails) {
   bool cq_status;
 
   // Create a service that can accept incoming Get requests.
-  OperationStatus operation_status;
+  zx_status_t operation_status = ZX_OK;
   grpc::ServerContext srv_ctx;
   grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
 
@@ -341,7 +343,7 @@ TEST_F(AsyncEndToEndTest, PutReadFails) {
   int32_t fake_fd = 0;
   PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
       fake_fd, "/some/dest",
-      [&operation_status](OperationStatus status) { operation_status = status; });
+      [&operation_status](zx_status_t status) { operation_status = status; });
 
   client_call_data->writer_ =
       stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
@@ -378,7 +380,7 @@ TEST_F(AsyncEndToEndTest, PutReadFails) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::CLIENT_FILE_READ_FAILURE);
+  ASSERT_EQ(operation_status, ZX_ERR_IO);
 }
 
 TEST_F(AsyncEndToEndTest, PutOneFragment) {
@@ -388,7 +390,7 @@ TEST_F(AsyncEndToEndTest, PutOneFragment) {
   bool cq_status;
 
   // Create a service that can accept incoming Get requests.
-  OperationStatus operation_status;
+  zx_status_t operation_status = ZX_ERR_IO;
   grpc::ServerContext srv_ctx;
   grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
 
@@ -398,7 +400,7 @@ TEST_F(AsyncEndToEndTest, PutOneFragment) {
   int32_t fake_fd = 0;
   PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
       fake_fd, "/some/dest",
-      [&operation_status](OperationStatus status) { operation_status = status; });
+      [&operation_status](zx_status_t status) { operation_status = status; });
 
   client_call_data->writer_ =
       stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
@@ -445,7 +447,7 @@ TEST_F(AsyncEndToEndTest, PutOneFragment) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::OK);
+  ASSERT_EQ(operation_status, ZX_OK);
 }
 
 TEST_F(AsyncEndToEndTest, PutMultipleFragments) {
@@ -455,7 +457,7 @@ TEST_F(AsyncEndToEndTest, PutMultipleFragments) {
   bool cq_status;
 
   // Create a service that can accept incoming Get requests.
-  OperationStatus operation_status;
+  zx_status_t operation_status = ZX_ERR_IO;
   grpc::ServerContext srv_ctx;
   grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
 
@@ -465,7 +467,7 @@ TEST_F(AsyncEndToEndTest, PutMultipleFragments) {
   int32_t fake_fd = 0;
   PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
       fake_fd, "/some/dest",
-      [&operation_status](OperationStatus status) { operation_status = status; });
+      [&operation_status](zx_status_t status) { operation_status = status; });
 
   client_call_data->writer_ =
       stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
@@ -522,7 +524,7 @@ TEST_F(AsyncEndToEndTest, PutMultipleFragments) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::OK);
+  ASSERT_EQ(operation_status, ZX_OK);
 }
 
 TEST_F(AsyncEndToEndTest, PutGrpcFailure) {
@@ -532,7 +534,7 @@ TEST_F(AsyncEndToEndTest, PutGrpcFailure) {
   bool cq_status;
 
   // Create a service that can accept incoming Get requests.
-  OperationStatus operation_status;
+  zx_status_t operation_status = ZX_OK;
   grpc::ServerContext srv_ctx;
   grpc::ServerAsyncReader<PutResponse, PutRequest> request_reader(&srv_ctx);
 
@@ -542,7 +544,7 @@ TEST_F(AsyncEndToEndTest, PutGrpcFailure) {
   int32_t fake_fd = 0;
   PutCallData<FakePlatform>* client_call_data = new PutCallData<FakePlatform>(
       fake_fd, "/some/dest",
-      [&operation_status](OperationStatus status) { operation_status = status; });
+      [&operation_status](zx_status_t status) { operation_status = status; });
 
   client_call_data->writer_ =
       stub_->AsyncPut(&(client_call_data->ctx_), &(client_call_data->response_), client_cq_.get(),
@@ -572,7 +574,7 @@ TEST_F(AsyncEndToEndTest, PutGrpcFailure) {
   client_call_data->Proceed(false);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::GRPC_FAILURE);
+  ASSERT_EQ(operation_status, ZX_ERR_PEER_CLOSED);
 }
 
 // Client Exec State Machine Tests
@@ -589,22 +591,24 @@ TEST_F(AsyncEndToEndTest, Client_Exec_ImmediateFailure) {
   bool cq_status;
 
   // Create a service that can accept incoming Exec requests.
-  OperationStatus operation_status;
-  int32_t return_code;
+  zx_status_t operation_status = ZX_OK;
   grpc::ServerContext srv_ctx;
   grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest> rw(&srv_ctx);
 
   service_->RequestExec(&srv_ctx, &rw, server_cq_.get(), server_cq_.get(), this);
 
+  fuchsia::netemul::guest::CommandListenerPtr listener;
+  listener.events().OnStarted = [&operation_status](zx_status_t status) {
+    operation_status = status;
+  };
+  std::unique_ptr<ListenerInterface> listener_interface =
+      std::make_unique<ListenerInterface>(listener.NewRequest());
+
   // Create components required to perform a client Exec request.
   std::string test_argv = "echo hello";
   std::map<std::string, std::string> empty_env;
-  ExecCallData<FakePlatform>* client_call_data = new ExecCallData<FakePlatform>(
-      test_argv, empty_env, 0, 1, 2,
-      [&operation_status, &return_code](OperationStatus status, int32_t ret_code) {
-        operation_status = status;
-        return_code = ret_code;
-      });
+  ExecCallData<FakePlatform>* client_call_data =
+      new ExecCallData<FakePlatform>(test_argv, empty_env, 0, 1, 2, std::move(listener_interface));
   client_call_data->rw_ =
       stub_->AsyncExec(client_call_data->ctx_.get(), client_cq_.get(), client_call_data);
 
@@ -616,7 +620,7 @@ TEST_F(AsyncEndToEndTest, Client_Exec_ImmediateFailure) {
   client_call_data->Proceed(false);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::GRPC_FAILURE);
+  WaitForCallback(&operation_status, ZX_ERR_INTERNAL);
 }
 
 TEST_F(AsyncEndToEndTest, Client_ExecWrite_Test) {
@@ -690,8 +694,17 @@ TEST_F(AsyncEndToEndTest, Client_ExecRead_Test) {
   bool cq_status;
 
   // Create a service that can accept incoming Exec requests.
-  OperationStatus operation_status;
+  zx_status_t operation_status = ZX_ERR_PEER_CLOSED;
   int32_t return_code;
+  fuchsia::netemul::guest::CommandListenerPtr listener;
+  listener.events().OnTerminated = [&operation_status, &return_code](zx_status_t status,
+                                                                     int32_t ret_code) {
+    operation_status = status;
+    return_code = ret_code;
+  };
+  std::unique_ptr<ListenerInterface> listener_interface =
+      std::make_unique<ListenerInterface>(listener.NewRequest());
+
   grpc::ServerContext srv_ctx;
   std::shared_ptr<grpc::ClientContext> cli_ctx = std::make_shared<grpc::ClientContext>();
   grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest> srv_rw(&srv_ctx);
@@ -707,12 +720,8 @@ TEST_F(AsyncEndToEndTest, Client_ExecRead_Test) {
   // normally be handled by the top-level ExecCallData.
   client_cq_->Next(&tag, &cq_status);
 
-  client_call_data = new ExecReadCallData<FakePlatform>(
-      0, 0, cli_ctx, cli_rw,
-      [&operation_status, &return_code](OperationStatus status, int32_t ret_code) {
-        operation_status = status;
-        return_code = ret_code;
-      });
+  client_call_data =
+      new ExecReadCallData<FakePlatform>(0, 0, cli_ctx, cli_rw, std::move(listener_interface));
 
   // Server should get the new stub request and immediately finish.
   server_cq_->Next(&tag, &cq_status);
@@ -739,6 +748,6 @@ TEST_F(AsyncEndToEndTest, Client_ExecRead_Test) {
   client_call_data->Proceed(cq_status);
 
   // The client sets the operation status in the callback.
-  ASSERT_EQ(operation_status, OperationStatus::OK);
+  WaitForCallback(&operation_status, ZX_OK);
   ASSERT_EQ(return_code, ret_code);
 }

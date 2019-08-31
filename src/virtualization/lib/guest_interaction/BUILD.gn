@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -12,6 +13,7 @@ import("//third_party/protobuf/proto_library.gni")
 group("tests") {
   testonly = true
   deps = [
+    ":guest_discovery_service",
     ":guest_interaction_tests",
   ]
 }
@@ -20,6 +22,7 @@ group("guest_interaction") {
   testonly = true
   deps = [
     ":debian_guest_interaction_daemon",
+    ":guest_discovery_service",
   ]
 }
 
@@ -87,16 +90,37 @@ source_set("server_lib") {
   ]
 }
 
-source_set("test_lib") {
+source_set("operation_test_lib") {
   testonly = true
   sources = [
-    "test/test_lib.h",
+    "test/operation_test_lib.h",
   ]
   deps = [
     ":proto",
     "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("integration_test_lib") {
+  testonly = true
+  sources = [
+    "test/operation_test_lib.h",
+  ]
+  deps = [
+    ":proto",
+    "//garnet/public/lib/component/cpp/testing",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp/testing:enclosing_environment",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/virtualization/tests:guest_console",
+    "//src/virtualization/tests:mock_netstack",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/public/fidl/fuchsia-net-stack",
   ]
 }
 
@@ -107,13 +131,15 @@ executable("client_operation_test") {
   ]
   deps = [
     ":client_lib",
+    ":fuchsia.netemul.guest",
+    ":operation_test_lib",
     ":proto",
-    ":test_lib",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/virtualization/lib/grpc:grpc",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
@@ -123,18 +149,20 @@ executable("server_operation_test") {
     "test/server_operation_test.cc",
   ]
   deps = [
+    ":operation_test_lib",
     ":proto",
     ":server_lib",
-    ":test_lib",
     "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 }
 
 test_package("guest_interaction_tests") {
   deps = [
     ":client_operation_test",
+    ":guest_interaction_service_test",
     ":server_daemon_test",
     ":server_operation_test",
   ]
@@ -157,6 +185,10 @@ test_package("guest_interaction_tests") {
     },
     {
       name = "server_daemon_test"
+      environments = [ nuc_env ]
+    },
+    {
+      name = "guest_interaction_service_test"
       environments = [ nuc_env ]
     },
   ]
@@ -186,6 +218,8 @@ executable("server_daemon_test") {
 
   deps = [
     ":common",
+    ":fuchsia.netemul.guest",
+    ":integration_test_lib",
     ":platform_interface_posix",
     ":proto",
     "//garnet/public/lib/component/cpp/testing",
@@ -199,9 +233,97 @@ executable("server_daemon_test") {
     "//src/virtualization/tests:mock_netstack",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
-    "//zircon/system/fidl/fuchsia-net",
-    "//zircon/system/fidl/fuchsia-net-stack",
+    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/public/fidl/fuchsia-net-stack",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+fidl("fuchsia.netemul.guest") {
+  sdk_category = "internal"
+  sources = [
+    "fidl/fuchsia.netemul.guest_interaction.fidl",
+  ]
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-io",
+  ]
+}
+
+executable("guest_discovery_service_bin") {
+  output_name = "guest_discovery_service"
+
+  sources = [
+    "client/client_impl.h",
+    "client/guest_discovery_service.cc",
+    "client/guest_discovery_service.h",
+    "client/guest_discovery_service_main.cc",
+    "client/guest_interaction_service.cc",
+    "client/guest_interaction_service.h",
+  ]
+
+  deps = [
+    ":client_lib",
+    ":common",
+    ":fuchsia.netemul.guest",
+    ":platform_interface_posix",
+    ":proto",
+    "//garnet/public/lib/async_promise:async_promise",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp",
+    "//src/virtualization/lib/grpc:grpc",
+    "//third_party/grpc:grpc++",
+    "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+  ]
+
+  # Enables thrd_create_with_name in <threads.h>.
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+package("guest_discovery_service") {
+  deps = [
+    ":guest_discovery_service_bin",
+  ]
+
+  binary = "guest_discovery_service"
+
+  meta = [
+    {
+      path = rebase_path("meta/guest_discovery_service.cmx")
+      dest = "guest_discovery_service.cmx"
+    },
+  ]
+}
+
+executable("guest_interaction_service_test") {
+  testonly = true
+
+  sources = [
+    "test/service_integration_test.cc",
+  ]
+
+  deps = [
+    ":common",
+    ":fuchsia.netemul.guest",
+    ":integration_test_lib",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp/testing:enclosing_environment",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_full",
+    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/public/fidl/fuchsia-net-stack",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
   ]

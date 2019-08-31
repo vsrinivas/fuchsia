@@ -7,7 +7,7 @@
 #include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/lib/guest_interaction/server/server_operation_state.h"
-#include "test_lib.h"
+#include "src/virtualization/lib/guest_interaction/test/operation_test_lib.h"
 
 #include <grpc++/grpc++.h>
 
