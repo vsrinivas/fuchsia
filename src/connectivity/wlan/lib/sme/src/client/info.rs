@@ -10,12 +10,17 @@ use {
         sink::InfoSink,
         Ssid,
     },
+    derivative::Derivative,
     failure::Fail,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     log::warn,
     std::collections::{HashMap, VecDeque},
     wlan_common::bss::{get_channel_map, get_phy_standard_map, Standard},
+    wlan_rsn::{
+        key::exchange::Key,
+        rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
+    },
 };
 
 #[derive(Debug, PartialEq)]
@@ -85,7 +90,8 @@ pub struct DiscoveryStats {
     pub num_bss_by_channel: HashMap<u8, usize>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Derivative)]
+#[derivative(Debug, PartialEq)]
 pub struct ConnectStats {
     pub connect_start_at: zx::Time,
     pub connect_end_at: zx::Time,
@@ -105,7 +111,16 @@ pub struct ConnectStats {
     pub result: ConnectResult,
     pub candidate_network: Option<fidl_mlme::BssDescription>,
 
-    /// Number of consecutive connection attempts that have been made to the same SSID
+    /// Possible detailed error from supplicant. May be downcast to wlan_rsn::Error.
+    #[derivative(PartialEq(compare_with = "cmp_supplicant_error"))]
+    pub supplicant_error: Option<failure::Error>,
+    pub supplicant_progress: Option<SupplicantProgress>,
+
+    /// Total number of times timeout triggers during all RSNA key frame exchanges for this
+    /// connection.
+    pub num_rsna_key_frame_exchange_timeout: u32,
+
+    /// Number of consecutive connection attempts that have been made to the same SSID.
     pub attempts: u32,
     /// Failures seen trying to connect the same SSID. Only up to ten failures are tracked. If
     /// the latest connection result is a failure, it's also included in this list.
@@ -122,6 +137,14 @@ pub struct ConnectStats {
     /// Intended to be used for client to compute time it takes from when user last
     /// disconnects to when client is reconnected.
     pub previous_disconnect_info: Option<PreviousDisconnectInfo>,
+}
+
+fn cmp_supplicant_error(left: &Option<failure::Error>, right: &Option<failure::Error>) -> bool {
+    match (left, right) {
+        (Some(e1), Some(e2)) => format!("{:?}", e1) == format!("{:?}", e2),
+        (None, None) => true,
+        _ => false,
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -382,6 +405,18 @@ impl InfoReporter {
         warn_if_err!(self.stats_collector.report_rsna_established());
     }
 
+    pub fn report_key_exchange_timeout(&mut self) {
+        warn_if_err!(self.stats_collector.report_key_exchange_timeout());
+    }
+
+    pub fn report_supplicant_updates(&mut self, update_sink: &UpdateSink) {
+        warn_if_err!(self.stats_collector.report_supplicant_updates(update_sink));
+    }
+
+    pub fn report_supplicant_error(&mut self, error: failure::Error) {
+        warn_if_err!(self.stats_collector.report_supplicant_error(error));
+    }
+
     pub fn report_connect_finished(&mut self, result: ConnectResult) {
         self.info_sink.send(InfoEvent::ConnectFinished { result: result.clone() });
         let stats = self.stats_collector.report_connect_finished(result);
@@ -547,6 +582,45 @@ impl StatsCollector {
         Ok(())
     }
 
+    /// Report updates derived from the supplicant. Used to record progress of establish RSNA step.
+    pub fn report_supplicant_updates(
+        &mut self,
+        update_sink: &UpdateSink,
+    ) -> Result<(), StatsError> {
+        let supplicant_progress =
+            self.connect_stats()?.supplicant_progress.get_or_insert(SupplicantProgress::default());
+        for update in update_sink {
+            match update {
+                SecAssocUpdate::Status(status) => match status {
+                    SecAssocStatus::PmkSaEstablished => {
+                        supplicant_progress.pmksa_established = true
+                    }
+                    SecAssocStatus::EssSaEstablished => {
+                        supplicant_progress.esssa_established = true
+                    }
+                    _ => (),
+                },
+                SecAssocUpdate::Key(key) => match key {
+                    Key::Ptk(..) => supplicant_progress.ptksa_established = true,
+                    Key::Gtk(..) => supplicant_progress.gtksa_established = true,
+                    _ => (),
+                },
+                _ => (),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn report_supplicant_error(&mut self, error: failure::Error) -> Result<(), StatsError> {
+        self.connect_stats()?.supplicant_error.replace(error);
+        Ok(())
+    }
+
+    pub fn report_key_exchange_timeout(&mut self) -> Result<(), StatsError> {
+        self.connect_stats()?.num_rsna_key_frame_exchange_timeout += 1;
+        Ok(())
+    }
+
     pub fn report_connect_finished(
         &mut self,
         result: ConnectResult,
@@ -598,6 +672,9 @@ impl StatsCollector {
             rsna_end_at: pending_stats.rsna_end_at,
             result,
             candidate_network: pending_stats.candidate_network,
+            supplicant_error: pending_stats.supplicant_error,
+            supplicant_progress: pending_stats.supplicant_progress,
+            num_rsna_key_frame_exchange_timeout: pending_stats.num_rsna_key_frame_exchange_timeout,
             attempts: connect_attempts.attempts,
             last_ten_failures: connect_attempts.last_ten_failures.iter().cloned().collect(),
             previous_disconnect_info,
@@ -681,7 +758,7 @@ impl ConnectAttempts {
                 ConnectFailure::AssociationFailure(..) => {
                     pending_stats.assoc_end_at.replace(now);
                 }
-                ConnectFailure::RsnaTimeout | ConnectFailure::EstablishRsna => {
+                ConnectFailure::EstablishRsna(..) => {
                     pending_stats.rsna_end_at.replace(now);
                 }
                 _ => (),
@@ -717,6 +794,17 @@ pub struct PendingConnectStats {
     rsna_start_at: Option<zx::Time>,
     rsna_end_at: Option<zx::Time>,
     candidate_network: Option<fidl_mlme::BssDescription>,
+    supplicant_error: Option<failure::Error>,
+    supplicant_progress: Option<SupplicantProgress>,
+    num_rsna_key_frame_exchange_timeout: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct SupplicantProgress {
+    pub pmksa_established: bool,
+    pub ptksa_established: bool,
+    pub gtksa_established: bool,
+    pub esssa_established: bool,
 }
 
 impl PendingConnectStats {
@@ -732,6 +820,9 @@ impl PendingConnectStats {
             rsna_start_at: None,
             rsna_end_at: None,
             candidate_network: None,
+            supplicant_error: None,
+            supplicant_progress: None,
+            num_rsna_key_frame_exchange_timeout: 0,
         }
     }
 }
@@ -742,8 +833,9 @@ mod tests {
         super::*,
         crate::client::{
             test_utils::{fake_bss_with_rates, fake_protected_bss_description, fake_scan_request},
-            SelectNetworkFailure,
+            EstablishRsnaFailure, SelectNetworkFailure,
         },
+        failure::format_err,
         maplit::hashmap,
         wlan_common::assert_variant,
     };
@@ -827,6 +919,35 @@ mod tests {
     }
 
     #[test]
+    fn test_connect_stats_establish_rsna_failure() {
+        let mut stats_collector = StatsCollector::default();
+
+        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        // Connecting should complete other steps first before starting establish RSNA step,
+        // but for testing starting with RSNA step right away is sufficient.
+        assert!(stats_collector.report_rsna_started().is_ok());
+        let update_sink = vec![SecAssocUpdate::Status(SecAssocStatus::PmkSaEstablished)];
+        assert!(stats_collector.report_supplicant_updates(&update_sink).is_ok());
+        assert!(stats_collector.report_key_exchange_timeout().is_ok());
+        assert!(stats_collector.report_key_exchange_timeout().is_ok());
+
+        assert!(stats_collector.report_supplicant_error(format_err!("blah")).is_ok());
+        let stats =
+            stats_collector.report_connect_finished(EstablishRsnaFailure::OverallTimeout.into());
+
+        assert_variant!(stats, Ok(stats) => {
+            assert!(stats.supplicant_error.is_some());
+            assert_variant!(stats.supplicant_progress, Some(SupplicantProgress {
+                pmksa_established: true,
+                ptksa_established: false,
+                gtksa_established: false,
+                esssa_established: false,
+            }));
+            assert_eq!(stats.num_rsna_key_frame_exchange_timeout, 2);
+        });
+    }
+
+    #[test]
     fn test_consecutive_connect_attempts_stats() {
         let mut stats_collector = StatsCollector::default();
 
@@ -839,18 +960,18 @@ mod tests {
         });
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let stats = stats_collector
-            .report_connect_finished(ConnectResult::Failed(ConnectFailure::EstablishRsna));
+        let failure2: ConnectFailure = EstablishRsnaFailure::OverallTimeout.into();
+        let stats = stats_collector.report_connect_finished(failure2.clone().into());
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 2);
-            assert_eq!(stats.last_ten_failures, &[failure1.clone(), ConnectFailure::EstablishRsna]);
+            assert_eq!(stats.last_ten_failures, &[failure1.clone(), failure2.clone()]);
         });
 
         assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
         let stats = stats_collector.report_connect_finished(ConnectResult::Success);
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 3);
-            assert_eq!(stats.last_ten_failures, &[failure1.clone(), ConnectFailure::EstablishRsna]);
+            assert_eq!(stats.last_ten_failures, &[failure1.clone(), failure2.clone()]);
         });
 
         // After a successful connection, new connect attempts tracking is reset
@@ -871,11 +992,11 @@ mod tests {
         let _stats = stats_collector.report_connect_finished(failure1.clone().into());
 
         assert!(stats_collector.report_connect_started(b"bar".to_vec()).is_none());
-        let stats = stats_collector
-            .report_connect_finished(ConnectResult::Failed(ConnectFailure::EstablishRsna));
+        let failure2: ConnectFailure = EstablishRsnaFailure::OverallTimeout.into();
+        let stats = stats_collector.report_connect_finished(failure2.clone().into());
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 1);
-            assert_eq!(stats.last_ten_failures, &[ConnectFailure::EstablishRsna]);
+            assert_eq!(stats.last_ten_failures, &[failure2.clone()]);
         });
     }
 

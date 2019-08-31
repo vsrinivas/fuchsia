@@ -598,7 +598,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
                     1,
                 );
             }
-            ConnectFailure::RsnaTimeout | ConnectFailure::EstablishRsna => {
+            ConnectFailure::EstablishRsna(..) => {
                 sender.with_component().log_event_count(
                     metrics::ESTABLISH_RSNA_FAILURE_METRIC_ID,
                     protection_dim as u32,
@@ -882,8 +882,9 @@ mod tests {
             info::{
                 ConnectStats, ConnectionLostInfo, ConnectionMilestone, ConnectionMilestoneInfo,
                 DisconnectCause, PreviousDisconnectInfo, ScanEndStats, ScanResult, ScanStartStats,
+                SupplicantProgress,
             },
-            ConnectFailure, ConnectResult, SelectNetworkFailure,
+            ConnectFailure, ConnectResult, EstablishRsnaFailure, SelectNetworkFailure,
         },
     };
 
@@ -1106,8 +1107,10 @@ mod tests {
 
     #[test]
     fn test_log_connect_stats_establish_rsna_failure() {
-        let connect_stats =
-            ConnectStats { result: ConnectFailure::RsnaTimeout.into(), ..fake_connect_stats() };
+        let connect_stats = ConnectStats {
+            result: EstablishRsnaFailure::OverallTimeout.into(),
+            ..fake_connect_stats()
+        };
         let expected_metrics_subset = hashset! {
             metrics::CONNECTION_RESULT_METRIC_ID,
             metrics::CONNECTION_FAILURE_METRIC_ID,
@@ -1274,6 +1277,14 @@ mod tests {
             assoc_end_at: Some(now),
             rsna_start_at: Some(now),
             rsna_end_at: Some(now),
+            supplicant_error: None,
+            supplicant_progress: Some(SupplicantProgress {
+                pmksa_established: true,
+                ptksa_established: true,
+                gtksa_established: true,
+                esssa_established: true,
+            }),
+            num_rsna_key_frame_exchange_timeout: 0,
             result: ConnectResult::Success,
             candidate_network: Some(fake_bss_description()),
             attempts: 1,

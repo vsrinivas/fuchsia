@@ -9,7 +9,7 @@ use {
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{DisconnectCause, ScanResult},
-        ConnectFailure, ConnectResult, SelectNetworkFailure,
+        ConnectFailure, ConnectResult, EstablishRsnaFailure, SelectNetworkFailure,
     },
 };
 
@@ -57,8 +57,11 @@ pub(super) fn convert_connect_failure(
             }
             AssocCodes::RefusedTemporarily => AssociationRefusedTemporarily,
         },
-        ConnectFailure::RsnaTimeout => RsnaTimeout,
-        ConnectFailure::EstablishRsna => Fail,
+        ConnectFailure::EstablishRsna(rsna_failure) => match rsna_failure {
+            EstablishRsnaFailure::OverallTimeout
+            | EstablishRsnaFailure::KeyFrameExchangeTimeout => RsnaTimeout,
+            _ => Fail,
+        },
     };
 
     Some(result)
@@ -147,7 +150,7 @@ pub(super) fn convert_to_fail_at_dim(
         ConnectFailure::JoinFailure(..) => Join,
         ConnectFailure::AuthenticationFailure(..) => Authentication,
         ConnectFailure::AssociationFailure(..) => Association,
-        ConnectFailure::RsnaTimeout | ConnectFailure::EstablishRsna => EstablishRsna,
+        ConnectFailure::EstablishRsna(..) => EstablishRsna,
     }
 }
 

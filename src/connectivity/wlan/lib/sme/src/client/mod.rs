@@ -109,8 +109,7 @@ pub enum ConnectFailure {
     JoinFailure(fidl_mlme::JoinResultCodes),
     AuthenticationFailure(fidl_mlme::AuthenticateResultCodes),
     AssociationFailure(fidl_mlme::AssociateResultCodes),
-    RsnaTimeout,
-    EstablishRsna,
+    EstablishRsna(EstablishRsnaFailure),
 }
 
 impl ConnectFailure {
@@ -126,7 +125,11 @@ impl ConnectFailure {
                 fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout => true,
                 _ => false,
             },
-            ConnectFailure::RsnaTimeout => true,
+            ConnectFailure::EstablishRsna(failure) => match failure {
+                EstablishRsnaFailure::KeyFrameExchangeTimeout
+                | EstablishRsnaFailure::OverallTimeout => true,
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -143,6 +146,20 @@ pub enum SelectNetworkFailure {
 impl From<SelectNetworkFailure> for ConnectFailure {
     fn from(failure: SelectNetworkFailure) -> Self {
         ConnectFailure::SelectNetwork(failure)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum EstablishRsnaFailure {
+    StartSupplicantFailed,
+    KeyFrameExchangeTimeout,
+    OverallTimeout,
+    InternalError,
+}
+
+impl From<EstablishRsnaFailure> for ConnectFailure {
+    fn from(failure: EstablishRsnaFailure) -> Self {
+        ConnectFailure::EstablishRsna(failure)
     }
 }
 

@@ -421,6 +421,7 @@ pub enum Role {
 pub enum SecAssocStatus {
     // TODO(hahnr): Rather than reporting wrong password as a status, report it as an error.
     WrongPassword,
+    PmkSaEstablished,
     EssSaEstablished,
 }
 
@@ -554,5 +555,4 @@ mod tests {
             akm_list: akms.into_iter().map(make_akm).collect(),
         }
     }
-
 }

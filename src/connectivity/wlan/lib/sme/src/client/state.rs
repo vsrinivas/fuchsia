@@ -16,7 +16,7 @@ use wlan_rsn::ProtectionInfo;
 
 use super::bss::ClientConfig;
 use super::rsn::Rsna;
-use super::{ConnectFailure, ConnectResult, Status};
+use super::{ConnectFailure, ConnectResult, EstablishRsnaFailure, Status};
 
 use crate::client::{
     event::{self, Event},
@@ -81,7 +81,7 @@ pub struct ConnectCommand {
 #[derive(Debug)]
 pub enum RsnaStatus {
     Established,
-    Failed,
+    Failed(EstablishRsnaFailure),
     Unchanged,
     Progressed { new_resp_timeout: Option<EventId> },
 }
@@ -238,8 +238,7 @@ impl State {
                 MlmeEvent::DeauthenticateInd { ind } => {
                     match link_state {
                         LinkState::EstablishingRsna { responder, .. } => {
-                            let connect_result =
-                                ConnectResult::Failed(ConnectFailure::EstablishRsna);
+                            let connect_result = EstablishRsnaFailure::InternalError.into();
                             report_connect_finished(responder, context, connect_result);
                         }
                         LinkState::LinkUp { since, .. } => {
@@ -304,9 +303,8 @@ impl State {
                                 };
                                 State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                             }
-                            RsnaStatus::Failed => {
-                                let result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
-                                report_connect_finished(responder, context, result);
+                            RsnaStatus::Failed(failure) => {
+                                report_connect_finished(responder, context, failure.into());
                                 send_deauthenticate_request(bss, &context.mlme_sink);
                                 state_change_msg.replace("RSNA failed".to_string());
                                 State::Idle { cfg }
@@ -398,7 +396,7 @@ impl State {
                         report_connect_finished(
                             responder,
                             context,
-                            ConnectResult::Failed(ConnectFailure::RsnaTimeout),
+                            EstablishRsnaFailure::OverallTimeout.into(),
                         );
                         send_deauthenticate_request(bss, &context.mlme_sink);
                         state_change_msg.replace("RSNA timeout".to_string());
@@ -425,6 +423,7 @@ impl State {
                                 radio_cfg,
                             };
                         }
+                        context.info.report_key_exchange_timeout();
 
                         if attempt < event::KEY_FRAME_EXCHANGE_MAX_ATTEMPTS {
                             warn!(
@@ -446,7 +445,7 @@ impl State {
                             report_connect_finished(
                                 responder,
                                 context,
-                                ConnectResult::Failed(ConnectFailure::RsnaTimeout),
+                                EstablishRsnaFailure::KeyFrameExchangeTimeout.into(),
                             );
                             send_deauthenticate_request(bss, &context.mlme_sink);
                             state_change_msg.replace("key frame rx timeout".to_string());
@@ -747,6 +746,7 @@ fn process_eapol_ind(
                 rx_eapol_frame: InspectBytes(&eapol_pdu),
                 status: format!("rejected (processing error): {}", e)
             });
+            context.info.report_supplicant_error(e);
             return RsnaStatus::Unchanged;
         }
         Ok(_) => {
@@ -759,6 +759,7 @@ fn process_eapol_ind(
             }
         }
     }
+    context.info.report_supplicant_updates(&update_sink);
 
     let bssid = ind.src_addr;
     let sta_addr = ind.dst_addr;
@@ -790,7 +791,10 @@ fn process_eapol_ind(
                 match status {
                     // ESS Security Association was successfully established. Link is now up.
                     SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
-                    SecAssocStatus::WrongPassword => return RsnaStatus::Failed,
+                    SecAssocStatus::WrongPassword => {
+                        return RsnaStatus::Failed(EstablishRsnaFailure::InternalError)
+                    }
+                    _ => (),
                 }
             }
         }
@@ -932,12 +936,9 @@ fn handle_supplicant_start_failure(
 ) {
     error!("deauthenticating; could not start Supplicant: {}", e);
     send_deauthenticate_request(bss, &context.mlme_sink);
+    context.info.report_supplicant_error(e);
 
-    report_connect_finished(
-        responder,
-        context,
-        ConnectResult::Failed(ConnectFailure::EstablishRsna),
-    );
+    report_connect_finished(responder, context, EstablishRsnaFailure::StartSupplicantFailed.into());
 }
 
 fn report_milestone(milestone: ConnectionMilestoneInfo, context: &mut Context) -> Option<EventId> {
@@ -1324,7 +1325,7 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        let result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
+        let result: ConnectResult = EstablishRsnaFailure::StartSupplicantFailed.into();
         expect_result(receiver, result.clone());
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 0 });
         expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
@@ -1407,7 +1408,7 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        let result = ConnectResult::Failed(ConnectFailure::EstablishRsna);
+        let result: ConnectResult = EstablishRsnaFailure::InternalError.into();
         expect_result(receiver, result.clone());
         expect_info_event(&mut h.info_stream, InfoEvent::ConnectFinished { result });
     }
@@ -1432,7 +1433,7 @@ mod tests {
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, ConnectResult::Failed(ConnectFailure::RsnaTimeout));
+        expect_result(receiver, EstablishRsnaFailure::OverallTimeout.into());
     }
 
     #[test]
@@ -1460,7 +1461,7 @@ mod tests {
         }
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_result(receiver, ConnectResult::Failed(ConnectFailure::RsnaTimeout));
+        expect_result(receiver, EstablishRsnaFailure::KeyFrameExchangeTimeout.into());
     }
 
     #[test]

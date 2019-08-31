@@ -225,6 +225,7 @@ impl EssSa {
                 self.pmksa.replace_state(|state| match state {
                     Pmksa::Initialized { method } => {
                         info!("established PMKSA");
+                        update_sink.push(SecAssocUpdate::Status(SecAssocStatus::PmkSaEstablished));
                         Pmksa::Established { method, pmk: pmk.clone() }
                     }
                     other => {
@@ -461,8 +462,10 @@ mod tests {
         let mut a_updates = vec![];
         let result = authenticator.initiate(&mut a_updates);
         assert!(result.is_ok(), "Authenticator failed initiating: {}", result.unwrap_err());
-        assert_eq!(a_updates.len(), 1);
-        let msg1 = test_util::expect_eapol_resp(&a_updates[..]);;
+        assert_eq!(a_updates.len(), 2);
+        let msg1 = test_util::expect_eapol_resp(&a_updates[..]);
+        let a_status = test_util::expect_reported_status(&a_updates);
+        assert_eq!(a_status, SecAssocStatus::PmkSaEstablished);
 
         // Send msg #1 to Supplicant and wait for response.
         let mut s_updates = vec![];
