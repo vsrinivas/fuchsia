@@ -5,6 +5,7 @@
 #ifndef LIB_ZXIO_INCEPTION_H_
 #define LIB_ZXIO_INCEPTION_H_
 
+#include <lib/sync/mutex.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxs/zxs.h>
 #include <threads.h>
@@ -59,8 +60,7 @@ typedef struct zxio_vmofile {
   zx_off_t off;
   zx_off_t end;
   zx_off_t ptr;
-  // TODO: Migrate to sync_mutex_t.
-  mtx_t lock;
+  sync_mutex_t lock;
 } zxio_vmofile_t;
 
 static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),

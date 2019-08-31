@@ -22,9 +22,9 @@ static zx_status_t zxio_vmofile_close(zxio_t* io) {
 static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  mtx_lock(&file->lock);
+  sync_mutex_lock(&file->lock);
   uint64_t seek = file->ptr - file->off;
-  mtx_unlock(&file->lock);
+  sync_mutex_unlock(&file->lock);
 
   auto result = file->control.Seek(seek, fio::SeekOrigin::START);
   if (result.status() != ZX_OK) {
@@ -66,13 +66,13 @@ static zx_status_t zxio_vmofile_read(zxio_t* io, void* buffer, size_t capacity,
                                      size_t* out_actual) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  mtx_lock(&file->lock);
+  sync_mutex_lock(&file->lock);
   if (capacity > (file->end - file->ptr)) {
     capacity = file->end - file->ptr;
   }
   zx_off_t offset = file->ptr;
   file->ptr += capacity;
-  mtx_unlock(&file->lock);
+  sync_mutex_unlock(&file->lock);
 
   zx_status_t status = file->vmo.read(buffer, offset, capacity);
   if (status == ZX_OK) {
@@ -109,7 +109,7 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset, zxio_seek_origin
                                      size_t* out_offset) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  mtx_lock(&file->lock);
+  sync_mutex_lock(&file->lock);
   zx_off_t at = 0u;
   switch (start) {
     case fio::SeekOrigin::START:
@@ -122,7 +122,7 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset, zxio_seek_origin
       at = (file->end - file->off) + offset;
       break;
     default:
-      mtx_unlock(&file->lock);
+      sync_mutex_unlock(&file->lock);
       return ZX_ERR_INVALID_ARGS;
   }
   if (at > file->end - file->off) {
@@ -130,7 +130,7 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset, zxio_seek_origin
   } else {
     file->ptr = file->off + at;
   }
-  mtx_unlock(&file->lock);
+  sync_mutex_unlock(&file->lock);
 
   *out_offset = at;
   return ZX_OK;
@@ -160,6 +160,5 @@ zx_status_t zxio_vmofile_init(zxio_storage_t* storage, fio::File::SyncClient con
       .lock = {},
   };
   zxio_init(&file->io, &zxio_vmofile_ops);
-  mtx_init(&file->lock, mtx_plain);
   return ZX_OK;
 }
