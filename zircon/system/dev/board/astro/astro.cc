@@ -75,6 +75,12 @@ int Astro::Thread() {
   }
   zxlogf(INFO, "Detected board rev 0x%x\n", info.board_revision);
 
+  if (info.board_revision != BOARD_REV_PVT) {
+    zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue\n",
+           info.board_revision);
+    return -1;
+  }
+
   if ((status = ButtonsInit()) != ZX_OK) {
     zxlogf(ERROR, "ButtonsInit failed: %d\n", status);
   }
