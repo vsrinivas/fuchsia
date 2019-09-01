@@ -10,9 +10,9 @@
 
 #include <vector>
 
-namespace fidl {
+namespace sys {
 
-class ServiceDirectoryBase;
+class ServiceAggregateBase;
 
 // A watcher for service instances.
 //
@@ -33,7 +33,7 @@ class ServiceWatcher final {
   explicit ServiceWatcher(Callback callback) : callback_(std::move(callback)) {}
 
   // Begins watching for service instances in a service directory.
-  zx_status_t Begin(const ServiceDirectoryBase& svcdir, async_dispatcher_t* dispatcher);
+  zx_status_t Begin(const ServiceAggregateBase& service_aggregate, async_dispatcher_t* dispatcher);
 
   // Cancels watching for service instances.
   zx_status_t Cancel();
@@ -48,6 +48,6 @@ class ServiceWatcher final {
   async::WaitMethod<ServiceWatcher, &ServiceWatcher::OnWatchedEvent> wait_{this};
 };
 
-}  // namespace fidl
+}  // namespace sys
 
 #endif  // LIB_SYS_SERVICE_CPP_SERVICE_WATCHER_H_

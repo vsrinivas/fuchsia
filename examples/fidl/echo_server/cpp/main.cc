@@ -23,7 +23,7 @@ class EchoImpl : public fidl::examples::echo::Echo {
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
-  fidl::ServiceHandler handler;
+  sys::ServiceHandler handler;
   fuchsia::examples::MyService::Handler my_service(&handler);
 
   // Example of serving a member "foo" of a service instance.

@@ -4,17 +4,17 @@
 
 #include <fuchsia/examples/cpp/fidl.h>
 #include <lib/async-testing/test_loop.h>
-#include <lib/sys/service/cpp/service_directory.h>
+#include <lib/sys/service/cpp/service_aggregate.h>
 #include <lib/sys/service/cpp/service_watcher.h>
 #include <lib/sys/service/cpp/test_base.h>
 #include <zircon/types.h>
 
 #include <gmock/gmock-matchers.h>
 
-namespace fidl {
+namespace sys {
 namespace {
 
-class ServiceWatcherTest : public fidl::testing::TestBase {
+class ServiceWatcherTest : public testing::TestBase {
  protected:
   async::TestLoop& loop() { return loop_; }
 
@@ -23,14 +23,14 @@ class ServiceWatcherTest : public fidl::testing::TestBase {
 };
 
 TEST_F(ServiceWatcherTest, Begin) {
-  auto service = OpenServiceDirectoryIn<fuchsia::examples::MyService>(ns());
-  ASSERT_TRUE(service.is_valid());
+  auto service_aggregate = OpenServiceAggregateIn<fuchsia::examples::MyService>(ns());
+  ASSERT_TRUE(service_aggregate.is_valid());
 
   std::vector<std::pair<uint8_t, std::string>> instances;
-  fidl::ServiceWatcher watcher([&instances](uint8_t event, std::string instance) {
+  ServiceWatcher watcher([&instances](uint8_t event, std::string instance) {
     instances.emplace_back(std::make_pair(event, instance));
   });
-  zx_status_t status = watcher.Begin(service, loop().dispatcher());
+  zx_status_t status = watcher.Begin(service_aggregate, loop().dispatcher());
   ASSERT_EQ(ZX_OK, status);
 
   ASSERT_TRUE(loop().RunUntilIdle());
@@ -63,4 +63,4 @@ TEST_F(ServiceWatcherTest, Begin) {
 }
 
 }  // namespace
-}  // namespace fidl
+}  // namespace sys

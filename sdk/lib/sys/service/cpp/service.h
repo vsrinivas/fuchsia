@@ -9,7 +9,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/service_connector.h>
 
-namespace fidl {
+namespace sys {
 
 // Name of the default instance of a service.
 extern const char kDefaultInstance[];
@@ -22,8 +22,8 @@ extern const char kDefaultInstance[];
 // If |instance| is not provided, the default instance is opened.
 //
 // Returns a `fuchsia::io::Directory`, representing an instance of the service.
-std::unique_ptr<ServiceConnector> OpenNamedServiceAt(
-    const InterfaceHandle<fuchsia::io::Directory>& handle, const std::string& service_path,
+std::unique_ptr<fidl::ServiceConnector> OpenNamedServiceAt(
+    const fidl::InterfaceHandle<fuchsia::io::Directory>& handle, const std::string& service_path,
     const std::string& instance = kDefaultInstance);
 
 // Opens a named |instance| of a |Service|, within a directory provided by
@@ -35,7 +35,7 @@ std::unique_ptr<ServiceConnector> OpenNamedServiceAt(
 //
 // Returns a |Service|, which is a FIDL-generated service.
 template <typename Service>
-Service OpenServiceAt(const InterfaceHandle<fuchsia::io::Directory>& handle,
+Service OpenServiceAt(const fidl::InterfaceHandle<fuchsia::io::Directory>& handle,
                       const std::string& instance = kDefaultInstance) {
   return Service(OpenNamedServiceAt(handle, Service::Name, instance));
 }
@@ -53,7 +53,7 @@ Service OpenServiceAt(const InterfaceHandle<fuchsia::io::Directory>& handle,
 // |ns| must not be null.
 //
 // Returns a `fuchsia::io::Directory`, representing an instance of the service.
-std::unique_ptr<ServiceConnector> OpenNamedServiceIn(
+std::unique_ptr<fidl::ServiceConnector> OpenNamedServiceIn(
     fdio_ns_t* ns, const std::string& service_path, const std::string& instance = kDefaultInstance);
 
 // Opens a named |instance| of a |Service|, within a namespace provided by
@@ -84,8 +84,8 @@ Service OpenServiceIn(fdio_ns_t* ns, const std::string& instance = kDefaultInsta
 // See `fdio_ns_get_installed()`.
 //
 // Returns a `fuchsia::io::Directory`, representing an instance of the service.
-std::unique_ptr<ServiceConnector> OpenNamedService(const std::string& service_path,
-                                                   const std::string& instance = kDefaultInstance);
+std::unique_ptr<fidl::ServiceConnector> OpenNamedService(
+    const std::string& service_path, const std::string& instance = kDefaultInstance);
 
 // Opens a named |instance| of a |Service|, within the default namespace.
 //
@@ -102,6 +102,6 @@ Service OpenService(const std::string& instance = kDefaultInstance) {
   return Service(OpenNamedService(Service::Name, instance));
 }
 
-}  // namespace fidl
+}  // namespace sys
 
 #endif  // LIB_SYS_SERVICE_CPP_SERVICE_H_

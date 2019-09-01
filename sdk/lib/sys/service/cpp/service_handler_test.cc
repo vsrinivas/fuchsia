@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-namespace fidl {
+namespace sys {
 namespace {
 
 class EchoImpl : public fidl::examples::echo::Echo {
@@ -21,7 +21,7 @@ TEST(ServiceHandlerTest, ConnectAndInvoke) {
   async::TestLoop loop;
 
   // Setup server.
-  fidl::ServiceHandler default_handler;
+  sys::ServiceHandler default_handler;
   fuchsia::examples::MyService::Handler my_service(&default_handler);
   EchoImpl foo_impl;
   fidl::BindingSet<fidl::examples::echo::Echo> foo_bindings;
@@ -42,7 +42,7 @@ TEST(ServiceHandlerTest, ConnectAndInvoke) {
                                    svc.NewRequest().TakeChannel().release());
   ASSERT_EQ(ZX_OK, status);
 
-  auto service = fidl::OpenServiceAt<fuchsia::examples::MyService>(svc);
+  auto service = OpenServiceAt<fuchsia::examples::MyService>(svc);
   auto handle = service.foo().Connect();
   ASSERT_TRUE(handle.is_valid());
 
@@ -58,4 +58,4 @@ TEST(ServiceHandlerTest, ConnectAndInvoke) {
 }
 
 }  // namespace
-}  // namespace fidl
+}  // namespace sys

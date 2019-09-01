@@ -4,12 +4,12 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/sys/service/cpp/service_directory.h>
+#include <lib/sys/service/cpp/service_aggregate.h>
 #include <lib/sys/service/cpp/service_watcher.h>
 
-namespace fidl {
+namespace sys {
 
-zx_status_t ServiceWatcher::Begin(const ServiceDirectoryBase& svcdir,
+zx_status_t ServiceWatcher::Begin(const ServiceAggregateBase& service_aggregate,
                                   async_dispatcher_t* dispatcher) {
   zx::channel client_end, server_end;
   zx_status_t status = zx::channel::create(0, &client_end, &server_end);
@@ -17,8 +17,8 @@ zx_status_t ServiceWatcher::Begin(const ServiceDirectoryBase& svcdir,
     return status;
   }
 
-  SynchronousInterfacePtr<fuchsia::io::Directory> dir;
-  dir.Bind(zx::channel(fdio_service_clone(svcdir.channel().get())));
+  fidl::SynchronousInterfacePtr<fuchsia::io::Directory> dir;
+  dir.Bind(zx::channel(fdio_service_clone(service_aggregate.channel().get())));
   zx_status_t fidl_status;
   status = dir->Watch(fuchsia::io::WATCH_MASK_EXISTING | fuchsia::io::WATCH_MASK_ADDED |
                           fuchsia::io::WATCH_MASK_REMOVED,
@@ -66,4 +66,4 @@ void ServiceWatcher::OnWatchedEvent(async_dispatcher_t* dispatcher, async::WaitB
   wait_.Begin(dispatcher);
 }
 
-}  // namespace fidl
+}  // namespace sys

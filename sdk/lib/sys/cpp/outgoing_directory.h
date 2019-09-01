@@ -163,8 +163,7 @@ class OutgoingDirectory final {
   // outgoing.AddService<MyService>(std::move(handler), "my-instance");
   // ```
   template <typename Service>
-  zx_status_t AddService(fidl::ServiceHandler handler,
-                         std::string instance = fidl::kDefaultInstance) const {
+  zx_status_t AddService(ServiceHandler handler, std::string instance = kDefaultInstance) const {
     return AddNamedService(std::move(handler), Service::Name, std::move(instance));
   }
 
@@ -175,8 +174,8 @@ class OutgoingDirectory final {
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The instance already exists.
-  zx_status_t AddNamedService(fidl::ServiceHandler handler, std::string service,
-                              std::string instance = fidl::kDefaultInstance) const;
+  zx_status_t AddNamedService(ServiceHandler handler, std::string service,
+                              std::string instance = kDefaultInstance) const;
 
   // Removes an instance of a service.
   //

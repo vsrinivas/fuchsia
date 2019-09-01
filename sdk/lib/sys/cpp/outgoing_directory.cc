@@ -58,7 +58,7 @@ zx_status_t OutgoingDirectory::AddPublicService(std::unique_ptr<vfs::Service> se
   return svc_->AddEntry(std::move(service_name), std::move(service));
 }
 
-zx_status_t OutgoingDirectory::AddNamedService(fidl::ServiceHandler handler, std::string service,
+zx_status_t OutgoingDirectory::AddNamedService(ServiceHandler handler, std::string service,
                                                std::string instance) const {
   auto dir = ::GetOrCreateDirectory(svc_, std::move(service));
   return dir->AddEntry(std::move(instance), handler.TakeDirectory());

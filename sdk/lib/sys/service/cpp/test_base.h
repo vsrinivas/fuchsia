@@ -12,7 +12,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-namespace fidl {
+namespace sys {
 namespace testing {
 
 class TestBase : public ::testing::Test {
@@ -55,6 +55,6 @@ class TestBase : public ::testing::Test {
 };
 
 }  // namespace testing
-}  // namespace fidl
+}  // namespace sys
 
 #endif  // LIB_SYS_SERVICE_CPP_TEST_BASE_H_

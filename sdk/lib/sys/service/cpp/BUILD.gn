@@ -14,8 +14,8 @@ sdk_source_set("cpp") {
   sources = [
     "service.cc",
     "service.h",
-    "service_directory.cc",
-    "service_directory.h",
+    "service_aggregate.cc",
+    "service_aggregate.h",
     "service_handler.h",
     "service_watcher.cc",
     "service_watcher.h",
@@ -24,10 +24,10 @@ sdk_source_set("cpp") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/vfs/cpp",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 
   public_configs = [ "//sdk/config" ]
@@ -37,7 +37,7 @@ executable("sys_service_unittests") {
   testonly = true
 
   sources = [
-    "service_directory_test.cc",
+    "service_aggregate_test.cc",
     "service_handler_test.cc",
     "service_test.cc",
     "service_watcher_test.cc",

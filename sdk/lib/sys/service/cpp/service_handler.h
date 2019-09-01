@@ -10,10 +10,10 @@
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 
-namespace fidl {
+namespace sys {
 
 // A handler for an instance of a service.
-class ServiceHandler : public ServiceHandlerBase {
+class ServiceHandler : public fidl::ServiceHandlerBase {
  public:
   // Add a |member| to the instance, which will is handled by |handler|.
   zx_status_t AddMember(std::string member, MemberHandler handler) const override {
@@ -29,6 +29,6 @@ class ServiceHandler : public ServiceHandlerBase {
   std::unique_ptr<vfs::PseudoDir> dir_ = std::make_unique<vfs::PseudoDir>();
 };
 
-}  // namespace fidl
+}  // namespace sys
 
 #endif  // LIB_SYS_SERVICE_CPP_SERVICE_HANDLER_H_

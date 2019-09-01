@@ -6,13 +6,13 @@
 #include <lib/sys/service/cpp/service.h>
 #include <lib/sys/service/cpp/test_base.h>
 
-namespace fidl {
+namespace sys {
 namespace {
 
-class ServiceTest : public fidl::testing::TestBase {};
+class ServiceTest : public testing::TestBase {};
 
 TEST_F(ServiceTest, OpenServiceAt) {
-  InterfaceHandle<fuchsia::io::Directory> directory;
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory;
   zx_status_t status = fdio_ns_connect(ns(), "/svc", fuchsia::io::OPEN_RIGHT_READABLE,
                                        directory.NewRequest().TakeChannel().release());
   ASSERT_EQ(ZX_OK, status);
@@ -47,4 +47,4 @@ TEST_F(ServiceTest, OpenServiceIn) {
 }
 
 }  // namespace
-}  // namespace fidl
+}  // namespace sys
