@@ -55,7 +55,9 @@ source_set("src") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/connectivity/network/testing/netemul/lib/fidl:devmgr",
@@ -66,7 +68,12 @@ source_set("src") {
     "//src/connectivity/network/testing/netemul/lib/network:netdump",
     "//src/connectivity/network/testing/netemul/lib/sync:sync_service",
     "//src/lib/fxl",
+    "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
+    "//src/virtualization/tests:guest_console",
+    "//src/virtualization/tests:mock_netstack",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/public/fidl/fuchsia-net-stack",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -80,10 +87,10 @@ source_set("src") {
     "//garnet/public/lib/async_promise",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
-    "//zircon/system/fidl/fuchsia-io",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fs",
+    "//zircon/system/fidl/fuchsia-io",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger",
   ]
 }
 
@@ -96,6 +103,7 @@ executable("bin") {
 
   deps = [
     ":src",
+    "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//third_party/rapidjson",
@@ -122,6 +130,7 @@ executable("sandbox_unittest") {
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

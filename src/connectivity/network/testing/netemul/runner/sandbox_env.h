@@ -6,19 +6,21 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_SANDBOX_ENV_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+
+#include <memory>
+#include <string>
+
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <src/connectivity/network/testing/netemul/lib/network/network_context.h>
 #include <src/connectivity/network/testing/netemul/lib/sync/sync_manager.h>
 #include <src/lib/fxl/macros.h>
-
-#include <memory>
-#include <string>
 
 #include "src/lib/files/unique_fd.h"
 
 namespace netemul {
 
 class DevfsHolder;
+class ManagedEnvironment;
 class SandboxEnv {
  public:
   using Ptr = std::shared_ptr<SandboxEnv>;
@@ -49,6 +51,8 @@ class SandboxEnv {
 
   NetworkContext& network_context() { return net_context_; }
   SyncManager& sync_manager() { return sync_manager_; }
+
+  std::weak_ptr<ManagedEnvironment> guest_env_;
 
  private:
   void ConnectDevfs(zx::channel req);

@@ -1,0 +1,41 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "capture": true,
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/guest.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "name": "guest",
+                        "test": [
+                            {
+                                "arguments": []
+                            }
+                        ]
+                    }
+                ]
+            },
+            "guest": [
+                {
+                    "files": {
+                        "data/test_script.sh": "/root/input/test_script.sh"
+                    },
+                    "label": "debian_guest",
+                    "networks": [
+                        "net"
+                    ],
+                    "url": "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx"
+                }
+            ],
+            "networks": [
+                {
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

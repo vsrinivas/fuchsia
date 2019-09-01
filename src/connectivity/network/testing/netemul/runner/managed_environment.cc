@@ -4,9 +4,11 @@
 
 #include "managed_environment.h"
 
+#include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/netemul/guest/cpp/fidl.h>
+
 #include <random>
 
-#include <fuchsia/logger/cpp/fidl.h>
 #include <sdk/lib/sys/cpp/termination_reason.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
@@ -166,6 +168,15 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
           return linfo;
         },
         svc.name);
+  }
+
+  if (auto guest = sandbox_env_->guest_env_.lock()) {
+    services->AddService<fuchsia::netemul::guest::GuestDiscovery>(
+        [guest = std::move(guest)](
+            fidl::InterfaceRequest<fuchsia::netemul::guest::GuestDiscovery> request) {
+          guest->ConnectToService(fuchsia::netemul::guest::GuestDiscovery::Name_,
+                                  request.TakeChannel());
+        });
   }
 
   if (options.has_devices()) {

@@ -6,16 +6,19 @@
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_RUNNER_SANDBOX_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/promise.h>
-#include <src/connectivity/network/testing/netemul/lib/network/netdump.h>
 
 #include <unordered_set>
 
+#include <src/connectivity/network/testing/netemul/lib/network/netdump.h>
+
 #include "managed_environment.h"
 #include "model/config.h"
+#include "model/guest.h"
 #include "sandbox_env.h"
 
 namespace netemul {
@@ -118,6 +121,9 @@ class Sandbox {
                                 const config::Environment* config);
   Promise StartEnvironmentInner(ConfiguringEnvironmentPtr environment,
                                 const config::Environment* config);
+  Promise LaunchGuestEnvironment(ConfiguringEnvironmentPtr env, const config::Guest& config);
+  Promise SendGuestFiles(ConfiguringEnvironmentPtr env, const config::Guest& guest);
+  Promise StartGuests(ConfiguringEnvironmentPtr env, const config::Config* config);
   Promise StartEnvironmentSetup(const config::Environment* config,
                                 ConfiguringEnvironmentLauncher launcher);
   Promise StartEnvironmentAppsAndTests(const config::Environment* config,
@@ -125,7 +131,12 @@ class Sandbox {
 
   bool CreateEnvironmentOptions(const config::Environment& config,
                                 ManagedEnvironment::Options* options);
-  void ConfigureRootEnvironment();
+  bool CreateGuestOptions(const std::vector<config::Guest>& guests,
+                          ManagedEnvironment::Options* options);
+  Promise ConfigureRootEnvironment();
+  Promise ConfigureGuestEnvironment();
+  Promise RunRootConfiguration(ManagedEnvironment::Options root_options);
+  Promise RunGuestConfiguration(ManagedEnvironment::Options guest_options);
   Promise ConfigureEnvironment(ConfiguringEnvironmentPtr env, const config::Environment* config,
                                bool root = false);
   bool ConfigureNetworks();
@@ -143,12 +154,15 @@ class Sandbox {
   fuchsia::sys::EnvironmentPtr parent_env_;
   fuchsia::sys::LoaderPtr loader_;
   ManagedEnvironment::Ptr root_;
+  std::shared_ptr<ManagedEnvironment> guest_;
   // keep network handles to keep objects alive
   std::vector<zx::channel> network_handles_;
   // keep component controller handles to keep processes alive
   std::vector<fuchsia::sys::ComponentControllerPtr> procs_;
   std::unordered_set<size_t> tests_;
   std::unique_ptr<NetWatcher<InMemoryDump>> net_dumps_;
+  // store guest realm handle to keep guest VMs alive
+  fuchsia::virtualization::RealmPtr realm_;
 };
 
 }  // namespace netemul

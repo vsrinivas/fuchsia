@@ -44,7 +44,10 @@ source_set("logger") {
 }
 
 source_set("guest_console") {
-  visibility = [ "//src/virtualization/*" ]
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
   sources = [
     "guest_console.cc",
     "guest_console.h",
@@ -66,7 +69,10 @@ source_set("guest_console") {
 }
 
 source_set("mock_netstack") {
-  visibility = [ "//src/virtualization/*" ]
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
   sources = [
     "mock_netstack.cc",
     "mock_netstack.h",

@@ -14,6 +14,7 @@ group("test") {
     "dynamic_devices",
     "easy_netstack_cfg",
     "env_build",
+    "guest",
     "inheritance",
     "netstack_socks",
     "sandbox_service",
@@ -38,6 +39,7 @@ group("netemul_empty_binaries") {
   write_file("$root_out_dir/inheritance_test", "")
   write_file("$root_out_dir/dynamic_devices_test", "")
   write_file("$root_out_dir/netstack_intermediary_test", "")
+  write_file("$root_out_dir/guest_test", "")
 }
 
 test_package("netemul_sandbox_test") {
@@ -47,6 +49,7 @@ test_package("netemul_sandbox_test") {
     "dynamic_devices",
     "easy_netstack_cfg",
     "env_build",
+    "guest",
     "inheritance",
     "netstack_intermediary",
     "netstack_socks",
@@ -55,6 +58,13 @@ test_package("netemul_sandbox_test") {
     "//src/connectivity/network/testing/netemul/runner:sandbox_unittest",
     "//src/connectivity/network/testing/netemul/runner/helpers/mock_device_settings:mock_device_settings_test",
     "//src/connectivity/network/testing/netemul/runner/model:model_unittest",
+  ]
+
+  resources = [
+    {
+      path = "//src/virtualization/lib/guest_interaction/test/test_script.sh"
+      dest = "test_script.sh"
+    },
   ]
 
   meta = [
@@ -94,6 +104,10 @@ test_package("netemul_sandbox_test") {
       path = rebase_path("meta/netstack_intermediary.cmx")
       dest = "netstack_intermediary.cmx"
     },
+    {
+      path = rebase_path("meta/guest.cmx")
+      dest = "guest.cmx"
+    },
   ]
 
   binaries = [
@@ -120,6 +134,9 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "netstack_intermediary"
+    },
+    {
+      name = "netemul_guest"
     },
   ]
 
@@ -167,6 +184,11 @@ test_package("netemul_sandbox_test") {
     {
       name = "netstack_intermediary_test"
       environments = [ qemu_env ]
+    },
+    {
+      # Running guests is resource intensive.  Limit this test to only run on NUCs.
+      name = "guest_test"
+      environments = [ nuc_env ]
     },
   ]
 }

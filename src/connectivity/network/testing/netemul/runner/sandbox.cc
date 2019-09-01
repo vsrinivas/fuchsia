@@ -5,18 +5,26 @@
 #include "sandbox.h"
 
 #include <fcntl.h>
+#include <fuchsia/netemul/guest/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/sequencer.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <zircon/status.h>
+
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
-#include <zircon/status.h>
+#include <src/virtualization/tests/guest_console.h>
 
 #include "garnet/lib/cmx/cmx.h"
 
@@ -25,6 +33,14 @@ using namespace fuchsia::netemul;
 namespace netemul {
 
 static const char* kEndpointMountPath = "class/ethernet/";
+static const char* kGuestManagerUrl =
+    "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
+static const char* kGuestDiscoveryUrl =
+    "fuchsia-pkg://fuchsia.com/guest_discovery_service#meta/"
+    "guest_discovery_service.cmx";
+static const char* kNetstackIntermediaryUrl =
+    "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/"
+    "helper_netstack_intermediary.cmx";
 
 #define STATIC_MSG_STRUCT(name, msgv) \
   struct name {                       \
@@ -161,6 +177,37 @@ void Sandbox::PostTerminate(netemul::SandboxResult::Status status, std::string d
   PostTerminate(SandboxResult(status, std::move(description)));
 }
 
+Sandbox::Promise Sandbox::RunRootConfiguration(ManagedEnvironment::Options root_options) {
+  fit::bridge<void, SandboxResult> bridge;
+  async::PostTask(main_dispatcher_, [this, completer = std::move(bridge.completer),
+                                     root_options = std::move(root_options)]() mutable {
+    ASSERT_MAIN_DISPATCHER;
+    root_ = ManagedEnvironment::CreateRoot(parent_env_, sandbox_env_, std::move(root_options));
+    root_->SetRunningCallback([this, completer = std::move(completer)]() mutable {
+      if (root_environment_created_callback_) {
+        root_environment_created_callback_(root_.get());
+      }
+      completer.complete_ok();
+    });
+  });
+
+  return bridge.consumer.promise().and_then([this]() { return ConfigureRootEnvironment(); });
+}
+
+Sandbox::Promise Sandbox::RunGuestConfiguration(ManagedEnvironment::Options guest_options) {
+  fit::bridge<void, SandboxResult> bridge;
+  async::PostTask(main_dispatcher_, [this, completer = std::move(bridge.completer),
+                                     guest_options = std::move(guest_options)]() mutable {
+    ASSERT_MAIN_DISPATCHER;
+    guest_ = ManagedEnvironment::CreateRoot(parent_env_, sandbox_env_, std::move(guest_options));
+    sandbox_env_->guest_env_ = guest_;
+    guest_->SetRunningCallback(
+        [completer = std::move(completer)]() mutable { completer.complete_ok(); });
+  });
+
+  return bridge.consumer.promise().and_then([this]() { return ConfigureGuestEnvironment(); });
+}
+
 void Sandbox::StartEnvironments() {
   ASSERT_MAIN_DISPATCHER;
 
@@ -177,18 +224,27 @@ void Sandbox::StartEnvironments() {
       return;
     }
 
-    async::PostTask(main_dispatcher_, [this, root_options = std::move(root_options)]() mutable {
-      ASSERT_MAIN_DISPATCHER;
-      root_ = ManagedEnvironment::CreateRoot(parent_env_, sandbox_env_, std::move(root_options));
-      root_->SetRunningCallback([this]() {
-        if (root_environment_created_callback_) {
-          root_environment_created_callback_(root_.get());
-        }
+    ManagedEnvironment::Options guest_options;
+    if (!CreateGuestOptions(env_config_.guests(), &guest_options)) {
+      PostTerminate(SandboxResult::Status::ENVIRONMENT_CONFIG_FAILED, "Invalid guest config");
+      return;
+    }
 
-        // configure root environment:
-        async::PostTask(helper_loop_->dispatcher(), [this]() { ConfigureRootEnvironment(); });
-      });
-    });
+    if (env_config_.guests().empty()) {
+      fit::schedule_for_consumer(
+          helper_executor_.get(),
+          RunRootConfiguration(std::move(root_options)).or_else([this](SandboxResult& result) {
+            PostTerminate(std::move(result));
+          }));
+    } else {
+      fit::schedule_for_consumer(
+          helper_executor_.get(),
+          RunGuestConfiguration(std::move(guest_options))
+              .and_then([this, root_options = std::move(root_options)]() mutable {
+                return RunRootConfiguration(std::move(root_options));
+              })
+              .or_else([this](SandboxResult& result) { PostTerminate(std::move(result)); }));
+    }
   });
 }
 
@@ -337,7 +393,39 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
   return true;
 }
 
-void Sandbox::ConfigureRootEnvironment() {
+// Only one guest can be created and that guest may only have one network associated with it.
+bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
+                                 ManagedEnvironment::Options* options) {
+  if (guests.empty()) {
+    return true;
+  }
+  if (guests.size() > 1 || guests[0].networks().size() > 1) {
+    return false;
+  }
+
+  std::vector<environment::LaunchService>* services = options->mutable_services();
+  {
+    auto& ls = services->emplace_back();
+    ls.name = fuchsia::virtualization::Manager::Name_;
+    ls.url = kGuestManagerUrl;
+  }
+  {
+    auto& ls = services->emplace_back();
+    ls.name = fuchsia::netemul::guest::GuestDiscovery::Name_;
+    ls.url = kGuestDiscoveryUrl;
+  }
+  if (!guests[0].networks().empty()) {
+    std::string netstack_arg = "--network=" + guests[0].networks()[0];
+    auto& ls = services->emplace_back();
+    ls.name = fuchsia::netstack::Netstack::Name_;
+    ls.url = kNetstackIntermediaryUrl;
+    ls.arguments->push_back(netstack_arg);
+  }
+
+  return true;
+}
+
+Sandbox::Promise Sandbox::ConfigureRootEnvironment() {
   ASSERT_HELPER_DISPATCHER;
   // connect to environment:
   auto svc = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
@@ -346,10 +434,18 @@ void Sandbox::ConfigureRootEnvironment() {
   async::PostTask(main_dispatcher_,
                   [this, req = std::move(req)]() mutable { root_->Bind(std::move(req)); });
 
-  fit::schedule_for_consumer(
-      helper_executor_.get(),
-      ConfigureEnvironment(std::move(svc), &env_config_.environment(), true)
-          .or_else([this](SandboxResult& result) { PostTerminate(std::move(result)); }));
+  return ConfigureEnvironment(std::move(svc), &env_config_.environment(), true);
+}
+
+Sandbox::Promise Sandbox::ConfigureGuestEnvironment() {
+  ASSERT_HELPER_DISPATCHER;
+  auto svc = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
+  auto req = svc->NewRequest();
+
+  async::PostTask(main_dispatcher_,
+                  [this, req = std::move(req)]() mutable { guest_->Bind(std::move(req)); });
+
+  return StartGuests(std::move(svc), &env_config_);
 }
 
 Sandbox::Promise Sandbox::StartChildEnvironment(ConfiguringEnvironmentPtr parent,
@@ -372,6 +468,142 @@ Sandbox::Promise Sandbox::StartChildEnvironment(ConfiguringEnvironmentPtr parent
              })
       .and_then([this, config](ConfiguringEnvironmentPtr& child_env) {
         return ConfigureEnvironment(std::move(child_env), config);
+      });
+}
+
+Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
+                                                 const config::Guest& guest) {
+  ASSERT_HELPER_DISPATCHER;
+
+  return fit::make_promise(
+             [this, env,
+              &guest]() -> fit::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
+               // Launch the guest
+               fuchsia::virtualization::LaunchInfo guest_launch_info;
+               guest_launch_info.label = guest.guest_label();
+               guest_launch_info.url = guest.guest_image_url();
+               guest_launch_info.args.emplace({"--virtio-gpu=false", "--virtio-net=true"});
+               fuchsia::virtualization::GuestPtr guest_controller;
+
+               fit::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;
+               realm_->LaunchInstance(
+                   std::move(guest_launch_info), guest_controller.NewRequest(),
+                   [completer = std::move(bridge.completer),
+                    guest_controller = std::move(guest_controller)](uint32_t cid) mutable {
+                     completer.complete_ok(std::move(guest_controller));
+                   });
+
+               return bridge.consumer.promise();
+             })
+      .and_then([](const fuchsia::virtualization::GuestPtr& guest_controller)
+                    -> fit::promise<zx::socket, SandboxResult> {
+        fit::bridge<zx::socket, SandboxResult> bridge;
+        guest_controller->GetSerial(
+            [completer = std::move(bridge.completer)](zx::socket socket) mutable {
+              if (!socket.is_valid()) {
+                completer.complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                                       "Could not create guest socket connection"));
+              }
+              completer.complete_ok(std::move(socket));
+            });
+
+        return bridge.consumer.promise();
+      })
+      .and_then([](zx::socket& socket) -> PromiseResult {
+        // Wait until the guest's serial console becomes usable to ensure that the guest has
+        // finished booting.
+        GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
+        zx_status_t status = serial.Start();
+
+        if (status != ZX_OK) {
+          return fit::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                          "Could not start guest serial connection"));
+        }
+
+        return fit::ok();
+      });
+}
+
+Sandbox::Promise Sandbox::SendGuestFiles(ConfiguringEnvironmentPtr env,
+                                         const config::Guest& guest) {
+  ASSERT_HELPER_DISPATCHER;
+
+  return fit::make_promise([env, &guest]() {
+    fuchsia::netemul::guest::GuestDiscoveryPtr gds;
+    fuchsia::netemul::guest::GuestInteractionPtr gis;
+
+    (*env)->ConnectToService(fuchsia::netemul::guest::GuestDiscovery::Name_,
+                             gds.NewRequest().TakeChannel());
+
+    gds->GetGuest(fuchsia::netemul::guest::DEFAULT_REALM, guest.guest_label(), gis.NewRequest());
+
+    std::vector<Sandbox::Promise> transfer_promises;
+    for (const auto& file_info : guest.files()) {
+      fidl::InterfaceHandle<fuchsia::io::File> put_file;
+      zx_status_t open_status =
+          fdio_open(("/definition/" + file_info.first).c_str(), ZX_FS_RIGHT_READABLE,
+                    put_file.NewRequest().TakeChannel().release());
+
+      if (open_status != ZX_OK) {
+        transfer_promises.clear();
+        transfer_promises.emplace_back(fit::make_promise([file_info]() {
+          return fit::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                          "Could not open " + file_info.first));
+        }));
+        break;
+      }
+
+      fit::bridge<void, SandboxResult> bridge;
+      gis->PutFile(
+          std::move(put_file), file_info.second,
+          [file_info, completer = std::move(bridge.completer)](zx_status_t put_result) mutable {
+            if (put_result != ZX_OK) {
+              completer.complete_error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                                                     "Failed to copy " + file_info.first));
+            } else {
+              completer.complete_ok();
+            }
+          });
+      transfer_promises.emplace_back(bridge.consumer.promise());
+    }
+    return fit::join_promise_vector(std::move(transfer_promises))
+        .then([gis = std::move(gis)](
+                  fit::result<std::vector<PromiseResult>>& result) -> PromiseResult {
+          auto results = result.take_value();
+          for (auto& r : results) {
+            if (r.is_error()) {
+              return r;
+            }
+          }
+          return fit::ok();
+        });
+  });
+}
+
+Sandbox::Promise Sandbox::StartGuests(ConfiguringEnvironmentPtr env, const config::Config* config) {
+  ASSERT_HELPER_DISPATCHER;
+  if (!realm_) {
+    fuchsia::virtualization::ManagerPtr guest_environment_manager;
+    (*env)->ConnectToService(fuchsia::virtualization::Manager::Name_,
+                             guest_environment_manager.NewRequest().TakeChannel());
+    guest_environment_manager->Create(fuchsia::netemul::guest::DEFAULT_REALM, realm_.NewRequest());
+  }
+
+  std::vector<Sandbox::Promise> promises;
+
+  for (const auto& guest : config->guests()) {
+    promises.emplace_back(LaunchGuestEnvironment(env, guest).and_then(SendGuestFiles(env, guest)));
+  }
+
+  return fit::join_promise_vector(std::move(promises))
+      .then([](fit::result<std::vector<PromiseResult>>& result) -> PromiseResult {
+        auto results = result.take_value();
+        for (auto& r : results) {
+          if (r.is_error()) {
+            return r;
+          }
+        }
+        return fit::ok();
       });
 }
 
