@@ -32,5 +32,20 @@ TEST_P(DbTest, HasKey) {
   });
 }
 
+TEST_P(DbTest, HasPrefix) {
+  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    std::unique_ptr<Db::Batch> batch;
+    EXPECT_EQ(db_->StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->Put(handler, "key", "value"), Status::OK);
+    EXPECT_EQ(batch->Execute(handler), Status::OK);
+
+    EXPECT_EQ(db_->HasPrefix(handler, ""), Status::OK);
+    EXPECT_EQ(db_->HasPrefix(handler, "k"), Status::OK);
+    EXPECT_EQ(db_->HasPrefix(handler, "ke"), Status::OK);
+    EXPECT_EQ(db_->HasPrefix(handler, "key"), Status::OK);
+    EXPECT_EQ(db_->HasPrefix(handler, "key2"), Status::INTERNAL_NOT_FOUND);
+  });
+}
+
 }  // namespace
 }  // namespace storage

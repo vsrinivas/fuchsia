@@ -240,6 +240,11 @@ class ControlledLevelDb : public Db {
     return leveldb_.HasKey(handler, key);
   }
 
+  Status HasPrefix(coroutine::CoroutineHandler* handler,
+                   convert::ExtendedStringView prefix) override {
+    return leveldb_.HasPrefix(handler, prefix);
+  }
+
   Status GetObject(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,
                    std::unique_ptr<const Piece>* piece) override {

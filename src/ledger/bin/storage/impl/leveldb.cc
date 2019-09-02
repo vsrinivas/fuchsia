@@ -6,9 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <trace/event.h>
 
 #include <utility>
+
+#include <trace/event.h>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
@@ -231,6 +232,16 @@ Status LevelDb::HasKey(CoroutineHandler* handler, convert::ExtendedStringView ke
   iterator->Seek(key);
 
   if (!iterator->Valid() || iterator->key() != key) {
+    return Status::INTERNAL_NOT_FOUND;
+  }
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
+}
+
+Status LevelDb::HasPrefix(CoroutineHandler* handler, convert::ExtendedStringView prefix) {
+  std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
+  iterator->Seek(prefix);
+
+  if (!iterator->Valid() || !iterator->key().starts_with(prefix)) {
     return Status::INTERNAL_NOT_FOUND;
   }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);

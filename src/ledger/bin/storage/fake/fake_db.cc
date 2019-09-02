@@ -23,7 +23,7 @@ Status MakeEmptySyncCallAndCheck(async_dispatcher_t* dispatcher,
   return Status::OK;
 }
 
-bool HasPrefix(const std::string& key, convert::ExtendedStringView prefix) {
+bool StartsWith(const std::string& key, convert::ExtendedStringView prefix) {
   return fxl::StringView(key.data(), std::min(key.size(), prefix.size())) == prefix;
 }
 
@@ -173,6 +173,14 @@ Status FakeDb::HasKey(coroutine::CoroutineHandler* handler, convert::ExtendedStr
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
+Status FakeDb::HasPrefix(coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix) {
+  auto it = key_value_store_.lower_bound(prefix.ToString());
+  if (it == key_value_store_.end() || !StartsWith(it->first, prefix)) {
+    return Status::INTERNAL_NOT_FOUND;
+  }
+  return MakeEmptySyncCallAndCheck(dispatcher_, handler);
+}
+
 Status FakeDb::GetObject(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                          ObjectIdentifier object_identifier, std::unique_ptr<const Piece>* piece) {
   auto it = key_value_store_.find(key.ToString());
@@ -189,7 +197,7 @@ Status FakeDb::GetByPrefix(coroutine::CoroutineHandler* handler, convert::Extend
                            std::vector<std::string>* key_suffixes) {
   std::vector<std::string> keys_with_prefix;
   auto it = key_value_store_.lower_bound(prefix.ToString());
-  while (it != key_value_store_.end() && HasPrefix(it->first, prefix)) {
+  while (it != key_value_store_.end() && StartsWith(it->first, prefix)) {
     keys_with_prefix.push_back(it->first.substr(prefix.size()));
     ++it;
   }
@@ -202,7 +210,7 @@ Status FakeDb::GetEntriesByPrefix(coroutine::CoroutineHandler* handler,
                                   std::vector<std::pair<std::string, std::string>>* entries) {
   std::vector<std::pair<std::string, std::string>> entries_with_prefix;
   auto it = key_value_store_.lower_bound(prefix.ToString());
-  while (it != key_value_store_.end() && HasPrefix(it->first, prefix)) {
+  while (it != key_value_store_.end() && StartsWith(it->first, prefix)) {
     entries_with_prefix.emplace_back(it->first.substr(prefix.size()), it->second);
     ++it;
   }

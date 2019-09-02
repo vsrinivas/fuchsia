@@ -24,6 +24,8 @@ class FakeDb : public Db {
   Status Get(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
              std::string* value) override;
   Status HasKey(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key) override;
+  Status HasPrefix(coroutine::CoroutineHandler* handler,
+                   convert::ExtendedStringView prefix) override;
   Status GetObject(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,
                    std::unique_ptr<const Piece>* piece) override;

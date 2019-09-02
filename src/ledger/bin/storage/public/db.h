@@ -59,6 +59,12 @@ class Db {
   FXL_WARN_UNUSED_RESULT virtual Status HasKey(coroutine::CoroutineHandler* handler,
                                                convert::ExtendedStringView key) = 0;
 
+  // Checks whether any key with the given |prefix| is stored in this database. Returns |OK| if the
+  // prefix was found, |INTERNAL_NOT_FOUND| if not, or another type of error in case of failure to
+  // look up.
+  FXL_WARN_UNUSED_RESULT virtual Status HasPrefix(coroutine::CoroutineHandler* handler,
+                                                  convert::ExtendedStringView prefix) = 0;
+
   // Retrieves the value for the given |key| as a Piece with the provided
   // |object_identifier|.
   FXL_WARN_UNUSED_RESULT virtual Status GetObject(coroutine::CoroutineHandler* handler,
