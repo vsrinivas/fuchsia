@@ -173,8 +173,6 @@ source_set("conformance_test_sources") {
   ]
 
   deps = [
-    ":cpp_base",
-    ":fidl_test",
     ":test_util",
     "//third_party/googletest:gtest",
     "//tools/fidl/gidl-conformance-suite:conformance_fidl",
