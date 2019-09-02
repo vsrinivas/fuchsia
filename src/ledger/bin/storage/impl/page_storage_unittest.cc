@@ -272,7 +272,7 @@ class ControlledLevelDb : public Db {
   LevelDb leveldb_;
 };
 
-class PageStorageTest : public ledger::TestWithEnvironment {
+class PageStorageTest : public StorageTest {
  public:
   PageStorageTest() : encryption_service_(dispatcher()) {}
 
@@ -312,7 +312,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   }
 
  protected:
-  PageStorage* GetStorage() { return storage_.get(); }
+  PageStorage* GetStorage() override { return storage_.get(); }
 
   std::vector<std::unique_ptr<const Commit>> GetHeads() {
     std::vector<std::unique_ptr<const Commit>> heads;
@@ -592,62 +592,6 @@ class PageStorageTest : public ledger::TestWithEnvironment {
              << "For id " << object_identifier << " expected to find the object "
              << (is_synced ? "un" : "") << "synced, but was " << (expected_synced ? "un" : "")
              << "synced, instead.";
-    }
-    return ::testing::AssertionSuccess();
-  }
-
-  ::testing::AssertionResult CreateNodeFromIdentifier(
-      ObjectIdentifier identifier, PageStorage::Location location,
-      std::unique_ptr<const btree::TreeNode>* node) {
-    bool called;
-    Status status;
-    std::unique_ptr<const btree::TreeNode> result;
-    btree::TreeNode::FromIdentifier(
-        GetStorage(), {std::move(identifier), std::move(location)},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &result));
-    RunLoopUntilIdle();
-
-    if (!called) {
-      return ::testing::AssertionFailure() << "TreeNode::FromIdentifier callback was not executed.";
-    }
-    if (status != Status::OK) {
-      return ::testing::AssertionFailure()
-             << "TreeNode::FromIdentifier failed with status " << status;
-    }
-    node->swap(result);
-    return ::testing::AssertionSuccess();
-  }
-
-  ::testing::AssertionResult CreateNodeFromEntries(
-      const std::vector<Entry>& entries, const std::map<size_t, ObjectIdentifier>& children,
-      std::unique_ptr<const btree::TreeNode>* node) {
-    bool called;
-    Status status;
-    ObjectIdentifier identifier;
-    btree::TreeNode::FromEntries(
-        GetStorage(), 0u, entries, children,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &identifier));
-    RunLoopUntilIdle();
-    if (!called) {
-      return ::testing::AssertionFailure() << "TreeNode::FromEntries callback was not executed.";
-    }
-    if (status != Status::OK) {
-      return ::testing::AssertionFailure() << "TreeNode::FromEntries failed with status " << status;
-    }
-    return CreateNodeFromIdentifier(identifier, PageStorage::Location::Local(), node);
-  }
-
-  ::testing::AssertionResult GetEmptyNodeIdentifier(ObjectIdentifier* empty_node_identifier) {
-    bool called;
-    Status status;
-    btree::TreeNode::Empty(GetStorage(), callback::Capture(callback::SetWhenCalled(&called),
-                                                           &status, empty_node_identifier));
-    RunLoopUntilIdle();
-    if (!called) {
-      return ::testing::AssertionFailure() << "TreeNode::Empty callback was not executed.";
-    }
-    if (status != Status::OK) {
-      return ::testing::AssertionFailure() << "TreeNode::Empty failed with status " << status;
     }
     return ::testing::AssertionSuccess();
   }
