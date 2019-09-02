@@ -584,7 +584,7 @@ zx_status_t VmObjectPaged::CreateClone(Resizability resizable, CloneType type, u
 
       // Invalidate everything the clone will be able to see. They're COW pages now,
       // so any existing mappings can no longer directly write to the pages.
-      RangeChangeUpdateLocked(vmo->parent_offset_, vmo->parent_offset_ + vmo->parent_limit_,
+      RangeChangeUpdateLocked(vmo->parent_offset_, vmo->parent_limit_,
                               RangeChangeOp::RemoveWrite);
     } else {
       clone_parent = this;
