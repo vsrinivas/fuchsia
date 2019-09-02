@@ -80,10 +80,12 @@ class PageStorageImplAccessorForTest {
 namespace {
 
 using ::coroutine::CoroutineHandler;
+using ::testing::_;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::Not;
+using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
@@ -145,7 +147,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
       return;
     }
     std::string& value = value_found->second;
-    object_requests.insert(std::move(object_identifier));
+    object_requests.emplace(std::move(object_identifier), object_type);
     on_get_object_([callback = std::move(callback), value] {
       callback(Status::OK, ChangeSource::CLOUD, IsObjectSynced::YES,
                DataSource::DataChunk::Create(value));
@@ -162,7 +164,7 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
 
   size_t GetNumberOfObjectsStored() { return digest_to_value_.size(); }
 
-  std::set<ObjectIdentifier> object_requests;
+  std::set<std::pair<ObjectIdentifier, ObjectType>> object_requests;
 
  private:
   fit::function<void(fit::closure)> on_get_object_;
@@ -926,8 +928,9 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
     EXPECT_EQ(sync.object_requests.size(), 2u);
-    EXPECT_TRUE(sync.object_requests.find(root_identifier) != sync.object_requests.end());
-    EXPECT_TRUE(sync.object_requests.find(eager_value.object_identifier) !=
+    EXPECT_TRUE(sync.object_requests.find({root_identifier, ObjectType::TREE_NODE}) !=
+                sync.object_requests.end());
+    EXPECT_TRUE(sync.object_requests.find({eager_value.object_identifier, ObjectType::BLOB}) !=
                 sync.object_requests.end());
 
     // Adding the same commit twice should not request any objects from sync.
@@ -1477,9 +1480,9 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
-  EXPECT_THAT(sync.object_requests, Contains(object_identifier));
-  EXPECT_THAT(sync.object_requests, Contains(chunk_identifiers[0]));
-  EXPECT_THAT(sync.object_requests, Not(Contains(chunk_identifiers[1])));
+  EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, ObjectType::BLOB)));
+  EXPECT_THAT(sync.object_requests, Contains(Pair(chunk_identifiers[0], ObjectType::BLOB)));
+  EXPECT_THAT(sync.object_requests, Not(Contains(Pair(chunk_identifiers[1], _))));
 }
 
 TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
@@ -1521,9 +1524,9 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
-  EXPECT_THAT(sync.object_requests, Contains(object_identifier));
-  EXPECT_THAT(sync.object_requests, Not(Contains(chunk_identifiers[0])));
-  EXPECT_THAT(sync.object_requests, Contains(chunk_identifiers[1]));
+  EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, ObjectType::BLOB)));
+  EXPECT_THAT(sync.object_requests, Not(Contains(Pair(chunk_identifiers[0], _))));
+  EXPECT_THAT(sync.object_requests, Contains(Pair(chunk_identifiers[1], ObjectType::BLOB)));
 }
 
 TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
@@ -1551,7 +1554,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
   std::string object_part_data;
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), "");
-  EXPECT_THAT(sync.object_requests, ElementsAre(object_identifier));
+  EXPECT_THAT(sync.object_requests, ElementsAre(Pair(object_identifier, ObjectType::BLOB)));
 }
 
 TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytesNotFound) {
@@ -1590,14 +1593,16 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
   EXPECT_EQ(convert::ToString(object_part_data), data_str.substr(offset, size));
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
-  EXPECT_THAT(sync.object_requests, Contains(object_identifier));
+  EXPECT_THAT(sync.object_requests, Contains(Pair(object_identifier, ObjectType::BLOB)));
   // Check that the requested pieces have been added to storage, and collect
   // their outbound references into an inbound-references map. Note that we need
   // to collect references only from piece actually added to storage, rather
   // than all pieces from |ForEachPiece|, since pieces not present in storage do
   // not contribute to reference counting.
   std::map<ObjectIdentifier, ObjectReferencesAndPriority> inbound_references;
-  for (const ObjectIdentifier& piece_identifier : sync.object_requests) {
+  for (const auto& [piece_identifier, object_type] : sync.object_requests) {
+    EXPECT_EQ(object_type, ObjectType::BLOB);
+
     auto piece = TryGetPiece(piece_identifier);
     ASSERT_NE(piece, nullptr);
     ObjectReferencesAndPriority outbound_references;
@@ -1696,7 +1701,8 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
   TryGetObject(object_identifier, PageStorage::Location::Local(), Status::INTERNAL_NOT_FOUND);
   // Check that all requested pieces have been stored locally.
-  for (const auto& piece_identifier : sync.object_requests) {
+  for (const auto& [piece_identifier, object_type] : sync.object_requests) {
+    ASSERT_EQ(object_type, ObjectType::BLOB);
     TryGetPiece(piece_identifier);
   }
 
@@ -1708,7 +1714,8 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
   EXPECT_EQ(sync.GetNumberOfObjectsStored(), sync.object_requests.size());
   TryGetObject(object_identifier, PageStorage::Location::Local(), Status::OK);
   // Check that all pieces have been stored locally.
-  for (const auto& piece_identifier : sync.object_requests) {
+  for (const auto& [piece_identifier, object_type] : sync.object_requests) {
+    ASSERT_EQ(object_type, ObjectType::BLOB);
     TryGetPiece(piece_identifier);
   }
 }
@@ -1853,7 +1860,8 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromSync) {
 
   // Check that all pieces have been stored locally.
   EXPECT_EQ(sync.GetNumberOfObjectsStored(), sync.object_requests.size());
-  for (const auto& piece_identifier : sync.object_requests) {
+  for (const auto& [piece_identifier, object_type] : sync.object_requests) {
+    EXPECT_EQ(object_type, ObjectType::BLOB);
     TryGetPiece(piece_identifier);
   }
 
@@ -2311,9 +2319,12 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromSync) {
     EXPECT_EQ(status, Status::OK);
 
     EXPECT_EQ(sync.object_requests.size(), 4u);
-    EXPECT_NE(sync.object_requests.find(object_identifiers[0]), sync.object_requests.end());
-    EXPECT_EQ(sync.object_requests.end(), sync.object_requests.find(object_identifiers[1]));
-    EXPECT_NE(sync.object_requests.find(object_identifiers[2]), sync.object_requests.end());
+    EXPECT_NE(sync.object_requests.find({object_identifiers[0], ObjectType::TREE_NODE}),
+              sync.object_requests.end());
+    EXPECT_EQ(sync.object_requests.find({object_identifiers[1], ObjectType::TREE_NODE}),
+              sync.object_requests.end());
+    EXPECT_NE(sync.object_requests.find({object_identifiers[2], ObjectType::TREE_NODE}),
+              sync.object_requests.end());
   });
 }
 
@@ -2381,9 +2392,12 @@ TEST_F(PageStorageTest, AddMultipleCommitsFromP2P) {
     EXPECT_EQ(status, Status::OK);
 
     EXPECT_EQ(sync.object_requests.size(), 6u);
-    EXPECT_NE(sync.object_requests.find(object_identifiers[0]), sync.object_requests.end());
-    EXPECT_NE(sync.object_requests.find(object_identifiers[1]), sync.object_requests.end());
-    EXPECT_NE(sync.object_requests.find(object_identifiers[2]), sync.object_requests.end());
+    EXPECT_NE(sync.object_requests.find({object_identifiers[0], ObjectType::TREE_NODE}),
+              sync.object_requests.end());
+    EXPECT_NE(sync.object_requests.find({object_identifiers[1], ObjectType::TREE_NODE}),
+              sync.object_requests.end());
+    EXPECT_NE(sync.object_requests.find({object_identifiers[2], ObjectType::TREE_NODE}),
+              sync.object_requests.end());
   });
 }
 

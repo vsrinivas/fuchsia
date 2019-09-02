@@ -1029,7 +1029,7 @@ void PageStorageImpl::GetOrDownloadPiece(
     }
     coroutine_manager_.StartCoroutine(
         std::move(callback),
-        [this, object_identifier = std::move(object_identifier)](
+        [this, object_identifier = std::move(object_identifier), location = std::move(location)](
             CoroutineHandler* handler,
             fit::function<void(Status, std::unique_ptr<const Piece>, WritePieceCallback)>
                 callback) mutable {
@@ -1037,15 +1037,18 @@ void PageStorageImpl::GetOrDownloadPiece(
           ChangeSource source;
           IsObjectSynced is_object_synced;
           std::unique_ptr<DataSource::DataChunk> chunk;
+          FXL_DCHECK(location.is_network());
+          ObjectType object_type =
+              location.is_tree_node_from_network() ? ObjectType::TREE_NODE : ObjectType::BLOB;
 
           // Retrieve an object from the network.
           if (coroutine::SyncCall(
                   handler,
-                  [this,
-                   object_identifier](fit::function<void(Status, ChangeSource, IsObjectSynced,
-                                                         std::unique_ptr<DataSource::DataChunk>)>
-                                          callback) mutable {
-                    page_sync_->GetObject(std::move(object_identifier), ObjectType::BLOB,
+                  [this, object_identifier,
+                   object_type](fit::function<void(Status, ChangeSource, IsObjectSynced,
+                                                   std::unique_ptr<DataSource::DataChunk>)>
+                                    callback) mutable {
+                    page_sync_->GetObject(std::move(object_identifier), object_type,
                                           std::move(callback));
                   },
                   &status, &source, &is_object_synced,
