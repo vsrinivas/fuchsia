@@ -256,9 +256,14 @@ void X86PageTableBase<paf>::UpdateEntry(ConsistencyManager* cm, PageTableLevel l
   DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
 
   pt_entry_t olde = *pte;
+  pt_entry_t newe = paddr | flags | X86_MMU_PG_P;
+  // If we ignore accessed and dirty bits, are we actually changing anything?
+  if ((olde & ~(X86_MMU_PG_A | X86_MMU_PG_D)) == newe) {
+    return;
+  }
 
   /* set the new entry */
-  *pte = paddr | flags | X86_MMU_PG_P;
+  *pte = newe;
   cm->cache_line_flusher()->FlushPtEntry(pte);
 
   /* attempt to invalidate the page */
