@@ -13,11 +13,11 @@ Implementation of Ledger.
  - [environment](environment)
  - [fidl](fidl) FIDL protocols internal to Ledger and peridot framework (not exposed to upper layers)
  - [fidl_helpers](fidl_helpers)
- - [lock](lock)
  - [filesystem](filesystem) contains filesystem-related helper functions
  - [p2p_provider](p2p_provider) implements P2P primitives powering the P2P sync
  - [p2p_sync](p2p_sync) implements Ledger synchronisation via P2P
  - [storage](storage) implements persistent representation of data held in
    Ledger
+ - [synchronization](synchronization)
  - [testing](testing) contains helper functions used for testing Ledger
  - [tests](tests) contains tests and benchmarks for Ledger
