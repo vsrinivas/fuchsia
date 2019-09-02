@@ -3122,6 +3122,63 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
               UnorderedElementsAre(commit_A->GetId(), commit_B->GetId(), commit_D->GetId()));
 }
 
+// Checks that the RetrievedObjectType can vary for a given piece depending on why we're reading it.
+TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
+  // Build a random, valid tree node.
+  std::vector<Entry> entries;
+  CreateEntries(1000, &entries);
+  std::string data_str = btree::EncodeNode(0, entries, {});
+  ASSERT_TRUE(btree::CheckValidTreeNodeSerialization(data_str));
+
+  // Split the tree node content into pieces and add them to a SyncDelegate to be
+  // retrieved by GetObject.
+  FakeSyncDelegate sync;
+  std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
+  ObjectIdentifier object_identifier =
+      ForEachPiece(data_str, ObjectType::TREE_NODE, storage_->GetObjectIdentifierFactory(),
+                   [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
+                     ObjectIdentifier piece_identifier = piece->GetIdentifier();
+                     if (GetObjectDigestInfo(piece_identifier.object_digest()).is_inlined()) {
+                       return;
+                     }
+                     digest_to_identifier[piece_identifier.object_digest()] = piece_identifier;
+                     sync.AddObject(std::move(piece_identifier), piece->GetData().ToString());
+                   });
+  ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
+  storage_->SetSyncDelegate(&sync);
+
+  // Get a non-root piece as a value.
+  ObjectIdentifier non_root_piece_identifier;
+  for (const auto& [digest, identifier] : digest_to_identifier) {
+    if (identifier != object_identifier) {
+      non_root_piece_identifier = identifier;
+      break;
+    }
+  }
+  ASSERT_NE(non_root_piece_identifier, ObjectIdentifier());
+  EXPECT_NE(non_root_piece_identifier, object_identifier);
+  std::unique_ptr<const Object> value_object =
+      TryGetObject(non_root_piece_identifier, PageStorage::Location::ValueFromNetwork());
+  EXPECT_THAT(sync.object_requests,
+              ElementsAre(Pair(non_root_piece_identifier, RetrievedObjectType::BLOB)));
+
+  // Reset and fetch the whole tree.
+  sync.object_requests.clear();
+  ResetStorage();
+  storage_->SetSyncDelegate(&sync);
+  RetrackIdentifier(&non_root_piece_identifier);
+  RetrackIdentifier(&object_identifier);
+
+  // Get the tree node containing the non-root piece.
+  CommitId dummy_commit = GetFirstHead()->GetId();
+  std::unique_ptr<const Object> node_object =
+      TryGetObject(object_identifier, PageStorage::Location::TreeNodeFromNetwork(dummy_commit));
+  EXPECT_THAT(sync.object_requests,
+              Contains(Pair(non_root_piece_identifier, RetrievedObjectType::TREE_NODE)));
+  EXPECT_THAT(sync.object_requests,
+              Not(Contains(Pair(non_root_piece_identifier, RetrievedObjectType::BLOB))));
+}
+
 }  // namespace
 
 }  // namespace storage

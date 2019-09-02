@@ -9,6 +9,8 @@
 #include <lib/callback/set_when_called.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
+#include <cmath>
 #include <numeric>
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
@@ -28,8 +30,6 @@ namespace storage {
 namespace {
 
 std::vector<size_t> GetEnumeration(size_t size) {
-  FXL_CHECK(size <= 100);
-
   std::vector<size_t> values(size);
   std::iota(values.begin(), values.end(), 0u);
 
@@ -218,16 +218,22 @@ StorageTest::~StorageTest() {}
 ::testing::AssertionResult StorageTest::CreateEntries(std::vector<size_t> values,
                                                       std::vector<Entry>* entries) {
   std::vector<Entry> result;
+  size_t largest = 0;
+  if (auto it = std::max_element(values.begin(), values.end()); it != values.end()) {
+    largest = *it;
+  }
+  // For compatibility with existing uses, length is at least two.
+  int length = 1 + std::floor(std::log10(std::max(largest, (size_t)99)));
   for (auto i : values) {
-    FXL_DCHECK(i < 100);
     std::unique_ptr<const Object> object;
     ::testing::AssertionResult assertion_result =
-        AddObject(fxl::StringPrintf("object%02" PRIuMAX, i), &object);
+        AddObject(fxl::StringPrintf("object%0*" PRIuMAX, length, i), &object);
     if (!assertion_result) {
       return assertion_result;
     }
-    result.push_back(Entry{fxl::StringPrintf("key%02" PRIuMAX, i), object->GetIdentifier(),
-                           KeyPriority::EAGER, EntryId(fxl::StringPrintf("id_%02" PRIuMAX, i))});
+    result.push_back(Entry{fxl::StringPrintf("key%0*" PRIuMAX, length, i), object->GetIdentifier(),
+                           KeyPriority::EAGER,
+                           EntryId(fxl::StringPrintf("id_%0*" PRIuMAX, length, i))});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();

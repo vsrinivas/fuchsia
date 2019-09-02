@@ -114,13 +114,15 @@ class StorageTest : public ledger::TestWithEnvironment {
   // Creates a vector of entries, each of which has a key from "key00" to
   // "keyXX" where XX is |size-1|. A new value is created for each entry and the
   // corresponding object_digest is set on the entry. |entries| vector will be
-  // swapped with the result.
+  // swapped with the result. The "XX" part is at least two digits long, and
+  // numbers will be 0-padded to the same size.
   ::testing::AssertionResult CreateEntries(size_t size, std::vector<Entry>* entries);
 
   // Creates a vector of entries, each of which has a key "keyXX", were "XX" is
   // taken from the |values| vector. A new value is created for each entry and
   // the corresponding object_digest is set on the entry. |entries| vector will
-  // be swapped with the result.
+  // be swapped with the result. The "XX" part is at least two digits long, and
+  // numbers will be 0-padded to the same size.
   ::testing::AssertionResult CreateEntries(std::vector<size_t> values, std::vector<Entry>* entries);
 
   // Creates a vector of entry changes adding or updating the given number of
