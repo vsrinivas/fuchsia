@@ -1038,17 +1038,18 @@ void PageStorageImpl::GetOrDownloadPiece(
           IsObjectSynced is_object_synced;
           std::unique_ptr<DataSource::DataChunk> chunk;
           FXL_DCHECK(location.is_network());
-          ObjectType object_type =
-              location.is_tree_node_from_network() ? ObjectType::TREE_NODE : ObjectType::BLOB;
+          RetrievedObjectType retrieved_object_type = location.is_tree_node_from_network()
+                                                          ? RetrievedObjectType::TREE_NODE
+                                                          : RetrievedObjectType::BLOB;
 
           // Retrieve an object from the network.
           if (coroutine::SyncCall(
                   handler,
-                  [this, object_identifier,
-                   object_type](fit::function<void(Status, ChangeSource, IsObjectSynced,
-                                                   std::unique_ptr<DataSource::DataChunk>)>
-                                    callback) mutable {
-                    page_sync_->GetObject(std::move(object_identifier), object_type,
+                  [this, object_identifier, retrieved_object_type](
+                      fit::function<void(Status, ChangeSource, IsObjectSynced,
+                                         std::unique_ptr<DataSource::DataChunk>)>
+                          callback) mutable {
+                    page_sync_->GetObject(std::move(object_identifier), retrieved_object_type,
                                           std::move(callback));
                   },
                   &status, &source, &is_object_synced,

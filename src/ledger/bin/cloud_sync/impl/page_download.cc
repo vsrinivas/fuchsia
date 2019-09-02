@@ -283,7 +283,8 @@ void PageDownload::DownloadBatch(std::vector<cloud_provider::Commit> commits,
 }
 
 void PageDownload::GetObject(
-    storage::ObjectIdentifier object_identifier, storage::ObjectType /*object_type*/,
+    storage::ObjectIdentifier object_identifier,
+    storage::RetrievedObjectType /*retrieved_object_type*/,
     fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {

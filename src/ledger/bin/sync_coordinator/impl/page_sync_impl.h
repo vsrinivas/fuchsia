@@ -47,7 +47,8 @@ class PageSyncImpl : public PageSync, public storage::PageSyncDelegate {
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
 
   // PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
+  void GetObject(storage::ObjectIdentifier object_identifier,
+                 storage::RetrievedObjectType retrieved_object_type,
                  fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>
                      callback) override;

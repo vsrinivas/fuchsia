@@ -15,6 +15,14 @@
 
 namespace storage {
 
+// The type of the object a piece belongs to. A piece can be part of multiple objects. In this
+// should be |TREE_NODE| if we are trying to read this piece because we are reading a tree node, and
+// |BLOB| if we are trying to read it as part of a value.
+enum class RetrievedObjectType {
+  TREE_NODE,
+  BLOB,
+};
+
 // Delegate interface for PageStorage responsible for retrieving on-demand
 // storage objects from the network (cloud or P2P).
 class PageSyncDelegate {
@@ -22,15 +30,17 @@ class PageSyncDelegate {
   PageSyncDelegate() {}
   virtual ~PageSyncDelegate() {}
 
-  // Retrieves the object of the given id from the network.
+  // Retrieves the piece of the given id from the network.
   //
-  // |object_type| is |TREE_NODE| if the object is part of a tree node, and |BLOB| otherwise. If
-  // |object_type| is |TREE_NODE|, the object will not be retrieved from the cloud.
+  // |retrieved_object_type| is |TREE_NODE| if the piece is part of a tree node, and |BLOB|
+  // otherwise. If |retrieved_object_type| is |TREE_NODE|, the piece will not be retrieved from the
+  // cloud.
   //
-  // Compatibility: the client may set |object_type| to |BLOB| for parts of tree nodes to force
-  // retrieving an object from the cloud even if it is part of the tree.
+  // Compatibility: the client may set |retrieved_object_type| to |BLOB| for parts of tree nodes to
+  // force retrieving a piece from the cloud even if it is part of the tree.
   // TODO(LE-823): remove compatibility.
-  virtual void GetObject(ObjectIdentifier object_identifier, ObjectType object_type,
+  virtual void GetObject(ObjectIdentifier object_identifier,
+                         RetrievedObjectType retrieved_object_type,
                          fit::function<void(Status, ChangeSource, IsObjectSynced,
                                             std::unique_ptr<DataSource::DataChunk>)>
                              callback) = 0;

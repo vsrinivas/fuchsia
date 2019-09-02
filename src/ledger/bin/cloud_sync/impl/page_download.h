@@ -71,7 +71,8 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
                      fit::closure on_done);
 
   // storage::PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
+  void GetObject(storage::ObjectIdentifier object_identifier,
+                 storage::RetrievedObjectType retrieved_object_type,
                  fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>
                      callback) override;
@@ -80,7 +81,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher, public storage::Pa
       fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
           callback) override;
 
-  // Actual implementation of |GetObject|: |object_type| is ignored at this level.
+  // Actual implementation of |GetObject|: |retrieved_object_type| is ignored at this level.
   void GetObject(storage::ObjectIdentifier object_identifier,
                  fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>

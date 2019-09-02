@@ -409,7 +409,7 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -454,7 +454,7 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -577,7 +577,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -618,7 +618,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -658,7 +658,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -698,7 +698,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -748,7 +748,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -803,7 +803,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   storage::ChangeSource source1, source2;
   storage::IsObjectSynced is_object_synced1, is_object_synced2;
   std::unique_ptr<storage::DataSource::DataChunk> data1, data2;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called1), &status1,
                                                 &source1, &is_object_synced1, &data1));
   RunLoopUntilIdle();
@@ -812,7 +812,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   ASSERT_EQ(mesh.messages_.size(), 1u);
   EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called2), &status2,
                                                 &source2, &is_object_synced2, &data2));
   RunLoopUntilIdle();
@@ -921,16 +921,16 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
   storage::IsObjectSynced is_object_synced1, is_object_synced2, is_object_synced3,
       is_object_synced4;
   std::unique_ptr<storage::DataSource::DataChunk> data1, data2, data3, data4;
-  page_communicator.GetObject(MakeObjectIdentifier("foo1"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo1"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called1), &status1,
                                                 &source1, &is_object_synced1, &data1));
-  page_communicator.GetObject(MakeObjectIdentifier("foo2"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo2"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called2), &status2,
                                                 &source2, &is_object_synced2, &data2));
-  page_communicator.GetObject(MakeObjectIdentifier("foo3"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo3"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called3), &status3,
                                                 &source3, &is_object_synced3, &data3));
-  page_communicator.GetObject(MakeObjectIdentifier("foo4"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo4"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called4), &status4,
                                                 &source4, &is_object_synced4, &data4));
   RunLoopUntilIdle();
@@ -1159,7 +1159,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectRemoveDevice) {
     page_communicator.OnDeviceChange(MakeP2PClientId(3u), p2p_provider::DeviceChangeType::DELETED);
   });
 
-  page_communicator.GetObject(MakeObjectIdentifier("foo1"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo1"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
 
@@ -1227,7 +1227,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -1236,7 +1236,7 @@ TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
   EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
 
   // A second call for the same object also returns.
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();
@@ -1260,7 +1260,7 @@ TEST_F(PageCommunicatorImplTest, GetObject_Disconnect) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::ObjectType::BLOB,
+  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
                               callback::Capture(callback::SetWhenCalled(&called), &status, &source,
                                                 &is_object_synced, &data));
   RunLoopUntilIdle();

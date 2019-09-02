@@ -23,7 +23,8 @@ class SyncProviderHolderBase : public storage::PageSyncClient, public storage::P
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override;
 
   // PageSyncDelegate:
-  void GetObject(storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
+  void GetObject(storage::ObjectIdentifier object_identifier,
+                 storage::RetrievedObjectType retrieved_object_type,
                  fit::function<void(ledger::Status status, storage::ChangeSource change_source,
                                     storage::IsObjectSynced is_object_synced,
                                     std::unique_ptr<storage::DataSource::DataChunk>)>
@@ -46,11 +47,12 @@ void SyncProviderHolderBase::SetSyncDelegate(storage::PageSyncDelegate* page_syn
 }
 
 void SyncProviderHolderBase::GetObject(
-    storage::ObjectIdentifier object_identifier, storage::ObjectType object_type,
+    storage::ObjectIdentifier object_identifier, storage::RetrievedObjectType retrieved_object_type,
     fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
-  page_sync_delegate_->GetObject(std::move(object_identifier), object_type, std::move(callback));
+  page_sync_delegate_->GetObject(std::move(object_identifier), retrieved_object_type,
+                                 std::move(callback));
 }
 
 void SyncProviderHolderBase::GetDiff(
@@ -195,7 +197,7 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 }
 
 void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
-                             storage::ObjectType object_type,
+                             storage::RetrievedObjectType retrieved_object_type,
                              fit::function<void(ledger::Status, storage::ChangeSource,
                                                 storage::IsObjectSynced is_object_synced,
                                                 std::unique_ptr<storage::DataSource::DataChunk>)>
@@ -212,7 +214,7 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
                  std::unique_ptr<storage::DataSource::DataChunk>>());
   if (cloud_sync_) {
     cloud_sync_->GetObject(
-        object_identifier, object_type,
+        object_identifier, retrieved_object_type,
         [callback = waiter->NewCallback()](ledger::Status status, storage::ChangeSource source,
                                            storage::IsObjectSynced is_object_synced,
                                            std::unique_ptr<storage::DataSource::DataChunk> data) {
@@ -221,7 +223,7 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
   }
   if (p2p_sync_) {
     p2p_sync_->GetObject(
-        std::move(object_identifier), object_type,
+        std::move(object_identifier), retrieved_object_type,
         [callback = waiter->NewCallback()](ledger::Status status, storage::ChangeSource source,
                                            storage::IsObjectSynced is_object_synced,
                                            std::unique_ptr<storage::DataSource::DataChunk> data) {

@@ -322,7 +322,8 @@ void PageCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source
 }
 
 void PageCommunicatorImpl::GetObject(
-    storage::ObjectIdentifier object_identifier, storage::ObjectType /*object_type*/,
+    storage::ObjectIdentifier object_identifier,
+    storage::RetrievedObjectType /*retrieved_object_type*/,
     fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
