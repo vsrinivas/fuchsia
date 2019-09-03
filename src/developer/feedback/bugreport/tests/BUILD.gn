@@ -64,7 +64,7 @@ executable("bugreport_integration_test") {
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 

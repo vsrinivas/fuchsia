@@ -10,6 +10,8 @@ import("//build/go/toolchain.gni")
 # It is currently used to make `//zircon/public/fidl/foo` strictly equivalent
 # to `//zircon/system/fidl/foo` in the Fuchsia GN build.
 template("fidl_alias") {
+  # TODO(35562): remove this warning.
+  print("WARNING: //zircon/public/fidl is going away, please use //zircon/system/fidl instead")
   not_needed(invoker, "*")
   library_name = target_name
   if (current_toolchain == dart_toolchain) {

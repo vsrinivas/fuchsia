@@ -228,7 +228,7 @@ source_set("gfx") {
     "//garnet/public/lib/inspect_deprecated",
     "//garnet/public/lib/ui/scenic/cpp",
     "//src/ui/lib/escher/util:check_vulkan_support",
-    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",

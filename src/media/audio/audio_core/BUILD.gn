@@ -165,7 +165,7 @@ source_set("audio_core_lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//third_party/rapidjson",
-    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
