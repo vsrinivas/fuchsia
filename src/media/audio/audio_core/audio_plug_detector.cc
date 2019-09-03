@@ -4,28 +4,16 @@
 
 #include "src/media/audio/audio_core/audio_plug_detector.h"
 
-#include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <zircon/compiler.h>
-#include <zircon/device/audio.h>
-#include <zircon/device/vfs.h>
 
-#include <fbl/auto_lock.h>
-#include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <trace/event.h>
 
-#include "src/lib/files/unique_fd.h"
-#include "src/media/audio/audio_core/audio_device_manager.h"
-#include "src/media/audio/audio_core/audio_input.h"
-#include "src/media/audio/audio_core/audio_output.h"
-#include "src/media/audio/audio_core/driver_output.h"
 #include "src/media/audio/audio_core/reporter.h"
 
 namespace media::audio {
@@ -38,26 +26,14 @@ static const struct {
     {.path = "/dev/class/audio-input", .is_input = true},
 };
 
-AudioPlugDetector::~AudioPlugDetector() { FXL_DCHECK(manager_ == nullptr); }
-
-zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
+zx_status_t AudioPlugDetector::Start() {
   TRACE_DURATION("audio", "AudioPlugDetector::Start");
-  FXL_DCHECK(manager != nullptr);
+  // Start should only be called once.
+  FXL_DCHECK(watchers_.empty());
 
   // If we fail to set up monitoring for any of our target directories,
   // automatically stop monitoring all sources of device nodes.
   auto error_cleanup = fit::defer([this]() { Stop(); });
-
-  // If we are already running, we cannot start again.  Cancel the cleanup
-  // operation and report that things are successfully started.
-  if (manager_ != nullptr) {
-    FXL_LOG(INFO) << "Attempted to start the AudioPlugDetector twice!";
-    error_cleanup.cancel();
-    return ZX_OK;
-  }
-
-  // Record our new manager
-  manager_ = manager;
 
   // Create our watchers.
   for (const auto& devnode : AUDIO_DEVNODES) {
@@ -82,16 +58,21 @@ zx_status_t AudioPlugDetector::Start(AudioDeviceManager* manager) {
 
 void AudioPlugDetector::Stop() {
   TRACE_DURATION("audio", "AudioPlugDetector::Stop");
-  manager_ = nullptr;
+  observer_ = nullptr;
   watchers_.clear();
 }
 
 void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name, bool is_input) {
   TRACE_DURATION("audio", "AudioPlugDetector::AddAudioDevice");
-  if (manager_ == nullptr)
+  if (!observer_) {
     return;
+  }
 
   // Open the device node.
+  //
+  // TODO(35145): Remove blocking 'openat' from the main thread. fdio_open_at is probably what we
+  // want, but we'll need a version of DeviceWatcher that operates on fuchsia::io::Directory
+  // handles instead of file descriptors.
   fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
     REP(FailedToOpenDevice(name, is_input, errno));
@@ -112,17 +93,15 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name, bool
   }
 
   // Obtain the stream channel
-  zx::channel channel;
-  fuchsia::hardware::audio::Device_SyncProxy dev(std::move(dev_channel));
-
-  res = dev.GetChannel(&channel);
-  if (res != ZX_OK) {
+  auto device =
+      fidl::InterfaceHandle<fuchsia::hardware::audio::Device>(std::move(dev_channel)).Bind();
+  device.set_error_handler([name, is_input](zx_status_t res) {
     REP(FailedToObtainStreamChannel(name, is_input, res));
     FXL_PLOG(ERROR, res) << "Failed to open channel to audio " << (is_input ? "input" : "output");
-    return;
-  }
-
-  manager_->AddDeviceByChannel(std::move(channel), name, is_input);
+  });
+  device->GetChannel([d = std::move(device), this, is_input, name](zx::channel channel) {
+    observer_(std::move(channel), name, is_input);
+  });
 }
 
 }  // namespace media::audio

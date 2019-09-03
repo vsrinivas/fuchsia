@@ -24,6 +24,7 @@ AudioDeviceManager::AudioDeviceManager(async_dispatcher_t* dispatcher,
                                        const SystemGainMuteProvider& system_gain_mute)
     : dispatcher_(dispatcher),
       system_gain_mute_(system_gain_mute),
+      plug_detector_(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel)),
       // TODO(35145): Use a dispatcher here appropriate for blocking operations such as disk IO
       // instead of the main service dispatcher.
       device_settings_persistence_(dispatcher_) {}
@@ -54,7 +55,7 @@ zx_status_t AudioDeviceManager::Init() {
   throttle_output_ = std::move(throttle_output);
 
   // Start monitoring for plug/unplug events of pluggable audio output devices.
-  res = plug_detector_.Start(this);
+  res = plug_detector_.Start();
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "AudioDeviceManager failed to start plug detector";
     return res;
@@ -739,7 +740,7 @@ void AudioDeviceManager::UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>
   device_settings_persistence_.CommitDirtySettings();
 }
 
-void AudioDeviceManager::AddDeviceByChannel(::zx::channel device_channel, std::string device_name,
+void AudioDeviceManager::AddDeviceByChannel(zx::channel device_channel, std::string device_name,
                                             bool is_input) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDeviceByChannel");
   AUD_VLOG(TRACE) << " adding " << (is_input ? "input" : "output") << " '" << device_name << "'";

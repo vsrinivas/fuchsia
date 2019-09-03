@@ -225,6 +225,7 @@ executable("unittest_bin") {
     "audio_device_settings_persistence_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_link_packet_source_unittest.cc",
+    "audio_plug_detector_unittest.cc",
     "command_line_options_unittest.cc",
     "gain_curve_unittest.cc",
     "policy_loader_unittest.cc",
@@ -238,9 +239,11 @@ executable("unittest_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/test:null_renderer_capturer",
-    "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-hardware-audio",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-scheduler",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fzl",
   ]
 }
 
