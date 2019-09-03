@@ -213,4 +213,31 @@ TEST(Sdio, IoAbort) {
   sdio2.VerifyAndClear();
 }
 
+TEST(Sdio, RamRw) {
+  brcmf_sdio_dev sdio_dev = {};
+  sdio_func func1 = {};
+  pthread_mutex_init(&func1.lock, nullptr);
+
+  MockSdio sdio1;
+
+  sdio_dev.sdio_proto_fn1 = *sdio1.GetProto();
+  sdio_dev.func1 = &func1;
+
+  sdio1.ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0000ffe0, 0x00000020, true, true))
+      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0001000a, 0x00000001, true, true))
+      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0001000b, 0x00000001, true, true))
+      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x0001000c, 0x00000001, true, true))
+      .ExpectDoRwTxn(ZX_OK, MakeSdioTxn(0x00008000, 0x00000020, true, true));
+
+  /* In this test the address is set to 0x000007fe0, and when running, this function
+   will chunk the data which is originally 0x40 bytes big into two pieces to align
+   the next transfer address to SBSDIO_SB_OFT_ADDR_LIMIT, which is 0x8000, each one
+   is 0x20 bytes big. The first line above corresponding to the first piece, and the
+   fifth line is the second piece, middle three are txns made in
+   brcmf_sdiod_set_backplane_window()
+   */
+  EXPECT_OK(brcmf_sdiod_ramrw(&sdio_dev, true, 0x000007fe0, nullptr, 0x00000040));
+  sdio1.VerifyAndClear();
+}
+
 }  // namespace

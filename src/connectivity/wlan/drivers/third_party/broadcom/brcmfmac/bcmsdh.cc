@@ -15,19 +15,20 @@
  */
 /* ****************** SDIO CARD Interface Functions **************************/
 
+#include <lib/sync/completion.h>
+#include <pthread.h>
+#include <zircon/status.h>
+
 #include <algorithm>
 #include <atomic>
-#include <pthread.h>
 
 #include <ddk/device.h>
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/sdio.h>
 #include <ddk/metadata.h>
-#include <ddk/trace/event.h>
+#include <ddk/protocol/composite.h>
 #include <ddk/protocol/gpio.h>
-#include <lib/sync/completion.h>
+#include <ddk/protocol/sdio.h>
+#include <ddk/trace/event.h>
 #include <wifi/wifi-config.h>
-#include <zircon/status.h>
 
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
@@ -574,16 +575,14 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
 }
 
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
-                              void* data, uint size) {
+                              void* data, uint32_t size) {
   zx_status_t err = ZX_OK;
   struct brcmf_netbuf* pkt;
-  uint32_t this_transfer_address;
-  uint this_transfer_size;
+  // SBSDIO_SB_OFT_ADDR_LIMIT is the max transfer limit a single chunk.
+  uint32_t alloc_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
+  uint32_t transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
+  uint32_t transfer_size;
 
-#define MAX_XFER_SIZE 0x100  // TODO(cphoenix): Remove when SDIO bug (?) is fixed.
-
-  uint packet_size = min_t(uint, MAX_XFER_SIZE, size);
-  uint alloc_size = packet_size;
   if (!write) {
     // Must round up the allocation size to match brcmf_sdiod_netbuf_read.
     alloc_size += 3;
@@ -592,20 +591,20 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
 
   pkt = brcmf_netbuf_allocate(alloc_size);
   if (!pkt) {
-    BRCMF_ERR("brcmf_netbuf_allocate failed: len %d\n", packet_size);
+    BRCMF_ERR("brcmf_netbuf_allocate failed: len %d\n", alloc_size);
     return ZX_ERR_IO;
   }
   pkt->priority = 0;
 
   /* Determine initial transfer parameters */
-  this_transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
-  uint32_t low_address_bits = this_transfer_address & (MAX_XFER_SIZE - 1);
-  if (low_address_bits) {
-    this_transfer_size = std::min(packet_size, MAX_XFER_SIZE - low_address_bits);
-  } else {
-    this_transfer_size = packet_size;
-  }
   sdio_claim_host(sdiodev->func1);
+  // Handling the situation when transfer_address + transfer_size > SBSDIO_SB_OFT_ADDR_LIMIT by
+  // doing address alignment.
+  if ((transfer_address + size) & SBSDIO_SBWINDOW_MASK) {
+    transfer_size = (SBSDIO_SB_OFT_ADDR_LIMIT - transfer_address);
+  } else {
+    transfer_size = size;
+  }
 
   /* Do the transfer(s) */
   while (size) {
@@ -616,16 +615,16 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
       break;
     }
 
-    this_transfer_address &= SBSDIO_SB_OFT_ADDR_MASK;
-    this_transfer_address |= SBSDIO_SB_ACCESS_2_4B_FLAG;
-
-    brcmf_netbuf_grow_tail(pkt, this_transfer_size);
+    transfer_address &= SBSDIO_SB_OFT_ADDR_MASK;
+    transfer_address |= SBSDIO_SB_ACCESS_2_4B_FLAG;
+    brcmf_netbuf_grow_tail(pkt, transfer_size);
 
     if (write) {
-      memcpy(pkt->data, data, this_transfer_size);
-      err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_1, this_transfer_address, pkt);
+      if (data)
+        memcpy(pkt->data, data, transfer_size);
+      err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_1, transfer_address, pkt);
     } else {
-      err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_1, this_transfer_address, pkt);
+      err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_1, transfer_address, pkt);
     }
 
     if (err != ZX_OK) {
@@ -633,18 +632,17 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
       break;
     }
     if (!write) {
-      memcpy(data, pkt->data, this_transfer_size);
+      memcpy(data, pkt->data, transfer_size);
     }
     brcmf_netbuf_reduce_length_to(pkt, 0);
 
     /* Adjust for next transfer (if any) */
-    size -= this_transfer_size;
-    if (size) {
-      data = static_cast<char*>(data) + this_transfer_size;
-      address += this_transfer_size;
-      this_transfer_address += this_transfer_size;
-      this_transfer_size = min_t(uint32_t, MAX_XFER_SIZE, size);
-    }
+    size -= transfer_size;
+    if (data)
+      data = static_cast<char*>(data) + transfer_size;
+    address += transfer_size;
+    transfer_address += transfer_size;
+    transfer_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
   }
 
   brcmf_netbuf_free(pkt);
