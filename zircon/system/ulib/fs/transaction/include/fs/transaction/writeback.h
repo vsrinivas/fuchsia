@@ -11,7 +11,6 @@
 
 #include <utility>
 
-// #include <blobfs/journal/journal2.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <fs/operation/buffered_operation.h>

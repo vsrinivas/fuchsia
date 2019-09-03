@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_JOURNAL_BACKGROUND_EXECUTOR_H_
+#define FS_JOURNAL_BACKGROUND_EXECUTOR_H_
 
-#include <fs/locking.h>
-#include <lib/fit/single_threaded_executor.h>
 #include <lib/fit/promise.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <mutex>
 #include <thread>
 
-namespace blobfs {
+#include <fs/locking.h>
+
+namespace fs {
 
 // A generic task executor, capable of running only when work is available until
 // destroyed. Tasks added to the BackgroundExecutor are executed on a single thread.
@@ -54,4 +56,6 @@ class BackgroundExecutor final : public fit::executor {
   bool should_terminate_ FS_TA_GUARDED(lock_) = false;
 };
 
-}  // namespace blobfs
+}  // namespace fs
+
+#endif  // FS_JOURNAL_BACKGROUND_EXECUTOR_H_

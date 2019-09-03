@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_DATA_STREAMER_H_
-#define BLOBFS_DATA_STREAMER_H_
+#ifndef FS_JOURNAL_DATA_STREAMER_H_
+#define FS_JOURNAL_DATA_STREAMER_H_
 
 #include <lib/fit/promise.h>
 
 #include <utility>
 
-#include <blobfs/journal/journal2.h>
+#include <fs/journal/journal.h>
 #include <fs/operation/buffered_operation.h>
 #include <fs/operation/unbuffered_operations_builder.h>
 
-namespace blobfs {
+namespace fs {
 
 // A class which helps callers write streaming data operations to the underlying device.
 //
@@ -42,7 +42,7 @@ namespace blobfs {
 // This class is thread-compatible.
 class DataStreamer {
  public:
-  DataStreamer(Journal2* journal, size_t writeback_capacity)
+  DataStreamer(fs::Journal* journal, size_t writeback_capacity)
       : journal_(journal), writeback_capacity_(writeback_capacity) {}
 
   // Issues |operation| to the underlying writeback subsystem (eventually).
@@ -56,14 +56,14 @@ class DataStreamer {
 
   // Ensures all operations sent to |StreamData| are issued to the executor, and returns a promise
   // representing when all those writes have completed.
-  Journal2::Promise Flush();
+  fs::Journal::Promise Flush();
 
  private:
   // Issues locally buffered operations to the executor, and track the resulting promise in
   // |promises_|. The completion of all issued operations can be achieved by invoking |Flush()|.
   void IssueOperations();
 
-  Journal2* journal_;
+  fs::Journal* journal_;
   const size_t writeback_capacity_;
 
   // Operations which have been sent to |StreamData|, but which have not been sent to the executor.
@@ -73,6 +73,6 @@ class DataStreamer {
   std::vector<fit::promise<void, zx_status_t>> promises_;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_DATA_STREAMER_H_
+#endif  // FS_JOURNAL_DATA_STREAMER_H_

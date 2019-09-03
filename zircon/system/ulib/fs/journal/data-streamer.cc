@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
-#include <blobfs/data-streamer.h>
+#include <fs/journal/data-streamer.h>
+#include <fs/operation/buffered_operation.h>
 
-namespace blobfs {
+namespace fs {
 
 void DataStreamer::StreamData(fs::UnbufferedOperation operation) {
   ZX_DEBUG_ASSERT(operation.op.type == fs::OperationType::kWrite);
   const size_t max_chunk_blocks = (3 * writeback_capacity_) / 4;
-  uint64_t delta_blocks = fbl::min(operation.op.length, max_chunk_blocks);
+  uint64_t delta_blocks = std::min(operation.op.length, max_chunk_blocks);
   while (operation.op.length > 0) {
     // If enqueueing these blocks could push us past the writeback buffer capacity
     // when combined with all previous writes, break this transaction into a smaller
@@ -22,21 +24,21 @@ void DataStreamer::StreamData(fs::UnbufferedOperation operation) {
     }
 
     fs::UnbufferedOperation partial_operation = {.vmo = zx::unowned_vmo(operation.vmo->get()),
-                                             {
-                                                 .type = fs::OperationType::kWrite,
-                                                 .vmo_offset = operation.op.vmo_offset,
-                                                 .dev_offset = operation.op.dev_offset,
-                                                 .length = delta_blocks,
-                                             }};
+                                                 {
+                                                     .type = fs::OperationType::kWrite,
+                                                     .vmo_offset = operation.op.vmo_offset,
+                                                     .dev_offset = operation.op.dev_offset,
+                                                     .length = delta_blocks,
+                                                 }};
     operations_.Add(std::move(partial_operation));
     operation.op.vmo_offset += delta_blocks;
     operation.op.dev_offset += delta_blocks;
     operation.op.length -= delta_blocks;
-    delta_blocks = fbl::min(operation.op.length, max_chunk_blocks);
+    delta_blocks = std::min(operation.op.length, max_chunk_blocks);
   }
 }
 
-Journal2::Promise DataStreamer::Flush() {
+fs::Journal::Promise DataStreamer::Flush() {
   // Issue locally buffered operations, to ensure that all data passed through |StreamData()|
   // has been issued to the executor.
   IssueOperations();
@@ -63,9 +65,9 @@ void DataStreamer::IssueOperations() {
     return;
   }
   // Reserve space within the writeback buffer.
-  Journal2::Promise work = journal_->WriteData(std::move(operations));
+  fs::Journal::Promise work = journal_->WriteData(std::move(operations));
   // Initiate the writeback operation, tracking the completion of the write.
   promises_.push_back(fit::schedule_for_consumer(journal_, std::move(work)).promise());
 }
 
-}  // namespace blobfs
+}  // namespace fs

@@ -2,22 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_JOURNAL_ENTRY_VIEW_H_
-#define ZIRCON_SYSTEM_ULIB_BLOBFS_JOURNAL_ENTRY_VIEW_H_
+#ifndef ZIRCON_SYSTEM_ULIB_FS_JOURNAL_ENTRY_VIEW_H_
+#define ZIRCON_SYSTEM_ULIB_FS_JOURNAL_ENTRY_VIEW_H_
 
 #include <zircon/types.h>
 
-#include <blobfs/format.h>
-#include <blobfs/journal/superblock.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 #include <fs/buffer/block_buffer_view.h>
+#include <fs/journal/format.h>
+#include <fs/journal/superblock.h>
 #include <fs/operation/buffered_operation.h>
 
-namespace blobfs {
-
-using fs::BlockBufferView;
-using fs::BufferedOperation;
+namespace fs {
 
 // A view into the filesystem journal entry, including the header and footer.
 //
@@ -26,13 +23,13 @@ using fs::BufferedOperation;
 class JournalEntryView {
  public:
   // Creates a new entry view without modification.
-  explicit JournalEntryView(BlockBufferView view);
+  explicit JournalEntryView(fs::BlockBufferView view);
 
   // Creates a new entry view which encodes the operations into the view
   // on construction.
   //
   // Asserts that |operations| is exactly the size of the journal entry.
-  JournalEntryView(BlockBufferView view, const fbl::Vector<BufferedOperation>& operations,
+  JournalEntryView(fs::BlockBufferView view, const fbl::Vector<fs::BufferedOperation>& operations,
                    uint64_t sequence_number);
 
   const JournalHeaderBlock* header() const {
@@ -58,7 +55,7 @@ class JournalEntryView {
   // that matches |kJournalEntryMagic|.
   //
   // Asserts that |operations| is exactly the size of the journal entry.
-  void Encode(const fbl::Vector<BufferedOperation>& operations, uint64_t sequence_number);
+  void Encode(const fbl::Vector<fs::BufferedOperation>& operations, uint64_t sequence_number);
 
   JournalHeaderBlock* header() { return reinterpret_cast<JournalHeaderBlock*>(view_.Data(0)); }
 
@@ -67,9 +64,9 @@ class JournalEntryView {
         view_.Data(view_.length() - kJournalEntryCommitBlocks));
   }
 
-  BlockBufferView view_;
+  fs::BlockBufferView view_;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_JOURNAL_ENTRY_VIEW_H_
+#endif  // ZIRCON_SYSTEM_ULIB_FS_JOURNAL_ENTRY_VIEW_H_

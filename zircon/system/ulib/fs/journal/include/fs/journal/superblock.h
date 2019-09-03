@@ -2,25 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_JOURNAL_SUPERBLOCK_H_
-#define BLOBFS_JOURNAL_SUPERBLOCK_H_
+#ifndef FS_JOURNAL_SUPERBLOCK_H_
+#define FS_JOURNAL_SUPERBLOCK_H_
 
 #include <zircon/types.h>
 
-#include <blobfs/format.h>
 #include <fbl/macros.h>
 #include <fs/buffer/block_buffer.h>
+#include <fs/journal/format.h>
 #include <fs/trace.h>
 
-namespace blobfs {
-
-using fs::BlockBuffer;
+namespace fs {
 
 // Contains and manages state representing the on-device journal info block.
 class JournalSuperblock {
  public:
   JournalSuperblock();
-  explicit JournalSuperblock(std::unique_ptr<BlockBuffer> buffer);
+  explicit JournalSuperblock(std::unique_ptr<fs::BlockBuffer> buffer);
 
   // Confirms that the magic and checksums within the info block
   // are correct.
@@ -35,7 +33,7 @@ class JournalSuperblock {
   // Returns the start of the first journal entry.
   uint64_t start() const { return Info()->start_block; }
   uint64_t sequence_number() const { return Info()->timestamp; }
-  const BlockBuffer& buffer() const { return *buffer_; }
+  const fs::BlockBuffer& buffer() const { return *buffer_; }
 
  private:
   uint32_t new_checksum() const;
@@ -46,9 +44,9 @@ class JournalSuperblock {
 
   JournalInfo* Info() { return reinterpret_cast<JournalInfo*>(buffer_->Data(0)); }
 
-  std::unique_ptr<BlockBuffer> buffer_;
+  std::unique_ptr<fs::BlockBuffer> buffer_;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_JOURNAL_SUPERBLOCK_H_
+#endif  // FS_JOURNAL_SUPERBLOCK_H_

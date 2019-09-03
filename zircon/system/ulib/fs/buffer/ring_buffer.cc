@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/buffer/ring_buffer.h>
-
 #include <zircon/status.h>
 
 #include <algorithm>
 #include <utility>
 
 #include <fbl/auto_lock.h>
+#include <fs/buffer/ring_buffer.h>
 #include <fs/trace.h>
 
 namespace fs {
@@ -77,8 +76,7 @@ void internal::RingBufferState::Free(const RingBufferReservation& reservation) {
 
 bool internal::RingBufferState::IsSpaceAvailableLocked(size_t blocks) const {
   if (blocks > capacity()) {
-    FS_TRACE_WARN("fs: Requested reservation too large (%zu > %zu blocks)\n", blocks,
-                  capacity());
+    FS_TRACE_WARN("fs: Requested reservation too large (%zu > %zu blocks)\n", blocks, capacity());
   }
   return reserved_length_ + blocks <= capacity();
 }
@@ -125,10 +123,10 @@ void RingBufferReservation::Reset() {
 }
 
 zx_status_t RingBufferReservation::CopyRequests(
-    const fbl::Vector<UnbufferedOperation>& in_operations, size_t offset,
-    fbl::Vector<BufferedOperation>* out) {
+    const fbl::Vector<fs::UnbufferedOperation>& in_operations, size_t offset,
+    fbl::Vector<fs::BufferedOperation>* out) {
   ZX_DEBUG_ASSERT_MSG(Reserved(), "Copying to invalid reservation");
-  fbl::Vector<BufferedOperation> out_operations;
+  fbl::Vector<fs::BufferedOperation> out_operations;
   out_operations.reserve(in_operations.size());
 
   ZX_DEBUG_ASSERT_MSG(offset + BlockCount(in_operations) <= length(),
@@ -142,7 +140,7 @@ zx_status_t RingBufferReservation::CopyRequests(
 
   for (size_t i = 0; i < in_operations.size(); i++) {
     // Read parameters of the current request.
-    ZX_DEBUG_ASSERT_MSG(in_operations[i].op.type == OperationType::kWrite,
+    ZX_DEBUG_ASSERT_MSG(in_operations[i].op.type == fs::OperationType::kWrite,
                         "RingBuffer only accepts write requests");
     size_t vmo_offset = in_operations[i].op.vmo_offset;
     size_t dev_offset = in_operations[i].op.dev_offset;
@@ -163,12 +161,12 @@ zx_status_t RingBufferReservation::CopyRequests(
     zx_status_t status =
         vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
-                     vmo_offset, zx_status_get_string(status));
+      FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len, vmo_offset,
+                     zx_status_get_string(status));
       return status;
     }
 
-    BufferedOperation out_op;
+    fs::BufferedOperation out_op;
     out_op.vmoid = vmoid();
     out_op.op.type = in_operations[i].op.type;
     out_op.op.vmo_offset = ring_buffer_offset;
@@ -198,7 +196,7 @@ zx_status_t RingBufferReservation::CopyRequests(
       reservation_offset += buf_len;
 
       // Insert the "new" request, which is the latter half of the last request
-      BufferedOperation out_op;
+      fs::BufferedOperation out_op;
       out_op.vmoid = vmoid();
       out_op.op.type = in_operations[i].op.type;
       out_op.op.vmo_offset = 0;
@@ -239,7 +237,7 @@ zx_status_t RingBuffer::Create(VmoidRegistry* vmoid_registry, size_t blocks, uin
   return ZX_OK;
 }
 
-RingBufferRequests::RingBufferRequests(fbl::Vector<BufferedOperation> requests,
+RingBufferRequests::RingBufferRequests(fbl::Vector<fs::BufferedOperation> requests,
                                        RingBufferReservation reservation)
     : requests_(std::move(requests)), reservation_(std::move(reservation)) {}
 

@@ -11,9 +11,9 @@
 
 #include <blobfs/allocator.h>
 #include <blobfs/blob.h>
-#include <blobfs/journal/journal2.h>
 #include <blobfs/metrics.h>
 #include <fbl/unique_ptr.h>
+#include <fs/journal/journal.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>
 
@@ -37,7 +37,7 @@ class TransactionManager : public fs::TransactionHandler, public SpaceManager {
   // Returns the capacity of the writeback buffer in blocks.
   virtual size_t WritebackCapacity() const = 0;
 
-  virtual Journal2* journal() = 0;
+  virtual fs::Journal* journal() = 0;
 };
 
 }  // namespace blobfs

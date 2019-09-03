@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_OPERATION_BUFFERED_OPERATION_H_
+#define FS_OPERATION_BUFFERED_OPERATION_H_
 
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
@@ -35,3 +36,5 @@ struct BufferedOperation {
 uint64_t BlockCount(const fbl::Vector<UnbufferedOperation>& requests);
 
 }  // namespace fs
+
+#endif  // FS_OPERATION_BUFFERED_OPERATION_H_

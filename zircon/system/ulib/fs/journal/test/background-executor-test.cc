@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/background-executor.h>
-
 #include <condition_variable>
 #include <mutex>
 
+#include <fs/journal/background-executor.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
 
 TEST(BackgroundExecutorTest, Creation) { BackgroundExecutor executor; }
@@ -68,4 +67,4 @@ TEST(BackgroundExecutorTest, ScheduleNotStalledUntilDestructor) {
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

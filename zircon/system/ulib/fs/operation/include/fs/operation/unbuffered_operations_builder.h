@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_OPERATION_UNBUFFERED_OPERATIONS_BUILDER_H_
+#define FS_OPERATION_UNBUFFERED_OPERATIONS_BUILDER_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
 #endif
+
+#include <lib/zx/vmo.h>
+#include <zircon/assert.h>
+#include <zircon/device/block.h>
 
 #include <utility>
 
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 #include <fs/operation/buffered_operation.h>
-#include <lib/zx/vmo.h>
-#include <zircon/assert.h>
-#include <zircon/device/block.h>
 
 namespace fs {
 
@@ -50,3 +52,5 @@ class UnbufferedOperationsBuilder {
 };
 
 }  // namespace fs
+
+#endif  // FS_OPERATION_UNBUFFERED_OPERATIONS_BUILDER_H_

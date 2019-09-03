@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOBFS_JOURNAL_JOURNAL2_H_
-#define BLOBFS_JOURNAL_JOURNAL2_H_
+#ifndef FS_JOURNAL_JOURNAL_H_
+#define FS_JOURNAL_JOURNAL_H_
 
 #include <lib/fit/barrier.h>
 #include <lib/fit/promise.h>
@@ -11,23 +11,16 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
-#include <blobfs/background-executor.h>
-#include <blobfs/format.h>
-#include <blobfs/journal/superblock.h>
 #include <fbl/vector.h>
 #include <fs/buffer/blocking_ring_buffer.h>
 #include <fs/buffer/ring_buffer.h>
+#include <fs/journal/background-executor.h>
+#include <fs/journal/format.h>
+#include <fs/journal/superblock.h>
 #include <fs/operation/buffered_operation.h>
 #include <fs/transaction/block_transaction.h>
 
-namespace blobfs {
-
-using fs::BufferedOperation;
-using fs::BlockingRingBuffer;
-using fs::BlockingRingBufferReservation;
-using fs::UnbufferedOperation;
-using fs::Operation;
-
+namespace fs {
 namespace internal {
 
 // A small container encapsulating a buffered request, along with the reservation that makes the
@@ -36,12 +29,12 @@ namespace internal {
 //
 // This struct is used for both journaled metadata and unjournaled data.
 struct JournalWorkItem {
-  JournalWorkItem(BlockingRingBufferReservation reservation,
-                  fbl::Vector<BufferedOperation> operations)
+  JournalWorkItem(fs::BlockingRingBufferReservation reservation,
+                  fbl::Vector<fs::BufferedOperation> operations)
       : reservation(std::move(reservation)), operations(std::move(operations)) {}
 
-  BlockingRingBufferReservation reservation;
-  fbl::Vector<BufferedOperation> operations;
+  fs::BlockingRingBufferReservation reservation;
+  fbl::Vector<fs::BufferedOperation> operations;
 };
 
 // The back-end of the journal. This class implements all the blocking operations which transmit
@@ -130,14 +123,14 @@ class JournalWriter {
   // which deal with wraparound of the in-memory |reservation| buffer and the on-disk
   // journal. Additionally, issues these operations to the underlying device and
   // returns the result (see |WriteOperations|).
-  zx_status_t WriteOperationToJournal(const BlockingRingBufferReservation& reservation);
+  zx_status_t WriteOperationToJournal(const fs::BlockingRingBufferReservation& reservation);
 
   // Writes operations directly through to disk.
   //
   // If any operations fail, this method will return the resulting error from the underlying
   // block device. Afterwards, however, this function will exclusively return |ZX_ERR_IO_REFUSED|
   // to prevent "partial operations" from being written to the underlying device.
-  zx_status_t WriteOperations(const fbl::Vector<BufferedOperation>& operations);
+  zx_status_t WriteOperations(const fbl::Vector<fs::BufferedOperation>& operations);
 
   fs::TransactionHandler* transaction_handler_ = nullptr;
   JournalSuperblock journal_superblock_;
@@ -165,7 +158,7 @@ class JournalWriter {
 //
 // EXAMPLE USAGE
 //
-//      Journal2 journal(...);
+//      Journal journal(...);
 //      auto data_promise = journal.WriteData(vnode_data);
 //      auto metadata_promise = journal.WriteMetadata(vnode_metadata);
 //      journal.schedule_task(data_promise.and_then(metadata_promise));
@@ -177,22 +170,22 @@ class JournalWriter {
 //      }));
 //
 // This class is thread-safe.
-class Journal2 final : public fit::executor {
+class Journal final : public fit::executor {
  public:
   using Promise = fit::promise<void, zx_status_t>;
 
   // Constructs a Journal with journaling enabled. This is the traditional constructor
   // of Journals, where data and metadata are treated separately.
-  Journal2(fs::TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
-           std::unique_ptr<BlockingRingBuffer> journal_buffer,
-           std::unique_ptr<BlockingRingBuffer> writeback_buffer, uint64_t journal_start_block);
+  Journal(fs::TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
+          std::unique_ptr<fs::BlockingRingBuffer> journal_buffer,
+          std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer, uint64_t journal_start_block);
 
   // Constructs a journal where metadata and data are both treated as data, effectively
   // disabling the journal.
-  Journal2(fs::TransactionHandler* transaction_handler,
-           std::unique_ptr<BlockingRingBuffer> writeback_buffer);
+  Journal(fs::TransactionHandler* transaction_handler,
+          std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer);
 
-  ~Journal2() final;
+  ~Journal() final;
 
   // Transmits operations containing pure data, which may be subject to different atomicity
   // guarantees than metadata updates.
@@ -200,14 +193,14 @@ class Journal2 final : public fit::executor {
   // Multiple requests to WriteData are not ordered. If ordering is desired, it should
   // be added using a |fit::sequencer| object, or by chaining the data writeback promise
   // along an object which is ordered.
-  Promise WriteData(fbl::Vector<UnbufferedOperation> operations);
+  Promise WriteData(fbl::Vector<fs::UnbufferedOperation> operations);
 
   // Transmits operations contains metadata, which must be updated atomically with respect
   // to power failures if journaling is enabled.
   //
   // Multiple requests to WriteMetadata are ordered. They are ordered by the invocation
   // of the |WriteMetadata| method, not by the completion of the returned promise.
-  Promise WriteMetadata(fbl::Vector<UnbufferedOperation> operations);
+  Promise WriteMetadata(fbl::Vector<fs::UnbufferedOperation> operations);
 
   // Identifies that a piece of metadata is no longer being used as metadata.
   //
@@ -229,7 +222,7 @@ class Journal2 final : public fit::executor {
   // with the stale copy of metadata, resulting in "valid metadata, but invalid user data".
   //
   // TODO(ZX-4752): Currently only returns a promise that results in ZX_ERR_NOT_SUPPORTED.
-  Promise WriteRevocation(fbl::Vector<Operation> operations);
+  Promise WriteRevocation(fbl::Vector<uint64_t> operations);
 
   // Returns a promise which identifies that all previous promises returned from the journal
   // have completed (succeeded, failed, or abandoned).
@@ -248,8 +241,8 @@ class Journal2 final : public fit::executor {
   void schedule_task(fit::pending_task task) final { executor_.schedule_task(std::move(task)); }
 
  private:
-  std::unique_ptr<BlockingRingBuffer> journal_buffer_;
-  std::unique_ptr<BlockingRingBuffer> writeback_buffer_;
+  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer_;
+  std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer_;
 
   // To implement |Sync()|, the journal must track all pending work, with the ability
   // to react once all prior work (up to a point) has finished execution.
@@ -270,6 +263,6 @@ class Journal2 final : public fit::executor {
   BackgroundExecutor executor_;
 };
 
-}  // namespace blobfs
+}  // namespace fs
 
-#endif  // BLOBFS_JOURNAL_JOURNAL2_H_
+#endif  // FS_JOURNAL_JOURNAL_H_

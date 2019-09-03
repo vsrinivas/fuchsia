@@ -133,8 +133,8 @@ class RingBufferReservation {
   // - The reservation must be large enough to copy |requests|:
   //  - offset + BlockCount(in_requests) <= length()
   // - |Reserved()| must be true.
-  zx_status_t CopyRequests(const fbl::Vector<UnbufferedOperation>& requests, size_t offset,
-                           fbl::Vector<BufferedOperation>* out);
+  zx_status_t CopyRequests(const fbl::Vector<fs::UnbufferedOperation>& requests, size_t offset,
+                           fbl::Vector<fs::BufferedOperation>* out);
 
   BlockBufferView buffer_view() { return view_; }
 
@@ -211,18 +211,19 @@ class RingBuffer {
 class RingBufferRequests {
  public:
   RingBufferRequests() = default;
-  RingBufferRequests(fbl::Vector<BufferedOperation> requests, RingBufferReservation reservation);
+  RingBufferRequests(fbl::Vector<fs::BufferedOperation> requests,
+                     RingBufferReservation reservation);
   RingBufferRequests(const RingBufferRequests&) = delete;
   RingBufferRequests& operator=(const RingBufferRequests&) = delete;
   RingBufferRequests(RingBufferRequests&& other) = default;
   RingBufferRequests& operator=(RingBufferRequests&& other) = default;
   ~RingBufferRequests() = default;
 
-  const fbl::Vector<BufferedOperation>& Operations() const { return requests_; }
+  const fbl::Vector<fs::BufferedOperation>& Operations() const { return requests_; }
   RingBufferReservation* Reservation() { return &reservation_; }
 
  private:
-  fbl::Vector<BufferedOperation> requests_;
+  fbl::Vector<fs::BufferedOperation> requests_;
   RingBufferReservation reservation_;
 };
 

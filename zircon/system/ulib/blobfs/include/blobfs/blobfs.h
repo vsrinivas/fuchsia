@@ -39,7 +39,6 @@
 #include <blobfs/format.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
-#include <blobfs/journal/journal2.h>
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
 #include <blobfs/transaction-manager.h>
@@ -53,6 +52,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <fs/journal/journal.h>
 #include <fs/managed-vfs.h>
 #include <fs/metrics/cobalt-metrics.h>
 #include <fs/operation/unbuffered_operations_builder.h>
@@ -135,7 +135,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   BlobfsMetrics& Metrics() final { return metrics_; }
   size_t WritebackCapacity() const final;
-  Journal2* journal() final;
+  fs::Journal* journal() final;
 
   ////////////////
   // Other methods.
@@ -195,7 +195,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Frees an inode, from both the reserved map and the inode table. If the
   // inode was allocated in the inode table, write the deleted inode out to
   // disk.
-  void FreeInode(uint32_t node_index, UnbufferedOperationsBuilder* operations);
+  void FreeInode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations);
 
   // Does a single pass of all blobs, creating uninitialized Vnode
   // objects for them all.
@@ -206,10 +206,10 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   zx_status_t InitializeVnodes();
 
   // Writes node data to the inode table and updates disk.
-  void PersistNode(uint32_t node_index, UnbufferedOperationsBuilder* operations);
+  void PersistNode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations);
 
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
-  void PersistBlocks(const ReservedExtent& extent, UnbufferedOperationsBuilder* ops);
+  void PersistBlocks(const ReservedExtent& extent, fs::UnbufferedOperationsBuilder* ops);
 
   // Record the location and size of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const { return allocator_->GetAllocatedRegions(); }
@@ -224,23 +224,24 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   zx_status_t Reload();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
-  void FreeExtent(const Extent& extent, UnbufferedOperationsBuilder* operations);
+  void FreeExtent(const Extent& extent, fs::UnbufferedOperationsBuilder* operations);
 
   // Free a single node. Doesn't attempt to parse the type / traverse nodes;
   // this function just deletes a single node.
-  void FreeNode(uint32_t node_index, UnbufferedOperationsBuilder* operations);
+  void FreeNode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations);
 
   // Given a contiguous number of blocks after a starting block,
   // write out the bitmap to disk for the corresponding blocks.
   // Should only be called by PersistBlocks and FreeExtent.
-  void WriteBitmap(uint64_t nblocks, uint64_t start_block, UnbufferedOperationsBuilder* operations);
+  void WriteBitmap(uint64_t nblocks, uint64_t start_block,
+                   fs::UnbufferedOperationsBuilder* operations);
 
   // Given a node within the node map at an index, write it to disk.
   // Should only be called by AllocateNode and FreeNode.
-  void WriteNode(uint32_t map_index, UnbufferedOperationsBuilder* operations);
+  void WriteNode(uint32_t map_index, fs::UnbufferedOperationsBuilder* operations);
 
   // Enqueues an update for allocated inode/block counts.
-  void WriteInfo(UnbufferedOperationsBuilder* operations);
+  void WriteInfo(fs::UnbufferedOperationsBuilder* operations);
 
   // When will flush the metrics in the calling thread and will schedule itself
   // to flush again in the future.
@@ -253,7 +254,7 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Verifies that the contents of a blob are valid.
   zx_status_t VerifyBlob(uint32_t node_index);
 
-  fbl::unique_ptr<Journal2> journal_;
+  fbl::unique_ptr<fs::Journal> journal_;
   Superblock info_;
 
   BlobCache blob_cache_;

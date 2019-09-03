@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/buffer/ring_buffer.h>
-
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
+#include <fs/buffer/ring_buffer.h>
 #include <fs/operation/unbuffered_operations_builder.h>
 #include <zxtest/zxtest.h>
 
@@ -155,7 +154,8 @@ void CheckVmoEquals(const zx::vmo& vmo, const void* addr, size_t offset, int val
 // Checks that, for the portion of data accessible in |reservation|, the |operation| is
 // accessible at |offset| within the reservation.
 void CheckOperationInRingBuffer(const zx::vmo& vmo, RingBufferReservation* reservation,
-                                const UnbufferedOperation& operation, size_t offset, int value) {
+                                const fs::UnbufferedOperation& operation, size_t offset,
+                                int value) {
   for (size_t i = 0; i < operation.op.length; i++) {
     CheckVmoEquals(vmo, reservation->Data(i + offset), operation.op.vmo_offset + i,
                    value + static_cast<int>(operation.op.vmo_offset + i));
@@ -163,7 +163,8 @@ void CheckOperationInRingBuffer(const zx::vmo& vmo, RingBufferReservation* reser
 }
 
 void ReserveAndCopyRequests(const fbl::unique_ptr<RingBuffer>& buffer,
-                            fbl::Vector<UnbufferedOperation> requests, RingBufferRequests* out) {
+                            fbl::Vector<fs::UnbufferedOperation> requests,
+                            RingBufferRequests* out) {
   RingBufferReservation reservation;
   ASSERT_OK(buffer->Reserve(BlockCount(requests), &reservation));
   fbl::Vector<fs::BufferedOperation> buffer_request;
@@ -180,10 +181,10 @@ TEST(RingBufferTest, OneRequestAtOffsetZero) {
   int seed = 0xAB;
   MakeTestVmo(kVmoBlocks, seed, &vmo);
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operation;
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo.get());
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = fs::OperationType::kWrite;
   operation.op.vmo_offset = 0;
   operation.op.dev_offset = 0;
   operation.op.length = kVmoBlocks;
@@ -192,8 +193,8 @@ TEST(RingBufferTest, OneRequestAtOffsetZero) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
   RingBufferRequests request;
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -219,10 +220,10 @@ TEST(RingBufferTest, OneRequestAtNonZeroOffset) {
   int seed = 0xAB;
   MakeTestVmo(kVmoBlocks, seed, &vmo);
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operation;
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo.get());
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = fs::OperationType::kWrite;
   operation.op.vmo_offset = 1;
   operation.op.dev_offset = 2;
   operation.op.length = kVmoBlocks - operation.op.vmo_offset;
@@ -231,8 +232,8 @@ TEST(RingBufferTest, OneRequestAtNonZeroOffset) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
   RingBufferRequests request;
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -259,16 +260,16 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoSameReservation) {
   int seed = 0xAB;
   MakeTestVmo(kVmoBlocks, seed, &vmo);
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operations[2];
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operations[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
-  operations[0].op.type = OperationType::kWrite;
+  operations[0].op.type = fs::OperationType::kWrite;
   operations[0].op.vmo_offset = 0;
   operations[0].op.dev_offset = 2;
   operations[0].op.length = 1;
   builder.Add(operations[0]);
   operations[1].vmo = zx::unowned_vmo(vmo.get());
-  operations[1].op.type = OperationType::kWrite;
+  operations[1].op.type = fs::OperationType::kWrite;
   operations[1].op.vmo_offset = 2;
   operations[1].op.dev_offset = 4;
   operations[1].op.length = 2;
@@ -277,8 +278,8 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoSameReservation) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
   RingBufferRequests request;
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -313,14 +314,14 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operations[2];
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operations[2];
   RingBufferRequests requests[2];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
-  operations[0].op.type = OperationType::kWrite;
+  operations[0].op.type = fs::OperationType::kWrite;
   operations[0].op.vmo_offset = 0;
   operations[0].op.dev_offset = 2;
   operations[0].op.length = 1;
@@ -328,7 +329,7 @@ TEST(RingBufferTest, TwoRequestsToTheSameVmoDifferentReservations) {
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
 
   operations[1].vmo = zx::unowned_vmo(vmo.get());
-  operations[1].op.type = OperationType::kWrite;
+  operations[1].op.type = fs::OperationType::kWrite;
   operations[1].op.vmo_offset = 2;
   operations[1].op.dev_offset = 4;
   operations[1].op.length = 2;
@@ -366,10 +367,10 @@ TEST(RingBufferTest, OneRequestFullRingBuffer) {
   int seed = 0xAB;
   MakeTestVmo(kVmoBlocks, seed, &vmo);
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operation;
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo.get());
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = fs::OperationType::kWrite;
   operation.op.vmo_offset = 0;
   operation.op.dev_offset = 0;
   operation.op.length = kVmoBlocks;
@@ -378,8 +379,8 @@ TEST(RingBufferTest, OneRequestFullRingBuffer) {
   const size_t kRingBufferBlocks = 3;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
   RingBufferRequests request;
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &request));
@@ -405,10 +406,10 @@ TEST(RingBufferTest, OneRequestWithRingBufferFull) {
   int seed = 0xAB;
   MakeTestVmo(kVmoBlocks, seed, &vmo);
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operation;
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo.get());
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = fs::OperationType::kWrite;
   operation.op.vmo_offset = 0;
   operation.op.dev_offset = 0;
   operation.op.length = kVmoBlocks;
@@ -417,8 +418,8 @@ TEST(RingBufferTest, OneRequestWithRingBufferFull) {
   const size_t kRingBufferBlocks = 3;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
   RingBufferRequests request;
   ASSERT_EQ(ZX_ERR_NO_SPACE, buffer->Reserve(BlockCount(builder.TakeOperations()), nullptr));
@@ -442,14 +443,14 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
   const size_t kRingBufferBlocks = 6;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operations[3];
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operations[3];
   RingBufferRequests requests[3];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
-  operations[0].op.type = OperationType::kWrite;
+  operations[0].op.type = fs::OperationType::kWrite;
   operations[0].op.vmo_offset = 0;
   operations[0].op.dev_offset = 0;
   operations[0].op.length = 3;
@@ -457,7 +458,7 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
 
   operations[1].vmo = zx::unowned_vmo(vmo.get());
-  operations[1].op.type = OperationType::kWrite;
+  operations[1].op.type = fs::OperationType::kWrite;
   operations[1].op.vmo_offset = 3;
   operations[1].op.dev_offset = 3;
   operations[1].op.length = 3;
@@ -465,7 +466,7 @@ TEST(RingBufferTest, RingBufferWraparoundCleanly) {
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
 
   operations[2].vmo = zx::unowned_vmo(vmo.get());
-  operations[2].op.type = OperationType::kWrite;
+  operations[2].op.type = fs::OperationType::kWrite;
   operations[2].op.vmo_offset = 6;
   operations[2].op.dev_offset = 6;
   operations[2].op.length = 3;
@@ -499,14 +500,14 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
   const size_t kRingBufferBlocks = 6;
   MockVmoidRegistry vmoid_registry;
   std::unique_ptr<RingBuffer> buffer;
-  ASSERT_OK(RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer",
-                               &buffer));
+  ASSERT_OK(
+      RingBuffer::Create(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer", &buffer));
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operations[3];
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operations[3];
   RingBufferRequests requests[3];
   operations[0].vmo = zx::unowned_vmo(vmo.get());
-  operations[0].op.type = OperationType::kWrite;
+  operations[0].op.type = fs::OperationType::kWrite;
   operations[0].op.vmo_offset = 0;
   operations[0].op.dev_offset = 0;
   operations[0].op.length = 3;
@@ -514,7 +515,7 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[0]));
 
   operations[1].vmo = zx::unowned_vmo(vmo.get());
-  operations[1].op.type = OperationType::kWrite;
+  operations[1].op.type = fs::OperationType::kWrite;
   operations[1].op.vmo_offset = 4;
   operations[1].op.dev_offset = 4;
   operations[1].op.length = 1;
@@ -522,7 +523,7 @@ TEST(RingBufferTest, RingBufferWraparoundSplitRequest) {
   ASSERT_NO_FATAL_FAILURES(ReserveAndCopyRequests(buffer, builder.TakeOperations(), &requests[1]));
 
   operations[2].vmo = zx::unowned_vmo(vmo.get());
-  operations[2].op.type = OperationType::kWrite;
+  operations[2].op.type = fs::OperationType::kWrite;
   operations[2].op.vmo_offset = 6;
   operations[2].op.dev_offset = 6;
   operations[2].op.length = 5;
@@ -557,20 +558,19 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
   const size_t kRingBufferBlocks = 4;
   MockVmoidRegistry vmoid_registry;
   VmoBuffer vmo_buffer;
-  ASSERT_OK(
-      vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
+  ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
   auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
 
   RingBufferReservation reservations[3];
   ASSERT_OK(buffer->Reserve(2, &reservations[0]));
   ASSERT_OK(buffer->Reserve(1, &reservations[1]));
 
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operations[3];
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operations[3];
 
   // "A, B"
   operations[0].vmo = zx::unowned_vmo(vmo.get());
-  operations[0].op.type = OperationType::kWrite;
+  operations[0].op.type = fs::OperationType::kWrite;
   operations[0].op.vmo_offset = 0;
   operations[0].op.dev_offset = 0;
   operations[0].op.length = 2;
@@ -580,7 +580,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
 
   // "C"
   operations[1].vmo = zx::unowned_vmo(vmo.get());
-  operations[1].op.type = OperationType::kWrite;
+  operations[1].op.type = fs::OperationType::kWrite;
   operations[1].op.vmo_offset = 2;
   operations[1].op.dev_offset = 2;
   operations[1].op.length = 1;
@@ -596,7 +596,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
 
   // "D"
   operations[2].vmo = zx::unowned_vmo(vmo.get());
-  operations[2].op.type = OperationType::kWrite;
+  operations[2].op.type = fs::OperationType::kWrite;
   operations[2].op.vmo_offset = 3;
   operations[2].op.dev_offset = 3;
   operations[2].op.length = 1;
@@ -629,8 +629,7 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
   const size_t kRingBufferBlocks = 5;
   MockVmoidRegistry vmoid_registry;
   VmoBuffer vmo_buffer;
-  ASSERT_OK(
-      vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
+  ASSERT_OK(vmo_buffer.Initialize(&vmoid_registry, kRingBufferBlocks, kBlockSize, "test-buffer"));
   auto buffer = std::make_unique<RingBuffer>(std::move(vmo_buffer));
 
   RingBufferReservation reservation;
@@ -641,10 +640,10 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
   ASSERT_OK(vmo_a.read(reservation.Data(2), 2 * kBlockSize, kBlockSize));
 
   // Data "B" of the VMO.
-  UnbufferedOperationsBuilder builder;
-  UnbufferedOperation operation;
+  fs::UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperation operation;
   operation.vmo = zx::unowned_vmo(vmo_b.get());
-  operation.op.type = OperationType::kWrite;
+  operation.op.type = fs::OperationType::kWrite;
   operation.op.vmo_offset = 1;
   operation.op.dev_offset = 1;
   operation.op.length = 1;

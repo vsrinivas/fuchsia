@@ -2,23 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/journal/journal2.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 
 #include <algorithm>
 #include <array>
 #include <memory>
 #include <vector>
 
-#include <lib/sync/completion.h>
-#include <lib/zx/vmo.h>
-
-#include <blobfs/journal/replay.h>
+#include <fs/journal/format.h>
+#include <fs/journal/journal.h>
+#include <fs/journal/replay.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
-
-using fs::OperationType;
 
 const vmoid_t kJournalVmoid = 1;
 const vmoid_t kWritebackVmoid = 2;
@@ -40,21 +38,20 @@ void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, si
   const size_t buffer_start = kBlockSize * buffer_offset;
   const size_t buffer_capacity = kBlockSize * buffer_blocks;
   for (size_t i = 0; i < length; i++) {
-    std::array<char, kBlockSize> buffer_buf {};
+    std::array<char, kBlockSize> buffer_buf{};
     size_t offset = (buffer_start + kBlockSize * i) % buffer_capacity;
     ASSERT_OK(buffer.read(buffer_buf.data(), offset, kBlockSize));
 
-    std::array<char, kBlockSize> expected_buf {};
+    std::array<char, kBlockSize> expected_buf{};
     offset = (expected_offset + i) * kBlockSize;
     ASSERT_OK(expected.read(expected_buf.data(), offset, kBlockSize));
 
     if (escape == EscapedBlocks::kVerified &&
         *reinterpret_cast<uint64_t*>(expected_buf.data()) == kJournalEntryMagic) {
       constexpr size_t kSkip = sizeof(kJournalEntryMagic);
-      std::array<char, kSkip> skip_buffer {};
+      std::array<char, kSkip> skip_buffer{};
       EXPECT_BYTES_EQ(skip_buffer.data(), buffer_buf.data(), kSkip);
-      EXPECT_BYTES_EQ(expected_buf.data() + kSkip, buffer_buf.data() + kSkip,
-                      kBlockSize - kSkip);
+      EXPECT_BYTES_EQ(expected_buf.data() + kSkip, buffer_buf.data() + kSkip, kBlockSize - kSkip);
     } else {
       EXPECT_BYTES_EQ(expected_buf.data(), buffer_buf.data(), kBlockSize);
     }
@@ -64,16 +61,16 @@ void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, si
 // A mock VMO reigstry, which acts as the holder for all VMOs used by the journaling
 // codebase to interact with the underlying device.
 //
-// In addition to the VmoidRegistry interface, provides some additional utilities
+// In addition to the fs::VmoidRegistry interface, provides some additional utilities
 // for buffer generation and verification.
-class MockVmoidRegistry : public VmoidRegistry {
+class MockVmoidRegistry : public fs::VmoidRegistry {
  public:
   // Sets the next Vmoid which will be allocated when "AttachVmo" is invoked.
   void SetNextVmoid(vmoid_t vmoid) { next_vmoid_ = vmoid; }
 
-  // Initializes a VmoBuffer with |length| blocks, pre-allocated to deterministic data.
-  VmoBuffer InitializeBuffer(size_t num_blocks) {
-    VmoBuffer buffer;
+  // Initializes a fs::VmoBuffer with |length| blocks, pre-allocated to deterministic data.
+  fs::VmoBuffer InitializeBuffer(size_t num_blocks) {
+    fs::VmoBuffer buffer;
     SetNextVmoid(kOtherVmoid);
     EXPECT_OK(buffer.Initialize(this, num_blocks, kBlockSize, "test-buffer"));
     for (size_t i = 0; i < num_blocks; i++) {
@@ -88,14 +85,14 @@ class MockVmoidRegistry : public VmoidRegistry {
   // Precondition: The journal and info VMOs must have been registered for this function
   // to be usable. Rather than replaying from a mock disk, this method uses the same VMOs
   // originally registered, but parses them separately using the replay code.
-  void VerifyReplay(const std::vector<UnbufferedOperation>& expected_operations,
+  void VerifyReplay(const std::vector<fs::UnbufferedOperation>& expected_operations,
                     uint64_t expected_sequence_number);
 
   const zx::vmo& journal() { return journal_vmo_; }
   const zx::vmo& writeback() { return writeback_vmo_; }
   const zx::vmo& info() { return info_vmo_; }
 
-  // VmoidRegistry interface:
+  // fs::VmoidRegistry interface:
 
   zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
 
@@ -107,7 +104,7 @@ class MockVmoidRegistry : public VmoidRegistry {
   //
   // This allows us to exercise the integration of the "journal writeback" and the on
   // reboot "journal replay".
-  void Replay(fbl::Vector<BufferedOperation>* operations, uint64_t* sequence_number);
+  void Replay(fbl::Vector<fs::BufferedOperation>* operations, uint64_t* sequence_number);
 
   zx::vmo journal_vmo_;
   zx::vmo writeback_vmo_;
@@ -115,9 +112,10 @@ class MockVmoidRegistry : public VmoidRegistry {
   vmoid_t next_vmoid_ = VMOID_INVALID;
 };
 
-void MockVmoidRegistry::VerifyReplay(const std::vector<UnbufferedOperation>& expected_operations,
-                                     uint64_t expected_sequence_number) {
-  fbl::Vector<BufferedOperation> operations;
+void MockVmoidRegistry::VerifyReplay(
+    const std::vector<fs::UnbufferedOperation>& expected_operations,
+    uint64_t expected_sequence_number) {
+  fbl::Vector<fs::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   ASSERT_NO_FAILURES(Replay(&operations, &sequence_number));
   EXPECT_EQ(expected_sequence_number, sequence_number);
@@ -149,9 +147,9 @@ zx_status_t MockVmoidRegistry::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
   return ZX_OK;
 }
 
-void MockVmoidRegistry::Replay(fbl::Vector<BufferedOperation>* operations,
+void MockVmoidRegistry::Replay(fbl::Vector<fs::BufferedOperation>* operations,
                                uint64_t* sequence_number) {
-  // We are "cheating" by using the same vmo / vmoids in a new VmoBuffer object.
+  // We are "cheating" by using the same vmo / vmoids in a new fs::VmoBuffer object.
   // This would normally cause problems by deregistering from the registry when going
   // out of scope, but since deregistering is a no-op, this just provides a limited
   // view of the existing buffers with no changes.
@@ -169,8 +167,7 @@ void MockVmoidRegistry::Replay(fbl::Vector<BufferedOperation>* operations,
   uint64_t length = kBlockSize * kJournalLength;
   ASSERT_OK(journal_vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, &journal_vmo));
   ASSERT_OK(mapper.Map(std::move(journal_vmo), length));
-  VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength,
-                           kBlockSize);
+  VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength, kBlockSize);
 
   ASSERT_OK(ParseJournalEntries(&superblock, &journal_buffer, operations, sequence_number));
 }
@@ -224,14 +221,14 @@ class JournalTest : public zxtest::Test {
  public:
   void SetUp() override {
     registry_.SetNextVmoid(kJournalVmoid);
-    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kJournalLength, kBlockSize,
-                                         "journal-writeback-buffer", &journal_buffer_));
+    ASSERT_OK(fs::BlockingRingBuffer::Create(&registry_, kJournalLength, kBlockSize,
+                                             "journal-writeback-buffer", &journal_buffer_));
 
     registry_.SetNextVmoid(kWritebackVmoid);
-    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
-                                         "data-writeback-buffer", &data_buffer_));
+    ASSERT_OK(fs::BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
+                                             "data-writeback-buffer", &data_buffer_));
 
-    auto info_block_buffer = std::make_unique<VmoBuffer>();
+    auto info_block_buffer = std::make_unique<fs::VmoBuffer>();
     registry_.SetNextVmoid(kInfoVmoid);
     ASSERT_OK(info_block_buffer->Initialize(&registry_, kJournalMetadataBlocks, kBlockSize,
                                             "info-block"));
@@ -244,14 +241,16 @@ class JournalTest : public zxtest::Test {
   // The following methods take the object out of the fixture. They are typically
   // used for journal initialization.
   JournalSuperblock take_info() { return std::move(info_block_); }
-  std::unique_ptr<BlockingRingBuffer> take_journal_buffer() { return std::move(journal_buffer_); }
-  std::unique_ptr<BlockingRingBuffer> take_data_buffer() { return std::move(data_buffer_); }
+  std::unique_ptr<fs::BlockingRingBuffer> take_journal_buffer() {
+    return std::move(journal_buffer_);
+  }
+  std::unique_ptr<fs::BlockingRingBuffer> take_data_buffer() { return std::move(data_buffer_); }
 
  private:
   MockVmoidRegistry registry_;
   JournalSuperblock info_block_;
-  std::unique_ptr<BlockingRingBuffer> journal_buffer_;
-  std::unique_ptr<BlockingRingBuffer> data_buffer_;
+  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer_;
+  std::unique_ptr<fs::BlockingRingBuffer> data_buffer_;
 };
 
 // Verifies that the info block marks |start| as the beginning of the journal (relative
@@ -324,18 +323,18 @@ class JournalRequestVerifier {
 
   // Verifies that |operation| matches |requests|, and exists within the
   // data writeback buffer at |DataOffset()|.
-  void VerifyDataWrite(const UnbufferedOperation& operation, const block_fifo_request_t requests[],
-                       size_t count) const;
+  void VerifyDataWrite(const fs::UnbufferedOperation& operation,
+                       const block_fifo_request_t requests[], size_t count) const;
 
   // Verifies that |operation| matches |requests|, exists within the journal
   // buffer at |JournalOffset()|, and targets the on-device journal.
-  void VerifyJournalWrite(const UnbufferedOperation& operation,
+  void VerifyJournalWrite(const fs::UnbufferedOperation& operation,
                           const block_fifo_request_t requests[], size_t count) const;
 
   // Verifies that |operation| matches |requests|, exists within the journal
   // buffer at |JournalOffset() + kJournalEntryHeaderBlocks|, and targets the final on-disk
   // location (not the journal).
-  void VerifyMetadataWrite(const UnbufferedOperation& operation,
+  void VerifyMetadataWrite(const fs::UnbufferedOperation& operation,
                            const block_fifo_request_t requests[], size_t count) const;
 
   // Verifies that the info block is targeted by |requests|, with |sequence_number|, and
@@ -360,7 +359,7 @@ class JournalRequestVerifier {
   uint64_t data_offset_ = 0;
 };
 
-void JournalRequestVerifier::VerifyDataWrite(const UnbufferedOperation& operation,
+void JournalRequestVerifier::VerifyDataWrite(const fs::UnbufferedOperation& operation,
                                              const block_fifo_request_t requests[],
                                              size_t count) const {
   EXPECT_GE(count, 1, "Not enough operations");
@@ -401,7 +400,7 @@ void JournalRequestVerifier::VerifyDataWrite(const UnbufferedOperation& operatio
   }
 }
 
-void JournalRequestVerifier::VerifyJournalWrite(const UnbufferedOperation& operation,
+void JournalRequestVerifier::VerifyJournalWrite(const fs::UnbufferedOperation& operation,
                                                 const block_fifo_request_t requests[],
                                                 size_t count) const {
   // Verify the operation is from the metadata buffer, targeting the journal.
@@ -447,14 +446,13 @@ void JournalRequestVerifier::VerifyJournalWrite(const UnbufferedOperation& opera
                                                    /* journal_offset= */ vmo_offset,
                                                    /* buffer= */ *operation.vmo,
                                                    /* buffer_offset= */ buffer_offset,
-                                                   /* length= */ length,
-                                                   EscapedBlocks::kVerified));
+                                                   /* length= */ length, EscapedBlocks::kVerified));
 
     buffer_offset += length;
   }
 }
 
-void JournalRequestVerifier::VerifyMetadataWrite(const UnbufferedOperation& operation,
+void JournalRequestVerifier::VerifyMetadataWrite(const fs::UnbufferedOperation& operation,
                                                  const block_fifo_request_t requests[],
                                                  size_t count) const {
   // Verify the operation is from the metadata buffer, targeting the final location on disk.
@@ -501,7 +499,7 @@ void JournalRequestVerifier::VerifyInfoBlockWrite(uint64_t sequence_number,
 // journal.
 TEST_F(JournalTest, JournalConstructor) {
   MockTransactionHandler handler;
-  Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
   CheckInfoBlock(registry()->info(), /* start= */ 0, /* sequence_number= */ 0);
   uint64_t sequence_number = 0;
   registry()->VerifyReplay({}, sequence_number);
@@ -511,7 +509,7 @@ TEST_F(JournalTest, JournalConstructor) {
 // generating no additional work (without concurrent metadata writes).
 TEST_F(JournalTest, NoWorkSyncCompletesBeforeJournalDestruction) {
   MockTransactionHandler handler;
-  Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
 
   sync_completion_t sync_completion;
   bool sync_completed = false;
@@ -533,7 +531,7 @@ TEST_F(JournalTest, NoWorkSyncCompletesOnDestruction) {
 
   {
     MockTransactionHandler handler;
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.Sync().and_then([&] {
       sync_completed = true;
       return fit::ok();
@@ -547,11 +545,11 @@ TEST_F(JournalTest, NoWorkSyncCompletesOnDestruction) {
 
 // Tests that writing data to the journal is observable from the "block device".
 TEST_F(JournalTest, WriteDataObserveTransaction) {
-  VmoBuffer buffer = registry()->InitializeBuffer(1);
-  const UnbufferedOperation operation = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(1);
+  const fs::UnbufferedOperation operation = {
       zx::unowned_vmo(buffer.vmo().get()),
       {
-          OperationType::kWrite,
+          fs::OperationType::kWrite,
           .vmo_offset = 0,
           .dev_offset = 20,
           .length = 1,
@@ -569,7 +567,7 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
   MockTransactionHandler handler(callbacks, std::size(callbacks));
 
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.WriteData({operation}).and_then([&]() {
       CheckInfoBlock(registry()->info(), /* start= */ 0, /* sequence_number= */ 0);
     });
@@ -582,12 +580,12 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
 // Operation 1: [ H, 1, C, _, _, _, _, _, _, _ ]
 //            : Info block update prompted by termination.
 TEST_F(JournalTest, WriteMetadataObserveTransactions) {
-  VmoBuffer metadata = registry()->InitializeBuffer(1);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(1);
 
-  const UnbufferedOperation operation = {
+  const fs::UnbufferedOperation operation = {
       zx::unowned_vmo(metadata.vmo().get()),
       {
-          OperationType::kWrite,
+          fs::OperationType::kWrite,
           .vmo_offset = 0,
           .dev_offset = 20,
           .length = 1,
@@ -623,8 +621,8 @@ TEST_F(JournalTest, WriteMetadataObserveTransactions) {
 
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operation}));
   }
 }
@@ -635,13 +633,13 @@ TEST_F(JournalTest, WriteMetadataObserveTransactions) {
 // Operation 2: [ _, _, _, H, 1, C, _, _, _, _ ]
 //            : Info block update prompted by termination.
 TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
-  VmoBuffer metadata = registry()->InitializeBuffer(3);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(3);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -650,7 +648,7 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -690,8 +688,8 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -703,13 +701,13 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
 // Operation 2: [ _, _, _, _, _, _, _, H, 1, C ]
 //            : Info block update prompted by termination.
 TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 5,
@@ -718,7 +716,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -763,8 +761,8 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -780,13 +778,13 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
 // Operation 1: [ H, 1, C, _, _, _, _, _, _, _ ]
 //            : Info block update promted by operation 1.
 TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperationArrives) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 8,
@@ -795,7 +793,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 1234,
               .length = 1,
@@ -820,7 +818,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
         verifier.ExtendJournalOffset(operations[0].op.length);
-        registry()->VerifyReplay({ operations[0] }, sequence_number);
+        registry()->VerifyReplay({operations[0]}, sequence_number);
         return ZX_OK;
       },
       // Operation 1 written. This prompts the info block to be updated.
@@ -837,7 +835,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
         verifier.ExtendJournalOffset(operations[1].op.length);
-        registry()->VerifyReplay({ operations[1] }, sequence_number);
+        registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
       },
       // Info block written on journal termination.
@@ -849,8 +847,8 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -864,13 +862,13 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
 // Operation 2: [ C, _, _, _, _, _, _, _, H, 1 ]
 //            : Info block update prompted by termination.
 TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 6,
@@ -879,7 +877,7 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -940,8 +938,8 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operations[0]}));
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
   }
@@ -955,13 +953,13 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
 // Operation 2: [ C, _, _, _, _, _, _, _, H, 1 ]
 //            : Info block update prompted by termination.
 TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 6,
@@ -970,7 +968,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -1027,8 +1025,8 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operations[0]}).and_then(journal.Sync()));
     // This write will block until the prevoius operation completes.
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
@@ -1043,13 +1041,13 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
 // Operation 2: [ 1, C, _, _, _, _, _, _, _, H ]
 //            : Info block update prompted by termination.
 TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 7,
@@ -1058,7 +1056,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -1115,8 +1113,8 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operations[0]}).and_then(journal.Sync()));
     // This write will block until the prevoius operation completes.
     journal.schedule_task(journal.WriteMetadata({operations[1]}));
@@ -1132,13 +1130,13 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
 // Operation 1: [ H, 1, C, _, _, _, _, _, _, _ ] (In-memory)
 // Operation 1: [ _, _, _, H, 1, C, _, _, _, _ ] (On-disk)
 TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 1234,
               .length = 1,
@@ -1147,7 +1145,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 4567,
               .length = 1,
@@ -1183,34 +1181,34 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
       },
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
-  std::unique_ptr<BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer = take_journal_buffer();
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
                                  journal_buffer->capacity());
 
   // Reserve operations[1] in memory before operations[0].
   //
   // This means that in-memory, operations[1] wraps around the internal buffer.
-  BlockingRingBufferReservation reservation0, reservation1;
+  fs::BlockingRingBufferReservation reservation0, reservation1;
   uint64_t block_count1 = operations[1].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count1, &reservation1));
   uint64_t block_count0 = operations[0].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count0, &reservation0));
 
   // Actually write operations[0] before operations[1].
-  fbl::Vector<BufferedOperation> buffered_operations0;
-  ASSERT_OK(reservation0.CopyRequests({ operations[0] }, kJournalEntryHeaderBlocks,
-                                      &buffered_operations0));
-  auto result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation0),
-                                                               std::move(buffered_operations0)),
-                                     block_count1);
+  fbl::Vector<fs::BufferedOperation> buffered_operations0;
+  ASSERT_OK(
+      reservation0.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations0));
+  auto result = writer.WriteMetadata(
+      internal::JournalWorkItem(std::move(reservation0), std::move(buffered_operations0)),
+      block_count1);
   ASSERT_TRUE(result.is_ok());
 
-  fbl::Vector<BufferedOperation> buffered_operations1;
-  ASSERT_OK(reservation1.CopyRequests({ operations[1] }, kJournalEntryHeaderBlocks,
-                                      &buffered_operations1));
-  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation1),
-                                                          std::move(buffered_operations1)),
-                                block_count1);
+  fbl::Vector<fs::BufferedOperation> buffered_operations1;
+  ASSERT_OK(
+      reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
+  result = writer.WriteMetadata(
+      internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)),
+      block_count1);
   ASSERT_TRUE(result.is_ok());
 }
 
@@ -1225,13 +1223,13 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
 // Operation 2: [ 1, C, _, _, _, _, _, _, _, H ] (In-memory)
 // Operation 2: [ _, _, H, 1, C, _, _, _, _, _ ] (On-disk)
 TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 7,
@@ -1240,7 +1238,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 1234,
               .length = 1,
@@ -1249,7 +1247,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 4567,
               .length = 1,
@@ -1307,26 +1305,26 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
       },
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
-  std::unique_ptr<BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer = take_journal_buffer();
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
                                  journal_buffer->capacity());
 
   // Issue the first operation, so the next operation will wrap around.
-  BlockingRingBufferReservation reservation;
-  fbl::Vector<BufferedOperation> buffered_operations;
+  fs::BlockingRingBufferReservation reservation;
+  fbl::Vector<fs::BufferedOperation> buffered_operations;
   uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
-  ASSERT_OK(reservation.CopyRequests({ operations[0] }, kJournalEntryHeaderBlocks,
-                                     &buffered_operations));
-  auto result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation),
-                                                               std::move(buffered_operations)),
-                                     block_count);
+  ASSERT_OK(
+      reservation.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations));
+  auto result = writer.WriteMetadata(
+      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)),
+      block_count);
   ASSERT_TRUE(result.is_ok());
 
   // Reserve operations[2] in memory before operations[1].
   //
   // This means that in-memory, operations[2] wraps around the internal buffer.
-  BlockingRingBufferReservation reservation1, reservation2;
+  fs::BlockingRingBufferReservation reservation1, reservation2;
   uint64_t block_count2 = operations[2].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count2, &reservation2));
   uint64_t block_count1 = operations[1].op.length + kEntryMetadataBlocks;
@@ -1335,20 +1333,20 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   // Actually write operations[1] before operations[2].
   //
   // This means that on-disk, operations[1] wraps around the journal.
-  fbl::Vector<BufferedOperation> buffered_operations1;
-  ASSERT_OK(reservation1.CopyRequests({ operations[1] }, kJournalEntryHeaderBlocks,
-                                      &buffered_operations1));
-  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation1),
-                                                          std::move(buffered_operations1)),
-                                block_count1);
+  fbl::Vector<fs::BufferedOperation> buffered_operations1;
+  ASSERT_OK(
+      reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
+  result = writer.WriteMetadata(
+      internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)),
+      block_count1);
   ASSERT_TRUE(result.is_ok());
 
-  fbl::Vector<BufferedOperation> buffered_operations2;
-  ASSERT_OK(reservation2.CopyRequests({ operations[2] }, kJournalEntryHeaderBlocks,
-                                      &buffered_operations2));
-  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation2),
-                                                          std::move(buffered_operations2)),
-                                block_count2);
+  fbl::Vector<fs::BufferedOperation> buffered_operations2;
+  ASSERT_OK(
+      reservation2.CopyRequests({operations[2]}, kJournalEntryHeaderBlocks, &buffered_operations2));
+  result = writer.WriteMetadata(
+      internal::JournalWorkItem(std::move(reservation2), std::move(buffered_operations2)),
+      block_count2);
   ASSERT_TRUE(result.is_ok());
 }
 
@@ -1361,13 +1359,13 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
 // Operation 1: [ 1, 2, 3, 4, C, _, _, _, _, H ] (In-memory)
 // Operation 1: [ 4, C, _, _, _, _, H, 1, 2, 3 ] (On-disk)
 TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 4,
@@ -1376,7 +1374,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 1234,
               .length = 4,
@@ -1417,32 +1415,32 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
       },
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
-  std::unique_ptr<BlockingRingBuffer> journal_buffer = take_journal_buffer();
+  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer = take_journal_buffer();
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
                                  journal_buffer->capacity());
 
   // Issue the first operation, so the next operation will wrap around.
-  BlockingRingBufferReservation reservation;
-  fbl::Vector<BufferedOperation> buffered_operations;
+  fs::BlockingRingBufferReservation reservation;
+  fbl::Vector<fs::BufferedOperation> buffered_operations;
   uint64_t block_count = operations[0].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
-  ASSERT_OK(reservation.CopyRequests({ operations[0] }, kJournalEntryHeaderBlocks,
-                                     &buffered_operations));
-  auto result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation),
-                                                               std::move(buffered_operations)),
-                                     block_count);
+  ASSERT_OK(
+      reservation.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations));
+  auto result = writer.WriteMetadata(
+      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)),
+      block_count);
   ASSERT_TRUE(result.is_ok());
 
-  BlockingRingBufferReservation reservation_unused;
+  fs::BlockingRingBufferReservation reservation_unused;
   ASSERT_OK(journal_buffer->Reserve(3, &reservation_unused));
   block_count = operations[1].op.length + kEntryMetadataBlocks;
   ASSERT_OK(journal_buffer->Reserve(block_count, &reservation));
 
-  ASSERT_OK(reservation.CopyRequests({ operations[1] }, kJournalEntryHeaderBlocks,
-                                     &buffered_operations));
-  result = writer.WriteMetadata(internal::JournalWorkItem(std::move(reservation),
-                                                          std::move(buffered_operations)),
-                                block_count);
+  ASSERT_OK(
+      reservation.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations));
+  result = writer.WriteMetadata(
+      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)),
+      block_count);
   ASSERT_TRUE(result.is_ok());
 }
 
@@ -1454,13 +1452,13 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
 // Operation 2: [ H, 1, C, _, _, _, _, _, _, _ ]
 //            : Info block update prompted by termination.
 TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 8,
@@ -1469,7 +1467,7 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -1526,8 +1524,8 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(
         journal.WriteMetadata({operations[0]}).and_then(journal.Sync()).and_then([&]() {
           // Wait to complete the prior operation before we invoke "WriteMetadata",
@@ -1543,13 +1541,13 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
 
 // Tests that metadata operations are ordered at the time "WriteMetadata" is invoked.
 TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
-  VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -1558,7 +1556,7 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -1596,8 +1594,8 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     auto first_promise = journal.WriteMetadata({operations[0]});
     auto second_promise = journal.WriteMetadata({operations[1]});
 
@@ -1610,12 +1608,12 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
 
 // Tests that data writes are not ordered at the time "WriteData" is invoked.
 TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
-  VmoBuffer buffer = registry()->InitializeBuffer(5);
-  const std::vector<UnbufferedOperation> operations = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(5);
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 2,
@@ -1624,7 +1622,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 1,
               .dev_offset = 200,
               .length = 3,
@@ -1649,7 +1647,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
   MockTransactionHandler handler(callbacks, std::size(callbacks));
 
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
 
     // Although we "WriteData" in a particular order, we can "and-then" data
     // to force an arbitrary order that we want. This is visible in the transaction
@@ -1664,17 +1662,17 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
 // Tests a pretty common operation from a client point-of-view: order data operations around
 // completion of a metadata update.
 TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
-  VmoBuffer buffer = registry()->InitializeBuffer(5);
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(5);
 
   // We're using the same source buffer, but use:
   // - operations[0] as data
   // - operations[1] as metadata
   // - operations[2] as data
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -1683,7 +1681,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 1,
               .dev_offset = 200,
               .length = 1,
@@ -1692,7 +1690,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 2000,
               .length = 1,
@@ -1735,7 +1733,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
   MockTransactionHandler handler(callbacks, std::size(callbacks));
 
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.WriteData({operations[0]})
                        .and_then(journal.WriteMetadata({operations[1]}))
                        .and_then(journal.WriteData({operations[2]}));
@@ -1746,12 +1744,12 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
 // Tests that many data operations, which overfill the writeback buffer, will cause subsequent
 // requests to block.
 TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
-  VmoBuffer buffer = registry()->InitializeBuffer(kWritebackLength);
-  const std::vector<UnbufferedOperation> operations = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(kWritebackLength);
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 9,
@@ -1760,7 +1758,7 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 2,
@@ -1800,7 +1798,7 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
   MockTransactionHandler handler(callbacks, std::size(callbacks));
 
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
 
     auto promise0 = journal.WriteData({operations[0]});
     journal.schedule_task(std::move(promise0));
@@ -1824,11 +1822,11 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
 
 // Tests that sync after invoking |WriteData| waits for that data to be flushed to disk.
 TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
-  VmoBuffer buffer = registry()->InitializeBuffer(1);
-  const UnbufferedOperation operation = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(1);
+  const fs::UnbufferedOperation operation = {
       zx::unowned_vmo(buffer.vmo().get()),
       {
-          OperationType::kWrite,
+          fs::OperationType::kWrite,
           .vmo_offset = 0,
           .dev_offset = 20,
           .length = 1,
@@ -1853,7 +1851,7 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
   MockTransactionHandler handler(callbacks, std::size(callbacks));
 
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto data_promise = journal.WriteData({operation});
 
     auto sync_promise = journal.Sync().and_then([&]() {
@@ -1872,11 +1870,11 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
 
 // Tests that sync after invoking |WriteMetadata| waits for that data to be flushed to disk.
 TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
-  VmoBuffer buffer = registry()->InitializeBuffer(1);
-  const UnbufferedOperation operation = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(1);
+  const fs::UnbufferedOperation operation = {
       zx::unowned_vmo(buffer.vmo().get()),
       {
-          OperationType::kWrite,
+          fs::OperationType::kWrite,
           .vmo_offset = 0,
           .dev_offset = 20,
           .length = 1,
@@ -1911,7 +1909,7 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
   };
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto metadata_promise = journal.WriteMetadata({operation});
 
     auto sync_promise = journal.Sync().and_then([&]() {
@@ -1931,12 +1929,12 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
 // Tests that operations which won't fit in data writeback will fail.
 TEST_F(JournalTest, DataOperationTooLargeToFitInWritebackFails) {
   const uint64_t kBufferLength = kWritebackLength + 1;
-  VmoBuffer buffer = registry()->InitializeBuffer(kBufferLength);
-  const std::vector<UnbufferedOperation> operations = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(kBufferLength);
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = kBufferLength,
@@ -1947,7 +1945,7 @@ TEST_F(JournalTest, DataOperationTooLargeToFitInWritebackFails) {
   zx_status_t data_status = ZX_OK;
   MockTransactionHandler handler;
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.WriteData({operations[0]}).or_else([&](zx_status_t& status) {
       data_status = status;
     });
@@ -1960,12 +1958,12 @@ TEST_F(JournalTest, DataOperationTooLargeToFitInWritebackFails) {
 // Tests that operations which won't fit in metadata writeback will fail.
 TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
   const uint64_t kBufferLength = kJournalLength + 1;
-  VmoBuffer buffer = registry()->InitializeBuffer(kBufferLength);
-  const std::vector<UnbufferedOperation> operations = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(kBufferLength);
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = kBufferLength,
@@ -1976,7 +1974,7 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
   zx_status_t metadata_status = ZX_OK;
   MockTransactionHandler handler;
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.WriteMetadata({operations[0]}).or_else([&](zx_status_t& status) {
       metadata_status = status;
     });
@@ -1988,19 +1986,12 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
 
 // Tests that revocation records are not yet supported.
 TEST_F(JournalTest, RevocationsRecordsNotSupported) {
-  Operation operations[] = {
-      {
-          OperationType::kWrite,
-          .vmo_offset = 0,
-          .dev_offset = 20,
-          .length = 1,
-      },
-  };
+  uint64_t operations[] = {5};
 
   zx_status_t revocation_status = ZX_OK;
   MockTransactionHandler handler;
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.WriteRevocation({operations[0]}).or_else([&](zx_status_t& status) {
       revocation_status = status;
     });
@@ -2012,12 +2003,12 @@ TEST_F(JournalTest, RevocationsRecordsNotSupported) {
 
 // Tests that the journal can be bypassed with an explicit constructor.
 TEST_F(JournalTest, InactiveJournalTreatsMetdataLikeData) {
-  VmoBuffer buffer = registry()->InitializeBuffer(5);
-  const std::vector<UnbufferedOperation> operations = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(5);
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 2,
@@ -2026,7 +2017,7 @@ TEST_F(JournalTest, InactiveJournalTreatsMetdataLikeData) {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 1,
               .dev_offset = 200,
               .length = 3,
@@ -2053,7 +2044,7 @@ TEST_F(JournalTest, InactiveJournalTreatsMetdataLikeData) {
   MockTransactionHandler handler(callbacks, std::size(callbacks));
 
   {
-    Journal2 journal(&handler, take_data_buffer());
+    Journal journal(&handler, take_data_buffer());
     auto promise =
         journal.WriteData({operations[0]}).and_then(journal.WriteMetadata({operations[1]}));
     journal.schedule_task(std::move(promise));
@@ -2063,12 +2054,12 @@ TEST_F(JournalTest, InactiveJournalTreatsMetdataLikeData) {
 // Tests that when data operations fail, subsequent operations also fail to avoid
 // leaving the device in an inconsistent state.
 TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
-  VmoBuffer buffer = registry()->InitializeBuffer(5);
-  const std::vector<UnbufferedOperation> operations = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(5);
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -2077,7 +2068,7 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 200,
               .length = 1,
@@ -2100,7 +2091,7 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
 
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise =
         journal.WriteData({operations[0]})
             .then([&](fit::result<void, zx_status_t>& result) {
@@ -2122,12 +2113,12 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
 
 // Tests that when data operations fail, sync can still complete with a failed result.
 TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
-  VmoBuffer buffer = registry()->InitializeBuffer(5);
-  const std::vector<UnbufferedOperation> operations = {
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(5);
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(buffer.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -2149,7 +2140,7 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
   std::atomic<bool> sync_done = false;
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
 
     auto data_promise = journal.WriteData({operations[0]});
     auto sync_promise = journal.Sync().then(
@@ -2170,13 +2161,13 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
 //
 // Tests a failure which occurs when writing metadata to journal itself.
 TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
-  VmoBuffer metadata = registry()->InitializeBuffer(3);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(3);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -2185,7 +2176,7 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -2207,8 +2198,8 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
 
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     auto promise0 =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by our MockTransactionHandler implementation.
@@ -2235,13 +2226,13 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
 //
 // Tests a failure which occurs when writing metadata to the final on-disk location (non-journal).
 TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
-  VmoBuffer metadata = registry()->InitializeBuffer(3);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(3);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -2250,7 +2241,7 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 2,
               .dev_offset = 1234,
               .length = 1,
@@ -2277,8 +2268,8 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
 
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     auto promise0 =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // Failure triggered by our MockTransactionHandler implementation.
@@ -2307,13 +2298,13 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
 // - Sync (cause info block writeback to happen, where it fails)
 // - Write Metadata (fails, because info block writeback failed earlier)
 TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
-  VmoBuffer metadata = registry()->InitializeBuffer(3);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(3);
 
-  const std::vector<UnbufferedOperation> operations = {
+  const std::vector<fs::UnbufferedOperation> operations = {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 20,
               .length = 1,
@@ -2322,7 +2313,7 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
       {
           zx::unowned_vmo(metadata.vmo().get()),
           {
-              OperationType::kWrite,
+              fs::OperationType::kWrite,
               .vmo_offset = 0,
               .dev_offset = 200,
               .length = 1,
@@ -2357,8 +2348,8 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
 
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     auto metadata_promise =
         journal.WriteMetadata({operations[0]}).then([&](fit::result<void, zx_status_t>& result) {
           // The metadata operation completed successfully.
@@ -2419,12 +2410,12 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
 // to a form that drops them on replay.
 TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
   // Create an operation which will become escaped when written by the journal.
-  VmoBuffer metadata = registry()->InitializeBuffer(1);
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(1);
   *reinterpret_cast<uint64_t*>(metadata.Data(0)) = kJournalEntryMagic;
-  const UnbufferedOperation operation = {
+  const fs::UnbufferedOperation operation = {
       zx::unowned_vmo(metadata.vmo().get()),
       {
-          OperationType::kWrite,
+          fs::OperationType::kWrite,
           .vmo_offset = 0,
           .dev_offset = 20,
           .length = 1,
@@ -2476,8 +2467,8 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
 
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
-    Journal2 journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
-                     kJournalStartBlock);
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operation}));
   }
 }
@@ -2485,4 +2476,4 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
 // TODO(ZX-4775): Test abandoning promises. This may require additional barrier support.
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

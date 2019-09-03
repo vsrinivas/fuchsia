@@ -19,7 +19,6 @@
 #include <blobfs/blobfs.h>
 #include <blobfs/compression/lz4.h>
 #include <blobfs/compression/zstd.h>
-#include <blobfs/data-streamer.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/block-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
@@ -31,6 +30,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
+#include <fs/journal/data-streamer.h>
 #include <fs/metrics/events.h>
 #include <fs/transaction/writeback.h>
 
@@ -405,7 +405,7 @@ fit::promise<void, zx_status_t> Blob::WriteMetadata() {
 
   atomic_store(&syncing_, true);
 
-  UnbufferedOperationsBuilder operations;
+  fs::UnbufferedOperationsBuilder operations;
   if (inode_.block_count) {
     // We utilize the NodePopulator class to take our reserved blocks and nodes and fill the
     // persistent map with an allocated inode / container.
@@ -520,8 +520,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     size_t merkle_size = MerkleTree::GetTreeLength(inode_.blob_size);
     fs::Duration generation_time;
     std::vector<fit::promise<void, zx_status_t>> promises;
-    UnbufferedOperationsBuilder operations;
-    DataStreamer streamer(blobfs_->journal(), blobfs_->WritebackCapacity());
+    fs::DataStreamer streamer(blobfs_->journal(), blobfs_->WritebackCapacity());
 
     if (merkle_size > 0) {
       Digest digest;
@@ -540,10 +539,10 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 
       status = StreamBlocks(&block_iter, merkle_blocks,
                             [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                              UnbufferedOperation op = {
+                              fs::UnbufferedOperation op = {
                                   .vmo = zx::unowned_vmo(mapping_.vmo().get()),
                                   {
-                                      .type = OperationType::kWrite,
+                                      .type = fs::OperationType::kWrite,
                                       .vmo_offset = vmo_offset,
                                       .dev_offset = dev_offset + blobfs_->DataStart(),
                                       .length = length,
@@ -570,18 +569,19 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       uint32_t blocks = static_cast<uint32_t>(blocks64);
       int64_t vmo_bias = -static_cast<int64_t>(merkle_blocks);
       ZX_DEBUG_ASSERT(block_iter.BlockIndex() + vmo_bias == 0);
-      status = StreamBlocks(
-          &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-            UnbufferedOperation op = {.vmo = zx::unowned_vmo(write_info_->compressor->Vmo().get()),
-                                      {
-                                          .type = OperationType::kWrite,
-                                          .vmo_offset = vmo_offset - merkle_blocks,
-                                          .dev_offset = dev_offset + blobfs_->DataStart(),
-                                          .length = length,
-                                      }};
-            streamer.StreamData(std::move(op));
-            return ZX_OK;
-          });
+      status = StreamBlocks(&block_iter, blocks,
+                            [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                              fs::UnbufferedOperation op = {
+                                  .vmo = zx::unowned_vmo(write_info_->compressor->Vmo().get()),
+                                  {
+                                      .type = fs::OperationType::kWrite,
+                                      .vmo_offset = vmo_offset - merkle_blocks,
+                                      .dev_offset = dev_offset + blobfs_->DataStart(),
+                                      .length = length,
+                                  }};
+                              streamer.StreamData(std::move(op));
+                              return ZX_OK;
+                            });
 
       if (status != ZX_OK) {
         return status;
@@ -598,13 +598,13 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       uint32_t blocks = static_cast<uint32_t>(blocks64);
       status = StreamBlocks(
           &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-            UnbufferedOperation op = {.vmo = zx::unowned_vmo(mapping_.vmo().get()),
-                                      {
-                                          .type = OperationType::kWrite,
-                                          .vmo_offset = vmo_offset,
-                                          .dev_offset = dev_offset + blobfs_->DataStart(),
-                                          .length = length,
-                                      }};
+            fs::UnbufferedOperation op = {.vmo = zx::unowned_vmo(mapping_.vmo().get()),
+                                          {
+                                              .type = fs::OperationType::kWrite,
+                                              .vmo_offset = vmo_offset,
+                                              .dev_offset = dev_offset + blobfs_->DataStart(),
+                                              .length = length,
+                                          }};
             streamer.StreamData(std::move(op));
             return ZX_OK;
           });
@@ -614,7 +614,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     }
 
     // Enqueue the blob's final data work. Metadata must be enqueued separately.
-    Journal2::Promise write_all_data = streamer.Flush();
+    fs::Journal::Promise write_all_data = streamer.Flush();
 
     // No more data to write. Flush to disk.
     fs::Ticker ticker(blobfs_->Metrics().Collecting());  // Tracking enqueue time.
@@ -968,7 +968,7 @@ zx_status_t Blob::Purge() {
   if (GetState() == kBlobStateReadable) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT(DeletionQueued());
-    UnbufferedOperationsBuilder operations;
+    fs::UnbufferedOperationsBuilder operations;
     blobfs_->FreeInode(GetMapIndex(), &operations);
 
     auto task = fs::wrap_reference(blobfs_->journal()->WriteMetadata(operations.TakeOperations()),

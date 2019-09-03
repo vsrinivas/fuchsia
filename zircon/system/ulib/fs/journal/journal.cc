@@ -5,22 +5,19 @@
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
-#include <blobfs/journal/journal2.h>
+#include <fs/journal/journal.h>
 #include <fs/trace.h>
 #include <fs/transaction/writeback.h>
 
 #include "entry-view.h"
 
-namespace blobfs {
+namespace fs {
 namespace {
-
-using fs::FlushWriteRequests;
-using fs::OperationType;
 
 zx_status_t CheckAllWriteOperations(const fbl::Vector<UnbufferedOperation>& operations) {
   for (const auto& operation : operations) {
     if (operation.op.type != OperationType::kWrite) {
-      FS_TRACE_ERROR("blobfs: Transmitted non-write operation to writeback\n");
+      FS_TRACE_ERROR("journal: Transmitted non-write operation to writeback\n");
       return ZX_ERR_WRONG_TYPE;
     }
   }
@@ -37,7 +34,7 @@ fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion)
 
 namespace internal {
 
-JournalWriter::JournalWriter(fs::TransactionHandler* transaction_handler,
+JournalWriter::JournalWriter(TransactionHandler* transaction_handler,
                              JournalSuperblock journal_superblock, uint64_t journal_start_block,
                              uint64_t entries_length)
     : transaction_handler_(transaction_handler),
@@ -47,13 +44,13 @@ JournalWriter::JournalWriter(fs::TransactionHandler* transaction_handler,
       next_entry_start_block_(journal_superblock_.start()),
       entries_length_(entries_length) {}
 
-JournalWriter::JournalWriter(fs::TransactionHandler* transaction_handler)
+JournalWriter::JournalWriter(TransactionHandler* transaction_handler)
     : transaction_handler_(transaction_handler) {}
 
 fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
   zx_status_t status = WriteOperations(work.operations);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to write data: %s\n", zx_status_get_string(status));
+    FS_TRACE_ERROR("journal: Failed to write data: %s\n", zx_status_get_string(status));
     return fit::error(status);
   }
   return fit::ok();
@@ -197,15 +194,15 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
   // that case explicitly first, using the sequence number to make the distinction.
   //
   // We require an info block update if the journal is full, but not if it's empty.
-  bool write_info = (head == tail) &&
-                    (next_sequence_number_ != journal_superblock_.sequence_number());
+  bool write_info =
+      (head == tail) && (next_sequence_number_ != journal_superblock_.sequence_number());
 
   if (!write_info) {
     const uint64_t journal_used = (head <= tail) ? (tail - head) : ((capacity - head) + tail);
     const uint64_t journal_free = capacity - journal_used;
     if (journal_free < block_count) {
       FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Writing info block (can't write %zu blocks)\n",
-                    block_count);
+                     block_count);
       write_info = true;
     } else {
       FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Not writing info (have %zu, need %zu blocks)\n",
@@ -259,21 +256,19 @@ zx_status_t JournalWriter::WriteOperations(const fbl::Vector<BufferedOperation>&
 
 }  // namespace internal
 
-Journal2::Journal2(fs::TransactionHandler* transaction_handler,
-                   JournalSuperblock journal_superblock,
-                   std::unique_ptr<BlockingRingBuffer> journal_buffer,
-                   std::unique_ptr<BlockingRingBuffer> writeback_buffer,
-                   uint64_t journal_start_block)
+Journal::Journal(TransactionHandler* transaction_handler, JournalSuperblock journal_superblock,
+                 std::unique_ptr<BlockingRingBuffer> journal_buffer,
+                 std::unique_ptr<BlockingRingBuffer> writeback_buffer, uint64_t journal_start_block)
     : journal_buffer_(std::move(journal_buffer)),
       writeback_buffer_(std::move(writeback_buffer)),
       writer_(transaction_handler, std::move(journal_superblock), journal_start_block,
               journal_buffer_->capacity()) {}
 
-Journal2::Journal2(fs::TransactionHandler* transaction_handler,
-                   std::unique_ptr<BlockingRingBuffer> writeback_buffer)
+Journal::Journal(TransactionHandler* transaction_handler,
+                 std::unique_ptr<BlockingRingBuffer> writeback_buffer)
     : writeback_buffer_(std::move(writeback_buffer)), writer_(transaction_handler) {}
 
-Journal2::~Journal2() {
+Journal::~Journal() {
   sync_completion_t completion;
   schedule_task(Sync().then([&completion](const fit::result<void, zx_status_t>& result) {
     return SignalSyncComplete(&completion);
@@ -281,7 +276,7 @@ Journal2::~Journal2() {
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
-Journal2::Promise Journal2::WriteData(fbl::Vector<UnbufferedOperation> operations) {
+Journal::Promise Journal::WriteData(fbl::Vector<UnbufferedOperation> operations) {
   zx_status_t status = CheckAllWriteOperations(operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Not all operations to WriteData are writes\n");
@@ -293,7 +288,7 @@ Journal2::Promise Journal2::WriteData(fbl::Vector<UnbufferedOperation> operation
   BlockingRingBufferReservation reservation;
   status = writeback_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to reserve space in writeback buffer: %s\n",
+    FS_TRACE_ERROR("journal: Failed to reserve space in writeback buffer: %s\n",
                    zx_status_get_string(status));
     return fit::make_error_promise(status);
   }
@@ -302,7 +297,7 @@ Journal2::Promise Journal2::WriteData(fbl::Vector<UnbufferedOperation> operation
   fbl::Vector<BufferedOperation> buffered_operations;
   status = reservation.CopyRequests(operations, 0, &buffered_operations);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to copy operations into writeback buffer: %s\n",
+    FS_TRACE_ERROR("journal: Failed to copy operations into writeback buffer: %s\n",
                    zx_status_get_string(status));
     return fit::make_error_promise(status);
   }
@@ -318,7 +313,7 @@ Journal2::Promise Journal2::WriteData(fbl::Vector<UnbufferedOperation> operation
   return barrier_.wrap(std::move(promise));
 }
 
-Journal2::Promise Journal2::WriteMetadata(fbl::Vector<UnbufferedOperation> operations) {
+Journal::Promise Journal::WriteMetadata(fbl::Vector<UnbufferedOperation> operations) {
   if (!journal_buffer_) {
     ZX_DEBUG_ASSERT(!writer_.IsJournalingEnabled());
     return WriteData(std::move(operations));
@@ -337,7 +332,7 @@ Journal2::Promise Journal2::WriteMetadata(fbl::Vector<UnbufferedOperation> opera
   BlockingRingBufferReservation reservation;
   status = journal_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to reserve space in journal buffer: %s\n",
+    FS_TRACE_ERROR("journal: Failed to reserve space in journal buffer: %s\n",
                    zx_status_get_string(status));
     return fit::make_error_promise(status);
   }
@@ -346,7 +341,7 @@ Journal2::Promise Journal2::WriteMetadata(fbl::Vector<UnbufferedOperation> opera
   fbl::Vector<BufferedOperation> buffered_operations;
   status = reservation.CopyRequests(operations, kJournalEntryHeaderBlocks, &buffered_operations);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to copy operations into journal buffer: %s\n",
+    FS_TRACE_ERROR("journal: Failed to copy operations into journal buffer: %s\n",
                    zx_status_get_string(status));
     return fit::make_error_promise(status);
   }
@@ -365,7 +360,7 @@ Journal2::Promise Journal2::WriteMetadata(fbl::Vector<UnbufferedOperation> opera
   return barrier_.wrap(std::move(ordered_promise));
 }
 
-Journal2::Promise Journal2::WriteRevocation(fbl::Vector<Operation> operations) {
+Journal::Promise Journal::WriteRevocation(fbl::Vector<uint64_t> operations) {
   if (!writer_.IsJournalingEnabled()) {
     return fit::make_promise([]() -> fit::result<void, zx_status_t> { return fit::ok(); });
   }
@@ -375,7 +370,7 @@ Journal2::Promise Journal2::WriteRevocation(fbl::Vector<Operation> operations) {
   return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
-Journal2::Promise Journal2::Sync() {
+Journal::Promise Journal::Sync() {
   auto update = fit::make_promise(
       [this]() mutable -> fit::result<void, zx_status_t> { return writer_.Sync(); });
   return barrier_.sync().then(
@@ -384,4 +379,4 @@ Journal2::Promise Journal2::Sync() {
       });
 }
 
-}  // namespace blobfs
+}  // namespace fs

@@ -24,14 +24,14 @@
 #include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/fsck.h>
-#include <blobfs/journal/replay.h>
-#include <blobfs/journal/superblock.h>
 #include <blobfs/node-reserver.h>
 #include <cobalt-client/cpp/collector.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
+#include <fs/journal/replay.h>
+#include <fs/journal/superblock.h>
 #include <fs/ticker.h>
 #include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
@@ -43,6 +43,10 @@
 using block_client::RemoteBlockDevice;
 using digest::Digest;
 using digest::MerkleTree;
+using fs::BlockingRingBuffer;
+using fs::Journal;
+using fs::JournalSuperblock;
+using fs::VmoidRegistry;
 using id_allocator::IdAllocator;
 
 namespace blobfs {
@@ -55,8 +59,8 @@ constexpr zx::duration kCobaltFlushTimer = zx::min(5);
 zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, VmoidRegistry* registry,
                               uint64_t journal_start, uint64_t journal_length,
                               JournalSuperblock journal_superblock,
-                              std::unique_ptr<Journal2>* out_journal) {
-  const uint64_t journal_entry_blocks = journal_length - kJournalMetadataBlocks;
+                              std::unique_ptr<Journal>* out_journal) {
+  const uint64_t journal_entry_blocks = journal_length - fs::kJournalMetadataBlocks;
 
   std::unique_ptr<BlockingRingBuffer> journal_buffer;
   zx_status_t status = BlockingRingBuffer::Create(registry, journal_entry_blocks, kBlobfsBlockSize,
@@ -74,16 +78,16 @@ zx_status_t InitializeJournal(fs::TransactionHandler* transaction_handler, Vmoid
     return status;
   }
 
-  *out_journal = std::make_unique<Journal2>(transaction_handler, std::move(journal_superblock),
-                                            std::move(journal_buffer), std::move(writeback_buffer),
-                                            journal_start);
+  *out_journal = std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
+                                               std::move(journal_buffer),
+                                               std::move(writeback_buffer), journal_start);
   return ZX_OK;
 }
 
 // Writeback enabled, journaling disabled.
 zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_handler,
                                             VmoidRegistry* registry,
-                                            std::unique_ptr<Journal2>* out_journal) {
+                                            std::unique_ptr<Journal>* out_journal) {
   std::unique_ptr<BlockingRingBuffer> writeback_buffer;
   zx_status_t status = BlockingRingBuffer::Create(registry, WriteBufferSize(), kBlobfsBlockSize,
                                                   "data-writeback-buffer", &writeback_buffer);
@@ -92,7 +96,7 @@ zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_
     return status;
   }
 
-  *out_journal = std::make_unique<Journal2>(transaction_handler, std::move(writeback_buffer));
+  *out_journal = std::make_unique<Journal>(transaction_handler, std::move(writeback_buffer));
   return ZX_OK;
 }
 
@@ -101,7 +105,7 @@ zx_status_t InitializeUnjournalledWriteback(fs::TransactionHandler* transaction_
 zx_status_t Blobfs::VerifyBlob(uint32_t node_index) { return Blob::VerifyBlob(this, node_index); }
 
 void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
-                           UnbufferedOperationsBuilder* operations) {
+                           fs::UnbufferedOperationsBuilder* operations) {
   TRACE_DURATION("blobfs", "Blobfs::PersistBlocks");
 
   allocator_->MarkBlocksAllocated(reserved_extent);
@@ -114,7 +118,7 @@ void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent,
 }
 
 // Frees blocks from reserved and allocated maps, updates disk in the latter case.
-void Blobfs::FreeExtent(const Extent& extent, UnbufferedOperationsBuilder* operations) {
+void Blobfs::FreeExtent(const Extent& extent, fs::UnbufferedOperationsBuilder* operations) {
   size_t start = extent.Start();
   size_t num_blocks = extent.Length();
   size_t end = start + num_blocks;
@@ -130,13 +134,13 @@ void Blobfs::FreeExtent(const Extent& extent, UnbufferedOperationsBuilder* opera
   }
 }
 
-void Blobfs::FreeNode(uint32_t node_index, UnbufferedOperationsBuilder* operations) {
+void Blobfs::FreeNode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations) {
   allocator_->FreeNode(node_index);
   info_.alloc_inode_count--;
   WriteNode(node_index, operations);
 }
 
-void Blobfs::FreeInode(uint32_t node_index, UnbufferedOperationsBuilder* operations) {
+void Blobfs::FreeInode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations) {
   TRACE_DURATION("blobfs", "Blobfs::FreeInode", "node_index", node_index);
   Inode* mapped_inode = GetNode(node_index);
   ZX_DEBUG_ASSERT(operations != nullptr);
@@ -163,7 +167,7 @@ void Blobfs::FreeInode(uint32_t node_index, UnbufferedOperationsBuilder* operati
   }
 }
 
-void Blobfs::PersistNode(uint32_t node_index, UnbufferedOperationsBuilder* operations) {
+void Blobfs::PersistNode(uint32_t node_index, fs::UnbufferedOperationsBuilder* operations) {
   TRACE_DURATION("blobfs", "Blobfs::PersistNode");
   info_.alloc_inode_count++;
   WriteNode(node_index, operations);
@@ -219,42 +223,43 @@ void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
 }
 
 void Blobfs::WriteBitmap(uint64_t nblocks, uint64_t start_block,
-                         UnbufferedOperationsBuilder* operations) {
+                         fs::UnbufferedOperationsBuilder* operations) {
   TRACE_DURATION("blobfs", "Blobfs::WriteBitmap", "nblocks", nblocks, "start_block", start_block);
   uint64_t bbm_start_block = start_block / kBlobfsBlockBits;
   uint64_t bbm_end_block =
       fbl::round_up(start_block + nblocks, kBlobfsBlockBits) / kBlobfsBlockBits;
 
   // Write back the block allocation bitmap
-  UnbufferedOperation operation = {.vmo = zx::unowned_vmo(allocator_->GetBlockMapVmo().get()),
-                                   {
-                                       .type = OperationType::kWrite,
-                                       .vmo_offset = bbm_start_block,
-                                       .dev_offset = BlockMapStartBlock(info_) + bbm_start_block,
-                                       .length = bbm_end_block - bbm_start_block,
-                                   }};
+  fs::UnbufferedOperation operation = {
+      .vmo = zx::unowned_vmo(allocator_->GetBlockMapVmo().get()),
+      {
+          .type = fs::OperationType::kWrite,
+          .vmo_offset = bbm_start_block,
+          .dev_offset = BlockMapStartBlock(info_) + bbm_start_block,
+          .length = bbm_end_block - bbm_start_block,
+      }};
   operations->Add(std::move(operation));
 }
 
-void Blobfs::WriteNode(uint32_t map_index, UnbufferedOperationsBuilder* operations) {
+void Blobfs::WriteNode(uint32_t map_index, fs::UnbufferedOperationsBuilder* operations) {
   TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
   uint64_t block = (map_index * sizeof(Inode)) / kBlobfsBlockSize;
-  UnbufferedOperation operation = {.vmo = zx::unowned_vmo(allocator_->GetNodeMapVmo().get()),
-                                   {
-                                       .type = OperationType::kWrite,
-                                       .vmo_offset = block,
-                                       .dev_offset = NodeMapStartBlock(info_) + block,
-                                       .length = 1,
-                                   }};
+  fs::UnbufferedOperation operation = {.vmo = zx::unowned_vmo(allocator_->GetNodeMapVmo().get()),
+                                       {
+                                           .type = fs::OperationType::kWrite,
+                                           .vmo_offset = block,
+                                           .dev_offset = NodeMapStartBlock(info_) + block,
+                                           .length = 1,
+                                       }};
   operations->Add(std::move(operation));
 }
 
-void Blobfs::WriteInfo(UnbufferedOperationsBuilder* operations) {
+void Blobfs::WriteInfo(fs::UnbufferedOperationsBuilder* operations) {
   memcpy(info_mapping_.start(), &info_, sizeof(info_));
-  UnbufferedOperation operation = {
+  fs::UnbufferedOperation operation = {
       .vmo = zx::unowned_vmo(info_mapping_.vmo().get()),
       {
-          .type = OperationType::kWrite,
+          .type = fs::OperationType::kWrite,
           .vmo_offset = 0,
           .dev_offset = 0,
           .length = 1,
@@ -377,13 +382,13 @@ zx_status_t Blobfs::AddInodes(fzl::ResizeableVmoMapper* node_map) {
   memset(reinterpret_cast<void*>(addr + kBlobfsBlockSize * inoblks_old), 0,
          (kBlobfsBlockSize * (zeroed_nodes_blocks)));
 
-  UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperationsBuilder builder;
   WriteInfo(&builder);
   if (zeroed_nodes_blocks > 0) {
-    UnbufferedOperation operation = {
+    fs::UnbufferedOperation operation = {
         .vmo = zx::unowned_vmo(node_map->vmo().get()),
         {
-            .type = OperationType::kWrite,
+            .type = fs::OperationType::kWrite,
             .vmo_offset = inoblks_old,
             .dev_offset = NodeMapStartBlock(info_) + inoblks_old,
             .length = zeroed_nodes_blocks,
@@ -438,16 +443,16 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   info_.dat_slices += static_cast<uint32_t>(length);
   info_.data_block_count = blocks;
 
-  UnbufferedOperationsBuilder builder;
+  fs::UnbufferedOperationsBuilder builder;
   WriteInfo(&builder);
   uint64_t zeroed_bitmap_blocks = abmblks - abmblks_old;
   // Since we are extending the bitmap, we need to fill the expanded
   // portion of the allocation block bitmap with zeroes.
   if (zeroed_bitmap_blocks > 0) {
-    UnbufferedOperation operation = {
+    fs::UnbufferedOperation operation = {
         .vmo = zx::unowned_vmo(block_map->StorageUnsafe()->GetVmo().get()),
         {
-            .type = OperationType::kWrite,
+            .type = fs::OperationType::kWrite,
             .vmo_offset = abmblks_old,
             .dev_offset = BlockMapStartBlock(info_) + abmblks_old,
             .length = zeroed_bitmap_blocks,
@@ -554,8 +559,8 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* op
     }
     FS_TRACE_INFO("blobfs: Replaying journal\n");
     JournalSuperblock journal_superblock;
-    status = ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                           JournalBlocks(fs->info_), &journal_superblock);
+    status = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                               JournalBlocks(fs->info_), &journal_superblock);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
       return status;
@@ -727,6 +732,6 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
   return ZX_OK;
 }
 
-Journal2* Blobfs::journal() { return journal_.get(); }
+Journal* Blobfs::journal() { return journal_.get(); }
 
 }  // namespace blobfs

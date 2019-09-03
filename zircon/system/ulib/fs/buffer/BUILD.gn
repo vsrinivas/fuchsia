@@ -39,9 +39,10 @@ group("test") {
 }
 
 test("fs-buffer") {
+  test_group = "fs"
   sources = [
-    "test/blocking_ring_buffer_test.cc",
     "test/block_buffer_view_test.cc",
+    "test/blocking_ring_buffer_test.cc",
     "test/ring_buffer_test.cc",
     "test/vmo_buffer_test.cc",
   ]

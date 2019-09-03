@@ -18,6 +18,8 @@ library("blobfs") {
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
     "$zx/system/ulib/fs:headers",
+    "$zx/system/ulib/fs/buffer:headers",
+    "$zx/system/ulib/fs/journal:headers",
     "$zx/system/ulib/fs/transaction:headers",
     "$zx/system/ulib/id_allocator:headers",
     "$zx/system/ulib/range:headers",
@@ -40,6 +42,7 @@ library("blobfs") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fs/buffer",
+    "$zx/system/ulib/fs/journal",
     "$zx/system/ulib/fs/operation",
     "$zx/system/ulib/fs/transaction",
     "$zx/system/ulib/fvm",
@@ -55,27 +58,19 @@ library("blobfs") {
   if (is_fuchsia) {
     sources += [
       "allocator.cc",
-      "background-executor.cc",
       "blob-cache.cc",
       "blob.cc",
       "blobfs.cc",
       "cache-node.cc",
       "compression/blob-compressor.cc",
-      "data-streamer.cc",
       "directory.cc",
       "format.cc",
       "iterator/node-populator.cc",
-      "journal/entry-view.cc",
-      "journal/journal2.cc",
-      "journal/replay.cc",
-      "journal/superblock.cc",
       "metrics.cc",
       "mount.cc",
     ]
     public_deps += [
       "$zx/system/ulib/block-client:headers",
-
-      # <blobfs/writeback.h> has #include <lib/sync/completion.h>.
       "$zx/system/ulib/fs/metrics:metrics-cobalt.headers",
       "$zx/system/ulib/fs/metrics:metrics-composite-latency-event.headers",
       "$zx/system/ulib/fs/metrics:metrics-inspect.headers",

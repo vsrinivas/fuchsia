@@ -16,7 +16,7 @@
 #include <utility>
 
 #include <blobfs/blobfs.h>
-#include <blobfs/journal/replay.h>
+#include <fs/journal/replay.h>
 
 #else
 
@@ -129,8 +129,8 @@ zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
 #ifdef __Fuchsia__
   zx_status_t status;
   if (apply_journal) {
-    status = ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
-                           JournalBlocks(blobfs_->info_), nullptr);
+    status = fs::ReplayJournal(blobfs_.get(), blobfs_.get(), JournalStartBlock(blobfs_->info_),
+                               JournalBlocks(blobfs_->info_), nullptr);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("blobfs: Unable to apply journal contents: %d\n", status);
       return status;

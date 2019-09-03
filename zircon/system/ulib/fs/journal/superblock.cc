@@ -6,15 +6,15 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <blobfs/format.h>
-#include <blobfs/journal/superblock.h>
+#include <fs/journal/format.h>
+#include <fs/journal/superblock.h>
 #include <fs/trace.h>
 
-namespace blobfs {
+namespace fs {
 
 JournalSuperblock::JournalSuperblock() = default;
 
-JournalSuperblock::JournalSuperblock(std::unique_ptr<BlockBuffer> buffer)
+JournalSuperblock::JournalSuperblock(std::unique_ptr<fs::BlockBuffer> buffer)
     : buffer_(std::move(buffer)) {
   ZX_DEBUG_ASSERT_MSG(buffer_->capacity() > 0, "Buffer is too small for journal superblock");
 }
@@ -44,4 +44,4 @@ uint32_t JournalSuperblock::new_checksum() const {
   return crc32(0, reinterpret_cast<const uint8_t*>(&info), sizeof(JournalInfo));
 }
 
-}  // namespace blobfs
+}  // namespace fs

@@ -14,13 +14,15 @@ library("operation") {
     ]
     public_deps = [
       "$zx/system/ulib/fbl:headers",
+      "$zx/system/ulib/fs:headers",
       "$zx/system/ulib/zircon:headers",
       "$zx/system/ulib/zx:headers",
     ]
     deps = [
       "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fit",
       "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fit",
+      "$zx/system/ulib/fs",
       "$zx/system/ulib/range",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
@@ -36,6 +38,7 @@ group("test") {
 }
 
 test("fs-operation") {
+  test_group = "fs"
   sources = [
     "test/unbuffered_operations_builder_test.cc",
   ]

@@ -2,12 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BLOBFS_ALLOCATOR_H_
+#define BLOBFS_ALLOCATOR_H_
 
-#include <optional>
+#include <fuchsia/blobfs/c/fidl.h>
 #include <inttypes.h>
+#include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/vmo.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/types.h>
+
+#include <optional>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
@@ -21,11 +27,7 @@
 #include <fbl/vector.h>
 #include <fs/buffer/vmoid_registry.h>
 #include <fs/trace.h>
-#include <fuchsia/blobfs/c/fidl.h>
 #include <id_allocator/id_allocator.h>
-#include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/zx/vmo.h>
-#include <zircon/types.h>
 
 namespace blobfs {
 
@@ -199,3 +201,5 @@ class Allocator : private ExtentReserver, private NodeReserver, public NodeFinde
 };
 
 }  // namespace blobfs
+
+#endif  // BLOBFS_ALLOCATOR_H_

@@ -7,24 +7,24 @@
 #include <lib/cksum.h>
 #include <zircon/types.h>
 
-#include <blobfs/format.h>
 #include <fbl/vector.h>
+#include <fs/journal/format.h>
 #include <fs/operation/buffered_operation.h>
 
-namespace blobfs {
+namespace fs {
 
-JournalEntryView::JournalEntryView(BlockBufferView view) : view_(std::move(view)) {}
+JournalEntryView::JournalEntryView(fs::BlockBufferView view) : view_(std::move(view)) {}
 
-JournalEntryView::JournalEntryView(BlockBufferView view,
-                                   const fbl::Vector<BufferedOperation>& operations,
+JournalEntryView::JournalEntryView(fs::BlockBufferView view,
+                                   const fbl::Vector<fs::BufferedOperation>& operations,
                                    uint64_t sequence_number)
     : view_(std::move(view)) {
   Encode(operations, sequence_number);
 }
 
-void JournalEntryView::Encode(const fbl::Vector<BufferedOperation>& operations,
+void JournalEntryView::Encode(const fbl::Vector<fs::BufferedOperation>& operations,
                               uint64_t sequence_number) {
-  memset(header(), 0, kBlobfsBlockSize);
+  memset(header(), 0, kJournalBlockSize);
   header()->prefix.magic = kJournalEntryMagic;
   header()->prefix.sequence_number = sequence_number;
   header()->prefix.flags = kJournalPrefixFlagHeader;
@@ -69,9 +69,9 @@ uint32_t JournalEntryView::CalculateChecksum() const {
   // making the checksum include the commit block (excluding the checksum location).
   uint32_t checksum = 0;
   for (size_t i = 0; i < view_.length() - 1; i++) {
-    checksum = crc32(checksum, static_cast<const uint8_t*>(view_.Data(i)), kBlobfsBlockSize);
+    checksum = crc32(checksum, static_cast<const uint8_t*>(view_.Data(i)), kJournalBlockSize);
   }
   return checksum;
 }
 
-}  // namespace blobfs
+}  // namespace fs

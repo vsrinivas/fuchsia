@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/assert.h>
+#include <fs/journal/data-streamer.h>
 
-#include <blobfs/data-streamer.h>
-#include <blobfs/journal/journal2.h>
+#include <fs/buffer/vmoid_registry.h>
+#include <fs/journal/journal.h>
 #include <fs/transaction/writeback.h>
+#include <zircon/assert.h>
 #include <zxtest/zxtest.h>
 
-#include "utils.h"
-
-namespace blobfs {
+namespace fs {
 namespace {
 
 class MockVmoidRegistry : public fs::VmoidRegistry {
@@ -39,11 +38,11 @@ class MockTransactionHandler final : public fs::TransactionHandler {
     transactions_seen_ = 0;
   }
 
-  uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t FsBlockSize() const final { return kJournalBlockSize; }
 
   groupid_t BlockGroupID() final { return 1; }
 
-  uint32_t DeviceBlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t DeviceBlockSize() const final { return kJournalBlockSize; }
 
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) override {
     EXPECT_LT(transactions_seen_, transactions_expected_);
@@ -56,6 +55,7 @@ class MockTransactionHandler final : public fs::TransactionHandler {
   size_t transactions_seen_ = 0;
 };
 
+constexpr uint64_t kBlockSize = kJournalBlockSize;
 constexpr uint64_t kVmoOffset = 0;
 constexpr uint64_t kDevOffset = 5;
 constexpr uint64_t kWritebackLength = 8;
@@ -69,28 +69,28 @@ class DataStreamerFixture : public zxtest::Test {
   void SetUp() override {
     std::unique_ptr<BlockingRingBuffer> journal_buffer;
     std::unique_ptr<BlockingRingBuffer> data_buffer;
-    ASSERT_OK(BlockingRingBuffer::Create(&registry_, 10, kBlobfsBlockSize,
-                                         "journal-writeback-buffer", &journal_buffer));
-    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlobfsBlockSize,
+    ASSERT_OK(BlockingRingBuffer::Create(&registry_, 10, kBlockSize, "journal-writeback-buffer",
+                                         &journal_buffer));
+    ASSERT_OK(BlockingRingBuffer::Create(&registry_, kWritebackLength, kBlockSize,
                                          "data-writeback-buffer", &data_buffer));
     auto info_block_buffer = std::make_unique<fs::VmoBuffer>();
     constexpr size_t kInfoBlockBlockCount = 1;
-    ASSERT_OK(info_block_buffer->Initialize(&registry_, kInfoBlockBlockCount, kBlobfsBlockSize,
-                                            "info-block"));
+    ASSERT_OK(
+        info_block_buffer->Initialize(&registry_, kInfoBlockBlockCount, kBlockSize, "info-block"));
     JournalSuperblock info_block = JournalSuperblock(std::move(info_block_buffer));
     info_block.Update(0, 0);
 
-    journal_ = std::make_unique<Journal2>(&handler_, std::move(info_block),
-                                          std::move(journal_buffer), std::move(data_buffer), 0);
+    journal_ = std::make_unique<Journal>(&handler_, std::move(info_block),
+                                         std::move(journal_buffer), std::move(data_buffer), 0);
   }
 
   MockTransactionHandler& handler() { return handler_; }
-  std::unique_ptr<Journal2> take_journal() { return std::move(journal_); }
+  std::unique_ptr<Journal> take_journal() { return std::move(journal_); }
 
  private:
   MockVmoidRegistry registry_;
   MockTransactionHandler handler_;
-  std::unique_ptr<Journal2> journal_;
+  std::unique_ptr<Journal> journal_;
 };
 
 using DataStreamerTest = DataStreamerFixture;
@@ -280,4 +280,4 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

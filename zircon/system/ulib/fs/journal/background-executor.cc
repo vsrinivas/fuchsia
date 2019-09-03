@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/background-executor.h>
-
 #include <zircon/assert.h>
 
-namespace blobfs {
+#include <fs/journal/background-executor.h>
+
+namespace fs {
 
 BackgroundExecutor::~BackgroundExecutor() {
   if (thrd_.joinable()) {
@@ -49,4 +49,4 @@ BackgroundExecutor::BackgroundExecutor() {
   thrd_ = std::thread([this] { executor_.run(); });
 }
 
-}  // namespace blobfs
+}  // namespace fs

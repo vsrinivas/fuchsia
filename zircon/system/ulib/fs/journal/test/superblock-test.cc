@@ -2,21 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/journal/superblock.h>
+#include <fs/journal/superblock.h>
 #include <zxtest/zxtest.h>
 
-namespace blobfs {
+namespace fs {
 namespace {
 
-class Buffer : public BlockBuffer {
+const uint32_t kBlockSize = 8192;
+
+class Buffer : public fs::BlockBuffer {
  public:
-  Buffer() : buffer_(std::make_unique<uint8_t[]>(kBlobfsBlockSize)) {}
+  Buffer() : buffer_(std::make_unique<uint8_t[]>(kBlockSize)) {}
 
   size_t capacity() const final { return 1; }
-  uint32_t BlockSize() const final { return kBlobfsBlockSize; }
+  uint32_t BlockSize() const final { return kBlockSize; }
   vmoid_t vmoid() const final { return VMOID_INVALID; }
-  void* Data(size_t index) final { return &buffer_[index * kBlobfsBlockSize]; }
-  const void* Data(size_t index) const final { return &buffer_[index * kBlobfsBlockSize]; }
+  void* Data(size_t index) final { return &buffer_[index * kBlockSize]; }
+  const void* Data(size_t index) const final { return &buffer_[index * kBlockSize]; }
 
  private:
   std::unique_ptr<uint8_t[]> buffer_;
@@ -31,7 +33,7 @@ class JournalSuperblockFixture : public zxtest::Test {
     buffer_ptr_ = static_cast<uint8_t*>(buffer_->Data(0));
   }
 
-  std::unique_ptr<BlockBuffer> take_buffer() { return std::move(buffer_); }
+  std::unique_ptr<fs::BlockBuffer> take_buffer() { return std::move(buffer_); }
 
   JournalInfo* info() { return reinterpret_cast<JournalInfo*>(&buffer_ptr_[0]); }
 
@@ -69,4 +71,4 @@ TEST_F(JournalSuperblockTest, BadChecksumDoesNotValidate) {
 }
 
 }  // namespace
-}  // namespace blobfs
+}  // namespace fs

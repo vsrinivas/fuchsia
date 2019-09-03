@@ -68,7 +68,7 @@ class MockTransactionManager : public TransactionManager {
 
   size_t WritebackCapacity() const final { return kWritebackCapacity; }
 
-  Journal2* journal() final {
+  fs::Journal* journal() final {
     ZX_ASSERT(false);
     return nullptr;
   }
