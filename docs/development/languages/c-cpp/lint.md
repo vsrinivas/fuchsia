@@ -87,6 +87,8 @@ This list tracks the reasons for which we disabled in particular [checks]:
  - `modernize-return-braced-init-list` - concerns about readability of returning
     braced initialization list for constructor arguments, prefer to use a
     constructor explicitly
+ - `modernize-use-emplace` - enabled the IgnoreImplicitConstructors option to
+   comply with https://abseil.io/tips/112.
  - `modernize-use-equals-delete` - flagging all gtest TEST_F
  - `modernize-use-trailing-return-type` - Fuchsia C++ code typically uses the
    `int foo()` style of defining functions, and not the `auto foo() -> int`
