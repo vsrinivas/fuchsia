@@ -6,29 +6,15 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_CORE_IMPL_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <mutex>
-
-#include <fbl/intrusive_double_list.h>
-#include <fbl/unique_ptr.h>
 #include <trace/event.h>
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_admin.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
-#include "src/media/audio/audio_core/audio_packet_ref.h"
 #include "src/media/audio/audio_core/command_line_options.h"
-#include "src/media/audio/audio_core/fwd_decls.h"
-#include "src/media/audio/audio_core/pending_flush_token.h"
-
-namespace component {
-class Services;
-}
 
 namespace media::audio {
 
@@ -49,50 +35,46 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
                       SystemGainMuteProvider,
                       UsageGainAdjustment {
  public:
-  AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_context,
+  AudioCoreImpl(async_dispatcher_t* dispatcher,
+                std::unique_ptr<sys::ComponentContext> component_context,
                 CommandLineOptions options);
+
+  // Disallow copy & move.
+  AudioCoreImpl(AudioCoreImpl&& o) = delete;
+  AudioCoreImpl& operator=(AudioCoreImpl&& o) = delete;
+  AudioCoreImpl(const AudioCoreImpl&) = delete;
+  AudioCoreImpl& operator=(const AudioCoreImpl&) = delete;
+
   ~AudioCoreImpl() override;
-
-  // Audio implementation.
-  void CreateAudioRenderer(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) final;
-
-  void CreateAudioCapturer(
-      bool loopback,
-      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
-
-  void SetSystemGain(float gain_db) final;
-  void SetSystemMute(bool muted) final;
-
-  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final;
-
-  void EnableDeviceSettings(bool enabled) final;
-
-  // Schedule a closure to run on the service's main message loop.
-  void ScheduleMainThreadTask(fit::closure task) {
-    FXL_DCHECK(dispatcher_);
-    async::PostTask(dispatcher_, std::move(task));
-  }
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   AudioDeviceManager& device_manager() { return device_manager_; }
   AudioAdmin& audio_admin() { return audio_admin_; }
-
-  float system_gain_db() const override { return system_gain_db_; }
-  bool system_muted() const override { return system_muted_; }
-
   fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
 
-  // Usage related fidl calls
+ private:
+  // |fuchsia::media::AudioCore|
+  void CreateAudioRenderer(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) final;
+  void CreateAudioCapturer(
+      bool loopback,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
+  void SetSystemGain(float gain_db) final;
+  void SetSystemMute(bool muted) final;
+  void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) final;
+  void EnableDeviceSettings(bool enabled) final;
+  void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
+  void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                       fuchsia::media::Behavior behavior) final;
   void ResetInteractions() final;
   void LoadDefaults() final;
 
-  void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
-  void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
-
  private:
+  // |SystemGainMuteProvider|
+  float system_gain_db() const override { return system_gain_db_; }
+  bool system_muted() const override { return system_muted_; }
+
   // |UsageGainAdjustment|
   void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) override;
   void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
@@ -108,9 +90,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   fidl::BindingSet<fuchsia::media::AudioCore> bindings_;
 
-  // A reference to our thread's dispatcher object.  Allows us to post events to
-  // be handled by our main application thread from things like the output
-  // manager's thread pool.
+  // A reference to our thread's dispatcher object.  Allows us to post events to be handled by our
+  // main application thread from things like the output manager's thread pool.
   async_dispatcher_t* dispatcher_;
 
   // State for dealing with devices.
@@ -121,18 +102,14 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   std::unique_ptr<sys::ComponentContext> component_context_;
 
-  // TODO(johngro): remove this state.  Migrate users to AudioDeviceEnumerator,
-  // to control gain on a per-input/output basis.
-  // Either way, Gain and Mute should remain fully independent.
+  // TODO(13436): remove this state.  Migrate users to AudioDeviceEnumerator, to control gain on
+  // a per-input/output basis. Either way, Gain and Mute should remain fully independent.
   float system_gain_db_ = kDefaultSystemGainDb;
   bool system_muted_ = kDefaultSystemMuted;
 
-  // We allocate a sub-vmar to hold the audio renderer buffers. Keeping these
-  // in a sub-vmar allows us to take advantage of ASLR while minimizing page
-  // table fragmentation.
+  // We allocate a sub-vmar to hold the audio renderer buffers. Keeping these in a sub-vmar allows
+  // us to take advantage of ASLR while minimizing page table fragmentation.
   fbl::RefPtr<fzl::VmarManager> vmar_manager_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(AudioCoreImpl);
 };
 
 }  // namespace media::audio

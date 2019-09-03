@@ -29,7 +29,8 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  media::audio::AudioCoreImpl impl(std::move(component_context), options.take_value());
+  media::audio::AudioCoreImpl impl(loop.dispatcher(), std::move(component_context),
+                                   options.take_value());
   loop.Run();
   return 0;
 }

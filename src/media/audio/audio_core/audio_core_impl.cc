@@ -4,9 +4,7 @@
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 
-#include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
@@ -15,10 +13,9 @@
 
 namespace media::audio {
 namespace {
-// All audio renderer buffers will need to fit within this VMAR. We want to
-// choose a size here large enough that will accomodate all the mappings
-// required by all clients while also being small enough to avoid unnecessary
-// page table fragmentation.
+// All audio renderer buffers will need to fit within this VMAR. We want to choose a size here large
+// enough that will accomodate all the mappings required by all clients while also being small
+// enough to avoid unnecessary page table fragmentation.
 constexpr size_t kAudioRendererVmarSize = 16ull * 1024 * 1024 * 1024;
 constexpr zx_vm_option_t kAudioRendererVmarFlags =
     ZX_VM_COMPACT | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_1GB;
@@ -26,10 +23,11 @@ constexpr zx_vm_option_t kAudioRendererVmarFlags =
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
-AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_context,
+AudioCoreImpl::AudioCoreImpl(async_dispatcher_t* dispatcher,
+                             std::unique_ptr<sys::ComponentContext> component_context,
                              CommandLineOptions options)
-    : dispatcher_(async_get_default_dispatcher()),
-      device_manager_(dispatcher_, *this),
+    : dispatcher_(dispatcher),
+      device_manager_(dispatcher, *this),
       audio_admin_(this),
       component_context_(std::move(component_context)),
       vmar_manager_(
@@ -123,9 +121,9 @@ void AudioCoreImpl::SetSystemGain(float gain_db) {
       std::max(std::min(gain_db, kMaxSystemAudioGainDb), fuchsia::media::audio::MUTED_GAIN_DB);
 
   if (system_gain_db_ == gain_db) {
-    // This system gain is the same as the last one we broadcast.
-    // A device might have received a SetDeviceGain call since we last set this.
-    // Only update devices that have diverged from the System Gain/Mute values.
+    // This system gain is the same as the last one we broadcast. A device might have received a
+    // SetDeviceGain call since we last set this. Only update devices that have diverged from the
+    // System Gain/Mute values.
     device_manager_.OnSystemGain(false);
     return;
   }
@@ -141,8 +139,8 @@ void AudioCoreImpl::SetSystemMute(bool muted) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetSystemMute");
   AUD_VLOG(TRACE) << " (mute: " << muted << ")";
   if (system_muted_ == muted) {
-    // A device might have received a SetDeviceMute call since we last set this.
-    // Only update devices that have diverged from the System Gain/Mute values.
+    // A device might have received a SetDeviceMute call since we last set this. Only update devices
+    // that have diverged from the System Gain/Mute values.
     device_manager_.OnSystemGain(false);
     return;
   }
