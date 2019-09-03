@@ -7,6 +7,7 @@
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <kernel/interrupt.h>
 #include <kernel/sched.h>
@@ -286,6 +287,69 @@ static bool test_interrupt_with_resched_disable() {
   END_TEST;
 }
 
+static bool test_auto_preempt_disabler() {
+  BEGIN_TEST;
+
+  // Make sure that nothing funny is going on with our preempt disable count as
+  // it stands now.
+  ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+
+  {
+    // Create a disabler inside of a scope, but do not have it immediately
+    // request that preemption be disabled.  Our count should still be zero.
+    AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler;
+    ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+
+    // Now explicitly disable.  Our count should go to 1.
+    ap_disabler.Disable();
+    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+
+    // Do it again, our count should remain at 1.
+    ap_disabler.Disable();
+    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+
+    {
+      // Make another inside of a new scope.  Our count should remain at 1 until
+      // we explicitly use the new instance to disable preemption.
+      AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler2;
+      ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+
+      ap_disabler2.Disable();
+      ASSERT_EQ(2u, thread_preempt_disable_count(), "");
+    }  // Let it go out of scope, we should drop down to a count of 1.
+
+    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+  }  // Allow the original to go out of scope.  This should get us back down to a count of 0.
+
+  ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+
+  // Next, do a similar test, but this time with the version which automatically
+  // begins life with preemption disabled.  These versions are a bit simpler
+  // under the hood as they do not require any internal state tracking.
+  {
+    AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
+    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+
+#if TEST_WILL_NOT_COMPILE || 0
+    // Attempting to call disable should fail to build.
+    ap_disabler.Disable();
+#endif
+
+    {
+      // Add a second.  Watch the count go up as it comes into scope, and back
+      // down again when it goes out.
+      AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler2;
+      ASSERT_EQ(2u, thread_preempt_disable_count(), "");
+    }
+
+    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+  }  // Allow the original to go out of scope.  This should get us back down to a count of 0.
+
+  ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(preempt_disable_tests)
 UNITTEST("test_in_timer_callback", test_in_timer_callback)
 UNITTEST("test_inc_dec_disable_counts", test_inc_dec_disable_counts)
@@ -295,4 +359,5 @@ UNITTEST("test_interrupt_preserves_preempt_pending", test_interrupt_preserves_pr
 UNITTEST("test_interrupt_clears_preempt_pending", test_interrupt_clears_preempt_pending)
 UNITTEST("test_interrupt_with_preempt_disable", test_interrupt_with_preempt_disable)
 UNITTEST("test_interrupt_with_resched_disable", test_interrupt_with_resched_disable)
+UNITTEST("test_auto_preempt_disabler", test_auto_preempt_disabler)
 UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests", "preempt_disable_tests");
