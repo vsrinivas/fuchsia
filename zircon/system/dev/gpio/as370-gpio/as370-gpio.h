@@ -5,26 +5,31 @@
 #ifndef ZIRCON_SYSTEM_DEV_GPIO_AS370_GPIO_AS370_GPIO_H_
 #define ZIRCON_SYSTEM_DEV_GPIO_AS370_GPIO_AS370_GPIO_H_
 
+#include <lib/mmio/mmio.h>
+#include <threads.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpioimpl.h>
-#include <lib/mmio/mmio.h>
+#include <fbl/array.h>
 
 namespace gpio {
 
-class As370Gpio : public ddk::Device<As370Gpio>,
+class As370Gpio : public ddk::Device<As370Gpio, ddk::Unbindable>,
                   public ddk::GpioImplProtocol<As370Gpio, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   As370Gpio(zx_device_t* parent, ddk::MmioBuffer pinmux_mmio, ddk::MmioBuffer gpio1_mmio,
-            ddk::MmioBuffer gpio2_mmio)
-      : ddk::Device<As370Gpio>(parent),
+            ddk::MmioBuffer gpio2_mmio, zx::interrupt gpio1_irq)
+      : ddk::Device<As370Gpio, ddk::Unbindable>(parent),
         pinmux_mmio_(std::move(pinmux_mmio)),
         gpio1_mmio_(std::move(gpio1_mmio)),
-        gpio2_mmio_(std::move(gpio2_mmio)) {}
+        gpio2_mmio_(std::move(gpio2_mmio)),
+        gpio1_irq_(std::move(gpio1_irq)) {}
   virtual ~As370Gpio() = default;
 
-  void DdkRelease() { delete this; }
+  void DdkUnbind();
+  void DdkRelease();
 
   zx_status_t GpioImplConfigIn(uint32_t index, uint32_t flags);
   zx_status_t GpioImplConfigOut(uint32_t index, uint8_t initial_value);
@@ -36,13 +41,25 @@ class As370Gpio : public ddk::Device<As370Gpio>,
   zx_status_t GpioImplReleaseInterrupt(uint32_t index);
   zx_status_t GpioImplSetPolarity(uint32_t index, gpio_polarity_t polarity);
 
+  zx_status_t Init();
+  void Shutdown();
+
  protected:
   ddk::MmioBuffer pinmux_mmio_;
   ddk::MmioBuffer gpio1_mmio_;
   ddk::MmioBuffer gpio2_mmio_;
 
  private:
-  zx_status_t Init();
+  zx_status_t Bind();
+  int Thread();
+  inline void SetInterruptPolarity(uint32_t index, bool is_high);
+  inline void SetInterruptEdge(uint32_t index, bool is_edge);
+  inline bool IsInterruptEnabled(uint32_t index);
+
+  thrd_t thread_;
+  zx::interrupt gpio1_irq_;
+  fbl::Array<zx::interrupt> interrupts_;
+  zx::port port_;
 };
 
 }  // namespace gpio

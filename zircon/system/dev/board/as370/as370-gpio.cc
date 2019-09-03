@@ -19,6 +19,13 @@ zx_status_t As370::GpioInit() {
       {.base = as370::kGpio2Base, .length = as370::kGpioSize},
   };
 
+  const pbus_irq_t gpio_irqs[] = {
+      {
+          .irq = as370::kGpio1Irq,
+          .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+      },
+  };
+
   const gpio_pin_t gpio_pins[] = {
       {17},  // AMP_EN.
       {4},   // LED_RESET
@@ -37,6 +44,8 @@ zx_status_t As370::GpioInit() {
   gpio_dev.did = PDEV_DID_SYNAPTICS_GPIO;
   gpio_dev.mmio_list = gpio_mmios;
   gpio_dev.mmio_count = countof(gpio_mmios);
+  gpio_dev.irq_list = gpio_irqs;
+  gpio_dev.irq_count = countof(gpio_irqs);
   gpio_dev.metadata_list = gpio_metadata;
   gpio_dev.metadata_count = countof(gpio_metadata);
 

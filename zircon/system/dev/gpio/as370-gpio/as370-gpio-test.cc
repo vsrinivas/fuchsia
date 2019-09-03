@@ -4,8 +4,9 @@
 
 #include "as370-gpio.h"
 
-#include <fbl/algorithm.h>
 #include <lib/mock-function/mock-function.h>
+
+#include <fbl/algorithm.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
@@ -14,7 +15,19 @@ namespace gpio {
 class As370GpioTest : public As370Gpio {
  public:
   As370GpioTest()
-      : As370Gpio(nullptr, ddk::MmioBuffer({}), ddk::MmioBuffer({}), ddk::MmioBuffer({})),
+      : As370Gpio(nullptr, ddk::MmioBuffer({}), ddk::MmioBuffer({}), ddk::MmioBuffer({}),
+                  zx::interrupt()),
+        mock_pinmux_regs_(pinmux_reg_array_, sizeof(uint32_t), fbl::count_of(pinmux_reg_array_)),
+        mock_gpio1_regs_(gpio1_reg_array_, sizeof(uint32_t), fbl::count_of(gpio1_reg_array_)),
+        mock_gpio2_regs_(gpio2_reg_array_, sizeof(uint32_t), fbl::count_of(gpio2_reg_array_)) {
+    pinmux_mmio_ = ddk::MmioBuffer(mock_pinmux_regs_.GetMmioBuffer());
+    gpio1_mmio_ = ddk::MmioBuffer(mock_gpio1_regs_.GetMmioBuffer());
+    gpio2_mmio_ = ddk::MmioBuffer(mock_gpio2_regs_.GetMmioBuffer());
+  }
+
+  As370GpioTest(zx::interrupt gpio_irq)
+      : As370Gpio(nullptr, ddk::MmioBuffer({}), ddk::MmioBuffer({}), ddk::MmioBuffer({}),
+                  std::move(gpio_irq)),
         mock_pinmux_regs_(pinmux_reg_array_, sizeof(uint32_t), fbl::count_of(pinmux_reg_array_)),
         mock_gpio1_regs_(gpio1_reg_array_, sizeof(uint32_t), fbl::count_of(gpio1_reg_array_)),
         mock_gpio2_regs_(gpio2_reg_array_, sizeof(uint32_t), fbl::count_of(gpio2_reg_array_)) {
@@ -206,6 +219,44 @@ TEST(As370GpioTest, Write) {
 
   EXPECT_NE(ZX_OK, dut.GpioImplWrite(64, 0));
 
+  dut.VerifyAll();
+}
+
+TEST(As370GpioTest, Interrupt) {
+  zx::interrupt mock_irq, dup_irq;
+  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &mock_irq));
+  ASSERT_OK(mock_irq.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_irq));
+
+  As370GpioTest dut(std::move(dup_irq));
+
+  dut.Init();
+  // Interrupt enable register
+  dut.mock_gpio1_regs()[0x30]
+      .ExpectRead(0xABCD'EF80)  // Interrupt enable check
+      .ExpectRead(0xABCD'EF80)  // Set pin 0 interrupt enable
+      .ExpectWrite(0xABCD'EF81)
+      .ExpectRead(0xABCD'EF81)  // Irq thread interrupt enable check
+      .ExpectRead(0xABCD'EF81)  // Release method interrupt check
+      .ExpectRead(0xABCD'EF81)  // Disable interrupt
+      .ExpectWrite(0xABCD'EF80);
+
+  // Interrupt Polarity and Level
+  dut.mock_gpio1_regs()[0x3c].ExpectRead(0xFFFE'AAA8).ExpectWrite(0xFFFE'AAA9);
+  dut.mock_gpio1_regs()[0x38].ExpectRead(0xFFFE'AAA8).ExpectWrite(0xFFFE'AAA9);
+
+  // Interrupt Status and Clear
+  dut.mock_gpio1_regs()[0x40].ExpectRead(0x0000'0001);
+  dut.mock_gpio1_regs()[0x4c].ExpectRead(0xFFFE'AAAC).ExpectWrite(0xFFFE'AAAD);
+
+  zx::interrupt test_irq;
+  EXPECT_OK(dut.GpioImplGetInterrupt(0, ZX_INTERRUPT_MODE_EDGE_HIGH, &test_irq));
+
+  EXPECT_OK(mock_irq.trigger(0, zx::time()));
+  EXPECT_OK(test_irq.wait(nullptr));
+
+  EXPECT_OK(dut.GpioImplReleaseInterrupt(0));
+
+  dut.Shutdown();
   dut.VerifyAll();
 }
 
