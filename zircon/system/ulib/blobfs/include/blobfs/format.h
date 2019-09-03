@@ -120,34 +120,12 @@ static_assert(sizeof(Superblock) == kBlobfsBlockSize, "Invalid blobfs superblock
 struct JournalInfo {
     uint64_t magic;
     uint64_t start_block; // Block of first journal entry (relative to entries start).
-    uint64_t num_blocks; // TODO(smklein): This will become unused with the new implementation.
+    uint64_t reserved; // Unused.
     uint64_t timestamp; // Timestamp at which the info block was last written.
     uint32_t checksum; // crc32 checksum of the preceding contents of the info block.
 };
 
 static_assert(sizeof(JournalInfo) <= kBlobfsBlockSize, "Journal info size is too large");
-
-// Journal V1 Structures:
-
-struct HeaderBlock {
-    uint64_t magic;
-    uint64_t timestamp;
-    uint64_t reserved;
-    uint64_t num_blocks;
-    uint64_t target_blocks[kMaxEntryDataBlocks];
-};
-
-static_assert(sizeof(HeaderBlock) <= kBlobfsBlockSize, "HeaderBlock size is too large");
-
-struct CommitBlock {
-    uint64_t magic;
-    uint64_t timestamp; // Timestamp (in ticks) at which the journal entry was written.
-    uint32_t checksum; // crc32 checksum of all preceding blocks in the entry.
-};
-
-static_assert(sizeof(CommitBlock) <= kBlobfsBlockSize, "CommitBlock size is too large");
-
-// End Journal V1 Structures.
 
 // Journal V2 Structures:
 

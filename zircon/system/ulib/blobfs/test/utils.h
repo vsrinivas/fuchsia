@@ -73,14 +73,6 @@ class MockTransactionManager : public TransactionManager {
     return nullptr;
   }
 
-  zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final {
-    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
-  }
-
-  zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final {
-    ZX_PANIC("Test should not invoke function %s\n", __FUNCTION__);
-  }
-
  private:
   BlobfsMetrics metrics_{};
   Superblock superblock_{};

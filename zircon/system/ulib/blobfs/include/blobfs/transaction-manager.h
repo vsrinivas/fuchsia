@@ -38,20 +38,6 @@ class TransactionManager : public fs::TransactionHandler, public SpaceManager {
   virtual size_t WritebackCapacity() const = 0;
 
   virtual Journal2* journal() = 0;
-
-  // Initializes a new unit of WritebackWork associated with a Writebacktarget.
-  //
-  // DEPRECATED.
-  virtual zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) = 0;
-
-  // Enqueues |work| to the appropriate buffer.
-  // If the data is journaled, |work| will be transmitted to the journal, where it will be
-  // persisted only after consistency is ensured.
-  // If the data is not journaled, |work| will be transmitted directly to the writeback buffer /
-  // persistent storage.
-  //
-  // DEPRECATED.
-  virtual zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) = 0;
 };
 
 }  // namespace blobfs

@@ -63,49 +63,19 @@ static_assert(sizeof(Superblock) ==
 // Ensure that the members don't change their offsets within the structure
 static_assert(offsetof(JournalInfo, magic) ==                0x0);
 static_assert(offsetof(JournalInfo, start_block) ==          0x08);
-static_assert(offsetof(JournalInfo, num_blocks) ==           0x10);
+static_assert(offsetof(JournalInfo, reserved) ==             0x10);
 static_assert(offsetof(JournalInfo, timestamp) ==            0x18);
 static_assert(offsetof(JournalInfo, checksum) ==             0x20);
 
 // Ensure that the padding between two members doesn't change
 static_assert(PADDING_LENGTH(JournalInfo, magic,                start_block) ==           0);
-static_assert(PADDING_LENGTH(JournalInfo, start_block,          num_blocks) ==            0);
-static_assert(PADDING_LENGTH(JournalInfo, num_blocks,           timestamp) ==             0);
+static_assert(PADDING_LENGTH(JournalInfo, start_block,          reserved) ==            0);
+static_assert(PADDING_LENGTH(JournalInfo, reserved,             timestamp) ==             0);
 static_assert(PADDING_LENGTH(JournalInfo, timestamp,            checksum) ==              0);
 
 // Ensure that the padding at the end of structure doesn't change
 static_assert(sizeof(JournalInfo) ==
               offsetof(JournalInfo, checksum) + sizeof(JournalInfo{}.checksum) + 4);
-
-// Ensure that the members don't change their offsets within the structure
-static_assert(offsetof(HeaderBlock, magic) ==                     0x0);
-static_assert(offsetof(HeaderBlock, timestamp) ==                 0x8);
-static_assert(offsetof(HeaderBlock, reserved) ==                  0x10);
-static_assert(offsetof(HeaderBlock, num_blocks) ==                0x18);
-static_assert(offsetof(HeaderBlock, target_blocks) ==             0x20);
-
-// Ensure that the padding between two members doesn't change
-static_assert(PADDING_LENGTH(HeaderBlock, magic,             timestamp) ==                0);
-static_assert(PADDING_LENGTH(HeaderBlock, timestamp,         reserved) ==                 0);
-static_assert(PADDING_LENGTH(HeaderBlock, reserved,          num_blocks) ==               0);
-static_assert(PADDING_LENGTH(HeaderBlock, num_blocks,        target_blocks) ==            0);
-
-// Ensure that the padding at the end of structure doesn't change
-static_assert(sizeof(HeaderBlock) ==
-              offsetof(HeaderBlock, target_blocks) + sizeof(HeaderBlock{}.target_blocks));
-
-// Ensure that the members don't change their offsets within the structure
-static_assert(offsetof(CommitBlock, magic) ==                 0x0);
-static_assert(offsetof(CommitBlock, timestamp) ==             0x08);
-static_assert(offsetof(CommitBlock, checksum) ==              0x10);
-
-// Ensure that the padding between two members doesn't change
-static_assert(PADDING_LENGTH(CommitBlock, magic,            timestamp) ==                 0);
-static_assert(PADDING_LENGTH(CommitBlock, timestamp,        checksum) ==                  0);
-
-// Ensure that the padding at the end of structure doesn't change
-static_assert(sizeof(CommitBlock) ==
-              offsetof(CommitBlock, checksum) + sizeof(CommitBlock{}.checksum) + 4);
 
 // Ensure that the members don't change their offsets within the structure.
 static_assert(offsetof(JournalPrefix, magic) ==                0x0);
@@ -133,7 +103,6 @@ static_assert(offsetof(JournalCommitBlock, checksum) == 0x20);
 
 // Ensure that the padding between members doesn't change.
 static_assert(PADDING_LENGTH(JournalCommitBlock, prefix, checksum) == 0);
-
 
 // Ensure that the members don't change their offsets within the structure
 static_assert(offsetof(NodePrelude, flags) ==               0x0);

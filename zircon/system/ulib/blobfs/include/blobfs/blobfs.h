@@ -39,7 +39,6 @@
 #include <blobfs/format.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
-#include <blobfs/journal.h>  // Deprecated.
 #include <blobfs/journal/journal2.h>
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
@@ -137,8 +136,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   BlobfsMetrics& Metrics() final { return metrics_; }
   size_t WritebackCapacity() const final;
   Journal2* journal() final;
-  zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
-  zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
 
   ////////////////
   // Other methods.
@@ -176,16 +173,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   }
 
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
-
-  // Initializes the WritebackQueue and Journal, replaying any existing journal entries
-  // if requested.
-  //
-  // If the underlying block device is read-only, the journal may not be
-  // replayed, and this function returns ZX_ERR_ACCESS_DENIED.
-  // If the filesystem is to be mounted read-only or read + write, the journal may be replayed.
-  //
-  // DEPRECATED.
-  zx_status_t ReplayOldJournal();
 
   virtual ~Blobfs();
 
@@ -232,12 +219,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
 
   Blobfs(std::unique_ptr<BlockDevice> device, const Superblock* info);
 
-  // Migrates the journal format from blobfs v7 to blobfs v8.
-  //
-  // Implemented by replaying the old journal and overwriting it in-place.
-  // Returns an error if the journal cannot be replayed or overwritten.
-  zx_status_t JournalUpgrade(MountOptions* options);
-
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
   zx_status_t Reload();
@@ -272,10 +253,6 @@ class Blobfs : public fs::ManagedVfs, public fbl::RefCounted<Blobfs>, public Tra
   // Verifies that the contents of a blob are valid.
   zx_status_t VerifyBlob(uint32_t node_index);
 
-  // Journal V1: Deprecated.
-  fbl::unique_ptr<WritebackQueue> writeback_;
-  fbl::unique_ptr<Journal> old_journal_;
-  // Journal V2.
   fbl::unique_ptr<Journal2> journal_;
   Superblock info_;
 

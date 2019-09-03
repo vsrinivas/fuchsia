@@ -170,36 +170,6 @@ void Blobfs::PersistNode(uint32_t node_index, UnbufferedOperationsBuilder* opera
   WriteInfo(operations);
 }
 
-zx_status_t Blobfs::ReplayOldJournal() {
-  zx_status_t status =
-      Journal::Create(this, JournalBlocks(info_), JournalStartBlock(info_), &old_journal_);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Could not initialize v1 journal\n");
-    return status;
-  }
-
-  // Initialize the WritebackQueue.
-  status = WritebackQueue::Create(this, WriteBufferSize(), &writeback_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Replay any lingering journal entries.
-  status = old_journal_->Replay();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Tear down the v1 journal.
-  old_journal_.reset();
-
-  // Tear down v1 writeback.
-  writeback_->Teardown();
-  writeback_.reset();
-
-  return ZX_OK;
-}
-
 size_t Blobfs::WritebackCapacity() const { return WriteBufferSize(); }
 
 void Blobfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
@@ -521,111 +491,6 @@ void Blobfs::ScheduleMetricFlush() {
       flush_loop_.dispatcher(), [this]() { ScheduleMetricFlush(); }, kCobaltFlushTimer);
 }
 
-zx_status_t Blobfs::JournalUpgrade(MountOptions* options) {
-  // Upgrade: migration from journal V1 to journal V2.
-  FS_TRACE_INFO("blobfs: (upgrade) Phase 1: Replay old journal entries\n");
-
-  // Initialize the old journal and replay any V1 entries.
-  if (options->writability != blobfs::Writability::Writable) {
-    FS_TRACE_ERROR("blobfs: Cannot upgrade non-writable partition\n");
-    return ZX_ERR_ACCESS_DENIED;
-  }
-  if (!options->journal) {
-    FS_TRACE_ERROR("blobfs: Cannot upgrade non-journaled partition\n");
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
-  zx_status_t status = ReplayOldJournal();
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Could not replay v1 journal\n");
-    return status;
-  }
-  FS_TRACE_INFO("blobfs: (upgrade) Phase 1: Replay old journal entries: Complete\n");
-
-  // Update the superblock, overwrite the journal.
-  FS_TRACE_INFO("blobfs: (upgrade) Phase 2: Upgrade in-memory structures\n");
-  zx::vmo vmo;
-  uint64_t superblock_blocks = 1;
-  uint64_t journal_blocks = JournalBlocks(info_);
-  uint64_t total_blocks = superblock_blocks + journal_blocks;
-  status = zx::vmo::create(kBlobfsBlockSize * total_blocks, 0, &vmo);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Could not create vmo\n");
-    return status;
-  }
-
-  zx::vmo dup;
-  status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to duplicate VMO during upgrade\n");
-    return status;
-  }
-
-  fuchsia_hardware_block_VmoID vmoid;
-  status = block_device_->BlockAttachVmo(std::move(dup), &vmoid);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to attach VMO during upgrade\n");
-    return status;
-  }
-
-  // Update superblock (in-memory).
-  info_.version = kBlobfsVersion;
-  status = vmo.write(&info_, 0, kBlobfsBlockSize);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to write superblock to VMO during upgrade\n");
-    return status;
-  }
-
-  // Reset journal (in-memory);
-  char block[kBlobfsBlockSize];
-  memset(block, 0, sizeof(block));
-  JournalInfo* journal_info = reinterpret_cast<JournalInfo*>(block);
-  journal_info->magic = kJournalMagic;
-  journal_info->checksum = crc32(0, reinterpret_cast<const uint8_t*>(block), sizeof(JournalInfo));
-  for (uint64_t n = 0; n < journal_blocks; n++) {
-    uint64_t offset = kBlobfsBlockSize * (superblock_blocks + n);
-    uint64_t length = kBlobfsBlockSize;
-    status = vmo.write(block, offset, length);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to write journal to VMO during upgrade\n");
-      return status;
-    }
-    if (n == 0) {
-      // All blocks after the info block are zero.
-      memset(block, 0, sizeof(block));
-    }
-  }
-
-  FS_TRACE_INFO("blobfs: (upgrade) Phase 2: Upgrade in-memory structures: Complete\n");
-
-  auto FsToDeviceBlocks = [disk_block = block_info_.block_size](uint64_t block) {
-    return block * (kBlobfsBlockSize / disk_block);
-  };
-
-  // Actually write the blocks to storage.
-  block_fifo_request_t requests[2] = {};
-  requests[0].opcode = BLOCKIO_WRITE;
-  requests[0].vmoid = vmoid.id;
-  requests[0].length = static_cast<uint32_t>(FsToDeviceBlocks(superblock_blocks));
-  requests[0].vmo_offset = FsToDeviceBlocks(0);
-  requests[0].dev_offset = FsToDeviceBlocks(0);
-
-  requests[1].opcode = BLOCKIO_WRITE;
-  requests[1].vmoid = vmoid.id;
-  requests[1].length = static_cast<uint32_t>(FsToDeviceBlocks(journal_blocks));
-  requests[1].vmo_offset = FsToDeviceBlocks(superblock_blocks);
-  requests[1].dev_offset = FsToDeviceBlocks(JournalStartBlock(info_));
-
-  FS_TRACE_INFO("blobfs: (upgrade) Phase 3: Upgrade on-disk superblock, journal\n");
-  status = block_device_->FifoTransaction(requests, fbl::count_of(requests));
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to write to disk during upgrade: %d\n", status);
-    return status;
-  }
-  FS_TRACE_INFO("blobfs: (upgrade) Phase 3: Upgrade on-disk superblock, journal: Complete\n");
-  return ZX_OK;
-}
-
 zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* options,
                            std::unique_ptr<Blobfs>* out) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
@@ -658,22 +523,6 @@ zx_status_t Blobfs::Create(std::unique_ptr<BlockDevice> device, MountOptions* op
   // upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(std::move(device), superblock));
   fs->block_info_ = std::move(block_info);
-
-  if ((superblock->magic0 == kBlobfsMagic0) && (superblock->magic1 == kBlobfsMagic1) &&
-      (superblock->version != kBlobfsVersion)) {
-    // This is a hook for upgrades. As a warning, minimal validation of the blobfs filesystem
-    // has occurred at this point.
-
-    static_assert(kBlobfsVersion == 0x8, "7 -> 8 Upgrade code should only live for one rev.");
-    if (superblock->version == 0x7) {
-      FS_TRACE_INFO("blobfs: In-place upgrade from blobfs version 0x7 -> 0x8\n");
-      status = fs->JournalUpgrade(options);
-      if (status != ZX_OK) {
-        return status;
-      }
-      FS_TRACE_INFO("blobfs: In-place upgrade from blobfs version 0x7 -> 0x8: Complete\n");
-    }
-  }
 
   // Perform superblock validations which should succeed prior to journal replay.
   if (blocks < TotalBlocks(fs->Info())) {
@@ -879,42 +728,5 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
 }
 
 Journal2* Blobfs::journal() { return journal_.get(); }
-
-zx_status_t Blobfs::CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) {
-  if (writeback_ == nullptr) {
-    // Transactions should never be allowed if the writeback queue is disabled.
-    return ZX_ERR_BAD_STATE;
-  }
-
-  out->reset(new BlobWork(this, fbl::WrapRefPtr(vnode)));
-  return ZX_OK;
-}
-
-zx_status_t Blobfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) {
-  ZX_DEBUG_ASSERT(work != nullptr);
-  switch (type) {
-    case EnqueueType::kJournal:
-      if (journal_ != nullptr) {
-        // If journaling is enabled (both in general and for this WritebackWork),
-        // attempt to enqueue to the journal buffer.
-        return old_journal_->Enqueue(std::move(work));
-      }
-      // Even if our enqueue type is kJournal,
-      // fall through to the writeback queue if the journal doesn't exist.
-      __FALLTHROUGH;
-    case EnqueueType::kData:
-      if (writeback_ != nullptr) {
-        return writeback_->Enqueue(std::move(work));
-      }
-      // If writeback_ does not exist, we are in a readonly state.
-      // Fall through to the default case.
-      __FALLTHROUGH;
-    default:
-      // The file system is currently in a readonly state.
-      // Mark the work complete to ensure that any pending callbacks are invoked.
-      work->MarkCompleted(ZX_ERR_BAD_STATE);
-      return ZX_ERR_BAD_STATE;
-  }
-}
 
 }  // namespace blobfs
