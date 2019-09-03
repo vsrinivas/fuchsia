@@ -230,6 +230,21 @@ fn impl_valid_fidl_table(
         }
     }));
 
+    let mut field_intos = TokenStream::new();
+    field_intos.extend(fields.iter().map(|field| {
+        let ident = &field.ident;
+        match &field.kind {
+            FidlFieldKind::Required | FidlFieldKind::HasDefault(_) => quote!(
+                #ident: Some(
+                    src.#ident.into()
+                ),
+            ),
+            FidlFieldKind::Optional => quote!(
+                #ident: src.#ident.into(),
+            ),
+        }
+    }));
+
     let mut field_errors = TokenStream::new();
     field_errors.extend(
         fields
@@ -286,6 +301,14 @@ fn impl_valid_fidl_table(
                 };
                 #custom_validator_call
                 Ok(maybe_valid)
+            }
+        }
+
+        impl std::convert::From<#name> for #fidl_table_type {
+            fn from(src: #name) -> #fidl_table_type {
+                Self {
+                    #field_intos
+                }
             }
         }
     ))

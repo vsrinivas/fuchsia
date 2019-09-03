@@ -41,6 +41,8 @@
 //!     fn try_from(src: FidlTable) -> Result<ValidatedFidlTable, Self::Error> { .. }
 //! }
 //! ```
+//! and also a [From][std::convert::From]<ValidatedFidlTable> implementation for `FidlTable`,
+//! so you can get a `FidlTable` using `validated.into()`.
 //!
 //! ## Custom Validations
 //!
@@ -69,12 +71,8 @@
 //! ```
 //!
 ///! This adds a `Logical(YourErrorType)` variant to the generated error enum.
-
 // TODO(turnage): Infer optionality based on parsing for
 //                "Option<" in field types.
-// TODO(turnage): Optionally Generate Into<> implementation
-//                to return to the original FIDL type.
-
 pub use fidl_table_validation_derive::ValidFidlTable;
 
 /// Validations on `T` that can be run during construction of a validated

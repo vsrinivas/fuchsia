@@ -194,3 +194,33 @@ fn nested_invalid_field_rejected() {
         r => panic!("Wanted invalid field error for invalid nested field; got {:?}", r),
     }
 }
+
+#[test]
+fn back_into_original_nested() {
+    #[derive(Debug, PartialEq)]
+    struct NestedFidl {
+        required: Option<usize>,
+    }
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(NestedFidl)]
+    struct ValidNestedFidl {
+        required: usize,
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct FidlHello {
+        nested: Option<NestedFidl>,
+    }
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(FidlHello)]
+    struct ValidHello {
+        nested: ValidNestedFidl,
+    }
+
+    assert_eq!(
+        FidlHello::from(ValidHello { nested: ValidNestedFidl { required: 10 } }),
+        FidlHello { nested: Some(NestedFidl { required: Some(10) }) }
+    );
+}
