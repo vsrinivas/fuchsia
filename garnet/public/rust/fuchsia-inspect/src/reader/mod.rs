@@ -41,6 +41,23 @@ impl NodeHierarchy {
     fn new() -> Self {
         NodeHierarchy { name: "".to_string(), properties: vec![], children: vec![] }
     }
+
+    /// Sorts the properties and children of the node hierarchy by name.
+    pub fn sort(&mut self) {
+        if self.properties.iter().all(|p| p.name().parse::<u64>().is_ok()) {
+            self.properties.sort_by(|p1, p2| {
+                let p1_value = p1.name().parse::<u64>().unwrap();
+                let p2_value = p2.name().parse::<u64>().unwrap();
+                p1_value.partial_cmp(&p2_value).unwrap()
+            });
+        } else {
+            self.properties.sort_by(|p1, p2| p1.name().partial_cmp(p2.name()).unwrap());
+        }
+        self.children.sort_by(|c1, c2| c1.name.partial_cmp(&c2.name).unwrap());
+        for child in self.children.iter_mut() {
+            child.sort();
+        }
+    }
 }
 
 /// A named property. Each of the fields consists of (name, value).
@@ -692,5 +709,53 @@ mod tests {
             buckets[3],
             ArrayBucket { floor: BucketLimit::Value(13.0), upper: BucketLimit::Max, count: 15.0 }
         );
+    }
+
+    #[test]
+    fn sort_hierarchy() {
+        let mut hierarchy = NodeHierarchy {
+            name: "root".to_string(),
+            properties: vec![
+                Property::String("x".to_string(), "foo".to_string()),
+                Property::Uint("c".to_string(), 3),
+                Property::Int("z".to_string(), -4),
+            ],
+            children: vec![
+                NodeHierarchy {
+                    name: "foo".to_string(),
+                    properties: vec![
+                        Property::Int("11".to_string(), -4),
+                        Property::Bytes("123".to_string(), "foo".bytes().into_iter().collect()),
+                        Property::Double("0".to_string(), 8.1),
+                    ],
+                    children: vec![],
+                },
+                NodeHierarchy { name: "bar".to_string(), properties: vec![], children: vec![] },
+            ],
+        };
+
+        hierarchy.sort();
+
+        let sorted_hierarchy = NodeHierarchy {
+            name: "root".to_string(),
+            properties: vec![
+                Property::Uint("c".to_string(), 3),
+                Property::String("x".to_string(), "foo".to_string()),
+                Property::Int("z".to_string(), -4),
+            ],
+            children: vec![
+                NodeHierarchy { name: "bar".to_string(), properties: vec![], children: vec![] },
+                NodeHierarchy {
+                    name: "foo".to_string(),
+                    properties: vec![
+                        Property::Double("0".to_string(), 8.1),
+                        Property::Int("11".to_string(), -4),
+                        Property::Bytes("123".to_string(), "foo".bytes().into_iter().collect()),
+                    ],
+                    children: vec![],
+                },
+            ],
+        };
+        assert_eq!(sorted_hierarchy, hierarchy);
     }
 }
