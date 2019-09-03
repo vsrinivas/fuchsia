@@ -1180,8 +1180,16 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     uint64_t decommit_offset = fbl::round_up(len, kMinfsBlockSize);
     uint64_t decommit_length = fbl::round_up(inode_size, kMinfsBlockSize) - decommit_offset;
     if (decommit_length > 0) {
-      ZX_ASSERT(vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset, decommit_length, nullptr, 0) ==
-                ZX_OK);
+      status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset, decommit_length, nullptr, 0);
+      if (status != ZX_OK) {
+        // TODO(35948): This is a known issue; the additional logging here is to help
+        // diagnose.
+        FS_TRACE_ERROR("TruncateInternal: Modifying node length from %zu to %zu\n",
+                       inode_size, len);
+        FS_TRACE_ERROR("  Decommit from offset %zu, length %zu. Status: %d\n",
+                       decommit_offset, decommit_length, status);
+        ZX_ASSERT(status == ZX_OK);
+      }
     }
 #endif
     // Shrink the size to be block-aligned if we are removing blocks from
