@@ -258,7 +258,7 @@ impl ViewAssistant for TerminalViewAssistant {
     }
 
     fn initial_animation_mode(&mut self) -> AnimationMode {
-        return AnimationMode::None;
+        AnimationMode::None
     }
 
     fn handle_message(&mut self, message: Message) {
@@ -293,10 +293,7 @@ impl PtyWrapper {
     }
 
     fn take_receiver(&mut self) -> mpsc::Receiver<PtyOutgoingMessages> {
-        if self.receiver.is_none() {
-            panic!("attempting to call PtyWrapper::take_receiver twice");
-        }
-        self.receiver.take().unwrap()
+        self.receiver.take().expect("attempting to call PtyWrapper::take_receiver twice")
     }
 }
 

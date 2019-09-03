@@ -12,7 +12,7 @@ pub struct TerminalAssistant;
 
 impl TerminalAssistant {
     pub fn new() -> TerminalAssistant {
-        TerminalAssistant {}
+        TerminalAssistant
     }
 }
 
