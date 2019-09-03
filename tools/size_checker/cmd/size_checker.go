@@ -54,6 +54,7 @@ const (
 	BlobSizes = "blob.sizes"
 	BlobList  = "gen/build/images/blob.manifest.list"
 	BlobsJSON = "blobs.json"
+	InputJSON = "size_checker.json"
 )
 
 func newDummyNode() *Node {
@@ -365,27 +366,26 @@ func verbError(verb, file string, err error) string {
 	return fmt.Sprintf("Failed to %s %s: %s", verb, file, err)
 }
 
-var inputJSON string
 var buildDir string
 
 func main() {
-	flag.StringVar(&inputJSON, "input_json", "", `input JSON to the size checker.
-The JSON file should consist of the following keys:
-  asset_ext: a list of extensions that should be considered as assets.
-  asset_limit: maximum size (in bytes) allocated for the assets.
-  core_limit: maximum size (in bytes) allocated for the core system and/or services.
-  components: a list of component objects. Each object should contain the following keys:
-    component: name of the component.
-    src: name of the area / package to be included as part of the component.
-    limit: maximum size (in bytes) allocated for the component`)
-	flag.StringVar(&buildDir, "build_dir", "", `(required) the output directory of a Fuchsia build.`)
+	flag.Usage = func() {
+		fmt.Fprintln(os.Stderr, `Usage: size_checker --build-dir
+
+A executable that checks if a build had exceeded its allocated space limit.
+
+See //tools/size_checker for more details.`)
+		flag.PrintDefaults()
+	}
+	flag.StringVar(&buildDir, "build-dir", "", `(required) the output directory of a Fuchsia build.`)
 	flag.Parse()
 
-	if inputJSON == "" || buildDir == "" {
-		flag.PrintDefaults()
+	if buildDir == "" {
+		flag.Usage()
 		os.Exit(2)
 	}
 
+	inputJSON := filepath.Join(buildDir, InputJSON)
 	inputData, err := ioutil.ReadFile(inputJSON)
 	if err != nil {
 		log.Fatal(readError(inputJSON, err))

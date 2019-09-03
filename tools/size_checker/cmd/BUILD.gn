@@ -4,8 +4,8 @@
 
 declare_args() {
   # The input to the size checker.
-  # The build system will produce a JSON file to be consumed by the size checker, which is a GI host
-  # test that will check and prevent integration of subsystems that are over their space allocation.
+  # The build system will produce a JSON file to be consumed by the size checker, which
+  # will check and prevent integration of subsystems that are over their space allocation.
   # The input consists of the following keys:
   #
   # asset_ext(string array): a list of extensions that should be considered as assets.
@@ -52,7 +52,6 @@ declare_args() {
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/images/boot.gni")
 
 generated_file("size_checker_json") {
   outputs = [
