@@ -13,7 +13,7 @@ using namespace escher;
 
 VK_TEST(RoundedRectFactory, NegativeBounds) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  auto uploader = BatchGpuUploader::New(escher, 0);
+  auto uploader = BatchGpuUploader::New(escher, /*frame_trace_number=*/0);
   RoundedRectSpec rect_spec(-1.f, -1.f, -2.f, -2.f, -2.f, -2.f);
   MeshSpec mesh_spec{MeshAttribute::kPosition2D | MeshAttribute::kUV};
   auto factory = std::make_unique<RoundedRectFactory>(escher);

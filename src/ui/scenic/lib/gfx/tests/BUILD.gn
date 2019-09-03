@@ -109,6 +109,7 @@ executable("unittests") {
     "node_unittest.cc",
     "object_linker_unittest.cc",
     "pose_buffer_unit_test.cc",
+    "protected_memory_visitor_unittest.cc",
     "resource_linker_unittest.cc",
     "run_all_unittests.cc",
     "scene_graph_unittest.cc",

@@ -26,13 +26,13 @@
 #ifndef SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_COMMAND_BUFFER_H_
 #define SRC_UI_LIB_ESCHER_THIRD_PARTY_GRANITE_VK_COMMAND_BUFFER_H_
 
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/base/reffable.h"
 #include "src/ui/lib/escher/third_party/granite/vk/command_buffer_pipeline_state.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/util/enum_cast.h"
 #include "src/ui/lib/escher/vk/render_pass_info.h"
+
+#include <vulkan/vulkan.hpp>
 
 // TODO(ES-83): CommandBuffer currently wraps an old-style impl::CommandBuffer.
 #include "src/ui/lib/escher/impl/command_buffer.h"
@@ -72,9 +72,9 @@ class CommandBuffer : public Reffable {
   enum class Type { kGraphics = 0, kCompute, kTransfer, kEnumCount };
 
   // Constructors.
-  static CommandBufferPtr NewForType(Escher* escher, Type type);
-  static CommandBufferPtr NewForGraphics(Escher* escher);
-  static CommandBufferPtr NewForCompute(Escher* escher);
+  static CommandBufferPtr NewForType(Escher* escher, Type type, bool use_protected_memory);
+  static CommandBufferPtr NewForGraphics(Escher* escher, bool use_protected_memory);
+  static CommandBufferPtr NewForCompute(Escher* escher, bool use_protected_memory);
   static CommandBufferPtr NewForTransfer(Escher* escher);
 
   Type type() const { return type_; }
@@ -83,6 +83,7 @@ class CommandBuffer : public Reffable {
   vk::Device vk_device() const { return vk_device_; }
   // TODO(ES-83): deprecated from the get-go.
   impl::CommandBuffer* impl() const { return impl_; }
+  bool use_protected_memory() const { return impl()->use_protected_memory(); }
 
   // Submits the command buffer on the appropriate queue: the main queue for
   // graphics and compute tasks, and the transfer queue for dedicated transfer

@@ -124,6 +124,9 @@ vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
   create_info.initialLayout = vk::ImageLayout::eUndefined;
   create_info.flags =
       info.is_mutable ? vk::ImageCreateFlagBits::eMutableFormat : vk::ImageCreateFlags();
+  if (info.memory_flags & vk::MemoryPropertyFlagBits::eProtected) {
+    create_info.flags |= vk::ImageCreateFlagBits::eProtected;
+  }
   return create_info;
 }
 
@@ -159,7 +162,7 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, ui
 }
 
 ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
-                  vk::ImageUsageFlags additional_flags) {
+                  vk::ImageUsageFlags additional_flags, vk::MemoryPropertyFlags memory_flags) {
   FXL_DCHECK(image_factory);
 
   ImageInfo info;
@@ -169,6 +172,7 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width
   info.sample_count = 1;
   info.usage = additional_flags | vk::ImageUsageFlagBits::eTransferDst |
                vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
+  info.memory_flags |= memory_flags;
 
   // Create the new image.
   auto image = image_factory->NewImage(info);
@@ -213,7 +217,8 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploade
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
-  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
+  auto image =
+      NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height, vk::ImageUsageFlags());
 
   WritePixelsToImage(gpu_uploader, pixels, image, final_layout);
   return image;

@@ -72,7 +72,8 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, ui
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
 ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
-                  vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
+                  vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags(),
+                  vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlags());
 
 // Write the contents of |pixels| into an existing |gpu_image|.
 // The width, and height of |pixels| is assumed to match that of

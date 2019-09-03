@@ -11,17 +11,25 @@ namespace {
 using namespace escher;
 using namespace escher::test;
 
-VulkanDeviceQueuesPtr CreateVulkanDeviceQueues() {
+VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
   VulkanInstance::Params instance_params(
       {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
   auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
+  VulkanDeviceQueues::Params::Flags flags =
+      VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent;
+  if (use_protected_memory) {
+    flags |= VulkanDeviceQueues::Params::kAllowProtectedMemory;
+  }
   // This extension is necessary for the VMA to support dedicated allocations.
-  return VulkanDeviceQueues::New(vulkan_instance,
-                                 {{VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME},
-                                  {},
-                                  vk::SurfaceKHR(),
-                                  VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
+  auto vulkan_queues = VulkanDeviceQueues::New(
+      vulkan_instance,
+      {{VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME}, {}, vk::SurfaceKHR(), flags});
+  // Some devices might not be capable of using protected memory.
+  if (use_protected_memory && !vulkan_queues->caps().allow_protected_memory) {
+    return nullptr;
+  }
+  return vulkan_queues;
 }
 
 // vk_mem_alloc allocates power of 2 buffers by default, so this makes the
@@ -160,7 +168,7 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
 }
 
-void TestAllocationOfImages(GpuAllocator* allocator) {
+void TestAllocationOfImages(GpuAllocator* allocator, bool use_protected_memory = false) {
   // Confirm that all memory has been released.
   EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
 
@@ -180,16 +188,20 @@ void TestAllocationOfImages(GpuAllocator* allocator) {
   info.height = kHeight;
   info.usage = kUsage;
   info.tiling = vk::ImageTiling::eLinear;
+  if (use_protected_memory) {
+    info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
+  }
 
   // Allocate some images, and confirm that the allocator is tracking the bytes
   // allocated.
   auto image0 = allocator->AllocateImage(nullptr, info);
   EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
-  EXPECT_NE(nullptr, image0->host_ptr());
+  // Protected memory should not be accessible by the host.
+  EXPECT_TRUE(use_protected_memory || image0->host_ptr() != nullptr);
   EXPECT_EQ(kMemorySize, image0->size());
   auto image1 = allocator->AllocateImage(nullptr, info);
   EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
-  EXPECT_NE(nullptr, image1->host_ptr());
+  EXPECT_TRUE(use_protected_memory || image1->host_ptr() != nullptr);
   EXPECT_EQ(kMemorySize, image1->size());
 
   // Allocate an image using dedicated memory and getting a separate managed
@@ -199,7 +211,7 @@ void TestAllocationOfImages(GpuAllocator* allocator) {
   EXPECT_TRUE(ptr);
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
-  EXPECT_NE(nullptr, ptr->mapped_ptr());
+  EXPECT_TRUE(use_protected_memory || ptr->mapped_ptr() != nullptr);
   EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
 
   // Release the objects, image first, and confirm that both need to be
@@ -214,7 +226,7 @@ void TestAllocationOfImages(GpuAllocator* allocator) {
   EXPECT_TRUE(ptr);
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
-  EXPECT_NE(nullptr, ptr->mapped_ptr());
+  EXPECT_TRUE(use_protected_memory || ptr->mapped_ptr() != nullptr);
   EXPECT_EQ(3 * kMemorySize, allocator->GetTotalBytesAllocated());
 
   // Release the objects in the opposite order, and perform the same test.
@@ -285,7 +297,7 @@ TEST(FakeAllocator, Images) {
 // These tests check real Vulkan allocators, so they have a true dependency on
 // Vulkan.
 VK_TEST(NaiveAllocator, NaiveAllocator) {
-  auto vulkan_queues = CreateVulkanDeviceQueues();
+  auto vulkan_queues = CreateVulkanDeviceQueues(false);
   NaiveGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
   TestAllocationOfMemory(&allocator);
@@ -300,25 +312,38 @@ VK_TEST(NaiveAllocator, NaiveAllocator) {
   // TestAllocationOfImages(&allocator);
 }
 
-VK_TEST(VmaAllocator, Memory) {
-  auto vulkan_queues = CreateVulkanDeviceQueues();
+class VmaAllocator : public ::testing::TestWithParam</*protected_memory=*/bool> {};
+
+VK_TEST_P(VmaAllocator, Memory) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
+  if (!vulkan_queues) {
+    return;
+  }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
   TestAllocationOfMemory(&allocator);
 }
 
-VK_TEST(VmaAllocator, Buffers) {
-  auto vulkan_queues = CreateVulkanDeviceQueues();
+VK_TEST_P(VmaAllocator, Buffers) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
+  if (!vulkan_queues) {
+    return;
+  }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
   TestAllocationOfBuffers(&allocator);
 }
 
-VK_TEST(VmaAllocator, Images) {
-  auto vulkan_queues = CreateVulkanDeviceQueues();
+VK_TEST_P(VmaAllocator, Images) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
+  if (!vulkan_queues) {
+    return;
+  }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
-  TestAllocationOfImages(&allocator);
+  TestAllocationOfImages(&allocator, GetParam());
 }
+
+INSTANTIATE_TEST_SUITE_P(VmaAllocatorTestSuite, VmaAllocator, ::testing::Bool());
 
 }  // namespace

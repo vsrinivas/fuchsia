@@ -55,6 +55,10 @@ class DisplaySwapchain : public Swapchain {
   // Passes along color correction information to the display
   void SetDisplayColorConversion(const ColorTransform& transform) override;
 
+  // Set the state for protected memory usage in |use_protected_memory_|. If there is a state
+  // change to true, it reallocates |swapchain_buffers_| using protected memory.
+  void SetUseProtectedMemory(bool use_protected_memory) override;
+
  private:
   struct Framebuffer {
     zx::vmo vmo;
@@ -81,7 +85,8 @@ class DisplaySwapchain : public Swapchain {
   std::unique_ptr<FrameRecord> NewFrameRecord(const FrameTimingsPtr& frame_timings,
                                               size_t swapchain_index);
 
-  bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler);
+  bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
+                              bool use_protected_memory);
 
   // When a frame is presented, the previously-presented frame becomes available
   // as a render target.
@@ -100,8 +105,11 @@ class DisplaySwapchain : public Swapchain {
   size_t next_frame_index_ = 0;
   size_t presented_frame_idx_ = 0;
   size_t outstanding_frame_count_ = 0;
+  bool use_protected_memory_ = false;
 
   std::vector<Framebuffer> swapchain_buffers_;
+  // Optionally generated on the fly.
+  std::vector<Framebuffer> protected_swapchain_buffers_;
 
   std::vector<std::unique_ptr<FrameRecord>> frames_;
 

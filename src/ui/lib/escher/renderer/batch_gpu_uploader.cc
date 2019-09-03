@@ -135,7 +135,8 @@ void BatchGpuUploader::Initialize() {
   // buffer recycling is refactored.
   if (!frame_) {
     frame_ = escher_->NewFrame("Gpu Uploader", frame_trace_number_,
-                               /* enable_gpu_logging */ false, CommandBuffer::Type::kTransfer);
+                               /*enable_gpu_logging=*/false, CommandBuffer::Type::kTransfer,
+                               /*use_protected_memory=*/false);
   }
   FXL_DCHECK(frame_);
   if (!buffer_cache_) {

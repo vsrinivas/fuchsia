@@ -23,8 +23,10 @@
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
+#include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
+#include "src/ui/scenic/lib/gfx/resources/protected_memory_visitor.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 
 namespace scenic_impl {
@@ -138,7 +140,19 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
     return RenderFrameResult::kNoContentToRender;
   }
 
-  escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number);
+  const bool uses_protected_memory = CheckForProtectedMemoryUse(hlas);
+  if (last_frame_uses_protected_memory_ != uses_protected_memory) {
+    for (auto& hla : hlas) {
+      if (!hla.swapchain)
+        continue;
+      hla.swapchain->SetUseProtectedMemory(uses_protected_memory);
+    }
+    last_frame_uses_protected_memory_ = uses_protected_memory;
+  }
+
+  escher::FramePtr frame = escher()->NewFrame("Scenic Compositor", frame_number, false,
+                                              escher::CommandBuffer::Type::kGraphics,
+                                              uses_protected_memory ? true : false);
 
   bool success = true;
   timings->RegisterSwapchains(hlas.size());
@@ -182,6 +196,24 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
 
   CleanupEscher();
   return RenderFrameResult::kRenderSuccess;
+}
+
+bool Engine::CheckForProtectedMemoryUse(const std::vector<HardwareLayerAssignment>& hlas) {
+  TRACE_DURATION("gfx", "CheckForProtectedMemoryUse");
+
+  if (!escher()->allow_protected_memory())
+    return false;
+
+  ProtectedMemoryVisitor visitor;
+  for (auto& hla : hlas) {
+    for (auto& layer_item : hla.items) {
+      for (auto& layer : layer_item.layers) {
+        layer->Accept(&visitor);
+      }
+    }
+  }
+
+  return visitor.HasProtectedMemoryUse();
 }
 
 void Engine::UpdateAndDeliverMetrics(zx::time presentation_time) {

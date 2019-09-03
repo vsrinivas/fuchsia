@@ -788,15 +788,22 @@ std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(cons
   TexturePtr& depth_texture = depth_buffers_[index];
   TexturePtr& msaa_texture = msaa_buffers_[index];
 
-  if (!depth_texture || info.width != depth_texture->width() ||
-      info.height != depth_texture->height() ||
-      config_.msaa_sample_count != depth_texture->image()->info().sample_count) {
+  const bool realloc_textures =
+      last_frame_uses_protected_memory_ != frame->use_protected_memory() || !depth_texture ||
+      info.width != depth_texture->width() || info.height != depth_texture->height() ||
+      config_.msaa_sample_count != depth_texture->image()->info().sample_count;
+  last_frame_uses_protected_memory_ = frame->use_protected_memory();
+
+  if (realloc_textures) {
     // Need to generate a new depth buffer.
     {
       TRACE_DURATION("gfx", "PaperRenderer::ObtainDepthAndMsaaTextures (new depth)");
-      depth_texture =
-          escher()->NewAttachmentTexture(config_.depth_stencil_format, info.width, info.height,
-                                         config_.msaa_sample_count, vk::Filter::eLinear);
+      depth_texture = escher()->NewAttachmentTexture(
+          config_.depth_stencil_format, info.width, info.height, config_.msaa_sample_count,
+          vk::Filter::eLinear, vk::ImageUsageFlags(), /*is_transient_attachment=*/false,
+          /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
+          frame->use_protected_memory() ? vk::MemoryPropertyFlagBits::eProtected
+                                        : vk::MemoryPropertyFlags());
     }
     // If the sample count is 1, there is no need for a MSAA buffer.
     if (config_.msaa_sample_count == 1) {
@@ -806,8 +813,12 @@ std::pair<TexturePtr, TexturePtr> PaperRenderer::ObtainDepthAndMsaaTextures(cons
       // TODO(SCN-634): use lazy memory allocation and transient attachments
       // when available.
       msaa_texture = escher()->NewAttachmentTexture(
-          info.format, info.width, info.height, config_.msaa_sample_count, vk::Filter::eLinear
-          // TODO(ES-73): , vk::ImageUsageFlagBits::eTransientAttachment);
+          info.format, info.width, info.height, config_.msaa_sample_count, vk::Filter::eLinear,
+          vk::ImageUsageFlags(), /*is_transient_attachment=*/false,
+          /*is_input_attachment=*/false, /*use_unnormalized_coordinates=*/false,
+          frame->use_protected_memory() ? vk::MemoryPropertyFlagBits::eProtected
+                                        : vk::MemoryPropertyFlags()
+          // TODO(ES-73): , vk::ImageUsageFlagBits::eTransientAttachment
       );
 
       frame->cmds()->ImageBarrier(msaa_texture->image(), vk::ImageLayout::eUndefined,

@@ -82,6 +82,8 @@ class ImagePipe : public ImageBase {
   // null.
   const escher::ImagePtr& GetEscherImage() override;
 
+  bool use_protected_memory() override { return false; }
+
   // Returns true if the connection to the ImagePipe has not closed.
   bool is_valid() { return is_valid_; };
 
