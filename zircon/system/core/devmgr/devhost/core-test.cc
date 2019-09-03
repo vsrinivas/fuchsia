@@ -4,6 +4,7 @@
 
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <ddk/driver.h>
@@ -115,7 +116,9 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
 
 class CoreTest : public zxtest::Test {
  protected:
-  CoreTest() : loop_(&kAsyncLoopConfigNoAttachToThread) { loop_.StartThread("devhost-test-loop"); }
+  CoreTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    loop_.StartThread("devhost-test-loop");
+  }
 
   void Connect(zx::channel* out) {
     zx::channel local, remote;

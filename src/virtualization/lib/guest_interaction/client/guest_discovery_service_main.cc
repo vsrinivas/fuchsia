@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include <src/lib/fxl/command_line.h>
@@ -12,7 +13,7 @@
 int main(int argc, char** argv) {
   syslog::InitLogger();
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
 
   // Create the guest interaction service and run its gRPC processing loop on

@@ -6,9 +6,11 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/usb-peripheral-utils/event-watcher.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
@@ -159,11 +161,10 @@ static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
 
   peripheral::FunctionDescriptor func_descs[config->descs_count];
   memcpy(func_descs, config->descs, sizeof(peripheral::FunctionDescriptor) * config->descs_count);
-  fidl::VectorView<peripheral::FunctionDescriptor>
-      function_descs(config->descs_count, func_descs);
+  fidl::VectorView<peripheral::FunctionDescriptor> function_descs(config->descs_count, func_descs);
 
-  auto resp = peripheral::Device::Call::SetConfiguration(
-      zx::unowned_channel(svc), device_desc, function_descs);
+  auto resp = peripheral::Device::Call::SetConfiguration(zx::unowned_channel(svc), device_desc,
+                                                         function_descs);
   if (resp.status() != ZX_OK) {
     return resp.status();
   }
@@ -179,8 +180,8 @@ static zx_status_t device_clear_functions(zx_handle_t svc) {
   if (status != ZX_OK) {
     return status;
   }
-  auto set_result = peripheral::Device::Call::SetStateChangeListener(
-      zx::unowned_channel(svc), std::move(handles[1]));
+  auto set_result = peripheral::Device::Call::SetStateChangeListener(zx::unowned_channel(svc),
+                                                                     std::move(handles[1]));
   if (set_result.status() != ZX_OK) {
     return set_result.status();
   }
@@ -190,7 +191,7 @@ static zx_status_t device_clear_functions(zx_handle_t svc) {
     return clear_functions.status();
   }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 0);
   loop.Run();
   if (!watcher.all_functions_cleared()) {

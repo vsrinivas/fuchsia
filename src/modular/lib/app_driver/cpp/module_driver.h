@@ -59,7 +59,7 @@ class ModuleHost {
 // };
 //
 // int main(int argc, const char** argv) {
-//   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+//   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 //   auto context = sys::ComponentContext::Create();
 //   modular::ModuleDriver<HelloWorldApp> driver(context.get(),
 //                                               [&loop] { loop.Quit(); });

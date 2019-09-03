@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
@@ -109,7 +110,7 @@ class AsyncEndToEndTest : public testing::TestWithParam<TestScenario> {
   std::unique_ptr<GuestInteractionService::Stub> stub_;
   std::unique_ptr<grpc::Server> server_;
   std::unique_ptr<GuestInteractionService::AsyncService> service_;
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
   uint32_t callback_wait_time_ = 5;  // Number of seconds to wait for Exec fidl responses to run.
 };
 

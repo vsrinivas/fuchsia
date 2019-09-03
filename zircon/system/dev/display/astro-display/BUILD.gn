@@ -64,6 +64,7 @@ test("astro-display-test") {
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

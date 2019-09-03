@@ -109,7 +109,7 @@ void USBVirtualBusBase::ClearPeripheralDeviceFunctions() {
   auto clear_functions = peripheral_->ClearFunctions();
   ASSERT_OK(clear_functions.status());
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   usb_peripheral_utils::EventWatcher watcher(&loop, std::move(handles[0]), 0);
   loop.Run();
   ASSERT_TRUE(watcher.all_functions_cleared());

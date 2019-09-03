@@ -5,6 +5,7 @@
 #include "src/virtualization/lib/guest_interaction/client/guest_interaction_service.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <stdlib.h>
 
 #include "src/virtualization/lib/grpc/fdio_util.h"
@@ -87,7 +88,7 @@ void FuchsiaGuestInteractionService::AddBinding(
 }
 
 void FuchsiaGuestInteractionService::Run() {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   async_set_default_dispatcher(loop.dispatcher());
   loop.StartThread();
   client_->Run();

@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/real_loop_fixture.h>
@@ -116,7 +117,7 @@ class AudioPlugDetectorTest : public gtest::RealLoopFixture {
   //
   // TODO(35145): Migrate to an async open so that we can share the same dispatcher in this test
   // and also remove more blocking logic from audio_core.
-  async::Loop vfs_loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop vfs_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   fs::SynchronousVfs vfs_{vfs_loop_.dispatcher()};
   // Note these _must_ be RefPtrs since the vfs_ will attempt to AdoptRef on a raw pointer passed
   // to it.

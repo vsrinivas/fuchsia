@@ -242,6 +242,8 @@ executable("unittest_bin") {
     "//zircon/system/fidl/fuchsia-hardware-audio",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-scheduler",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
   ]
