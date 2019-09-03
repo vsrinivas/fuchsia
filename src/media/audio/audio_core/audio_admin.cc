@@ -7,15 +7,18 @@
 #include <fcntl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fidl/cpp/clone.h>
 
 #include <trace/event.h>
 
 #include "src/media/audio/audio_core/audio_core_impl.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
-AudioAdmin::AudioAdmin(AudioCoreImpl* service) : service_(service) {}
+AudioAdmin::AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment)
+    : behavior_gain_(behavior_gain), gain_adjustment_(*gain_adjustment) {
+  FXL_DCHECK(gain_adjustment);
+}
 
 void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                                 fuchsia::media::Behavior behavior) {
@@ -37,14 +40,6 @@ void AudioAdmin::SetInteraction(fuchsia::media::Usage active, fuchsia::media::Us
   }
 }
 
-AudioAdmin::~AudioAdmin() { Shutdown(); }
-
-zx_status_t AudioAdmin::Init() {
-  TRACE_DURATION("audio", "AudioAdmin::Init");
-  LoadDefaults();
-  return ZX_OK;
-}
-
 bool AudioAdmin::IsActive(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::IsActive(Render)");
   auto usage_index = fidl::ToUnderlying(usage);
@@ -59,32 +54,32 @@ bool AudioAdmin::IsActive(fuchsia::media::AudioCaptureUsage usage) {
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Render)");
-  service_->SetRenderUsageGainAdjustment(usage, none_gain_db_);
+  gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.none_gain_db);
 }
 
 void AudioAdmin::SetUsageNone(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageNone(Capture)");
-  service_->SetCaptureUsageGainAdjustment(usage, none_gain_db_);
+  gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.none_gain_db);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Render)");
-  service_->SetRenderUsageGainAdjustment(usage, mute_gain_db_);
+  gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.mute_gain_db);
 }
 
 void AudioAdmin::SetUsageMute(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageMute(Capture)");
-  service_->SetCaptureUsageGainAdjustment(usage, mute_gain_db_);
+  gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.mute_gain_db);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Render)");
-  service_->SetRenderUsageGainAdjustment(usage, duck_gain_db_);
+  gain_adjustment_.SetRenderUsageGainAdjustment(usage, behavior_gain_.duck_gain_db);
 }
 
 void AudioAdmin::SetUsageDuck(fuchsia::media::AudioCaptureUsage usage) {
   TRACE_DURATION("audio", "AudioAdmin::SetUsageDuck(Capture)");
-  service_->SetCaptureUsageGainAdjustment(usage, duck_gain_db_);
+  gain_adjustment_.SetCaptureUsageGainAdjustment(usage, behavior_gain_.duck_gain_db);
 }
 
 void AudioAdmin::ApplyPolicies(fuchsia::media::AudioCaptureUsage active) {
@@ -206,8 +201,6 @@ void AudioAdmin::UpdateCapturerState(fuchsia::media::AudioCaptureUsage usage, bo
   UpdatePolicy();
 }
 
-void AudioAdmin::Shutdown() {}
-
 void AudioAdmin::PolicyRules::ResetInteractions() {
   TRACE_DURATION("audio", "AudioAdmin::ResetInteractions");
   for (int i = 0; i < fuchsia::media::RENDER_USAGE_COUNT; i++) {
@@ -234,5 +227,11 @@ void AudioAdmin::PolicyRules::ResetInteractions() {
   }
 }
 
-}  // namespace audio
-}  // namespace media
+void AudioAdmin::SetInteractionsFromAudioPolicy(AudioPolicy policy) {
+  ResetInteractions();
+  for (auto& rule : policy.rules()) {
+    SetInteraction(fidl::Clone(rule.active), fidl::Clone(rule.affected), rule.behavior);
+  }
+}
+
+}  // namespace media::audio

@@ -69,8 +69,7 @@ AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_co
   FXL_DCHECK(res == ZX_OK);
 
   // Set up our audio policy.
-  res = audio_admin_.Init();
-  FXL_DCHECK(res == ZX_OK);
+  LoadDefaults();
 
   PublishServices();
 }
@@ -163,20 +162,6 @@ void AudioCoreImpl::NotifyGainMuteChanged() {
   }
 }
 
-float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage) {
-  TRACE_DURATION("audio", "AudioCoreImpl::GetRenderUsageGain");
-  fuchsia::media::Usage usage;
-  usage.set_render_usage(render_usage);
-  return Gain::Settings().GetUsageGain(std::move(usage));
-}
-
-float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage) {
-  TRACE_DURATION("audio", "AudioCoreImpl::GetCaptureUsageGain");
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(capture_usage);
-  return Gain::Settings().GetUsageGain(std::move(usage));
-}
-
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
   AUD_VLOG(TRACE) << " (usage: " << static_cast<int>(usage) << ", " << gain_db << " dB)";
@@ -221,7 +206,10 @@ void AudioCoreImpl::SetInteraction(fuchsia::media::Usage active, fuchsia::media:
 
 void AudioCoreImpl::LoadDefaults() {
   TRACE_DURATION("audio", "AudioCoreImpl::LoadDefaults");
-  audio_admin_.LoadDefaults();
+  // TODO(35145): Move disk I/O off main thread.
+  auto policy = PolicyLoader::LoadDefaultPolicy();
+  FXL_CHECK(policy);
+  audio_admin_.SetInteractionsFromAudioPolicy(std::move(*policy));
 }
 
 void AudioCoreImpl::ResetInteractions() {

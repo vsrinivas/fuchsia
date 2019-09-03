@@ -136,6 +136,7 @@ source_set("audio_core_lib") {
     "audio_packet_ref.h",
     "audio_plug_detector.cc",
     "audio_plug_detector.h",
+    "audio_policy.h",
     "audio_renderer_format_info.cc",
     "audio_renderer_format_info.h",
     "audio_renderer_impl.cc",
@@ -219,6 +220,7 @@ executable("unittest_bin") {
   output_name = "audio_core_unittests"
 
   sources = [
+    "audio_admin_unittest.cc",
     "audio_device_settings_json_unittest.cc",
     "audio_device_settings_persistence_unittest.cc",
     "audio_device_settings_unittest.cc",
@@ -235,6 +237,7 @@ executable("unittest_bin") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/media/audio/lib/test:null_renderer_capturer",
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-scheduler",

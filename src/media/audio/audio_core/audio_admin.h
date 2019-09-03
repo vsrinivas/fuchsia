@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_ADMIN_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_ADMIN_H_
 
+#include <fuchsia/media/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
@@ -20,19 +21,44 @@
 namespace media {
 namespace audio {
 
+class UsageGainAdjustment;
+
 class AudioAdmin {
  public:
-  AudioAdmin(AudioCoreImpl* service);
-  ~AudioAdmin();
-  zx_status_t Init();
-  void Shutdown();
+  struct BehaviorGain {
+    float none_gain_db;
+    float duck_gain_db;
+    float mute_gain_db;
+  };
 
-  // AudioPolicy interface
+  // Constructs an |AudioAdmin| from a |BehaviorGain| and |GainAdjustment|.
+  //
+  // The |BehaviorGain| provides the target gain_db values to use when triggering behaviors between
+  // usages, simply mapping each behavior to a relative gain value. The |GainAdjustment| is simply
+  // an interface that this object will use to apply the target gain values in |BehaviorGain|.
+  //
+  // |gain_adjustment| must be non-null.
+  AudioAdmin(BehaviorGain behavior_gain, UsageGainAdjustment* gain_adjustment);
+
+  // Constructs an |AudioAdmin| using some default |BehaviorGain| values.
+  explicit AudioAdmin(UsageGainAdjustment* gain_adjustment)
+      : AudioAdmin(
+            BehaviorGain{
+                .none_gain_db = 0.0f,
+                .duck_gain_db = -14.0f,
+                .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
+            },
+            gain_adjustment) {}
+
+  // Sets the interaction behavior between |active| and |affected| usages.
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,
                       fuchsia::media::Behavior behavior);
 
+  // Clears all configured behaviors.
   void ResetInteractions() { active_rules_.ResetInteractions(); };
-  void LoadDefaults() { ::media::audio::PolicyLoader::LoadDefaults(this); };
+
+  // Clears all configured behaviors and then applies the rules in the provided AudioPolicy.
+  void SetInteractionsFromAudioPolicy(AudioPolicy policy);
 
   // Interface used by AudiolCoreImpl for accounting
   void UpdateRendererState(fuchsia::media::AudioRenderUsage usage, bool active,
@@ -41,13 +67,10 @@ class AudioAdmin {
                            fuchsia::media::AudioCapturer* capturer);
 
  private:
-  AudioCoreImpl* service_;
+  BehaviorGain behavior_gain_;
+  UsageGainAdjustment& gain_adjustment_;
 
   void UpdatePolicy();
-
-  float mute_gain_db_ = -160.0f;
-  float duck_gain_db_ = -14.0f;
-  float none_gain_db_ = 0.0f;
 
   // Helpers to make the control of streams cleaner.
   void SetUsageNone(fuchsia::media::AudioRenderUsage usage);

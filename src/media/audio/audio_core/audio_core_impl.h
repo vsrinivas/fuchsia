@@ -38,7 +38,16 @@ class SystemGainMuteProvider {
   virtual bool system_muted() const = 0;
 };
 
-class AudioCoreImpl : public fuchsia::media::AudioCore, SystemGainMuteProvider {
+class UsageGainAdjustment {
+ public:
+  virtual void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
+                                            float gain_db) = 0;
+  virtual void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage, float gain_db) = 0;
+};
+
+class AudioCoreImpl : public fuchsia::media::AudioCore,
+                      SystemGainMuteProvider,
+                      UsageGainAdjustment {
  public:
   AudioCoreImpl(std::unique_ptr<sys::ComponentContext> component_context,
                 CommandLineOptions options);
@@ -83,14 +92,11 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, SystemGainMuteProvider {
   void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
   void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
 
-  float GetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage);
-  float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage);
-
-  friend class AudioAdmin;
-
  private:
-  void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db);
-  void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db);
+  // |UsageGainAdjustment|
+  void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db) override;
+  void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
+                                     float gain_db) override;
 
   static constexpr float kDefaultSystemGainDb = -12.0f;
   static constexpr bool kDefaultSystemMuted = false;

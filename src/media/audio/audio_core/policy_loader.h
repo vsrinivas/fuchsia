@@ -10,28 +10,19 @@
 #include <rapidjson/document.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/media/audio/audio_core/audio_policy.h"
 
 namespace media {
 namespace audio {
 
-class AudioAdmin;
-
 class PolicyLoader {
  public:
-  // Utility Methods
-  static std::optional<fuchsia::media::AudioRenderUsage> JsonToRenderUsage(
-      const rapidjson::Value& usage);
-  static std::optional<fuchsia::media::AudioCaptureUsage> JsonToCaptureUsage(
-      const rapidjson::Value& usage);
-  static std::optional<fuchsia::media::Behavior> JsonToBehavior(const rapidjson::Value& usage);
+  static std::optional<AudioPolicy> LoadDefaultPolicy();
 
-  static std::optional<rapidjson::Document> ParseConfig(const char* file_body);
-
-  static void LoadDefaults(AudioAdmin* audio_admin);
+  static std::optional<AudioPolicy> ParseConfig(const char* file_body);
 
  private:
-  static zx_status_t LoadConfig(AudioAdmin* audio_admin, const char* file_body);
-  static zx_status_t LoadConfigFromFile(AudioAdmin* audio_admin, const std::string config);
+  static std::optional<AudioPolicy> LoadConfigFromFile(const std::string config);
 };
 
 }  // namespace audio

@@ -9,65 +9,24 @@
 #include "src/media/audio/audio_core/policy_loader_unittest_data.h"
 
 namespace media::audio {
+namespace {
+
 class AudioAdminUnitTest : public gtest::TestLoopFixture {};
 
-static const char* const allowed_render_usages[] = {"BACKGROUND", "MEDIA", "INTERRUPTION",
-                                                    "SYSTEM_AGENT", "COMMUNICATION"};
-static_assert(GTEST_ARRAY_SIZE_(allowed_render_usages) == fuchsia::media::RENDER_USAGE_COUNT,
-              "New Render Usage(s) added to fidl without updating tests");
+TEST_F(AudioAdminUnitTest, GoodConfigs) {
+  // Explicitly passing no rules is an acceptable configuration.
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::empty_rules_json));
 
-TEST_F(AudioAdminUnitTest, InvalidRenderUsage) {
-  const char bad_render_usage[] = "INVALID";
-  {
-    rapidjson::Value v(rapidjson::StringRef(bad_render_usage));
-    auto render_usage = PolicyLoader::JsonToRenderUsage(v);
-    EXPECT_FALSE(render_usage);
-  }
-}
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::ignored_key));
 
-TEST_F(AudioAdminUnitTest, ValidRenderUsages) {
-  for (auto usage : allowed_render_usages) {
-    rapidjson::Value v(rapidjson::StringRef(usage));
-    auto render_usage = PolicyLoader::JsonToRenderUsage(v);
-    EXPECT_TRUE(render_usage);
-  }
-}
+  // Test each possible combination of render and capture usage.
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::render_render));
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::render_capture));
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::capture_render));
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::capture_capture));
 
-static const char* const allowed_capture_usages[] = {"BACKGROUND", "FOREGROUND", "SYSTEM_AGENT",
-                                                     "COMMUNICATION"};
-static_assert(GTEST_ARRAY_SIZE_(allowed_capture_usages) == fuchsia::media::CAPTURE_USAGE_COUNT,
-              "New Capture Usage(s) added to fidl without updating tests");
-TEST_F(AudioAdminUnitTest, InvalidCaptureUsages) {
-  const char bad_capture_usage[] = "INVALID";
-  {
-    rapidjson::Value v(rapidjson::StringRef(bad_capture_usage));
-    auto capture_usage = PolicyLoader::JsonToCaptureUsage(v);
-    EXPECT_FALSE(capture_usage);
-  }
-}
-
-TEST_F(AudioAdminUnitTest, ValidCaptureUsages) {
-  for (auto usage : allowed_capture_usages) {
-    rapidjson::Value v(rapidjson::StringRef(usage));
-    auto capture_usage = PolicyLoader::JsonToCaptureUsage(v);
-    EXPECT_TRUE(capture_usage);
-  }
-}
-
-static const char* const allowed_behaviors[] = {"NONE", "DUCK", "MUTE"};
-TEST_F(AudioAdminUnitTest, Behaviors) {
-  const char bad_behavior[] = "INVALID";
-  {
-    rapidjson::Value v(rapidjson::StringRef(bad_behavior));
-    auto parsed_behavior = PolicyLoader::JsonToBehavior(v);
-    EXPECT_FALSE(parsed_behavior);
-  }
-
-  for (auto behavior : allowed_behaviors) {
-    rapidjson::Value v(rapidjson::StringRef(behavior));
-    auto parsed_behavior = PolicyLoader::JsonToBehavior(v);
-    EXPECT_TRUE(parsed_behavior);
-  }
+  // Test a config that contains all possible usage and behavior types.
+  EXPECT_TRUE(PolicyLoader::ParseConfig(test::contains_all_usages_and_behaviors));
 }
 
 TEST_F(AudioAdminUnitTest, BadConfigs) {
@@ -87,16 +46,5 @@ TEST_F(AudioAdminUnitTest, BadConfigs) {
   EXPECT_FALSE(PolicyLoader::ParseConfig(test::invalid_behavior));
 }
 
-TEST_F(AudioAdminUnitTest, GoodConfigs) {
-  // Explicitly passing no rules is an acceptable configuration.
-  EXPECT_TRUE(PolicyLoader::ParseConfig(test::empty_rules_json));
-
-  EXPECT_TRUE(PolicyLoader::ParseConfig(test::ignored_key));
-
-  // Test each possible combination of render and capture usage.
-  EXPECT_TRUE(PolicyLoader::ParseConfig(test::render_render));
-  EXPECT_TRUE(PolicyLoader::ParseConfig(test::render_capture));
-  EXPECT_TRUE(PolicyLoader::ParseConfig(test::capture_render));
-  EXPECT_TRUE(PolicyLoader::ParseConfig(test::capture_capture));
-}
+}  // namespace
 }  // namespace media::audio

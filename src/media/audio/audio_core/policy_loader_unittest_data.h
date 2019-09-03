@@ -5,6 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_POLICY_LOADER_UNITTEST_DATA_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_POLICY_LOADER_UNITTEST_DATA_H_
 
+#include <fuchsia/media/cpp/fidl.h>
+#include <lib/fidl/cpp/enum.h>
+
 namespace media::audio::test {
 // Examples of invalid configs.
 
@@ -134,6 +137,55 @@ constexpr char capture_capture[] = R"JSON(
           "active": {"capture_usage":"BACKGROUND"},
           "affected": {"capture_usage":"BACKGROUND"},
           "behavior": "NONE"
+        }
+      ]
+    }
+)JSON";
+
+// Some static asserts that document the values we used to generate the JSON blob below with. If
+// these fail we'll want to update the corresponding test data.
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND) == 0);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA) == 1);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION) == 2);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT) == 3);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION) == 4);
+static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::BACKGROUND) == 0);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::FOREGROUND) == 1);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT) == 2);
+static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::COMMUNICATION) == 3);
+static_assert(fuchsia::media::CAPTURE_USAGE_COUNT == 4);
+static_assert(fidl::ToUnderlying(fuchsia::media::Behavior::NONE) == 0);
+static_assert(fidl::ToUnderlying(fuchsia::media::Behavior::DUCK) == 1);
+static_assert(fidl::ToUnderlying(fuchsia::media::Behavior::MUTE) == 2);
+
+constexpr char contains_all_usages_and_behaviors[] = R"JSON(
+    {
+      "audio_policy_rules": [
+        {
+          "active": {"render_usage":"BACKGROUND"},
+          "affected": {"render_usage":"MEDIA"},
+          "behavior": "DUCK"
+        },
+        {
+          "active": {"render_usage":"INTERRUPTION"},
+          "affected": {"render_usage":"SYSTEM_AGENT"},
+          "behavior": "MUTE"
+        },
+        {
+          "active": {"render_usage":"COMMUNICATION"},
+          "affected": {"capture_usage":"BACKGROUND"},
+          "behavior": "NONE"
+        },
+        {
+          "active": {"capture_usage":"FOREGROUND"},
+          "affected": {"capture_usage":"SYSTEM_AGENT"},
+          "behavior": "DUCK"
+        },
+        {
+          "active": {"capture_usage":"SYSTEM_AGENT"},
+          "affected": {"capture_usage":"COMMUNICATION"},
+          "behavior": "DUCK"
         }
       ]
     }

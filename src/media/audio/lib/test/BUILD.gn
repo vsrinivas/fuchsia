@@ -11,6 +11,7 @@ source_set("test") {
     ":constants",
     ":hermetic_audio_test",
     ":message_transceiver",
+    ":null_renderer_capturer",
     ":test_fixture",
   ]
 }
@@ -97,5 +98,17 @@ source_set("message_transceiver") {
 
   deps = [
     "//zircon/public/lib/async-cpp",
+  ]
+}
+
+# Flexible utility class for channel-based communication (such as to drivers or device services).
+source_set("null_renderer_capturer") {
+  sources = [
+    "null_audio_capturer.h",
+    "null_audio_renderer.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
   ]
 }
