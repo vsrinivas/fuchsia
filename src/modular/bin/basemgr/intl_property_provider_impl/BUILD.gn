@@ -36,6 +36,7 @@ source_set("intl_property_provider_impl") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/service/cpp",
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
     "//third_party/icu",
