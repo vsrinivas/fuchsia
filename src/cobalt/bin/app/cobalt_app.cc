@@ -181,11 +181,8 @@ std::unique_ptr<logger::Logger> CobaltApp::NewInternalLogger(
                       "include the expected internal metrics project. "
                       "Cobalt-measuring-Cobalt will be disabled.";
   }
-  // Help the compiler understand which of several constructor overloads we
-  // mean to be invoking here.
-  logger::LoggerInterface* null_logger = nullptr;
   return std::make_unique<logger::Logger>(std::move(internal_project_context), &logger_encoder_,
-                                          &event_aggregator_, &observation_writer_, null_logger);
+                                          &event_aggregator_, &observation_writer_, &system_data_);
 }
 
 }  // namespace cobalt
