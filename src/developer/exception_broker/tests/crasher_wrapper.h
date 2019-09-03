@@ -29,5 +29,7 @@ struct ProcessException {
 // Returns |true| if the process was crashed and the exception was retrieved successfully.
 bool SpawnCrasher(ProcessException* pe);
 
+bool MarkExceptionAsHandled(ProcessException* pe);
+
 }  // namespace exception
 }  // namespace fuchsia
