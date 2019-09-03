@@ -31,6 +31,7 @@ int usage(void) {
   fprintf(stderr, " of=FILE   : write to FILE instead of stdout\n");
   fprintf(stderr, " seek=N    : skip N obs-sized blocks at start of output\n");
   fprintf(stderr, " skip=N    : skip N ibs-sized blocks at start of input\n");
+  fprintf(stderr, " conv=sync : pad input to input block size\n");
   fprintf(stderr,
           " N and BYTES may be followed by the following multiplicitive\n"
           " suffixes: c = 1, w = 2, b = 512, kB = 1000, K = 1024,\n"
@@ -95,6 +96,7 @@ typedef struct {
   size_t output_seek;
   char input[PATH_MAX];
   char output[PATH_MAX];
+  bool pad;
 } dd_options_t;
 
 int parse_args(int argc, const char** argv, dd_options_t* options) {
@@ -134,6 +136,8 @@ int parse_args(int argc, const char** argv, dd_options_t* options) {
     } else if (prefix_match(&arg, "of=")) {
       strncpy(options->output, arg, PATH_MAX);
       options->output[PATH_MAX - 1] = '\0';
+    } else if (strcmp(arg, "conv=sync") == 0) {
+      options->pad = true;
     } else {
       return usage();
     }
@@ -339,7 +343,13 @@ int main(int argc, const char** argv) {
       if (rout == (ssize_t)options.input_bs) {
         records_in++;
       } else if (rout > 0) {
-        record_in_partial = rout;
+        if (options.pad) {
+          memset(buf + rout, 0, options.input_bs - rout);
+          records_in++;
+          rout = options.input_bs;
+        } else {
+          record_in_partial = rout;
+        }
       }
       if (rout > 0) {
         rlen += rout;
