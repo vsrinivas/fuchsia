@@ -105,8 +105,9 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
-  auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), escher_->GetWeakPtr(),
-                                                    &sysmem_, &display_manager_, display);
+  auto weak_escher = escher_ ? escher_->GetWeakPtr() : escher::EscherWeakPtr();
+  auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), weak_escher, &sysmem_,
+                                                    &display_manager_, display);
   frame_scheduler_->AddSessionUpdater(gfx->GetWeakPtr());
   scenic_.SetDelegate(gfx);
   FXL_DCHECK(gfx);
