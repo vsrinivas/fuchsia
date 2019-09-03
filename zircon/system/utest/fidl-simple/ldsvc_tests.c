@@ -42,33 +42,11 @@ static zx_status_t ldsvc_Clone(void* ctx, zx_handle_t loader, fidl_txn_t* txn) {
   return fuchsia_ldsvc_LoaderClone_reply(txn, 45);
 }
 
-static zx_status_t ldsvc_DebugPublishDataSink(void* ctx, const char* data_sink_data,
-                                              size_t data_sink_size, zx_handle_t data,
-                                              fidl_txn_t* txn) {
-  size_t len = strlen("my data sink");
-  ASSERT_EQ(len, data_sink_size, "");
-  EXPECT_EQ(0, memcmp(data_sink_data, "my data sink", len), "");
-  EXPECT_EQ(ZX_OK, zx_handle_close(data), "");
-  return fuchsia_ldsvc_LoaderDebugPublishDataSink_reply(txn, 46);
-}
-
-static zx_status_t ldsvc_DebugLoadConfig(void* ctx, const char* config_name_data,
-                                         size_t config_name_size, fidl_txn_t* txn) {
-  size_t len = strlen("my debug config");
-  ASSERT_EQ(len, config_name_size, "");
-  EXPECT_EQ(0, memcmp(config_name_data, "my debug config", len), "");
-  zx_handle_t event = ZX_HANDLE_INVALID;
-  EXPECT_EQ(ZX_OK, zx_event_create(0, &event), "");
-  return fuchsia_ldsvc_LoaderDebugLoadConfig_reply(txn, 47, event);
-}
-
 static const fuchsia_ldsvc_Loader_ops_t kOps = {
     .Done = ldsvc_Done,
     .LoadObject = ldsvc_LoadObject,
     .Config = ldsvc_Config,
     .Clone = ldsvc_Clone,
-    .DebugPublishDataSink = ldsvc_DebugPublishDataSink,
-    .DebugLoadConfig = ldsvc_DebugLoadConfig,
 };
 
 typedef struct ldsvc_connection {
@@ -172,30 +150,6 @@ static bool loader_test(void) {
     ASSERT_EQ(ZX_OK, zx_handle_close(h2), "");
   }
 
-  {
-    const char* sink = "my data sink";
-    zx_status_t rv = ZX_OK;
-    zx_handle_t h1, h2;
-    ASSERT_EQ(ZX_OK, zx_eventpair_create(0, &h1, &h2), "");
-    ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDebugPublishDataSink(client, sink, strlen(sink), h1, &rv),
-              "");
-    ASSERT_EQ(46, rv, "");
-    ASSERT_EQ(ZX_ERR_PEER_CLOSED, zx_object_signal_peer(h2, 0, 0), "");
-    ASSERT_EQ(ZX_OK, zx_handle_close(h2), "");
-  }
-
-  {
-    const char* config_name = "my debug config";
-    zx_status_t rv = ZX_OK;
-    zx_handle_t object = ZX_HANDLE_INVALID;
-    ASSERT_EQ(
-        ZX_OK,
-        fuchsia_ldsvc_LoaderDebugLoadConfig(client, config_name, strlen(config_name), &rv, &object),
-        "");
-    ASSERT_EQ(47, rv, "");
-    ASSERT_EQ(ZX_OK, zx_handle_close(object), "");
-  }
-
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDone(client), "");
   ASSERT_EQ(ZX_OK, zx_handle_close(client), "");
 
@@ -226,13 +180,6 @@ static bool ordinals_are_consistent(void) {
   static_assert(LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneOrdinal ||
                     LDMSG_OP_CLONE == fuchsia_ldsvc_LoaderCloneGenOrdinal,
                 "Clone ordinals need to match");
-  static_assert(
-      LDMSG_OP_DEBUG_PUBLISH_DATA_SINK == fuchsia_ldsvc_LoaderDebugPublishDataSinkOrdinal ||
-          LDMSG_OP_DEBUG_PUBLISH_DATA_SINK == fuchsia_ldsvc_LoaderDebugPublishDataSinkGenOrdinal,
-      "DebugPublishDataSink ordinals need to match");
-  static_assert(LDMSG_OP_DEBUG_LOAD_CONFIG == fuchsia_ldsvc_LoaderDebugLoadConfigOrdinal ||
-                    LDMSG_OP_DEBUG_LOAD_CONFIG == fuchsia_ldsvc_LoaderDebugLoadConfigGenOrdinal,
-                "DebugLoad ordinals need to match");
   END_TEST;
 }
 
@@ -290,8 +237,6 @@ static bool ldmsg_functions_are_consistent(void) {
                           &fuchsia_ldsvc_LoaderLoadObjectRequestTable);
   check_string_round_trip(fuchsia_ldsvc_LoaderConfigOrdinal,
                           &fuchsia_ldsvc_LoaderConfigRequestTable);
-  check_string_round_trip(fuchsia_ldsvc_LoaderDebugLoadConfigOrdinal,
-                          &fuchsia_ldsvc_LoaderDebugLoadConfigRequestTable);
   END_TEST;
 }
 
@@ -313,8 +258,6 @@ static bool replies_are_consistent(void) {
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderLoadObject_reply(&txn, 42, event), "");
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderConfig_reply(&txn, 44), "");
   ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderClone_reply(&txn, 45), "");
-  ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDebugPublishDataSink_reply(&txn, 46), "");
-  ASSERT_EQ(ZX_OK, fuchsia_ldsvc_LoaderDebugLoadConfig_reply(&txn, 47, event), "");
 
   zx_handle_close(event);
 

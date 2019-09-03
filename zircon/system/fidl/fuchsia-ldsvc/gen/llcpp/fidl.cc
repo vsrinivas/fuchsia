@@ -24,14 +24,6 @@ extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
 constexpr uint64_t kLoader_Clone_Ordinal = 0x3862fcb900000000lu;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kLoader_DebugPublishDataSink_Ordinal = 0x4f64fa4100000000lu;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugPublishDataSinkRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugPublishDataSinkResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kLoader_DebugLoadConfig_Ordinal = 0x722d77ba00000000lu;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugLoadConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugLoadConfigResponseTable;
 
 }  // namespace
 
@@ -276,144 +268,6 @@ Loader::UnownedResultOf::Clone Loader::Call::Clone(zx::unowned_channel _client_e
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
-template <>
-Loader::ResultOf::DebugPublishDataSink_Impl<Loader::DebugPublishDataSinkResponse>::DebugPublishDataSink_Impl(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugPublishDataSinkRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  DebugPublishDataSinkRequest _request = {};
-  _request.data_sink = std::move(data_sink);
-  _request.data = std::move(data);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<DebugPublishDataSinkRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Loader::InPlace::DebugPublishDataSink(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Loader::ResultOf::DebugPublishDataSink Loader::SyncClient::DebugPublishDataSink(::fidl::StringView data_sink, ::zx::vmo data) {
-  return ResultOf::DebugPublishDataSink(zx::unowned_channel(this->channel_), std::move(data_sink), std::move(data));
-}
-
-Loader::ResultOf::DebugPublishDataSink Loader::Call::DebugPublishDataSink(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data) {
-  return ResultOf::DebugPublishDataSink(std::move(_client_end), std::move(data_sink), std::move(data));
-}
-
-template <>
-Loader::UnownedResultOf::DebugPublishDataSink_Impl<Loader::DebugPublishDataSinkResponse>::DebugPublishDataSink_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < DebugPublishDataSinkRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<DebugPublishDataSinkResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  DebugPublishDataSinkRequest _request = {};
-  _request.data_sink = std::move(data_sink);
-  _request.data = std::move(data);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<DebugPublishDataSinkRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Loader::InPlace::DebugPublishDataSink(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Loader::UnownedResultOf::DebugPublishDataSink Loader::SyncClient::DebugPublishDataSink(::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugPublishDataSink(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(data_sink), std::move(data), std::move(_response_buffer));
-}
-
-Loader::UnownedResultOf::DebugPublishDataSink Loader::Call::DebugPublishDataSink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugPublishDataSink(std::move(_client_end), std::move(_request_buffer), std::move(data_sink), std::move(data), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Loader::DebugPublishDataSinkResponse> Loader::InPlace::DebugPublishDataSink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DebugPublishDataSinkRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Loader::DebugPublishDataSinkResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<DebugPublishDataSinkRequest, DebugPublishDataSinkResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Loader::DebugPublishDataSinkResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Loader::ResultOf::DebugLoadConfig_Impl<Loader::DebugLoadConfigResponse>::DebugLoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::StringView config_name) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugLoadConfigRequest, ::fidl::MessageDirection::kSending>();
-  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
-  auto& _write_bytes_array = *_write_bytes_boxed;
-  DebugLoadConfigRequest _request = {};
-  _request.config_name = std::move(config_name);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<DebugLoadConfigRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Loader::InPlace::DebugLoadConfig(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Loader::ResultOf::DebugLoadConfig Loader::SyncClient::DebugLoadConfig(::fidl::StringView config_name) {
-  return ResultOf::DebugLoadConfig(zx::unowned_channel(this->channel_), std::move(config_name));
-}
-
-Loader::ResultOf::DebugLoadConfig Loader::Call::DebugLoadConfig(zx::unowned_channel _client_end, ::fidl::StringView config_name) {
-  return ResultOf::DebugLoadConfig(std::move(_client_end), std::move(config_name));
-}
-
-template <>
-Loader::UnownedResultOf::DebugLoadConfig_Impl<Loader::DebugLoadConfigResponse>::DebugLoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < DebugLoadConfigRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<DebugLoadConfigResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  DebugLoadConfigRequest _request = {};
-  _request.config_name = std::move(config_name);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<DebugLoadConfigRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Loader::InPlace::DebugLoadConfig(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Loader::UnownedResultOf::DebugLoadConfig Loader::SyncClient::DebugLoadConfig(::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugLoadConfig(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(config_name), std::move(_response_buffer));
-}
-
-Loader::UnownedResultOf::DebugLoadConfig Loader::Call::DebugLoadConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::DebugLoadConfig(std::move(_client_end), std::move(_request_buffer), std::move(config_name), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Loader::DebugLoadConfigResponse> Loader::InPlace::DebugLoadConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DebugLoadConfigRequest> params, ::fidl::BytePart response_buffer) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Loader::DebugLoadConfigResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<DebugLoadConfigRequest, DebugLoadConfigResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Loader::DebugLoadConfigResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
 
 bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -468,30 +322,6 @@ bool Loader::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       auto message = result.message.message();
       impl->Clone(std::move(message->loader),
         Interface::CloneCompleter::Sync(txn));
-      return true;
-    }
-    case kLoader_DebugPublishDataSink_Ordinal:
-    {
-      auto result = ::fidl::DecodeAs<DebugPublishDataSinkRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->DebugPublishDataSink(std::move(message->data_sink), std::move(message->data),
-        Interface::DebugPublishDataSinkCompleter::Sync(txn));
-      return true;
-    }
-    case kLoader_DebugLoadConfig_Ordinal:
-    {
-      auto result = ::fidl::DecodeAs<DebugLoadConfigRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->DebugLoadConfig(std::move(message->config_name),
-        Interface::DebugLoadConfigCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -595,66 +425,6 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::BytePart _buffer, int3
 void Loader::Interface::CloneCompleterBase::Reply(::fidl::DecodedMessage<CloneResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kLoader_Clone_Ordinal;
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Loader::Interface::DebugPublishDataSinkCompleterBase::Reply(int32_t rv) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugPublishDataSinkResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DebugPublishDataSinkResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
-  _response.rv = std::move(rv);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DebugPublishDataSinkResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DebugPublishDataSinkResponse>(std::move(_response_bytes)));
-}
-
-void Loader::Interface::DebugPublishDataSinkCompleterBase::Reply(::fidl::BytePart _buffer, int32_t rv) {
-  if (_buffer.capacity() < DebugPublishDataSinkResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<DebugPublishDataSinkResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
-  _response.rv = std::move(rv);
-  _buffer.set_actual(sizeof(DebugPublishDataSinkResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DebugPublishDataSinkResponse>(std::move(_buffer)));
-}
-
-void Loader::Interface::DebugPublishDataSinkCompleterBase::Reply(::fidl::DecodedMessage<DebugPublishDataSinkResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugPublishDataSink_Ordinal;
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Loader::Interface::DebugLoadConfigCompleterBase::Reply(int32_t rv, ::zx::vmo config) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DebugLoadConfigResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DebugLoadConfigResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
-  _response.rv = std::move(rv);
-  _response.config = std::move(config);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DebugLoadConfigResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DebugLoadConfigResponse>(std::move(_response_bytes)));
-}
-
-void Loader::Interface::DebugLoadConfigCompleterBase::Reply(::fidl::BytePart _buffer, int32_t rv, ::zx::vmo config) {
-  if (_buffer.capacity() < DebugLoadConfigResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<DebugLoadConfigResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
-  _response.rv = std::move(rv);
-  _response.config = std::move(config);
-  _buffer.set_actual(sizeof(DebugLoadConfigResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DebugLoadConfigResponse>(std::move(_buffer)));
-}
-
-void Loader::Interface::DebugLoadConfigCompleterBase::Reply(::fidl::DecodedMessage<DebugLoadConfigResponse> params) {
-  params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLoader_DebugLoadConfig_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

@@ -117,20 +117,6 @@ static zx_status_t fd_load_object(void* ctx, const char* name, zx_handle_t* out)
   return ZX_ERR_NOT_FOUND;
 }
 
-static zx_status_t fd_load_abspath(void* ctx, const char* path, zx_handle_t* out) {
-  int root_dir_fd = ((instance_state_t*)ctx)->root_dir_fd;
-  int fd = openat(root_dir_fd, path, O_RDONLY);
-  if (fd >= 0) {
-    return vmo_from_fd(fd, path, out);
-  }
-  return ZX_ERR_NOT_FOUND;
-}
-
-zx_status_t fd_publish_data_sink(void* ctx, const char* sink_name, zx_handle_t vmo) {
-  zx_handle_close(vmo);
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 void fd_finalizer(void* ctx) {
   instance_state_t* instance_state = (instance_state_t*)ctx;
   int root_dir_fd = instance_state->root_dir_fd;
@@ -138,12 +124,8 @@ void fd_finalizer(void* ctx) {
   free(instance_state);
 }
 
-static const loader_service_ops_t fd_ops = {
-    .load_object = fd_load_object,
-    .load_abspath = fd_load_abspath,
-    .publish_data_sink = fd_publish_data_sink,
-    .finalizer = fd_finalizer,
-};
+static const loader_service_ops_t fd_ops = {.load_object = fd_load_object,
+                                            .finalizer = fd_finalizer};
 
 static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_state) {
   loader_service_t* svc = session_state->svc;
@@ -208,21 +190,6 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
         // otherwise, if non-exclusive, try loading without the prefix
       }
       status = svc->ops->load_object(svc->ctx, data, &rsp_handle);
-      break;
-    case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG:
-      // When loading a debug configuration file, we expect an absolute path.
-      if (data[0] != '/') {
-        fprintf(stderr, "dlsvc: invalid debug config file, '%s' is not an absolute path\n", data);
-        status = ZX_ERR_NOT_FOUND;
-        break;
-      }
-      status = svc->ops->load_abspath(svc->ctx, data, &rsp_handle);
-      break;
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
-      status = svc->ops->publish_data_sink(svc->ctx, data, req_handle);
-      req_handle = ZX_HANDLE_INVALID;
       break;
     case LDMSG_OP_CLONE_OLD:
     case LDMSG_OP_CLONE:

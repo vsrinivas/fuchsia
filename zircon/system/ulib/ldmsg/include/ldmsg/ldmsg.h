@@ -20,15 +20,11 @@ __BEGIN_CDECLS
 #define LDMSG_OP_LOAD_OBJECT ((uint64_t)0x18D35E60 << 32)
 #define LDMSG_OP_CONFIG ((uint64_t)0x1ADEB78D << 32)
 #define LDMSG_OP_CLONE ((uint64_t)0x3862FCB9 << 32)
-#define LDMSG_OP_DEBUG_PUBLISH_DATA_SINK ((uint64_t)0x4F64FA41 << 32)
-#define LDMSG_OP_DEBUG_LOAD_CONFIG ((uint64_t)0x722D77BA << 32)
 
 #define LDMSG_OP_DONE_OLD 1u
 #define LDMSG_OP_LOAD_OBJECT_OLD 2u
 #define LDMSG_OP_CONFIG_OLD 4u
 #define LDMSG_OP_CLONE_OLD 5u
-#define LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD 7u
-#define LDMSG_OP_DEBUG_LOAD_CONFIG_OLD 8u
 
 // The payload format used for all the requests other than LDMSG_OP_CLONE.
 typedef struct ldmsg_common ldmsg_common_t;

@@ -31,29 +31,4 @@ protocol Loader {
 
     // Obtain a new loader service connection.
     Clone(request<Loader> loader) -> (zx.status rv);
-
-    // The program runtime sends a string naming a `data_sink` and
-    // transfers the sole handle to a VMO containing the `data` it
-    // wants published there.  The `data_sink` string identifies a
-    // type of data, and the VMO's object name can specifically
-    // identify the data set in this VMO.  The client must transfer
-    // the only handle to the VMO (which prevents the VMO being
-    // resized without the receiver's knowledge), but it might still
-    // have the VMO mapped in and continue to write data to it.  Code
-    // instrumentation runtimes use this to deliver large binary trace
-    // results.
-    //
-    // This is intended to be a developer-oriented feature and might
-    // not ordinarily be available in production runs.
-    DebugPublishDataSink(string:1024 data_sink, handle<vmo> data) -> (zx.status rv);
-
-    // The program runtime names a `config_name` referring to a debug
-    // configuration of some kind and gets back a VMO to read
-    // configuration data from.  The sanitizer runtimes use this to
-    // allow large options text to be stored in a file rather than
-    // passed directly in environment strings.
-    //
-    // This is intended to be a developer-oriented feature and might
-    // not ordinarily be available in production runs.
-    DebugLoadConfig(string:1024 config_name) -> (zx.status rv, handle<vmo>? config);
 };

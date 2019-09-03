@@ -99,31 +99,6 @@ bool LoaderService::HandleRequest(const zx::channel& channel) {
       rsp.rv = ZX_ERR_NOT_SUPPORTED;
       goto error_reply;
 
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK: {
-      if (hcount != 1) {
-        fail(log_->get(), "loader-service received DEBUG_PUBLISH_DATA_SINK request without VMO");
-      }
-
-      char name[ZX_MAX_NAME_LEN];
-      status = reqhandle.get_property(ZX_PROP_NAME, name, sizeof(name));
-      if (status != ZX_OK) {
-        fail(log_->get(), "zx_object_get_property failed");
-      }
-
-      uint64_t size;
-      status = reqhandle.get_size(&size);
-      if (status != ZX_OK) {
-        fail(log_->get(), "zx_vmo_get_size failed");
-      }
-
-      printl(log_->get(),
-             "loader-service data-sink \"%s\" DATA DROPPED: \"%s\", "
-             "%zu bytes",
-             string, name, static_cast<size_t>(size));
-      break;
-    }
-
     default:
       fail(log_->get(), "loader-service received invalid opcode");
       break;

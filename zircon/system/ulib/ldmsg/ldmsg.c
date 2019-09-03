@@ -27,16 +27,9 @@ zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* 
       return ZX_OK;
     case LDMSG_OP_LOAD_OBJECT:
     case LDMSG_OP_CONFIG:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG:
     case LDMSG_OP_LOAD_OBJECT_OLD:
     case LDMSG_OP_CONFIG_OLD:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
       offset = sizeof(fidl_string_t);
-      break;
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
-      req->common.object = FIDL_HANDLE_PRESENT;
-      offset = sizeof(ldmsg_common_t);
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
@@ -78,21 +71,12 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
       return ZX_OK;
     case LDMSG_OP_LOAD_OBJECT:
     case LDMSG_OP_CONFIG:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG:
     case LDMSG_OP_LOAD_OBJECT_OLD:
     case LDMSG_OP_CONFIG_OLD:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
 
       if ((uintptr_t)req->common.string.data != FIDL_ALLOC_PRESENT)
         return ZX_ERR_INVALID_ARGS;
       offset = sizeof(fidl_string_t);
-      break;
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
-      if ((uintptr_t)req->common.string.data != FIDL_ALLOC_PRESENT ||
-          req->common.object != FIDL_HANDLE_PRESENT)
-        return ZX_ERR_INVALID_ARGS;
-      offset = sizeof(ldmsg_common_t);
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
@@ -116,15 +100,11 @@ zx_status_t ldmsg_req_decode(ldmsg_req_t* req, size_t req_len, const char** data
 size_t ldmsg_rsp_get_size(ldmsg_rsp_t* rsp) {
   switch (rsp->header.ordinal) {
     case LDMSG_OP_LOAD_OBJECT:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG:
     case LDMSG_OP_LOAD_OBJECT_OLD:
-    case LDMSG_OP_DEBUG_LOAD_CONFIG_OLD:
     case LDMSG_OP_CONFIG:
     case LDMSG_OP_CLONE:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK:
     case LDMSG_OP_CONFIG_OLD:
     case LDMSG_OP_CLONE_OLD:
-    case LDMSG_OP_DEBUG_PUBLISH_DATA_SINK_OLD:
       return sizeof(ldmsg_rsp_t);
     case LDMSG_OP_DONE:
     case LDMSG_OP_DONE_OLD:

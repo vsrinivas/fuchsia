@@ -28,10 +28,6 @@ extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderConfigResponseTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneRequestTable;
 extern "C" const fidl_type_t fuchsia_ldsvc_LoaderCloneResponseTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugPublishDataSinkRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugPublishDataSinkResponseTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugLoadConfigRequestTable;
-extern "C" const fidl_type_t fuchsia_ldsvc_LoaderDebugLoadConfigResponseTable;
 
 class Loader final {
   Loader() = delete;
@@ -124,64 +120,6 @@ class Loader final {
     using ResponseType = CloneResponse;
   };
 
-  struct DebugPublishDataSinkResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t rv;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderDebugPublishDataSinkResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct DebugPublishDataSinkRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView data_sink;
-    ::zx::vmo data;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderDebugPublishDataSinkRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 1024;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = DebugPublishDataSinkResponse;
-  };
-
-  struct DebugLoadConfigResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t rv;
-    ::zx::vmo config;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderDebugLoadConfigResponseTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct DebugLoadConfigRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView config_name;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderDebugLoadConfigRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 1024;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = DebugLoadConfigResponse;
-  };
-
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -246,46 +184,12 @@ class Loader final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class DebugPublishDataSink_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      DebugPublishDataSink_Impl(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
-      ~DebugPublishDataSink_Impl() = default;
-      DebugPublishDataSink_Impl(DebugPublishDataSink_Impl&& other) = default;
-      DebugPublishDataSink_Impl& operator=(DebugPublishDataSink_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class DebugLoadConfig_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      DebugLoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::StringView config_name);
-      ~DebugLoadConfig_Impl() = default;
-      DebugLoadConfig_Impl(DebugLoadConfig_Impl&& other) = default;
-      DebugLoadConfig_Impl& operator=(DebugLoadConfig_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Done = Done_Impl;
     using LoadObject = LoadObject_Impl<LoadObjectResponse>;
     using Config = Config_Impl<ConfigResponse>;
     using Clone = Clone_Impl<CloneResponse>;
-    using DebugPublishDataSink = DebugPublishDataSink_Impl<DebugPublishDataSinkResponse>;
-    using DebugLoadConfig = DebugLoadConfig_Impl<DebugLoadConfigResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -352,46 +256,12 @@ class Loader final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class DebugPublishDataSink_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      DebugPublishDataSink_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data, ::fidl::BytePart _response_buffer);
-      ~DebugPublishDataSink_Impl() = default;
-      DebugPublishDataSink_Impl(DebugPublishDataSink_Impl&& other) = default;
-      DebugPublishDataSink_Impl& operator=(DebugPublishDataSink_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class DebugLoadConfig_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      DebugLoadConfig_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
-      ~DebugLoadConfig_Impl() = default;
-      DebugLoadConfig_Impl(DebugLoadConfig_Impl&& other) = default;
-      DebugLoadConfig_Impl& operator=(DebugLoadConfig_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
     using Done = Done_Impl;
     using LoadObject = LoadObject_Impl<LoadObjectResponse>;
     using Config = Config_Impl<ConfigResponse>;
     using Clone = Clone_Impl<CloneResponse>;
-    using DebugPublishDataSink = DebugPublishDataSink_Impl<DebugPublishDataSinkResponse>;
-    using DebugLoadConfig = DebugLoadConfig_Impl<DebugLoadConfigResponse>;
   };
 
   class SyncClient final {
@@ -427,18 +297,6 @@ class Loader final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Clone Clone(::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer);
 
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::DebugPublishDataSink DebugPublishDataSink(::fidl::StringView data_sink, ::zx::vmo data);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::DebugPublishDataSink DebugPublishDataSink(::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data, ::fidl::BytePart _response_buffer);
-
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::DebugLoadConfig DebugLoadConfig(::fidl::StringView config_name);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::DebugLoadConfig DebugLoadConfig(::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
-
    private:
     ::zx::channel channel_;
   };
@@ -470,18 +328,6 @@ class Loader final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Clone Clone(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel loader, ::fidl::BytePart _response_buffer);
 
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::DebugPublishDataSink DebugPublishDataSink(zx::unowned_channel _client_end, ::fidl::StringView data_sink, ::zx::vmo data);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::DebugPublishDataSink DebugPublishDataSink(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView data_sink, ::zx::vmo data, ::fidl::BytePart _response_buffer);
-
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::DebugLoadConfig DebugLoadConfig(zx::unowned_channel _client_end, ::fidl::StringView config_name);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::DebugLoadConfig DebugLoadConfig(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView config_name, ::fidl::BytePart _response_buffer);
-
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -497,10 +343,6 @@ class Loader final {
     static ::fidl::DecodeResult<ConfigResponse> Config(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConfigRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<CloneResponse> Clone(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CloneRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<DebugPublishDataSinkResponse> DebugPublishDataSink(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DebugPublishDataSinkRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<DebugLoadConfigResponse> DebugLoadConfig(zx::unowned_channel _client_end, ::fidl::DecodedMessage<DebugLoadConfigRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -557,34 +399,6 @@ class Loader final {
     using CloneCompleter = ::fidl::Completer<CloneCompleterBase>;
 
     virtual void Clone(::zx::channel loader, CloneCompleter::Sync _completer) = 0;
-
-    class DebugPublishDataSinkCompleterBase : public _Base {
-     public:
-      void Reply(int32_t rv);
-      void Reply(::fidl::BytePart _buffer, int32_t rv);
-      void Reply(::fidl::DecodedMessage<DebugPublishDataSinkResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using DebugPublishDataSinkCompleter = ::fidl::Completer<DebugPublishDataSinkCompleterBase>;
-
-    virtual void DebugPublishDataSink(::fidl::StringView data_sink, ::zx::vmo data, DebugPublishDataSinkCompleter::Sync _completer) = 0;
-
-    class DebugLoadConfigCompleterBase : public _Base {
-     public:
-      void Reply(int32_t rv, ::zx::vmo config);
-      void Reply(::fidl::BytePart _buffer, int32_t rv, ::zx::vmo config);
-      void Reply(::fidl::DecodedMessage<DebugLoadConfigResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using DebugLoadConfigCompleter = ::fidl::Completer<DebugLoadConfigCompleterBase>;
-
-    virtual void DebugLoadConfig(::fidl::StringView config_name, DebugLoadConfigCompleter::Sync _completer) = 0;
 
   };
 
@@ -662,39 +476,5 @@ struct IsFidlMessage<::llcpp::fuchsia::ldsvc::Loader::CloneResponse> : public st
 static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::CloneResponse)
     == ::llcpp::fuchsia::ldsvc::Loader::CloneResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::CloneResponse, rv) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkRequest)
-    == ::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkRequest, data_sink) == 16);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkRequest, data) == 32);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkResponse)
-    == ::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::DebugPublishDataSinkResponse, rv) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigRequest)
-    == ::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigRequest, config_name) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigResponse)
-    == ::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigResponse, rv) == 16);
-static_assert(offsetof(::llcpp::fuchsia::ldsvc::Loader::DebugLoadConfigResponse, config) == 20);
 
 }  // namespace fidl

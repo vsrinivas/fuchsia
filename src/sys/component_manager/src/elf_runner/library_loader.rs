@@ -64,14 +64,6 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                         start(new_lib_proxy, loader.into_channel());
                         responder.send(zx::sys::ZX_OK)?;
                     }
-                    LoaderRequest::DebugPublishDataSink { data_sink: _, data: _, responder } => {
-                        // Unimplemented
-                        responder.control_handle().shutdown();
-                    }
-                    LoaderRequest::DebugLoadConfig { config_name: _, responder } => {
-                        // Unimplemented
-                        responder.control_handle().shutdown();
-                    }
                 }
             }
             Ok(())
