@@ -92,8 +92,55 @@ long ObjectIdentifierFactoryImpl::count(const ObjectDigest& digest) const {
 
 int ObjectIdentifierFactoryImpl::size() const { return tokens_.size(); }
 
+bool ObjectIdentifierFactoryImpl::StartDeletion(const ObjectDigest& object_digest) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+
+  if (tokens_.find(object_digest) != tokens_.end()) {
+    // The object is tracked currently.
+    return false;
+  }
+  if (!deletion_aborted_.emplace(object_digest, false).second) {
+    // The object is already pending deletion.
+    return false;
+  }
+  FXL_VLOG(1) << "Start deletion " << object_digest;
+  return true;
+}
+
+void ObjectIdentifierFactoryImpl::AbortDeletion(const ObjectDigest& object_digest) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+
+  auto it = deletion_aborted_.find(object_digest);
+  if (it == deletion_aborted_.end()) {
+    // The object is not pending deletion.
+    return;
+  }
+  FXL_VLOG(1) << "Abort deletion " << object_digest;
+  it->second = true;
+}
+
+bool ObjectIdentifierFactoryImpl::CompleteDeletion(const ObjectDigest& object_digest) {
+  FXL_DCHECK(thread_checker_.IsCreationThreadCurrent());
+  FXL_DCHECK(dispatcher_checker_.IsCreationDispatcherCurrent());
+
+  auto it = deletion_aborted_.find(object_digest);
+  if (it == deletion_aborted_.end()) {
+    // The object is not pending deletion.
+    FXL_NOTREACHED() << "Unbalanced calls to start and abort deletion of object " << object_digest;
+    return false;
+  }
+  FXL_VLOG(1) << "Complete deletion " << object_digest;
+  const bool deletion_aborted = it->second;
+  deletion_aborted_.erase(it);
+  return !deletion_aborted;
+}
+
 ObjectIdentifier ObjectIdentifierFactoryImpl::MakeObjectIdentifier(uint32_t key_index,
                                                                    ObjectDigest object_digest) {
+  // Creating an object identifier automatically aborts any pending deletion on the object.
+  AbortDeletion(object_digest);
   auto token = GetToken(object_digest);
   return ObjectIdentifier(key_index, std::move(object_digest), std::move(token));
 }

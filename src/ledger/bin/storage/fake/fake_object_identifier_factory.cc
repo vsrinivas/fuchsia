@@ -54,5 +54,11 @@ std::string FakeObjectIdentifierFactory::ObjectIdentifierToStorageBytes(
   return storage::EncodeObjectIdentifier(identifier);
 }
 
+bool FakeObjectIdentifierFactory::StartDeletion(const ObjectDigest& object_digest) { return false; }
+
+bool FakeObjectIdentifierFactory::CompleteDeletion(const ObjectDigest& object_digest) {
+  return false;
+}
+
 }  // namespace fake
 }  // namespace storage

@@ -131,6 +131,13 @@ bool operator<(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs);
 std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e);
 
 // A factory interface to build object identifiers.
+//
+// In addition to allocating and serializing object identifiers, this class also allows to keep
+// track of objects that are "pending deletion". Because object deletion requires a number of checks
+// that are not atomic, it is necessary to register the intent to delete an object before
+// proceeding, and then check that this object has not been accessed or referenced concurrently (ie.
+// that no identifier has been issued for this object) when ready to issue the final call to perform
+// the actual deletion from the database.
 class ObjectIdentifierFactory {
  public:
   // Creates an object identifier.
@@ -146,6 +153,17 @@ class ObjectIdentifierFactory {
 
   // Serializes an object identifier.
   virtual std::string ObjectIdentifierToStorageBytes(const ObjectIdentifier& identifier) = 0;
+
+  // Registers |object_digest| as pending deletion and returns true if there is currently no object
+  // identifier for this digest and it is not already pending deletion. Returns false otherwise
+  // (which means that deletion cannot proceed safely).
+  FXL_WARN_UNUSED_RESULT virtual bool StartDeletion(const ObjectDigest& object_digest) = 0;
+
+  // Marks the deletion of |object_digest| as complete and returns true if the object was currently
+  // pending deletion and the deletion was not aborted already. Returns false otherwise (which means
+  // that deletion cannot proceed safely).
+  FXL_WARN_UNUSED_RESULT virtual bool CompleteDeletion(const ObjectDigest& object_digest) = 0;
+
 };
 
 // Object-object references, for garbage collection.

@@ -12,6 +12,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/dispatcher_checker.h"
+#include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 
@@ -36,17 +37,31 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
   int size() const;
 
   // ObjectIdentifierFactory:
+  // Returns an object identifier for the provided parameters. If the |object_digest| is currently
+  // pending deletion, marks the deletion as aborted.
   ObjectIdentifier MakeObjectIdentifier(uint32_t key_index, ObjectDigest object_digest) override;
+
   bool MakeObjectIdentifierFromStorageBytes(convert::ExtendedStringView storage_bytes,
                                             ObjectIdentifier* object_identifier) override;
   std::string ObjectIdentifierToStorageBytes(const ObjectIdentifier& identifier) override;
 
+  FXL_WARN_UNUSED_RESULT bool StartDeletion(const ObjectDigest& object_digest) override;
+
+  FXL_WARN_UNUSED_RESULT bool CompleteDeletion(const ObjectDigest& object_digest) override;
+
  private:
+  // Marks the deletion of |object_digest| as aborted if the object is currently pending deletion.
+  void AbortDeletion(const ObjectDigest& object_digest);
+
   // Returns a Token tracking |digest|.
   std::shared_ptr<ObjectIdentifier::Token> GetToken(ObjectDigest digest);
 
   // Current token for each live digest. Entries are cleaned up when the tokens expire.
   std::map<ObjectDigest, std::weak_ptr<ObjectIdentifier::Token>> tokens_;
+
+  // Every key in the map is an object digest pending deletion. The value indicates whether the
+  // deletion must be aborted or not.
+  std::map<ObjectDigest, bool> deletion_aborted_;
 
   // To check for multithreaded accesses.
   fxl::ThreadChecker thread_checker_;
