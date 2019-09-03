@@ -5,7 +5,7 @@
 //! Test tools for building and serving TUF repositories containing Fuchsia packages.
 
 use {
-    crate::package::Package,
+    crate::{package::Package, serve::ServedRepositoryBuilder},
     bytes::Buf,
     failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_pkg_ext::{
@@ -31,6 +31,8 @@ use {
         fmt,
         fs::{self, File},
         io::{self, Cursor, Read, Write},
+        path::PathBuf,
+        sync::Arc,
     },
     tempfile::TempDir,
 };
@@ -218,6 +220,11 @@ impl Repository {
         fs::read(self.dir.path().join(format!("repository/blobs/{}", merkle_root)))
     }
 
+    /// Returns the path of the base of the repository.
+    pub(crate) fn path(&self) -> PathBuf {
+        self.dir.path().join("repository")
+    }
+
     /// Returns an iterator over all packages contained in this repository.
     pub fn iter_packages(
         &self,
@@ -230,6 +237,22 @@ impl Repository {
         let mut packages = self.iter_packages()?.collect::<Result<Vec<_>, _>>()?;
         packages.sort_unstable();
         Ok(packages)
+    }
+
+    /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
+    /// repository when it is served at the given URL.
+    pub fn make_repo_config(&self, url: RepoUrl, mirror_url: String) -> RepositoryConfig {
+        let mut builder = RepositoryConfigBuilder::new(url);
+
+        for key in self.root_keys() {
+            builder = builder.add_root_key(key);
+        }
+
+        let mut mirror = MirrorConfigBuilder::new(mirror_url).subscribe(false);
+        if let Some(ref key) = self.encryption_key {
+            mirror = mirror.blob_key(RepositoryBlobKey::Aes(key.as_bytes().to_vec()))
+        }
+        builder.add_mirror(mirror.build()).build()
     }
 
     fn root_keys(&self) -> BTreeSet<RepositoryKey> {
@@ -269,6 +292,11 @@ impl Repository {
                 RepositoryKey::Ed25519(hex::decode(root.keys[keyid].keyval.public.clone()).unwrap())
             })
             .collect()
+    }
+
+    /// Serves the repository over HTTP using hyper.
+    pub fn build_server(self: Arc<Self>) -> ServedRepositoryBuilder {
+        ServedRepositoryBuilder::new(self)
     }
 
     /// Serves the repository over HTTP.
@@ -372,17 +400,7 @@ impl<'a> ServedRepository<'a> {
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository.
     pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
-        let mut builder = RepositoryConfigBuilder::new(url);
-
-        for key in self.repo.root_keys() {
-            builder = builder.add_root_key(key);
-        }
-
-        let mut mirror = MirrorConfigBuilder::new(self.local_url()).subscribe(false);
-        if let Some(ref key) = self.repo.encryption_key {
-            mirror = mirror.blob_key(RepositoryBlobKey::Aes(key.0.to_vec()))
-        }
-        builder.add_mirror(mirror.build()).build()
+        self.repo.make_repo_config(url, self.local_url())
     }
 
     /// Kill the pm component and wait for it to exit.
@@ -392,7 +410,7 @@ impl<'a> ServedRepository<'a> {
     }
 }
 
-async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
+pub(crate) async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
     let request = Request::get(url.as_ref()).body(Body::empty()).map_err(|e| Error::from(e))?;
     let client = fuchsia_hyper::new_client();
     let response = client.request(request).compat().await?;

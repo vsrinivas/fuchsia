@@ -14,6 +14,7 @@ mod repo;
 pub use crate::repo::{
     BlobEncryptionKey, PackageEntry, Repository, RepositoryBuilder, ServedRepository,
 };
+mod serve;
 
 mod blobfs;
 

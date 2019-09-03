@@ -28,6 +28,7 @@ use {
     std::{
         fs::File,
         io::{self, Read},
+        sync::Arc,
     },
 };
 
@@ -339,6 +340,28 @@ async fn test_download_blob_experiment_many_blobs() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn test_download_blob_experiment_identity() -> Result<(), Error> {
     verify_download_blob_resolve(Package::identity().await?).await
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_download_blob_experiment_identity_hyper() -> Result<(), Error> {
+    let env = TestEnv::new();
+
+    let pkg = Package::identity().await?;
+    let repo = Arc::new(RepositoryBuilder::new().add_package(&pkg).build().await?);
+    let served_repository = repo.build_server().start()?;
+    let repo_url = "fuchsia-pkg://test".parse().unwrap();
+    let repo_config = served_repository.make_repo_config(repo_url);
+
+    env.proxies.repo_manager.add(repo_config.into()).await?;
+
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
+    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
+    let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
+
+    pkg.verify_contents(&package_dir).await.expect("correct package contents");
+
+    Ok(())
 }
 
 #[fasync::run_singlethreaded(test)]
