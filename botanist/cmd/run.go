@@ -109,7 +109,7 @@ func (*RunCommand) Synopsis() string {
 }
 
 func (r *RunCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&r.configFile, "config", "/etc/botanist/device.json", "path to file of device config")
+	f.StringVar(&r.configFile, "config", "", "path to file of device config")
 	f.Var(&r.imageManifests, "images", "paths to image manifests")
 	f.BoolVar(&r.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")

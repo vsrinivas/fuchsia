@@ -72,7 +72,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.outputArchive, "out", "output.tar", "path on host to output tarball of test results")
 	f.StringVar(&cmd.summaryFilename, "summary-name", runtests.TestSummaryFilename, "name of the file in the test directory")
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
-	f.StringVar(&cmd.configFile, "config", "/etc/botanist/config.json", "path to file of device config")
+	f.StringVar(&cmd.configFile, "config", "", "path to file of device config")
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 }
 
