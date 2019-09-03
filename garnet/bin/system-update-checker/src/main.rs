@@ -17,6 +17,7 @@ mod update_manager;
 mod update_monitor;
 mod update_service;
 
+use crate::apply::Initiator;
 use crate::config::Config;
 use crate::info_handler::InfoHandler;
 use crate::poller::run_periodic_update_check;
@@ -30,6 +31,7 @@ use fuchsia_inspect as finspect;
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
 use futures::prelude::*;
 use std::sync::Arc;
+use std::time::Duration;
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 100;
 
@@ -82,7 +84,15 @@ async fn main() -> Result<(), Error> {
 
     let cron_fut = run_periodic_update_check(update_manager.clone(), &config);
 
-    future::join4(channel_fut, fidl_fut, cron_fut, perform_fdr_if_necessary()).await;
+    let first_update_fut = async move {
+        if config.poll_frequency().is_some() {
+            fasync::Timer::new(fasync::Time::after(Duration::from_secs(60).into())).await;
+            update_manager.try_start_update(Initiator::Automatic, None);
+        }
+    };
+
+    future::join5(channel_fut, fidl_fut, cron_fut, first_update_fut, perform_fdr_if_necessary())
+        .await;
 
     Ok(())
 }
