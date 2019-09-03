@@ -73,6 +73,10 @@ bits ContextFeatureFlags : uint64 {
     /// Enables hardware video decoding. `VULKAN` must be enabled as well. Requires
     /// [`fuchsia.mediacodec.CodecFactory`] service.
     HARDWARE_VIDEO_DECODER = 0x8;
+
+    /// Enables Widevine CDM modules for EME API. `VULKAN` feature must be enabled as well.
+    /// Requires [`fuchsia.media.drm.Widevine`] service.
+    WIDEVINE_CDM = 0x10;
 };
 
 table CreateContextParams {
@@ -117,6 +121,12 @@ table CreateContextParams {
     /// Optional features that should be enabled for this context. Some features may also require
     /// additional services in `service_directory`.
     7: ContextFeatureFlags features;
+
+    /// Enables PlayReady CDM for the Context using the specified string as a key system
+    /// string. The string should be a reverse domain name, as required by
+    /// [EME API](https://www.w3.org/TR/encrypted-media/#key-system). Requires
+    /// [`fuchsia.media.drm.PlayReady`] service.
+    8: string:128 playready_key_system;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of
