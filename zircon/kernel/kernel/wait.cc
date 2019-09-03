@@ -252,7 +252,12 @@ zx_status_t wait_queue_block_etc(wait_queue_t* wait, const Deadline& deadline, u
   DEBUG_ASSERT_MAGIC_CHECK(wait);
   DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
   DEBUG_ASSERT(arch_ints_disabled());
+
+  // Any time a thread blocks, it should be holding exactly one spinlock, and it
+  // should be the thread lock.  If a thread blocks while holding another spin
+  // lock, something has gone very wrong.
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 1);
 
   if (WAIT_QUEUE_VALIDATION) {
     wait_queue_validate_queue(wait);
