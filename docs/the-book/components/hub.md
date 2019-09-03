@@ -50,7 +50,7 @@ and traversable when a component instance is running on the system.
 + **exec/** : This directory contains information about instance's execution context,
 only exists while the instance is running.
 
-+ **exec/resolved_url/**: The component's resolved URL in text format.
++ **exec/resolved_url**: The component's resolved URL in text format.
 
 + **exec/in/**: The instance's incoming namespace, as supplied by the
 component manager. This contains a listing of services and directories
@@ -77,7 +77,7 @@ format.
 + **exec/runtime/elf/job-id**: The instance's job id in text format.
 
 
-+ **exec/runtime/elf/args**: A directory of command-line arguments.
++ **exec/runtime/elf/args/**: A directory of command-line arguments.
 These arguments are presented as a series of files from `0` onward.
 
 ## [Capability Routing](#capability-routing)
@@ -85,7 +85,7 @@ These arguments are presented as a series of files from `0` onward.
 You can make the **/hub** directory available in any component's incoming namespace
 with the appriorate declaration in the component's manifest.
 
- ### Basic Example
+### Basic Example
 
 In this example above, the component, `hub_client` has requested the hub in its
 namespace from the `framework`. The `framework` provides `hub_client` with a hub
