@@ -6,11 +6,14 @@
 
 #include <bits.h>
 #include <err.h>
+#include <lib/affine/ratio.h>
 #include <zircon/types.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
+#include <ktl/limits.h>
 #include <lk/init.h>
 #include <platform/pc/hpet.h>
 #include <vm/vm_aspace.h>
@@ -84,16 +87,23 @@ static void hpet_init(uint level) {
     return;
   }
 
+  // If something goes wrong, make sure we free the HPET registers.
+  auto cleanup = fbl::MakeAutoCall([]() {
+    VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(hpet_regs));
+    hpet_regs = nullptr;
+    num_timers = 0;
+  });
+
   bool has_64bit_count = BIT_SET(hpet_regs->general_caps, 13);
   tick_period_in_fs = hpet_regs->general_caps >> 32;
   if (tick_period_in_fs == 0 || tick_period_in_fs > MAX_PERIOD_IN_FS) {
-    goto fail;
+    return;
   }
 
   /* We only support HPETs that are 64-bit and have at least two timers */
   num_timers = static_cast<uint8_t>(BITS_SHIFT(hpet_regs->general_caps, 12, 8) + 1);
   if (!has_64bit_count || num_timers < 2) {
-    goto fail;
+    return;
   }
 
   /* Make sure all timers have interrupts disabled */
@@ -101,16 +111,42 @@ static void hpet_init(uint level) {
     hpet_regs->timers[i].conf_caps &= ~TIMER_CONF_INT_EN;
   }
 
+  /* figure out the ratio of clock monotonic ticks to HPET ticks.  This is the
+   * scaling factor when converting from HPET to clock mono.
+   *
+   * There are 10^6 fSec/clock mono tick
+   * |tick_period_in_fs| fSec/HPET tick.
+   *
+   * So, there should be |tick_period_in_fs|/10^6 CM_ticks/HPET_ticks
+   *
+   * Compute this, make sure that we can represent it as a 32 bit ratio, then
+   * store it.
+   */
+  uint64_t N = tick_period_in_fs;
+  uint64_t D = 1000000;
+  affine::Ratio::Reduce(&N, &D);
+
+  // ASSERT that we can represent this as a 32 bit ratio.  If we cannot, it
+  // means that tick_period_in_fs is a number so large, and with so few prime
+  // factors of 2 and 5, that it cannot be reduced to fit into a 32 bit
+  // integer.  This would imply an extremely odd and slow clock.  For now,
+  // just ASSERT that this will never happen.
+  ZX_ASSERT_MSG(
+      (N <= ktl::numeric_limits<uint32_t>::max()) && (D <= ktl::numeric_limits<uint32_t>::max()),
+      "Clock monotonic ticks : HPET ticks ratio (%lu : %lu) "
+      "too large to store in a 32 bit ratio!!",
+      N, D);
+  hpet_ticks_to_clock_monotonic = {static_cast<uint32_t>(N), static_cast<uint32_t>(D)};
+
   _hpet_ticks_per_ms = 1000000000000ULL / tick_period_in_fs;
   min_ticks_ahead = 100000000ULL / tick_period_in_fs;
   hpet_present = true;
-  return;
 
-fail:
-  VmAspace::kernel_aspace()->FreeRegion(reinterpret_cast<vaddr_t>(hpet_regs));
-  hpet_regs = nullptr;
-  num_timers = 0;
+  // things went well, cancel our cleanup auto-call
+  cleanup.cancel();
+  return;
 }
+
 /* Begin running after ACPI tables are up */
 LK_INIT_HOOK(hpet, hpet_init, LK_INIT_LEVEL_VM + 2)
 

@@ -50,6 +50,13 @@ library("pc") {
     # <platform/pc/acpi.h> has #include <acpica/acpi.h>.
     "$zx/third_party/lib/acpica:headers",
   ]
+
+  if (toolchain.environment == "kernel") {
+    public_deps += [
+      # <platform/pc/timer.h> has #include <lib/affine/ratio.h>.
+      "$zx/system/ulib/affine",
+    ]
+  }
 }
 
 source_set("tests") {

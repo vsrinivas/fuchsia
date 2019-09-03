@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_INCLUDE_PLATFORM_H_
 
 #include <sys/types.h>
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -37,7 +38,7 @@ zx_time_t current_time(void);
 zx_ticks_t ticks_per_second(void);
 
 /* high-precision timer current_ticks */
-zx_ticks_t current_ticks(void);
+extern zx_ticks_t (*current_ticks)(void);
 
 /* super early platform initialization, before almost everything */
 void platform_early_init(void);
@@ -129,5 +130,20 @@ bool platform_serial_enabled(void);
 bool platform_early_console_enabled(void);
 
 __END_CDECLS
+
+#ifdef __cplusplus
+
+namespace affine {
+class Ratio;  // Fwd decl.
+}  // namespace affine
+
+// Setter/getter pair for the ratio which defines the relationship between the
+// system's tick counter, and the current_time/clock_monotonic clock.  This gets
+// set once by architecture specific plaform code, after an appropriate ticks
+// source has been selected and characterized.
+void platform_set_ticks_to_time_ratio(const affine::Ratio& ticks_to_time);
+const affine::Ratio& platform_get_ticks_to_time_ratio(void);
+
+#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_INCLUDE_PLATFORM_H_

@@ -35,4 +35,11 @@ void hpet_wait_ms(uint16_t ms);
 
 __END_CDECLS
 
+#ifdef __cplusplus
+#include <lib/affine/ratio.h>
+
+// Storage resides in platform/pc/timer.cpp
+extern affine::Ratio hpet_ticks_to_clock_monotonic;
+#endif  // __cplusplus
+
 #endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_HPET_H_

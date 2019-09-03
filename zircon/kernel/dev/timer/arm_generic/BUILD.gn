@@ -11,5 +11,7 @@ library("arm_generic") {
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/pdev",
     "$zx/kernel/lib/fixed_point",
+    "$zx/kernel/lib/unittest",
+    "$zx/system/ulib/affine",
   ]
 }

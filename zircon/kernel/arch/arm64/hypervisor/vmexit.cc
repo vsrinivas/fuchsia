@@ -16,6 +16,7 @@
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <hypervisor/ktrace.h>
+#include <lib/affine/ratio.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
 
@@ -112,7 +113,7 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
     if (static_cast<uint64_t>(current_ticks()) >= guest_state->cntv_cval_el0) {
       return ZX_OK;
     }
-    deadline = cntpct_to_zx_time(guest_state->cntv_cval_el0);
+    deadline = platform_get_ticks_to_time_ratio().Scale(guest_state->cntv_cval_el0);
   }
   return gich_state->Wait(deadline);
 }

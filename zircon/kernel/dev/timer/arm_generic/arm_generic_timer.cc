@@ -7,9 +7,14 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <lib/fixed_point.h>
 #include <platform.h>
 #include <trace.h>
+
+#include <arch/ops.h>
+#include <ktl/limits.h>
+#include <lib/affine/ratio.h>
+#include <lib/fixed_point.h>
+#include <lib/unittest/unittest.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/types.h>
 
@@ -44,15 +49,10 @@
 
 static int timer_irq;
 
-struct fp_32_64 cntpct_per_ns;
-struct fp_32_64 ns_per_cntpct;
-
-static uint64_t zx_time_to_cntpct(zx_time_t zx_time) {
-  DEBUG_ASSERT(zx_time >= 0);
-  return u64_mul_u64_fp32_64(zx_time, cntpct_per_ns);
+zx_time_t cntpct_to_zx_time(uint64_t cntpct) {
+  DEBUG_ASSERT(cntpct < ktl::numeric_limits<int64_t>::max());
+  return platform_get_ticks_to_time_ratio().Scale(static_cast<int64_t>(cntpct));
 }
-
-zx_time_t cntpct_to_zx_time(uint64_t cntpct) { return u64_mul_u64_fp32_64(cntpct, ns_per_cntpct); }
 
 static uint32_t read_cntfrq(void) {
   uint32_t cntfrq;
@@ -166,9 +166,10 @@ static inline void write_cval(uint64_t val) { reg_procs->write_cval(val); }
 
 static inline void write_tval(uint32_t val) { reg_procs->write_tval(val); }
 
-static uint64_t read_ct(void) {
-  uint64_t cntpct = reg_procs->read_ct();
-  LTRACEF_LEVEL(3, "cntpct: 0x%016" PRIx64 ", %" PRIu64 "\n", cntpct, cntpct);
+static zx_ticks_t read_ct(void) {
+  zx_ticks_t cntpct = static_cast<zx_ticks_t>(reg_procs->read_ct());
+  LTRACEF_LEVEL(3, "cntpct: 0x%016" PRIx64 ", %" PRIi64 "\n", static_cast<uint64_t>(cntpct),
+                cntpct);
   return cntpct;
 }
 
@@ -187,7 +188,8 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
 
   // Add one to the deadline, since with very high probability the deadline
   // straddles a counter tick.
-  const uint64_t cntpct_deadline = zx_time_to_cntpct(deadline) + 1;
+  const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
+  const uint64_t cntpct_deadline = time_to_ticks.Scale(deadline) + 1;
 
   // Even if the deadline has already passed, the ARMv8-A timer will fire the
   // interrupt.
@@ -204,67 +206,14 @@ void platform_shutdown_timer(void) {
   mask_interrupt(timer_irq);
 }
 
-zx_time_t current_time(void) { return cntpct_to_zx_time(read_ct()); }
-
-zx_ticks_t current_ticks(void) { return read_ct(); }
-
-zx_ticks_t ticks_per_second(void) { return u64_mul_u32_fp32_64(1000 * 1000 * 1000, cntpct_per_ns); }
-
-static uint64_t abs_int64(int64_t a) { return (a > 0) ? a : -a; }
-
-static void test_time_conversion_check_result(uint64_t a, uint64_t b, uint64_t limit) {
-  if (a != b) {
-    uint64_t diff = abs_int64(a - b);
-    if (diff <= limit)
-      LTRACEF("ROUNDED by %" PRIu64 " (up to %" PRIu64 " allowed)\n", diff, limit);
-    else
-      TRACEF("FAIL, off by %" PRIu64 "\n", diff);
+template <bool AllowDebugPrint = false>
+static inline affine::Ratio arm_generic_timer_compute_conversion_factors(uint32_t cntfrq) {
+  affine::Ratio cntpct_to_nsec = {ZX_SEC(1), cntfrq};
+  if constexpr (AllowDebugPrint) {
+    dprintf(SPEW, "cntpct_per_nsec: %u/%u", cntpct_to_nsec.numerator(),
+            cntpct_to_nsec.denominator());
   }
-}
-
-static void test_zx_time_to_cntpct(uint32_t cntfrq, zx_time_t zx_time) {
-  uint64_t cntpct = zx_time_to_cntpct(zx_time);
-  const uint64_t nanos_per_sec = ZX_SEC(1);
-  uint64_t expected_cntpct = ((uint64_t)cntfrq * zx_time + nanos_per_sec / 2) / nanos_per_sec;
-
-  test_time_conversion_check_result(cntpct, expected_cntpct, 1);
-  LTRACEF_LEVEL(2, "zx_time_to_cntpct(%" PRIi64 "): got %" PRIu64 ", expect %" PRIu64 "\n", zx_time,
-                cntpct, expected_cntpct);
-}
-
-static void test_cntpct_to_zx_time(uint32_t cntfrq, uint64_t expected_s) {
-  zx_time_t expected_zx_time = ZX_SEC(expected_s);
-  uint64_t cntpct = (uint64_t)cntfrq * expected_s;
-  zx_time_t zx_time = cntpct_to_zx_time(cntpct);
-
-  test_time_conversion_check_result(zx_time, expected_zx_time, (1000 * 1000 + cntfrq - 1) / cntfrq);
-  LTRACEF_LEVEL(2, "cntpct_to_zx_time(%" PRIu64 "): got %" PRIi64 ", expect %" PRIi64 "\n", cntpct,
-                zx_time, expected_zx_time);
-}
-
-static void test_time_conversions(uint32_t cntfrq) {
-  test_zx_time_to_cntpct(cntfrq, 0);
-  test_zx_time_to_cntpct(cntfrq, 1);
-  test_zx_time_to_cntpct(cntfrq, 60 * 60 * 24);
-  test_zx_time_to_cntpct(cntfrq, 60 * 60 * 24 * 365);
-  test_zx_time_to_cntpct(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
-  test_zx_time_to_cntpct(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
-  test_zx_time_to_cntpct(cntfrq, 1ULL << 60);
-  test_cntpct_to_zx_time(cntfrq, 0);
-  test_cntpct_to_zx_time(cntfrq, 1);
-  test_cntpct_to_zx_time(cntfrq, 60 * 60 * 24);
-  test_cntpct_to_zx_time(cntfrq, 60 * 60 * 24 * 365);
-  test_cntpct_to_zx_time(cntfrq, 60 * 60 * 24 * (365 * 10 + 2));
-  test_cntpct_to_zx_time(cntfrq, 60ULL * 60 * 24 * (365 * 100 + 2));
-}
-
-static void arm_generic_timer_init_conversion_factors(uint32_t cntfrq) {
-  fp_32_64_div_32_32(&cntpct_per_ns, cntfrq, ZX_SEC(1));
-  fp_32_64_div_32_32(&ns_per_cntpct, ZX_SEC(1), cntfrq);
-  dprintf(SPEW, "cntpct_per_ns: %08x.%08x%08x\n", cntpct_per_ns.l0, cntpct_per_ns.l32,
-          cntpct_per_ns.l64);
-  dprintf(SPEW, "ns_per_cntpct: %08x.%08x%08x\n", ns_per_cntpct.l0, ns_per_cntpct.l32,
-          ns_per_cntpct.l64);
+  return cntpct_to_nsec;
 }
 
 static void arm_generic_timer_init(uint32_t freq_override) {
@@ -281,19 +230,10 @@ static void arm_generic_timer_init(uint32_t freq_override) {
     cntfrq = freq_override;
   }
 
-  dprintf(INFO, "arm generic timer freq %u Hz\n", cntfrq);
+  current_ticks = read_ct;
 
-#if LOCAL_TRACE
-  LTRACEF("Test min cntfrq\n");
-  arm_generic_timer_init_conversion_factors(1);
-  test_time_conversions(1);
-  LTRACEF("Test max cntfrq\n");
-  arm_generic_timer_init_conversion_factors(~0);
-  test_time_conversions(~0);
-  LTRACEF("Set actual cntfrq\n");
-#endif
-  arm_generic_timer_init_conversion_factors(cntfrq);
-  test_time_conversions(cntfrq);
+  dprintf(INFO, "arm generic timer freq %u Hz\n", cntfrq);
+  platform_set_ticks_to_time_ratio(arm_generic_timer_compute_conversion_factors<true>(cntfrq));
 
   LTRACEF("register irq %d on cpu %u\n", timer_irq, arch_curr_cpu_num());
   zx_status_t status = register_int_handler(timer_irq, &platform_tick, NULL);
@@ -349,3 +289,126 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
 
 LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_timer_pdev_init,
              LK_INIT_LEVEL_PLATFORM_EARLY)
+
+/********************************************************************************
+ *
+ * Tests
+ *
+ ********************************************************************************/
+
+namespace {
+
+constexpr uint32_t kMinTestFreq = 1;
+constexpr uint32_t kMaxTestFreq = ktl::numeric_limits<uint32_t>::max();
+constexpr uint32_t kCurTestFreq = 0;
+
+inline uint64_t abs_int64(int64_t a) { return (a > 0) ? a : -a; }
+
+bool test_time_conversion_check_result(uint64_t a, uint64_t b, uint64_t limit) {
+  BEGIN_TEST;
+
+  if (a != b) {
+    uint64_t diff = abs_int64(a - b);
+    ASSERT_LE(diff, limit, "");
+  }
+
+  END_TEST;
+}
+
+#if 0
+static void test_zx_time_to_cntpct(uint32_t cntfrq, zx_time_t zx_time) {
+    uint64_t cntpct = zx_time_to_cntpct(zx_time);
+    const uint64_t nanos_per_sec = ZX_SEC(1);
+    uint64_t expected_cntpct = ((uint64_t)cntfrq * zx_time + nanos_per_sec / 2) / nanos_per_sec;
+
+    test_time_conversion_check_result(cntpct, expected_cntpct, 1);
+    LTRACEF_LEVEL(2, "zx_time_to_cntpct(%" PRIi64 "): got %" PRIu64
+                     ", expect %" PRIu64 "\n",
+                  zx_time, cntpct, expected_cntpct);
+}
+#endif
+
+bool test_time_to_cntpct(uint32_t cntfrq) {
+  BEGIN_TEST;
+
+  affine::Ratio time_to_ticks;
+  if (cntfrq == kCurTestFreq) {
+    uint64_t tps = ticks_per_second();
+    ASSERT_LE(tps, ktl::numeric_limits<uint32_t>::max(), "");
+    cntfrq = static_cast<uint32_t>(tps);
+    time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
+  } else {
+    time_to_ticks = arm_generic_timer_compute_conversion_factors(cntfrq).Inverse();
+  }
+
+  constexpr uint64_t VECTORS[] = {
+      0,
+      1,
+      60 * 60 * 24,
+      60 * 60 * 24 * 365,
+      60 * 60 * 24 * (365 * 10 + 2),
+      60ULL * 60 * 24 * (365 * 100 + 2),
+  };
+
+  for (auto vec : VECTORS) {
+    uint64_t cntpct = time_to_ticks.Scale(vec);
+    constexpr uint32_t nanos_per_sec = ZX_SEC(1);
+    uint64_t expected_cntpct = ((uint64_t)cntfrq * vec + (nanos_per_sec / 2)) / nanos_per_sec;
+
+    if (!test_time_conversion_check_result(cntpct, expected_cntpct, 1)) {
+      printf("FAIL: zx_time_to_cntpct(%" PRIu64 "): got %" PRIu64 ", expect %" PRIu64 "\n", vec,
+             cntpct, expected_cntpct);
+      ASSERT_TRUE(false, "");
+    }
+  }
+
+  END_TEST;
+}
+
+bool test_cntpct_to_time(uint32_t cntfrq) {
+  BEGIN_TEST;
+
+  affine::Ratio ticks_to_time;
+  if (cntfrq == kCurTestFreq) {
+    uint64_t tps = ticks_per_second();
+    ASSERT_LE(tps, ktl::numeric_limits<uint32_t>::max(), "");
+    cntfrq = static_cast<uint32_t>(tps);
+    ticks_to_time = platform_get_ticks_to_time_ratio();
+  } else {
+    ticks_to_time = arm_generic_timer_compute_conversion_factors(cntfrq);
+  }
+
+  constexpr uint64_t VECTORS[] = {
+      1,
+      60 * 60 * 24,
+      60 * 60 * 24 * 365,
+      60 * 60 * 24 * (365 * 10 + 2),
+      60ULL * 60 * 24 * (365 * 50 + 2),
+  };
+
+  for (auto vec : VECTORS) {
+    zx_time_t expected_zx_time = ZX_SEC(vec);
+    uint64_t cntpct = (uint64_t)cntfrq * vec;
+    zx_time_t zx_time = ticks_to_time.Scale(cntpct);
+
+    const uint64_t limit = (1000 * 1000 + cntfrq - 1) / cntfrq;
+    if (!test_time_conversion_check_result(zx_time, expected_zx_time, limit)) {
+      printf("cntpct_to_zx_time(0x%" PRIx64 "): got 0x%" PRIx64 ", expect 0x%" PRIx64 "\n", cntpct,
+             static_cast<uint64_t>(zx_time), static_cast<uint64_t>(expected_zx_time));
+      ASSERT_TRUE(false, "");
+    }
+  }
+
+  END_TEST;
+}
+
+}  // namespace
+
+UNITTEST_START_TESTCASE(arm_clock_tests)
+UNITTEST("Time --> CNTPCT (min freq)", []() -> bool { return test_time_to_cntpct(kMinTestFreq); })
+UNITTEST("Time --> CNTPCT (max freq)", []() -> bool { return test_time_to_cntpct(kMaxTestFreq); })
+UNITTEST("Time --> CNTPCT (cur freq)", []() -> bool { return test_time_to_cntpct(kCurTestFreq); })
+UNITTEST("CNTPCT --> Time (min freq)", []() -> bool { return test_cntpct_to_time(kMinTestFreq); })
+UNITTEST("CNTPCT --> Time (max freq)", []() -> bool { return test_cntpct_to_time(kMaxTestFreq); })
+UNITTEST("CNTPCT --> Time (cur freq)", []() -> bool { return test_cntpct_to_time(kCurTestFreq); })
+UNITTEST_END_TESTCASE(arm_clock_tests, "arm_clock", "Tests for ARM tick count and current time");

@@ -41,6 +41,7 @@ source_set("kernel") {
     "$zx/kernel/lib/version",
     "$zx/kernel/object",
     "$zx/kernel/vm",
+    "$zx/system/ulib/affine",
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/zircon-internal",
   ]

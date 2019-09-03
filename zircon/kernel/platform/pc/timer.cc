@@ -9,6 +9,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/affine/transform.h>
 #include <lib/cmdline.h>
 #include <lib/fixed_point.h>
 #include <platform.h>
@@ -97,10 +98,12 @@ static uint64_t tsc_ticks_per_ms;
 static struct fp_32_64 ns_per_tsc;
 static struct fp_32_64 tsc_per_ns;
 static uint32_t ns_per_tsc_rounded_up;
+static affine::Ratio rdtsc_ticks_to_clock_monotonic;
 
 // HPET calibration values
 static struct fp_32_64 ns_per_hpet;
 static uint32_t ns_per_hpet_rounded_up;
+affine::Ratio hpet_ticks_to_clock_monotonic;  // Non-static so that hpet_init has access
 
 #define INTERNAL_FREQ 1193182U
 #define INTERNAL_FREQ_3X 3579546U
@@ -113,30 +116,13 @@ static uint32_t ns_per_hpet_rounded_up;
 
 #define LOCAL_TRACE 0
 
-zx_time_t current_time(void) {
-  zx_time_t time;
+zx_ticks_t current_ticks_rdtsc(void) { return rdtsc(); }
 
-  switch (wall_clock) {
-    case CLOCK_TSC: {
-      uint64_t tsc = rdtsc();
-      time = ticks_to_nanos(tsc);
-      break;
-    }
-    case CLOCK_HPET: {
-      uint64_t counter = hpet_get_value();
-      time = u64_mul_u64_fp32_64(counter, ns_per_hpet);
-      break;
-    }
-    case CLOCK_PIT: {
-      time = u64_mul_u64_fp32_64(pit_ticks, us_per_pit) * 1000;
-      break;
-    }
-    default:
-      panic("Invalid wall clock source\n");
-  }
+zx_ticks_t current_ticks_hpet(void) { return hpet_get_value(); }
 
-  return time;
-}
+zx_ticks_t current_ticks_pit(void) { return pit_ticks; }
+
+const affine::Ratio& rdtsc_to_nanos() { return rdtsc_ticks_to_clock_monotonic; }
 
 // Round up t to a clock tick, so that when the APIC timer fires, the wall time
 // will have elapsed.
@@ -161,12 +147,6 @@ static zx_time_t discrete_time_roundup(zx_time_t t) {
 
   return zx_time_add_duration(t, value);
 }
-
-zx_ticks_t ticks_per_second(void) { return tsc_ticks_per_ms * 1000; }
-
-zx_ticks_t current_ticks(void) { return rdtsc(); }
-
-zx_time_t ticks_to_nanos(zx_ticks_t ticks) { return u64_mul_u64_fp32_64(ticks, ns_per_tsc); }
 
 // The PIT timer will keep track of wall time if we aren't using the TSC
 static interrupt_eoi pit_timer_tick(void* arg) {
@@ -402,6 +382,22 @@ static void calibrate_tsc(bool has_pvclock) {
 
   const uint64_t tsc_freq = has_pvclock ? pvclock_get_tsc_freq() : x86_lookup_tsc_freq();
   if (tsc_freq != 0) {
+    uint64_t N = 1'000'000'000;
+    uint64_t D = tsc_freq;
+    affine::Ratio::Reduce(&N, &D);
+
+    // ASSERT that we can represent this as a 32 bit ratio.  If we cannot,
+    // it means that tsc_freq is a number so large, and with so few prime
+    // factors of 2 and 5, that it cannot be reduced to fit into a 32 bit
+    // integer.  This is pretty unreasonable, for now, just assert that it
+    // will not happen.
+    ZX_ASSERT_MSG(
+        (N <= ktl::numeric_limits<uint32_t>::max()) && (D <= ktl::numeric_limits<uint32_t>::max()),
+        "Clock monotonic ticks : RDTSC ticks ratio (%lu : %lu) "
+        "too large to store in a 32 bit ratio!!",
+        N, D);
+    rdtsc_ticks_to_clock_monotonic = {static_cast<uint32_t>(N), static_cast<uint32_t>(D)};
+
     tsc_ticks_per_ms = tsc_freq / 1000;
     printf("TSC frequency: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
   } else {
@@ -421,7 +417,14 @@ static void calibrate_tsc(bool has_pvclock) {
 
     ASSERT(best_time[0] < best_time[1]);
 
-    tsc_ticks_per_ms = (best_time[1] - best_time[0]) / (duration_ms[1] - duration_ms[0]);
+    uint64_t tsc_ticks_per_sec =
+        ((best_time[1] - best_time[0]) * 1000) / (duration_ms[1] - duration_ms[0]);
+
+    ZX_ASSERT_MSG(tsc_ticks_per_sec <= ktl::numeric_limits<uint32_t>::max(),
+                  "Estimated TSC (%lu) is to high!\n", tsc_ticks_per_sec);
+
+    tsc_ticks_per_ms = tsc_ticks_per_sec / 1000;
+    rdtsc_ticks_to_clock_monotonic = {1'000'000'000, static_cast<uint32_t>(tsc_ticks_per_sec)};
 
     printf("TSC calibrated: %" PRIu64 " ticks/ms\n", tsc_ticks_per_ms);
   }
@@ -487,6 +490,11 @@ static void pc_init_timer(uint level) {
     // Program PIT in the software strobe configuration, but do not load
     // the count.  This will pause the PIT.
     outp(I8253_CONTROL_REG, 0x38);
+
+    // Set up our ticks hook to point to rdtsc, and stash the initial
+    // transformation from ticks to clock monotonic.
+    current_ticks = current_ticks_rdtsc;
+    platform_set_ticks_to_time_ratio(rdtsc_ticks_to_clock_monotonic);
     wall_clock = CLOCK_TSC;
   } else {
     if (constant_tsc || invariant_tsc) {
@@ -496,6 +504,10 @@ static void pc_init_timer(uint level) {
     }
 
     if (has_hpet && (!force_wallclock || !strcmp(force_wallclock, "hpet"))) {
+      // Set up our ticks hook to point to HPET, and stash the initial
+      // transformation from ticks to clock monotonic.
+      current_ticks = current_ticks_hpet;
+      platform_set_ticks_to_time_ratio(hpet_ticks_to_clock_monotonic);
       wall_clock = CLOCK_HPET;
       hpet_set_value(0);
       hpet_enable();
@@ -504,6 +516,10 @@ static void pc_init_timer(uint level) {
         panic("Could not satisfy kernel.wallclock choice\n");
       }
 
+      // Set up our ticks hook to point to pit, and stash the initial
+      // transformation from ticks to clock monotonic.
+      current_ticks = current_ticks_pit;
+      platform_set_ticks_to_time_ratio({1'000'000, 1});
       wall_clock = CLOCK_PIT;
 
       set_pit_frequency(1000);  // ~1ms granularity

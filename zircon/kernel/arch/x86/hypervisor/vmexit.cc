@@ -595,7 +595,8 @@ zx_time_t lvt_deadline(LocalApicState* local_apic_state) {
   uint32_t shift = BITS_SHIFT(local_apic_state->lvt_divide_config, 1, 0) |
                    (BIT_SHIFT(local_apic_state->lvt_divide_config, 3) << 2);
   uint32_t divisor_shift = (shift + 1) & 7;
-  zx_duration_t duration = ticks_to_nanos(local_apic_state->lvt_initial_count << divisor_shift);
+  zx_duration_t duration = rdtsc_to_nanos().Scale(
+      static_cast<int64_t>(local_apic_state->lvt_initial_count << divisor_shift));
   return zx_time_add_duration(current_time(), duration);
 }
 
@@ -798,8 +799,9 @@ static zx_status_t handle_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs, Guest
       if ((local_apic_state->lvt_timer & LVT_TIMER_MODE_MASK) != LVT_TIMER_MODE_TSC_DEADLINE)
         return ZX_ERR_INVALID_ARGS;
       next_rip(exit_info, vmcs);
-      uint64_t tsc_deadline = (guest_state->rdx << 32) | (guest_state->rax & UINT32_MAX);
-      update_timer(local_apic_state, ticks_to_nanos(tsc_deadline));
+      int64_t tsc_deadline =
+          static_cast<int64_t>((guest_state->rdx << 32) | (guest_state->rax & UINT32_MAX));
+      update_timer(local_apic_state, rdtsc_to_nanos().Scale(tsc_deadline));
       return ZX_OK;
     }
     case kX2ApicMsrBase ... kX2ApicMsrMax:

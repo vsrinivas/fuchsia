@@ -24,6 +24,7 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/affine/ratio.h>
 #include <lib/counters.h>
 #include <list.h>
 #include <malloc.h>
@@ -57,12 +58,35 @@ KCOUNTER(timer_fired_counter, "timer.fired")
 // firing are not counted.
 KCOUNTER(timer_canceled_counter, "timer.canceled")
 
+// Default platform ticks hook.  This hook will be replaced with the appropriate
+// source of time for the platform, selected during platform initialization.
+zx_ticks_t (*current_ticks)(void) = [](void) -> zx_ticks_t { return 0; };
+
 namespace {
 
 spin_lock_t timer_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
 DECLARE_SINGLETON_LOCK_WRAPPER(TimerLock, timer_lock);
 
+affine::Ratio gTicksToTime;
+uint64_t gTicksPerSecond;
+
 }  // anonymous namespace
+
+void platform_set_ticks_to_time_ratio(const affine::Ratio& ticks_to_time) {
+  // ASSERT that we are not calling this function twice.  Once set, this ratio
+  // may not change.
+  DEBUG_ASSERT(gTicksPerSecond == 0);
+  DEBUG_ASSERT(ticks_to_time.numerator() != 0);
+  DEBUG_ASSERT(ticks_to_time.denominator() != 0);
+  gTicksToTime = ticks_to_time;
+  gTicksPerSecond = gTicksToTime.Inverse().Scale(ZX_SEC(1));
+}
+
+const affine::Ratio& platform_get_ticks_to_time_ratio(void) { return gTicksToTime; }
+
+zx_time_t current_time(void) { return gTicksToTime.Scale(current_ticks()); }
+
+zx_ticks_t ticks_per_second(void) { return gTicksPerSecond; }
 
 void timer_init(timer_t* timer) { *timer = (timer_t)TIMER_INITIAL_VALUE(*timer); }
 
