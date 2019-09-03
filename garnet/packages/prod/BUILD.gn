@@ -217,7 +217,6 @@ group("all") {
     "//garnet/packages/prod:mediaplayer",
     "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:memory_monitor",
-    "//garnet/packages/prod:net-cli",
     "//garnet/packages/prod:netcfg",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:netstack3",
@@ -310,13 +309,6 @@ group("realtek") {
     "//src/connectivity/wlan/drivers/realtek/rtl88xx",
     "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanphy",
-  ]
-}
-
-group("net-cli") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/net-cli",
   ]
 }
 

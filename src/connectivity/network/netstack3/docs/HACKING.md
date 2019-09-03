@@ -90,7 +90,7 @@ you'll need is included in your `fx set` line using the `--with-base` argument,
 which will have those packages be part of the base system.  Like this:
 
 `fx set core.x64
- --with-base //garnet/packages/prod:net-cli \
+ --with-base //src/connectivity/network/net-cli \
  --with-base //garnet/packages/prod:netstack3 \
  --with-base //garnet/packages/prod:netcfg \
  --with-base //garnet/packages/prod:chrealm`
