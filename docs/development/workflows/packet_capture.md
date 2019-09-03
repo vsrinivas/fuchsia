@@ -2,68 +2,121 @@
 
 Packet capture is a fundamental tool for developing, debugging, and testing networking.
 
-`netdump` is a Fuchsia's packet capture tool, and is bundled into the Fuchsia image as a base package. You can run this command on the Fuchsia target, or you may run this command via `fx shell` from the development host. See the corresponding topic below.
+`fx sniff` is a development host command that
+* Runs the packet capture on the Fuchsia **target** device.
+* Store the packets in PCAPNG format on the Fuchsia developmet **host**.
+* Stream out to a graphical user interface such as `Wireshark`.
 
-## Quick how-to
+`netdump` is a packet capture with rich capture filter support. `fx sniff` internally invokes `netdump` with predefined capture filters that are necessary for Fuchsia's developer workflow. In some use case scenarios where `fx sniff` is not viable (eg. when you have a serial console access but without dev host connected), use `netdump`.
 
-#### First, decide which network interface you want to capture
-A Fuchsia device has multiple network interfaces in general.
+## Prepare the image {#prepare-image}
+
+`netdump` is not part of the base package of the core product, so you need to prepare the image to use `netdump`.
 
 ```shell
-[target] $ net if list       # Take note of `filepath`
-[target] $ net if list wlan  # Show WLAN interfaces only
-[target] $ net if list eth   # Show Ethernet interfaces only
+$ fx set core.x64 --with //src/connectivity/network/netdump
+$ fx build
 ```
 
-#### Capture all and dump to stdout for 10 sec
-Specify the interface using `filepath` found in the above step. `-t {sec}` for duration. A more convenient way of specifying the network interface is planned to be done. (See crbug.com/fuchsia/4965).
+
+## How-to (On Host)
+
+### Capture packets over WLAN interface
 
 ```shell
-[target] $ netdump -t 10 /dev/class/ethernet/000
+[host] $ fx sniff wlan
 ```
 
-#### Dump to a file
-Use `-w {filename}`.
+By default, this command captures packets for 30 seconds. To use other than 30 sec, add `--time {sec}` or `-t {sec}` option.
+
+If you don't know the network interface name, run `fx sniff` without options. The error message shows you what interfaces are available. Alternatively, run:
 
 ```shell
-[target] $ netdump -t 10 -w /tmp/my_precious_packets.pcapng /dev/class/ethernet/000
+[host] $ fx shell net if list       # Take note of `filepath`
 ```
 
-#### Copy packet dump files from the target
+
+### Show the hexdump of packets over the ethernet interface
 
 ```shell
-[host] $ fx scp "[$(fx get-device-addr)]:/tmp/my_precious_packets.pcapng" .
+[host] $ fx sniff --format hex eth
 ```
 
-#### Give me a hexadump
-Use `--raw`
+### Capture WLAN packets and store them in a file
 
 ```shell
-[target] $ netdump -t 10 --raw /dev/class/ethernet/000
+[host] $ fx sniff --file my_packets wlan
 ```
 
-#### Filter out all IPv6 packets and TCP packets whose port is either 22 or IANA-assigned http (80)
-Use `-f` filter syntax.
+The capture packet is first stored in the target's `/tmp/` directory. After the capture is complete, the files are moved to `//out/my_packets.pcapng` automatically.
+
+### Stream out to Wireshark in realtime
+
+**_NOTE:_** Linux only.
 
 ```shell
-[target] $ netdump -t 10 -f "not ( ip6 or tcp port 22,http )" /dev/class/ethernet/000
+[host] $ fx sniff --format wireshark wlan
 ```
 
-#### Watch ARP, DHCP, DNS packets only
+## How-to (on target device)
+
+### Use netdump for debugging
+
+`fx sniff` requires working `ssh` connectivity from the host to the target, which means that networking is working to some degree. In some cases, networking might not work at all. If you have access to the serial console while networking, including `ssh`, is not working, you must run `netdump` directly on the target. `netdump` provides a richer set of features than `fx sniff`.
+
+#### Prerequisites
+
+Before you use `netdump`, you must get the file path for the network interface. This is an example for WLAN interface (assuming your target device has one and only one WLAN interface - which is a typical case).
 
 ```shell
-[target] $ netdump -t 10 -f "arp or port dns,dhcp" /dev/class/ethernet/000
+[target] $ iface_filepath=$(net if list wlan | grep filepath | while read c1 c2; do echo $c2; done)
 ```
 
-#### Can I run with `fx shell`?
-While a better support is coming soon, in the meantime, yes - use this recipe. Note the escaping sequence magics. Also make sure to filter out "port 22" to avoid an infinite loop.
+#### Capture packets over the WLAN interface
 
 ```shell
-[host] $ fx shell sh -c '"netdump -t 10 -f \"not ( port 22 )\" /dev/class/ethernet/000"'
+[target] $ netdump -t 30 "$iface_filepath"
+```
+
+#### Show the hexdump of packets over the ethernet interface
+
+```shell
+[target] $ netdump --raw "$iface_filepath"
+```
+
+#### Stream out the binary dump in PCAPNG format
+
+```shell
+[target] $ netdump --pcapdump ${iface_filepath}
+```
+
+#### Capture packets and store them in a file
+
+```shell
+[target] $ netdump -t 30 -w /tmp/my_packets.pcapng "$iface_filepath"
+```
+
+#### Copy the dump file to the host
+
+```shell
+[host] $ cd ${FUCHSIA_OUT_DIR} && fx scp "[$(fx get-device-addr)]:/tmp/my_precious_packets.pcapng" .
+```
+
+#### `netdump` help
+
+```shell
+[target] $ netdump --help
+```
+
+#### Only Watch ARP, DHCP, and DNS packets
+
+```shell
+[target] $ netdump -t 10 -f "arp or port dns,dhcp" "$iface_filepath"
 ```
 
 ## Full syntax for filters
 The packet filter language syntax is as follows. Keywords are in **bold**. Optional terms are in `[square brackets]`. Placeholders for literals are in `<angle brackets>`. Binary logical operators associate to the left. All keywords and port aliases should be in lower case.
+
 <pre><code>
        expr ::= <b>(</b> expr <b>)</b>
               | <b>not</b> expr  | expr <b>and</b> expr | expr <b>or</b> expr
@@ -153,3 +206,14 @@ You can run some sanity checks locally.
 [host] $ fx run-test netdump_unit_test          # unit test
 [host] $ fx run-test netdump_integration_tests  # integration test
 ```
+
+
+## Troubleshooting
+
+**_Q_** `fx sniff` commands gives me an error `env: python3: No such file or directory`
+
+**A** Please install Python 3 in your environment; Fuchsia is in the middle of migration from Python 2.7 to Python 3.
+
+**_Q_** I got an error `/boot/bin/sh: netdump not found`
+
+**A** `netdump` package is not prepared. Make sure to bundle `netdump` in the image. See [prepare the image](#prepare-image).
