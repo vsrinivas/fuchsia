@@ -61,7 +61,7 @@ TODO(ZX-3978): Currently, alignment flags greater than 4KB cannot be used when
 allocating a new VMAR within a compact VMAR.
 
 Using **ZX_VM_ALIGN** flags with **ZX_VM_SPECIFIC** will fail if the
-*partent_vmar* base address + *offset* are not aligned to the requested
+*parent_vmar* base address + *offset* are not aligned to the requested
 value.
 
 ## RIGHTS
