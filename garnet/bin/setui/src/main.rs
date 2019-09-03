@@ -8,6 +8,8 @@
 use {
     crate::accessibility::spawn_accessibility_controller,
     crate::accessibility::spawn_accessibility_fidl_handler,
+    crate::audio::spawn_audio_controller,
+    crate::audio::spawn_audio_fidl_handler,
     crate::default_store::DefaultStore,
     crate::display::spawn_display_controller,
     crate::display::spawn_display_fidl_handler,
@@ -34,7 +36,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
-    fuchsia_syslog::{self as syslog, fx_log_info, fx_log_err},
+    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info},
     futures::StreamExt,
     log::error,
     setui_handler::SetUIHandler,
@@ -43,6 +45,7 @@ use {
 };
 
 mod accessibility;
+mod audio;
 mod common;
 mod default_store;
 mod display;
@@ -161,6 +164,19 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
         });
     }
 
+    if components.contains(&SettingType::Audio) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(switchboard::base::SettingType::Audio, spawn_audio_controller())
+            .unwrap();
+
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: AudioRequestStream| {
+            spawn_audio_fidl_handler(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
     if components.contains(&SettingType::Display) {
         registry_handle
             .write()
@@ -181,16 +197,13 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::DoNotDisturb) {
-        let register_result = registry_handle
-            .write()
-            .unwrap()
-            .register(
-                switchboard::base::SettingType::DoNotDisturb,
-                spawn_do_not_disturb_controller(service_context_handle.clone()),
-            );
+        let register_result = registry_handle.write().unwrap().register(
+            switchboard::base::SettingType::DoNotDisturb,
+            spawn_do_not_disturb_controller(service_context_handle.clone()),
+        );
         match register_result {
             Ok(_) => {}
-            Err(e) => fx_log_err!("failed to register do_not_disturb in registry, {:#?}", e)
+            Err(e) => fx_log_err!("failed to register do_not_disturb in registry, {:#?}", e),
         };
 
         let switchboard_handle_clone = switchboard_handle.clone();
@@ -250,16 +263,22 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::registry::device_storage::testing::*;
-    use crate::registry::device_storage::DeviceStorageFactory;
-    use crate::switchboard::base::{AccessibilityInfo,ConfigurationInterfaceFlags, SetupInfo};
-    use failure::format_err;
-    use fidl::endpoints::{ServerEnd, ServiceMarker};
-    use fidl_fuchsia_accessibility::*;
-    use fidl_fuchsia_settings::ColorBlindnessType;
-    use fuchsia_zircon as zx;
-    use futures::prelude::*;
+    use {
+        super::*,
+        crate::audio::create_default_audio_stream,
+        crate::fidl_clone::FIDLClone,
+        crate::registry::device_storage::testing::*,
+        crate::registry::device_storage::DeviceStorageFactory,
+        crate::switchboard::base::{
+            AccessibilityInfo, AudioStreamType, ConfigurationInterfaceFlags, SetupInfo,
+        },
+        failure::format_err,
+        fidl::endpoints::{ServerEnd, ServiceMarker},
+        fidl_fuchsia_accessibility::*,
+        fidl_fuchsia_settings::ColorBlindnessType,
+        fuchsia_zircon as zx,
+        futures::prelude::*,
+    };
 
     const ENV_NAME: &str = "settings_service_test_environment";
 
@@ -452,6 +471,55 @@ mod tests {
         assert_eq!(settings.color_correction, Some(CHANGED_COLOR_BLINDNESS_TYPE));
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_audio() {
+        let mut fs = ServiceFs::new();
+
+        let default_media_stream =
+            AudioStreamSettings::from(create_default_audio_stream(AudioStreamType::Media));
+
+        let changed_media_stream = AudioStreamSettings {
+            stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+            source: Some(AudioStreamSettingSource::User),
+            user_volume: Some(Volume { level: Some(0.7), muted: Some(true) }),
+        };
+
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::Audio].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(None))),
+            Box::new(InMemoryStorageFactory::create()),
+        );
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
+
+        let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+        let settings =
+            audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+
+        let streams = settings.streams.expect("audio settings contain streams");
+        streams
+            .into_iter()
+            .find(|x| *x == default_media_stream)
+            .expect("contains default media stream");
+
+        let mut audio_settings = AudioSettings::empty();
+        audio_settings.streams = Some(vec![changed_media_stream.clone()]);
+
+        audio_proxy.set(audio_settings).await.expect("set completed").expect("set successful");
+
+        let settings =
+            audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+        settings
+            .streams
+            .expect("audio settings contain streams")
+            .into_iter()
+            .find(|x| *x == changed_media_stream)
+            .expect("contains changed media stream");
+    }
+
     /// Tests that the FIDL calls result in appropriate commands sent to the switchboard
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_display() {
@@ -610,8 +678,8 @@ mod tests {
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
         fasync::spawn(fs.collect());
 
-        let dnd_proxy = env.connect_to_service::<DoNotDisturbMarker>()
-            .expect("connected to service");
+        let dnd_proxy =
+            env.connect_to_service::<DoNotDisturbMarker>().expect("connected to service");
 
         let mut dnd_settings = DoNotDisturbSettings::empty();
         dnd_settings.user_initiated_do_not_disturb = Some(true);

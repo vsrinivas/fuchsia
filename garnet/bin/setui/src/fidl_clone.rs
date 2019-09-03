@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_setui::*;
+use {fidl_fuchsia_settings::*, fidl_fuchsia_setui::*};
 
 /// A placeholder for real cloning support in FIDL generated Rust code.
 /// TODO(QA-715): Remove
@@ -62,6 +62,19 @@ impl FIDLClone for TimeZone {
             id: self.id.clone(),
             name: self.name.clone(),
             region: self.region.clone(),
+        };
+    }
+}
+
+impl FIDLClone for AudioStreamSettings {
+    fn clone(&self) -> Self {
+        return AudioStreamSettings {
+            stream: self.stream,
+            source: self.source,
+            user_volume: Some(Volume {
+                level: self.user_volume.as_ref().unwrap().level,
+                muted: self.user_volume.as_ref().unwrap().muted,
+            }),
         };
     }
 }

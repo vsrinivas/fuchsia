@@ -14,10 +14,12 @@ pub type SettingRequestResponder = Sender<SettingResponseResult>;
 
 /// The setting types supported by the messaging system. This is used as a key
 /// for listening to change notifications and sending requests.
+/// The types are arranged alphabetically.
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
 pub enum SettingType {
     Unknown,
     Accessibility,
+    Audio,
     Display,
     DoNotDisturb,
     Intl,
@@ -30,6 +32,7 @@ pub enum SettingType {
 pub fn get_all_setting_types() -> HashSet<SettingType> {
     let mut set = HashSet::new();
     set.insert(SettingType::Accessibility);
+    set.insert(SettingType::Audio);
     set.insert(SettingType::Display);
     set.insert(SettingType::DoNotDisturb);
     set.insert(SettingType::Intl);
@@ -41,6 +44,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
 
 /// The possible requests that can be made on a setting. The sink will expect a
 /// subset of the values defined below based on the associated type.
+/// The types are arranged alphabetically.
 #[derive(PartialEq, Debug, Clone)]
 pub enum SettingRequest {
     Get,
@@ -48,6 +52,9 @@ pub enum SettingRequest {
     // Accessibility requests.
     SetAudioDescription(bool),
     SetColorCorrection(ColorBlindnessType),
+
+    // Audio requests.
+    SetVolume(Vec<AudioStream>),
 
     // Display requests.
     SetBrightness(f32),
@@ -73,6 +80,36 @@ pub struct AccessibilityInfo {
     pub color_correction: ColorBlindnessType,
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum AudioSettingSource {
+    Default,
+    User,
+    System,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Hash, Eq)]
+pub enum AudioStreamType {
+    Background,
+    Media,
+    Interruption,
+    SystemAgent,
+    Communication,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct AudioStream {
+    pub stream_type: AudioStreamType,
+    pub source: AudioSettingSource,
+    pub user_volume_level: f32,
+    pub user_volume_muted: bool,
+}
+
+// TODO(go/fxb/35873): Add AudioInput support.
+#[derive(PartialEq, Debug, Clone)]
+pub struct AudioInfo {
+    pub streams: Vec<AudioStream>,
+}
+
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ColorBlindnessType {
     /// No color blindness.
@@ -93,9 +130,15 @@ impl From<fidl_fuchsia_settings::ColorBlindnessType> for ColorBlindnessType {
     fn from(color_blindness_type: fidl_fuchsia_settings::ColorBlindnessType) -> Self {
         match color_blindness_type {
             fidl_fuchsia_settings::ColorBlindnessType::None => ColorBlindnessType::None,
-            fidl_fuchsia_settings::ColorBlindnessType::Protanomaly => ColorBlindnessType::Protanomaly,
-            fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly => ColorBlindnessType::Deuteranomaly,
-            fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly => ColorBlindnessType::Tritanomaly,
+            fidl_fuchsia_settings::ColorBlindnessType::Protanomaly => {
+                ColorBlindnessType::Protanomaly
+            }
+            fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly => {
+                ColorBlindnessType::Deuteranomaly
+            }
+            fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly => {
+                ColorBlindnessType::Tritanomaly
+            }
         }
     }
 }
@@ -104,9 +147,15 @@ impl From<ColorBlindnessType> for fidl_fuchsia_settings::ColorBlindnessType {
     fn from(color_blindness_type: ColorBlindnessType) -> Self {
         match color_blindness_type {
             ColorBlindnessType::None => fidl_fuchsia_settings::ColorBlindnessType::None,
-            ColorBlindnessType::Protanomaly => fidl_fuchsia_settings::ColorBlindnessType::Protanomaly,
-            ColorBlindnessType::Deuteranomaly => fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly,
-            ColorBlindnessType::Tritanomaly => fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly,
+            ColorBlindnessType::Protanomaly => {
+                fidl_fuchsia_settings::ColorBlindnessType::Protanomaly
+            }
+            ColorBlindnessType::Deuteranomaly => {
+                fidl_fuchsia_settings::ColorBlindnessType::Deuteranomaly
+            }
+            ColorBlindnessType::Tritanomaly => {
+                fidl_fuchsia_settings::ColorBlindnessType::Tritanomaly
+            }
         }
     }
 }
@@ -175,6 +224,7 @@ pub struct SetupInfo {
 pub enum SettingResponse {
     Unknown,
     Accessibility(AccessibilityInfo),
+    Audio(AudioInfo),
     /// Response to a request to get current brightness state.AccessibilityEncoder
     Brightness(DisplayInfo),
     DoNotDisturb(DoNotDisturbInfo),
