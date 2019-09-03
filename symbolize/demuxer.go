@@ -8,7 +8,7 @@ import (
 	"context"
 	"fmt"
 
-	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/lib/logger"
 )
 
 // TODO (jakehehrlich): Make as much of this private as possible.

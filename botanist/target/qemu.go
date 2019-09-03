@@ -15,7 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"go.fuchsia.dev/tools/build"
+	"go.fuchsia.dev/tools/build/api"
 	"go.fuchsia.dev/tools/qemu"
 )
 

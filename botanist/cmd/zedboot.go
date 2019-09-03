@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"go.fuchsia.dev/tools/botanist/target"
-	"go.fuchsia.dev/tools/build"
-	"go.fuchsia.dev/tools/command"
-	"go.fuchsia.dev/tools/logger"
-	"go.fuchsia.dev/tools/netutil"
-	"go.fuchsia.dev/tools/runtests"
+	"go.fuchsia.dev/tools/build/api"
+	"go.fuchsia.dev/tools/lib/command"
+	"go.fuchsia.dev/tools/lib/logger"
+	"go.fuchsia.dev/tools/net/netutil"
+	"go.fuchsia.dev/tools/testing/runtests"
 
 	"github.com/google/subcommands"
 )

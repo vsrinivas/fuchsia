@@ -16,11 +16,11 @@ import (
 
 	"go.fuchsia.dev/tools/botanist"
 	"go.fuchsia.dev/tools/botanist/power"
-	"go.fuchsia.dev/tools/build"
-	"go.fuchsia.dev/tools/logger"
-	"go.fuchsia.dev/tools/netboot"
-	"go.fuchsia.dev/tools/netutil"
-	"go.fuchsia.dev/tools/serial"
+	"go.fuchsia.dev/tools/build/api"
+	"go.fuchsia.dev/tools/lib/logger"
+	"go.fuchsia.dev/tools/net/netboot"
+	"go.fuchsia.dev/tools/net/netutil"
+	"go.fuchsia.dev/tools/net/serial"
 
 	"golang.org/x/crypto/ssh"
 )

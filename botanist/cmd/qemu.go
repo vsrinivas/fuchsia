@@ -11,8 +11,8 @@ import (
 
 	"github.com/google/subcommands"
 	"go.fuchsia.dev/tools/botanist/target"
-	"go.fuchsia.dev/tools/build"
-	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/build/api"
+	"go.fuchsia.dev/tools/lib/logger"
 )
 
 // QEMUBinPrefix is the prefix of the QEMU binary name, which is of the form

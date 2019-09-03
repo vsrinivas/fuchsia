@@ -18,11 +18,11 @@ import (
 
 	"go.fuchsia.dev/tools/botanist"
 	"go.fuchsia.dev/tools/botanist/target"
-	"go.fuchsia.dev/tools/build"
-	"go.fuchsia.dev/tools/command"
-	"go.fuchsia.dev/tools/logger"
-	"go.fuchsia.dev/tools/runner"
-	"go.fuchsia.dev/tools/sshutil"
+	"go.fuchsia.dev/tools/build/api"
+	"go.fuchsia.dev/tools/lib/command"
+	"go.fuchsia.dev/tools/lib/logger"
+	"go.fuchsia.dev/tools/lib/runner"
+	"go.fuchsia.dev/tools/net/sshutil"
 
 	"github.com/google/subcommands"
 )

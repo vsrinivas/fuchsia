@@ -10,8 +10,8 @@ import (
 
 	"go.fuchsia.dev/tools/botanist/power/amt"
 	"go.fuchsia.dev/tools/botanist/power/wol"
-	"go.fuchsia.dev/tools/logger"
-	"go.fuchsia.dev/tools/sshutil"
+	"go.fuchsia.dev/tools/lib/logger"
+	"go.fuchsia.dev/tools/net/sshutil"
 
 	"golang.org/x/crypto/ssh"
 )

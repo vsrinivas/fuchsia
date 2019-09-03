@@ -12,8 +12,8 @@ import (
 	"io"
 	"os"
 
-	"go.fuchsia.dev/tools/color"
-	"go.fuchsia.dev/tools/logger"
+	"go.fuchsia.dev/tools/lib/color"
+	"go.fuchsia.dev/tools/lib/logger"
 	"go.fuchsia.dev/tools/symbolize"
 )
 
