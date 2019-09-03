@@ -434,4 +434,45 @@ mod tests {
 
         exec.run_singlethreaded(futures::future::join(server, client));
     }
+
+    #[test]
+    fn send_recv_large() {
+        let mut exec = Executor::new().expect("could not create executor");
+        let addr = "127.0.0.1:0".parse().unwrap();
+
+        const BUF_SIZE: usize = 10 * 1024;
+        const WRITES: usize = 1024;
+        const LENGTH: usize = WRITES * BUF_SIZE;
+
+        let listener = TcpListener::bind(&addr).expect("could not create listener");
+        let addr = listener.local_addr().expect("query local_addr");
+        let mut listener = listener.accept_stream();
+
+        let server = async move {
+            let (mut socket, _clientaddr) =
+                listener.next().await.expect("stream to not be done").expect("client to connect");
+            drop(listener);
+
+            let buf = [0u8; BUF_SIZE];
+            for _ in 0usize..WRITES {
+                socket.write_all(&buf[..]).await.expect("server write to succeed");
+            }
+        };
+
+        let client = async move {
+            let connector = TcpStream::connect(addr).expect("could not create client");
+            let mut socket = connector.await.expect("client to connect to server");
+
+            let zeroes = [0u8; BUF_SIZE];
+            let mut read = 0;
+            while read < LENGTH {
+                let mut buf = [1u8; BUF_SIZE];
+                let n = socket.read(&mut buf[..]).await.expect("client read to succeed");
+                assert_eq!(&buf[0..n], &zeroes[0..n]);
+                read += n;
+            }
+        };
+
+        exec.run_singlethreaded(futures::future::join(server, client));
+    }
 }

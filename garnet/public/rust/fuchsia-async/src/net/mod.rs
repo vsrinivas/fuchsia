@@ -128,11 +128,8 @@ where
                 write_task: AtomicWaker::new(),
             }));
 
-        let evented_fd = EventedFd {
-            inner,
-            fdio,
-            signal_receiver: mem::ManuallyDrop::new(signal_receiver),
-        };
+        let evented_fd =
+            EventedFd { inner, fdio, signal_receiver: mem::ManuallyDrop::new(signal_receiver) };
 
         // Make sure a packet is delivered if an error or closure occurs.
         evented_fd.schedule_packet(ERROR | HUP);
@@ -234,10 +231,7 @@ where
 
     /// Clears all incoming signals.
     pub fn clear(&self) {
-        self.signal_receiver
-            .receiver()
-            .signals
-            .store(0, Ordering::SeqCst);
+        self.signal_receiver.receiver().signals.store(0, Ordering::SeqCst);
     }
 }
 
@@ -283,7 +277,7 @@ impl<T: AsRawFd + Write> AsyncWrite for EventedFd<T> {
         let res = (&mut *self).as_mut().write(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
-                self.need_read(cx);
+                self.need_write(cx);
                 return Poll::Pending;
             }
         }
@@ -343,7 +337,7 @@ where
         let res = (&*self).as_ref().write(buf);
         if let Err(e) = &res {
             if e.kind() == io::ErrorKind::WouldBlock {
-                self.need_read(cx);
+                self.need_write(cx);
                 return Poll::Pending;
             }
         }
@@ -373,7 +367,9 @@ mod syscall {
         pub fn fdio_unsafe_release(io: *const fdio_t);
 
         pub fn fdio_unsafe_wait_begin(
-            io: *const fdio_t, events: u32, handle_out: &mut zx_handle_t,
+            io: *const fdio_t,
+            events: u32,
+            handle_out: &mut zx_handle_t,
             signals_out: &mut zx_signals_t,
         );
 
