@@ -78,6 +78,7 @@ class ArmIspDevice : public IspDeviceType,
 
   ~ArmIspDevice();
 
+  static zx_status_t Init(void** ctx_out);
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Methods required by the ddk.

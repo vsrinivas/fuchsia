@@ -4,6 +4,7 @@
 
 #include "arm-isp.h"
 
+#include <lib/syslog/global.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/types.h>
@@ -456,6 +457,16 @@ zx_status_t ArmIspDevice::SetPort(uint8_t kMode) {
 }
 
 // static
+zx_status_t ArmIspDevice::Init(void** ctx_out) {
+  ZX_ASSERT(ctx_out);
+  *ctx_out = nullptr;
+  fx_logger_config_t config{};
+  config.min_severity = FX_LOG_INFO;
+  config.console_fd = STDERR_FILENO;
+  return fx_log_init_with_config(&config);  // Used by submodules
+}
+
+// static
 zx_status_t ArmIspDevice::Create(void* ctx, zx_device_t* parent) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
@@ -794,6 +805,7 @@ void ArmIspDevice::ShutDown() {}
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
+  ops.init = ArmIspDevice::Init;
   ops.bind = ArmIspDevice::Create;
   return ops;
 }();
