@@ -4,8 +4,8 @@
 #ifndef SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_
 #define SRC_DEVELOPER_EXCEPTION_BROKER_EXCEPTION_BROKER_H_
 
+#include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/exception/cpp/fidl.h>
-#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/service_directory.h>
 
@@ -28,7 +28,7 @@ class ExceptionBroker : public Handler {
 
   fxl::WeakPtr<ExceptionBroker> GetWeakPtr();
 
-  const std::map<uint64_t, fuchsia::feedback::CrashReporterPtr>& connections() const {
+  const std::map<uint64_t, fuchsia::crash::AnalyzerPtr>& connections() const {
     return connections_;
   }
 
@@ -40,7 +40,7 @@ class ExceptionBroker : public Handler {
   // As we create a new connection each time an exception is passed on to us, we need to
   // keep track of all the current outstanding connections.
   // These will be deleted as soon as the call returns or fails.
-  std::map<uint64_t, fuchsia::feedback::CrashReporterPtr> connections_;
+  std::map<uint64_t, fuchsia::crash::AnalyzerPtr> connections_;
   uint64_t next_connection_id_ = 1;
 
   fxl::WeakPtrFactory<ExceptionBroker> weak_factory_;

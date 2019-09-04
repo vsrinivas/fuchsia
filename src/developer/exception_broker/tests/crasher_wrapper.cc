@@ -71,16 +71,5 @@ bool SpawnCrasher(ProcessException* pe) {
   return true;
 }
 
-bool MarkExceptionAsHandled(ProcessException* pe) {
-  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
-  if (zx_status_t res = pe->exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
-      res != ZX_OK) {
-    FX_PLOGS(ERROR, res) << "Could not set handled state to exception.";
-    return false;
-  }
-
-  return true;
-}
-
 }  // namespace exception
 }  // namespace fuchsia

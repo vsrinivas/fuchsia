@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx",
-                "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/crashpad_agent#meta/crashpad_agent.cmx"
+                "fuchsia.crash.Analyzer": "fuchsia-pkg://fuchsia.com/crashpad_agent#meta/crashpad_agent.cmx",
+                "fuchsia.exception.Handler": "fuchsia-pkg://fuchsia.com/exception_broker#meta/exception_broker.cmx"
             }
         }
     },

@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.feedback.CrashReporter",
+            "fuchsia.crash.Analyzer",
             "fuchsia.logger.LogSink"
         ]
     }
