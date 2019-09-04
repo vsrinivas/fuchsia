@@ -592,6 +592,7 @@ TEST_F(AsyncEndToEndTest, Client_Exec_ImmediateFailure) {
 
   // Create a service that can accept incoming Exec requests.
   zx_status_t operation_status = ZX_OK;
+  zx_status_t termination_status = ZX_OK;
   grpc::ServerContext srv_ctx;
   grpc::ServerAsyncReaderWriter<ExecResponse, ExecRequest> rw(&srv_ctx);
 
@@ -600,6 +601,9 @@ TEST_F(AsyncEndToEndTest, Client_Exec_ImmediateFailure) {
   fuchsia::netemul::guest::CommandListenerPtr listener;
   listener.events().OnStarted = [&operation_status](zx_status_t status) {
     operation_status = status;
+  };
+  listener.events().OnTerminated = [&termination_status](zx_status_t status, int32_t exit_code) {
+    termination_status = status;
   };
   std::unique_ptr<ListenerInterface> listener_interface =
       std::make_unique<ListenerInterface>(listener.NewRequest());
@@ -621,6 +625,7 @@ TEST_F(AsyncEndToEndTest, Client_Exec_ImmediateFailure) {
 
   // The client sets the operation status in the callback.
   WaitForCallback(&operation_status, ZX_ERR_INTERNAL);
+  WaitForCallback(&termination_status, ZX_ERR_PEER_CLOSED);
 }
 
 TEST_F(AsyncEndToEndTest, Client_ExecWrite_Test) {
