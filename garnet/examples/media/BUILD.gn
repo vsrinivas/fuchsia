@@ -167,12 +167,10 @@ template("vp9_file_decoder_conformance_test") {
 
     tests = [
       {
-        # Soon, this should pass when run on VIM2 or astro, and fail otherwise.
-        #
-        # TODO(dustingreen): This package is not yet included in tests, but
-        # should be soon.
         name = "vp9_decoder_conformance_test"
 
+        # This should pass when run on VIM2 or astro, and will fail in any env
+        # that lacks VP9 decode.
         environments = [
           vim2_env,
           astro_env,

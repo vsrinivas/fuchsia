@@ -93,6 +93,10 @@ test("use_h264_decoder_test") {
   deps = [
     ":use_media_decoder_source_set",
   ]
+
+  # In environments without an h264 HW decoder, this test will fall back to a SW
+  # decoder.
+  environments = [ astro_env ] + basic_envs
 }
 
 test("use_vp9_decoder_test") {
@@ -107,6 +111,10 @@ test("use_vp9_decoder_test") {
   deps = [
     ":use_media_decoder_source_set",
   ]
+
+  # In contrast to use_h264_decoder_test, there is no SW fallback for VP9 at the
+  # moment, so for now only list envs with HW decode.
+  environments = [ astro_env ]
 }
 
 test("vp9_decoder_conformance_test") {
@@ -121,4 +129,8 @@ test("vp9_decoder_conformance_test") {
   deps = [
     ":use_media_decoder_source_set",
   ]
+
+  # No VP9 SW fallback for now, so the test can only pass running on envs with
+  # HW decode.
+  environments = [ astro_env ]
 }
