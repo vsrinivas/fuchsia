@@ -15,18 +15,18 @@ group("test") {
 test("blobfs-unit") {
   test_group = "fs"
   sources = [
-    "allocated-extent-iterator-test.cc",
-    "allocator-test.cc",
-    "blob-cache-test.cc",
-    "compressor-test.cc",
-    "create-tests.cc",
-    "extent-reserver-test.cc",
-    "format-test.cc",
-    "get-allocated-regions-test.cc",
-    "node-populator-test.cc",
-    "node-reserver-test.cc",
-    "utils.cc",
-    "vector-extent-iterator-test.cc",
+    "unit/allocated-extent-iterator-test.cc",
+    "unit/allocator-test.cc",
+    "unit/blob-cache-test.cc",
+    "unit/compressor-test.cc",
+    "unit/create-tests.cc",
+    "unit/extent-reserver-test.cc",
+    "unit/format-test.cc",
+    "unit/get-allocated-regions-test.cc",
+    "unit/node-populator-test.cc",
+    "unit/node-reserver-test.cc",
+    "unit/utils.cc",
+    "unit/vector-extent-iterator-test.cc",
   ]
   deps = [
     "$zx/system/ulib/async-loop",
@@ -47,7 +47,7 @@ test("blobfs-unit") {
 
 test("blobfs-host") {
   sources = [
-    "host-test.cc",
+    "host/host-test.cc",
   ]
   deps = [
     "$zx/system/ulib/blobfs",
