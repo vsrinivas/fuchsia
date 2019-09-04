@@ -133,7 +133,6 @@ static void write_reg_hour(uint8_t hour, bool reg_is_binary, bool reg_is_24_hour
 
 static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
   uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
-  ;
   int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
   // Please do not use get_root_resource() in new code. See ZX-1467.
   return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);

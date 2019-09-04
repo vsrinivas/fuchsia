@@ -41,7 +41,6 @@ static ACPI_STATUS acpi_print_resources(ACPI_HANDLE object, unsigned int level,
   } else {
     printf("Invalid resource type to print\n");
     return AE_BAD_PARAMETER;
-    ;
   }
 
   if (status != AE_OK) {

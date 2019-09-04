@@ -61,7 +61,6 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
   usb_device_descriptor_t device_desc;
   char manufacturer[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
   char product[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
-  ;
   ssize_t ret = 0;
 
   ret = fuchsia_hardware_usb_device_DeviceGetDeviceDescriptor(svc, (uint8_t*)&device_desc);
@@ -88,7 +87,6 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
 
   if (verbose) {
     char string_buf[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
-    ;
 
     // print device descriptor
     printf("Device Descriptor:\n");

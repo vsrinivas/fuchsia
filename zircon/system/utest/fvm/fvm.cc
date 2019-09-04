@@ -3243,7 +3243,6 @@ bool TestRandomOpMultithreaded() {
     EXPECT_TRUE(CheckWriteReadBlock(s.thread_states[i].vp_fd.get(), 0, kBlocksPerSlice));
 
     fzl::FdioCaller partition_caller(std::move(s.thread_states[i].vp_fd));
-    ;
     zx_status_t status;
     ASSERT_EQ(
         fuchsia_hardware_block_volume_VolumeDestroy(partition_caller.borrow_channel(), &status),

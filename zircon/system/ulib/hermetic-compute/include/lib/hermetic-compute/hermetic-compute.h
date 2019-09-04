@@ -384,7 +384,6 @@ class HermeticExportAgent : public HermeticExportAgentBase<T> {
     static_assert(std::is_same_v<std::decay_t<ArgType>, type>);
     if constexpr (kIsHandle) {
       return std::make_tuple(zx::handle{std::move(x)});
-      ;
     } else if constexpr (std::is_integral_v<T> && sizeof(T) <= sizeof(uintptr_t)) {
       // Small integer types can just be coerced to uintptr_t.
       return std::make_tuple(static_cast<uintptr_t>(x));

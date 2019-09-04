@@ -137,7 +137,6 @@ static int hikey960_start_thread(void* arg) {
 
   if ((status = hikey960_add_devices(hikey)) != ZX_OK) {
     zxlogf(ERROR, "hikey960_bind: hikey960_add_devices failed!\n");
-    ;
   }
 
   return ZX_OK;

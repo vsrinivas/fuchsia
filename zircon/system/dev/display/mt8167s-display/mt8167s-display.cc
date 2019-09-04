@@ -247,7 +247,6 @@ uint32_t Mt8167sDisplay::DisplayControllerImplCheckConfiguration(
           // Ony support ALPHA_HW_MULTIPLY
           if (layer.alpha_mode == ALPHA_PREMULTIPLIED) {
             layer_cfg_results[0][j] |= CLIENT_ALPHA;
-            ;
           }
           break;
         }

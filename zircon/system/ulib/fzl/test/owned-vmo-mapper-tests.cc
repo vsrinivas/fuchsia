@@ -179,7 +179,6 @@ bool MoveTest() {
   }
 
   fzl::OwnedVmoMapper mapper2(std::move(mapper1));
-  ;
   ASSERT_EQ(mapper1.vmo().get(), ZX_HANDLE_INVALID);
   ASSERT_NULL(mapper1.start());
   ASSERT_EQ(mapper1.size(), 0);

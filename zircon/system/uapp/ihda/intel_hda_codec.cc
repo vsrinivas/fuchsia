@@ -390,7 +390,6 @@ static zx_status_t ParseVendorID(CodecState& codec, const CodecResponse& resp) {
 
   codec.vendor_id_ = static_cast<uint16_t>((resp.data >> 16) & 0xFFFF);
   codec.device_id_ = static_cast<uint16_t>(resp.data & 0xFFFF);
-  ;
 
   return (codec.vendor_id_ != 0) ? ZX_OK : ZX_ERR_INTERNAL;
 }

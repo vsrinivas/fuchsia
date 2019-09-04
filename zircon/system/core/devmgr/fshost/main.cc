@@ -104,7 +104,6 @@ int RamctlWatcher(void* arg) {
 void setup_loader_service(zx::channel devmgr_loader) {
   loader_service_t* svc;
   zx_status_t status = loader_service_create_fs(nullptr, &svc);
-  ;
   if (status != ZX_OK) {
     fprintf(stderr, "fshost: failed to create loader service %d\n", status);
   }

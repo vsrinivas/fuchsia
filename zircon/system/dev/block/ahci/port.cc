@@ -462,7 +462,6 @@ zx_status_t Port::TxnBeginLocked(uint32_t slot, sata_txn_t* txn) {
     } else if (length > AHCI_PRD_MAX_SIZE) {
       zxlogf(ERROR, "ahci.%u: chunk size > %zu is unsupported\n", num_, length);
       return ZX_ERR_NOT_SUPPORTED;
-      ;
     } else if (cl->prdtl == AHCI_MAX_PRDS) {
       zxlogf(ERROR, "ahci.%u: txn with more than %d chunks is unsupported\n", num_, cl->prdtl);
       return ZX_ERR_NOT_SUPPORTED;

@@ -36,7 +36,6 @@ bool DefaultDispatcherIsSetAndUnset() {
   EXPECT_NULL(async_get_default_dispatcher());
   {
     async::TestLoop loop;
-    ;
     EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher());
   }
   EXPECT_NULL(async_get_default_dispatcher());

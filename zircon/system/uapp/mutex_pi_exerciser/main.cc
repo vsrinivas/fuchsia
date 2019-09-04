@@ -202,7 +202,6 @@ zx_status_t ExerciseMutexChain(ThreadCollection* _threads) {
   auto& threads = *_threads;
 
   zx_status_t res = ZX_ERR_INTERNAL;
-  ;
   struct chain_node_t {
     Event exit_evt;
     Event ready_evt;
@@ -264,7 +263,6 @@ zx_status_t ExerciseMutexMultiWait(ThreadCollection* _threads) {
   auto& threads = *_threads;
 
   zx_status_t res = ZX_ERR_INTERNAL;
-  ;
   MutexType the_mutex;
   Event exit_evt;
   Event ready_evt;
