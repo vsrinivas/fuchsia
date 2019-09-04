@@ -100,6 +100,7 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 ## Going further
 
 - [Editor setup](editors.md)
+- [Measuring binary bloat](bloat.md)
 - [Managing third-party dependencies](third_party.md)
 - [Unsafe code](unsafe.md)
 - [Unstable features](unstable.md)

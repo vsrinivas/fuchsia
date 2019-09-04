@@ -12,6 +12,8 @@ toc:
   path: /docs/development/languages/rust/syslog.md
 - title: "Testing Rust Code"
   path: /docs/development/languages/rust/testing.md
+- title: "Measuring Rust Binary Bloat"
+  path: /docs/development/languages/rust/bloat.md
 - title: "Third-party Rust crates"
   path: /docs/development/languages/rust/third_party.md
 - title: "Unsafe code in Rust"
