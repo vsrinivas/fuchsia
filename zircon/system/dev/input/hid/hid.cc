@@ -44,20 +44,17 @@ static constexpr uint64_t hid_report_trace_id(uint32_t instance_id, uint64_t rep
   return (report_id << 32) | instance_id;
 }
 
-// Convenience functions for calling hidbus protocol functions
-
-input_report_size_t HidDevice::GetReportSizeById(input_report_id_t id,
-                                                 fuchsia_hardware_input_ReportType type) {
+input_report_size_t HidDevice::GetReportSizeById(input_report_id_t id, ReportType type) {
   for (size_t i = 0; i < num_reports_; i++) {
     // If we have more than one report, get the report with the right id. If we only have
     // one report, then always match that report.
     if ((sizes_[i].id == id) || (num_reports_ == 1)) {
       switch (type) {
-        case fuchsia_hardware_input_ReportType_INPUT:
+        case ReportType::INPUT:
           return BitsToBytes(sizes_[i].in_size);
-        case fuchsia_hardware_input_ReportType_OUTPUT:
+        case ReportType::OUTPUT:
           return BitsToBytes(sizes_[i].out_size);
-        case fuchsia_hardware_input_ReportType_FEATURE:
+        case ReportType::FEATURE:
           return BitsToBytes(sizes_[i].feat_size);
       }
     }
@@ -66,22 +63,26 @@ input_report_size_t HidDevice::GetReportSizeById(input_report_id_t id,
   return 0;
 }
 
-fuchsia_hardware_input_BootProtocol HidDevice::GetBootProtocol() {
+BootProtocol HidDevice::GetBootProtocol() {
   if (info_.device_class == HID_DEVICE_CLASS_KBD ||
       info_.device_class == HID_DEVICE_CLASS_KBD_POINTER) {
-    return fuchsia_hardware_input_BootProtocol_KBD;
+    return BootProtocol::KBD;
   } else if (info_.device_class == HID_DEVICE_CLASS_POINTER) {
-    return fuchsia_hardware_input_BootProtocol_MOUSE;
+    return BootProtocol::MOUSE;
   }
-  return fuchsia_hardware_input_BootProtocol_NONE;
+  return BootProtocol::NONE;
 }
 
 void HidDevice::RemoveHidInstanceFromList(HidInstance* instance) {
   fbl::AutoLock lock(&instance_lock_);
 
   // TODO(dgilhooley): refcount the base device and call stop if no instances are open
-  instance_list_.erase_if(
-      [instance_ = instance](const HidInstance iter) { return iter.zxdev == instance_->zxdev; });
+  for (auto& iter : instance_list_) {
+    if (iter.zxdev() == instance->zxdev()) {
+      instance_list_.erase(iter);
+      break;
+    }
+  }
 }
 
 void HidDevice::GetReportIds(uint8_t* report_ids) {
@@ -99,49 +100,47 @@ input_report_size_t HidDevice::GetMaxInputReportSize() {
   return BitsToBytes(size);
 }
 
-zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
+zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
   TRACE_DURATION("input", "HID Read Instance");
   zx_status_t status = ZX_OK;
 
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-
-  if (hid->flags & kHidFlagsDead) {
+  if (flags_ & kHidFlagsDead) {
     return ZX_ERR_PEER_CLOSED;
   }
 
   size_t left;
-  mtx_lock(&hid->fifo.lock);
+  mtx_lock(&fifo_.lock);
   size_t xfer;
   uint8_t rpt_id;
-  ssize_t r = zx_hid_fifo_peek(&hid->fifo, &rpt_id);
+  ssize_t r = zx_hid_fifo_peek(&fifo_, &rpt_id);
   if (r < 1) {
     // fifo is empty
-    mtx_unlock(&hid->fifo.lock);
+    mtx_unlock(&fifo_.lock);
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  xfer = hid->base->GetReportSizeById(rpt_id, fuchsia_hardware_input_ReportType_INPUT);
+  xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
   if (xfer == 0) {
     zxlogf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
-    mtx_unlock(&hid->fifo.lock);
+    mtx_unlock(&fifo_.lock);
     return ZX_ERR_BAD_STATE;
   }
 
   if (xfer > count) {
     zxlogf(SPEW, "next report: %zd, read count: %zd\n", xfer, count);
-    mtx_unlock(&hid->fifo.lock);
+    mtx_unlock(&fifo_.lock);
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  r = zx_hid_fifo_read(&hid->fifo, buf, xfer);
-  left = zx_hid_fifo_size(&hid->fifo);
+  r = zx_hid_fifo_read(&fifo_, buf, xfer);
+  left = zx_hid_fifo_size(&fifo_);
   if (left == 0) {
-    device_state_clr(hid->zxdev, DEV_STATE_READABLE);
+    device_state_clr(zxdev_, DEV_STATE_READABLE);
   }
-  mtx_unlock(&hid->fifo.lock);
+  mtx_unlock(&fifo_.lock);
   if (r > 0) {
-    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(hid->trace_id, hid->reports_read));
-    ++hid->reports_read;
+    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_read_));
+    ++reports_read_;
     *actual = r;
     r = ZX_OK;
   } else if (r == 0) {
@@ -150,125 +149,122 @@ zx_status_t hid_read_instance(void* ctx, void* buf, size_t count, zx_off_t off, 
   return status;
 }
 
-static zx_status_t hid_close_instance(void* ctx, uint32_t flags) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-
-  hid->flags |= kHidFlagsDead;
-  hid->base->RemoveHidInstanceFromList(hid);
+zx_status_t HidInstance::DdkClose(uint32_t flags) {
+  flags_ |= kHidFlagsDead;
+  base_->RemoveHidInstanceFromList(this);
   return ZX_OK;
 }
 
-static void hid_release_instance(void* ctx) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  delete hid;
+void HidInstance::DdkRelease() { delete this; }
+
+zx_status_t HidInstance::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+  DdkTransaction transaction(txn);
+  ::llcpp::fuchsia::hardware::input::Device::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
-static zx_status_t fidl_GetBootProtocol(void* ctx, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  return fuchsia_hardware_input_DeviceGetBootProtocol_reply(txn, hid->base->GetBootProtocol());
+void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync _completer) {
+  _completer.Reply(base_->GetBootProtocol());
 }
 
-static zx_status_t fidl_GetReportDescSize(void* ctx, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  return fuchsia_hardware_input_DeviceGetReportDescSize_reply(
-      txn, static_cast<uint16_t>(hid->base->GetReportDescLen()));
+void HidInstance::GetReportDescSize(GetReportDescSizeCompleter::Sync _completer) {
+  _completer.Reply(static_cast<uint16_t>(base_->GetReportDescLen()));
 }
 
-static zx_status_t fidl_GetReportDesc(void* ctx, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  return fuchsia_hardware_input_DeviceGetReportDesc_reply(txn, hid->base->GetReportDesc(),
-                                                          hid->base->GetReportDescLen());
+void HidInstance::GetReportDesc(GetReportDescCompleter::Sync _completer) {
+  size_t desc_size = base_->GetReportDescLen();
+  const uint8_t* desc = base_->GetReportDesc();
+
+   // (BUG 35762) Const cast is necessary until simple data types are generated
+   // as const in LLCPP. We know the data is not modified.
+  _completer.Reply(::fidl::VectorView<uint8_t>(desc_size, const_cast<uint8_t*>(desc)));
 }
 
-static zx_status_t fidl_GetNumReports(void* ctx, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  return fuchsia_hardware_input_DeviceGetNumReports_reply(
-      txn, static_cast<uint16_t>(hid->base->GetNumReports()));
+void HidInstance::GetNumReports(GetNumReportsCompleter::Sync _completer) {
+  _completer.Reply(static_cast<uint16_t>(base_->GetNumReports()));
 }
 
-static zx_status_t fidl_GetReportIds(void* ctx, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  uint8_t report[fuchsia_hardware_input_MAX_REPORT_IDS];
-  hid->base->GetReportIds(report);
-  return fuchsia_hardware_input_DeviceGetReportIds_reply(txn, report, hid->base->GetNumReports());
+void HidInstance::GetReportIds(GetReportIdsCompleter::Sync _completer) {
+  uint8_t report_ids[::llcpp::fuchsia::hardware::input::MAX_REPORT_IDS];
+  base_->GetReportIds(report_ids);
+
+  fidl::VectorView id_view(base_->GetNumReports(), report_ids);
+
+  _completer.Reply(id_view);
 }
 
-static zx_status_t fidl_GetReportSize(void* ctx, fuchsia_hardware_input_ReportType type, uint8_t id,
-                                      fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  input_report_size_t size = hid->base->GetReportSizeById(id, type);
-  return fuchsia_hardware_input_DeviceGetReportSize_reply(txn, size == 0 ? ZX_ERR_NOT_FOUND : ZX_OK,
-                                                          size);
+void HidInstance::GetReportSize(ReportType type, uint8_t id,
+                                GetReportSizeCompleter::Sync _completer) {
+  input_report_size_t size = base_->GetReportSizeById(id, type);
+  _completer.Reply((size == 0) ? ZX_ERR_NOT_FOUND : ZX_OK, size);
 }
 
-static zx_status_t fidl_GetMaxInputReportSize(void* ctx, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  return fuchsia_hardware_input_DeviceGetMaxInputReportSize_reply(
-      txn, hid->base->GetMaxInputReportSize());
+void HidInstance::GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync _completer) {
+  _completer.Reply(base_->GetMaxInputReportSize());
 }
 
-static zx_status_t fidl_GetReport(void* ctx, fuchsia_hardware_input_ReportType type, uint8_t id,
-                                  fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  input_report_size_t needed = hid->base->GetReportSizeById(id, type);
+void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync _completer) {
+  input_report_size_t needed = base_->GetReportSizeById(id, type);
   if (needed == 0) {
-    return fuchsia_hardware_input_DeviceGetReport_reply(txn, ZX_ERR_NOT_FOUND, NULL, 0);
+    _completer.Reply(ZX_ERR_NOT_FOUND, fidl::VectorView<uint8_t>(0, nullptr));
+    return;
   }
 
   uint8_t report[needed];
   size_t actual = 0;
-  zx_status_t status = hid->base->GetHidbusProtocol()->GetReport(type, id, report, needed, &actual);
-  return fuchsia_hardware_input_DeviceGetReport_reply(txn, status, report, actual);
+  zx_status_t status = base_->GetHidbusProtocol()->GetReport(static_cast<uint8_t>(type), id, report,
+                                                             needed, &actual);
+
+  fidl::VectorView<uint8_t> report_view(actual, report);
+  _completer.Reply(status, report_view);
 }
 
-static zx_status_t fidl_SetReport(void* ctx, fuchsia_hardware_input_ReportType type, uint8_t id,
-                                  const uint8_t* report, size_t report_len, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  input_report_size_t needed = hid->base->GetReportSizeById(id, type);
-  if (needed < report_len) {
-    return fuchsia_hardware_input_DeviceSetReport_reply(txn, ZX_ERR_BUFFER_TOO_SMALL);
-  }
-  zx_status_t status = hid->base->GetHidbusProtocol()->SetReport(type, id, report, report_len);
-  return fuchsia_hardware_input_DeviceSetReport_reply(txn, status);
-}
-
-static zx_status_t fidl_SetTraceId(void* ctx, uint32_t id) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  hid->trace_id = id;
-  return ZX_OK;
-}
-
-static fuchsia_hardware_input_Device_ops_t fidl_ops = {
-    .GetBootProtocol = fidl_GetBootProtocol,
-    .GetReportDescSize = fidl_GetReportDescSize,
-    .GetReportDesc = fidl_GetReportDesc,
-    .GetNumReports = fidl_GetNumReports,
-    .GetReportIds = fidl_GetReportIds,
-    .GetReportSize = fidl_GetReportSize,
-    .GetMaxInputReportSize = fidl_GetMaxInputReportSize,
-    .GetReport = fidl_GetReport,
-    .SetReport = fidl_SetReport,
-    .SetTraceId = fidl_SetTraceId,
-};
-
-static zx_status_t hid_message_instance(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-  auto hid = reinterpret_cast<HidInstance*>(ctx);
-  if (hid->flags & kHidFlagsDead) {
-    return ZX_ERR_PEER_CLOSED;
+void HidInstance::SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
+                            SetReportCompleter::Sync _completer) {
+  input_report_size_t needed = base_->GetReportSizeById(id, type);
+  if (needed < report.count()) {
+    _completer.Reply(ZX_ERR_BUFFER_TOO_SMALL);
+    return;
   }
 
-  return fuchsia_hardware_input_Device_dispatch(ctx, txn, msg, &fidl_ops);
+  zx_status_t status = base_->GetHidbusProtocol()->SetReport(static_cast<uint8_t>(type), id,
+                                                             report.data(), report.count());
+  _completer.Reply(status);
+  return;
 }
 
-zx_protocol_device_t hid_instance_proto = []() {
-  zx_protocol_device_t proto = {};
-  proto.version = DEVICE_OPS_VERSION;
-  proto.read = hid_read_instance;
-  proto.close = hid_close_instance;
-  proto.message = hid_message_instance;
-  proto.release = hid_release_instance;
-  return proto;
-}();
+void HidInstance::SetTraceId(uint32_t id, SetTraceIdCompleter::Sync _completer) { trace_id_ = id; }
+
+void HidInstance::CloseInstance() {
+  flags_ |= kHidFlagsDead;
+  SetState(DEV_STATE_READABLE);
+}
+
+void HidInstance::WriteToFifo(const uint8_t* report, size_t report_len) {
+  mtx_lock(&fifo_.lock);
+  bool was_empty = zx_hid_fifo_size(&fifo_) == 0;
+  ssize_t wrote = zx_hid_fifo_write(&fifo_, report, report_len);
+
+  if (wrote <= 0) {
+    if (!(flags_ & kHidFlagsWriteFailed)) {
+      zxlogf(ERROR, "%s: could not write to hid fifo (ret=%zd)\n", base_->GetName(), wrote);
+      flags_ |= kHidFlagsWriteFailed;
+    }
+  } else {
+    TRACE_FLOW_BEGIN("input", "hid_report", hid_report_trace_id(trace_id_, reports_written_));
+    ++reports_written_;
+    flags_ &= ~kHidFlagsWriteFailed;
+    if (was_empty) {
+      device_state_set(zxdev(), DEV_STATE_READABLE);
+    }
+  }
+  mtx_unlock(&fifo_.lock);
+}
+
+zx_status_t HidInstance::Bind(HidDevice* base) {
+  base_ = base;
+  return DdkAdd("hid-instance", DEVICE_ADD_INSTANCE);
+}
 
 void hid_reports_set_boot_mode(hid_reports_t* reports) {
   reports->num_reports = 1;
@@ -335,35 +331,21 @@ void HidDevice::DdkRelease() {
 }
 
 zx_status_t HidDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
-  HidInstance* inst = new HidInstance();
-  if (inst == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  zx_hid_fifo_init(&inst->fifo);
-
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "hid";
-  args.ctx = inst;
-  args.ops = &hid_instance_proto;
-  args.proto_id = ZX_PROTOCOL_HID_DEVICE;
-  args.flags = DEVICE_ADD_INSTANCE;
-
-  zx_status_t status = device_add(zxdev_, &args, &inst->zxdev);
+  auto inst = std::make_unique<HidInstance>(zxdev());
+  zx_status_t status = inst->Bind(this);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hid: error creating instance %d\n", status);
-    delete inst;
     return status;
   }
-  inst->base = this;
 
   {
     fbl::AutoLock lock(&instance_lock_);
-    instance_list_.push_front(std::move(inst));
+    instance_list_.push_front(inst.get());
   }
 
-  *dev_out = inst->zxdev;
+  *dev_out = inst->zxdev();
+
+  // devmgr is now in charge of the memory for inst.
+  __UNUSED auto ptr = inst.release();
   return ZX_OK;
 }
 
@@ -371,11 +353,10 @@ void HidDevice::DdkUnbind() {
   {
     fbl::AutoLock lock(&instance_lock_);
     for (auto& instance : instance_list_) {
-      instance.flags |= kHidFlagsDead;
-      device_state_set(instance.zxdev, DEV_STATE_READABLE);
+      instance.CloseInstance();
     }
   }
-  device_remove(zxdev_);
+  DdkRemove();
 }
 
 void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len) {
@@ -419,7 +400,7 @@ void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len) {
     } else {
       // No reassembly is in progress.  Start by identifying this report's
       // size.
-      size_t rpt_sz = hid->GetReportSizeById(buf[0], fuchsia_hardware_input_ReportType_INPUT);
+      size_t rpt_sz = hid->GetReportSizeById(buf[0], ReportType::INPUT);
 
       // If we don't recognize this report ID, we are in trouble.  Drop
       // the rest of this payload and hope that the next one gets us back
@@ -453,25 +434,7 @@ void HidDevice::IoQueue(void* cookie, const void* _buf, size_t len) {
     len -= consumed;
 
     for (auto& instance : hid->instance_list_) {
-      mtx_lock(&instance.fifo.lock);
-      bool was_empty = zx_hid_fifo_size(&instance.fifo) == 0;
-      ssize_t wrote = zx_hid_fifo_write(&instance.fifo, rbuf, rlen);
-
-      if (wrote <= 0) {
-        if (!(instance.flags & kHidFlagsWriteFailed)) {
-          zxlogf(ERROR, "%s: could not write to hid fifo (ret=%zd)\n", hid->name_.data(), wrote);
-          instance.flags |= kHidFlagsWriteFailed;
-        }
-      } else {
-        TRACE_FLOW_BEGIN("input", "hid_report",
-                         hid_report_trace_id(instance.trace_id, instance.reports_written));
-        ++instance.reports_written;
-        instance.flags &= ~kHidFlagsWriteFailed;
-        if (was_empty) {
-          device_state_set(instance.zxdev, DEV_STATE_READABLE);
-        }
-      }
-      mtx_unlock(&instance.fifo.lock);
+      instance.WriteToFifo(rbuf, rlen);
     }
 
     {
@@ -512,7 +475,7 @@ zx_status_t HidDevice::HidDeviceGetDescriptor(uint8_t* out_descriptor_data, size
 zx_status_t HidDevice::HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                           uint8_t* out_report_data, size_t report_count,
                                           size_t* out_report_actual) {
-  input_report_size_t needed = GetReportSizeById(rpt_id, rpt_type);
+  input_report_size_t needed = GetReportSizeById(rpt_id, static_cast<ReportType>(rpt_type));
   if (needed == 0) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -534,7 +497,7 @@ zx_status_t HidDevice::HidDeviceGetReport(hid_report_type_t rpt_type, uint8_t rp
 
 zx_status_t HidDevice::HidDeviceSetReport(hid_report_type_t rpt_type, uint8_t rpt_id,
                                           const uint8_t* report_data, size_t report_count) {
-  input_report_size_t needed = GetReportSizeById(rpt_id, rpt_type);
+  input_report_size_t needed = GetReportSizeById(rpt_id, static_cast<ReportType>(rpt_type));
   if (needed < report_count) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -596,6 +559,8 @@ zx_status_t HidDevice::SetReportDescriptor() {
 
   return ZX_OK;
 }
+
+const char* HidDevice::GetName() { return name_.data(); }
 
 zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
   hidbus_ = std::move(hidbus_proto);
