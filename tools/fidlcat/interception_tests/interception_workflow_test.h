@@ -37,6 +37,8 @@ constexpr uint64_t kFirstThreadKoid = 8764;
 constexpr uint64_t kSecondThreadKoid = 8765;
 
 constexpr uint32_t kHandle = 0xcefa1db0;
+constexpr uint32_t kHandle2 = 0xcefa1222;
+constexpr uint32_t kHandle3 = 0xcefa1333;
 constexpr uint32_t kHandleOut = 0xbde90caf;
 constexpr uint32_t kPort = 0xdf0b2ec1;
 constexpr uint64_t kKey = 1234;

@@ -238,6 +238,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       ExceptionChannelTypeName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kFeatureKind:
+      os << colors.red;
+      FeatureKindName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kHandle: {
       zx_handle_info_t handle_info;
       handle_info.handle = value;
@@ -284,6 +289,16 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
     case SyscallType::kSignals:
       os << colors.blue;
       SignalName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kSystemEventType:
+      os << colors.blue;
+      SystemEventTypeName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kSystemPowerctl:
+      os << colors.blue;
+      SystemPowerctlName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kThreadState:
@@ -1142,6 +1157,36 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
   const std::unique_ptr<Access<size_t>> buffer_size_;
 };
 
+// An input/output which is a string. This is always displayed inline.
+class SyscallInputOutputString : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputString(int64_t error_code, std::string_view name,
+                           std::unique_ptr<Access<char>> string,
+                           std::unique_ptr<Access<size_t>> string_size)
+      : SyscallInputOutputBase(error_code, name),
+        string_(std::move(string)),
+        string_size_(std::move(string_size)) {}
+
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    string_size_->Load(decoder, stage);
+
+    if (string_size_->Loaded(decoder, stage)) {
+      size_t value = string_size_->Value(decoder, stage);
+      if (value > 0) {
+        string_->LoadArray(decoder, stage, value);
+      }
+    }
+  }
+
+  const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                            Stage stage, const char* separator, std::ostream& os) const override;
+
+ private:
+  const std::unique_ptr<Access<char>> string_;
+  const std::unique_ptr<Access<size_t>> string_size_;
+};
+
 // An input/output which is an object. This is always displayed outline.
 template <typename ClassType>
 class SyscallInputOutputObject : public SyscallInputOutputBase {
@@ -1341,6 +1386,22 @@ class Syscall {
     inputs_.push_back(std::make_unique<SyscallInputOutput<Type>>(0, name, std::move(access)));
   }
 
+  // Adds an input buffer to display.
+  template <typename Type, typename FromType>
+  void InputBuffer(std::string_view name, SyscallType syscall_type,
+                   std::unique_ptr<Access<Type>> buffer,
+                   std::unique_ptr<Access<size_t>> buffer_size) {
+    inputs_.push_back(std::make_unique<SyscallInputOutputBuffer<Type, FromType>>(
+        0, name, syscall_type, std::move(buffer), std::move(buffer_size)));
+  }
+
+  // Adds an input string to display.
+  void InputString(std::string_view name, std::unique_ptr<Access<char>> string,
+                   std::unique_ptr<Access<size_t>> string_size) {
+    inputs_.push_back(std::make_unique<SyscallInputOutputString>(0, name, std::move(string),
+                                                                 std::move(string_size)));
+  }
+
   // Adds an object input to display.
   template <typename ClassType>
   SyscallInputOutputObject<ClassType>* InputObject(std::string_view name,
@@ -1406,6 +1467,13 @@ class Syscall {
     auto result = object.get();
     outputs_.push_back(std::move(object));
     return result;
+  }
+
+  // Adds an output string to display.
+  void OutputString(int64_t error_code, std::string_view name, std::unique_ptr<Access<char>> string,
+                    std::unique_ptr<Access<size_t>> string_size) {
+    outputs_.push_back(std::make_unique<SyscallInputOutputString>(
+        error_code, name, std::move(string), std::move(string_size)));
   }
 
   // Adds an object output to display.
@@ -1624,6 +1692,61 @@ void SyscallInputOutputBuffer<Type, FromType>::DisplayOutline(SyscallDisplayDisp
     for (size_t i = 0; i < buffer_size; ++i) {
       os << separator;
       DisplayValue<Type>(colors, syscall_type_, reinterpret_cast<const Type*>(buffer)[i], os);
+      separator = ", ";
+    }
+  }
+  os << '\n';
+}
+
+template <>
+inline void SyscallInputOutputBuffer<uint8_t, uint8_t>::DisplayOutline(
+    SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+    std::string_view line_header, int tabs, std::ostream& os) const {
+  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name();
+  const Colors& colors = dispatcher->colors();
+  DisplayType(colors, syscall_type_, os);
+  const uint8_t* buffer = buffer_->Content(decoder, stage);
+  if (buffer == nullptr) {
+    os << colors.red << "nullptr" << colors.reset;
+  } else {
+    size_t buffer_size = buffer_size_->Value(decoder, stage);
+    if (buffer_size == 0) {
+      os << "empty\n";
+      return;
+    }
+    for (size_t i = 0;; ++i) {
+      if (i == buffer_size) {
+        os << colors.red << '"';
+        for (size_t i = 0; i < buffer_size; ++i) {
+          char value = reinterpret_cast<const char*>(buffer)[i];
+          switch (value) {
+            case 0:
+              break;
+            case '\\':
+              os << "\\\\";
+              break;
+            case '\n':
+              os << "\\n";
+              break;
+            default:
+              os << value;
+              break;
+          }
+        }
+        os << '"' << colors.reset << '\n';
+        return;
+      }
+      if ((buffer[i] == 0) && (i != buffer_size - 1)) {
+        break;
+      }
+      if (!std::isprint(buffer[i]) && (buffer[i] != '\n')) {
+        break;
+      }
+    }
+    const char* separator = "";
+    for (size_t i = 0; i < buffer_size; ++i) {
+      os << separator;
+      DisplayValue<uint8_t>(colors, buffer_->GetSyscallType(), buffer[i], os);
       separator = ", ";
     }
   }

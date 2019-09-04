@@ -4,10 +4,12 @@
 
 #include "tools/fidlcat/lib/type_decoder.h"
 
+#include <zircon/system/public/zircon/features.h>
 #include <zircon/system/public/zircon/rights.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/object.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
+#include <zircon/system/public/zircon/syscalls/system.h>
 #include <zircon/system/public/zircon/types.h>
 
 #include <cstdint>
@@ -64,6 +66,22 @@ void ExceptionChannelTypeName(uint32_t type, std::ostream& os) {
     ExceptionChannelTypeNameCase(ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER);
     default:
       os << static_cast<uint32_t>(type);
+      return;
+  }
+}
+
+#define FeatureKindNameCase(name) \
+  case name:                      \
+    os << #name;                  \
+    return
+
+void FeatureKindName(uint32_t feature_kind, std::ostream& os) {
+  switch (feature_kind) {
+    FeatureKindNameCase(ZX_FEATURE_KIND_CPU);
+    FeatureKindNameCase(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT);
+    FeatureKindNameCase(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT);
+    default:
+      os << feature_kind;
       return;
   }
 }
@@ -375,6 +393,41 @@ void StatusName(const Colors& colors, zx_status_t status, std::ostream& os) {
   os << colors.reset;
 }
 
+#define SystemEventTypeNameCase(name) \
+  case name:                          \
+    os << #name;                      \
+    return
+
+void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os) {
+  switch (type) {
+    SystemEventTypeNameCase(ZX_SYSTEM_EVENT_LOW_MEMORY);
+    default:
+      os << type;
+      return;
+  }
+}
+
+#define SystemPowerctlNameCase(name) \
+  case name:                         \
+    os << #name;                     \
+    return
+
+void SystemPowerctlName(uint32_t powerctl, std::ostream& os) {
+  switch (powerctl) {
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS);
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY);
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE);
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1);
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_REBOOT);
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER);
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY);
+    SystemPowerctlNameCase(ZX_SYSTEM_POWERCTL_SHUTDOWN);
+    default:
+      os << powerctl;
+      return;
+  }
+}
+
 #define ThreadStateNameCase(name) \
   case name:                      \
     os << #name;                  \
@@ -535,6 +588,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kBool:
       os << ":" << colors.green << "bool" << colors.reset << ": ";
       break;
+    case SyscallType::kChar:
+      os << ":" << colors.green << "char" << colors.reset << ": ";
+      break;
     case SyscallType::kCharArray:
       os << ":" << colors.green << "char[]" << colors.reset << ": ";
       break;
@@ -542,6 +598,7 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       os << ":" << colors.green << "int64" << colors.reset << ": ";
       break;
     case SyscallType::kUint8:
+    case SyscallType::kUint8Hexa:
       os << ":" << colors.green << "uint8" << colors.reset << ": ";
       break;
     case SyscallType::kUint8ArrayDecimal:
@@ -549,6 +606,7 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       os << ":" << colors.green << "uint8[]" << colors.reset << ": ";
       break;
     case SyscallType::kUint16:
+    case SyscallType::kUint16Hexa:
       os << ":" << colors.green << "uint16" << colors.reset << ": ";
       break;
     case SyscallType::kUint16ArrayDecimal:
@@ -556,6 +614,7 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       os << ":" << colors.green << "uint16[]" << colors.reset << ": ";
       break;
     case SyscallType::kUint32:
+    case SyscallType::kUint32Hexa:
       os << ":" << colors.green << "uint32" << colors.reset << ": ";
       break;
     case SyscallType::kUint32ArrayDecimal:
@@ -563,6 +622,7 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       os << ":" << colors.green << "uint32[]" << colors.reset << ": ";
       break;
     case SyscallType::kUint64:
+    case SyscallType::kUint64Hexa:
       os << ":" << colors.green << "uint64" << colors.reset << ": ";
       break;
     case SyscallType::kUint64ArrayDecimal:
@@ -581,6 +641,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kExceptionChannelType:
       os << ":" << colors.green << "zx_info_thread_t::wait_exception_port_type" << colors.reset
          << ": ";
+      break;
+    case SyscallType::kFeatureKind:
+      os << ":" << colors.green << "zx_feature_kind_t" << colors.reset << ": ";
       break;
     case SyscallType::kGpAddr:
       os << ":" << colors.green << "zx_gpaddr_t" << colors.reset << ": ";
@@ -630,6 +693,12 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kStatus:
       os << ":" << colors.green << "status_t" << colors.reset << ": ";
       break;
+    case SyscallType::kSystemEventType:
+      os << ":" << colors.green << "zx_system_event_type_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kSystemPowerctl:
+      os << ":" << colors.green << "zx_system_powerctl_t" << colors.reset << ": ";
+      break;
     case SyscallType::kThreadState:
       os << ":" << colors.green << "zx_info_thread_t::state" << colors.reset << ": ";
       break;
@@ -648,10 +717,8 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kVmoType:
       os << ":" << colors.green << "zx_info_vmo_type_t" << colors.reset << ": ";
       break;
-    default:
-      os << ":" << colors.green << "unimplemented type " << static_cast<uint32_t>(type)
-         << colors.reset;
-      return;
+    case SyscallType::kStruct:
+      break;
   }
 }
 

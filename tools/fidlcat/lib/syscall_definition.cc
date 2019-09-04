@@ -5,6 +5,7 @@
 #include <zircon/system/public/zircon/errors.h>
 #include <zircon/system/public/zircon/syscalls/exception.h>
 #include <zircon/system/public/zircon/syscalls/port.h>
+#include <zircon/system/public/zircon/syscalls/system.h>
 
 #include <cstdint>
 #include <memory>
@@ -1482,6 +1483,83 @@ const ZxPortPacket* ZxPortPacket::GetClass() {
   return instance_;
 }
 
+class ZxSystemPowerctlArgAcpi : public Class<zx_system_powerctl_arg_t> {
+ public:
+  static const ZxSystemPowerctlArgAcpi* GetClass();
+
+  static uint8_t target_s_state(const zx_system_powerctl_arg_t* from) {
+    return from->acpi_transition_s_state.target_s_state;
+  }
+  static uint8_t sleep_type_a(const zx_system_powerctl_arg_t* from) {
+    return from->acpi_transition_s_state.sleep_type_a;
+  }
+  static uint8_t sleep_type_b(const zx_system_powerctl_arg_t* from) {
+    return from->acpi_transition_s_state.sleep_type_b;
+  }
+
+ private:
+  ZxSystemPowerctlArgAcpi() : Class("zx_system_powerctl_arg_t") {
+    AddField(std::make_unique<ClassField<zx_system_powerctl_arg_t, uint8_t>>(
+        "target_s_state", SyscallType::kUint8, target_s_state));
+    AddField(std::make_unique<ClassField<zx_system_powerctl_arg_t, uint8_t>>(
+        "sleep_type_a", SyscallType::kUint8, sleep_type_a));
+    AddField(std::make_unique<ClassField<zx_system_powerctl_arg_t, uint8_t>>(
+        "sleep_type_b", SyscallType::kUint8, sleep_type_b));
+  }
+  ZxSystemPowerctlArgAcpi(const ZxSystemPowerctlArgAcpi&) = delete;
+  ZxSystemPowerctlArgAcpi& operator=(const ZxSystemPowerctlArgAcpi&) = delete;
+  static ZxSystemPowerctlArgAcpi* instance_;
+};
+
+ZxSystemPowerctlArgAcpi* ZxSystemPowerctlArgAcpi::instance_ = nullptr;
+
+const ZxSystemPowerctlArgAcpi* ZxSystemPowerctlArgAcpi::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxSystemPowerctlArgAcpi;
+  }
+  return instance_;
+}
+
+class ZxSystemPowerctlArgX86PowerLimit : public Class<zx_system_powerctl_arg_t> {
+ public:
+  static const ZxSystemPowerctlArgX86PowerLimit* GetClass();
+
+  static uint32_t power_limit(const zx_system_powerctl_arg_t* from) {
+    return from->x86_power_limit.power_limit;
+  }
+  static uint32_t time_window(const zx_system_powerctl_arg_t* from) {
+    return from->x86_power_limit.time_window;
+  }
+  static uint8_t clamp(const zx_system_powerctl_arg_t* from) { return from->x86_power_limit.clamp; }
+  static uint8_t enable(const zx_system_powerctl_arg_t* from) {
+    return from->x86_power_limit.enable;
+  }
+
+ private:
+  ZxSystemPowerctlArgX86PowerLimit() : Class("zx_system_powerctl_arg_t") {
+    AddField(std::make_unique<ClassField<zx_system_powerctl_arg_t, uint32_t>>(
+        "power_limit", SyscallType::kUint32, power_limit));
+    AddField(std::make_unique<ClassField<zx_system_powerctl_arg_t, uint32_t>>(
+        "time_window", SyscallType::kUint32, time_window));
+    AddField(std::make_unique<ClassField<zx_system_powerctl_arg_t, uint8_t>>(
+        "clamp", SyscallType::kUint8, clamp));
+    AddField(std::make_unique<ClassField<zx_system_powerctl_arg_t, uint8_t>>(
+        "enable", SyscallType::kUint8, enable));
+  }
+  ZxSystemPowerctlArgX86PowerLimit(const ZxSystemPowerctlArgX86PowerLimit&) = delete;
+  ZxSystemPowerctlArgX86PowerLimit& operator=(const ZxSystemPowerctlArgX86PowerLimit&) = delete;
+  static ZxSystemPowerctlArgX86PowerLimit* instance_;
+};
+
+ZxSystemPowerctlArgX86PowerLimit* ZxSystemPowerctlArgX86PowerLimit::instance_ = nullptr;
+
+const ZxSystemPowerctlArgX86PowerLimit* ZxSystemPowerctlArgX86PowerLimit::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxSystemPowerctlArgX86PowerLimit;
+  }
+  return instance_;
+}
+
 class ZxWaitItem : public Class<zx_wait_item_t> {
  public:
   static const ZxWaitItem* GetClass();
@@ -1562,6 +1640,172 @@ void SyscallDecoderDispatcher::Populate() {
     zx_clock_adjust->Input<zx_clock_t>("clock_id",
                                        std::make_unique<ArgumentAccess<zx_clock_t>>(clock_id));
     zx_clock_adjust->Input<int64_t>("offset", std::make_unique<ArgumentAccess<int64_t>>(offset));
+  }
+
+  { Add("zx_system_get_dcache_line_size", SyscallReturnType::kUint32); }
+
+  { Add("zx_system_get_num_cpus", SyscallReturnType::kUint32); }
+
+  {
+    Syscall* zx_system_get_version = Add("zx_system_get_version", SyscallReturnType::kStatus);
+    // Arguments
+    auto version = zx_system_get_version->PointerArgument<char>(SyscallType::kChar);
+    auto version_size = zx_system_get_version->Argument<size_t>(SyscallType::kSize);
+    // Outputs
+    zx_system_get_version->OutputString(ZX_OK, "version",
+                                        std::make_unique<ArgumentAccess<char>>(version),
+                                        std::make_unique<ArgumentAccess<size_t>>(version_size));
+  }
+
+  { Add("zx_system_get_physmem", SyscallReturnType::kUint64); }
+
+  {
+    Syscall* zx_system_get_event = Add("zx_system_get_event", SyscallReturnType::kStatus);
+    // Arguments
+    auto root_job = zx_system_get_event->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kind = zx_system_get_event->Argument<uint32_t>(SyscallType::kSystemEventType);
+    auto event = zx_system_get_event->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_system_get_event->Input<uint32_t>("root_job",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(root_job));
+    zx_system_get_event->Input<uint32_t>("kind", std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    // Outputs
+    zx_system_get_event->Output<zx_handle_t>(ZX_OK, "event",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(event));
+  }
+
+  {
+    Syscall* zx_system_get_features = Add("zx_system_get_features", SyscallReturnType::kStatus);
+    // Arguments
+    auto kind = zx_system_get_features->Argument<uint32_t>(SyscallType::kFeatureKind);
+    auto features = zx_system_get_features->PointerArgument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_system_get_features->Input<uint32_t>("kind",
+                                            std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    // Outputs
+    zx_system_get_features->Output<uint32_t>(ZX_OK, "features",
+                                             std::make_unique<ArgumentAccess<uint32_t>>(features));
+  }
+
+  {
+    Syscall* zx_system_mexec = Add("zx_system_mexec", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_system_mexec->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kernel_vmo = zx_system_mexec->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto bootimage_vmo = zx_system_mexec->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_system_mexec->Input<uint32_t>("resource",
+                                     std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_system_mexec->Input<uint32_t>("kernel_vmo",
+                                     std::make_unique<ArgumentAccess<zx_handle_t>>(kernel_vmo));
+    zx_system_mexec->Input<uint32_t>("bootimage_vmo",
+                                     std::make_unique<ArgumentAccess<zx_handle_t>>(bootimage_vmo));
+  }
+
+  {
+    Syscall* zx_system_mexec_payload_get =
+        Add("zx_system_mexec_payload_get", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_system_mexec_payload_get->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto buffer = zx_system_mexec_payload_get->PointerArgument<uint8_t>(SyscallType::kUint8Hexa);
+    auto buffer_size = zx_system_mexec_payload_get->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_system_mexec_payload_get->Input<uint32_t>(
+        "resource", std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_system_mexec_payload_get->Input<size_t>(
+        "buffer_size", std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    // Outputs
+    zx_system_mexec_payload_get->OutputBuffer<uint8_t, uint8_t>(
+        ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_system_powerctl = Add("zx_system_powerctl", SyscallReturnType::kStatus);
+    // Arguments
+    auto resource = zx_system_powerctl->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto cmd = zx_system_powerctl->Argument<uint32_t>(SyscallType::kSystemPowerctl);
+    auto arg = zx_system_powerctl->PointerArgument<uint8_t>(SyscallType::kUint8);
+    // Inputs
+    zx_system_powerctl->Input<uint32_t>("resource",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(resource));
+    zx_system_powerctl->Input<uint32_t>("cmd", std::make_unique<ArgumentAccess<uint32_t>>(cmd));
+    zx_system_powerctl
+        ->InputObject<zx_system_powerctl_arg_t>("arg",
+                                                std::make_unique<ArgumentAccess<uint8_t>>(arg),
+                                                ZxSystemPowerctlArgAcpi::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(cmd),
+                                   ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE);
+    zx_system_powerctl
+        ->InputObject<zx_system_powerctl_arg_t>("arg",
+                                                std::make_unique<ArgumentAccess<uint8_t>>(arg),
+                                                ZxSystemPowerctlArgX86PowerLimit::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(cmd),
+                                   ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1);
+  }
+
+  {
+    Syscall* zx_cache_flush = Add("zx_cache_flush", SyscallReturnType::kStatus);
+    // Arguments
+    auto addr = zx_cache_flush->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto size = zx_cache_flush->Argument<size_t>(SyscallType::kSize);
+    auto options = zx_cache_flush->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_cache_flush->Input<zx_vaddr_t>("addr", std::make_unique<ArgumentAccess<zx_vaddr_t>>(addr));
+    zx_cache_flush->Input<size_t>("size", std::make_unique<ArgumentAccess<size_t>>(size));
+    zx_cache_flush->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+  }
+
+  {
+    Syscall* zx_handle_close = Add("zx_handle_close", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_handle_close->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_handle_close->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_handle_close_many = Add("zx_handle_close_many", SyscallReturnType::kStatus);
+    // Arguments
+    auto handles = zx_handle_close_many->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto num_handles = zx_handle_close_many->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_handle_close_many->InputBuffer<zx_handle_t, zx_handle_t>(
+        "handles", SyscallType::kHandle, std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
+        std::make_unique<ArgumentAccess<size_t>>(num_handles));
+  }
+
+  {
+    Syscall* zx_handle_duplicate = Add("zx_handle_duplicate", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_handle_duplicate->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto rights = zx_handle_duplicate->Argument<zx_rights_t>(SyscallType::kRights);
+    auto out = zx_handle_duplicate->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_handle_duplicate->Input<zx_handle_t>("handle",
+                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_handle_duplicate->Input<zx_rights_t>("rights",
+                                            std::make_unique<ArgumentAccess<zx_rights_t>>(rights));
+    // Outputs
+    zx_handle_duplicate->Output<zx_handle_t>(ZX_OK, "out",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_handle_replace = Add("zx_handle_replace", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_handle_replace->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto rights = zx_handle_replace->Argument<zx_rights_t>(SyscallType::kRights);
+    auto out = zx_handle_replace->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_handle_replace->Input<zx_handle_t>("handle",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_handle_replace->Input<zx_rights_t>("rights",
+                                          std::make_unique<ArgumentAccess<zx_rights_t>>(rights));
+    // Outputs
+    zx_handle_replace->Output<zx_handle_t>(ZX_OK, "out",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(out));
   }
 
   {

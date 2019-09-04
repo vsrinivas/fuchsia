@@ -54,6 +54,43 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
   os << dispatcher->colors().reset << '\n';
 }
 
+const char* SyscallInputOutputString::DisplayInline(SyscallDisplayDispatcher* dispatcher,
+                                                    SyscallDecoder* decoder, Stage stage,
+                                                    const char* separator, std::ostream& os) const {
+  os << separator;
+  os << name() << ":string: ";
+  const char* string = string_->Content(decoder, stage);
+  if (string == nullptr) {
+    os << "nullptr\n";
+  } else {
+    size_t string_size = string_size_->Value(decoder, stage);
+    if (string_size == 0) {
+      os << "empty\n";
+    } else {
+      const Colors& colors = dispatcher->colors();
+      os << colors.red << '"';
+      for (size_t i = 0; i < string_size; ++i) {
+        char value = string[i];
+        switch (value) {
+          case 0:
+            break;
+          case '\\':
+            os << "\\\\";
+            break;
+          case '\n':
+            os << "\\n";
+            break;
+          default:
+            os << value;
+            break;
+        }
+      }
+      os << '"' << colors.reset << '\n';
+    }
+  }
+  return ", ";
+}
+
 void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
                                               SyscallDecoder* decoder, Stage stage,
                                               std::string_view line_header, int tabs,

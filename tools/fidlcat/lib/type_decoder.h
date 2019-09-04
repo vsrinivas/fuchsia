@@ -27,6 +27,7 @@ constexpr int kCharatersPerByte = 2;
 // Types for syscall arguments.
 enum class SyscallType {
   kBool,
+  kChar,
   kCharArray,
   kInt64,
   kUint8,
@@ -49,6 +50,7 @@ enum class SyscallType {
   kClock,
   kDuration,
   kExceptionChannelType,
+  kFeatureKind,
   kGpAddr,
   kHandle,
   kInfoMapsType,
@@ -65,6 +67,8 @@ enum class SyscallType {
   kSignals,
   kSize,
   kStatus,
+  kSystemEventType,
+  kSystemPowerctl,
   kThreadState,
   kTime,
   kUintptr,
@@ -104,6 +108,7 @@ struct Colors {
 void CachePolicyName(uint32_t cache_policy, std::ostream& os);
 void ClockName(zx_clock_t clock, std::ostream& os);
 void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
+void FeatureKindName(uint32_t feature_kind, std::ostream& os);
 void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
 void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
 void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
@@ -115,6 +120,8 @@ void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
 void SignalName(zx_signals_t signals, std::ostream& os);
 void StatusName(zx_status_t status, std::ostream& os);
 void StatusName(const Colors& colors, zx_status_t status, std::ostream& os);
+void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os);
+void SystemPowerctlName(uint32_t powerctl, std::ostream& os);
 void ThreadStateName(uint32_t state, std::ostream& os);
 void TopicName(uint32_t topic, std::ostream& os);
 void VmOptionName(zx_vm_option_t option, std::ostream& os);
