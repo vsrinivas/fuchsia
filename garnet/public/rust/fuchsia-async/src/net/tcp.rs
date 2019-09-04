@@ -448,6 +448,8 @@ mod tests {
         let addr = listener.local_addr().expect("query local_addr");
         let mut listener = listener.accept_stream();
 
+        let (done, wait_done) = futures::channel::oneshot::channel::<()>();
+
         let server = async move {
             let (mut socket, _clientaddr) =
                 listener.next().await.expect("stream to not be done").expect("client to connect");
@@ -457,6 +459,14 @@ mod tests {
             for _ in 0usize..WRITES {
                 socket.write_all(&buf[..]).await.expect("server write to succeed");
             }
+
+            // FIXME(35995): a client should be able to read all data sent through a socket, even
+            // if the remote end closes its end before the client finishes reading all buffered
+            // data, but for reasons that are still unclear, if `socket` is dropped before the
+            // client below finishes reading all data, the client will rarely hang forever waiting
+            // to read. This explicit synchronization prevents this test from flaking, but further
+            // investigation is required.
+            let () = wait_done.await.unwrap();
         };
 
         let client = async move {
@@ -471,6 +481,7 @@ mod tests {
                 assert_eq!(&buf[0..n], &zeroes[0..n]);
                 read += n;
             }
+            done.send(()).unwrap();
         };
 
         exec.run_singlethreaded(futures::future::join(server, client));
