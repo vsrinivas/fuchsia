@@ -1,6 +1,4 @@
 /prebuilt/downloads/
 /prebuilt/config.gni
-/public/banjo/
-/public/fidl/
 /public/lib/
 /public/tool/
