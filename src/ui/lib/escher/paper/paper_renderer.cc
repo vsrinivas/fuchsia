@@ -486,12 +486,12 @@ void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp, ResourceRecycler* rec
       rp->store_attachments = 1u << kResolveTargetAttachmentIndex;
 
       rp->subpasses.push_back(RenderPassInfo::Subpass{
-          .num_color_attachments = 1,
           .color_attachments = {kRenderTargetAttachmentIndex},
-          .num_input_attachments = 0,
           .input_attachments = {},
-          .num_resolve_attachments = 1,
           .resolve_attachments = {kResolveTargetAttachmentIndex},
+          .num_color_attachments = 1,
+          .num_input_attachments = 0,
+          .num_resolve_attachments = 1,
       });
     }
   }

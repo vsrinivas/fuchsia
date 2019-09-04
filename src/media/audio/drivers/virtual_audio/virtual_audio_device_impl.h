@@ -31,12 +31,13 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
 
   // One very limited range for basic audio support by default.
   static constexpr audio_stream_format_range_t kDefaultFormatRange = {
-      .min_channels = 2,
-      .max_channels = 2,
       .sample_formats = AUDIO_SAMPLE_FORMAT_16BIT,
       .min_frames_per_second = 48000,
       .max_frames_per_second = 48000,
-      .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY};
+      .min_channels = 2,
+      .max_channels = 2,
+      .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY,
+  };
 
   // Default FIFO is 250 usec, at 48k stereo 16
   static constexpr uint32_t kDefaultFifoDepthBytes = 48;

@@ -49,10 +49,10 @@ Device::Device(zx_device_t* device) : parent_(device) {}
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t qmi_fake_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .get_protocol = [](void* ctx, uint32_t proto_id, void* out_proto) -> zx_status_t {
       return DEV(ctx)->GetProtocol(proto_id, out_proto);
     },
+    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
     .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
       return DEV(ctx)->DdkMessage(msg, txn);

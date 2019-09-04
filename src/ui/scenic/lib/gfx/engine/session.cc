@@ -146,7 +146,7 @@ bool Session::ScheduleUpdate(zx::time requested_presentation_time,
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
                                                           zx::time target_presentation_time) {
   ApplyUpdateResult update_results{
-      .success = false, .needs_render = false, .all_fences_ready = true};
+      .success = false, .all_fences_ready = true, .needs_render = false};
 
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= target_presentation_time) {

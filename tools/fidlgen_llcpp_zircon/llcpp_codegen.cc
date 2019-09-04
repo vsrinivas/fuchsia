@@ -83,8 +83,8 @@ std::vector<Target> AllTargets(const fs::path& zircon_build_root) {
     targets_vector.push_back(Target {
       .gen_dir = fs::path(target["target_gen_dir"].GetString()),
       .name = target["name"].GetString(),
-      .args = std::move(args_vector),
       .fidl_sources = std::move(fidl_sources_vector),
+      .args = std::move(args_vector),
       .json = fs::path(target["json"].GetString()),
       .header = fs::path(target["header"].GetString()),
       .source = fs::path(target["source"].GetString()),

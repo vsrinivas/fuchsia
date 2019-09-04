@@ -212,11 +212,11 @@ void MeshMlme::SendPeeringConfirm(const MlmeMsg<wlan_mlme::MeshPeeringConfirmAct
 void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req) {
   wlan_assoc_ctx ctx = {
       .aid = req.body()->local_aid,
-      .qos = true,  // all mesh nodes are expected to support QoS frames
-      .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates.size(), sizeof(ctx.rates))),
-      .chan = device_->GetState()->channel(),
       .phy = WLAN_INFO_PHY_TYPE_OFDM,  // TODO(gbonik): get PHY from
                                        // MeshPeeringParams
+      .chan = device_->GetState()->channel(),
+      .qos = true,  // all mesh nodes are expected to support QoS frames
+      .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates.size(), sizeof(ctx.rates))),
   };
   memcpy(ctx.bssid, req.body()->peer_sta_address.data(), sizeof(ctx.bssid));
   memcpy(ctx.rates, req.body()->rates.data(), ctx.rates_cnt);

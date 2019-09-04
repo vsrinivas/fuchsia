@@ -546,9 +546,9 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int sub
 //  (-2,1)    (0,1)     (2,1)
 IndexedTriangleMesh2d<vec2> GetStandardTestMesh2d() {
   return IndexedTriangleMesh2d<vec2>{
+      .indices = {0, 1, 3, 3, 1, 4, 4, 1, 2},
       .positions = {vec2(-2, 1), vec2(0, 1), vec2(2, 1), vec2(-1, -1), vec2(1, -1)},
-      .attributes1 = {vec2(0, 1), vec2(0.5f, 1), vec2(1, 1), vec2(0, 0), vec2(1, 0)},
-      .indices = {0, 1, 3, 3, 1, 4, 4, 1, 2}};
+      .attributes1 = {vec2(0, 1), vec2(0.5f, 1), vec2(1, 1), vec2(0, 0), vec2(1, 0)}};
 }
 
 IndexedTriangleMesh3d<vec2> GetStandardTestMesh3d() {

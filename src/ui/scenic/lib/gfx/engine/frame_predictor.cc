@@ -90,7 +90,7 @@ PredictedTimes FramePredictor::GetPrediction(PredictionRequest request) const {
   // frame in time for the target present.
   zx::time latch_point = target_presentation_time - required_frame_duration;
 
-  return {.presentation_time = target_presentation_time, .latch_point_time = latch_point};
+  return {.latch_point_time = latch_point, .presentation_time = target_presentation_time};
 }
 
 }  // namespace gfx

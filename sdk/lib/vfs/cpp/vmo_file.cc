@@ -36,14 +36,14 @@ void VmoFile::Describe(fuchsia::io::NodeInfo* out_info) {
         return;
       }
       out_info->vmofile() =
-          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .length = length_, .offset = offset_};
+          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .offset = offset_, .length = length_};
       break;
     case Sharing::CLONE_COW:
       if (vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, offset_, length_, &temp_vmo) != ZX_OK) {
         return;
       }
       out_info->vmofile() =
-          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .length = length_, .offset = offset_};
+          fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .offset = offset_, .length = length_};
       break;
   }
 }

@@ -567,10 +567,10 @@ TxVector GetTxVector(const fbl::unique_ptr<MinstrelRateSelector>& minstrel,
     const uint8_t mcs = fc->type() == FrameType::kData ? 7 : 3;
     return {
         .phy = WLAN_INFO_PHY_TYPE_ERP,
-        .cbw = CBW20,
-        .mcs_idx = mcs,
-        .nss = 1,
         .gi = WLAN_GI_800NS,
+        .cbw = CBW20,
+        .nss = 1,
+        .mcs_idx = mcs,
     };
   }
 }
@@ -593,12 +593,12 @@ wlan_tx_info_t MakeTxInfo(const fbl::unique_ptr<Packet>& packet, const TxVector&
   }
 
   return {
+      .tx_flags = flags,
+      .valid_fields = valid_fields,
+      .tx_vector_idx = idx,
       .phy = static_cast<uint16_t>(tv.phy),
       .cbw = static_cast<uint8_t>(tv.cbw),
       .mcs = tv.mcs_idx,
-      .tx_vector_idx = idx,
-      .valid_fields = valid_fields,
-      .tx_flags = flags,
   };
 }
 

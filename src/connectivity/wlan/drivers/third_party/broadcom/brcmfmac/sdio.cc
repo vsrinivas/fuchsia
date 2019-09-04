@@ -3377,10 +3377,10 @@ static void brcmf_sdio_buscore_write32(void* ctx, uint32_t addr, uint32_t val) {
 }
 
 static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
-    .prepare = brcmf_sdio_buscoreprep,
-    .activate = brcmf_sdio_buscore_activate,
     .read32 = brcmf_sdio_buscore_read32,
     .write32 = brcmf_sdio_buscore_write32,
+    .prepare = brcmf_sdio_buscoreprep,
+    .activate = brcmf_sdio_buscore_activate,
 };
 
 // This will wait, then dump out all SDIO transactions to date.
@@ -3609,8 +3609,8 @@ static zx_status_t brcmf_sdio_get_bootloader_macaddr(brcmf_bus* bus_if, uint8_t*
 
 static const struct brcmf_bus_ops brcmf_sdio_bus_ops = {
     .get_bus_type = []() { return BRCMF_BUS_TYPE_SDIO; },
-    .stop = brcmf_sdio_bus_stop,
     .preinit = brcmf_sdio_bus_preinit,
+    .stop = brcmf_sdio_bus_stop,
     .txdata = brcmf_sdio_bus_txdata,
     .txctl = brcmf_sdio_bus_txctl,
     .rxctl = brcmf_sdio_bus_rxctl,

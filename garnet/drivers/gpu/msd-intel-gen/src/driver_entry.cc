@@ -157,8 +157,8 @@ static void sysdrv_gpu_release(void* ctx) {
 
 static zx_protocol_device_t sysdrv_gpu_device_proto = {
     .version = DEVICE_OPS_VERSION,
-    .message = sysdrv_gpu_message,
     .release = sysdrv_gpu_release,
+    .message = sysdrv_gpu_message,
 };
 
 // implement driver object:

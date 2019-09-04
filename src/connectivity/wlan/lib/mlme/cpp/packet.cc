@@ -48,10 +48,10 @@ bool IsBodyAligned(const Packet& pkt) {
 mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet) {
   auto* pkt = packet.release();
   return mlme_in_buf_t{
+      .free_buffer = [](void* raw) { fbl::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset(); },
+      .raw = pkt,
       .data = pkt->data(),
       .len = pkt->len(),
-      .raw = pkt,
-      .free_buffer = [](void* raw) { fbl::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset(); },
   };
 }
 

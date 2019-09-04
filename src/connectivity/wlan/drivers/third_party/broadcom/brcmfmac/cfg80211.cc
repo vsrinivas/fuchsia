@@ -3508,6 +3508,7 @@ void brcmf_hook_stop_capture_frames(void* ctx) { BRCMF_ERR("stop_capture_frames 
 wlanif_impl_protocol_ops_t if_impl_proto_ops = {
     .start = brcmf_if_start,
     .stop = brcmf_if_stop,
+    .query = brcmf_hook_query,
     .start_scan = brcmf_hook_start_scan,
     .join_req = brcmf_hook_join_req,
     .auth_req = brcmf_hook_auth_req,
@@ -3522,12 +3523,11 @@ wlanif_impl_protocol_ops_t if_impl_proto_ops = {
     .set_keys_req = brcmf_hook_set_keys_req,
     .del_keys_req = brcmf_hook_del_keys_req,
     .eapol_req = brcmf_hook_eapol_req,
-    .query = brcmf_hook_query,
     .stats_query_req = brcmf_hook_stats_query_req,
-    .data_queue_tx = brcmf_hook_data_queue_tx,
-    .set_multicast_promisc = brcmf_hook_set_multicast_promisc,
     .start_capture_frames = brcmf_hook_start_capture_frames,
     .stop_capture_frames = brcmf_hook_stop_capture_frames,
+    .set_multicast_promisc = brcmf_hook_set_multicast_promisc,
+    .data_queue_tx = brcmf_hook_data_queue_tx,
 };
 
 zx_status_t brcmf_alloc_vif(struct brcmf_cfg80211_info* cfg, uint16_t type,

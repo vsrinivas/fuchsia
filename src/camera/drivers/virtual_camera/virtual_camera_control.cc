@@ -104,9 +104,9 @@ void VirtualCameraControlImpl::GetFormats(uint32_t index, GetFormatsCallback cal
   fuchsia::camera::VideoFormat format = {
       .format =
           {
-              .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::BGRA32},
               .width = 640,
               .height = 480,
+              .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::BGRA32},
               // .bits_per_pixel = 4,
           },
       .rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1}};

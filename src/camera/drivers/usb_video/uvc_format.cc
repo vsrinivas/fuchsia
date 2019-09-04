@@ -184,12 +184,13 @@ zx_status_t UvcFormatList::ParseUsbDescriptor(usb_video_vc_desc_header* format_d
             .format_index = format_index,
             .pixel_format = pixel_format,
             .bits_per_pixel = bits_per_pixel,
-            .default_frame_index = default_frame_index,
             .frame_index = desc->bFrameIndex,
             .default_frame_interval = desc->dwDefaultFrameInterval,
             .width = desc->wWidth,
             .height = desc->wHeight,
-            .stride = desc->dwMaxVideoFrameBufferSize / desc->wHeight};
+            .stride = desc->dwMaxVideoFrameBufferSize / desc->wHeight,
+            .default_frame_index = default_frame_index,
+        };
         formats_.push_back(frame_desc);
       } break;
       default:

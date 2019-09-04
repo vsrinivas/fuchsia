@@ -139,8 +139,8 @@ void ProcessBuilder::AddArgs(const std::vector<std::string>& argv) {
 
 void ProcessBuilder::AddHandle(uint32_t id, zx::handle handle) {
   handles_.push_back(fuchsia::process::HandleInfo{
-      .id = id,
       .handle = std::move(handle),
+      .id = id,
   });
 }
 
@@ -151,8 +151,8 @@ void ProcessBuilder::AddHandles(std::vector<fuchsia::process::HandleInfo> handle
 
 void ProcessBuilder::SetDefaultJob(zx::job job) {
   handles_.push_back(fuchsia::process::HandleInfo{
-      .id = PA_JOB_DEFAULT,
       .handle = std::move(job),
+      .id = PA_JOB_DEFAULT,
   });
 }
 
@@ -212,8 +212,8 @@ zx_status_t ProcessBuilder::CloneFileDescriptor(int local_fd, int target_fd) {
   if (status != ZX_OK)
     return status;
   handles_.push_back(fuchsia::process::HandleInfo{
-      .id = PA_HND(PA_FD, target_fd),
       .handle = std::move(fd_handle),
+      .id = PA_HND(PA_FD, target_fd),
   });
   return ZX_OK;
 }

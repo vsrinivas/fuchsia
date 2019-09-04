@@ -39,7 +39,7 @@ void VmoFileWithUpdate::Describe(fuchsia::io::NodeInfo* out_info) {
     return;
   }
   out_info->vmofile() =
-      fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .length = length_, .offset = offset_};
+      fuchsia::io::Vmofile{.vmo = std::move(temp_vmo), .offset = offset_, .length = length_};
 }
 
 zx_status_t VmoFileWithUpdate::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
