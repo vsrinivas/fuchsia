@@ -39,9 +39,9 @@ class GainTest : public testing::Test {
 
   void TestUnityGain(float source_gain_db, float dest_gain_db) {
     gain_.SetSourceGain(source_gain_db);
-    EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale(dest_gain_db));
-
     gain_.SetDestGain(dest_gain_db);
+    EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
+
     EXPECT_FALSE(gain_.IsSilent());
     EXPECT_TRUE(gain_.IsUnity());
   }
@@ -147,20 +147,24 @@ TEST_F(GainTest, SourceGainCaching) {
   Gain::AScale amplitude_scale, expect_amplitude_scale;
 
   // Set expect_amplitude_scale to a value that represents -6.0 dB.
-  expect_gain.SetSourceGain(6.0f);
-  expect_amplitude_scale = expect_gain.GetGainScale(-12.0f);
+  expect_gain.SetSourceGain(-6.0f);
+  expect_amplitude_scale = expect_gain.GetGainScale();
 
   // If Render gain defaults to 0.0, this represents -6.0 dB too.
-  amplitude_scale = gain_.GetGainScale(-6.0f);
+  gain_.SetSourceGain(0.0f);
+  gain_.SetDestGain(-6.0f);
+  amplitude_scale = gain_.GetGainScale();
   EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
 
   // Now set a different renderer gain that will be cached (+3.0).
   gain_.SetSourceGain(3.0f);
-  amplitude_scale = gain_.GetGainScale(-3.0f);
+  gain_.SetDestGain(-3.0f);
+  amplitude_scale = gain_.GetGainScale();
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // If Render gain is cached val of +3, then combo should be Unity.
-  amplitude_scale = gain_.GetGainScale(-3.0f);
+  gain_.SetDestGain(-3.0f);
+  amplitude_scale = gain_.GetGainScale();
   EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // Try another Output gain; with cached +3 this should equate to -6dB.
@@ -168,10 +172,8 @@ TEST_F(GainTest, SourceGainCaching) {
   EXPECT_EQ(expect_amplitude_scale, gain_.GetGainScale());
 
   // Render gain cached +3 and Output gain non-cached -3 should lead to Unity.
-  EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale(-3.0f));
-
-  // Cached Output gain should still be -9, leading to -6dB.
-  EXPECT_EQ(expect_amplitude_scale, gain_.GetGainScale());
+  gain_.SetDestGain(-3.0f);
+  EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 }
 
 // We independently limit stream and device gains to kMaxGainDb/0, respectively.
@@ -183,11 +185,13 @@ TEST_F(GainTest, MaxClamp) {
 
   // Renderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
   gain_.SetSourceGain(Gain::kMaxGainDb * 2);
-  EXPECT_EQ(Gain::kMaxScale, gain_.GetGainScale(Gain::kUnityGainDb));
+  gain_.SetDestGain(Gain::kUnityGainDb);
+  EXPECT_EQ(Gain::kMaxScale, gain_.GetGainScale());
 
   // This combination (24.05 dB) is clamped to 24.0dB.
   gain_.SetSourceGain(Gain::kMaxGainDb);
-  EXPECT_EQ(Gain::kMaxScale, gain_.GetGainScale(0.05f));
+  gain_.SetDestGain(0.05f);
+  EXPECT_EQ(Gain::kMaxScale, gain_.GetGainScale());
 
   // System limits renderer gain to kMaxGainDb, even when sum is less than 0.
   // Renderer Gain +36dB (clamped to +24dB) plus system Gain -48dB ==> -24dB.

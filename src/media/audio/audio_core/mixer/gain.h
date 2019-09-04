@@ -146,13 +146,6 @@ class Gain {
     return GetGainScale(target_src_gain_db_.load(), GetUsageGain(), target_dest_gain_db_.load());
   }
 
-  // Retrieve combined amplitude scale for a mix stream, given gain for a mix's
-  // "destination" (output device, or capturer in API). Only called by a link's
-  // mixer. For performance, values are cached and recomputed only as needed.
-  AScale GetGainScale(float dest_gain_db) {
-    return GetGainScale(target_src_gain_db_.load(), GetUsageGain(), dest_gain_db);
-  }
-
   void GetScaleArray(AScale* scale_arr, uint32_t num_frames, const TimelineRate& rate);
 
   // Advance the state of any gain ramp by the specified number of frames.
