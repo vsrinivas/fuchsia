@@ -297,8 +297,7 @@ zx_status_t wait_queue_block(wait_queue_t* wait, zx_time_t deadline) {
  * @brief  Wake up one thread sleeping on a wait queue
  *
  * This function removes one thread (if any) from the head of the wait queue and
- * makes it executable.  The new thread will be placed at the head of the
- * run queue.
+ * makes it executable.  The new thread will be placed in the run queue.
  *
  * @param wait  The wait queue to wake
  * @param reschedule  If true, the newly-woken thread will run immediately.
