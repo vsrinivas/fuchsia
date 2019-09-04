@@ -94,6 +94,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
   // main application thread from things like the output manager's thread pool.
   async_dispatcher_t* dispatcher_;
 
+  std::unique_ptr<EffectsLoader> effects_loader_;
+
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
 

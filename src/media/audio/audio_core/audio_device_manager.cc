@@ -21,13 +21,18 @@
 namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(async_dispatcher_t* dispatcher,
+                                       EffectsLoader* effects_loader,
                                        const SystemGainMuteProvider& system_gain_mute)
     : dispatcher_(dispatcher),
       system_gain_mute_(system_gain_mute),
+      effects_loader_(*effects_loader),
       plug_detector_(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel)),
       // TODO(35145): Use a dispatcher here appropriate for blocking operations such as disk IO
       // instead of the main service dispatcher.
-      device_settings_persistence_(dispatcher_) {}
+      device_settings_persistence_(dispatcher) {
+  FXL_DCHECK(dispatcher);
+  FXL_DCHECK(effects_loader);
+}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -61,15 +66,7 @@ zx_status_t AudioDeviceManager::Init() {
     return res;
   }
 
-  // Initialize the EffectsLoader and load the device effect library, if present.
-  res = effects_loader_.LoadLibrary();
-  if (res == ZX_ERR_ALREADY_EXISTS) {
-    FXL_LOG(ERROR) << "EffectsLoader already started!";
-  } else if (res != ZX_OK) {
-    FXL_PLOG(WARNING, res) << "EffectsLoader::LoadLibrary failed";
-  }
-
-  return res;
+  return ZX_OK;
 }
 
 // We are no longer managing audio devices, unwind everything.

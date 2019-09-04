@@ -29,7 +29,7 @@ class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
  public:
-  AudioDeviceManager(async_dispatcher_t* dispatcher,
+  AudioDeviceManager(async_dispatcher_t* dispatcher, EffectsLoader* effects_loader,
                      const SystemGainMuteProvider& system_gain_mute);
   ~AudioDeviceManager();
 
@@ -170,6 +170,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
 
   // Pointer to System gain/mute values. This pointer cannot be bad while we still exist.
   const SystemGainMuteProvider& system_gain_mute_;
+  // Load and create audio effects.
+  [[maybe_unused]] EffectsLoader& effects_loader_;
 
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> bindings_;
@@ -195,8 +197,6 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   uint64_t default_input_token_ = ZX_KOID_INVALID;
 
   AudioDeviceSettingsPersistence device_settings_persistence_;
-
-  EffectsLoader effects_loader_;
 };
 
 }  // namespace media::audio

@@ -25,10 +25,10 @@ class EffectsLoaderTestBase : public testing::Test {
   void TearDown() override;
 
   test_effects_module_ext* test_effects() { return test_effects_.get(); }
-  EffectsLoader* effects_loader() { return &effects_loader_; }
+  EffectsLoader* effects_loader() { return effects_loader_.get(); }
 
  private:
-  EffectsLoader effects_loader_{kTestEffectsModuleName};
+  std::unique_ptr<EffectsLoader> effects_loader_;
   std::shared_ptr<test_effects_module_ext> test_effects_;
 };
 

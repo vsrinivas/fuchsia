@@ -47,12 +47,12 @@ EffectsModule<ModuleImpl> EffectsModule<ModuleImpl>::Open(const char* name) {
   // We use the shared_ptr to handle the basic ref counting. We provide a custom deleter as we
   // don't actually own the module pointer (it's just some data within the loaded module), but
   // instead we want to unload the module when the refcount reaches 0.
-  return EffectsModule<ModuleImpl>(std::shared_ptr<ModuleImpl>(
+  return EffectsModule<ModuleImpl>(std::shared_ptr<const ModuleImpl>(
       module, [lib](ModuleImpl* ptr) { FXL_DCHECK(dlclose(lib) == 0); }));
 }
 
 template <typename ModuleImpl>
-EffectsModule<ModuleImpl>::EffectsModule(std::shared_ptr<ModuleImpl> module)
+EffectsModule<ModuleImpl>::EffectsModule(std::shared_ptr<const ModuleImpl> module)
     : module_(std::move(module)) {}
 
 template class EffectsModule<fuchsia_audio_effects_module_v1>;

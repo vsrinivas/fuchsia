@@ -29,7 +29,8 @@ std::shared_ptr<test_effects_module_ext> OpenTestEffectsExt() {
 
 void EffectsLoaderTestBase::SetUp() {
   testing::Test::SetUp();
-  ASSERT_EQ(effects_loader_.LoadLibrary(), ZX_OK);
+  ASSERT_EQ(EffectsLoader::CreateWithModule(kTestEffectsModuleName, &effects_loader_), ZX_OK);
+  ASSERT_TRUE(effects_loader_);
   test_effects_ = OpenTestEffectsExt();
   ASSERT_TRUE(test_effects_ != nullptr);
 }

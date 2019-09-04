@@ -19,6 +19,7 @@ class EffectsModule {
   static EffectsModule<ModuleImpl> Open(const char* name);
 
   EffectsModule() = default;
+  explicit EffectsModule(std::shared_ptr<const ModuleImpl> module);
 
   // Allow both move and copy. Defaults are fine here as a single shared_ptr is our only data
   // member.
@@ -43,9 +44,7 @@ class EffectsModule {
   }
 
  private:
-  explicit EffectsModule(std::shared_ptr<ModuleImpl> module);
-
-  std::shared_ptr<ModuleImpl> module_;
+  std::shared_ptr<const ModuleImpl> module_;
 };
 
 }  // namespace internal

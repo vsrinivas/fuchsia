@@ -21,77 +21,64 @@ static constexpr uint16_t kTwoChannels = 2;
 // The |EffectsLoaderModuleNotLoadedTest| suite holds tests that exercise the `EffectsLoader` in a
 // state before a valid module has been loaded. This is done by the test fixture for
 // |EffectsLoaderTest| so don't use the fixture for these test cases.
-
-TEST(EffectsLoaderModuleNotLoadedTest, LoadInvalidModule) {
-  EffectsLoader loader("does_not_exist.so");
-  EXPECT_EQ(ZX_ERR_UNAVAILABLE, loader.LoadLibrary());
+TEST(EffectsLoaderModuleNotLoadedTest, CreateWithInvalidModule) {
+  std::unique_ptr<EffectsLoader> loader;
+  EXPECT_EQ(ZX_ERR_UNAVAILABLE, EffectsLoader::CreateWithModule("does_not_exist.so", &loader));
+  EXPECT_FALSE(loader);
 }
 
-TEST(EffectsLoaderModuleNotLoadedTest, GetNumEffectsModuleNotLoaded) {
-  EffectsLoader loader(test::kTestEffectsModuleName);
-  uint32_t num_effects = 0;
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, loader.GetNumFx(&num_effects));
+TEST(EffectsLoaderModuleNotLoadedTest, CreateWithNullModule) {
+  // Sanity test the null module behaves as expected.
+  std::unique_ptr<EffectsLoader> loader = EffectsLoader::CreateWithNullModule();
+  ASSERT_TRUE(loader);
+
+  EXPECT_EQ(0u, loader->GetNumEffects());
+
+  // Test that |GetEffectInfo| and |CreateEffect| behave as expected. These are unimplemented for
+  // the null module, so we just sanity check here the valid effect ID check is implemented by
+  // the loader itself and not deferred to the (unimplemented) module functions.
+  fuchsia_audio_effects_description desc = {};
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, loader->GetEffectInfo(0, &desc));
+  auto effect = loader->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels, {});
+  EXPECT_FALSE(effect);
 }
 
 TEST_F(EffectsLoaderTest, GetNumEffects) {
-  uint32_t num_effects;
-
   // Add effect 1
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
-  EXPECT_EQ(effects_loader()->GetNumFx(&num_effects), ZX_OK);
-  EXPECT_EQ(1u, num_effects);
+  EXPECT_EQ(1u, effects_loader()->GetNumEffects());
 
   // Add effect 2
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_2.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                2.0}));
-  EXPECT_EQ(effects_loader()->GetNumFx(&num_effects), ZX_OK);
-  EXPECT_EQ(2u, num_effects);
+  EXPECT_EQ(2u, effects_loader()->GetNumEffects());
 
   test_effects()->clear_effects();
 }
 
-TEST_F(EffectsLoaderTest, GetNumEffectsNullCount) {
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, effects_loader()->GetNumFx(nullptr));
-}
-
-TEST_F(EffectsLoaderTest, GetFxInfo) {
-  fuchsia_audio_effects_description dfx_desc;
-
+TEST_F(EffectsLoaderTest, GetEffectInfoNullInfoPointer) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                TEST_EFFECTS_ACTION_ASSIGN,
                                                1.0}));
 
-  EXPECT_EQ(effects_loader()->GetFxInfo(0, &dfx_desc), ZX_OK);
-  EXPECT_TRUE(dfx_desc.incoming_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY);
-  EXPECT_TRUE(dfx_desc.outgoing_channels == FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN);
+  EXPECT_EQ(effects_loader()->GetEffectInfo(0, nullptr), ZX_ERR_INVALID_ARGS);
 
   test_effects()->clear_effects();
 }
 
-TEST_F(EffectsLoaderTest, GetFxInfoNullInfoPointer) {
-  ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
-                                                FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
-                                               TEST_EFFECTS_ACTION_ASSIGN,
-                                               1.0}));
-
-  EXPECT_EQ(effects_loader()->GetFxInfo(0, nullptr), ZX_ERR_INVALID_ARGS);
-
-  test_effects()->clear_effects();
-}
-
-TEST_F(EffectsLoaderTest, GetFxInfoInvalidEffectId) {
+TEST_F(EffectsLoaderTest, GetEffectInfoInvalidEffectId) {
   fuchsia_audio_effects_description dfx_desc;
 
-  EXPECT_EQ(effects_loader()->GetFxInfo(kInvalidEffectId, &dfx_desc), ZX_ERR_OUT_OF_RANGE);
+  EXPECT_EQ(effects_loader()->GetEffectInfo(kInvalidEffectId, &dfx_desc), ZX_ERR_OUT_OF_RANGE);
 }
 
-TEST_F(EffectsLoaderTest, CreateFx) {
+TEST_F(EffectsLoaderTest, CreateEffect) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,
                                                 FUCHSIA_AUDIO_EFFECTS_CHANNELS_SAME_AS_IN},
                                                TEST_EFFECTS_ACTION_ASSIGN,
@@ -109,22 +96,22 @@ TEST_F(EffectsLoaderTest, CreateFx) {
   test_effects()->clear_effects();
 }
 
-TEST_F(EffectsLoaderTest, CreateFxInvalidEffectId) {
+TEST_F(EffectsLoaderTest, CreateEffectInvalidEffectId) {
   // Since we didn't call 'add_effect' there are no valid effect_id's that can be used for
-  // CreateFx.
+  // CreateEffect.
   Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects()->num_instances());
 }
 
-TEST_F(EffectsLoaderTest, CreateFxInvalidChannelConfiguration) {
+TEST_F(EffectsLoaderTest, CreateEffectInvalidChannelConfiguration) {
   // The passthrough effect requires in_chans == out_chans.
   Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels - 1, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects()->num_instances());
 }
 
-TEST_F(EffectsLoaderTest, CreateFxTooManyChannels) {
+TEST_F(EffectsLoaderTest, CreateEffectTooManyChannels) {
   static constexpr uint32_t kTooManyChannels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX + 1;
   Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTooManyChannels, kTooManyChannels, {});
   EXPECT_FALSE(e);

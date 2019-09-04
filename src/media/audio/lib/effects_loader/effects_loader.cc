@@ -9,34 +9,51 @@
 #include "src/lib/fxl/logging.h"
 
 namespace media::audio {
+namespace {
 
-zx_status_t EffectsLoader::LoadLibrary() {
-  if (module_) {
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-  module_ = EffectsModuleV1::Open(lib_name_);
-  if (!module_) {
+// With |num_effects| == 0, none of the functions should ever be used (ex: there's no effects to
+// query for information, to create, etc).
+const fuchsia_audio_effects_module_v1 kNullEffectModuleV1 = {
+    .num_effects = 0,
+    .get_info = nullptr,
+    .create_effect = nullptr,
+    .update_effect_configuration = nullptr,
+    .delete_effect = nullptr,
+    .get_parameters = nullptr,
+    .process_inplace = nullptr,
+    .process = nullptr,
+    .flush = nullptr,
+};
+
+}  // namespace
+
+zx_status_t EffectsLoader::CreateWithModule(const char* lib_name,
+                                            std::unique_ptr<EffectsLoader>* out) {
+  auto module = EffectsModuleV1::Open(lib_name);
+  if (!module) {
     return ZX_ERR_UNAVAILABLE;
   }
+  *out = std::unique_ptr<EffectsLoader>(new EffectsLoader(std::move(module)));
   return ZX_OK;
 }
 
-zx_status_t EffectsLoader::GetNumFx(uint32_t* num_fx_out) {
-  if (!module_) {
-    return ZX_ERR_NOT_FOUND;
-  }
-  if (num_fx_out == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  *num_fx_out = module_->num_effects;
-  return ZX_OK;
+std::unique_ptr<EffectsLoader> EffectsLoader::CreateWithNullModule() {
+  // Note we use a no-op 'release' method here since we're wrapping a static/const data member we
+  // want to make sure we don't free this pointer.
+  auto module = std::shared_ptr<const fuchsia_audio_effects_module_v1>(&kNullEffectModuleV1,
+                                                                       [](auto* ptr) {});
+  return std::unique_ptr<EffectsLoader>(new EffectsLoader(EffectsModuleV1(std::move(module))));
 }
 
-zx_status_t EffectsLoader::GetFxInfo(uint32_t effect_id, fuchsia_audio_effects_description* desc) {
-  if (!module_) {
-    return ZX_ERR_NOT_FOUND;
-  }
+uint32_t EffectsLoader::GetNumEffects() {
+  FXL_DCHECK(module_);
+  return module_->num_effects;
+}
+
+zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
+                                         fuchsia_audio_effects_description* desc) {
+  FXL_DCHECK(module_);
+
   if (desc == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -51,9 +68,8 @@ zx_status_t EffectsLoader::GetFxInfo(uint32_t effect_id, fuchsia_audio_effects_d
 
 Effect EffectsLoader::CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
                                    uint16_t channels_out, std::string_view config) {
-  if (!module_) {
-    return {};
-  }
+  FXL_DCHECK(module_);
+
   if (effect_id >= module_->num_effects) {
     return {};
   }
