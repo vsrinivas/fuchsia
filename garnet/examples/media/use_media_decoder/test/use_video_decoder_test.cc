@@ -52,13 +52,16 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
   SHA256_CTX sha256_ctx;
   SHA256_Init(&sha256_ctx);
 
-  EmitFrame emit_frame = [&sha256_ctx, &timestamps](
+  uint32_t frame_index = 0;
+  EmitFrame emit_frame = [&sha256_ctx, &timestamps, &frame_index](
                              uint8_t* i420_data, uint32_t width, uint32_t height, uint32_t stride,
                              bool has_timestamp_ish, uint64_t timestamp_ish) {
+    VLOGF("emit_frame frame_index: %u", frame_index);
     ZX_ASSERT_MSG(width % 2 == 0, "odd width not yet handled");
     ZX_ASSERT_MSG(width == stride, "stride != width not yet handled");
     timestamps.push_back({has_timestamp_ish, timestamp_ish});
     SHA256_Update(&sha256_ctx, i420_data, width * height * 3 / 2);
+    frame_index++;
   };
 
   if (!decode_video_stream_test(&fidl_loop, fidl_thread, component_context.get(),

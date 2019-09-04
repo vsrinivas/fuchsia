@@ -445,6 +445,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t frame_count,
                                           bool has_sar,
                                           uint32_t sar_width,
                                           uint32_t sar_height) {
+  DLOG("InitializeFrames() display_width: %u display_height: %u", display_width, display_height);
   video_frames_.clear();
   returned_frames_.clear();
 
@@ -738,7 +739,7 @@ void H264Decoder::HandleInterrupt() {
   // The main processor returns a result using AvScratch0 to trigger the decoder
   // to continue (possibly 0, if no result is needed).
   auto scratch0 = AvScratch0::Get().ReadFrom(owner_->dosbus());
-  DLOG("Got command: %x\n", scratch0.reg_value());
+  DLOG("Got command: %x", scratch0.reg_value());
   uint32_t cpu_command = scratch0.reg_value() & 0xff;
   switch (cpu_command) {
     case kCommandInitializeStream: {

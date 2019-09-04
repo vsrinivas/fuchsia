@@ -132,7 +132,9 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
     // printf("queuing offset: %ld byte_count: %zu\n", bytes -
     // input_bytes.get(), byte_count);
     while (bytes_so_far != byte_count) {
+      VLOGF("BlockingGetFreeInputPacket()...");
       std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
+      VLOGF("BlockingGetFreeInputPacket() done");
 
       if (!packet->has_header()) {
         Exit("broken server sent packet without header");
@@ -173,10 +175,12 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
     size_t start_code_size_bytes = 0;
     uint32_t actual_peek_bytes;
     uint8_t* peek;
+    VLOGF("PeekBytes()...");
     zx_status_t status = in_stream->PeekBytes(
         max_peek_bytes, &actual_peek_bytes, &peek,
         zx::deadline_after(kReadDeadlineDuration));
     ZX_ASSERT(status == ZX_OK);
+    VLOGF("PeekBytes() done");
     if (actual_peek_bytes == 0) {
       // Out of input.  Not an error.  No more input AUs.
       ZX_DEBUG_ASSERT(in_stream->eos_position_known() && in_stream->cursor_position() == in_stream->eos_position());
@@ -217,13 +221,18 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
     queue_access_unit(&peek[0], start_code_size_bytes + nal_length);
 
     // start code + NAL payload
+    VLOGF("TossPeekedBytes()...");
     in_stream->TossPeekedBytes(start_code_size_bytes + nal_length);
+    VLOGF("TossPeekedBytes() done");
   }
 
   // Send through QueueInputEndOfStream().
+
+  VLOGF("QueueInputEndOfStream()");
   codec_client->QueueInputEndOfStream(kStreamLifetimeOrdinal);
   // We flush and close to run the handling code server-side.  However, we don't
   // yet verify that this successfully achieves what it says.
+  VLOGF("FlushEndOfStreamAndCloseStream()");
   codec_client->FlushEndOfStreamAndCloseStream(kStreamLifetimeOrdinal);
   // input thread done
 }
@@ -393,6 +402,7 @@ static void use_video_decoder(
   VLOGF("before starting in_thread...\n");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
       [&codec_client, in_stream, format]() {
+        VLOGF("in_thread start");
         switch (format) {
           case Format::kH264:
             QueueH264Frames(&codec_client, in_stream);
@@ -402,6 +412,7 @@ static void use_video_decoder(
             QueueVp9Frames(&codec_client, in_stream);
             break;
         }
+        VLOGF("in_thread done");
       });
 
   // Separate thread to process the output.
@@ -410,6 +421,7 @@ static void use_video_decoder(
   // frame_sink activity started by out_thread).
   std::unique_ptr<std::thread> out_thread = std::make_unique<
       std::thread>([fidl_loop, &codec_client, frame_sink, &emit_frame]() {
+    VLOGF("out_thread start");
     // We allow the server to send multiple output constraint updates if it
     // wants; see implementation of BlockingGetEmittedOutput() which will hide
     // multiple constraint updates before the first packet from this code.  In
@@ -419,7 +431,9 @@ static void use_video_decoder(
         prev_stream_format;
     const fuchsia::media::VideoUncompressedFormat* raw = nullptr;
     while (true) {
+      VLOGF("BlockingGetEmittedOutput()...");
       std::unique_ptr<CodecOutput> output = codec_client.BlockingGetEmittedOutput();
+      VLOGF("BlockingGetEmittedOutput() done");
       if (output->stream_lifetime_ordinal() != kStreamLifetimeOrdinal) {
         Exit(
             "server emitted a stream_lifetime_ordinal that client didn't set "
@@ -484,6 +498,7 @@ static void use_video_decoder(
       // We have a non-empty packet of the stream.
 
       if (!prev_stream_format || prev_stream_format.get() != format.get()) {
+        VLOGF("handling output format");
         // Every output has a format.  This happens exactly once.
         prev_stream_format = format;
 
@@ -647,7 +662,7 @@ static void use_video_decoder(
       // If we didn't std::move(cleanup) before here, then ~cleanup runs here.
     }
   end_of_output:;
-    VLOGF("output thread done\n");
+    VLOGF("out_thread done");
     // output thread done
     // ~raw_video_writer
   });

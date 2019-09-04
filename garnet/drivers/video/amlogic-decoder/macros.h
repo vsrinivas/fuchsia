@@ -10,9 +10,9 @@
 #include <chrono>
 #include <thread>
 
-#define DECODE_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DECODE_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt "\n", __func__, __LINE__, ##__VA_ARGS__)
 
-#define DECODE_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DECODE_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt "\n", __func__, __LINE__, ##__VA_ARGS__)
 
 #ifndef AMLOGIC_DLOG_ENABLE
 #define AMLOGIC_DLOG_ENABLE 0

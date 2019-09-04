@@ -9,6 +9,7 @@
 
 #include "device_ctx.h"
 #include "h264_decoder.h"
+#include "macros.h"
 #include "pts_manager.h"
 #include "vdec1.h"
 
@@ -838,11 +839,13 @@ void CodecAdapterH264::ProcessInput() {
     if (item.is_end_of_stream()) {
       video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
       if (!ParseVideoAnnexB(&new_stream_h264[0], new_stream_h264_len)) {
+        DECODE_ERROR("!ParseVideoAnnexB(new_stream_h264)");
         return;
       }
       auto bytes = std::make_unique<uint8_t[]>(kFlushThroughBytes);
       memset(bytes.get(), 0, kFlushThroughBytes);
       if (!ParseVideoAnnexB(bytes.get(), kFlushThroughBytes)) {
+        DECODE_ERROR("!ParseVideoAnnexB(kFlushThroughBytes)");
         return;
       }
       continue;
@@ -1145,6 +1148,7 @@ bool CodecAdapterH264::ParseVideoAnnexB(const uint8_t* data, uint32_t length) {
   }
 
   if (is_cancelling || ZX_OK != video_->WaitForParsingCompleted(ZX_SEC(10))) {
+    DLOG("is_cancelling: %u", is_cancelling);
     video_->CancelParsing();
     OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
     return false;
@@ -1157,8 +1161,7 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(::zx::bti bti, uint32_t fr
                                                       uint32_t stride, uint32_t display_width,
                                                       uint32_t display_height, bool has_sar,
                                                       uint32_t sar_width, uint32_t sar_height) {
-  // First handle the special case of EndOfStream marker showing up at the
-  // output.
+  // First handle the special case of EndOfStream marker showing up at the output.
   if (display_width == kEndOfStreamWidth && display_height == kEndOfStreamHeight) {
     bool is_output_end_of_stream = false;
     {  // scope lock

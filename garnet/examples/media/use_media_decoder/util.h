@@ -19,14 +19,22 @@
 #define VLOG_ENABLED 0
 
 #if (VLOG_ENABLED)
-#define VLOGF(...) printf(__VA_ARGS__)
+#define VLOGF(fmt, ...) \
+  do { \
+    printf(fmt "\n", ## __VA_ARGS__); \
+    fflush(stdout); \
+  } while (0)
 #else
-#define VLOGF(...) \
+#define VLOGF(fmt, ...) \
   do {             \
   } while (0)
 #endif
 
-#define LOGF(...) printf(__VA_ARGS__)
+#define LOGF(fmt, ...) \
+  do { \
+    printf(fmt "\n", ## __VA_ARGS__); \
+    fflush(stdout); \
+  } while (0)
 
 void Exit(const char* format, ...);
 
