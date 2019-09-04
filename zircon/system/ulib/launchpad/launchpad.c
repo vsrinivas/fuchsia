@@ -145,8 +145,10 @@ zx_status_t launchpad_create_with_jobs(zx_handle_t creation_job, zx_handle_t tra
   if (launchpad_create_with_process(proc, vmar, &lp) == ZX_OK)
     lp->fresh_process = true;
 
-  if (status < 0)
+  if (status != ZX_OK) {
+    lp->error = ZX_OK;
     lp_error(lp, status, "create: zx_process_create() failed");
+  }
 
   if (transferred_job != ZX_HANDLE_INVALID) {
     launchpad_add_handle(lp, transferred_job, PA_JOB_DEFAULT);

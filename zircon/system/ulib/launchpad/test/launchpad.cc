@@ -6,22 +6,25 @@
 // provides a place for testing aspects of launchpad that aren't necessarily
 // normally used.
 
-#include <elfload/elfload.h>
-#include <fbl/algorithm.h>
-#include <fbl/array.h>
-#include <fbl/auto_call.h>
-#include <launchpad/launchpad.h>
-#include <launchpad/vmo.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
+#include <zircon/types.h>
+
+#include <elfload/elfload.h>
+#include <fbl/algorithm.h>
+#include <fbl/array.h>
+#include <fbl/auto_call.h>
+#include <launchpad/launchpad.h>
+#include <launchpad/vmo.h>
 #include <zxtest/zxtest.h>
 
 // argv[0]
@@ -170,6 +173,14 @@ TEST(LaunchpadTest, Limits) {
   ASSERT_NO_FAILURES(RunWithArgsEnvHandles(1, 1, 58));
   ASSERT_NO_FAILURES(RunWithArgsEnvHandles(5000, 10000, 0));
   ASSERT_NO_FAILURES(RunWithArgsEnvHandles(5000, 10000, 58));
+}
+
+TEST(LaunchpadTest, ProcessCreateFailure) {
+  launchpad_t* lp;
+  EXPECT_STATUS(launchpad_create_with_jobs(ZX_HANDLE_INVALID, ZX_HANDLE_INVALID, "", &lp),
+                ZX_ERR_BAD_HANDLE);
+  EXPECT_STR_EQ(launchpad_error_message(lp), "create: zx_process_create() failed");
+  launchpad_destroy(lp);
 }
 
 // Providing our own main() because we want to pass argv[0] to one of the tests via program_path.
