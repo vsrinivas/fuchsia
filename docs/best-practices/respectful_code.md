@@ -15,6 +15,7 @@ directly or indirectly, should be avoided.
 ## What is in scope for this policy?
 
 Anything that a contributor would read while working on Fuchsia, including:
+
 - Names of variables, types, functions, files, build rules, binaries, exported
   variables, ...
 - Test data
