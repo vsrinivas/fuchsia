@@ -49,15 +49,18 @@ void DumpVisitor::Visit(Memory* r) {
 }
 
 void DumpVisitor::VisitEscherImage(escher::Image* i) {
+  BeginSection("escher::Image");
   if (i) {
-    WriteProperty("image.width") << i->width();
-    WriteProperty("image.height") << i->height();
-    WriteProperty("image.format") << static_cast<int>(i->format());
-    WriteProperty("image.has_depth") << i->has_depth();
-    WriteProperty("image.has_stencil") << i->has_stencil();
+    WriteProperty("width") << i->width();
+    WriteProperty("height") << i->height();
+    WriteProperty("size") << i->size();
+    WriteProperty("format") << static_cast<int>(i->format());
+    WriteProperty("has_depth") << i->has_depth();
+    WriteProperty("has_stencil") << i->has_stencil();
   } else {
-    WriteProperty("image.value") << "(null)";
+    WriteProperty("value") << "(null)";
   }
+  EndSection();
 }
 
 void DumpVisitor::Visit(Image* r) {
@@ -248,14 +251,18 @@ void DumpVisitor::Visit(Material* r) {
   if (auto backing_image = r->texture_image()) {
     backing_image->Accept(this);
   } else {
-    WriteProperty("image.value") << "(null)";
+    WriteProperty("value") << "(null)";
   }
   EndSection();
+  BeginSection("texture");
   if (auto texture = r->escher_material()->texture()) {
-    WriteProperty("texture.width") << texture->width();
-    WriteProperty("texture.height") << texture->height();
-    WriteProperty("texture.size") << texture->image()->size();
+    WriteProperty("width") << texture->width();
+    WriteProperty("height") << texture->height();
+    WriteProperty("size") << texture->image()->size();
+  } else {
+    WriteProperty("value") << "(null)";
   }
+  EndSection();
   VisitResource(r);
   EndItem();
 }
@@ -372,7 +379,9 @@ void DumpVisitor::Visit(Import* r) {
 
 void DumpVisitor::VisitResource(Resource* r) {
   if (r->event_mask()) {
+    BeginSection("mask");
     WriteProperty("event_mask") << r->event_mask();
+    EndSection();
   }
   if (!r->imports().empty()) {
     BeginSection("imports");
@@ -424,7 +433,7 @@ void DumpVisitor::BeginSection(const char* label) {
   EndLine();
 }
 
-void DumpVisitor::EndSection() { FXL_DCHECK(!partial_line_); }
+void DumpVisitor::EndSection() { EndLine(); }
 
 void DumpVisitor::BeginLine() {
   EndLine();

@@ -17,6 +17,8 @@ namespace test {
 
 class DumpVisitorTest : public SessionTest {
  public:
+  // TODO(24711): Once Images can be created without interacting with the underlying renderer,
+  // replace this with HostImage::New.
   ImagePtr CreateImage(ResourceId id) {
     fuchsia::images::ImageInfo image_info;
     return fxl::AdoptRef(new HostImage(session(), id, /* memory */ nullptr,
@@ -24,6 +26,19 @@ class DumpVisitorTest : public SessionTest {
                                        /* memory_offset */ 0, image_info));
   }
 };
+
+TEST_F(DumpVisitorTest, NullImage) {
+  std::ostringstream ostream;
+  std::unordered_set<GlobalId, GlobalId::Hash> visited;
+  DumpVisitor::VisitorContext context(ostream, &visited);
+  DumpVisitor visitor(std::move(context));
+
+  MaterialPtr null_image_material = fxl::MakeRefCounted<Material>(session(), 1u);
+
+  visitor.Visit(null_image_material.get());
+
+  ASSERT_TRUE(ostream.str().find("value: (null)"));
+}
 
 TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
   std::ostringstream ostream;
