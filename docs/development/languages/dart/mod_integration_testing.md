@@ -242,7 +242,7 @@ graphics. In addition, the `fuchsia.posix.socket.Provider` system service and
 `deprecated-shell` feature are needed to allow Flutter Driver to interact with
 the Dart Observatory.
 
-### BUILD.gn target {:#build-gn-target}
+### BUILD.gn target {#build-gn-target}
 
 The test itself also needs a target in the
 [`BUILD.gn`](https://fuchsia.googlesource.com/topaz/+/HEAD/examples/test/driver_example_mod/BUILD.gn).
@@ -289,7 +289,7 @@ environments in
 
 Once you have this target available, you can add it to the build tree. In the
 case of `driver_example_mod`, this can be done in
-[`//topaz/packages/examples:tests`](https://fuchsia.googlesource.com/topaz/+/HEAD/packages/examples/BUILD.gn)
+[`//topaz:tests`](https://fuchsia.googlesource.com/topaz/+/HEAD/BUILD.gn)
 to be available in `//topaz/bundles:buildbot` and other configurations, like so:
 
 ```gn
