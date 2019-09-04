@@ -18,6 +18,7 @@ extern crate log;
 mod error;
 pub mod hal;
 pub mod lifmgr;
+pub mod packet_filter;
 pub mod portmgr;
 mod servicemgr;
 use crate::lifmgr::{LIFProperties, LIFType, LifIpAddr};

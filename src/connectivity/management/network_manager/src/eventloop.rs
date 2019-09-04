@@ -33,14 +33,15 @@
 //! * Modifies the router state byt accessinc netcfg.
 //! * Updates local state.
 
-use crate::packet_filter::PacketFilter;
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_router_config::RouterAdminRequest;
 use fidl_fuchsia_router_config::{Id, Lif, Port};
 use fidl_fuchsia_router_config::{RouterStateGetPortsResponder, RouterStateRequest};
 use futures::channel::mpsc;
 use futures::prelude::*;
-use network_manager_core::{hal::NetCfg, lifmgr::LIFType, portmgr::PortId, DeviceState};
+use network_manager_core::{
+    hal::NetCfg, lifmgr::LIFType, packet_filter::PacketFilter, portmgr::PortId, DeviceState,
+};
 
 macro_rules! router_error {
     ($code:ident, $desc:expr) => {

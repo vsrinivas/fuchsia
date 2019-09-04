@@ -15,7 +15,6 @@ extern crate log;
 mod eventloop;
 mod fidl_worker;
 mod overnet_worker;
-mod packet_filter;
 
 use crate::eventloop::EventLoop;
 
