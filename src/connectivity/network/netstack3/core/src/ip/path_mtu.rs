@@ -113,76 +113,75 @@ pub(crate) fn get_pmtu<A: IpAddress, C: PmtuContext<A::Version>>(
 /// A handler for PMTU events.
 ///
 /// `PmtuHandler<I>` is implemented by any type which also implements
-/// [`PmtuContext<I>`], and it can also be mocked for use in testing.
+/// [`PmtuContext<I>`], and it can also be mocked for use in testing. See the
+/// [`testutil`] module for an simple mock.
 pub(crate) trait PmtuHandler<I: Ip> {
     /// Update the PMTU between `src_ip` and `dst_ip` if `new_mtu` is less than
     /// the current PMTU and does not violate the minimum MTU size requirements
     /// for an IP.
-    fn update_pmtu_if_less(
-        &mut self,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        new_mtu: u32,
-    ) -> Result<Option<u32>, Option<u32>>;
+    fn update_pmtu_if_less(&mut self, src_ip: I::Addr, dst_ip: I::Addr, new_mtu: u32);
 
     /// Update the PMTU between `src_ip` and `dst_ip` to the next lower estimate
     /// from `from`.
-    ///
-    /// Returns `Ok((a, b))` on successful update (a lower PMTU value, `b`,
-    /// exists that does not violate IP specific minimum MTU requirements and it
-    /// is less than the current PMTU estimate, `a`). Returns `Err(a)`
-    /// otherwise, where `a` is the same `a` as in the success case.
-    fn update_pmtu_next_lower(
-        &mut self,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        from: u32,
-    ) -> Result<(Option<u32>, u32), Option<u32>>;
+    fn update_pmtu_next_lower(&mut self, src_ip: I::Addr, dst_ip: I::Addr, from: u32);
 }
 
 impl<I: Ip, C: PmtuContext<I>> PmtuHandler<I> for C {
-    fn update_pmtu_if_less(
-        &mut self,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        new_mtu: u32,
-    ) -> Result<Option<u32>, Option<u32>> {
-        let prev_mtu = get_pmtu(self, src_ip, dst_ip);
-
-        match prev_mtu {
-            // No PMTU exists so update.
-            None => update_pmtu(self, src_ip, dst_ip, new_mtu),
-            // A PMTU exists but it is greater than `new_mtu` so update.
-            Some(mtu) if new_mtu < mtu => update_pmtu(self, src_ip, dst_ip, new_mtu),
-            // A PMTU exists but it is less than or equal to `new_mtu` so no need to update.
-            _ => {
-                trace!("update_pmtu_if_less: Not updating the PMTU  between src {} and dest {} to {}; is {}", src_ip, dst_ip, new_mtu, prev_mtu.unwrap());
-                Ok(prev_mtu)
-            }
-        }
+    fn update_pmtu_if_less(&mut self, src_ip: I::Addr, dst_ip: I::Addr, new_mtu: u32) {
+        update_pmtu_if_less(self, src_ip, dst_ip, new_mtu);
     }
 
-    fn update_pmtu_next_lower(
-        &mut self,
-        src_ip: I::Addr,
-        dst_ip: I::Addr,
-        from: u32,
-    ) -> Result<(Option<u32>, u32), Option<u32>> {
-        if let Some(next_pmtu) = next_lower_pmtu_plateau(from) {
-            trace!(
+    fn update_pmtu_next_lower(&mut self, src_ip: I::Addr, dst_ip: I::Addr, from: u32) {
+        update_pmtu_next_lower(self, src_ip, dst_ip, from);
+    }
+}
+
+fn update_pmtu_if_less<I: Ip, C: PmtuContext<I>>(
+    ctx: &mut C,
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+    new_mtu: u32,
+) -> Result<Option<u32>, Option<u32>> {
+    let prev_mtu = get_pmtu(ctx, src_ip, dst_ip);
+
+    match prev_mtu {
+        // No PMTU exists so update.
+        None => update_pmtu(ctx, src_ip, dst_ip, new_mtu),
+        // A PMTU exists but it is greater than `new_mtu` so update.
+        Some(mtu) if new_mtu < mtu => update_pmtu(ctx, src_ip, dst_ip, new_mtu),
+        // A PMTU exists but it is less than or equal to `new_mtu` so no need to
+        // update.
+        _ => {
+            trace!("update_pmtu_if_less: Not updating the PMTU  between src {} and dest {} to {}; is {}", src_ip, dst_ip, new_mtu, prev_mtu.unwrap());
+            Ok(prev_mtu)
+        }
+    }
+}
+
+/// Returns `Ok((a, b))` on successful update (a lower PMTU value, `b`, exists
+/// that does not violate IP specific minimum MTU requirements and it is less
+/// than the current PMTU estimate, `a`). Returns `Err(a)` otherwise, where `a`
+/// is the same `a` as in the success case.
+fn update_pmtu_next_lower<I: Ip, C: PmtuContext<I>>(
+    ctx: &mut C,
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+    from: u32,
+) -> Result<(Option<u32>, u32), Option<u32>> {
+    if let Some(next_pmtu) = next_lower_pmtu_plateau(from) {
+        trace!(
             "update_pmtu_next_lower: Attempting to update PMTU between src {} and dest {} to {}",
             src_ip,
             dst_ip,
             next_pmtu
         );
 
-            self.update_pmtu_if_less(src_ip, dst_ip, next_pmtu).map(|x| (x, next_pmtu))
-        } else {
-            // TODO(ghanan): Should we make sure the current PMTU value is set to the
-            //               IP specific minimum MTU value?
-            trace!("update_pmtu_next_lower: Not updating PMTU between src {} and dest {} as there is no lower PMTU value from {}", src_ip, dst_ip, from);
-            Err(get_pmtu(self, src_ip, dst_ip))
-        }
+        update_pmtu_if_less(ctx, src_ip, dst_ip, next_pmtu).map(|x| (x, next_pmtu))
+    } else {
+        // TODO(ghanan): Should we make sure the current PMTU value is set to
+        //               the IP specific minimum MTU value?
+        trace!("update_pmtu_next_lower: Not updating PMTU between src {} and dest {} as there is no lower PMTU value from {}", src_ip, dst_ip, from);
+        Err(get_pmtu(ctx, src_ip, dst_ip))
     }
 }
 
@@ -402,6 +401,78 @@ fn create_maintenance_timer<I: Ip, C: PmtuContext<I>>(ctx: &mut C) {
 }
 
 #[cfg(test)]
+#[macro_use]
+pub(crate) mod testutil {
+    use super::*;
+
+    pub(crate) struct UpdatePmtuIfLessArgs<A: IpAddress> {
+        pub(crate) src_ip: A,
+        pub(crate) dst_ip: A,
+        pub(crate) new_mtu: u32,
+    }
+
+    pub(crate) struct UpdatePmtuNextLowerArgs<A: IpAddress> {
+        pub(crate) src_ip: A,
+        pub(crate) dst_ip: A,
+        pub(crate) from: u32,
+    }
+
+    #[derive(Default)]
+    pub(crate) struct DummyPmtuState<A: IpAddress> {
+        /// Each time `PmtuHandler::update_pmtu_if_less` is called, a new entry
+        /// is pushed onto this vector.
+        pub(crate) update_pmtu_if_less: Vec<UpdatePmtuIfLessArgs<A>>,
+        /// Each time `PmtuHandler::update_pmtu_next_lower` is called, a new
+        /// entry is pushed onto this vector.
+        pub(crate) update_pmtu_next_lower: Vec<UpdatePmtuNextLowerArgs<A>>,
+    }
+
+    /// Implement the `PmtuHandler<$ip_version>` trait for a particular type
+    /// which implements `AsMut<DummyPmtuState<$ip_version::Addr>>`.
+    macro_rules! impl_pmtu_handler {
+        ($ty:ty, $ip_version:ident) => {
+            impl PmtuHandler<net_types::ip::$ip_version> for $ty {
+                fn update_pmtu_if_less(
+                    &mut self,
+                    src_ip: <net_types::ip::$ip_version as net_types::ip::Ip>::Addr,
+                    dst_ip: <net_types::ip::$ip_version as net_types::ip::Ip>::Addr,
+                    new_mtu: u32,
+                ) {
+                    let state: &mut DummyPmtuState<
+                        <net_types::ip::$ip_version as net_types::ip::Ip>::Addr,
+                    > = self.as_mut();
+                    state.update_pmtu_if_less.push(
+                        crate::ip::path_mtu::testutil::UpdatePmtuIfLessArgs {
+                            src_ip,
+                            dst_ip,
+                            new_mtu,
+                        },
+                    );
+                }
+
+                fn update_pmtu_next_lower(
+                    &mut self,
+                    src_ip: <net_types::ip::$ip_version as net_types::ip::Ip>::Addr,
+                    dst_ip: <net_types::ip::$ip_version as net_types::ip::Ip>::Addr,
+                    from: u32,
+                ) {
+                    let state: &mut DummyPmtuState<
+                        <net_types::ip::$ip_version as net_types::ip::Ip>::Addr,
+                    > = self.as_mut();
+                    state.update_pmtu_next_lower.push(
+                        crate::ip::path_mtu::testutil::UpdatePmtuNextLowerArgs {
+                            src_ip,
+                            dst_ip,
+                            from,
+                        },
+                    );
+                }
+            }
+        };
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -562,7 +633,7 @@ mod tests {
         // PMTU should be updated to `new_mtu3` and last updated instant
         // should be updated to the start of the test + 5s.
         assert_eq!(
-            PmtuHandler::<I>::update_pmtu_if_less(
+            update_pmtu_if_less::<I, _>(
                 &mut ctx,
                 dummy_config.local_ip.get(),
                 dummy_config.remote_ip.get(),
@@ -602,7 +673,7 @@ mod tests {
 
         // Make sure update only if new PMTU is less than current (it isn't)
         assert_eq!(
-            PmtuHandler::<I>::update_pmtu_if_less(
+            update_pmtu_if_less::<I, _>(
                 &mut ctx,
                 dummy_config.local_ip.get(),
                 dummy_config.remote_ip.get(),
@@ -639,7 +710,7 @@ mod tests {
 
         // Updating with mtu value less than the minimum MTU should fail.
         assert_eq!(
-            PmtuHandler::<I>::update_pmtu_if_less(
+            update_pmtu_if_less::<I, _>(
                 &mut ctx,
                 dummy_config.local_ip.get(),
                 dummy_config.remote_ip.get(),

@@ -635,6 +635,11 @@ pub(crate) mod testutil {
         pub(crate) fn frames(&self) -> &[(Meta, Vec<u8>)] {
             self.frames.frames()
         }
+
+        /// Get the value of the named counter.
+        pub(crate) fn get_counter(&self, ctr: &str) -> usize {
+            self.counters.counters.get(ctr).cloned().unwrap_or(0)
+        }
     }
 
     impl<S, Id: Clone, Meta> DummyContext<S, Id, Meta> {

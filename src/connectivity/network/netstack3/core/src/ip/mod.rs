@@ -4,13 +4,15 @@
 
 //! The Internet Protocol, versions 4 and 6.
 
+#[macro_use]
+pub(crate) mod path_mtu;
+
 mod forwarding;
 mod gmp;
 pub mod icmp;
 mod igmp;
 mod ipv6;
 mod mld;
-pub(crate) mod path_mtu;
 pub(crate) mod reassembly;
 mod types;
 
@@ -163,6 +165,22 @@ impl<I: Ip, D: EventDispatcher> TransportIpContext<I> for Context<D> {
 /// as when ICMP delivers an MLD packet to the `mld` module for processing).
 pub(crate) trait IpDeviceIdContext {
     type DeviceId: Copy + Display + Debug + Send + Sync + 'static;
+}
+
+/// A dummy device ID for use in testing.
+///
+/// `DummyDeviceId` is provided for use in implementing
+/// `IpDeviceIdContext::DeviceId` in tests. Unlike `()`, it implements the
+/// `Display` trait, which is a requirement of `IpDeviceIdContext::DeviceId`.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[cfg(test)]
+pub(crate) struct DummyDeviceId;
+
+#[cfg(test)]
+impl Display for DummyDeviceId {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "DummyDeviceId")
+    }
 }
 
 // Temporary blanket impl until we switch over entirely to the traits defined in
@@ -1736,7 +1754,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> Icmpv4Context<B> for Context<D> {
     fn receive_icmpv4_error(
         &mut self,
         original_packet: Ipv4PacketRaw<&[u8]>,
-        error: Icmpv4ErrorCode,
+        err: Icmpv4ErrorCode,
     ) {
         // Import this here (rather than for the whole module) to avoid
         // introducing ambiguities with the methods provided by the IpPacket
@@ -1744,10 +1762,10 @@ impl<B: BufferMut, D: BufferDispatcher<B>> Icmpv4Context<B> for Context<D> {
         use crate::wire::ipv4::Ipv4Header;
 
         self.increment_counter("Icmpv4Context::receive_icmpv4_error");
-        trace!("Icmpv4Context::receive_icmpv4_error({:?})", error);
+        trace!("Icmpv4Context::receive_icmpv4_error({:?})", err);
         match original_packet.proto() {
             IpProto::Icmp => {
-                crate::ip::icmp::receive_icmpv4_socket_error(self, original_packet, error)
+                crate::ip::icmp::receive_icmpv4_socket_error(self, original_packet, err)
             }
             IpProto::Udp => {
                 log_unimplemented!((), "receive_icmpv4_error: receive ICMP error for UDP")

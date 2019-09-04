@@ -134,7 +134,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
 }
 
 create_net_enum! {
-    Icmpv6MessageType,
+    pub(crate) Icmpv6MessageType,
     DestUnreachable: DEST_UNREACHABLE = 1,
     PacketTooBig: PACKET_TOO_BIG = 2,
     TimeExceeded: TIME_EXCEEDED = 3,
@@ -167,7 +167,7 @@ impl_icmp_message!(Ipv6, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, OriginalP
 impl_icmp_message!(Ipv6, IcmpEchoReply, EchoReply, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {
-  Icmpv6DestUnreachableCode,
+  pub(crate) Icmpv6DestUnreachableCode,
   NoRoute: NO_ROUTE = 0,
   CommAdministrativelyProhibited: COMM_ADMINISTRATIVELY_PROHIBITED = 1,
   BeyondScope: BEYOND_SCOPE = 2,
@@ -205,7 +205,7 @@ impl Icmpv6PacketTooBig {
 impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {
-  Icmpv6TimeExceededCode,
+  pub(crate) Icmpv6TimeExceededCode,
   HopLimitExceeded: HOP_LIMIT_EXCEEDED = 0,
   FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
 }
@@ -213,7 +213,7 @@ create_net_enum! {
 impl_icmp_message!(Ipv6, IcmpTimeExceeded, TimeExceeded, Icmpv6TimeExceededCode, OriginalPacket<B>);
 
 create_net_enum! {
-  Icmpv6ParameterProblemCode,
+  pub(crate) Icmpv6ParameterProblemCode,
   ErroneousHeaderField: ERRONEOUS_HEADER_FIELD = 0,
   UnrecognizedNextHeaderType: UNRECOGNIZED_NEXT_HEADER_TYPE = 1,
   UnrecognizedIpv6Option: UNRECOGNIZED_IPV6_OPTION = 2,

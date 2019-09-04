@@ -8,7 +8,7 @@ use byteorder::{ByteOrder, NetworkEndian};
 use log::{debug, trace};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::{MulticastAddress, SpecifiedAddr, Witness};
-use packet::{BufferMut, Serializer, TruncateDirection, TruncatingSerializer};
+use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSerializer};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
@@ -22,21 +22,22 @@ use crate::ip::{IpDeviceIdContext, IpProto, IPV6_MIN_MTU};
 use crate::transport::ConnAddrMap;
 use crate::wire::icmp::{
     peek_message_type, IcmpDestUnreachable, IcmpEchoRequest, IcmpIpExt, IcmpMessage,
-    IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
+    IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpPacketRaw, IcmpParseArgs, IcmpTimeExceeded,
     IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4Packet, Icmpv4ParameterProblem,
     Icmpv4ParameterProblemCode, Icmpv4RedirectCode, Icmpv4TimeExceededCode,
     Icmpv6DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem,
     Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody, OriginalPacket,
 };
-use crate::wire::ipv4::Ipv4PacketRaw;
+use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 
 /// An ICMPv4 error type and code.
 ///
 /// Each enum variant corresponds to a particular error type, and contains the
 /// possible codes for that error type.
-#[derive(Copy, Clone, Debug)]
-pub(crate) enum Icmpv4ErrorCode {
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[allow(missing_docs)]
+pub enum Icmpv4ErrorCode {
     DestUnreachable(Icmpv4DestUnreachableCode),
     Redirect(Icmpv4RedirectCode),
     TimeExceeded(Icmpv4TimeExceededCode),
@@ -125,10 +126,25 @@ impl From<IcmpConnId> for usize {
     }
 }
 
+/// An event dispatcher for the ICMPv4 layer.
+///
+/// See the `EventDispatcher` trait in the crate root for more details.
+pub trait Icmpv4EventDispatcher {
+    /// Receive an ICMP error message related to a previously-sent ICMP echo
+    /// request.
+    ///
+    /// `seq_num` is the sequence number of the original echo request that
+    /// triggered the error, and `err` is the specific error identified by the
+    /// incoming ICMP error message.
+    fn receive_icmpv4_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv4ErrorCode) {
+        log_unimplemented!((), "Icmpv4SocketContext::receive_icmp_echo_reply: not implemented");
+    }
+}
+
 /// An event dispatcher for the ICMP layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
-pub trait IcmpEventDispatcher<B: BufferMut> {
+pub trait IcmpEventDispatcher<B: BufferMut>: Icmpv4EventDispatcher {
     /// Receive an ICMP echo reply.
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
         log_unimplemented!((), "IcmpEventDispatcher::receive_icmp_echo_reply: not implemented");
@@ -145,13 +161,35 @@ pub trait IcmpSocketContext<I: Ip, B: BufferMut> {
     /// If `I` is `Ipv4`, then this is an ICMP(v4) echo reply, and if it's
     /// `Ipv6`, then this is an ICMPv6 echo reply.
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
-        log_unimplemented!((), "IcmpContext::receive_icmp_echo_reply: not implemented");
+        log_unimplemented!((), "IcmpSocketContext::receive_icmp_echo_reply: not implemented");
+    }
+}
+
+/// The execution context for ICMPv4 sockets.
+///
+/// `Icmpv4SocketContext` extends [`IcmpSocketContext`] with ICMPv4-specific
+/// functionality.
+pub trait Icmpv4SocketContext {
+    /// Receive an ICMP error message related to a previously-sent ICMP echo
+    /// request.
+    ///
+    /// `seq_num` is the sequence number of the original echo request that
+    /// triggered the error, and `err` is the specific error identified by the
+    /// incoming ICMP error message.
+    fn receive_icmpv4_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv4ErrorCode) {
+        log_unimplemented!((), "Icmpv4SocketContext::receive_icmp_echo_reply: not implemented");
     }
 }
 
 impl<I: Ip, B: BufferMut, D: BufferDispatcher<B>> IcmpSocketContext<I, B> for Context<D> {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
         self.dispatcher_mut().receive_icmp_echo_reply(conn, seq_num, data);
+    }
+}
+
+impl<D: EventDispatcher> Icmpv4SocketContext for Context<D> {
+    fn receive_icmpv4_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv4ErrorCode) {
+        self.dispatcher_mut().receive_icmpv4_error(conn, seq_num, err);
     }
 }
 
@@ -232,7 +270,7 @@ pub(crate) trait IcmpContext<I: IcmpIpExt, B: BufferMut>:
 
 /// The execution context for ICMP(v4).
 pub(crate) trait Icmpv4Context<B: BufferMut>:
-    IcmpContext<Ipv4, B> + StateContext<(), Icmpv4State>
+    IcmpContext<Ipv4, B> + StateContext<(), Icmpv4State> + Icmpv4SocketContext
 {
     // TODO(joshlf): If we end up needing to respond to these messages with new
     // outbound packets, then perhaps it'd be worth passing the original buffer
@@ -244,11 +282,7 @@ pub(crate) trait Icmpv4Context<B: BufferMut>:
     /// contents - including at least 8 bytes of the packet's body - are
     /// encapsulated in the error message, and provided here so that the error
     /// can be associated with a transport-layer socket.
-    fn receive_icmpv4_error(
-        &mut self,
-        original_packet: Ipv4PacketRaw<&[u8]>,
-        error: Icmpv4ErrorCode,
-    );
+    fn receive_icmpv4_error(&mut self, original_packet: Ipv4PacketRaw<&[u8]>, err: Icmpv4ErrorCode);
 }
 
 /// The execution context for ICMPv6.
@@ -455,10 +489,10 @@ fn receive_icmpv4_error<
 >(
     ctx: &mut C,
     packet: &IcmpPacket<Ipv4, BB, M>,
-    error: Icmpv4ErrorCode,
+    err: Icmpv4ErrorCode,
 ) {
     packet.with_original_packet(|res| match res {
-        Ok(original_packet) => ctx.receive_icmpv4_error(original_packet, error),
+        Ok(original_packet) => Icmpv4Context::receive_icmpv4_error(ctx, original_packet, err),
         Err(_) => debug!(
             "receive_icmpv4_error: Got ICMP error message with unparsable original IPv4 packet"
         ),
@@ -1259,10 +1293,35 @@ fn receive_icmp_echo_reply<
 pub(crate) fn receive_icmpv4_socket_error<B: BufferMut, C: Icmpv4Context<B>>(
     ctx: &mut C,
     original_packet: Ipv4PacketRaw<&[u8]>,
-    error: Icmpv4ErrorCode,
+    err: Icmpv4ErrorCode,
 ) {
-    trace!("receive_icmpv4_error({:?})", error);
-    log_unimplemented!((), "receive_icmpv4_error");
+    ctx.increment_counter("receive_icmpv4_socket_error");
+    trace!("receive_icmpv4_socket_error({:?})", err);
+
+    let mut body = original_packet.body().into_inner();
+    let echo_request =
+        if let Ok(echo_request) = body.parse::<IcmpPacketRaw<Ipv4, _, IcmpEchoRequest>>() {
+            echo_request
+        } else {
+            // NOTE: This might just mean that the error message was in response
+            // to a packet that we sent that wasn't an echo request, so we just
+            // silently ignore it.
+            return;
+        };
+
+    if let Some(dst_ip) = SpecifiedAddr::new(original_packet.dst_ip()) {
+        let id = echo_request.message().id();
+        if let Some(conn) =
+            ctx.get_state(()).as_ref().get_by_addr(&IcmpAddr { remote_addr: dst_ip, icmp_id: id })
+        {
+            let seq = echo_request.message().seq();
+            Icmpv4SocketContext::receive_icmpv4_error(ctx, IcmpConnId(conn), seq, err);
+        } else {
+            trace!("receive_icmpv4_error: Got ICMPv4 error message for no-longer existant ICMP echo socket");
+        }
+    } else {
+        trace!("receive_icmpv4_error: Got ICMPv4 error message for IPv4 packet with an unspecified destination IP address");
+    }
 }
 
 /// Send an ICMPv4 echo request on an existing connection.
@@ -1342,7 +1401,15 @@ pub fn new_icmp_connection<D: EventDispatcher, A: IpAddress>(
     remote_addr: SpecifiedAddr<A>,
     icmp_id: u16,
 ) -> Result<IcmpConnId, error::NetstackError> {
-    let conns = get_conns::<_, A>(ctx.state_mut());
+    new_icmp_connection_inner(get_conns::<_, A>(ctx.state_mut()), local_addr, remote_addr, icmp_id)
+}
+
+fn new_icmp_connection_inner<A: IpAddress>(
+    conns: &mut ConnAddrMap<IcmpAddr<A>>,
+    local_addr: SpecifiedAddr<A>,
+    remote_addr: SpecifiedAddr<A>,
+    icmp_id: u16,
+) -> Result<IcmpConnId, error::NetstackError> {
     // TODO(brunodalbo) ICMP connections are currently only bound to the remote
     //  address. Sockets API v2 will improve this.
     let addr = IcmpAddr { remote_addr, icmp_id };
@@ -1374,7 +1441,8 @@ mod tests {
 
     use super::*;
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
-    use crate::ip::{receive_ipv4_packet, IpExt};
+    use crate::ip::path_mtu::testutil::DummyPmtuState;
+    use crate::ip::{receive_ipv4_packet, DummyDeviceId, IpExt};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
     };
@@ -1384,6 +1452,10 @@ mod tests {
     };
     #[cfg(feature = "udp-icmp-port-unreachable")]
     use crate::wire::udp::UdpPacketBuilder;
+
+    //
+    // Tests that require an entire IP stack.
+    //
 
     /// Test that receiving a particular IP packet results in a particular ICMP
     /// response.
@@ -1739,66 +1811,410 @@ mod tests {
         test_icmp_connections::<Ipv6>("receive_icmpv6_packet");
     }
 
-    /// Test that receiving an ICMP error message results in that error getting
-    /// passed to `Icmpv4Context::receive_icmpv4_error`.
-    ///
-    /// Test that receiving an ICMP error message with the given code and
-    /// message contents, and containing the given original IPv4 packet, results
-    /// in that error getting passed to `Icmpv4Context::receive_icmpv4_error`.
-    /// The error message will be sent from `DUMMY_CONFIG_V4.remote_ip` to
-    /// `DUMMY_CONFIG_V4.local_ip`.
-    ///
-    /// After the error has been received, and the call to
-    /// `receive_icmpv4_error` has been verified (via test counters), `f` is
-    /// called on the context so that the caller can perform whatever extra
-    /// validation they want.
-    fn test_receive_icmp_error_helper<
-        C: Debug,
-        M: for<'a> IcmpMessage<Ipv4, &'a [u8], Code = C> + Debug,
-        F: Fn(&Context<DummyEventDispatcher>),
-    >(
-        original_packet: &mut [u8],
-        code: C,
-        msg: M,
-        f: F,
-    ) {
-        crate::testutil::set_logger_for_test();
-        let buffer = Buf::new(original_packet, ..)
-            .encapsulate(IcmpPacketBuilder::new(
-                DUMMY_CONFIG_V4.remote_ip,
-                DUMMY_CONFIG_V4.local_ip,
-                code,
-                msg,
-            ))
-            .serialize_vec_outer()
-            .unwrap();
+    //
+    // Tests that only require an ICMP stack. Unlike the preceding tests, these
+    // only test the ICMP stack and state, and mock everything else.
+    //
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-            .build::<DummyEventDispatcher>();
+    // The arguments to `IcmpContext::send_icmp_reply`.
+    #[derive(Debug, PartialEq)]
+    struct SendIcmpReplyArgs<A: IpAddress> {
+        device: Option<DummyDeviceId>,
+        src_ip: SpecifiedAddr<A>,
+        dst_ip: SpecifiedAddr<A>,
+        body: Vec<u8>,
+    }
 
-        let device = DeviceId::new_ethernet(0);
-        receive_icmpv4_packet(
-            &mut ctx,
-            Some(device),
-            DUMMY_CONFIG_V4.remote_ip.get(),
-            DUMMY_CONFIG_V4.local_ip,
-            buffer,
-        );
+    // The arguments to `IcmpContext::send_icmp_error_message`.
+    #[derive(Debug, PartialEq)]
+    struct SendIcmpErrorMessageArgs<A: IpAddress> {
+        frame_dst: FrameDestination,
+        src_ip: SpecifiedAddr<A>,
+        dst_ip: A,
+        body: Vec<u8>,
+        ip_mtu: Option<u32>,
+        allow_dst_multicast: bool,
+        // Whether `should_send_icmpv{4,6}_error` returned true.
+        sent: bool,
+    }
 
-        assert_eq!(*ctx.state().test_counters.get("Icmpv4Context::receive_icmpv4_error"), 1);
-        f(&ctx);
+    // The arguments to `Icmpv4Context::receive_icmpv4_error`.
+    #[derive(Debug, PartialEq)]
+    struct ReceiveIcmpv4ErrorArgs {
+        err: Icmpv4ErrorCode,
+    }
+
+    // The arguments to `Icmpv4SocketContext::receive_icmpv4_error`.
+    #[derive(Debug, PartialEq)]
+    struct ReceiveIcmpv4SocketErrorArgs {
+        conn: IcmpConnId,
+        seq_num: u16,
+        err: Icmpv4ErrorCode,
+    }
+
+    #[derive(Default)]
+    struct DummyIcmpContext<I: IcmpIpExt> {
+        send_icmp_reply: Vec<SendIcmpReplyArgs<I::Addr>>,
+        send_icmp_error_message: Vec<SendIcmpErrorMessageArgs<I::Addr>>,
+        pmtu_state: DummyPmtuState<I::Addr>,
+    }
+
+    struct DummyIcmpv4Context {
+        inner: DummyIcmpContext<Ipv4>,
+        // We store calls to `Icmpv4Context::receive_icmpv4_error` AND calls to
+        // `Icmpv4SocketContext::receive_icmpv4_error`. Any call to
+        // `Icmpv4Context::receive_icmpv4_error` with an IP proto of ICMPv4 will
+        // be stored here and also passed to `receive_icmpv4_socket_error`,
+        // which will in turn call `Icmpv4SocketContext::receive_icmpv4_error`.
+        receive_icmpv4_error: Vec<ReceiveIcmpv4ErrorArgs>,
+        receive_icmpv4_socket_error: Vec<ReceiveIcmpv4SocketErrorArgs>,
+        icmpv4_state: Icmpv4State,
+    }
+
+    impl Default for DummyIcmpv4Context {
+        fn default() -> DummyIcmpv4Context {
+            DummyIcmpv4Context {
+                inner: DummyIcmpContext::default(),
+                receive_icmpv4_error: Vec::new(),
+                receive_icmpv4_socket_error: Vec::new(),
+                icmpv4_state: Icmpv4StateBuilder::default().build(),
+            }
+        }
+    }
+
+    type Dummyv4Context = crate::context::testutil::DummyContext<DummyIcmpv4Context>;
+
+    impl AsMut<DummyPmtuState<Ipv4Addr>> for Dummyv4Context {
+        fn as_mut(&mut self) -> &mut DummyPmtuState<Ipv4Addr> {
+            &mut self.get_mut().inner.pmtu_state
+        }
+    }
+
+    impl_pmtu_handler!(Dummyv4Context, Ipv4);
+
+    impl IpDeviceIdContext for Dummyv4Context {
+        type DeviceId = DummyDeviceId;
+    }
+
+    impl Icmpv4SocketContext for Dummyv4Context {
+        fn receive_icmpv4_error(&mut self, conn: IcmpConnId, seq_num: u16, err: Icmpv4ErrorCode) {
+            self.increment_counter("Icmpv4SocketContext::receive_icmpv4_error");
+            self.get_mut().receive_icmpv4_socket_error.push(ReceiveIcmpv4SocketErrorArgs {
+                conn,
+                seq_num,
+                err,
+            });
+        }
+    }
+
+    impl<B: BufferMut> IcmpSocketContext<Ipv4, B> for Dummyv4Context {}
+
+    impl<B: BufferMut> IcmpContext<Ipv4, B> for Dummyv4Context {
+        fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S>(
+            &mut self,
+            device: Option<DummyDeviceId>,
+            src_ip: SpecifiedAddr<Ipv4Addr>,
+            dst_ip: SpecifiedAddr<Ipv4Addr>,
+            get_body: F,
+        ) -> Result<(), S> {
+            self.get_mut().inner.send_icmp_reply.push(SendIcmpReplyArgs {
+                device,
+                src_ip,
+                dst_ip,
+                body: unimplemented!(),
+            });
+            Ok(())
+        }
+
+        fn send_icmp_error_message<
+            S: Serializer<Buffer = B>,
+            F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S,
+        >(
+            &mut self,
+            device: DummyDeviceId,
+            frame_dst: FrameDestination,
+            src_ip: SpecifiedAddr<Ipv4Addr>,
+            dst_ip: Ipv4Addr,
+            get_body: F,
+            ip_mtu: Option<u32>,
+            allow_dst_multicast: bool,
+        ) -> Result<(), S> {
+            let sent = should_send_icmpv4_error(frame_dst, src_ip, dst_ip);
+            self.get_mut().inner.send_icmp_error_message.push(SendIcmpErrorMessageArgs {
+                frame_dst,
+                src_ip,
+                dst_ip,
+                body: unimplemented!(),
+                ip_mtu,
+                allow_dst_multicast,
+                sent,
+            });
+            Ok(())
+        }
+    }
+
+    impl<B: BufferMut> Icmpv4Context<B> for Dummyv4Context {
+        fn receive_icmpv4_error(
+            &mut self,
+            original_packet: Ipv4PacketRaw<&[u8]>,
+            err: Icmpv4ErrorCode,
+        ) {
+            self.increment_counter("Icmpv4Context::receive_icmpv4_error");
+            self.get_mut().receive_icmpv4_error.push(ReceiveIcmpv4ErrorArgs { err });
+            if original_packet.proto() == IpProto::Icmp {
+                receive_icmpv4_socket_error::<B, _>(self, original_packet, err);
+            }
+        }
+    }
+
+    impl StateContext<(), Icmpv4State> for Dummyv4Context {
+        fn get_state(&self, _id: ()) -> &Icmpv4State {
+            &self.get_ref().icmpv4_state
+        }
+
+        fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State {
+            &mut self.get_mut().icmpv4_state
+        }
     }
 
     #[test]
     fn test_receive_icmpv4_error() {
-        // Test that, when we receive various ICMPv4 error messages, we properly
-        // pass them up to the IP layer (in particular, to
-        // `Icmpv4Context::receive_icmpv4_error`).
+        // Chosen arbitrarily to be a) non-zero (it's easy to accidentally get
+        // the value 0) and, b) different from each other.
+        const ICMP_ID: u16 = 0x0F;
+        const SEQ_NUM: u16 = 0xF0;
 
-        // TODO(joshlf): Once we capture more information from
-        // `Icmpv4Context::receive_icmpv4_error` or other functions, assert more
-        // properties (such as that the received code is actually the one we
-        // sent).
+        /// Test that receiving an ICMP error message results in certain
+        /// counters getting incremented
+        ///
+        /// in that error getting passed to
+        /// `Icmpv4Context::receive_icmpv4_error`.
+        ///
+        /// Test receiving an ICMP error message.
+        ///
+        /// Test that receiving an ICMP error message with the given code and
+        /// message contents, and containing the given original IPv4 packet,
+        /// results in the counter values in `assert_counters`. After that
+        /// assertion passes, `f` is called on the context so that the caller
+        /// can perform whatever extra validation they want.
+        ///
+        /// The error message will be sent from `DUMMY_CONFIG_V4.remote_ip` to
+        /// `DUMMY_CONFIG_V4.local_ip`. Before the message is sent, an ICMP
+        /// socket will be established with the ID `ICMP_ID`, and
+        /// `test_receive_icmpv4_error_helper` will assert that its `IcmpConnId`
+        /// is 0. This allows the caller to craft the `original_packet` so that
+        /// it should be delivered to this socket.
+        fn test_receive_icmpv4_error_helper<
+            C: Debug,
+            M: for<'a> IcmpMessage<Ipv4, &'a [u8], Code = C> + Debug,
+            F: Fn(&Dummyv4Context),
+        >(
+            original_packet: &mut [u8],
+            code: C,
+            msg: M,
+            assert_counters: &[(&str, usize)],
+            f: F,
+        ) {
+            crate::testutil::set_logger_for_test();
+
+            let mut ctx = Dummyv4Context::default();
+            // NOTE: This assertion is not a correctness requirement. It's just
+            // that the rest of this test assumes that the new connection has ID
+            // 0. If this assertion fails in the future, that isn't necessarily
+            // evidence of a bug; we may just have to update this test to
+            // accomodate whatever new ID allocation scheme is being used.
+            assert_eq!(
+                new_icmp_connection_inner(
+                    &mut ctx.get_mut().icmpv4_state.conns,
+                    DUMMY_CONFIG_V4.local_ip,
+                    DUMMY_CONFIG_V4.remote_ip,
+                    ICMP_ID
+                )
+                .unwrap(),
+                IcmpConnId(0)
+            );
+
+            receive_icmpv4_packet(
+                &mut ctx,
+                Some(DummyDeviceId),
+                DUMMY_CONFIG_V4.remote_ip.get(),
+                DUMMY_CONFIG_V4.local_ip,
+                Buf::new(original_packet, ..)
+                    .encapsulate(IcmpPacketBuilder::new(
+                        DUMMY_CONFIG_V4.remote_ip,
+                        DUMMY_CONFIG_V4.local_ip,
+                        code,
+                        msg,
+                    ))
+                    .serialize_vec_outer()
+                    .unwrap(),
+            );
+
+            for (ctr, count) in assert_counters {
+                assert_eq!(ctx.get_counter(ctr), *count);
+            }
+            f(&ctx);
+        }
+        // Test that, when we receive various ICMPv4 error messages, we properly
+        // pass them up to the IP layer and, sometimes, to the transport layer.
+
+        // First, test with an original packet containing an ICMP message. Since
+        // this test mock supports ICMP sockets, this error can be delivered all
+        // the way up the stack.
+
+        // A buffer containing an ICMP echo request with ID `ICMP_ID` and
+        // sequence number `SEQ_NUM` from the local IP to the remote IP. Any
+        // ICMP error message which contains this as its original packet should
+        // be delivered to the socket created in
+        // `test_receive_icmpv4_error_helper`.
+        let mut buffer = Buf::new(&mut [], ..)
+            .encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                DUMMY_CONFIG_V4.local_ip,
+                DUMMY_CONFIG_V4.remote_ip,
+                IcmpUnusedCode,
+                IcmpEchoRequest::new(ICMP_ID, SEQ_NUM),
+            ))
+            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
+                DUMMY_CONFIG_V4.local_ip,
+                DUMMY_CONFIG_V4.remote_ip,
+                64,
+                IpProto::Icmp,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        test_receive_icmpv4_error_helper(
+            buffer.as_mut(),
+            Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+            IcmpDestUnreachable::default(),
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 1),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 1),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::DestUnreachable(
+                    Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(
+                    ctx.get_ref().receive_icmpv4_socket_error,
+                    [ReceiveIcmpv4SocketErrorArgs { conn: IcmpConnId(0), seq_num: SEQ_NUM, err }]
+                );
+            },
+        );
+
+        test_receive_icmpv4_error_helper(
+            buffer.as_mut(),
+            Icmpv4TimeExceededCode::TtlExpired,
+            IcmpTimeExceeded::default(),
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 1),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 1),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::TimeExceeded(Icmpv4TimeExceededCode::TtlExpired);
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(
+                    ctx.get_ref().receive_icmpv4_socket_error,
+                    [ReceiveIcmpv4SocketErrorArgs { conn: IcmpConnId(0), seq_num: SEQ_NUM, err }]
+                );
+            },
+        );
+
+        test_receive_icmpv4_error_helper(
+            buffer.as_mut(),
+            Icmpv4ParameterProblemCode::PointerIndicatesError,
+            Icmpv4ParameterProblem::new(0),
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 1),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 1),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::ParameterProblem(
+                    Icmpv4ParameterProblemCode::PointerIndicatesError,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(
+                    ctx.get_ref().receive_icmpv4_socket_error,
+                    [ReceiveIcmpv4SocketErrorArgs { conn: IcmpConnId(0), seq_num: SEQ_NUM, err }]
+                );
+            },
+        );
+
+        // Second, test with an original packet containing a malformed ICMP
+        // packet (we accomplish this by leaving the IP packet's body empty). We
+        // should process this packet in `receive_icmpv4_socket_error`, but we
+        // should go no further - in particular, we should not call
+        // `Icmpv4SocketContext::receive_icmpv4_error`.
+
+        let mut buffer = Buf::new(&mut [], ..)
+            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
+                DUMMY_CONFIG_V4.local_ip,
+                DUMMY_CONFIG_V4.remote_ip,
+                64,
+                IpProto::Icmp,
+            ))
+            .serialize_vec_outer()
+            .unwrap();
+
+        test_receive_icmpv4_error_helper(
+            buffer.as_mut(),
+            Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+            IcmpDestUnreachable::default(),
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 1),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::DestUnreachable(
+                    Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
+            },
+        );
+
+        test_receive_icmpv4_error_helper(
+            buffer.as_mut(),
+            Icmpv4TimeExceededCode::TtlExpired,
+            IcmpTimeExceeded::default(),
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 1),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::TimeExceeded(Icmpv4TimeExceededCode::TtlExpired);
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
+            },
+        );
+
+        test_receive_icmpv4_error_helper(
+            buffer.as_mut(),
+            Icmpv4ParameterProblemCode::PointerIndicatesError,
+            Icmpv4ParameterProblem::new(0),
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 1),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::ParameterProblem(
+                    Icmpv4ParameterProblemCode::PointerIndicatesError,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
+            },
+        );
+
+        // Third, test with an original packet containing a UDP packet. This
+        // allows us to verify that protocol numbers are handled properly by
+        // checking that `receive_icmpv4_socket_error` was NOT called.
 
         let mut buffer = Buf::new(&mut [], ..)
             .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
@@ -1810,25 +2226,56 @@ mod tests {
             .serialize_vec_outer()
             .unwrap();
 
-        test_receive_icmp_error_helper(
+        test_receive_icmpv4_error_helper(
             buffer.as_mut(),
             Icmpv4DestUnreachableCode::DestNetworkUnreachable,
             IcmpDestUnreachable::default(),
-            |_| {},
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 0),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::DestUnreachable(
+                    Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
+            },
         );
 
-        test_receive_icmp_error_helper(
+        test_receive_icmpv4_error_helper(
             buffer.as_mut(),
             Icmpv4TimeExceededCode::TtlExpired,
             IcmpTimeExceeded::default(),
-            |_| {},
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 0),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::TimeExceeded(Icmpv4TimeExceededCode::TtlExpired);
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
+            },
         );
 
-        test_receive_icmp_error_helper(
+        test_receive_icmpv4_error_helper(
             buffer.as_mut(),
             Icmpv4ParameterProblemCode::PointerIndicatesError,
             Icmpv4ParameterProblem::new(0),
-            |_| {},
+            &[
+                ("Icmpv4Context::receive_icmpv4_error", 1),
+                ("receive_icmpv4_socket_error", 0),
+                ("Icmpv4SocketContext::receive_icmpv4_error", 0),
+            ],
+            |ctx| {
+                let err = Icmpv4ErrorCode::ParameterProblem(
+                    Icmpv4ParameterProblemCode::PointerIndicatesError,
+                );
+                assert_eq!(ctx.get_ref().receive_icmpv4_error, [ReceiveIcmpv4ErrorArgs { err }]);
+                assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
+            },
         );
     }
 }

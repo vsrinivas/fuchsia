@@ -18,7 +18,7 @@ use crate::wire::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImp
 use crate::wire::U16;
 
 create_net_enum! {
-    IgmpMessageType,
+    pub(crate) IgmpMessageType,
     MembershipQuery: MEMBERSHIP_QUERY = 0x11,
     MembershipReportV1: MEMBERSHIP_REPORT_V1 = 0x12,
     MembershipReportV2: MEMBERSHIP_REPORT_V2 = 0x16,
@@ -262,7 +262,7 @@ impl MembershipReportV3Data {
 ///
 /// [RFC 3376 section 4.2.12]: https://tools.ietf.org/html/rfc3376#section-4.2.12
 create_net_enum! {
-    IgmpGroupRecordType,
+    pub(crate) IgmpGroupRecordType,
     ModeIsInclude: MODE_IS_INCLUDE = 0x01,
     ModeIsExclude: MODE_IS_EXCLUDE = 0x02,
     ChangeToIncludeMode: CHANGE_TO_INCLUDE_MODE = 0x03,

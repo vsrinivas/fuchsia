@@ -24,7 +24,7 @@ use rand_xorshift::XorShiftRng;
 use crate::device::ethernet::EtherType;
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{IpParseResult, ParseError, ParseResult};
-use crate::ip::icmp::{IcmpConnId, IcmpEventDispatcher};
+use crate::ip::icmp::{IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher};
 use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto, IPV6_MIN_MTU};
 use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
@@ -936,6 +936,8 @@ impl DummyEventDispatcher {
 impl UdpEventDispatcher for DummyEventDispatcher {}
 
 impl TransportLayerEventDispatcher for DummyEventDispatcher {}
+
+impl Icmpv4EventDispatcher for DummyEventDispatcher {}
 
 impl<B: BufferMut> IcmpEventDispatcher<B> for DummyEventDispatcher {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {

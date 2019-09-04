@@ -102,7 +102,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B
 }
 
 create_net_enum! {
-    Icmpv4MessageType,
+    pub(crate) Icmpv4MessageType,
     EchoReply: ECHO_REPLY = 0,
     DestUnreachable: DEST_UNREACHABLE = 3,
     Redirect: REDIRECT = 5,
@@ -121,7 +121,7 @@ impl IcmpMessageType for Icmpv4MessageType {
 }
 
 create_net_enum! {
-  Icmpv4DestUnreachableCode,
+  pub Icmpv4DestUnreachableCode,
   DestNetworkUnreachable: DEST_NETWORK_UNREACHABLE = 0,
   DestHostUnreachable: DEST_HOST_UNREACHABLE = 1,
   DestProtocolUnreachable: DEST_PROTOCOL_UNREACHABLE = 2,
@@ -151,7 +151,7 @@ impl_icmp_message!(Ipv4, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, OriginalP
 impl_icmp_message!(Ipv4, IcmpEchoReply, EchoReply, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {
-  Icmpv4RedirectCode,
+  pub Icmpv4RedirectCode,
   Network: NETWORK = 0,
   Host: HOST = 1,
   ToSNetwork: TOS_NETWORK = 2,
@@ -175,7 +175,7 @@ impl Icmpv4Redirect {
 impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, OriginalPacket<B>);
 
 create_net_enum! {
-  Icmpv4TimeExceededCode,
+  pub Icmpv4TimeExceededCode,
   TtlExpired: TTL_EXPIRED = 0,
   FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
 }
@@ -251,7 +251,7 @@ impl_icmp_message!(Ipv4, Icmpv4TimestampRequest, TimestampRequest, IcmpUnusedCod
 impl_icmp_message!(Ipv4, Icmpv4TimestampReply, TimestampReply, IcmpUnusedCode);
 
 create_net_enum! {
-  Icmpv4ParameterProblemCode,
+  pub Icmpv4ParameterProblemCode,
   PointerIndicatesError: POINTER_INDICATES_ERROR = 0,
   MissingRequiredOption: MISSING_REQUIRED_OPTION = 1,
   BadLength: BAD_LENGTH = 2,

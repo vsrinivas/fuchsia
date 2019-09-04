@@ -276,7 +276,7 @@ pub(crate) mod options {
     const AUTONOMOUS_ADDRESS_CONFIGURATION_FLAG: u8 = 0x40;
 
     create_net_enum! {
-        NdpOptionType,
+        pub(crate) NdpOptionType,
         SourceLinkLayerAddress: SOURCE_LINK_LAYER_ADDRESS = 1,
         TargetLinkLayerAddress: TARGET_LINK_LAYER_ADDRESS = 2,
         PrefixInformation: PREFIX_INFORMATION = 3,

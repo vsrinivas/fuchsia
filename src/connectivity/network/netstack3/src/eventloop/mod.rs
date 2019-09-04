@@ -130,7 +130,7 @@ use util::{
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
-use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher};
+use netstack3_core::icmp::{IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher};
 use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, get_all_ip_addr_subnets, get_all_routes,
     handle_timeout, initialize_device, receive_frame, remove_device, Context, DeviceId,
@@ -923,6 +923,10 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for EventLoopInner {
 impl UdpEventDispatcher for EventLoopInner {}
 
 impl TransportLayerEventDispatcher for EventLoopInner {}
+
+impl Icmpv4EventDispatcher for EventLoopInner {
+    // TODO(joshlf): Override default impl of `receive_icmpv4_error`.
+}
 
 impl<B: BufferMut> IcmpEventDispatcher<B> for EventLoopInner {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {

@@ -99,7 +99,7 @@ impl Display for DeviceProtocol {
 /// `FrameDestination` is used to implement RFC 1122 section 3.2.2 and RFC 4443
 /// section 2.4.e, which govern when to avoid sending an ICMP error message for
 /// ICMP and ICMPv6 respectively.
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum FrameDestination {
     /// A unicast address - one which is neither multicast nor broadcast.
     Unicast,
