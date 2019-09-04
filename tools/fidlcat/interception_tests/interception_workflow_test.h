@@ -41,6 +41,7 @@ constexpr uint32_t kHandleOut = 0xbde90caf;
 constexpr uint32_t kPort = 0xdf0b2ec1;
 constexpr uint64_t kKey = 1234;
 constexpr uint64_t kKoid = 4252;
+constexpr uint64_t kKoid2 = 5242;
 
 class SystemCallTest {
  public:

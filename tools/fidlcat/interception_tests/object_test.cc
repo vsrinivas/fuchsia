@@ -524,6 +524,38 @@ OBJECT_GET_INFO_PROCESS_DISPLAY_TEST(
     "        debugger_attached:\x1B[32mbool\x1B[0m: \x1B[34mfalse\x1B[0m\n"
     "      }\n");
 
+#define OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST_CONTENT(result, expected)      \
+  constexpr zx_koid_t kThread1 = 1111;                                              \
+  constexpr zx_koid_t kThread2 = 2222;                                              \
+  constexpr zx_koid_t kThread3 = 3333;                                              \
+  std::vector<zx_koid_t> buffer = {kThread1, kThread2, kThread3};                   \
+  size_t actual = buffer.size();                                                    \
+  size_t avail = buffer.size() + 2;                                                 \
+  auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_THREADS,   \
+                               reinterpret_cast<void*>(buffer.data()),              \
+                               buffer.size() * sizeof(zx_koid_t), &actual, &avail); \
+  PerformDisplayTest("zx_object_get_info@plt", std::move(value), expected);
+
+#define OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                               \
+    OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                         \
+  TEST_F(InterceptionWorkflowTestArm, name) {                               \
+    OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_INFO_PROCESS_THREADS_DISPLAY_TEST(
+    ZxObjectGetInfoProcessThreads, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_info("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_PROCESS_THREADS\x1B[0m, "
+    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m24\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
+    "      info:\x1B[32mzx_koid_t\x1B[0m: "
+    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m\n");
+
 #define OBJECT_GET_INFO_THREAD_DISPLAY_TEST_CONTENT(result, expected)                             \
   zx_info_thread_t buffer;                                                                        \
   buffer.state = ZX_THREAD_STATE_BLOCKED_EXCEPTION;                                               \
@@ -702,24 +734,18 @@ OBJECT_GET_INFO_VMAR_DISPLAY_TEST(
 #define OBJECT_GET_INFO_VMO_DISPLAY_TEST_CONTENT(result, expected)                             \
   constexpr size_t kSizeBytes = 4000;                                                          \
   constexpr size_t kCommittedBytes = 4096;                                                     \
-  zx_info_vmo_t buffer;                                                                        \
-  buffer.koid = kKoid;                                                                         \
-  buffer.name[0] = 'm';                                                                        \
-  buffer.name[1] = 'y';                                                                        \
-  buffer.name[2] = '_';                                                                        \
-  buffer.name[3] = 'v';                                                                        \
-  buffer.name[4] = 'm';                                                                        \
-  buffer.name[5] = 'o';                                                                        \
-  buffer.name[6] = '\0';                                                                       \
-  buffer.size_bytes = kSizeBytes;                                                              \
-  buffer.parent_koid = 0;                                                                      \
-  buffer.num_children = 2;                                                                     \
-  buffer.num_mappings = 1;                                                                     \
-  buffer.share_count = 3;                                                                      \
-  buffer.flags = ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE | ZX_INFO_VMO_CONTIGUOUS;      \
-  buffer.committed_bytes = kCommittedBytes;                                                    \
-  buffer.handle_rights = 0;                                                                    \
-  buffer.cache_policy = ZX_CACHE_POLICY_CACHED;                                                \
+  zx_info_vmo_t buffer{                                                                        \
+      .koid = kKoid,                                                                           \
+      .name = "my_vmo",                                                                        \
+      .size_bytes = kSizeBytes,                                                                \
+      .parent_koid = 0,                                                                        \
+      .num_children = 2,                                                                       \
+      .num_mappings = 1,                                                                       \
+      .share_count = 3,                                                                        \
+      .flags = ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE | ZX_INFO_VMO_CONTIGUOUS,        \
+      .committed_bytes = kCommittedBytes,                                                      \
+      .handle_rights = 0,                                                                      \
+      .cache_policy = ZX_CACHE_POLICY_CACHED};                                                 \
   auto value =                                                                                 \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_VMO, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                       \
@@ -836,6 +862,70 @@ OBJECT_GET_INFO_TIMER_DISPLAY_TEST(
     "        slack:\x1B[32mduration\x1B[0m: \x1B[34m100 nano seconds\x1B[0m\n"
     "      }\n");
 
+#define OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST_CONTENT(result, expected)         \
+  constexpr zx_koid_t kThread1 = 1111;                                              \
+  constexpr zx_koid_t kThread2 = 2222;                                              \
+  constexpr zx_koid_t kThread3 = 3333;                                              \
+  std::vector<zx_koid_t> buffer = {kThread1, kThread2, kThread3};                   \
+  size_t actual = buffer.size();                                                    \
+  size_t avail = buffer.size() + 2;                                                 \
+  auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_JOB_CHILDREN,      \
+                               reinterpret_cast<void*>(buffer.data()),              \
+                               buffer.size() * sizeof(zx_koid_t), &actual, &avail); \
+  PerformDisplayTest("zx_object_get_info@plt", std::move(value), expected);
+
+#define OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                            \
+    OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                      \
+  TEST_F(InterceptionWorkflowTestArm, name) {                            \
+    OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_INFO_JOB_CHILDREN_DISPLAY_TEST(
+    ZxObjectGetInfoJobChildren, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_info("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_JOB_CHILDREN\x1B[0m, "
+    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m24\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
+    "      info:\x1B[32mzx_koid_t\x1B[0m: "
+    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m\n");
+
+#define OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST_CONTENT(result, expected)        \
+  constexpr zx_koid_t kThread1 = 1111;                                              \
+  constexpr zx_koid_t kThread2 = 2222;                                              \
+  constexpr zx_koid_t kThread3 = 3333;                                              \
+  std::vector<zx_koid_t> buffer = {kThread1, kThread2, kThread3};                   \
+  size_t actual = buffer.size();                                                    \
+  size_t avail = buffer.size() + 2;                                                 \
+  auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_JOB_PROCESSES,     \
+                               reinterpret_cast<void*>(buffer.data()),              \
+                               buffer.size() * sizeof(zx_koid_t), &actual, &avail); \
+  PerformDisplayTest("zx_object_get_info@plt", std::move(value), expected);
+
+#define OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                             \
+    OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                       \
+  TEST_F(InterceptionWorkflowTestArm, name) {                             \
+    OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_INFO_JOB_PROCESSES_DISPLAY_TEST(
+    ZxObjectGetInfoJobProcesses, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_info("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_JOB_PROCESSES\x1B[0m, "
+    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m24\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m (actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m5\x1B[0m)\n"
+    "      info:\x1B[32mzx_koid_t\x1B[0m: "
+    "\x1B[31m1111\x1B[0m, \x1B[31m2222\x1B[0m, \x1B[31m3333\x1B[0m\n");
+
 #define OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST_CONTENT(result, expected)                  \
   constexpr size_t kMemMappedBytes = 65536;                                                \
   constexpr size_t kMemPrivateBytes = 16000;                                               \
@@ -873,6 +963,160 @@ OBJECT_GET_INFO_TASK_STATS_DISPLAY_TEST(
     "        mem_private_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m16000\x1B[0m\n"
     "        mem_shared_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m20000\x1B[0m\n"
     "        mem_scaled_shared_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m5000\x1B[0m\n"
+    "      }\n");
+
+#define OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST_CONTENT(result, expected)                       \
+  std::vector<zx_info_maps_t> buffer(3);                                                          \
+  buffer[0] = {                                                                                   \
+      .name = "map1", .base = 0x10000, .size = 4096, .depth = 1, .type = ZX_INFO_MAPS_TYPE_NONE}; \
+  buffer[1] = {                                                                                   \
+      .name = "map2",                                                                             \
+      .base = 0x20000,                                                                            \
+      .size = 2048,                                                                               \
+      .depth = 2,                                                                                 \
+      .type = ZX_INFO_MAPS_TYPE_MAPPING,                                                          \
+      .u = {.mapping = {.mmu_flags = ZX_VM_ALIGN_2KB | ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE,      \
+                        .vmo_koid = 5555,                                                         \
+                        .vmo_offset = 2048,                                                       \
+                        .committed_pages = 1}}};                                                  \
+  buffer[2] = {                                                                                   \
+      .name = "map3", .base = 0x40000, .size = 2048, .depth = 2, .type = ZX_INFO_MAPS_TYPE_VMAR}; \
+  size_t actual = buffer.size();                                                                  \
+  size_t avail = 10;                                                                              \
+  auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_MAPS,                    \
+                               reinterpret_cast<void*>(buffer.data()),                            \
+                               buffer.size() * sizeof(zx_info_maps_t), &actual, &avail);          \
+  PerformDisplayTest("zx_object_get_info@plt", std::move(value), expected);
+
+#define OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                            \
+    OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                      \
+  TEST_F(InterceptionWorkflowTestArm, name) {                            \
+    OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_INFO_PROCESS_MAPS_DISPLAY_TEST(
+    ZxObjectGetInfoProcessMaps, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_info("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_PROCESS_MAPS\x1B[0m, "
+    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m288\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m ("
+    "actual:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m/\x1B[34m10\x1B[0m)\n"
+    "      info:\x1B[32mzx_info_maps_t\x1B[0m[]:  {\n"
+    "        {\n"
+    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map1\"\x1B[0m\n"
+    "          base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000010000\x1B[0m\n"
+    "          size:\x1B[32msize_t\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "          depth:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "          type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_NONE\x1B[0m\n"
+    "        },\n"
+    "        {\n"
+    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map2\"\x1B[0m\n"
+    "          base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000020000\x1B[0m\n"
+    "          size:\x1B[32msize_t\x1B[0m: \x1B[34m2048\x1B[0m\n"
+    "          depth:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "          type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_MAPPING\x1B[0m\n"
+    "          mapping:\x1B[32mzx_info_maps_mapping_t\x1B[0m: {\n"
+    "            mmu_flags:\x1B[32mzx_vm_option_t\x1B[0m: "
+    "\x1B[31mZX_VM_ALIGN_2KB | ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE\x1B[0m\n"
+    "            vmo_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m5555\x1B[0m\n"
+    "            vmo_offset:\x1B[32muint64\x1B[0m: \x1B[34m2048\x1B[0m\n"
+    "            committed_pages:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "          }\n"
+    "        },\n"
+    "        {\n"
+    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"map3\"\x1B[0m\n"
+    "          base:\x1B[32mzx_vaddr_t\x1B[0m: \x1B[34m0000000000040000\x1B[0m\n"
+    "          size:\x1B[32msize_t\x1B[0m: \x1B[34m2048\x1B[0m\n"
+    "          depth:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "          type:\x1B[32mzx_info_maps_type_t\x1B[0m: \x1B[31mZX_INFO_MAPS_TYPE_VMAR\x1B[0m\n"
+    "        }\n"
+    "      }\n");
+
+#define OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST_CONTENT(result, expected)                      \
+  std::vector<zx_info_vmo_t> buffer(2);                                                          \
+  buffer[0] = {.koid = kKoid,                                                                    \
+               .name = "my_vmo1",                                                                \
+               .size_bytes = 4000,                                                               \
+               .parent_koid = 0,                                                                 \
+               .num_children = 2,                                                                \
+               .num_mappings = 1,                                                                \
+               .share_count = 3,                                                                 \
+               .flags = ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE | ZX_INFO_VMO_CONTIGUOUS, \
+               .committed_bytes = 4096,                                                          \
+               .handle_rights = 0,                                                               \
+               .cache_policy = ZX_CACHE_POLICY_CACHED};                                          \
+  buffer[1] = {.koid = kKoid2,                                                                   \
+               .name = "my_vmo2",                                                                \
+               .size_bytes = 8000,                                                               \
+               .parent_koid = 0,                                                                 \
+               .num_children = 2,                                                                \
+               .num_mappings = 1,                                                                \
+               .share_count = 3,                                                                 \
+               .flags = ZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE,                          \
+               .committed_bytes = 4096,                                                          \
+               .handle_rights = 0,                                                               \
+               .cache_policy = ZX_CACHE_POLICY_CACHED};                                          \
+  size_t actual = buffer.size();                                                                 \
+  size_t avail = 2;                                                                              \
+  auto value = ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_PROCESS_VMOS,                   \
+                               reinterpret_cast<void*>(buffer.data()),                           \
+                               buffer.size() * sizeof(zx_info_vmo_t), &actual, &avail);          \
+  PerformDisplayTest("zx_object_get_info@plt", std::move(value), expected);
+
+#define OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(name, errno, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                            \
+    OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }                                                                      \
+  TEST_F(InterceptionWorkflowTestArm, name) {                            \
+    OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST_CONTENT(errno, expected);  \
+  }
+
+OBJECT_GET_INFO_PROCESS_VMOS_DISPLAY_TEST(
+    ZxObjectGetInfoProcessVmos, ZX_OK,
+    "\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "zx_object_get_info("
+    "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+    "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_PROCESS_VMOS\x1B[0m, "
+    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m208\x1B[0m)\n"
+    "  -> \x1B[32mZX_OK\x1B[0m ("
+    "actual:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m/\x1B[34m2\x1B[0m)\n"
+    "      info:\x1B[32mzx_info_vmo_t\x1B[0m[]:  {\n"
+    "        {\n"
+    "          koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m4252\x1B[0m\n"
+    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo1\"\x1B[0m\n"
+    "          size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4000\x1B[0m\n"
+    "          parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
+    "          num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "          num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "          share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
+    "          flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
+    "\x1B[34mZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE | ZX_INFO_VMO_CONTIGUOUS\x1B[0m\n"
+    "          committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "          handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
+    "          cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
+    "\x1B[31mZX_CACHE_POLICY_CACHED\x1B[0m\n"
+    "        },\n"
+    "        {\n"
+    "          koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m5242\x1B[0m\n"
+    "          name:\x1B[32mchar[]\x1B[0m: \x1B[31m\"my_vmo2\"\x1B[0m\n"
+    "          size_bytes:\x1B[32muint64\x1B[0m: \x1B[34m8000\x1B[0m\n"
+    "          parent_koid:\x1B[32mzx_koid_t\x1B[0m: \x1B[31m0\x1B[0m\n"
+    "          num_children:\x1B[32msize_t\x1B[0m: \x1B[34m2\x1B[0m\n"
+    "          num_mappings:\x1B[32msize_t\x1B[0m: \x1B[34m1\x1B[0m\n"
+    "          share_count:\x1B[32msize_t\x1B[0m: \x1B[34m3\x1B[0m\n"
+    "          flags:\x1B[32mzx_info_vmo_type_t\x1B[0m: "
+    "\x1B[34mZX_INFO_VMO_TYPE_PAGED | ZX_INFO_VMO_RESIZABLE\x1B[0m\n"
+    "          committed_bytes:\x1B[32muint64\x1B[0m: \x1B[34m4096\x1B[0m\n"
+    "          handle_rights:\x1B[32mzx_rights_t\x1B[0m: \x1B[34mZX_RIGHT_NONE\x1B[0m\n"
+    "          cache_policy:\x1B[32mzx_cache_policy_t\x1B[0m: "
+    "\x1B[31mZX_CACHE_POLICY_CACHED\x1B[0m\n"
+    "        }\n"
     "      }\n");
 
 #define OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST_CONTENT(result, expected)                  \
@@ -926,24 +1170,14 @@ OBJECT_GET_INFO_KMEM_STATS_DISPLAY_TEST(
     "        other_bytes:\x1B[32msize_t\x1B[0m: \x1B[34m50\x1B[0m\n"
     "      }\n");
 
-#define OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST_CONTENT(result, expected)                    \
-  constexpr uint64_t kBase = 1000;                                                         \
-  constexpr uint64_t kSize = 100;                                                          \
-  zx_info_resource_t buffer;                                                               \
-  buffer.kind = ZX_RSRC_KIND_ROOT;                                                         \
-  buffer.flags = 0;                                                                        \
-  buffer.base = kBase;                                                                     \
-  buffer.size = kSize;                                                                     \
-  buffer.name[0] = 'm';                                                                    \
-  buffer.name[1] = 'y';                                                                    \
-  buffer.name[2] = '_';                                                                    \
-  buffer.name[3] = 'r';                                                                    \
-  buffer.name[4] = 'e';                                                                    \
-  buffer.name[5] = 's';                                                                    \
-  buffer.name[6] = '\0';                                                                   \
-  auto value =                                                                             \
-      ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_RESOURCE,                          \
-                      reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr); \
+#define OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST_CONTENT(result, expected)                       \
+  constexpr uint64_t kBase = 1000;                                                            \
+  constexpr uint64_t kSize = 100;                                                             \
+  zx_info_resource_t buffer{                                                                  \
+      .kind = ZX_RSRC_KIND_ROOT, .flags = 0, .base = kBase, .size = kSize, .name = "my_res"}; \
+  auto value =                                                                                \
+      ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_RESOURCE,                             \
+                      reinterpret_cast<void*>(&buffer), sizeof(buffer), nullptr, nullptr);    \
   PerformDisplayTest("zx_object_get_info@plt", std::move(value), expected);
 
 #define OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(name, errno, expected) \

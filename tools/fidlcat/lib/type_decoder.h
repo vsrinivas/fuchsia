@@ -51,6 +51,7 @@ enum class SyscallType {
   kExceptionChannelType,
   kGpAddr,
   kHandle,
+  kInfoMapsType,
   kKoid,
   kMonotonicTime,
   kObjectInfoTopic,
@@ -67,6 +68,8 @@ enum class SyscallType {
   kThreadState,
   kTime,
   kUintptr,
+  kVaddr,
+  kVmOption,
   kVmoType,
   kStruct
 };
@@ -101,6 +104,7 @@ struct Colors {
 void CachePolicyName(uint32_t cache_policy, std::ostream& os);
 void ClockName(zx_clock_t clock, std::ostream& os);
 void ExceptionChannelTypeName(uint32_t type, std::ostream& os);
+void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os);
 void ObjPropsName(zx_obj_props_t obj_props, std::ostream& os);
 void ObjTypeName(zx_obj_type_t obj_type, std::ostream& os);
 void PacketGuestVcpuTypeName(uint8_t type, std::ostream& os);
@@ -113,6 +117,7 @@ void StatusName(zx_status_t status, std::ostream& os);
 void StatusName(const Colors& colors, zx_status_t status, std::ostream& os);
 void ThreadStateName(uint32_t state, std::ostream& os);
 void TopicName(uint32_t topic, std::ostream& os);
+void VmOptionName(zx_vm_option_t option, std::ostream& os);
 void VmoTypeName(uint32_t type, std::ostream& os);
 void DisplayHandle(const Colors& colors, const zx_handle_info_t& handle, std::ostream& os);
 void DisplayType(const Colors& colors, SyscallType type, std::ostream& os);

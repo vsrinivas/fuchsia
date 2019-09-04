@@ -246,6 +246,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       DisplayHandle(colors, handle_info, os);
       break;
     }
+    case SyscallType::kInfoMapsType:
+      os << colors.red;
+      InfoMapsTypeName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kObjectInfoTopic:
       os << colors.blue;
       TopicName(value, os);
@@ -284,6 +289,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
     case SyscallType::kThreadState:
       os << colors.blue;
       ThreadStateName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kVmOption:
+      os << colors.red;
+      VmOptionName(value, os);
       os << colors.reset;
       break;
     case SyscallType::kVmoType:
@@ -360,6 +370,12 @@ inline void DisplayValue<uint64_t>(const Colors& colors, SyscallType type, uint6
       os << colors.blue << buffer.data() << colors.reset;
       break;
     }
+    case SyscallType::kVaddr: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
 #endif
     default:
       os << "unimplemented uint64_t value " << static_cast<uint32_t>(type);
@@ -406,6 +422,12 @@ inline void DisplayValue<uintptr_t>(const Colors& colors, SyscallType type, uint
       os << colors.blue << value << colors.reset;
       break;
     case SyscallType::kUintptr: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value);
+      os << colors.blue << buffer.data() << colors.reset;
+      break;
+    }
+    case SyscallType::kVaddr: {
       std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
       snprintf(buffer.data(), buffer.size(), "%016lx", value);
       os << colors.blue << buffer.data() << colors.reset;
@@ -1056,6 +1078,70 @@ class SyscallInputOutput : public SyscallInputOutputBase {
   const std::unique_ptr<Access<Type>> access_;
 };
 
+// An input/output which displays actual/asked. This is always displayed inline.
+template <typename Type>
+class SyscallInputOutputActualAndRequested : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputActualAndRequested(int64_t error_code, std::string_view name,
+                                       std::unique_ptr<Access<Type>> actual,
+                                       std::unique_ptr<Access<Type>> asked)
+      : SyscallInputOutputBase(error_code, name),
+        actual_(std::move(actual)),
+        asked_(std::move(asked)) {}
+
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    actual_->Load(decoder, stage);
+    asked_->Load(decoder, stage);
+  }
+
+  const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                            Stage stage, const char* separator, std::ostream& os) const override;
+
+ private:
+  // Current value.
+  const std::unique_ptr<Access<Type>> actual_;
+  // Value which has been asked or value that should have been asked.
+  const std::unique_ptr<Access<Type>> asked_;
+};
+
+// An input/output which is a composed of several items of the same type.
+// This is always displayed outline.
+template <typename Type, typename FromType>
+class SyscallInputOutputBuffer : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputBuffer(int64_t error_code, std::string_view name, SyscallType syscall_type,
+                           std::unique_ptr<Access<FromType>> buffer,
+                           std::unique_ptr<Access<size_t>> buffer_size)
+      : SyscallInputOutputBase(error_code, name),
+        syscall_type_(syscall_type),
+        buffer_(std::move(buffer)),
+        buffer_size_(std::move(buffer_size)) {}
+
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    buffer_size_->Load(decoder, stage);
+
+    if (buffer_size_->Loaded(decoder, stage)) {
+      size_t value = buffer_size_->Value(decoder, stage);
+      if (value > 0) {
+        buffer_->LoadArray(decoder, stage, value * sizeof(Type));
+      }
+    }
+  }
+
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+                      std::string_view line_header, int tabs, std::ostream& os) const override;
+
+ private:
+  // Type of one buffer item.
+  SyscallType syscall_type_;
+  // Access to the buffer which contains all the items.
+  const std::unique_ptr<Access<FromType>> buffer_;
+  // Item count in the buffer.
+  const std::unique_ptr<Access<size_t>> buffer_size_;
+};
+
 // An input/output which is an object. This is always displayed outline.
 template <typename ClassType>
 class SyscallInputOutputObject : public SyscallInputOutputBase {
@@ -1298,6 +1384,30 @@ class Syscall {
         std::make_unique<SyscallInputOutput<Type>>(error_code, name, std::move(access)));
   }
 
+  // Adds an inline output to display which is displayed like: actual/asked.
+  template <typename Type>
+  SyscallInputOutputActualAndRequested<Type>* OutputActualAndRequested(
+      int64_t error_code, std::string_view name, std::unique_ptr<Access<Type>> actual,
+      std::unique_ptr<Access<Type>> asked) {
+    auto object = std::make_unique<SyscallInputOutputActualAndRequested<Type>>(
+        error_code, name, std::move(actual), std::move(asked));
+    auto result = object.get();
+    outputs_.push_back(std::move(object));
+    return result;
+  }
+
+  // Adds an output buffer to display.
+  template <typename Type, typename FromType>
+  SyscallInputOutputBuffer<Type, FromType>* OutputBuffer(
+      int64_t error_code, std::string_view name, SyscallType syscall_type,
+      std::unique_ptr<Access<FromType>> buffer, std::unique_ptr<Access<size_t>> buffer_size) {
+    auto object = std::make_unique<SyscallInputOutputBuffer<Type, FromType>>(
+        error_code, name, syscall_type, std::move(buffer), std::move(buffer_size));
+    auto result = object.get();
+    outputs_.push_back(std::move(object));
+    return result;
+  }
+
   // Adds an object output to display.
   template <typename ClassType>
   SyscallInputOutputObject<ClassType>* OutputObject(int64_t error_code, std::string_view name,
@@ -1475,6 +1585,49 @@ void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder*
   } else {
     os << colors.red << "(nullptr)" << colors.reset;
   }
+}
+
+template <typename Type>
+const char* SyscallInputOutputActualAndRequested<Type>::DisplayInline(
+    SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+    const char* separator, std::ostream& os) const {
+  os << separator;
+  actual_->Display(dispatcher, decoder, stage, name(), os);
+  os << "/";
+  const Colors& colors = dispatcher->colors();
+  if (asked_->ValueValid(decoder, stage)) {
+    DisplayValue<Type>(colors, asked_->GetSyscallType(), asked_->Value(decoder, stage), os);
+  } else {
+    os << colors.red << "(nullptr)" << colors.reset;
+  }
+  return ", ";
+}
+
+template <typename Type, typename FromType>
+void SyscallInputOutputBuffer<Type, FromType>::DisplayOutline(SyscallDisplayDispatcher* dispatcher,
+                                                              SyscallDecoder* decoder, Stage stage,
+                                                              std::string_view line_header,
+                                                              int tabs, std::ostream& os) const {
+  os << line_header << std::string((tabs + 1) * kTabSize, ' ') << name();
+  const Colors& colors = dispatcher->colors();
+  DisplayType(colors, syscall_type_, os);
+  const FromType* buffer = buffer_->Content(decoder, stage);
+  if (buffer == nullptr) {
+    os << colors.red << "nullptr" << colors.reset;
+  } else {
+    size_t buffer_size = buffer_size_->Value(decoder, stage);
+    if (buffer_size == 0) {
+      os << "empty\n";
+      return;
+    }
+    const char* separator = "";
+    for (size_t i = 0; i < buffer_size; ++i) {
+      os << separator;
+      DisplayValue<Type>(colors, syscall_type_, reinterpret_cast<const Type*>(buffer)[i], os);
+      separator = ", ";
+    }
+  }
+  os << '\n';
 }
 
 template <typename ClassType>

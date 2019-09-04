@@ -428,6 +428,87 @@ const ZxInfoKmemStats* ZxInfoKmemStats::GetClass() {
   return instance_;
 }
 
+class ZxInfoMapsMapping : public Class<zx_info_maps_mapping_t> {
+ public:
+  static const ZxInfoMapsMapping* GetClass();
+
+  static zx_vm_option_t mmu_flags(const zx_info_maps_mapping_t* from) { return from->mmu_flags; }
+  static zx_koid_t vmo_koid(const zx_info_maps_mapping_t* from) { return from->vmo_koid; }
+  static uint64_t vmo_offset(const zx_info_maps_mapping_t* from) { return from->vmo_offset; }
+  static size_t committed_pages(const zx_info_maps_mapping_t* from) {
+    return from->committed_pages;
+  }
+
+ private:
+  ZxInfoMapsMapping() : Class("zx_info_maps_mapping_t") {
+    AddField(std::make_unique<ClassField<zx_info_maps_mapping_t, zx_vm_option_t>>(
+        "mmu_flags", SyscallType::kVmOption, mmu_flags));
+    AddField(std::make_unique<ClassField<zx_info_maps_mapping_t, zx_koid_t>>(
+        "vmo_koid", SyscallType::kKoid, vmo_koid));
+    AddField(std::make_unique<ClassField<zx_info_maps_mapping_t, uint64_t>>(
+        "vmo_offset", SyscallType::kUint64, vmo_offset));
+    AddField(std::make_unique<ClassField<zx_info_maps_mapping_t, size_t>>(
+        "committed_pages", SyscallType::kSize, committed_pages));
+  }
+  ZxInfoMapsMapping(const ZxInfoMapsMapping&) = delete;
+  ZxInfoMapsMapping& operator=(const ZxInfoMapsMapping&) = delete;
+  static ZxInfoMapsMapping* instance_;
+};
+
+ZxInfoMapsMapping* ZxInfoMapsMapping::instance_ = nullptr;
+
+const ZxInfoMapsMapping* ZxInfoMapsMapping::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoMapsMapping;
+  }
+  return instance_;
+}
+
+class ZxInfoMaps : public Class<zx_info_maps_t> {
+ public:
+  static const ZxInfoMaps* GetClass();
+
+  static std::pair<const char*, size_t> name(const zx_info_maps_t* from) {
+    return std::make_pair(reinterpret_cast<const char*>(from->name), sizeof(from->name));
+  }
+  static zx_vaddr_t base(const zx_info_maps_t* from) { return from->base; }
+  static size_t size(const zx_info_maps_t* from) { return from->size; }
+  static size_t depth(const zx_info_maps_t* from) { return from->depth; }
+  static zx_info_maps_type_t type(const zx_info_maps_t* from) { return from->type; }
+  static const zx_info_maps_mapping_t* mapping(const zx_info_maps_t* from) {
+    return reinterpret_cast<const zx_info_maps_mapping_t*>(&from->u.mapping);
+  }
+
+ private:
+  ZxInfoMaps() : Class("zx_info_maps_t") {
+    AddField(std::make_unique<ClassField<zx_info_maps_t, std::pair<const char*, size_t>>>(
+        "name", SyscallType::kCharArray, name));
+    AddField(std::make_unique<ClassField<zx_info_maps_t, zx_vaddr_t>>("base", SyscallType::kVaddr,
+                                                                      base));
+    AddField(
+        std::make_unique<ClassField<zx_info_maps_t, size_t>>("size", SyscallType::kSize, size));
+    AddField(
+        std::make_unique<ClassField<zx_info_maps_t, size_t>>("depth", SyscallType::kSize, depth));
+    auto type_field = AddField(std::make_unique<ClassField<zx_info_maps_t, zx_info_maps_type_t>>(
+        "type", SyscallType::kInfoMapsType, type));
+    AddField(std::make_unique<ClassClassField<zx_info_maps_t, zx_info_maps_mapping_t>>(
+                 "mapping", mapping, ZxInfoMapsMapping::GetClass()))
+        ->DisplayIfEqual(type_field, ZX_INFO_MAPS_TYPE_MAPPING);
+  }
+  ZxInfoMaps(const ZxInfoMaps&) = delete;
+  ZxInfoMaps& operator=(const ZxInfoMaps&) = delete;
+  static ZxInfoMaps* instance_;
+};
+
+ZxInfoMaps* ZxInfoMaps::instance_ = nullptr;
+
+const ZxInfoMaps* ZxInfoMaps::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxInfoMaps;
+  }
+  return instance_;
+}
+
 class ZxInfoProcess : public Class<zx_info_process_t> {
  public:
   static const ZxInfoProcess* GetClass();
@@ -1581,8 +1662,8 @@ void SyscallDecoderDispatcher::Populate() {
         zx_object_get_info->Argument<zx_object_info_topic_t>(SyscallType::kObjectInfoTopic);
     auto buffer = zx_object_get_info->PointerArgument<uint8_t>(SyscallType::kUint8);
     auto buffer_size = zx_object_get_info->Argument<size_t>(SyscallType::kSize);
-    zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
-    zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
+    auto actual = zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
+    auto avail = zx_object_get_info->PointerArgument<size_t>(SyscallType::kSize);
     // Inputs
     zx_object_get_info->Input<zx_handle_t>("handle",
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
@@ -1618,6 +1699,18 @@ void SyscallDecoderDispatcher::Populate() {
                                           ZxInfoProcess::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_PROCESS);
+    zx_object_get_info
+        ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
+                                           std::make_unique<ArgumentAccess<size_t>>(actual),
+                                           std::make_unique<ArgumentAccess<size_t>>(avail))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS_THREADS);
+    zx_object_get_info
+        ->OutputBuffer<zx_koid_t, uint8_t>(ZX_OK, "info", SyscallType::kKoid,
+                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                           std::make_unique<ArgumentAccess<size_t>>(actual))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS_THREADS);
     zx_object_get_info
         ->OutputObject<zx_info_thread_t>(ZX_OK, "info",
                                          std::make_unique<ArgumentAccess<uint8_t>>(buffer),
@@ -1664,11 +1757,59 @@ void SyscallDecoderDispatcher::Populate() {
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_TIMER);
     zx_object_get_info
+        ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
+                                           std::make_unique<ArgumentAccess<size_t>>(actual),
+                                           std::make_unique<ArgumentAccess<size_t>>(avail))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_JOB_CHILDREN);
+    zx_object_get_info
+        ->OutputBuffer<zx_koid_t, uint8_t>(ZX_OK, "info", SyscallType::kKoid,
+                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                           std::make_unique<ArgumentAccess<size_t>>(actual))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_JOB_CHILDREN);
+    zx_object_get_info
+        ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
+                                           std::make_unique<ArgumentAccess<size_t>>(actual),
+                                           std::make_unique<ArgumentAccess<size_t>>(avail))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_JOB_PROCESSES);
+    zx_object_get_info
+        ->OutputBuffer<zx_koid_t, uint8_t>(ZX_OK, "info", SyscallType::kKoid,
+                                           std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+                                           std::make_unique<ArgumentAccess<size_t>>(actual))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_JOB_PROCESSES);
+    zx_object_get_info
         ->OutputObject<zx_info_task_stats_t>(ZX_OK, "info",
                                              std::make_unique<ArgumentAccess<uint8_t>>(buffer),
                                              ZxInfoTaskStats::GetClass())
         ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
                                    ZX_INFO_TASK_STATS);
+    zx_object_get_info
+        ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
+                                           std::make_unique<ArgumentAccess<size_t>>(actual),
+                                           std::make_unique<ArgumentAccess<size_t>>(avail))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS_MAPS);
+    zx_object_get_info
+        ->OutputObjectArray<zx_info_maps_t>(
+            ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            std::make_unique<ArgumentAccess<size_t>>(actual), ZxInfoMaps::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS_MAPS);
+    zx_object_get_info
+        ->OutputActualAndRequested<size_t>(ZX_OK, "actual",
+                                           std::make_unique<ArgumentAccess<size_t>>(actual),
+                                           std::make_unique<ArgumentAccess<size_t>>(avail))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS_VMOS);
+    zx_object_get_info
+        ->OutputObjectArray<zx_info_vmo_t>(
+            ZX_OK, "info", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            std::make_unique<ArgumentAccess<size_t>>(actual), ZxInfoVmo::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(topic),
+                                   ZX_INFO_PROCESS_VMOS);
     zx_object_get_info
         ->OutputObject<zx_info_kmem_stats_t>(ZX_OK, "info",
                                              std::make_unique<ArgumentAccess<uint8_t>>(buffer),

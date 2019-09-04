@@ -68,6 +68,23 @@ void ExceptionChannelTypeName(uint32_t type, std::ostream& os) {
   }
 }
 
+#define InfoMapsTypeCase(name) \
+  case name:                   \
+    os << #name;               \
+    return
+
+void InfoMapsTypeName(zx_info_maps_type_t type, std::ostream& os) {
+  switch (type) {
+    InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_NONE);
+    InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_ASPACE);
+    InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_VMAR);
+    InfoMapsTypeCase(ZX_INFO_MAPS_TYPE_MAPPING);
+    default:
+      os << type;
+      return;
+  }
+}
+
 #define ObjPropsNameCase(name) \
   case name:                   \
     os << #name;               \
@@ -422,6 +439,60 @@ void TopicName(uint32_t topic, std::ostream& os) {
   }
 }
 
+#define VmOptionAlign(name) \
+  case name:                \
+    os << #name;            \
+    break;
+
+#define VmOptionCase(name)           \
+  if ((option & (name)) == (name)) { \
+    os << " | " << #name;            \
+  }
+
+void VmOptionName(zx_vm_option_t option, std::ostream& os) {
+  switch (option & ~((1 << ZX_VM_ALIGN_BASE) - 1)) {
+    VmOptionAlign(ZX_VM_ALIGN_1KB);
+    VmOptionAlign(ZX_VM_ALIGN_2KB);
+    VmOptionAlign(ZX_VM_ALIGN_4KB);
+    VmOptionAlign(ZX_VM_ALIGN_8KB);
+    VmOptionAlign(ZX_VM_ALIGN_16KB);
+    VmOptionAlign(ZX_VM_ALIGN_32KB);
+    VmOptionAlign(ZX_VM_ALIGN_64KB);
+    VmOptionAlign(ZX_VM_ALIGN_128KB);
+    VmOptionAlign(ZX_VM_ALIGN_256KB);
+    VmOptionAlign(ZX_VM_ALIGN_512KB);
+    VmOptionAlign(ZX_VM_ALIGN_1MB);
+    VmOptionAlign(ZX_VM_ALIGN_2MB);
+    VmOptionAlign(ZX_VM_ALIGN_4MB);
+    VmOptionAlign(ZX_VM_ALIGN_8MB);
+    VmOptionAlign(ZX_VM_ALIGN_16MB);
+    VmOptionAlign(ZX_VM_ALIGN_32MB);
+    VmOptionAlign(ZX_VM_ALIGN_64MB);
+    VmOptionAlign(ZX_VM_ALIGN_128MB);
+    VmOptionAlign(ZX_VM_ALIGN_256MB);
+    VmOptionAlign(ZX_VM_ALIGN_512MB);
+    VmOptionAlign(ZX_VM_ALIGN_1GB);
+    VmOptionAlign(ZX_VM_ALIGN_2GB);
+    VmOptionAlign(ZX_VM_ALIGN_4GB);
+    default:
+      os << (option >> ZX_VM_ALIGN_BASE);
+      break;
+  }
+  VmOptionCase(ZX_VM_PERM_READ);
+  VmOptionCase(ZX_VM_PERM_WRITE);
+  VmOptionCase(ZX_VM_PERM_EXECUTE);
+  VmOptionCase(ZX_VM_COMPACT);
+  VmOptionCase(ZX_VM_SPECIFIC);
+  VmOptionCase(ZX_VM_SPECIFIC_OVERWRITE);
+  VmOptionCase(ZX_VM_CAN_MAP_SPECIFIC);
+  VmOptionCase(ZX_VM_CAN_MAP_READ);
+  VmOptionCase(ZX_VM_CAN_MAP_WRITE);
+  VmOptionCase(ZX_VM_CAN_MAP_EXECUTE);
+  VmOptionCase(ZX_VM_MAP_RANGE);
+  VmOptionCase(ZX_VM_REQUIRE_NON_RESIZABLE);
+  VmOptionCase(ZX_VM_ALLOW_FAULTS);
+}
+
 #define VmoTypeNameCase(name)      \
   if ((type & (name)) == (name)) { \
     os << " | " << #name;          \
@@ -517,6 +588,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kHandle:
       os << ":" << colors.green << "handle" << colors.reset << ": ";
       break;
+    case SyscallType::kInfoMapsType:
+      os << ":" << colors.green << "zx_info_maps_type_t" << colors.reset << ": ";
+      break;
     case SyscallType::kKoid:
       os << ":" << colors.green << "zx_koid_t" << colors.reset << ": ";
       break;
@@ -564,6 +638,12 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kUintptr:
       os << ":" << colors.green << "uintptr_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kVaddr:
+      os << ":" << colors.green << "zx_vaddr_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kVmOption:
+      os << ":" << colors.green << "zx_vm_option_t" << colors.reset << ": ";
       break;
     case SyscallType::kVmoType:
       os << ":" << colors.green << "zx_info_vmo_type_t" << colors.reset << ": ";
