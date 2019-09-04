@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_USAGE_GAIN_SETTINGS_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_MIXER_USAGE_GAIN_SETTINGS_H_
 
-#include <atomic>
-
 #include <fuchsia/media/cpp/fidl.h>
+
+#include <atomic>
 
 namespace media::audio {
 
