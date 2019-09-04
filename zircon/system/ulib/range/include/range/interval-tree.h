@@ -136,7 +136,36 @@ class IntervalTree {
     }
   }
 
-  // Returns an iterator to a range which contains the value.
+  // Erases a range from the tree. If this range partially overlaps with ranges present in the
+  // tree, those ranges are split into multiple parts.
+  void erase(const RangeType& value) {
+    IterType iter;
+    while ((iter = find(value)) != map_.end()) {
+      RangeType range = iter->second;
+
+      // Remove the entire overlapping in-tree range.
+      map_.erase(iter);
+
+      // If we cut a range in pieces, put the remaining valid pieces back.
+      if (range.Start() < value.Start()) {
+        typename RangeType::Container prior_container = range.container();
+        ZX_ASSERT(RangeType::ContainerTraits::Update(nullptr, range.Start(), value.Start(),
+                                                     &prior_container) == ZX_OK);
+        RangeType prior(prior_container);
+        map_.insert({prior.Start(), prior});
+      }
+
+      if (value.End() < range.End()) {
+        typename RangeType::Container next_container = range.container();
+        ZX_ASSERT(RangeType::ContainerTraits::Update(nullptr, value.End(), range.End(),
+                                                     &next_container) == ZX_OK);
+        RangeType next(next_container);
+        map_.insert({next.Start(), next});
+      }
+    }
+  }
+
+  // Returns an iterator to the range which contains the value.
   // If no such range exists, returns |end()|.
   //
   // Runtime: O(log(number of ranges))
@@ -146,7 +175,7 @@ class IntervalTree {
     }
     auto iter = map_.upper_bound(value);
     if (iter == map_.begin()) {
-      // |range| is less than the first valid element.
+      // |value| is less than the first valid element.
       return map_.end();
     }
     iter--;
@@ -159,6 +188,33 @@ class IntervalTree {
     }
     return map_.end();
   }
+
+  // Returns an iterator to the first range which overlaps with a provided range.
+  // If no such range exists, returns |end()|.
+  IterType find(const RangeType& range) {
+    if (map_.empty()) {
+      return map_.end();
+    }
+
+    // Return the first element strictly after the start of the range.
+    //
+    // As long as this isn't the first element of |map_|, move back to the prior element.
+    // This is necessary for using a single-element indexing scheme into a range-based
+    // structure.
+    auto iter = map_.upper_bound(range.Start());
+    if (iter != map_.begin()) {
+      iter--;
+    }
+    while (iter != map_.end() && iter->second.Start() < range.End()) {
+      if (Overlap(iter->second, range)) {
+        return iter;
+      }
+      iter++;
+    }
+    return map_.end();
+  }
+
+  void clear() { map_.clear(); }
 
   [[nodiscard]] bool empty() const { return map_.empty(); }
 

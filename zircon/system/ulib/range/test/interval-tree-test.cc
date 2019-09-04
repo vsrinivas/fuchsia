@@ -324,6 +324,116 @@ TEST(IntervalTreeTest, EraseRangeMiddleLeavesPrefixAndSuffix) {
   EXPECT_EQ(2, tree.size());
 }
 
+TEST(IntervalTreeTest, EraseByRangeCanRemoveEntireRange) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  tree.erase(TestRange(2, 5));
+  EXPECT_TRUE(tree.empty());
+}
+
+TEST(IntervalTreeTest, EraseByRangeCanRemovePrefix) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  tree.erase(TestRange(1, 3));
+
+  EXPECT_EQ(1, tree.size());
+  EXPECT_EQ(TestRange(3, 5), tree.begin()->second);
+}
+
+TEST(IntervalTreeTest, EraseByRangeCanRemoveSuffix) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  tree.erase(TestRange(4, 6));
+
+  EXPECT_EQ(1, tree.size());
+  EXPECT_EQ(TestRange(2, 4), tree.begin()->second);
+}
+
+TEST(IntervalTreeTest, EraseByRangeCanSplitRange) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  tree.erase(TestRange(3, 4));
+
+  EXPECT_EQ(2, tree.size());
+  auto iter = tree.begin();
+  EXPECT_EQ(TestRange(2, 3), iter->second);
+  iter++;
+  EXPECT_EQ(TestRange(4, 5), iter->second);
+}
+
+TEST(IntervalTreeTest, EraseByRangeCanEraseMultipleRanges) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 3));
+  tree.insert(TestRange(4, 5));
+  tree.insert(TestRange(6, 7));
+  ASSERT_EQ(3, tree.size());
+
+  tree.erase(TestRange(2, 7));
+  EXPECT_EQ(0, tree.size());
+}
+
+TEST(IntervalTreeTest, EraseByRangeCanEraseMultipleRangesAndLeaveEdges) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(1, 3));
+  tree.insert(TestRange(4, 5));
+  tree.insert(TestRange(6, 8));
+  ASSERT_EQ(3, tree.size());
+
+  tree.erase(TestRange(2, 7));
+  EXPECT_EQ(2, tree.size());
+  auto iter = tree.begin();
+  EXPECT_EQ(TestRange(1, 2), iter->second);
+  iter++;
+  EXPECT_EQ(TestRange(7, 8), iter->second);
+}
+
+TEST(IntervalTreeTest, FindRangeByNonOverlappingRangeReturnsEnd) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  tree.insert(TestRange(7, 10));
+  ASSERT_EQ(tree.end(), tree.find(TestRange(5, 6)));
+}
+
+TEST(IntervalTreeTest, FindRangeByExactRange) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  ASSERT_EQ(TestRange(2, 5), tree.find(TestRange(2, 5))->second);
+}
+
+TEST(IntervalTreeTest, FindRangeByOverlappingPrefixRange) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  ASSERT_EQ(TestRange(2, 5), tree.find(TestRange(1, 3))->second);
+}
+
+TEST(IntervalTreeTest, FindRangeByOverlappingPrefixRangeAndAdjacentRange) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(0, 1));
+  tree.insert(TestRange(2, 5));
+  ASSERT_EQ(TestRange(2, 5), tree.find(TestRange(1, 3))->second);
+}
+
+TEST(IntervalTreeTest, FindRangeByOverlappingSuffixRange) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  ASSERT_EQ(TestRange(2, 5), tree.find(TestRange(4, 6))->second);
+}
+
+TEST(IntervalTreeTest, FindRangeByOverlappingSuffixRangeAndAdjacentRange) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  tree.insert(TestRange(6, 7));
+  ASSERT_EQ(TestRange(2, 5), tree.find(TestRange(4, 6))->second);
+}
+
+TEST(IntervalTreeTest, FindRangeOverlappingMultipleRangesReturnsFirst) {
+  TestIntervalTree tree;
+  tree.insert(TestRange(2, 5));
+  tree.insert(TestRange(7, 8));
+  tree.insert(TestRange(10, 15));
+  ASSERT_EQ(TestRange(2, 5), tree.find(TestRange(0, 10))->second);
+}
+
 struct RangeContainer {
   RangeContainer(uint64_t start, uint64_t end, bool merge)
       : start_(start), end_(end), allow_merge_(merge) {}
