@@ -34,7 +34,7 @@ class LogSink {
 };
 
 // Represents a LogSink that writes to a |FILE*| stream.
-class FileLogSink : public LogSink {
+class FileLogSink final : public LogSink {
  public:
   // Constructs a LogSink that writes to |stream|. If |stream| is nullptr then the outputs are
   // silenced.

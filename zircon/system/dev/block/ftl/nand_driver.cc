@@ -25,7 +25,7 @@ uint32_t GetParameter(const char* key) {
   return static_cast<uint32_t>(strtoul(value, nullptr, 0));
 }
 
-class NandDriverImpl : public ftl::NandDriver {
+class NandDriverImpl final : public ftl::NandDriver {
  public:
   NandDriverImpl(const nand_protocol_t* parent, const bad_block_protocol_t* bad_block)
       : parent_(parent), bad_block_protocol_(bad_block) {}

@@ -17,7 +17,7 @@
 
 // Implements the vulkan loader's Loader service which provides the client
 // driver portion to the loader as a VMO.
-class LoaderImpl : public fuchsia::vulkan::loader::Loader {
+class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
  public:
   LoaderImpl() = default;
   ~LoaderImpl() final = default;

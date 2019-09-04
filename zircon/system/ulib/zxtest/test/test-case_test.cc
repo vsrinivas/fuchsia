@@ -34,7 +34,7 @@ class FakeTest : public zxtest::Test {
 
 // Lifecycle observer that verifies that callbacks are executed correctly within
 // zxtest::TestCase.
-class FakeLifecycleObserver : public LifecycleObserver {
+class FakeLifecycleObserver final : public LifecycleObserver {
  public:
   ~FakeLifecycleObserver() final {}
 

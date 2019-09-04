@@ -18,7 +18,7 @@ struct TestOptions {
 constexpr TestOptions kDefaultTestOptions = {900, 50, false};
 
 // Ram-backed driver for testing purposes.
-class NdmRamDriver : public ftl::NdmBaseDriver {
+class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
   NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, kDefaultTestOptions) {}
   NdmRamDriver(const ftl::VolumeOptions& options, const TestOptions& test_options)

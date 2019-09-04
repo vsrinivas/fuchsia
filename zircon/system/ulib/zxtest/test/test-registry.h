@@ -18,7 +18,7 @@ namespace zxtest {
 namespace test {
 
 // Stub used for testing;
-class TestDriverStub : public internal::TestDriver {
+class TestDriverStub final : public internal::TestDriver {
  public:
   ~TestDriverStub() final {}
 

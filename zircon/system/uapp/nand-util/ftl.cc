@@ -31,7 +31,7 @@ int GetWearCount(const NandBroker& nand, uint32_t block, int page_multiplier) {
   return internal::IsFtlBlock(*oob) ? internal::DecodeWear(*oob) : -1;
 }
 
-class FtlData : public FtlInfo {
+class FtlData final : public FtlInfo {
  public:
   explicit FtlData(const NandBroker* nand) : nand_(nand) {}
   ~FtlData() final {}

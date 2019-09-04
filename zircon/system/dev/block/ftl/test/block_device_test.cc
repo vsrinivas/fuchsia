@@ -59,7 +59,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
   nand_protocol_t proto_;
 };
 
-class FakeVolume : public ftl::Volume {
+class FakeVolume final : public ftl::Volume {
  public:
   explicit FakeVolume(ftl::BlockDevice* device) : device_(device) {}
   ~FakeVolume() final {}

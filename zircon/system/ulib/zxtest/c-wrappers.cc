@@ -18,7 +18,7 @@
 
 namespace {
 
-class CTestWrapper : public zxtest::Test {
+class CTestWrapper final : public zxtest::Test {
  public:
   CTestWrapper() = default;
   ~CTestWrapper() final {}

@@ -25,7 +25,7 @@ namespace internal {
 
 // Test Driver implementation for the runner. Observes lifecycle events to
 // reset the test state correctly.
-class TestDriverImpl : public TestDriver, public LifecycleObserver {
+class TestDriverImpl final : public TestDriver, public LifecycleObserver {
  public:
   TestDriverImpl();
   ~TestDriverImpl() final;

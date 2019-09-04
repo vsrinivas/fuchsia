@@ -145,7 +145,7 @@ class BlockDeviceAdapter : public DeviceRef {
 };
 
 // Provides a Ramdisk device that is destroyed upon leaving the scope.
-class RamdiskRef : public BlockDeviceAdapter {
+class RamdiskRef final : public BlockDeviceAdapter {
  public:
   // Creates a block device with the respective block count and size.
   // Returns nullptr on failure.
@@ -175,7 +175,7 @@ class RamdiskRef : public BlockDeviceAdapter {
 class FvmAdapter;
 
 // Wrapper over a VPartitionAdapter, that provides common methods using in fvm-tests.
-class VPartitionAdapter : public BlockDeviceAdapter {
+class VPartitionAdapter final : public BlockDeviceAdapter {
  public:
   // Attaches itself to an existing VPartitionAdapter.
   static std::unique_ptr<VPartitionAdapter> Create(const fbl::unique_fd& devfs_root,

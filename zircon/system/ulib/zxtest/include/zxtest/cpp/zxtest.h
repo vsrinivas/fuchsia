@@ -30,7 +30,7 @@
 #define _ZXTEST_TEST_CLASS(TestCase, Test) TestCase##_##Test##_Class
 
 #define _ZXTEST_TEST_CLASS_DECL(Fixture, TestClass) \
-  class TestClass : public Fixture {                \
+  class TestClass final : public Fixture {                \
    public:                                          \
     TestClass() = default;                          \
     ~TestClass() final = default;                   \

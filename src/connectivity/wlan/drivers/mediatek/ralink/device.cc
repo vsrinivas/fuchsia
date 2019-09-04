@@ -4440,8 +4440,8 @@ int Device::AddTxStatsFifoEntry(const wlan_tx_packet_t& wlan_pkt) {
 ::wlan::TxVector FromStatFifoRegister(const TxStatFifo& stat_fifo) {
   return ::wlan::TxVector{
       .phy = static_cast<wlan_info_phy_type_t>(ralink_phy_to_ddk_phy(stat_fifo.txq_phy())),
-      .cbw = stat_fifo.txq_bw() == 1 ? CBW40 : CBW20,
       .gi = stat_fifo.txq_sgi() == 1 ? WLAN_GI_400NS : WLAN_GI_800NS,
+      .cbw = stat_fifo.txq_bw() == 1 ? CBW40 : CBW20,
       .mcs_idx = stat_fifo.txq_mcs(),
   };
 }

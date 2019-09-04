@@ -28,7 +28,7 @@ FILE* MakeMemfile(char* buffer, const char* path, const uint64_t size) {
 
 // Fake class that simply checks whether something was written or not
 // to the sink.
-class FakeLogSink : public LogSink {
+class FakeLogSink final : public LogSink {
  public:
   FakeLogSink() = default;
   FakeLogSink(FakeLogSink&&) = delete;

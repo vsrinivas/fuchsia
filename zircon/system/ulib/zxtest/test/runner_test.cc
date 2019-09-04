@@ -203,7 +203,7 @@ void RunnerRunAllTestsUntilFailure() {
   ZX_ASSERT_MSG(test_counter == kAttemptsUntilFailure, "test was not executed enough.\n");
 }
 
-class FakeEnv : public zxtest::Environment {
+class FakeEnv final : public zxtest::Environment {
  public:
   FakeEnv(int* curr_setup, int* curr_tear_down) {
     this->curr_setup_ = curr_setup;

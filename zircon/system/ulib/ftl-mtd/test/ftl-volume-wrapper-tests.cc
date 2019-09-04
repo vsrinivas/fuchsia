@@ -21,7 +21,7 @@ constexpr uint32_t kPageSize = 4 * 1024;  // 4 KiB
 constexpr uint32_t kNumPages = 128;
 constexpr uint32_t kSize = kNumPages * kPageSize;
 
-class FakeVolume : public ftl::Volume {
+class FakeVolume final : public ftl::Volume {
  public:
   explicit FakeVolume() {}
   ~FakeVolume() final {}

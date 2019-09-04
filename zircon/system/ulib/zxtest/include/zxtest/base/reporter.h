@@ -53,7 +53,7 @@ struct IterationSummary {
 }  // namespace internal
 
 // Reports test lifecycle progress.
-class Reporter : public LifecycleObserver {
+class Reporter final : public LifecycleObserver {
  public:
   Reporter() = delete;
   // Prints output to |stream|. If |stream| is |nullptr| it will behave as writing to /dev/null.

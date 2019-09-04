@@ -62,7 +62,7 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
   // A directory-like object which dynamically creates Service vnodes
   // for any file lookup.  Does not support enumeration since the actual
   // set of services available is not known by the bridge.
-  class ServiceProviderDir : public fs::Vnode {
+  class ServiceProviderDir final : public fs::Vnode {
    public:
     explicit ServiceProviderDir(fxl::WeakPtr<ServiceProviderBridge> bridge);
     ~ServiceProviderDir() final;

@@ -76,7 +76,7 @@ class Volume {
 };
 
 // Implementation of the Volume interface.
-class VolumeImpl : public Volume {
+class VolumeImpl final : public Volume {
  public:
   VolumeImpl(FtlInstance* owner) : owner_(owner) {}
   ~VolumeImpl() final {}

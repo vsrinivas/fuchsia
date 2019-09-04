@@ -17,7 +17,7 @@ class Runner;
 
 namespace internal {
 
-class EventBroadcaster : public LifecycleObserver {
+class EventBroadcaster final : public LifecycleObserver {
  public:
   EventBroadcaster();
   EventBroadcaster(const EventBroadcaster&) = delete;
