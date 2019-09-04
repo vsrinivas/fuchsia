@@ -11,9 +11,11 @@ import os
 import re
 import subprocess
 import time
+import sys
 
 from device import Device
 from host import Host
+from cliutils import show_menu
 
 
 class Fuzzer(object):
@@ -80,14 +82,23 @@ class Fuzzer(object):
 
     @classmethod
     def from_args(cls, device, args):
-        """Constructs a Fuzzer from command line arguments."""
-        fuzzers = Fuzzer.filter(device.host.fuzzers, args.name)
-        if len(fuzzers) != 1:
-            raise Fuzzer.NameError(
-                'Name did not resolve to exactly one fuzzer: \'' + args.name +
-                '\'. Try using \'list-fuzzers\'.')
-        return cls(
-            device, fuzzers[0][0], fuzzers[0][1], args.output, args.foreground)
+        """Constructs a Fuzzer from command line arguments, showing a
+        disambiguation menu if specified name matches more than one fuzzer."""
+
+        matches = Fuzzer.filter(device.host.fuzzers, args.name)
+
+        if not matches:
+            sys.exit("No matching fuzzers found. Try `fx fuzz list`.")
+
+        if len(matches) > 1:
+            print("More than one match found, please pick one from the list:")
+            choices = ["/".join(m) for m in matches]
+            fuzzer_name = show_menu(choices).split("/")
+        else:
+            fuzzer_name = matches[0]
+
+        return cls(device, fuzzer_name[0], fuzzer_name[1], args.output,
+                   args.foreground)
 
     def __init__(self, device, pkg, tgt, output=None, foreground=False):
         self.device = device

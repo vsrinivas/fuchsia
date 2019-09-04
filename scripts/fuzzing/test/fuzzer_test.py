@@ -37,10 +37,7 @@ class TestFuzzer(unittest.TestCase):
     def test_from_args(self):
         mock_device = MockDevice()
         parser = Args.make_parser('description')
-        with self.assertRaises(Fuzzer.NameError):
-            args = parser.parse_args(['target'])
-            fuzzer = Fuzzer.from_args(mock_device, args)
-        with self.assertRaises(Fuzzer.NameError):
+        with self.assertRaises(SystemExit):
             args = parser.parse_args(['target4'])
             fuzzer = Fuzzer.from_args(mock_device, args)
 
