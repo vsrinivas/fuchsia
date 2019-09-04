@@ -349,7 +349,7 @@ fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_identical!(Option<fdata::Dictionary>);
 
 /// A path to a capability.
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CapabilityPath {
     /// The directory containing the last path element, e.g. `/svc/foo` in `/svc/foo/bar`.
     pub dirname: String,
