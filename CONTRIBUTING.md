@@ -189,8 +189,11 @@ can be edited via the web UI.
 
 ## Changes that span repositories
 
-See [Changes that span
-repositories](/docs/development/workflows/working_across_petals.md).
+See [Working across different petals](/development/workflows/working_across_petals.md) to
+understand how to manage changes that span different repositories (petals).
+
+More information on the structure of the `fuchsia.git` respository is available in
+[Source code layout](/development/source_code/layout.md).
 
 ## Resolving merge conflicts
 

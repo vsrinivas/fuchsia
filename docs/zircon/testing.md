@@ -110,7 +110,7 @@ the `debuglog` virtual terminal.
 
 Many parts of the kernel have unit tests, which report success/failure
 automatically. These unit tests are built using the primitives provided by [the
-kernel unit-test library](/zircon/kernel/lib/unittest). You can find these statically
+kernel unit-test library](/zircon/kernel/lib/unittest/). You can find these statically
 by searching for `UNITTEST_START_TESTCASE`.
 
 These tests can be run from the shell with `k ut`. `k ut all` will run all tests

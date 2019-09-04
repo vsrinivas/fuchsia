@@ -24,9 +24,9 @@ zx_status_t zx_eventpair_create(uint32_t options,
 are mutually signalable.
 
 The signals **ZX_EVENTPAIR_SIGNALED** and **ZX_USER_SIGNAL_n** (where *n* is 0 through 7)
-may be set or cleared using [`zx_object_signal()`] (modifying the signals on the
-object itself), or [`zx_object_signal_peer()`] (modifying the signals on its
-counterpart).
+may be set or cleared using [`zx_object_signal()`], which modifies the signals on the
+object itself, or [`zx_object_signal_peer()`], which modifies the signals on its
+counterpart.
 
 When all the handles to one of the objects have been closed, the
 **ZX_EVENTPAIR_PEER_CLOSED** signal will be asserted on the opposing object.
