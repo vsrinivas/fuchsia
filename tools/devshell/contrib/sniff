@@ -6,7 +6,7 @@
 """Fuchsia packet capture and display tool.
 
 fx sniff captures the packets flowing in-and-out the Fuchsia target device
-and displays the packets in a useful format. This is to run on the development
+and displays the packets in a useful view. This is to run on the development
 host.
 
 fx sniff will automatically filter out fx-workflow related packets such as ssh,
@@ -18,11 +18,11 @@ their own needs.
 [Typical usages]
 $ fx sniff wlan                    # capture packets over WLAN interface,
                                    # and show their summaries
-$ fx sniff --format hex eth        # capture packets over Ethernet interface,
+$ fx sniff --view hex eth          # capture packets over Ethernet interface,
                                    # and show their hexadecimal dump
-$ fx sniff --format wireshark wlan # capture packets over WLAN interface,
+$ fx sniff --view wireshark wlan   # capture packets over WLAN interface,
                                    # and start wireshark GUI for display
-$ fx sniff --file myfile eth         # capture packets and store
+$ fx sniff --file myfile eth       # capture packets and store
                                    # at //out/myfile.pcapng
 $ fx sniff -t 10 wlan              # capture for 10 sec
 $ fx sniff --help                  # show all command line options
@@ -179,11 +179,11 @@ def do_sniff(args):
         full_path = u"%s%s" % (TARGET_TMP_DIR, args.file)
         cmd_options += u"-w %s " % full_path
 
-    if args.format == u"summary":
+    if args.view == u"summary":
         cmd_options += u""  # Default behavior
-    elif args.format == u"hex":
+    elif args.view == u"hex":
         cmd_options += u"--hexdump"
-    elif args.format == u"wireshark":
+    elif args.view == u"wireshark":
         (result, err_str) = has_wireshark_env()
         if not result:
             msg = (
@@ -232,7 +232,7 @@ def main():
     parser.add_argument(
         u"-t", u"--timeout", default=30, help=u"Time duration to sniff")
     parser.add_argument(
-        u"--format",
+        u"--view",
         nargs=u"?",
         choices=[u"wireshark", u"hex", u"summary"],
         default=u"summary",
@@ -243,7 +243,7 @@ def main():
         type=str,
         default=u"",
         help=
-        u"Store PCAPNG file in //out directory. May use with --format option")
+        u"Store PCAPNG file in //out directory. May use with --view option")
     parser.add_argument(
         u"--iface_filepath",
         dest=u"iface_filepath",

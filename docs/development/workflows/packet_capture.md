@@ -55,7 +55,7 @@ The capture packet is first stored in the target's `/tmp/` directory. After the 
 **_NOTE:_** Linux only.
 
 ```shell
-[host] $ fx sniff --format wireshark wlan
+[host] $ fx sniff --view wireshark wlan
 ```
 
 ## How-to (on target device)
