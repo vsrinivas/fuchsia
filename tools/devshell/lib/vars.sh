@@ -264,7 +264,9 @@ function fx-print-command-help {
 
 function fx-command-help {
   fx-print-command-help "$0"
+  echo -e "\nFor global options, try \`fx help\`."
 }
+
 
 # This function massages arguments to an fx subcommand so that a single
 # argument `--switch=value` becomes two arguments `--switch` `value`.

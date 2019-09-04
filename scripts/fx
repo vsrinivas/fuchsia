@@ -80,6 +80,21 @@ function find_command {
   return 1
 }
 
+function help_global_options {
+  cat <<END
+
+Global fx options: fx [OPTION] ${cmd} ...
+  --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
+  -d=DEVICE_NAME        Target a specific device. DEVICE_NAME may be a Fuchsia
+                        device name. Note: "fx set-device" can be used to set a
+                        default DEVICE_NAME for a BUILD_DIR.
+  -i                    Iterative mode.  Repeat the command whenever a file is
+                        modified under your Fuchsia directory, not including
+                        out/.
+  -x                    Print commands and their arguments as they are executed.
+END
+}
+
 function help {
   local cmd="$1"
   if [[ -z "${cmd}" ]]; then
@@ -91,12 +106,14 @@ function help {
         echo "${cmd}"
       fi
     done | column -t -s '|' -c 2
+    help_global_options
   else
     local cmd_path="$(find_command "${cmd}")"
     if [[ -z "$cmd_path" ]]; then
-      echo "Command not found"
+      echo "Command not found. Try \`fx help\`"
     elif [[ $(file -b --mime "${cmd_path}" | cut -d / -f 1) == "text" ]]; then
       fx-print-command-help "${cmd_path}"
+      help_global_options
     else
       echo "No help found. Try \`fx ${cmd} -h\`"
     fi
@@ -113,16 +130,6 @@ environment variable set to the root of a Platform Source Tree.
 
 commands:
 $(help)
-
-optional arguments:
-  --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
-  -d=DEVICE_NAME        Target a specific device. DEVICE_NAME may be a Fuchsia
-                        device name. Note: "fx set-device" can be used to set a
-                        default DEVICE_NAME for a BUILD_DIR.
-  -i                    Iterative mode.  Repeat the command whenever a file is
-                        modified under your Fuchsia directory, not including
-                        out/.
-  -x                    Print commands and their arguments as they are executed.
 
 optional shell extensions:
   fx-go
