@@ -4,7 +4,6 @@
 
 driver("fallback") {
   sources = [
-    "fallback-rtc.c",
     "rtc-impl.cc",
   ]
   deps = [

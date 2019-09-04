@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 #include <string.h>
 
+#include <ddk/binding.h>
+#include <ddk/driver.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -16,7 +18,7 @@
 
 #include <librtc.h>
 
-namespace {
+namespace fallback_rtc {
 
 zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
   uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
@@ -120,9 +122,7 @@ zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t
   return fuchsia_hardware_rtc_DeviceSet_reply(txn, status);
 }
 
-}  // namespace
-
-extern "C" zx_status_t fallback_rtc_bind(void* ctx, zx_device_t* parent) {
+static zx_status_t fallback_rtc_bind(void* ctx, zx_device_t* parent) {
   auto dev = std::make_unique<FallbackRtc>(parent);
   auto status = dev->Bind();
   if (status == ZX_OK) {
@@ -131,3 +131,24 @@ extern "C" zx_status_t fallback_rtc_bind(void* ctx, zx_device_t* parent) {
   }
   return status;
 }
+
+static constexpr zx_driver_ops_t ops = []() {
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = fallback_rtc_bind;
+  return ops;
+}();
+
+}  // namespace fallback_rtc
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(fallback_rtc, fallback_rtc::ops, "fallback_rtc", "0.1", 7)
+  BI_GOTO_IF(EQ, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST, 0),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_RTC_FALLBACK),
+  BI_ABORT(),
+  BI_LABEL(0),
+  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_FALLBACK_RTC_TEST),
+ZIRCON_DRIVER_END(fallback_rtc)
+// clang-format on
