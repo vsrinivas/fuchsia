@@ -4,6 +4,8 @@
 
 library fuchsia.ui.remotewidgets;
 
+using fuchsia.fonts;
+
 /// The value to hold these numeric types.
 union Number {
     int64 int_value;
@@ -44,6 +46,13 @@ struct InputValue {
     int32 action = 0;
 };
 
+/// Represents an icon type in a ui spec with an associated action.
+struct IconValue {
+    int32 code_point;
+    fuchsia.fonts.FamilyName? font_family;
+    int32 action = 0;
+};
+
 /// Represents a grid of strings type in a ui spec with an associated action.
 struct GridValue {
     byte columns;
@@ -66,6 +75,7 @@ union Value {
     ProgressValue progress;
     ButtonValue button;
     InputValue input;
+    IconValue icon;
     GridValue grid;
     GraphValue graph;
 };

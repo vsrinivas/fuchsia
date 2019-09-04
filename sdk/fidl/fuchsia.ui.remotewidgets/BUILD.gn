@@ -8,4 +8,8 @@ fidl("fuchsia.ui.remotewidgets") {
   sources = [
     "quickui.fidl",
   ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.fonts",
+  ]
 }
