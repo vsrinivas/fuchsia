@@ -250,6 +250,12 @@ config("default_warnings") {
 
     # TODO(34837): disable -Wdangling until we clear all instances.
     "-Wno-dangling",
+
+    # TODO(35965): Temporarily disable C99 designator warnings introduced in
+    # https://reviews.llvm.org/D59754. After the new Clang toolchain lands
+    # and we do some cleanup, this will be re-enabled.
+    "-Wno-unknown-warning-option",
+    "-Wno-c99-designator",
   ]
 }
 
