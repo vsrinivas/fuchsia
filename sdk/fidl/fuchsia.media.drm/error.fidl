@@ -4,15 +4,14 @@
 
 library fuchsia.media.drm;
 
-/// Standard error codes for DRM related protocols. The error code names
+/// Standard error codes for DRM related protocols. Many of the error code names
 /// originate from the [`W3C Encrypted Media Extensions`] specification to cover
-/// common CDM exception cases. CDM implementations might also provide
-/// application specific error codes, so long as they are positive 32 bit
-/// integers and do not overlap with this set.
+/// common CDM exception cases.
 ///
 /// [`W3C Encrypted Media Extensions`]:
 ///   https://www.w3.org/TR/encrypted-media
 enum Error {
+    // Encrypted Media Extension error codes
     /// An error that occurs when the client provides invalid parameter data to
     /// the server, such as an invalid license response message.
     TYPE = 1;
@@ -28,4 +27,11 @@ enum Error {
     /// An error that occurs when a requested action would exceed allowable
     /// limits, such as attempting to load an already opened session. 
     QUOTA_EXCEEDED = 4;
+
+    // Additional common error codes for DRM systems (100)
+    /// An internal, unexpected error that is not actionable by the client.
+    INTERNAL = 100;
+    /// An error that occurs when the CDM is not usable because it requires
+    /// additional provisioning.
+    NOT_PROVISIONED = 101;
 };
