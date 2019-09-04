@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocator.h"
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -11,7 +9,8 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
-#include <minfs/block-txn.h>
+
+#include "allocator.h"
 
 namespace minfs {
 

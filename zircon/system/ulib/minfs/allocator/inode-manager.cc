@@ -6,8 +6,6 @@
 
 #include <stdlib.h>
 
-#include <minfs/block-txn.h>
-
 namespace minfs {
 
 InodeManager::InodeManager(blk_t start_block) : start_block_(start_block) {}
@@ -46,7 +44,7 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
   return ZX_OK;
 }
 
-void InodeManager::Update(WriteTxn* txn, ino_t ino, const Inode* inode) {
+void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inode) {
   // Obtain the offset of the inode within its containing block
   const uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
   const blk_t inoblock_rel = ino / kMinfsInodesPerBlock;
@@ -55,7 +53,14 @@ void InodeManager::Update(WriteTxn* txn, ino_t ino, const Inode* inode) {
 
   char* inodata = reinterpret_cast<char*>(inode_table_.start()) + inoblock_rel * kMinfsBlockSize;
   memcpy(inodata + off_of_ino, inode, kMinfsInodeSize);
-  txn->Enqueue(inode_table_.vmo().get(), inoblock_rel, inoblock_abs, 1);
+
+  fs::Operation op = {
+    .type = fs::OperationType::kWrite,
+    .vmo_offset = inoblock_rel,
+    .dev_offset = inoblock_abs,
+    .length = 1,
+  };
+  transaction->EnqueueMetadata(inode_table_.vmo().get(), std::move(op));
 }
 
 const Allocator* InodeManager::GetInodeAllocator() const { return inode_allocator_.get(); }

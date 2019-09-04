@@ -4,8 +4,9 @@
 
 #include <optional>
 
-#include "minfs-private.h"
 #include <minfs/minfs.h>
+
+#include "minfs-private.h"
 #ifdef FS_WITH_METRICS
 #include <minfs/metrics.h>
 #include <storage-metrics/storage-metrics.h>

@@ -5,7 +5,8 @@
 // This file describes the structure used to allocate
 // from an on-disk bitmap.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_ALLOCATOR_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_ALLOCATOR_H_
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
@@ -19,6 +20,7 @@
 #include <minfs/format.h>
 #include <minfs/mutex.h>
 #include <minfs/superblock.h>
+#include <minfs/writeback.h>
 
 #ifdef __Fuchsia__
 #include <fuchsia/minfs/c/fidl.h>
@@ -70,7 +72,7 @@ class Allocator {
   size_t GetAvailable() const FS_TA_EXCLUDES(lock_);
 
   // Free an item from the allocator.
-  void Free(WriteTxn* txn, size_t index) FS_TA_EXCLUDES(lock_);
+  void Free(PendingWork* transaction, size_t index) FS_TA_EXCLUDES(lock_);
 
 #ifdef __Fuchsia__
   // Extract a vector of all currently allocated regions in the filesystem.
@@ -86,12 +88,12 @@ class Allocator {
   // idiom. They are public, but require an empty |AllocatorPromiseKey|.
 
   // Allocate a single element and return its newly allocated index.
-  size_t Allocate(AllocatorPromiseKey, WriteTxn* txn) FS_TA_EXCLUDES(lock_);
+  size_t Allocate(AllocatorPromiseKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
 
   // Reserve |count| elements. This is required in order to later allocate them.
   // Outputs a |promise| which contains reservation details.
-  zx_status_t Reserve(AllocatorPromiseKey, WriteTxn* txn, size_t count, AllocatorPromise* promise)
-      FS_TA_EXCLUDES(lock_);
+  zx_status_t Reserve(AllocatorPromiseKey, PendingWork* transaction, size_t count,
+                      AllocatorPromise* promise) FS_TA_EXCLUDES(lock_);
 
   // Unreserve |count| elements. This may be called in the event of failure, or if we
   // over-reserved initially.
@@ -115,7 +117,7 @@ class Allocator {
   // and swap_out_ maps are guaranteed to belong to only one Vnode. This method should only be
   // called in the same thread as the block swaps -- i.e. we should never be resolving blocks for
   // more than one vnode at a time.
-  void SwapCommit(AllocatorPromiseKey, WriteTxn* txn) FS_TA_EXCLUDES(lock_);
+  void SwapCommit(AllocatorPromiseKey, PendingWork* transaction) FS_TA_EXCLUDES(lock_);
 #endif
 
  private:
@@ -168,3 +170,5 @@ class Allocator {
 };
 
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_ALLOCATOR_H_

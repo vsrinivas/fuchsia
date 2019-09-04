@@ -29,7 +29,9 @@ class MockTransactionHandler : public TransactionHandler {
     transactions_seen_ = 0;
   }
 
-  uint32_t FsBlockSize() const final { return DeviceBlockSize() * kDiskBlockRatio; }
+  uint32_t FsBlockSize() const final {
+    return DeviceBlockSize() * static_cast<uint32_t>(kDiskBlockRatio);
+  }
 
   groupid_t BlockGroupID() final { return 1; }
 

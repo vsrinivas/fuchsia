@@ -5,7 +5,8 @@
 // This file describes the structure used to access inodes.
 // Currently, this structure is implemented on-disk as a table.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_INODE_MANAGER_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_INODE_MANAGER_H_
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
@@ -14,8 +15,9 @@
 #include <minfs/format.h>
 
 #ifdef __Fuchsia__
-#include <block-client/cpp/block-device.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+
+#include <block-client/cpp/block-device.h>
 #endif
 
 #include "allocator.h"
@@ -54,15 +56,15 @@ class InodeManager : public InspectableInodeManager {
 #endif
 
   // Reserve |inodes| inodes in the allocator.
-  zx_status_t Reserve(WriteTxn* txn, size_t inodes, AllocatorPromise* promise) {
-    return promise->Initialize(txn, inodes, inode_allocator_.get());
+  zx_status_t Reserve(PendingWork* transaction, size_t inodes, AllocatorPromise* promise) {
+    return promise->Initialize(transaction, inodes, inode_allocator_.get());
   }
 
   // Free an inode.
-  void Free(WriteTxn* txn, size_t index) { inode_allocator_->Free(txn, index); }
+  void Free(PendingWork* transaction, size_t index) { inode_allocator_->Free(transaction, index); }
 
   // Persist the inode to storage.
-  void Update(WriteTxn* txn, ino_t ino, const Inode* inode);
+  void Update(PendingWork* transaction, ino_t ino, const Inode* inode);
 
   // InspectableInodeManager interface:
   const Allocator* GetInodeAllocator() const final;
@@ -92,3 +94,5 @@ class InodeManager : public InspectableInodeManager {
 };
 
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_INODE_MANAGER_H_

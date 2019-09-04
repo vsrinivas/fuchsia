@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocator.h"
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -11,7 +9,8 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
-#include <minfs/block-txn.h>
+
+#include "allocator.h"
 
 namespace minfs {
 
@@ -46,7 +45,7 @@ size_t Allocator::GetAvailable() const {
   return GetAvailableLocked();
 }
 
-void Allocator::Free(WriteTxn* txn, size_t index) {
+void Allocator::Free(PendingWork* transaction, size_t index) {
   AutoLock lock(&lock_);
 #ifdef __Fuchsia__
   ZX_DEBUG_ASSERT(!swap_out_.GetOne(index));
@@ -54,8 +53,8 @@ void Allocator::Free(WriteTxn* txn, size_t index) {
   ZX_DEBUG_ASSERT(map_.GetOne(index));
 
   map_.ClearOne(index);
-  storage_->PersistRange(txn, GetMapDataLocked(), index, 1);
-  storage_->PersistRelease(txn, 1);
+  storage_->PersistRange(transaction, GetMapDataLocked(), index, 1);
+  storage_->PersistRelease(transaction, 1);
 
   if (index < first_free_) {
     first_free_ = index;
@@ -77,7 +76,7 @@ zx_status_t Allocator::GrowMapLocked(size_t new_size, size_t* old_size) {
   return ZX_OK;
 }
 
-zx_status_t Allocator::Reserve(AllocatorPromiseKey, WriteTxn* txn, size_t count,
+zx_status_t Allocator::Reserve(AllocatorPromiseKey, PendingWork* transaction, size_t count,
                                AllocatorPromise* promise) {
   AutoLock lock(&lock_);
   if (GetAvailableLocked() < count) {
@@ -89,7 +88,7 @@ zx_status_t Allocator::Reserve(AllocatorPromiseKey, WriteTxn* txn, size_t count,
 
     zx_status_t status;
     // TODO(planders): Allow Extend to take in count.
-    if ((status = storage_->Extend(txn, GetMapDataLocked(), grow_map)) != ZX_OK) {
+    if ((status = storage_->Extend(transaction, GetMapDataLocked(), grow_map)) != ZX_OK) {
       return status;
     }
 
@@ -105,15 +104,15 @@ bool Allocator::CheckAllocated(size_t index) const {
   return map_.Get(index, index + 1);
 }
 
-size_t Allocator::Allocate(AllocatorPromiseKey, WriteTxn* txn) {
+size_t Allocator::Allocate(AllocatorPromiseKey, PendingWork* transaction) {
   AutoLock lock(&lock_);
   ZX_DEBUG_ASSERT(reserved_ > 0);
   size_t bitoff_start = FindLocked();
 
   ZX_ASSERT(map_.SetOne(bitoff_start) == ZX_OK);
-  storage_->PersistRange(txn, GetMapDataLocked(), bitoff_start, 1);
+  storage_->PersistRange(transaction, GetMapDataLocked(), bitoff_start, 1);
   reserved_ -= 1;
-  storage_->PersistAllocate(txn, 1);
+  storage_->PersistAllocate(transaction, 1);
   first_free_ = bitoff_start + 1;
   return bitoff_start;
 }

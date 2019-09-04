@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef BITMAP_STORAGE_H_
+#define BITMAP_STORAGE_H_
 
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
-
 #include <zircon/process.h>
 #include <zircon/types.h>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
@@ -93,6 +94,7 @@ class VmoStorage {
       vmo_.reset();
       return status;
     }
+
     vmo_.set_property(ZX_PROP_NAME, "vmo-backed-bitmap", strlen("vmo-backed-bitmap"));
     return ZX_OK;
   }
@@ -163,3 +165,5 @@ class VmoStorage {
 #endif
 
 }  // namespace bitmap
+
+#endif  // BITMAP_STORAGE_H_

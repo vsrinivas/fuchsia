@@ -11,7 +11,6 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
-#include <minfs/block-txn.h>
 
 namespace minfs {
 
@@ -93,7 +92,7 @@ size_t Allocator::Swap(AllocatorPromiseKey, size_t old_index) {
   return new_index;
 }
 
-void Allocator::SwapCommit(AllocatorPromiseKey, WriteTxn* txn) {
+void Allocator::SwapCommit(AllocatorPromiseKey, PendingWork* transaction) {
   AutoLock lock(&lock_);
   if (swap_in_.num_bits() == 0 && swap_out_.num_bits() == 0) {
     return;
@@ -106,7 +105,7 @@ void Allocator::SwapCommit(AllocatorPromiseKey, WriteTxn* txn) {
     // Swap in the new bits.
     zx_status_t status = map_.Set(range->bitoff, range->end());
     ZX_DEBUG_ASSERT(status == ZX_OK);
-    storage_->PersistRange(txn, GetMapDataLocked(), range->bitoff, range->bitlen);
+    storage_->PersistRange(transaction, GetMapDataLocked(), range->bitoff, range->bitlen);
   }
 
   for (auto range = swap_out_.begin(); range != swap_out_.end(); ++range) {
@@ -120,14 +119,14 @@ void Allocator::SwapCommit(AllocatorPromiseKey, WriteTxn* txn) {
     // Swap out the old bits.
     zx_status_t status = map_.Clear(range->bitoff, range->end());
     ZX_DEBUG_ASSERT(status == ZX_OK);
-    storage_->PersistRange(txn, GetMapDataLocked(), range->bitoff, range->bitlen);
+    storage_->PersistRange(transaction, GetMapDataLocked(), range->bitoff, range->bitlen);
   }
 
   // Update count of allocated blocks.
   // Since we swap out 1 or fewer elements each time one is swapped in,
   // the elements in swap_out can never be greater than those in swap_in.
   ZX_DEBUG_ASSERT(swap_in_.num_bits() >= swap_out_.num_bits());
-  storage_->PersistAllocate(txn, swap_in_.num_bits() - swap_out_.num_bits());
+  storage_->PersistAllocate(transaction, swap_in_.num_bits() - swap_out_.num_bits());
 
   // Clear the reserved/unreserved bitmaps
   swap_in_.ClearAll();

@@ -4,7 +4,8 @@
 
 // This file describes a utility for storing pending allocation state for a Minfs vnode.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_VNODE_ALLOCATION_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_VNODE_ALLOCATION_H_
 
 #ifndef __Fuchsia__
 #error Fuchsia-only Header
@@ -12,6 +13,7 @@
 
 #include <bitmap/rle-bitmap.h>
 #include <minfs/format.h>
+
 #include "allocator/allocator.h"
 
 namespace minfs {
@@ -84,3 +86,5 @@ class PendingAllocationData {
 };
 
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_VNODE_ALLOCATION_H_

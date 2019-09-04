@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <type_traits>
+
 #include <minfs/writeback-async.h>
 
 #include "minfs-private.h"
-
-#include <type_traits>
 
 namespace minfs {
 

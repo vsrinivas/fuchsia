@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <utility>
 #include <stdlib.h>
+
+#include <utility>
 
 #include <minfs/allocator-promise.h>
 
@@ -13,7 +14,8 @@ namespace minfs {
 
 AllocatorPromise::~AllocatorPromise() { Cancel(); }
 
-zx_status_t AllocatorPromise::Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator) {
+zx_status_t AllocatorPromise::Initialize(PendingWork* transaction, size_t reserved,
+                                         Allocator* allocator) {
   if (allocator_ != nullptr) {
     return ZX_ERR_BAD_STATE;
   }
@@ -24,7 +26,7 @@ zx_status_t AllocatorPromise::Initialize(WriteTxn* txn, size_t reserved, Allocat
 
   ZX_DEBUG_ASSERT(reserved_ == 0);
 
-  zx_status_t status = allocator->Reserve({}, txn, reserved, this);
+  zx_status_t status = allocator->Reserve({}, transaction, reserved, this);
   if (status == ZX_OK) {
     allocator_ = allocator;
     reserved_ = reserved;
@@ -32,11 +34,11 @@ zx_status_t AllocatorPromise::Initialize(WriteTxn* txn, size_t reserved, Allocat
   return status;
 }
 
-size_t AllocatorPromise::Allocate(WriteTxn* txn) {
+size_t AllocatorPromise::Allocate(PendingWork* transaction) {
   ZX_DEBUG_ASSERT(allocator_ != nullptr);
   ZX_DEBUG_ASSERT(reserved_ > 0);
   reserved_--;
-  return allocator_->Allocate({}, txn);
+  return allocator_->Allocate({}, transaction);
 }
 
 #ifdef __Fuchsia__
@@ -47,9 +49,9 @@ size_t AllocatorPromise::Swap(size_t old_index) {
   return allocator_->Swap({}, old_index);
 }
 
-void AllocatorPromise::SwapCommit(WriteTxn* txn) {
+void AllocatorPromise::SwapCommit(PendingWork* transaction) {
   ZX_DEBUG_ASSERT(allocator_ != nullptr);
-  allocator_->SwapCommit({}, txn);
+  allocator_->SwapCommit({}, transaction);
 }
 
 void AllocatorPromise::GiveBlocks(size_t requested, AllocatorPromise* other_promise) {

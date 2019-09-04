@@ -441,14 +441,14 @@ zx_status_t Minfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
 }
 
 zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
+  auto work = transaction->RemoveMetadataWork();
 #ifdef __Fuchsia__
   ZX_DEBUG_ASSERT(writeback_ != nullptr);
-  // TODO(planders): Move this check to Journal enqueue.
-  ZX_DEBUG_ASSERT(transaction->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
+  ZX_DEBUG_ASSERT(work->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
 #endif
   // Take the transaction's metadata updates, and pass them back to the writeback buffer.
   // This begins the pipeline of "actually writing these updates out to persistent storage".
-  return EnqueueWork(transaction->RemoveWork());
+  return EnqueueWork(std::move(work));
 }
 
 #ifdef __Fuchsia__
@@ -502,14 +502,14 @@ zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) cons
 }
 #endif
 
-zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
+zx_status_t Minfs::InoFree(PendingWork* transaction, VnodeMinfs* vn) {
   TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->GetIno());
 
 #ifdef __Fuchsia__
   vn->CancelPendingWriteback();
 #endif
 
-  inodes_->Free(transaction->GetWork(), vn->GetIno());
+  inodes_->Free(transaction, vn->GetIno());
   uint32_t block_count = vn->GetInode()->block_count;
 
   // release all direct blocks
@@ -519,7 +519,7 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
     }
     ValidateBno(vn->GetInode()->dnum[n]);
     block_count--;
-    block_allocator_->Free(transaction->GetWork(), vn->GetInode()->dnum[n]);
+    block_allocator_->Free(transaction, vn->GetInode()->dnum[n]);
   }
 
   // release all indirect blocks
@@ -547,11 +547,11 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
         continue;
       }
       block_count--;
-      block_allocator_->Free(transaction->GetWork(), entry[m]);
+      block_allocator_->Free(transaction, entry[m]);
     }
     // release the direct block itself
     block_count--;
-    block_allocator_->Free(transaction->GetWork(), vn->GetInode()->inum[n]);
+    block_allocator_->Free(transaction, vn->GetInode()->inum[n]);
   }
 
   // release doubly indirect blocks
@@ -597,16 +597,16 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
         }
 
         block_count--;
-        block_allocator_->Free(transaction->GetWork(), entry[k]);
+        block_allocator_->Free(transaction, entry[k]);
       }
 
       block_count--;
-      block_allocator_->Free(transaction->GetWork(), dentry[m]);
+      block_allocator_->Free(transaction, dentry[m]);
     }
 
     // release the doubly indirect block itself
     block_count--;
-    block_allocator_->Free(transaction->GetWork(), vn->GetInode()->dinum[n]);
+    block_allocator_->Free(transaction, vn->GetInode()->dinum[n]);
   }
 
   ZX_DEBUG_ASSERT(block_count == 0);
@@ -614,7 +614,7 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
   return ZX_OK;
 }
 
-void Minfs::AddUnlinked(Transaction* transaction, VnodeMinfs* vn) {
+void Minfs::AddUnlinked(PendingWork* transaction, VnodeMinfs* vn) {
   ZX_DEBUG_ASSERT(vn->GetInode()->link_count == 0);
 
   Superblock* info = sb_->MutableInfo();
@@ -635,13 +635,13 @@ void Minfs::AddUnlinked(Transaction* transaction, VnodeMinfs* vn) {
     vn->SetLastInode(last_vn->GetIno());
     info->unlinked_tail = vn->GetIno();
 
-    last_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
-    vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
+    last_vn->InodeSync(transaction, kMxFsSyncDefault);
+    vn->InodeSync(transaction, kMxFsSyncDefault);
   }
-  sb_->Write(transaction->GetWork(), UpdateBackupSuperblock::kNoUpdate);
+  sb_->Write(transaction, UpdateBackupSuperblock::kNoUpdate);
 }
 
-void Minfs::RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn) {
+void Minfs::RemoveUnlinked(PendingWork* transaction, VnodeMinfs* vn) {
   if (vn->GetInode()->last_inode == 0) {
     // If |vn| is the first unlinked inode, we just need to update the list head
     // to the next inode (which may not exist).
@@ -654,7 +654,7 @@ void Minfs::RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn) {
     fbl::RefPtr<VnodeMinfs> last_vn = VnodeLookupInternal(vn->GetInode()->last_inode);
     ZX_DEBUG_ASSERT(last_vn != nullptr);
     last_vn->SetNextInode(vn->GetInode()->next_inode);
-    last_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
+    last_vn->InodeSync(transaction, kMxFsSyncDefault);
   }
 
   if (vn->GetInode()->next_inode == 0) {
@@ -669,7 +669,7 @@ void Minfs::RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn) {
     fbl::RefPtr<VnodeMinfs> next_vn = VnodeLookupInternal(vn->GetInode()->next_inode);
     ZX_DEBUG_ASSERT(next_vn != nullptr);
     next_vn->SetLastInode(vn->GetInode()->last_inode);
-    next_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
+    next_vn->InodeSync(transaction, kMxFsSyncDefault);
   }
 }
 
@@ -706,7 +706,7 @@ zx_status_t Minfs::PurgeUnlinked() {
       ZX_DEBUG_ASSERT(Info().unlinked_tail == last_ino);
       sb_->MutableInfo()->unlinked_tail = 0;
     }
-    sb_->Write(transaction->GetWork(), UpdateBackupSuperblock::kNoUpdate);
+    sb_->Write(transaction.get(), UpdateBackupSuperblock::kNoUpdate);
     status = CommitTransaction(std::move(transaction));
     if (status != ZX_OK) {
       return status;
@@ -776,7 +776,7 @@ void Minfs::InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino)
   size_t allocated_ino = transaction->AllocateInode();
   *out_ino = static_cast<ino_t>(allocated_ino);
   // Write the inode back to storage.
-  InodeUpdate(transaction->GetWork(), *out_ino, inode);
+  InodeUpdate(transaction, *out_ino, inode);
 }
 
 zx_status_t Minfs::VnodeNew(Transaction* transaction, fbl::RefPtr<VnodeMinfs>* out, uint32_t type) {
@@ -874,13 +874,13 @@ bool Minfs::IsReadonly() {
   return ReadonlyLocked();
 }
 
-void Minfs::UpdateFlags(Transaction* transaction, uint32_t flags, bool set) {
+void Minfs::UpdateFlags(PendingWork* transaction, uint32_t flags, bool set) {
   if (set) {
     sb_->MutableInfo()->flags |= flags;
   } else {
     sb_->MutableInfo()->flags &= (~flags);
   }
-  sb_->Write(transaction->GetWork(), UpdateBackupSuperblock::kUpdate);
+  sb_->Write(transaction, UpdateBackupSuperblock::kUpdate);
 }
 
 #ifdef __Fuchsia__
@@ -895,9 +895,9 @@ void Minfs::BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno) {
 }
 #endif
 
-void Minfs::BlockFree(Transaction* transaction, blk_t bno) {
+void Minfs::BlockFree(PendingWork* transaction, blk_t bno) {
   ValidateBno(bno);
-  block_allocator_->Free(transaction->GetWork(), bno);
+  block_allocator_->Free(transaction, bno);
 }
 
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {

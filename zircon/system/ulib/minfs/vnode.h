@@ -2,24 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <utility>
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_VNODE_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_VNODE_H_
 
 #include <inttypes.h>
 
+#include <utility>
+
 #ifdef __Fuchsia__
-#include <fbl/auto_lock.h>
-#include <fs/remote.h>
-#include <fs/watcher.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/auto_lock.h>
+#include <fs/remote.h>
+#include <fs/watcher.h>
 #include <minfs/writeback-async.h>
 
 #include "vnode-allocation.h"
 #endif
+
+#include <lib/zircon-internal/fnv1hash.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
@@ -31,7 +35,6 @@
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
-#include <lib/zircon-internal/fnv1hash.h>
 #include <minfs/format.h>
 #include <minfs/minfs.h>
 #include <minfs/transaction-limits.h>
@@ -128,7 +131,7 @@ class VnodeMinfs : public fs::Vnode,
 
   // Deletes the block at |vmo_offset| within the file, corresponding to on-disk
   // block |dev_offset| (zero if unallocated).
-  virtual void DeleteBlock(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset) = 0;
+  virtual void DeleteBlock(PendingWork* transaction, blk_t vmo_offset, blk_t dev_offset) = 0;
 
 #ifdef __Fuchsia__
   // Instructs the Vnode to write out |count| blocks of the vnode, starting at local
@@ -156,9 +159,9 @@ class VnodeMinfs : public fs::Vnode,
 
   // Local implementations of read, write, and truncate functions which
   // may operate on either files or directories.
-  zx_status_t ReadInternal(Transaction* transaction, void* data, size_t len, size_t off,
+  zx_status_t ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
                            size_t* actual);
-  zx_status_t ReadExactInternal(Transaction* transaction, void* data, size_t len, size_t off);
+  zx_status_t ReadExactInternal(PendingWork* transaction, void* data, size_t len, size_t off);
   zx_status_t WriteInternal(Transaction* transaction, const void* data, size_t len, size_t off,
                             size_t* actual);
   zx_status_t WriteExactInternal(Transaction* transaction, const void* data, size_t len,
@@ -179,7 +182,7 @@ class VnodeMinfs : public fs::Vnode,
 #endif
 
   // Update the vnode's inode and write it to disk.
-  void InodeSync(WritebackWork* wb, uint32_t flags);
+  void InodeSync(PendingWork* transaction, uint32_t flags);
 
   // Decrements the inode link count to a vnode.
   // Writes the inode back to |transaction|.
@@ -187,7 +190,7 @@ class VnodeMinfs : public fs::Vnode,
   // If the link count becomes zero, the node either:
   // 1) Calls |Purge()| (if no open fds exist), or
   // 2) Adds itself to the "unlinked list", to be purged later.
-  void RemoveInodeLink(Transaction* transaction);
+  void RemoveInodeLink(PendingWork* transaction);
 
   // TODO(smklein): These operations and members are protected as a historical artifact
   // of "File + Directory + Vnode" being a single class. They should be transitioned to
@@ -399,14 +402,14 @@ class VnodeMinfs : public fs::Vnode,
   // Must only be called on Vnodes which
   // - Have no open fds
   // - Are fully unlinked (link count == 0)
-  void Purge(Transaction* transaction);
+  void Purge(PendingWork* transaction);
 
 #ifdef __Fuchsia__
   zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
   void Sync(SyncCallback closure) final;
   zx_status_t AttachRemote(fs::MountChannel h) final;
-  zx_status_t InitVmo(Transaction* transaction);
+  zx_status_t InitVmo(PendingWork* transaction);
 
   // Initializes the indirect VMO, grows it to |size| bytes, and reads |count| indirect
   // blocks from |iarray| into the indirect VMO, starting at block offset |offset|.
@@ -464,3 +467,5 @@ class VnodeMinfs : public fs::Vnode,
 };
 
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_VNODE_H_

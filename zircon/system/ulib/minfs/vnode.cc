@@ -6,25 +6,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/stat.h>
+#include <zircon/device/vfs.h>
+#include <zircon/time.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 #include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
-#include <zircon/device/vfs.h>
-#include <zircon/time.h>
 
 #ifdef __Fuchsia__
 #include <lib/fdio/vfs.h>
 #include <lib/fidl-utils/bind.h>
-#include <fbl/auto_lock.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
+
+#include <fbl/auto_lock.h>
 #endif
 
 #include "directory.h"
@@ -85,7 +86,7 @@ void VnodeMinfs::SetIno(ino_t ino) {
   ino_ = ino;
 }
 
-void VnodeMinfs::InodeSync(WritebackWork* wb, uint32_t flags) {
+void VnodeMinfs::InodeSync(PendingWork* transaction, uint32_t flags) {
   // by default, c/mtimes are not updated to current time
   if (flags != kMxFsSyncDefault) {
     zx_time_t cur_time = GetTimeUTC();
@@ -98,7 +99,7 @@ void VnodeMinfs::InodeSync(WritebackWork* wb, uint32_t flags) {
     }
   }
 
-  fs_->InodeUpdate(wb, ino_, &inode_);
+  fs_->InodeUpdate(transaction, ino_, &inode_);
 }
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
@@ -226,7 +227,7 @@ zx_status_t VnodeMinfs::InitIndirectVmo() {
 // TODO(smklein): Even this hack can be optimized; a bitmap could be used to
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
-zx_status_t VnodeMinfs::InitVmo(Transaction* transaction) {
+zx_status_t VnodeMinfs::InitVmo(PendingWork* transaction) {
   if (vmo_.is_valid()) {
     return ZX_OK;
   }
@@ -423,8 +424,13 @@ zx_status_t VnodeMinfs::BlockOpIndirect(BlockOpArgs* op_args, IndirectArgs* para
       // Only update the indirect block if an entry was deleted, and the indirect block
       // itself was not deleted.
 #ifdef __Fuchsia__
-      op_args->transaction->GetWork()->Enqueue(vmo_indirect_->vmo().get(), params->GetOffset() + i,
-                                               params->GetBno(i) + fs_->Info().dat_block, 1);
+      fs::Operation op = {
+        .type = fs::OperationType::kWrite,
+        .vmo_offset = params->GetOffset() + i,
+        .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
+        .length = 1,
+      };
+      op_args->transaction->EnqueueMetadata(vmo_indirect_->vmo().get(), std::move(op));
 #else
       fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, entry);
 #endif
@@ -491,8 +497,13 @@ zx_status_t VnodeMinfs::BlockOpDindirect(BlockOpArgs* op_args, DindirectArgs* pa
       // Only update the indirect block if an entry was deleted, and the indirect block
       // itself was not deleted.
 #ifdef __Fuchsia__
-      op_args->transaction->GetWork()->Enqueue(vmo_indirect_->vmo().get(), params->GetOffset() + i,
-                                               params->GetBno(i) + fs_->Info().dat_block, 1);
+      fs::Operation op = {
+        .type = fs::OperationType::kWrite,
+        .vmo_offset = params->GetOffset() + i,
+        .dev_offset = params->GetBno(i) + fs_->Info().dat_block,
+        .length = 1,
+      };
+      op_args->transaction->EnqueueMetadata(vmo_indirect_->vmo().get(), std::move(op));
 #else
       fs_->bc_->Writeblk(params->GetBno(i) + fs_->Info().dat_block, dientry);
 #endif
@@ -627,7 +638,7 @@ zx_status_t VnodeMinfs::ApplyOperation(BlockOpArgs* op_args) {
 
   if (dirty) {
     ZX_DEBUG_ASSERT(op_args->transaction != nullptr);
-    InodeSync(op_args->transaction->GetWork(), kMxFsSyncDefault);
+    InodeSync(op_args->transaction, kMxFsSyncDefault);
   }
 
   // Return out of range if we were not able to process all blocks
@@ -688,7 +699,7 @@ zx_status_t VnodeMinfs::BlockGetReadable(blk_t n, blk_t* bno) {
   return ApplyOperation(&op_args);
 }
 
-zx_status_t VnodeMinfs::ReadExactInternal(Transaction* transaction, void* data, size_t len,
+zx_status_t VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data, size_t len,
                                           size_t off) {
   size_t actual;
   zx_status_t status = ReadInternal(transaction, data, len, off, &actual);
@@ -709,11 +720,11 @@ zx_status_t VnodeMinfs::WriteExactInternal(Transaction* transaction, const void*
   } else if (actual != len) {
     return ZX_ERR_IO;
   }
-  InodeSync(transaction->GetWork(), kMxFsSyncMtime);
+  InodeSync(transaction, kMxFsSyncMtime);
   return ZX_OK;
 }
 
-void VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
+void VnodeMinfs::RemoveInodeLink(PendingWork* transaction) {
   ZX_ASSERT(inode_.link_count > 0);
 
   // This effectively 'unlinks' the target node without deleting the direntry
@@ -735,7 +746,7 @@ void VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
     }
   }
 
-  InodeSync(transaction->GetWork(), kMxFsSyncMtime);
+  InodeSync(transaction, kMxFsSyncMtime);
 }
 
 void VnodeMinfs::ValidateVmoTail(uint64_t inode_size) const {
@@ -804,7 +815,7 @@ zx_status_t VnodeMinfs::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_OK;
 }
 
-void VnodeMinfs::Purge(Transaction* transaction) {
+void VnodeMinfs::Purge(PendingWork* transaction) {
   ZX_DEBUG_ASSERT(fd_count_ == 0);
   ZX_DEBUG_ASSERT(IsUnlinked());
   fs_->VnodeRelease(this);
@@ -838,7 +849,7 @@ zx_status_t VnodeMinfs::Close() {
 }
 
 // Internal read. Usable on directories.
-zx_status_t VnodeMinfs::ReadInternal(Transaction* transaction, void* data, size_t len, size_t off,
+zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
                                      size_t* actual) {
   // clip to EOF
   if (off >= GetSize()) {
@@ -1036,8 +1047,8 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
       return status;
     }
-    InodeSync(transaction->GetWork(), kMxFsSyncDefault);
-    transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+    InodeSync(transaction.get(), kMxFsSyncDefault);
+    transaction->PinVnode(fbl::WrapRefPtr(this));
     return fs_->CommitTransaction(std::move(transaction));
   }
   return ZX_OK;

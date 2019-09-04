@@ -5,7 +5,8 @@
 // This file represents the interface used by the allocator to interact with
 // the underlying storage medium.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_STORAGE_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_STORAGE_H_
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
@@ -19,15 +20,6 @@
 #include "metadata.h"
 
 namespace minfs {
-
-// Types of data to use with read and write transactions.
-#ifdef __Fuchsia__
-using ReadData = vmoid_t;
-using WriteData = zx_handle_t;
-#else
-using ReadData = const void*;
-using WriteData = const void*;
-#endif
 
 using GrowMapCallback = fbl::Function<zx_status_t(size_t pool_size, size_t* old_pool_size)>;
 
@@ -47,7 +39,8 @@ class AllocatorStorage {
   virtual void Load(fs::ReadTxn* txn, ReadData data) = 0;
 
   // Extend the on-disk extent containing map_.
-  virtual zx_status_t Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) = 0;
+  virtual zx_status_t Extend(PendingWork* transaction, WriteData data,
+                             GrowMapCallback grow_map) = 0;
 
   // Returns the number of unallocated elements.
   virtual uint32_t PoolAvailable() const = 0;
@@ -59,13 +52,14 @@ class AllocatorStorage {
   uint32_t PoolBlocks() const;
 
   // Persists the map at range |index| - |index + count|.
-  virtual void PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) = 0;
+  virtual void PersistRange(PendingWork* transaction, WriteData data, size_t index,
+                            size_t count) = 0;
 
   // Marks |count| elements allocated and persists the latest data.
-  virtual void PersistAllocate(WriteTxn* txn, size_t count) = 0;
+  virtual void PersistAllocate(PendingWork* transaction, size_t count) = 0;
 
   // Marks |count| elements released and persists the latest data.
-  virtual void PersistRelease(WriteTxn* txn, size_t count) = 0;
+  virtual void PersistRelease(PendingWork* transaction, size_t count) = 0;
 };
 
 // A type of storage which represents a persistent disk.
@@ -95,17 +89,17 @@ class PersistentStorage : public AllocatorStorage {
 
   void Load(fs::ReadTxn* txn, ReadData data);
 
-  zx_status_t Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) final;
+  zx_status_t Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final;
 
   uint32_t PoolAvailable() const final { return metadata_.PoolAvailable(); }
 
   uint32_t PoolTotal() const final { return metadata_.PoolTotal(); }
 
-  void PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) final;
+  void PersistRange(PendingWork* transaction, WriteData data, size_t index, size_t count) final;
 
-  void PersistAllocate(WriteTxn* txn, size_t count) final;
+  void PersistAllocate(PendingWork* transaction, size_t count) final;
 
-  void PersistRelease(WriteTxn* txn, size_t count) final;
+  void PersistRelease(PendingWork* transaction, size_t count) final;
 
  private:
   // Returns the number of blocks necessary to store a pool containing |size| bits.
@@ -121,3 +115,5 @@ class PersistentStorage : public AllocatorStorage {
 };
 
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_ALLOCATOR_STORAGE_H_

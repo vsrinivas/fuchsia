@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_FILE_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_FILE_H_
 
 #ifdef __Fuchsia__
 #include "vnode-allocation.h"
 #endif
+
+#include <lib/zircon-internal/fnv1hash.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
@@ -14,7 +17,6 @@
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vnode.h>
-#include <lib/zircon-internal/fnv1hash.h>
 #include <minfs/format.h>
 #include <minfs/minfs.h>
 #include <minfs/superblock.h>
@@ -44,7 +46,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   void SetSize(uint32_t new_size) final;
   void AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno,
                             blk_t* out_bno) final;
-  void DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) final;
+  void DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) final;
 #ifdef __Fuchsia__
   void IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                       blk_t count) final;
@@ -76,3 +78,5 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
 };
 
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_FILE_H_

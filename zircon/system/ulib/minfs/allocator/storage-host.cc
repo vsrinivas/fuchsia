@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "storage.h"
-
 #include <utility>
+
+#include "storage.h"
 
 namespace minfs {
 
@@ -12,7 +12,7 @@ PersistentStorage::PersistentStorage(SuperblockManager* sb, size_t unit_size, Gr
                                      AllocatorMetadata metadata)
     : sb_(sb), grow_cb_(std::move(grow_cb)), metadata_(std::move(metadata)) {}
 
-zx_status_t PersistentStorage::Extend(WriteTxn* write_transaction, WriteData data,
+zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
                                       GrowMapCallback grow_map) {
   return ZX_ERR_NO_SPACE;
 }

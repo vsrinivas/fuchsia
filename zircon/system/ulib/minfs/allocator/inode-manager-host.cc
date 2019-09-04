@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inode-manager.h"
-
 #include <stdlib.h>
 
-#include <minfs/block-txn.h>
+#include "inode-manager.h"
 
 namespace minfs {
 
@@ -31,7 +29,7 @@ zx_status_t InodeManager::Create(Bcache* bc, SuperblockManager* sb, fs::ReadTxn*
   return ZX_OK;
 }
 
-void InodeManager::Update(WriteTxn* txn, ino_t ino, const Inode* inode) {
+void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inode) {
   // Obtain the offset of the inode within its containing block
   const uint32_t off_of_ino = (ino % kMinfsInodesPerBlock) * kMinfsInodeSize;
   const blk_t inoblock_rel = ino / kMinfsInodesPerBlock;

@@ -35,7 +35,7 @@ class MockMinfs : public TransactionalFs {
   zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
     BlockIfPaused();
     ZX_ASSERT(transaction != nullptr);
-    transaction->GetWork()->MarkCompleted(ZX_OK);
+    transaction->RemoveMetadataWork()->MarkCompleted(ZX_OK);
     return ZX_OK;
   }
 

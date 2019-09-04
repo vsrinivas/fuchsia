@@ -5,15 +5,16 @@
 // This file describes the structure used to allocate
 // from an on-disk bitmap.
 
-#pragma once
+#ifndef MINFS_ALLOCATOR_PROMISE_H_
+#define MINFS_ALLOCATOR_PROMISE_H_
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <fs/transaction/block_transaction.h>
-#include <minfs/block-txn.h>
 #include <minfs/format.h>
 #include <minfs/mutex.h>
+#include <minfs/pending-work.h>
 #include <minfs/superblock.h>
 
 #ifdef __Fuchsia__
@@ -40,7 +41,7 @@ class AllocatorPromise {
   // Returns |ZX_OK| when |allocator| reserves |reserved| elements and |this| is successfully
   // initialized. Returns an error if not enough elements are available for reservation,
   // |allocator| is null, or |this| was previously initialized.
-  zx_status_t Initialize(WriteTxn* txn, size_t reserved, Allocator* allocator);
+  zx_status_t Initialize(PendingWork* transaction, size_t reserved, Allocator* allocator);
 
   bool IsInitialized() const { return allocator_ != nullptr; }
 
@@ -48,7 +49,7 @@ class AllocatorPromise {
   // A call to Allocate() is effectively the same as a call to Swap(0) + SwapCommit(), but under
   // the hood completes these operations more efficiently as additional state doesn't need to be
   // stored between the two.
-  size_t Allocate(WriteTxn* txn);
+  size_t Allocate(PendingWork* transaction);
 
   // Unreserve all currently reserved items.
   void Cancel();
@@ -60,7 +61,7 @@ class AllocatorPromise {
   size_t Swap(size_t old_index);
 
   // Commit any pending swaps, allocating new indices and de-allocating old indices.
-  void SwapCommit(WriteTxn* txn);
+  void SwapCommit(PendingWork* transaction);
 
   // Remove |requested| reserved elements and give them to |other_promise|.
   // The reserved count belonging to the Allocator does not change.
@@ -77,3 +78,5 @@ class AllocatorPromise {
 };
 
 }  // namespace minfs
+
+#endif  // MINFS_ALLOCATOR_PROMISE_H_

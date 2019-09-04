@@ -4,10 +4,10 @@
 
 // Tests Minfs Allocator and AllocatorPromise behavior.
 
+#include "allocator.h"
+
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
-
-#include "allocator.h"
 
 namespace minfs {
 namespace {
@@ -32,7 +32,7 @@ class FakeStorage : public AllocatorStorage {
 
   void Load(fs::ReadTxn* txn, ReadData data) final {}
 
-  zx_status_t Extend(WriteTxn* txn, WriteData data, GrowMapCallback grow_map) final {
+  zx_status_t Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
     return ZX_ERR_NO_SPACE;
   }
 
@@ -41,14 +41,14 @@ class FakeStorage : public AllocatorStorage {
   uint32_t PoolTotal() const final { return pool_total_; }
 
   // Write back the allocation of the following items to disk.
-  void PersistRange(WriteTxn* txn, WriteData data, size_t index, size_t count) final {}
+  void PersistRange(PendingWork* transaction, WriteData data, size_t index, size_t count) final {}
 
-  void PersistAllocate(WriteTxn* txn, size_t count) final {
+  void PersistAllocate(PendingWork* transaction, size_t count) final {
     ZX_DEBUG_ASSERT(pool_used_ + count <= pool_total_);
     pool_used_ += static_cast<uint32_t>(count);
   }
 
-  void PersistRelease(WriteTxn* txn, size_t count) final {
+  void PersistRelease(PendingWork* transaction, size_t count) final {
     ZX_DEBUG_ASSERT(pool_used_ >= count);
     pool_used_ -= static_cast<uint32_t>(count);
   }
@@ -332,20 +332,37 @@ TEST(AllocatorTest, AllocateSwap) {
   ASSERT_NO_FATAL_FAILURES(PerformFree(allocator.get(), indices));
 }
 
+class FakeTransaction : public PendingWork {
+ public:
+  void EnqueueMetadata(WriteData source, fs::Operation operation) final {
+    fs::UnbufferedOperation unbuffered_operation = {
+      .vmo = zx::unowned_vmo(source),
+      .op = std::move(operation)
+    };
+    metadata_operations_.Add(std::move(unbuffered_operation));
+  }
+
+  void EnqueueData(WriteData source, fs::Operation operation) final {}
+
+  size_t BlockCount() { return metadata_operations_.BlockCount(); }
+
+ private:
+  fs::UnbufferedOperationsBuilder metadata_operations_;
+};
+
 TEST(AllocatorTest, PersistRange) {
   // Create PersistentStorage with bogus attributes - valid storage is unnecessary for this test.
   AllocatorFvmMetadata fvm_metadata;
   AllocatorMetadata metadata(0, 0, false, std::move(fvm_metadata), 0, 0);
   PersistentStorage storage(nullptr, nullptr, kMinfsBlockSize, nullptr, std::move(metadata));
-  WriteTxn txn(nullptr);
-  ASSERT_EQ(txn.BlockCount(), 0);
+  FakeTransaction transaction;
+  ASSERT_EQ(transaction.BlockCount(), 0);
 
   // Add a transaction which crosses the boundary between two blocks within the storage bitmap.
-  storage.PersistRange(&txn, 1, kMinfsBlockBits - 1, 2);
+  storage.PersistRange(&transaction, 1, kMinfsBlockBits - 1, 2);
 
   // Check that two distinct blocks have been added to the txn.
-  ASSERT_EQ(txn.BlockCount(), 2);
-  txn.Cancel();
+  ASSERT_EQ(transaction.BlockCount(), 2);
 }
 
 }  // namespace

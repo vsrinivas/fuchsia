@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "work-queue.h"
+
 #include "minfs-private.h"
 
 namespace minfs {

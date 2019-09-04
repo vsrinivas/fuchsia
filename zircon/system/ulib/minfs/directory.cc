@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/stat.h>
+#include <zircon/device/vfs.h>
+#include <zircon/time.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -20,10 +22,11 @@
 #ifdef __Fuchsia__
 #include <lib/fdio/vfs.h>
 #include <lib/fidl-utils/bind.h>
-#include <fbl/auto_lock.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
+
+#include <fbl/auto_lock.h>
 #endif
 
 #include "directory.h"
@@ -85,7 +88,7 @@ void Directory::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, 
   }
 }
 
-void Directory::DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) {
+void Directory::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) {
   // If we found a block that was previously allocated, delete it.
   if (old_bno != 0) {
     fs_->BlockFree(transaction, old_bno);
@@ -96,7 +99,13 @@ void Directory::DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old
 #ifdef __Fuchsia__
 void Directory::IssueWriteback(Transaction* transaction, blk_t vmo_offset, blk_t dev_offset,
                                blk_t count) {
-  transaction->GetWork()->Enqueue(vmo_.get(), vmo_offset, dev_offset, count);
+  fs::Operation op = {
+    .type = fs::OperationType::kWrite,
+    .vmo_offset = vmo_offset,
+    .dev_offset = dev_offset,
+    .length = count,
+  };
+  transaction->EnqueueMetadata(vmo_.get(), std::move(op));
 }
 
 bool Directory::HasPendingAllocation(blk_t vmo_offset) { return false; }
@@ -201,8 +210,8 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
   }
 
   childvn->RemoveInodeLink(transaction);
-  transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-  transaction->GetWork()->PinVnode(childvn);
+  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(childvn);
   return kDirIteratorSaveSync;
 }
 
@@ -289,8 +298,8 @@ zx_status_t Directory::DirentCallbackAttemptRename(fbl::RefPtr<Directory> vndir,
     return status;
   }
 
-  args->transaction->GetWork()->PinVnode(vn);
-  args->transaction->GetWork()->PinVnode(vndir);
+  args->transaction->PinVnode(vn);
+  args->transaction->PinVnode(vndir);
   return kDirIteratorSaveSync;
 }
 
@@ -306,7 +315,7 @@ zx_status_t Directory::DirentCallbackUpdateInode(fbl::RefPtr<Directory> vndir, D
   if (status != ZX_OK) {
     return status;
   }
-  args->transaction->GetWork()->PinVnode(vndir);
+  args->transaction->PinVnode(vndir);
   return kDirIteratorSaveSync;
 }
 
@@ -392,8 +401,8 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
 
   inode_.dirent_count++;
   inode_.seq_num++;
-  InodeSync(args->transaction->GetWork(), kMxFsSyncMtime);
-  args->transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+  InodeSync(args->transaction, kMxFsSyncMtime);
+  args->transaction->PinVnode(fbl::WrapRefPtr(this));
   return ZX_OK;
 }
 
@@ -430,8 +439,8 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
         break;
       case kDirIteratorSaveSync:
         inode_.seq_num++;
-        InodeSync(args->transaction->GetWork(), kMxFsSyncMtime);
-        args->transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+        InodeSync(args->transaction, kMxFsSyncMtime);
+        args->transaction->PinVnode(fbl::WrapRefPtr(this));
         return ZX_OK;
       case kDirIteratorDone:
       default:
@@ -634,7 +643,7 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
       FS_TRACE_ERROR("minfs: Create: Failed to initialize empty directory: %d\n", status);
       return ZX_ERR_IO;
     }
-    vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
+    vn->InodeSync(transaction.get(), kMxFsSyncDefault);
   }
 
   // add directory entry for the new child node
@@ -644,8 +653,8 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
     return status;
   }
 
-  transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-  transaction->GetWork()->PinVnode(vn);
+  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(vn);
   if ((status = fs_->CommitTransaction(std::move(transaction))) != ZX_OK) {
     return status;
   }
@@ -677,7 +686,7 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
   if (status != ZX_OK) {
     return status;
   }
-  transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(fbl::WrapRefPtr(this));
   status = fs_->CommitTransaction(std::move(transaction));
   success = (status == ZX_OK);
   return status;
@@ -818,8 +827,8 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   if ((status = ForEachDirent(&args, DirentCallbackForceUnlink)) != ZX_OK) {
     return status;
   }
-  transaction->GetWork()->PinVnode(oldvn);
-  transaction->GetWork()->PinVnode(newdir);
+  transaction->PinVnode(oldvn);
+  transaction->PinVnode(newdir);
   status = fs_->CommitTransaction(std::move(transaction));
   if (status == ZX_OK) {
     success = true;
@@ -879,9 +888,9 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
 
   // We have successfully added the vn to a new location. Increment the link count.
   target->AddLink();
-  target->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
-  transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-  transaction->GetWork()->PinVnode(target);
+  target->InodeSync(transaction.get(), kMxFsSyncDefault);
+  transaction->PinVnode(fbl::WrapRefPtr(this));
+  transaction->PinVnode(target);
   return fs_->CommitTransaction(std::move(transaction));
 }
 

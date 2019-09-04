@@ -2,15 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef MINFS_WRITEBACK_H_
+#define MINFS_WRITEBACK_H_
 
 #include <utility>
+#include <vector>
 
 #ifdef __Fuchsia__
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <fs/transaction/writeback.h>
 #endif
 
 #include <fbl/algorithm.h>
@@ -25,6 +29,7 @@
 #include <minfs/bcache.h>
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
+#include <minfs/pending-work.h>
 
 namespace minfs {
 
@@ -87,7 +92,7 @@ class WritebackWork : public WriteTxn,
 // inode table, as well as the Vnode block count and inode size may in the near future be modified
 // asynchronously. Since these modifications require a Transaction to be in progress, this lock
 // will protect against multiple simultaneous writes to these structures.
-class Transaction {
+class Transaction : public PendingWork {
  public:
   static zx_status_t Create(TransactionalFs* minfs, size_t reserve_inodes, size_t reserve_blocks,
                             InodeManager* inode_manager, Allocator* block_allocator,
@@ -95,55 +100,39 @@ class Transaction {
 
   Transaction() = delete;
 
-  Transaction(TransactionalFs* minfs);
+  explicit Transaction(TransactionalFs* minfs);
 
-  ~Transaction() {
-    // Unreserve all reserved inodes/blocks while the lock is still held.
-    inode_promise_.Cancel();
-    block_promise_.Cancel();
-  }
+  ~Transaction() final;
 
-  void InitWork() {
-    ZX_DEBUG_ASSERT(work_ == nullptr);
-    work_.reset(new WritebackWork(bc_));
-  }
+  ////////////////
+  // PendingWork interface.
 
-  WritebackWork* GetWork() {
-    ZX_DEBUG_ASSERT(work_ != nullptr);
-    return work_.get();
-  }
+  void EnqueueMetadata(WriteData source, fs::Operation operation) final;
 
-  fbl::unique_ptr<WritebackWork> RemoveWork() {
-    ZX_DEBUG_ASSERT(data_work_ == nullptr);
-    ZX_DEBUG_ASSERT(work_ != nullptr);
-    return std::move(work_);
-  }
+  void EnqueueData(WriteData source, fs::Operation operation) final;
 
-  void InitDataWork() {
-    ZX_DEBUG_ASSERT(work_ != nullptr);
-    ZX_DEBUG_ASSERT(data_work_ == nullptr);
-    data_work_.reset(new WritebackWork(bc_));
-  }
-
-  WritebackWork* GetDataWork() {
-    ZX_DEBUG_ASSERT(data_work_ != nullptr);
-    return data_work_.get();
-  }
-
-  fbl::unique_ptr<WritebackWork> RemoveDataWork() {
-    ZX_DEBUG_ASSERT(data_work_ != nullptr);
-    return std::move(data_work_);
-  }
+  ////////////////
+  // Other methods.
 
   size_t AllocateInode() {
     ZX_DEBUG_ASSERT(inode_promise_.IsInitialized());
-    return inode_promise_.Allocate(GetWork());
+    return inode_promise_.Allocate(this);
   }
 
   size_t AllocateBlock() {
     ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
-    return block_promise_.Allocate(GetWork());
+    return block_promise_.Allocate(this);
   }
+
+  void PinVnode(fbl::RefPtr<VnodeMinfs> vnode);
+
+  // Deprecated. Used only for compatibility with WritebackQueue; should be removed once writeback
+  // moves to the Journal.
+  fbl::unique_ptr<WritebackWork> RemoveMetadataWork();
+
+  // Deprecated. Used only for compatibility with WritebackQueue; should be removed once writeback
+  // moves to the Journal.
+  fbl::unique_ptr<WritebackWork> RemoveDataWork();
 
 #ifdef __Fuchsia__
   size_t SwapBlock(size_t old_bno) {
@@ -153,7 +142,7 @@ class Transaction {
 
   void Resolve() {
     if (block_promise_.IsInitialized()) {
-      block_promise_.SwapCommit(GetWork());
+      block_promise_.SwapCommit(this);
     }
   }
 
@@ -172,13 +161,22 @@ class Transaction {
  private:
 #ifdef __Fuchsia__
   fbl::AutoLock<fbl::Mutex> lock_;
+  fs::UnbufferedOperationsBuilder metadata_operations_;
+  fs::UnbufferedOperationsBuilder data_operations_;
+  std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes_;
+#else
+  WritebackWork* GetMetadataWork();
+  WritebackWork* GetDataWork();
+
+  fbl::unique_ptr<WritebackWork> metadata_work_;
+  fbl::unique_ptr<WritebackWork> data_work_;
 #endif
 
   Bcache* bc_;
-  fbl::unique_ptr<WritebackWork> work_;
-  fbl::unique_ptr<WritebackWork> data_work_;
   AllocatorPromise inode_promise_;
   AllocatorPromise block_promise_;
 };
 
 }  // namespace minfs
+
+#endif  // MINFS_WRITEBACK_H_

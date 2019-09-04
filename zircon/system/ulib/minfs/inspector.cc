@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <minfs/inspector.h>
-
+#include <lib/disk-inspector/common-types.h>
 #include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/disk-inspector/common-types.h>
 #include <minfs/bcache.h>
+#include <minfs/inspector.h>
 
 #include "inspector-private.h"
 

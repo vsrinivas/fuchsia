@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_MINFS_WORK_QUEUE_H_
+#define ZIRCON_SYSTEM_ULIB_MINFS_WORK_QUEUE_H_
 
 #ifndef __Fuchsia__
 #error "Fuchsia-only header"
 #endif
 
+#include <optional>
+
 #include <fbl/condition_variable.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <minfs/writeback.h>
-#include "allocator/allocator.h"
 
-#include <optional>
+#include "allocator/allocator.h"
 
 // The maximum number of tasks that can be enqueued at a time.
 constexpr uint32_t kMaxQueued = 16;
@@ -90,3 +92,5 @@ class WorkQueue {
   fbl::ConditionVariable sync_cvar_;  // Signalled when the queue size decreases from max capacity.
 };
 }  // namespace minfs
+
+#endif  // ZIRCON_SYSTEM_ULIB_MINFS_WORK_QUEUE_H_

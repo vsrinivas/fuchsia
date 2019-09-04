@@ -5,12 +5,15 @@
 #include <inttypes.h>
 
 #ifdef __Fuchsia__
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/zx/vmo.h>
+
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/zx/vmo.h>
 #endif
+
+#include <utility>
 
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_hash_table.h>
@@ -20,11 +23,9 @@
 #include <fbl/unique_ptr.h>
 #include <fs/transaction/block_transaction.h>
 #include <fs/vfs.h>
-
-#include "minfs-private.h"
 #include <minfs/writeback.h>
 
-#include <utility>
+#include "minfs-private.h"
 
 namespace minfs {
 
@@ -148,22 +149,21 @@ zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
                                 size_t reserve_blocks, InodeManager* inode_manager,
                                 Allocator* block_allocator, fbl::unique_ptr<Transaction>* out) {
   fbl::unique_ptr<Transaction> transaction(new Transaction(minfs));
-  transaction->InitWork();
 
   if (reserve_inodes) {
     // The inode allocator is currently not accessed asynchronously.
     // However, acquiring the reservation may cause the superblock to be modified via extension,
     // so we still need to acquire the lock first.
-    zx_status_t status = inode_manager->Reserve(transaction->GetWork(), reserve_inodes,
-                                                &transaction->inode_promise_);
+    zx_status_t status =
+        inode_manager->Reserve(transaction.get(), reserve_inodes, &transaction->inode_promise_);
     if (status != ZX_OK) {
       return status;
     }
   }
 
   if (reserve_blocks) {
-    zx_status_t status = transaction->block_promise_.Initialize(transaction->GetWork(),
-                                                                reserve_blocks, block_allocator);
+    zx_status_t status =
+        transaction->block_promise_.Initialize(transaction.get(), reserve_blocks, block_allocator);
     if (status != ZX_OK) {
       return status;
     }
@@ -180,6 +180,108 @@ Transaction::Transaction(TransactionalFs* minfs)
 #endif
       bc_(minfs->GetMutableBcache()) {
 }
+
+Transaction::~Transaction() {
+  // Unreserve all reserved inodes/blocks while the lock is still held.
+  inode_promise_.Cancel();
+  block_promise_.Cancel();
+}
+
+#ifdef __Fuchsia__
+void Transaction::EnqueueMetadata(WriteData source, fs::Operation operation) {
+  fs::UnbufferedOperation unbuffered_operation = {
+    .vmo = zx::unowned_vmo(source),
+    .op = operation
+  };
+  metadata_operations_.Add(std::move(unbuffered_operation));
+}
+
+void Transaction::EnqueueData(WriteData source, fs::Operation operation) {
+  fs::UnbufferedOperation unbuffered_operation = {
+    .vmo = zx::unowned_vmo(source),
+    .op = operation
+  };
+  data_operations_.Add(std::move(unbuffered_operation));
+}
+
+void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {
+  for (size_t i = 0; i < pinned_vnodes_.size(); i++) {
+    if (pinned_vnodes_[i].get() == vnode.get()) {
+      // Already pinned
+      return;
+    }
+  }
+
+  pinned_vnodes_.push_back(std::move(vnode));
+}
+
+fbl::unique_ptr<WritebackWork> Transaction::RemoveMetadataWork() {
+  fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_));
+  fbl::Vector<fs::UnbufferedOperation> operations = metadata_operations_.TakeOperations();
+
+  for (fs::UnbufferedOperation operation : operations) {
+    work->Enqueue(operation.vmo->get(), static_cast<blk_t>(operation.op.vmo_offset),
+                  static_cast<blk_t>(operation.op.dev_offset),
+                  static_cast<blk_t>(operation.op.length));
+  }
+
+  for (size_t i = 0; i < pinned_vnodes_.size(); i++) {
+    work->PinVnode(std::move(pinned_vnodes_[i]));
+  }
+
+  return work;
+}
+
+fbl::unique_ptr<WritebackWork> Transaction::RemoveDataWork() {
+  fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_));
+  fbl::Vector<fs::UnbufferedOperation> operations = data_operations_.TakeOperations();
+
+  for (fs::UnbufferedOperation operation : operations) {
+    work->Enqueue(operation.vmo->get(), static_cast<blk_t>(operation.op.vmo_offset),
+                  static_cast<blk_t>(operation.op.dev_offset),
+                  static_cast<blk_t>(operation.op.length));
+  }
+
+  return work;
+}
+
+#else
+
+void Transaction::EnqueueMetadata(WriteData source, fs::Operation operation) {
+  GetMetadataWork()->Enqueue(source, operation.vmo_offset, operation.dev_offset, operation.length);
+}
+
+void Transaction::EnqueueData(WriteData source, fs::Operation operation) {
+  GetDataWork()->Enqueue(source, operation.vmo_offset, operation.dev_offset, operation.length);
+}
+
+void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {
+  GetMetadataWork()->PinVnode(std::move(vnode));
+}
+
+fbl::unique_ptr<WritebackWork> Transaction::RemoveMetadataWork() {
+  return std::move(metadata_work_);
+}
+
+fbl::unique_ptr<WritebackWork> Transaction::RemoveDataWork() { return std::move(data_work_); }
+
+WritebackWork* Transaction::GetMetadataWork() {
+  if (metadata_work_ == nullptr) {
+    metadata_work_.reset(new WritebackWork(bc_));
+  }
+
+  return metadata_work_.get();
+}
+
+WritebackWork* Transaction::GetDataWork() {
+  if (data_work_ == nullptr) {
+    ZX_DEBUG_ASSERT(metadata_work_ != nullptr);
+    data_work_.reset(new WritebackWork(bc_));
+  }
+
+  return data_work_.get();
+}
+#endif
 
 #ifdef __Fuchsia__
 void WritebackWork::SetSyncCallback(SyncCallback closure) {

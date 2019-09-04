@@ -6,8 +6,6 @@
 
 #include <utility>
 
-#include <minfs/block-txn.h>
-
 #include "allocator.h"
 
 namespace minfs {
@@ -25,7 +23,7 @@ zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, fuchsia_hardware_bl
   return device_->BlockAttachVmo(vmo, vmoid);
 }
 
-zx_status_t PersistentStorage::Extend(WriteTxn* write_transaction, WriteData data,
+zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
                                       GrowMapCallback grow_map) {
   TRACE_DURATION("minfs", "Minfs::PersistentStorage::Extend");
   ZX_DEBUG_ASSERT(write_transaction != nullptr);

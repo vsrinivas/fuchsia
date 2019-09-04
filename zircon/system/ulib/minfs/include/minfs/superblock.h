@@ -7,11 +7,10 @@
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fs/transaction/block_transaction.h>
-#include <minfs/block-txn.h>
 #include <minfs/format.h>
 #include <minfs/fsck.h>
 #include <minfs/minfs.h>
+#include <minfs/pending-work.h>
 
 #ifdef __Fuchsia__
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -67,7 +66,7 @@ class SuperblockManager {
 
   // Write the superblock/backup superblock back to persistent storage at respective locations.
   // If write_backup is kUpdate, also update the backup superblock.
-  void Write(WriteTxn* txn, UpdateBackupSuperblock write_backup);
+  void Write(PendingWork* transaction, UpdateBackupSuperblock write_backup);
 
  private:
 #ifdef __Fuchsia__

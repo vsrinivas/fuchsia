@@ -144,6 +144,7 @@ class TransactionalFs {
     EnqueueWork(std::move(work));
   }
 #endif
+
   // Begin a transaction with |reserve_inodes| inodes and |reserve_blocks| blocks reserved.
   virtual zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                        fbl::unique_ptr<Transaction>* transaction_out) = 0;
@@ -221,30 +222,30 @@ class Minfs :
   void BlockNew(Transaction* transaction, blk_t* out_bno);
 
   // Set/Unset the flags.
-  void UpdateFlags(Transaction* transaction, uint32_t flags, bool set);
+  void UpdateFlags(PendingWork* transaction, uint32_t flags, bool set);
 
   // Mark |in_bno| for de-allocation (if it is > 0), and return a new block |*out_bno|.
   // The swap will not be persisted until the transaction is commited.
   void BlockSwap(Transaction* transaction, blk_t in_bno, blk_t* out_bno);
 
   // Free a data block.
-  void BlockFree(Transaction* transaction, blk_t bno);
+  void BlockFree(PendingWork* transaction, blk_t bno);
 
   // Free ino in inode bitmap, release all blocks held by inode.
-  zx_status_t InoFree(Transaction* transaction, VnodeMinfs* vn);
+  zx_status_t InoFree(PendingWork* transaction, VnodeMinfs* vn);
 
   // Mark |vn| to be unlinked.
-  void AddUnlinked(Transaction* transaction, VnodeMinfs* vn);
+  void AddUnlinked(PendingWork* transaction, VnodeMinfs* vn);
 
   // Remove |vn| from the list of unlinked vnodes.
-  void RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn);
+  void RemoveUnlinked(PendingWork* transaction, VnodeMinfs* vn);
 
   // Free resources of all vnodes marked unlinked.
   zx_status_t PurgeUnlinked();
 
   // Writes back an inode into the inode table on persistent storage.
   // Does not modify inode bitmap.
-  void InodeUpdate(WriteTxn* transaction, ino_t ino, const Inode* inode) {
+  void InodeUpdate(PendingWork* transaction, ino_t ino, const Inode* inode) {
     inodes_->Update(transaction, ino, inode);
   }
 
@@ -261,7 +262,7 @@ class Minfs :
 
   zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) final __WARN_UNUSED_RESULT;
 
-  void EnqueueAllocation(fbl::unique_ptr<Transaction> transaction);
+  void EnqueueAllocation(fbl::unique_ptr<PendingWork> transaction);
 
   // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
   zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) final
@@ -389,9 +390,6 @@ class Minfs :
 
   // Find a free inode, allocate it in the inode bitmap, and write it back to disk
   void InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino);
-
-  // Enqueues an update to the super block.
-  void WriteInfo(WriteTxn* transaction);
 
   // Find an unallocated and unreserved block in the block bitmap starting from block |start|
   zx_status_t FindBlock(size_t start, size_t* blkno_out);

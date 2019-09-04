@@ -6,25 +6,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/stat.h>
+#include <zircon/device/vfs.h>
+#include <zircon/time.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 #include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
-#include <zircon/device/vfs.h>
-#include <zircon/time.h>
 
 #ifdef __Fuchsia__
 #include <lib/fdio/vfs.h>
 #include <lib/fidl-utils/bind.h>
-#include <fbl/auto_lock.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
+
+#include <fbl/auto_lock.h>
 #endif
 
 #include "file.h"
@@ -66,7 +67,7 @@ void File::AllocateData() {
       if (inode_.size != allocation_state_.GetNodeSize()) {
         inode_.size = allocation_state_.GetNodeSize();
         ValidateVmoTail(inode_.size);
-        InodeSync(transaction->GetWork(), kMxFsSyncMtime);
+        InodeSync(transaction.get(), kMxFsSyncMtime);
       }
 
       // Since we may have pending reservations from an expected update, reset the allocation
@@ -86,10 +87,6 @@ void File::AllocateData() {
 
     // Transfer reserved blocks from the vnode's allocation state to the current Transaction.
     transaction->MergeBlockPromise(allocation_state_.GetPromise());
-
-    // Write to data blocks must be done in a separate transaction from the metadata updates to
-    // ensure that all user data goes out to disk before associated metadata.
-    transaction->InitDataWork();
 
     if (bno_start + bno_count >= kMinfsDirect) {
       // Calculate the number of pre-indirect blocks. These will not factor into the number
@@ -122,11 +119,15 @@ void File::AllocateData() {
 
     // Enqueue each data block one at a time, as they may not be contiguous on disk.
     for (blk_t i = 0; i < bno_count; i++) {
-      transaction->GetDataWork()->Enqueue(vmo_.get(), bno_start + i,
-                                          allocated_blocks[i] + fs_->Info().dat_block, 1);
+      fs::Operation op = {
+        .type = fs::OperationType::kWrite,
+        .vmo_offset = bno_start + i,
+        .dev_offset = allocated_blocks[i] + fs_->Info().dat_block,
+        .length = 1,
+      };
+      transaction->EnqueueData(vmo_.get(), std::move(op));
     }
 
-    transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
     // Enqueue may fail if we are in a readonly state, but we should continue resolving all
     // pending allocations.
     __UNUSED zx_status_t status = fs_->EnqueueWork(transaction->RemoveDataWork());
@@ -147,11 +148,11 @@ void File::AllocateData() {
     }
 
     ValidateVmoTail(inode_.size);
-    InodeSync(transaction->GetWork(), kMxFsSyncMtime);
+    InodeSync(transaction.get(), kMxFsSyncMtime);
 
     // In the future we could resolve on a per state (i.e. promise) basis, but since swaps are
     // currently only made within a single thread, for now it is okay to resolve everything.
-    transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+    transaction->PinVnode(fbl::WrapRefPtr(this));
     transaction->Resolve();
 
     // Return remaining reserved blocks back to the allocation state.
@@ -220,7 +221,7 @@ void File::AcquireWritableBlock(Transaction* transaction, blk_t local_bno, blk_t
 #endif
 }
 
-void File::DeleteBlock(Transaction* transaction, blk_t local_bno, blk_t old_bno) {
+void File::DeleteBlock(PendingWork* transaction, blk_t local_bno, blk_t old_bno) {
   // If we found a block that was previously allocated, delete it.
   if (old_bno != 0) {
     fs_->BlockFree(transaction, old_bno);
@@ -303,8 +304,8 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   }
   if (*out_actual != 0) {
     // Enqueue metadata allocated via write.
-    InodeSync(transaction->GetWork(), kMxFsSyncMtime);  // Successful writes updates mtime
-    transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+    InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime
+    transaction->PinVnode(fbl::WrapRefPtr(this));
     status = fs_->CommitTransaction(std::move(transaction));
 
 #ifdef __Fuchsia__
@@ -358,8 +359,8 @@ zx_status_t File::Truncate(size_t len) {
   // later, the act of truncating may have allocated indirect blocks.
   //
   // Ensure our inode is consistent with that metadata.
-  InodeSync(transaction->GetWork(), kMxFsSyncMtime);
-  transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+  InodeSync(transaction.get(), kMxFsSyncMtime);
+  transaction->PinVnode(fbl::WrapRefPtr(this));
   status = fs_->CommitTransaction(std::move(transaction));
 #ifdef __Fuchsia__
   // Enqueue data allocated via write.
