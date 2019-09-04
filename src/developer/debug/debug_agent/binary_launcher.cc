@@ -9,7 +9,7 @@
 #include <lib/fdio/io.h>
 #include <zircon/processargs.h>
 
-#include "src/developer/debug/debug_agent/object_util.h"
+#include "src/developer/debug/debug_agent/object_provider.h"
 
 namespace debug_agent {
 

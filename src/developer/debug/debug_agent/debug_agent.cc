@@ -17,7 +17,7 @@
 #include "src/developer/debug/debug_agent/binary_launcher.h"
 #include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
-#include "src/developer/debug/debug_agent/object_util.h"
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/system_info.h"

@@ -11,7 +11,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "src/developer/debug/debug_agent/object_util.h"
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/lib/fxl/logging.h"
 
 namespace debug_agent {

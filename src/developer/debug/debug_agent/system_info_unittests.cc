@@ -5,7 +5,7 @@
 #include <lib/zx/process.h>
 
 #include "gtest/gtest.h"
-#include "src/developer/debug/debug_agent/object_util.h"
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 
 namespace debug_agent {
