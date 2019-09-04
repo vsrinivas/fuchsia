@@ -33,12 +33,13 @@
 #include "src/ledger/bin/testing/loop_controller_test_loop.h"
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
-#include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
-#include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
 namespace ledger {
 namespace {
+
+enum class InjectNetworkError { YES, NO };
 
 constexpr fxl::StringView kLedgerName = "AppTests";
 constexpr zx::duration kBackoffDuration = zx::msec(5);
@@ -82,8 +83,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
       rng::Random* random,
       fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
-      fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
-          cloud_provider,
+      cloud_provider::CloudControllerPtr* cloud_controller,
       std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
       fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
       fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr);
@@ -129,8 +129,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   async_dispatcher_t* services_dispatcher_;
-  fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>* const
-      cloud_provider_;
+  cloud_provider::CloudControllerPtr* cloud_controller_;
 
   // This must be the last field of this class.
   fxl::WeakPtrFactory<LedgerAppInstanceImpl> weak_ptr_factory_;
@@ -141,8 +140,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     rng::Random* random,
     fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request,
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
-    fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
-        cloud_provider,
+    cloud_provider::CloudControllerPtr* cloud_controller,
     std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
     fidl::InterfaceRequest<fuchsia::inspect::Inspect> inspect_request,
     fidl::InterfacePtr<fuchsia::inspect::Inspect> inspect_ptr)
@@ -153,7 +151,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       loop_(loop_controller->StartNewLoop()),
       io_loop_(loop_controller->StartNewLoop()),
       services_dispatcher_(services_dispatcher),
-      cloud_provider_(cloud_provider),
+      cloud_controller_(cloud_controller),
       weak_ptr_factory_(this) {
   auto top_level_objects = component::Object::Make(kTestTopLevelNodeName.ToString());
   auto top_level_object_dir = component::ObjectDir(top_level_objects);
@@ -174,14 +172,14 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
-  if (!cloud_provider_) {
+  if (!cloud_controller_) {
     return nullptr;
   }
   cloud_provider::CloudProviderPtr cloud_provider;
   async::PostTask(services_dispatcher_,
                   callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                                        [this, request = cloud_provider.NewRequest()]() mutable {
-                                         cloud_provider_->AddBinding(std::move(request));
+                                         (*cloud_controller_)->Connect(std::move(request));
                                        }));
   return cloud_provider;
 }
@@ -253,9 +251,20 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
       : loop_controller_(&loop_),
         random_(loop_.initial_state()),
         services_loop_(loop_controller_.StartNewLoop()),
-        cloud_provider_(FakeCloudProvider::Builder().SetInjectNetworkError(inject_network_error)),
         enable_sync_(enable_sync),
-        enable_p2p_mesh_(enable_p2p_mesh) {}
+        enable_p2p_mesh_(enable_p2p_mesh) {
+    async_test_subloop_t* cloud_subloop =
+        cloud_provider::NewCloudControllerFactory(cloud_controller_factory_.NewRequest());
+    cloud_provider_loop_ = loop_.RegisterLoop(cloud_subloop);
+    cloud_controller_factory_->Build(cloud_controller_.NewRequest());
+    if (inject_network_error == InjectNetworkError::YES) {
+      bool called;
+      cloud_controller_->SetNetworkState(cloud_provider::NetworkState::INJECT_NETWORK_ERRORS,
+                                         callback::SetWhenCalled(&called));
+      loop_.RunUntilIdle();
+      FXL_CHECK(called);
+    }
+  }
   ~LedgerAppInstanceFactoryImpl() override;
 
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;
@@ -270,7 +279,9 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   rng::TestRandom random_;
   // Loop on which to run services.
   std::unique_ptr<SubLoop> services_loop_;
-  fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider> cloud_provider_;
+  std::unique_ptr<async::SubloopToken> cloud_provider_loop_;
+  cloud_provider::CloudControllerFactoryPtr cloud_controller_factory_;
+  cloud_provider::CloudControllerPtr cloud_controller_;
   int app_instance_counter_ = 0;
   OvernetFactory overnet_factory_;
   const EnableSync enable_sync_;
@@ -300,8 +311,9 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
     }
     result = std::make_unique<LedgerAppInstanceImpl>(
         &loop_controller_, services_loop_->dispatcher(), &random_,
-        std::move(repository_factory_request), std::move(repository_factory_ptr), &cloud_provider_,
-        std::move(user_communicator_factory), std::move(inspect_request), std::move(inspect_ptr));
+        std::move(repository_factory_request), std::move(repository_factory_ptr),
+        &cloud_controller_, std::move(user_communicator_factory), std::move(inspect_request),
+        std::move(inspect_ptr));
   } else {
     result = std::make_unique<LedgerAppInstanceImpl>(
         &loop_controller_, services_loop_->dispatcher(), &random_,
