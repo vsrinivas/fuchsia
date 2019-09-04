@@ -59,7 +59,7 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 use crate::{
     sealed, LinkLocalAddr, LinkLocalAddress, MulticastAddr, MulticastAddress, SpecifiedAddr,
-    SpecifiedAddress, UnicastAddress, Witness,
+    SpecifiedAddress, UnicastAddr, UnicastAddress, Witness,
 };
 
 // NOTE on passing by reference vs by value: Clippy advises us to pass IPv4
@@ -531,6 +531,7 @@ macro_rules! impl_from_witness {
 impl_from_witness!(SpecifiedAddr);
 impl_from_witness!(MulticastAddr);
 impl_from_witness!(LinkLocalAddr);
+impl_from_witness!(UnicastAddr, Ipv6Addr);
 
 /// An IPv4 address.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, FromBytes, AsBytes, Unaligned)]

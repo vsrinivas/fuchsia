@@ -39,9 +39,13 @@ pub trait Witness<A>: Deref<Target = A> + sealed::Sealed + Sized {
     fn new(addr: A) -> Option<Self>;
 
     /// Get a clone of the address.
+    #[inline]
     fn get(&self) -> A
     where
-        A: Clone;
+        A: Clone,
+    {
+        self.deref().clone()
+    }
 
     /// Consumes this witness and returns the contained `A`.
     fn into_addr(self) -> A;
@@ -205,14 +209,6 @@ impl<A: SpecifiedAddress> Witness<A> for SpecifiedAddr<A> {
     }
 
     #[inline]
-    fn get(&self) -> A
-    where
-        A: Clone,
-    {
-        self.0.clone()
-    }
-
-    #[inline]
     fn into_addr(self) -> A {
         self.0
     }
@@ -269,14 +265,6 @@ impl<A: UnicastAddress> Witness<A> for UnicastAddr<A> {
     }
 
     #[inline]
-    fn get(&self) -> A
-    where
-        A: Clone,
-    {
-        self.0.clone()
-    }
-
-    #[inline]
     fn into_addr(self) -> A {
         self.0
     }
@@ -297,6 +285,18 @@ impl<A> UnicastAddr<A> {
     }
 }
 
+impl<A: UnicastAddress + SpecifiedAddress> UnicastAddr<A> {
+    /// Converts this `UnicastAddr` into a [`SpecifiedAddr`].
+    ///
+    /// [`UnicastAddress::is_unicast`] implies
+    /// [`SpecifiedAddress::is_specified`], so all `UnicastAddr`s are guaranteed
+    /// to be specified, so this conversion is infallible.
+    #[inline]
+    pub fn into_specified(self) -> SpecifiedAddr<A> {
+        SpecifiedAddr(self.0)
+    }
+}
+
 impl<A: UnicastAddress> Deref for UnicastAddr<A> {
     type Target = A;
 
@@ -310,6 +310,12 @@ impl<A: UnicastAddress + Display> Display for UnicastAddr<A> {
     #[inline]
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl<A: UnicastAddress + SpecifiedAddress> From<UnicastAddr<A>> for SpecifiedAddr<A> {
+    fn from(addr: UnicastAddr<A>) -> SpecifiedAddr<A> {
+        addr.into_specified()
     }
 }
 
@@ -333,14 +339,6 @@ impl<A: MulticastAddress> Witness<A> for MulticastAddr<A> {
     }
 
     #[inline]
-    fn get(&self) -> A
-    where
-        A: Clone,
-    {
-        self.0.clone()
-    }
-
-    #[inline]
     fn into_addr(self) -> A {
         self.0
     }
@@ -361,7 +359,7 @@ impl<A> MulticastAddr<A> {
     }
 }
 
-impl<A: SpecifiedAddress> MulticastAddr<A> {
+impl<A: MulticastAddress + SpecifiedAddress> MulticastAddr<A> {
     /// Converts this `MulticastAddr` into a [`SpecifiedAddr`].
     ///
     /// [`MulticastAddress::is_multicast`] implies
@@ -389,7 +387,7 @@ impl<A: MulticastAddress + Display> Display for MulticastAddr<A> {
     }
 }
 
-impl<A: SpecifiedAddress> From<MulticastAddr<A>> for SpecifiedAddr<A> {
+impl<A: MulticastAddress + SpecifiedAddress> From<MulticastAddr<A>> for SpecifiedAddr<A> {
     fn from(addr: MulticastAddr<A>) -> SpecifiedAddr<A> {
         addr.into_specified()
     }
@@ -415,14 +413,6 @@ impl<A: LinkLocalAddress> Witness<A> for LinkLocalAddr<A> {
     }
 
     #[inline]
-    fn get(&self) -> A
-    where
-        A: Clone,
-    {
-        self.0.clone()
-    }
-
-    #[inline]
     fn into_addr(self) -> A {
         self.0
     }
@@ -443,7 +433,7 @@ impl<A> LinkLocalAddr<A> {
     }
 }
 
-impl<A: SpecifiedAddress> LinkLocalAddr<A> {
+impl<A: LinkLocalAddress + SpecifiedAddress> LinkLocalAddr<A> {
     /// Converts this `LinkLocalAddr` into a [`SpecifiedAddr`].
     ///
     /// [`LinkLocalAddress::is_linklocal`] implies
@@ -471,7 +461,7 @@ impl<A: LinkLocalAddress + Display> Display for LinkLocalAddr<A> {
     }
 }
 
-impl<A: SpecifiedAddress> From<LinkLocalAddr<A>> for SpecifiedAddr<A> {
+impl<A: LinkLocalAddress + SpecifiedAddress> From<LinkLocalAddr<A>> for SpecifiedAddr<A> {
     fn from(addr: LinkLocalAddr<A>) -> SpecifiedAddr<A> {
         addr.into_specified()
     }
