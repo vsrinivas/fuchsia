@@ -339,7 +339,10 @@ zx_status_t Message::TemporarySharedMemory::SyncToVmo(size_t actual_size) {
   if (actual_size > size_) {
     return ZX_OK;
   }
-  return vmo_.write(reinterpret_cast<void*>(shared_memory_->vaddr()), vmo_offset_, actual_size);
+  // TODO(35763): synchronize only actual_size bytes.
+  // Currently we synchronize the whole shared memory back to the vmo
+  // as a workaround, even though that should be unnecessary.
+  return vmo_.write(reinterpret_cast<void*>(shared_memory_->vaddr()), vmo_offset_, size_);
 }
 
 zx_handle_t Message::TemporarySharedMemory::ReleaseVmo() { return vmo_.release(); }
