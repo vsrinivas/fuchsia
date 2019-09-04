@@ -68,7 +68,8 @@ def MeanAndStddev(values):
 
 class Stats(object):
 
-    def __init__(self, values):
+    def __init__(self, values, unit):
+        self._unit = unit
         sample_size = len(values)
         mean, stddev = MeanAndStddev(values)
         offset = (-scipy.stats.t.ppf(ALPHA / 2, sample_size - 1)
@@ -79,7 +80,7 @@ class Stats(object):
         self.interval = (mean - offset, mean + offset)
 
     def FormatConfidenceInterval(self):
-        return '%d +/- %d' % (self._mean, self._offset)
+        return '%d +/- %d %s' % (self._mean, self._offset, self._unit)
 
     # Returns the relative CI width, which is the width of the confidence
     # interval divided by the mean.
@@ -151,13 +152,27 @@ def FormatTestName(results):
     return '%s: %s' % (results['test_suite'], results['label'])
 
 
+UNIT_ABBREVIATIONS = {'nanoseconds': 'ns'}
+
+
+def FormatUnit(unit_set):
+    assert len(unit_set) > 0
+    if len(unit_set) > 1:
+        raise AssertionError('Inconsistent units for test case: %s' % unit_set)
+    unit = list(unit_set)[0]
+    return UNIT_ABBREVIATIONS.get(unit, unit)
+
+
 # Takes a list of filenames of perf test results, each representing the
 # results from one boot of Fuchsia, and each in the format accepted by
 # RawResultsFromDir().
 #
 # Returns a dict mapping test names to Stats objects.
 def ResultsFromDirs(filenames):
+    # Mapping from test names to lists of values.
     results_map = {}
+    # Mapping from test names to sets of strings (for units of measurement).
+    units_map = {}
     for boot_results_path in filenames:
         results_for_boot = {}
         for process_run_results in RawResultsFromDir(boot_results_path):
@@ -165,9 +180,11 @@ def ResultsFromDirs(filenames):
                 new_value = MeanExcludingWarmup(test_case['values'])
                 name = FormatTestName(test_case)
                 results_for_boot.setdefault(name, []).append(new_value)
+                units_map.setdefault(name, set()).add(test_case['unit'])
         for label, values in results_for_boot.iteritems():
             results_map.setdefault(label, []).append(Mean(values))
-    return {name: Stats(values) for name, values in results_map.iteritems()}
+    return {name: Stats(values, FormatUnit(units_map[name]))
+            for name, values in results_map.iteritems()}
 
 
 # This takes a directory representing perf test results from multiple boots

@@ -151,6 +151,7 @@ class StatisticsTest(TempDirTestCase):
     def ResultsDictForValues(self, run_values):
         return {'label': 'ExampleTest',
                 'test_suite': 'example_suite',
+                'unit': 'nanoseconds',
                 'values': run_values}
 
     # Given data in the format returned by GenerateData(), writes this data
@@ -214,21 +215,21 @@ class StatisticsTest(TempDirTestCase):
     # Test the CIs produced with variation at different levels of the
     # multi-level sampling process.
     def test_confidence_intervals(self):
-        self.CheckConfidenceInterval(self.GenerateData(), '1000 +/- 0')
+        self.CheckConfidenceInterval(self.GenerateData(), '1000 +/- 0 ns')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_boots=100),
-            '1021 +/- 451')
+            '1021 +/- 451 ns')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_processes=100),
-            '1012 +/- 151')
+            '1012 +/- 151 ns')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_iters=100),
-            '980 +/- 73')
+            '980 +/- 73 ns')
 
     # Test the case where just a single value is produced per process run.
     def test_confidence_interval_with_single_value_per_process(self):
         self.CheckConfidenceInterval(
-            [[[100]], [[101]]], '100 +/- 31')
+            [[[100]], [[101]]], '100 +/- 31 ns')
 
 
 class PerfCompareTest(TempDirTestCase):
@@ -272,7 +273,7 @@ class PerfCompareTest(TempDirTestCase):
         test_name = 'fuchsia.example: ClockGetTimeExample'
         self.assertEquals(
             results[test_name].FormatConfidenceInterval(),
-            '991 +/- 26')
+            '991 +/- 26 ns')
 
     # Returns the output of compare_perf when run on the given directories.
     def ComparePerf(self, before_dir, after_dir):
