@@ -10,6 +10,8 @@ source_set("testing") {
   sources = [
     "commit_empty_impl.cc",
     "commit_empty_impl.h",
+    "id_and_parent_ids_commit.cc",
+    "id_and_parent_ids_commit.h",
     "page_storage_empty_impl.cc",
     "page_storage_empty_impl.h",
     "storage_matcher.cc",

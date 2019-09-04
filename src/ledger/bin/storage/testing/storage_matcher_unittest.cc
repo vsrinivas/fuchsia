@@ -5,6 +5,8 @@
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 
 #include "gtest/gtest.h"
+#include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/bin/storage/testing/id_and_parent_ids_commit.h"
 
 namespace storage {
 namespace {
@@ -34,6 +36,22 @@ TEST(StorageMatcher, MatchesEntry3Parameters) {
 
   EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::EAGER}));
   EXPECT_THAT(entry, Not(MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::LAZY})));
+}
+
+TEST(StorageMatcher, MatchesCommit) {
+  CommitId zero = kFirstPageCommitId.ToString();
+  CommitId one = CommitId("00000000000000000000000000000001", kCommitIdSize);
+  CommitId two = CommitId("00000000000000000000000000000002", kCommitIdSize);
+  CommitId three = CommitId("00000000000000000000000000000003", kCommitIdSize);
+  CommitId four = CommitId("00000000000000000000000000000004", kCommitIdSize);
+  CommitId five = CommitId("00000000000000000000000000000005", kCommitIdSize);
+  IdAndParentIdsCommit commit = IdAndParentIdsCommit(zero, {one, two, three});
+
+  EXPECT_THAT(commit, MatchesCommit(zero, {one, two, three}));
+  EXPECT_THAT(commit, Not(MatchesCommit(five, {one, two, three})));
+  EXPECT_THAT(commit, Not(MatchesCommit(zero, {})));
+  EXPECT_THAT(commit, Not(MatchesCommit(zero, {one, two})));
+  EXPECT_THAT(commit, Not(MatchesCommit(zero, {one, two, three, four})));
 }
 
 }  // namespace

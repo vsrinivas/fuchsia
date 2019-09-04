@@ -424,7 +424,7 @@ class JournalMergeTest : public JournalTest, public ::testing::WithParamInterfac
     journal_->Put(key, MakeObjectIdentifier(object_identifier_components), priority);
   }
 
-  testing::Matcher<Entry> Matches(MergeTestEntry entry) {
+  testing::Matcher<const Entry&> Matches(const MergeTestEntry& entry) {
     auto& [key, object_identifier_components, priority] = entry;
     return MatchesEntry({key, MakeObjectIdentifier(object_identifier_components), priority});
   }

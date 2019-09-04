@@ -13,8 +13,7 @@
 
 namespace storage {
 
-// Empty implementaton of Commit. All methods do nothing and return dummy or
-// empty responses.
+// Empty implementation of Commit. All methods do nothing and return dummy or empty responses.
 class CommitEmptyImpl : public Commit {
  public:
   CommitEmptyImpl() = default;

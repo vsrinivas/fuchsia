@@ -4,32 +4,57 @@
 
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 
+#include <set>
+
+#include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/bin/storage/public/types.h"
+
 using testing::_;
 using testing::AllOf;
+using testing::Eq;
 using testing::Field;
+using testing::ResultOf;
+using testing::UnorderedElementsAreArray;
 
 namespace storage {
 
-testing::Matcher<ObjectIdentifier> MatchesDigest(testing::Matcher<std::string> matcher) {
+testing::Matcher<const ObjectIdentifier&> MatchesDigest(
+    testing::Matcher<const std::string&> matcher) {
   return Property(&ObjectIdentifier::object_digest, Property(&ObjectDigest::Serialize, matcher));
 }
 
-testing::Matcher<ObjectIdentifier> MatchesDigest(testing::Matcher<ObjectDigest> matcher) {
+testing::Matcher<const ObjectIdentifier&> MatchesDigest(
+    testing::Matcher<const ObjectDigest&> matcher) {
   return Property(&ObjectIdentifier::object_digest, matcher);
 }
 
-testing::Matcher<Entry> MatchesEntry(
-    std::pair<testing::Matcher<std::string>, testing::Matcher<ObjectIdentifier>> matcher) {
+testing::Matcher<const Entry&> MatchesEntry(
+    std::pair<testing::Matcher<const std::string&>, testing::Matcher<const ObjectIdentifier&>>
+        matcher) {
   return MatchesEntry({matcher.first, matcher.second, _});
 }
 
-testing::Matcher<Entry> MatchesEntry(
-    std::tuple<testing::Matcher<std::string>, testing::Matcher<ObjectIdentifier>,
-               testing::Matcher<KeyPriority>>
+testing::Matcher<const Entry&> MatchesEntry(
+    std::tuple<testing::Matcher<const std::string&>, testing::Matcher<const ObjectIdentifier&>,
+               testing::Matcher<const KeyPriority&>>
         matcher) {
   return AllOf(Field(&Entry::key, std::get<0>(matcher)),
                Field(&Entry::object_identifier, std::get<1>(matcher)),
                Field(&Entry::priority, std::get<2>(matcher)));
+}
+
+testing::Matcher<const Commit&> MatchesCommit(const CommitId& id,
+                                              const std::set<CommitId>& parent_ids) {
+  return AllOf(ResultOf([](const Commit& commit) { return commit.GetId(); }, Eq(id)),
+               ResultOf(
+                   [](const Commit& commit) {
+                     std::set<CommitId> parent_ids;
+                     for (const CommitIdView& parent_id : commit.GetParentIds()) {
+                       parent_ids.insert(parent_id.ToString());
+                     }
+                     return parent_ids;
+                   },
+                   UnorderedElementsAreArray(parent_ids)));
 }
 
 }  // namespace storage
