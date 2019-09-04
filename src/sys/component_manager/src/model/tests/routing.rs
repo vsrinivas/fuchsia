@@ -1226,6 +1226,100 @@ async fn use_from_expose() {
 }
 
 ///   a
+///  / \
+/// b   c
+///
+/// b: exposes directory /data/foo from self as /data/bar to framework (NOT realm)
+/// a: offers directory /data/bar from b as /data/baz to c, but it is not exposed via realm
+/// c: uses /data/baz as /data/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_from_expose_to_framework() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferDirectorySource::Child("b".to_string()),
+                        source_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
+                    }),
+                    OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        source: OfferServiceSource::Child("b".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
+                    }),
+                ],
+                children: vec![
+                    ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                    ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        target: ExposeTarget::Framework,
+                    }),
+                    ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
+                        target: ExposeTarget::Framework,
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![
+                    UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let test = RoutingTest::new("a", components, vec![]).await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
+    )
+    .await;
+    test.check_use(
+        vec!["c:0"].into(),
+        CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
+    )
+    .await;
+}
+
+///   a
 ///    \
 ///     b
 ///

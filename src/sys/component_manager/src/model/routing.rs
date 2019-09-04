@@ -5,8 +5,8 @@
 use {
     crate::model::*,
     cm_rust::{
-        self, CapabilityPath, ExposeDecl, ExposeSource, FrameworkCapabilityDecl, OfferDecl,
-        OfferDirectorySource, OfferServiceSource, OfferStorageSource, StorageDecl,
+        self, CapabilityPath, ExposeDecl, ExposeSource, ExposeTarget, FrameworkCapabilityDecl,
+        OfferDecl, OfferDirectorySource, OfferServiceSource, OfferStorageSource, StorageDecl,
         StorageDirectorySource, UseDecl,
     },
     failure::format_err,
@@ -550,13 +550,20 @@ async fn walk_expose_chain<'a>(
             None => pos.capability.find_expose_source(decl),
         };
         if let Some(expose) = expose {
-            let source = match expose {
+            let (source, target) = match expose {
                 ExposeDecl::Service(_) => {
                     return Err(ModelError::unsupported("Service capability"))
                 }
-                ExposeDecl::LegacyService(d) => &d.source,
-                ExposeDecl::Directory(d) => &d.source,
+                ExposeDecl::LegacyService(ls) => (&ls.source, &ls.target),
+                ExposeDecl::Directory(d) => (&d.source, &d.target),
             };
+            if target != &ExposeTarget::Realm {
+                return Err(ModelError::capability_discovery_error(format_err!(
+                    "matching exposed capability {:?} from component {} has non-realm target",
+                    pos.capability,
+                    pos.moniker()
+                )));
+            }
             match source {
                 ExposeSource::Self_ => {
                     // The offered capability comes from the current component, return our
