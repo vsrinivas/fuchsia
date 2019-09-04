@@ -56,8 +56,8 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
   return fit::ok();
 }
 
-fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work,
-                                                            uint64_t block_count) {
+fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work) {
+  const uint64_t block_count = work.reservation.length();
   FS_TRACE_DEBUG("WriteMetadata: Writing %zu blocks (includes header, commit)\n", block_count);
 
   // Ensure the info block is caught up, so it doesn't point to the middle of an invalid entry.
@@ -68,7 +68,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
   }
 
   // Write metadata to the journal itself.
-  status = WriteMetadataToJournal(&work, block_count);
+  status = WriteMetadataToJournal(&work);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("WriteMetadata: Failed to write metadata to journal: %s\n",
                    zx_status_get_string(status));
@@ -142,7 +142,7 @@ fit::result<void, zx_status_t> JournalWriter::Sync() {
   return fit::ok();
 }
 
-zx_status_t JournalWriter::WriteMetadataToJournal(JournalWorkItem* work, uint64_t block_count) {
+zx_status_t JournalWriter::WriteMetadataToJournal(JournalWorkItem* work) {
   FS_TRACE_DEBUG("WriteMetadataToJournal: Writing %zu blocks with sequence_number %zu\n",
                  work->reservation.length(), next_sequence_number_);
 
@@ -348,9 +348,9 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<UnbufferedOperation> operati
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
 
   // Return the deferred action to write the metadata operations to the device.
-  auto promise = fit::make_promise(
-      [this, work = std::move(work), block_count]() mutable -> fit::result<void, zx_status_t> {
-        return writer_.WriteMetadata(std::move(work), block_count);
+  auto promise =
+      fit::make_promise([this, work = std::move(work)]() mutable -> fit::result<void, zx_status_t> {
+        return writer_.WriteMetadata(std::move(work));
       });
 
   // Ensure all metadata operations are completed in order.

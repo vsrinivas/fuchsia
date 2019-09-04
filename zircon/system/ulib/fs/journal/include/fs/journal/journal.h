@@ -57,7 +57,6 @@ class JournalWriter {
   fit::result<void, zx_status_t> WriteData(JournalWorkItem work);
 
   // Writes |work| to disk immediately (possibly also to the journal)
-  // Precondition: |block_count| is the number of blocks modified by |work|.
   //
   // Updating metadata has three phases:
   // 1) Updating the info block (if necessary to make space)
@@ -66,7 +65,7 @@ class JournalWriter {
   //
   // This method currently blocks, completing all three phases before returning, but in the future,
   // could be more fine grained, returning a promise that represents the completion of all phases.
-  fit::result<void, zx_status_t> WriteMetadata(JournalWorkItem work, uint64_t block_count);
+  fit::result<void, zx_status_t> WriteMetadata(JournalWorkItem work);
 
   // Synchronizes the most up-to-date info block back to disk.
   //
@@ -106,7 +105,7 @@ class JournalWriter {
   // Writes |work| to the journal, and flushes it to the underlying device.
   //
   // Blocks the calling thread on I/O until the operation completes.
-  zx_status_t WriteMetadataToJournal(JournalWorkItem* work, uint64_t block_count);
+  zx_status_t WriteMetadataToJournal(JournalWorkItem* work);
 
   // Writes the info block if adding a |block_count| block entry to the journal
   // will hit the start of the journal.

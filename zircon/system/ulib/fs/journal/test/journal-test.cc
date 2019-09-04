@@ -1199,16 +1199,14 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
   ASSERT_OK(
       reservation0.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations0));
   auto result = writer.WriteMetadata(
-      internal::JournalWorkItem(std::move(reservation0), std::move(buffered_operations0)),
-      block_count1);
+      internal::JournalWorkItem(std::move(reservation0), std::move(buffered_operations0)));
   ASSERT_TRUE(result.is_ok());
 
   fbl::Vector<fs::BufferedOperation> buffered_operations1;
   ASSERT_OK(
       reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
   result = writer.WriteMetadata(
-      internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)),
-      block_count1);
+      internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)));
   ASSERT_TRUE(result.is_ok());
 }
 
@@ -1317,8 +1315,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   ASSERT_OK(
       reservation.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations));
   auto result = writer.WriteMetadata(
-      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)),
-      block_count);
+      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)));
   ASSERT_TRUE(result.is_ok());
 
   // Reserve operations[2] in memory before operations[1].
@@ -1337,16 +1334,14 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
   ASSERT_OK(
       reservation1.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations1));
   result = writer.WriteMetadata(
-      internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)),
-      block_count1);
+      internal::JournalWorkItem(std::move(reservation1), std::move(buffered_operations1)));
   ASSERT_TRUE(result.is_ok());
 
   fbl::Vector<fs::BufferedOperation> buffered_operations2;
   ASSERT_OK(
       reservation2.CopyRequests({operations[2]}, kJournalEntryHeaderBlocks, &buffered_operations2));
   result = writer.WriteMetadata(
-      internal::JournalWorkItem(std::move(reservation2), std::move(buffered_operations2)),
-      block_count2);
+      internal::JournalWorkItem(std::move(reservation2), std::move(buffered_operations2)));
   ASSERT_TRUE(result.is_ok());
 }
 
@@ -1427,8 +1422,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
   ASSERT_OK(
       reservation.CopyRequests({operations[0]}, kJournalEntryHeaderBlocks, &buffered_operations));
   auto result = writer.WriteMetadata(
-      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)),
-      block_count);
+      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)));
   ASSERT_TRUE(result.is_ok());
 
   fs::BlockingRingBufferReservation reservation_unused;
@@ -1439,8 +1433,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
   ASSERT_OK(
       reservation.CopyRequests({operations[1]}, kJournalEntryHeaderBlocks, &buffered_operations));
   result = writer.WriteMetadata(
-      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)),
-      block_count);
+      internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)));
   ASSERT_TRUE(result.is_ok());
 }
 
