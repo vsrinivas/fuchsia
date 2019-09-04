@@ -16,12 +16,12 @@
 #include <unordered_map>
 
 #include "src/media/playback/mediaplayer/core/player_core.h"
-#include "src/media/playback/mediaplayer/decode/decoder.h"
 #include "src/media/playback/mediaplayer/demux/demux.h"
 #include "src/media/playback/mediaplayer/demux/reader.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_audio_renderer.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_video_renderer.h"
 #include "src/media/playback/mediaplayer/graph/service_provider.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 #include "src/media/playback/mediaplayer/source_impl.h"
 
 namespace media_player {

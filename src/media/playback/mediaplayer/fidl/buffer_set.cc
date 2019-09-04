@@ -52,7 +52,7 @@ BufferSet::BufferSet(const fuchsia::media::StreamBufferSettings& settings,
 
 BufferSet::~BufferSet() {
   // Release all the |PayloadBuffers| before |buffers_| is deleted.
-  ReleaseAllDecoderOwnedBuffers();
+  ReleaseAllProcessorOwnedBuffers();
 }
 
 void BufferSet::SetBufferCount(uint32_t buffer_count) {
@@ -98,7 +98,7 @@ fbl::RefPtr<PayloadBuffer> BufferSet::AllocateBuffer(uint64_t size,
     }
   }
 
-  FXL_DCHECK(buffers_[index].decoder_ref_ == nullptr);
+  FXL_DCHECK(buffers_[index].processor_ref_ == nullptr);
   FXL_DCHECK(buffers_[index].free_);
   buffers_[index].free_ = false;
 
@@ -107,40 +107,40 @@ fbl::RefPtr<PayloadBuffer> BufferSet::AllocateBuffer(uint64_t size,
   return CreateBuffer(index, vmos);
 }
 
-void BufferSet::AddRefBufferForDecoder(uint32_t buffer_index,
-                                       fbl::RefPtr<PayloadBuffer> payload_buffer) {
+void BufferSet::AddRefBufferForProcessor(uint32_t buffer_index,
+                                         fbl::RefPtr<PayloadBuffer> payload_buffer) {
   FXL_DCHECK(payload_buffer);
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(buffer_index < buffers_.size());
   FXL_DCHECK(!buffers_[buffer_index].free_);
-  FXL_DCHECK(!buffers_[buffer_index].decoder_ref_);
+  FXL_DCHECK(!buffers_[buffer_index].processor_ref_);
 
-  buffers_[buffer_index].decoder_ref_ = payload_buffer;
+  buffers_[buffer_index].processor_ref_ = payload_buffer;
 }
 
-fbl::RefPtr<PayloadBuffer> BufferSet::TakeBufferFromDecoder(uint32_t buffer_index) {
+fbl::RefPtr<PayloadBuffer> BufferSet::TakeBufferFromProcessor(uint32_t buffer_index) {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(buffer_index < buffers_.size());
   FXL_DCHECK(!buffers_[buffer_index].free_);
-  FXL_DCHECK(buffers_[buffer_index].decoder_ref_);
+  FXL_DCHECK(buffers_[buffer_index].processor_ref_);
 
-  auto result = buffers_[buffer_index].decoder_ref_;
-  buffers_[buffer_index].decoder_ref_ = nullptr;
+  auto result = buffers_[buffer_index].processor_ref_;
+  buffers_[buffer_index].processor_ref_ = nullptr;
 
   return result;
 }
 
-fbl::RefPtr<PayloadBuffer> BufferSet::GetDecoderOwnedBuffer(uint32_t buffer_index) {
+fbl::RefPtr<PayloadBuffer> BufferSet::GetProcessorOwnedBuffer(uint32_t buffer_index) {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(buffer_index < buffers_.size());
-  // Buffer must already be owned by the decoder.
+  // Buffer must already be owned by the processor.
   FXL_DCHECK(!buffers_[buffer_index].free_);
-  FXL_DCHECK(buffers_[buffer_index].decoder_ref_);
+  FXL_DCHECK(buffers_[buffer_index].processor_ref_);
 
-  return buffers_[buffer_index].decoder_ref_;
+  return buffers_[buffer_index].processor_ref_;
 }
 
-void BufferSet::AllocateAllBuffersForDecoder(const PayloadVmos& payload_vmos) {
+void BufferSet::AllocateAllBuffersForProcessor(const PayloadVmos& payload_vmos) {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(!buffers_.empty());
 
@@ -149,25 +149,25 @@ void BufferSet::AllocateAllBuffersForDecoder(const PayloadVmos& payload_vmos) {
 
   for (size_t index = 0; index < buffers_.size(); ++index) {
     FXL_DCHECK(buffers_[index].free_);
-    FXL_DCHECK(!buffers_[index].decoder_ref_);
+    FXL_DCHECK(!buffers_[index].processor_ref_);
 
     buffers_[index].free_ = false;
-    buffers_[index].decoder_ref_ = CreateBuffer(index, vmos);
+    buffers_[index].processor_ref_ = CreateBuffer(index, vmos);
   }
 
   free_buffer_count_ = 0;
 }
 
-void BufferSet::ReleaseAllDecoderOwnedBuffers() {
+void BufferSet::ReleaseAllProcessorOwnedBuffers() {
   std::vector<fbl::RefPtr<PayloadBuffer>> buffers_to_release_;
 
   {
     std::lock_guard<std::mutex> locker(mutex_);
 
     for (size_t index = 0; index < buffers_.size(); ++index) {
-      if (buffers_[index].decoder_ref_) {
-        buffers_to_release_.push_back(buffers_[index].decoder_ref_);
-        buffers_[index].decoder_ref_ = nullptr;
+      if (buffers_[index].processor_ref_) {
+        buffers_to_release_.push_back(buffers_[index].processor_ref_);
+        buffers_[index].processor_ref_ = nullptr;
       }
     }
   }
@@ -188,9 +188,9 @@ bool BufferSet::HasFreeBuffer(fit::closure callback) {
 }
 
 void BufferSet::Decommission() {
-  // This was probably taken care of by the decoder, but let's make sure. Any
-  // decoder-owned buffers left behind will cause this |BufferSet| to leak.
-  ReleaseAllDecoderOwnedBuffers();
+  // This was probably taken care of by the processor, but let's make sure. Any
+  // processor-owned buffers left behind will cause this |BufferSet| to leak.
+  ReleaseAllProcessorOwnedBuffers();
 
   std::lock_guard<std::mutex> locker(mutex_);
   free_buffer_callback_ = nullptr;
@@ -215,7 +215,7 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
           std::lock_guard<std::mutex> locker(mutex_);
           FXL_DCHECK(buffer_index < buffers_.size());
           FXL_DCHECK(!buffers_[buffer_index].free_);
-          FXL_DCHECK(!buffers_[buffer_index].decoder_ref_);
+          FXL_DCHECK(!buffers_[buffer_index].processor_ref_);
 
           buffers_[buffer_index].free_ = true;
           ++free_buffer_count_;
@@ -262,17 +262,17 @@ bool BufferSetManager::ApplyConstraints(const fuchsia::media::StreamBufferConstr
   return true;
 }
 
-void BufferSetManager::ReleaseBufferForDecoder(uint64_t lifetime_ordinal, uint32_t index) {
+void BufferSetManager::ReleaseBufferForProcessor(uint64_t lifetime_ordinal, uint32_t index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (current_set_ && lifetime_ordinal == current_set_->lifetime_ordinal()) {
     // Release the buffer from the current set.
-    current_set_->TakeBufferFromDecoder(index);
+    current_set_->TakeBufferFromProcessor(index);
     return;
   }
 
   // The buffer is from an old set and has already been released for the
-  // decoder.
+  // processor.
 }
 
 }  // namespace media_player

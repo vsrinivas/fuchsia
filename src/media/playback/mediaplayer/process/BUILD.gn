@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("decode") {
+source_set("process") {
   sources = [
-    "decoder.h",
-    "software_decoder.cc",
-    "software_decoder.h",
+    "processor.h",
+    "software_processor.cc",
+    "software_processor.h",
   ]
 
   public_deps = [

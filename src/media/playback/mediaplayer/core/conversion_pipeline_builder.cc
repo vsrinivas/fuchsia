@@ -4,8 +4,8 @@
 
 #include "src/media/playback/mediaplayer/core/conversion_pipeline_builder.h"
 
-#include "src/media/playback/mediaplayer/decode/decoder.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 
 namespace media_player {
 
@@ -180,7 +180,7 @@ void Builder::AddTransformsForCompressedVideo(const VideoStreamType& video_type)
 }
 
 void Builder::AddDecoder() {
-  decoder_factory_->CreateDecoder(*type_, [this](std::shared_ptr<Decoder> decoder) {
+  decoder_factory_->CreateDecoder(*type_, [this](std::shared_ptr<Processor> decoder) {
     if (!decoder) {
       // No decoder found.
       Fail();

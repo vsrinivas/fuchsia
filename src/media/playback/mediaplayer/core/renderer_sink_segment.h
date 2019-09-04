@@ -6,7 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_RENDERER_SINK_SEGMENT_H_
 
 #include "src/media/playback/mediaplayer/core/sink_segment.h"
-#include "src/media/playback/mediaplayer/decode/decoder.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 #include "src/media/playback/mediaplayer/render/renderer.h"
 
 namespace media_player {

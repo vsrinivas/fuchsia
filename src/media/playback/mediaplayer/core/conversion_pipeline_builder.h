@@ -7,10 +7,10 @@
 
 #include <lib/fit/function.h>
 
-#include "src/media/playback/mediaplayer/decode/decoder.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 #include "src/media/playback/mediaplayer/graph/packet.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 
 namespace media_player {
 

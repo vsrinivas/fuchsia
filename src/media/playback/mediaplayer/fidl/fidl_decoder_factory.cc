@@ -7,7 +7,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include "lib/fidl/cpp/clone.h"
-#include "src/media/playback/mediaplayer/fidl/fidl_decoder.h"
+#include "src/media/playback/mediaplayer/fidl/fidl_processor.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 
 namespace media_player {
@@ -25,7 +25,7 @@ FidlDecoderFactory::FidlDecoderFactory(ServiceProvider* service_provider)
 FidlDecoderFactory::~FidlDecoderFactory() {}
 
 void FidlDecoderFactory::CreateDecoder(const StreamType& stream_type,
-                                       fit::function<void(std::shared_ptr<Decoder>)> callback) {
+                                       fit::function<void(std::shared_ptr<Processor>)> callback) {
   FXL_DCHECK(callback);
 
   auto format_details = fidl::To<fuchsia::media::FormatDetailsPtr>(stream_type);
@@ -45,8 +45,8 @@ void FidlDecoderFactory::CreateDecoder(const StreamType& stream_type,
   codec_factory_->CreateDecoder(std::move(decoder_params), decoder.NewRequest());
   FXL_DCHECK(decoder);
 
-  FidlDecoder::Create(service_provider_, stream_type, std::move(*format_details),
-                      std::move(decoder), std::move(callback));
+  FidlProcessor::Create(service_provider_, stream_type.medium(), Processor::Function::kDecode,
+                        std::move(decoder), std::move(callback));
 }
 
 }  // namespace media_player

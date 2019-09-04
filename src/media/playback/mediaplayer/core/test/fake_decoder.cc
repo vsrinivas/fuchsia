@@ -39,7 +39,7 @@ FakeDecoderFactory::FakeDecoderFactory() {}
 FakeDecoderFactory::~FakeDecoderFactory() {}
 
 void FakeDecoderFactory::CreateDecoder(const StreamType& stream_type,
-                                       fit::function<void(std::shared_ptr<Decoder>)> callback) {
+                                       fit::function<void(std::shared_ptr<Processor>)> callback) {
   FXL_DCHECK(callback);
   callback(std::make_shared<test::FakeDecoder>(stream_type));
 }

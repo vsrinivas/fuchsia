@@ -2,28 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_DECODER_H_
-#define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_DECODER_H_
+#ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_PROCESS_PROCESSOR_H_
+#define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_PROCESS_PROCESSOR_H_
 
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
-#include "src/media/playback/mediaplayer/graph/packet.h"
-#include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
-#include "src/media/playback/mediaplayer/graph/result.h"
 #include "src/media/playback/mediaplayer/graph/service_provider.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 
 namespace media_player {
 
-// Abstract base class for nodes that decode compressed media.
-class Decoder : public Node {
+// Abstract base class for nodes that process sstreams.
+class Processor : public Node {
  public:
-  ~Decoder() override {}
+  enum class Function { kDecode, kDecrypt };
 
-  // Returns the type of the stream the decoder will produce.
+  ~Processor() override {}
+
+  // Returns the type of the stream the processor will produce.
   virtual std::unique_ptr<StreamType> output_stream_type() const = 0;
 };
 
-// Abstract base class for |Decoder| factories.
+// Abstract base class for decoder factories.
 class DecoderFactory {
  public:
   // Creates a decoder factory.
@@ -31,11 +30,11 @@ class DecoderFactory {
 
   virtual ~DecoderFactory() {}
 
-  // Creates a |Decoder| object for a given stream type. Calls back with a
+  // Creates a |Processor| object for decoding a given stream type. Calls back with a
   // decoder if the operation succeeds, with nullptr if not. This method may
   // call back synchronously.
   virtual void CreateDecoder(const StreamType& stream_type,
-                             fit::function<void(std::shared_ptr<Decoder>)> callback) = 0;
+                             fit::function<void(std::shared_ptr<Processor>)> callback) = 0;
 
  protected:
   DecoderFactory() {}
@@ -48,4 +47,4 @@ class DecoderFactory {
 
 }  // namespace media_player
 
-#endif  // SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_DECODER_H_
+#endif  // SRC_MEDIA_PLAYBACK_MEDIAPLAYER_PROCESS_PROCESSOR_H_

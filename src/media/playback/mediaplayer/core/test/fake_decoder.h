@@ -5,12 +5,12 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_DECODER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_DECODER_H_
 
-#include "src/media/playback/mediaplayer/decode/decoder.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 
 namespace media_player {
 namespace test {
 
-class FakeDecoder : public Decoder {
+class FakeDecoder : public Processor {
  public:
   static std::unique_ptr<StreamType> OutputStreamType(const StreamType& stream_type);
 
@@ -20,7 +20,7 @@ class FakeDecoder : public Decoder {
 
   const char* label() const override { return "FakeDecoder"; }
 
-  // Decoder implementation.
+  // Processor implementation.
   void ConfigureConnectors() override {
     ConfigureInputToUseLocalMemory(1,    // max_aggregate_payload_size
                                    0);   // max_payload_count
@@ -55,7 +55,7 @@ class FakeDecoderFactory : public DecoderFactory {
   ~FakeDecoderFactory() override;
 
   void CreateDecoder(const StreamType& stream_type,
-                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+                     fit::function<void(std::shared_ptr<Processor>)> callback) override;
 };
 
 }  // namespace test

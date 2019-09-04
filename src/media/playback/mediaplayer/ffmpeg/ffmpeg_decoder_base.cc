@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_decoder_base.h"
 
 #include <lib/async/cpp/task.h>
+
 #include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
@@ -241,7 +242,7 @@ PacketPtr FfmpegDecoderBase::CreateEndOfStreamPacket() {
 }
 
 void FfmpegDecoderBase::Dump(std::ostream& os) const {
-  SoftwareDecoder::Dump(os);
+  SoftwareProcessor::Dump(os);
 
   os << fostr::Indent;
   os << fostr::NewLine << "next pts:          " << AsNs(next_pts_) << "@" << pts_rate_;

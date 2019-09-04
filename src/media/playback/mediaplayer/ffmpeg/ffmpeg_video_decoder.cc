@@ -23,7 +23,7 @@ constexpr uint32_t kOutputMaxPayloadCount = 6;
 }  // namespace
 
 // static
-std::shared_ptr<Decoder> FfmpegVideoDecoder::Create(AvCodecContextPtr av_codec_context) {
+std::shared_ptr<Processor> FfmpegVideoDecoder::Create(AvCodecContextPtr av_codec_context) {
   return std::make_shared<FfmpegVideoDecoder>(std::move(av_codec_context));
 }
 

@@ -10,10 +10,10 @@
 
 #include <limits>
 
-#include "src/media/playback/mediaplayer/decode/software_decoder.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_frame.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_packet.h"
+#include "src/media/playback/mediaplayer/process/software_processor.h"
 extern "C" {
 #include "libavcodec/avcodec.h"
 }
@@ -21,20 +21,20 @@ extern "C" {
 namespace media_player {
 
 // Abstract base class for ffmpeg-based decoders.
-class FfmpegDecoderBase : public SoftwareDecoder {
+class FfmpegDecoderBase : public SoftwareProcessor {
  public:
   FfmpegDecoderBase(AvCodecContextPtr av_codec_context);
 
   ~FfmpegDecoderBase() override;
 
-  // Decoder implementation.
+  // Processor implementation.
   std::unique_ptr<StreamType> output_stream_type() const override;
 
   // Node implementation.
   void Dump(std::ostream& os) const override;
 
  protected:
-  // SoftwareDecoder overrides.
+  // SoftwareProcessor overrides.
   void Flush() override;
 
   bool TransformPacket(const PacketPtr& input, bool new_input, PacketPtr* output) override;

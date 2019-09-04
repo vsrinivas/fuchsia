@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "src/media/playback/mediaplayer/decode/decoder.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 
 namespace media_player {
 
@@ -22,7 +22,7 @@ class FfmpegDecoderFactory : public DecoderFactory {
   ~FfmpegDecoderFactory() override;
 
   void CreateDecoder(const StreamType& stream_type,
-                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+                     fit::function<void(std::shared_ptr<Processor>)> callback) override;
 };
 
 }  // namespace media_player

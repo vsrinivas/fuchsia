@@ -95,8 +95,8 @@ TEST_F(BufferSetTest, NominalSequence) {
   EXPECT_TRUE(!!allocated_buffers.back());
 }
 
-// Tests allocation methods relating to decoder-owned buffers..
-TEST_F(BufferSetTest, DecoderOwnedBuffers) {
+// Tests allocation methods relating to processor-owned buffers..
+TEST_F(BufferSetTest, ProcessorOwnedBuffers) {
   BufferSetManager under_test;
 
   uint64_t buffer_size = 1000;
@@ -127,27 +127,27 @@ TEST_F(BufferSetTest, DecoderOwnedBuffers) {
     allocator->AddVmo(PayloadVmo::Create(buffer_size, 0));
   }
 
-  current_set.AllocateAllBuffersForDecoder(*allocator);
+  current_set.AllocateAllBuffersForProcessor(*allocator);
   EXPECT_FALSE(current_set.HasFreeBuffer(nullptr));
 
-  EXPECT_TRUE(!!current_set.GetDecoderOwnedBuffer(0));
+  EXPECT_TRUE(!!current_set.GetProcessorOwnedBuffer(0));
   EXPECT_FALSE(current_set.HasFreeBuffer(nullptr));
 
-  // Take one of the decoder's buffers and free it.
-  auto buffer = current_set.TakeBufferFromDecoder(0);
+  // Take one of the processor's buffers and free it.
+  auto buffer = current_set.TakeBufferFromProcessor(0);
   EXPECT_TRUE(!!buffer);
   EXPECT_FALSE(current_set.HasFreeBuffer(nullptr));
   buffer = nullptr;
   EXPECT_TRUE(current_set.HasFreeBuffer(nullptr));
 
-  // Allocate the one free buffer and give it back to the decoder.
+  // Allocate the one free buffer and give it back to the processor.
   buffer = current_set.AllocateBuffer(buffer_size, *allocator);
   EXPECT_TRUE(!!buffer);
-  current_set.AddRefBufferForDecoder(0, std::move(buffer));
+  current_set.AddRefBufferForProcessor(0, std::move(buffer));
   EXPECT_FALSE(current_set.HasFreeBuffer(nullptr));
 
   // Release all the buffers and then allocate them again to make sure they were freed.
-  current_set.ReleaseAllDecoderOwnedBuffers();
+  current_set.ReleaseAllProcessorOwnedBuffers();
   EXPECT_TRUE(current_set.HasFreeBuffer(nullptr));
 
   std::vector<fbl::RefPtr<PayloadBuffer>> allocated_buffers;
@@ -245,10 +245,8 @@ TEST_F(BufferSetTest, TwoSets) {
 
     EXPECT_FALSE(current_set.single_vmo());
     EXPECT_EQ(3u, current_set.lifetime_ordinal());
-    EXPECT_EQ(default_settings.packet_count_for_server(),
-              current_set.packet_count_for_server());
-    EXPECT_EQ(default_settings.packet_count_for_client(),
-              current_set.packet_count_for_client());
+    EXPECT_EQ(default_settings.packet_count_for_server(), current_set.packet_count_for_server());
+    EXPECT_EQ(default_settings.packet_count_for_client(), current_set.packet_count_for_client());
     EXPECT_EQ(default_settings.per_packet_buffer_bytes(), current_set.buffer_size());
     EXPECT_EQ(0u, current_set.buffer_count());
   }

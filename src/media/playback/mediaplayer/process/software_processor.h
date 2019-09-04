@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_SOFTWARE_DECODER_H_
-#define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_SOFTWARE_DECODER_H_
+#ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_PROCESS_SOFTWARE_PROCESSOR_H_
+#define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_PROCESS_SOFTWARE_PROCESSOR_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -14,12 +14,12 @@
 #include <mutex>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/media/playback/mediaplayer/decode/decoder.h"
 #include "src/media/playback/mediaplayer/metrics/value_tracker.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 
 namespace media_player {
 
-// Abstract base class for software decoders.
+// Abstract base class for software stream processors.
 //
 // This base class implements a simple model for packet transformation on a
 // worker thread. Most member variables are accessed on the graph's main thread
@@ -34,7 +34,7 @@ namespace media_player {
 // call.
 //
 // The main thread logic, under normal operation, maintains an input packet in
-// |input_packet_| so it's ready for decoding. When an output packet is
+// |input_packet_| so it's ready for processing. When an output packet is
 // requested, the main thread logic posts a call to |HandleInputPacketOnWorker|
 // passing the input packet. A request for a new input packet is issued at that
 // time.
@@ -62,11 +62,11 @@ namespace media_player {
 //    an end-of-stream output packet immediately before posting
 //    |WorkerDoneWithInputPacket|.
 //
-class SoftwareDecoder : public Decoder {
+class SoftwareProcessor : public Processor {
  public:
-  SoftwareDecoder();
+  SoftwareProcessor();
 
-  ~SoftwareDecoder() override;
+  ~SoftwareProcessor() override;
 
   // Node implementation.
   void Dump(std::ostream& os) const override;
@@ -104,7 +104,7 @@ class SoftwareDecoder : public Decoder {
   // packet may or may not be generated for any given invocation of this
   // method. |*output| is always set by this method, possibly to null.
   //
-  // This method must always 'progress' decoding in one way or another. That is,
+  // This method must always 'progress' processing in one way or another. That is,
   // either the result must be true or an output packet must be generated or
   // both.
   virtual bool TransformPacket(const PacketPtr& input, bool new_input, PacketPtr* output) = 0;
@@ -144,18 +144,18 @@ class SoftwareDecoder : public Decoder {
   bool end_of_input_stream_ = false;
   bool end_of_output_stream_ = false;
   // When we're not flushed and the input stream hasn't ended, we endeavor to
-  // keep a packet in |input_packet_| waiting to be decoded. That is, if
+  // keep a packet in |input_packet_| waiting to be processed. That is, if
   // |flushing_| and |end_of_input_stream_| are false and |input_packet_| is
   // null, we can be sure we've requested an input packet from upstream.
   PacketPtr input_packet_;
   fit::closure flush_callback_;
 
-  // |decode_duration_| is updated on the worker thread and read on the main
+  // |process_duration_| is updated on the worker thread and read on the main
   // thread when |Dump| is called.
-  mutable std::mutex decode_duration_mutex_;
-  ValueTracker<int64_t> decode_duration_ FXL_GUARDED_BY(decode_duration_mutex_);
+  mutable std::mutex process_duration_mutex_;
+  ValueTracker<int64_t> process_duration_ FXL_GUARDED_BY(process_duration_mutex_);
 };
 
 }  // namespace media_player
 
-#endif  // SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_SOFTWARE_DECODER_H_
+#endif  // SRC_MEDIA_PLAYBACK_MEDIAPLAYER_PROCESS_SOFTWARE_PROCESSOR_H_

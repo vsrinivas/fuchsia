@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/playback/mediaplayer/decode/decoder.h"
-
 #include <vector>
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_decoder_factory.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_decoder_factory.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 
 namespace media_player {
 namespace {
@@ -29,12 +28,12 @@ class CompositeDecoderFactory : public DecoderFactory {
 
   // DecoderFactory implementation.
   void CreateDecoder(const StreamType& stream_type,
-                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+                     fit::function<void(std::shared_ptr<Processor>)> callback) override;
 
  private:
   void ContinueCreateDecoder(std::vector<std::unique_ptr<DecoderFactory>>::iterator iter,
                              const StreamType& stream_type,
-                             fit::function<void(std::shared_ptr<Decoder>)> callback);
+                             fit::function<void(std::shared_ptr<Processor>)> callback);
 
   std::vector<std::unique_ptr<DecoderFactory>> children_;
 };
@@ -53,7 +52,7 @@ void CompositeDecoderFactory::AddFactory(std::unique_ptr<DecoderFactory> factory
 }
 
 void CompositeDecoderFactory::CreateDecoder(
-    const StreamType& stream_type, fit::function<void(std::shared_ptr<Decoder>)> callback) {
+    const StreamType& stream_type, fit::function<void(std::shared_ptr<Processor>)> callback) {
   FXL_DCHECK(callback);
 
   ContinueCreateDecoder(children_.begin(), stream_type, std::move(callback));
@@ -61,7 +60,7 @@ void CompositeDecoderFactory::CreateDecoder(
 
 void CompositeDecoderFactory::ContinueCreateDecoder(
     std::vector<std::unique_ptr<DecoderFactory>>::iterator iter, const StreamType& stream_type,
-    fit::function<void(std::shared_ptr<Decoder>)> callback) {
+    fit::function<void(std::shared_ptr<Processor>)> callback) {
   FXL_DCHECK(callback);
 
   if (iter == children_.end()) {
@@ -72,7 +71,7 @@ void CompositeDecoderFactory::ContinueCreateDecoder(
   FXL_DCHECK(*iter);
 
   (*iter)->CreateDecoder(stream_type, [this, iter, &stream_type, callback = std::move(callback)](
-                                          std::shared_ptr<Decoder> decoder) mutable {
+                                          std::shared_ptr<Processor> decoder) mutable {
     if (decoder) {
       callback(decoder);
       return;

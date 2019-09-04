@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/playback/mediaplayer/decode/software_decoder.h"
+#include "src/media/playback/mediaplayer/process/software_processor.h"
 
 #include <lib/async/default.h>
 #include <lib/zx/clock.h>
@@ -13,7 +13,7 @@
 
 namespace media_player {
 
-SoftwareDecoder::SoftwareDecoder()
+SoftwareProcessor::SoftwareProcessor()
     : main_thread_dispatcher_(async_get_default_dispatcher()),
       worker_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   output_state_ = OutputState::kIdle;
@@ -22,9 +22,9 @@ SoftwareDecoder::SoftwareDecoder()
   PostTaskToWorkerThread([]() { ThreadPriority::SetToHigh(); });
 }
 
-SoftwareDecoder::~SoftwareDecoder() { FXL_DCHECK(is_main_thread()); }
+SoftwareProcessor::~SoftwareProcessor() { FXL_DCHECK(is_main_thread()); }
 
-void SoftwareDecoder::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
+void SoftwareProcessor::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
   FXL_DCHECK(is_main_thread());
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
@@ -41,7 +41,7 @@ void SoftwareDecoder::FlushInput(bool hold_frame, size_t input_index, fit::closu
   callback();
 }
 
-void SoftwareDecoder::FlushOutput(size_t output_index, fit::closure callback) {
+void SoftwareProcessor::FlushOutput(size_t output_index, fit::closure callback) {
   FXL_DCHECK(is_main_thread());
   FXL_DCHECK(output_index == 0);
   FXL_DCHECK(callback);
@@ -63,7 +63,7 @@ void SoftwareDecoder::FlushOutput(size_t output_index, fit::closure callback) {
   });
 }
 
-void SoftwareDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
+void SoftwareProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK(is_main_thread());
   FXL_DCHECK(packet);
   FXL_DCHECK(input_index == 0);
@@ -96,7 +96,7 @@ void SoftwareDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
   }
 }
 
-void SoftwareDecoder::RequestOutputPacket() {
+void SoftwareProcessor::RequestOutputPacket() {
   FXL_DCHECK(is_main_thread());
   FXL_DCHECK(!end_of_output_stream_);
 
@@ -138,7 +138,7 @@ void SoftwareDecoder::RequestOutputPacket() {
   }
 }
 
-void SoftwareDecoder::HandleInputPacketOnWorker(PacketPtr input) {
+void SoftwareProcessor::HandleInputPacketOnWorker(PacketPtr input) {
   FXL_DCHECK(is_worker_thread());
   FXL_DCHECK(input);
 
@@ -163,14 +163,14 @@ void SoftwareDecoder::HandleInputPacketOnWorker(PacketPtr input) {
   }
 
   {
-    std::lock_guard<std::mutex> locker(decode_duration_mutex_);
-    decode_duration_.AddSample(zx::clock::get_monotonic().get() - start_time);
+    std::lock_guard<std::mutex> locker(process_duration_mutex_);
+    process_duration_.AddSample(zx::clock::get_monotonic().get() - start_time);
   }
 
   PostTaskToMainThread([this]() { WorkerDoneWithInputPacket(); });
 }
 
-void SoftwareDecoder::HandleOutputPacket(PacketPtr packet) {
+void SoftwareProcessor::HandleOutputPacket(PacketPtr packet) {
   FXL_DCHECK(is_main_thread());
   FXL_DCHECK(!end_of_output_stream_);
 
@@ -200,7 +200,7 @@ void SoftwareDecoder::HandleOutputPacket(PacketPtr packet) {
   PutOutputPacket(std::move(packet));
 }
 
-void SoftwareDecoder::WorkerDoneWithInputPacket() {
+void SoftwareProcessor::WorkerDoneWithInputPacket() {
   FXL_DCHECK(is_main_thread());
 
   switch (output_state_) {
@@ -236,7 +236,7 @@ void SoftwareDecoder::WorkerDoneWithInputPacket() {
   }
 }
 
-void SoftwareDecoder::Dump(std::ostream& os) const {
+void SoftwareProcessor::Dump(std::ostream& os) const {
   FXL_DCHECK(is_main_thread());
 
   os << label() << fostr::Indent;
@@ -268,14 +268,14 @@ void SoftwareDecoder::Dump(std::ostream& os) const {
   }
 
   {
-    std::lock_guard<std::mutex> locker(decode_duration_mutex_);
-    if (decode_duration_.count() != 0) {
-      os << fostr::NewLine << "decodes:           " << decode_duration_.count();
-      os << fostr::NewLine << "decode durations:";
+    std::lock_guard<std::mutex> locker(process_duration_mutex_);
+    if (process_duration_.count() != 0) {
+      os << fostr::NewLine << "processs:           " << process_duration_.count();
+      os << fostr::NewLine << "process durations:";
       os << fostr::Indent;
-      os << fostr::NewLine << "minimum        " << AsNs(decode_duration_.min());
-      os << fostr::NewLine << "average        " << AsNs(decode_duration_.average());
-      os << fostr::NewLine << "maximum        " << AsNs(decode_duration_.max());
+      os << fostr::NewLine << "minimum        " << AsNs(process_duration_.min());
+      os << fostr::NewLine << "average        " << AsNs(process_duration_.average());
+      os << fostr::NewLine << "maximum        " << AsNs(process_duration_.max());
       os << fostr::Outdent;
     }
   }

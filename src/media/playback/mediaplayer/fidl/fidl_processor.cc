@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/playback/mediaplayer/fidl/fidl_decoder.h"
+#include "src/media/playback/mediaplayer/fidl/fidl_processor.h"
 
 #include <vector>
 
@@ -17,25 +17,19 @@ namespace media_player {
 constexpr uint32_t kOutputIndex = 0;
 
 // static
-void FidlDecoder::Create(ServiceProvider* service_provider, const StreamType& stream_type,
-                         fuchsia::media::FormatDetails input_format_details,
-                         fuchsia::media::StreamProcessorPtr decoder,
-                         fit::function<void(std::shared_ptr<Decoder>)> callback) {
-  auto fidl_decoder =
-      std::make_shared<FidlDecoder>(service_provider, stream_type, std::move(input_format_details));
-  fidl_decoder->Init(std::move(decoder),
-                     [fidl_decoder, callback = std::move(callback)](bool succeeded) {
-                       callback(succeeded ? fidl_decoder : nullptr);
-                     });
+void FidlProcessor::Create(ServiceProvider* service_provider, StreamType::Medium medium,
+                           Function function, fuchsia::media::StreamProcessorPtr processor,
+                           fit::function<void(std::shared_ptr<Processor>)> callback) {
+  auto fidl_processor = std::make_shared<FidlProcessor>(service_provider, medium, function);
+  fidl_processor->Init(std::move(processor),
+                       [fidl_processor, callback = std::move(callback)](bool succeeded) {
+                         callback(succeeded ? fidl_processor : nullptr);
+                       });
 }
 
-FidlDecoder::FidlDecoder(ServiceProvider* service_provider, const StreamType& stream_type,
-                         fuchsia::media::FormatDetails input_format_details)
-    : service_provider_(service_provider),
-      medium_(stream_type.medium()),
-      input_format_details_(std::move(input_format_details)) {
-  FXL_DCHECK(input_format_details_.has_mime_type());
-
+FidlProcessor::FidlProcessor(ServiceProvider* service_provider, StreamType::Medium medium,
+                             Function function)
+    : service_provider_(service_provider), medium_(medium), function_(function) {
   switch (medium_) {
     case StreamType::Medium::kAudio:
       output_stream_type_ = AudioStreamType::Create(StreamType::kAudioEncodingLpcm, nullptr,
@@ -53,80 +47,98 @@ FidlDecoder::FidlDecoder(ServiceProvider* service_provider, const StreamType& st
   }
 }
 
-void FidlDecoder::Init(fuchsia::media::StreamProcessorPtr decoder,
-                       fit::function<void(bool)> callback) {
+void FidlProcessor::Init(fuchsia::media::StreamProcessorPtr processor,
+                         fit::function<void(bool)> callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  FXL_DCHECK(decoder);
+  FXL_DCHECK(processor);
   FXL_DCHECK(callback);
 
-  outboard_decoder_ = std::move(decoder);
+  outboard_processor_ = std::move(processor);
   init_callback_ = std::move(callback);
 
-  outboard_decoder_.set_error_handler(fit::bind_member(this, &FidlDecoder::OnConnectionFailed));
+  outboard_processor_.set_error_handler(fit::bind_member(this, &FidlProcessor::OnConnectionFailed));
 
-  outboard_decoder_.events().OnStreamFailed = fit::bind_member(this, &FidlDecoder::OnStreamFailed);
-  outboard_decoder_.events().OnInputConstraints =
-      fit::bind_member(this, &FidlDecoder::OnInputConstraints);
-  outboard_decoder_.events().OnOutputConstraints =
-      fit::bind_member(this, &FidlDecoder::OnOutputConstraints);
-  outboard_decoder_.events().OnOutputFormat = fit::bind_member(this, &FidlDecoder::OnOutputFormat);
-  outboard_decoder_.events().OnOutputPacket = fit::bind_member(this, &FidlDecoder::OnOutputPacket);
-  outboard_decoder_.events().OnOutputEndOfStream =
-      fit::bind_member(this, &FidlDecoder::OnOutputEndOfStream);
-  outboard_decoder_.events().OnFreeInputPacket =
-      fit::bind_member(this, &FidlDecoder::OnFreeInputPacket);
+  outboard_processor_.events().OnStreamFailed =
+      fit::bind_member(this, &FidlProcessor::OnStreamFailed);
+  outboard_processor_.events().OnInputConstraints =
+      fit::bind_member(this, &FidlProcessor::OnInputConstraints);
+  outboard_processor_.events().OnOutputConstraints =
+      fit::bind_member(this, &FidlProcessor::OnOutputConstraints);
+  outboard_processor_.events().OnOutputFormat =
+      fit::bind_member(this, &FidlProcessor::OnOutputFormat);
+  outboard_processor_.events().OnOutputPacket =
+      fit::bind_member(this, &FidlProcessor::OnOutputPacket);
+  outboard_processor_.events().OnOutputEndOfStream =
+      fit::bind_member(this, &FidlProcessor::OnOutputEndOfStream);
+  outboard_processor_.events().OnFreeInputPacket =
+      fit::bind_member(this, &FidlProcessor::OnFreeInputPacket);
 
-  outboard_decoder_->EnableOnStreamFailed();
+  outboard_processor_->EnableOnStreamFailed();
 }
 
-FidlDecoder::~FidlDecoder() { FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_); }
+FidlProcessor::~FidlProcessor() { FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_); }
 
-const char* FidlDecoder::label() const {
-  switch (medium_) {
-    case StreamType::Medium::kAudio:
-      return "fidl audio decoder";
-    case StreamType::Medium::kVideo:
-      return "fidl video decoder";
-    case StreamType::Medium::kText:
-      return "fidl text decoder";
-    case StreamType::Medium::kSubpicture:
-      return "fidl subpicture decoder";
+const char* FidlProcessor::label() const {
+  switch (function_) {
+    case Function::kDecode:
+      switch (medium_) {
+        case StreamType::Medium::kAudio:
+          return "fidl audio decoder";
+        case StreamType::Medium::kVideo:
+          return "fidl video decoder";
+        case StreamType::Medium::kText:
+          return "fidl text decoder";
+        case StreamType::Medium::kSubpicture:
+          return "fidl subpicture decoder";
+      }
+      break;
+    case Function::kDecrypt:
+      switch (medium_) {
+        case StreamType::Medium::kAudio:
+          return "fidl audio decryptor";
+        case StreamType::Medium::kVideo:
+          return "fidl video decryptor";
+        case StreamType::Medium::kText:
+          return "fidl text decryptor";
+        case StreamType::Medium::kSubpicture:
+          return "fidl subpicture decryptor";
+      }
+      break;
   }
 }
 
-void FidlDecoder::Dump(std::ostream& os) const {
+void FidlProcessor::Dump(std::ostream& os) const {
   os << label() << fostr::Indent;
   Node::Dump(os);
   // TODO(dalesat): More.
   os << fostr::Outdent;
 }
 
-void FidlDecoder::ConfigureConnectors() {
+void FidlProcessor::ConfigureConnectors() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   ConfigureInputDeferred();
   ConfigureOutputDeferred();
 }
 
-void FidlDecoder::OnInputConnectionReady(size_t input_index) {
+void FidlProcessor::OnInputConnectionReady(size_t input_index) {
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
   current_set.SetBufferCount(UseInputVmos().GetVmos().size());
 }
 
-void FidlDecoder::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
+void FidlProcessor::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
-  FXL_DCHECK(input_format_details_.has_mime_type());
 
-  // This decoder will always receive a FlushOutput shortly after a FlushInput.
-  // We call CloseCurrentStream now to let the outboard decoder know we're
+  // This processor will always receive a FlushOutput shortly after a FlushInput.
+  // We call CloseCurrentStream now to let the outboard processor know we're
   // abandoning this stream. Incrementing stream_lifetime_ordinal_ will cause
   // any stale output packets to be discarded. When FlushOutput is called, we'll
-  // sync with the outboard decoder to make sure we're all caught up.
-  outboard_decoder_->CloseCurrentStream(stream_lifetime_ordinal_, false, false);
+  // sync with the outboard processor to make sure we're all caught up.
+  outboard_processor_->CloseCurrentStream(stream_lifetime_ordinal_, false, false);
   stream_lifetime_ordinal_ += 2;
   end_of_input_stream_ = false;
   flushing_ = true;
@@ -134,7 +146,7 @@ void FidlDecoder::FlushInput(bool hold_frame, size_t input_index, fit::closure c
   callback();
 }
 
-void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
+void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(packet);
   FXL_DCHECK(input_index == 0);
@@ -159,7 +171,7 @@ void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
     FXL_DCHECK(packet->payload_buffer()->id() < current_set.buffer_count())
         << "Buffer ID " << packet->payload_buffer()->id()
         << " is out of range, should be less than " << current_set.buffer_count();
-    current_set.AddRefBufferForDecoder(packet->payload_buffer()->id(), packet->payload_buffer());
+    current_set.AddRefBufferForProcessor(packet->payload_buffer()->id(), packet->payload_buffer());
 
     fuchsia::media::Packet codec_packet;
     codec_packet.mutable_header()->set_buffer_lifetime_ordinal(current_set.lifetime_ordinal());
@@ -174,60 +186,60 @@ void FidlDecoder::PutInputPacket(PacketPtr packet, size_t input_index) {
 
     FXL_DCHECK(packet->size() <= current_set.buffer_size());
 
-    outboard_decoder_->QueueInputPacket(std::move(codec_packet));
+    outboard_processor_->QueueInputPacket(std::move(codec_packet));
   }
 
   if (packet->end_of_stream()) {
     end_of_input_stream_ = true;
-    outboard_decoder_->QueueInputEndOfStream(stream_lifetime_ordinal_);
+    outboard_processor_->QueueInputEndOfStream(stream_lifetime_ordinal_);
   }
 }
 
-void FidlDecoder::OnOutputConnectionReady(size_t output_index) {
+void FidlProcessor::OnOutputConnectionReady(size_t output_index) {
   FXL_DCHECK(output_index == 0);
 
-  if (allocate_output_buffers_for_decoder_pending_) {
-    allocate_output_buffers_for_decoder_pending_ = false;
-    // We allocate all the buffers on behalf of the outboard decoder. We give
-    // the outboard decoder ownership of these buffers as long as this set is
-    // current. The decoder decides what buffers to use for output. When an
+  if (allocate_output_buffers_for_processor_pending_) {
+    allocate_output_buffers_for_processor_pending_ = false;
+    // We allocate all the buffers on behalf of the outboard processor. We give
+    // the outboard processor ownership of these buffers as long as this set is
+    // current. The processor decides what buffers to use for output. When an
     // output packet is produced, the player shares ownership of the buffer until
     // all packets referencing the buffer are recycled. This ownership model
-    // reflects the fact that the outboard decoder is free to use output buffers
+    // reflects the fact that the outboard processor is free to use output buffers
     // as references and even use the same output buffer for multiple packets as
     // happens with VP9.
     FXL_DCHECK(output_buffers_.has_current_set());
     BufferSet& current_set = output_buffers_.current_set();
     current_set.SetBufferCount(UseOutputVmos().GetVmos().size());
-    current_set.AllocateAllBuffersForDecoder(UseOutputVmos());
+    current_set.AllocateAllBuffersForProcessor(UseOutputVmos());
   }
 }
 
-void FidlDecoder::FlushOutput(size_t output_index, fit::closure callback) {
+void FidlProcessor::FlushOutput(size_t output_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(output_index == 0);
   FXL_DCHECK(callback);
 
-  // This decoder will always receive a FlushInput shortly before a FlushOutput.
+  // This processor will always receive a FlushInput shortly before a FlushOutput.
   // In FlushInput, we've already closed the stream. Now we sync with the
-  // output decoder just to make sure we're caught up.
-  outboard_decoder_->Sync(std::move(callback));
+  // output processor just to make sure we're caught up.
+  outboard_processor_->Sync(std::move(callback));
 }
 
-void FidlDecoder::RequestOutputPacket() {
+void FidlProcessor::RequestOutputPacket() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   flushing_ = false;
 
   MaybeRequestInputPacket();
 }
 
-std::unique_ptr<StreamType> FidlDecoder::output_stream_type() const {
+std::unique_ptr<StreamType> FidlProcessor::output_stream_type() const {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(output_stream_type_);
   return output_stream_type_->Clone();
 }
 
-void FidlDecoder::InitSucceeded() {
+void FidlProcessor::InitSucceeded() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (init_callback_) {
@@ -236,7 +248,7 @@ void FidlDecoder::InitSucceeded() {
   }
 }
 
-void FidlDecoder::InitFailed() {
+void FidlProcessor::InitFailed() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (init_callback_) {
@@ -245,7 +257,7 @@ void FidlDecoder::InitFailed() {
   }
 }
 
-void FidlDecoder::MaybeRequestInputPacket() {
+void FidlProcessor::MaybeRequestInputPacket() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (!flushing_ && input_buffers_.has_current_set() && !end_of_input_stream_) {
@@ -260,7 +272,7 @@ void FidlDecoder::MaybeRequestInputPacket() {
   }
 }
 
-void FidlDecoder::OnConnectionFailed(zx_status_t error) {
+void FidlProcessor::OnConnectionFailed(zx_status_t error) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   FXL_PLOG(ERROR, error) << "OnConnectionFailed";
@@ -269,15 +281,15 @@ void FidlDecoder::OnConnectionFailed(zx_status_t error) {
   // TODO(dalesat): Report failure.
 }
 
-void FidlDecoder::OnStreamFailed(uint64_t stream_lifetime_ordinal,
-                                 fuchsia::media::StreamError error) {
+void FidlProcessor::OnStreamFailed(uint64_t stream_lifetime_ordinal,
+                                   fuchsia::media::StreamError error) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_LOG(ERROR) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
                  << " error: " << std::hex << static_cast<uint32_t>(error);
   // TODO(dalesat): Report failure.
 }
 
-void FidlDecoder::OnInputConstraints(fuchsia::media::StreamBufferConstraints constraints) {
+void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints constraints) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(!input_buffers_.has_current_set()) << "OnInputConstraints received more than once.";
 
@@ -294,14 +306,14 @@ void FidlDecoder::OnInputConstraints(fuchsia::media::StreamBufferConstraints con
         return current_set.AllocateBuffer(size, payload_vmos);
       });
 
-  // Call |Sync| on the sysmem token before passing it to the outboard decoder as part of
+  // Call |Sync| on the sysmem token before passing it to the outboard processor as part of
   // |SetInputBufferPartialSettings|. This needs to done to ensure that sysmem recognizes the
-  // token when it arrives. The outboard decoder doesn't do this.
+  // token when it arrives. The outboard processor doesn't do this.
   input_sysmem_token_ = TakeInputSysmemToken();
   // TODO(dalesat): Use the BufferCollection::Sync() instead, since token Sync() may go away before
   // long.
   input_sysmem_token_->Sync([this, &current_set]() {
-    outboard_decoder_->SetInputBufferPartialSettings(
+    outboard_processor_->SetInputBufferPartialSettings(
         current_set.PartialSettings(std::move(input_sysmem_token_)));
     InitSucceeded();
   });
@@ -311,7 +323,7 @@ void FidlDecoder::OnInputConstraints(fuchsia::media::StreamBufferConstraints con
   }
 }
 
-void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints constraints) {
+void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints constraints) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (constraints.has_buffer_constraints_action_required() &&
@@ -332,10 +344,10 @@ void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints co
   }
 
   if (output_buffers_.has_current_set()) {
-    // All the old output buffers were owned by the outboard decoder. We release
+    // All the old output buffers were owned by the outboard processor. We release
     // that ownership. The buffers will continue to exist until all packets
     // referencing them are destroyed.
-    output_buffers_.current_set().ReleaseAllDecoderOwnedBuffers();
+    output_buffers_.current_set().ReleaseAllProcessorOwnedBuffers();
   }
 
   // Use a single VMO for audio, VMO per buffer for video.
@@ -357,27 +369,27 @@ void FidlDecoder::OnOutputConstraints(fuchsia::media::StreamOutputConstraints co
       current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
       0);  // map_flags
 
-  // Call |Sync| on the sysmem token before passing it to the outboard decoder as part of
+  // Call |Sync| on the sysmem token before passing it to the outboard processor as part of
   // |SetOutputBufferPartialSettings|. This needs to be done to ensure that sysmem recognizes the
-  // token when it arrives. The outboard decoder doesn't do this.
+  // token when it arrives. The outboard processor doesn't do this.
   output_sysmem_token_ = TakeOutputSysmemToken();
   // TODO(dalesat): Use the BufferCollection::Sync() instead, since token Sync() may go away before
   // long.
   output_sysmem_token_->Sync([this]() {
     BufferSet& current_set = output_buffers_.current_set();
-    outboard_decoder_->SetOutputBufferPartialSettings(
+    outboard_processor_->SetOutputBufferPartialSettings(
         current_set.PartialSettings(std::move(output_sysmem_token_)));
 
-    outboard_decoder_->CompleteOutputBufferPartialSettings(current_set.lifetime_ordinal());
+    outboard_processor_->CompleteOutputBufferPartialSettings(current_set.lifetime_ordinal());
 
-    allocate_output_buffers_for_decoder_pending_ = true;
+    allocate_output_buffers_for_processor_pending_ = true;
     if (OutputConnectionReady()) {
       OnOutputConnectionReady(kOutputIndex);
     }
   });
 }
 
-void FidlDecoder::OnOutputFormat(fuchsia::media::StreamOutputFormat format) {
+void FidlProcessor::OnOutputFormat(fuchsia::media::StreamOutputFormat format) {
   if (!format.has_format_details()) {
     FXL_LOG(ERROR) << "Config has no format details.";
     InitFailed();
@@ -410,8 +422,8 @@ void FidlDecoder::OnOutputFormat(fuchsia::media::StreamOutputFormat format) {
   have_real_output_stream_type_ = true;
 }
 
-void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet, bool error_detected_before,
-                                 bool error_detected_during) {
+void FidlProcessor::OnOutputPacket(fuchsia::media::Packet packet, bool error_detected_before,
+                                   bool error_detected_during) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (!packet.has_header() || !packet.header().has_buffer_lifetime_ordinal() ||
@@ -448,7 +460,7 @@ void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet, bool error_detec
 
   if (packet.header().buffer_lifetime_ordinal() != current_set.lifetime_ordinal()) {
     // Refers to an obsolete buffer. We've already assumed the outboard
-    // decoder gave up this buffer, so there's no need to free it. Also, this
+    // processor gave up this buffer, so there's no need to free it. Also, this
     // shouldn't happen, and there's no evidence that it does.
     FXL_LOG(FATAL) << "OnOutputPacket delivered tacket with obsolete "
                       "buffer_lifetime_ordinal.";
@@ -457,16 +469,16 @@ void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet, bool error_detec
 
   if (packet.stream_lifetime_ordinal() != stream_lifetime_ordinal_) {
     // Refers to an obsolete stream. We'll just recycle the packet back to the
-    // output decoder.
-    outboard_decoder_->RecycleOutputPacket(std::move(*packet.mutable_header()));
+    // output processor.
+    outboard_processor_->RecycleOutputPacket(std::move(*packet.mutable_header()));
     return;
   }
 
   // All the output buffers in the current set are always owned by the outboard
-  // decoder. Get another reference to the |PayloadBuffer| for the specified
+  // processor. Get another reference to the |PayloadBuffer| for the specified
   // buffer.
   FXL_DCHECK(buffer_lifetime_ordinal == current_set.lifetime_ordinal());
-  fbl::RefPtr<PayloadBuffer> payload_buffer = current_set.GetDecoderOwnedBuffer(buffer_index);
+  fbl::RefPtr<PayloadBuffer> payload_buffer = current_set.GetProcessorOwnedBuffer(buffer_index);
 
   // TODO(dalesat): Tolerate !has_timestamp_ish somehow.
   if (!packet.has_timestamp_ish()) {
@@ -489,21 +501,21 @@ void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet, bool error_detec
                   buffer_lifetime_ordinal = packet->payload_buffer()->buffer_config()]() {
           FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-          // |outboard_decoder_| is always set after |Init| is called, so we
+          // |outboard_processor_| is always set after |Init| is called, so we
           // can rely on it here.
-          FXL_DCHECK(outboard_decoder_);
+          FXL_DCHECK(outboard_processor_);
           fuchsia::media::PacketHeader header;
           header.set_buffer_lifetime_ordinal(buffer_lifetime_ordinal);
           header.set_packet_index(packet_index);
-          outboard_decoder_->RecycleOutputPacket(std::move(header));
+          outboard_processor_->RecycleOutputPacket(std::move(header));
         });
       });
 
   PutOutputPacket(std::move(output_packet));
 }
 
-void FidlDecoder::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
-                                      bool error_detected_before) {
+void FidlProcessor::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
+                                        bool error_detected_before) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (error_detected_before) {
@@ -513,7 +525,7 @@ void FidlDecoder::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
   PutOutputPacket(Packet::CreateEndOfStream(next_pts_, pts_rate_));
 }
 
-void FidlDecoder::OnFreeInputPacket(fuchsia::media::PacketHeader packet_header) {
+void FidlProcessor::OnFreeInputPacket(fuchsia::media::PacketHeader packet_header) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (!packet_header.has_buffer_lifetime_ordinal() || !packet_header.has_packet_index()) {
@@ -521,12 +533,12 @@ void FidlDecoder::OnFreeInputPacket(fuchsia::media::PacketHeader packet_header) 
     return;
   }
 
-  input_buffers_.ReleaseBufferForDecoder(packet_header.buffer_lifetime_ordinal(),
-                                         packet_header.packet_index());
+  input_buffers_.ReleaseBufferForProcessor(packet_header.buffer_lifetime_ordinal(),
+                                           packet_header.packet_index());
 }
 
-void FidlDecoder::HandlePossibleOutputStreamTypeChange(const StreamType& old_type,
-                                                       const StreamType& new_type) {
+void FidlProcessor::HandlePossibleOutputStreamTypeChange(const StreamType& old_type,
+                                                         const StreamType& new_type) {
   // TODO(dalesat): Actually compare the types.
   revised_output_stream_type_ = new_type.Clone();
 }

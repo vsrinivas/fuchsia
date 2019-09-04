@@ -33,9 +33,9 @@ source_set("core") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
     "//src/lib/fxl",
-    "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",
+    "//src/media/playback/mediaplayer/process",
     "//src/media/playback/mediaplayer/render",
     "//src/media/playback/mediaplayer/util",
     "//zircon/public/lib/fbl",
@@ -65,9 +65,9 @@ test("tests") {
     "//garnet/public/lib/gtest",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",
+    "//src/media/playback/mediaplayer/process",
     "//src/media/playback/mediaplayer/render",
   ]
 }

@@ -79,25 +79,25 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // Allocates a buffer.
   fbl::RefPtr<PayloadBuffer> AllocateBuffer(uint64_t size, const PayloadVmos& payload_vmos);
 
-  // Adds a reference to the payload buffer on behalf of the outboard decoder.
+  // Adds a reference to the payload buffer on behalf of the outboard processor.
   // |payload_buffer| cannot be null. This version is used when the client
   // has a reference to the |PayloadBuffer| already.
-  void AddRefBufferForDecoder(uint32_t buffer_index, fbl::RefPtr<PayloadBuffer> payload_buffer);
+  void AddRefBufferForProcessor(uint32_t buffer_index, fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   // Takes a reference to the payload buffer previously added using
-  // |AddRefBufferForDecoder| or |AllocateAllBuffersForDecoder| and returns a
+  // |AddRefBufferForProcessor| or |AllocateAllBuffersForProcessor| and returns a
   // reference to the |PayloadBuffer|.
-  fbl::RefPtr<PayloadBuffer> TakeBufferFromDecoder(uint32_t buffer_index);
+  fbl::RefPtr<PayloadBuffer> TakeBufferFromProcessor(uint32_t buffer_index);
 
-  // Gets a new reference to a buffer already owned by the outboard decoder.
-  fbl::RefPtr<PayloadBuffer> GetDecoderOwnedBuffer(uint32_t buffer_index);
+  // Gets a new reference to a buffer already owned by the outboard processor.
+  fbl::RefPtr<PayloadBuffer> GetProcessorOwnedBuffer(uint32_t buffer_index);
 
-  // Allocates all buffers for the outboard decoder. All buffers must be free
+  // Allocates all buffers for the outboard processor. All buffers must be free
   // when this method is called.
-  void AllocateAllBuffersForDecoder(const PayloadVmos& payload_vmos);
+  void AllocateAllBuffersForProcessor(const PayloadVmos& payload_vmos);
 
-  // Releases all buffers currently owned by the output decoder.
-  void ReleaseAllDecoderOwnedBuffers();
+  // Releases all buffers currently owned by the output processor.
+  void ReleaseAllProcessorOwnedBuffers();
 
   // Returns true if there's a free buffer, otherwise calls |callback| on an
   // arbirary thread when one becomes free. The pending action can be cancelled
@@ -112,13 +112,13 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
  private:
   // The current state of a buffer in the set.
   struct BufferInfo {
-    // Indicates whether the buffer is free. |decoder_ref_| must be false if
+    // Indicates whether the buffer is free. |processor_ref_| must be false if
     // this field is true.
     bool free_ = true;
 
     // This field is non-null for buffers that are currently owned by the
-    // outboard decoder.
-    fbl::RefPtr<PayloadBuffer> decoder_ref_;
+    // outboard processor.
+    fbl::RefPtr<PayloadBuffer> processor_ref_;
   };
 
   // Creates a |PayloadBuffer| for the indicated |buffer_index|.
@@ -189,9 +189,9 @@ class BufferSetManager {
                         bool single_vmo_preferred);
 
   // Releases a reference to the payload buffer previously added using
-  // |BufferSet::AddRefBufferForDecoder| or
-  // |BufferSet::AllocateAllBuffersForDecoder|.
-  void ReleaseBufferForDecoder(uint64_t lifetime_ordinal, uint32_t buffer_index);
+  // |BufferSet::AddRefBufferForProcessor| or
+  // |BufferSet::AllocateAllBuffersForProcessor|.
+  void ReleaseBufferForProcessor(uint64_t lifetime_ordinal, uint32_t buffer_index);
 
  private:
   FXL_DECLARE_THREAD_CHECKER(thread_checker_);

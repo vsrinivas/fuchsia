@@ -5,11 +5,12 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_DECODER_FACTORY_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_DECODER_FACTORY_H_
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
 #include <memory>
 
-#include "src/media/playback/mediaplayer/decode/decoder.h"
+#include "src/media/playback/mediaplayer/process/processor.h"
 
 namespace media_player {
 
@@ -24,7 +25,7 @@ class FidlDecoderFactory : public DecoderFactory {
   ~FidlDecoderFactory() override;
 
   void CreateDecoder(const StreamType& stream_type,
-                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+                     fit::function<void(std::shared_ptr<Processor>)> callback) override;
 
  private:
   ServiceProvider* service_provider_;

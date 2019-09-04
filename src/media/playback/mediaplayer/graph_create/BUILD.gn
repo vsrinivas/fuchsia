@@ -10,10 +10,10 @@ source_set("graph_create") {
 
   deps = [
     "//src/lib/fxl",
-    "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/ffmpeg",
     "//src/media/playback/mediaplayer/fidl",
     "//src/media/playback/mediaplayer/graph",
+    "//src/media/playback/mediaplayer/process",
   ]
 }

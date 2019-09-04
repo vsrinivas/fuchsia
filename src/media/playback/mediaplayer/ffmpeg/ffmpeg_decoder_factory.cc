@@ -20,7 +20,7 @@ FfmpegDecoderFactory::FfmpegDecoderFactory() {}
 FfmpegDecoderFactory::~FfmpegDecoderFactory() {}
 
 void FfmpegDecoderFactory::CreateDecoder(const StreamType& stream_type,
-                                         fit::function<void(std::shared_ptr<Decoder>)> callback) {
+                                         fit::function<void(std::shared_ptr<Processor>)> callback) {
   FXL_DCHECK(callback);
 
   AvCodecContextPtr av_codec_context(AvCodecContext::Create(stream_type));

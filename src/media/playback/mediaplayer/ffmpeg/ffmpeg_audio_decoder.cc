@@ -10,7 +10,7 @@
 namespace media_player {
 
 // static
-std::shared_ptr<Decoder> FfmpegAudioDecoder::Create(AvCodecContextPtr av_codec_context) {
+std::shared_ptr<Processor> FfmpegAudioDecoder::Create(AvCodecContextPtr av_codec_context) {
   return std::make_shared<FfmpegAudioDecoder>(std::move(av_codec_context));
 }
 

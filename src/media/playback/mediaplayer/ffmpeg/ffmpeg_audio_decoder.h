@@ -13,10 +13,10 @@
 
 namespace media_player {
 
-// Decoder implementation employing an ffmpeg audio decoder.
+// Processor implementation employing an ffmpeg audio decoder.
 class FfmpegAudioDecoder : public FfmpegDecoderBase {
  public:
-  static std::shared_ptr<Decoder> Create(AvCodecContextPtr av_codec_context);
+  static std::shared_ptr<Processor> Create(AvCodecContextPtr av_codec_context);
 
   FfmpegAudioDecoder(AvCodecContextPtr av_codec_context);
 
