@@ -1241,6 +1241,10 @@ impl<D: EventDispatcher> ArpContext<Ipv4Addr, Mac> for Context<D> {
     fn address_resolution_failed(&mut self, device_id: usize, proto_addr: Ipv4Addr) {
         mac_resolution_failed(self, device_id, IpAddr::V4(proto_addr));
     }
+
+    fn address_resolution_expired(&mut self, device_id: Self::DeviceId, proto_addr: Ipv4Addr) {
+        log_unimplemented!((), "ArpContext::address_resolution_expired");
+    }
 }
 
 /// Dummy type used to implement NdpDevice

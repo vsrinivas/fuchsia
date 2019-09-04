@@ -160,6 +160,10 @@ pub(crate) trait ArpContext<P: PType, H: HType>:
     /// Notifies the device layer that the hardware address resolution for the
     /// given protocol address `proto_addr` failed.
     fn address_resolution_failed(&mut self, device_id: Self::DeviceId, proto_addr: P);
+
+    /// Notifies the device layer that a previously-cached resolution entry has
+    /// expired, and is no longer valid.
+    fn address_resolution_expired(&mut self, device_id: Self::DeviceId, proto_addr: P);
 }
 
 /// Handle an ARP timer firing.
@@ -192,6 +196,7 @@ impl<P: PType, H: HType, C: ArpContext<P, H>> TimerHandler<C, ArpTimerId<C::Devi
             }
             ArpTimerIdInner::EntryExpiration { proto_addr } => {
                 ctx.get_state_mut(id.device_id).table.remove(proto_addr);
+                ctx.address_resolution_expired(id.device_id, proto_addr);
 
                 // There are several things to notice:
                 // - Unlike when we send an ARP request in response to a lookup,
@@ -626,6 +631,7 @@ mod tests {
         hw_addr: Mac,
         addr_resolved: Vec<(Ipv4Addr, Mac)>,
         addr_resolution_failed: Vec<Ipv4Addr>,
+        addr_resolution_expired: Vec<Ipv4Addr>,
         arp_state: ArpState<Ipv4Addr, Mac>,
     }
 
@@ -636,6 +642,7 @@ mod tests {
                 hw_addr: TEST_LOCAL_MAC,
                 addr_resolved: vec![],
                 addr_resolution_failed: vec![],
+                addr_resolution_expired: vec![],
                 arp_state: ArpState::default(),
             }
         }
@@ -664,6 +671,10 @@ mod tests {
 
         fn address_resolution_failed(&mut self, _device_id: (), proto_addr: Ipv4Addr) {
             self.get_mut().addr_resolution_failed.push(proto_addr);
+        }
+
+        fn address_resolution_expired(&mut self, device_id: Self::DeviceId, proto_addr: Ipv4Addr) {
+            self.get_mut().addr_resolution_expired.push(proto_addr);
         }
     }
 
@@ -865,6 +876,14 @@ mod tests {
 
             fn address_resolution_failed(&mut self, _device_id: usize, proto_addr: Ipv4Addr) {
                 self.get_mut().addr_resolution_failed.push(proto_addr);
+            }
+
+            fn address_resolution_expired(
+                &mut self,
+                device_id: Self::DeviceId,
+                proto_addr: Ipv4Addr,
+            ) {
+                self.get_mut().addr_resolution_expired.push(proto_addr);
             }
         }
 
@@ -1330,6 +1349,8 @@ mod tests {
         assert!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4).is_none());
         // The timer should have been canceled.
         assert_eq!(ctx.timers().len(), 0);
+        // The device layer should have been notified.
+        assert_eq!(ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
 
     #[test]
@@ -1393,6 +1414,8 @@ mod tests {
         );
         // The entry should be gone.
         assert!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).is_none());
+        // The device layer should have been notified.
+        assert_eq!(ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
 
     #[test]
