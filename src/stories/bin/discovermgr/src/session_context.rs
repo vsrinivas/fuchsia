@@ -126,7 +126,7 @@ mod tests {
         action.intent.action = Some(action_name.clone());
         {
             let mut manager_lock = story_manager.lock();
-            manager_lock.add_to_story_graph(&action).await?;
+            manager_lock.add_to_story_graph(&action, vec![]).await?;
         }
 
         // Initialize service client and server.

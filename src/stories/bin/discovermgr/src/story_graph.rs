@@ -67,15 +67,14 @@ impl StoryGraph {
         self.modules.get(module_id)
     }
 
-    #[cfg(test)]
     /// Returns the mutable module data associated to the given |module_id|.
     pub fn get_module_data_mut(&mut self, module_id: &str) -> Option<&mut ModuleData> {
         self.modules.get_mut(module_id)
     }
 
     /// Returns an iterator of all modules in it.
-    pub fn get_all_modules(&self) -> impl Iterator<Item = &ModuleData> {
-        self.modules.values()
+    pub fn get_all_modules(&self) -> impl Iterator<Item = (&ModuleId, &ModuleData)> {
+        self.modules.iter()
     }
 
     /// Retures the number of modules in this story.
@@ -85,9 +84,21 @@ impl StoryGraph {
     }
 }
 
+/// Holds both module_id and corresponding module_data.
+pub struct Module {
+    pub module_id: String,
+    pub module_data: ModuleData,
+}
+
+impl Module {
+    pub fn new(module_id: impl Into<String>, module_data: ModuleData) -> Self {
+        Module { module_id: module_id.into(), module_data }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ModuleData {
-    outputs: HashMap<OutputName, ModuleOutput>,
+    pub outputs: HashMap<OutputName, ModuleOutput>,
     children: HashSet<ModuleId>,
     pub last_intent: Intent,
     created_timestamp: u128,
@@ -108,7 +119,6 @@ impl ModuleData {
         }
     }
 
-    #[cfg(test)]
     /// Updates an output with the given reference. If no reference is given, the
     /// output is removed.
     pub fn update_output(&mut self, output_name: &str, new_reference: Option<String>) {
@@ -127,14 +137,26 @@ impl ModuleData {
         self.update_timestamp();
     }
 
-    #[cfg(test)]
+    /// Add new consumer for an output.
+    pub fn add_output_consumer(
+        &mut self,
+        output_name: impl Into<String>,
+        reference: impl Into<String>,
+        module_id: impl Into<String>,
+        entity_type: impl Into<String>,
+    ) {
+        let output =
+            self.outputs.entry(output_name.into()).or_insert(ModuleOutput::new(reference.into()));
+        output.add_consumer(module_id, entity_type);
+        self.update_timestamp();
+    }
+
     /// Updates the last intent issued to the module with |new_intent|.
     pub fn update_intent(&mut self, new_intent: Intent) {
         self.last_intent = new_intent;
         self.update_timestamp();
     }
 
-    #[cfg(test)]
     /// Links two mods through intents. This means this module issued an intent to
     /// the module with id |child_module_id|.
     pub fn add_child(&mut self, child_module_id: impl Into<String>) {
@@ -149,7 +171,6 @@ impl ModuleData {
         self.update_timestamp();
     }
 
-    #[cfg(test)]
     fn update_timestamp(&mut self) {
         self.last_modified_timestamp =
             SystemTime::now().duration_since(UNIX_EPOCH).expect("time went backwards").as_nanos();
@@ -157,10 +178,10 @@ impl ModuleData {
 }
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ModuleOutput {
-    entity_reference: EntityReference,
-    consumers: HashSet<(ModuleId, EntityType)>,
+    pub entity_reference: EntityReference,
+    pub consumers: HashSet<(ModuleId, EntityType)>,
 }
-#[cfg(test)]
+
 impl ModuleOutput {
     fn new(entity_reference: impl Into<String>) -> Self {
         ModuleOutput { entity_reference: entity_reference.into(), consumers: hashset!() }
@@ -172,6 +193,7 @@ impl ModuleOutput {
     }
 
     /// Unlinks the mod outputing this output and the mod with id |module_id|.
+    #[cfg(test)]
     pub fn remove_consumer(&mut self, module_id: &str) {
         self.consumers.retain(|(m, _)| m != module_id);
     }
@@ -245,6 +267,11 @@ mod tests {
         let output = module_data.outputs.get("some-output").unwrap();
         assert_eq!(output.entity_reference, "some-ref");
         assert!(output.consumers.is_empty());
+        timestamps.push(module_data.last_modified_timestamp);
+
+        module_data.add_output_consumer("some-output", "some-ref", "some_consumer_id", "some_type");
+        let new_output = module_data.outputs.get("some-output").unwrap();
+        assert!(!new_output.consumers.is_empty());
         timestamps.push(module_data.last_modified_timestamp);
 
         module_data.update_output("some-output", None);

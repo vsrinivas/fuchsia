@@ -4,7 +4,10 @@
 
 use {
     crate::{
-        mod_manager::ModManager, models::AddModInfo, story_context_store::StoryContextStore, utils,
+        mod_manager::ModManager,
+        models::AddModInfo,
+        story_context_store::{ContextReader, ContextWriter, Contributor},
+        utils,
     },
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_app_discover::{ModuleIdentifier, StoryModuleRequest, StoryModuleRequestStream},
@@ -17,7 +20,7 @@ use {
 };
 
 /// The StoryModule protocol implementation.
-pub struct StoryModuleService {
+pub struct StoryModuleService<T> {
     /// The story id to which the module belongs.
     story_id: String,
 
@@ -25,16 +28,16 @@ pub struct StoryModuleService {
     module_id: String,
 
     /// Reference to the context store.
-    story_context_store: Arc<Mutex<StoryContextStore>>,
+    story_context_store: Arc<Mutex<T>>,
 
     /// Reference to the intent re-issuing.
     mod_manager: Arc<Mutex<ModManager>>,
 }
 
-impl StoryModuleService {
+impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
     /// Create a new module writer instance from an identifier.
     pub fn new(
-        story_context_store: Arc<Mutex<StoryContextStore>>,
+        story_context_store: Arc<Mutex<T>>,
         mod_manager: Arc<Mutex<ModManager>>,
         module: ModuleIdentifier,
     ) -> Result<Self, Error> {
@@ -108,7 +111,13 @@ impl StoryModuleService {
                     context_store_lock.get_reference(&self.story_id, &self.module_id, &output_name)
                 {
                     let mut issuer_lock = self.mod_manager.lock();
-                    issuer_lock.replace(old_reference, &reference).await;
+                    issuer_lock
+                        .replace(
+                            old_reference,
+                            &reference,
+                            Contributor::module_new(&self.story_id, &self.module_id, &output_name),
+                        )
+                        .await?;
                 }
                 context_store_lock
                     .contribute(&self.story_id, &self.module_id, &output_name, &reference)
@@ -127,9 +136,9 @@ mod tests {
         crate::{
             models::{AddModInfo, Intent},
             story_context_store::{ContextEntity, Contributor},
-            story_manager::StoryManager,
-            story_storage::MemoryStorage,
-            testing::{FakeEntityData, FakeEntityResolver, PuppetMasterFake},
+            testing::{
+                common_initialization, FakeEntityData, FakeEntityResolver, PuppetMasterFake,
+            },
         },
         fidl_fuchsia_app_discover::StoryModuleMarker,
         fidl_fuchsia_modular::{
@@ -141,12 +150,6 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write() {
-        let (puppet_master_client, _) =
-            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mod_manager =
-            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
-
         let (entity_resolver, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
         let mut fake_entity_resolver = FakeEntityResolver::new();
@@ -161,7 +164,10 @@ mod tests {
             story_id: Some("story1".to_string()),
             module_path: Some(vec!["mod-a".to_string()]),
         };
-        let state = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
+        let (puppet_master_client, _) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+        let (state, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
+
         StoryModuleService::new(state.clone(), mod_manager, module).unwrap().spawn(request_stream);
 
         // Write a module output.
@@ -228,18 +234,20 @@ mod tests {
 
         // Set initial state of connected mods. The actions here will be executed with the new
         // entity reference in the parameter.
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
-        let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "peridot-ref");
-        let action = AddModInfo::new(intent, Some("story1".to_string()), Some("mod-a".to_string()));
-        mod_manager.actions = hashmap!("peridot-ref".to_string() => hashset!(action));
-
-        let mut context_store = StoryContextStore::new(entity_resolver);
-        context_store.contribute("story1", "mod-a", "artist", "peridot-ref").await?;
-        let context_store_ref = Arc::new(Mutex::new(context_store));
+        let (context_store_ref, _, mod_manager_ref) =
+            common_initialization(puppet_master_client, entity_resolver);
+        {
+            let mut context_store = context_store_ref.lock();
+            context_store.contribute("story1", "mod-a", "artist", "peridot-ref").await?;
+            let mut mod_manager = mod_manager_ref.lock();
+            let intent =
+                Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "peridot-ref");
+            let action =
+                AddModInfo::new(intent, Some("story1".to_string()), Some("mod-a".to_string()));
+            mod_manager.actions = hashmap!("peridot-ref".to_string() => hashset!(action));
+        }
 
         // Initialize service client and server.
-        let mod_manager_ref = Arc::new(Mutex::new(mod_manager));
         let (client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoryModuleMarker>().unwrap();
         let module = ModuleIdentifier {
@@ -299,10 +307,8 @@ mod tests {
         puppet_master_fake.spawn(puppet_master_request_stream);
 
         // Initialize service client and server.
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mod_manager =
-            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
-        let context_store = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
+        let (context_store, _, mod_manager) =
+            common_initialization(puppet_master_client, entity_resolver);
         let (client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoryModuleMarker>().unwrap();
         let module = ModuleIdentifier {

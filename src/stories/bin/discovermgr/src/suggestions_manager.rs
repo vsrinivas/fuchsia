@@ -91,16 +91,18 @@ mod tests {
         super::*,
         crate::{
             models::{AddModInfo, DisplayInfo, Intent, Suggestion},
-            story_manager::StoryManager,
-            story_storage::MemoryStorage,
             testing::{
-                puppet_master_fake::PuppetMasterFake, suggestion_providers::TestSuggestionsProvider,
+                common_initialization, puppet_master_fake::PuppetMasterFake,
+                suggestion_providers::TestSuggestionsProvider,
             },
         },
+        failure::ResultExt,
         fidl_fuchsia_modular::{
-            IntentParameter, IntentParameterData, PuppetMasterMarker, StoryCommand,
+            EntityResolverMarker, IntentParameter, IntentParameterData, PuppetMasterMarker,
+            StoryCommand,
         },
         fuchsia_async as fasync,
+        fuchsia_component::client::connect_to_service,
         maplit::{hashmap, hashset},
         std::collections::HashSet,
     };
@@ -121,9 +123,9 @@ mod tests {
 
         // Set up our test suggestions provider. This will provide two suggestions
         // all the time.
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mod_manager =
-            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
+        let entity_resolver = connect_to_service::<EntityResolverMarker>()
+            .context("failed to connect to entity resolver")?;
+        let (_, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
         let mut suggestions_manager = SuggestionsManager::new(mod_manager);
         suggestions_manager.register_suggestions_provider(Box::new(TestSuggestionsProvider::new()));
 
@@ -177,9 +179,9 @@ mod tests {
         });
 
         puppet_master_fake.spawn(request_stream);
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mod_manager =
-            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
+        let entity_resolver = connect_to_service::<EntityResolverMarker>()
+            .context("failed to connect to entity resolver")?;
+        let (_, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
         let mut suggestions_manager = SuggestionsManager::new(mod_manager);
 
         // Set some fake suggestions.

@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::utils,
+    crate::{models::OutputConsumer, utils},
     derivative::*,
     failure::Error,
     fidl_fuchsia_modular::{EntityMarker, EntityProxy, EntityResolverProxy},
     fuchsia_syslog::macros::*,
+    futures::future::LocalFutureObj,
     serde_json,
     std::collections::{HashMap, HashSet},
 };
@@ -115,6 +116,53 @@ impl ContextEntity {
     fn remove_contributor(&mut self, contributor: &Contributor) {
         self.contributors.remove(contributor);
     }
+
+    fn get_contributors_by_story_id<'a>(
+        &'a self,
+        target_story_id: &'a str,
+    ) -> Vec<&'a Contributor> {
+        self.contributors
+            .iter()
+            .filter(|Contributor::ModuleContributor { story_id, .. }| story_id == target_story_id)
+            .collect()
+    }
+}
+
+pub trait ContextReader {
+    fn get_reference(
+        &self,
+        story_id: &str,
+        module_id: &str,
+        parameter_name: &str,
+    ) -> Option<&EntityReference>;
+
+    // Compose output_consumers given consumed entity reference
+    // story id of consumer and type of consumed entity.
+    fn get_output_consumers(
+        &self,
+        entity_reference: &str,
+        consumer_story_id: &str,
+        consume_type: &str,
+    ) -> Vec<OutputConsumer>;
+
+    fn current<'a>(&'a self) -> Box<dyn Iterator<Item = &'a ContextEntity> + 'a>;
+}
+
+pub trait ContextWriter {
+    fn contribute<'a>(
+        &'a mut self,
+        story_id: &'a str,
+        module_id: &'a str,
+        parameter_name: &'a str,
+        reference: &'a str,
+    ) -> LocalFutureObj<'a, Result<(), Error>>;
+
+    fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_name: &str);
+
+    #[allow(dead_code)] // Will be used through the ContextManager
+    fn withdraw_all(&mut self, story_id: &str, module_id: &str);
+
+    fn clear_contributor(&mut self, contributor: &Contributor);
 }
 
 impl StoryContextStore {
@@ -125,8 +173,10 @@ impl StoryContextStore {
             entity_resolver,
         }
     }
+}
 
-    pub fn get_reference(
+impl ContextReader for StoryContextStore {
+    fn get_reference(
         &self,
         story_id: &str,
         module_id: &str,
@@ -137,39 +187,79 @@ impl StoryContextStore {
         self.contributor_to_refs.get(&contributor).and_then(|references| references.iter().next())
     }
 
-    pub async fn contribute<'a>(
+    fn get_output_consumers(
+        &self,
+        entity_reference: &str,
+        consumer_story_id: &str,
+        consume_type: &str,
+    ) -> Vec<OutputConsumer> {
+        self.context_entities
+            .get(entity_reference)
+            .map(|context_entity| {
+                context_entity
+                    .get_contributors_by_story_id(consumer_story_id)
+                    .iter()
+                    .map(
+                        |Contributor::ModuleContributor {
+                             story_id: _,
+                             module_id,
+                             parameter_name,
+                         }| {
+                            OutputConsumer::new(
+                                entity_reference,
+                                module_id,
+                                parameter_name,
+                                consume_type,
+                            )
+                        },
+                    )
+                    .collect()
+            })
+            .unwrap_or(vec![])
+    }
+
+    /// Iterate over the context entities.
+    fn current<'a>(&'a self) -> Box<dyn Iterator<Item = &'a ContextEntity> + 'a> {
+        Box::new(self.context_entities.values())
+    }
+}
+
+impl ContextWriter for StoryContextStore {
+    fn contribute<'a>(
         &'a mut self,
         story_id: &'a str,
         module_id: &'a str,
         parameter_name: &'a str,
         reference: &'a str,
-    ) -> Result<(), Error> {
-        let contributor = Contributor::module_new(story_id, module_id, parameter_name);
-        // Get the entity proxy client.
-        let (entity_proxy, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
-        self.entity_resolver.resolve_entity(reference, server_end)?;
-        let types = entity_proxy.get_types().await?;
+    ) -> LocalFutureObj<'a, Result<(), Error>> {
+        LocalFutureObj::new(Box::new(async move {
+            let contributor = Contributor::module_new(story_id, module_id, parameter_name);
+            // Get the entity proxy client.
+            let (entity_proxy, server_end) = fidl::endpoints::create_proxy::<EntityMarker>()?;
+            self.entity_resolver.resolve_entity(reference, server_end)?;
+            let types = entity_proxy.get_types().await?;
 
-        // Remove previous contributions for this contributor.
-        self.clear_contributor(&contributor);
+            // Remove previous contributions for this contributor.
+            self.clear_contributor(&contributor);
 
-        // Track new entity
-        let context_entity = self
-            .context_entities
-            .entry(reference.to_string())
-            .or_insert(ContextEntity::new(reference, entity_proxy));
-        context_entity.add_contributor(contributor.clone());
-        context_entity.merge_types(types);
+            // Track new entity
+            let context_entity = self
+                .context_entities
+                .entry(reference.to_string())
+                .or_insert(ContextEntity::new(reference, entity_proxy));
+            context_entity.add_contributor(contributor.clone());
+            context_entity.merge_types(types);
 
-        // Keep track of contributor => references removal.
-        self.contributor_to_refs
-            .entry(contributor)
-            .or_insert(HashSet::new())
-            .insert(reference.to_string());
-        Ok(())
+            // Keep track of contributor => references removal.
+            self.contributor_to_refs
+                .entry(contributor)
+                .or_insert(HashSet::new())
+                .insert(reference.to_string());
+            Ok(())
+        }))
     }
 
-    pub fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_name: &str) {
+    fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_name: &str) {
         let contributor = Contributor::ModuleContributor {
             story_id: story_id.to_string(),
             module_id: module_id.to_string(),
@@ -178,8 +268,7 @@ impl StoryContextStore {
         self.clear_contributor(&contributor);
     }
 
-    #[allow(dead_code)] // Will be used through the ContextManager
-    pub fn withdraw_all(&mut self, story_id: &str, module_id: &str) {
+    fn withdraw_all(&mut self, story_id: &str, module_id: &str) {
         let contributors: Vec<Contributor> = self
             .contributor_to_refs
             .keys()
@@ -193,11 +282,6 @@ impl StoryContextStore {
         for contributor in contributors {
             self.clear_contributor(&contributor);
         }
-    }
-
-    /// Iterate over the context entities.
-    pub fn current<'a>(&'a self) -> impl Iterator<Item = &'a ContextEntity> {
-        self.context_entities.values()
     }
 
     fn clear_contributor(&mut self, contributor: &Contributor) {
@@ -342,5 +426,4 @@ mod tests {
         story_context_store.contribute("story1", "mod-a", "param-bar", "bar").await?;
         Ok(())
     }
-
 }

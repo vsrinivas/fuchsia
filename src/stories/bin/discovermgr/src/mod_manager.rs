@@ -4,7 +4,11 @@
 
 use {
     crate::{
-        models::{AddModInfo, SuggestedAction, Suggestion},
+        models::{
+            Action, AddModInfo, OutputConsumer, Parameter, RestoreStoryInfo, SuggestedAction,
+            Suggestion,
+        },
+        story_context_store::{ContextReader, Contributor},
         story_manager::StoryManager,
     },
     failure::{bail, Error},
@@ -27,60 +31,120 @@ type EntityReference = String;
 pub struct ModManager {
     // Maps an entity reference to actions launched with it.
     pub(super) actions: HashMap<EntityReference, HashSet<AddModInfo>>,
+    story_context_store: Arc<Mutex<dyn ContextReader>>,
     puppet_master: PuppetMasterProxy,
     story_manager: Arc<Mutex<StoryManager>>,
+    available_actions: Arc<Vec<Action>>,
 }
 
 impl ModManager {
-    pub fn new(puppet_master: PuppetMasterProxy, story_manager: Arc<Mutex<StoryManager>>) -> Self {
-        ModManager { actions: HashMap::new(), puppet_master, story_manager }
-    }
-
-    pub async fn issue_action(&mut self, action: &AddModInfo, focus: bool) -> Result<(), Error> {
-        let mut story_manager = self.story_manager.lock();
-        story_manager.add_to_story_graph(action).await?;
-        self.execute_actions(vec![action], focus).await?;
-        for param in action.intent().parameters() {
-            self.actions
-                .entry(param.entity_reference().to_string())
-                .or_insert(HashSet::new())
-                .insert(action.clone());
+    pub fn new(
+        story_context_store: Arc<Mutex<dyn ContextReader>>,
+        puppet_master: PuppetMasterProxy,
+        story_manager: Arc<Mutex<StoryManager>>,
+        available_actions: Arc<Vec<Action>>,
+    ) -> Self {
+        ModManager {
+            actions: HashMap::new(),
+            story_context_store,
+            puppet_master,
+            story_manager,
+            available_actions,
         }
-        Ok(())
     }
 
     pub async fn execute_suggestion(&mut self, suggestion: Suggestion) -> Result<(), Error> {
         match suggestion.action() {
             SuggestedAction::AddMod(action) => {
-                self.issue_action(&action, /* focus= */ true).await?;
+                self.issue_action(&action, /* focus= */ true).await
             }
             SuggestedAction::RestoreStory(restore_story_info) => {
-                let mut story_manager = self.story_manager.lock();
-                let modules = story_manager
-                    .restore_story_graph(restore_story_info.story_name.to_string())
-                    .await?;
-
-                let actions = modules
-                    .into_iter()
-                    .map(|module| {
-                        AddModInfo::new(
-                            module.last_intent,
-                            Some(restore_story_info.story_name.clone()),
-                            None,
-                        )
-                    })
-                    .collect::<Vec<AddModInfo>>();
-                self.execute_actions(
-                    actions.iter().map(|action| action).collect(),
-                    /*focus=*/ true,
-                )
-                .await?;
+                self.handle_restory_story(restore_story_info).await
             }
         }
-        Ok(())
     }
 
-    pub async fn replace<'a>(&'a mut self, old: &'a str, new: &'a str) {
+    // Extracts parameters information from available actions.
+    fn get_action_parameters(&self, action_name: Option<&String>) -> Vec<Parameter> {
+        action_name
+            .and_then(|name| {
+                self.available_actions
+                    .iter()
+                    .filter_map(|available_action| {
+                        if &available_action.name == name {
+                            Some(available_action.parameters.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .next()
+            })
+            .unwrap_or(vec![])
+    }
+
+    // Handle Addmod suggestions.
+    pub async fn issue_action(&mut self, add_mod: &AddModInfo, focus: bool) -> Result<(), Error> {
+        self.execute_actions(vec![&add_mod], focus).await?;
+
+        let mut output_consumers: Vec<OutputConsumer> = vec![];
+        let action_parameters = self.get_action_parameters(add_mod.intent().action.as_ref());
+
+        let context_store = self.story_context_store.lock();
+        for param in add_mod.intent().parameters() {
+            self.actions
+                .entry(param.entity_reference.clone())
+                .or_insert(HashSet::new())
+                .insert(add_mod.clone());
+            let consume_type = action_parameters
+                .iter()
+                .filter_map(|manifest_parameter| {
+                    if &manifest_parameter.name == &param.name {
+                        Some(manifest_parameter.parameter_type.as_str())
+                    } else {
+                        None
+                    }
+                })
+                .next()
+                .unwrap_or("None");
+            output_consumers.append(&mut context_store.get_output_consumers(
+                &param.entity_reference,
+                add_mod.story_name(),
+                consume_type,
+            ));
+        }
+        let mut story_manager = self.story_manager.lock();
+        story_manager.add_to_story_graph(&add_mod, output_consumers).await
+    }
+
+    // Handle restore story suggestions.
+    async fn handle_restory_story(
+        &mut self,
+        restore_story_info: &RestoreStoryInfo,
+    ) -> Result<(), Error> {
+        let mut story_manager = self.story_manager.lock();
+        let modules =
+            story_manager.restore_story_graph(restore_story_info.story_name.to_string()).await?;
+
+        let actions = modules
+            .into_iter()
+            .map(|module| {
+                AddModInfo::new(
+                    module.module_data.last_intent,
+                    Some(restore_story_info.story_name.clone()),
+                    Some(module.module_id),
+                )
+            })
+            .collect::<Vec<AddModInfo>>();
+        self.execute_actions(actions.iter().collect(), /*focus=*/ true).await
+    }
+
+    // This is called with story_context_store locked.
+    pub async fn replace<'a>(
+        &'a mut self,
+        old: &'a str,
+        new: &'a str,
+        contributor: Contributor,
+    ) -> Result<(), Error> {
         let actions = self
             .actions
             .remove(old)
@@ -91,6 +155,8 @@ impl ModManager {
         join_all(actions.iter().map(|action| self.execute_actions(vec![action], /*focus=*/ false)))
             .await;
         self.actions.insert(new.to_string(), actions);
+        let mut story_manager = self.story_manager.lock();
+        story_manager.update_graph_for_replace(old, new, contributor).await
     }
 
     async fn execute_actions<'a>(
@@ -136,11 +202,14 @@ mod tests {
         super::*,
         crate::{
             models::{DisplayInfo, Intent},
-            story_storage::MemoryStorage,
-            testing::puppet_master_fake::PuppetMasterFake,
+            testing::{common_initialization, puppet_master_fake::PuppetMasterFake},
         },
-        fidl_fuchsia_modular::{IntentParameter, IntentParameterData, PuppetMasterMarker},
+        failure::ResultExt,
+        fidl_fuchsia_modular::{
+            EntityResolverMarker, IntentParameter, IntentParameterData, PuppetMasterMarker,
+        },
         fuchsia_async as fasync,
+        fuchsia_component::client::connect_to_service,
         maplit::{hashmap, hashset},
     };
 
@@ -179,9 +248,11 @@ mod tests {
             }
         });
 
+        let entity_resolver = connect_to_service::<EntityResolverMarker>()
+            .context("failed to connect to entity resolver")?;
         puppet_master_fake.spawn(request_stream);
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
+        let (_, _, mod_manager_arc) = common_initialization(puppet_master_client, entity_resolver);
+        let mut mod_manager = mod_manager_arc.lock();
 
         let suggestion = suggestion!(
             action = "PLAY_MUSIC",
@@ -238,9 +309,11 @@ mod tests {
             }
         });
 
+        let entity_resolver = connect_to_service::<EntityResolverMarker>()
+            .context("failed to connect to entity resolver")?;
         puppet_master_fake.spawn(request_stream);
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mut mod_manager = ModManager::new(puppet_master_client, story_manager);
+        let (_, _, mod_manager_arc) = common_initialization(puppet_master_client, entity_resolver);
+        let mut mod_manager = mod_manager_arc.lock();
 
         // Set initial state. The actions here will be executed with the new
         // entity reference in the parameter.
@@ -249,7 +322,13 @@ mod tests {
             AddModInfo::new(intent, Some("story_name".to_string()), Some("mod_name".to_string()));
         mod_manager.actions = hashmap!("peridot-ref".to_string() => hashset!(action));
 
-        mod_manager.replace("peridot-ref", "garnet-ref").await;
+        mod_manager
+            .replace(
+                "peridot-ref",
+                "garnet-ref",
+                Contributor::module_new("story_name", "mod_name", "artist"),
+            )
+            .await?;
 
         // Assert the action was replaced.
         let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "garnet-ref");

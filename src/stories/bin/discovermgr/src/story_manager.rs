@@ -5,20 +5,21 @@
 use {
     crate::{
         constants::{GRAPH_KEY, TITLE_KEY},
-        models::AddModInfo,
-        story_graph::{ModuleData, StoryGraph},
+        models::{AddModInfo, OutputConsumer},
+        story_context_store::Contributor,
+        story_graph::{Module, StoryGraph},
         story_storage::{StoryName, StoryStorage, StoryTitle},
         utils,
     },
     chrono::{Datelike, Timelike, Utc},
-    failure::Error,
+    failure::{bail, Error},
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon as zx,
 };
 
 /// Manage multiple story graphs to support restoring stories.
 pub struct StoryManager {
-    // save stories to Ledger
+    // Save stories to Ledger.
     story_storage: Box<dyn StoryStorage>,
 }
 
@@ -42,9 +43,15 @@ impl StoryManager {
         key: &str,
         value: Buffer,
     ) -> Result<(), Error> {
-        self.story_storage
-            .set_property(story_name, key, utils::vmo_buffer_to_string(Box::new(value))?)
-            .await
+        match key {
+            // Writing to story graph is not allowed.
+            GRAPH_KEY => bail!("Key for set_property is now allowed"),
+            _ => {
+                self.story_storage
+                    .set_property(story_name, key, utils::vmo_buffer_to_string(Box::new(value))?)
+                    .await
+            }
+        }
     }
 
     // Get property of given story with key.
@@ -56,24 +63,73 @@ impl StoryManager {
         Ok(Buffer { vmo, size: data_to_write.len() as u64 })
     }
 
-    // Restore the story in story_manager by returning a vector of its modules
+    // Restore the story in story_manager by returning a vector of its modules.
     pub async fn restore_story_graph(
         &mut self,
         target_story_name: StoryName,
-    ) -> Result<Vec<ModuleData>, Error> {
+    ) -> Result<Vec<Module>, Error> {
         let story_graph = serde_json::from_str(
             &self.story_storage.get_property(&target_story_name, GRAPH_KEY).await?,
         )
         .unwrap_or(StoryGraph::new());
-
-        let modules = story_graph.get_all_modules().map(|module| module.clone()).collect();
-
-        Ok(modules)
+        Ok(story_graph.get_all_modules().map(|(k, v)| Module::new(k.clone(), v.clone())).collect())
     }
 
-    // Add the module to the story graph by loading it from storage,
+    // Update the graph when a contributor changes its output.
+    pub async fn update_graph_for_replace(
+        &mut self,
+        old_reference: &str,
+        new_reference: &str,
+        contributor: Contributor,
+    ) -> Result<(), Error> {
+        match contributor {
+            Contributor::ModuleContributor { story_id, module_id, parameter_name } => {
+                let mut story_graph = self
+                    .story_storage
+                    .get_property(&story_id, GRAPH_KEY)
+                    .await
+                    .map(|s| serde_json::from_str(&s).unwrap_or(StoryGraph::new()))
+                    .unwrap_or(StoryGraph::new());
+
+                let consumer_ids = match story_graph.get_module_data_mut(&module_id) {
+                    Some(module_data) => {
+                        // Update the provider.
+                        module_data.update_output(&parameter_name, Some(new_reference.to_string()));
+                        module_data.outputs[&parameter_name]
+                            .consumers
+                            .iter()
+                            .map(|(id, _)| id.to_string())
+                            .collect()
+                    }
+                    None => vec![],
+                };
+                // Update the intent of each consumer module.
+                for consumer_module_id in consumer_ids {
+                    if let Some(consumer_module_data) =
+                        story_graph.get_module_data_mut(&consumer_module_id)
+                    {
+                        let new_intent = consumer_module_data
+                            .last_intent
+                            .clone_with_new_reference(old_reference, new_reference);
+                        consumer_module_data.update_intent(new_intent);
+                    }
+                }
+
+                if let Ok(string_content) = serde_json::to_string(&story_graph) {
+                    self.story_storage.set_property(&story_id, GRAPH_KEY, string_content).await?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    // Add the mod to the story graph by loading it from storage,
     // update it and save it to storage.
-    pub async fn add_to_story_graph(&mut self, action: &AddModInfo) -> Result<(), Error> {
+    pub async fn add_to_story_graph(
+        &mut self,
+        action: &AddModInfo,
+        output_consumers: Vec<OutputConsumer>,
+    ) -> Result<(), Error> {
         let mut story_graph = self
             .story_storage
             .get_property(action.story_name(), GRAPH_KEY)
@@ -86,13 +142,25 @@ impl StoryManager {
             intent.action = Some("NONE".to_string());
         }
         story_graph.add_module(action.mod_name(), intent);
-        self.story_storage
-            .set_property(
-                action.story_name(),
-                GRAPH_KEY,
-                serde_json::to_string(&story_graph).unwrap(),
-            )
-            .await?;
+
+        for output_consumer in output_consumers {
+            match story_graph.get_module_data_mut(&output_consumer.module_id) {
+                Some(module_data) => {
+                    module_data.add_child(action.mod_name());
+                    module_data.add_output_consumer(
+                        &output_consumer.output_name,
+                        output_consumer.entity_reference,
+                        action.mod_name(),
+                        output_consumer.consume_type,
+                    );
+                }
+                None => {}
+            }
+        }
+
+        if let Ok(string_content) = serde_json::to_string(&story_graph) {
+            self.story_storage.set_property(action.story_name(), GRAPH_KEY, string_content).await?;
+        }
 
         let story_title = self.story_storage.get_property(action.story_name(), TITLE_KEY).await;
         if story_title.is_ok() {
@@ -150,11 +218,9 @@ mod tests {
         );
         match suggestion_1.action() {
             SuggestedAction::AddMod(action) => {
-                story_manager.add_to_story_graph(&action).await?;
+                story_manager.add_to_story_graph(&action, vec![]).await?;
             }
-            SuggestedAction::RestoreStory(_) => {
-                assert!(false);
-            }
+            _ => assert!(false),
         }
 
         let story_graph = serde_json::from_str(
@@ -168,17 +234,80 @@ mod tests {
         // changed to a new story_name_2
         match suggestion_2.action() {
             SuggestedAction::AddMod(action) => {
-                story_manager.add_to_story_graph(&action).await?;
+                story_manager.add_to_story_graph(&action, vec![]).await?;
             }
-            SuggestedAction::RestoreStory(_) => {
-                assert!(false);
-            }
+            _ => assert!(false),
         }
         // story_name_1 & 2 already saved
         assert_eq!(story_manager.story_storage.get_story_count().await?, 2);
         // restore the story_name_1
         let modules = story_manager.restore_story_graph("story_name_1".to_string()).await?;
         assert_eq!(modules.len(), 1);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn save_links() -> Result<(), Error> {
+        let mut story_manager = StoryManager::new(Box::new(MemoryStorage::new()));
+        let suggestion_1 = suggestion!(
+            action = "NOUNS_OF_WORLD",
+            title = "Nouns of world",
+            parameters = [],
+            story = "story_name_1"
+        );
+
+        let mod_name_1 = match suggestion_1.action() {
+            SuggestedAction::AddMod(action) => {
+                story_manager.add_to_story_graph(&action, vec![]).await?;
+                Some(action.mod_name())
+            }
+            _ => None,
+        }
+        .unwrap();
+
+        let contributors = vec![OutputConsumer::new(
+            "peridot-ref",
+            mod_name_1,
+            "selected",
+            "https://schema.org/MusicGroup",
+        )];
+        let suggestion_2 = suggestion!(
+            action = "PLAY_MUSIC",
+            title = "Play music",
+            parameters = [(name = "artist", entity_reference = "peridot-ref")],
+            story = "story_name_1"
+        );
+
+        let mod_name_2 = match suggestion_2.action() {
+            SuggestedAction::AddMod(action) => {
+                story_manager.add_to_story_graph(&action, contributors).await?;
+                Some(action.mod_name())
+            }
+            _ => None,
+        }
+        .unwrap();
+
+        let story_graph = story_manager
+            .story_storage
+            .get_property("story_name_1", GRAPH_KEY)
+            .await
+            .map(|s| serde_json::from_str(&s).unwrap_or(StoryGraph::new()))
+            .unwrap_or(StoryGraph::new());
+
+        let module_data_1 = story_graph.get_module_data(mod_name_1).unwrap();
+        assert_eq!(module_data_1.outputs.len(), 1);
+        let module_output = &module_data_1.outputs["selected"];
+        assert_eq!(module_output.entity_reference, "peridot-ref".to_string());
+        assert_eq!(module_output.consumers.len(), 1);
+        assert_eq!(
+            module_output
+                .consumers
+                .iter()
+                .filter(|(module_name, type_name)| module_name == mod_name_2
+                    && type_name == "https://schema.org/MusicGroup")
+                .count(),
+            1
+        );
         Ok(())
     }
 }

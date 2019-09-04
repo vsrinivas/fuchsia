@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        story_context_store::{ContextEntity, StoryContextStore},
+        story_context_store::{ContextEntity, ContextReader},
         suggestions_manager::SuggestionsManager,
     },
     failure::{Error, ResultExt},
@@ -24,13 +24,13 @@ use {
 const ITERATOR_CHUNK_SIZE: usize = 10;
 
 pub struct SuggestionsService {
-    context_store: Arc<Mutex<StoryContextStore>>,
+    context_store: Arc<Mutex<dyn ContextReader>>,
     suggestions_manager: Arc<Mutex<SuggestionsManager>>,
 }
 
 impl SuggestionsService {
     pub fn new(
-        context_store: Arc<Mutex<StoryContextStore>>,
+        context_store: Arc<Mutex<dyn ContextReader>>,
         suggestions_manager: Arc<Mutex<SuggestionsManager>>,
     ) -> Self {
         SuggestionsService { context_store, suggestions_manager }
@@ -96,7 +96,7 @@ impl SuggestionsService {
 mod tests {
     use {
         super::*,
-        crate::{story_storage::MemoryStorage, ModManager, StoryManager},
+        crate::testing::common_initialization,
         fidl_fuchsia_app_discover::{
             SuggestionsIteratorMarker, SuggestionsMarker, SuggestionsProxy,
         },
@@ -108,9 +108,7 @@ mod tests {
         let (entity_resolver, _) =
             fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>()?;
 
-        let context_store = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mod_manager = Arc::new(Mutex::new(ModManager::new(puppet_master, story_manager)));
+        let (context_store, _, mod_manager) = common_initialization(puppet_master, entity_resolver);
         let suggestions_manager = Arc::new(Mutex::new(SuggestionsManager::new(mod_manager)));
 
         // Initialize service client and server.

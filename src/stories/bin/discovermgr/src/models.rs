@@ -41,6 +41,30 @@ pub struct ActionDisplayInfo {
     pub parameter_mapping: Vec<ParameterMapping>,
 }
 
+pub struct OutputConsumer {
+    pub entity_reference: String,
+    /// The id of the module outputting the entity.
+    pub module_id: String,
+    pub output_name: String,
+    pub consume_type: String,
+}
+
+impl OutputConsumer {
+    pub fn new(
+        entity_reference: impl Into<String>,
+        module_id: impl Into<String>,
+        output_name: impl Into<String>,
+        consume_type: impl Into<String>,
+    ) -> Self {
+        OutputConsumer {
+            entity_reference: entity_reference.into(),
+            module_id: module_id.into(),
+            output_name: output_name.into(),
+            consume_type: consume_type.into(),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct DisplayInfo {
     pub icon: Option<String>,
@@ -143,12 +167,6 @@ impl Suggestion {
 
     pub fn display_info(&self) -> &DisplayInfo {
         &self.display_info
-    }
-}
-
-impl IntentParameter {
-    pub fn entity_reference(&self) -> &str {
-        &self.entity_reference
     }
 }
 
@@ -291,22 +309,7 @@ impl AddModInfo {
         AddModInfo {
             story_name: self.story_name,
             mod_name: self.mod_name,
-            intent: Intent {
-                handler: self.intent.handler,
-                action: self.intent.action,
-                parameters: self
-                    .intent
-                    .parameters
-                    .into_iter()
-                    .map(|p| {
-                        if p.entity_reference == old {
-                            IntentParameter { name: p.name, entity_reference: new.to_string() }
-                        } else {
-                            p
-                        }
-                    })
-                    .collect::<BTreeSet<IntentParameter>>(),
-            },
+            intent: self.intent.clone_with_new_reference(old, new),
         }
     }
 }
@@ -336,6 +339,32 @@ impl Intent {
             entity_reference: entity_reference.to_string(),
         });
         self
+    }
+
+    // Create a new intent which replaces old entity
+    // reference with new one.
+    pub fn clone_with_new_reference(
+        &self,
+        old_reference: &str,
+        new_reference: impl Into<String>,
+    ) -> Intent {
+        let reference = new_reference.into();
+        Intent {
+            handler: self.handler.clone(),
+            action: self.action.clone(),
+            parameters: self
+                .parameters
+                .clone()
+                .into_iter()
+                .map(|p| {
+                    if p.entity_reference == old_reference {
+                        IntentParameter { name: p.name, entity_reference: reference.clone() }
+                    } else {
+                        p
+                    }
+                })
+                .collect::<BTreeSet<IntentParameter>>(),
+        }
     }
 }
 

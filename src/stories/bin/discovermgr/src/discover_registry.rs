@@ -46,10 +46,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            story_context_store::{ContextEntity, Contributor},
-            story_manager::StoryManager,
-            story_storage::MemoryStorage,
-            testing::{FakeEntityData, FakeEntityResolver},
+            story_context_store::{ContextEntity, ContextReader, Contributor},
+            testing::{common_initialization, FakeEntityData, FakeEntityResolver},
         },
         fidl_fuchsia_app_discover::{
             DiscoverRegistryMarker, ModuleIdentifier, ModuleOutputWriterMarker, StoryModuleMarker,
@@ -61,12 +59,6 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_register_module_output() -> Result<(), Error> {
-        let (puppet_master_client, _) =
-            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mod_manager =
-            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
-
         // Initialize the fake entity resolver.
         let (entity_resolver, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
@@ -79,7 +71,10 @@ mod tests {
         let (client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<DiscoverRegistryMarker>().unwrap();
 
-        let state = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
+        let (puppet_master_client, _) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+        let (state, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
+
         let story_context = state.clone();
         fasync::spawn_local(
             async move { run_server(story_context, mod_manager, request_stream).await }
@@ -114,12 +109,6 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_register_story_module() -> Result<(), Error> {
-        let (puppet_master_client, _) =
-            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
-        let mod_manager =
-            Arc::new(Mutex::new(ModManager::new(puppet_master_client, story_manager)));
-
         // Initialize the fake entity resolver.
         let (entity_resolver, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
@@ -132,7 +121,11 @@ mod tests {
         let (client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<DiscoverRegistryMarker>().unwrap();
 
-        let state = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
+        let (puppet_master_client, _) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+
+        let (state, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
+
         let story_context = state.clone();
         fasync::spawn_local(
             async move { run_server(story_context, mod_manager, request_stream).await }
