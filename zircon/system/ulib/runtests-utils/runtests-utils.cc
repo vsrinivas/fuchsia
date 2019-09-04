@@ -373,8 +373,20 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
       argv.push_back(nullptr);  // Important, since there's no argc.
       const char* output_dir_for_test =
           output_dir_for_test_str.empty() ? nullptr : output_dir_for_test_str.c_str();
-      const char* output_filename =
-          output_filename_str.empty() ? nullptr : output_filename_str.c_str();
+
+      const char* output_filename = nullptr;
+      if (!output_filename_str.empty()) {
+        output_filename = output_filename_str.c_str();
+        // Ensure the output file exists, even if RunTest fails to create it.
+        // This makes it possible for the infra to trust the summary.json.
+        FILE* output_file = fopen(output_filename, "w");
+        if (output_file == nullptr) {
+          fprintf(stderr, "Error: Could not create output file %s: %s\n",
+                  output_filename, strerror(errno));
+          return false;
+        }
+        fclose(output_file);
+      }
 
       // Execute the test binary.
       printf(
