@@ -81,10 +81,10 @@ pub enum Property {
     /// The value is a double array.
     DoubleArray(String, ArrayValue<f64>),
 
-    /// The value is an integer.
+    /// The value is an integer array.
     IntArray(String, ArrayValue<i64>),
 
-    /// The value is an unsigned integer.
+    /// The value is an unsigned integer array.
     UintArray(String, ArrayValue<u64>),
 }
 

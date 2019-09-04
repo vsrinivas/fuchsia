@@ -12,7 +12,7 @@ use {
         utils,
     },
     byteorder::{ByteOrder, LittleEndian},
-    failure::{bail, Error},
+    failure::{bail, format_err, Error},
     mapped_vmo::Mapping,
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::{FromPrimitive, ToPrimitive},
@@ -150,40 +150,43 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(payload.header_generation_count() & 1 == 1)
     }
 
-    /// Get the double value of a DOUBLE_VALUE block.
+    /// Gets the double value of a DOUBLE_VALUE block.
     pub fn double_value(&self) -> Result<f64, Error> {
         self.check_type(BlockType::DoubleValue)?;
         Ok(f64::from_bits(self.read_payload().numeric_value()))
     }
 
-    /// Get the value of an INT_VALUE block.
+    /// Gets the value of an INT_VALUE block.
     pub fn int_value(&self) -> Result<i64, Error> {
         self.check_type(BlockType::IntValue)?;
         Ok(i64::from_le_bytes(self.read_payload().numeric_value().to_le_bytes()))
     }
 
-    /// Get the unsigned value of an UINT_VALUE block.
+    /// Gets the unsigned value of a UINT_VALUE block.
     pub fn uint_value(&self) -> Result<u64, Error> {
         self.check_type(BlockType::UintValue)?;
         Ok(self.read_payload().numeric_value())
     }
 
-    /// Get the index of the EXTENT of the PROPERTY block.
+    /// Gets the index of the EXTENT of the PROPERTY block.
     pub fn property_extent_index(&self) -> Result<u32, Error> {
         self.check_type(BlockType::PropertyValue)?;
         Ok(self.read_payload().property_extent_index())
     }
 
-    /// Get the total length of the PROPERTY block.
+    /// Gets the total length of a PROPERTY block.
     pub fn property_total_length(&self) -> Result<usize, Error> {
         self.check_type(BlockType::PropertyValue)?;
         Ok(self.read_payload().property_total_length().to_usize().unwrap())
     }
 
-    /// Get the flags of a PROPERTY block.
+    /// Gets the flags of a PROPERTY block.
     pub fn property_format(&self) -> Result<PropertyFormat, Error> {
         self.check_type(BlockType::PropertyValue)?;
-        Ok(PropertyFormat::from_u8(self.read_payload().property_flags()).unwrap())
+        let raw_format = self.read_payload().property_flags();
+        PropertyFormat::from_u8(raw_format).ok_or_else(|| {
+            format_err!("Invalid property format {} at index {}", raw_format, self.index())
+        })
     }
 
     /// Returns the next EXTENT in an EXTENT chain.
@@ -201,7 +204,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(bytes)
     }
 
-    /// Get the NAME block index of a *_VALUE block.
+    /// Gets the NAME block index of a *_VALUE block.
     pub fn name_index(&self) -> Result<u32, Error> {
         self.check_any_value()?;
         Ok(self.read_header().value_name_index())
@@ -210,7 +213,10 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Gets the format of an ARRAY_VALUE block.
     pub fn array_format(&self) -> Result<ArrayFormat, Error> {
         self.check_type(BlockType::ArrayValue)?;
-        Ok(ArrayFormat::from_u8(self.read_payload().array_flags()).unwrap())
+        let raw_flags = self.read_payload().array_flags();
+        ArrayFormat::from_u8(raw_flags).ok_or_else(|| {
+            format_err!("Invalid array format {} at index {}", raw_flags, self.index())
+        })
     }
 
     /// Gets the number of slots in an ARRAY_VALUE block.
@@ -222,10 +228,17 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Gets the type of each slot in an ARRAY_VALUE block.
     pub fn array_entry_type(&self) -> Result<BlockType, Error> {
         self.check_type(BlockType::ArrayValue)?;
-        Ok(BlockType::from_u8(self.read_payload().array_entry_type()).unwrap())
+        let array_type_raw = self.read_payload().array_entry_type();
+        let array_type = BlockType::from_u8(array_type_raw).ok_or_else(|| {
+            format_err!("Array entry type isn't a block type: {}", array_type_raw)
+        })?;
+        if !array_type.is_numeric_value() {
+            bail!("Array type is non-numeric {:?}", array_type);
+        }
+        Ok(array_type)
     }
 
-    /// Sets the value of an int ARRAY_VALUE block.
+    /// Gets the value of an int ARRAY_VALUE slot.
     pub fn array_get_int_slot(&self, slot_index: usize) -> Result<i64, Error> {
         self.check_array_entry_type(BlockType::IntValue)?;
         if slot_index > utils::array_capacity(self.order()) {
@@ -237,7 +250,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(i64::from_le_bytes(bytes))
     }
 
-    /// Sets the value of a double ARRAY_VALUE block.
+    /// Gets the value of a double ARRAY_VALUE slot.
     pub fn array_get_double_slot(&self, slot_index: usize) -> Result<f64, Error> {
         self.check_array_entry_type(BlockType::DoubleValue)?;
         if slot_index > utils::array_capacity(self.order()) {
@@ -249,7 +262,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(f64::from_bits(u64::from_le_bytes(bytes)))
     }
 
-    /// Sets the value of a uint ARRAY_VALUE block.
+    /// Gets the value of a uint ARRAY_VALUE slot.
     pub fn array_get_uint_slot(&self, slot_index: usize) -> Result<u64, Error> {
         self.check_array_entry_type(BlockType::UintValue)?;
         if slot_index > utils::array_capacity(self.order()) {
@@ -261,7 +274,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(u64::from_le_bytes(bytes))
     }
 
-    /// Ensures the value of the array is the expected one.
+    /// Ensures the type of the array is the expected one.
     fn check_array_entry_type(&self, expected: BlockType) -> Result<(), Error> {
         let actual = self.array_entry_type()?;
         if actual == expected {
@@ -301,12 +314,19 @@ impl<T: ReadableBlockContainer> Block<T> {
         let length = self.name_length()?;
         let mut bytes = vec![0u8; length];
         self.container.read_bytes(self.payload_offset(), &mut bytes);
-        Ok(String::from(std::str::from_utf8(&bytes).unwrap()))
+        Ok(String::from(std::str::from_utf8(&bytes)?))
     }
 
-    /// Returns the type of a block.
+    /// Returns the type of a block. Panics on an invalid value.
     pub fn block_type(&self) -> BlockType {
         BlockType::from_u8(self.read_header().block_type()).unwrap()
+    }
+
+    /// Returns the type of a block or an error if invalid.
+    pub fn block_type_or(&self) -> Result<BlockType, Error> {
+        let raw_type = self.read_header().block_type();
+        BlockType::from_u8(raw_type)
+            .ok_or_else(|| format_err!("Invalid block type {} at index {}", raw_type, self.index()))
     }
 
     /// Check that the block type is |block_type|
@@ -369,7 +389,7 @@ impl<T: ReadableBlockContainer> Block<T> {
 }
 
 impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Block<T> {
-    /// Initializes an empty reserved block.
+    /// Initializes an empty free block.
     pub fn new_free(container: T, index: u32, order: usize, next_free: u32) -> Result<Self, Error> {
         if order >= constants::NUM_ORDERS {
             bail!("Order {} must be less than {}", order, constants::NUM_ORDERS);
@@ -546,7 +566,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
-    /// Set the payload of an EXTENT block. The bytes written will be returned.
+    /// Set the payload of an EXTENT block. The number of bytes written will be returned.
     pub fn extent_set_contents(&self, value: &[u8]) -> Result<usize, Error> {
         self.check_type(BlockType::Extent)?;
         let max_bytes = utils::payload_size_for_order(self.order());
@@ -818,6 +838,18 @@ mod tests {
         assert_eq!(block.block_type(), BlockType::Free);
         assert_eq!(container[..8], [0x03, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    }
+
+    #[test]
+    fn test_block_type_or() {
+        let mut container = [0u8; constants::MIN_ORDER_SIZE];
+        container[0] = 0x20;
+        let block = Block::new(&container[..], 0);
+        assert_eq!(block.block_type_or().unwrap(), BlockType::Header);
+        let mut container = [0u8; constants::MIN_ORDER_SIZE];
+        container[0] = 0xf0;
+        let block = Block::new(&container[..], 0);
+        assert!(block.block_type_or().is_err());
     }
 
     #[test]
@@ -1131,6 +1163,12 @@ mod tests {
         assert_eq!(container[..8], [0x71, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10]);
 
+        let mut bad_format_bytes = [0u8; constants::MIN_ORDER_SIZE];
+        bad_format_bytes.copy_from_slice(&container);
+        bad_format_bytes[15] = 0x30;
+        let bad_block = Block::new(&bad_format_bytes[..], 0);
+        assert!(bad_block.property_format().is_err()); // Make sure we get Error not panic
+
         assert!(block.set_property_extent_index(4).is_ok());
         assert_eq!(block.property_extent_index().unwrap(), 4);
         assert_eq!(container[..8], [0x71, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
@@ -1163,6 +1201,12 @@ mod tests {
         assert_eq!(container[..8], [0x91, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(&container[8..25], "test-rust-inspect".as_bytes());
         assert_eq!(container[25..], [0, 0, 0, 0, 0, 0, 0]);
+        let mut bad_name_bytes = [0u8; constants::MIN_ORDER_SIZE * 2];
+        bad_name_bytes.copy_from_slice(&container);
+        bad_name_bytes[24] = 0xff;
+        let bad_block = Block::new(&bad_name_bytes[..], 0);
+        assert_eq!(bad_block.name_length().unwrap(), 17); // Sanity check we copied correctly
+        assert!(bad_block.name_contents().is_err()); // Make sure we get Error not panic
         let types = BTreeSet::from_iter(vec![BlockType::Name]);
         test_ok_types(move |b| b.name_length(), &types);
         test_ok_types(move |b| b.name_contents(), &types);
@@ -1200,6 +1244,19 @@ mod tests {
                 [(i as u8 + 1) * 5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
             );
         }
+
+        let mut bad_bytes = [0u8; constants::MIN_ORDER_SIZE * 4];
+        bad_bytes.copy_from_slice(&container);
+        bad_bytes[8] = 0x12; // LinearHistogram; Header
+        let bad_block = Block::new(&bad_bytes[..], 0);
+        assert_eq!(bad_block.array_format().unwrap(), ArrayFormat::LinearHistogram);
+        // Make sure we get Error not panic or BlockType::Header
+        assert!(bad_block.array_entry_type().is_err());
+
+        bad_bytes[8] = 0xef; // Not in enum; Not in enum
+        let bad_block = Block::new(&bad_bytes[..], 0);
+        assert!(bad_block.array_format().is_err());
+        assert!(bad_block.array_entry_type().is_err());
 
         for i in 0..6 {
             assert_eq!(block.array_get_uint_slot(i).unwrap(), (i as u64 + 1) * 5);

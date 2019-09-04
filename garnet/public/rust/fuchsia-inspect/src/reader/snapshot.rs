@@ -60,7 +60,8 @@ impl Snapshot {
                     vmo.read(&mut buffer[..], 0)?;
                     if BlockIterator::from(&buffer[..16])
                         .find(|block| {
-                            block.block_type() == BlockType::Header
+                            block.block_type_or().unwrap_or(BlockType::Reserved)
+                                == BlockType::Header
                                 && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
                                 && block.header_version().unwrap()
                                     == constants::HEADER_VERSION_NUMBER
@@ -92,7 +93,7 @@ fn header_generation_count(bytes: &[u8]) -> Option<u64> {
     } else {
         BlockIterator::from(&bytes[..])
             .find(|block| {
-                block.block_type() == BlockType::Header
+                block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
                     && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
                     && block.header_version().unwrap() == constants::HEADER_VERSION_NUMBER
                     && !block.header_is_locked().unwrap()
@@ -183,6 +184,7 @@ impl<'h> Iterator for BlockIterator<'h> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::format::block::WritableBlockContainer;
     use mapped_vmo::Mapping;
     use std::sync::Arc;
 
@@ -232,6 +234,24 @@ mod tests {
         assert_eq!(snapshot.get_block(6).unwrap().block_type(), BlockType::Free);
         assert!(snapshot.get_block(4096).is_none());
 
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_type() -> Result<(), Error> {
+        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let mapping_ref = Arc::new(mapping);
+        mapping_ref.write_bytes(0, &[0xf0]);
+        assert!(Snapshot::try_from(&vmo).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_order() -> Result<(), Error> {
+        let (mapping, vmo) = Mapping::allocate(4096)?;
+        let mapping_ref = Arc::new(mapping);
+        mapping_ref.write_bytes(0, &[0x0f]);
+        assert!(Snapshot::try_from(&vmo).is_err());
         Ok(())
     }
 

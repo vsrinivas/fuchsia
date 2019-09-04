@@ -388,8 +388,8 @@ impl Node {
     create_linear_histogram_property_fn!(uint, Uint, u64);
     create_linear_histogram_property_fn!(double, Double, f64);
 
-    /// Add an exponential histogram property to this node: create_int_linear_histogram,
-    /// create_uint_linear_histogram, create_double_linear_histogram.
+    /// Add an exponential histogram property to this node: create_int_exponential_histogram,
+    /// create_uint_exponential_histogram, create_double_exponential_histogram.
     create_exponential_histogram_property_fn!(int, Int, i64);
     create_exponential_histogram_property_fn!(uint, Uint, u64);
     create_exponential_histogram_property_fn!(double, Double, f64);
@@ -511,6 +511,7 @@ macro_rules! drop_value_impl {
 
 /// Utility for generating a numeric property datatype impl
 ///   `name`: the readble name of the type of the function (example: double)
+///   `name_cap`: the capitalized readble name of the type of the function (example: Double)
 ///   `type`: the type of the argument of the function to generate (example: f64)
 macro_rules! numeric_property {
     ($name:ident, $name_cap:ident, $type:ident) => {
@@ -549,9 +550,9 @@ numeric_property!(int, Int, i64);
 numeric_property!(uint, Uint, u64);
 numeric_property!(double, Double, f64);
 
-/// Utility for generating a numeric property datatype impl
-///   `name`: the readable name of the type of the function (example: double)
-///   `type`: the type of the argument of the function to generate (example: f64)
+/// Utility for generating a byte/string property datatype impl
+///   `name`: the readable name of the type of the function (example: String)
+///   `type`: the type of the argument of the function to generate (example: str)
 ///   `bytes`: an expression to get the bytes of the property
 macro_rules! property {
     ($name:ident, $type:expr, $bytes:expr) => {
@@ -622,7 +623,7 @@ macro_rules! array_property_fn {
     };
 }
 
-/// Utility for generating a numeric property datatype impl
+/// Utility for generating a numeric array datatype impl
 ///   `name`: the readble name of the type of the function (example: double)
 ///   `type`: the type of the argument of the function to generate (example: f64)
 macro_rules! array_property {

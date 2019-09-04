@@ -491,6 +491,7 @@ group("inspect_unittests") {
   testonly = true
   public_deps = [
     "//garnet/public/lib/inspect_deprecated/tests:inspect_unittests",
+    "//garnet/public/rust/fuchsia-inspect:tests",
   ]
 }
 
