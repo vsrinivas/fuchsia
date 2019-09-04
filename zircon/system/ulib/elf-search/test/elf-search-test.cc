@@ -5,6 +5,7 @@
 #include <elf-search.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
+#include <elf.h>
 #include <inttypes.h>
 #include <launchpad/launchpad.h>
 #include <lib/zx/job.h>
@@ -122,6 +123,7 @@ bool GetKoid(const zx::vmo& obj, zx_koid_t* out) {
 
 bool ElfSearchTest() {
   BEGIN_TEST;
+  unittest_cancel_timeout();
 
   // Define some dummy modules.
   constexpr Elf64_Phdr mod0_phdrs[] = {MakePhdr(PT_LOAD, 0x2000, 0, PF_R, 0x1000),
@@ -133,15 +135,20 @@ bool ElfSearchTest() {
                                        MakePhdr(PT_NOTE, 20, 0x1000, PF_R, 4),
                                        MakePhdr(PT_LOAD, 0x1000, 0x2000, PF_R | PF_X, 0x1000)};
   constexpr uint8_t mod1_build_id[] = {0xff, 0xff, 0xff, 0xff};
-  constexpr Elf64_Phdr mod2_phdrs[] = {
-      MakePhdr(PT_LOAD, 0x2000, 0x0000, PF_R, 0x1000),
-      MakePhdr(PT_NOTE, 20, 0x1000, PF_R, 4),
-  };
+  constexpr Elf64_Phdr mod2_phdrs[] = {MakePhdr(PT_LOAD, 0x2000, 0x0000, PF_R, 0x1000),
+                                       MakePhdr(PT_NOTE, 20, 0x1000, PF_R, 4)};
   constexpr uint8_t mod2_build_id[] = {0x00, 0x00, 0x00, 0x00};
-  Module mods[3] = {
+  constexpr Elf64_Phdr mod3_phdrs[] = {MakePhdr(PT_LOAD, 0x2000, 0, PF_R, 0x1000),
+                                       MakePhdr(PT_NOTE, 20, 0x1000, PF_R, 4),
+                                       MakePhdr(PT_DYNAMIC, 0x800, 0x1800, PF_R, 4)};
+  constexpr uint8_t mod3_build_id[] = {0x12, 0x34, 0x56, 0x78};
+  constexpr Elf64_Dyn mod3_dyns[] = {{DT_STRTAB, {0x1900}}, {DT_SONAME, {1}}, {DT_NULL, {}}};
+  constexpr const char* mod3_soname = "soname";
+  Module mods[] = {
       {"mod0", mod0_phdrs, mod0_build_id, {}},
       {"mod1", mod1_phdrs, mod1_build_id, {}},
       {"mod2", mod2_phdrs, mod2_build_id, {}},
+      {"mod3", mod3_phdrs, mod3_build_id, {}},
   };
 
   // Load the modules and get a handle to the process.
@@ -150,6 +157,11 @@ bool ElfSearchTest() {
   uintptr_t base, entry;
   for (auto& mod : mods) {
     EXPECT_TRUE(MakeELF(&mod));
+    if (mod.name == "mod3") {
+      // Handle mod3's string table.
+      EXPECT_EQ(ZX_OK, mods[3].vmo.write(&mod3_dyns, 0x1800, sizeof(mod3_dyns)));
+      EXPECT_EQ(ZX_OK, mods[3].vmo.write(mod3_soname, 0x1901, strlen(mod3_soname) + 1));
+    }
     ASSERT_EQ(ZX_OK, launchpad_elf_load_extra(lp, mod.vmo.get(), &base, &entry),
               launchpad_error_message(lp));
   }
@@ -167,7 +179,11 @@ bool ElfSearchTest() {
         char name[ZX_MAX_NAME_LEN];
         zx_koid_t vmo_koid = 0;
         EXPECT_TRUE(GetKoid(mod.vmo, &vmo_koid));
-        snprintf(name, sizeof(name), "<VMO#%" PRIu64 "=%s>", vmo_koid, mod.name.data());
+        if (mod.name != "mod3") {
+          snprintf(name, sizeof(name), "<VMO#%" PRIu64 "=%s>", vmo_koid, mod.name.data());
+        } else {
+          snprintf(name, sizeof(name), "%s", mod3_soname);
+        }
         EXPECT_TRUE(info.name == name, "expected module names to be the same");
         EXPECT_EQ(mod.phdrs.size(), info.phdrs.size(), "expected same number of phdrs");
       }
