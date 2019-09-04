@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_FIDL_INCLUDE_TYPES_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
+#include <fuchsia/ledger/cloud/test/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 
@@ -14,6 +15,10 @@
 namespace cloud_provider {
 using CloudProvider = fuchsia::ledger::cloud::CloudProvider;
 using CloudProviderPtr = fuchsia::ledger::cloud::CloudProviderPtr;
+using CloudController = fuchsia::ledger::cloud::test::CloudController;
+using CloudControllerPtr = fuchsia::ledger::cloud::test::CloudControllerPtr;
+using CloudControllerFactory = fuchsia::ledger::cloud::test::CloudControllerFactory;
+using CloudControllerFactoryPtr = fuchsia::ledger::cloud::test::CloudControllerFactoryPtr;
 using CommitPack = fuchsia::ledger::cloud::CommitPack;
 using Commit = fuchsia::ledger::cloud::Commit;
 using Commits = fuchsia::ledger::cloud::Commits;
@@ -24,6 +29,7 @@ using DeviceSetWatcherPtr = fuchsia::ledger::cloud::DeviceSetWatcherPtr;
 using Diff = fuchsia::ledger::cloud::Diff;
 using DiffEntry = fuchsia::ledger::cloud::DiffEntry;
 using DiffPack = fuchsia::ledger::cloud::DiffPack;
+using NetworkState = fuchsia::ledger::cloud::test::NetworkState;
 using Operation = fuchsia::ledger::cloud::Operation;
 using PageCloud = fuchsia::ledger::cloud::PageCloud;
 using PageCloudPtr = fuchsia::ledger::cloud::PageCloudPtr;

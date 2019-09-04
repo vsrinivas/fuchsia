@@ -2,13 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_staticlib.gni")
 import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
   name = "cloud_provider_memory_diff"
+  edition = "2018"
+  deps = [
+    ":lib",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.ledger.cloud:fuchsia.ledger.cloud-rustc",
+    "//src/ledger/bin/fidl:cloud-test-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+rustc_library("lib") {
+  name = "cloud_provider_memory_diff_lib"
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -43,13 +59,15 @@ package("cloud_provider_memory_diff") {
 group("tests") {
   testonly = true
   deps = [
+    ":cloud_provider_memory_diff",
     ":cloud_provider_memory_diff_tests",
   ]
 }
 
 test_package("cloud_provider_memory_diff_tests") {
   deps = [
-    ":bin_test",
+    ":lib_test",
+    "cpp:cloud_provider_memory_diff_staticlib_test",
     "validation",
   ]
 
@@ -59,7 +77,11 @@ test_package("cloud_provider_memory_diff_tests") {
       environments = basic_envs
     },
     {
-      name = "cloud_provider_memory_diff_bin_test"
+      name = "cloud_provider_memory_diff_lib_lib_test"
+      environments = basic_envs
+    },
+    {
+      name = "cloud_provider_memory_diff_staticlib_test"
       environments = basic_envs
     },
   ]
