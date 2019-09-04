@@ -99,9 +99,14 @@ while true; do
     pm_srv_pid=
     exit 1
   fi
-  
-  fx-command-run shell -O check > /dev/null 2>&1
-  ping_result=$?
+
+  if [[ "$state" == "discover" ]]; then
+    fx-command-run shell 'PATH=;echo' > /dev/null 2>&1
+    ping_result=$?
+  else
+    fx-command-run shell -O check > /dev/null 2>&1
+    ping_result=$?
+  fi
 
   if [[ "$state" == "discover" && "$ping_result" == 0 ]]; then
     log "Device up"
