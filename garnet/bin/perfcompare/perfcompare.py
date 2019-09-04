@@ -147,6 +147,10 @@ def MeanExcludingWarmup(values):
     return Mean(values[1:])
 
 
+def FormatTestName(results):
+    return '%s: %s' % (results['test_suite'], results['label'])
+
+
 # Takes a list of filenames of perf test results, each representing the
 # results from one boot of Fuchsia, and each in the format accepted by
 # RawResultsFromDir().
@@ -159,8 +163,8 @@ def ResultsFromDirs(filenames):
         for process_run_results in RawResultsFromDir(boot_results_path):
             for test_case in process_run_results:
                 new_value = MeanExcludingWarmup(test_case['values'])
-                results_for_boot.setdefault(test_case['label'], []).append(
-                    new_value)
+                name = FormatTestName(test_case)
+                results_for_boot.setdefault(name, []).append(new_value)
         for label, values in results_for_boot.iteritems():
             results_map.setdefault(label, []).append(Mean(values))
     return {name: Stats(values) for name, values in results_map.iteritems()}

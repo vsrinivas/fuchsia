@@ -12,17 +12,17 @@ Summary counts:
 
 Results from test cases with differences:
 
-Test case      Improve/regress?  Factor change  Mean before  Mean after
--------------  ----------------  -------------  -----------  -----------
-SecondExample  added             -              -            1975 +/- 78
+Test case                       Improve/regress?  Factor change  Mean before  Mean after
+------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: SecondExample  added             -              -            1975 +/- 78
 
 
 Results from all test cases:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
-SecondExample        added             -              -            1975 +/- 78
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
+fuchsia.example: SecondExample        added             -              -            1975 +/- 78
 
 
 ### comparison_improvement
@@ -37,17 +37,17 @@ Summary counts:
 
 Results from test cases with differences:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26  1391 +/- 26
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26  1391 +/- 26
 
 
 Results from all test cases:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26  1391 +/- 26
-SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26  1391 +/- 26
+fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_improvement_small
@@ -62,10 +62,10 @@ Summary counts:
 
 Results from all test cases:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  no_sig_diff       0.933-1.002    1491 +/- 26  1441 +/- 26
-SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.933-1.002    1491 +/- 26  1441 +/- 26
+fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_no_change
@@ -80,10 +80,10 @@ Summary counts:
 
 Results from all test cases:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
-SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
+fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### comparison_regression
@@ -98,17 +98,17 @@ Summary counts:
 
 Results from test cases with differences:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
 
 
 Results from all test cases:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  -----------
-ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
-SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  -----------
+fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26  1591 +/- 26
+fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78  1975 +/- 78
 
 
 ### removing_test
@@ -123,23 +123,23 @@ Summary counts:
 
 Results from test cases with differences:
 
-Test case      Improve/regress?  Factor change  Mean before  Mean after
--------------  ----------------  -------------  -----------  ----------
-SecondExample  removed           -              1975 +/- 78  -
+Test case                       Improve/regress?  Factor change  Mean before  Mean after
+------------------------------  ----------------  -------------  -----------  ----------
+fuchsia.example: SecondExample  removed           -              1975 +/- 78  -
 
 
 Results from all test cases:
 
-Test case            Improve/regress?  Factor change  Mean before  Mean after
--------------------  ----------------  -------------  -----------  ----------
-ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
-SecondExample        removed           -              1975 +/- 78  -
+Test case                             Improve/regress?  Factor change  Mean before  Mean after
+------------------------------------  ----------------  -------------  -----------  ----------
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26   991 +/- 26
+fuchsia.example: SecondExample        removed           -              1975 +/- 78  -
 
 
 ### validate_perfcompare
 Rate of mismatches (non-intersections) of confidence intervals for each test:
-0.512821 ClockGetTimeExample
-0.000000 SecondExample
+0.512821 fuchsia.example: ClockGetTimeExample
+0.000000 fuchsia.example: SecondExample
 
 Mean mismatch rate: 0.256410
 Mean relative confidence interval width: 0.432586

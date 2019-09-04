@@ -148,6 +148,11 @@ class StatisticsTest(TempDirTestCase):
                 for mean_within_boot in GenerateValues(
                         mean, stddev_across_boots, 4)]
 
+    def ResultsDictForValues(self, run_values):
+        return {'label': 'ExampleTest',
+                'test_suite': 'example_suite',
+                'values': run_values}
+
     # Given data in the format returned by GenerateData(), writes this data
     # to a temporary directory.
     def DirOfData(self, data):
@@ -159,9 +164,7 @@ class StatisticsTest(TempDirTestCase):
             for process_idx, run_values in enumerate(results_for_boot):
                 dest_file = os.path.join(
                     boot_dir, 'example_process%06d.json' % process_idx)
-                WriteJsonFile(dest_file,
-                              [{'label': 'ExampleTest',
-                                'values': run_values}])
+                WriteJsonFile(dest_file, [self.ResultsDictForValues(run_values)])
         return dir_path
 
     # Sanity-check that DirOfData() writes data in the correct format by
@@ -174,13 +177,13 @@ class StatisticsTest(TempDirTestCase):
         boot_data = list(perfcompare.RawResultsFromDir(
             os.path.join(dir_path, 'by_boot', 'boot000000')))
         self.assertEquals(boot_data,
-                          [[{'label': 'ExampleTest', 'values': [1, 2]}],
-                           [{'label': 'ExampleTest', 'values': [3, 4]}]])
+                          [[self.ResultsDictForValues([1, 2])],
+                           [self.ResultsDictForValues([3, 4])]])
         boot_data = list(perfcompare.RawResultsFromDir(
             os.path.join(dir_path, 'by_boot', 'boot000001')))
         self.assertEquals(boot_data,
-                          [[{'label': 'ExampleTest', 'values': [5, 6]}],
-                           [{'label': 'ExampleTest', 'values': [7, 8]}]])
+                          [[self.ResultsDictForValues([5, 6])],
+                           [self.ResultsDictForValues([7, 8])]])
 
     def TarFileOfDir(self, dir_path, write_mode):
         tar_filename = os.path.join(self.MakeTempDir(), 'out.tar')
@@ -199,12 +202,13 @@ class StatisticsTest(TempDirTestCase):
                 os.path.join(dir_path, 'by_boot', 'boot000000'), write_mode)
             boot_data = list(perfcompare.RawResultsFromDir(tar_filename))
             self.assertEquals(boot_data,
-                              [[{'label': 'ExampleTest', 'values': [1, 2]}],
-                               [{'label': 'ExampleTest', 'values': [3, 4]}]])
+                              [[self.ResultsDictForValues([1, 2])],
+                               [self.ResultsDictForValues([3, 4])]])
 
     def CheckConfidenceInterval(self, data, interval_string):
         dir_path = self.DirOfData(data)
-        stats = perfcompare.ResultsFromDir(dir_path)['ExampleTest']
+        test_name = 'example_suite: ExampleTest'
+        stats = perfcompare.ResultsFromDir(dir_path)[test_name]
         self.assertEquals(stats.FormatConfidenceInterval(), interval_string)
 
     # Test the CIs produced with variation at different levels of the
@@ -253,7 +257,7 @@ class PerfCompareTest(TempDirTestCase):
                 WriteJsonFile(
                     dest_file,
                     [{'label': test_name,
-                      'test_suite': 'fuchsia.example.perf_test',
+                      'test_suite': 'fuchsia.example',
                       'unit': 'nanoseconds',
                       'values': SLOW_INITIAL_RUN + [value]}])
 
@@ -265,8 +269,9 @@ class PerfCompareTest(TempDirTestCase):
     def test_reading_results_from_dir(self):
         dir_path = self.ExampleDataDir()
         results = perfcompare.ResultsFromDir(dir_path)
+        test_name = 'fuchsia.example: ClockGetTimeExample'
         self.assertEquals(
-            results['ClockGetTimeExample'].FormatConfidenceInterval(),
+            results[test_name].FormatConfidenceInterval(),
             '991 +/- 26')
 
     # Returns the output of compare_perf when run on the given directories.
