@@ -33,7 +33,7 @@ copy("fidldoc_copy_config") {
     "src/fidldoc.config.json",
   ]
   outputs = [
-    "${root_out_dir}/host_${current_cpu}/fidldoc.config.json",
+    "${root_out_dir}/fidldoc.config.json",
   ]
 }
 
@@ -43,7 +43,9 @@ install_host_tools("fidldoc") {
     ":fidldoc_copy_config",
   ]
 
-  outputs = ["fidldoc"]
+  outputs = [
+    "fidldoc",
+  ]
 }
 
 group("tests") {
