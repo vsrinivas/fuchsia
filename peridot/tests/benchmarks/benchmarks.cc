@@ -11,10 +11,7 @@
 
 namespace {
 
-// This is the set of tests whose results will get uploaded to the Catapult
-// perf dashboard by the perf bots on CI.  This is the non-perfcompare
-// case.
-void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner) {
+void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfcompare_mode) {
   FXL_DCHECK(benchmarks_runner);
 
   // Benchmark example, here for demonstration.
@@ -22,16 +19,44 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner) {
       "benchmark_example",
       "/pkgfs/packages/benchmark/0/data/benchmark_example.tspec");
 
-  // Performance tests implemented in the Zircon repo.
-  benchmarks_runner->AddLibPerfTestBenchmark(
-      "zircon.perf_test",
-      "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test");
+  // For the perfcompare CQ trybot, we run the libperftest-based processes
+  // multiple times.  That is useful for tests that exhibit between-process
+  // variation in results (e.g. due to memory layout chosen when a process
+  // starts) -- it reduces the variation in the average that we report.
+  //
+  // Ideally we would do the same for non-perfcompare mode, i.e. for the
+  // results that get uploaded to the Catapult dashboard by the perf bots
+  // on CI.  However, catapult_converter does not yet support merging
+  // results from multiple process runs.  (That is partly because
+  // catapult_converter is run separately on the results from each process
+  // run.)
+  if (perfcompare_mode) {
+    // Reduce the number of iterations of each perf test within each
+    // process given that we are launching each process multiple times.
+    std::vector<std::string> extra_args = {"--runs", "100"};
 
-  // Performance tests implemented in the Garnet repo (the name
-  // "zircon_benchmarks" is now misleading).
-  benchmarks_runner->AddLibPerfTestBenchmark(
-      "zircon_benchmarks",
-      "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
+    for (int process = 0; process < 6; ++process) {
+      // Performance tests implemented in the Zircon repo.
+      benchmarks_runner->AddLibPerfTestBenchmark(
+          fxl::StringPrintf("zircon.perf_test_process%06d", process),
+          "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test", extra_args);
+
+      // Performance tests implemented in the Garnet repo (the name
+      // "zircon_benchmarks" is now misleading).
+      benchmarks_runner->AddLibPerfTestBenchmark(
+          fxl::StringPrintf("zircon_benchmarks_process%06d", process),
+          "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks", extra_args);
+    }
+  } else {
+    // Performance tests implemented in the Zircon repo.
+    benchmarks_runner->AddLibPerfTestBenchmark(
+        "zircon.perf_test", "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test");
+
+    // Performance tests implemented in the Garnet repo (the name
+    // "zircon_benchmarks" is now misleading).
+    benchmarks_runner->AddLibPerfTestBenchmark(
+        "zircon_benchmarks", "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
+  }
 
   // Run "local" Ledger benchmarks.  These don't need external services to
   // function properly.
@@ -113,38 +138,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner) {
   AddGraphicsBenchmarks(benchmarks_runner);
 }
 
-// This is the set of tests that are run by the perfcompare CQ trybot.
-//
-// TODO(35472): Merge this with AddPerfTests() so that perfcompare runs the
-// same set of tests.  Perfcompare currently runs only a subset of the
-// tests.  Part of the reason for running a subset is that the full set
-// takes a long time and might exceed the bot timeout.
-void AddPerfcompareTests(benchmarking::BenchmarksRunner* benchmarks_runner) {
-  FXL_DCHECK(benchmarks_runner);
-
-  // Reduce the number of iterations of each perf test within each process
-  // given that we are launching each process multiple times.
-  std::vector<std::string> extra_args = {"--runs", "100"};
-
-  // Run these processes multiple times in order to account for
-  // between-process variation in results (e.g. due to memory layout chosen
-  // when a process starts).
-  for (int process = 0; process < 6; ++process) {
-    // Performance tests implemented in the Zircon repo.
-    benchmarks_runner->AddLibPerfTestBenchmark(
-        fxl::StringPrintf("zircon.perf_test_process%06d", process),
-        "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test",
-        extra_args);
-
-    // Performance tests implemented in the Garnet repo (the name
-    // "zircon_benchmarks" is now misleading).
-    benchmarks_runner->AddLibPerfTestBenchmark(
-        fxl::StringPrintf("zircon_benchmarks_process%06d", process),
-        "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
-        extra_args);
-  }
-}
-
 }  // namespace
 
 int main(int argc, const char** argv) {
@@ -164,11 +157,7 @@ int main(int argc, const char** argv) {
   }
 
   auto& benchmarks_runner = *maybe_benchmarks_runner;
-  if (perfcompare_mode) {
-    AddPerfcompareTests(&benchmarks_runner);
-  } else {
-    AddPerfTests(&benchmarks_runner);
-  }
+  AddPerfTests(&benchmarks_runner, perfcompare_mode);
 
   benchmarks_runner.Finish();
 }
