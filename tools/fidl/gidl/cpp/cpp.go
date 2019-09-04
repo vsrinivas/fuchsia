@@ -28,7 +28,7 @@ var tmpls = template.Must(template.New("tmpls").Parse(`
 
 {{- define "EncodeSuccessCase"}}
 
-TEST(Conformance, {{ .name }}_Encoding) {
+TEST(Conformance, {{ .name }}_Encode) {
   {{ .value_build }}
 
   auto expected = std::vector<uint8_t>{
@@ -42,7 +42,7 @@ TEST(Conformance, {{ .name }}_Encoding) {
 
 {{- define "DecodeSuccessCase"}}
 
-TEST(Conformance, {{ .name }}_Decoding) {
+TEST(Conformance, {{ .name }}_Decode) {
   auto input = std::vector<uint8_t>{
     {{ .bytes }}
   };
@@ -51,6 +51,31 @@ TEST(Conformance, {{ .name }}_Decoding) {
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype({{ .value_var }})>(input);
   EXPECT_TRUE(::fidl::Equals({{ .value_var }}, expected));
+}
+
+{{end -}}
+
+{{- define "EncodeFailureCase"}}
+
+TEST(Conformance, {{ .name }}_Encode_Failure) {
+  {{ .value_build }}
+
+  zx_status_t expected = {{ .error_code }};
+
+  ::fidl::test::util::CheckEncodeFailure({{ .value_var }}, expected);
+}
+
+{{end -}}
+
+{{- define "DecodeFailureCase"}}
+
+TEST(Conformance, {{ .name }}_Decode_Failure) {
+  auto input = std::vector<uint8_t>{
+    {{ .bytes }}
+  };
+  zx_status_t expected = {{ .error_code }};
+
+  ::fidl::test::util::CheckDecodeFailure<{{ .value_type }}>(input, expected);
 }
 
 {{end -}}
@@ -101,8 +126,45 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 			return err
 		}
 	}
+	for _, encodeFailure := range gidl.EncodeFailure {
+		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
+		if err != nil {
+			return fmt.Errorf("encodeFailure %s: %s", encodeFailure.Name, err)
+		}
+
+		var valueBuilder cppValueBuilder
+		gidlmixer.Visit(&valueBuilder, encodeFailure.Value, decl)
+
+		if err := tmpls.ExecuteTemplate(wr, "EncodeFailureCase", map[string]interface{}{
+			"name":        encodeFailure.Name,
+			"value_build": valueBuilder.String(),
+			"value_var":   valueBuilder.lastVar,
+			"error_code":  cppErrorCode(encodeFailure.Err),
+		}); err != nil {
+			return err
+		}
+	}
+	for _, decodeFailure := range gidl.DecodeFailure {
+		if err := tmpls.ExecuteTemplate(wr, "DecodeFailureCase", map[string]interface{}{
+			"name":       decodeFailure.Name,
+			"value_type": cppType(decodeFailure.Type),
+			"bytes":      bytesBuilder(decodeFailure.Bytes),
+			"error_code": cppErrorCode(decodeFailure.Err),
+		}); err != nil {
+			return err
+		}
+	}
 
 	return nil
+}
+
+func cppErrorCode(code gidlir.ErrorCode) string {
+	// TODO(fxb/35381) Implement different codes for different FIDL error cases.
+	return "ZX_ERR_INVALID_ARGS"
+}
+
+func cppType(gidlTypeString string) string {
+	return "conformance::" + gidlTypeString
 }
 
 // extract out to common library (this is the same code as golang.go)

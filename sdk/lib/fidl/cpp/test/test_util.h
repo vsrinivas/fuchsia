@@ -68,6 +68,24 @@ bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
                      reinterpret_cast<const uint8_t*>(expected.data()), expected.size());
 }
 
+template <class Output>
+void CheckDecodeFailure(std::vector<uint8_t> input, const zx_status_t expected_failure_code) {
+  Message message(BytePart(input.data(), input.capacity(), input.size()), HandlePart());
+
+  const char* error = nullptr;
+  EXPECT_EQ(expected_failure_code, message.Decode(Output::FidlType, &error)) << error;
+}
+
+template <class Input>
+void CheckEncodeFailure(const Input& input, const zx_status_t expected_failure_code) {
+  fidl::Encoder enc(0xfefefefe);
+  auto offset = enc.Alloc(CodingTraits<Input>::encoded_size);
+  fidl::Clone(input).Encode(&enc, offset);
+  auto msg = enc.GetMessage();
+  const char* error = nullptr;
+  EXPECT_EQ(expected_failure_code, msg.Validate(Input::FidlType, &error)) << error;
+}
+
 }  // namespace util
 }  // namespace test
 }  // namespace fidl

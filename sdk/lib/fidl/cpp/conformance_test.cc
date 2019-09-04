@@ -9,7 +9,7 @@
 #include <conformance/cpp/fidl.h>
 #include <gtest/gtest.h>
 
-TEST(Conformance, 3ByteObjectAlignmentInStruct_Encoding) {
+TEST(Conformance, 3ByteObjectAlignmentInStruct_Encode) {
   conformance::ThreeByteInStruct v1;
 
   conformance::ThreeByte v2;
@@ -57,7 +57,7 @@ TEST(Conformance, 3ByteObjectAlignmentInStruct_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 5ByteObjectAlignmentInStruct_Encoding) {
+TEST(Conformance, 5ByteObjectAlignmentInStruct_Encode) {
   conformance::FiveByteInStruct v1;
 
   conformance::FiveByte v2;
@@ -96,7 +96,7 @@ TEST(Conformance, 5ByteObjectAlignmentInStruct_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInVector_Encoding) {
+TEST(Conformance, 3ByteObjectAlignmentInVector_Encode) {
   conformance::ThreeByteInVector v1;
 
   conformance::ThreeByte v2;
@@ -142,7 +142,7 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 5ByteObjectAlignmentInVector_Encoding) {
+TEST(Conformance, 5ByteObjectAlignmentInVector_Encode) {
   conformance::FiveByteInVector v1;
 
   conformance::FiveByte v2;
@@ -179,7 +179,7 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInArray_Encoding) {
+TEST(Conformance, 3ByteObjectAlignmentInArray_Encode) {
   conformance::ThreeByteInArray v1;
 
   conformance::ThreeByte v2;
@@ -224,7 +224,7 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 5ByteObjectAlignmentInArray_Encoding) {
+TEST(Conformance, 5ByteObjectAlignmentInArray_Encode) {
   conformance::FiveByteInArray v1;
 
   conformance::FiveByte v2;
@@ -260,7 +260,7 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, EmptyStruct_Encoding) {
+TEST(Conformance, EmptyStruct_Encode) {
   conformance::EmptyStruct v1;
 
   auto expected = std::vector<uint8_t>{
@@ -271,7 +271,7 @@ TEST(Conformance, EmptyStruct_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, EmptyStructSandwich_Encoding) {
+TEST(Conformance, EmptyStructSandwich_Encode) {
   conformance::EmptyStructSandwich v1;
 
   std::string v2 = "before";
@@ -294,7 +294,7 @@ TEST(Conformance, EmptyStructSandwich_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, Uint8Uint16Uint32Uint64_Encoding) {
+TEST(Conformance, Uint8Uint16Uint32Uint64_Encode) {
   conformance::Uint8Uint16Uint32Uint64 v1;
 
   uint8_t v2 = 1ull;
@@ -318,7 +318,7 @@ TEST(Conformance, Uint8Uint16Uint32Uint64_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, Uint64Uint32Uint16Uint8_Encoding) {
+TEST(Conformance, Uint64Uint32Uint16Uint8_Encode) {
   conformance::Uint64Uint32Uint16Uint8 v1;
 
   uint64_t v2 = 579005069656919567ull;
@@ -342,7 +342,7 @@ TEST(Conformance, Uint64Uint32Uint16Uint8_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, SimpleTableEmpty_Encoding) {
+TEST(Conformance, SimpleTableEmpty_Encode) {
   conformance::StructOfSimpleTable v1;
 
   conformance::SimpleTable v2;
@@ -357,7 +357,7 @@ TEST(Conformance, SimpleTableEmpty_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, SimpleTableXAndY_Encoding) {
+TEST(Conformance, SimpleTableXAndY_Encode) {
   conformance::StructOfSimpleTable v1;
 
   conformance::SimpleTable v2;
@@ -384,7 +384,7 @@ TEST(Conformance, SimpleTableXAndY_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, SimpleTableJustY_Encoding) {
+TEST(Conformance, SimpleTableJustY_Encode) {
   conformance::StructOfSimpleTable v1;
 
   conformance::SimpleTable v2;
@@ -407,7 +407,7 @@ TEST(Conformance, SimpleTableJustY_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encoding) {
+TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encode) {
   conformance::StructOfTableWithStringAndVector v1;
 
   conformance::TableWithStringAndVector v2;
@@ -432,7 +432,7 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, SimpleTableThenUint64_Encoding) {
+TEST(Conformance, SimpleTableThenUint64_Encode) {
   conformance::SimpleTableThenUint64 v1;
 
   conformance::SimpleTable v2;
@@ -462,7 +462,7 @@ TEST(Conformance, SimpleTableThenUint64_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, InlineXUnionInStruct_Encoding) {
+TEST(Conformance, InlineXUnionInStruct_Encode) {
   conformance::TestInlineXUnionInStruct v1;
 
   std::string v2 = "before";
@@ -490,7 +490,7 @@ TEST(Conformance, InlineXUnionInStruct_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, OptionalXUnionInStructAbsent_Encoding) {
+TEST(Conformance, OptionalXUnionInStructAbsent_Encode) {
   conformance::TestOptionalXUnionInStruct v1;
 
   std::string v2 = "before";
@@ -511,7 +511,7 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, OptionalXUnionInStructPresent_Encoding) {
+TEST(Conformance, OptionalXUnionInStructPresent_Encode) {
   conformance::TestOptionalXUnionInStruct v1;
 
   std::string v2 = "before";
@@ -539,7 +539,7 @@ TEST(Conformance, OptionalXUnionInStructPresent_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, XUnionInTableXUnionAbsent_Encoding) {
+TEST(Conformance, XUnionInTableXUnionAbsent_Encode) {
   conformance::TestXUnionInTable v1;
 
   conformance::XUnionInTable v2;
@@ -566,7 +566,7 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, XUnionInTableXUnionPresent_Encoding) {
+TEST(Conformance, XUnionInTableXUnionPresent_Encode) {
   conformance::TestXUnionInTable v1;
 
   conformance::XUnionInTable v2;
@@ -601,7 +601,7 @@ TEST(Conformance, XUnionInTableXUnionPresent_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, StrictXUnion_Encoding) {
+TEST(Conformance, StrictXUnion_Encode) {
   conformance::TestStrictXUnionInStruct v1;
 
   conformance::SampleStrictXUnion v2;
@@ -620,7 +620,7 @@ TEST(Conformance, StrictXUnion_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, AddEthernetDeviceRequest_Encoding) {
+TEST(Conformance, AddEthernetDeviceRequest_Encode) {
   conformance::TestAddEthernetDeviceRequest v1;
 
   std::string v2 = "@/dev/sys/pci/00:03.0/e1000/ethernet";
@@ -656,7 +656,7 @@ TEST(Conformance, AddEthernetDeviceRequest_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, FileGetAttrResponse_Encoding) {
+TEST(Conformance, FileGetAttrResponse_Encode) {
   conformance::FileGetAttrResponse v1;
 
   int32_t v2 = 2125315759ull;
@@ -698,7 +698,7 @@ TEST(Conformance, FileGetAttrResponse_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, Optionals_Encoding) {
+TEST(Conformance, Optionals_Encode) {
   conformance::StructWithOptionals v1;
 
   conformance::EmptyStruct v2;
@@ -756,7 +756,7 @@ TEST(Conformance, Optionals_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, Arrays_Encoding) {
+TEST(Conformance, Arrays_Encode) {
   conformance::StructWithArrays v1;
 
   int32_t v2 = 1ull;
@@ -804,7 +804,7 @@ TEST(Conformance, Arrays_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, Vectors_Encoding) {
+TEST(Conformance, Vectors_Encode) {
   conformance::StructWithVectors v1;
 
   auto v2 = std::vector<int32_t>{};
@@ -855,7 +855,7 @@ TEST(Conformance, Vectors_Encoding) {
   EXPECT_TRUE(::fidl::test::util::ValueToBytes(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInStruct_Decoding) {
+TEST(Conformance, 3ByteObjectAlignmentInStruct_Decode) {
   auto input = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
       0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -904,7 +904,7 @@ TEST(Conformance, 3ByteObjectAlignmentInStruct_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, 5ByteObjectAlignmentInStruct_Decoding) {
+TEST(Conformance, 5ByteObjectAlignmentInStruct_Decode) {
   auto input = std::vector<uint8_t>{
       0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
       0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
@@ -944,7 +944,7 @@ TEST(Conformance, 5ByteObjectAlignmentInStruct_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInVector_Decoding) {
+TEST(Conformance, 3ByteObjectAlignmentInVector_Decode) {
   auto input = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
@@ -991,7 +991,7 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, 5ByteObjectAlignmentInVector_Decoding) {
+TEST(Conformance, 5ByteObjectAlignmentInVector_Decode) {
   auto input = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
@@ -1029,7 +1029,7 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, 3ByteObjectAlignmentInArray_Decoding) {
+TEST(Conformance, 3ByteObjectAlignmentInArray_Decode) {
   auto input = std::vector<uint8_t>{
       0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
       0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1075,7 +1075,7 @@ TEST(Conformance, 3ByteObjectAlignmentInArray_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, 5ByteObjectAlignmentInArray_Decoding) {
+TEST(Conformance, 5ByteObjectAlignmentInArray_Decode) {
   auto input = std::vector<uint8_t>{
       0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06,
       0x0a, 0x00, 0x00, 0x00, 0x0e, 0x0d, 0x0c, 0x0b, 0x0f, 0x00, 0x00, 0x00,
@@ -1112,7 +1112,7 @@ TEST(Conformance, 5ByteObjectAlignmentInArray_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, EmptyStruct_Decoding) {
+TEST(Conformance, EmptyStruct_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
@@ -1124,7 +1124,7 @@ TEST(Conformance, EmptyStruct_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, EmptyStructSandwich_Decoding) {
+TEST(Conformance, EmptyStructSandwich_Decode) {
   auto input = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
@@ -1148,7 +1148,7 @@ TEST(Conformance, EmptyStructSandwich_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Uint8Uint16Uint32Uint64_Decoding) {
+TEST(Conformance, Uint8Uint16Uint32Uint64_Decode) {
   auto input = std::vector<uint8_t>{
       0x01, 0x00, 0x03, 0x02, 0x07, 0x06, 0x05, 0x04,
       0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
@@ -1173,7 +1173,7 @@ TEST(Conformance, Uint8Uint16Uint32Uint64_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Uint64Uint32Uint16Uint8_Decoding) {
+TEST(Conformance, Uint64Uint32Uint16Uint8_Decode) {
   auto input = std::vector<uint8_t>{
       0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
       0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00,
@@ -1198,7 +1198,7 @@ TEST(Conformance, Uint64Uint32Uint16Uint8_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, SimpleTableEmpty_Decoding) {
+TEST(Conformance, SimpleTableEmpty_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1214,7 +1214,7 @@ TEST(Conformance, SimpleTableEmpty_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, SimpleTableXAndY_Decoding) {
+TEST(Conformance, SimpleTableXAndY_Decode) {
   auto input = std::vector<uint8_t>{
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -1242,7 +1242,7 @@ TEST(Conformance, SimpleTableXAndY_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, SimpleTableJustY_Decoding) {
+TEST(Conformance, SimpleTableJustY_Decode) {
   auto input = std::vector<uint8_t>{
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1266,7 +1266,7 @@ TEST(Conformance, SimpleTableJustY_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decoding) {
+TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decode) {
   auto input = std::vector<uint8_t>{
       0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -1292,7 +1292,7 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, SimpleTableThenUint64_Decoding) {
+TEST(Conformance, SimpleTableThenUint64_Decode) {
   auto input = std::vector<uint8_t>{
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xef, 0xbe, 0xad, 0xde, 0xef, 0xbe, 0xad, 0xde, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1323,7 +1323,7 @@ TEST(Conformance, SimpleTableThenUint64_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, InlineXUnionInStruct_Decoding) {
+TEST(Conformance, InlineXUnionInStruct_Decode) {
   auto input = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
@@ -1352,7 +1352,7 @@ TEST(Conformance, InlineXUnionInStruct_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, OptionalXUnionInStructAbsent_Decoding) {
+TEST(Conformance, OptionalXUnionInStructAbsent_Decode) {
   auto input = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1374,7 +1374,7 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, OptionalXUnionInStructPresent_Decoding) {
+TEST(Conformance, OptionalXUnionInStructPresent_Decode) {
   auto input = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0xb2, 0x56, 0x9c, 0x38, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
@@ -1403,7 +1403,7 @@ TEST(Conformance, OptionalXUnionInStructPresent_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, XUnionInTableXUnionAbsent_Decoding) {
+TEST(Conformance, XUnionInTableXUnionAbsent_Decode) {
   auto input = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -1431,7 +1431,7 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, XUnionInTableXUnionPresent_Decoding) {
+TEST(Conformance, XUnionInTableXUnionPresent_Decode) {
   auto input = std::vector<uint8_t>{
       0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1467,7 +1467,7 @@ TEST(Conformance, XUnionInTableXUnionPresent_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, StrictXUnion_Decoding) {
+TEST(Conformance, StrictXUnion_Decode) {
   auto input = std::vector<uint8_t>{
       0x72, 0xea, 0xe2, 0x08, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1487,7 +1487,7 @@ TEST(Conformance, StrictXUnion_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, AddEthernetDeviceRequest_Decoding) {
+TEST(Conformance, AddEthernetDeviceRequest_Decode) {
   auto input = std::vector<uint8_t>{
       0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1524,7 +1524,7 @@ TEST(Conformance, AddEthernetDeviceRequest_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, FileGetAttrResponse_Decoding) {
+TEST(Conformance, FileGetAttrResponse_Decode) {
   auto input = std::vector<uint8_t>{
       0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00, 0xa4, 0x81, 0x23, 0x96, 0x00,
       0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe7, 0x00,
@@ -1567,7 +1567,7 @@ TEST(Conformance, FileGetAttrResponse_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Optionals_Decoding) {
+TEST(Conformance, Optionals_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -1626,7 +1626,7 @@ TEST(Conformance, Optionals_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Arrays_Decoding) {
+TEST(Conformance, Arrays_Decode) {
   auto input = std::vector<uint8_t>{
       0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -1675,7 +1675,7 @@ TEST(Conformance, Arrays_Decoding) {
   EXPECT_TRUE(::fidl::Equals(v1, expected));
 }
 
-TEST(Conformance, Vectors_Decoding) {
+TEST(Conformance, Vectors_Decode) {
   auto input = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
       0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -1725,4 +1725,26 @@ TEST(Conformance, Vectors_Decoding) {
 
   auto expected = ::fidl::test::util::DecodedBytes<decltype(v1)>(input);
   EXPECT_TRUE(::fidl::Equals(v1, expected));
+}
+
+TEST(Conformance, StringExceedsLimit_Encode_Failure) {
+  conformance::Length2StringWrapper v1;
+
+  std::string v2 = "abc";
+  v1.length_2_string = std::move(v2);
+
+  zx_status_t expected = ZX_ERR_INVALID_ARGS;
+
+  ::fidl::test::util::CheckEncodeFailure(v1, expected);
+}
+
+TEST(Conformance, NonEmptyStringWithNullPtrBody_Decode_Failure) {
+  auto input = std::vector<uint8_t>{
+      0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+  zx_status_t expected = ZX_ERR_INVALID_ARGS;
+
+  ::fidl::test::util::CheckDecodeFailure<conformance::StringWrapper>(input, expected);
 }
