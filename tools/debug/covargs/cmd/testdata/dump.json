@@ -1,0 +1,12 @@
+[
+  {"modules":[
+    {"name": "fbl.so", "build":"deadbeef", "id":0},
+    {"name": "a.out", "build":"deadcafe", "id":2}],
+    "segments":[], "type":"llvm-profile", "name": "llvm-profile.3190"},
+  {"modules":[
+    {"name": "dl.so", "build":"89abcdef", "id":3}],
+    "segments":[], "type":"llvm-profile", "name": "llvm-profile.1234"},
+  {"modules":[
+    {"name": "foo.so", "build":"ffffffff", "id":1}],
+    "segments":[], "type":"llvm-profile", "name": "llvm-profile.4567"}
+]

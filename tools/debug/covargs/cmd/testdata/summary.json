@@ -1,0 +1,21 @@
+{"tests": [
+  {"name": "fbl-test",
+   "output_file": "stdout-and-stderr.txt",
+   "result": "PASS",
+   "data_sinks": {"llvm-profile": [
+     {"name": "llvm-profile.3190", "file": "build/fbl.profraw"}
+  ]}},
+  {"name": "foo-test",
+   "output_file": "stdout-and-stderr.txt",
+   "result": "PASS",
+   "data_sinks": {"llvm-profile": [
+     {"name": "llvm-profile.4567", "file": "build/foo.profraw"}
+  ]}},
+  {"name": "all-test",
+   "output_file": "stdout-and-stderr.txt",
+   "result": "PASS",
+   "data_sinks": {"llvm-profile": [
+     {"name": "llvm-profile.1234", "file": "build/dl.profraw"}
+   ]}}
+ ],
+ "outputs": {"syslog_file": "syslog.txt"}}
