@@ -152,7 +152,6 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Accessibility,
                 spawn_accessibility_controller(
-                    service_context_handle.clone(),
                     unboxed_storage_factory.get_store::<switchboard::base::AccessibilityInfo>(),
                 ),
             )
@@ -270,12 +269,12 @@ mod tests {
         crate::registry::device_storage::testing::*,
         crate::registry::device_storage::DeviceStorageFactory,
         crate::switchboard::base::{
-            AccessibilityInfo, AudioStreamType, ConfigurationInterfaceFlags, SetupInfo,
+            AccessibilityInfo, AudioStreamType, ColorBlindnessType, ConfigurationInterfaceFlags,
+            SetupInfo,
         },
         failure::format_err,
         fidl::endpoints::{ServerEnd, ServiceMarker},
-        fidl_fuchsia_accessibility::*,
-        fidl_fuchsia_settings::ColorBlindnessType,
+        fidl_fuchsia_settings::ColorBlindnessType as FidlColorBlindnessType,
         fuchsia_zircon as zx,
         futures::prelude::*,
     };
@@ -291,85 +290,21 @@ mod tests {
 
     // TODO(fxb/35254): move out of main.rs
     async fn create_test_accessibility_env(
-        initial_audio_description: bool,
-        initial_color_correction: ColorCorrection,
         storage_factory: Box<InMemoryStorageFactory>,
-    ) -> fuchsia_component::server::NestedEnvironment {
-        // Fake accessibility service for test.
-        let service_gen = move |service_name: &str, channel: zx::Channel| {
-            if service_name != SettingsManagerMarker::NAME {
-                return Err(format_err!("unsupported!"));
-            }
-
-            let stored_audio_description: Arc<RwLock<bool>> =
-                Arc::new(RwLock::new(initial_audio_description));
-            let stored_color_correction: Arc<RwLock<ColorCorrection>> =
-                Arc::new(RwLock::new(initial_color_correction));
-
-            // Handle calls to RegisterSettingProvider.
-            let mut manager_stream =
-                ServerEnd::<SettingsManagerMarker>::new(channel).into_stream()?;
-            fasync::spawn(async move {
-                while let Some(req) = manager_stream.try_next().await.unwrap() {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        SettingsManagerRequest::RegisterSettingProvider {
-                            settings_provider_request,
-                            control_handle: _,
-                        } => {
-                            let stored_audio_description_clone = stored_audio_description.clone();
-                            let stored_color_correction_clone = stored_color_correction.clone();
-
-                            // Handle set calls on the provider that was registered.
-                            let mut provider_stream =
-                                settings_provider_request.into_stream().unwrap();
-                            fasync::spawn(async move {
-                                while let Some(req) = provider_stream.try_next().await.unwrap() {
-                                    #[allow(unreachable_patterns)]
-                                    match req {
-                                        SettingsProviderRequest::SetScreenReaderEnabled {
-                                            screen_reader_enabled,
-                                            responder,
-                                        } => {
-                                            *stored_audio_description_clone.write().unwrap() =
-                                                screen_reader_enabled;
-                                            responder.send(SettingsManagerStatus::Ok).unwrap();
-                                        }
-                                        SettingsProviderRequest::SetColorCorrection {
-                                            color_correction,
-                                            responder,
-                                        } => {
-                                            *stored_color_correction_clone.write().unwrap() =
-                                                color_correction;
-                                            responder.send(SettingsManagerStatus::Ok).unwrap();
-                                        }
-                                        _ => {}
-                                    }
-                                }
-                            });
-                        }
-                        _ => {}
-                    }
-                }
-            });
-
-            Ok(())
-        };
-
-        // Create the fake accessibility service.
+    ) -> AccessibilityProxy {
         let mut fs = ServiceFs::new();
 
         create_fidl_service(
             fs.root_dir(),
             [SettingType::Accessibility].iter().cloned().collect(),
-            Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
+            Arc::new(RwLock::new(ServiceContext::new(None))),
             storage_factory,
         );
 
         let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
         fasync::spawn(fs.collect());
 
-        env
+        env.connect_to_service::<AccessibilityMarker>().unwrap()
     }
 
     // TODO(fxb/35254): move out of main.rs
@@ -378,25 +313,17 @@ mod tests {
         const INITIAL_AUDIO_DESCRIPTION: bool = false;
         const CHANGED_AUDIO_DESCRIPTION: bool = true;
 
-        const INITIAL_COLOR_CORRECTION: ColorCorrection = ColorCorrection::Disabled;
-
         let expected_struct = AccessibilityInfo {
             audio_description: CHANGED_AUDIO_DESCRIPTION,
-            color_correction: switchboard::base::ColorBlindnessType::None,
+            color_correction: ColorBlindnessType::None,
         };
 
+        // Create and fetch a store from device storage so we can read stored value for testing.
         let factory = Box::new(InMemoryStorageFactory::create());
         let store = factory.get_store::<AccessibilityInfo>();
-
-        let env = create_test_accessibility_env(
-            INITIAL_AUDIO_DESCRIPTION,
-            INITIAL_COLOR_CORRECTION,
-            factory,
-        )
-        .await;
+        let accessibility_proxy = create_test_accessibility_env(factory).await;
 
         // Fetch the initial audio description value.
-        let accessibility_proxy = env.connect_to_service::<AccessibilityMarker>().unwrap();
         let settings =
             accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
         assert_eq!(settings.audio_description, Some(INITIAL_AUDIO_DESCRIPTION));
@@ -424,36 +351,31 @@ mod tests {
     // TODO(fxb/35254): move out of main.rs
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_accessibility_color_correction() {
-        const INITIAL_AUDIO_DESCRIPTION: bool = false;
-        const INITIAL_COLOR_CORRECTION: ColorCorrection = ColorCorrection::Disabled;
-
-        const INITIAL_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::None;
         const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
 
+        const INITIAL_FIDL_COLOR_BLINDNESS_TYPE: FidlColorBlindnessType =
+            FidlColorBlindnessType::None;
+        const CHANGED_FIDL_COLOR_BLINDNESS_TYPE: FidlColorBlindnessType =
+            FidlColorBlindnessType::Tritanomaly;
+
         let expected_struct = AccessibilityInfo {
-            audio_description: INITIAL_AUDIO_DESCRIPTION,
-            color_correction: switchboard::base::ColorBlindnessType::Tritanomaly,
+            audio_description: false,
+            color_correction: CHANGED_COLOR_BLINDNESS_TYPE,
         };
 
+        // Create and fetch a store from device storage so we can read stored value for testing.
         let factory = Box::new(InMemoryStorageFactory::create());
         let store = factory.get_store::<AccessibilityInfo>();
-
-        let env = create_test_accessibility_env(
-            INITIAL_AUDIO_DESCRIPTION,
-            INITIAL_COLOR_CORRECTION,
-            factory,
-        )
-        .await;
+        let accessibility_proxy = create_test_accessibility_env(factory).await;
 
         // Fetch the initial color correction value.
-        let accessibility_proxy = env.connect_to_service::<AccessibilityMarker>().unwrap();
         let settings =
             accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
-        assert_eq!(settings.color_correction, Some(INITIAL_COLOR_BLINDNESS_TYPE));
+        assert_eq!(settings.color_correction, Some(INITIAL_FIDL_COLOR_BLINDNESS_TYPE));
 
         // Set the color correction value.
         let mut accessibility_settings = AccessibilitySettings::empty();
-        accessibility_settings.color_correction = Some(CHANGED_COLOR_BLINDNESS_TYPE);
+        accessibility_settings.color_correction = Some(CHANGED_FIDL_COLOR_BLINDNESS_TYPE);
         accessibility_proxy
             .set(accessibility_settings)
             .await
@@ -468,7 +390,7 @@ mod tests {
         // Verify the value we set is returned when watching.
         let settings =
             accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
-        assert_eq!(settings.color_correction, Some(CHANGED_COLOR_BLINDNESS_TYPE));
+        assert_eq!(settings.color_correction, Some(CHANGED_FIDL_COLOR_BLINDNESS_TYPE));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
