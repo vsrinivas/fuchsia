@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":gesture_arena_tests",
+  ]
+}
+
+executable("gesture_arena_tests") {
+  testonly = true
+
+  sources = [
+    "gesture_arena_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/a11y/lib/gesture_manager/arena:gesture_arena",
+  ]
+}
