@@ -46,6 +46,7 @@ will occur using channels.
 
 The "stream" channel will then be used for most command and control tasks,
 including:
+
  * Capability interrogation
  * Format negotiation
  * Hardware gain control
@@ -65,6 +66,7 @@ channel may be used to request a shared buffer from the stream (delivered in the
 form of a [VMO](../objects/vm_object.md)) which may be mapped into the address
 space of the application and used to send or receive audio data as appropriate.
 Generally, the operations conducted over the ring buffer channel include...
+
  * Requesting a shared buffer
  * Starting and Stopping stream playback/capture
  * Receiving notifications of playback/capture progress
@@ -181,6 +183,7 @@ and **must** close the channel, terminating any operations which happen to be in
 flight at the time.  Additionally, they **may** log a message to a central
 logging service to assist in application developers in debugging the cause of
 the protocol violation.  Examples of protocol violation include...
+
  * Using `AUDIO_INVALID_TRANSACTION_ID` as the value of
    `message.hdr.transaction_id`
  * Using a value not present in the `audio_cmd_t` enumeration as the value of
@@ -199,7 +202,8 @@ audio stream consists of a compressed bitstream instead of uncompressed LPCM
 samples.  Refer to the [audio](/zircon/system/public/zircon/device/audio.h)
 protocol header for exact symbol definitions.
 
-Notes
+Notes:
+
  * With the exception of `FORMAT_BITSTREAM`, samples are always assumed to
    use linear PCM encoding.  BITSTREAM is used for transporting compressed
    audio encodings (such as AC3, DTS, and so on) over a digital interconnect
@@ -249,21 +253,24 @@ even if only to report that there are no formats currently supported.
 ### Range structures
 
 Drivers indicate support for formats by sending messages containing zero or more
-`audio_stream_format_range_t` structures.  Each structure contains field which
-describe...
+`audio_stream_format_range_t` structures.  Each structure contains fields which
+describe:
+
  * A bitmask of supported sample formats.
  * A minimum and maximum number of channels.
  * A set of frame rates.
 
 A single range structure indicates support for each of the combinations of the
 three different sets of values (sample formats, channel counts, and frame
-rates).  For example, if a range structure indicated support for...
+rates).  For example, if a range structure indicated support for:
+
  * 16 bit signed LPCM samples
  * 48000, and 44100 Hz frame rates
  * 1 and 2 channels
 
 Then the fully expanded set of supported formats indicated by the range
-structure would be...
+structure would be:
+
  * Stereo 16-bit 48 KHz audio
  * Stereo 16-bit 44.1 KHz audio
  * Mono 16-bit 48 KHz audio
@@ -293,6 +300,7 @@ So, conceptually, the valid frame rates are the union of the sets produced by
 applying each of the flags which are set to the inclusive [min, max] range.  For
 example, if both the 48 KHz and 44.1 KHz were set, and the range given was
 [16000, 47999], then the supported frame rates for this range would be
+
  * 16000 Hz
  * 22050 Hz
  * 32000 Hz
@@ -318,7 +326,8 @@ Range structures are transmitted from drivers to applications within the
 `audio_stream_cmd_get_formats_resp_t` message.  If a large number of
 formats are supported by a stream, drivers may need to send multiple
 messages to enumerate all available modes.  Messages include the
-following fields.
+following fields:
+
  * A standard `audio_cmd_hdr_t` header.  **All** messages involved in the
    response to an `AUDIO_STREAM_CMD_GET_FORMATS` request **must** use the
    transaction ID of the original request, and the cmd field in the header
@@ -333,7 +342,8 @@ following fields.
  * An array of `audio_stream_cmd_get_formats_resp_t` structures which is at most
    `AUDIO_STREAM_CMD_GET_FORMATS_MAX_RANGES_PER_RESPONSE` elements long.
 
-Drivers **must**
+Drivers **must**:
+
  * Always transmit all of the available audio format ranges.
  * Always transmit the available audio format ranges in ascending index order.
  * Always pack as many ranges as possible in the fixed size message structure.
@@ -378,7 +388,8 @@ accept messages as short as
 
 In order to select a stream format, applications send an
 `AUDIO_STREAM_CMD_SET_FORMAT` message over the stream channel.  In the message,
-for uncompressed audio streams, the application specifies
+for uncompressed audio streams, the application specifies:
+
  * The frame rate of the stream in Hz using the `frames_per_second` field (in
    the case of an uncompressed audio stream).
  * The number of channels packed into each frame using the `channels` field.
@@ -460,7 +471,8 @@ In order to change a stream's current gain settings, applications send an
 are supplied with this message, a set of flags which control the request, and a
 float indicating the dB gain which should be applied to the stream.
 
-Three valid flags are currently defined.
+Three valid flags are currently defined:
+
  * `AUDIO_SGF_MUTE_VALID`.  Set when the application wishes to set the
    muted/un-muted state of the stream.  Clear if the application wishes to
    preserve the current muted/un-muted state.
@@ -472,7 +484,8 @@ Three valid flags are currently defined.
 
 Drivers **must** fail the request with an `ZX_ERR_INVALID_ARGS` result if the
 application's request is incompatible with the stream's capabilities.
-Incompatible requests include.
+Incompatible requests include:
+
  * The requested gain is less than the minimum support gain for the stream.
  * The requested gain is more than the maximum support gain for the stream.
  * Mute was requested, but the stream does not support an explicit mute.
@@ -517,6 +530,7 @@ timestamp referenced from `ZX_CLOCK_MONOTONIC` indicating the last time the plug
 state changed.
 
 Three valid plug-detect notification flags (PDNF) are currently defined:
+
  * `AUDIO_PDNF_HARDWIRED` is set when the stream hardware is considered to be
    "hardwired".  In other words, the stream is considered to be connected as
    long as the device is published.  Examples include a set of built-in
@@ -547,6 +561,7 @@ plug state changes, using the flags field of the `AUDIO_STREAM_CMD_PLUG_DETECT`
 command.
 
 Two valid flags are currently defined:
+
  * `AUDIO_PDF_ENABLE NOTIFICATIONS` is set by clients in order to request that
    the stream proactively generate `AUDIO_STREAM_PLUG_DETECT_NOTIFY` messages
    when its plug state changes, if the stream has this capability.
