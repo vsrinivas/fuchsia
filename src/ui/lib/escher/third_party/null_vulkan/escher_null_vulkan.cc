@@ -40,10 +40,6 @@ VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceFeatures*                   pFeatures) {}
 
-VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFeatures2(
-    VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceFeatures2*                  pFeatures) {}
-
 VKAPI_ATTR void VKAPI_CALL vkGetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
@@ -122,11 +118,6 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueSubmit(
     uint32_t                                    submitCount,
     const VkSubmitInfo*                         pSubmits,
     VkFence                                     fence) { return VK_SUCCESS; }
-
-VKAPI_ATTR void VKAPI_CALL vkGetDeviceQueue2(
-    VkDevice                                    device,
-    const VkDeviceQueueInfo2*                   pQueueInfo,
-    VkQueue*                                    pQueue) {}
 
 VKAPI_ATTR VkResult VKAPI_CALL vkQueueWaitIdle(
     VkQueue                                     queue) { return VK_SUCCESS; }

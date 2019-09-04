@@ -150,8 +150,6 @@ source_set("gfx") {
     "resources/nodes/variable_binding.h",
     "resources/nodes/view_node.cc",
     "resources/nodes/view_node.h",
-    "resources/protected_memory_visitor.cc",
-    "resources/protected_memory_visitor.h",
     "resources/renderers/renderer.cc",
     "resources/renderers/renderer.h",
     "resources/resource.cc",

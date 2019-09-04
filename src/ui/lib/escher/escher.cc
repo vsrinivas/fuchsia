@@ -26,7 +26,6 @@
 #include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
 #include "src/ui/lib/escher/vk/texture.h"
 #include "src/ui/lib/escher/vk/vma_gpu_allocator.h"
-
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace escher {
@@ -35,23 +34,20 @@ namespace {
 
 // Constructor helper.
 std::unique_ptr<impl::CommandBufferPool> NewCommandBufferPool(
-    const VulkanContext& context, impl::CommandBufferSequencer* sequencer,
-    bool use_protected_memory) {
-  return std::make_unique<impl::CommandBufferPool>(
-      context.device, context.queue, context.queue_family_index, sequencer,
-      /*supports_graphics_and_compute=*/true, use_protected_memory);
+    const VulkanContext& context, impl::CommandBufferSequencer* sequencer) {
+  return std::make_unique<impl::CommandBufferPool>(context.device, context.queue,
+                                                   context.queue_family_index, sequencer, true);
 }
 
 // Constructor helper.
 std::unique_ptr<impl::CommandBufferPool> NewTransferCommandBufferPool(
-    const VulkanContext& context, impl::CommandBufferSequencer* sequencer,
-    bool use_protected_memory) {
+    const VulkanContext& context, impl::CommandBufferSequencer* sequencer) {
   if (!context.transfer_queue) {
     return nullptr;
   } else {
-    return std::make_unique<impl::CommandBufferPool>(
-        context.device, context.transfer_queue, context.transfer_queue_family_index, sequencer,
-        /*supports_graphics_and_compute=*/false, use_protected_memory);
+    return std::make_unique<impl::CommandBufferPool>(context.device, context.transfer_queue,
+                                                     context.transfer_queue_family_index, sequencer,
+                                                     false);
   }
 }
 
@@ -84,10 +80,9 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
       vulkan_context_(device_->GetVulkanContext()),
       gpu_allocator_(std::make_unique<VmaGpuAllocator>(vulkan_context_)),
       command_buffer_sequencer_(std::make_unique<impl::CommandBufferSequencer>()),
-      command_buffer_pool_(NewCommandBufferPool(vulkan_context_, command_buffer_sequencer_.get(),
-                                                /*use_protected_memory=*/false)),
-      transfer_command_buffer_pool_(NewTransferCommandBufferPool(
-          vulkan_context_, command_buffer_sequencer_.get(), /*use_protected_memory=*/false)),
+      command_buffer_pool_(NewCommandBufferPool(vulkan_context_, command_buffer_sequencer_.get())),
+      transfer_command_buffer_pool_(
+          NewTransferCommandBufferPool(vulkan_context_, command_buffer_sequencer_.get())),
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
       pipeline_cache_(std::make_unique<impl::PipelineCache>()),
@@ -152,18 +147,7 @@ bool Escher::Cleanup() {
   if (auto pool = transfer_command_buffer_pool()) {
     finished = pool->Cleanup() && finished;
   }
-  if (auto pool = protected_command_buffer_pool()) {
-    finished = pool->Cleanup() && finished;
-  }
   return finished;
-}
-
-impl::CommandBufferPool* Escher::protected_command_buffer_pool() {
-  if (allow_protected_memory() && !protected_command_buffer_pool_) {
-    protected_command_buffer_pool_ =
-        NewCommandBufferPool(vulkan_context_, command_buffer_sequencer_.get(), true);
-  }
-  return protected_command_buffer_pool_.get();
 }
 
 MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
@@ -216,15 +200,13 @@ BufferPtr Escher::NewBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage_flag
 TexturePtr Escher::NewTexture(vk::Format format, uint32_t width, uint32_t height,
                               uint32_t sample_count, vk::ImageUsageFlags usage_flags,
                               vk::Filter filter, vk::ImageAspectFlags aspect_flags,
-                              bool use_unnormalized_coordinates,
-                              vk::MemoryPropertyFlags memory_flags) {
+                              bool use_unnormalized_coordinates) {
   TRACE_DURATION("gfx", "Escher::NewTexture (new image)");
   ImageInfo image_info{.format = format,
                        .width = width,
                        .height = height,
                        .sample_count = sample_count,
                        .usage = usage_flags};
-  image_info.memory_flags |= memory_flags;
   ImagePtr image = gpu_allocator()->AllocateImage(resource_recycler(), image_info);
   return Texture::New(resource_recycler(), std::move(image), filter, aspect_flags,
                       use_unnormalized_coordinates);
@@ -234,8 +216,7 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width, uint3
                                         uint32_t sample_count, vk::Filter filter,
                                         vk::ImageUsageFlags usage_flags,
                                         bool is_transient_attachment, bool is_input_attachment,
-                                        bool use_unnormalized_coordinates,
-                                        vk::MemoryPropertyFlags memory_flags) {
+                                        bool use_unnormalized_coordinates) {
   const auto pair = image_utils::IsDepthStencilFormat(format);
   usage_flags |= (pair.first || pair.second) ? vk::ImageUsageFlagBits::eDepthStencilAttachment
                                              : vk::ImageUsageFlagBits::eColorAttachment;
@@ -252,7 +233,7 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width, uint3
   }
   return NewTexture(format, width, height, sample_count, usage_flags, filter,
                     image_utils::FormatToColorOrDepthStencilAspectFlags(format),
-                    use_unnormalized_coordinates, memory_flags);
+                    use_unnormalized_coordinates);
 }
 
 ShaderProgramPtr Escher::GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
@@ -261,7 +242,7 @@ ShaderProgramPtr Escher::GetProgram(const std::string shader_paths[EnumCount<Sha
 }
 
 FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging,
-                          escher::CommandBuffer::Type requested_type, bool use_protected_memory) {
+                          escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::Escher::NewFrame ");
 
   // Check the type before cycling the framebuffer/descriptor-set allocators.
@@ -281,8 +262,7 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool
     framebuffer_allocator_->BeginFrame();
   }
 
-  return frame_manager_->NewFrame(trace_literal, frame_number, enable_gpu_logging, requested_type,
-                                  use_protected_memory);
+  return frame_manager_->NewFrame(trace_literal, frame_number, enable_gpu_logging, requested_type);
 }
 
 uint64_t Escher::GetNumGpuBytesAllocated() { return gpu_allocator()->GetTotalBytesAllocated(); }

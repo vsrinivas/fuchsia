@@ -28,9 +28,6 @@ class ImageBase : public Resource {
   // Returns the image that should currently be presented. Can be null.
   virtual const escher::ImagePtr& GetEscherImage() = 0;
 
-  // Returns if the image is allocated using protected memory.
-  virtual bool use_protected_memory() = 0;
-
  protected:
   ImageBase(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 };

@@ -18,12 +18,11 @@ namespace escher {
 namespace impl {
 
 CommandBuffer::CommandBuffer(vk::Device device, vk::CommandBuffer command_buffer, vk::Fence fence,
-                             vk::PipelineStageFlags pipeline_stage_mask, bool use_protected_memory)
+                             vk::PipelineStageFlags pipeline_stage_mask)
     : device_(device),
       command_buffer_(command_buffer),
       fence_(fence),
-      pipeline_stage_mask_(pipeline_stage_mask),
-      use_protected_memory_(use_protected_memory) {}
+      pipeline_stage_mask_(pipeline_stage_mask) {}
 
 CommandBuffer::~CommandBuffer() {
   FXL_DCHECK(!is_active_ && !is_submitted_);
@@ -51,10 +50,8 @@ bool CommandBuffer::Submit(vk::Queue queue, CommandBufferFinishedCallback callba
   auto end_command_buffer_result = command_buffer_.end();
   FXL_DCHECK(end_command_buffer_result == vk::Result::eSuccess);
 
-  auto protected_submit_info = vk::ProtectedSubmitInfo().setProtectedSubmit(true);
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = 1;
-  submit_info.pNext = use_protected_memory_ ? &protected_submit_info : nullptr;
   submit_info.pCommandBuffers = &command_buffer_;
   submit_info.waitSemaphoreCount = wait_semaphores_for_submit_.size();
   submit_info.pWaitSemaphores = wait_semaphores_for_submit_.data();
@@ -130,22 +127,12 @@ void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
 void CommandBuffer::CopyImage(const ImagePtr& src_image, const ImagePtr& dst_image,
                               vk::ImageLayout src_layout, vk::ImageLayout dst_layout,
                               vk::ImageCopy* region) {
-  // If commandBuffer is a protected command buffer, then dstImage must not be an unprotected image.
-  // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdCopyImage.html
-  FXL_CHECK(!use_protected_memory() || dst_image->use_protected_memory());
-
   command_buffer_.copyImage(src_image->vk(), src_layout, dst_image->vk(), dst_layout, 1, region);
   KeepAlive(src_image);
   KeepAlive(dst_image);
 }
 
 void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst, vk::BufferCopy region) {
-  // If commandBuffer is a protected command buffer, then dstBuffer must not be an unprotected
-  // buffer.
-  // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdCopyBuffer.html
-  // We do not use protected buffers.
-  FXL_CHECK(!use_protected_memory());
-
   command_buffer_.copyBuffer(src->vk(), dst->vk(), 1 /* region_count */, &region);
   KeepAlive(src);
   KeepAlive(dst);

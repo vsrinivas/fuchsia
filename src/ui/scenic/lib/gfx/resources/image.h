@@ -36,7 +36,6 @@ class Image : public ImageBase {
 
   void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) override;
   const escher::ImagePtr& GetEscherImage() override;
-  bool use_protected_memory() override { return false; }
 
   // TODO(SCN-1010): Determine proper signaling for marking images as dirty.
   void MarkAsDirty() { dirty_ = true; }

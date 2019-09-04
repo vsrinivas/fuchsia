@@ -212,24 +212,11 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   // Other stuff (e.g. which extensions are supported) will be added below.
   VulkanDeviceQueues::Caps caps(physical_device);
 
-  auto physical_device_memory_features = vk::PhysicalDeviceProtectedMemoryFeatures();
-  auto physical_device_features =
-      vk::PhysicalDeviceFeatures2().setPNext(&physical_device_memory_features);
-  physical_device.getFeatures2(&physical_device_features);
-  if (!physical_device_memory_features.protectedMemory) {
-    FXL_LOG(WARNING) << "Protected memory is not supported.";
-    caps.allow_protected_memory = false;
-  } else {
-    caps.allow_protected_memory = params.flags & VulkanDeviceQueues::Params::kAllowProtectedMemory;
-  }
-
   // Prepare to create the Device and Queues.
   vk::DeviceQueueCreateInfo queue_info[2];
   const float kQueuePriority = 0;
   queue_info[0] = vk::DeviceQueueCreateInfo();
   queue_info[0].queueFamilyIndex = main_queue_family;
-  queue_info[0].flags = caps.allow_protected_memory ? vk::DeviceQueueCreateFlagBits::eProtected
-                                                    : vk::DeviceQueueCreateFlags();
   queue_info[0].queueCount = 1;
   queue_info[0].pQueuePriorities = &kQueuePriority;
   queue_info[1] = vk::DeviceQueueCreateInfo();
@@ -300,9 +287,6 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   device_info.enabledExtensionCount = extension_names.size();
   device_info.ppEnabledExtensionNames = extension_names.data();
   device_info.pEnabledFeatures = &caps.enabled_features;
-  if (caps.allow_protected_memory) {
-    device_info.pNext = &physical_device_memory_features;
-  }
 
   // It's possible that the main queue and transfer queue are in the same
   // queue family.  Adjust the device-creation parameters to account for this.
@@ -332,23 +316,8 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   vk::Device device = result.value;
 
   // Obtain the queues that we requested to be created with the device.
-  vk::Queue main_queue;
-  if (caps.allow_protected_memory) {
-    auto main_queue_info2 = vk::DeviceQueueInfo2()
-                                .setFlags(vk::DeviceQueueCreateFlagBits::eProtected)
-                                .setQueueFamilyIndex(main_queue_family)
-                                .setQueueIndex(main_queue_index);
-    main_queue = device.getQueue2(main_queue_info2);
-  } else {
-    main_queue = device.getQueue(main_queue_family, main_queue_index);
-  }
-
-  vk::Queue transfer_queue;
-  if (main_queue_family == transfer_queue_family && main_queue_index == transfer_queue_index) {
-    transfer_queue = main_queue;
-  } else {
-    transfer_queue = device.getQueue(transfer_queue_family, transfer_queue_index);
-  }
+  vk::Queue main_queue = device.getQueue(main_queue_family, main_queue_index);
+  vk::Queue transfer_queue = device.getQueue(transfer_queue_family, transfer_queue_index);
 
   return fxl::AdoptRef(new VulkanDeviceQueues(
       device, physical_device, main_queue, main_queue_family, transfer_queue, transfer_queue_family,

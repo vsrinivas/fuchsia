@@ -35,14 +35,14 @@ FrameManager::FrameManager(EscherWeakPtr escher)
 FrameManager::~FrameManager() = default;
 
 FramePtr FrameManager::NewFrame(const char* trace_literal, uint64_t frame_number,
-                                bool enable_gpu_logging, escher::CommandBuffer::Type requested_type,
-                                bool use_protected_memory) {
+                                bool enable_gpu_logging,
+                                escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::FrameManager::NewFrame");
   uniform_buffer_pool_.BeginFrame();
-  FramePtr frame = fxl::AdoptRef<Frame>(
-      new Frame(this, requested_type, std::move(*GetBlockAllocator().get()),
-                uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,
-                gpu_vthread_literal_, gpu_vthread_id_, enable_gpu_logging, use_protected_memory));
+  FramePtr frame =
+      fxl::AdoptRef<Frame>(new Frame(this, requested_type, std::move(*GetBlockAllocator().get()),
+                                     uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,
+                                     gpu_vthread_literal_, gpu_vthread_id_, enable_gpu_logging));
   frame->BeginFrame();
   return frame;
 }

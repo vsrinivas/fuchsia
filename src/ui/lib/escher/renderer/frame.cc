@@ -31,7 +31,7 @@ const ResourceTypeInfo Frame::kTypeInfo("Frame", ResourceType::kResource, Resour
 Frame::Frame(impl::FrameManager* manager, escher::CommandBuffer::Type requested_type,
              BlockAllocator allocator, impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
              uint64_t frame_number, const char* trace_literal, const char* gpu_vthread_literal,
-             uint64_t gpu_vthread_id, bool enable_gpu_logging, bool use_protected_memory)
+             uint64_t gpu_vthread_id, bool enable_gpu_logging)
     : Resource(manager),
       frame_number_(frame_number),
       escher_frame_number_(NextFrameNumber()),
@@ -39,15 +39,11 @@ Frame::Frame(impl::FrameManager* manager, escher::CommandBuffer::Type requested_
       gpu_vthread_literal_(gpu_vthread_literal),
       gpu_vthread_id_(gpu_vthread_id),
       enable_gpu_logging_(enable_gpu_logging),
-      use_protected_memory_(use_protected_memory),
       queue_(escher()->device()->vk_main_queue()),
       command_buffer_type_(requested_type),
       block_allocator_(std::move(allocator)),
       uniform_block_allocator_(std::move(uniform_buffer_pool)),
-      // vkCmdBeginQuery, vkCmdEndQuery that is used in querying gpu cannot be executed on a
-      // protected command buffer.
-      // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/vkCmdBeginQuery.html
-      profiler_((escher()->supports_timer_queries() && enable_gpu_logging && !use_protected_memory)
+      profiler_(escher()->supports_timer_queries() && enable_gpu_logging
                     ? fxl::MakeRefCounted<TimestampProfiler>(escher()->vk_device(),
                                                              escher()->timestamp_period())
                     : TimestampProfilerPtr()) {
@@ -87,8 +83,7 @@ void Frame::IssueCommandBuffer() {
   FXL_DCHECK(!command_buffer_);
   state_ = State::kInProgress;
 
-  command_buffer_ =
-      CommandBuffer::NewForType(escher(), command_buffer_type_, use_protected_memory_);
+  command_buffer_ = CommandBuffer::NewForType(escher(), command_buffer_type_);
   command_buffer_sequence_number_ = command_buffer_->impl()->sequence_number();
 }
 

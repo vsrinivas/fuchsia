@@ -55,10 +55,6 @@ class Swapchain {
   // (coefficients * (pixel + preoffsets)) + postoffsets.
   virtual void SetDisplayColorConversion(const ColorTransform& transform) = 0;
 
-  // Used to tell swapchain if protected memory should be used to allocate framebuffers. If there is
-  // any state change, the caller expects swapchain to reallocate buffers immediately.
-  virtual void SetUseProtectedMemory(bool use_protected_memory) = 0;
-
   virtual ~Swapchain() = default;
 };
 

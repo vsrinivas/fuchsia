@@ -24,8 +24,7 @@ class CommandBufferPool {
  public:
   // The CommandBufferPool does not take ownership of the device and queue.
   CommandBufferPool(vk::Device device, vk::Queue queue, uint32_t queue_family_index,
-                    CommandBufferSequencer* sequencer, bool supports_graphics_and_compute,
-                    bool use_protected_memory);
+                    CommandBufferSequencer* sequencer, bool supports_graphics_and_compute);
 
   // If there are still any pending buffers, this will block until they are
   // finished.
@@ -59,7 +58,6 @@ class CommandBufferPool {
   vk::CommandPool pool_;
   std::queue<std::unique_ptr<CommandBuffer>> free_buffers_;
   std::queue<std::unique_ptr<CommandBuffer>> pending_buffers_;
-  const bool use_protected_memory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandBufferPool);
 };

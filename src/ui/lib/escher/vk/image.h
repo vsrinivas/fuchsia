@@ -79,9 +79,6 @@ class Image : public WaitableResource {
   void set_swapchain_layout(vk::ImageLayout layout) { swapchain_layout_ = layout; }
   vk::ImageLayout swapchain_layout() const { return swapchain_layout_; }
   bool is_swapchain_image() const { return swapchain_layout_ != vk::ImageLayout::eUndefined; }
-  bool use_protected_memory() const {
-    return static_cast<bool>(info_.memory_flags & vk::MemoryPropertyFlagBits::eProtected);
-  }
 
  protected:
   // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,

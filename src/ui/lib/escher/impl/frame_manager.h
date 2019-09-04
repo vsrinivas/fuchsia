@@ -23,7 +23,7 @@ class FrameManager : public ResourceManager {
   ~FrameManager();
 
   FramePtr NewFrame(const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging,
-                    escher::CommandBuffer::Type requested_type, bool use_protected_memory);
+                    escher::CommandBuffer::Type requested_type);
 
  private:
   // |Owner::OnReceiveOwnable()|

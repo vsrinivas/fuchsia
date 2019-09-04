@@ -7,13 +7,12 @@
 
 #include <set>
 #include <string>
+#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/ui/lib/escher/util/debug_print.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
 #include "src/ui/lib/escher/vk/vulkan_instance.h"
-
-#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -31,10 +30,9 @@ class VulkanDeviceQueues : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> 
     vk::SurfaceKHR surface;
 
     enum FlagBits {
-      // When picking a queue, don't filter out those that do not support presentation.
+      // When picking a queue, don't filter out those that do not support
+      // presentation.
       kDisableQueueFilteringForPresent = 1 << 0,
-      // Create protected capable Vulkan resources.
-      kAllowProtectedMemory = 1 << 1,
     };
     using Flags = uint32_t;
     Flags flags = 0;
@@ -46,7 +44,6 @@ class VulkanDeviceQueues : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> 
     uint32_t max_image_height = 0;
     std::set<vk::Format> depth_stencil_formats;
     std::set<std::string> extensions;
-    bool allow_protected_memory;
 
     vk::PhysicalDeviceFeatures enabled_features;
 

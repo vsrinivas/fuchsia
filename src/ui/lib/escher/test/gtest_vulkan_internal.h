@@ -52,30 +52,4 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
           });                                                                                   \
   void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody()
 
-#define VK_GTEST_TEST_P_(test_suite_name, test_name)                                           \
-  class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name) : public test_suite_name {          \
-   public:                                                                                     \
-    GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)() {}                                    \
-    virtual void TestBody();                                                                   \
-                                                                                               \
-   private:                                                                                    \
-    static int AddToRegistry() {                                                               \
-      ::testing::UnitTest::GetInstance()                                                       \
-          ->parameterized_test_registry()                                                      \
-          .GetTestSuitePatternHolder<test_suite_name>(                                         \
-              #test_suite_name, ::testing::internal::CodeLocation(__FILE__, __LINE__))         \
-          ->AddTestPattern(                                                                    \
-              GTEST_STRINGIFY_(test_suite_name),                                               \
-              ::testing::internal::escher::PrependDisabledIfNecessary(#test_name).c_str(),     \
-              new ::testing::internal::TestMetaFactory<GTEST_TEST_CLASS_NAME_(test_suite_name, \
-                                                                              test_name)>());  \
-      return 0;                                                                                \
-    }                                                                                          \
-    static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_;                               \
-    GTEST_DISALLOW_COPY_AND_ASSIGN_(GTEST_TEST_CLASS_NAME_(test_suite_name, test_name));       \
-  };                                                                                           \
-  int GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::gtest_registering_dummy_ =           \
-      GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::AddToRegistry();                     \
-  void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody()
-
 #endif  // SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_

@@ -56,9 +56,6 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
   // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
 
-  // Check that we are working with a protected framebuffer.
-  FXL_DCHECK(output_image->use_protected_memory() == frame->use_protected_memory());
-
   // Render each layer, except the bottom one. Create an escher::Object for
   // each layer, which will be composited as part of rendering the final
   // layer.
@@ -72,8 +69,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame, zx::time target
     while (++it != layers.end()) {
       auto layer = *it;
       auto texture = escher::Texture::New(
-          escher_->resource_recycler(),
-          GetLayerFramebufferImage(layer->width(), layer->height(), frame->use_protected_memory()),
+          escher_->resource_recycler(), GetLayerFramebufferImage(layer->width(), layer->height()),
           // TODO(SCN-1270): shouldn't need linear filter, since this is
           // 1-1 pixel mapping.  Verify when re-enabling multi-layer support.
           vk::Filter::eLinear);
@@ -256,16 +252,12 @@ void EngineRenderer::DrawLayerWithPaperRenderer(const escher::FramePtr& frame,
   paper_renderer_->EndFrame();
 }
 
-escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32_t height,
-                                                          bool use_protected_memory) {
+escher::ImagePtr EngineRenderer::GetLayerFramebufferImage(uint32_t width, uint32_t height) {
   escher::ImageInfo info;
   info.format = vk::Format::eB8G8R8A8Srgb;
   info.width = width;
   info.height = height;
   info.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled;
-  if (use_protected_memory) {
-    info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
-  }
   return escher_->image_cache()->NewImage(info);
 }
 
