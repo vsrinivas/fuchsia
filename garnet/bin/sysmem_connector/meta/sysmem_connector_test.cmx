@@ -7,9 +7,12 @@
         }
     },
     "program": {
-        "binary": "test/disabled/sysmem_connector_test"
+        "binary": "test/sysmem_connector_test"
     },
     "sandbox": {
+        "dev": [
+          "class/sysmem"
+        ],
         "services": [
             "fuchsia.tracing.provider.Registry",
             "fuchsia.sys.Environment",

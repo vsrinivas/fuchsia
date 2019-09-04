@@ -15,11 +15,11 @@ executable("sysmem_connector_executable") {
 
   deps = [
     "//sdk/lib/sys/cpp",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/sysmem-connector",
     "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 
@@ -54,9 +54,9 @@ executable("sysmem_connector_test_executable") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 
@@ -68,13 +68,6 @@ test_package("sysmem_connector_test") {
   tests = [
     {
       name = "sysmem_connector_test"
-
-      # For now, this test is disabled on CI/CQ, because those use a test
-      # sandbox that prevents access to /dev/class/sysmem.
-      #
-      # TODO(dustingreen): Set up this test to run similarly to HW-dependent
-      # tests, in CQ if possible,
-      disabled = true
     },
   ]
 }
