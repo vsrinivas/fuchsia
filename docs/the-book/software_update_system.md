@@ -1,8 +1,7 @@
 # Software Update System
 
 Fuchsia is a project that constantly gets updates for new features, enhancements,
-and security fixes. In order to maintain Fuchsia up to date and secure, Fuchsia's
-software update system is based on
+and security fixes. Fuchsia's software update system makes use of
 [The Update Framework (TUF) version 1.0](https://github.com/theupdateframework/specification/blob/master/tuf-spec.md).
 However, Fuchsia does have some differences from TUF:
 
@@ -12,7 +11,7 @@ However, Fuchsia does have some differences from TUF:
 
 ## Specification version {#specification-version}
 
-In the Fuchsia repository, the Fuchsia repository version is listed as a
+In a Fuchsia repository, the Fuchsia repository version is listed as a
 top-level attribute of the target role's signed data. This example shows
 the format of the specification version:
 
@@ -38,8 +37,9 @@ Definition of values:
 
 ## Package organization {#package-organization}
 
-In the Fuchsia repository, all targets are package meta [Fuchsia Archives (FAR)](archive_format.md).
-This example shows the format for packages:
+TUF targets in a Fuchsia repository that address Fuchsia packages contain custom
+meta data that points to the Package Metadata Archive. This example shows the
+format for packages:
 
 ```
 {
