@@ -357,6 +357,7 @@ TEST_F(DeviceEnumerationTest, As370Test) {
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
       "power/as370-power",
       "power/as370-power/power-0",
+      "class/thermal/000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
@@ -387,6 +388,7 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
       "power/as370-power",
       "power/as370-power/power-0",
+      "class/thermal/000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

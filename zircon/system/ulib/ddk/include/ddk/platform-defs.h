@@ -260,6 +260,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AS370_CLOCK         5
 #define PDEV_DID_AS370_DHUB          6
 #define PDEV_DID_AS370_POWER         7
+#define PDEV_DID_AS370_THERMAL       8
 
 // Maxim
 #define PDEV_VID_MAXIM              21

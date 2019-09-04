@@ -6,6 +6,7 @@ group("thermal") {
   deps = [
     "aml-thermal-s905d2g",
     "aml-thermal-s912",
+    "as370-thermal",
     "mtk-thermal",
   ]
 }

@@ -98,6 +98,7 @@ if (current_cpu != "") {
       "$zx/system/dev/tee/optee:test",
       "$zx/system/dev/test",
       "$zx/system/dev/thermal/aml-thermal-s912:aml-thermal-s912-test",
+      "$zx/system/dev/thermal/as370-thermal:as370-thermal-test",
       "$zx/system/dev/thermal/mtk-thermal:mtk-thermal-test",
       "$zx/system/dev/usb/mt-musb-host:mt-hci-request-queue-test",
       "$zx/system/dev/usb/mt-musb-host:mt-hci-test",
