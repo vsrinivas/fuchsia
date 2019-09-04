@@ -9,6 +9,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
+#include "src/media/playback/mediaplayer/graph/thread_priority.h"
 
 namespace media_player {
 
@@ -17,6 +18,8 @@ SoftwareDecoder::SoftwareDecoder()
       worker_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   output_state_ = OutputState::kIdle;
   worker_loop_.StartThread();
+
+  PostTaskToWorkerThread([]() { ThreadPriority::SetToHigh(); });
 }
 
 SoftwareDecoder::~SoftwareDecoder() { FXL_DCHECK(is_main_thread()); }

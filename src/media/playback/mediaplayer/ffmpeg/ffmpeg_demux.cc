@@ -22,6 +22,7 @@
 #include "src/media/playback/mediaplayer/ffmpeg/av_io_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_packet.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
+#include "src/media/playback/mediaplayer/graph/thread_priority.h"
 #include "src/media/playback/mediaplayer/util/incident.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
@@ -170,7 +171,10 @@ std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<ReaderCache> reader_c
 FfmpegDemuxImpl::FfmpegDemuxImpl(std::shared_ptr<ReaderCache> reader_cache)
     : reader_cache_(reader_cache), dispatcher_(async_get_default_dispatcher()) {
   FXL_DCHECK(dispatcher_);
-  ffmpeg_thread_ = std::thread([this]() { Worker(); });
+  ffmpeg_thread_ = std::thread([this]() {
+    ThreadPriority::SetToHigh();
+    Worker();
+  });
 }
 
 FfmpegDemuxImpl::~FfmpegDemuxImpl() {

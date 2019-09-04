@@ -32,6 +32,7 @@
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_video_renderer.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
+#include "src/media/playback/mediaplayer/graph/thread_priority.h"
 #include "src/media/playback/mediaplayer/source_impl.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
@@ -81,6 +82,8 @@ PlayerImpl::PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> 
   FXL_DCHECK(request);
   FXL_DCHECK(component_context_);
   FXL_DCHECK(quit_callback_);
+
+  ThreadPriority::SetToHigh();
 
   demux_factory_ = DemuxFactory::Create(this);
   FXL_DCHECK(demux_factory_);

@@ -7,6 +7,7 @@
             "fuchsia.media.Audio",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",

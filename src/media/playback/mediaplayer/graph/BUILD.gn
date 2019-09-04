@@ -35,6 +35,8 @@ source_set("graph") {
     "refs.h",
     "result.h",
     "service_provider.h",
+    "thread_priority.cc",
+    "thread_priority.h",
     "types/audio_stream_type.cc",
     "types/audio_stream_type.h",
     "types/bytes.cc",
@@ -62,6 +64,7 @@ source_set("graph") {
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
     "//src/media/playback/mediaplayer/util",
+    "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }
 
