@@ -20,19 +20,19 @@ over 6 syscalls:
 
 ```C
     zx_status_t zx_futex_wait(const zx_futex_t* value_ptr,
-                              int current_value,
+                              zx_futex_t current_value,
                               zx_handle_t new_futex_owner,
                               zx_time_t deadline);
     zx_status_t zx_futex_wake(const zx_futex_t* value_ptr, uint32_t wake_count);
     zx_status_t zx_futex_wake_single_owner(const zx_futex_t* value_ptr);
     zx_status_t zx_futex_requeue(const zx_futex_t* value_ptr,
                                  uint32_t wake_count,
-                                 int current_value,
+                                 zx_futex_t current_value,
                                  const zx_futex_t* requeue_ptr,
                                  uint32_t requeue_count,
                                  zx_handle_t new_requeue_owner);
     zx_status_t zx_futex_requeue_single_owner(const zx_futex_t* value_ptr,
-                                              int current_value,
+                                              zx_futex_t current_value,
                                               const zx_futex_t* requeue_ptr,
                                               uint32_t requeue_count,
                                               zx_handle_t new_requeue_owner);
