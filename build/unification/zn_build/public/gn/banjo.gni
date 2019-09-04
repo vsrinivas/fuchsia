@@ -33,8 +33,5 @@ template("banjo_library") {
     if (defined(invoker.public_deps)) {
       deps += invoker.public_deps
     }
-
-    # By default, Banjo libraries are available for SDK publication.
-    sdk_category = "partner"
   }
 }

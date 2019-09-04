@@ -4,7 +4,7 @@
 
 library("ddktl") {
   sdk = "static"
-  sdk_publishable = true
+  sdk_publishable = false
   sdk_headers = [
     "ddktl/device-internal.h",
     "ddktl/device.h",
