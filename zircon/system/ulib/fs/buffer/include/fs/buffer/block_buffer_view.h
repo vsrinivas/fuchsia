@@ -23,13 +23,24 @@ class BlockBufferView {
   BlockBufferView() = default;
   BlockBufferView(BlockBuffer* buffer, size_t start, size_t length)
       : buffer_(buffer), start_(start % buffer->capacity()), length_(length) {
-    ZX_DEBUG_ASSERT(length <= buffer->capacity());
+    ZX_ASSERT(length <= buffer->capacity());
   }
   BlockBufferView(const BlockBufferView&) = default;
   BlockBufferView& operator=(const BlockBufferView&) = default;
-  BlockBufferView(BlockBufferView&& other) = default;
-  BlockBufferView& operator=(BlockBufferView&& other) = default;
+  BlockBufferView(BlockBufferView&&) = default;
+  BlockBufferView& operator=(BlockBufferView&&) = default;
   ~BlockBufferView() = default;
+
+  // Creates a new block buffer view within the current view.
+  // |relative_start| is relative to |this.start()|.
+  // |relative_start + new_length| must be less than or equal to |this.length()|.
+  // Otherwise an assertion is fired.
+  //
+  // Does not modify the original view.
+  BlockBufferView CreateSubView(size_t relative_start, size_t new_length) const {
+    ZX_ASSERT(relative_start + new_length <= length());
+    return BlockBufferView(buffer_, start() + relative_start, new_length);
+  }
 
   // Returns the start of the view, in blocks.
   size_t start() const { return start_; }
@@ -43,7 +54,7 @@ class BlockBufferView {
   }
 
   const void* Data(size_t index) const {
-    ZX_DEBUG_ASSERT_MSG(index < length_, "Accessing data outside the length of the view");
+    ZX_ASSERT_MSG(index < length_, "Accessing data outside the length of the view");
     return buffer_->Data((start_ + index) % buffer_->capacity());
   }
 

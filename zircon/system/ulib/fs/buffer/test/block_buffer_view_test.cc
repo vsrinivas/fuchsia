@@ -4,6 +4,8 @@
 
 #include <fs/buffer/block_buffer_view.h>
 
+#include <array>
+
 #include <lib/zx/vmo.h>
 
 #include <fs/buffer/vmo_buffer.h>
@@ -48,19 +50,19 @@ class BlockBufferViewFixture : public zxtest::Test {
  public:
   void SetUp() override {
     ASSERT_OK(buffer.Initialize(&registry, kCapacity, kBlockSize, kGoldenLabel));
-    memset(buf_a, 'a', sizeof(buf_a));
-    memset(buf_b, 'b', sizeof(buf_b));
-    memset(buf_c, 'c', sizeof(buf_c));
-    memcpy(buffer.Data(0), buf_a, kBlockSize);
-    memcpy(buffer.Data(1), buf_b, kBlockSize);
-    memcpy(buffer.Data(2), buf_c, kBlockSize);
+    memset(buf_a.data(), 'a', buf_a.size());
+    memset(buf_b.data(), 'b', buf_b.size());
+    memset(buf_c.data(), 'c', buf_c.size());
+    memcpy(buffer.Data(0), buf_a.data(), kBlockSize);
+    memcpy(buffer.Data(1), buf_b.data(), kBlockSize);
+    memcpy(buffer.Data(2), buf_c.data(), kBlockSize);
   }
 
   MockVmoidRegistry registry;
   VmoBuffer buffer;
-  char buf_a[kBlockSize];
-  char buf_b[kBlockSize];
-  char buf_c[kBlockSize];
+  std::array<char, kBlockSize> buf_a;
+  std::array<char, kBlockSize> buf_b;
+  std::array<char, kBlockSize> buf_c;
 };
 
 using BlockBufferViewTest = BlockBufferViewFixture;
@@ -68,35 +70,84 @@ using BlockBufferViewTest = BlockBufferViewFixture;
 TEST_F(BlockBufferViewTest, WholeView) {
   BlockBufferView view(&buffer, 0, kCapacity);
   EXPECT_EQ(0, view.start());
-  EXPECT_EQ(kCapacity, view.length());
-  EXPECT_EQ(0, memcmp(buf_a, view.Data(0), kBlockSize));
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(1), kBlockSize));
-  EXPECT_EQ(0, memcmp(buf_c, view.Data(2), kBlockSize));
+  ASSERT_EQ(kCapacity, view.length());
+  EXPECT_BYTES_EQ(buf_a.data(), view.Data(0), kBlockSize);
+  EXPECT_BYTES_EQ(buf_b.data(), view.Data(1), kBlockSize);
+  EXPECT_BYTES_EQ(buf_c.data(), view.Data(2), kBlockSize);
 }
 
 TEST_F(BlockBufferViewTest, PartialView) {
   BlockBufferView view(&buffer, 1, 1);
   EXPECT_EQ(1, view.start());
   EXPECT_EQ(1, view.length());
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(0), kBlockSize));
+  EXPECT_BYTES_EQ(buf_b.data(), view.Data(0), kBlockSize);
 }
 
 TEST_F(BlockBufferViewTest, WraparoundBeforeEndView) {
   BlockBufferView view(&buffer, 2, kCapacity);
   EXPECT_EQ(2, view.start());
-  EXPECT_EQ(kCapacity, view.length());
-  EXPECT_EQ(0, memcmp(buf_c, view.Data(0), kBlockSize));
-  EXPECT_EQ(0, memcmp(buf_a, view.Data(1), kBlockSize));
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(2), kBlockSize));
+  ASSERT_EQ(kCapacity, view.length());
+  EXPECT_BYTES_EQ(buf_c.data(), view.Data(0), kBlockSize);
+  EXPECT_BYTES_EQ(buf_a.data(), view.Data(1), kBlockSize);
+  EXPECT_BYTES_EQ(buf_b.data(), view.Data(2), kBlockSize);
 }
 
 TEST_F(BlockBufferViewTest, WraparoundAtEndView) {
   BlockBufferView view(&buffer, kCapacity, kCapacity);
   EXPECT_EQ(0, view.start());
-  EXPECT_EQ(kCapacity, view.length());
-  EXPECT_EQ(0, memcmp(buf_a, view.Data(0), kBlockSize));
-  EXPECT_EQ(0, memcmp(buf_b, view.Data(1), kBlockSize));
-  EXPECT_EQ(0, memcmp(buf_c, view.Data(2), kBlockSize));
+  ASSERT_EQ(kCapacity, view.length());
+  EXPECT_BYTES_EQ(buf_a.data(), view.Data(0), kBlockSize);
+  EXPECT_BYTES_EQ(buf_b.data(), view.Data(1), kBlockSize);
+  EXPECT_BYTES_EQ(buf_c.data(), view.Data(2), kBlockSize);
+}
+
+TEST_F(BlockBufferViewTest, CreateSubViewNoOffsetNoWraparound) {
+  BlockBufferView view(&buffer, 0, kCapacity);
+  const size_t kNewRelativeStart = 0;
+  const size_t kNewLength = 1;
+  BlockBufferView subview(view.CreateSubView(kNewRelativeStart, kNewLength));
+  EXPECT_EQ(kNewRelativeStart, subview.start());
+  ASSERT_EQ(kNewLength, subview.length());
+  EXPECT_BYTES_EQ(buf_a.data(), subview.Data(0), kBlockSize);
+}
+
+TEST_F(BlockBufferViewTest, CreateSubViewWithOffsetNoWraparound) {
+  const size_t kOldStart = 1;
+  BlockBufferView view(&buffer, kOldStart, kCapacity);
+  const size_t kNewRelativeStart = 1;
+  const size_t kNewLength = 1;
+  BlockBufferView subview(view.CreateSubView(kNewRelativeStart, kNewLength));
+  EXPECT_EQ(kOldStart + kNewRelativeStart, subview.start());
+  EXPECT_EQ(kNewLength, subview.length());
+  EXPECT_BYTES_EQ(buf_c.data(), subview.Data(0), kBlockSize);
+}
+
+TEST_F(BlockBufferViewTest, CreateSubViewWithOffsetAndWraparound) {
+  const size_t kOldStart = 1;
+  BlockBufferView view(&buffer, kOldStart, kCapacity);
+  const size_t kNewRelativeStart = 1;
+  const size_t kNewLength = 2;
+  BlockBufferView subview(view.CreateSubView(kNewRelativeStart, kNewLength));
+  EXPECT_EQ(kOldStart + kNewRelativeStart, subview.start());
+  ASSERT_EQ(kNewLength, subview.length());
+  EXPECT_BYTES_EQ(buf_c.data(), subview.Data(0), kBlockSize);
+  EXPECT_BYTES_EQ(buf_a.data(), subview.Data(1), kBlockSize);
+}
+
+using BlockBufferViewDeathTest = BlockBufferViewFixture;
+
+TEST_F(BlockBufferViewDeathTest, CreateTooLongSubViewThrowsAssertion) {
+  BlockBufferView view(&buffer, 0, kCapacity);
+
+  ASSERT_NO_DEATH([=] { view.CreateSubView(0, kCapacity); });
+  ASSERT_DEATH([=] { view.CreateSubView(0, kCapacity + 1); });
+}
+
+TEST_F(BlockBufferViewDeathTest, CreateTooLongSubViewAtOffsetThrowsAssertion) {
+  BlockBufferView view(&buffer, 0, kCapacity);
+
+  ASSERT_NO_DEATH([=] { view.CreateSubView(1, kCapacity - 1); });
+  ASSERT_DEATH([=] { view.CreateSubView(1, kCapacity); });
 }
 
 }  // namespace
