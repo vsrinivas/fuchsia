@@ -1,8 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_plug_detector.h"
+#include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 
 #include <fcntl.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
@@ -26,10 +26,14 @@ static const struct {
     {.path = "/dev/class/audio-input", .is_input = true},
 };
 
-zx_status_t AudioPlugDetector::Start() {
-  TRACE_DURATION("audio", "AudioPlugDetector::Start");
+zx_status_t AudioPlugDetectorImpl::Start(Observer observer) {
+  TRACE_DURATION("audio", "AudioPlugDetectorImpl::Start");
   // Start should only be called once.
   FXL_DCHECK(watchers_.empty());
+  FXL_DCHECK(!observer_);
+  FXL_DCHECK(observer);
+
+  observer_ = std::move(observer);
 
   // If we fail to set up monitoring for any of our target directories,
   // automatically stop monitoring all sources of device nodes.
@@ -43,8 +47,8 @@ zx_status_t AudioPlugDetector::Start() {
         });
 
     if (watcher == nullptr) {
-      FXL_LOG(ERROR) << "AudioPlugDetector failed to create DeviceWatcher for \"" << devnode.path
-                     << "\".";
+      FXL_LOG(ERROR) << "AudioPlugDetectorImpl failed to create DeviceWatcher for \""
+                     << devnode.path << "\".";
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -56,14 +60,14 @@ zx_status_t AudioPlugDetector::Start() {
   return ZX_OK;
 }
 
-void AudioPlugDetector::Stop() {
-  TRACE_DURATION("audio", "AudioPlugDetector::Stop");
+void AudioPlugDetectorImpl::Stop() {
+  TRACE_DURATION("audio", "AudioPlugDetectorImpl::Stop");
   observer_ = nullptr;
   watchers_.clear();
 }
 
-void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name, bool is_input) {
-  TRACE_DURATION("audio", "AudioPlugDetector::AddAudioDevice");
+void AudioPlugDetectorImpl::AddAudioDevice(int dir_fd, const std::string& name, bool is_input) {
+  TRACE_DURATION("audio", "AudioPlugDetectorImpl::AddAudioDevice");
   if (!observer_) {
     return;
   }
@@ -76,7 +80,7 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name, bool
   fbl::unique_fd dev_node(openat(dir_fd, name.c_str(), O_RDONLY));
   if (!dev_node.is_valid()) {
     REP(FailedToOpenDevice(name, is_input, errno));
-    FXL_LOG(ERROR) << "AudioPlugDetector failed to open device node at \"" << name << "\". ("
+    FXL_LOG(ERROR) << "AudioPlugDetectorImpl failed to open device node at \"" << name << "\". ("
                    << strerror(errno) << " : " << errno << ")";
     return;
   }

@@ -17,7 +17,7 @@
 #include "src/media/audio/audio_core/audio_device_settings_persistence.h"
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
-#include "src/media/audio/audio_core/audio_plug_detector.h"
+#include "src/media/audio/audio_core/audio_plug_detector_impl.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
 #include "src/media/audio/lib/effects_loader/effects_loader.h"
@@ -188,7 +188,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   fbl::RefPtr<AudioOutput> throttle_output_;
 
   // A helper class we will use to detect plug/unplug events for audio devices
-  AudioPlugDetector plug_detector_;
+  AudioPlugDetectorImpl plug_detector_;
 
   // State which affects routing policy.
   fuchsia::media::AudioOutputRoutingPolicy routing_policy_ =

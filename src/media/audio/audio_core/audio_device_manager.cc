@@ -26,7 +26,6 @@ AudioDeviceManager::AudioDeviceManager(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher),
       system_gain_mute_(system_gain_mute),
       effects_loader_(*effects_loader),
-      plug_detector_(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel)),
       // TODO(35145): Use a dispatcher here appropriate for blocking operations such as disk IO
       // instead of the main service dispatcher.
       device_settings_persistence_(dispatcher) {
@@ -60,7 +59,7 @@ zx_status_t AudioDeviceManager::Init() {
   throttle_output_ = std::move(throttle_output);
 
   // Start monitoring for plug/unplug events of pluggable audio output devices.
-  res = plug_detector_.Start();
+  res = plug_detector_.Start(fit::bind_member(this, &AudioDeviceManager::AddDeviceByChannel));
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "AudioDeviceManager failed to start plug detector";
     return res;

@@ -6,31 +6,22 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_PLUG_DETECTOR_H_
 
 #include <lib/fit/function.h>
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include <memory>
 #include <string>
-#include <vector>
-
-#include "lib/fsl/io/device_watcher.h"
 
 namespace media::audio {
 
 class AudioPlugDetector {
  public:
+  virtual ~AudioPlugDetector() = default;
+
   // Callback invoked whenever a new device is added to the system.
   using Observer = fit::function<void(zx::channel, std::string, bool)>;
+  virtual zx_status_t Start(Observer o) = 0;
 
-  explicit AudioPlugDetector(Observer o) : observer_(std::move(o)) {}
-
-  zx_status_t Start();
-  void Stop();
-
- private:
-  void AddAudioDevice(int dir_fd, const std::string& name, bool is_input);
-
-  Observer observer_;
-  std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers_;
+  virtual void Stop() = 0;
 };
 
 }  // namespace media::audio
