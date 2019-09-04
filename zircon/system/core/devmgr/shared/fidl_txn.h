@@ -34,7 +34,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
   }
 
   void Reply(fidl::Message message) {
-    ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have it's Status() method used.\n");
+    ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have its transaction id set.\n");
     const fidl_msg_t msg{
         .bytes = message.bytes().data(),
         .handles = message.handles().data(),
