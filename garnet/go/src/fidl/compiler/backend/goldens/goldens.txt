@@ -2,6 +2,8 @@ bits.test.test.fidl.json
 bits.test.test.fidl.json.cc.golden
 bits.test.test.fidl.json.go.golden
 bits.test.test.fidl.json.h.golden
+bits.test.test.fidl.json.libfuzzer.cc.golden
+bits.test.test.fidl.json.libfuzzer.h.golden
 bits.test.test.fidl.json.llcpp.cc.golden
 bits.test.test.fidl.json.llcpp.h.golden
 bits.test.test.fidl.json.rs.golden
@@ -11,6 +13,8 @@ consts.test.fidl.json
 consts.test.fidl.json.cc.golden
 consts.test.fidl.json.go.golden
 consts.test.fidl.json.h.golden
+consts.test.fidl.json.libfuzzer.cc.golden
+consts.test.fidl.json.libfuzzer.h.golden
 consts.test.fidl.json.llcpp.cc.golden
 consts.test.fidl.json.llcpp.h.golden
 consts.test.fidl.json.rs.golden
@@ -20,6 +24,8 @@ doc_comments.test.fidl.json
 doc_comments.test.fidl.json.cc.golden
 doc_comments.test.fidl.json.go.golden
 doc_comments.test.fidl.json.h.golden
+doc_comments.test.fidl.json.libfuzzer.cc.golden
+doc_comments.test.fidl.json.libfuzzer.h.golden
 doc_comments.test.fidl.json.llcpp.cc.golden
 doc_comments.test.fidl.json.llcpp.h.golden
 doc_comments.test.fidl.json.rs.golden
@@ -29,6 +35,8 @@ empty_struct.test.fidl.json
 empty_struct.test.fidl.json.cc.golden
 empty_struct.test.fidl.json.go.golden
 empty_struct.test.fidl.json.h.golden
+empty_struct.test.fidl.json.libfuzzer.cc.golden
+empty_struct.test.fidl.json.libfuzzer.h.golden
 empty_struct.test.fidl.json.llcpp.cc.golden
 empty_struct.test.fidl.json.llcpp.h.golden
 empty_struct.test.fidl.json.rs.golden
@@ -38,6 +46,8 @@ enum.test.fidl.json
 enum.test.fidl.json.cc.golden
 enum.test.fidl.json.go.golden
 enum.test.fidl.json.h.golden
+enum.test.fidl.json.libfuzzer.cc.golden
+enum.test.fidl.json.libfuzzer.h.golden
 enum.test.fidl.json.llcpp.cc.golden
 enum.test.fidl.json.llcpp.h.golden
 enum.test.fidl.json.rs.golden
@@ -47,6 +57,8 @@ handles.test.fidl.json
 handles.test.fidl.json.cc.golden
 handles.test.fidl.json.go.golden
 handles.test.fidl.json.h.golden
+handles.test.fidl.json.libfuzzer.cc.golden
+handles.test.fidl.json.libfuzzer.h.golden
 handles.test.fidl.json.llcpp.cc.golden
 handles.test.fidl.json.llcpp.h.golden
 handles.test.fidl.json.rs.golden
@@ -56,6 +68,8 @@ ordinal_switch.test.fidl.json
 ordinal_switch.test.fidl.json.cc.golden
 ordinal_switch.test.fidl.json.go.golden
 ordinal_switch.test.fidl.json.h.golden
+ordinal_switch.test.fidl.json.libfuzzer.cc.golden
+ordinal_switch.test.fidl.json.libfuzzer.h.golden
 ordinal_switch.test.fidl.json.llcpp.cc.golden
 ordinal_switch.test.fidl.json.llcpp.h.golden
 ordinal_switch.test.fidl.json.rs.golden
@@ -65,6 +79,8 @@ protocol_request.test.fidl.json
 protocol_request.test.fidl.json.cc.golden
 protocol_request.test.fidl.json.go.golden
 protocol_request.test.fidl.json.h.golden
+protocol_request.test.fidl.json.libfuzzer.cc.golden
+protocol_request.test.fidl.json.libfuzzer.h.golden
 protocol_request.test.fidl.json.llcpp.cc.golden
 protocol_request.test.fidl.json.llcpp.h.golden
 protocol_request.test.fidl.json.rs.golden
@@ -74,6 +90,8 @@ protocols.test.fidl.json
 protocols.test.fidl.json.cc.golden
 protocols.test.fidl.json.go.golden
 protocols.test.fidl.json.h.golden
+protocols.test.fidl.json.libfuzzer.cc.golden
+protocols.test.fidl.json.libfuzzer.h.golden
 protocols.test.fidl.json.llcpp.cc.golden
 protocols.test.fidl.json.llcpp.h.golden
 protocols.test.fidl.json.rs.golden
@@ -83,6 +101,8 @@ service.test.fidl.json
 service.test.fidl.json.cc.golden
 service.test.fidl.json.go.golden
 service.test.fidl.json.h.golden
+service.test.fidl.json.libfuzzer.cc.golden
+service.test.fidl.json.libfuzzer.h.golden
 service.test.fidl.json.llcpp.cc.golden
 service.test.fidl.json.llcpp.h.golden
 service.test.fidl.json.rs.golden
@@ -92,6 +112,8 @@ tables.test.fidl.json
 tables.test.fidl.json.cc.golden
 tables.test.fidl.json.go.golden
 tables.test.fidl.json.h.golden
+tables.test.fidl.json.libfuzzer.cc.golden
+tables.test.fidl.json.libfuzzer.h.golden
 tables.test.fidl.json.llcpp.cc.golden
 tables.test.fidl.json.llcpp.h.golden
 tables.test.fidl.json.rs.golden
@@ -101,6 +123,8 @@ union.test.fidl.json
 union.test.fidl.json.cc.golden
 union.test.fidl.json.go.golden
 union.test.fidl.json.h.golden
+union.test.fidl.json.libfuzzer.cc.golden
+union.test.fidl.json.libfuzzer.h.golden
 union.test.fidl.json.llcpp.cc.golden
 union.test.fidl.json.llcpp.h.golden
 union.test.fidl.json.rs.golden
@@ -110,6 +134,8 @@ xunion.test.fidl.json
 xunion.test.fidl.json.cc.golden
 xunion.test.fidl.json.go.golden
 xunion.test.fidl.json.h.golden
+xunion.test.fidl.json.libfuzzer.cc.golden
+xunion.test.fidl.json.libfuzzer.h.golden
 xunion.test.fidl.json.llcpp.cc.golden
 xunion.test.fidl.json.llcpp.h.golden
 xunion.test.fidl.json.rs.golden

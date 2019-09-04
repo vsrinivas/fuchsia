@@ -87,6 +87,14 @@ go_test("fidlgen_golang_test") {
   ]
 }
 
+go_test("fidlgen_libfuzzer_test") {
+  gopackages = [ "fidl/compiler/backend/cpp_libfuzzer" ]
+
+  deps = [
+    ":fidlgen_test_lib",
+  ]
+}
+
 go_test("fidlgen_golang_ir_test") {
   gopackages = [ "fidl/compiler/backend/golang/ir" ]
 

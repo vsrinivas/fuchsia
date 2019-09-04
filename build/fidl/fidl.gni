@@ -208,6 +208,13 @@ template("fidl") {
           output_stem = "cpp/fidl"
           additional_public_deps = hlcpp_public_deps
         },
+        {
+          target_suffix = "libfuzzer"
+          fidlgen_tool = "//garnet/go/src/fidl:fidlgen"
+          fidlgen_generator = "libfuzzer"
+          output_stem = "cpp/libfuzzer"
+          additional_public_deps = hlcpp_public_deps
+        },
       ]
       llcpp_generators = _llcpp_generators
     }

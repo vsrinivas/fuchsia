@@ -109,6 +109,7 @@ template("fidl_alias") {
               "_c_client",
               "_c_server",
               "_llcpp",
+              "_libfuzzer",
             ]) {
       group(target_name + suffix) {
         forward_variables_from(invoker, [ "testonly" ])

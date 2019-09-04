@@ -36,6 +36,8 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     cpp_source_name=${json_name}.cc
     llcpp_header_name=${json_name}.llcpp.h
     llcpp_source_name=${json_name}.llcpp.cc
+    libfuzzer_header_name=${json_name}.libfuzzer.h
+    libfuzzer_source_name=${json_name}.libfuzzer.cc
     go_impl_name=${json_name}.go
     rust_name=${json_name}.rs
     syzkaller_name=${json_name}.syz.txt
@@ -47,6 +49,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
       "${cpp_source_name}.golden",
       "${llcpp_header_name}.golden",
       "${llcpp_source_name}.golden",
+      "${libfuzzer_header_name}.golden",
       "${go_impl_name}.golden",
       "${rust_name}.golden",
       "${syzkaller_name}.golden",
@@ -77,6 +80,15 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
         -include-base "${GOLDENS_DIR}"
     mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"
+
+    echo "  libfuzzer: ${json_name} > ${libfuzzer_header_name}"
+    ${FIDLGEN} \
+        -generators libfuzzer \
+        -json "${GOLDENS_DIR}/${json_name}" \
+        -output-base "${GOLDENS_DIR}/${json_name}" \
+        -include-base "${GOLDENS_DIR}"
+    mv "${GOLDENS_DIR}/${cpp_header_name}" "${GOLDENS_DIR}/${libfuzzer_header_name}.golden"
+    mv "${GOLDENS_DIR}/${cpp_source_name}" "${GOLDENS_DIR}/${libfuzzer_source_name}.golden"
 
     echo "  go: ${json_name} > ${go_impl_name}"
     ${FIDLGEN} \
