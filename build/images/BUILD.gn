@@ -992,6 +992,7 @@ if (use_vbmeta) {
       sources = [
         "$root_out_dir/fuchsia.vbmeta",
       ]
+      updater = "fuchsia.vbmeta"
       json = {
         name = "zircon-a"
         type = "vbmeta"
@@ -1057,7 +1058,7 @@ if (use_vbmeta) {
       sources = [
         "$root_out_dir/zedboot.vbmeta",
       ]
-      updater = "zedboot.vbmeta"
+      updater = "recovery.vbmeta"
     },
   ]
 }
