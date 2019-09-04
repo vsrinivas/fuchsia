@@ -6,6 +6,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 bool CopyrightHeaderWithCppComments(Writer* writer) {
   return writer->Puts(R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -125,4 +126,44 @@ std::string GetCName(const Type& type) {
   name_visitor.constness = type.constness();
   std::visit(name_visitor, type.type_data());
   return name_visitor.ret;
+}
+
+void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
+                  Writer* writer) {
+  writer->Printf("%sextern ", prefix);
+  writer->Printf("%s ", GetCName(syscall.kernel_return_type()).c_str());
+  writer->Printf("%s%s(\n", name_prefix, syscall.name().c_str());
+
+  std::vector<std::string> non_nulls;
+  if (syscall.kernel_arguments().size() == 0) {
+    writer->Printf("    void");
+  } else {
+    for (size_t i = 0; i < syscall.kernel_arguments().size(); ++i) {
+      const StructMember& arg = syscall.kernel_arguments()[i];
+      const bool last = i == syscall.kernel_arguments().size() - 1;
+      writer->Printf("    %s %s%s", GetCName(arg.type()).c_str(), arg.name().c_str(),
+                     last ? "" : ",\n");
+      if (arg.type().IsPointer() && arg.type().optionality() == Optionality::kOutputNonOptional) {
+        non_nulls.push_back(fxl::StringPrintf("%zu", i + 1));
+      }
+    }
+  }
+  writer->Printf(")");
+
+  // TODO(syscall-fidl-transition): The order of these post-declaration markup is maintained, but
+  // perhaps it could be simplified once it doesn't need to match.
+
+  if (!non_nulls.empty()) {
+    // TODO(syscall-fidl-transition): abigen only tags non-optional arguments as non-null, but
+    // other input pointers could also perhaps be usefully tagged as well.
+    writer->Printf(" __NONNULL((%s))", fxl::JoinStrings(non_nulls, ", ").c_str());
+  }
+  writer->Printf(" __LEAF_FN");
+  if (syscall.HasAttribute("Const")) {
+    writer->Printf(" __CONST");
+  }
+  if (syscall.HasAttribute("Noreturn")) {
+    writer->Printf(" __NO_RETURN");
+  }
+  writer->Printf(";\n\n");
 }

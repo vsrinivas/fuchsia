@@ -26,4 +26,10 @@ std::string CamelToSnake(const std::string& camel_fidl);
 // Gets an string representing |type| suitable for output to a C file.
 std::string GetCName(const Type& type);
 
+// Emits a C header declaration for a syscall.
+// |prefix| is a string that goes before the entire declaration.
+// |name_prefix| is prepended to the function name.
+void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
+                  Writer* writer);
+
 #endif  // TOOLS_KAZOO_OUTPUT_UTIL_H_

@@ -35,6 +35,7 @@ if (current_toolchain == host_toolchain) {
       "syscall_library.cc",
       "syscall_library.h",
       "syscall_numbers_output.cc",
+      "user_header_output.cc",
       "vdso_header_output.cc",
       "writer.cc",
       "writer.h",
@@ -69,6 +70,7 @@ if (current_toolchain == host_toolchain) {
       "output_util_test.cc",
       "syscall_library_test.cc",
       "syscall_numbers_output_test.cc",
+      "user_header_output_test.cc",
       "vdso_header_output_test.cc",
       "writer_test.cc",
     ]

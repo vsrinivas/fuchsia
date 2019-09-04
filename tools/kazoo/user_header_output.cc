@@ -5,19 +5,18 @@
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/outputs.h"
 
-bool VdsoHeaderOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)){
+bool UserHeaderOutput(const SyscallLibrary& library, Writer* writer) {
+  if (!CopyrightHeaderWithCppComments(writer)) {
     return false;
   }
 
   for (const auto& syscall : library.syscalls()) {
-    CDeclaration(*syscall, "__LOCAL ", "VDSO_zx_", writer);
-
-    if (syscall->HasAttribute("Vdsocall")) {
+    if (syscall->HasAttribute("Internal")) {
       continue;
     }
 
-    CDeclaration(*syscall, "__LOCAL ", "SYSCALL_zx_", writer);
+    CDeclaration(*syscall, "", "zx_", writer);
+    CDeclaration(*syscall, "", "_zx_", writer);
   }
 
   // TODO(syscall-fidl-transition): Original file has an extra \n, add one here
