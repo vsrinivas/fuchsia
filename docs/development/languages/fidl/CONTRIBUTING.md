@@ -34,9 +34,28 @@ Rust      | [//garnet/go/src/fidl/compiler/backend/rust/][be-rust] | [//garnet/p
 Dart      | [//topaz/bin/fidlgen_dart/][be-dart]                   | [//topaz//public/dart/fidl/][rtl-dart]<br>[//topaz/bin/fidl_bindings_test/][bindings_test-dart]
 JavaScipt | [chromium:build/fuchsia/fidlgen_fs][be-js]             | [chromium:build/fuchsia/fidlgen_js/runtime][rtl-js]
 
-### Other Tools
+### Other FIDL Tools
 
 **TBD: linter, formatter, gidl, difl, regen scripts, etc.**
+
+### Common Development Tools
+
+This is a crowdsourced section from the FIDL team on useful tools that they
+use for working on the FIDL codebase.
+
+#### IDEs
+
+Most of the FIDL team uses VSCode for development. Some useful plugins and workflows:
+
+* The [remote ssh](https://code.visualstudio.com/docs/remote/ssh) feature works
+really well for doing remote work from your laptop.
+  * Setting up tmux or screen is also helpful for remote work, to preserve
+  history and manage multiple sessions in the shell.
+* The fuchsia docs have instructions for setting up language servers:
+  * [clangd](https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/editors) for c++
+  * [rls](https://fuchsia.dev/fuchsia-src/development/languages/rust/editors) for rust
+* The [rewrap extension](https://marketplace.visualstudio.com/items?itemName=stkb.rewrap) is useful
+  for automatically reflowing lines to a certain length (e.g. when editing markdown files).
 
 ### C++ Style Guide
 
