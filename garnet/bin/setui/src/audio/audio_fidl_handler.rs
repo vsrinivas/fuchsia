@@ -13,7 +13,6 @@ use {
     std::sync::{Arc, RwLock},
 };
 
-// TODO(go/fxb/35873): Add AudioInput support.
 impl Sender<AudioSettings> for AudioWatchResponder {
     fn send_response(self, data: AudioSettings) {
         self.send(&mut Ok(data)).unwrap();
@@ -23,13 +22,17 @@ impl Sender<AudioSettings> for AudioWatchResponder {
 impl From<SettingResponse> for AudioSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Audio(info) = response {
-            let mut audio_settings = AudioSettings::empty();
             let mut streams = Vec::new();
             for stream in info.streams {
                 streams.push(AudioStreamSettings::from(stream));
             }
 
+            let mut audio_input = AudioInput::empty();
+            audio_input.muted = Some(info.input.mic_mute);
+
+            let mut audio_settings = AudioSettings::empty();
             audio_settings.streams = Some(streams);
+            audio_settings.input = Some(audio_input);
             audio_settings
         } else {
             panic!("incorrect value sent to audio");

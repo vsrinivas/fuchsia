@@ -109,10 +109,15 @@ pub struct AudioStream {
     pub user_volume_muted: bool,
 }
 
-// TODO(go/fxb/35873): Add AudioInput support.
+#[derive(PartialEq, Debug, Clone)]
+pub struct AudioInputInfo {
+    pub mic_mute: bool,
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub struct AudioInfo {
     pub streams: Vec<AudioStream>,
+    pub input: AudioInputInfo,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

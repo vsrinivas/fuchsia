@@ -20,6 +20,9 @@ pub fn spawn_audio_controller() -> futures::channel::mpsc::UnboundedSender<Comma
     // TODO(go/fxb/35983): Load default values from a config.
     let mut stored_audio_streams = HashMap::new();
 
+    // TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
+    let stored_mic_mute = false;
+
     let stream_types: [AudioStreamType; 5] = [
         AudioStreamType::Background,
         AudioStreamType::Media,
@@ -46,7 +49,6 @@ pub fn spawn_audio_controller() -> futures::channel::mpsc::UnboundedSender<Comma
                 },
                 Command::HandleRequest(request, responder) => {
                     // TODO(go/fxb/35874): Connect to audio core service.
-                    // TODO(go/fxb/35873): Add AudioInput support.
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetVolume(volume) => {
@@ -68,6 +70,7 @@ pub fn spawn_audio_controller() -> futures::channel::mpsc::UnboundedSender<Comma
                             let _ = responder
                                 .send(Ok(Some(SettingResponse::Audio(AudioInfo {
                                     streams: streams,
+                                    input: AudioInputInfo { mic_mute: stored_mic_mute },
                                 }))))
                                 .ok();
                         }

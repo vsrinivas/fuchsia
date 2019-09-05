@@ -465,6 +465,32 @@ mod tests {
             .expect("contains changed media stream");
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_audio_input() {
+        let mut fs = ServiceFs::new();
+
+        const INITIAL_MIC_MUTE: bool = false;
+
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::Audio].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(None))),
+            Box::new(InMemoryStorageFactory::create()),
+        );
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
+
+        let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+        let settings =
+            audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+        assert_eq!(
+            settings.input.expect("audio settings contains input").muted,
+            Some(INITIAL_MIC_MUTE)
+        );
+    }
+
     /// Tests that the FIDL calls result in appropriate commands sent to the switchboard
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_display() {
