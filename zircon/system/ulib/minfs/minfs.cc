@@ -31,6 +31,7 @@
 #include <lib/zx/event.h>
 
 #include <fbl/auto_lock.h>
+#include <fs/journal/journal.h>
 #endif
 
 #include <utility>
@@ -420,7 +421,7 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
                                     fbl::unique_ptr<Transaction>* out) {
   ZX_DEBUG_ASSERT(reserve_inodes <= TransactionLimits::kMaxInodeBitmapBlocks);
 #ifdef __Fuchsia__
-  if (writeback_ == nullptr) {
+  if (journal_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -432,23 +433,46 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
                              block_allocator_.get(), out);
 }
 
-zx_status_t Minfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
 #ifdef __Fuchsia__
-  return writeback_->Enqueue(std::move(work));
-#else
-  return work->Complete();
-#endif
+void Minfs::EnqueueCallback(SyncCallback callback) {
+  journal_->schedule_task(journal_->Sync().then(
+      [closure = std::move(callback)](
+          fit::result<void, zx_status_t>& result) mutable -> fit::result<void, zx_status_t> {
+        if (result.is_ok()) {
+          closure(ZX_OK);
+        } else {
+          closure(result.error());
+        }
+        return fit::ok();
+      }));
 }
-
-zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
-  auto work = transaction->RemoveMetadataWork();
-#ifdef __Fuchsia__
-  ZX_DEBUG_ASSERT(writeback_ != nullptr);
-  ZX_DEBUG_ASSERT(work->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
 #endif
-  // Take the transaction's metadata updates, and pass them back to the writeback buffer.
-  // This begins the pipeline of "actually writing these updates out to persistent storage".
-  return EnqueueWork(std::move(work));
+
+void Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
+#ifdef __Fuchsia__
+  ZX_DEBUG_ASSERT(journal_ != nullptr);
+
+  auto data_operations = transaction->RemoveDataOperations();
+  auto metadata_operations = transaction->RemoveMetadataOperations();
+  auto pinned_vnodes = transaction->RemovePinnedVnodes();
+
+  ZX_DEBUG_ASSERT(BlockCount(metadata_operations) <= limits_.GetMaximumEntryDataBlocks());
+
+  if (!data_operations.is_empty() && !metadata_operations.is_empty()) {
+    auto promise = journal_->WriteData(std::move(data_operations))
+                      .and_then(journal_->WriteMetadata(std::move(metadata_operations)));
+    auto wrapped_promise = fs::wrap_reference_vector(std::move(promise), std::move(pinned_vnodes));
+    journal_->schedule_task(std::move(wrapped_promise));
+  } else if (!metadata_operations.is_empty()) {
+    auto promise = fs::wrap_reference_vector(
+      journal_->WriteMetadata(std::move(metadata_operations)), std::move(pinned_vnodes));
+    journal_->schedule_task(std::move(promise));
+  } else if (!data_operations.is_empty()) {
+    auto promise = fs::wrap_reference_vector(
+      journal_->WriteData(std::move(data_operations)), std::move(pinned_vnodes));
+    journal_->schedule_task(std::move(promise));
+  }
+#endif
 }
 
 #ifdef __Fuchsia__
@@ -707,11 +731,7 @@ zx_status_t Minfs::PurgeUnlinked() {
       sb_->MutableInfo()->unlinked_tail = 0;
     }
     sb_->Write(transaction.get(), UpdateBackupSuperblock::kNoUpdate);
-    status = CommitTransaction(std::move(transaction));
-    if (status != ZX_OK) {
-      return status;
-    }
-
+    CommitTransaction(std::move(transaction));
     unlinked_count++;
   }
 
@@ -1024,19 +1044,16 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info, In
 
 #ifdef __Fuchsia__
 zx_status_t Minfs::InitializeWriteback() {
-  // Use a heuristics-based approach based on physical RAM size to
-  // determine the size of the writeback buffer.
-  //
-  // Currently, we set the writeback buffer size to 2% of physical
-  // memory.
-  static const size_t kWriteBufferSize =
-      fbl::round_up((zx_system_get_physmem() * 2) / 100, kMinfsBlockSize);
-  static const blk_t kWriteBufferBlocks = static_cast<blk_t>(kWriteBufferSize / kMinfsBlockSize);
-
-  zx_status_t status;
-  if ((status = WritebackQueue::Create(bc_.get(), kWriteBufferBlocks, &writeback_)) != ZX_OK) {
+  std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer;
+  zx_status_t status = fs::BlockingRingBuffer::Create(bc_.get(), WritebackCapacity(),
+                                                      kMinfsBlockSize, "minfs-writeback-buffer",
+                                                      &writeback_buffer);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: Cannot create data writeback buffer\n");
     return status;
   }
+
+  journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(writeback_buffer));
 
   if ((status = PurgeUnlinked()) != ZX_OK) {
     return status;
@@ -1279,7 +1296,7 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
     fbl::unique_ptr<Transaction> transaction;
     if ((status = fs->BeginTransaction(0, 0, &transaction)) == ZX_OK) {
       fs->UpdateFlags(transaction.get(), kMinfsFlagClean, false);
-      status = fs->CommitTransaction(std::move(transaction));
+      fs->CommitTransaction(std::move(transaction));
     }
     if (status != ZX_OK) {
       FS_TRACE_WARN("minfs: failed to unset clean flag: %d\n", status);
@@ -1321,7 +1338,7 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
     zx_status_t status;
     if ((status = BeginTransaction(0, 0, &transaction)) == ZX_OK) {
       UpdateFlags(transaction.get(), kMinfsFlagClean, true);
-      status = CommitTransaction(std::move(transaction));
+      CommitTransaction(std::move(transaction));
     }
     if (status != ZX_OK) {
       FS_TRACE_WARN("minfs: Failed to set clean flag on unmount: %d\n", status);
@@ -1335,7 +1352,7 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
         // The data block assigner must be resolved first, so it can enqueue any pending
         // transactions to the writeback buffer.
         assigner_ = nullptr;
-        writeback_ = nullptr;
+        journal_ = nullptr;
         bc_->Sync();
 
         auto on_unmount = std::move(on_unmount_);

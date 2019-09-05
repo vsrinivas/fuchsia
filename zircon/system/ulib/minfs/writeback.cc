@@ -108,19 +108,9 @@ zx_status_t WriteTxn::Transact() {
 }
 #endif
 
-WritebackWork::WritebackWork(Bcache* bc)
-    : WriteTxn(bc),
-#ifdef __Fuchsia__
-      sync_cb_(nullptr),
-#endif
-      node_count_(0) {
-}
+WritebackWork::WritebackWork(Bcache* bc) : WriteTxn(bc), node_count_(0) {}
 
 void WritebackWork::MarkCompleted(zx_status_t status) {
-#ifdef __Fuchsia__
-  WriteTxn::Cancel();
-  ResetCallbacks(status);
-#endif
   while (0 < node_count_) {
     vn_[--node_count_] = nullptr;
   }
@@ -176,9 +166,11 @@ zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
 Transaction::Transaction(TransactionalFs* minfs)
     :
 #ifdef __Fuchsia__
-      lock_(minfs->GetLock()),
+      lock_(minfs->GetLock())
+#else
+      bc_(minfs->GetMutableBcache())
 #endif
-      bc_(minfs->GetMutableBcache()) {
+{
 }
 
 Transaction::~Transaction() {
@@ -215,38 +207,10 @@ void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {
   pinned_vnodes_.push_back(std::move(vnode));
 }
 
-fbl::unique_ptr<WritebackWork> Transaction::RemoveMetadataWork() {
-  fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_));
-  fbl::Vector<fs::UnbufferedOperation> operations = metadata_operations_.TakeOperations();
-
-  for (fs::UnbufferedOperation operation : operations) {
-    work->Enqueue(operation.vmo->get(), static_cast<blk_t>(operation.op.vmo_offset),
-                  static_cast<blk_t>(operation.op.dev_offset),
-                  static_cast<blk_t>(operation.op.length));
-  }
-
-  for (size_t i = 0; i < pinned_vnodes_.size(); i++) {
-    work->PinVnode(std::move(pinned_vnodes_[i]));
-  }
-
-  return work;
+std::vector<fbl::RefPtr<VnodeMinfs>> Transaction::RemovePinnedVnodes() {
+  return std::move(pinned_vnodes_);
 }
-
-fbl::unique_ptr<WritebackWork> Transaction::RemoveDataWork() {
-  fbl::unique_ptr<WritebackWork> work(new WritebackWork(bc_));
-  fbl::Vector<fs::UnbufferedOperation> operations = data_operations_.TakeOperations();
-
-  for (fs::UnbufferedOperation operation : operations) {
-    work->Enqueue(operation.vmo->get(), static_cast<blk_t>(operation.op.vmo_offset),
-                  static_cast<blk_t>(operation.op.dev_offset),
-                  static_cast<blk_t>(operation.op.length));
-  }
-
-  return work;
-}
-
 #else
-
 void Transaction::EnqueueMetadata(WriteData source, fs::Operation operation) {
   GetMetadataWork()->Enqueue(source, operation.vmo_offset, operation.dev_offset, operation.length);
 }
@@ -258,12 +222,6 @@ void Transaction::EnqueueData(WriteData source, fs::Operation operation) {
 void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {
   GetMetadataWork()->PinVnode(std::move(vnode));
 }
-
-fbl::unique_ptr<WritebackWork> Transaction::RemoveMetadataWork() {
-  return std::move(metadata_work_);
-}
-
-fbl::unique_ptr<WritebackWork> Transaction::RemoveDataWork() { return std::move(data_work_); }
 
 WritebackWork* Transaction::GetMetadataWork() {
   if (metadata_work_ == nullptr) {
@@ -282,19 +240,5 @@ WritebackWork* Transaction::GetDataWork() {
   return data_work_.get();
 }
 #endif
-
-#ifdef __Fuchsia__
-void WritebackWork::SetSyncCallback(SyncCallback closure) {
-  ZX_DEBUG_ASSERT(!sync_cb_);
-  sync_cb_ = std::move(closure);
-}
-
-void WritebackWork::ResetCallbacks(zx_status_t status) {
-  if (sync_cb_) {
-    sync_cb_(status);
-    sync_cb_ = nullptr;
-  }
-}
-#endif  // __Fuchsia__
 
 }  // namespace minfs

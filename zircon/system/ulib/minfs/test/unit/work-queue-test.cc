@@ -16,30 +16,26 @@ namespace {
 class MockMinfs : public TransactionalFs {
  public:
   MockMinfs() = default;
-  fbl::Mutex* GetLock() const { return &txn_lock_; }
+  fbl::Mutex* GetLock() const final { return &txn_lock_; }
 
   zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                               fbl::unique_ptr<Transaction>* out) {
+                               fbl::unique_ptr<Transaction>* out) final {
     BlockIfPaused();
     ZX_ASSERT(reserve_inodes == 0);
     ZX_ASSERT(reserve_blocks == 0);
     return Transaction::Create(this, reserve_inodes, reserve_blocks, nullptr, nullptr, out);
   }
 
-  zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) final {
-    BlockIfPaused();
-    work->MarkCompleted(ZX_OK);
-    return ZX_OK;
+  void EnqueueCallback(SyncCallback cb) final {
+    cb(ZX_OK);
   }
 
-  zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
+  void CommitTransaction(fbl::unique_ptr<Transaction> transaction) final {
     BlockIfPaused();
     ZX_ASSERT(transaction != nullptr);
-    transaction->RemoveMetadataWork()->MarkCompleted(ZX_OK);
-    return ZX_OK;
   }
 
-  Bcache* GetMutableBcache() { return nullptr; }
+  Bcache* GetMutableBcache() final { return nullptr; }
 
   // Blocks any thread calling into the TransactionalFs interface.
   zx_status_t Pause() {
@@ -91,7 +87,7 @@ class MockVnode : public fbl::RefCounted<MockVnode> {
     fbl::unique_ptr<Transaction> transaction;
     ZX_ASSERT(minfs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
     reserved_ = 0;
-    ZX_ASSERT(minfs_->CommitTransaction(std::move(transaction)) == ZX_OK);
+    minfs_->CommitTransaction(std::move(transaction));
   }
 
   void Reserve(blk_t count) { reserved_ += count; }

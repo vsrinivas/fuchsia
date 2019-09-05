@@ -527,10 +527,10 @@ bool TestUnlinkFail(void) {
   // fail, sync will also fail.
   ASSERT_LT(syncfs(fd.get()), 0);
 
-  // All succeeding close calls will fail.
+  // Close all open fds. These will appear to succeed, although all pending transactions will fail.
   for (unsigned i = first_fd + 2; i < last_fd; i++) {
     if (i != mid_fd) {
-      ASSERT_LT(close(fds[i].release()), 0);
+      ASSERT_EQ(close(fds[i].release()), 0);
     }
   }
 

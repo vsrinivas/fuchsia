@@ -10,6 +10,7 @@
 #include <lib/zx/vmo.h>
 
 #include <utility>
+#include <vector>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
@@ -27,6 +28,18 @@ decltype(auto) wrap_reference(Promise promise, fbl::RefPtr<T> object) {
   return promise.then(
       [obj = std::move(object)](typename Promise::result_type& result) mutable { return result; });
 }
+
+// Wraps a promise with a vector of references to ref-counted objects.
+//
+// This keeps all objects in |object_vector| alive until the promise completes or is abandoned.
+template <typename Promise, typename T>
+decltype(auto) wrap_reference_vector(Promise promise, std::vector<fbl::RefPtr<T>> object_vector) {
+  return promise.then(
+      [obj = std::move(object_vector)](typename Promise::result_type& result) mutable {
+        return result;
+      });
+}
+
 
 // Flushes |operations| to persistent storage using a transaction created by |transaction_handler|,
 // sending through the disk-registered |vmoid| object.

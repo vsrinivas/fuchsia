@@ -26,6 +26,7 @@
 #ifdef __Fuchsia__
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
+#include <fs/buffer/vmoid_registry.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fvm/client.h>
@@ -39,7 +40,7 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 
-class Bcache : public fs::TransactionHandler {
+class Bcache : public fs::TransactionHandler, public fs::VmoidRegistry {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Bcache);
   friend class BlockNode;
@@ -68,6 +69,13 @@ class Bcache : public fs::TransactionHandler {
   // but not on __Fuchsia__.
   zx_status_t Readblk(blk_t bno, void* data);
   zx_status_t Writeblk(blk_t bno, const void* data);
+
+  ////////////////
+  // fs::VmoidRegistry interface.
+
+  zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
+
+  zx_status_t DetachVmo(vmoid_t vmoid) final;
 
   ////////////////
   // Other methods.

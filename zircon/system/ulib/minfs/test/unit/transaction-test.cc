@@ -42,9 +42,9 @@ class MockMinfs : public TransactionalFs {
     return ZX_OK;
   }
 
-  zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) final { return ZX_OK; }
+  void EnqueueCallback(SyncCallback callback) {}
 
-  zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) { return ZX_OK; }
+  void CommitTransaction(fbl::unique_ptr<Transaction> transaction) {}
 
   Bcache* GetMutableBcache() { return nullptr; }
 
@@ -257,15 +257,13 @@ TEST_F(TransactionTest, AllocateTooManyBlocksFails) {
 TEST_F(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
   Transaction transaction(&minfs_);
 
-  // Metadata work should be empty.
-  fbl::unique_ptr<WritebackWork> meta_work = transaction.RemoveMetadataWork();
-  ASSERT_EQ(0, meta_work->BlockCount());
-  ASSERT_EQ(0, meta_work->Requests().size());
+  // Metadata operations should be empty.
+  fbl::Vector<fs::UnbufferedOperation> meta_operations = transaction.RemoveMetadataOperations();
+  ASSERT_TRUE(meta_operations.is_empty());
 
   // Data work should be empty.
-  fbl::unique_ptr<WritebackWork> data_work = transaction.RemoveDataWork();
-  ASSERT_EQ(0, data_work->BlockCount());
-  ASSERT_EQ(0, data_work->Requests().size());
+  fbl::Vector<fs::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
+  ASSERT_TRUE(data_operations.is_empty());
 }
 
 // Checks that the Transaction's metadata work is populated after enqueueing metadata writes.
@@ -280,14 +278,13 @@ TEST_F(TransactionTest, EnqueueAndVerifyMetadataWork) {
   };
   transaction.EnqueueMetadata(1, std::move(op));
 
-  fbl::unique_ptr<WritebackWork> meta_work = transaction.RemoveMetadataWork();
-  ASSERT_EQ(4, meta_work->BlockCount());
-  ASSERT_EQ(1, meta_work->Requests().size());
-  ASSERT_EQ(1, meta_work->Requests()[0].vmo);
-  ASSERT_EQ(2, meta_work->Requests()[0].vmo_offset);
-  ASSERT_EQ(3, meta_work->Requests()[0].dev_offset);
-  ASSERT_EQ(4, meta_work->Requests()[0].length);
-  meta_work->MarkCompleted(ZX_OK);
+  fbl::Vector<fs::UnbufferedOperation> meta_operations = transaction.RemoveMetadataOperations();
+  ASSERT_EQ(1, meta_operations.size());
+  ASSERT_EQ(1, meta_operations[0].vmo);
+  ASSERT_EQ(2, meta_operations[0].op.vmo_offset);
+  ASSERT_EQ(3, meta_operations[0].op.dev_offset);
+  ASSERT_EQ(4, meta_operations[0].op.length);
+  ASSERT_EQ(fs::OperationType::kWrite, meta_operations[0].op.type);
 }
 
 // Checks that the Transaction's data work is populated after enqueueing data writes.
@@ -302,14 +299,13 @@ TEST_F(TransactionTest, EnqueueAndVerifyDataWork) {
   };
   transaction.EnqueueData(1, std::move(op));
 
-  fbl::unique_ptr<WritebackWork> data_work = transaction.RemoveDataWork();
-  ASSERT_EQ(4, data_work->BlockCount());
-  ASSERT_EQ(1, data_work->Requests().size());
-  ASSERT_EQ(1, data_work->Requests()[0].vmo);
-  ASSERT_EQ(2, data_work->Requests()[0].vmo_offset);
-  ASSERT_EQ(3, data_work->Requests()[0].dev_offset);
-  ASSERT_EQ(4, data_work->Requests()[0].length);
-  data_work->MarkCompleted(ZX_OK);
+  fbl::Vector<fs::UnbufferedOperation> data_operations = transaction.RemoveDataOperations();
+  ASSERT_EQ(1, data_operations.size());
+  ASSERT_EQ(1, data_operations[0].vmo);
+  ASSERT_EQ(2, data_operations[0].op.vmo_offset);
+  ASSERT_EQ(3, data_operations[0].op.dev_offset);
+  ASSERT_EQ(4, data_operations[0].op.length);
+  ASSERT_EQ(fs::OperationType::kWrite, data_operations[0].op.type);
 }
 
 class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs> {
@@ -352,7 +348,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
 };
 
 // Checks that a pinned vnode is not attached to the transaction's data work.
-TEST_F(TransactionTest, CreateAndVerifyDataWorkDoesNotContainPinnedVnode) {
+TEST_F(TransactionTest, RemovePinnedVnodeContainsVnode) {
   bool vnode_alive = false;
 
   fbl::RefPtr<MockVnodeMinfs> vnode(fbl::AdoptRef(new MockVnodeMinfs(&vnode_alive)));
@@ -362,26 +358,35 @@ TEST_F(TransactionTest, CreateAndVerifyDataWorkDoesNotContainPinnedVnode) {
   transaction.PinVnode(std::move(vnode));
   ASSERT_EQ(nullptr, vnode);
 
-  // Data work should not contain the pinned vnode.
-  fbl::unique_ptr<WritebackWork> data_work = transaction.RemoveDataWork();
-  data_work.reset();
-  ASSERT_TRUE(vnode_alive);
+  std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes = transaction.RemovePinnedVnodes();
+  ASSERT_EQ(1, pinned_vnodes.size());
+
+  pinned_vnodes.clear();
+  ASSERT_FALSE(vnode_alive);
 }
 
-// Checks that a pinned vnode is attached to the transaction's metadata work.
-TEST_F(TransactionTest, CreateAndVerifyMetadataWorkContainsPinnedVnode) {
-  bool vnode_alive = false;
-  fbl::RefPtr<MockVnodeMinfs> vnode(fbl::AdoptRef(new MockVnodeMinfs(&vnode_alive)));
-  ASSERT_TRUE(vnode_alive);
-
+TEST_F(TransactionTest, RemovePinnedVnodeContainsManyVnodes) {
+  size_t vnode_count = 4;
+  bool vnode_alive[vnode_count];
+  fbl::RefPtr<MockVnodeMinfs> vnodes[vnode_count];
   Transaction transaction(&minfs_);
-  transaction.PinVnode(std::move(vnode));
-  ASSERT_EQ(nullptr, vnode);
 
-  // Metadata work should contain the pinned vnode.
-  fbl::unique_ptr<WritebackWork> meta_work = transaction.RemoveMetadataWork();
-  meta_work.reset();
-  ASSERT_FALSE(vnode_alive);
+  for (size_t i = 0; i < vnode_count; i++) {
+    vnode_alive[i] = false;
+    vnodes[i] = fbl::AdoptRef(new MockVnodeMinfs(&vnode_alive[i]));
+    ASSERT_TRUE(vnode_alive[i]);
+    transaction.PinVnode(std::move(vnodes[i]));
+    ASSERT_EQ(nullptr, vnodes[i]);
+  }
+
+  std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes = transaction.RemovePinnedVnodes();
+  ASSERT_EQ(vnode_count, pinned_vnodes.size());
+
+  pinned_vnodes.clear();
+
+  for (size_t i = 0; i < vnode_count; i++) {
+    ASSERT_FALSE(vnode_alive[i]);
+  }
 }
 
 // Checks that GiveBlocksToPromise correctly transfers block allocation to an external promise.

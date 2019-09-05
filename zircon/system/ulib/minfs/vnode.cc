@@ -843,7 +843,7 @@ zx_status_t VnodeMinfs::Close() {
     }
     fs_->RemoveUnlinked(transaction.get(), this);
     Purge(transaction.get());
-    return fs_->CommitTransaction(std::move(transaction));
+    fs_->CommitTransaction(std::move(transaction));
   }
   return ZX_OK;
 }
@@ -1049,7 +1049,7 @@ zx_status_t VnodeMinfs::Setattr(const vnattr_t* a) {
     }
     InodeSync(transaction.get(), kMxFsSyncDefault);
     transaction->PinVnode(fbl::WrapRefPtr(this));
-    return fs_->CommitTransaction(std::move(transaction));
+    fs_->CommitTransaction(std::move(transaction));
   }
   return ZX_OK;
 }

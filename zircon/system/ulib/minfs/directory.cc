@@ -655,14 +655,12 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 
   transaction->PinVnode(fbl::WrapRefPtr(this));
   transaction->PinVnode(vn);
-  if ((status = fs_->CommitTransaction(std::move(transaction))) != ZX_OK) {
-    return status;
-  }
+  fs_->CommitTransaction(std::move(transaction));
 
   vn->Open(0, nullptr);
   *out = std::move(vn);
-  success = (status == ZX_OK);
-  return status;
+  success = true;
+  return ZX_OK;
 }
 
 zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
@@ -687,9 +685,9 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
     return status;
   }
   transaction->PinVnode(fbl::WrapRefPtr(this));
-  status = fs_->CommitTransaction(std::move(transaction));
-  success = (status == ZX_OK);
-  return status;
+  fs_->CommitTransaction(std::move(transaction));
+  success = true;
+  return ZX_OK;
 }
 
 zx_status_t Directory::Truncate(size_t len) { return ZX_ERR_NOT_FILE; }
@@ -829,11 +827,9 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   }
   transaction->PinVnode(oldvn);
   transaction->PinVnode(newdir);
-  status = fs_->CommitTransaction(std::move(transaction));
-  if (status == ZX_OK) {
-    success = true;
-  }
-  return status;
+  fs_->CommitTransaction(std::move(transaction));
+  success = true;
+  return ZX_OK;
 }
 
 zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _target) {
@@ -891,7 +887,8 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   target->InodeSync(transaction.get(), kMxFsSyncDefault);
   transaction->PinVnode(fbl::WrapRefPtr(this));
   transaction->PinVnode(target);
-  return fs_->CommitTransaction(std::move(transaction));
+  fs_->CommitTransaction(std::move(transaction));
+  return ZX_OK;
 }
 
 }  // namespace minfs

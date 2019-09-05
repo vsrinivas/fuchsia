@@ -61,23 +61,7 @@ class WritebackWork : public WriteTxn,
   // its initial state. Returns the result of the transaction.
   zx_status_t Complete();
 
-#ifdef __Fuchsia__
-  // Adds a closure to the WritebackWork, such that it will be signalled
-  // when the WritebackWork is flushed to disk.
-  // If no closure is set, nothing will get signalled.
-  //
-  // Only one closure may be set for each WritebackWork unit.
-  using SyncCallback = fs::Vnode::SyncCallback;
-  void SetSyncCallback(SyncCallback closure);
-#endif
  private:
-#ifdef __Fuchsia__
-  // If a sync callback exists, call it with |status| and delete it.
-  // Also delete any other existing callbacks.
-  void ResetCallbacks(zx_status_t status);
-
-  SyncCallback sync_cb_;  // Optional.
-#endif
   size_t node_count_;
   // May be empty. Currently '4' is the maximum number of vnodes within a
   // single unit of writeback work, which occurs during a cross-directory
@@ -113,7 +97,6 @@ class Transaction final : public PendingWork {
 
   ////////////////
   // Other methods.
-
   size_t AllocateInode() {
     ZX_DEBUG_ASSERT(inode_promise_.IsInitialized());
     return inode_promise_.Allocate(this);
@@ -126,15 +109,17 @@ class Transaction final : public PendingWork {
 
   void PinVnode(fbl::RefPtr<VnodeMinfs> vnode);
 
-  // Deprecated. Used only for compatibility with WritebackQueue; should be removed once writeback
-  // moves to the Journal.
-  fbl::unique_ptr<WritebackWork> RemoveMetadataWork();
-
-  // Deprecated. Used only for compatibility with WritebackQueue; should be removed once writeback
-  // moves to the Journal.
-  fbl::unique_ptr<WritebackWork> RemoveDataWork();
-
 #ifdef __Fuchsia__
+  // Returns a vector of all enqueued metadata write operations.
+  fbl::Vector<fs::UnbufferedOperation> RemoveMetadataOperations() {
+    return metadata_operations_.TakeOperations();
+  }
+
+  // Returns a vector of all enqueued data write operations.
+  fbl::Vector<fs::UnbufferedOperation> RemoveDataOperations() {
+    return data_operations_.TakeOperations();
+  }
+
   size_t SwapBlock(size_t old_bno) {
     ZX_DEBUG_ASSERT(block_promise_.IsInitialized());
     return block_promise_.Swap(old_bno);
@@ -156,6 +141,9 @@ class Transaction final : public PendingWork {
   void MergeBlockPromise(AllocatorPromise* other_promise) {
     other_promise->GiveBlocks(other_promise->GetReserved(), &block_promise_);
   }
+
+  std::vector<fbl::RefPtr<VnodeMinfs>> RemovePinnedVnodes();
+
 #endif
 
  private:
@@ -170,9 +158,9 @@ class Transaction final : public PendingWork {
 
   fbl::unique_ptr<WritebackWork> metadata_work_;
   fbl::unique_ptr<WritebackWork> data_work_;
+  Bcache* bc_;
 #endif
 
-  Bcache* bc_;
   AllocatorPromise inode_promise_;
   AllocatorPromise block_promise_;
 };

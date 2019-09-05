@@ -19,6 +19,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 
+#include <fs/journal/journal.h>
 #include <fs/managed-vfs.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
@@ -135,25 +136,20 @@ class BlockOffsets {
 
 class TransactionalFs {
  public:
+  virtual ~TransactionalFs() = default;
+
 #ifdef __Fuchsia__
   virtual fbl::Mutex* GetLock() const = 0;
 
-  void EnqueueCallback(SyncCallback callback) {
-    fbl::unique_ptr<WritebackWork> work(new WritebackWork(GetMutableBcache()));
-    work->SetSyncCallback(std::move(callback));
-    EnqueueWork(std::move(work));
-  }
+  virtual void EnqueueCallback(SyncCallback callback) = 0;
 #endif
 
   // Begin a transaction with |reserve_inodes| inodes and |reserve_blocks| blocks reserved.
   virtual zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                        fbl::unique_ptr<Transaction>* transaction_out) = 0;
 
-  // Enqueues a WritebackWork for processing.
-  virtual zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) = 0;
-
   // Enqueues a metadata transaction by persisting its contents to disk.
-  virtual zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) = 0;
+  virtual void CommitTransaction(fbl::unique_ptr<Transaction> transaction) = 0;
 
   virtual Bcache* GetMutableBcache() = 0;
 };
@@ -258,15 +254,17 @@ class Minfs :
   }
 
   zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
-                               fbl::unique_ptr<Transaction>* transaction) __WARN_UNUSED_RESULT;
+                               fbl::unique_ptr<Transaction>* transaction) final
+      __WARN_UNUSED_RESULT;
 
-  zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) final __WARN_UNUSED_RESULT;
+#ifdef __Fuchsia__
+  void EnqueueCallback(SyncCallback callback) final;
+#endif
 
   void EnqueueAllocation(fbl::unique_ptr<PendingWork> transaction);
 
   // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
-  zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) final
-      __WARN_UNUSED_RESULT;
+  void CommitTransaction(fbl::unique_ptr<Transaction> transaction) final;
 
 #ifdef __Fuchsia__
   // Hands off a work unit to be completed by the "data assigner" thread.
@@ -274,8 +272,12 @@ class Minfs :
 
   // Returns the capacity of the writeback buffer, in blocks.
   size_t WritebackCapacity() const {
-    ZX_DEBUG_ASSERT(writeback_ != nullptr);
-    return writeback_->GetCapacity();
+    // Use a heuristics-based approach based on physical RAM size to
+    // determine the size of the writeback buffer.
+    //
+    // Currently, we set the writeback buffer size to 2% of physical
+    // memory.
+    return fbl::round_up((zx_system_get_physmem() * 2) / 100, kMinfsBlockSize) / kMinfsBlockSize;
   }
 
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
@@ -422,8 +424,8 @@ class Minfs :
 #ifdef __Fuchsia__
   fbl::Closure on_unmount_{};
   MinfsMetrics metrics_ = {};
-  fbl::unique_ptr<WritebackQueue> writeback_;
   fbl::unique_ptr<WorkQueue> assigner_;
+  fbl::unique_ptr<fs::Journal> journal_;
   uint64_t fs_id_ = 0;
 #else
   // Store start block + length for all extents. These may differ from info block for

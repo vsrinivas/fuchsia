@@ -78,7 +78,7 @@ void File::AllocateData() {
       ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
 
       // Stop processing if we have not found any data blocks to update.
-      __UNUSED zx_status_t status = fs_->CommitTransaction(std::move(transaction));
+      fs_->CommitTransaction(std::move(transaction));
       break;
     }
 
@@ -128,10 +128,6 @@ void File::AllocateData() {
       transaction->EnqueueData(vmo_.get(), std::move(op));
     }
 
-    // Enqueue may fail if we are in a readonly state, but we should continue resolving all
-    // pending allocations.
-    __UNUSED zx_status_t status = fs_->EnqueueWork(transaction->RemoveDataWork());
-
     // Since we are updating the file in "chunks", only update the on-disk inode size
     // with the portion we've written so far.
     blk_t last_byte = (bno_start + bno_count) * kMinfsBlockSize;
@@ -161,7 +157,7 @@ void File::AllocateData() {
 
     // Commit may fail if we are in a readonly state, but we should continue resolving all
     // pending allocations.
-    status = fs_->CommitTransaction(std::move(transaction));
+    fs_->CommitTransaction(std::move(transaction));
   }
 }
 
@@ -306,7 +302,7 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
     // Enqueue metadata allocated via write.
     InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime
     transaction->PinVnode(fbl::WrapRefPtr(this));
-    status = fs_->CommitTransaction(std::move(transaction));
+    fs_->CommitTransaction(std::move(transaction));
 
 #ifdef __Fuchsia__
     // Enqueue data allocated via write.
@@ -315,7 +311,7 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
 #endif
   }
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t File::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
@@ -361,7 +357,7 @@ zx_status_t File::Truncate(size_t len) {
   // Ensure our inode is consistent with that metadata.
   InodeSync(transaction.get(), kMxFsSyncMtime);
   transaction->PinVnode(fbl::WrapRefPtr(this));
-  status = fs_->CommitTransaction(std::move(transaction));
+  fs_->CommitTransaction(std::move(transaction));
 #ifdef __Fuchsia__
   // Enqueue data allocated via write.
   if (len != inode_.size) {
@@ -369,7 +365,7 @@ zx_status_t File::Truncate(size_t len) {
         [file = fbl::WrapRefPtr(this)](TransactionalFs*) mutable { file->AllocateData(); });
   }
 #endif
-  return status;
+  return ZX_OK;
 }
 
 }  // namespace minfs

@@ -52,6 +52,21 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
   return ZX_OK;
 }
 
+zx_status_t Bcache::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
+  fuchsia_hardware_block_VmoID vmoid;
+  zx_status_t status = device()->BlockAttachVmo(vmo, &vmoid);
+  *out = vmoid.id;
+  return status;
+}
+
+zx_status_t Bcache::DetachVmo(vmoid_t vmoid) {
+  block_fifo_request_t request = {};
+  request.group = BlockGroupID();
+  request.vmoid = vmoid;
+  request.opcode = BLOCKIO_CLOSE_VMO;
+  return Transaction(&request, 1);
+}
+
 int Bcache::Sync() {
   fs::WriteTxn sync_txn(this);
   sync_txn.EnqueueFlush();
