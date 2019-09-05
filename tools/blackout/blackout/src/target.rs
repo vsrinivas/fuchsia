@@ -43,3 +43,11 @@ pub fn generate_name(seed: u64) -> String {
     name.push_str(&rng.sample_iter(&distributions::Alphanumeric).take(16).collect::<String>());
     name
 }
+
+/// Generate a Vec<u8> of random bytes from a seed using a standard distribution.
+pub fn generate_content(seed: u64) -> Vec<u8> {
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    let size = rng.gen_range(1, 1 << 16);
+    rng.sample_iter(&distributions::Standard).take(size).collect()
+}
