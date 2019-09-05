@@ -99,6 +99,121 @@ zx_status_t CalculatePllParams(uint32_t input_freq, uint32_t desired_freq, PllPa
   return ZX_OK;
 }
 
+// Setup the device clocks, ready to play and record audio.
+zx_status_t SetUpDeviceClocks(Alc5663Client* client, uint32_t sample_rate,
+                              uint32_t bclk_frequency) {
+  // We need to configure the ALC5663 to have a clock of 256*|sample_rate| for
+  // its system clock.
+  //
+  // The ALC5663 gives us the choice of using MCLK or BCLK. We don't (yet)
+  // have a way for the SoC to communicate MCLK to us, so we currently choose
+  // to use BCLK as our main clock.
+  //
+  // Because |bclk_frequency| won't be high enough to provide
+  // a 256*|sample_rate| clock, we need to plumb it into a PLL to get the
+  // right frequency, resulting in the following timing chain:
+  //
+  //    (BCLK) ---> (Clock select) ---> (PLL) ---> (Clock select) --.
+  //                                                                |
+  //            (System clock) <---clk_sys_i2s <--- (Divider) <-----'
+  //
+  // Once the I2S BCLK gets plumbed through the PLL, the resulting clock isn't
+  // synchronized with original clock any longer. When the clocks are not
+  // synchronized, the ALC5663 requires us to enable the "asynchronous
+  // sampling rate converter" (ASRC).
+  //
+  // The datasheet is a little unclear about what the system clock needs to be
+  // when ASRC is enabled. Section 7.5 suggests the system clock should be
+  // `256*|sample_rate|`. Section 7.5.2 suggests when ASRC is enabled, the
+  // system clock must be at least `512*|sample_rate`. Empirically, it appears
+  // that the clock `clk_sys_pre` needs to be at least `512*|sample_rate|`,
+  // while the clock labelled `clk_sys_i2s` needs to be `256*|sample_rate|`.
+  // Confusingly, both are called the "system clock" in different parts of the
+  // manual.
+  //
+  // Our final timing is as follows:
+  //
+  //   BCLK input: |bclk_frequency|
+  //
+  //   PLL output: 512*|sample_rate|
+  //     * (scale from blck_frequency to 512*|sample_rate|)
+  //
+  //   Divider output: 256*|sample_rate|
+  //     * (divide by 2)
+
+  // Configure the device to be externally clocked ("slave mode").
+  zx_status_t result = MapRegister<I2s1DigitalInterfaceControlReg>(
+      client, [](auto reg) { return reg.set_i2s1_externally_clocked(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Plumb BCLK into the PLL, and set up the system clock to use the PLL
+  // output.
+  result = MapRegister<GlobalClockControlReg>(client, [](auto reg) {
+    return reg.set_pll_source(GlobalClockControlReg::PllSource::BCLK)
+        .set_sysclk1_source(GlobalClockControlReg::SysClk1Source::PLL);
+  });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Configure the PLL to convert the input clock from |bclk_frequency| to
+  // 512*|sample_rate|.
+  PllParameters pll_parameters;
+  result = CalculatePllParams(bclk_frequency, 512 * sample_rate, &pll_parameters);
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "alc5663: Could not set up PLL to convert clock from %uHz to %uHz.\n",
+           bclk_frequency, 512 * sample_rate);
+    return result;
+  }
+  result = MapRegister<PllControl1Reg>(client, [&pll_parameters](auto reg) {
+    return reg.set_n_code(pll_parameters.n).set_k_code(pll_parameters.k);
+  });
+  if (result != ZX_OK) {
+    return result;
+  }
+  result = MapRegister<PllControl2Reg>(client, [&pll_parameters](auto reg) {
+    return reg.set_m_code(pll_parameters.m)
+        .set_bypass_m(pll_parameters.bypass_m ? 1 : 0)
+        .set_bypass_k(pll_parameters.bypass_k ? 1 : 0);
+  });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Power up the PLL.
+  result =
+      MapRegister<PowerManagementControl5Reg>(client, [](auto reg) { return reg.set_pow_pll(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Set up the final divider to convert the 512*|sample_rate| clock into
+  // a 256*|sample_rate| clock.
+  result = MapRegister<AdcDacClockControlReg>(
+      client, [](auto reg) { return reg.set_i2s_pre_div(ClockDivisionRate::DivideBy2); });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Enable ASRC mode.
+  result = MapRegister<AsrcControl1Reg>(
+      client, [](auto reg) { return reg.set_i2s1_asrc(1).set_dac_asrc(1).set_adc_asrc(1); });
+  if (result != ZX_OK) {
+    return result;
+  }
+  result = MapRegister<AsrcControl2Reg>(client, [](auto reg) {
+    return reg.set_clk_da_filter_source(AsrcControl2Reg::FilterSource::ASRC)
+        .set_clk_ad_filter_source(AsrcControl2Reg::FilterSource::ASRC);
+  });
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  return ZX_OK;
+}
+
 Alc5663Device::Alc5663Device(zx_device_t* parent, ddk::I2cChannel channel)
     : DeviceType(parent), client_(channel) {}
 
@@ -147,13 +262,11 @@ zx_status_t Alc5663Device::InitializeDevice() {
   if (status != ZX_OK) {
     return status;
   }
-
   status = MapRegister<PowerManagementControl2Reg>(
       &client_, [](auto reg) { return reg.set_pow_adc_filter(1).set_pow_dac_stereo1_filter(1); });
   if (status != ZX_OK) {
     return status;
   }
-
   status = MapRegister<PowerManagementControl3Reg>(&client_, [](auto reg) {
     return reg.set_pow_vref1(1)
         .set_pow_vref2(1)
@@ -165,10 +278,18 @@ zx_status_t Alc5663Device::InitializeDevice() {
   if (status != ZX_OK) {
     return status;
   }
-
   status = MapRegister<PowerManagementControl4Reg>(&client_, [](auto reg) {
     return reg.set_pow_bst1(1).set_pow_micbias1(1).set_pow_micbias2(1).set_pow_recmix1(1);
   });
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Setup internal clocks and PLL.
+  //
+  // TODO(fxb/35648): Allow this to be configured at runtime.
+  status = SetUpDeviceClocks(&client_, /*sample_rate=*/kSampleRate,
+                             /*bclk_frequency=*/(kSampleRate * kBitsPerChannel * kNumChannels));
   if (status != ZX_OK) {
     return status;
   }

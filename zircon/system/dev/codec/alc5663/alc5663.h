@@ -80,6 +80,14 @@ struct PllParameters {
   bool bypass_k;  // If true, don't divide by (K + 2).
 };
 
+// Input data format.
+//
+// TODO(fxb/35648): Allow this to be configured at runtime.
+const uint32_t kBitsPerSample = 24;
+const uint32_t kBitsPerChannel = 25;  // Pixelbook Eve NHLT configures 25 bits (sic) per channel.
+const uint32_t kNumChannels = 2;
+const uint32_t kSampleRate = 48'000;
+
 // Calculate phase-locked loop (PLL) parameters.
 //
 // In particular, we calculate values of N, M and K such that:
