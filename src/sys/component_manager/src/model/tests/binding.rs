@@ -66,7 +66,7 @@ async fn bind_instance_root_non_existent() {
     let model = new_model(mock_resolver, mock_runner).await;
     let res = model.look_up_and_bind_instance(vec!["no-such-instance:0"].into()).await;
     let expected_res: Result<(), ModelError> =
-        Err(ModelError::lookup_not_found(vec!["no-such-instance:0"].into()));
+        Err(ModelError::instance_not_found(vec!["no-such-instance:0"].into()));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_urls = urls_run.lock().await;
     let expected_urls: Vec<String> = vec![];
@@ -158,7 +158,7 @@ async fn bind_instance_child_non_existent() {
     // can't bind to logger: it does not exist
     let moniker: AbsoluteMoniker = vec!["system:0", "logger:0"].into();
     let res = model.look_up_and_bind_instance(moniker.clone()).await;
-    let expected_res: Result<(), ModelError> = Err(ModelError::lookup_not_found(moniker));
+    let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(moniker));
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_urls = urls_run.lock().await;
     let expected_urls = vec!["test:///system_resolved".to_string()];

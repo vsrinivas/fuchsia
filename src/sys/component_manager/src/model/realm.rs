@@ -187,7 +187,7 @@ impl Realm {
                     .await?;
                 child_realm
             } else {
-                return Err(ModelError::instance_not_found(
+                return Err(ModelError::instance_not_found_in_realm(
                     realm.abs_moniker.clone(),
                     partial_moniker.clone(),
                 ));

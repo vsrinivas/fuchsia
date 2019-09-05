@@ -12,13 +12,13 @@ use {
 #[derive(Debug, Fail, Clone)]
 pub enum ModelError {
     #[fail(display = "component instance {} not found in realm {}", child, moniker)]
-    InstanceNotFound { moniker: AbsoluteMoniker, child: PartialMoniker },
+    InstanceNotFoundInRealm { moniker: AbsoluteMoniker, child: PartialMoniker },
     #[fail(display = "component instance {} in realm {} already exists", child, moniker)]
     InstanceAlreadyExists { moniker: AbsoluteMoniker, child: PartialMoniker },
     #[fail(display = "component instance with moniker {} has shut down", moniker)]
     InstanceShutDown { moniker: AbsoluteMoniker },
-    #[fail(display = "component instance {} not found for lookup", moniker)]
-    LookupNotFound { moniker: AbsoluteMoniker },
+    #[fail(display = "component instance {} not found", moniker)]
+    InstanceNotFound { moniker: AbsoluteMoniker },
     #[fail(display = "component collection not found with name {}", name)]
     CollectionNotFound { name: String },
     #[fail(display = "{} is not supported", feature)]
@@ -58,8 +58,11 @@ pub enum ModelError {
 }
 
 impl ModelError {
-    pub fn instance_not_found(moniker: AbsoluteMoniker, child: PartialMoniker) -> ModelError {
-        ModelError::InstanceNotFound { moniker, child }
+    pub fn instance_not_found_in_realm(
+        moniker: AbsoluteMoniker,
+        child: PartialMoniker,
+    ) -> ModelError {
+        ModelError::InstanceNotFoundInRealm { moniker, child }
     }
 
     pub fn instance_already_exists(moniker: AbsoluteMoniker, child: PartialMoniker) -> ModelError {
@@ -70,8 +73,8 @@ impl ModelError {
         ModelError::InstanceShutDown { moniker }
     }
 
-    pub fn lookup_not_found(moniker: AbsoluteMoniker) -> ModelError {
-        ModelError::LookupNotFound { moniker }
+    pub fn instance_not_found(moniker: AbsoluteMoniker) -> ModelError {
+        ModelError::InstanceNotFound { moniker }
     }
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {

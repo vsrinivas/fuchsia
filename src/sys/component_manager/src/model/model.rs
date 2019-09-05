@@ -192,7 +192,7 @@ impl Model {
                 if let Some(r) = cur_state.all_child_realms().get(moniker) {
                     r.clone()
                 } else {
-                    return Err(ModelError::lookup_not_found(look_up_abs_moniker.clone()));
+                    return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
                 }
             };
         }

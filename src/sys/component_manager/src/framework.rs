@@ -263,7 +263,7 @@ impl RealmServiceHostInner {
         child.collection.as_ref().ok_or(fsys::Error::InvalidArguments)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
         Realm::remove_dynamic_child(model, realm, &partial_moniker).await.map_err(|e| match e {
-            ModelError::InstanceNotFound { .. } => fsys::Error::InstanceNotFound,
+            ModelError::InstanceNotFoundInRealm { .. } => fsys::Error::InstanceNotFound,
             ModelError::Unsupported { .. } => fsys::Error::Unsupported,
             e => {
                 error!("remove_dynamic_child() failed: {}", e);
