@@ -5,7 +5,7 @@
 import("//build/config.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//third_party/cobalt_config/metrics_registry.gni")
+import("//third_party/cobalt/metrics_registry.gni")
 
 declare_args() {
   # Set to |true| to enable collecting execution traces of audio_core.
