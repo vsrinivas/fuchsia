@@ -13,6 +13,7 @@ library("journal") {
       "data-streamer.cc",
       "entry-view.cc",
       "journal.cc",
+      "operation-tracker.cc",
       "replay.cc",
       "superblock.cc",
     ]
@@ -22,6 +23,7 @@ library("journal") {
       "$zx/system/ulib/fs/operation:headers",
       "$zx/system/ulib/fs/transaction:headers",
       "$zx/system/ulib/fzl:headers",
+      "$zx/system/ulib/range:headers",
     ]
     deps = [
       "$zx/system/ulib/fbl",
@@ -30,6 +32,7 @@ library("journal") {
       "$zx/system/ulib/fs/buffer",
       "$zx/system/ulib/fs/operation",
       "$zx/system/ulib/fs/transaction",
+      "$zx/system/ulib/range",
       "$zx/system/ulib/sync",
       "$zx/system/ulib/zircon",
       "$zx/third_party/ulib/cksum",
@@ -51,6 +54,7 @@ test("journal-unit") {
     "test/data-streamer-test.cc",
     "test/entry-view-test.cc",
     "test/journal-test.cc",
+    "test/operation-tracker-test.cc",
     "test/replay-test.cc",
     "test/superblock-test.cc",
   ]
