@@ -17,6 +17,7 @@ rustc_staticlib("staticlib") {
     "//src/lib/fuchsia-async-testloop",
   ]
   source_root = "staticlib.rs"
+  non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
 
 source_set("cpp") {
