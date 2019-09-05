@@ -603,30 +603,26 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn test_serialize_fail_header_too_short() {
         let mut buf = [0u8; 7];
         let mut buf = [&mut buf[..]];
         let buf = FragmentedBytesMut::new(&mut buf[..]);
         let (head, body, foot) = buf.try_split_contiguous(..).unwrap();
         let mut buffer = SerializeBuffer::new(head, body, foot);
-        UdpPacketBuilder::new(TEST_SRC_IPV4, TEST_DST_IPV4, None, NonZeroU16::new(1).unwrap())
-            .serialize(&mut buffer);
+        let builder =
+            UdpPacketBuilder::new(TEST_SRC_IPV4, TEST_DST_IPV4, None, NonZeroU16::new(1).unwrap());
+        should_panic!(builder.serialize(&mut buffer), "too few bytes for UDP header");
     }
 
     #[test]
-    #[should_panic]
     fn test_serialize_fail_packet_too_long_ipv4() {
-        (&[0; (1 << 16) - HEADER_BYTES][..])
-            .into_serializer()
-            .encapsulate(UdpPacketBuilder::new(
-                TEST_SRC_IPV4,
-                TEST_DST_IPV4,
-                None,
-                NonZeroU16::new(1).unwrap(),
-            ))
-            .serialize_vec_outer()
-            .unwrap();
+        let ser = (&[0; (1 << 16) - HEADER_BYTES][..]).into_serializer().encapsulate(
+            UdpPacketBuilder::new(TEST_SRC_IPV4, TEST_DST_IPV4, None, NonZeroU16::new(1).unwrap()),
+        );
+        should_panic!(
+            ser.serialize_vec_outer(),
+            "total UDP packet length of 65536 bytes overflows 16-bit length field of UDP header"
+        );
     }
 
     #[test]

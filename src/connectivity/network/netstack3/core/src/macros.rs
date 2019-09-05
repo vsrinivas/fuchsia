@@ -147,6 +147,38 @@ macro_rules! create_protocol_enum {
     () => ()
 }
 
+/// Evaluate the expression `$e` and assert that it panics with the message
+/// `$msg`. The panicked value must either have type `&'static str` or type
+/// `String`.
+///
+/// Note that this macro will compile regardless of whether the expression `$e`,
+/// when converted to the body of a closure, is [`UnwindSafe`]. This shouldn't
+/// be a problem because it only ever makes sense to invoke this macro as the
+/// last line in a test, so no other code will run that might observe any
+/// invalid state. However, if you are planning to use this in some exotic way,
+/// make sure to consider unwind safety.
+///
+/// [`UnwindSafe`]: std::panic::UnwindSafe
+#[cfg(test)]
+macro_rules! should_panic {
+    ($e:expr, $msg:expr) => {
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $e)) {
+            Ok(_) => panic!("expression unexpectedly didn't panic"),
+            Err(e) => assert_eq!(
+                match (e.downcast_ref::<&'static str>(), e.downcast_ref::<String>()) {
+                    (Some(s), None) => s,
+                    (None, Some(s)) => s.as_str(),
+                    (None, None) => {
+                        panic!("expression panicked with a type other than &'static str or String")
+                    }
+                    (Some(_), Some(_)) => unreachable!(), // can't be two different types at once
+                },
+                $msg
+            ),
+        }
+    };
+}
+
 /// Declare a benchmark function.
 ///
 /// The function will be named `$name`. If the `benchmark` feature is enabled,
