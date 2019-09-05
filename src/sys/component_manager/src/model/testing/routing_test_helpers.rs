@@ -76,7 +76,7 @@ pub enum CheckUse {
 pub struct RoutingTest {
     components: Vec<(&'static str, ComponentDecl)>,
     pub model: Model,
-    namespaces: Namespaces,
+    pub namespaces: Namespaces,
     memfs: Memfs,
 }
 
@@ -384,7 +384,7 @@ impl RoutingTest {
         }
     }
 
-    async fn bind_instance<'a>(model: &'a Model, moniker: &'a AbsoluteMoniker) -> String {
+    pub async fn bind_instance<'a>(model: &'a Model, moniker: &'a AbsoluteMoniker) -> String {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(
             format!("{:?}", model.look_up_and_bind_instance(moniker.clone()).await),
@@ -393,13 +393,13 @@ impl RoutingTest {
         moniker.path().last().expect("didn't expect a root component").name().to_string()
     }
 
-    fn resolved_url(component_name: &str) -> String {
+    pub fn resolved_url(component_name: &str) -> String {
         format!("test:///{}_resolved", component_name)
     }
 }
 
 /// Contains functions to use capabilities in routing tests.
-mod capability_util {
+pub mod capability_util {
     use super::*;
     use cm_rust::NativeIntoFidl;
 
@@ -660,7 +660,7 @@ mod capability_util {
 
     /// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of
     /// `resolved_url`.
-    async fn get_dir_from_namespace(
+    pub async fn get_dir_from_namespace(
         dir_string: &str,
         resolved_url: String,
         namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,

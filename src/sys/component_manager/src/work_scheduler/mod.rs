@@ -3,3 +3,6 @@
 // found in the LICENSE file.
 
 pub mod work_scheduler;
+
+#[cfg(test)]
+mod routing_tests;

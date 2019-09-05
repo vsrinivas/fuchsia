@@ -5,12 +5,10 @@
 use {
     crate::{
         framework::FrameworkCapability,
-        model::{
-            error::ModelError, hooks::RouteFrameworkCapabilityHook,
-            AbsoluteMoniker, Realm,
-        },
+        model::{error::ModelError, hooks::RouteFrameworkCapabilityHook, AbsoluteMoniker, Realm},
     },
-    cm_rust::{CapabilityPath, FrameworkCapabilityDecl},
+    cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget, FrameworkCapabilityDecl},
+    failure::format_err,
     fidl::{endpoints::ServerEnd, Error},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, TryStreamExt},
@@ -20,6 +18,8 @@ use {
 };
 
 lazy_static! {
+    pub static ref WORKER_CAPABILITY_PATH: CapabilityPath =
+        "/svc/fuchsia.sys2.Worker".try_into().unwrap();
     pub static ref WORK_SCHEDULER_CAPABILITY_PATH: CapabilityPath =
         "/svc/fuchsia.sys2.WorkScheduler".try_into().unwrap();
 }
@@ -244,9 +244,10 @@ impl WorkSchedulerHook {
         capability: Option<Box<dyn FrameworkCapability>>,
     ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
         match capability_decl {
-            FrameworkCapabilityDecl::Service(capability_path)
+            FrameworkCapabilityDecl::LegacyService(capability_path)
                 if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
             {
+                Self::check_for_worker(&*realm).await?;
                 Ok(Some(Box::new(WorkSchedulerCapability::new(
                     self.work_scheduler.clone(),
                     realm.abs_moniker.clone(),
@@ -254,6 +255,39 @@ impl WorkSchedulerHook {
             }
             _ => Ok(capability),
         }
+    }
+
+    async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
+        let realm_state = realm.lock_state().await;
+        let realm_state = realm_state.get();
+        let decl = realm_state.decl();
+        decl.exposes
+            .iter()
+            .find(|&expose| match expose {
+                ExposeDecl::LegacyService(ls) => ls.target_path == *WORKER_CAPABILITY_PATH,
+                _ => false,
+            })
+            .map_or_else(
+                || {
+                    Err(ModelError::capability_discovery_error(format_err!(
+                        "component uses WorkScheduler without exposing Worker: {}",
+                        realm.abs_moniker
+                    )))
+                },
+                |expose| match expose {
+                    ExposeDecl::LegacyService(ls) => match ls.target {
+                        ExposeTarget::Framework => Ok(()),
+                        _ => Err(ModelError::capability_discovery_error(format_err!(
+                            "component exposes Worker, but not as legacy service to framework: {}",
+                            realm.abs_moniker
+                        ))),
+                    },
+                    _ => Err(ModelError::capability_discovery_error(format_err!(
+                        "component exposes Worker, but not as legacy service to framework: {}",
+                        realm.abs_moniker
+                    ))),
+                },
+            )
     }
 }
 
