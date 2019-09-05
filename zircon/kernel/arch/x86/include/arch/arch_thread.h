@@ -15,6 +15,15 @@
 
 #include <arch/x86/registers.h>
 
+// Bit 63 of the page_fault_resume field is used to indicate whether a data fault should first
+// handle the fault, or immediately return the resume location. The 63'rd bit is selected as this
+// bit is invariant over all kernel addresses.
+static constexpr uint64_t X86_PFR_RUN_FAULT_HANDLER_BIT = 63;
+// Check that the fault handler bit would always be 1 for a kernel address.
+static_assert(((KERNEL_ASPACE_BASE >> X86_PFR_RUN_FAULT_HANDLER_BIT) & 1) == 1 &&
+                  ((KERNEL_ASPACE_SIZE - 1) & KERNEL_ASPACE_BASE) == 0,
+              "PFR fault handler bit not invariant over kernel addresses");
+
 __BEGIN_CDECLS
 
 struct arch_thread {
@@ -45,8 +54,10 @@ struct arch_thread {
   void *extended_register_state;
   uint8_t extended_register_buffer[X86_MAX_EXTENDED_REGISTER_SIZE + 64];
 
-  /* if non-NULL, address to return to on page fault */
-  void *page_fault_resume;
+  // If non-NULL, address to return to on page fault. Additionally the
+  // X86_PFR_RUN_FAULT_HANDLER_BIT controls whether the fault handler is invoked or not. If not
+  // invoked resume is called with rdx = fault address and rcx = page fault flags.
+  uint64_t page_fault_resume;
 
   /* |track_debug_state| tells whether the kernel should keep track of the whole debug state for
    * this thread. Normally this is set explicitly by an user that wants to make use of HW

@@ -29,13 +29,37 @@ class UserMemory {
  public:
   static ktl::unique_ptr<UserMemory> Create(size_t size);
   virtual ~UserMemory();
-  void* out() { return reinterpret_cast<void*>(mapping_->base()); }
-  const void* in() { return reinterpret_cast<void*>(mapping_->base()); }
+  vaddr_t base() { return mapping_->base(); }
+  void* out() { return reinterpret_cast<void*>(base()); }
+  const void* in() { return reinterpret_cast<void*>(base()); }
+  template <typename T>
+  user_out_ptr<T> user_out() {
+    return make_user_out_ptr<T>(reinterpret_cast<T*>(out()));
+  }
+  template <typename T>
+  user_in_ptr<const T> user_in() {
+    return make_user_in_ptr<const T>(reinterpret_cast<const T*>(in()));
+  }
+
+  // Ensures the mapping is committed and mapped such that usages will cause no faults.
+  zx_status_t CommitAndMap(size_t size) { return mapping_->MapRange(0, size, true); }
+
+  // Read or write to the underlying VMO directly, bypassing the mapping.
+  zx_status_t VmoRead(void* ptr, uint64_t offset, uint64_t len) {
+    ASSERT(vmo_);
+    return vmo_->Read(ptr, offset, len);
+  }
+  zx_status_t VmoWrite(const void* ptr, uint64_t offset, uint64_t len) {
+    ASSERT(vmo_);
+    return vmo_->Write(ptr, offset, len);
+  }
 
  private:
-  UserMemory(fbl::RefPtr<VmMapping> mapping) : mapping_(ktl::move(mapping)) {}
+  UserMemory(fbl::RefPtr<VmMapping> mapping, fbl::RefPtr<VmObject> vmo)
+      : mapping_(ktl::move(mapping)), vmo_(ktl::move(vmo)) {}
 
   fbl::RefPtr<VmMapping> mapping_;
+  fbl::RefPtr<VmObject> vmo_;
 };
 
 }  // namespace testing

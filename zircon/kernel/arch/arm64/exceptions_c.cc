@@ -217,6 +217,18 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
           iframe->elr, is_user, far, esr, iss);
 
+  uint64_t dfr = get_current_thread()->arch.data_fault_resume;
+  if (unlikely(dfr && !BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT))) {
+    // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
+    // Double check the bit before ARM64_DFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
+    // address) and fill it in.
+    DEBUG_ASSERT(BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT - 1));
+    iframe->elr = dfr | (1ull << ARM64_DFR_RUN_FAULT_HANDLER_BIT);
+    iframe->r[1] = far;
+    iframe->r[2] = pf_flags;
+    return;
+  }
+
   uint32_t dfsc = BITS(iss, 5, 0);
   if (likely(dfsc != DFSC_ALIGNMENT_FAULT)) {
     arch_enable_ints();
@@ -230,9 +242,11 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
 
   // Check if the current thread was expecting a data fault and
   // we should return to its handler.
-  thread_t* thr = get_current_thread();
-  if (thr->arch.data_fault_resume != NULL && is_user_address(far)) {
-    iframe->elr = (uintptr_t)thr->arch.data_fault_resume;
+  if (dfr && is_user_address(far)) {
+    // Having the ARM64_DFR_RUN_FAULT_HANDLER_BIT set should have already resulted in a valid
+    // sign extended canonical address. Double check the bit before, which should be a one.
+    DEBUG_ASSERT(BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT - 1));
+    iframe->elr = dfr;
     return;
   }
 

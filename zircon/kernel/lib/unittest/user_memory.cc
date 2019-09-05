@@ -49,7 +49,7 @@ ktl::unique_ptr<UserMemory> UserMemory::Create(size_t size) {
   });
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<UserMemory> mem(new (&ac) UserMemory(mapping));
+  ktl::unique_ptr<UserMemory> mem(new (&ac) UserMemory(mapping, vmo));
   if (!ac.check()) {
     unittest_printf("failed to allocate from heap\n");
     return nullptr;

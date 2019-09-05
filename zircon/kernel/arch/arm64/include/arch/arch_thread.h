@@ -20,6 +20,15 @@
 
 #include <arch/arm64/registers.h>
 
+// Bit 63 of the data_fault_resume field is used to indicate whether a data fault should first
+// handle the fault, or immediately return the resume location. The 63'rd bit is selected as this
+// bit is invariant over all kernel addresses.
+static constexpr uint64_t ARM64_DFR_RUN_FAULT_HANDLER_BIT = 63;
+// Check that the fault handler bit would always be 1 for a kernel address.
+static_assert(((KERNEL_ASPACE_BASE >> ARM64_DFR_RUN_FAULT_HANDLER_BIT) & 1) == 1 &&
+                  ((KERNEL_ASPACE_SIZE - 1) & KERNEL_ASPACE_BASE) == 0,
+              "DFR fault handler bit not invariant over kernel addresses");
+
 __BEGIN_CDECLS
 
 struct fpstate {
@@ -54,8 +63,11 @@ struct arch_thread {
   // restore x18 on exception entry. Swapped on context switch.
   struct arm64_percpu* current_percpu_ptr;
 
-  // if non-NULL, address to return to on data fault
-  void* data_fault_resume;
+  // If non-NULL, address to return to on data fault. Additionally the
+  // ARM64_DFR_RUN_FAULT_HANDLER_BIT controls whether the fault handler is invoked or not. If not
+  // invoked resume is called with iframe_t::r[1] = fault address and iframe_t::r[2] = page fault
+  // flags.
+  uint64_t data_fault_resume;
 
   // saved fpu state
   struct fpstate fpstate;

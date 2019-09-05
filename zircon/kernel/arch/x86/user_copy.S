@@ -16,17 +16,21 @@
  * %rsi = argument 2, const void* src
  * %rdx = argument 3, size_t len
  *   - moved to %rcx
- * %rcx = argument 4, void** fault_return
+ * %rcx = argument 4, uint64_t* fault_return
  *   - moved to %r10
  */
 
-// zx_status_t _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, void **fault_return)
+// X64CopyToFromUserRet _x86_copy_to_or_from_user(void *dst, const void *src, size_t len, uint64_t *fault_return, uint64_t fault_return_mask)
 FUNCTION(_x86_copy_to_or_from_user)
     // Copy fault_return out of %rcx, because %rcx is used by "rep movsb" later.
     movq %rcx, %r10
 
     // Setup page fault return
     leaq .Lfault_copy(%rip), %rax
+    // Given that we are in the kernel and our page fault return address will be a kernel address
+    // we can toggle the high bit of fault_return (which controls whether the hardware page fault
+    // handler actually runs or not) by simpling ANDing with the supplied page_fault_mask.
+    andq %r8, %rax
     movq %rax, (%r10)
 
     // Disable SMAP protection if SMAP is enabled
@@ -40,6 +44,8 @@ FUNCTION(_x86_copy_to_or_from_user)
     movq %rdx, %rcx
 .align 16
     APPLY_CODE_PATCH_FUNC(x86_usercopy_select, 16)
+    // Set eax to ZX_OK. In this case since we do not set rdx the value of the fault address in the
+    // return struct is undefined.
     xorl %eax, %eax
 
 .Lcleanup_copy:
@@ -51,6 +57,12 @@ FUNCTION(_x86_copy_to_or_from_user)
     ret
 
 .Lfault_copy:
-    mov $ZX_ERR_INVALID_ARGS, %rax
+    // If we are capturing faults the flags will have been placed in rcx and the fault address in
+    // rdx. In case we were capturing faults we shuffle the flags to get them into the high bits of
+    // rax. It is up to the caller to know if fault capture was enabled and hence whether the flags
+    // and fault address will be valid values.
+    shlq $32, %rcx
+    movl $ZX_ERR_INVALID_ARGS, %eax
+    or %rcx, %rax
     jmp .Lcleanup_copy
 END_FUNCTION(_x86_copy_to_or_from_user)

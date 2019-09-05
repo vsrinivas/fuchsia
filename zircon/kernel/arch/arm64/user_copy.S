@@ -12,6 +12,7 @@ dst .req x0
 src .req x1
 len .req x2
 fault_return_ptr .req x3
+fault_return_mask .req x4
 temp .req x15
 
 // NOTE! We know here that the memcpy code doesn't touch these registers,
@@ -20,12 +21,13 @@ temp .req x15
 saved_fault_return_ptr .req x16
 saved_lr .req x17
 
-// zx_status_t _arm64_user_copy(void *dst, const void *src, size_t len, void **fault_return)
+// Arm64UserCopyRet _arm64_user_copy(void *dst, const void *src, size_t len, uint64_t *fault_return, uint64_t fault_return_mask)
 .section .text._arm64_user_copy,"ax"
 .balign 64 // Align to cache line.  This code fits in one cache line.
 FUNCTION(_arm64_user_copy)
 
     adr temp, .Lfault_from_user
+    and temp, temp, fault_return_mask
 
     mov saved_fault_return_ptr, fault_return_ptr
     .cfi_register fault_return_ptr, saved_fault_return_ptr
@@ -42,6 +44,8 @@ FUNCTION(_arm64_user_copy)
     // the registers we're using for saved_fault_return_ptr and saved_lr.
     str temp, [fault_return_ptr]
     bl memcpy
+    // Store a successful status for the return. In this case since we do not set x1 the value of
+    // the fault address in the return struct is undefined.
     mov x0, #ZX_OK
 
 .Luser_copy_return:
@@ -52,10 +56,18 @@ FUNCTION(_arm64_user_copy)
 END_FUNCTION(_arm64_user_copy)
 
 .section .text.cold._arm64_user_copy,"ax"
+// If we are capturing faults the exception handler will have placed the faulting virtual address
+// for us in x1 and the flags in x2. We do not touch x1 and rely on the caller to know if the value
+// is meaningful based on whether it specified fault capture or not, we just need to construct a
+// valid x0 before jmping to user_copy_return.
 .Lfault_from_user:
     .cfi_startproc
     .cfi_register fault_return_ptr, saved_fault_return_ptr
     .cfi_register lr, saved_lr
     mov x0, #ZX_ERR_INVALID_ARGS
+    // If we are capturing faults the flags will have been placed in x2 and we want them placed in
+    // the high bits of x0. If not capturing faults then we will copy some garbage bits which will
+    // be ignored by the caller.
+    bfi x0, x2, 32, 32
     b .Luser_copy_return
     .cfi_endproc

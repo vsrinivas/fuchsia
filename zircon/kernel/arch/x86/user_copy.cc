@@ -47,8 +47,6 @@ void fill_out_clac_instruction(const CodePatchInfo* patch) {
   }
 }
 
-extern zx_status_t _x86_copy_to_or_from_user(void*, const void*, size_t, void**);
-
 void x86_usercopy_select(const CodePatchInfo* patch) {
   // The user copy patch area is 16-byte aligned; make sure the block is 16-bytes in size too, to
   // ensure that the jump that exits it jumps to a 16-byte aligned address, per recommendations in
@@ -91,37 +89,69 @@ static bool can_access(const void* base, size_t len) {
   // permissions are, as long as they are in the user address space.  We
   // rely on a page fault occurring if an actual permissions error occurs.
   DEBUG_ASSERT(x86_get_cr0() & X86_CR0_WP);
-  return is_user_address_range((vaddr_t)base, len);
+  return is_user_address_range(reinterpret_cast<vaddr_t>(base), len);
 }
 
-zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
+static X64CopyToFromUserRet _arch_copy_from_user(void* dst, const void* src, size_t len,
+                                                 uint64_t fault_return_mask) {
   // If we have the SMAP feature, then AC should only be set when running
   // _x86_copy_to_or_from_user. If we don't have the SMAP feature, then we don't care if AC is set
   // or not.
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
 
   if (!can_access(src, len))
-    return ZX_ERR_INVALID_ARGS;
+    return (X64CopyToFromUserRet){.status = ZX_ERR_INVALID_ARGS, .pf_flags = 0, .pf_va = 0};
 
   thread_t* thr = get_current_thread();
-  zx_status_t status = _x86_copy_to_or_from_user(dst, src, len, &thr->arch.page_fault_resume);
+  X64CopyToFromUserRet ret =
+      _x86_copy_to_or_from_user(dst, src, len, &thr->arch.page_fault_resume, fault_return_mask);
 
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
-  return status;
+  return ret;
 }
 
-zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
+zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
+  return _arch_copy_from_user(dst, src, len, X86_USER_COPY_DO_FAULTS).status;
+}
+
+zx_status_t arch_copy_from_user_capture_faults(void* dst, const void* src, size_t len,
+                                               vaddr_t* pf_va, uint* pf_flags) {
+  X64CopyToFromUserRet ret = _arch_copy_from_user(dst, src, len, X86_USER_COPY_CAPTURE_FAULTS);
+  // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the
+  // responsibility of the caller to check the status and ignore.
+  *pf_va = ret.pf_va;
+  *pf_flags = ret.pf_flags;
+  return ret.status;
+}
+
+static X64CopyToFromUserRet _arch_copy_to_user(void* dst, const void* src, size_t len,
+                                               uint64_t fault_return_mask) {
   // If we have the SMAP feature, then AC should only be set when running
   // _x86_copy_to_or_from_user. If we don't have the SMAP feature, then we don't care if AC is set
   // or not.
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
 
   if (!can_access(dst, len))
-    return ZX_ERR_INVALID_ARGS;
+    return (X64CopyToFromUserRet){.status = ZX_ERR_INVALID_ARGS, .pf_flags = 0, .pf_va = 0};
 
   thread_t* thr = get_current_thread();
-  zx_status_t status = _x86_copy_to_or_from_user(dst, src, len, &thr->arch.page_fault_resume);
+  X64CopyToFromUserRet ret =
+      _x86_copy_to_or_from_user(dst, src, len, &thr->arch.page_fault_resume, fault_return_mask);
 
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
-  return status;
+  return ret;
+}
+
+zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
+  return _arch_copy_to_user(dst, src, len, X86_USER_COPY_DO_FAULTS).status;
+}
+
+zx_status_t arch_copy_to_user_capture_faults(void* dst, const void* src, size_t len, vaddr_t* pf_va,
+                                             uint* pf_flags) {
+  X64CopyToFromUserRet ret = _arch_copy_to_user(dst, src, len, X86_USER_COPY_CAPTURE_FAULTS);
+  // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the
+  // responsibility of the caller to check the status and ignore.
+  *pf_va = ret.pf_va;
+  *pf_flags = ret.pf_flags;
+  return ret.status;
 }

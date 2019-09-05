@@ -5,4 +5,20 @@
 library("user_copy") {
   kernel = true
   sources = []
+  deps = [
+    ":tests",
+  ]
+}
+
+source_set("tests") {
+  #TODO: testonly = true
+  visibility = [ ":*" ]
+  sources = [
+    "user_copy_tests.cc",
+  ]
+
+  deps = [
+    ":headers",
+    "$zx/kernel/lib/unittest",
+  ]
 }

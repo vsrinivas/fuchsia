@@ -6,6 +6,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <bits.h>
 #include <debug.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
@@ -272,6 +273,20 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
   flags |= (error_code & PFEX_I) ? VMM_PF_FLAG_INSTRUCTION : 0;
   flags |= (error_code & PFEX_P) ? 0 : VMM_PF_FLAG_NOT_PRESENT;
 
+  /* Check if the page fault handler should be skipped. It is skipped if there's a page_fault_resume
+   * address and the highest bit is 0. */
+  uint64_t pfr = get_current_thread()->arch.page_fault_resume;
+  if (unlikely(pfr && !BIT_SET(pfr, X86_PFR_RUN_FAULT_HANDLER_BIT))) {
+    // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
+    // Double check the bit before X86_PFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
+    // address) and fill it in.
+    DEBUG_ASSERT(BIT_SET(pfr, X86_PFR_RUN_FAULT_HANDLER_BIT - 1));
+    frame->ip = pfr | (1ull << X86_PFR_RUN_FAULT_HANDLER_BIT);
+    frame->rdx = va;
+    frame->rcx = flags;
+    return ZX_OK;
+  }
+
   /* call the high level page fault handler */
   zx_status_t pf_err = vmm_page_fault_handler(va, flags);
   if (likely(pf_err == ZX_OK))
@@ -281,9 +296,11 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
    * resort to trying to recover first, before bailing */
 
   /* Check if a resume address is specified, and just return to it if so */
-  thread_t* current_thread = get_current_thread();
-  if (unlikely(current_thread->arch.page_fault_resume)) {
-    frame->ip = (uintptr_t)current_thread->arch.page_fault_resume;
+  if (unlikely(pfr)) {
+    // Having the X86_PFR_RUN_FAULT_HANDLER_BIT set should have already resulted in a valid
+    // sign extended canonical address. Double check the bit before, which should be a one.
+    DEBUG_ASSERT(BIT_SET(pfr, X86_PFR_RUN_FAULT_HANDLER_BIT - 1));
+    frame->ip = pfr;
     return ZX_OK;
   }
 
