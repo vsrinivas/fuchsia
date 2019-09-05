@@ -5,7 +5,7 @@
 #ifndef SRC_MODULAR_LIB_ASYNC_CPP_OPERATION_H_
 #define SRC_MODULAR_LIB_ASYNC_CPP_OPERATION_H_
 
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
 
 #include <functional>

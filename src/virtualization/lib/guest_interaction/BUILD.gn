@@ -234,10 +234,10 @@ executable("server_daemon_test") {
     "//src/virtualization/tests:mock_netstack",
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
-    "//zircon/system/fidl/fuchsia-net",
-    "//zircon/system/fidl/fuchsia-net-stack",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net-stack",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
@@ -271,12 +271,12 @@ executable("guest_discovery_service_bin") {
     ":fuchsia.netemul.guest",
     ":platform_interface_posix",
     ":proto",
-    "//garnet/public/lib/async_promise:async_promise",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
     "//src/virtualization/lib/grpc:grpc",
     "//third_party/grpc:grpc++",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -324,10 +324,10 @@ executable("guest_interaction_service_test") {
     "//third_party/googletest:gtest_main",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_full",
-    "//zircon/system/fidl/fuchsia-net",
-    "//zircon/system/fidl/fuchsia-net-stack",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-net",
+    "//zircon/system/fidl/fuchsia-net-stack",
   ]
 }
 

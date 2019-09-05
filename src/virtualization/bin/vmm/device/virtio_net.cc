@@ -5,7 +5,7 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/promise.h>

@@ -66,7 +66,6 @@ executable("hub_tests") {
 
   deps = [
     "//garnet/bin/sysmgr:lib",
-    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/inspect_deprecated/query",
     "//garnet/public/lib/inspect_deprecated/testing",
     "//sdk/lib/sys/cpp",
@@ -75,6 +74,7 @@ executable("hub_tests") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 

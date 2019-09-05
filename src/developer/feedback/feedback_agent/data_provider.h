@@ -7,8 +7,8 @@
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/dispatcher.h>
-#include <lib/async_promise/executor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <stdint.h>
 

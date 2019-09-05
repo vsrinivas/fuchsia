@@ -9,7 +9,7 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/scope.h>

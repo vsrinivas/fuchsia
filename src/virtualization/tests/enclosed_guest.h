@@ -8,7 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
@@ -171,8 +171,8 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
                                               const std::vector<std::string>& argv) override;
   zx_status_t Execute(const std::vector<std::string>& argv,
-                      const std::unordered_map<std::string, std::string>& env,
-                      std::string* result, int32_t* return_code) override;
+                      const std::unordered_map<std::string, std::string>& env, std::string* result,
+                      int32_t* return_code) override;
 
  protected:
   zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;

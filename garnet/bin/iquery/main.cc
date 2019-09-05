@@ -4,13 +4,14 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
 #include <unistd.h>
 
 #include <iostream>
+
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
 
 #include "garnet/bin/iquery/modes.h"
 #include "lib/inspect_deprecated/query/discover.h"

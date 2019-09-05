@@ -300,7 +300,6 @@ group("all") {
     ":acts_tests",
     ":amber",
     ":asio",
-    ":async_promise",
     ":ath10k",
     ":banjo",
     ":bluetooth",
@@ -450,13 +449,6 @@ group("fidl_llcpp_types_test") {
   testonly = true
   public_deps = [
     "//garnet/public/lib/fidl/llcpp:fidl_llcpp_types_test",
-  ]
-}
-
-group("async_promise") {
-  testonly = true
-  public_deps = [
-    "//garnet/public/lib/async_promise:async_promise_unittests_package",
   ]
 }
 

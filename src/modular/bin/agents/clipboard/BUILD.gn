@@ -47,6 +47,7 @@ source_set("clipboard_sources") {
 
   deps = [
     "//peridot/lib/ledger_client:page_client",
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
     "//src/modular/lib/async/cpp:operation",

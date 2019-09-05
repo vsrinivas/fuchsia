@@ -5,7 +5,7 @@
 #include "src/modular/bin/sessionmgr/story/model/ledger_story_model_storage.h"
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 #include <lib/fit/single_threaded_executor.h>

@@ -5,13 +5,12 @@
 #include "integration-test.h"
 
 #include <fcntl.h>
-
+#include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/async_promise/executor.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fit/bridge.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>

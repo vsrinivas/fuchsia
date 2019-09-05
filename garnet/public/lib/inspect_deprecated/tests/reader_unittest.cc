@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/synchronous-vfs.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/bridge.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect_deprecated/inspect.h>
@@ -14,6 +13,8 @@
 #include <lib/inspect_deprecated/testing/inspect.h>
 
 #include <thread>
+
+#include <fs/synchronous-vfs.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

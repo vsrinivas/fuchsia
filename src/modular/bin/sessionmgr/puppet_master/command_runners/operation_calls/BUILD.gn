@@ -80,6 +80,7 @@ source_set("initialize_chain_call") {
 
   deps = [
     ":set_link_value_call",
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
     "//src/modular/bin/sessionmgr/storage:story_storage",
     "//src/modular/lib/async/cpp:operation",

@@ -64,7 +64,7 @@ fit::promise<> p = fit::make_promise([] {
 
 In order to run the promise, it must be scheduled it on an implementation of
 `fit::executor`. The most commonly used executor is an `async::Executor`
-[[2](/garnet/public/lib/async_promise/executor.h)]
+[[2](/zircon/system/ulib/async/include/lib/async/cpp/executor.h)]
 which schedules callbacks on an `async_dispatcher_t`. For the purposes of
 testing and exploration, there is also `fit::single_threaded_executor` and its
 associated method `fit::run_single_threaded()`

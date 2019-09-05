@@ -75,16 +75,15 @@ source_set("lib") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
-    "//zircon/system/fidl/fuchsia-inspect",
     "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/task-utils",
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-inspect",
   ]
 
   deps = [
-    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/inspect_deprecated:reader",
@@ -95,6 +94,7 @@ source_set("lib") {
     "//src/ledger/lib/firebase_auth/testing:service_account",
     "//src/lib/fxl",
     "//third_party/boringssl",
+    "//zircon/public/lib/async-cpp",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

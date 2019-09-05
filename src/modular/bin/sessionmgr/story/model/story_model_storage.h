@@ -6,7 +6,7 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_STORY_MODEL_STORY_MODEL_STORAGE_H_
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
 
 #include <list>

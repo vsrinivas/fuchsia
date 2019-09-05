@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/boot_log_checker/reboot_log_handler.h"
 
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/gtest/test_loop_fixture.h>

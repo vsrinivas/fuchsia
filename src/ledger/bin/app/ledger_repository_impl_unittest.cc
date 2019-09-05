@@ -5,7 +5,7 @@
 #include "src/ledger/bin/app/ledger_repository_impl.h"
 
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/optional.h>

@@ -26,9 +26,12 @@ source_set("model") {
     "network.h",
   ]
 
+  public_deps = [
+    "//garnet/public/lib/json",
+  ]
+
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/json:json",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",

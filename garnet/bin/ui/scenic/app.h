@@ -5,12 +5,12 @@
 #ifndef GARNET_BIN_UI_SCENIC_APP_H_
 #define GARNET_BIN_UI_SCENIC_APP_H_
 
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/device_watcher.h>
 
 #include <memory>
 
-#include "garnet/public/lib/async_promise/executor.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"

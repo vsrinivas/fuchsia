@@ -5,7 +5,7 @@
 #include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/gtest/test_loop_fixture.h>

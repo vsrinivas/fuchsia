@@ -37,8 +37,8 @@ executable("kcounter_inspect_unittest") {
     "//src/lib/fxl:fxl_logging",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-kernel",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-kernel",
   ]
 }
 
@@ -51,14 +51,14 @@ executable("kcounter_inspect_integration_test") {
 
   deps = [
     "//garnet/bin/iquery:lib",
-    "//garnet/public/lib/async_promise",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-kernel",
-    "//zircon/system/fidl/fuchsia-mem",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-kernel",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }

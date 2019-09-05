@@ -4,7 +4,7 @@
 
 #include "src/virtualization/lib/vsh/command_runner.h"
 
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/virtualization/testing/fake_manager.h>

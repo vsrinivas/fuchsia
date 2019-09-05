@@ -7,7 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <zircon/assert.h>
 
@@ -15,7 +15,8 @@ namespace {
 class TestFixture : public gtest::RealLoopFixture {
  public:
   TestFixture()
-      : promise_loop_(&kAsyncLoopConfigNoAttachToCurrentThread), executor_(promise_loop_.dispatcher()) {
+      : promise_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        executor_(promise_loop_.dispatcher()) {
     ZX_ASSERT(promise_loop_.StartThread() == ZX_OK);
   }
 

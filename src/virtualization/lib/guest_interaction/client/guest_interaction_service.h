@@ -7,8 +7,8 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
-#include <lib/async_promise/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>

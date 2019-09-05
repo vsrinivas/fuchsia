@@ -34,8 +34,8 @@ source_set("operation") {
 
   public_deps = [
     ":future",
-    "//garnet/public/lib/async_promise",
     "//src/lib/fxl",
+    "//zircon/public/lib/async-cpp",
   ]
 
   deps = [

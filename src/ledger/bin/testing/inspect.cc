@@ -5,7 +5,7 @@
 #include "src/ledger/bin/testing/inspect.h"
 
 #include <lib/async-testing/test_loop.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/interface_request.h>

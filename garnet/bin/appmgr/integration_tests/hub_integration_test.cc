@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/default.h>
-#include <lib/async_promise/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/inspect_deprecated/query/discover.h>
 #include <lib/inspect_deprecated/query/read.h>
 #include <lib/inspect_deprecated/testing/inspect.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+
 #include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/string_printf.h>

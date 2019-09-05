@@ -48,7 +48,6 @@ source_set("testing_deps") {
   public_deps = [
     ":mocks",
     ":util",
-    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect_deprecated",
@@ -66,6 +65,7 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/scenic/tests:testing_deps",
     "//src/ui/scenic/lib/scenic/util",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]
 }

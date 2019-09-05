@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 #include <fuchsia/kernel/cpp/fidl.h>
-#include <garnet/public/lib/inspect_deprecated/reader.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/spawn.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/vmo_file.h>
+
+#include <garnet/public/lib/inspect_deprecated/reader.h>
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"

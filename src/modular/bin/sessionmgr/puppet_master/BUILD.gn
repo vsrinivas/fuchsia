@@ -49,6 +49,7 @@ source_set("puppet_master_impl") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular",
     "//src/modular/bin/sessionmgr:annotations",
     "//src/modular/bin/sessionmgr/storage",

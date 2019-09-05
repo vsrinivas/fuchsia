@@ -4,7 +4,7 @@
 
 #include "src/developer/feedback/feedback_agent/channel_provider_ptr.h"
 
-#include <lib/async_promise/executor.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>

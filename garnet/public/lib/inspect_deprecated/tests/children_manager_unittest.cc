@@ -5,8 +5,8 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async_promise/executor.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/capture.h>
 #include <lib/callback/ensure_called.h>

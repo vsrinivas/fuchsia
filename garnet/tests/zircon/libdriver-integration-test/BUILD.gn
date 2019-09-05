@@ -26,13 +26,9 @@ executable("tests") {
 
   deps = [
     ":mock-device",
-    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-device:fuchsia-device",
-    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test",
-    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test_c",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -41,6 +37,10 @@ executable("tests") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device",
+    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test",
+    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test_c",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io",
   ]
 }
 

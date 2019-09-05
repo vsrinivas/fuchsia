@@ -62,11 +62,11 @@ executable("unittest") {
   deps = [
     ":grpc",
     ":test_proto",
-    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 
