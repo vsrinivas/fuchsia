@@ -1081,7 +1081,6 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
                                                   object_identifiers.end());
   for (const auto& identifier : unsynced_identifiers) {
     EXPECT_FALSE(GetObjectDigestInfo(identifier.object_digest()).is_inlined());
-
     if (GetObjectDigestInfo(identifier.object_digest()).piece_type == PieceType::INDEX) {
       found_index = true;
       std::set<ObjectIdentifier> sub_identifiers;
@@ -1111,7 +1110,9 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
       RunLoopUntilIdle();
       EXPECT_EQ(iteration_status, IterationStatus::DONE);
       for (const auto& identifier : sub_identifiers) {
-        EXPECT_EQ(unsynced_identifiers.count(identifier), 1u);
+        if (!GetObjectDigestInfo(identifier.object_digest()).is_inlined()) {
+          EXPECT_EQ(unsynced_identifiers.count(identifier), 1u);
+        }
       }
     }
   }
