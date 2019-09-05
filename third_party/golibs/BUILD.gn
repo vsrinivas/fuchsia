@@ -14,6 +14,51 @@ template("golib") {
 
 ##### NOTE: keep the following targets in alphabetical order.
 
+### cloud.google.com/*
+go_library("cloud.google.com/go/compute/metadata") {
+  source_dir = "//third_party/golibs/github.com/googleapis/google-cloud-go/compute/metadata"
+}
+go_library("cloud.google.com/go/iam") {
+  source_dir = "//third_party/golibs/github.com/googleapis/google-cloud-go/iam"
+  deps = [
+    ":cloud.google.com/go/internal",
+    ":github.com/googleapis/gax-go/v2",
+    ":google.golang.org/genproto/googleapis/iam/v1",
+    ":google.golang.org/grpc",
+  ]
+}
+
+# Actually aggregates the dependencies of other cloud.google.com/go/internal/*
+# packages as well. Use this as a convenience target for any such package.
+go_library("cloud.google.com/go/internal") {
+  source_dir =
+      "//third_party/golibs/github.com/googleapis/google-cloud-go/internal"
+  deps = [
+    ":github.com/golang/protobuf",
+    ":github.com/google/go-cmp",
+    ":go.opencensus.io",
+    ":golang.org/x/oauth2",
+    ":google.golang.org/api/googleapi",
+    ":google.golang.org/genproto/googleapis/rpc/code",
+    ":google.golang.org/grpc",
+  ]
+}
+go_library("cloud.google.com/go/storage") {
+  source_dir =
+      "//third_party/golibs/github.com/googleapis/google-cloud-go/storage"
+  deps = [
+    ":cloud.google.com/go/iam",
+    ":cloud.google.com/go/internal",
+    ":github.com/googleapis/gax-go/v2",
+    ":google.golang.org/api/googleapi",
+    ":google.golang.org/api/iterator",
+    ":google.golang.org/api/option",
+    ":google.golang.org/api/storage/v1",
+    ":google.golang.org/api/transport/http",
+    ":google.golang.org/genproto/googleapis/iam/v1",
+  ]
+}
+
 ### github.com/*
 golib("github.com/dustin/go-humanize") {
 }
@@ -37,12 +82,18 @@ golib("github.com/go-yaml/yaml") {
 }
 golib("github.com/golang/glog") {
 }
+
+# Actually aggregates the dependencies of other google.golang.org/protobuf/*
+# packages as well. Use this as a convenience target for any such package.
 golib("github.com/golang/protobuf") {
   deps = [
     ":golang.org/x/net",
   ]
 }
-golib("github.com/golang/snappy") {
+golib("github.com/googleapis/gax-go/v2") {
+  deps = [
+    ":google.golang.org/grpc",
+  ]
 }
 golib("github.com/google/btree") {
 }
@@ -52,6 +103,10 @@ golib("github.com/google/netstack") {
   deps = [
     ":golang.org/x/sys",
   ]
+}
+golib("github.com/golang/groupcache/lru") {
+}
+golib("github.com/golang/snappy") {
 }
 golib("github.com/google/subcommands") {
 }
@@ -88,17 +143,131 @@ golib("github.com/syndtr/goleveldb") {
 golib("github.com/tent/canonical-json-go") {
 }
 
+### go.opencensus.io/*
+# Actually aggregates the dependencies of other go.opencensus.io/*
+# packages as well. Use this as a convenience target for any such package.
+go_library("go.opencensus.io") {
+  source_dir =
+      "//third_party/golibs/github.com/census-instrumentation/opencensus-go"
+  deps = [
+    ":github.com/golang/groupcache/lru",
+    ":google.golang.org/grpc",
+  ]
+}
+
 ### golang.org/x/*
 golib("golang.org/x/crypto") {
 }
 golib("golang.org/x/net") {
+  deps = [
+    ":golang.org/x/text",
+  ]
 }
 golib("golang.org/x/oauth2") {
   deps = [
+    ":cloud.google.com/go/compute/metadata",
     ":golang.org/x/net",
   ]
 }
 golib("golang.org/x/sys") {
+}
+go_library("golang.org/x/text") {
+  source_dir = "//third_party/golibs/github.com/golang/text"
+}
+
+### google.golang.org/*
+go_library("google.golang.org/genproto/googleapis/api/annotations") {
+  source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/api/annotations"
+  deps = [
+    ":github.com/golang/protobuf",
+  ]
+}
+go_library("google.golang.org/genproto/googleapis/iam/v1") {
+  source_dir =
+      "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/iam/v1"
+  deps = [
+    ":github.com/golang/protobuf",
+    ":google.golang.org/genproto/googleapis/api/annotations",
+    ":google.golang.org/genproto/googleapis/type/expr",
+    ":google.golang.org/grpc",
+  ]
+}
+go_library("google.golang.org/genproto/googleapis/rpc/code") {
+  source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/rpc/code"
+  deps = [
+    ":github.com/golang/protobuf",
+  ]
+}
+go_library("google.golang.org/genproto/googleapis/rpc/status") {
+  source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/rpc/status"
+  deps = [
+    ":github.com/golang/protobuf",
+  ]
+}
+go_library("google.golang.org/genproto/googleapis/type/expr") {
+  source_dir = "//third_party/golibs/github.com/googleapis/go-genproto/googleapis/type/expr"
+  deps = [
+    ":github.com/golang/protobuf",
+  ]
+}
+
+# Actually aggregates the dependencies of other google.golang.org/grpc/*
+# packages as well. Use this as a convenience target for any such package.
+go_library("google.golang.org/grpc") {
+  source_dir = "//third_party/golibs/github.com/grpc/grpc-go"
+  deps = [
+    ":golang.org/x/net",
+    ":golang.org/x/sys",
+    ":google.golang.org/genproto/googleapis/rpc/status",
+  ]
+}
+go_library("google.golang.org/api/gensupport") {
+  source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/gensupport"
+  deps = [
+    ":google.golang.org/api/googleapi",
+  ]
+}
+go_library("google.golang.org/api/googleapi") {
+  source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/googleapi"
+}
+go_library("google.golang.org/api/internal") {
+  source_dir =
+      "//third_party/golibs/github.com/googleapis/google-api-go-client/internal"
+  deps = [
+    ":golang.org/x/oauth2",
+    ":google.golang.org/grpc",
+  ]
+}
+go_library("google.golang.org/api/iterator") {
+  source_dir =
+      "//third_party/golibs/github.com/googleapis/google-api-go-client/iterator"
+}
+go_library("google.golang.org/api/option") {
+  source_dir =
+      "//third_party/golibs/github.com/googleapis/google-api-go-client/option"
+  deps = [
+    ":golang.org/x/oauth2",
+    ":google.golang.org/api/internal",
+    ":google.golang.org/grpc",
+  ]
+}
+go_library("google.golang.org/api/storage/v1") {
+  source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/storage/v1"
+  deps = [
+    ":google.golang.org/api/gensupport",
+    ":google.golang.org/api/googleapi",
+    ":google.golang.org/api/option",
+    ":google.golang.org/api/transport/http",
+  ]
+}
+go_library("google.golang.org/api/transport/http") {
+  source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/transport/http"
+  deps = [
+    ":go.opencensus.io",
+    ":google.golang.org/api/googleapi",
+    ":google.golang.org/api/internal",
+    ":google.golang.org/api/option",
+  ]
 }
 
 ### gopkg.in/*
