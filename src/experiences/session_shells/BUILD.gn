@@ -12,6 +12,7 @@ group("session_shells") {
 group("dart_unittests") {
   testonly = true
   deps = [
+    "ermine/settings:ermine_settings_unittests($host_toolchain)",
     "ermine/shell:ermine_unittests($host_toolchain)",
     "//src/experiences/lib/quickui:quickui_unittests($host_toolchain)",
   ]

@@ -38,7 +38,7 @@ void main() {
     group = spec.groups.first;
     expect(group.title, 'Bar');
     expect(group.values.length, 1);
-    expect(group.values.first.tag, ValueTag.number);
+    expect(group.values.first.$tag, ValueTag.number);
     expect(group.values.first.number.action, 1);
     expect(group.values.first.number.value.intValue, 5);
   });

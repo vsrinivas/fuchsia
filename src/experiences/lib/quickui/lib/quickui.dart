@@ -19,7 +19,9 @@ abstract class UiSpec extends QuickUi {
 
   // Constructor.
   UiSpec(Spec spec) {
-    _completer.complete(spec);
+    if (spec != null) {
+      _completer.complete(spec);
+    }
   }
 
   /// Completes any outstanding Get for [Spec].

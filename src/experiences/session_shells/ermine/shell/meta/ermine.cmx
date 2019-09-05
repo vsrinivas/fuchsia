@@ -24,6 +24,7 @@
             "fuchsia.power.BatteryManager",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.ui.brightness.Control",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"
