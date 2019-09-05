@@ -1502,6 +1502,50 @@ static bool vmo_lookup_clone_test() {
   END_TEST;
 }
 
+static bool vmo_clone_removes_write_test() {
+  BEGIN_TEST;
+
+  // Create and map a VMO.
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE, &vmo);
+  EXPECT_EQ(ZX_OK, status, "vmo create");
+  auto ka = VmAspace::kernel_aspace();
+  void* ptr;
+  status = ka->MapObjectInternal(vmo, "test", 0, PAGE_SIZE, &ptr, 0, VmAspace::VMM_FLAG_COMMIT,
+                                 kArchRwFlags);
+  EXPECT_EQ(ZX_OK, status, "map vmo");
+
+  // Query the aspace and validate there is a writable mapping.
+  paddr_t paddr_writable;
+  uint mmu_flags;
+  status = ka->arch_aspace().Query(reinterpret_cast<vaddr_t>(ptr), &paddr_writable, &mmu_flags);
+  EXPECT_EQ(ZX_OK, status, "query aspace");
+
+  EXPECT_TRUE(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE, "mapping is writable check");
+
+  // Clone the VMO, which causes the parent to have to downgrade any mappings to read-only so that
+  // copy-on-write can take place. Need to set a fake user id so that the COW creation code is
+  // happy.
+  vmo->set_user_id(42);
+  fbl::RefPtr<VmObject> clone;
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::CopyOnWrite, 0, PAGE_SIZE, true,
+                            &clone);
+  EXPECT_EQ(ZX_OK, status, "create clone");
+
+  // Aspace should now have a read only mapping with the same underlying page.
+  paddr_t paddr_readable;
+  status = ka->arch_aspace().Query(reinterpret_cast<vaddr_t>(ptr), &paddr_readable, &mmu_flags);
+  EXPECT_EQ(ZX_OK, status, "query aspace");
+  EXPECT_FALSE(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE, "mapping is read only check");
+  EXPECT_EQ(paddr_writable, paddr_readable, "mapping has same page");
+
+  // Cleanup.
+  status = ka->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
+  EXPECT_EQ(ZX_OK, status, "unmapping object");
+
+  END_TEST;
+}
+
 // TODO(ZX-1431): The ARM code's error codes are always ZX_ERR_INTERNAL, so
 // special case that.
 #if ARCH_ARM64
@@ -2154,6 +2198,7 @@ VM_UNITTEST(vmo_read_write_smoke_test)
 VM_UNITTEST(vmo_cache_test)
 VM_UNITTEST(vmo_lookup_test)
 VM_UNITTEST(vmo_lookup_clone_test)
+VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(arch_noncontiguous_map)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last

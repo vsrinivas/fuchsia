@@ -396,14 +396,34 @@ zx_status_t VmMapping::RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) 
 
   canary_.Assert();
 
+  // NOTE: must be acquired with the vmo lock held, but doesn't need to take
+  // the address space lock, since it will not manipulate its location in the
+  // vmar tree. However, it must be held in the ALIVE state across this call.
+  //
+  // Avoids a race with DestroyLocked() since it removes ourself from the VMO's
+  // mapping list with the VMO lock held before dropping this state to DEAD. The
+  // VMO cant call back to us once we're out of their list.
+  DEBUG_ASSERT(state_ == LifeCycleState::ALIVE);
+
+  DEBUG_ASSERT(object_);
+  DEBUG_ASSERT(object_->lock()->lock().IsHeld());
+
   // If this doesn't support writing then nothing to be done, as we know we have no write mappings.
   if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) || !(arch_mmu_flags() & ARCH_MMU_FLAG_PERM_WRITE)) {
     return ZX_OK;
   }
 
-  // For now we simulate remove write by unmapping due to the performance of protect not being
-  // suitable at the moment on all architectures.
-  return UnmapVmoRangeLocked(offset, len);
+  // See if there's an intersect.
+  vaddr_t base;
+  uint64_t new_len;
+  if (!ObjectRangeToVaddrRange(offset, len, &base, &new_len)) {
+    return ZX_OK;
+  }
+
+  // Build new mmu flags without writing.
+  uint mmu_flags = arch_mmu_flags() & ~(ARCH_MMU_FLAG_PERM_WRITE);
+
+  return ProtectOrUnmap(aspace_, base, new_len, mmu_flags);
 }
 
 namespace {
