@@ -42,6 +42,9 @@ class TabsWidget extends StatelessWidget {
             onSelect: () {
               bloc.request.add(FocusTabAction(tab: tab));
             },
+            onClose: () {
+              bloc.request.add(RemoveTabAction(tab: tab));
+            },
           ),
         ),
       );
@@ -51,29 +54,58 @@ class TabsWidget extends StatelessWidget {
     String title,
     bool selected,
     VoidCallback onSelect,
-    double width,
+    VoidCallback onClose,
   }) {
     return GestureDetector(
       onTap: onSelect,
       child: Container(
-        width: width,
         color: selected
             ? Theme.of(context).primaryColor
             : Theme.of(context).accentColor,
-        padding: EdgeInsets.symmetric(horizontal: 4.0),
-        child: Center(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: 'RobotoMono',
-              fontSize: 11.0,
-              color: selected
-                  ? Theme.of(context).accentColor
-                  : Theme.of(context).primaryColor,
+        child: Stack(
+          children: <Widget>[
+            Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4.0),
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.0,
+                    color: selected
+                        ? Theme.of(context).accentColor
+                        : Theme.of(context).primaryColor,
+                  ),
+                ),
+              ),
             ),
-          ),
+            Positioned(
+              top: 0.0,
+              right: 0.0,
+              bottom: 0.0,
+              child: AspectRatio(
+                aspectRatio: 1.0,
+                child: GestureDetector(
+                  onTap: onClose,
+                  child: Padding(
+                    padding: const EdgeInsets.all(1.0),
+                    child: Center(
+                      child: Text(
+                        '×',
+                        style: TextStyle(
+                          fontSize: 11.0,
+                          color: selected
+                              ? Theme.of(context).accentColor
+                              : Theme.of(context).primaryColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

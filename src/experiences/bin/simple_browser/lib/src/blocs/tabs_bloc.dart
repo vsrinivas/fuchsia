@@ -55,6 +55,27 @@ class TabsBloc<T> {
         final FocusTabAction<T> focusTab = action;
         _currentTab.value = focusTab.tab;
         break;
+      case TabsActionType.removeTab:
+        if (tabs.isEmpty) {
+          break;
+        }
+
+        final RemoveTabAction<T> removeTab = action;
+        final T tab = removeTab.tab;
+
+        if (tabs.length == 1) {
+          _currentTab.value = null;
+        } else if (currentTab == removeTab.tab) {
+          final indexOfRemoved = _tabsList.indexOf(tab);
+          final indexOfNewTab =
+              indexOfRemoved == 0 ? indexOfRemoved + 1 : indexOfRemoved - 1;
+          _currentTab.value = _tabsList.elementAt(indexOfNewTab);
+        }
+
+        _tabsList.remove(tab);
+        _tabs.value = UnmodifiableListView<T>(_tabsList);
+        disposeTab(tab);
+        break;
     }
   }
 }
