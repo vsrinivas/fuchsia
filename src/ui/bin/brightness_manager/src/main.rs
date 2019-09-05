@@ -116,20 +116,14 @@ fn start_auto_brightness_task(
     fasync::spawn(
         Abortable::new(
             async move {
+                let time_per_step = 10.millis();
                 loop {
-                    // TODO(b/139153875): Pull loop body, without timer into function for testing.
-                    let lux = {
-                        // Get the sensor reading in its own mutex block
-                        let sensor = sensor.lock().await;
-                        // TODO(kpt) Do we need a Mutex if sensor is only read?
-                        let report = sensor.read().await.expect("Could not read from the sensor");
-                        report.illuminance
-                    };
-                    let nits = brightness_curve_lux_to_nits(lux);
-                    let backlight = backlight.clone();
-                    let large_change = set_brightness(nits, backlight)
-                        .await
-                        .expect("Could not set the brightness");
+                    let large_change = read_sensor_and_set_brightness(
+                        sensor.clone(),
+                        backlight.clone(),
+                        time_per_step,
+                    )
+                    .await;
                     let delay_timeout =
                         if large_change { QUICK_SCAN_TIMEOUT_MS } else { SCAN_TIMEOUT_MS };
                     fuchsia_async::Timer::new(Duration::from_millis(delay_timeout).after_now())
@@ -141,6 +135,25 @@ fn start_auto_brightness_task(
         .unwrap_or_else(|_| ()),
     );
     abort_handle
+}
+
+async fn read_sensor_and_set_brightness(
+    sensor: Arc<Mutex<dyn SensorControl>>,
+    backlight: Arc<Mutex<dyn BacklightControl>>,
+    time_per_step: Duration,
+) -> bool {
+    let lux = {
+        // Get the sensor reading in its own mutex block
+        let sensor = sensor.lock().await;
+        // TODO(kpt) Do we need a Mutex if sensor is only read?
+        let report = sensor.read().await.expect("Could not read from the sensor");
+        report.illuminance
+    };
+    let nits = brightness_curve_lux_to_nits(lux);
+    let backlight = backlight.clone();
+    let large_change =
+        set_brightness(nits, backlight, time_per_step).await.expect("Could not set the brightness");
+    large_change
 }
 
 /// Sets the appropriate backlight brightness based on the ambient light sensor reading.
@@ -164,6 +177,7 @@ fn brightness_curve_lux_to_nits(lux: u16) -> u16 {
 async fn set_brightness(
     nits: u16,
     backlight: Arc<Mutex<dyn BacklightControl>>,
+    time_per_step: Duration,
 ) -> Result<bool, Error> {
     let mut backlight = backlight.lock().await;
     let current_nits = backlight.get_brightness().await.unwrap_or_else(|e| {
@@ -175,7 +189,7 @@ async fn set_brightness(
             .set_brightness(nits)
             .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
     };
-    set_brightness_slowly(current_nits, nits, set_brightness, 10.millis()).await?;
+    set_brightness_slowly(current_nits, nits, set_brightness, time_per_step).await?;
     Ok((nits as i16 - current_nits as i16).abs() > LARGE_CHANGE_THRESHOLD_NITS)
 }
 
@@ -242,6 +256,59 @@ async fn main() -> Result<(), Error> {
 
 mod tests {
     use super::*;
+
+    use async_trait::async_trait;
+    use sensor::AmbientLightInputRpt;
+
+    struct MockSensor {
+        illuminence: u16,
+    }
+
+    #[async_trait]
+    impl SensorControl for MockSensor {
+        async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
+            Ok(AmbientLightInputRpt {
+                rpt_id: 0,
+                state: 0,
+                event: 0,
+                illuminance: self.illuminence,
+                red: 0,
+                green: 0,
+                blue: 0,
+            })
+        }
+    }
+
+    struct MockBacklight {
+        value: u16,
+    }
+
+    #[async_trait]
+    impl BacklightControl for MockBacklight {
+        async fn get_brightness(&self) -> Result<u16, Error> {
+            Ok(self.value)
+        }
+
+        fn set_brightness(&mut self, value: u16) -> Result<(), Error> {
+            self.value = value;
+            Ok(())
+        }
+    }
+
+    fn set_mocks(
+        sensor: u16,
+        backlight: u16,
+    ) -> (Arc<Mutex<impl SensorControl>>, Arc<Mutex<impl BacklightControl>>) {
+        let sensor = MockSensor { illuminence: sensor };
+        let sensor = Arc::new(Mutex::new(sensor));
+        let backlight = MockBacklight { value: backlight };
+        let backlight = Arc::new(Mutex::new(backlight));
+        (sensor, backlight)
+    }
+
+    fn approx(v: f32) -> f32 {
+        (v * 10.0).round() / 10.0
+    }
 
     #[test]
     fn test_brightness_curve() {
@@ -321,7 +388,31 @@ mod tests {
         assert_eq!(1.0, approx(convert_from_old_backlight_value(255)));
     }
 
-    fn approx(v: f32) -> f32 {
-        (v * 10.0).round() / 10.0
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_sensor_and_set_brightness_small_change() {
+        let (sensor, backlight) = set_mocks(400, 253);
+        let large_step =
+            read_sensor_and_set_brightness(sensor, backlight.clone(), 0.millis()).await;
+        assert_eq!(false, large_step);
+        let backlight = backlight.lock().await;
+        assert_eq!(255, backlight.get_brightness().await.unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_sensor_and_set_brightness_large_change() {
+        let (sensor, backlight) = set_mocks(400, 0);
+        let large_step =
+            read_sensor_and_set_brightness(sensor, backlight.clone(), 0.millis()).await;
+        assert_eq!(true, large_step);
+        let backlight = backlight.lock().await;
+        assert_eq!(255, backlight.get_brightness().await.unwrap());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_sensor_and_set_brightness_low_light() {
+        let (sensor, backlight) = set_mocks(0, 0);
+        read_sensor_and_set_brightness(sensor, backlight.clone(), 0.millis()).await;
+        let backlight = backlight.lock().await;
+        assert_eq!(1, backlight.get_brightness().await.unwrap());
     }
 }
