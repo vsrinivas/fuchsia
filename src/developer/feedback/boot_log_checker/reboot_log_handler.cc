@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
@@ -73,6 +74,21 @@ std::string Signature(const CrashType cause) {
   }
 }
 
+std::string CobaltStatus(fuchsia::cobalt::Status status) {
+  switch (status) {
+    case fuchsia::cobalt::Status::OK:
+      return "OK";
+    case fuchsia::cobalt::Status::INVALID_ARGUMENTS:
+      return "INVALID_ARGUMENTS";
+    case fuchsia::cobalt::Status::EVENT_TOO_BIG:
+      return "EVENT_TOO_BIG";
+    case fuchsia::cobalt::Status::BUFFER_FULL:
+      return "BUFFER_FULL";
+    case fuchsia::cobalt::Status::INTERNAL_ERROR:
+      return "INTERNAL_ERROR";
+  }
+}
+
 }  // namespace
 
 fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
@@ -105,8 +121,15 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
 
   // We then wait for the network to be reachable before handing it off to the
   // crash reporter.
-  return WaitForNetworkToBeReachable().and_then(
-      [this, crash_type] { return FileCrashReport(crash_type); });
+  return fit::join_promises(SendCobaltMetrics(crash_type),
+                            WaitForNetworkToBeReachable().and_then(FileCrashReport(crash_type)))
+      .and_then([](std::tuple<fit::result<void>, fit::result<void>>& result) {
+        const auto& cobalt_result = std::get<0>(result);
+        if (cobalt_result.is_error()) {
+          return cobalt_result;
+        }
+        return std::get<1>(result);
+      });  // return error if either one in the tuple is error
 }
 
 fit::promise<void> RebootLogHandler::WaitForNetworkToBeReachable() {
@@ -178,6 +201,60 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const CrashType crash_type)
       });
 
   return crash_reporting_done_.consumer.promise_or(fit::error());
+}
+
+fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
+  // Connect to the cobalt fidl service provided by the environment.
+  cobalt_logger_factory_ = services_->Connect<fuchsia::cobalt::LoggerFactory>();
+  cobalt_logger_factory_.set_error_handler([this](zx_status_t status) {
+    if (!cobalt_logging_done_.completer) {
+      return;
+    }
+
+    FX_PLOGS(ERROR, status) << "lost connection to Cobalt metrics logger factory";
+    cobalt_logging_done_.completer.complete_error();
+  });
+  // Create a Cobalt Logger. The project name is the one we specified in the
+  // Cobalt metrics registry. We specify that our release stage is DOGFOOD.
+  // This means we are not allowed to use any metrics declared as DEBUG
+  // or FISHFOOD.
+  static const char kProjectName[] = "feedback";
+  cobalt_logger_factory_->CreateLoggerFromProjectName(
+      kProjectName, fuchsia::cobalt::ReleaseStage::DOGFOOD, cobalt_logger_.NewRequest(),
+      [this, crash_type](fuchsia::cobalt::Status status) {
+        if (status != fuchsia::cobalt::Status::OK) {
+          FX_LOGS(ERROR) << "error getting feedback metrics logger: " << CobaltStatus(status);
+          cobalt_logging_done_.completer.complete_error();
+          return;
+        }
+        cobalt_logger_.set_error_handler([this](zx_status_t status) {
+          if (!cobalt_logging_done_.completer) {
+            return;
+          }
+
+          FX_PLOGS(ERROR, status) << "lost connection to feedback metrics logger";
+          cobalt_logging_done_.completer.complete_error();
+        });
+        cobalt_registry::RebootMetricDimensionReason reboot_reason =
+            crash_type == CrashType::KERNEL_PANIC
+                ? cobalt_registry::RebootMetricDimensionReason::KernelPanic
+                : cobalt_registry::RebootMetricDimensionReason::Oom;
+        cobalt_logger_->LogEvent(cobalt_registry::kRebootMetricId, reboot_reason,
+                                 [this](fuchsia::cobalt::Status status) {
+                                   if (!cobalt_logging_done_.completer) {
+                                     return;
+                                   }
+                                   if (status != fuchsia::cobalt::Status::OK) {
+                                     FX_LOGS(ERROR) << "error sending feedback metrics: "
+                                                    << CobaltStatus(status);
+                                     cobalt_logging_done_.completer.complete_error();
+                                     return;
+                                   }
+
+                                   cobalt_logging_done_.completer.complete_ok();
+                                 });
+      });
+  return cobalt_logging_done_.consumer.promise_or(fit::error());
 }
 
 }  // namespace feedback

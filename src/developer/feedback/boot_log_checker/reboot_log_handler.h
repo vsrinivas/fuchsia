@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
 #define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
 
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <lib/fit/bridge.h>
@@ -42,6 +43,7 @@ class RebootLogHandler {
  private:
   fit::promise<void> WaitForNetworkToBeReachable();
   fit::promise<void> FileCrashReport(CrashType crash_type);
+  fit::promise<void> SendCobaltMetrics(CrashType crash_type);
 
   const std::shared_ptr<::sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of Handle().
@@ -53,6 +55,9 @@ class RebootLogHandler {
   fit::bridge<void> network_reachable_;
   fuchsia::feedback::CrashReporterPtr crash_reporter_;
   fit::bridge<void> crash_reporting_done_;
+  fuchsia::cobalt::LoggerFactoryPtr cobalt_logger_factory_;
+  fuchsia::cobalt::LoggerPtr cobalt_logger_;
+  fit::bridge<void> cobalt_logging_done_;
 };
 
 }  // namespace feedback

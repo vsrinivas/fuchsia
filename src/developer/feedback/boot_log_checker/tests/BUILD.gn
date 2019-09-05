@@ -29,6 +29,8 @@ executable("reboot_log_handler_unittest") {
 
   sources = [
     "reboot_log_handler_unittest.cc",
+    "stub_cobalt_logger_factory.cc",
+    "stub_cobalt_logger_factory.h",
     "stub_crash_reporter.cc",
     "stub_crash_reporter.h",
     "stub_network_reachability_provider.h",
@@ -39,6 +41,7 @@ executable("reboot_log_handler_unittest") {
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback/boot_log_checker:metrics_registry",
     "//src/developer/feedback/boot_log_checker:src",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/lib/files",

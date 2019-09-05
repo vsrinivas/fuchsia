@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
 
 package("boot_log_checker") {
   deps = [
@@ -52,14 +53,25 @@ source_set("src") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/fit",
+    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/fidl/fuchsia-net",
   ]
 
   deps = [
+    ":metrics_registry",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/syslog/cpp",
     "//src/lib/fxl",
   ]
+}
+
+metrics_registry("metrics_registry") {
+  # This must match the name of our Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "feedback"
+  namespace = "cobalt_registry"
+  generate_cc = true
+  generate_binarypb = false
 }
 
 config_data("config") {
