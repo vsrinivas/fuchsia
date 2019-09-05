@@ -12,6 +12,7 @@ library("journal") {
       "background-executor.cc",
       "data-streamer.cc",
       "entry-view.cc",
+      "journal-writer.cc",
       "journal.cc",
       "operation-tracker.cc",
       "replay.cc",
