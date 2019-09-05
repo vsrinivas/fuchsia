@@ -23,11 +23,12 @@ executable("spawn-child") {
   visibility = [ ":*" ]
   testonly = true
   sources = [
-    "child.c",
+    "child.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }
 

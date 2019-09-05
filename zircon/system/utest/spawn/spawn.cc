@@ -120,6 +120,41 @@ static bool spawn_launcher_test(void) {
   END_TEST;
 }
 
+static bool spawn_nested_test(void) {
+  BEGIN_TEST;
+
+  zx_status_t status;
+  zx::process process;
+  const std::string path = new_path(kSpawnChild);
+
+  {
+    const char* argv[] = {path.c_str(), "--spawn", path.c_str(), nullptr};
+    int flags = FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_NAMESPACE | FDIO_SPAWN_CLONE_JOB;
+    status = fdio_spawn(ZX_HANDLE_INVALID, flags, path.c_str(), argv,
+                        process.reset_and_get_address());
+    ASSERT_EQ(ZX_OK, status);
+    EXPECT_EQ(43, join(process));
+  }
+
+  {
+    const char* argv[] = {path.c_str(), "--spawn", path.c_str(), nullptr};
+    status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path.c_str(), argv,
+                        process.reset_and_get_address());
+    ASSERT_EQ(ZX_OK, status);
+    EXPECT_EQ(43, join(process));
+  }
+
+  {
+    const char* argv[] = {path.c_str(), "--spawn", path.c_str(), "--flags", "all", nullptr};
+    status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path.c_str(), argv,
+                        process.reset_and_get_address());
+    ASSERT_EQ(ZX_OK, status);
+    EXPECT_EQ(56, join(process));
+  }
+
+  END_TEST;
+}
+
 static bool spawn_invalid_args_test(void) {
   BEGIN_TEST;
 
@@ -631,7 +666,8 @@ static bool spawn_errors_test(void) {
     ASSERT_EQ(0, fdio_bind_to_fd(io, 0, 0));
     status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path.c_str(), argv,
                         process.reset_and_get_address());
-    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, status);
+    ASSERT_EQ(ZX_OK, status);
+    EXPECT_EQ(43, join(process));
     ASSERT_EQ(0, close(0));
     ASSERT_EQ(0, dup2(30, 0));
     ASSERT_EQ(0, close(30));
@@ -725,6 +761,7 @@ static bool spawn_vmo_test(void) {
 BEGIN_TEST_CASE(spawn_tests)
 RUN_TEST(spawn_control_test)
 RUN_TEST(spawn_launcher_test)
+RUN_TEST(spawn_nested_test)
 RUN_TEST(spawn_invalid_args_test)
 RUN_TEST(spawn_flags_test)
 RUN_TEST(spawn_environ_test)

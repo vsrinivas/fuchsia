@@ -9,6 +9,7 @@
 #include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
+#include <lib/zx/handle.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -91,6 +92,31 @@ static bool do_stat(const char* path) {
   return stat(path, &statbuf) == 0;
 }
 
+int do_spawn(int argc, char** argv) {
+  zx::handle subprocess;
+  zx_status_t status = fdio_spawn(
+    ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+    argv[0], argv,
+    subprocess.reset_and_get_address()
+  );
+  if (status != ZX_OK)
+    return status;
+
+  status = subprocess.wait_one(ZX_TASK_TERMINATED, zx::time(ZX_TIME_INFINITE), nullptr);
+  if (status != ZX_OK)
+    return -102;
+
+  size_t actual, avail;
+  zx_info_process_t proc_info;
+  status = subprocess.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), &actual, &avail);
+  if (status != ZX_OK)
+    return -103;
+  if (actual != 1)
+    return -104;
+
+  return int(proc_info.return_code);
+}
+
 int main(int argc, char** argv) {
   if (argc == 0)
     return 42;
@@ -157,6 +183,11 @@ int main(int argc, char** argv) {
     if (argc != 3)
       return -253;
     return do_stat(argv[2]) ? 76 : -6;
+  }
+  if (!strcmp(cmd, "--spawn")) {
+    if (argc < 3)
+      return -254;
+    return do_spawn(argc - 2, argv + 2);
   }
 
   return -250;

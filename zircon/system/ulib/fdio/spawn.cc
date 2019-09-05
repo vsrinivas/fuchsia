@@ -404,9 +404,10 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
     for (int fd = 0; fd < 3; ++fd) {
       zx_handle_t fd_handle = ZX_HANDLE_INVALID;
       status = fdio_fd_clone(fd, &fd_handle);
-      if (status == ZX_ERR_INVALID_ARGS) {
-        // This file descriptor is closed. We just skip it rather than
-        // generating an error.
+      if (status == ZX_ERR_INVALID_ARGS || status == ZX_ERR_NOT_SUPPORTED) {
+        // This file descriptor is either closed, or something that doesn't
+        // support cloning into a handle (e.g. a null fdio object).
+        // We just skip it rather than generating an error.
         continue;
       }
       if (status != ZX_OK) {
