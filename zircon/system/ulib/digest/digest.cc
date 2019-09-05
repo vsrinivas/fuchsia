@@ -2,23 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <digest/digest.h>
-
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
-
-#include <fbl/alloc_checker.h>
-#include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <digest/digest.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/unique_ptr.h>
+
 // See note in //zircon/third_party/ulib/uboringssl/rules.mk
 #define BORINGSSL_NO_CXX
-#include <openssl/sha.h>
-
 #include <utility>
+
+#include <openssl/sha.h>
 
 namespace digest {
 
@@ -33,30 +32,25 @@ Digest::Digest() : bytes_{0} {}
 
 Digest::Digest(const uint8_t* other) : bytes_{0} { *this = other; }
 
-Digest::~Digest() { ZX_DEBUG_ASSERT(ref_count_ == 0); }
-
 Digest::Digest(Digest&& o) {
-  ZX_DEBUG_ASSERT(o.ref_count_ == 0);
   ctx_ = std::move(o.ctx_);
   memcpy(bytes_, o.bytes_, kLength);
   memset(o.bytes_, 0, kLength);
 }
 
+Digest::~Digest() {}
+
 Digest& Digest::operator=(Digest&& o) {
-  ZX_DEBUG_ASSERT(o.ref_count_ == 0);
-  ZX_DEBUG_ASSERT(ref_count_ == 0);
   memcpy(bytes_, o.bytes_, kLength);
   return *this;
 }
 
 Digest& Digest::operator=(const uint8_t* rhs) {
-  ZX_DEBUG_ASSERT(ref_count_ == 0);
   memcpy(bytes_, rhs, kLength);
   return *this;
 }
 
 zx_status_t Digest::Init() {
-  ZX_DEBUG_ASSERT(ref_count_ == 0);
   fbl::AllocChecker ac;
   ctx_.reset(new (&ac) Context());
   if (!ac.check()) {
@@ -67,14 +61,12 @@ zx_status_t Digest::Init() {
 }
 
 void Digest::Update(const void* buf, size_t len) {
-  ZX_DEBUG_ASSERT(ref_count_ == 0);
   ZX_DEBUG_ASSERT(len <= INT_MAX);
   ZX_DEBUG_ASSERT(ctx_ != nullptr);
   SHA256_Update(&ctx_->impl, buf, len);
 }
 
 const uint8_t* Digest::Final() {
-  ZX_DEBUG_ASSERT(ref_count_ == 0);
   ZX_DEBUG_ASSERT(ctx_ != nullptr);
   SHA256_Final(bytes_, &ctx_->impl);
   return bytes_;
@@ -87,22 +79,20 @@ const uint8_t* Digest::Hash(const void* buf, size_t len) {
 }
 
 zx_status_t Digest::Parse(const char* hex, size_t len) {
-  ZX_DEBUG_ASSERT(ref_count_ == 0);
-  if (len < sizeof(bytes_) * 2) {
+  if (len != sizeof(bytes_) * 2) {
     return ZX_ERR_INVALID_ARGS;
   }
-  uint8_t c = 0;
   size_t i = 0;
   for (size_t j = 0; j < sizeof(bytes_) * 2; ++j) {
-    c = static_cast<uint8_t>(toupper(hex[j]) & 0xFF);
+    int c = toupper(hex[j]);
     if (!isxdigit(c)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    c = static_cast<uint8_t>(c < 'A' ? c - '0' : c - '7');  // '7' = 'A' - 10
+    c = c < 'A' ? c - '0' : c - '7';  // '7' = 'A' - 10
     if (j % 2 == 0) {
       bytes_[i] = static_cast<uint8_t>(c << 4);
     } else {
-      bytes_[i++] |= c;
+      bytes_[i++] |= static_cast<uint8_t>(c);
     }
   }
   return ZX_OK;
@@ -128,17 +118,6 @@ zx_status_t Digest::CopyTo(uint8_t* out, size_t len) const {
   memset(out, 0, len);
   memcpy(out, bytes_, sizeof(bytes_));
   return ZX_OK;
-}
-
-const uint8_t* Digest::AcquireBytes() const {
-  ZX_DEBUG_ASSERT(ref_count_ < SIZE_MAX);
-  ++ref_count_;
-  return bytes_;
-}
-
-void Digest::ReleaseBytes() const {
-  ZX_DEBUG_ASSERT(ref_count_ > 0);
-  --ref_count_;
 }
 
 bool Digest::operator==(const Digest& rhs) const {

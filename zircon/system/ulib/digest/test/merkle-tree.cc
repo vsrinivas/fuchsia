@@ -2,28 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <digest/merkle-tree.h>
-
 #include <stdlib.h>
-
-#include <digest/digest.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
-#include <unittest/unittest.h>
+
+#include <digest/digest.h>
+#include <digest/merkle-tree.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
 ////////////////
 // Test support.
-
-// Helper defines for the typical case of checking a zx_status_t
-#define BEGIN_TEST_WITH_RC \
-  BEGIN_TEST;              \
-  zx_status_t rc
-#define ASSERT_ERR(expected, expr) \
-  rc = (expr);                     \
-  ASSERT_EQ(expected, rc, zx_status_get_string(rc))
-#define ASSERT_OK(expr) ASSERT_ERR(ZX_OK, (expr))
 
 // These unit tests are for the MerkleTree object in ulib/digest.
 using digest::Digest;
@@ -39,11 +29,11 @@ const uint64_t kUnalignedLarge = kLarge + (kNodeSize / 2);
 
 // The hard-coded trees used for testing were created by using sha256sum on
 // files generated using echo -ne, dd, and xxd
-struct Case {
+struct TreeParam {
   size_t data_len;
   size_t tree_len;
   const char digest[(Digest::kLength * 2) + 1];
-} kCases[] = {
+} kTreeParams[] = {
     {0, 0, "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"},
     {1, 0, "0967e0f62a104d1595610d272dfab3d2fa2fe07be0eebce13ef5d79db142610e"},
     {kNodeSize / 2, 0, "0a90612c255555469dead72c8fdc41eec06dfe04a30a1f2b7c480ff95d20c5ec"},
@@ -55,639 +45,411 @@ struct Case {
     {kUnalignedLarge, kNodeSize * 3,
      "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43"},
 };
+const size_t kNumTreeParams = sizeof(kTreeParams) / sizeof(struct TreeParam);
 
-const size_t kNumCases = sizeof(kCases) / sizeof(struct Case);
+// These tests use a text fixture to reduce the amount of repetitive setup.
+class MerkleTreeTestCase : public zxtest::Test {
+ protected:
+  void SetUp() override {
+    memset(data_, 0xff, sizeof(data_));
+    index_ = 0;
+  }
 
-// These tests use anonymously scoped globals to reduce the amount of repetitive
-// test setup.
-uint8_t gData[kUnalignedLarge];
-uint8_t gTree[kNodeSize * 3];
+  zx_status_t InitCreate(size_t data_len) {
+    size_t tree_len = MerkleTree::GetTreeLength(data_len);
+    if (data_len > sizeof(data_) || tree_len > sizeof(tree_)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    data_len_ = data_len;
+    tree_len_ = tree_len;
+    return ZX_OK;
+  }
+
+  zx_status_t InitVerify(size_t data_len) {
+    zx_status_t rc;
+    if ((rc = InitCreate(data_len)) != ZX_OK ||
+        (rc = MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_)) != ZX_OK) {
+      return rc;
+    }
+    return ZX_OK;
+  }
+
+  zx_status_t NextCreate() {
+    zx_status_t rc;
+    if (index_ >= kNumTreeParams) {
+      return ZX_ERR_STOP;
+    }
+    if ((rc = InitCreate(kTreeParams[index_].data_len)) != ZX_OK ||
+        (rc = expected_.Parse(kTreeParams[index_].digest, strlen(kTreeParams[index_].digest))) !=
+            ZX_OK) {
+      return rc;
+    }
+    index_++;
+    return ZX_ERR_NEXT;
+  }
+
+  zx_status_t NextVerify() {
+    zx_status_t rc;
+    if ((rc = NextCreate()) != ZX_ERR_NEXT ||
+        (rc = MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_)) != ZX_OK) {
+      return rc;
+    }
+    return ZX_ERR_NEXT;
+  }
+
+  size_t index_;
+
+  uint8_t data_[kUnalignedLarge];
+  uint8_t tree_[kNodeSize * 3];
+  size_t data_len_;
+  size_t tree_len_;
+  MerkleTree mt_;
+  Digest actual_;
+  Digest expected_;
+};
 
 ////////////////
 // Test cases
 
-bool GetTreeLength(void) {
-  BEGIN_TEST;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    ZX_DEBUG_ASSERT(kCases[i].data_len <= sizeof(gData));
-    ZX_DEBUG_ASSERT(kCases[i].tree_len <= sizeof(gTree));
-    ASSERT_EQ(kCases[i].tree_len, MerkleTree::GetTreeLength(kCases[i].data_len),
-              "Wrong tree length");
+TEST_F(MerkleTreeTestCase, GetTreeLength) {
+  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    EXPECT_EQ(tree_len_, MerkleTree::GetTreeLength(data_len_));
   }
-  END_TEST;
 }
 
-bool CreateInit(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, GetTreeLengthC) {
+  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    EXPECT_EQ(tree_len_, merkle_tree_get_tree_length(data_len_));
+  }
 }
 
-bool CreateInitWithoutData(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(0, tree_len));
-  ASSERT_OK(merkleTree.CreateInit(0, 0));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateInit) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
 }
 
-bool CreateInitWithoutTree(void) {
-  BEGIN_TEST_WITH_RC;
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kNodeSize, 0));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateInitWithoutData) {
+  EXPECT_OK(mt_.CreateInit(0, MerkleTree::GetTreeLength(kLarge)));
+  EXPECT_OK(mt_.CreateInit(0, 0));
 }
 
-bool CreateInitTreeTooSmall(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_ERR(ZX_ERR_BUFFER_TOO_SMALL, merkleTree.CreateInit(kLarge, tree_len - 1));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateInitWithoutTree) { EXPECT_OK(mt_.CreateInit(kNodeSize, 0)); }
+
+TEST_F(MerkleTreeTestCase, CreateInitTreeTooSmall) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_STATUS(mt_.CreateInit(kLarge, tree_len_ - 1), ZX_ERR_BUFFER_TOO_SMALL);
 }
 
-bool CreateUpdate(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  ASSERT_OK(merkleTree.CreateUpdate(gData, kLarge, gTree));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateUpdate) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  EXPECT_OK(mt_.CreateUpdate(data_, data_len_, tree_));
 }
 
-bool CreateUpdateMissingInit(void) {
-  BEGIN_TEST_WITH_RC;
-  MerkleTree merkleTree;
-  ASSERT_ERR(ZX_ERR_BAD_STATE, merkleTree.CreateUpdate(gData, kLarge, gTree));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateUpdateMissingInit) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_STATUS(mt_.CreateUpdate(data_, data_len_, tree_), ZX_ERR_BAD_STATE);
 }
 
-bool CreateUpdateMissingData(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  ASSERT_ERR(ZX_ERR_INVALID_ARGS, merkleTree.CreateUpdate(nullptr, kLarge, gTree));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateUpdateMissingData) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  EXPECT_STATUS(mt_.CreateUpdate(nullptr, data_len_, tree_), ZX_ERR_INVALID_ARGS);
 }
 
-bool CreateUpdateMissingTree(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  ASSERT_ERR(ZX_ERR_INVALID_ARGS, merkleTree.CreateUpdate(gData, kLarge, nullptr));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateUpdateMissingTree) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  EXPECT_STATUS(mt_.CreateUpdate(data_, data_len_, nullptr), ZX_ERR_INVALID_ARGS);
 }
 
-bool CreateUpdateWithoutData(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  ASSERT_OK(merkleTree.CreateUpdate(gData, 0, gTree));
-  ASSERT_OK(merkleTree.CreateUpdate(nullptr, 0, gTree));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateUpdateWithoutData) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  EXPECT_OK(mt_.CreateUpdate(data_, 0, tree_));
+  EXPECT_OK(mt_.CreateUpdate(nullptr, 0, tree_));
 }
 
-bool CreateUpdateWithoutTree(void) {
-  BEGIN_TEST_WITH_RC;
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kNodeSize, 0));
-  ASSERT_OK(merkleTree.CreateUpdate(gData, kNodeSize, nullptr));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateUpdateWithoutTree) {
+  ASSERT_OK(InitCreate(kNodeSize));
+  EXPECT_OK(mt_.CreateInit(data_len_, 0));
+  EXPECT_OK(mt_.CreateUpdate(data_, data_len_, nullptr));
 }
 
-bool CreateUpdateTooMuchData(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  ASSERT_ERR(ZX_ERR_OUT_OF_RANGE, merkleTree.CreateUpdate(gData, kLarge + 1, gTree));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateUpdateTooMuchData) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  EXPECT_STATUS(mt_.CreateUpdate(data_, data_len_ + 1, tree_), ZX_ERR_OUT_OF_RANGE);
 }
 
-bool CreateFinalMissingInit(void) {
-  BEGIN_TEST_WITH_RC;
-  MerkleTree merkleTree;
-  Digest digest;
-  ASSERT_ERR(ZX_ERR_BAD_STATE, merkleTree.CreateFinal(gTree, &digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, CreateFinalMissingInit) {
+  EXPECT_STATUS(mt_.CreateFinal(tree_, &actual_), ZX_ERR_BAD_STATE);
 }
 
-// Used by CreateFinalAll, CreateFinalWithoutData, and CreateFinalWithoutTree
-// below
-bool CreateFinal(size_t data_len, const char* digest, void* data, void* tree) {
-  zx_status_t rc;
-  size_t tree_len = MerkleTree::GetTreeLength(data_len);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(data_len, tree_len));
-  ASSERT_OK(merkleTree.CreateUpdate(data, data_len, tree));
-  Digest actual;
-  ASSERT_OK(merkleTree.CreateFinal(tree, &actual));
-  Digest expected;
-  ASSERT_OK(expected.Parse(digest, strlen(digest)));
-  ASSERT_TRUE(actual == expected, "Incorrect root digest");
-  return true;
-}
-
-bool CreateFinalAll(void) {
-  BEGIN_TEST;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (!CreateFinal(kCases[i].data_len, kCases[i].digest, gData, gTree)) {
-      unittest_printf_critical("CreateFinalAll failed with data length of %zu\n",
-                               kCases[i].data_len);
+TEST_F(MerkleTreeTestCase, CreateFinal) {
+  size_t no_data = 0;
+  size_t no_tree = 0;
+  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    if (data_len_ == 0) {
+      no_data++;
+    } else if (data_len_ < kNodeSize) {
+      no_tree++;
     }
+    EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+    EXPECT_OK(mt_.CreateUpdate(data_, data_len_, tree_));
+    EXPECT_OK(mt_.CreateFinal(tree_, &actual_));
+    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), Digest::kLength);
   }
-  END_TEST;
+  EXPECT_NE(no_data, 0);
+  EXPECT_NE(no_tree, 0);
 }
 
-bool CreateFinalWithoutData(void) {
-  BEGIN_TEST;
-  bool found = false;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (kCases[i].data_len != 0) {
-      continue;
+TEST_F(MerkleTreeTestCase, CreateFinalMissingDigest) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  EXPECT_OK(mt_.CreateUpdate(data_, data_len_, tree_));
+  EXPECT_STATUS(mt_.CreateFinal(tree_, nullptr), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(MerkleTreeTestCase, CreateFinalIncompleteData) {
+  ASSERT_OK(InitCreate(kLarge));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  EXPECT_OK(mt_.CreateUpdate(data_, kLarge - 1, tree_));
+  EXPECT_STATUS(mt_.CreateFinal(tree_, &actual_), ZX_ERR_BAD_STATE);
+}
+
+TEST_F(MerkleTreeTestCase, Create) {
+  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    EXPECT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_));
+    EXPECT_BYTES_EQ(actual_.get(), expected_.get(), Digest::kLength);
+  }
+}
+
+TEST_F(MerkleTreeTestCase, CreateFinalCAll) {
+  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    // Init
+    merkle_tree_t* mt = nullptr;
+    EXPECT_OK(merkle_tree_create_init(data_len_, tree_len_, &mt));
+    // Update
+    size_t i = 0;
+    while (i + kNodeSize < data_len_) {
+      EXPECT_OK(merkle_tree_create_update(mt, data_ + i, kNodeSize, tree_));
+      i += kNodeSize;
     }
-    if (!CreateFinal(kCases[i].data_len, kCases[i].digest, nullptr, nullptr)) {
-      unittest_printf_critical("CreateFinalWithoutData failed with data length of %zu\n",
-                               kCases[i].data_len);
-    }
-    found = true;
+    EXPECT_OK(merkle_tree_create_update(mt, data_ + i, data_len_ - i, tree_));
+    // Final
+    uint8_t actual[Digest::kLength];
+    EXPECT_OK(merkle_tree_create_final(mt, tree_, &actual, sizeof(actual)));
+    EXPECT_BYTES_EQ(expected_.get(), actual, Digest::kLength);
   }
-  ASSERT_TRUE(found, "Unable to find test cases with length == 0");
-  END_TEST;
 }
 
-bool CreateFinalWithoutTree(void) {
-  BEGIN_TEST;
-  bool found = false;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (kCases[i].data_len > kNodeSize) {
-      continue;
-    }
-    if (!CreateFinal(kCases[i].data_len, kCases[i].digest, gData, nullptr)) {
-      unittest_printf_critical("CreateFinalWithoutTree failed with data length of %zu\n",
-                               kCases[i].data_len);
-    }
-    found = true;
+TEST_F(MerkleTreeTestCase, CreateC) {
+  for (auto rc = NextCreate(); rc != ZX_ERR_STOP; rc = NextCreate()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    uint8_t actual[Digest::kLength];
+    EXPECT_OK(merkle_tree_create(data_, data_len_, tree_, tree_len_, &actual, sizeof(actual)));
+    EXPECT_BYTES_EQ(expected_.get(), actual, Digest::kLength);
   }
-  ASSERT_TRUE(found, "Unable to find test cases with length <= kNodeSize");
-  END_TEST;
 }
 
-bool CreateFinalMissingDigest(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  ASSERT_OK(merkleTree.CreateUpdate(gData, kLarge, gTree));
-  ASSERT_ERR(ZX_ERR_INVALID_ARGS, merkleTree.CreateFinal(gTree, nullptr));
-  END_TEST;
-}
-
-bool CreateFinalIncompleteData(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kLarge, tree_len));
-  ASSERT_OK(merkleTree.CreateUpdate(gData, kLarge - 1, gTree));
-  Digest digest;
-  ASSERT_ERR(ZX_ERR_BAD_STATE, merkleTree.CreateFinal(gTree, &digest));
-  END_TEST;
-}
-
-// Used by CreateAll below.
-bool Create(size_t data_len, const char* digest) {
-  zx_status_t rc;
-  size_t tree_len = MerkleTree::GetTreeLength(data_len);
-  Digest actual;
-  ASSERT_OK(MerkleTree::Create(gData, data_len, gTree, tree_len, &actual));
-  Digest expected;
-  ASSERT_OK(expected.Parse(digest, strlen(digest)));
-  ASSERT_TRUE(actual == expected, "Incorrect root digest");
-  return true;
-}
-
-bool CreateAll(void) {
-  BEGIN_TEST;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (!Create(kCases[i].data_len, kCases[i].digest)) {
-      unittest_printf_critical("CreateAll failed with data length of %zu\n", kCases[i].data_len);
-    }
+TEST_F(MerkleTreeTestCase, CreateByteByByte) {
+  ASSERT_OK(InitCreate(kSmall));
+  EXPECT_OK(mt_.CreateInit(data_len_, tree_len_));
+  for (uint64_t i = 0; i < data_len_; ++i) {
+    EXPECT_OK(mt_.CreateUpdate(data_ + i, 1, tree_));
   }
-  END_TEST;
+  EXPECT_OK(mt_.CreateFinal(tree_, &actual_));
+  EXPECT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &expected_));
+  EXPECT_BYTES_EQ(actual_.get(), expected_.get(), Digest::kLength);
 }
 
-// Used by CreateFinalCAll below.
-bool CreateFinalC(size_t data_len, const char* digest) {
-  zx_status_t rc;
-  // Init
-  size_t tree_len = merkle_tree_get_tree_length(data_len);
-  merkle_tree_t* mt = nullptr;
-  ASSERT_OK(merkle_tree_create_init(data_len, tree_len, &mt));
-  // Update
-  size_t i = 0;
-  while (data_len - i > kNodeSize) {
-    ASSERT_OK(merkle_tree_create_update(mt, gData + i, kNodeSize, gTree));
-    i += kNodeSize;
+TEST_F(MerkleTreeTestCase, CreateMissingData) {
+  ASSERT_OK(InitCreate(kSmall));
+  EXPECT_STATUS(MerkleTree::Create(nullptr, data_len_, tree_, tree_len_, &actual_),
+                ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(MerkleTreeTestCase, CreateMissingTree) {
+  ASSERT_OK(InitCreate(kSmall));
+  EXPECT_STATUS(MerkleTree::Create(data_, data_len_, nullptr, kNodeSize, &actual_),
+                ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(MerkleTreeTestCase, CreateTreeTooSmall) {
+  ASSERT_OK(InitCreate(kSmall));
+  EXPECT_STATUS(MerkleTree::Create(data_, data_len_, nullptr, 0, &actual_),
+                ZX_ERR_BUFFER_TOO_SMALL);
+
+  // The maximum amount of data representable by a one-node tree.
+  size_t max_data_one_node = kNodeSize * (kNodeSize / Digest::kLength);
+  EXPECT_STATUS(MerkleTree::Create(data_, max_data_one_node + 1, tree_, kNodeSize, &actual_),
+                ZX_ERR_BUFFER_TOO_SMALL);
+}
+
+TEST_F(MerkleTreeTestCase, Verify) {
+  for (auto rc = NextVerify(); rc != ZX_ERR_STOP; rc = NextVerify()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, expected_));
   }
-  ASSERT_OK(merkle_tree_create_update(mt, gData + i, data_len - i, gTree));
-  // Final
-  uint8_t actual[Digest::kLength];
-  ASSERT_OK(merkle_tree_create_final(mt, gTree, &actual, sizeof(actual)));
-  Digest expected;
-  ASSERT_OK(expected.Parse(digest, strlen(digest)));
-  ASSERT_TRUE(expected == actual, "Incorrect root digest");
-  return true;
 }
 
-// See CreateFinalC above.
-bool CreateFinalCAll(void) {
-  BEGIN_TEST;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (!CreateFinalC(kCases[i].data_len, kCases[i].digest)) {
-      unittest_printf_critical(
-          "CreateFinalCAll failed with "
-          "data length of %zu\n",
-          kCases[i].data_len);
-    }
+TEST_F(MerkleTreeTestCase, VerifyC) {
+  for (auto rc = NextVerify(); rc != ZX_ERR_STOP; rc = NextVerify()) {
+    ASSERT_STATUS(rc, ZX_ERR_NEXT);
+    EXPECT_OK(merkle_tree_verify(data_, data_len_, tree_, tree_len_, 0, data_len_, expected_.get(),
+                                 Digest::kLength));
   }
-  END_TEST;
 }
 
-// Used by CreateCAll below.
-bool CreateC(size_t data_len, const char* digest) {
-  zx_status_t rc;
-  size_t tree_len = merkle_tree_get_tree_length(data_len);
-  uint8_t actual[Digest::kLength];
-  ASSERT_OK(merkle_tree_create(gData, data_len, gTree, tree_len, &actual, sizeof(actual)));
-  Digest expected;
-  ASSERT_OK(expected.Parse(digest, strlen(digest)));
-  ASSERT_TRUE(expected == actual, "Incorrect root digest");
-  return true;
-}
-
-// See CreateC above.
-bool CreateCAll(void) {
-  BEGIN_TEST;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (!CreateC(kCases[i].data_len, kCases[i].digest)) {
-      unittest_printf_critical("CreateCAll failed with data length of %zu\n", kCases[i].data_len);
-    }
+TEST_F(MerkleTreeTestCase, VerifyNodeByNode) {
+  ASSERT_OK(InitVerify(kSmall));
+  for (uint64_t i = 0; i < data_len_; i += kNodeSize) {
+    EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, i, kNodeSize, actual_));
   }
-  END_TEST;
 }
 
-bool CreateByteByByte(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  MerkleTree merkleTree;
-  ASSERT_OK(merkleTree.CreateInit(kSmall, tree_len));
-  for (uint64_t i = 0; i < kSmall; ++i) {
-    ASSERT_OK(merkleTree.CreateUpdate(gData + i, 1, gTree));
-  }
-  Digest actual;
-  ASSERT_OK(merkleTree.CreateFinal(gTree, &actual));
-  Digest expected;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &expected));
-  ASSERT_TRUE(actual == expected, "Incorrect root digest");
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyMissingData) {
+  ASSERT_OK(InitVerify(kSmall));
+  EXPECT_STATUS(MerkleTree::Verify(nullptr, data_len_, tree_, tree_len_, 0, data_len_, actual_),
+                ZX_ERR_INVALID_ARGS);
 }
 
-bool CreateMissingData(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_ERR(ZX_ERR_INVALID_ARGS, MerkleTree::Create(nullptr, kSmall, gTree, tree_len, &digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyMissingTree) {
+  ASSERT_OK(InitVerify(kLarge));
+  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, nullptr, tree_len_, 0, data_len_, actual_),
+                ZX_ERR_INVALID_ARGS);
 }
 
-bool CreateMissingTree(void) {
-  BEGIN_TEST_WITH_RC;
-  Digest digest;
-  ASSERT_ERR(ZX_ERR_INVALID_ARGS, MerkleTree::Create(gData, kSmall, nullptr, kNodeSize, &digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyUnalignedTreeLength) {
+  ASSERT_OK(InitVerify(kSmall));
+  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_ + 1, 0, data_len_, actual_));
 }
 
-bool CreateTreeTooSmall(void) {
-  BEGIN_TEST_WITH_RC;
-  Digest digest;
-  ASSERT_ERR(ZX_ERR_BUFFER_TOO_SMALL, MerkleTree::Create(gData, kSmall, nullptr, 0, &digest));
-  ASSERT_ERR(ZX_ERR_BUFFER_TOO_SMALL,
-             MerkleTree::Create(gData, kNodeSize * 257, gTree, kNodeSize, &digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyUnalignedDataLength) {
+  ASSERT_OK(InitVerify(kSmall - 1));
+  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_));
 }
 
-// Used by VerifyAll below.
-bool Verify(size_t data_len) {
-  zx_status_t rc;
-  size_t tree_len = MerkleTree::GetTreeLength(data_len);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, data_len, gTree, tree_len, &digest));
-  ASSERT_OK(MerkleTree::Verify(gData, data_len, gTree, tree_len, 0, data_len, digest));
-  return true;
+TEST_F(MerkleTreeTestCase, VerifyTreeTooSmall) {
+  ASSERT_OK(InitVerify(kSmall));
+  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_ - 1, 0, data_len_, actual_),
+                ZX_ERR_BUFFER_TOO_SMALL);
 }
 
-// See Verify above.
-bool VerifyAll(void) {
-  BEGIN_TEST;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (!Verify(kCases[i].data_len)) {
-      unittest_printf_critical("VerifyAll failed with data length of %zu\n", kCases[i].data_len);
-    }
-  }
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyUnalignedOffset) {
+  ASSERT_OK(InitVerify(kSmall));
+  EXPECT_OK(
+      MerkleTree::Verify(data_, data_len_, tree_, tree_len_, kNodeSize - 1, kNodeSize, actual_));
 }
 
-// Used by VerifyCAll below.
-bool VerifyC(size_t data_len) {
-  zx_status_t rc;
-  size_t tree_len = merkle_tree_get_tree_length(data_len);
-  uint8_t digest[Digest::kLength];
-  ASSERT_OK(merkle_tree_create(gData, data_len, gTree, tree_len, digest, sizeof(digest)));
-  ASSERT_OK(
-      merkle_tree_verify(gData, data_len, gTree, tree_len, 0, data_len, digest, sizeof(digest)));
-  return true;
+TEST_F(MerkleTreeTestCase, VerifyUnalignedLength) {
+  ASSERT_OK(InitVerify(kSmall));
+  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_ - 1, actual_));
 }
 
-// See VerifyC above.
-bool VerifyCAll(void) {
-  BEGIN_TEST;
-  for (size_t i = 0; i < kNumCases; ++i) {
-    if (!VerifyC(kCases[i].data_len)) {
-      unittest_printf_critical("VerifyCAll failed with data length of %zu\n", kCases[i].data_len);
-    }
-  }
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyOutOfBounds) {
+  ASSERT_OK(InitVerify(kSmall));
+  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, data_len_ - kNodeSize,
+                                   kNodeSize * 2, actual_),
+                ZX_ERR_OUT_OF_RANGE);
 }
 
-bool VerifyNodeByNode(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  for (uint64_t i = 0; i < kSmall; i += kNodeSize) {
-    ASSERT_OK(MerkleTree::Verify(gData, kSmall, gTree, tree_len, i, kNodeSize, digest));
-  }
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyZeroLength) {
+  ASSERT_OK(InitVerify(kSmall));
+  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, 0, actual_));
 }
 
-bool VerifyMissingData(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_ERR(ZX_ERR_INVALID_ARGS,
-             MerkleTree::Verify(nullptr, kSmall, gTree, tree_len, 0, kSmall, digest));
-  END_TEST;
-}
-
-bool VerifyMissingTree(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_ERR(ZX_ERR_INVALID_ARGS,
-             MerkleTree::Verify(gData, kNodeSize + 1, nullptr, tree_len, 0, kNodeSize, digest));
-  END_TEST;
-}
-
-bool VerifyUnalignedTreeLength(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_OK(MerkleTree::Verify(gData, kSmall, gTree, tree_len + 1, 0, kSmall, digest));
-  END_TEST;
-}
-
-bool VerifyUnalignedDataLength(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_OK(MerkleTree::Verify(gData, kSmall - 1, gTree, tree_len, 0, kNodeSize, digest));
-  END_TEST;
-}
-
-bool VerifyTreeTooSmall(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  tree_len = MerkleTree::GetTreeLength(kSmall);
-  ASSERT_ERR(ZX_ERR_BUFFER_TOO_SMALL,
-             MerkleTree::Verify(gData, kSmall, gTree, tree_len - 1, 0, kSmall, digest));
-  END_TEST;
-}
-
-bool VerifyUnalignedOffset(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_OK(MerkleTree::Verify(gData, kSmall, gTree, tree_len, kNodeSize - 1, kNodeSize, digest));
-  END_TEST;
-}
-
-bool VerifyUnalignedLength(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_OK(MerkleTree::Verify(gData, kSmall, gTree, tree_len, 0, kSmall - 1, digest));
-  END_TEST;
-}
-
-bool VerifyOutOfBounds(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_ERR(ZX_ERR_OUT_OF_RANGE, MerkleTree::Verify(gData, kSmall, gTree, tree_len,
-                                                     kSmall - kNodeSize, kNodeSize * 2, digest));
-  END_TEST;
-}
-
-bool VerifyZeroLength(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  ASSERT_OK(MerkleTree::Verify(gData, kSmall, gTree, tree_len, 0, 0, digest));
-  END_TEST;
-}
-
-bool VerifyBadRoot(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kLarge, gTree, tree_len, &digest));
+TEST_F(MerkleTreeTestCase, VerifyBadRoot) {
+  ASSERT_OK(InitVerify(kLarge));
   // Modify digest
   char str[(Digest::kLength * 2) + 1];
-  ASSERT_OK(digest.ToString(str, sizeof(str)));
+  EXPECT_OK(actual_.ToString(str, sizeof(str)));
   str[0] = (str[0] == '0' ? '1' : '0');
-  rc = digest.Parse(str, strlen(str));
-  ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
+  EXPECT_OK(actual_.Parse(str, strlen(str)));
   // Verify
-  ASSERT_ERR(ZX_ERR_IO_DATA_INTEGRITY,
-             MerkleTree::Verify(gData, kLarge, gTree, tree_len, 0, kLarge, digest));
-  END_TEST;
+  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
+                ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-// TODO
-bool VerifyGoodPartOfBadTree(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kLarge, gTree, tree_len, &digest));
-  gTree[0] ^= 1;
-  ASSERT_OK(
-      MerkleTree::Verify(gData, kLarge, gTree, tree_len, kLarge - kNodeSize, kNodeSize, digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyGoodPartOfBadTree) {
+  ASSERT_OK(InitVerify(kLarge));
+  tree_[0] ^= 1;
+  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, data_len_ - kNodeSize, kNodeSize,
+                               actual_));
 }
 
-bool VerifyBadTree(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kLarge);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kLarge, gTree, tree_len, &digest));
-  gTree[0] ^= 1;
-  ASSERT_ERR(ZX_ERR_IO_DATA_INTEGRITY,
-             MerkleTree::Verify(gData, kLarge, gTree, tree_len, 0, 1, digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyBadTree) {
+  ASSERT_OK(InitVerify(kLarge));
+  tree_[0] ^= 1;
+  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, 1, actual_),
+                ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-bool VerifyGoodPartOfBadLeaves(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  gData[0] ^= 1;
-  ASSERT_OK(
-      MerkleTree::Verify(gData, kSmall, gTree, tree_len, kNodeSize, kSmall - kNodeSize, digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyGoodPartOfBadLeaves) {
+  ASSERT_OK(InitVerify(kSmall));
+  data_[0] ^= 1;
+  EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, kNodeSize, data_len_ - kNodeSize,
+                               actual_));
 }
 
-bool VerifyBadLeaves(void) {
-  BEGIN_TEST_WITH_RC;
-  size_t tree_len = MerkleTree::GetTreeLength(kSmall);
-  Digest digest;
-  ASSERT_OK(MerkleTree::Create(gData, kSmall, gTree, tree_len, &digest));
-  gData[0] ^= 1;
-  ASSERT_ERR(ZX_ERR_IO_DATA_INTEGRITY,
-             MerkleTree::Verify(gData, kSmall, gTree, tree_len, 0, kSmall, digest));
-  END_TEST;
+TEST_F(MerkleTreeTestCase, VerifyBadLeaves) {
+  ASSERT_OK(InitVerify(kSmall));
+  data_[0] ^= 1;
+  EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
+                ZX_ERR_IO_DATA_INTEGRITY);
 }
 
-bool CreateAndVerifyHugePRNGData(void) {
-  BEGIN_TEST_WITH_RC;
-  Digest digest;
+TEST_F(MerkleTreeTestCase, CreateAndVerifyHugePRNGData) {
   uint8_t buffer[Digest::kLength];
-  for (size_t data_len = kNodeSize; data_len <= sizeof(gData); data_len <<= 1) {
+  for (size_t data_len = kNodeSize; data_len <= sizeof(data_); data_len <<= 1) {
+    ASSERT_OK(InitCreate(data_len));
     // Generate random data
     for (uint64_t i = 0; i < data_len; ++i) {
-      gData[i] = static_cast<uint8_t>(rand());
+      data_[i] = static_cast<uint8_t>(rand());
     }
-    // Create the Merkle tree
-    size_t tree_len = MerkleTree::GetTreeLength(data_len);
-    ASSERT_OK(MerkleTree::Create(gData, data_len, gTree, tree_len, &digest));
+    ASSERT_OK(MerkleTree::Create(data_, data_len_, tree_, tree_len_, &actual_));
     // Randomly pick one of the four cases below.
-    uint64_t n = (rand() % 16) + 1;
-    switch (rand() % 4) {
-      case 1:
-        ASSERT_OK(digest.CopyTo(buffer, sizeof(buffer)));
-        // Flip bits in root digest
-        for (uint64_t i = 0; i < n; ++i) {
-          uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
-          buffer[rand() % Digest::kLength] ^= static_cast<uint8_t>(1 << tmp);
-        }
-        digest = buffer;
-        ASSERT_ERR(ZX_ERR_IO_DATA_INTEGRITY,
-                   MerkleTree::Verify(gData, data_len, gTree, tree_len, 0, data_len, digest));
-        break;
-      case 2:
-        // Flip bit in data
-        for (uint64_t i = 0; i < n; ++i) {
-          uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
-          gData[rand() % data_len] ^= static_cast<uint8_t>(1 << tmp);
-        }
-        ASSERT_ERR(ZX_ERR_IO_DATA_INTEGRITY,
-                   MerkleTree::Verify(gData, data_len, gTree, tree_len, 0, data_len, digest));
-        break;
-      case 3:
-        // Flip bit in tree (if large enough to have a tree)
-        for (uint64_t i = 0; i < n && tree_len > 0; ++i) {
-          uint8_t tmp = static_cast<uint8_t>(rand()) % 8;
-          gTree[rand() % tree_len] ^= static_cast<uint8_t>(1 << tmp);
-        }
-        rc = MerkleTree::Verify(gData, data_len, gTree, tree_len, 0, data_len, digest);
+    uint8_t flip = static_cast<uint8_t>(1 << (rand() % 8));
 
-        if (tree_len <= kNodeSize) {
-          ASSERT_EQ(rc, ZX_OK, zx_status_get_string(rc));
-        } else {
-          ASSERT_EQ(rc, ZX_ERR_IO_DATA_INTEGRITY, zx_status_get_string(rc));
+    switch (rand() % 4) {
+      case 1: {
+        EXPECT_OK(actual_.CopyTo(buffer, sizeof(buffer)));
+        // Flip a bit in root digest
+        buffer[rand() % Digest::kLength] ^= flip;
+        actual_ = buffer;
+        EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
+                      ZX_ERR_IO_DATA_INTEGRITY);
+        break;
+      }
+      case 2: {
+        // Flip a bit in data
+        data_[rand() % data_len_] ^= flip;
+        EXPECT_STATUS(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
+                      ZX_ERR_IO_DATA_INTEGRITY);
+        break;
+      }
+      case 3: {
+        // Flip a bit in tree (if large enough to have a tree)
+        if (tree_len_ != 0) {
+          tree_[rand() % (data_len_ / Digest::kLength)] ^= flip;
+          EXPECT_STATUS(
+              MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_),
+              ZX_ERR_IO_DATA_INTEGRITY);
         }
         break;
+      }
       default:
         // Normal verification without modification
-        ASSERT_OK(MerkleTree::Verify(gData, data_len, gTree, tree_len, 0, data_len, digest));
+        EXPECT_OK(MerkleTree::Verify(data_, data_len_, tree_, tree_len_, 0, data_len_, actual_));
         break;
     }
   }
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(MerkleTreeTests)
-// Do this global setup once
-memset(gData, 0xff, sizeof(gData));
-RUN_TEST(GetTreeLength)
-RUN_TEST(CreateInit)
-RUN_TEST(CreateInitWithoutData)
-RUN_TEST(CreateInitWithoutTree)
-RUN_TEST(CreateInitTreeTooSmall)
-RUN_TEST(CreateUpdate)
-RUN_TEST(CreateUpdateMissingInit)
-RUN_TEST(CreateUpdateMissingData)
-RUN_TEST(CreateUpdateMissingTree)
-RUN_TEST(CreateUpdateWithoutData)
-RUN_TEST(CreateUpdateWithoutTree)
-RUN_TEST(CreateUpdateTooMuchData)
-RUN_TEST(CreateFinalMissingInit)
-RUN_TEST(CreateFinalAll)
-RUN_TEST(CreateFinalWithoutData)
-RUN_TEST(CreateFinalWithoutTree)
-RUN_TEST(CreateFinalMissingDigest)
-RUN_TEST(CreateFinalIncompleteData)
-RUN_TEST(CreateAll)
-RUN_TEST(CreateFinalCAll)
-RUN_TEST(CreateCAll)
-RUN_TEST(CreateByteByByte)
-RUN_TEST(CreateMissingData)
-RUN_TEST(CreateMissingTree)
-RUN_TEST(CreateTreeTooSmall)
-RUN_TEST(VerifyAll)
-RUN_TEST(VerifyCAll)
-RUN_TEST(VerifyNodeByNode)
-RUN_TEST(VerifyMissingData)
-RUN_TEST(VerifyMissingTree)
-RUN_TEST(VerifyUnalignedTreeLength)
-RUN_TEST(VerifyUnalignedDataLength)
-RUN_TEST(VerifyTreeTooSmall)
-RUN_TEST(VerifyUnalignedOffset)
-RUN_TEST(VerifyUnalignedLength)
-RUN_TEST(VerifyOutOfBounds)
-RUN_TEST(VerifyZeroLength)
-RUN_TEST(VerifyBadRoot)
-RUN_TEST(VerifyGoodPartOfBadTree)
-RUN_TEST(VerifyBadTree)
-RUN_TEST(VerifyGoodPartOfBadLeaves)
-RUN_TEST(VerifyBadLeaves)
-RUN_TEST(CreateAndVerifyHugePRNGData)
-END_TEST_CASE(MerkleTreeTests)

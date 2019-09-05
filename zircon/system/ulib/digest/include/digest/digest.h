@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DIGEST_DIGEST_H_
+#define DIGEST_DIGEST_H_
 
-#include <stdint.h>
 #include <stddef.h>
-
+#include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -58,9 +58,15 @@ class Digest final {
   // calling |Final|.
   const uint8_t* Hash(const void* data, size_t len);
 
-  // Converts a |hex| string to binary and stores it in this->data.  The
-  // string must contain at least |kLength| * 2 valid hex characters.
+  // Converts a null-terminated |hex| string to binary and stores it in this
+  // object. |hex| must represent |kLength| bytes, that is, it must have
+  // |kLength| * 2 characters.
   zx_status_t Parse(const char* hex, size_t len);
+
+  // Converts |len| characters of the given |hex| string to binary and stores
+  // it in this object. The string does need to be null-terminated, but |len|
+  // must be |kLength| * 2.
+  zx_status_t Parse(const char* hex) { return Parse(hex, strlen(hex)); }
 
   // Writes the current digest to |out| as a null-terminated, hex-encoded
   // string.  |out| must have room for (kLength * 2) + 1 characters to
@@ -72,15 +78,9 @@ class Digest final {
   zx_status_t CopyTo(uint8_t* out, size_t len) const;
 
   // Returns a pointer to a buffer containing the current digest value.  This
-  // will always have |kLength| bytes.  Each call to |AcquireBytes| must have
-  // a corresponding call to |ReleaseBytes| before calling any other non-const
-  // method.
-  const uint8_t* AcquireBytes() const;
-
-  // Indicates to this object that the caller is finished using the pointer
-  // returned by |AcquireBytes|.  It is an error to call any other non-const
-  // method after |AcquireBytes| without first calling |ReleaseBytes|.
-  void ReleaseBytes() const;
+  // will always have |kLength| bytes. This pointer is only valid for the
+  // lifetime of this object.
+  const uint8_t* get() const { return bytes_; }
 
   // Equality operators.  Those that take |const uint8_t *| arguments will
   // read |kLength| bytes; callers MUST ensure there are sufficient bytes
@@ -89,16 +89,6 @@ class Digest final {
   bool operator!=(const Digest& rhs) const;
   bool operator==(const uint8_t* rhs) const;
   bool operator!=(const uint8_t* rhs) const;
-
-  // Check to see if this digest is currently valid.  A digest is defined as
-  // valid when it has a valid crypto context; so any time after a successful
-  // call to Init, but before the call to Final.  The following operations
-  // require a valid digest in order to execute.
-  //
-  // ++ Update
-  // ++ Final
-  //
-  bool is_valid() const { return ctx_ != nullptr; }
 
  private:
   // Opaque crypto implementation context.
@@ -109,9 +99,6 @@ class Digest final {
   // The raw bytes of the current digest.  This is filled in either by the
   // assignment operators or the Parse and Final methods.
   uint8_t bytes_[kLength];
-  // The number of outstanding calls to |AcquireBytes| without matching calls
-  // to |ReleaseBytes|.
-  mutable size_t ref_count_ = 0;
 };
 
 }  // namespace digest
@@ -152,3 +139,5 @@ zx_status_t digest_final(digest_t* digest, void* out, size_t out_len);
 zx_status_t digest_hash(const void* buf, size_t len, void* out, size_t out_len);
 
 __END_CDECLS
+
+#endif  // DIGEST_DIGEST_H_

@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <digest/merkle-tree.h>
-
 #include <stdint.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <digest/digest.h>
+#include <digest/merkle-tree.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/assert.h>
-#include <zircon/errors.h>
 
 namespace digest {
 
@@ -232,8 +231,7 @@ zx_status_t MerkleTree::CreateFinalInternal(const void* data, void* tree, Digest
   initialized_ = false;
   // If the top, save the digest as the Merkle tree root and return.
   if (length_ <= kNodeSize) {
-    *root = digest_.AcquireBytes();
-    digest_.ReleaseBytes();
+    *root = digest_.get();
     return ZX_OK;
   }
   // Finalize the next level up.

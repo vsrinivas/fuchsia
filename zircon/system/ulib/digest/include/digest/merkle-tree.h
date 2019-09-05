@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef DIGEST_MERKLE_TREE_H_
+#define DIGEST_MERKLE_TREE_H_
 
 #include <stddef.h>
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -199,3 +199,5 @@ zx_status_t merkle_tree_verify(const void* data, size_t data_len, void* tree, si
                                size_t offset, size_t length, const void* root, size_t root_len);
 
 __END_CDECLS
+
+#endif  // DIGEST_MERKLE_TREE_H_

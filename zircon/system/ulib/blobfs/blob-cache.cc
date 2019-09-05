@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <digest/digest.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/ref_ptr.h>
 #include <zircon/status.h>
 
 #include <utility>
 
 #include <blobfs/blob-cache.h>
+#include <digest/digest.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/ref_ptr.h>
 
 using digest::Digest;
 
@@ -86,8 +86,7 @@ void BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
 
 zx_status_t BlobCache::Lookup(const Digest& digest, fbl::RefPtr<CacheNode>* out) {
   TRACE_DURATION("blobfs", "BlobCache::Lookup");
-  const uint8_t* key = digest.AcquireBytes();
-  auto release = fbl::MakeAutoCall([&digest]() { digest.ReleaseBytes(); });
+  const uint8_t* key = digest.get();
 
   // Look up the blob in the maps.
   fbl::RefPtr<CacheNode> vnode = nullptr;
