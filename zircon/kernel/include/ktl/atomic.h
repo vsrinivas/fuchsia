@@ -23,6 +23,9 @@ using std::memory_order_seq_cst;
 
 using std::atomic_init;
 
+using std::atomic_signal_fence;
+using std::atomic_thread_fence;
+
 }  // namespace ktl
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KTL_ATOMIC_H_
