@@ -21,9 +21,6 @@ class SettingsProvider : public fuchsia::accessibility::SettingsProvider {
   SettingsProvider();
   ~SettingsProvider() override;
 
-  void Bind(
-      fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request);
-
   void AddWatcher(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher);
 
  private:
@@ -51,10 +48,6 @@ class SettingsProvider : public fuchsia::accessibility::SettingsProvider {
 
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const fuchsia::accessibility::Settings& new_settings);
-
-  std::string BoolToString(bool value);
-
-  fidl::Binding<fuchsia::accessibility::SettingsProvider> binding_;
 
   fidl::InterfacePtrSet<fuchsia::accessibility::SettingsWatcher> watchers_;
 

@@ -23,6 +23,8 @@ class MockSettingsService {
   explicit MockSettingsService(sys::testing::ComponentContextProvider* context);
   ~MockSettingsService() = default;
 
+  zx_status_t provider_error() const { return provider_error_; }
+
   void SetMagnificationEnabled(
       bool magnification_enabled,
       fuchsia::accessibility::SettingsProvider::SetMagnificationEnabledCallback callback);
@@ -48,6 +50,8 @@ class MockSettingsService {
   fuchsia::accessibility::SettingsManagerPtr manager_;
   fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
   fuchsia::accessibility::Settings settings_;
+
+  zx_status_t provider_error_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSettingsService);
 };

@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/logger.h>
 
-#include <src/lib/fxl/logging.h>
+#include <ios>
 
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -38,7 +38,7 @@ const std::array<float, 9> kCorrectTritanomaly = {
     0.805712f,  0.621162f, 0.895177f};
 // clang-format on
 
-SettingsProvider::SettingsProvider() : binding_(this) {
+SettingsProvider::SettingsProvider() {
   settings_.set_magnification_enabled(false);
   settings_.set_magnification_zoom_factor(1.0);
   settings_.set_screen_reader_enabled(false);
@@ -48,14 +48,6 @@ SettingsProvider::SettingsProvider() : binding_(this) {
 }
 
 SettingsProvider::~SettingsProvider() = default;
-
-void SettingsProvider::Bind(
-    fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request) {
-  binding_.Close(ZX_ERR_PEER_CLOSED);
-  binding_.Bind(std::move(settings_provider_request));
-}
-
-std::string SettingsProvider::BoolToString(bool value) { return value ? "true" : "false"; }
 
 void SettingsProvider::SetMagnificationEnabled(bool magnification_enabled,
                                                SetMagnificationEnabledCallback callback) {
@@ -80,7 +72,8 @@ void SettingsProvider::SetMagnificationEnabled(bool magnification_enabled,
 
   NotifyWatchers(settings_);
 
-  FX_LOGS(INFO) << "magnification_enabled = " << BoolToString(settings_.magnification_enabled());
+  FX_LOGS(INFO) << "magnification_enabled = " << std::boolalpha
+                << settings_.magnification_enabled();
 
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }
@@ -114,7 +107,8 @@ void SettingsProvider::SetScreenReaderEnabled(bool screen_reader_enabled,
 
   NotifyWatchers(settings_);
 
-  FX_LOGS(INFO) << "screen_reader_enabled = " << BoolToString(settings_.screen_reader_enabled());
+  FX_LOGS(INFO) << "screen_reader_enabled = " << std::boolalpha
+                << settings_.screen_reader_enabled();
 
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }
@@ -126,8 +120,8 @@ void SettingsProvider::SetColorInversionEnabled(bool color_inversion_enabled,
 
   NotifyWatchers(settings_);
 
-  FX_LOGS(INFO) << "color_inversion_enabled = "
-                << BoolToString(settings_.color_inversion_enabled());
+  FX_LOGS(INFO) << "color_inversion_enabled = " << std::boolalpha
+                << settings_.color_inversion_enabled();
 
   callback(fuchsia::accessibility::SettingsManagerStatus::OK);
 }

@@ -19,6 +19,8 @@ MockSettingsService::MockSettingsService(sys::testing::ComponentContextProvider*
   });
 
   manager_->RegisterSettingProvider(settings_provider_ptr_.NewRequest());
+  settings_provider_ptr_.set_error_handler(
+      [this](zx_status_t status) { provider_error_ = status; });
 }
 
 void MockSettingsService::SetMagnificationEnabled(

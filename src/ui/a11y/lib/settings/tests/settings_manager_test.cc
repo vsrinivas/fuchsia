@@ -641,6 +641,7 @@ TEST_F(SettingsManagerTest, MultipleSettingsService_UseLastOne) {
                    "is made on a channel which no longer exist.";
   settings_service_first.SetMagnificationEnabled(
       true, [&status](SettingsManagerStatus retval) { status = retval; });
+  EXPECT_EQ(settings_service_first.provider_error(), ZX_ERR_PEER_CLOSED);
   RunLoopUntilIdle();
 
   // Check Settings in Watcher. Settings should not change..

@@ -26,6 +26,7 @@ class SettingsManager : public fuchsia::accessibility::SettingsManager {
 
  private:
   SettingsProvider settings_provider_;
+  fidl::Binding<fuchsia::accessibility::SettingsProvider> settings_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SettingsManager);
 };

@@ -6,12 +6,12 @@
 
 namespace a11y {
 
-SettingsManager::SettingsManager() = default;
+SettingsManager::SettingsManager() : settings_provider_binding_(&settings_provider_){};
 SettingsManager::~SettingsManager() = default;
 
 void SettingsManager::RegisterSettingProvider(
     fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request) {
-  settings_provider_.Bind(std::move(settings_provider_request));
+  settings_provider_binding_.Bind(std::move(settings_provider_request));
 }
 
 void SettingsManager::Watch(
