@@ -304,6 +304,13 @@ void BatchUpload::EncodeCommit(
 void BatchUpload::EncodeDiff(storage::CommitIdView commit_id,
                              std::vector<storage::EntryChange> entries,
                              fit::function<void(UploadStatus, cloud_provider::Diff)> callback) {
+  // We sort entries by their entry id. This ensures that the ordering of entries only depends on
+  // information we are willing to reveal to the cloud.
+  std::sort(entries.begin(), entries.end(),
+            [](const storage::EntryChange& lhs, const storage::EntryChange& rhs) {
+              return lhs.entry.entry_id < rhs.entry.entry_id;
+            });
+
   auto waiter = fxl::MakeRefCounted<callback::Waiter<UploadStatus, cloud_provider::DiffEntry>>(
       UploadStatus::OK);
 

@@ -360,6 +360,44 @@ TEST_F(BatchUploadTest, DiffFromCommit) {
   EXPECT_EQ(storage_.objects_marked_as_synced.size(), 0u);
 }
 
+TEST_F(BatchUploadTest, DiffSortedByEntryId) {
+  std::vector<std::unique_ptr<const storage::Commit>> commits;
+  commits.push_back(storage_.NewCommit("id", "content", true));
+  auto batch_upload = MakeBatchUpload(std::move(commits));
+
+  auto obj_id0 = MakeObjectIdentifier("obj_digest0");
+  auto obj_id1 = MakeObjectIdentifier("obj_digest1");
+  storage_.diffs_to_return["id"] =
+      std::make_pair(storage::kFirstPageCommitId.ToString(),
+                     std::vector<storage::EntryChange>{
+                         {{"key0", obj_id0, storage::KeyPriority::EAGER, "entryC"}, false},
+                         {{"key1", obj_id1, storage::KeyPriority::LAZY, "entryA"}, true},
+                         {{"key2", obj_id1, storage::KeyPriority::LAZY, "entryB"}, true}});
+
+  batch_upload->Start();
+  RunLoopUntilIdle();
+  EXPECT_EQ(done_calls_, 1u);
+  EXPECT_EQ(error_calls_, 0u);
+
+  // Verify that the entries are sent in entry id order.
+  ASSERT_THAT(page_cloud_.received_commits, SizeIs(1));
+  ASSERT_THAT(page_cloud_.received_commits, Each(Truly(CommitHasIdAndData)));
+  EXPECT_EQ(page_cloud_.received_commits.front().id(), convert::ToArray("id"));
+  ASSERT_TRUE(page_cloud_.received_commits[0].has_diff());
+  ASSERT_TRUE(page_cloud_.received_commits[0].diff().has_base_state());
+  EXPECT_TRUE(page_cloud_.received_commits[0].diff().base_state().is_empty_page());
+  EXPECT_TRUE(page_cloud_.received_commits[0].diff().has_changes());
+
+  auto& changes = page_cloud_.received_commits[0].diff().changes();
+  ASSERT_THAT(changes, SizeIs(3));
+  ASSERT_TRUE(changes[0].has_entry_id());
+  EXPECT_EQ(changes[0].entry_id(), convert::ToArray("entryA"));
+  ASSERT_TRUE(changes[1].has_entry_id());
+  EXPECT_EQ(changes[1].entry_id(), convert::ToArray("entryB"));
+  ASSERT_TRUE(changes[2].has_entry_id());
+  EXPECT_EQ(changes[2].entry_id(), convert::ToArray("entryC"));
+}
+
 TEST_F(BatchUploadTest, GetDiffFailure) {
   storage_.should_fail_get_diff_for_cloud = true;
 
