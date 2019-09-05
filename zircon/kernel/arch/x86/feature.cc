@@ -16,6 +16,7 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/platform_access.h>
 #include <fbl/algorithm.h>
+#include <ktl/atomic.h>
 #include <lib/code_patching.h>
 #include <platform/pc/bootbyte.h>
 
@@ -44,12 +45,12 @@ bool g_swapgs_bug_mitigated;
 
 enum x86_hypervisor_list x86_hypervisor;
 
-static int initialized = 0;
+static ktl::atomic<bool> g_cpuid_initialized;
 
 static enum x86_hypervisor_list get_hypervisor();
 
 void x86_feature_init(void) {
-  if (atomic_swap(&initialized, 1)) {
+  if (g_cpuid_initialized.exchange(true)) {
     return;
   }
   /* test for cpuid count */
