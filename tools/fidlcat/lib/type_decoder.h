@@ -66,6 +66,9 @@ enum class SyscallType {
   kRsrcKind,
   kSignals,
   kSize,
+  kSocketCreateOptions,
+  kSocketReadOptions,
+  kSocketShutdownOptions,
   kStatus,
   kSystemEventType,
   kSystemPowerctl,
@@ -118,6 +121,9 @@ void PortPacketTypeName(uint32_t type, std::ostream& os);
 void RightsName(zx_rights_t rights, std::ostream& os);
 void RsrcKindName(zx_rsrc_kind_t kind, std::ostream& os);
 void SignalName(zx_signals_t signals, std::ostream& os);
+void SocketCreateOptionsName(uint32_t options, std::ostream& os);
+void SocketReadOptionsName(uint32_t options, std::ostream& os);
+void SocketShutdownOptionsName(uint32_t options, std::ostream& os);
 void StatusName(zx_status_t status, std::ostream& os);
 void StatusName(const Colors& colors, zx_status_t status, std::ostream& os);
 void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os);

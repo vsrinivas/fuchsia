@@ -2245,6 +2245,78 @@ void SyscallDecoderDispatcher::Populate() {
   }
 
   {
+    Syscall* zx_socket_create = Add("zx_socket_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto options = zx_socket_create->Argument<uint32_t>(SyscallType::kSocketCreateOptions);
+    auto out0 = zx_socket_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    auto out1 = zx_socket_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_socket_create->Input<uint32_t>("options",
+                                      std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_socket_create->Output<zx_handle_t>(ZX_OK, "out0",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
+    zx_socket_create->Output<zx_handle_t>(ZX_OK, "out1",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+  }
+
+  {
+    Syscall* zx_socket_write = Add("zx_socket_write", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_socket_write->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_socket_write->Argument<uint32_t>(SyscallType::kUint32);
+    auto buffer = zx_socket_write->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto buffer_size = zx_socket_write->Argument<size_t>(SyscallType::kSize);
+    auto actual = zx_socket_write->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_socket_write->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_socket_write->Input<uint32_t>("options",
+                                     std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_socket_write->InputBuffer<uint8_t, uint8_t>(
+        "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    // Outputs
+    zx_socket_write->OutputActualAndRequested<size_t>(
+        ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+  }
+
+  {
+    Syscall* zx_socket_read = Add("zx_socket_read", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_socket_read->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_socket_read->Argument<uint32_t>(SyscallType::kSocketReadOptions);
+    auto buffer = zx_socket_read->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto buffer_size = zx_socket_read->Argument<size_t>(SyscallType::kSize);
+    auto actual = zx_socket_read->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_socket_read->Input<zx_handle_t>("handle",
+                                       std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_socket_read->Input<uint32_t>("options", std::make_unique<ArgumentAccess<uint32_t>>(options));
+    zx_socket_read->Input<size_t>("buffer_size",
+                                  std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    // Outputs
+    zx_socket_read->OutputActualAndRequested<size_t>(
+        ZX_OK, "actual", std::make_unique<ArgumentAccess<size_t>>(actual),
+        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    zx_socket_read->OutputBuffer<uint8_t, uint8_t>(
+        ZX_OK, "buffer", SyscallType::kUint8Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+        std::make_unique<ArgumentAccess<size_t>>(actual));
+  }
+
+  {
+    Syscall* zx_socket_shutdown = Add("zx_socket_shutdown", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_socket_shutdown->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto options = zx_socket_shutdown->Argument<uint32_t>(SyscallType::kSocketShutdownOptions);
+    // Inputs
+    zx_socket_shutdown->Input<zx_handle_t>("handle",
+                                           std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_socket_shutdown->Input<uint32_t>("options",
+                                        std::make_unique<ArgumentAccess<uint32_t>>(options));
+  }
+  {
     Syscall* zx_port_create = Add("zx_port_create", SyscallReturnType::kStatus);
     // Arguments
     auto options = zx_port_create->Argument<uint32_t>(SyscallType::kUint32);

@@ -291,6 +291,21 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       SignalName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kSocketCreateOptions:
+      os << colors.blue;
+      SocketCreateOptionsName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kSocketReadOptions:
+      os << colors.blue;
+      SocketReadOptionsName(value, os);
+      os << colors.reset;
+      break;
+    case SyscallType::kSocketShutdownOptions:
+      os << colors.blue;
+      SocketShutdownOptionsName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kSystemEventType:
       os << colors.blue;
       SystemEventTypeName(value, os);

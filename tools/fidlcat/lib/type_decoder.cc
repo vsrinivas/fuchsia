@@ -324,6 +324,51 @@ void SignalName(zx_signals_t signals, std::ostream& os) {
   SignalNameCase(ZX_USER_SIGNAL_7);
 }
 
+#define SocketCreateOptionsNameCase(name) \
+  case name:                              \
+    os << #name;                          \
+    return
+
+void SocketCreateOptionsName(uint32_t options, std::ostream& os) {
+  switch (options) {
+    SocketCreateOptionsNameCase(ZX_SOCKET_STREAM);
+    SocketCreateOptionsNameCase(ZX_SOCKET_DATAGRAM);
+    default:
+      os << static_cast<uint32_t>(options);
+      return;
+  }
+}
+
+#define SocketReadOptionsNameCase(name) \
+  case name:                            \
+    os << #name;                        \
+    return
+
+void SocketReadOptionsName(uint32_t options, std::ostream& os) {
+  switch (options) {
+    SocketReadOptionsNameCase(ZX_SOCKET_PEEK);
+    default:
+      os << static_cast<uint32_t>(options);
+      return;
+  }
+}
+
+#define SocketShutdownOptionsNameCase(name) \
+  if ((options & (name)) == (name)) {       \
+    os << separator << #name;               \
+    separator = " | ";                      \
+  }
+
+void SocketShutdownOptionsName(uint32_t options, std::ostream& os) {
+  if (options == 0) {
+    os << "0";
+    return;
+  }
+  const char* separator = "";
+  SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_WRITE);
+  SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_READ);
+}
+
 #define StatusNameCase(name) \
   case name:                 \
     os << #name;             \
@@ -689,6 +734,15 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kSize:
       os << ":" << colors.green << "size_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kSocketCreateOptions:
+      os << ":" << colors.green << "zx_socket_create_options_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kSocketReadOptions:
+      os << ":" << colors.green << "zx_socket_read_options_t" << colors.reset << ": ";
+      break;
+    case SyscallType::kSocketShutdownOptions:
+      os << ":" << colors.green << "zx_socket_shutdown_options_t" << colors.reset << ": ";
       break;
     case SyscallType::kStatus:
       os << ":" << colors.green << "status_t" << colors.reset << ": ";
