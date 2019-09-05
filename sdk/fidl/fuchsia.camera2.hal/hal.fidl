@@ -67,4 +67,7 @@ protocol Controller {
     /// Enable/Disable Streaming
     EnableStreaming();
     DisableStreaming();
+
+    // Get identifying information about the device:
+    GetDeviceInfo() -> (fuchsia.camera2.DeviceInfo info);
 };

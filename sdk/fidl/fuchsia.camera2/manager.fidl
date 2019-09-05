@@ -11,27 +11,27 @@ using zx;
 protocol Manager {
     /// Notifies the client when a camera becomes available.  A number of these events will
     /// be sent when a client first connects to this protocol.
+    /// |device_id| is used to identify the camera.  The device_id should not change throughout
+    /// the lifetime of the camera.
     /// |last_known_camera| is set to true when the Camera Manager has notified the client
     /// of all the devices it currently knows about.
     /// |description| describes the properties of the camera.
-    -> OnCameraAvailable(CameraInfo description, bool last_known_camera);
+    -> OnDeviceAvailable(int32 device_id, DeviceInfo description, bool last_known_camera);
 
-    /// Notifies the client when a camera becomes unavailable. The description will match a
-    /// description sent via OnCameraAvailable.
-    -> OnCameraUnavailable(CameraInfo description);
+    /// Notifies the client when a camera becomes unavailable.
+    -> OnDeviceUnavailable(int32 device_id);
 
     /// Notifies the client when a camera becomes muted or unmuted.
-    /// |id| refers to the camera_id from the description of a previous OnCameraAvailable
+    /// |device_id| refers to the device_id from the description of a previous OnDeviceAvailable
     /// call.
-    -> OnCameraMuteChanged(int32 camera_id, bool currently_muted);
+    -> OnDeviceMuteChanged(int32 device_id, bool currently_muted);
 
-    /// AcknowledgeCameraEvent must be called after any of the above events before more
+    /// AcknowledgeDeviceEvent must be called after any of the above events before more
     /// events will be sent.
-    AcknowledgeCameraEvent();
+    AcknowledgeDeviceEvent();
 
     /// Connect to a camera stream:
-    /// |camera_id| Refers to a specific camera_id from a CameraInfo that has been
-    /// advertised by OnCameraAvailable.
+    /// |device_id| Refers to a specific device_id that has been advertised by OnDeviceAvailable.
     /// |constraints| contains a set of constraints on the requested stream.  The Camera
     /// Manager will attempt to find a stream that meets the constraints.  If multiple
     /// streams match, one of the matching streams will be connected.
@@ -45,7 +45,7 @@ protocol Manager {
     /// on the stream is indicated on the response.
     /// The connection is considered to be successful once a response has been given, unless
     /// |stream| is closed.
-    ConnectToStream(int32 camera_id, StreamConstraints constraints,
+    ConnectToStream(int32 device_id, StreamConstraints constraints,
                     fuchsia.sysmem.BufferCollectionToken token,
                     request<Stream> stream) -> (fuchsia.sysmem.ImageFormat_2 format);
 };
@@ -56,10 +56,9 @@ protocol MuteControl {
     /// camera will not produce any more images until
     /// unmute is called.  You can still connect to streams from a muted camera, but they
     /// will not produce frames until the camera is unmuted.
-    /// |id| refers to the camera_id from the description of a previous OnCameraAvailable
-    /// call.
-    Mute(int32 camera_id) -> (zx.status status);
-    Unmute(int32 camera_id) -> (zx.status status);
+    /// |device_id| refers to the device_id from a previous OnDeviceAvailable call.
+    Mute(int32 device_id) -> (zx.status status);
+    Unmute(int32 device_id) -> (zx.status status);
 };
 
 /// These constraints are given to the Camera Manager when requesting a stream.  The
@@ -75,9 +74,15 @@ enum DeviceType {
     VIRTUAL = 2;
 };
 
-/// Contains distinguishing information about a camera.
-table CameraInfo {
-    1: uint32 camera_id;
-    2: DeviceType type;
-    // TODO(garratt): add more fields here as needed.
+/// Identifying information about the device.
+table DeviceInfo {
+    /// Information from physical device enumeration:
+    1: uint16 vendor_id;
+    2: string:255 vendor_name;
+    3: uint16 product_id;
+    4: string:255 product_name;
+    5: string:255 serial_number;
+
+    /// Information about the type of device:
+    6: DeviceType type;
 };
