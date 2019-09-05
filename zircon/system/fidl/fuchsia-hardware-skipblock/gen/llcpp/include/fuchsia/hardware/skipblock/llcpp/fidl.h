@@ -21,9 +21,34 @@ namespace fuchsia {
 namespace hardware {
 namespace skipblock {
 
+struct WriteBytesOperation;
 struct ReadWriteOperation;
 struct PartitionInfo;
 class SkipBlock;
+
+extern "C" const fidl_type_t fuchsia_hardware_skipblock_WriteBytesOperationTable;
+
+struct WriteBytesOperation {
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_WriteBytesOperationTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 32;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  // Memory object describing buffer to write from.
+  ::zx::vmo vmo = {};
+
+  // VMO offset in bytes.
+  uint64_t vmo_offset = {};
+
+  // Device offset in bytes to begin operation from.
+  // Must be flash page aligned.
+  uint64_t offset = {};
+
+  // Number of bytes to write.
+  // Must be flash page aligned.
+  uint64_t size = {};
+};
 
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_ReadWriteOperationTable;
 
@@ -71,6 +96,8 @@ extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadRequestTabl
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
 
 class SkipBlock final {
   SkipBlock() = delete;
@@ -149,6 +176,35 @@ class SkipBlock final {
     using ResponseType = WriteResponse;
   };
 
+  struct WriteBytesResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+    bool bad_block_grown;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteBytesRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    WriteBytesOperation op;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteBytesResponse;
+  };
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -202,11 +258,28 @@ class SkipBlock final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class WriteBytes_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WriteBytes_Impl(zx::unowned_channel _client_end, WriteBytesOperation op);
+      ~WriteBytes_Impl() = default;
+      WriteBytes_Impl(WriteBytes_Impl&& other) = default;
+      WriteBytes_Impl& operator=(WriteBytes_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using GetPartitionInfo = GetPartitionInfo_Impl<GetPartitionInfoResponse>;
     using Read = Read_Impl<ReadResponse>;
     using Write = Write_Impl<WriteResponse>;
+    using WriteBytes = WriteBytes_Impl<WriteBytesResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -262,11 +335,28 @@ class SkipBlock final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class WriteBytes_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WriteBytes_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WriteBytesOperation op, ::fidl::BytePart _response_buffer);
+      ~WriteBytes_Impl() = default;
+      WriteBytes_Impl(WriteBytes_Impl&& other) = default;
+      WriteBytes_Impl& operator=(WriteBytes_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using GetPartitionInfo = GetPartitionInfo_Impl<GetPartitionInfoResponse>;
     using Read = Read_Impl<ReadResponse>;
     using Write = Write_Impl<WriteResponse>;
+    using WriteBytes = WriteBytes_Impl<WriteBytesResponse>;
   };
 
   class SyncClient final {
@@ -322,6 +412,32 @@ class SkipBlock final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Write Write(::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
 
+    // Erases and writes the specified bytes from the provided vmo. If offset
+    // and size in |op| are not aligned to |block_size_bytes| then the driver will
+    // first read the partitially written blocks and combine them with the
+    // provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WriteBytes WriteBytes(WriteBytesOperation op);
+
+    // Erases and writes the specified bytes from the provided vmo. If offset
+    // and size in |op| are not aligned to |block_size_bytes| then the driver will
+    // first read the partitially written blocks and combine them with the
+    // provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WriteBytes WriteBytes(::fidl::BytePart _request_buffer, WriteBytesOperation op, ::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -373,6 +489,32 @@ class SkipBlock final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Write Write(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ReadWriteOperation op, ::fidl::BytePart _response_buffer);
 
+    // Erases and writes the specified bytes from the provided vmo. If offset
+    // and size in |op| are not aligned to |block_size_bytes| then the driver will
+    // first read the partitially written blocks and combine them with the
+    // provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WriteBytes WriteBytes(zx::unowned_channel _client_end, WriteBytesOperation op);
+
+    // Erases and writes the specified bytes from the provided vmo. If offset
+    // and size in |op| are not aligned to |block_size_bytes| then the driver will
+    // first read the partitially written blocks and combine them with the
+    // provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WriteBytes WriteBytes(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WriteBytesOperation op, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -398,6 +540,18 @@ class SkipBlock final {
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
     static ::fidl::DecodeResult<WriteResponse> Write(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteRequest> params, ::fidl::BytePart response_buffer);
+
+    // Erases and writes the specified bytes from the provided vmo. If offset
+    // and size in |op| are not aligned to |block_size_bytes| then the driver will
+    // first read the partitially written blocks and combine them with the
+    // provided vmo.
+    //
+    // In the event that bad block is grown, the partition will shrink and
+    // `bad_block_grown` will be set to true. Since this causes the logical to
+    // physical block map to change, all previously written blocks at logical
+    // addresses after the section being written should be considered corrupted,
+    // and rewritten if applicable.
+    static ::fidl::DecodeResult<WriteBytesResponse> WriteBytes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBytesRequest> params, ::fidl::BytePart response_buffer);
 
   };
 
@@ -451,6 +605,20 @@ class SkipBlock final {
 
     virtual void Write(ReadWriteOperation op, WriteCompleter::Sync _completer) = 0;
 
+    class WriteBytesCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status, bool bad_block_grown);
+      void Reply(::fidl::BytePart _buffer, int32_t status, bool bad_block_grown);
+      void Reply(::fidl::DecodedMessage<WriteBytesResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WriteBytesCompleter = ::fidl::Completer<WriteBytesCompleterBase>;
+
+    virtual void WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -481,6 +649,15 @@ constexpr uint32_t GUID_LEN = 16u;
 }  // namespace llcpp
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation, vmo) == 0);
+static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation, vmo_offset) == 8);
+static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation, offset) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation, size) == 24);
+static_assert(sizeof(::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation) == ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation> : public std::true_type {};
@@ -540,5 +717,22 @@ static_assert(sizeof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteResp
     == ::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteResponse, bad_block_grown) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesRequest)
+    == ::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesRequest, op) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesResponse)
+    == ::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::skipblock::SkipBlock::WriteBytesResponse, bad_block_grown) == 20);
 
 }  // namespace fidl

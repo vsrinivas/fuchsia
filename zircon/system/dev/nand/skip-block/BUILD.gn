@@ -17,6 +17,7 @@ source_set("common") {
   deps = [
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
@@ -45,7 +46,7 @@ test("skip-block-test") {
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]

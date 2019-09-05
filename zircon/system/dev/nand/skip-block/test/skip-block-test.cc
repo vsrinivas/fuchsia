@@ -10,6 +10,7 @@
 #include <ddktl/protocol/nand.h>
 #include <fbl/vector.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 #include <zxtest/zxtest.h>
@@ -71,7 +72,10 @@ class Binder : public fake_ddk::Bind {
 // Fake for the nand protocol.
 class FakeNand : public ddk::NandProtocol<FakeNand> {
  public:
-  FakeNand() : proto_({&nand_protocol_ops_, this}) {}
+  FakeNand() : proto_({&nand_protocol_ops_, this}) {
+    ASSERT_OK(mapper_.CreateAndMap(kNumBlocks * kNumPages * kPageSize,
+                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
+  }
 
   const nand_protocol_t* proto() const { return &proto_; }
 
@@ -95,8 +99,6 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
 
     switch (op->command) {
       case NAND_OP_READ: {
-        zx::vmo data_vmo(op->rw.data_vmo);
-        zx::vmo oob_vmo(op->rw.oob_vmo);
         if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
             (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
           result = ZX_ERR_OUT_OF_RANGE;
@@ -105,12 +107,15 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
         if (op->rw.data_vmo == ZX_HANDLE_INVALID && op->rw.oob_vmo == ZX_HANDLE_INVALID) {
           result = ZX_ERR_BAD_HANDLE;
           break;
+        }
+        zx::unowned_vmo data_vmo(op->rw.data_vmo);
+        if (*data_vmo) {
+          auto* data = static_cast<uint8_t*>(mapper_.start()) + (op->rw.offset_nand * kPageSize);
+          data_vmo->read(data, op->rw.offset_data_vmo, op->rw.length * kPageSize);
         }
         break;
       }
       case NAND_OP_WRITE: {
-        zx::vmo data_vmo(op->rw.data_vmo);
-        zx::vmo oob_vmo(op->rw.oob_vmo);
         if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
             (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
           result = ZX_ERR_OUT_OF_RANGE;
@@ -120,15 +125,30 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
           result = ZX_ERR_BAD_HANDLE;
           break;
         }
+        zx::unowned_vmo data_vmo(op->rw.data_vmo);
+        if (*data_vmo) {
+          fzl::VmoMapper mapper;
+          result = mapper.Map(*data_vmo, 0, 0, ZX_VM_PERM_READ);
+          if (result != ZX_OK) {
+            break;
+          }
+          auto* src = static_cast<uint8_t*>(mapper.start()) + (op->rw.offset_data_vmo * kPageSize);
+          auto* dst = static_cast<uint8_t*>(mapper_.start()) + (op->rw.offset_nand * kPageSize);
+          memcpy(dst, src, op->rw.length * kPageSize);
+        }
         break;
       }
-      case NAND_OP_ERASE:
+      case NAND_OP_ERASE: {
         if (!op->erase.num_blocks || op->erase.first_block >= nand_info_.num_blocks ||
             (op->erase.num_blocks > (nand_info_.num_blocks - op->erase.first_block))) {
           result = ZX_ERR_OUT_OF_RANGE;
+          break;
         }
+        auto* data = static_cast<uint8_t*>(mapper_.start()) +
+                     (op->erase.first_block * kPageSize * kNumPages);
+        memset(data, 0, op->erase.num_blocks * kPageSize * kNumPages);
         break;
-
+      }
       default:
         result = ZX_ERR_NOT_SUPPORTED;
         break;
@@ -144,6 +164,7 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
     return ZX_OK;
   }
 
+  const fzl::VmoMapper& mapper() { return mapper_; }
   const nand_op_t& last_op() { return last_op_; }
 
  private:
@@ -152,6 +173,8 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
   fuchsia_hardware_nand_Info nand_info_ = kInfo;
   fbl::Vector<zx_status_t> result_;
   size_t num_nand_pages_ = kNumPages * kNumBlocks;
+
+  fzl::VmoMapper mapper_;
 
   nand_op_t last_op_ = {};
 };
@@ -204,6 +227,15 @@ class SkipBlockTest : public zxtest::Test {
 
   ~SkipBlockTest() { ddk_.DeviceRemove(parent()); }
 
+  void CreatePayload(size_t size, zx::vmo* out) {
+    zx::vmo vmo;
+    fzl::VmoMapper mapper;
+    ASSERT_OK(mapper.CreateAndMap(fbl::round_up(size, ZX_PAGE_SIZE),
+                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
+    memset(mapper.start(), 0x4a, mapper.size());
+    *out = std::move(vmo);
+  }
+
   void Write(nand::ReadWriteOperation op, bool* bad_block_grown, zx_status_t expected = ZX_OK) {
     if (!client_) {
       client_.emplace(std::move(ddk().FidlClient()));
@@ -222,6 +254,31 @@ class SkipBlockTest : public zxtest::Test {
     auto result = client_->Read(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
+  }
+
+  void WriteBytes(nand::WriteBytesOperation op, bool* bad_block_grown,
+                  zx_status_t expected = ZX_OK) {
+    if (!client_) {
+      client_.emplace(std::move(ddk().FidlClient()));
+    }
+    auto result = client_->WriteBytes(std::move(op));
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+    *bad_block_grown = result.value().bad_block_grown;
+  }
+
+  void ValidateWritten(size_t offset, size_t size) {
+    const uint8_t* start = static_cast<uint8_t*>(nand_.mapper().start()) + offset;
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(start[i], 0x4a, "i = %zu", i);
+    }
+  }
+
+  void ValidateUnwritten(size_t offset, size_t size) {
+    const uint8_t* start = static_cast<uint8_t*>(nand_.mapper().start()) + offset;
+    for (size_t i = 0; i < size; i++) {
+      ASSERT_EQ(start[i], 0x00, "i = %zu", i);
+    }
   }
 
   zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
@@ -350,4 +407,102 @@ TEST_F(SkipBlockTest, ReadFailure) {
   ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_INVALID_ARGS));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_READ);
+}
+
+TEST_F(SkipBlockTest, WriteBytesSingleBlock) {
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Read block 5.
+    nand().set_result(ZX_OK);
+    // Erase block 5.
+    nand().set_result(ZX_OK);
+    // Write block 5.
+    nand().set_result(ZX_OK);
+
+    constexpr size_t kOffset = kPageSize;
+    constexpr size_t kSize = kBlockSize - (2 * kPageSize);
+    constexpr size_t kNandOffset = 5 * kBlockSize;
+
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+    nand::WriteBytesOperation op = {};
+    op.vmo = std::move(vmo);
+    op.offset = kNandOffset + kOffset;
+    op.size = kSize;
+
+    bool bad_block_grown;
+    ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+    ASSERT_FALSE(bad_block_grown);
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+    ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset, kPageSize));
+    ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset + kOffset, kSize));
+    ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset + kOffset + kSize, kPageSize));
+}
+
+TEST_F(SkipBlockTest, WriteBytesMultipleBlocks) {
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Read block 4.
+    nand().set_result(ZX_OK);
+    // Read block 6.
+    nand().set_result(ZX_OK);
+    // Erase block 4 - 6.
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+    // Write block  4 - 6.
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+
+    constexpr size_t kOffset = kPageSize;
+    constexpr size_t kSize = (kBlockSize * 3) - (2 * kPageSize);
+    constexpr size_t kNandOffset = 4 * kBlockSize;
+
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+    nand::WriteBytesOperation op = {};
+    op.vmo = std::move(vmo);
+    op.offset = kNandOffset + kOffset;
+    op.size = kSize;
+
+    bool bad_block_grown;
+    ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+    ASSERT_FALSE(bad_block_grown);
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+    ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset, kPageSize));
+    ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset + kOffset, kSize));
+    ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset + kOffset + kSize, kPageSize));
+}
+
+TEST_F(SkipBlockTest, WriteBytesAligned) {
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Erase block 4 - 5.
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+    // Write block  4 - 5.
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+    nand().set_result(ZX_OK);
+
+    constexpr size_t kSize = (kBlockSize * 2);
+    constexpr size_t kNandOffset = 4 * kBlockSize;
+
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+    nand::WriteBytesOperation op = {};
+    op.vmo = std::move(vmo);
+    op.offset = kNandOffset;
+    op.size = kSize;
+
+    bool bad_block_grown;
+    ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+    ASSERT_FALSE(bad_block_grown);
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+    ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
 }

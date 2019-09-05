@@ -29,6 +29,19 @@ struct ReadWriteOperation {
     uint32 block_count;
 };
 
+struct WriteBytesOperation {
+    /// Memory object describing buffer to write from.
+    handle<vmo> vmo;
+    /// VMO offset in bytes.
+    uint64 vmo_offset;
+    /// Device offset in bytes to begin operation from.
+    /// Must be flash page aligned.
+    uint64 offset;
+    /// Number of bytes to write.
+    /// Must be flash page aligned.
+    uint64 size;
+};
+
 [Layout = "Simple"]
 protocol SkipBlock {
     /// Returns information about the skip-block partition.
@@ -48,4 +61,16 @@ protocol SkipBlock {
     /// addresses after the section being written should be considered corrupted,
     /// and rewritten if applicable.
     Write(ReadWriteOperation op) -> (zx.status status, bool bad_block_grown);
+
+    /// Erases and writes the specified bytes from the provided vmo. If offset
+    /// and size in |op| are not aligned to |block_size_bytes| then the driver will
+    /// first read the partitially written blocks and combine them with the
+    /// provided vmo.
+    ///
+    /// In the event that bad block is grown, the partition will shrink and
+    /// `bad_block_grown` will be set to true. Since this causes the logical to
+    /// physical block map to change, all previously written blocks at logical
+    /// addresses after the section being written should be considered corrupted,
+    /// and rewritten if applicable.
+    WriteBytes(WriteBytesOperation op) -> (zx.status status, bool bad_block_grown);
 };

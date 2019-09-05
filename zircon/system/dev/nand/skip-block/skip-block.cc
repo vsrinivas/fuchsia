@@ -19,6 +19,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
@@ -227,19 +228,21 @@ void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoCompleter::Sync completer
 
   PartitionInfo info;
   info.block_size_bytes = GetBlockSize();
-  uint32_t logical_block_count = UINT32_MAX;
-  for (uint32_t copy = 0; copy < copy_count_; copy++) {
-    logical_block_count = fbl::min(logical_block_count, block_map_.LogicalBlockCount(copy));
-  }
-  info.partition_block_count = logical_block_count;
+  info.partition_block_count = GetBlockCountLocked();
   memcpy(info.partition_guid.data(), nand_info_.partition_guid, ZBI_PARTITION_GUID_LEN);
 
   completer.Reply(ZX_OK, info);
 }
 
-zx_status_t SkipBlockDevice::ValidateVmo(const ReadWriteOperation& op) const {
-  uint64_t vmo_size;
+zx_status_t SkipBlockDevice::ValidateOperationLocked(const ReadWriteOperation& op) const {
+  if (op.block_count == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (op.block + op.block_count > GetBlockCountLocked()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
+  uint64_t vmo_size;
   zx_status_t status = op.vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
     return ZX_ERR_INVALID_ARGS;
@@ -250,25 +253,38 @@ zx_status_t SkipBlockDevice::ValidateVmo(const ReadWriteOperation& op) const {
   return ZX_OK;
 }
 
-void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer) {
-  fbl::AutoLock al(&lock_);
-
-  zx_status_t status = ValidateVmo(op);
-  if (status != ZX_OK) {
-    completer.Reply(status);
-    return;
+zx_status_t SkipBlockDevice::ValidateOperationLocked(const WriteBytesOperation& op) const {
+  if (op.size == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (op.offset % nand_info_.page_size != 0 || op.size % nand_info_.page_size != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (fbl::round_up(op.offset + op.size, GetBlockSize()) > GetBlockCountLocked() * GetBlockSize()) {
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
+  uint64_t vmo_size;
+  zx_status_t status = op.vmo.get_size(&vmo_size);
+  if (status != ZX_OK) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (vmo_size < op.vmo_offset + op.size) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  return ZX_OK;
+}
+
+zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
   // TODO(surajmalhotra): We currently only read from the first copy. Given a
   // good use case, we could improve this to read from other copies in the
   // case or read failures, or perhaps expose ability to chose which copy gets
   // read to the user.
   constexpr uint32_t kReadCopy = 0;
   uint32_t physical_block;
-  status = block_map_.GetPhysical(kReadCopy, op.block, &physical_block);
+  zx_status_t status = block_map_.GetPhysical(kReadCopy, op.block, &physical_block);
   if (status != ZX_OK) {
-    completer.Reply(status);
-    return;
+    return status;
   }
   sync_completion_t completion;
   BlockOperationContext op_context = {
@@ -296,26 +312,29 @@ void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer)
 
   // Wait on completion.
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  completer.Reply(op_context.status);
+  return op_context.status;
 }
 
-void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync completer) {
+void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer) {
   fbl::AutoLock al(&lock_);
 
-  bool bad_block_grown = false;
-  zx_status_t status = ValidateVmo(op);
+  zx_status_t status = ValidateOperationLocked(op);
   if (status != ZX_OK) {
-    completer.Reply(status, bad_block_grown);
+    completer.Reply(status);
     return;
   }
+  completer.Reply(ReadLocked(std::move(op)));
+}
+
+zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_grown) {
+  *bad_block_grown = false;
 
   for (uint32_t copy = 0; copy < copy_count_; copy++) {
     for (;;) {
       uint32_t physical_block;
-      status = block_map_.GetPhysical(copy, op.block, &physical_block);
+      zx_status_t status = block_map_.GetPhysical(copy, op.block, &physical_block);
       if (status != ZX_OK) {
-        completer.Reply(status, bad_block_grown);
-        return;
+        return status;
       }
 
       sync_completion_t completion;
@@ -347,8 +366,7 @@ void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync complete
         status = bad_block_.MarkBlockBad(op_context.physical_block);
         if (status != ZX_OK) {
           zxlogf(ERROR, "skip-block: Failed to mark block bad\n");
-          completer.Reply(status, bad_block_grown);
-          return;
+          return status;
         }
         // Logical to physical mapping has changed, so we need to re-initialize block_map_.
         fbl::Array<uint32_t> bad_blocks;
@@ -356,26 +374,148 @@ void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync complete
         ZX_ASSERT(GetBadBlockList(&bad_blocks) == ZX_OK);
         block_map_ =
             LogicalToPhysicalMap(copy_count_, nand_info_.num_blocks, std::move(bad_blocks));
-        bad_block_grown = true;
+        *bad_block_grown = true;
         continue;
       }
       if (op_context.status != ZX_OK) {
-        completer.Reply(op_context.status, bad_block_grown);
-        return;
+        return op_context.status;
       }
       break;
     }
   }
-  completer.Reply(ZX_OK, bad_block_grown);
+  return ZX_OK;
+}
+
+void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync completer) {
+  fbl::AutoLock al(&lock_);
+
+  bool bad_block_grown = false;
+  zx_status_t status = ValidateOperationLocked(op);
+  if (status != ZX_OK) {
+    completer.Reply(status, bad_block_grown);
+    return;
+  }
+
+  status = WriteLocked(std::move(op), &bad_block_grown);
+  completer.Reply(status, bad_block_grown);
+}
+
+zx_status_t SkipBlockDevice::ReadPartialBlocksLocked(WriteBytesOperation op, uint64_t block_size,
+                                                     uint64_t first_block, uint64_t last_block,
+                                                     uint64_t op_size, zx::vmo* vmo) {
+    zx_status_t status = zx::vmo::create(op_size, 0, vmo);
+    if (status != ZX_OK) {
+       return status;
+    }
+
+    if (op.offset % block_size) {
+        // Need to read first block.
+        zx::vmo dup;
+        status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+        if (status != ZX_OK) {
+           return status;
+        }
+        ReadWriteOperation rw_op = {
+          .vmo = std::move(dup),
+          .vmo_offset = 0,
+          .block = static_cast<uint32_t>(first_block),
+          .block_count = 1,
+        };
+        status = ReadLocked(std::move(rw_op));
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    if (first_block != last_block && (op.offset + op.size) % block_size != 0) {
+        // Need to read last block.
+        zx::vmo dup;
+        status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+        if (status != ZX_OK) {
+           return status;
+        }
+        ReadWriteOperation rw_op = {
+          .vmo = std::move(dup),
+          .vmo_offset = last_block * block_size,
+          .block = static_cast<uint32_t>(last_block),
+          .block_count = 1,
+        };
+        status = ReadLocked(std::move(rw_op));
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+
+    // Copy from input vmo to newly created one.
+    fzl::VmoMapper mapper;
+    const size_t vmo_page_offset = op.vmo_offset % ZX_PAGE_SIZE;
+    status = mapper.Map(op.vmo, fbl::round_down(op.vmo_offset, ZX_PAGE_SIZE),
+                        fbl::round_up(vmo_page_offset + op.size, ZX_PAGE_SIZE),
+                        ZX_VM_PERM_READ);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = vmo->write(static_cast<uint8_t*>(mapper.start()) + vmo_page_offset,
+                        op.offset % block_size, op.size);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync completer) {
+    fbl::AutoLock al(&lock_);
+
+    bool bad_block_grown = false;
+    zx_status_t status = ValidateOperationLocked(op);
+    if (status != ZX_OK) {
+        completer.Reply(status, bad_block_grown);
+        return;
+    }
+
+    const uint64_t block_size = GetBlockSize();
+    const uint64_t first_block = op.offset / block_size;
+    const uint64_t last_block = fbl::round_up(op.offset + op.size, block_size) / block_size - 1;
+    const uint64_t op_size = (last_block - first_block + 1) * block_size;
+
+    zx::vmo vmo;
+    if (op_size == op.size) {
+        // No copies are necessary as offset and size are block aligned.
+        vmo = std::move(op.vmo);
+    } else {
+       status = ReadPartialBlocksLocked(std::move(op), block_size, first_block, last_block, op_size,
+                                        &vmo);
+        if (status != ZX_OK) {
+            completer.Reply(status, bad_block_grown);
+            return;
+        }
+    }
+
+    // Now issue normal write.
+    ReadWriteOperation rw_op = {
+      .vmo = std::move(vmo),
+      .vmo_offset = 0,
+      .block = static_cast<uint32_t>(first_block),
+      .block_count = static_cast<uint32_t>(last_block - first_block + 1),
+    };
+    status = WriteLocked(std::move(rw_op), &bad_block_grown);
+    completer.Reply(status, bad_block_grown);
+}
+
+uint32_t SkipBlockDevice::GetBlockCountLocked() const {
+    uint32_t logical_block_count = UINT32_MAX;
+    for (uint32_t copy = 0; copy < copy_count_; copy++) {
+        // TODO(surajmalhotra): If there are copies, we actually want to use the maximum, and
+        // stop writing/reading the copies with bad blocks.
+        logical_block_count = fbl::min(logical_block_count, block_map_.LogicalBlockCount(copy));
+    }
+    return  logical_block_count;
 }
 
 zx_off_t SkipBlockDevice::DdkGetSize() {
-  fbl::AutoLock al(&lock_);
-  uint32_t logical_block_count = UINT32_MAX;
-  for (uint32_t copy = 0; copy < copy_count_; copy++) {
-    logical_block_count = fbl::min(logical_block_count, block_map_.LogicalBlockCount(copy));
-  }
-  return GetBlockSize() * logical_block_count;
+    fbl::AutoLock al(&lock_);
+    return GetBlockSize() * GetBlockCountLocked();
 }
 
 zx_status_t SkipBlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

@@ -22,6 +22,10 @@ extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockReadResponseTab
 constexpr uint64_t kSkipBlock_Write_Ordinal = 0x697d770a00000000lu;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kSkipBlock_WriteBytes_Ordinal = 0x4ce2ddf400000000lu;
+extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
 
 }  // namespace
 template <>
@@ -212,6 +216,69 @@ SkipBlock::UnownedResultOf::Write SkipBlock::Call::Write(zx::unowned_channel _cl
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+SkipBlock::ResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::WriteBytes_Impl(zx::unowned_channel _client_end, WriteBytesOperation op) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBytesRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WriteBytesRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteBytesRequest*>(_write_bytes);
+  _request.op = std::move(op);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteBytesRequest));
+  ::fidl::DecodedMessage<WriteBytesRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      SkipBlock::InPlace::WriteBytes(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+SkipBlock::ResultOf::WriteBytes SkipBlock::SyncClient::WriteBytes(WriteBytesOperation op) {
+  return ResultOf::WriteBytes(zx::unowned_channel(this->channel_), std::move(op));
+}
+
+SkipBlock::ResultOf::WriteBytes SkipBlock::Call::WriteBytes(zx::unowned_channel _client_end, WriteBytesOperation op) {
+  return ResultOf::WriteBytes(std::move(_client_end), std::move(op));
+}
+
+template <>
+SkipBlock::UnownedResultOf::WriteBytes_Impl<SkipBlock::WriteBytesResponse>::WriteBytes_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < WriteBytesRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<WriteBytesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, WriteBytesRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteBytesRequest*>(_request_buffer.data());
+  _request.op = std::move(op);
+  _request_buffer.set_actual(sizeof(WriteBytesRequest));
+  ::fidl::DecodedMessage<WriteBytesRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      SkipBlock::InPlace::WriteBytes(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+SkipBlock::UnownedResultOf::WriteBytes SkipBlock::SyncClient::WriteBytes(::fidl::BytePart _request_buffer, WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteBytes(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
+}
+
+SkipBlock::UnownedResultOf::WriteBytes SkipBlock::Call::WriteBytes(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, WriteBytesOperation op, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteBytes(std::move(_client_end), std::move(_request_buffer), std::move(op), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<SkipBlock::WriteBytesResponse> SkipBlock::InPlace::WriteBytes(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBytesRequest> params, ::fidl::BytePart response_buffer) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSkipBlock_WriteBytes_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SkipBlock::WriteBytesResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WriteBytesRequest, WriteBytesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<SkipBlock::WriteBytesResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -254,6 +321,18 @@ bool SkipBlock::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transactio
       auto message = result.message.message();
       impl->Write(std::move(message->op),
         Interface::WriteCompleter::Sync(txn));
+      return true;
+    }
+    case kSkipBlock_WriteBytes_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<WriteBytesRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->WriteBytes(std::move(message->op),
+        Interface::WriteBytesCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -359,6 +438,37 @@ void SkipBlock::Interface::WriteCompleterBase::Reply(::fidl::BytePart _buffer, i
 void SkipBlock::Interface::WriteCompleterBase::Reply(::fidl::DecodedMessage<WriteResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kSkipBlock_Write_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void SkipBlock::Interface::WriteBytesCompleterBase::Reply(int32_t status, bool bad_block_grown) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBytesResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WriteBytesResponse*>(_write_bytes);
+  _response._hdr.ordinal = kSkipBlock_WriteBytes_Ordinal;
+  _response.status = std::move(status);
+  _response.bad_block_grown = std::move(bad_block_grown);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteBytesResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteBytesResponse>(std::move(_response_bytes)));
+}
+
+void SkipBlock::Interface::WriteBytesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, bool bad_block_grown) {
+  if (_buffer.capacity() < WriteBytesResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WriteBytesResponse*>(_buffer.data());
+  _response._hdr.ordinal = kSkipBlock_WriteBytes_Ordinal;
+  _response.status = std::move(status);
+  _response.bad_block_grown = std::move(bad_block_grown);
+  _buffer.set_actual(sizeof(WriteBytesResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteBytesResponse>(std::move(_buffer)));
+}
+
+void SkipBlock::Interface::WriteBytesCompleterBase::Reply(::fidl::DecodedMessage<WriteBytesResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kSkipBlock_WriteBytes_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
