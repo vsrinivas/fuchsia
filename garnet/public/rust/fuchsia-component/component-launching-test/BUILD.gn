@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_test("driver") {
+  name = "component_launching_test"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//third_party/rust_crates:tempfile",
+  ]
+}
+
+rustc_binary("injected_directory_checker_bin") {
+  name = "injected_directory_checker"
+  edition = "2018"
+  source_root = "src/injected_directory_checker.rs"
+  testonly = true
+}
+
+test_package("component-launching-tests") {
+  deps = [
+    ":driver",
+    ":injected_directory_checker_bin",
+  ]
+
+  binaries = [
+    {
+      name = "injected_directory_checker"
+      dest = "injected-directory-checker"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/injected-directory-checker.cmx")
+      dest = "injected-directory-checker.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "component_launching_test"
+      dest = "component-launching-test"
+      environments = basic_envs
+    },
+  ]
+}

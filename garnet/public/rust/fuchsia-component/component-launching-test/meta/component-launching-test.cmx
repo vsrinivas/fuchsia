@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/component-launching-test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

@@ -56,6 +56,12 @@ pub fn connect_to_service<S: DiscoverableService>() -> Result<S::Proxy, Error> {
     connect_to_service_at::<S>("/svc")
 }
 
+/// Adds a new directory handle to the namespace for the new process.
+pub fn add_handle_to_namespace(namespace: &mut FlatNamespace, path: String, dir: zx::Handle) {
+    namespace.paths.push(path);
+    namespace.directories.push(zx::Channel::from(dir));
+}
+
 /// Adds a new directory to the namespace for the new process.
 pub fn add_dir_to_namespace(
     namespace: &mut FlatNamespace,
@@ -63,10 +69,7 @@ pub fn add_dir_to_namespace(
     dir: File,
 ) -> Result<(), Error> {
     let handle = fdio::transfer_fd(dir)?;
-    namespace.paths.push(path);
-    namespace.directories.push(zx::Channel::from(handle));
-
-    Ok(())
+    Ok(add_handle_to_namespace(namespace, path, handle))
 }
 
 /// Returns a connection to the application launcher service.
@@ -95,16 +98,19 @@ impl LaunchOptions {
         LaunchOptions { namespace: None, out: None }
     }
 
-    /// Adds a new directory to the namespace for the new process.
-    pub fn add_dir_to_namespace(&mut self, path: String, dir: File) -> Result<&mut Self, Error> {
-        let handle = fdio::transfer_fd(dir)?;
+    /// Adds a new directory handle to the namespace for the new process.
+    pub fn add_handle_to_namespace(&mut self, path: String, dir: zx::Handle) -> &mut Self {
         let namespace = self
             .namespace
             .get_or_insert_with(|| Box::new(FlatNamespace { paths: vec![], directories: vec![] }));
-        namespace.paths.push(path);
-        namespace.directories.push(zx::Channel::from(handle));
+        add_handle_to_namespace(namespace, path, dir);
+        self
+    }
 
-        Ok(self)
+    /// Adds a new directory to the namespace for the new process.
+    pub fn add_dir_to_namespace(&mut self, path: String, dir: File) -> Result<&mut Self, Error> {
+        let handle = fdio::transfer_fd(dir)?;
+        Ok(self.add_handle_to_namespace(path, handle))
     }
 
     /// Sets the out handle.
@@ -294,17 +300,20 @@ impl AppBuilder {
         self
     }
 
-    /// Mounts an opened directory in the namespace of the component.
-    pub fn add_dir_to_namespace(mut self, path: String, dir: File) -> Result<Self, Error> {
-        let handle = fdio::transfer_fd(dir)?;
+    /// Mounts a handle to a directory in the namespace of the component.
+    pub fn add_handle_to_namespace(mut self, path: String, handle: zx::Handle) -> Self {
         let namespace = self
             .launch_info
             .flat_namespace
             .get_or_insert_with(|| Box::new(FlatNamespace { paths: vec![], directories: vec![] }));
-        namespace.paths.push(path);
-        namespace.directories.push(zx::Channel::from(handle));
+        add_handle_to_namespace(namespace, path, handle);
+        self
+    }
 
-        Ok(self)
+    /// Mounts an opened directory in the namespace of the component.
+    pub fn add_dir_to_namespace(self, path: String, dir: File) -> Result<Self, Error> {
+        let handle = fdio::transfer_fd(dir)?;
+        Ok(self.add_handle_to_namespace(path, handle))
     }
 
     /// Append the given `arg` to the sequence of arguments passed to the new process.
