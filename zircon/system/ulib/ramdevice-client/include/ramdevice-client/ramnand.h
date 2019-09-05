@@ -13,7 +13,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <zircon/compiler.h>
 
 namespace ramdevice_client {
@@ -31,10 +31,10 @@ class RamNandCtl : public fbl::RefCounted<RamNandCtl> {
   const fbl::unique_fd& devfs_root() { return devmgr_.devfs_root(); }
 
  private:
-  RamNandCtl(devmgr_integration_test::IsolatedDevmgr devmgr, fbl::unique_fd ctl)
+  RamNandCtl(driver_integration_test::IsolatedDevmgr devmgr, fbl::unique_fd ctl)
       : devmgr_(std::move(devmgr)), ctl_(std::move(ctl)) {}
 
-  devmgr_integration_test::IsolatedDevmgr devmgr_;
+  driver_integration_test::IsolatedDevmgr devmgr_;
   fbl::unique_fd ctl_;
 };
 

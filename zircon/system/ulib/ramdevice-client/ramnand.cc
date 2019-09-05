@@ -24,14 +24,15 @@
 namespace ramdevice_client {
 
 zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
-  devmgr_launcher::Args args;
-  args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-  args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+  driver_integration_test::IsolatedDevmgr::Args args;
   args.driver_search_paths.push_back("/boot/driver");
   args.disable_block_watcher = true;
+  // TODO(surajmalhotra): Remove creation of isolated devmgr from this lib so that caller can choose
+  // their creation parameters.
+  args.board_name = "astro";
 
-  devmgr_integration_test::IsolatedDevmgr devmgr;
-  zx_status_t st = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
+  driver_integration_test::IsolatedDevmgr devmgr;
+  zx_status_t st = driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr);
   if (st != ZX_OK) {
     fprintf(stderr, "Could not create ram_nand_ctl device, %d\n", st);
     return st;

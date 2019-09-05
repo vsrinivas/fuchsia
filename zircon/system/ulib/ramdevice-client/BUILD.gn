@@ -14,8 +14,8 @@ library("ramdevice-client") {
     "ramnand.cc",
   ]
   public_deps = [
-    # <ramdevice-client/ramnand.h> has #include <lib/devmgr-integration-test/fixture.h>
-    "$zx/system/ulib/devmgr-integration-test:headers",
+    # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
+    "$zx/system/ulib/driver-integration-test:headers",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
@@ -25,6 +25,7 @@ library("ramdevice-client") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/devmgr-integration-test:static",
     "$zx/system/ulib/devmgr-launcher:static",
+    "$zx/system/ulib/driver-integration-test:static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
