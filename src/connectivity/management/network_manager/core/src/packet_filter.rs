@@ -23,11 +23,8 @@ fn to_filter_rule(rule: netfilter::Rule) -> Result<router_config::FilterRule, Er
         selector: router_config::FlowSelector {
             src_address: to_cidr_address(rule.src_subnet),
             dst_address: to_cidr_address(rule.dst_subnet),
-            // TODO(cgibson): netfilter2 does not currently support port ranges (NET-2182)
-            // Put the `uint16` from the `netfilter::Rule` directly into the
-            // `router_config::PortRange::from` field for now.
-            src_ports: to_port_range(rule.src_port, rule.src_port),
-            dst_ports: to_port_range(rule.dst_port, rule.dst_port),
+            src_ports: to_port_range(rule.src_port_range),
+            dst_ports: to_port_range(rule.dst_port_range),
             protocol: to_protocol(rule.proto),
         },
     })
@@ -57,9 +54,8 @@ fn to_cidr_address(
     }
 }
 
-// TODO(cgibson): netfilter2 currently does not support port ranges (NET-2182)
-fn to_port_range(from: u16, to: u16) -> Option<Vec<router_config::PortRange>> {
-    Some(vec![router_config::PortRange { from, to }])
+fn to_port_range(i: netfilter::PortRange) -> Option<Vec<router_config::PortRange>> {
+    Some(vec![router_config::PortRange { from: i.start, to: i.end }])
 }
 
 /// Parses a [`netfilter::SocketProtocol`] to a [`router_config::Protocol`].
@@ -102,24 +98,10 @@ fn from_filter_rule(rule: router_config::FilterRule) -> Result<Vec<netfilter::Ru
 /// Takes a [`router_config::FilterRule`] and converts it into a [`netfilter::Rule`].
 fn gen_netfilter_rule(rule: &router_config::FilterRule) -> Result<netfilter::Rule, Error> {
     // This is a good candidate to refactor to use TryInto/TryFrom.
-    let src_port: u16 = match from_port_range(&rule.selector.src_ports) {
-        Ok(port) => match port {
-            Some(p) => p,
-            // TODO(cgibson): I think `src_port` not being optional is a bug in the netfilter
-            // FIDL API?
-            None => 0,
-        },
-        Err(e) => return Err(format_err!("Invalid source port: {:?}", e)),
-    };
-    let dst_port: u16 = match from_port_range(&rule.selector.dst_ports) {
-        Ok(port) => match port {
-            Some(p) => p,
-            // TODO(cgibson): I think `dst_port` not being optional is a bug in the netfilter
-            // FIDL API?
-            None => 0,
-        },
-        Err(e) => return Err(format_err!("Invalid destination port: {:?}", e)),
-    };
+    let src_port_range = from_port_range(&rule.selector.src_ports)
+        .unwrap_or_else(|| netfilter::PortRange { start: 0, end: 0 });
+    let dst_port_range = from_port_range(&rule.selector.dst_ports)
+        .unwrap_or_else(|| netfilter::PortRange { start: 0, end: 0 });
     Ok(netfilter::Rule {
         action: from_filter_action(&rule.action),
         // TODO(cgibson): We need a way to specify the direction of traffic.
@@ -131,15 +113,15 @@ fn gen_netfilter_rule(rule: &router_config::FilterRule) -> Result<netfilter::Rul
         quick: false,
         src_subnet: from_cidr_address(&rule.selector.src_address)?,
         src_subnet_invert_match: false,
-        src_port,
-        dst_port,
+        src_port_range,
+        dst_port_range,
         // TODO(cgibson): NIC 0 applies to *all* interfaces, however that doesn't seem like what we
         // want to do at all. The `router_config::FilterRule` FIDL API doesn't specify interface
         // names, and in fact should probably be a *property* of the WAN or LAN router_config FIDL
         // APIs since we can have packet filters installed on every interface.
         nic: 0,
         // The proto field requires further processing, just set any value for now.
-        proto: netfilter::SocketProtocol::Ip,
+        proto: netfilter::SocketProtocol::Tcp,
     })
 }
 
@@ -169,14 +151,14 @@ fn from_filter_action(action: &router_config::FilterAction) -> netfilter::Action
     }
 }
 
-/// Parses a [`router_config::PortRange`] and turns it into a `u16` result.
-fn from_port_range(range: &Option<Vec<router_config::PortRange>>) -> Result<Option<u16>, Error> {
-    // TODO(cgibson): netfilter2 does not currently support port ranges (NET-2182)
-    // For now, we'll put the first `router_config::PortRange`'s `from` value into
-    // `netfilter::Rule`'s src or dst port field.
+/// Parses a [`router_config::PortRange`] and turns it into a [`netfilter::PortRange`] result.
+fn from_port_range(range: &Option<Vec<router_config::PortRange>>) -> Option<netfilter::PortRange> {
     match range {
-        Some(v) => Ok(Some(v[0].from)),
-        None => Ok(None),
+        Some(ranges) => ranges
+            .into_iter()
+            .find(|_| true)
+            .map(|range| netfilter::PortRange { start: range.from, end: range.to }),
+        None => None,
     }
 }
 
@@ -313,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_to_port_range() {
-        let port_ranges = to_port_range(1000, 2000);
+        let port_ranges = to_port_range(netfilter::PortRange { start: 1000, end: 2000 });
         assert_eq!(port_ranges.is_some(), true);
 
         let p = port_ranges.unwrap();
@@ -352,10 +334,10 @@ mod tests {
             quick: false,
             src_subnet,
             src_subnet_invert_match: false,
-            src_port: 1024,
+            src_port_range: netfilter::PortRange { start: 1024, end: 1024 },
             dst_subnet,
             dst_subnet_invert_match: false,
-            dst_port: 80,
+            dst_port_range: netfilter::PortRange { start: 80, end: 80 },
             proto: netfilter::SocketProtocol::Tcp,
             nic: 0,
             log: false,
@@ -405,10 +387,10 @@ mod tests {
             quick: false,
             src_subnet,
             src_subnet_invert_match: false,
-            src_port: 1024,
+            src_port_range: netfilter::PortRange { start: 1024, end: 1024 },
             dst_subnet,
             dst_subnet_invert_match: false,
-            dst_port: 80,
+            dst_port_range: netfilter::PortRange { start: 80, end: 80 },
             proto: netfilter::SocketProtocol::Tcp,
             nic: 0,
             log: false,
