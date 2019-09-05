@@ -4,13 +4,31 @@
 
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 
+#include <lib/syslog/cpp/logger.h>
+
 namespace accessibility_test {
 
+namespace {
+
+fuchsia::ui::views::ViewRef CreateOrphanViewRef() {
+  fuchsia::ui::views::ViewRef view_ref;
+  zx::eventpair unused;
+  FX_CHECK(zx::eventpair::create(0u, &view_ref.reference, &unused) == ZX_OK);
+  return view_ref;
+}
+
+fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref) {
+  fuchsia::ui::views::ViewRef clone;
+  FX_CHECK(fidl::Clone(view_ref, &clone) == ZX_OK);
+  return clone;
+}
+
+}  // namespace
+
 MockSemanticProvider::MockSemanticProvider(
-    fuchsia::accessibility::semantics::SemanticsManager* manager,
-    fuchsia::ui::views::ViewRef view_ref) {
-  manager->RegisterView(std::move(view_ref),
-                        action_listener_bindings_.AddBinding(&action_listener_),
+    fuchsia::accessibility::semantics::SemanticsManager* manager)
+    : view_ref_(CreateOrphanViewRef()) {
+  manager->RegisterView(Clone(view_ref_), action_listener_bindings_.AddBinding(&action_listener_),
                         tree_ptr_.NewRequest());
 }
 

@@ -21,4 +21,8 @@ source_set("mocks") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
   ]
+
+  deps = [
+    "//garnet/public/lib/syslog/cpp",
+  ]
 }

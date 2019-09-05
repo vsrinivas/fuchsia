@@ -61,20 +61,7 @@ const std::string kDeletedSemanticSubtreePath = "/pkg/data/deleted_subtree_even_
 // semantic_tree.h
 class SemanticsManagerTest : public gtest::RealLoopFixture {
  public:
-  SemanticsManagerTest() : semantics_manager_(context_provider_.context()) {}
-
-  void SetUp() override {
-    RealLoopFixture::SetUp();
-    syslog::InitLogger();
-
-    zx::eventpair a, b;
-    zx::eventpair::create(0u, &a, &b);
-    view_ref_ = fuchsia::ui::views::ViewRef({
-        .reference = std::move(a),
-    });
-
-    RunLoopUntilIdle();
-  }
+  SemanticsManagerTest() : semantics_manager_(context_provider_.context()) { syslog::InitLogger(); }
 
   Node CreateTestNode(uint32_t node_id, std::string label);
   void InitializeActionListener(std::string file_path,
@@ -85,7 +72,6 @@ class SemanticsManagerTest : public gtest::RealLoopFixture {
   vfs::PseudoDir *debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 
   sys::testing::ComponentContextProvider context_provider_;
-  fuchsia::ui::views::ViewRef view_ref_;
   a11y::SemanticsManager semantics_manager_;
   SemanticTreeParser semantic_tree_parser_;
 };
@@ -145,14 +131,7 @@ char *SemanticsManagerTest::ReadFile(vfs::internal::Node *node, int length, char
 // Basic test to check that a node update without commit will not result in
 // any change to semantic tree.
 TEST_F(SemanticsManagerTest, NodeUpdateWithoutCommit) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -169,20 +148,13 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithoutCommit) {
   RunLoopUntilIdle();
 
   // Check that the node is not present in the tree.
-  EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0));
+  EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0));
 }
 
 // Basic test to check that a node update with commit will result in
 // node being changed in the tree.
 TEST_F(SemanticsManagerTest, NodeUpdateWithCommit) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -203,7 +175,7 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithCommit) {
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
-  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
@@ -212,14 +184,7 @@ TEST_F(SemanticsManagerTest, NodeUpdateWithCommit) {
 // Basic test to check that a node delete without commit should result in
 // node not being deleted in the tree.
 TEST_F(SemanticsManagerTest, NodeDeleteWithoutCommit) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -246,7 +211,7 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithoutCommit) {
   RunLoopUntilIdle();
 
   // Node should still be present.
-  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
@@ -255,14 +220,7 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithoutCommit) {
 // Basic test to check that a node delete with commit should result in
 // node being deleted in the tree.
 TEST_F(SemanticsManagerTest, NodeDeleteWithCommit) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -290,21 +248,14 @@ TEST_F(SemanticsManagerTest, NodeDeleteWithCommit) {
   RunLoopUntilIdle();
 
   // Check that the node is not present in the tree.
-  EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0));
+  EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0));
 }
 
 // Commit() should ensure that there are no cycles in the tree after
 // Update/Delete has been applied. If they are present, the tree should be
 // deleted.
 TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -328,8 +279,8 @@ TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
   // Check that nodes are not present in the semantic tree.
   for (const Node &node : nodes_list_copy) {
     // Check that the node is not present in the tree.
-    EXPECT_EQ(nullptr,
-              semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, node.node_id()));
+    EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(),
+                                                               node.node_id()));
   }
 }
 
@@ -337,14 +288,7 @@ TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
 // trees without parents. Which means if a node is deleted then the
 // entire tree should be deleted.
 TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -369,7 +313,7 @@ TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
   RunLoopUntilIdle();
 
   // Check root node is present.
-  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_NE(returned_node, nullptr);
 
   // Check subtree rooted at delete_node_id doesn't exist.
@@ -377,8 +321,8 @@ TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
   ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(kDeletedSemanticSubtreePath, &subtree_list));
   for (const Node &node : subtree_list) {
     // Check that the node is not present in the tree.
-    EXPECT_EQ(nullptr,
-              semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, node.node_id()));
+    EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(),
+                                                               node.node_id()));
   }
 }
 
@@ -389,14 +333,7 @@ TEST_F(SemanticsManagerTest, DetectDanglingSubtrees) {
 //              update 1, data 2
 // should result in Update 1 , data2 and NOT Empty Tree.
 TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -428,7 +365,7 @@ TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
   RunLoopUntilIdle();
 
   // Check Node 0 is present and has Label-B.
-  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node2.node_id(), returned_node->node_id());
   EXPECT_STREQ(node2.attributes().label().data(), returned_node->attributes().label().data());
@@ -437,22 +374,15 @@ TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
 // Test for LogSemanticTree() to make sure correct logs are generated,
 // when number of nodes in the tree are odd.
 TEST_F(SemanticsManagerTest, LogSemanticTree_OddNumberOfNodes) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
 
   InitializeActionListener(kSemanticTreeOddNodesPath, &semantic_provider);
   vfs::internal::Node *node;
-  EXPECT_EQ(ZX_OK,
-            debug_dir()->Lookup(std::to_string(a11y::GetKoid(view_ref_connection_copy)), &node));
+  EXPECT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(a11y::GetKoid(semantic_provider.view_ref())),
+                                       &node));
 
   char buffer[kMaxLogBufferSize];
   ReadFile(node, kSemanticTreeOdd.size(), buffer);
@@ -462,22 +392,15 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_OddNumberOfNodes) {
 // Test for LogSemanticTree() to make sure correct logs are generated,
 // when number of nodes in the tree are even.
 TEST_F(SemanticsManagerTest, LogSemanticTree_EvenNumberOfNodes) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
 
   InitializeActionListener(kSemanticTreeEvenNodesPath, &semantic_provider);
   vfs::internal::Node *node;
-  EXPECT_EQ(ZX_OK,
-            debug_dir()->Lookup(std::to_string(a11y::GetKoid(view_ref_connection_copy)), &node));
+  EXPECT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(a11y::GetKoid(semantic_provider.view_ref())),
+                                       &node));
 
   char buffer[kMaxLogBufferSize];
   ReadFile(node, kSemanticTreeEven.size(), buffer);
@@ -487,22 +410,15 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_EvenNumberOfNodes) {
 // Test for LogSemanticTree() to make sure correct logs are generated,
 // when there is just a single node in the tree for a particular view.
 TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
 
   InitializeActionListener(kSemanticTreeSingleNodePath, &semantic_provider);
   vfs::internal::Node *node;
-  EXPECT_EQ(ZX_OK,
-            debug_dir()->Lookup(std::to_string(a11y::GetKoid(view_ref_connection_copy)), &node));
+  EXPECT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(a11y::GetKoid(semantic_provider.view_ref())),
+                                       &node));
 
   char buffer[kMaxLogBufferSize];
   ReadFile(node, kSemanticTreeSingle.size(), buffer);
@@ -512,18 +428,10 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
 // Basic test to check that Semantic Tree is deleted when Semantics Manager is
 // disabled.
 TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection, view_ref_connection_copy;
-  fidl::Clone(view_ref_, &view_ref_connection);
-  fidl::Clone(view_ref_, &view_ref_connection_copy);
-
-  // Enable Semantics Manager.
   // Note: Enable has no effect on the behavior of semantics manager.
   semantics_manager_.SetSemanticsManagerEnabled(true);
 
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -544,7 +452,7 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
-  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
@@ -554,20 +462,14 @@ TEST_F(SemanticsManagerTest, SemanticsManagerDisabled) {
   semantics_manager_.SetSemanticsManagerEnabled(false);
 
   // Check that previously committed node is not present in the semantic tree.
-  returned_node = semantics_manager_.GetAccessibilityNode(view_ref_connection_copy, 0);
+  returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_EQ(returned_node, nullptr);
 }
 
 // Test for PerformHitTesting() to make sure correct node_id is passed from the
 // semantic provider to semantics manager.
 TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection;
-  fidl::Clone(view_ref_, &view_ref_connection);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -578,7 +480,7 @@ TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
   uint32_t expected_result = 5;
   semantic_provider.SetHitTestResult(expected_result);
 
-  zx_koid_t koid = a11y::GetKoid(view_ref_);
+  zx_koid_t koid = a11y::GetKoid(semantic_provider.view_ref());
   ::fuchsia::math::PointF local_point;
   bool done = false;
   semantics_manager_.PerformHitTesting(
@@ -594,13 +496,7 @@ TEST_F(SemanticsManagerTest, PerformHitTesting_Pass) {
 // Basic test to make sure nodes can be searched using node id and Koid of
 // ViewRef of that semantic tree.
 TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoid) {
-  // Create ViewRef.
-  fuchsia::ui::views::ViewRef view_ref_connection;
-  fidl::Clone(view_ref_, &view_ref_connection);
-
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_,
-                                                             std::move(view_ref_connection));
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
   // We make sure the Semantic Action Listener has finished connecting to the
   // root.
   RunLoopUntilIdle();
@@ -621,7 +517,7 @@ TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoid) {
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
-  zx_koid_t koid = a11y::GetKoid(view_ref_);
+  zx_koid_t koid = a11y::GetKoid(semantic_provider.view_ref());
   NodePtr returned_node = semantics_manager_.GetAccessibilityNodeByKoid(koid, 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());

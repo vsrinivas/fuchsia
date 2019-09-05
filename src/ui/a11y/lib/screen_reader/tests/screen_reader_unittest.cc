@@ -32,41 +32,21 @@ constexpr int kMaxLogBufferSize = 1024;
 
 class ScreenReaderTest : public gtest::RealLoopFixture {
  public:
-  ScreenReaderTest() : semantics_manager_(context_provider_.context()) {}
-
-  void SetUp() override {
-    RealLoopFixture::SetUp();
-
-    tts_manager_ = std::make_unique<a11y::TtsManager>(context_provider_.context());
-
-    // Create ViewRef eventpair.
-    zx::eventpair a, b;
-    zx::eventpair::create(0u, &a, &b);
-    view_ref_ = fuchsia::ui::views::ViewRef({
-        .reference = std::move(a),
-    });
-
-    fuchsia::ui::views::ViewRef view_ref_connection;
-    fidl::Clone(view_ref_, &view_ref_connection);
-    semantic_provider_ = std::make_unique<accessibility_test::MockSemanticProvider>(
-        &semantics_manager_, std::move(view_ref_connection));
-    RunLoopUntilIdle();
-
-    // Initialize Screen Reader.
-    screen_reader_ = std::make_unique<a11y::ScreenReader>(&semantics_manager_, tts_manager_.get(),
-                                                          &gesture_manager_);
-  }
+  ScreenReaderTest()
+      : tts_manager_(context_provider_.context()),
+        semantics_manager_(context_provider_.context()),
+        screen_reader_(&semantics_manager_, &tts_manager_, &gesture_manager_),
+        semantic_provider_(&semantics_manager_) {}
 
   AccessibilityPointerEvent GetDefaultPointerEvent();
   void CreateOnOneFngerTapAction();
 
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<a11y::TtsManager> tts_manager_;
+  a11y::TtsManager tts_manager_;
   a11y::SemanticsManager semantics_manager_;
   a11y::GestureManager gesture_manager_;
-  std::unique_ptr<accessibility_test::MockSemanticProvider> semantic_provider_;
-  fuchsia::ui::views::ViewRef view_ref_;
-  std::unique_ptr<a11y::ScreenReader> screen_reader_;
+  a11y::ScreenReader screen_reader_;
+  accessibility_test::MockSemanticProvider semantic_provider_;
 };
 
 // Returns a default Accessibility Pointer Event.
@@ -78,7 +58,7 @@ AccessibilityPointerEvent ScreenReaderTest::GetDefaultPointerEvent() {
   event.set_type(fuchsia::ui::input::PointerEventType::TOUCH);
   event.set_phase(PointerEventPhase::ADD);
   event.set_global_point({4, 4});
-  event.set_viewref_koid(a11y::GetKoid(view_ref_));
+  event.set_viewref_koid(a11y::GetKoid(semantic_provider_.view_ref()));
   event.set_local_point({2, 2});
   return event;
 }
@@ -122,7 +102,7 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
   accessibility_test::MockTtsEngine mock_tts_engine;
   fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
       mock_tts_engine.GetHandle();
-  tts_manager_->RegisterEngine(
+  tts_manager_.RegisterEngine(
       std::move(engine_handle),
       [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
         EXPECT_TRUE(result.is_response());
@@ -137,22 +117,23 @@ TEST_F(ScreenReaderTest, OnOneFingerTapAction) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  semantic_provider_->UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  semantic_provider_->Commit();
+  semantic_provider_.Commit();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
   vfs::PseudoDir *debug_dir = context_provider_.context()->outgoing()->debug_dir();
   vfs::internal::Node *test_node;
-  ASSERT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(a11y::GetKoid(view_ref_)), &test_node));
+  ASSERT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(a11y::GetKoid(semantic_provider_.view_ref())),
+                                     &test_node));
   char buffer[kMaxLogBufferSize];
   accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 
-  semantic_provider_->SetHitTestResult(0);
+  semantic_provider_.SetHitTestResult(0);
 
   // Create OnOneFingerTap Action.
   CreateOnOneFngerTapAction();

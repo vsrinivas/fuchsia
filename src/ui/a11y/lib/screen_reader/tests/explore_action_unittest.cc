@@ -30,36 +30,17 @@ constexpr int kMaxLogBufferSize = 1024;
 
 class ExploreActionTest : public gtest::RealLoopFixture {
  public:
-  ExploreActionTest() : semantics_manager_(context_provider_.context()) {}
-
-  void SetUp() override {
-    RealLoopFixture::SetUp();
-
-    // Initialize ActionContext.
+  ExploreActionTest()
+      : semantics_manager_(context_provider_.context()),
+        tts_manager_(context_provider_.context()),
+        semantic_provider_(&semantics_manager_) {
     action_context_.semantics_manager = &semantics_manager_;
+    semantics_manager_.SetSemanticsManagerEnabled(true);
 
-    // Enabled Semantics Manager.
-    action_context_.semantics_manager->SetSemanticsManagerEnabled(true);
-
-    // Intiailize TtsManager.
-    tts_manager_ = std::make_unique<a11y::TtsManager>(context_provider_.context());
-    tts_manager_->OpenEngine(action_context_.tts_engine_ptr.NewRequest(),
-                             [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
-                               EXPECT_TRUE(result.is_response());
-                             });
-
-    // Create ViewRef eventpair.
-    zx::eventpair a, b;
-    zx::eventpair::create(0u, &a, &b);
-    view_ref_ = fuchsia::ui::views::ViewRef({
-        .reference = std::move(a),
-    });
-
-    fuchsia::ui::views::ViewRef view_ref_connection;
-    fidl::Clone(view_ref_, &view_ref_connection);
-    semantic_provider_ = std::make_unique<accessibility_test::MockSemanticProvider>(
-        &semantics_manager_, std::move(view_ref_connection));
-    RunLoopUntilIdle();
+    tts_manager_.OpenEngine(action_context_.tts_engine_ptr.NewRequest(),
+                            [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
+                              EXPECT_TRUE(result.is_response());
+                            });
   }
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
@@ -67,9 +48,8 @@ class ExploreActionTest : public gtest::RealLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   a11y::SemanticsManager semantics_manager_;
   a11y::ScreenReaderAction::ActionContext action_context_;
-  fuchsia::ui::views::ViewRef view_ref_;
-  std::unique_ptr<a11y::TtsManager> tts_manager_;
-  std::unique_ptr<accessibility_test::MockSemanticProvider> semantic_provider_;
+  a11y::TtsManager tts_manager_;
+  accessibility_test::MockSemanticProvider semantic_provider_;
 };
 
 // Create a test node with only a node id and a label.
@@ -91,7 +71,7 @@ TEST_F(ExploreActionTest, ReadLabel) {
   accessibility_test::MockTtsEngine mock_tts_engine;
   fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle =
       mock_tts_engine.GetHandle();
-  tts_manager_->RegisterEngine(
+  tts_manager_.RegisterEngine(
       std::move(engine_handle),
       [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {
         EXPECT_TRUE(result.is_response());
@@ -106,25 +86,26 @@ TEST_F(ExploreActionTest, ReadLabel) {
   update_nodes.push_back(std::move(clone_node));
 
   // Update the node created above.
-  semantic_provider_->UpdateSemanticNodes(std::move(update_nodes));
+  semantic_provider_.UpdateSemanticNodes(std::move(update_nodes));
   RunLoopUntilIdle();
 
   // Commit nodes.
-  semantic_provider_->Commit();
+  semantic_provider_.Commit();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
   vfs::internal::Node* test_node;
-  ASSERT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(a11y::GetKoid(view_ref_)), &test_node));
+  ASSERT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(a11y::GetKoid(semantic_provider_.view_ref())),
+                                       &test_node));
   char buffer[kMaxLogBufferSize];
   accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 
   a11y::ExploreAction explore_action(&action_context_);
   a11y::ExploreAction::ActionData action_data;
-  action_data.koid = a11y::GetKoid(view_ref_);
+  action_data.koid = a11y::GetKoid(semantic_provider_.view_ref());
 
-  semantic_provider_->SetHitTestResult(0);
+  semantic_provider_.SetHitTestResult(0);
 
   // Call ExploreAction Run()
   explore_action.Run(action_data);
