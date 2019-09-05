@@ -172,11 +172,6 @@ fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event);
 // Takes ownership of |socket|.
 fdio_t* fdio_pipe_create(zx::socket socket);
 
-// Creates a socketpair backed by a socket.
-//
-// Takes ownership of |socket|.
-fdio_t* fdio_socketpair_create(zx::socket socket);
-
 // Creates an |fdio_t| from a VMO.
 //
 // Takes ownership of |vmo|.

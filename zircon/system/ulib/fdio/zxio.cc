@@ -709,8 +709,6 @@ fdio_t* fdio_pipe_create(zx::socket socket) {
   return io;
 }
 
-fdio_t* fdio_socketpair_create(zx::socket socket) { return fdio_pipe_create(std::move(socket)); }
-
 int fdio_pipe_pair(fdio_t** _a, fdio_t** _b) {
   zx::socket h0, h1;
   fdio_t *a, *b;
