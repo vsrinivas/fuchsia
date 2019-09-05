@@ -16,6 +16,7 @@ mod client;
 mod display;
 mod do_not_disturb;
 mod intl;
+mod privacy;
 mod setup;
 mod system;
 
@@ -105,6 +106,12 @@ pub enum SettingClient {
         locales: Vec<fidl_fuchsia_intl::LocaleId>,
     },
 
+    #[structopt(name = "privacy")]
+    Privacy {
+        #[structopt(short, long)]
+        user_data_sharing_consent: Option<bool>,
+    },
+
     #[structopt(name = "setup")]
     Setup {
         #[structopt(short = "i", long = "interfaces", parse(from_str = "str_to_interfaces"))]
@@ -147,7 +154,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = display::command(display_service, brightness, auto_brightness).await?;
             println!("Display: {}", output);
         }
-        SettingClient::DoNotDisturb { user_dnd, night_mode_dnd} => {
+        SettingClient::DoNotDisturb { user_dnd, night_mode_dnd } => {
             let dnd_service = connect_to_service::<fidl_fuchsia_settings::DoNotDisturbMarker>()
                 .context("Failed to connect to do_not_disturb service")?;
             let output = do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await?;
@@ -179,6 +186,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
             println!("Accessibility: {}", output);
+        }
+        SettingClient::Privacy { user_data_sharing_consent } => {
+            let privacy_service = connect_to_service::<fidl_fuchsia_settings::PrivacyMarker>()
+                .context("Failed to connect to privacy service")?;
+            let output = privacy::command(privacy_service, user_data_sharing_consent).await?;
+            println!("Privacy: {}", output);
         }
         SettingClient::Setup { configuration_interfaces } => {
             let setup_service = connect_to_service::<fidl_fuchsia_settings::SetupMarker>()

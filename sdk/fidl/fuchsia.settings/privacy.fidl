@@ -4,6 +4,7 @@
 
 library fuchsia.settings;
 
+[Discoverable]
 protocol Privacy {
     /// Notifies of a change in privacy settings.
     ///

@@ -18,6 +18,7 @@ mod client;
 mod display;
 mod do_not_disturb;
 mod intl;
+mod privacy;
 mod setup;
 mod system;
 
@@ -26,9 +27,10 @@ enum Services {
     Accessibility(AccessibilityRequestStream),
     Display(DisplayRequestStream),
     DoNotDisturb(DoNotDisturbRequestStream),
-    System(SystemRequestStream),
     Intl(IntlRequestStream),
+    Privacy(PrivacyRequestStream),
     Setup(SetupRequestStream),
+    System(SystemRequestStream),
 }
 
 const ENV_NAME: &str = "setui_client_test_environment";
@@ -94,6 +96,13 @@ async fn main() -> Result<(), Error> {
     println!("intl service tests");
     println!("  client calls set temperature unit");
     validate_temperature_unit().await?;
+
+    println!("privacy service tests");
+    println!("  client calls privacy watch");
+    validate_privacy(None).await?;
+
+    println!("  client calls set user_data_sharing_consent");
+    validate_privacy(Some(true)).await?;
 
     println!("system service tests");
     println!("  client calls set login mode");
@@ -319,6 +328,33 @@ async fn validate_dnd(
 
     do_not_disturb::command(do_not_disturb_service, expected_user_dnd, expected_night_mode_dnd)
         .await?;
+
+    Ok(())
+}
+
+async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> Result<(), Error> {
+    let env = create_service!(
+        Services::Privacy, PrivacyRequest::Set { settings, responder, } => {
+            if let (Some(user_data_sharing_consent), Some(expected_user_data_sharing_consent_value)) =
+                (settings.user_data_sharing_consent, expected_user_data_sharing_consent) {
+                assert_eq!(user_data_sharing_consent, expected_user_data_sharing_consent_value);
+                responder.send(&mut Ok(()))?;
+            } else {
+                panic!("Unexpected call to set");
+            }
+        },
+        PrivacyRequest::Watch { responder } => {
+            responder.send(&mut Ok(PrivacySettings {
+                user_data_sharing_consent: Some(false),
+            }))?;
+        }
+    );
+
+    let privacy_service = env
+        .connect_to_service::<PrivacyMarker>()
+        .context("Failed to connect to privacy service")?;
+
+    privacy::command(privacy_service, expected_user_data_sharing_consent).await?;
 
     Ok(())
 }
