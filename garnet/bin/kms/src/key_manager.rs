@@ -9,6 +9,8 @@ use crate::crypto_provider::{
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
 use crate::kms_sealing_key::{KmsSealingKey, SEALING_KEY_NAME};
 use base64;
+use failure::err_msg;
+use failure::Error as fError;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_kms::{
@@ -27,7 +29,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex, RwLock};
 
-const PROVIDER_NAME: &str = "MundaneSoftwareProvider";
+const DEFAULT_PROVIDER_NAME: &str = "MundaneSoftwareProvider";
 const KEY_FOLDER: &str = "/data/kms";
 const USER_KEY_SUBFOLDER: &str = "user";
 const INTERNAL_KEY_SUBFOLDER: &str = "internal";
@@ -62,6 +64,7 @@ pub struct KeyManager {
     crypto_provider_map: RwLock<HashMap<&'static str, Box<dyn CryptoProvider>>>,
     /// The path to the key folder to store key data and attributes.
     key_folder: String,
+    provider_name: String,
 }
 
 impl KeyManager {
@@ -71,12 +74,21 @@ impl KeyManager {
             internal_key_map: Arc::new(Mutex::new(HashMap::new())),
             crypto_provider_map: RwLock::new(HashMap::new()),
             key_folder: KEY_FOLDER.to_string(),
+            provider_name: DEFAULT_PROVIDER_NAME.to_string(),
         };
 
         key_manager.add_provider(Box::new(MundaneSoftwareProvider {}));
         key_manager.add_provider(Box::new(OpteeProvider {}));
 
         key_manager
+    }
+
+    pub fn set_provider(&mut self, provider_name: &str) -> Result<(), fError> {
+        if !self.crypto_provider_map.read().unwrap().contains_key(provider_name) {
+            return Err(err_msg("Invalid crypto provider name"));
+        }
+        self.provider_name = provider_name.to_string();
+        Ok(())
     }
 
     #[allow(dead_code)]
@@ -88,7 +100,7 @@ impl KeyManager {
     pub fn handle_request(&self, req: KeyManagerRequest) -> Result<(), fidl::Error> {
         match req {
             KeyManagerRequest::GenerateAsymmetricKey { key_name, key, responder } => {
-                self.with_provider(PROVIDER_NAME, |provider| {
+                self.with_provider(&self.provider_name, |provider| {
                     // Default algorithm for asymmetric key is ECDSA-SHA512-P521.
                     match self.generate_asymmetric_key_and_bind(
                         &key_name,
@@ -106,7 +118,7 @@ impl KeyManager {
                 key_algorithm,
                 key,
                 responder,
-            } => self.with_provider(PROVIDER_NAME, |provider| {
+            } => self.with_provider(&self.provider_name, |provider| {
                 match self.generate_asymmetric_key_and_bind(
                     &key_name,
                     key,
@@ -129,7 +141,7 @@ impl KeyManager {
                 key_algorithm,
                 key,
                 responder,
-            } => self.with_provider(PROVIDER_NAME, |provider| {
+            } => self.with_provider(&self.provider_name, |provider| {
                 match self.import_asymmetric_private_key_and_bind(
                     &data,
                     &key_name,
@@ -142,7 +154,7 @@ impl KeyManager {
                 }
             }),
             KeyManagerRequest::SealData { plain_text, responder } => {
-                self.with_provider(PROVIDER_NAME, |provider| {
+                self.with_provider(&self.provider_name, |provider| {
                     match self.seal_data(plain_text, provider.unwrap()) {
                         Ok(mut cipher_text) => {
                             responder.send(Status::Ok, Some(OutOfLine(&mut cipher_text)))
@@ -152,7 +164,7 @@ impl KeyManager {
                 })
             }
             KeyManagerRequest::UnsealData { cipher_text, responder } => {
-                self.with_provider(PROVIDER_NAME, |provider| {
+                self.with_provider(&self.provider_name, |provider| {
                     match self.unseal_data(cipher_text, provider.unwrap()) {
                         Ok(mut plain_text) => {
                             responder.send(Status::Ok, Some(OutOfLine(&mut plain_text)))
@@ -1121,7 +1133,7 @@ mod tests {
     #[test]
     fn test_get_default_provider() {
         let key_manager = KeyManager::new();
-        key_manager.with_provider(PROVIDER_NAME, |provider| {
+        key_manager.with_provider(DEFAULT_PROVIDER_NAME, |provider| {
             assert_eq!(false, provider.is_none());
         });
     }
