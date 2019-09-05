@@ -35,6 +35,7 @@
  *****************************************************************************/
 #include <lib/device-protocol/pci.h>
 #include <stdint.h>
+#include <threads.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -531,29 +532,33 @@ static void iwl_pcie_apm_stop(struct iwl_trans* trans, bool op_mode_leave) {
 }
 #endif  // NEEDS_PORTING
 
-static int iwl_pcie_nic_init(struct iwl_trans* trans) {
+static zx_status_t iwl_pcie_nic_init(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  int ret;
 
   /* nic_init */
   mtx_lock(&trans_pcie->irq_lock);
-  ret = iwl_pcie_apm_init(trans);
+  zx_status_t status = iwl_pcie_apm_init(trans);
   mtx_unlock(&trans_pcie->irq_lock);
-
-  if (ret) {
-    return ret;
+  if (status != ZX_OK) {
+    return status;
   }
 
   iwl_pcie_set_pwr(trans, false);
 
   iwl_op_mode_nic_config(trans->op_mode);
 
-#if 0   // NEEDS_PORTING
-    /* Allocate the RX queue, or reset if it is already allocated */
-    iwl_pcie_rx_init(trans);
+  // Allocate the RX queue, or reset if it is already allocated.
+  status = iwl_pcie_rx_init(trans);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    /* Allocate or reset and init all Tx and Command queues */
-    if (iwl_pcie_tx_init(trans)) { return ZX_ERR_NO_RESOURCES; }
+#if 0   // NEEDS_PORTING
+  // Allocate or reset and init all Tx and Command queues.
+  status = iwl_pcie_tx_init(trans);
+  if (status != ZX_OK) {
+    return status;
+  }
 #endif  // NEEDS_PORTING
 
   if (trans->cfg->base_params->shadow_reg_enable) {
@@ -562,7 +567,7 @@ static int iwl_pcie_nic_init(struct iwl_trans* trans) {
     IWL_DEBUG_INFO(trans, "Enabling shadow registers in device\n");
   }
 
-  return 0;
+  return ZX_OK;
 }
 
 #define HW_READY_TIMEOUT (50)
@@ -670,6 +675,7 @@ static zx_status_t iwl_pcie_load_firmware_chunk(struct iwl_trans* trans, uint32_
     iwl_trans_pcie_dump_regs(trans);
     return ZX_ERR_TIMED_OUT;
   }
+  sync_completion_reset(&trans_pcie->ucode_write_waitq);
 
   return ZX_OK;
 }
@@ -1351,8 +1357,8 @@ static zx_status_t iwl_trans_pcie_start_fw(struct iwl_trans* trans, const struct
   iwl_write32(trans, CSR_INT, 0xFFFFFFFF);
 
   ret = iwl_pcie_nic_init(trans);
-  if (ret) {
-    IWL_ERR(trans, "Unable to init nic\n");
+  if (ret != ZX_OK) {
+    IWL_ERR(trans, "Unable to init nic: %s\n", zx_status_get_string(ret));
     goto out;
   }
 
@@ -3269,9 +3275,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
    * PCI Tx retries from interfering with C3 CPU state */
   pci_config_write8(trans_pcie->pci, PCI_CFG_RETRY_TIMEOUT, 0x00);
 
-#if 0
-    iwl_disable_interrupts(trans);
-#endif
+  iwl_disable_interrupts(trans);
 
   trans->hw_rev = iwl_read32(trans, CSR_HW_REV);
   if (trans->hw_rev == 0xffffffff) {
@@ -3417,10 +3421,10 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
   snprintf(trans->hw_id_str, sizeof(trans->hw_id_str), "PCI ID: 0x%04X:0x%04X", device->device_id,
            device->subsystem_device_id);
 
-#if 0   // NEEDS_PORTING
-    /* Initialize the wait queue for commands */
-    init_waitqueue_head(&trans_pcie->wait_command_queue);
+  /* Initialize the wait queue for commands */
+  trans_pcie->wait_command_queue = SYNC_CONDITION_INIT;
 
+#if 0   // NEEDS_PORTING
     init_waitqueue_head(&trans_pcie->d0i3_waitq);
 #endif  // NEEDS_PORTING
 
@@ -3436,15 +3440,17 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
       goto out_no_pci;
     }
 
-#if 0   // NEEDS_PORTING
-        ret = devm_request_threaded_irq(&pdev->dev, pdev->irq, iwl_pcie_isr, iwl_pcie_irq_handler,
-                                        IRQF_SHARED, DRV_NAME, trans);
-        if (ret) {
-            IWL_ERR(trans, "Error allocating IRQ %d\n", pdev->irq);
-            goto out_free_ict;
-        }
-        trans_pcie->inta_mask = CSR_INI_SET_MASK;
+    int ret =
+        thrd_create_with_name(&trans_pcie->irq_thread, iwl_pcie_irq_handler, trans, "iwlwifi-irq");
+    if (ret != thrd_success) {
+      IWL_ERR(trans, "Failed to start irq thread: %d\n", ret);
+      goto out_free_ict;
+    }
+    thrd_detach(trans_pcie->irq_thread);
 
+    trans_pcie->inta_mask = CSR_INI_SET_MASK;
+
+#if 0   // NEEDS_PORTING
     trans_pcie->rba.alloc_wq = alloc_workqueue("rb_allocator", WQ_HIGHPRI | WQ_UNBOUND, 1);
     INIT_WORK(&trans_pcie->rba.rx_alloc, iwl_pcie_rx_allocator_work);
 #endif  // NEEDS_PORTING
@@ -3463,10 +3469,8 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
 
   return trans;
 
-#if 0   // NEEDS_PORTING
 out_free_ict:
   iwl_pcie_free_ict(trans);
-#endif  // NEEDS_PORTING
 out_no_pci:
 #if 0   // NEEDS_PORTING
     free_percpu(trans_pcie->tso_hdr_page);

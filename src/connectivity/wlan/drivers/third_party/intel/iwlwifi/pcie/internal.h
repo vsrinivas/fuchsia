@@ -37,6 +37,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
 #include <lib/sync/completion.h>
+#include <lib/sync/condition.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 
@@ -215,7 +216,7 @@ struct iwl_rxq {
 
 /**
  * struct iwl_rb_allocator - Rx allocator
- * @req_pending: number of requests the allcator had not processed yet
+ * @req_pending: number of requests the allocator had not processed yet
  * @req_ready: number of requests honored and ready for claiming
  * @rbd_allocated: RBDs with pages allocated and ready to be handled to
  *  the queue. This is a list of &struct iwl_rx_mem_buffer
@@ -548,6 +549,7 @@ struct iwl_trans_pcie {
   struct isr_statistics isr_stats;
 
   zx_handle_t irq_handle;
+  thrd_t irq_thread;
   mtx_t irq_lock;
   mtx_t mutex;
   uint32_t inta_mask;
@@ -567,8 +569,8 @@ struct iwl_trans_pcie {
 
   bool ucode_write_complete;
   sync_completion_t ucode_write_waitq;
+  sync_condition_t wait_command_queue;
 #if 0   // NEEDS_PORTING
-    wait_queue_head_t wait_command_queue;
     wait_queue_head_t d0i3_waitq;
 #endif  // NEEDS_PORTING
 
@@ -662,9 +664,10 @@ void iwl_trans_pcie_free(struct iwl_trans* trans);
  ******************************************************/
 zx_status_t iwl_pcie_rx_init(struct iwl_trans* trans);
 int iwl_pcie_gen2_rx_init(struct iwl_trans* trans);
+int iwl_pcie_irq_handler(void* arg);
+zx_status_t iwl_pcie_isr(struct iwl_trans* trans);
 #if 0   // NEEDS_PORTING
 irqreturn_t iwl_pcie_msix_isr(int irq, void* data);
-irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id);
 irqreturn_t iwl_pcie_irq_msix_handler(int irq, void* dev_id);
 irqreturn_t iwl_pcie_irq_rx_msix_handler(int irq, void* dev_id);
 #endif  // NEEDS_PORTING
@@ -675,9 +678,6 @@ int iwl_pcie_dummy_napi_poll(struct napi_struct* napi, int budget);
 /*****************************************************
  * ICT - interrupt handling
  ******************************************************/
-#if 0   // NEEDS_PORTING
-irqreturn_t iwl_pcie_isr(int irq, void* data);
-#endif  // NEEDS_PORTING
 zx_status_t iwl_pcie_alloc_ict(struct iwl_trans* trans);
 void iwl_pcie_free_ict(struct iwl_trans* trans);
 void iwl_pcie_reset_ict(struct iwl_trans* trans);

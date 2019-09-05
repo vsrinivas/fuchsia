@@ -33,6 +33,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <lib/sync/condition.h>
 #include <zircon/assert.h>
 
 #include <ddk/io-buffer.h>
@@ -225,7 +226,7 @@ static void iwl_pcie_rxq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_rxq* rxq
   }
 }
 
-__UNUSED static void iwl_pcie_rxq_check_wrptr(struct iwl_trans* trans) {
+static void iwl_pcie_rxq_check_wrptr(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   int i;
 
@@ -1062,7 +1063,6 @@ static void iwl_pcie_rx_reuse_rbd(struct iwl_trans* trans, struct iwl_rx_mem_buf
 static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
                                   struct iwl_rx_mem_buffer* rxb, bool emergency, int i) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
   bool page_stolen = false;
   uint32_t offset = 0;
 
@@ -1096,9 +1096,11 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
          "frame on invalid queue - is on %d and indicates %d\n", rxq->id,
          (le32_to_cpu(pkt->len_n_flags) & FH_RSCSR_RXQ_MASK) >> FH_RSCSR_RXQ_POS);
 
+#if 0   // NEEDS_PORTING
     IWL_DEBUG_RX(trans, "Q %d: cmd at offset %d: %s (%.2x.%2x, seq 0x%x)\n", rxq->id, offset,
                  iwl_get_cmd_string(trans, iwl_cmd_id(pkt->hdr.cmd, pkt->hdr.group_id, 0)),
                  pkt->hdr.group_id, pkt->hdr.cmd, le16_to_cpu(pkt->hdr.sequence));
+#endif  // NEEDS_PORTING
 
     int len = iwl_rx_packet_len(pkt);
     len += sizeof(uint32_t); /* account for status word */
@@ -1126,8 +1128,10 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
       }
     }
 
+#if 0   // NEEDS_PORTING
     uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
     int index = SEQ_TO_INDEX(sequence);
+    struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
     __UNUSED int cmd_index = iwl_pcie_get_cmd_index(txq, index);
 
     if (rxq->id == trans_pcie->def_rx_queue) {
@@ -1136,7 +1140,6 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
       iwl_op_mode_rx_rss(trans->op_mode, &rxq->napi, &rxcb, rxq->id);
     }
 
-#if 0   // NEEDS_PORTING
     if (reclaim) {
       kzfree(txq->entries[cmd_index].free_buf);
       txq->entries[cmd_index].free_buf = NULL;
@@ -1176,7 +1179,7 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
    * SKBs that fail to Rx correctly, add them back into the
    * rx_free list for reuse later. */
   if (io_buffer_is_valid(&rxb->io_buf)) {
-    list_add_tail(&rxb->list, &rxq->rx_free);
+    list_add_tail(&rxq->rx_free, &rxb->list);
     rxq->free_count++;
   } else {
     iwl_pcie_rx_reuse_rbd(trans, rxb, rxq, emergency);
@@ -1235,7 +1238,7 @@ out_err:
 /*
  * iwl_pcie_rx_handle - Main entry function for receiving responses from fw
  */
-__UNUSED static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
+static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct iwl_rxq* rxq = &trans_pcie->rxq[queue];
   uint32_t r, i, count = 0;
@@ -1379,13 +1382,13 @@ irqreturn_t iwl_pcie_irq_rx_msix_handler(int irq, void* dev_id) {
 
   return IRQ_HANDLED;
 }
+#endif  // NEEDS_PORTING
 
 /*
  * iwl_pcie_irq_handle_error - called for HW or SW error interrupt from card
  */
 static void iwl_pcie_irq_handle_error(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  int i;
 
   /* W/A for WiFi/WiMAX coex and WiMAX own the RF */
   if (trans->cfg->internal_wimax_coex && !trans->cfg->apmg_not_supported &&
@@ -1393,23 +1396,25 @@ static void iwl_pcie_irq_handle_error(struct iwl_trans* trans) {
        (iwl_read_prph(trans, APMG_PS_CTRL_REG) & APMG_PS_CTRL_VAL_RESET_REQ))) {
     clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
     iwl_op_mode_wimax_active(trans->op_mode);
-    wake_up(&trans_pcie->wait_command_queue);
+    sync_condition_signal(&trans_pcie->wait_command_queue);
     return;
   }
 
-  for (i = 0; i < trans->cfg->base_params->num_of_queues; i++) {
+#if 0   // NEEDS_PORTING
+  for (int i = 0; i < trans->cfg->base_params->num_of_queues; i++) {
     if (!trans_pcie->txq[i]) {
       continue;
     }
     del_timer(&trans_pcie->txq[i]->stuck_timer);
   }
+#endif  // NEEDS_PORTING
 
   /* The STATUS_FW_ERROR bit is set in this function. This must happen
    * before we wake up the command caller, to ensure a proper cleanup. */
   iwl_trans_fw_error(trans);
 
   clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
-  wake_up(&trans_pcie->wait_command_queue);
+  sync_condition_signal(&trans_pcie->wait_command_queue);
 }
 
 static uint32_t iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
@@ -1417,15 +1422,15 @@ static uint32_t iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
 
   lockdep_assert_held(&IWL_TRANS_GET_PCIE_TRANS(trans)->irq_lock);
 
+#if 0   // NEEDS_PORTING
   trace_iwlwifi_dev_irq(trans->dev);
-
+#endif  // NEEDS_PORTING
   /* Discover which interrupts are active/pending */
   inta = iwl_read32(trans, CSR_INT);
 
   /* the thread will service interrupts and re-enable them */
   return inta;
 }
-#endif  // NEEDS_PORTING
 
 /* a device (PCI-E) page is 4096 bytes long */
 #define ICT_SHIFT 12
@@ -1493,13 +1498,12 @@ uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
   return (0xff & val) | ((0xff00 & val) << 16);
 }
 
-#if 0  // NEEDS_PORTING
 void iwl_pcie_handle_rfkill_irq(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct isr_statistics* isr_stats = &trans_pcie->isr_stats;
   bool hw_rfkill, prev, report;
 
-  mutex_lock(&trans_pcie->mutex);
+  mtx_lock(&trans_pcie->mutex);
   prev = test_bit(STATUS_RFKILL_OPMODE, &trans->status);
   hw_rfkill = iwl_is_rfkill_set(trans);
   if (hw_rfkill) {
@@ -1519,13 +1523,13 @@ void iwl_pcie_handle_rfkill_irq(struct iwl_trans* trans) {
   if (prev != report) {
     iwl_trans_pcie_rf_kill(trans, report);
   }
-  mutex_unlock(&trans_pcie->mutex);
+  mtx_unlock(&trans_pcie->mutex);
 
   if (hw_rfkill) {
     if (test_and_clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status)) {
       IWL_DEBUG_RF_KILL(trans, "Rfkill while SYNC HCMD in flight\n");
     }
-    wake_up(&trans_pcie->wait_command_queue);
+    sync_condition_signal(&trans_pcie->wait_command_queue);
   } else {
     clear_bit(STATUS_RFKILL_HW, &trans->status);
     if (trans_pcie->opmode_down) {
@@ -1534,14 +1538,30 @@ void iwl_pcie_handle_rfkill_irq(struct iwl_trans* trans) {
   }
 }
 
-irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
-  struct iwl_trans* trans = dev_id;
+int iwl_pcie_irq_handler(void* arg) {
+  struct iwl_trans* trans = arg;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+
+  zx_status_t status;
+  while ((status = zx_interrupt_wait(trans_pcie->irq_handle, NULL)) == ZX_OK) {
+    iwl_pcie_isr(trans);
+  }
+
+  return 0;
+}
+
+zx_status_t iwl_pcie_isr(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct isr_statistics* isr_stats = &trans_pcie->isr_stats;
   uint32_t inta = 0;
   uint32_t handled = 0;
 
-  lock_map_acquire(&trans->sync_cmd_lockdep_map);
+  /* Disable (but don't clear!) interrupts here to avoid
+   * back-to-back ISRs and sporadic interrupts from our NIC.
+   * If we have something to service, the tasklet will re-enable ints.
+   * If we *don't* have something, we'll re-enable before leaving here.
+   */
+  iwl_write32(trans, CSR_INT_MASK, 0x00000000);
 
   mtx_lock(&trans_pcie->irq_lock);
 
@@ -1579,8 +1599,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
       _iwl_enable_interrupts(trans);
     }
     mtx_unlock(&trans_pcie->irq_lock);
-    lock_map_release(&trans->sync_cmd_lockdep_map);
-    return IRQ_NONE;
+    return ZX_OK;
   }
 
   if (unlikely(inta == 0xFFFFFFFF || (inta & 0xFFFFFFF0) == 0xa5a5a5a0)) {
@@ -1606,8 +1625,9 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
    */
   iwl_write32(trans, CSR_INT, inta | ~trans_pcie->inta_mask);
 
-  if (iwl_have_debug_level(IWL_DL_ISR))
+  if (iwl_have_debug_level(IWL_DL_ISR)) {
     IWL_DEBUG_ISR(trans, "inta 0x%08x, enabled 0x%08x\n", inta, iwl_read32(trans, CSR_INT_MASK));
+  }
 
   mtx_unlock(&trans_pcie->irq_lock);
 
@@ -1678,7 +1698,9 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
   if (inta & CSR_INT_BIT_WAKEUP) {
     IWL_DEBUG_ISR(trans, "Wakeup interrupt\n");
     iwl_pcie_rxq_check_wrptr(trans);
+#if 0   // NEEDS_PORTING
     iwl_pcie_txq_check_wrptrs(trans);
+#endif  // NEEDS_PORTING
 
     isr_stats->wakeup++;
 
@@ -1725,9 +1747,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
 
     isr_stats->rx++;
 
-    local_bh_disable();
     iwl_pcie_rx_handle(trans, 0);
-    local_bh_enable();
   }
 
   /* This "Tx" DMA channel is used only for loading uCode */
@@ -1738,7 +1758,7 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
     handled |= CSR_INT_BIT_FH_TX;
     /* Wake up uCode load routine, now that load is complete */
     trans_pcie->ucode_write_complete = true;
-    wake_up(&trans_pcie->ucode_write_waitq);
+    sync_completion_signal(&trans_pcie->ucode_write_waitq);
   }
 
   if (inta & ~handled) {
@@ -1766,10 +1786,8 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
   mtx_unlock(&trans_pcie->irq_lock);
 
 out:
-  lock_map_release(&trans->sync_cmd_lockdep_map);
-  return IRQ_HANDLED;
+  return ZX_OK;
 }
-#endif
 
 /******************************************************************************
  *
@@ -1844,23 +1862,6 @@ void iwl_pcie_disable_ict(struct iwl_trans* trans) {
 }
 
 #if 0   // NEEDS_PORTING
-irqreturn_t iwl_pcie_isr(int irq, void* data) {
-  struct iwl_trans* trans = data;
-
-  if (!trans) {
-    return IRQ_NONE;
-  }
-
-  /* Disable (but don't clear!) interrupts here to avoid
-   * back-to-back ISRs and sporadic interrupts from our NIC.
-   * If we have something to service, the tasklet will re-enable ints.
-   * If we *don't* have something, we'll re-enable before leaving here.
-   */
-  iwl_write32(trans, CSR_INT_MASK, 0x00000000);
-
-  return IRQ_WAKE_THREAD;
-}
-
 irqreturn_t iwl_pcie_msix_isr(int irq, void* data) { return IRQ_WAKE_THREAD; }
 
 irqreturn_t iwl_pcie_irq_msix_handler(int irq, void* dev_id) {
@@ -1915,7 +1916,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void* dev_id) {
      * now that load is complete
      */
     trans_pcie->ucode_write_complete = true;
-    wake_up(&trans_pcie->ucode_write_waitq);
+        sync_condition_signal(&trans_pcie->ucode_write_waitq);
   }
 
   /* Error detected by uCode */
@@ -1981,7 +1982,6 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void* dev_id) {
   iwl_pcie_clear_irq(trans, entry);
 
   lock_map_release(&trans->sync_cmd_lockdep_map);
-
   return IRQ_HANDLED;
 }
 #endif  // NEEDS_PORTING

@@ -64,6 +64,7 @@ source_set("core") {
 source_set("pcie") {
   visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
   defines = config_flags
+  defines += [ "_ALL_SOURCE=1" ]
 
   sources = [
     "pcie/drv.c",

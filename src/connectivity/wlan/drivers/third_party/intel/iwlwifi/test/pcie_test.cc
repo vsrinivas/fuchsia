@@ -23,6 +23,7 @@
 #include <zxtest/zxtest.h>
 
 extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
 
@@ -40,6 +41,7 @@ class PcieTest : public zxtest::Test {
   PcieTest() {
     trans_ops_.write8 = write8_wrapper;
     trans_ops_.write32 = write32_wrapper;
+    trans_ops_.read32 = read32_wrapper;
     trans_ops_.grab_nic_access = grab_nic_access_wrapper;
     trans_ops_.release_nic_access = release_nic_access_wrapper;
     cfg_.base_params = &base_params_;
@@ -69,6 +71,16 @@ class PcieTest : public zxtest::Test {
     auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
     if (wrapper->test->mock_write32_.HasExpectations()) {
       wrapper->test->mock_write32_.Call(ofs, val);
+    }
+  }
+
+  mock_function::MockFunction<uint32_t, uint32_t> mock_read32_;
+  static uint32_t read32_wrapper(struct iwl_trans* trans, uint32_t ofs) {
+    auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
+    if (wrapper->test->mock_read32_.HasExpectations()) {
+      return wrapper->test->mock_read32_.Call(ofs);
+    } else {
+      return 0;
     }
   }
 
@@ -150,7 +162,7 @@ TEST_F(PcieTest, RxInit) {
 }
 
 TEST_F(PcieTest, IctTable) {
-  ASSERT_EQ(iwl_pcie_alloc_ict(trans_), ZX_OK);
+  ASSERT_OK(iwl_pcie_alloc_ict(trans_));
 
   // Check the initial state.
   ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
@@ -202,6 +214,54 @@ TEST_F(PcieTest, IctTable) {
   EXPECT_EQ(ict_table[42], 0);
 
   iwl_pcie_free_ict(trans_);
+}
+
+TEST_F(PcieTest, RxInterrupts) {
+  trans_->num_rx_queues = 1;
+  trans_pcie_->rx_buf_size = IWL_AMSDU_2K;
+  trans_pcie_->use_ict = true;
+  trans_pcie_->inta_mask = CSR_INI_SET_MASK;
+  set_bit(STATUS_DEVICE_ENABLED, &trans_->status);
+  ASSERT_OK(iwl_pcie_alloc_ict(trans_));
+  ASSERT_OK(iwl_pcie_rx_init(trans_));
+
+  ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
+  uint32_t* ict_table = static_cast<uint32_t*>(io_buffer_virt(&trans_pcie_->ict_tbl));
+
+  // Spurious interrupt.
+  trans_pcie_->ict_index = 0;
+  ict_table[0] = 0;
+  ASSERT_OK(iwl_pcie_isr(trans_));
+
+  // Set up the ICT table with an RX interrupt at index 0.
+  trans_pcie_->ict_index = 0;
+  ict_table[0] = static_cast<uint32_t>(CSR_INT_BIT_FH_RX) >> 16;
+  ict_table[1] = 0;
+
+  // This struct is controlled by the device, closed_rb_num is the read index for the shared ring
+  // buffer. For the tests we manually increment the index to push forward the index.
+  struct iwl_rb_status* rb_status =
+      static_cast<struct iwl_rb_status*>(io_buffer_virt(&trans_pcie_->rxq->rb_status));
+
+  // Process 128 buffers. The driver should process each buffer and indicate this to the hardware by
+  // setting the write index (rxq->write_actual).
+  rb_status->closed_rb_num = 128;
+  ASSERT_OK(iwl_pcie_isr(trans_));
+  EXPECT_EQ(trans_pcie_->rxq->write, 127);
+  EXPECT_EQ(trans_pcie_->rxq->write_actual, 120);
+
+  // Reset the interrupt table.
+  trans_pcie_->ict_index = 0;
+  ict_table[0] = static_cast<uint32_t>(CSR_INT_BIT_FH_RX) >> 16;
+  ict_table[1] = 0;
+
+  // Process another 300 buffers, wrapping to the beginning of the circular buffer.
+  rb_status->closed_rb_num = 172;
+  ASSERT_OK(iwl_pcie_isr(trans_));
+  EXPECT_EQ(trans_pcie_->rxq->write, 171);
+  EXPECT_EQ(trans_pcie_->rxq->write_actual, 168);
+
+  iwl_pcie_rx_free(trans_);
 }
 
 }  // namespace
