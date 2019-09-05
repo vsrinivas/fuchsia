@@ -339,8 +339,12 @@ void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer)
 zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_grown) {
   *bad_block_grown = false;
 
+  bool one_copy_succeeded = false;
   for (uint32_t copy = 0; copy < copy_count_; copy++) {
     for (;;) {
+      if (op.block >= block_map_.AvailableBlockCount(copy)) {
+        break;
+      }
       uint32_t physical_block;
       zx_status_t status = block_map_.GetPhysical(copy, op.block, &physical_block);
       if (status != ZX_OK) {
@@ -388,10 +392,16 @@ zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_
         continue;
       }
       if (op_context.status != ZX_OK) {
-        return op_context.status;
+        zxlogf(ERROR, "Failed to write block %d, copy %d with status %s\n",
+               op_context.current_block, copy, zx_status_get_string(op_context.status));
+        break;
       }
+      one_copy_succeeded = true;
       break;
     }
+  }
+  if (!one_copy_succeeded) {
+    return ZX_ERR_IO;
   }
   return ZX_OK;
 }
