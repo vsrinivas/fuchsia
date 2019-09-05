@@ -40,7 +40,7 @@ Requires the **ZX_RIGHT_WRITE** right.
 **ZX_VMO_OP_DECOMMIT** - Release a range of pages previously committed to the VMO from *offset*
 to *offset*+*size*, which resets that range's bytes to 0. Requires the **ZX_RIGHT_WRITE** right.
 This is only supported for vmos created from [`zx_vmo_create()`] which do not have non-slice
-children, and for slice children of such vmos.
+children, and for slice children of such vmos. Provided range must be page aligned.
 
 **ZX_VMO_OP_LOCK** - Presently unsupported.
 
@@ -93,7 +93,8 @@ value is returned.
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have sufficient rights to perform the operation.
 
 **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer, *op* is not a valid
-operation, or *size* is zero and *op* is a cache operation.
+operation, *size* is zero and *op* is a cache operation, or *op* was **ZX_VMO_OP_DECOMMIT** and
+range was not page aligned.
 
 **ZX_ERR_NOT_SUPPORTED**  *op* was **ZX_VMO_OP_LOCK** or **ZX_VMO_OP_UNLOCK**, or
 *op* was **ZX_VMO_OP_DECOMMIT** and the underlying VMO does not allow decommiting.

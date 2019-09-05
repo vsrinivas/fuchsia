@@ -1777,6 +1777,11 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // Demand offset and length be correctly aligned to not give surprising user semantics.
+  if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(len)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // trim the size
   uint64_t new_len;
   if (!TrimRange(offset, len, size_, &new_len)) {
@@ -1788,27 +1793,19 @@ zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len,
     return ZX_OK;
   }
 
-  // figure the starting and ending page offset
-  uint64_t start = ROUNDDOWN(offset, PAGE_SIZE);
-  uint64_t end = ROUNDUP_PAGE_SIZE(offset + new_len);
-  DEBUG_ASSERT(end > offset);
-  DEBUG_ASSERT(end > start);
-  uint64_t page_aligned_len = end - start;
-
-  LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 ", page_aliged_len %#" PRIx64 "\n", start, end,
-          page_aligned_len);
+  LTRACEF("start offset %#" PRIx64 ", end %#" PRIx64 "\n", offset, offset + new_len);
 
   // TODO(teisenbe): Allow decommitting of pages pinned by
   // CommitRangeContiguous
 
-  if (AnyPagesPinnedLocked(start, page_aligned_len)) {
+  if (AnyPagesPinnedLocked(offset, new_len)) {
     return ZX_ERR_BAD_STATE;
   }
 
   // unmap all of the pages in this range on all the mapping regions
-  RangeChangeUpdateLocked(start, page_aligned_len, RangeChangeOp::Unmap);
+  RangeChangeUpdateLocked(offset, new_len, RangeChangeOp::Unmap);
 
-  page_list_.RemovePages(start, end, &free_list);
+  page_list_.RemovePages(offset, offset + new_len, &free_list);
 
   return ZX_OK;
 }

@@ -1169,14 +1169,15 @@ TEST(VmoTestCase, DecommitMisaligned) {
   zx_handle_t vmo;
   EXPECT_OK(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), "creation for decommit test");
 
+  // Forbid unaligned decommit, even if there's nothing committed.
   zx_status_t status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0x10, 0x100, NULL, 0);
-  EXPECT_OK(status, "decommitting uncommitted memory");
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "decommitting uncommitted memory");
 
   status = zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0x10, 0x100, NULL, 0);
   EXPECT_OK(status, "committing memory");
 
   status = zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0x10, 0x100, NULL, 0);
-  EXPECT_OK(status, "decommitting memory");
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status, "decommitting memory");
 
   EXPECT_OK(zx_handle_close(vmo), "close handle");
 }
