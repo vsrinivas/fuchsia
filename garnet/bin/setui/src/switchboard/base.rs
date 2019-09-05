@@ -23,6 +23,7 @@ pub enum SettingType {
     Display,
     DoNotDisturb,
     Intl,
+    Privacy,
     Setup,
     System,
 }
@@ -36,6 +37,7 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     set.insert(SettingType::Display);
     set.insert(SettingType::DoNotDisturb);
     set.insert(SettingType::Intl);
+    set.insert(SettingType::Privacy);
     set.insert(SettingType::Setup);
     set.insert(SettingType::System);
 
@@ -60,18 +62,21 @@ pub enum SettingRequest {
     SetBrightness(f32),
     SetAutoBrightness(bool),
 
-    // System login requests.
-    SetLoginOverrideMode(SystemLoginOverrideMode),
+    // Do not disturb requests.
+    SetUserInitiatedDoNotDisturb(bool),
+    SetNightModeInitiatedDoNotDisturb(bool),
 
     // Intl requests.
     SetTimeZone(String),
 
+    // Privacy requests.
+    SetUserDataSharingConsent(Option<bool>),
+
     // Setup info requests.
     SetConfigurationInterfaces(ConfigurationInterfaceFlags),
 
-    // Do not disturb requests.
-    SetUserInitiatedDoNotDisturb(bool),
-    SetNightModeInitiatedDoNotDisturb(bool),
+    // System login requests.
+    SetLoginOverrideMode(SystemLoginOverrideMode),
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
@@ -202,6 +207,11 @@ pub struct IntlInfo {
     pub time_zone_id: String,
 }
 
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct PrivacyInfo {
+    pub user_data_sharing_consent: Option<bool>,
+}
+
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum SystemLoginOverrideMode {
     None,
@@ -229,6 +239,7 @@ pub enum SettingResponse {
     Brightness(DisplayInfo),
     DoNotDisturb(DoNotDisturbInfo),
     Intl(IntlInfo),
+    Privacy(PrivacyInfo),
     Setup(SetupInfo),
     System(SystemInfo),
 }

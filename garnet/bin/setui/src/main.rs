@@ -19,6 +19,8 @@ use {
     crate::intl::intl_fidl_handler::IntlFidlHandler,
     crate::json_codec::JsonCodec,
     crate::mutation::*,
+    crate::privacy::privacy_controller::PrivacyController,
+    crate::privacy::privacy_fidl_handler::PrivacyFidlHandler,
     crate::registry::base::Registry,
     crate::registry::device_storage::{DeviceStorageFactory, StashDeviceStorageFactory},
     crate::registry::registry_impl::RegistryImpl,
@@ -54,6 +56,7 @@ mod fidl_clone;
 mod intl;
 mod json_codec;
 mod mutation;
+mod privacy;
 mod registry;
 mod setting_adapter;
 mod setui_handler;
@@ -227,6 +230,25 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
         });
     }
 
+    if components.contains(&SettingType::Privacy) {
+        registry_handle
+            .write()
+            .unwrap()
+            .register(
+                switchboard::base::SettingType::Privacy,
+                PrivacyController::spawn(
+                    unboxed_storage_factory.get_store::<switchboard::base::PrivacyInfo>(),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+        let switchboard_handle_clone = switchboard_handle.clone();
+        service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
+            PrivacyFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
+        });
+    }
+
     if components.contains(&SettingType::System) {
         registry_handle
             .write()
@@ -270,7 +292,7 @@ mod tests {
         crate::registry::device_storage::DeviceStorageFactory,
         crate::switchboard::base::{
             AccessibilityInfo, AudioStreamType, ColorBlindnessType, ConfigurationInterfaceFlags,
-            SetupInfo,
+            PrivacyInfo, SetupInfo,
         },
         failure::format_err,
         fidl::endpoints::{ServerEnd, ServiceMarker},
@@ -284,6 +306,7 @@ mod tests {
     enum Services {
         Accessibility(AccessibilityRequestStream),
         DoNotDisturb(DoNotDisturbRequestStream),
+        Privacy(PrivacyRequestStream),
         Timezone(fidl_fuchsia_timezone::TimezoneRequestStream),
         Intl(IntlRequestStream),
     }
@@ -675,6 +698,61 @@ mod tests {
         assert_eq!(
             settings.time_zone_id,
             Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() })
+        );
+    }
+
+    //TODO(fxb/35371): Move out of main.rs
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_privacy() {
+        let mut fs = ServiceFs::new();
+
+        let initial_value = switchboard::base::PrivacyInfo { user_data_sharing_consent: None };
+
+        let changed_value =
+            switchboard::base::PrivacyInfo { user_data_sharing_consent: Some(true) };
+
+        // Create and fetch a store from device storage so we can read stored value for testing.
+        let factory = Box::new(InMemoryStorageFactory::create());
+        let store = factory.get_store::<PrivacyInfo>();
+
+        create_fidl_service(
+            fs.root_dir(),
+            [SettingType::Privacy].iter().cloned().collect(),
+            Arc::new(RwLock::new(ServiceContext::new(None))),
+            factory,
+        );
+
+        let env = fs.create_salted_nested_environment(ENV_NAME).unwrap();
+        fasync::spawn(fs.collect());
+
+        let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
+
+        // Ensure retrieved value matches set value
+        let settings = privacy_service.watch().await.expect("watch completed");
+        assert_eq!(
+            settings.unwrap().user_data_sharing_consent,
+            initial_value.user_data_sharing_consent
+        );
+
+        // Ensure setting interface propagates correctly
+        let mut privacy_settings = fidl_fuchsia_settings::PrivacySettings::empty();
+        privacy_settings.user_data_sharing_consent = Some(true);
+        privacy_service
+            .set(privacy_settings)
+            .await
+            .expect("set completed")
+            .expect("set successful");
+
+        // Verify the value we set is persisted in DeviceStorage.
+        let mut store_lock = store.lock().await;
+        let retrieved_struct = store_lock.get().await;
+        assert_eq!(changed_value, retrieved_struct);
+
+        // Ensure retrieved value matches set value
+        let settings = privacy_service.watch().await.expect("watch completed");
+        assert_eq!(
+            settings.unwrap().user_data_sharing_consent,
+            changed_value.user_data_sharing_consent
         );
     }
 
