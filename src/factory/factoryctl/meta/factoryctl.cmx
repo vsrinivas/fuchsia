@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/factoryctl"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.FactoryItems",
+            "fuchsia.factory.CastCredentialsFactoryStoreProvider",
+            "fuchsia.factory.MiscFactoryStoreProvider",
+            "fuchsia.factory.PlayReadyFactoryStoreProvider",
+            "fuchsia.factory.WidevineFactoryStoreProvider"
+        ]
+    }
+}

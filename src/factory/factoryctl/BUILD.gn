@@ -1,0 +1,81 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "factoryctl"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:nom",
+    "//third_party/rust_crates:structopt",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+
+  test_deps = [ "//garnet/public/rust/fuchsia-vfs/pseudo-fs" ]
+}
+
+package("factoryctl") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "factoryctl"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/factoryctl.cmx")
+      dest = "factoryctl.cmx"
+    },
+  ]
+}
+
+test_package("factoryctl_tests") {
+  deps = [
+    ":bin",
+    ":bin_test",
+  ]
+
+  binaries = [
+    {
+      name = "factoryctl"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/factoryctl.cmx")
+      dest = "factoryctl.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "factoryctl_bin_test"
+      environments = basic_envs
+    },
+  ]
+}
