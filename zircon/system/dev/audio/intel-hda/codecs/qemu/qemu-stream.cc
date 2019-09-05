@@ -4,9 +4,9 @@
 
 #include "qemu-stream.h"
 
-#include <fbl/vector.h>
-
 #include <utility>
+
+#include <fbl/vector.h>
 
 namespace audio {
 namespace intel_hda {

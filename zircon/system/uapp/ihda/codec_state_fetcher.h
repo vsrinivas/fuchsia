@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_FETCHER_H_
+#define ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_FETCHER_H_
 
 #include "codec_state.h"
 
@@ -101,3 +102,5 @@ class CodecStateFetcher {
 
 }  // namespace intel_hda
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_FETCHER_H_

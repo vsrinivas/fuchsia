@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_lock.h>
-#include <intel-hda/utils/intel-hda-registers.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <string.h>
 #include <zircon/assert.h>
-#include <lib/zircon-internal/thread_annotations.h>
+
+#include <fbl/auto_lock.h>
+#include <intel-hda/utils/intel-hda-registers.h>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"

@@ -5,6 +5,8 @@
 #ifndef INTEL_HDA_CODEC_UTILS_CODEC_DRIVER_BASE_H_
 #define INTEL_HDA_CODEC_UTILS_CODEC_DRIVER_BASE_H_
 
+#include <lib/zx/handle.h>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/intelhda/codec.h>
@@ -15,7 +17,6 @@
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/status.h>
-#include <lib/zx/handle.h>
 
 namespace audio {
 namespace intel_hda {

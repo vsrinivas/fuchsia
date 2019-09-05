@@ -5,8 +5,9 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CODECS_REALTEK_UTILS_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CODECS_REALTEK_UTILS_H_
 
-#include <intel-hda/utils/codec-commands.h>
 #include <zircon/device/audio.h>
+
+#include <intel-hda/utils/codec-commands.h>
 
 namespace audio {
 namespace intel_hda {

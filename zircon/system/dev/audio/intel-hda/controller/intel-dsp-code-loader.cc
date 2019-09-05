@@ -4,7 +4,6 @@
 
 #include "intel-dsp-code-loader.h"
 
-#include <hw/arch_ops.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -12,6 +11,8 @@
 
 #include <climits>
 #include <limits>
+
+#include <hw/arch_ops.h>
 
 #include "debug-logging.h"
 

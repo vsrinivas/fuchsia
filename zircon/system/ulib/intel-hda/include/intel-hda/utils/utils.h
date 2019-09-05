@@ -5,11 +5,6 @@
 #ifndef INTEL_HDA_UTILS_UTILS_H_
 #define INTEL_HDA_UTILS_UTILS_H_
 
-#include <fbl/function.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/vector.h>
-#include <intel-hda/utils/codec-caps.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
@@ -19,6 +14,12 @@
 
 #include <type_traits>
 #include <utility>
+
+#include <fbl/function.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
+#include <intel-hda/utils/codec-caps.h>
 
 namespace audio {
 namespace intel_hda {

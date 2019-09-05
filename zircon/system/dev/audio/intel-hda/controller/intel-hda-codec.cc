@@ -4,13 +4,14 @@
 
 #include "intel-hda-codec.h"
 
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
-#include <intel-hda/utils/codec-commands.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <intel-hda/utils/codec-commands.h>
 
 #include "debug-logging.h"
 #include "intel-hda-controller.h"
@@ -40,13 +41,13 @@ fuchsia_hardware_intel_hda_CodecDevice_ops_t IntelHDACodec::CODEC_FIDL_THUNKS = 
 };
 
 zx_protocol_device_t IntelHDACodec::CODEC_DEVICE_THUNKS = []() {
-    zx_protocol_device_t ops = {};
-    ops.version = DEVICE_OPS_VERSION;
-    ops.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
-      return fuchsia_hardware_intel_hda_CodecDevice_dispatch(ctx, txn, msg,
-                                                             &IntelHDACodec::CODEC_FIDL_THUNKS);
-    };
-    return ops;
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
+    return fuchsia_hardware_intel_hda_CodecDevice_dispatch(ctx, txn, msg,
+                                                           &IntelHDACodec::CODEC_FIDL_THUNKS);
+  };
+  return ops;
 }();
 
 ihda_codec_protocol_ops_t IntelHDACodec::CODEC_PROTO_THUNKS = {

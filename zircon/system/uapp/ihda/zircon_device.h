@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_IHDA_ZIRCON_DEVICE_H_
+#define ZIRCON_SYSTEM_UAPP_IHDA_ZIRCON_DEVICE_H_
 
+#include <lib/zx/channel.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/device/intel-hda.h>
 #include <zircon/syscalls.h>
@@ -80,3 +81,5 @@ class ZirconDevice {
 
 }  // namespace intel_hda
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_UAPP_IHDA_ZIRCON_DEVICE_H_

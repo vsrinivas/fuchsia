@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/fdio.h>
@@ -11,6 +9,9 @@
 #include <zircon/types.h>
 
 #include <array>
+
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
 
 namespace audio::intel_hda {
 

@@ -5,9 +5,10 @@
 #include "intel-hda/utils/status.h"
 
 #include <zircon/errors.h>
-#include <zxtest/zxtest.h>
 
 #include <string>
+
+#include <zxtest/zxtest.h>
 
 namespace audio::intel_hda {
 namespace {

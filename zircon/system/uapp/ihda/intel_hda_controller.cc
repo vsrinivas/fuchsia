@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/device/intel-hda.h>
-#include <lib/fdio/io.h>
+#include "intel_hda_controller.h"
 
-#include <fbl/algorithm.h>
-#include <intel-hda/utils/intel-hda-registers.h>
+#include <lib/fdio/io.h>
+#include <zircon/device/intel-hda.h>
 
 #include <utility>
 
-#include "intel_hda_controller.h"
+#include <fbl/algorithm.h>
+#include <intel-hda/utils/intel-hda-registers.h>
 
 namespace audio {
 namespace intel_hda {

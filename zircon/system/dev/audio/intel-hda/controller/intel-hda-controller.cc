@@ -4,6 +4,14 @@
 
 #include "intel-hda-controller.h"
 
+#include <stdio.h>
+#include <string.h>
+#include <threads.h>
+#include <zircon/assert.h>
+
+#include <atomic>
+#include <utility>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -14,13 +22,6 @@
 #include <fbl/auto_lock.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
-#include <stdio.h>
-#include <string.h>
-#include <threads.h>
-#include <zircon/assert.h>
-
-#include <atomic>
-#include <utility>
 
 #include "debug-logging.h"
 #include "intel-hda-codec.h"
@@ -43,20 +44,18 @@ fuchsia_hardware_intel_hda_ControllerDevice_ops_t IntelHDAController::CONTROLLER
 
 // Device interface thunks
 zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = []() {
-    zx_protocol_device_t ops = {};
-    ops.version = DEVICE_OPS_VERSION;
-    ops.get_protocol =
-        [](void* ctx, uint32_t proto_id, void* protocol) {
-          return static_cast<IntelHDAController*>(ctx)->DeviceGetProtocol(proto_id, protocol);
-        };
-    ops.unbind = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceShutdown(); };
-    ops.release = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceRelease(); };
-    ops.message =
-        [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
-          return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
-              ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
-        };
-    return ops;
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+  ops.get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) {
+    return static_cast<IntelHDAController*>(ctx)->DeviceGetProtocol(proto_id, protocol);
+  };
+  ops.unbind = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceShutdown(); };
+  ops.release = [](void* ctx) { static_cast<IntelHDAController*>(ctx)->DeviceRelease(); };
+  ops.message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
+        ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
+  };
+  return ops;
 }();
 
 ihda_codec_protocol_ops_t IntelHDAController::CODEC_PROTO_THUNKS = {

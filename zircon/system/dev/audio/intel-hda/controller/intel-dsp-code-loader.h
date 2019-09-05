@@ -5,12 +5,13 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_CODE_LOADER_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_CODE_LOADER_H_
 
-#include <intel-hda/utils/intel-hda-registers.h>
-#include <intel-hda/utils/utils.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
+
+#include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
 

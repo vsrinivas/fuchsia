@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CODEC_H_
+#define ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CODEC_H_
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/unique_ptr.h>
-
 #include <intel-hda/utils/codec-commands.h>
 
 #include "codec_state.h"
@@ -66,3 +66,5 @@ class IntelHDACodec : public IntelHDADevice,
 
 }  // namespace intel_hda
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_CODEC_H_

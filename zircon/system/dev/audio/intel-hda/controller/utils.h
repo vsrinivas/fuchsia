@@ -5,16 +5,17 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_UTILS_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_UTILS_H_
 
-#include <ddk/device.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <zircon/types.h>
+
+#include <ddk/device.h>
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
 
 namespace audio {
 namespace intel_hda {

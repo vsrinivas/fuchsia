@@ -5,6 +5,16 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_CONTROLLER_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_CONTROLLER_H_
 
+#include <fuchsia/hardware/intel/hda/c/fidl.h>
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/interrupt.h>
+#include <threads.h>
+#include <zircon/types.h>
+
+#include <atomic>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
@@ -14,19 +24,10 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/utils.h>
-#include <lib/fzl/pinned-vmo.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/interrupt.h>
-#include <threads.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
-
-#include <atomic>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"

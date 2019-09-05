@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <intel-hda/utils/utils.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <intel-hda/utils/utils.h>
 
 namespace audio {
 namespace intel_hda {

@@ -127,4 +127,4 @@ class BinaryDecoder {
 
 }  // namespace audio::intel_hda
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL-HDA_CONTROLLER_BINARY_DECODE_H_
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_BINARY_DECODER_H_

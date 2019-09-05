@@ -4,11 +4,12 @@
 
 #include "intel-dsp-stream.h"
 
-#include <audio-proto-utils/format-utils.h>
-#include <fbl/auto_call.h>
 #include <zircon/device/audio.h>
 
 #include <utility>
+
+#include <audio-proto-utils/format-utils.h>
+#include <fbl/auto_call.h>
 
 #include "intel-dsp.h"
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_DEVICE_H_
+#define ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_DEVICE_H_
 
 #include "zircon_device.h"
 
@@ -33,3 +34,5 @@ class IntelHDADevice : public ZirconDevice {
 
 }  // namespace intel_hda
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_UAPP_IHDA_INTEL_HDA_DEVICE_H_

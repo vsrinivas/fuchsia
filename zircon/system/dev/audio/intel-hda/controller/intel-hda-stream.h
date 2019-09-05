@@ -5,6 +5,12 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_STREAM_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_STREAM_H_
 
+#include <lib/fzl/pinned-vmo.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/vmo.h>
+
 #include <audio-proto/audio-proto.h>
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/intrusive_wavl_tree.h>
@@ -13,11 +19,6 @@
 #include <fbl/unique_ptr.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/utils.h>
-#include <lib/fzl/pinned-vmo.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/handle.h>
-#include <lib/zx/vmo.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "debug-logging.h"
 #include "utils.h"

@@ -5,6 +5,12 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_CODEC_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_HDA_CODEC_H_
 
+#include <fuchsia/hardware/intel/hda/c/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/handle.h>
+#include <stdint.h>
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intelhda/codec.h>
@@ -14,14 +20,9 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
 #include <intel-hda/utils/intel-hda-registers.h>
-#include <lib/zx/handle.h>
-#include <stdint.h>
-#include <string.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"

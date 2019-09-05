@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
+
+#include <limits>
+#include <utility>
+
 #include <audio-proto-utils/format-utils.h>
 #include <audio-proto/audio-proto.h>
 #include <fbl/algorithm.h>
@@ -9,10 +14,6 @@
 #include <intel-hda/codec-utils/codec-driver-base.h>
 #include <intel-hda/codec-utils/stream-base.h>
 #include <intel-hda/utils/intel-hda-proto.h>
-#include <string.h>
-
-#include <limits>
-#include <utility>
 
 #include "debug-logging.h"
 

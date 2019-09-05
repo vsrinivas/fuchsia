@@ -4,13 +4,6 @@
 
 #include "utils.h"
 
-#include <ddk/binding.h>
-#include <ddk/driver.h>
-#include <dispatcher-pool/dispatcher-channel.h>
-#include <dispatcher-pool/dispatcher-execution-domain.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <intel-hda/utils/intel-hda-registers.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -18,6 +11,14 @@
 #include <zircon/process.h>
 
 #include <utility>
+
+#include <ddk/binding.h>
+#include <ddk/driver.h>
+#include <dispatcher-pool/dispatcher-channel.h>
+#include <dispatcher-pool/dispatcher-execution-domain.h>
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <intel-hda/utils/intel-hda-registers.h>
 
 #include "debug-logging.h"
 

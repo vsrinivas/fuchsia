@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <audio-utils/audio-device-stream.h>
-#include <audio-utils/audio-input.h>
-#include <audio-utils/audio-output.h>
-#include <fbl/string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/types.h>
-#include <zxtest/zxtest.h>
 
 #include <array>
 #include <cstdlib>
 #include <iostream>
 #include <set>
 #include <string>
+
+#include <audio-utils/audio-device-stream.h>
+#include <audio-utils/audio-input.h>
+#include <audio-utils/audio-output.h>
+#include <fbl/string.h>
+#include <zxtest/zxtest.h>
 
 #include "board_name.h"
 #include "zircon/errors.h"

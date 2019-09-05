@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_H_
+#define ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_H_
 
-#include <zircon/assert.h>
-#include <zircon/types.h>
-#include <fbl/unique_ptr.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/assert.h>
+#include <zircon/types.h>
 
+#include <fbl/unique_ptr.h>
 #include <intel-hda/utils/codec-caps.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/codec-state.h>
@@ -242,3 +243,5 @@ struct CodecState {
 
 }  // namespace intel_hda
 }  // namespace audio
+
+#endif  // ZIRCON_SYSTEM_UAPP_IHDA_CODEC_STATE_H_

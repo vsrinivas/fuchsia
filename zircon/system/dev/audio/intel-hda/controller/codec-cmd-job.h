@@ -5,6 +5,9 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
 
+#include <memory>
+#include <utility>
+
 #include <dispatcher-pool/dispatcher-channel.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
@@ -12,9 +15,6 @@
 #include <fbl/unique_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
-
-#include <memory>
-#include <utility>
 
 namespace audio {
 namespace intel_hda {

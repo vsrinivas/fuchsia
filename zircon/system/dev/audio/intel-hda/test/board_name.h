@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string.h>
+#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_BOARD_NAME_H_
+#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_BOARD_NAME_H_
+
 #include <zircon/types.h>
+
+#include <fbl/string.h>
 
 namespace audio::intel_hda {
 
@@ -12,3 +16,5 @@ namespace audio::intel_hda {
 zx_status_t GetBoardName(fbl::String* result);
 
 }  // namespace audio::intel_hda
+
+#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_TEST_BOARD_NAME_H_

@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits>
+#include "zircon_device.h"
+
 #include <dirent.h>
 #include <fcntl.h>
-#include <stdio.h>
-
-#include <fbl/unique_fd.h>
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
-#include <lib/fzl/fdio.h>
 #include <lib/fdio/io.h>
+#include <lib/fzl/fdio.h>
+#include <stdio.h>
 #include <zircon/device/intel-hda.h>
 
-#include "zircon_device.h"
+#include <limits>
+
+#include <fbl/unique_fd.h>
 
 namespace audio {
 namespace intel_hda {

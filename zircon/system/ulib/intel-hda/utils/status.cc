@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/string_printf.h>
-#include <intel-hda/utils/status.h>
 #include <zircon/status.h>
 
 #include <string>
 #include <string_view>
 #include <variant>
+
+#include <fbl/string_printf.h>
+#include <intel-hda/utils/status.h>
 
 namespace audio::intel_hda {
 

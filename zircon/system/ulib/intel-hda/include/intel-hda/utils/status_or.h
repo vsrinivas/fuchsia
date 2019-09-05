@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_INTEL_HDA_INCLUDE_INTEL_HDA_UTILS_STATUS_OR_H_
-#define ZIRCON_SYSTEM_ULIB_INTEL_HDA_INCLUDE_INTEL_HDA_UTILS_STATUS_OR_H_
+#ifndef INTEL_HDA_UTILS_STATUS_OR_H_
+#define INTEL_HDA_UTILS_STATUS_OR_H_
 
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -90,4 +90,4 @@ class [[nodiscard]] StatusOr {
 
 }  // namespace audio::intel_hda
 
-#endif  // ZIRCON_SYSTEM_ULIB_INTEL-HDA_INCLUDE_INTEL-HDA_UTILS_STATUS_OR_H_
+#endif  // INTEL_HDA_UTILS_STATUS_OR_H_

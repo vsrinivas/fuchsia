@@ -5,11 +5,12 @@
 #ifndef INTEL_HDA_UTILS_STATUS_H_
 #define INTEL_HDA_UTILS_STATUS_H_
 
-#include <fbl/string.h>
 #include <zircon/types.h>
 
 #include <string_view>
 #include <variant>
+
+#include <fbl/string.h>
 
 namespace audio::intel_hda {
 

@@ -5,6 +5,11 @@
 #ifndef INTEL_HDA_CODEC_UTILS_STREAM_BASE_H_
 #define INTEL_HDA_CODEC_UTILS_STREAM_BASE_H_
 
+#include <fuchsia/hardware/audio/c/fidl.h>
+#include <lib/zx/channel.h>
+
+#include <utility>
+
 #include <audio-proto/audio-proto.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -16,12 +21,8 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/audio/c/fidl.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
-#include <lib/zx/channel.h>
-
-#include <utility>
 
 namespace audio {
 namespace intel_hda {

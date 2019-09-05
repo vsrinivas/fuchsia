@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hw/arch_ops.h>
-#include <intel-hda/utils/status.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <limits.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include <utility>
+
+#include <hw/arch_ops.h>
+#include <intel-hda/utils/status.h>
 
 #include "debug-logging.h"
 #include "intel-dsp.h"

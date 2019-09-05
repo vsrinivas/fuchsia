@@ -4,9 +4,9 @@
 
 #include "intel_hda_codec.h"
 
-#include <fbl/algorithm.h>
-
 #include <utility>
+
+#include <fbl/algorithm.h>
 
 namespace audio {
 namespace intel_hda {

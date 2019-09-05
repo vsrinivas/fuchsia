@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
-#include "codec_state.h"
 
 #include <fbl/algorithm.h>
+
+#include "codec_state.h"
 
 namespace audio {
 namespace intel_hda {

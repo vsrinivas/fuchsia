@@ -5,8 +5,9 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_
 
-#include <ddk/debug.h>
 #include <inttypes.h>
+
+#include <ddk/debug.h>
 
 // Notes: The TRACE and SPEW levels of logging are disabled by default.  In
 // order to enable them, you can pass something like the following in the kernel
