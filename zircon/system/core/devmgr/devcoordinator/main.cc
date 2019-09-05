@@ -47,7 +47,6 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
 
 #include "../shared/env.h"
@@ -663,31 +662,49 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
   }
 
   const char* name = "svchost";
-  const char* argv[2] = {
+  const char* argv[3] = {
       "/boot/bin/svchost",
       require_system ? "--require-system" : nullptr,
+      nullptr,
   };
-  int argc = require_system ? 2 : 1;
 
-  launchpad_t* lp = nullptr;
-  launchpad_create(svc_job_copy.get(), name, &lp);
-  launchpad_load_from_file(lp, argv[0]);
-  launchpad_set_args(lp, argc, argv);
-  launchpad_add_handle(lp, dir_request.release(), PA_DIRECTORY_REQUEST);
-  launchpad_add_handle(lp, logger.release(), PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO));
+  fbl::Vector<fdio_spawn_action_t> actions;
+
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_SET_NAME,
+    .name = {.data = name},
+  });
+
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_DIRECTORY_REQUEST, .handle = dir_request.release()},
+  });
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO), .handle = logger.release()},
+  });
 
   // Remove once svchost hosts the fuchsia.tracing.provider service itself.
-  launchpad_add_handle(lp, appmgr_svc.release(), PA_HND(PA_USER0, 0));
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_USER0, 0), .handle = appmgr_svc.release()},
+  });
 
   // Give svchost a restricted root job handle. svchost is already a privileged system service
   // as it controls system-wide process launching. With the root job it can consolidate a few
   // services such as crashsvc and the profile service.
-  launchpad_add_handle(lp, root_job_copy.release(), PA_HND(PA_USER0, 1));
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_USER0, 1), .handle = root_job_copy.release()},
+  });
 
   // Also give svchost a restricted root resource handle, this allows it to run the kernel-debug
   // service.
   if (root_resource_copy.is_valid()) {
-    launchpad_add_handle(lp, root_resource_copy.release(), PA_HND(PA_USER0, 2));
+    actions.push_back((fdio_spawn_action_t){
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 2), .handle = root_resource_copy.release()},
+    });
   }
 
   // TODO(smklein): Merge "coordinator_client" (proxying requests to devmgr) and
@@ -695,44 +712,62 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
   // PseudoDirectory.
 
   // Add handle to channel to allow svchost to proxy fidl services to us.
-  launchpad_add_handle(lp, coordinator_client.release(), PA_HND(PA_USER0, 3));
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_USER0, 3), .handle = coordinator_client.release()},
+  });
 
   // Add a handle to allow svchost to proxy services to fshost.
-  launchpad_add_handle(lp, fshost_client.release(), PA_HND(PA_USER0, 4));
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_USER0, 4), .handle = fshost_client.release()},
+  });
   if (!coordinator->boot_args().GetBool("virtcon.disable", false)) {
     // Add handle to channel to allow svchost to proxy fidl services to
     // virtcon.
-    launchpad_add_handle(lp, virtcon_client.release(), PA_HND(PA_USER0, 5));
+    actions.push_back((fdio_spawn_action_t){
+      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+      .h = {.id = PA_HND(PA_USER0, 5), .handle = virtcon_client.release()},
+    });
   }
 
   // Add handle to channel to allow svchost to talk to miscsvc.
-  launchpad_add_handle(lp, miscsvc_svc.release(), PA_HND(PA_USER0, 6));
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_USER0, 6), .handle = miscsvc_svc.release()},
+  });
 
   // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
   // is hosted by component_manager and includes services routed from other components; see
   // "devcoordinator.cml".
-  launchpad_add_handle(lp, devcoordinator_svc.release(), PA_HND(PA_USER0, 7));
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_USER0, 7), .handle = devcoordinator_svc.release()},
+  });
 
   // Add handle to channel to allow svchost to talk to device_name_provider.
-  launchpad_add_handle(lp, device_name_provider_svc.release(), PA_HND(PA_USER0, 8));
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+    .h = {.id = PA_HND(PA_USER0, 8), .handle = device_name_provider_svc.release()},
+  });
 
   // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
   // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
-  const char* nametable[1] = {};
-  uint32_t count = 0;
   zx::channel fs_handle = devmgr::fs_clone("dev/class/sysmem");
-  if (fs_handle.is_valid()) {
-    nametable[count] = "/sysmem";
-    launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
-  } else {
-    launchpad_abort(lp, ZX_ERR_BAD_STATE, "devcoordinator: failed to clone /dev/class/sysmem");
-    // The launchpad_go() call below will fail, but will still free lp.
+  if (!fs_handle.is_valid()) {
+    printf("devcoordinator: failed to clone /dev/class/sysmem\n");
+    return ZX_ERR_BAD_STATE;
   }
+  actions.push_back((fdio_spawn_action_t){
+    .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+    .ns = {.prefix = "/sysmem", .handle = fs_handle.release()},
+  });
 
-  launchpad_set_nametable(lp, count, nametable);
-
-  const char* errmsg = nullptr;
-  if ((status = launchpad_go(lp, nullptr, &errmsg)) != ZX_OK) {
+  char errmsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  zx_handle_t proc = ZX_HANDLE_INVALID;
+  status = fdio_spawn_etc(svc_job_copy.get(), FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC,
+                          argv[0], argv, NULL, actions.size(), actions.data(), &proc, errmsg);
+  if (status != ZX_OK) {
     printf("devcoordinator: launch %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
     return status;
   } else {
@@ -783,13 +818,7 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
   // pass VDSO VMOS to fshost
   for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
     uint32_t type = PA_HND(PA_VMO_VDSO, m);
-    if (m == 0) {
-      // By this point, launchpad has already moved PA_HND(PA_VMO_VDSO, 0) into a static.
-      handles[n] = ZX_HANDLE_INVALID;
-      launchpad_get_vdso_vmo(&handles[n]);
-    } else {
-      handles[n] = zx_take_startup_handle(type);
-    }
+    handles[n] = zx_take_startup_handle(type);
 
     if (handles[n] != ZX_HANDLE_INVALID) {
       types[n++] = type;

@@ -22,12 +22,10 @@ library("launchpad") {
     ":*",
     "test:*",
     "$zx/system/core/bootsvc:*",
+    "$zx/system/ulib:*",
 
     # Do not add anymore targets to this list.
     # Instead of launchpad, use fdio_spawn or fuchsia.process.Launcher.
-    "$zx/system/core/devmgr/devcoordinator:*",
-    "$zx/system/core/devmgr/shared:*",
-    "$zx/system/ulib:*",
     "$zx/system/ulib/elf-search/test:*",
   ]
 }
