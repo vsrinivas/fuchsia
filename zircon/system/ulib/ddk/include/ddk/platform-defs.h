@@ -261,6 +261,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AS370_DHUB          6
 #define PDEV_DID_AS370_POWER         7
 #define PDEV_DID_AS370_THERMAL       8
+#define PDEV_DID_AS370_TOUCH         9
 
 // Maxim
 #define PDEV_VID_MAXIM              21

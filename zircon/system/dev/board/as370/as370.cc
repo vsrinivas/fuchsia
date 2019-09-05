@@ -81,10 +81,17 @@ int As370::Thread() {
     zxlogf(ERROR, "%s: AudioInit() failed\n", __func__);
     // In case of error report it and keep going.
   }
+
   if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_VISALIA) {
     if (LightInit() != ZX_OK) {
+      zxlogf(ERROR, "%s: LightInit() failed\n", __func__);
+    }
+
+    if (TouchInit() != ZX_OK) {
+      zxlogf(ERROR, "%s: TouchInit() failed\n", __func__);
     }
   }
+
   if (NandInit() != ZX_OK) {
     zxlogf(ERROR, "%s: NandInit() failed\n", __func__);
   }

@@ -43,6 +43,7 @@ class As370 : public ddk::Device<As370> {
   zx_status_t NandInit();
   zx_status_t PowerInit();
   zx_status_t ThermalInit();
+  zx_status_t TouchInit();
 
   const ddk::PBusProtocolClient pbus_;
   const pdev_board_info_t board_info_;

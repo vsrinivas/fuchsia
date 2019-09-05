@@ -14,19 +14,18 @@
 namespace board_as370 {
 
 zx_status_t As370::LightInit() {
-  // setup LED reset pin
+  // setup LED/Touch reset pin
   auto status = gpio_impl_.SetAltFunction(4, 0);  // 0 - GPIO mode
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GPIO SetAltFunction failed: %d\n", __func__, status);
     return status;
   }
 
-  // Initialize LED device
-  status = gpio_impl_.Write(4, 1);  // Initialize device
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GPIO Write failed: %d\n", __func__, status);
-    return status;
-  }
+  // Reset LED/Touch device
+  // Note: GPIO is shared between LED and Touch. Hence reset is done only here.
+  gpio_impl_.Write(4, 1);
+  gpio_impl_.Write(4, 0);
+  gpio_impl_.Write(4, 1);
 
   // Composite binding rules for TI LED driver.
   static const zx_bind_inst_t root_match[] = {

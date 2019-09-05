@@ -9,6 +9,7 @@ library("hid") {
     "hid/ambient-light.h",
     "hid/boot.h",
     "hid/buttons.h",
+    "hid/visalia-touch.h",
     "hid/descriptor.h",
     "hid/egalax.h",
     "hid/eyoyo.h",
@@ -27,6 +28,7 @@ library("hid") {
     "bma253.c",
     "boot.c",
     "buttons.c",
+    "visalia-touch.c",
     "egalax.c",
     "eyoyo.c",
     "ft3x27.c",
@@ -42,6 +44,7 @@ library("hid") {
   deps = [
     "$zx/system/fidl/fuchsia-hardware-input:c",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
     "$zx/system/ulib/zircon",
   ]
 }

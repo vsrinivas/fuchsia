@@ -389,6 +389,10 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
       "power/as370-power",
       "power/as370-power/power-0",
       "class/thermal/000",
+      "lp5018-light",
+      "lp5018-light/lp50xx-light",
+      "as370-touch",
+      "as370-touch/cy8cmbr3108",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

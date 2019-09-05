@@ -5,6 +5,7 @@
 group("input") {
   deps = [
     "bma253",
+    "cypress",
     "focaltech",
     "goodix",
     "hid",

@@ -110,6 +110,14 @@ zx_status_t As370::I2cInit() {
           .pid = 0,
           .did = 0,
       },
+      /* Cypress touch sensor */
+      {
+          .bus_id = 0,
+          .address = 0x37,
+          .vid = 0,
+          .pid = 0,
+          .did = 0,
+      },
   };
 
   const pbus_metadata_t synaptics_i2c_metadata[] = {
