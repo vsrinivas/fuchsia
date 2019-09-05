@@ -15,6 +15,13 @@ group("tools") {
   ]
 }
 
+group("infratools") {
+  testonly = true
+  public_deps = [
+    "//tools:infratools",
+  ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [

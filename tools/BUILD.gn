@@ -6,9 +6,17 @@ group("tools") {
   testonly = true
 
   public_deps = [
+    ":infratools",
     "//tools/fidl/fidldoc",
     "//tools/fidlcat:fidlcat_host",
     "//tools/kazoo:kazoo_host",
+  ]
+}
+
+group("infratools") {
+  testonly = true
+
+  public_deps = [
     "//tools/size_checker/cmd:size_checker($host_toolchain)",
   ]
 }
