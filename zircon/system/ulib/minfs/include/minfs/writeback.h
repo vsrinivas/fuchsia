@@ -92,7 +92,7 @@ class WritebackWork : public WriteTxn,
 // inode table, as well as the Vnode block count and inode size may in the near future be modified
 // asynchronously. Since these modifications require a Transaction to be in progress, this lock
 // will protect against multiple simultaneous writes to these structures.
-class Transaction : public PendingWork {
+class Transaction final : public PendingWork {
  public:
   static zx_status_t Create(TransactionalFs* minfs, size_t reserve_inodes, size_t reserve_blocks,
                             InodeManager* inode_manager, Allocator* block_allocator,
