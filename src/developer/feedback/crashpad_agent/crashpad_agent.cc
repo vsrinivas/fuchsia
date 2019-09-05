@@ -127,6 +127,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
   // settings.
   database->GetSettings()->SetUploadsEnabled(config.crash_server.enable_upload);
 
+  inspect_manager->ExposeConfig(config);
+
   return std::unique_ptr<CrashpadAgent>(
       new CrashpadAgent(dispatcher, std::move(services), std::move(config), std::move(database),
                         std::move(crash_server), inspect_manager));

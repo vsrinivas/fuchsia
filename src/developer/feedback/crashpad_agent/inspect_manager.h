@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
@@ -45,6 +46,9 @@ class InspectManager {
   // Adds a new entry to the crash-list of a program, and returns it.
   Report* AddReport(const std::string& program_name, const crashpad::UUID& local_report_id);
 
+  // Records the configuration file of the CrashpadAgent.
+  void ExposeConfig(const fuchsia::crash::Config& config);
+
  private:
   // Inspect node containing a list of reports.
   struct ReportList {
@@ -52,9 +56,40 @@ class InspectManager {
     std::vector<Report> reports;
   };
 
+  // Inspect node containing the configuration file.
+  struct Config {
+    // Inspect node containing the database configuration.
+    struct CrashpadDatabaseConfig {
+      ::inspect_deprecated::Node node;
+      ::inspect_deprecated::StringProperty path;
+      ::inspect_deprecated::UIntMetric max_size_in_kb;
+    };
+
+    // Inspect node containing the crash server configuration.
+    struct CrashServerConfig {
+      ::inspect_deprecated::Node node;
+      ::inspect_deprecated::StringProperty enable_upload;
+      ::inspect_deprecated::StringProperty url;
+    };
+
+    ::inspect_deprecated::Node node;
+
+    CrashpadDatabaseConfig crashpad_database;
+    CrashServerConfig crash_server;
+    ::inspect_deprecated::UIntMetric feedback_data_collection_timeout_in_milliseconds;
+  };
+
+  // Inspect node pointing to the list of reports.
+  struct Reports {
+    ::inspect_deprecated::Node node;
+    // Maps program names to a list of |Report| nodes.
+    std::map<std::string, ReportList> report_lists;
+  };
+
   ::inspect_deprecated::Node* root_node_ = nullptr;
-  // Maps program names to a list of |Report| nodes.
-  std::map<std::string, ReportList> report_lists_;
+
+  Config config_;
+  Reports crash_reports_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };

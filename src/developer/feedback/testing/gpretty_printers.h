@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_GPRETTY_PRINTERS_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/inspect/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/mem/formatting.h>
@@ -71,6 +72,18 @@ void PrintTo(const Buffer& vmo, std::ostream* os) {
 }
 
 }  // namespace mem
+
+namespace inspect {
+
+// Pretty-prints Property in gTest matchers instead of the default byte string in case of failed
+// expectations.
+void PrintTo(const Property& property, std::ostream* os) {
+  *os << fostr::Indent;
+  *os << fostr::NewLine << "key: " << property.key;
+  *os << fostr::NewLine << "value: " << property.value.str();
+  *os << fostr::Outdent;
+}
+} // namespace inspect
 }  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_GPRETTY_PRINTERS_H_

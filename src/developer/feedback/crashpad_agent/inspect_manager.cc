@@ -7,6 +7,7 @@
 #include <map>
 #include <utility>
 
+#include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/lib/fxl/logging.h"
 
 namespace fuchsia {
@@ -37,23 +38,51 @@ void InspectManager::Report::MarkUploaded(std::string server_id) {
       server_node_.CreateStringProperty("creation_time", GetCurrentTimeString());
 }
 
-InspectManager::InspectManager(::inspect_deprecated::Node* root_node) : root_node_(root_node) {}
+InspectManager::InspectManager(::inspect_deprecated::Node* root_node) : root_node_(root_node) {
+  config_.node = root_node->CreateChild(kInspectConfigName);
+  crash_reports_.node = root_node_->CreateChild(kInspectReportsName);
+}
 
 InspectManager::Report* InspectManager::AddReport(const std::string& program_name,
                                                   const crashpad::UUID& local_report_id) {
   // Find or create a Node for this program.
   InspectManager::ReportList* report_list;
-  auto it = report_lists_.find(program_name);
-  if (it != report_lists_.end()) {
+  auto* report_lists = &crash_reports_.report_lists;
+  auto it = report_lists->find(program_name);
+  if (it != report_lists->end()) {
     report_list = &it->second;
   } else {
-    report_lists_[program_name].node = root_node_->CreateChild(program_name);
-    report_list = &report_lists_[program_name];
+    (*report_lists)[program_name].node = crash_reports_.node.CreateChild(program_name);
+    report_list = &(*report_lists)[program_name];
   }
 
   // Create a new Report object and return it.
   report_list->reports.push_back(Report(&report_list->node, local_report_id));
   return &report_list->reports.back();
+}
+
+void InspectManager::ExposeConfig(const fuchsia::crash::Config& config) {
+  auto* crashpad_database = &config_.crashpad_database;
+  auto* crash_server = &config_.crash_server;
+
+  crashpad_database->node = config_.node.CreateChild(kCrashpadDatabaseKey);
+  crashpad_database->path =
+      config_.crashpad_database.node.CreateStringProperty(kCrashpadDatabasePathKey, config.crashpad_database.path);
+  crashpad_database->max_size_in_kb = crashpad_database->node.CreateUIntMetric(
+      kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
+
+  crash_server->node = config_.node.CreateChild(kCrashServerKey);
+  crash_server->enable_upload = crash_server->node.CreateStringProperty(
+      kCrashServerEnableUploadKey, (config.crash_server.enable_upload ? "true" : "false"));
+
+  if (config.crash_server.enable_upload) {
+    crash_server->url =
+        crash_server->node.CreateStringProperty(kCrashServerUrlKey, *config.crash_server.url.get());
+  }
+
+  config_.feedback_data_collection_timeout_in_milliseconds =
+      config_.node.CreateUIntMetric(kFeedbackDataCollectionTimeoutInSecondsKey,
+                                    config.feedback_data_collection_timeout_in_milliseconds);
 }
 
 }  // namespace crash

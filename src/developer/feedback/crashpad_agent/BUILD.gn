@@ -109,6 +109,7 @@ source_set("src") {
   ]
 
   deps = [
+    ":constants",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/syslog/cpp",
     "//third_party/crashpad/handler",
@@ -122,6 +123,14 @@ source_set("src") {
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
   ]
+}
+
+source_set("constants") {
+  sources = [
+    "constants.h",
+  ]
+
+  visibility = [ "//src/developer/feedback/crashpad_agent/*" ]
 }
 
 config_data("upload_to_prod_server_config") {

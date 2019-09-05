@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 
+#include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/lib/files/file.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/error/en.h"
@@ -62,15 +63,6 @@ const char kSchema[] = R"({
   ],
   "additionalProperties": false
 })";
-
-const char kCrashpadDatabaseKey[] = "crashpad_database";
-const char kCrashpadDatabasePathKey[] = "path";
-const char kCrashpadDatabaseMaxSizeInKbKey[] = "max_size_in_kb";
-const char kCrashServerKey[] = "crash_server";
-const char kCrashServerEnableUploadKey[] = "enable_upload";
-const char kCrashServerUrlKey[] = "url";
-const char kFeedbackDataCollectionTimeoutInSecondsKey[] =
-    "feedback_data_collection_timeout_in_milliseconds";
 
 bool CheckAgainstSchema(rapidjson::Document& doc) {
   // Check that the schema is actually valid.

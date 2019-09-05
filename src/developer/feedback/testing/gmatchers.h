@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_GMATCHERS_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include <string>
@@ -57,6 +58,22 @@ bool DoAnnotationMatch(const fuchsia::feedback::Annotation& actual, const std::s
 }
 
 template <typename ResultListenerT>
+bool DoPropertyMatch(const fuchsia::inspect::Property& actual, const std::string& expected_key,
+                     const std::string& expected_value, ResultListenerT* result_listener) {
+  if (actual.key != expected_key) {
+    *result_listener << "Expected key " << expected_key << ", got " << actual.key;
+    return false;
+  }
+
+  if (actual.value.str().compare(expected_value) != 0) {
+    *result_listener << "Expected value " << expected_value << ", got " << actual.value.str();
+    return false;
+  }
+
+  return true;
+}
+
+template <typename ResultListenerT>
 bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual, const std::string& expected,
                          ResultListenerT* result_listener) {
   std::string actual_value;
@@ -94,6 +111,14 @@ MATCHER_P2(MatchesAnnotation, expected_key, expected_value,
            "matches an annotation with key '" + std::string(expected_key) + "' and value '" +
                std::string(expected_value) + "'") {
   return internal::DoAnnotationMatch(arg, expected_key, expected_value, result_listener);
+}
+
+// Returns true if gMock |arg|.key matches |expected_key| and |arg.value.str()| matches
+// |expected_value|, assuming two fuchsia::inspect::Property objects.
+MATCHER_P2(MatchesProperty, expected_key, expected_value,
+           "matches a property with key '" + std::string(expected_key) + "' and value '" +
+               std::string(expected_value) + "'") {
+  return internal::DoPropertyMatch(arg, expected_key, expected_value, result_listener);
 }
 
 // Returns true if gMock str(|arg|) matches |expected|.
