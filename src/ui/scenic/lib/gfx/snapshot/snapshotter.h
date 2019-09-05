@@ -39,7 +39,7 @@ class Snapshotter : public ResourceVisitor {
  protected:
   void Visit(Memory* r) override;
   void Visit(Image* r) override;
-  void Visit(ImagePipe* r) override;
+  void Visit(ImagePipeBase* r) override;
   void Visit(Buffer* r) override;
   void Visit(View* r) override;
   void Visit(ViewNode* r) override;

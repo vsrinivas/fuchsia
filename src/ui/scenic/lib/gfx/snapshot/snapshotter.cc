@@ -18,7 +18,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
+#include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
 #include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
@@ -197,7 +197,7 @@ void Snapshotter::Visit(Image* r) {
   VisitResource(r);
 }
 
-void Snapshotter::Snapshotter::Visit(ImagePipe* r) {
+void Snapshotter::Snapshotter::Visit(ImagePipeBase* r) {
   VisitImage(r->GetEscherImage());
   VisitResource(r);
 }

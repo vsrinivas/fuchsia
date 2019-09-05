@@ -21,7 +21,7 @@ const ResourceTypeInfo ImagePipe::kTypeInfo = {ResourceType::kImagePipe | Resour
 ImagePipe::ImagePipe(Session* session, ResourceId id,
                      std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
                      std::shared_ptr<ErrorReporter> error_reporter)
-    : ImageBase(session, id, ImagePipe::kTypeInfo),
+    : ImagePipeBase(session, id, ImagePipe::kTypeInfo),
       image_pipe_updater_(std::move(image_pipe_updater)),
       error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
@@ -33,7 +33,7 @@ ImagePipe::ImagePipe(Session* session, ResourceId id,
                      fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
                      std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
                      std::shared_ptr<ErrorReporter> error_reporter)
-    : ImageBase(session, id, ImagePipe::kTypeInfo),
+    : ImagePipeBase(session, id, ImagePipe::kTypeInfo),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
       image_pipe_updater_(std::move(image_pipe_updater)),
       error_reporter_(std::move(error_reporter)),
@@ -87,7 +87,7 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.clear();
 
   // Schedule a new frame.
-  image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), ImagePipePtr());
+  image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>());
 }
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
@@ -138,8 +138,7 @@ void ImagePipe::PresentImage(uint32_t image_id, zx::time presentation_time,
   acquire_fences_listener->WaitReadyAsync(
       [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
         if (weak) {
-          weak->image_pipe_updater_->ScheduleImagePipeUpdate(presentation_time,
-                                                             ImagePipePtr(weak.get()));
+          weak->image_pipe_updater_->ScheduleImagePipeUpdate(presentation_time, weak);
         }
       });
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image_to_update", image_id);

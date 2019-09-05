@@ -12,7 +12,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
 #include "src/ui/scenic/lib/gfx/resources/host_image.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
+#include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
 #include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
@@ -44,7 +44,7 @@ void GpuImage::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void HostImage::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void ImagePipe::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
+void ImagePipeBase::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void View::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 

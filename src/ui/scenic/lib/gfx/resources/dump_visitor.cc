@@ -13,7 +13,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
+#include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
 #include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
@@ -82,7 +82,7 @@ void DumpVisitor::Visit(Buffer* r) {
   EndItem();
 }
 
-void DumpVisitor::Visit(ImagePipe* r) {
+void DumpVisitor::Visit(ImagePipeBase* r) {
   BeginItem("ImagePipe", r);
   if (r->GetEscherImage()) {
     VisitEscherImage(r->GetEscherImage().get());
