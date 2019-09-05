@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <dirent.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <limits.h>
 #include <errno.h>
-#include <threads.h>
-
-#include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
+#include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+#include <unistd.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 
 static constexpr const char kDriverTestDir[] = "/boot/driver/test";
 static constexpr const char kBindFailDriver[] = "bind-fail-test.so";
@@ -170,7 +170,6 @@ int output_thread(void* arg) {
 
 int main(int argc, char** argv) {
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.use_system_svchost = true;
 
   IsolatedDevmgr devmgr;
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);

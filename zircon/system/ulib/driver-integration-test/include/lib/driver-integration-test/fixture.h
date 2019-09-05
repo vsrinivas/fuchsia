@@ -4,11 +4,12 @@
 
 #pragma once
 
+#include <lib/devmgr-integration-test/fixture.h>
+
 #include <ddk/metadata/test.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <lib/devmgr-integration-test/fixture.h>
 
 namespace driver_integration_test {
 
@@ -24,14 +25,10 @@ class IsolatedDevmgr {
     // specifies specific drivers rather than entire directories.
     fbl::Vector<const char*> load_drivers;
     // A list of path prefixes and channels to add to the isolated devmgr's namespace. Note that
-    // /boot is always forwarded from the parent namespace, and /svc will be forwarded if
-    // |use_system_svchost| is true. This argument may be used to allow the isolated devmgr
-    // access to drivers from /system/drivers.
+    // /boot is always forwarded from the parent namespace, and a /svc is always provided that
+    // forwards fuchsia.process.Launcher from the parent namespace. This argument may be used to
+    // allow the isolated devmgr access to drivers from /system/drivers.
     std::vector<std::pair<const char*, zx::channel>> flat_namespace;
-    // Whether or not to use default system /svc or to create a new one.
-    // Only when this is true, the default outgoing services are available.
-    // in IsolatedDevMgr environment.
-    bool use_system_svchost = true;
     // A list of vid/pid/did triplets to spawn in their own devhosts.
     fbl::Vector<board_test::DeviceEntry> device_list;
     // A list of kernel cmdline arguments to pass to the devmgr process.
@@ -53,6 +50,7 @@ class IsolatedDevmgr {
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
 
   const zx::channel& svc_root_dir() const { return devmgr_.svc_root_dir(); }
+
  private:
   devmgr_integration_test::IsolatedDevmgr devmgr_;
 };

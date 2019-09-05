@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/manager/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/vmo.h>
-#include <fuchsia/device/manager/c/fidl.h>
 #include <zircon/device/vfs.h>
+
 #include <zxtest/zxtest.h>
 
 namespace devmgr_integration_test {
@@ -58,7 +59,6 @@ TEST(LauncherTest, OutgoingServices) {
   devmgr_launcher::Args args;
   args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
   args.driver_search_paths.push_back("/boot/driver");
-  args.use_system_svchost = true;
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -73,7 +73,7 @@ TEST(LauncherTest, OutgoingServices) {
 
   zx::vmo debug_vmo;
   zx_handle_t vmo_dup;
-  size_t vmo_size = 512*512;
+  size_t vmo_size = 512 * 512;
   ASSERT_OK(zx::vmo::create(vmo_size, 0, &debug_vmo));
   ASSERT_OK(zx_handle_duplicate(debug_vmo.get(), ZX_RIGHTS_IO | ZX_RIGHT_TRANSFER, &vmo_dup));
   zx_status_t call_status = ZX_OK;

@@ -7,7 +7,6 @@ test_driver("ddk-test") {
     "ddk-test-binding.c",
     "ddk-test.c",
     "metadata-test.c",
-    "svc-test.cc",
     "usb-request-test.c",
   ]
   deps = [
@@ -16,8 +15,6 @@ test_driver("ddk-test") {
     "$zx/system/banjo/ddk.protocol.usb.request",
     "$zx/system/dev/lib/fake-bti",
     "$zx/system/dev/lib/usb",
-    "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/fidl/fuchsia-scheduler:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/sync",

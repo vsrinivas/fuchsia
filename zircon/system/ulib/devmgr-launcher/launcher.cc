@@ -3,11 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/devmgr-launcher/launch.h>
-
-#include <stdint.h>
-#include <utility>
-
-#include <fbl/algorithm.h>
+#include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -16,12 +12,15 @@
 #include <lib/fdio/spawn.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
+#include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include <lib/devmgr-launcher/processargs.h>
+#include <utility>
+
+#include <fbl/algorithm.h>
 
 namespace {
 
@@ -31,7 +30,7 @@ constexpr const char* kDevmgrPath = "/boot/bin/devcoordinator";
 
 namespace devmgr_launcher {
 
-zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root,
+zx_status_t Launch(Args args, zx::channel svc_client, zx::job* devmgr_job, zx::channel* devfs_root,
                    zx::channel* outgoing_services_root) {
   // Create containing job (and copy to send to devmgr)
   zx::job job, job_copy;
@@ -42,21 +41,6 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root,
   status = job.duplicate(ZX_RIGHT_SAME_RIGHTS, &job_copy);
   if (status != ZX_OK) {
     return status;
-  }
-
-  // Create a new client to /svc to maybe give to devmgr
-  zx::channel svc_client;
-  {
-    zx::channel svc_server;
-    status = zx::channel::create(0, &svc_client, &svc_server);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    status = fdio_open("/svc", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, svc_server.release());
-    if (status != ZX_OK) {
-      return status;
-    }
   }
 
   // Create channel to connect to devfs
@@ -77,6 +61,7 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root,
 
   fbl::Vector<const char*> argv;
   argv.push_back(kDevmgrPath);
+  argv.push_back("--no-start-svchost");
   for (const char* path : args.driver_search_paths) {
     argv.push_back("--driver-search-path");
     argv.push_back(path);
@@ -88,9 +73,6 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root,
   if (args.sys_device_driver != nullptr) {
     argv.push_back("--sys-device-driver");
     argv.push_back(args.sys_device_driver);
-  }
-  if (args.use_system_svchost) {
-    argv.push_back("--use-system-svchost");
   }
   if (args.disable_block_watcher) {
     argv.push_back("--disable-block-watcher");
@@ -131,12 +113,10 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root,
       .dir = {.prefix = "/boot"},
   });
 
-  if (args.use_system_svchost) {
-    actions.push_back(fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-        .ns = {.prefix = "/svc", .handle = svc_client.release()},
-    });
-  }
+  actions.push_back(fdio_spawn_action_t{
+      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+      .ns = {.prefix = "/svc", .handle = svc_client.release()},
+  });
 
   if (!clone_stdio) {
     actions.push_back(fdio_spawn_action_t{

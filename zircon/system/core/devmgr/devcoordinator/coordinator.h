@@ -80,9 +80,9 @@ struct DevmgrArgs {
   // Use this driver as the sys_device driver.  If nullptr, the default will
   // be used.
   const char* sys_device_driver = nullptr;
-  // Select whether to launch a new svchost or to just use the system provided
-  // /svc directory.
-  bool use_system_svchost = false;
+  // Select whether to launch a new svchost process, or to use the /svc provided through the
+  // namespace when launching subprocesses (only used in integration tests).
+  bool start_svchost = true;
   // Disables the block watcher if set to true. This can be used for testing purposes,
   // where it is not necessary to have the block watcher running.
   bool disable_block_watcher = false;

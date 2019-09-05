@@ -60,10 +60,10 @@
 
 namespace {
 
-constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
-constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
-constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
-constexpr char kRootResourcePath[] = "/bootsvc/" fuchsia_boot_RootResource_Name;
+constexpr char kArgumentsPath[] = "/svc/" fuchsia_boot_Arguments_Name;
+constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
+constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
+constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 
 struct GlobalHandles {
   // The handle used to transmit messages to appmgr.
@@ -332,7 +332,7 @@ int console_starter(void* arg) {
 
   const char* device = boot_args.Get("console.path");
   if (device == nullptr) {
-    device = "/bootsvc/fuchsia.hardware.pty.Device";
+    device = "/svc/fuchsia.hardware.pty.Device";
   }
 
   const char* envp[] = {
@@ -640,15 +640,16 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
     }
   }
 
-  zx::channel bootsvc_svc;
+  zx::channel devcoordinator_svc;
   {
-    zx::channel bootsvc_svc_req;
-    status = zx::channel::create(0, &bootsvc_svc_req, &bootsvc_svc);
+    zx::channel devcoordinator_svc_req;
+    status = zx::channel::create(0, &devcoordinator_svc_req, &devcoordinator_svc);
     if (status != ZX_OK) {
       return status;
     }
 
-    status = fdio_service_connect("/bootsvc", bootsvc_svc_req.release());
+    // This connects to the /svc in devcoordinator's namespace.
+    status = fdio_service_connect("/svc", devcoordinator_svc_req.release());
     if (status != ZX_OK) {
       return status;
     }
@@ -707,8 +708,10 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
   // Add handle to channel to allow svchost to talk to miscsvc.
   launchpad_add_handle(lp, miscsvc_svc.release(), PA_HND(PA_USER0, 6));
 
-  // Add handle to channel to allow svchost to talk to bootsvc.
-  launchpad_add_handle(lp, bootsvc_svc.release(), PA_HND(PA_USER0, 7));
+  // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
+  // is hosted by component_manager and includes services routed from other components; see
+  // "devcoordinator.cml".
+  launchpad_add_handle(lp, devcoordinator_svc.release(), PA_HND(PA_USER0, 7));
 
   // Add handle to channel to allow svchost to talk to device_name_provider.
   launchpad_add_handle(lp, device_name_provider_svc.release(), PA_HND(PA_USER0, 8));
@@ -824,7 +827,7 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
 }
 
 void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
-                     bool needs_svc_mount, zx::channel fshost_server) {
+                     zx::channel fshost_server) {
   fdio_ns_t* ns;
   zx_status_t r;
   r = fdio_ns_get_installed(&ns);
@@ -832,12 +835,6 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs&
   r = fdio_ns_bind(ns, "/dev", devmgr::fs_clone("dev").release());
   ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot bind /dev to namespace: %s\n",
                 zx_status_get_string(r));
-
-  if (needs_svc_mount) {
-    r = fdio_ns_bind(ns, "/svc", devmgr::fs_clone("svc").release());
-    ZX_ASSERT_MSG(r == ZX_OK, "devcoordinator: cannot bind /svc to namespace: %s\n",
-                  zx_status_get_string(r));
-  }
 
   // Start fshost before binding /system, since it publishes it.
   fshost_start(coordinator, devmgr_args, std::move(fshost_server));
@@ -955,8 +952,8 @@ int service_starter(void* arg) {
       args[3] = "--run";
       args[4] = vcmd.data();
     }
-    devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", args, env.data(), -1, handles, types,
-                          handle_count, nullptr, FS_ALL);
+    devmgr::devmgr_launch(g_handles.svc_job, "virtual-console", args, env.data(), -1, handles,
+                          types, handle_count, nullptr, FS_ALL);
   }
 
   const char* backstop = coordinator->boot_args().Get("clock.backstop");
@@ -982,7 +979,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
     kDriverSearchPath,
     kLoadDriver,
     kSysDeviceDriver,
-    kUseSystemSvchost,
+    kNoStartSvchost,
     kDisableBlockWatcher,
     kDisableNetsvc,
   };
@@ -990,7 +987,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
       {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
       {"load-driver", required_argument, nullptr, kLoadDriver},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
-      {"use-system-svchost", no_argument, nullptr, kUseSystemSvchost},
+      {"no-start-svchost", no_argument, nullptr, kNoStartSvchost},
       {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
       {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
   };
@@ -1026,8 +1023,8 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         check_not_duplicated(out->sys_device_driver);
         out->sys_device_driver = optarg;
         break;
-      case kUseSystemSvchost:
-        out->use_system_svchost = true;
+      case kNoStartSvchost:
+        out->start_svchost = false;
         break;
       case kDisableBlockWatcher:
         out->disable_block_watcher = true;
@@ -1226,7 +1223,21 @@ int main(int argc, char** argv) {
   zx::channel::create(0, &g_handles.device_name_provider_client,
                       &g_handles.device_name_provider_server);
 
-  if (devmgr_args.use_system_svchost) {
+  if (devmgr_args.start_svchost) {
+    status = StartSvchost(root_job, require_system, &coordinator, std::move(fshost_client));
+    if (status != ZX_OK) {
+      fprintf(stderr, "devcoordinator: failed to start svchost: %s\n",
+              zx_status_get_string(status));
+      return 1;
+    }
+  } else {
+    // This path is only used in integration tests that start an "isolated" devmgr/devcoordinator.
+    // Rather than start another svchost process - which won't work for a couple reasons - we
+    // clone the /svc in devcoordinator's namespace when devcoordinator launches other processes.
+    // This may or may not work well, depending on the services those processes require and whether
+    // they happen to be in the /svc exposed to this test instance of devcoordinator.
+    // TODO(bryanhenry): This can go away once we move the processes devcoordinator spawns today out
+    // into separate components.
     zx::channel dir_request;
     zx_status_t status = zx::channel::create(0, &dir_request, &g_handles.svchost_outgoing);
     if (status != ZX_OK) {
@@ -1238,29 +1249,22 @@ int main(int argc, char** argv) {
       fprintf(stderr, "devcoordinator: failed to connect to /svc\n");
       return 1;
     }
-    // Check if whatever launched devcoordinator gave a channel to be connected to the
-    // outgoing services directory. This is for use in tests to let the test environment see
-    // outgoing services.
-    zx::channel
-        outgoing_svc_dir_client(zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND));
-    if (outgoing_svc_dir_client.is_valid()) {
-      status = coordinator.BindOutgoingServices(std::move(outgoing_svc_dir_client));
-      if (status != ZX_OK) {
-        fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
-        return 1;
-      }
-    }
-  } else {
-    status = StartSvchost(root_job, require_system, &coordinator, std::move(fshost_client));
+  }
+
+  // Check if whatever launched devcoordinator gave a channel to be connected to the
+  // outgoing services directory. This is for use in tests to let the test environment see
+  // outgoing services.
+  zx::channel outgoing_svc_dir_client(
+      zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND));
+  if (outgoing_svc_dir_client.is_valid()) {
+    status = coordinator.BindOutgoingServices(std::move(outgoing_svc_dir_client));
     if (status != ZX_OK) {
-      fprintf(stderr, "devcoordinator: failed to start svchost: %s\n",
-              zx_status_get_string(status));
+      fprintf(stderr, "devcoordinator: failed to bind outgoing services\n");
       return 1;
     }
   }
 
-  const bool needs_svc_mount = !devmgr_args.use_system_svchost;
-  devmgr_vfs_init(&coordinator, devmgr_args, needs_svc_mount, std::move(fshost_server));
+  devmgr_vfs_init(&coordinator, devmgr_args, std::move(fshost_server));
 
   // If this is not a full Fuchsia build, do not setup appmgr services, as
   // this will delay startup.

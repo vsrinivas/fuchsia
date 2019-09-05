@@ -62,8 +62,8 @@ constexpr uint32_t kIdHJobRoot = 4;
 
 constexpr char kBootFirmwarePath[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
-constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
-constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
+constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
+constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
 
 // TODO(jocelyndang): this can be removed once we switch to using the unbind tasks.
 constexpr bool kUseUnbindTasks = false;

@@ -104,7 +104,6 @@ int main(int argc, const char** argv) {
   args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
   args.disable_block_watcher = true;
   args.disable_netsvc = true;
-  args.use_system_svchost = true;
 
   std::string svc_name = "fuchsia.io.Directory";
   std::vector<std::string> wait;

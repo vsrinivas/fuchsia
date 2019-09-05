@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ramdevice-client/ramnand.h>
-
 #include <fcntl.h>
+#include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fzl/fdio.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-#include <lib/fzl/fdio.h>
-#include <zircon/types.h>
-
-#include <utility>
+#include <ramdevice-client/ramnand.h>
 
 namespace ramdevice_client {
 
@@ -29,7 +28,6 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
   args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   args.driver_search_paths.push_back("/boot/driver");
-  args.use_system_svchost = true;
   args.disable_block_watcher = true;
 
   devmgr_integration_test::IsolatedDevmgr devmgr;

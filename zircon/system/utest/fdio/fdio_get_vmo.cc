@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdlib>
-#include <fbl/unique_fd.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -15,8 +13,10 @@
 #include <zircon/limits.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <string>
 
+#include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -43,8 +43,8 @@ zx_status_t FileDescribe(void* ctx, fidl_txn_t* txn) {
   memset(&info, 0, sizeof(info));
   if (context->is_vmofile) {
     zx::vmo vmo;
-    zx_status_t status =
-        context->vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, &vmo);
+    zx_status_t status = context->vmo.duplicate(
+        ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHTS_PROPERTY, &vmo);
     if (status != ZX_OK) {
       return status;
     }

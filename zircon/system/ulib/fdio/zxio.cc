@@ -510,7 +510,7 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags, zx_handle_t*
         length != vmo_length) {
       return ZX_ERR_NOT_FOUND;
     }
-    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
+    zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
     rights |= (flags & fio::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & fio::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
     rights |= (flags & fio::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;

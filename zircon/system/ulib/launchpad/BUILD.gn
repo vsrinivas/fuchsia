@@ -29,6 +29,5 @@ library("launchpad") {
     "$zx/system/core/devmgr/shared:*",
     "$zx/system/ulib:*",
     "$zx/system/ulib/elf-search/test:*",
-    "$zx/system/ulib/process-launcher:*",
   ]
 }

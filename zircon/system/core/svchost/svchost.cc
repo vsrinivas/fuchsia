@@ -10,6 +10,7 @@
 #include <fuchsia/net/llcpp/fidl.h>
 #include <fuchsia/paver/c/fidl.h>
 #include <fuchsia/posix/socket/llcpp/fidl.h>
+#include <fuchsia/process/c/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -19,7 +20,6 @@
 #include <lib/kernel-debug/kernel-debug.h>
 #include <lib/kernel-mexec/kernel-mexec.h>
 #include <lib/logger/provider.h>
-#include <lib/process-launcher/launcher.h>
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/job.h>
@@ -154,10 +154,17 @@ static constexpr const char* miscsvc_services[] = {
     nullptr,
 };
 
-// List of services which are re-routed to bootsvc.
-static constexpr const char* bootsvc_services[] = {
-    fuchsia_boot_FactoryItems_Name, fuchsia_boot_Items_Name,        fuchsia_boot_Log_Name,
-    fuchsia_boot_RootJob_Name,      fuchsia_boot_RootResource_Name, nullptr,
+// List of services which are re-routed to devcoodinator's /svc.
+// TODO: When svchost becomes a standalone v2 component, these will be provided through its own
+// namespace instead.
+static constexpr const char* devcoodinator_services[] = {
+    fuchsia_boot_FactoryItems_Name,
+    fuchsia_boot_Items_Name,
+    fuchsia_boot_Log_Name,
+    fuchsia_boot_RootJob_Name,
+    fuchsia_boot_RootResource_Name,
+    fuchsia_process_Launcher_Name,
+    nullptr,
 };
 
 // List of services which are re-routed to devmgr.
@@ -256,7 +263,7 @@ int main(int argc, char** argv) {
   zx::channel fshost_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 4)));
   zx::channel virtcon_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 5)));
   zx::channel miscsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 6)));
-  zx::channel bootsvc_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
+  zx::channel devcoordinator_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 7)));
   zx::channel device_name_provider_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 8)));
 
   zx_status_t status = outgoing.ServeFromStartupInfo();
@@ -280,7 +287,6 @@ int main(int argc, char** argv) {
   };
 
   zx_service_provider_instance_t service_providers[] = {
-      {.provider = launcher_get_service_provider(), .ctx = nullptr},
       {.provider = sysmem2_get_service_provider(), .ctx = nullptr},
       {.provider = kernel_debug_get_service_provider(),
        .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource))},
@@ -314,7 +320,8 @@ int main(int argc, char** argv) {
   publish_services(outgoing.svc_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
   publish_services(outgoing.svc_dir(), fshost_services, zx::unowned_channel(fshost_svc));
   publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
-  publish_services(outgoing.svc_dir(), bootsvc_services, zx::unowned_channel(bootsvc_svc));
+  publish_services(outgoing.svc_dir(), devcoodinator_services,
+                   zx::unowned_channel(devcoordinator_svc));
   publish_services(outgoing.svc_dir(), devmgr_services, zx::unowned_channel(devmgr_proxy_channel));
   publish_service(outgoing.svc_dir(), fuchsia_device_NameProvider_Name,
                   zx::unowned_channel(device_name_provider_svc));

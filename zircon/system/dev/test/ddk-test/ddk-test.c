@@ -16,7 +16,6 @@
 #include <unittest/unittest.h>
 
 extern struct test_case_element* test_case_ddk_metadata;
-extern struct test_case_element* test_case_ddk_svc;
 extern struct test_case_element* test_case_ddk_usb_request;
 
 zx_device_t* ddk_test_dev;
@@ -53,7 +52,6 @@ static zx_status_t ddk_test_func(void* cookie, test_report_t* report) {
 
   memset(report, 0, sizeof(*report));
   update_test_report(unittest_run_one_test(test_case_ddk_metadata, TEST_ALL), report);
-  update_test_report(unittest_run_one_test(test_case_ddk_svc, TEST_ALL), report);
   update_test_report(unittest_run_one_test(test_case_ddk_usb_request, TEST_ALL), report);
   unittest_restore_output_function();
   zx_handle_close(output);

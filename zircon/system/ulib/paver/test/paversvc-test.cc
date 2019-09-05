@@ -7,11 +7,11 @@
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
 #include <lib/zx/vmo.h>
-#include <lib/fdio/directory.h>
 #include <zircon/hw/gpt.h>
 
 #include <optional>
@@ -175,7 +175,6 @@ class PaverServiceTest : public zxtest::Test {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
-    args.use_system_svchost = true;
     args.disable_block_watcher = true;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 

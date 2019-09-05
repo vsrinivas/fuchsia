@@ -6,18 +6,9 @@
 
 #include <dirent.h>
 #include <errno.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/string.h>
-#include <fbl/string_piece.h>  // for constexpr_strlen
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
-#include <fvm/format.h>
 #include <inttypes.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
@@ -26,7 +17,6 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
-#include <ramdevice-client/ramdisk.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -34,9 +24,20 @@
 #include <sys/types.h>
 #include <threads.h>
 #include <unistd.h>
-#include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <fbl/string.h>
+#include <fbl/string_piece.h>  // for constexpr_strlen
+#include <fbl/unique_fd.h>
+#include <fs-management/fvm.h>
+#include <fs-management/mount.h>
+#include <fvm/format.h>
+#include <ramdevice-client/ramdisk.h>
+#include <unittest/unittest.h>
 #include <zxcrypt/fdio-volume.h>
 #include <zxcrypt/volume.h>
 
@@ -120,13 +121,6 @@ bool TestDevice::SetupDevmgr() {
   args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   // And make sure it's the test sysdev driver.
   args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-
-  // Reuse the system-wide service host.  We don't need to connect to any
-  // system-global service instances, but we do wish to be able to run
-  // without the root resource handle, and spawning a separate svchost
-  // currently fails without the root resource, so prefer using the system
-  // svchost.
-  args.use_system_svchost = true;
 
   // We explicitly bind drivers ourselves, and don't want the block watcher
   // racing with us to call Bind.

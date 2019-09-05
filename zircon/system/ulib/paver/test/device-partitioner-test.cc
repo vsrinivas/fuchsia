@@ -6,13 +6,9 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-
-#include <fbl/auto_call.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
-#include <gpt/gpt.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -21,9 +17,13 @@
 #include <zircon/hw/gpt.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zxtest/zxtest.h>
 
 #include <utility>
+
+#include <fbl/auto_call.h>
+#include <fbl/unique_ptr.h>
+#include <gpt/gpt.h>
+#include <zxtest/zxtest.h>
 
 #include "test/test-utils.h"
 
@@ -32,7 +32,7 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-//constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+// constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
@@ -153,7 +153,6 @@ class EfiPartitionerTests : public zxtest::Test {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
-    args.use_system_svchost = true;
     args.disable_block_watcher = false;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
@@ -353,7 +352,6 @@ class FixedDevicePartitionerTests : public zxtest::Test {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
-    args.use_system_svchost = true;
     args.disable_block_watcher = true;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 

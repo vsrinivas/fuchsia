@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(fxb/35941): Something about these headers is order dependent
+// clang-format off
 #include "paver.h"
 
 #include <fs-management/fvm.h>
@@ -9,6 +11,7 @@
 #include <zxtest/zxtest.h>
 
 #include "test/test-utils.h"
+// clang-format on
 
 namespace {
 
@@ -26,7 +29,6 @@ class FvmTest : public zxtest::Test {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
-    args.use_system_svchost = true;
     args.disable_block_watcher = true;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 

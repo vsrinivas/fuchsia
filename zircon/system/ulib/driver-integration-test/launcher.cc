@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/devmgr-launcher/launch.h>
 #include <lib/driver-integration-test/fixture.h>
-
+#include <lib/zx/vmo.h>
 #include <memory.h>
 #include <string.h>
-
-#include <ddk/platform-defs.h>
-#include <fbl/algorithm.h>
-#include <lib/devmgr-launcher/launch.h>
-#include <lib/zx/vmo.h>
-#include <libzbi/zbi-cpp.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
+
+#include <ddk/platform-defs.h>
+#include <fbl/algorithm.h>
+#include <libzbi/zbi-cpp.h>
 
 namespace driver_integration_test {
 
@@ -41,7 +40,7 @@ zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, fbl
       zbi_platform_id_t platform_id = kPlatformId;
       if (!board_name.empty()) {
         strncpy(platform_id.board_name, board_name.c_str(), ZBI_BOARD_NAME_LEN - 1);
-       }
+      }
       zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
       if (status != ZX_OK) {
         return status;
@@ -119,10 +118,9 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* o
   devmgr_args.load_drivers.swap(args->load_drivers);
   devmgr_args.flat_namespace = std::move(args->flat_namespace);
   devmgr_args.disable_block_watcher = args->disable_block_watcher;
-  devmgr_args.use_system_svchost = args->use_system_svchost;
   devmgr_args.disable_netsvc = args->disable_netsvc;
   devmgr_args.get_boot_item = [args = std::move(cb_args)](uint32_t type, uint32_t extra,
-                                                              zx::vmo* out, uint32_t* length) {
+                                                          zx::vmo* out, uint32_t* length) {
     return GetBootItem(args->device_list_, args->board_name_, type, extra, out, length);
   };
 

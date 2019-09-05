@@ -106,7 +106,6 @@ group("ulib") {
     "perftest",
     "port",
     "pretty",
-    "process-launcher",
     "ramdevice-client",
     "region-alloc",
     "rtc",

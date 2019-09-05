@@ -50,7 +50,6 @@ executable("svchost") {
     "$zx/system/ulib/kernel-debug",
     "$zx/system/ulib/kernel-mexec",
     "$zx/system/ulib/logger",
-    "$zx/system/ulib/process-launcher",
     "$zx/system/ulib/profile",
     "$zx/system/ulib/svc",
     "$zx/system/ulib/sysmem-connector",

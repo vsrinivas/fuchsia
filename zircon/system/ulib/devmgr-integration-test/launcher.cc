@@ -2,9 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/process/c/fidl.h>
+#include <fuchsia/scheduler/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/devmgr-integration-test/fixture.h>
-
+#include <lib/devmgr-launcher/launch.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fidl-async/bind.h>
 #include <stdint.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+
 #include <thread>
 #include <utility>
 
@@ -12,17 +25,8 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-#include <fuchsia/boot/c/fidl.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/devmgr-launcher/launch.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fidl-async/bind.h>
-#include <zircon/processargs.h>
-#include <zircon/status.h>
+
+#include "fbl/ref_ptr.h"
 
 namespace {
 
@@ -77,15 +81,31 @@ constexpr fuchsia_boot_RootJob_ops kRootJobOps = {
     .Get = RootJobGet,
 };
 
-fbl::RefPtr<fs::Service> MakeNode(async_dispatcher_t* dispatcher, fidl_dispatch_t* dispatch,
-                                  void* ctx, const void* ops) {
-  return fbl::MakeRefCounted<fs::Service>([dispatcher, dispatch, ctx, ops](zx::channel channel) {
-    return fidl_bind(dispatcher, channel.release(), dispatch, ctx, ops);
-  });
+void CreateFakeService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
+                       async_dispatcher_t* dispatcher, fidl_dispatch_t* dispatch, void* ctx,
+                       const void* ops) {
+  auto node =
+      fbl::MakeRefCounted<fs::Service>([dispatcher, dispatch, ctx, ops](zx::channel channel) {
+        return fidl_bind(dispatcher, channel.release(), dispatch, ctx, ops);
+      });
+  root->AddEntry(name, node);
 }
 
-zx_status_t bootsvc_main(zx::channel bootsvc_server, GetBootItemFunction get_boot_item,
-                         GetArgumentsFunction get_arguments, zx::unowned_job root_job) {
+void ForwardService(fbl::RefPtr<fs::PseudoDir> root, const char* name,
+                    zx::unowned_channel svc_client) {
+  root->AddEntry(name, fbl::MakeRefCounted<fs::Service>([name, svc_client = std::move(svc_client)](
+                                                            zx::channel request) {
+                   return fdio_service_connect_at(svc_client->get(), name, request.release());
+                 }));
+}
+
+// Create and host a /svc directory for the devcoordinator process we're creating.
+// TODO(fxb/35991): IsolatedDevmgr and devmgr_launcher should be rewritten to make use of
+// Components v2/Test Framework concepts as soon as those are ready enough. For now this has to be
+// manually kept in sync with devcoordinator's manifest in //src/sys/root/devcoordinator.cml
+// (although it already seems to be incomplete).
+zx_status_t host_svc_directory(zx::channel bootsvc_server, GetBootItemFunction get_boot_item,
+                               GetArgumentsFunction get_arguments, zx::unowned_job root_job) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   // Quit the loop when the channel is closed.
@@ -96,18 +116,39 @@ zx_status_t bootsvc_main(zx::channel bootsvc_server, GetBootItemFunction get_boo
   fs::SynchronousVfs vfs(loop.dispatcher());
   auto root = fbl::MakeRefCounted<fs::PseudoDir>();
 
+  // Connect to /svc in the current namespace.
+  zx::channel svc_client;
+  {
+    zx::channel svc_server;
+    zx_status_t status = zx::channel::create(0, &svc_client, &svc_server);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = fdio_service_connect("/svc", svc_server.release());
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  // Forward required services from the current namespace. Currently this is just
+  // fuchsia.process.Launcher.
+  ForwardService(root, fuchsia_process_Launcher_Name, zx::unowned_channel(svc_client));
+
+  // Host fake instances of some services normally provided by bootsvc and routed to devcoordinator
+  // by component_manager. The difference between these fakes and the optional services above is
+  // that these 1) are fakeable (unlike fuchsia.process.Launcher) and 2) seem to be required
+  // services for devcoordinator.
   auto items_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Items_dispatch);
-  auto items_node = MakeNode(loop.dispatcher(), items_dispatch, &get_boot_item, &kItemsOps);
-  root->AddEntry(fuchsia_boot_Items_Name, items_node);
+  CreateFakeService(root, fuchsia_boot_Items_Name, loop.dispatcher(), items_dispatch,
+                    &get_boot_item, &kItemsOps);
 
   auto arguments_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Arguments_dispatch);
-  auto arguments_node =
-      MakeNode(loop.dispatcher(), arguments_dispatch, &get_arguments, &kArgumentsOps);
-  root->AddEntry(fuchsia_boot_Arguments_Name, arguments_node);
+  CreateFakeService(root, fuchsia_boot_Arguments_Name, loop.dispatcher(), arguments_dispatch,
+                    &get_arguments, &kArgumentsOps);
 
   auto root_job_dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_RootJob_dispatch);
-  auto root_job_node = MakeNode(loop.dispatcher(), root_job_dispatch, &root_job, &kRootJobOps);
-  root->AddEntry(fuchsia_boot_RootJob_Name, root_job_node);
+  CreateFakeService(root, fuchsia_boot_RootJob_Name, loop.dispatcher(), root_job_dispatch,
+                    &root_job, &kRootJobOps);
 
   // Serve VFS on channel.
   auto conn = std::make_unique<fs::Connection>(
@@ -127,7 +168,6 @@ devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
   args.sys_device_driver = kSysdevDriver;
   args.load_drivers.push_back("/boot/driver/test.so");
   args.driver_search_paths.push_back("/boot/driver/test");
-  args.use_system_svchost = true;
   return args;
 }
 
@@ -139,12 +179,11 @@ IsolatedDevmgr::~IsolatedDevmgr() {
 }
 
 zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* out) {
-  zx::channel bootsvc_client, bootsvc_server;
-  zx_status_t status = zx::channel::create(0, &bootsvc_client, &bootsvc_server);
+  zx::channel svc_client, svc_server;
+  zx_status_t status = zx::channel::create(0, &svc_client, &svc_server);
   if (status != ZX_OK) {
     return status;
   }
-  args.flat_namespace.push_back(std::make_pair("/bootsvc", std::move(bootsvc_client)));
 
   GetBootItemFunction get_boot_item = std::move(args.get_boot_item);
   GetArgumentsFunction get_arguments = std::move(args.get_arguments);
@@ -152,14 +191,15 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, IsolatedDevmgr* o
   IsolatedDevmgr devmgr;
   zx::channel devfs;
   zx::channel outgoing_svc_root;
-  status = devmgr_launcher::Launch(std::move(args), &devmgr.job_, &devfs, &outgoing_svc_root);
+  status = devmgr_launcher::Launch(std::move(args), std::move(svc_client), &devmgr.job_, &devfs,
+                                   &outgoing_svc_root);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Launch bootsvc_main thread after calling devmgr_launcher::Launch, to
+  // Launch host_svc_directory thread after calling devmgr_launcher::Launch, to
   // avoid a race when accessing devmgr.job_.
-  std::thread(bootsvc_main, std::move(bootsvc_server), std::move(get_boot_item),
+  std::thread(host_svc_directory, std::move(svc_server), std::move(get_boot_item),
               std::move(get_arguments), zx::unowned_job(devmgr.job_))
       .detach();
 

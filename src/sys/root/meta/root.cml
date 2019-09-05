@@ -48,11 +48,9 @@
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },
-    // ...except for this one, which is provided by component_manager itself.
-    // TODO: Implement routing from /builtin (this doesn't actually work yet), and consider making
-    // the distinction from bootsvc services clearer.
+    // ...except for this one, which is provided by component_manager itself as a builtin service.
     {
-      "legacy_service": "/builtin/fuchsia.process.Launcher",
+      "legacy_service": "/svc/fuchsia.process.Launcher",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },

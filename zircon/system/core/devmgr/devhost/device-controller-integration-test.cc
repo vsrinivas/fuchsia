@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/metadata/test.h>
-#include <ddk/platform-defs.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/test/c/fidl.h>
@@ -12,6 +10,9 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
+
+#include <ddk/metadata/test.h>
+#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -84,7 +85,6 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.use_system_svchost = true;
 
   fbl::Vector<const char*> arguments;
   arguments.push_back("driver.tests.enable=true");
@@ -111,7 +111,6 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
 TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.use_system_svchost = true;
 
   fbl::Vector<const char*> arguments;
   arguments.push_back("driver.tests.enable=true");
@@ -139,7 +138,6 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
 TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.use_system_svchost = true;
 
   fbl::Vector<const char*> arguments;
   arguments.push_back("driver.unit_test_fail.tests.enable=true");
@@ -167,7 +165,6 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
 TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.use_system_svchost = true;
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -189,7 +186,6 @@ TEST(DeviceControllerIntegrationTest, DefaultTestsDisabledBind) {
 TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   IsolatedDevmgr devmgr;
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.use_system_svchost = true;
 
   fbl::Vector<const char*> arguments;
   arguments.push_back("driver.tests.enable=true");

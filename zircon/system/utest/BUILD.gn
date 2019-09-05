@@ -265,6 +265,7 @@ if (current_cpu != "") {
       "spawn",
       "status",
       "stdio",
+      "svchost",
       "sysconf",
       "sysinfo",
       "sysmem",

@@ -9,7 +9,16 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/vmo.h>
-#include <unittest/unittest.h>
+
+#include <zxtest/zxtest.h>
+
+namespace {
+
+// These are integration tests of svchost which check whether certain services are present in
+// the /svc directory exposed by svchost. To verify that the services are actually present we need
+// to minimally test that they work, since fdio_service_connect succeeding does not actually mean
+// the remote end exists (i.e. you won't observe a PEER_CLOSED error until actually trying to use
+// the channel).
 
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
@@ -18,9 +27,7 @@ constexpr char kProfileProviderPath[] = "/svc/" fuchsia_scheduler_ProfileProvide
 constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 
-static bool test_open_factory_items(void) {
-  BEGIN_TEST;
-
+TEST(SvchostTest, FuchsiaBootFactoryItemsPresent) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
@@ -32,13 +39,9 @@ static bool test_open_factory_items(void) {
   uint32_t length;
   status = fuchsia_boot_FactoryItemsGet(client.get(), 0, payload.reset_and_get_address(), &length);
   ASSERT_EQ(ZX_OK, status, "fuchsia_boot_FactoryItemsGet failed");
-
-  END_TEST;
 }
 
-static bool test_open_items(void) {
-  BEGIN_TEST;
-
+TEST(SvchostTest, FuchsiaBootItemsPresent) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
@@ -50,13 +53,9 @@ static bool test_open_items(void) {
   uint32_t length;
   status = fuchsia_boot_ItemsGet(client.get(), 0, 0, payload.reset_and_get_address(), &length);
   ASSERT_EQ(ZX_OK, status, "fuchsia_boot_ItemsGet failed");
-
-  END_TEST;
 }
 
-static bool test_open_log(void) {
-  BEGIN_TEST;
-
+TEST(SvchostTest, FuchsiaBootLogPresent) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
@@ -67,13 +66,9 @@ static bool test_open_log(void) {
   zx::debuglog log;
   status = fuchsia_boot_LogGet(client.get(), log.reset_and_get_address());
   ASSERT_EQ(ZX_OK, status, "fuchsia_boot_LogGet failed");
-
-  END_TEST;
 }
 
-static bool test_open_profile_provider(void) {
-  BEGIN_TEST;
-
+TEST(SvchostTest, FuchsiaSchedulerProfileProviderPresent) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
@@ -86,13 +81,9 @@ static bool test_open_profile_provider(void) {
   status = fuchsia_scheduler_ProfileProviderGetProfile(client.get(), 0, "", 0, &fidl_status,
                                                        profile.reset_and_get_address());
   ASSERT_EQ(ZX_OK, status, "fuchsia_scheduler_ProfileProviderGetProfile failed");
-
-  END_TEST;
 }
 
-static bool test_open_root_resource(void) {
-  BEGIN_TEST;
-
+TEST(SvchostTest, FuchsiaRootResourcePresent) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
@@ -103,36 +94,19 @@ static bool test_open_root_resource(void) {
   zx::resource resource;
   status = fuchsia_boot_RootResourceGet(client.get(), resource.reset_and_get_address());
   ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootResourceGet failed");
-
-  END_TEST;
 }
 
-static bool test_open_root_job(void) {
-    BEGIN_TEST;
+TEST(SvchostTest, FuchsiaRootJobPresent) {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
 
-    zx::channel client, server;
-    zx_status_t status = zx::channel::create(0, &client, &server);
-    ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
+  status = fdio_service_connect(kRootJobPath, server.release());
+  ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
 
-    status = fdio_service_connect(kRootJobPath, server.release());
-    ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
-
-    zx::job job;
-    status = fuchsia_boot_RootJobGet(client.get(), job.reset_and_get_address());
-    ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootJobGet failed");
-
-    END_TEST;
+  zx::job job;
+  status = fuchsia_boot_RootJobGet(client.get(), job.reset_and_get_address());
+  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_RootJobGet failed");
 }
 
-BEGIN_TEST_CASE(svc_tests)
-RUN_TEST(test_open_factory_items)
-RUN_TEST(test_open_items)
-RUN_TEST(test_open_log)
-RUN_TEST(test_open_profile_provider)
-RUN_TEST(test_open_root_resource)
-RUN_TEST(test_open_root_job)
-END_TEST_CASE(svc_tests)
-
-extern "C" {
-struct test_case_element* test_case_ddk_svc = TEST_CASE_ELEMENT(svc_tests);
-}
+}  // namespace
