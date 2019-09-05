@@ -15,7 +15,7 @@ namespace nand {
 
 void CheckMultiple(LogicalToPhysicalMap ltop_map, fbl::Vector<fbl::Vector<uint32_t>> expected) {
   for (uint32_t copy = 0; copy < expected.size(); copy++) {
-    EXPECT_EQ(ltop_map.LogicalBlockCount(copy), expected[copy].size());
+    EXPECT_EQ(ltop_map.AvailableBlockCount(copy), expected[copy].size());
     uint32_t i;
     for (i = 0; i < expected[copy].size(); i++) {
       uint32_t physical;
@@ -77,7 +77,7 @@ TEST(LogicalToPhysicalMap, AllBadTest) {
   bad_blocks[2] = 2;
   LogicalToPhysicalMap ltop_map(1, 3, std::move(bad_blocks));
 
-  EXPECT_EQ(ltop_map.LogicalBlockCount(0), 0);
+  EXPECT_EQ(ltop_map.AvailableBlockCount(0), 0);
   uint32_t physical;
   zx_status_t status = ltop_map.GetPhysical(0, 0, &physical);
   EXPECT_EQ(status, ZX_ERR_OUT_OF_RANGE);

@@ -1,4 +1,3 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -164,6 +163,11 @@ class FakeNand : public ddk::NandProtocol<FakeNand> {
     return ZX_OK;
   }
 
+  void set_block_count(uint32_t num_blocks) {
+      nand_info_.num_blocks = num_blocks;
+      num_nand_pages_ = kNumPages * num_blocks;
+  }
+
   const fzl::VmoMapper& mapper() { return mapper_; }
   const nand_op_t& last_op() { return last_op_; }
 
@@ -195,9 +199,10 @@ class FakeBadBlock : public ddk::BadBlockProtocol<FakeBadBlock> {
     if (bad_block_list_len < *bad_block_count) {
       return bad_block_list == nullptr ? ZX_OK : ZX_ERR_BUFFER_TOO_SMALL;
     }
-    memcpy(bad_block_list, grown_bad_blocks_.data(), grown_bad_blocks_.size());
+    memcpy(bad_block_list, grown_bad_blocks_.data(), grown_bad_blocks_.size() * sizeof(uint32_t));
     return result_;
   }
+
   zx_status_t BadBlockMarkBlockBad(uint32_t block) {
     if (result_ == ZX_OK) {
       grown_bad_blocks_.push_back(block);
@@ -265,6 +270,17 @@ class SkipBlockTest : public zxtest::Test {
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     *bad_block_grown = result.value().bad_block_grown;
+  }
+
+  void GetPartitionInfo(nand::PartitionInfo* out, zx_status_t expected = ZX_OK) {
+    if (!client_) {
+      client_.emplace(std::move(ddk().FidlClient()));
+    }
+
+    auto result = client_->GetPartitionInfo();
+    ASSERT_OK(result.status());
+    ASSERT_STATUS(result.value().status, expected);
+    *out = result.value().partition_info;
   }
 
   void ValidateWritten(size_t offset, size_t size) {
@@ -404,9 +420,63 @@ TEST_F(SkipBlockTest, ReadFailure) {
   op.block = 7;
   op.block_count = 1;
 
-  ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_INVALID_ARGS));
+  ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_IO));
   ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
   ASSERT_EQ(nand().last_op(), NAND_OP_READ);
+}
+
+TEST_F(SkipBlockTest, ReadMultipleCopies) {
+    const uint32_t count_ = 4;
+    ddk().SetMetadata(&count_, sizeof(count_));
+    ddk().SetSize(kPageSize * kNumPages * 8);
+    nand().set_block_count(8);
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Read Block 1
+    nand().set_result(ZX_ERR_IO);
+    // Read Block 3
+    nand().set_result(ZX_ERR_IO);
+    // Read Block 5
+    nand().set_result(ZX_OK);
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+    nand::ReadWriteOperation op = {};
+    op.vmo = std::move(vmo);
+    op.block = 1;
+    op.block_count = 1;
+
+    ASSERT_NO_FATAL_FAILURES(Read(std::move(op)));
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_READ);
+}
+
+TEST_F(SkipBlockTest, ReadMultipleCopiesNoneSucceeds) {
+    const uint32_t count_ = 4;
+    ddk().SetMetadata(&count_, sizeof(count_));
+    ddk().SetSize(kPageSize * kNumPages * 4);
+    nand().set_block_count(4);
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Read Block 0
+    nand().set_result(ZX_ERR_IO);
+    // Read Block 1
+    nand().set_result(ZX_ERR_IO);
+    // Read Block 2
+    nand().set_result(ZX_ERR_IO);
+    // Read Block 3
+    nand().set_result(ZX_ERR_IO);
+
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
+    nand::ReadWriteOperation op = {};
+    op.vmo = std::move(vmo);
+    op.block = 0;
+    op.block_count = 1;
+
+    ASSERT_NO_FATAL_FAILURES(Read(std::move(op), ZX_ERR_IO));
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }
 
 TEST_F(SkipBlockTest, WriteBytesSingleBlock) {
@@ -505,4 +575,13 @@ TEST_F(SkipBlockTest, WriteBytesAligned) {
     ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
     ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
     ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
+}
+
+TEST_F(SkipBlockTest, GetPartitionInfo) {
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    nand::PartitionInfo info;
+    ASSERT_NO_FATAL_FAILURES(GetPartitionInfo(&info));
+    ASSERT_EQ(info.block_size_bytes, kBlockSize);
+    ASSERT_EQ(info.partition_block_count, kNumBlocks);
 }

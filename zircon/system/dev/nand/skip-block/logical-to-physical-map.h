@@ -41,7 +41,7 @@ class LogicalToPhysicalMap {
 
   zx_status_t GetPhysical(uint32_t copy, uint32_t block, uint32_t* physical_block) const;
 
-  uint32_t LogicalBlockCount(uint32_t copy) const;
+  uint32_t AvailableBlockCount(uint32_t copy) const;
 
  private:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(LogicalToPhysicalMap);

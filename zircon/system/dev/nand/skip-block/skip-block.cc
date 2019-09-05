@@ -23,7 +23,9 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
+#include <zircon/status.h>
 
+#include <algorithm>
 #include <utility>
 
 namespace nand {
@@ -276,43 +278,51 @@ zx_status_t SkipBlockDevice::ValidateOperationLocked(const WriteBytesOperation& 
 }
 
 zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
-  // TODO(surajmalhotra): We currently only read from the first copy. Given a
-  // good use case, we could improve this to read from other copies in the
-  // case or read failures, or perhaps expose ability to chose which copy gets
-  // read to the user.
-  constexpr uint32_t kReadCopy = 0;
-  uint32_t physical_block;
-  zx_status_t status = block_map_.GetPhysical(kReadCopy, op.block, &physical_block);
-  if (status != ZX_OK) {
-    return status;
+  for (uint32_t copy = 0; copy < copy_count_; copy++) {
+    if (block_map_.AvailableBlockCount(copy) < op.block_count) {
+      zxlogf(INFO, "skipblock: copy %u too small, skipping read attempt.\n", copy);
+      continue;
+    }
+
+    uint32_t physical_block;
+    zx_status_t status = block_map_.GetPhysical(copy, op.block, &physical_block);
+    if (status != ZX_OK) {
+      return status;
+    }
+    sync_completion_t completion;
+    BlockOperationContext op_context = {
+        .op = std::move(op),
+        .nand_info = &nand_info_,
+        .block_map = &block_map_,
+        .nand = &nand_,
+        .copy = copy,
+        .current_block = op.block,
+        .physical_block = physical_block,
+        .completion_event = &completion,
+        .status = ZX_OK,
+        .mark_bad = false,
+    };
+
+    nand_operation_t* nand_op = nand_op_->operation();
+    nand_op->rw.command = NAND_OP_READ;
+    nand_op->rw.data_vmo = op_context.op.vmo.get();
+    nand_op->rw.oob_vmo = ZX_HANDLE_INVALID;
+    nand_op->rw.length = nand_info_.pages_per_block;
+    nand_op->rw.offset_nand = physical_block * nand_info_.pages_per_block;
+    nand_op->rw.offset_data_vmo = op.vmo_offset;
+    // The read callback will enqueue subsequent reads.
+    nand_.Queue(nand_op, ReadCompletionCallback, &op_context);
+
+    // Wait on completion.
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    op = std::move(op_context.op);
+    if (op_context.status == ZX_OK) {
+      return ZX_OK;
+    }
+    zxlogf(ERROR, "skipblock: Failed to read block %d, copy %d, with status %s\n",
+           op_context.current_block, copy, zx_status_get_string(op_context.status));
   }
-  sync_completion_t completion;
-  BlockOperationContext op_context = {
-      .op = std::move(op),
-      .nand_info = &nand_info_,
-      .block_map = &block_map_,
-      .nand = &nand_,
-      .copy = kReadCopy,
-      .current_block = op.block,
-      .physical_block = physical_block,
-      .completion_event = &completion,
-      .status = ZX_OK,
-      .mark_bad = false,
-  };
-
-  nand_operation_t* nand_op = nand_op_->operation();
-  nand_op->rw.command = NAND_OP_READ;
-  nand_op->rw.data_vmo = op_context.op.vmo.get();
-  nand_op->rw.oob_vmo = ZX_HANDLE_INVALID;
-  nand_op->rw.length = nand_info_.pages_per_block;
-  nand_op->rw.offset_nand = physical_block * nand_info_.pages_per_block;
-  nand_op->rw.offset_data_vmo = op.vmo_offset;
-  // The read callback will enqueue subsequent reads.
-  nand_.Queue(nand_op, ReadCompletionCallback, &op_context);
-
-  // Wait on completion.
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  return op_context.status;
+  return ZX_ERR_IO;
 }
 
 void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer) {
@@ -504,13 +514,11 @@ void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sy
 }
 
 uint32_t SkipBlockDevice::GetBlockCountLocked() const {
-    uint32_t logical_block_count = UINT32_MAX;
+    uint32_t logical_block_count = 0;
     for (uint32_t copy = 0; copy < copy_count_; copy++) {
-        // TODO(surajmalhotra): If there are copies, we actually want to use the maximum, and
-        // stop writing/reading the copies with bad blocks.
-        logical_block_count = fbl::min(logical_block_count, block_map_.LogicalBlockCount(copy));
+        logical_block_count = std::max(logical_block_count, block_map_.AvailableBlockCount(copy));
     }
-    return  logical_block_count;
+    return logical_block_count;
 }
 
 zx_off_t SkipBlockDevice::DdkGetSize() {
