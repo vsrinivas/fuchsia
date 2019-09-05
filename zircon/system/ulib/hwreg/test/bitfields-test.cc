@@ -234,6 +234,43 @@ TEST(StructEnumSubFieldTestCase, Uint64) {
   ASSERT_NO_FAILURES(struct_enum_sub_field_test<uint64_t>());
 }
 
+struct GloballyScopedSubfieldTest {
+  uint16_t data;
+  DEF_SUBBIT(data, 0, bit);
+  DEF_SUBFIELD(data, 2, 1, field);
+  enum class Enum : uint8_t {
+    kA = 0,
+    kB = 1,
+  };
+  DEF_ENUM_SUBFIELD(data, Enum, 3, 3, enum_field);
+};
+
+TEST(SubFieldTestCase, GloballyScopedEnumField) {
+  // In the past [1], globally scoped structures have triggered GCC warnings (and
+  // hence build failures) not generated when the structure was defined in
+  // a function. Test that we can compile and execute a simple struct with
+  // a subfield at global scope.
+  //
+  // [1] c.f. https://fuchsia-review.googlesource.com/q/I3bcb2a997d2080c483c557b59fb95a54cc18b73b
+  GloballyScopedSubfieldTest reg{};
+
+  reg.set_bit(1);
+  EXPECT_EQ(reg.bit(), 1);
+
+  reg.set_field(1);
+  EXPECT_EQ(reg.field(), 1);
+
+  reg.set_enum_field(GloballyScopedSubfieldTest::Enum::kB);
+  EXPECT_EQ(reg.enum_field(), GloballyScopedSubfieldTest::Enum::kB);
+}
+
+TEST(SubFieldTestCase, ConstFields) {
+  const GloballyScopedSubfieldTest reg = {0xf};
+  EXPECT_EQ(reg.bit(), 1);
+  EXPECT_EQ(reg.field(), 3);
+  EXPECT_EQ(reg.enum_field(), GloballyScopedSubfieldTest::Enum::kB);
+}
+
 TEST(RegisterTestCase, Rsvdz) {
   class TestReg8 : public hwreg::RegisterBase<TestReg8, uint8_t> {
    public:

@@ -365,7 +365,7 @@ class BitfieldRef {
   auto& set_##NAME(ENUM_TYPE val) {                                                               \
     hwreg::BitfieldRef<typename std::remove_reference<decltype(FIELD)>::type>(&FIELD, (BIT_HIGH), \
                                                                               (BIT_LOW))          \
-        .set(static_cast<const typename std::remove_reference<decltype(FIELD)>::type>(val));      \
+        .set(static_cast<typename std::remove_reference<decltype(FIELD)>::type>(val));            \
     return *this;                                                                                 \
   }                                                                                               \
   static_assert(true)  // eat a ;
