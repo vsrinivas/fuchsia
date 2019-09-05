@@ -11,10 +11,12 @@ Packet capture is a fundamental tool for developing, debugging, and testing netw
 
 ## Prepare the image {#prepare-image}
 
-`netdump` is not part of the base package of the core product, so you need to prepare the image to use `netdump`.
+`netdump` is part of the [universe dependency list](https://fuchsia.dev/fuchsia-src/development/build/boards_and_products#universe) of the core product. If a package server _is_ available, there is no extra step to prepare the image. Just running `netdump` will fetch the binary.
+
+If the package server is _not_ available, make sure to bundle `netdump` into a base package.
 
 ```shell
-$ fx set core.x64 --with //src/connectivity/network/netdump
+$ fx set core.x64 --with-base //src/connectivity/network/netdump
 $ fx build
 ```
 
