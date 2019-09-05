@@ -16,7 +16,7 @@
 #include <variant>
 #include <vector>
 
-#include "garnet/bin/media/codecs/mpsc_queue.h"
+#include "src/media/lib/mpsc_queue/mpsc_queue.h"
 
 class DecryptorAdapter : public CodecAdapter {
  public:

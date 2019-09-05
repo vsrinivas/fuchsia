@@ -9,7 +9,7 @@
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <src/lib/fxl/synchronization/thread_annotations.h>
 
-#include "mpsc_queue.h"
+#include "src/media/lib/mpsc_queue/mpsc_queue.h"
 
 // BufferPool manages CodecBuffers for use with local output types in software
 // encoders.

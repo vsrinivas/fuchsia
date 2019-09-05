@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_CODECS_MPSC_QUEUE_H_
-#define GARNET_BIN_MEDIA_CODECS_MPSC_QUEUE_H_
+#ifndef SRC_MEDIA_LIB_MPSC_QUEUE_MPSC_QUEUE_H_
+#define SRC_MEDIA_LIB_MPSC_QUEUE_MPSC_QUEUE_H_
 
 #include <lib/zx/event.h>
-#include <src/lib/fxl/macros.h>
 #include <zircon/assert.h>
 
 #include <atomic>
@@ -14,6 +13,8 @@
 #include <optional>
 #include <queue>
 #include <stack>
+
+#include <src/lib/fxl/macros.h>
 
 // A lock free queue for multiple producers and a single consumer.
 template <typename T>
@@ -160,4 +161,4 @@ class BlockingMpscQueue {
   MpscQueue<T> queue_;
 };
 
-#endif  // GARNET_BIN_MEDIA_CODECS_MPSC_QUEUE_H_
+#endif  // SRC_MEDIA_LIB_MPSC_QUEUE_MPSC_QUEUE_H_

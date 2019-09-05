@@ -20,7 +20,7 @@
 #include <queue>
 
 #include "buffer_pool.h"
-#include "mpsc_queue.h"
+#include "src/media/lib/mpsc_queue/mpsc_queue.h"
 
 // TODO(turnage): Allow a range of packet count for the client instead of
 // forcing a particular number.

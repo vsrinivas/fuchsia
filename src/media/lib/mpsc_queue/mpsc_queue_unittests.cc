@@ -6,8 +6,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 
-#include "../mpsc_queue.h"
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
+
+#include "src/media/lib/mpsc_queue/mpsc_queue.h"
 
 TEST(MpscQueueTest, Sanity) {
   MpscQueue<int> under_test;

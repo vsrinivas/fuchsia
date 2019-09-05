@@ -6,5 +6,13 @@ group("lib") {
   testonly = true
   deps = [
     "ffmpeg",
+    "mpsc_queue",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "mpsc_queue:tests",
   ]
 }

@@ -6,7 +6,6 @@ group("codecs") {
   testonly = true
   deps = [
     ":chunk_input_stream",
-    ":mpsc_queue",
     ":output_sink",
     ":timestamp_extrapolator",
     "sw",
@@ -39,19 +38,6 @@ source_set("timestamp_extrapolator") {
   ]
 }
 
-source_set("mpsc_queue") {
-  visibility = [
-    "//garnet/bin/media/codecs/*",
-    "//garnet/lib/media/codec_impl/*",
-  ]
-
-  public = [
-    "mpsc_queue.h",
-  ]
-
-  public_configs = [ ":local_header_include_config" ]
-}
-
 source_set("chunk_input_stream") {
   public = [
     "chunk_input_stream.h",
@@ -76,8 +62,8 @@ source_set("output_sink") {
   ]
   public_configs = [ ":local_header_include_config" ]
   public_deps = [
-    "//garnet/bin/media/codecs:mpsc_queue",
     "//garnet/lib/media/codec_impl",
+    "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]

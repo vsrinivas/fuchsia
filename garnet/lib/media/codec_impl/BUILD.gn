@@ -42,9 +42,9 @@ source_set("codec_impl") {
   public_deps = [
     ":closure_queue",
     ":fourcc",
-    "//garnet/bin/media/codecs:mpsc_queue",
     "//sdk/fidl/fuchsia.media.drm",
     "//sdk/fidl/fuchsia.mediacodec",
+    "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

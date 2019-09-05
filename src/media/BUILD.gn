@@ -19,6 +19,7 @@ group("tests") {
 
   deps = [
     "audio:tests",
+    "lib:tests",
     "sessions:tests",
     "stream_processors:tests",
   ]

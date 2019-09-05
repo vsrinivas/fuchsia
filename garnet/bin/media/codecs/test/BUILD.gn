@@ -11,7 +11,6 @@ group("test") {
   deps = [
     ":chunk_input_stream_tests",
     ":codec_adapter_sw_test",
-    ":mpsc_queue_tests",
     ":output_sink_tests",
     ":timestamp_extrapolator_tests",
   ]
@@ -67,37 +66,6 @@ test_package("timestamp_extrapolator_tests") {
   tests = [
     {
       name = "timestamp_extrapolator_tests"
-      environments = basic_envs
-    },
-  ]
-}
-
-executable("mpsc_queue_test_bin") {
-  output_name = "mpsc_queue_tests"
-
-  testonly = true
-
-  sources = [
-    "mpsc_queue_tests.cc",
-  ]
-
-  deps = [
-    "//garnet/bin/media/codecs:mpsc_queue",
-    "//garnet/public/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
-}
-
-test_package("mpsc_queue_tests") {
-  deps = [
-    ":mpsc_queue_test_bin",
-  ]
-
-  tests = [
-    {
-      name = "mpsc_queue_tests"
       environments = basic_envs
     },
   ]

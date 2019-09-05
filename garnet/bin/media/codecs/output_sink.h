@@ -11,7 +11,7 @@
 #include <lib/media/codec_impl/codec_packet.h>
 #include <threads.h>
 
-#include "mpsc_queue.h"
+#include "src/media/lib/mpsc_queue/mpsc_queue.h"
 
 // A sink for blocks of output data that manages output packets and output
 // buffers.
