@@ -85,7 +85,6 @@ zx::thread ObjectProvider::ThreadForKoid(zx_handle_t process, zx_koid_t thread_k
   return zx::thread(thread_handle);
 }
 
-
 zx_koid_t ObjectProvider::KoidForObject(zx_handle_t object) {
   zx_info_handle_basic_t info;
   if (zx_object_get_info(object, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
@@ -162,9 +161,7 @@ zx::job ObjectProvider::GetJobFromKoid(zx_koid_t koid) {
   return result;
 }
 
-zx_koid_t ObjectProvider::GetRootJobKoid() {
-  return KoidForObject(GetRootJob());
-}
+zx_koid_t ObjectProvider::GetRootJobKoid() { return KoidForObject(GetRootJob()); }
 
 // The hub writes the job it uses to create components in a special file.
 //

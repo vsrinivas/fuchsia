@@ -1,11 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#pragma once
-
-#include "src/developer/debug/debug_agent/object_provider.h"
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_OBJECT_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_OBJECT_PROVIDER_H_
 
 #include <map>
+
+#include "src/developer/debug/debug_agent/object_provider.h"
 
 namespace debug_agent {
 
@@ -41,33 +42,32 @@ struct MockJobObject : public MockObject {
 // |CreateDefaultMockObjectProvider|.
 class MockObjectProvider : public ObjectProvider {
  public:
-   // Object Provider Interface.
-   std::vector<zx::job> GetChildJobs(zx_handle_t job) override;
-   std::vector<zx::process> GetChildProcesses(zx_handle_t job) override;
+  // Object Provider Interface.
+  std::vector<zx::job> GetChildJobs(zx_handle_t job) override;
+  std::vector<zx::process> GetChildProcesses(zx_handle_t job) override;
 
-   std::string NameForObject(zx_handle_t object) override;
-   zx_koid_t KoidForObject(zx_handle_t object) override;
+  std::string NameForObject(zx_handle_t object) override;
+  zx_koid_t KoidForObject(zx_handle_t object) override;
 
-   MockJobObject* root() const { return root_.get(); }
-   MockObject* ObjectByKoid(zx_koid_t koid) const;
-   MockObject* ObjectByName(const std::string& name) const;
+  MockJobObject* root() const { return root_.get(); }
+  MockObject* ObjectByKoid(zx_koid_t koid) const;
+  MockObject* ObjectByName(const std::string& name) const;
 
-   // Passing |nullptr| to |parent_job| will create a root handle.
-   MockJobObject* AppendJob(MockJobObject* parent_job, std::string name);
+  // Passing |nullptr| to |parent_job| will create a root handle.
+  MockJobObject* AppendJob(MockJobObject* parent_job, std::string name);
 
-   MockProcessObject* AppendProcess(MockJobObject* parent_job, std::string name);
+  MockProcessObject* AppendProcess(MockJobObject* parent_job, std::string name);
 
-  private:
-   std::unique_ptr<MockJobObject> CreateJob(std::string name);          // Advances the koid.
-   std::unique_ptr<MockProcessObject> CreateProcess(std::string name);  // Advances the koid.
+ private:
+  std::unique_ptr<MockJobObject> CreateJob(std::string name);          // Advances the koid.
+  std::unique_ptr<MockProcessObject> CreateProcess(std::string name);  // Advances the koid.
 
-   std::unique_ptr<MockJobObject> root_;
-   std::map<zx_koid_t, MockObject*> object_map_;  // For easy access.
-   std::map<std::string, MockObject*> name_map_;  // For easy access.
+  std::unique_ptr<MockJobObject> root_;
+  std::map<zx_koid_t, MockObject*> object_map_;  // For easy access.
+  std::map<std::string, MockObject*> name_map_;  // For easy access.
 
-   uint64_t next_koid_ = 1;
+  uint64_t next_koid_ = 1;
 };
-
 
 // Creates a default process tree:
 //
@@ -87,3 +87,5 @@ class MockObjectProvider : public ObjectProvider {
 MockObjectProvider CreateDefaultMockObjectProvider();
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_OBJECT_PROVIDER_H_

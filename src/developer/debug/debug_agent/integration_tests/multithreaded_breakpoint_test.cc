@@ -5,8 +5,8 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
-#include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
+#include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -23,7 +23,7 @@ namespace {
 
 // Receives the notification from the DebugAgent.
 // The implementation is at the end of the file.
-class BreakpointStreamBackend : public MockStreamBackend {
+class BreakpointStreamBackend : public LocalStreamBackend {
  public:
   // In what part of the test we currently are.
   // This will determine when we quit the loop to let the test verify state.

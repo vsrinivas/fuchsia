@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
+#include "src/developer/debug/debug_agent/local_stream_backend.h"
 
 #include "lib/sys/cpp/service_directory.h"
+#include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
-MockStreamBackend::MockStreamBackend() {
+LocalStreamBackend::LocalStreamBackend() {
   // We initialize the stream and pass it on to the debug agent, which will
   // think it's correctly connected to a client.
   stream_.set_writer(this);
@@ -20,7 +21,7 @@ MockStreamBackend::MockStreamBackend() {
   agent_->Connect(&stream_);
 }
 
-size_t MockStreamBackend::ConsumeStreamBufferData(const char* data, size_t len) {
+size_t LocalStreamBackend::ConsumeStreamBufferData(const char* data, size_t len) {
   // We assume we always get a header.
   const debug_ipc::MsgHeader* header = reinterpret_cast<const debug_ipc::MsgHeader*>(data);
 

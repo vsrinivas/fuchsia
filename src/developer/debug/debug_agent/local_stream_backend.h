@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MOCK_STREAM_BACKEND_H_
-#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MOCK_STREAM_BACKEND_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LOCAL_STREAM_BACKEND_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LOCAL_STREAM_BACKEND_H_
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
-#include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
@@ -22,13 +21,11 @@ namespace debug_agent {
 // all the content is sent.
 //
 // We use this class to intercept the messages sent back from the agent and
-// react accordingly. This class is kinda hardcoded for this tests, as different
-// integration tests care about different messages. If there are more tests that
-// require this kind of interception, this class should be separated and
-// generalized.
-class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
+// react accordingly. This class is somwhat geared towards tests, mainly in the sense that
+// notification handlers are needed as they're needed.
+class LocalStreamBackend : public debug_ipc::StreamBuffer::Writer {
  public:
-  MockStreamBackend();
+  LocalStreamBackend();
   RemoteAPI* remote_api() const { return agent_.get(); }
   DebugAgent* agent() const { return agent_.get(); }
 
@@ -57,4 +54,4 @@ class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
 
 }  // namespace debug_agent
 
-#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_INTEGRATION_TESTS_MOCK_STREAM_BACKEND_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_LOCAL_STREAM_BACKEND_H_

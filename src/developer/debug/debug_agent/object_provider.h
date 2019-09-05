@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_OBJECT_UTIL_H_
-#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_OBJECT_UTIL_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_OBJECT_PROVIDER_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_OBJECT_PROVIDER_H_
 
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -66,4 +66,4 @@ class ObjectProvider {
 
 }  // namespace debug_agent
 
-#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_OBJECT_UTIL_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_OBJECT_PROVIDER_H_

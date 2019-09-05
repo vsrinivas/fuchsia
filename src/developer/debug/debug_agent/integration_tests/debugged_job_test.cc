@@ -8,11 +8,12 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
-#include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
+#include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
+#include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -76,7 +77,7 @@ zx::process LaunchProcess(const zx::job& job, const std::string name,
 // These mostly correspond to the zircon exceptions.
 //
 // The class will record all those so that the test can verify the behaviour.
-class JobStreamBackend : public MockStreamBackend {
+class JobStreamBackend : public LocalStreamBackend {
  public:
   JobStreamBackend(MessageLoop* message_loop) : message_loop_(message_loop) {}
 

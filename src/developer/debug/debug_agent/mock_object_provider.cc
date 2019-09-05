@@ -72,12 +72,12 @@ MockObjectProvider CreateDefaultMockObjectProvider() {
   provider.AppendProcess(job1, "job1-p2");
 
   MockJobObject* job11 = provider.AppendJob(job1, "job11");
-  provider.AppendProcess(job11, "job11-p1");   // process-6
+  provider.AppendProcess(job11, "job11-p1");  // process-6
 
-  MockJobObject* job12= provider.AppendJob(job1, "job12");     // job-3
-  MockJobObject* job121 = provider.AppendJob(job12, "job121");   // job-4
-  provider.AppendProcess(job121, "job121-p1");  // process-7
-  provider.AppendProcess(job121, "job121-p2");  // process-8
+  MockJobObject* job12 = provider.AppendJob(job1, "job12");     // job-3
+  MockJobObject* job121 = provider.AppendJob(job12, "job121");  // job-4
+  provider.AppendProcess(job121, "job121-p1");                  // process-7
+  provider.AppendProcess(job121, "job121-p2");                  // process-8
 
   return provider;
 }

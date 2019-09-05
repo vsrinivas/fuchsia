@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <zircon/status.h>
 
+#include <gtest/gtest.h>
+
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
-#include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
+#include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
@@ -58,7 +59,7 @@ const char* kTestSo = "debug_agent_test_so.so";
 const char* kTestExecutablePath = "/pkg/bin/breakpoint_test_exe";
 const char* kModuleToSearch = "libdebug_agent_test_so.so";
 
-class BreakpointStreamBackend : public MockStreamBackend {
+class BreakpointStreamBackend : public LocalStreamBackend {
  public:
   BreakpointStreamBackend(debug_ipc::MessageLoop* loop) : loop_(loop) {}
 

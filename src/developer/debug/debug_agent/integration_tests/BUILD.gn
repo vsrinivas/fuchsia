@@ -9,8 +9,6 @@ executable("integration_tests") {
   sources = [
     "message_loop_wrapper.cc",
     "message_loop_wrapper.h",
-    "mock_stream_backend.cc",
-    "mock_stream_backend.h",
     "so_wrapper.cc",
     "so_wrapper.h",
   ]
@@ -33,7 +31,7 @@ executable("integration_tests") {
   deps = [
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/developer/debug/debug_agent:lib",
+    "//src/developer/debug/debug_agent:test_lib",
     "//src/developer/debug/ipc:client",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

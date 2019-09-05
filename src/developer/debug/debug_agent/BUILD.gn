@@ -83,12 +83,13 @@ static_library("lib") {
     "//garnet/public/lib/svc/cpp",
     "//garnet/third_party/libunwindstack",
     "//src/developer/debug/ipc:agent",
+    "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
     "//src/lib/fxl",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ngunwind",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
   ]
 }
 
@@ -140,14 +141,11 @@ package("debug_agent") {
   binary = "debug_agent"
 }
 
-executable("unit_tests") {
-  testonly = true
-  output_name = "debug_agent_unit_tests"
-
+# Common functionality used by tests.
+source_set("test_lib") {
   sources = [
-    "breakpoint_unittest.cc",
-    "debugged_job_unittest.cc",
-    "debugged_thread_unittest.cc",
+    "local_stream_backend.cc",
+    "local_stream_backend.h",
     "mock_arch_provider.cc",
     "mock_arch_provider.h",
     "mock_object_provider.cc",
@@ -156,6 +154,21 @@ executable("unit_tests") {
     "mock_process.h",
     "mock_thread.cc",
     "mock_thread.h",
+  ]
+
+  public_deps = [
+    ":lib",
+  ]
+}
+
+executable("unit_tests") {
+  testonly = true
+  output_name = "debug_agent_unit_tests"
+
+  sources = [
+    "breakpoint_unittest.cc",
+    "debugged_job_unittest.cc",
+    "debugged_thread_unittest.cc",
     "process_breakpoint_unittest.cc",
     "process_watchpoint_unittest.cc",
     "system_info_unittests.cc",
@@ -171,7 +184,7 @@ executable("unit_tests") {
   }
 
   deps = [
-    ":lib",
+    ":test_lib",
     "//src/developer/debug/ipc:tests",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
