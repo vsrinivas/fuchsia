@@ -33,7 +33,6 @@ executable_package("basemgr") {
   deps = [
     ":lib",
     ":wait_for_minfs",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
     "//peridot/lib/ledger_client:constants",
