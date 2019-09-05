@@ -442,82 +442,80 @@ async fn walk_offer_chain<'a>(
         // This `get()` is safe because `look_up_realm` populates this field
         let decl = realm_state.decl();
         let last_child_moniker = pos.last_child_moniker.as_ref().unwrap();
-        if let Some(offer) = pos.capability.find_offer_source(decl, last_child_moniker) {
-            let source = match offer {
-                OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-                OfferDecl::LegacyService(s) => OfferSource::LegacyService(&s.source),
-                OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
-                OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
-            };
-            match source {
-                OfferSource::Directory(OfferDirectorySource::Framework) => {
-                    let capability_decl =
-                        FrameworkCapabilityDecl::try_from(offer).map_err(|_| {
-                            ModelError::capability_discovery_error(format_err!(
-                                "no matching offers found for capability {:?} from component {}",
-                                pos.capability,
-                                pos.moniker(),
-                            ))
-                        })?;
-                    return Ok(Some(CapabilitySource::Framework(
-                        capability_decl,
-                        current_realm.clone(),
-                    )));
-                }
-                OfferSource::Service(OfferServiceSource::Realm)
-                | OfferSource::LegacyService(OfferServiceSource::Realm)
-                | OfferSource::Directory(OfferDirectorySource::Realm)
-                | OfferSource::Storage(OfferStorageSource::Realm) => {
-                    // The offered capability comes from the realm, so follow the
-                    // parent
-                    pos.capability = RoutedCapability::Offer(offer.clone());
-                    pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
-                    pos.moniker = pos.moniker().parent();
-                    continue 'offerloop;
-                }
-                OfferSource::Service(OfferServiceSource::Self_)
-                | OfferSource::LegacyService(OfferServiceSource::Self_)
-                | OfferSource::Directory(OfferDirectorySource::Self_) => {
-                    // The offered capability comes from the current component,
-                    // return our current location in the tree.
-                    return Ok(Some(CapabilitySource::Component(
-                        RoutedCapability::Offer(offer.clone()),
-                        current_realm.clone(),
-                    )));
-                }
-                OfferSource::Service(OfferServiceSource::Child(child_name))
-                | OfferSource::LegacyService(OfferServiceSource::Child(child_name))
-                | OfferSource::Directory(OfferDirectorySource::Child(child_name)) => {
-                    // The offered capability comes from a child, break the loop
-                    // and begin walking the expose chain.
-                    pos.capability = RoutedCapability::Offer(offer.clone());
-                    let partial = PartialMoniker::new(child_name.to_string(), None);
-                    pos.moniker =
-                        Some(realm_state.extend_moniker_with(&pos.moniker(), &partial).ok_or(
-                            ModelError::capability_discovery_error(format_err!(
-                                "no child {} found from component {} for offer source",
-                                partial,
-                                pos.moniker().clone(),
-                            )),
-                        )?);
-                    return Ok(None);
-                }
-                OfferSource::Storage(OfferStorageSource::Storage(storage_name)) => {
-                    let storage = decl
-                        .find_storage_source(&storage_name)
-                        .expect("storage offer references nonexistent section");
-                    return Ok(Some(CapabilitySource::StorageDecl(
-                        storage.clone(),
-                        current_realm.clone(),
-                    )));
-                }
-            }
-        } else {
-            return Err(ModelError::capability_discovery_error(format_err!(
+        let offer = pos.capability.find_offer_source(decl, last_child_moniker).ok_or(
+            ModelError::capability_discovery_error(format_err!(
                 "no matching offers found for capability {:?} from component {}",
                 pos.capability,
                 pos.moniker(),
-            )));
+            )),
+        )?;
+        let source = match offer {
+            OfferDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
+            OfferDecl::LegacyService(s) => OfferSource::LegacyService(&s.source),
+            OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
+            OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
+        };
+        match source {
+            OfferSource::Service(_) => {
+                return Err(ModelError::unsupported("Service capability"));
+            }
+            OfferSource::Directory(OfferDirectorySource::Framework) => {
+                let capability_decl = FrameworkCapabilityDecl::try_from(offer).map_err(|_| {
+                    ModelError::capability_discovery_error(format_err!(
+                        "no matching offers found for capability {:?} from component {}",
+                        pos.capability,
+                        pos.moniker(),
+                    ))
+                })?;
+                return Ok(Some(CapabilitySource::Framework(
+                    capability_decl,
+                    current_realm.clone(),
+                )));
+            }
+            OfferSource::LegacyService(OfferServiceSource::Realm)
+            | OfferSource::Directory(OfferDirectorySource::Realm)
+            | OfferSource::Storage(OfferStorageSource::Realm) => {
+                // The offered capability comes from the realm, so follow the
+                // parent
+                pos.capability = RoutedCapability::Offer(offer.clone());
+                pos.last_child_moniker = pos.moniker().path().last().map(|c| c.clone());
+                pos.moniker = pos.moniker().parent();
+                continue 'offerloop;
+            }
+            OfferSource::LegacyService(OfferServiceSource::Self_)
+            | OfferSource::Directory(OfferDirectorySource::Self_) => {
+                // The offered capability comes from the current component,
+                // return our current location in the tree.
+                return Ok(Some(CapabilitySource::Component(
+                    RoutedCapability::Offer(offer.clone()),
+                    current_realm.clone(),
+                )));
+            }
+            OfferSource::LegacyService(OfferServiceSource::Child(child_name))
+            | OfferSource::Directory(OfferDirectorySource::Child(child_name)) => {
+                // The offered capability comes from a child, break the loop
+                // and begin walking the expose chain.
+                pos.capability = RoutedCapability::Offer(offer.clone());
+                let partial = PartialMoniker::new(child_name.to_string(), None);
+                pos.moniker =
+                    Some(realm_state.extend_moniker_with(&pos.moniker(), &partial).ok_or(
+                        ModelError::capability_discovery_error(format_err!(
+                            "no child {} found from component {} for offer source",
+                            partial,
+                            pos.moniker().clone(),
+                        )),
+                    )?);
+                return Ok(None);
+            }
+            OfferSource::Storage(OfferStorageSource::Storage(storage_name)) => {
+                let storage = decl
+                    .find_storage_source(&storage_name)
+                    .expect("storage offer references nonexistent section");
+                return Ok(Some(CapabilitySource::StorageDecl(
+                    storage.clone(),
+                    current_realm.clone(),
+                )));
+            }
         }
     }
 }
@@ -543,69 +541,60 @@ async fn walk_expose_chain<'a>(
         let realm_state = current_realm.lock_state().await;
         let realm_state = realm_state.get();
         // This `get()` is safe because look_up_realm populates this field.
-        let decl = realm_state.decl();
         let first_expose = first_expose.take();
-        let expose = match first_expose {
-            Some(_) => first_expose.as_ref(),
-            None => pos.capability.find_expose_source(decl),
+        let expose = first_expose
+            .as_ref()
+            .or_else(|| pos.capability.find_expose_source(realm_state.decl()))
+            .ok_or(ModelError::capability_discovery_error(format_err!(
+                "no matching offers found for capability {:?} from component {}",
+                pos.capability,
+                pos.moniker(),
+            )))?;
+        let (source, target) = match expose {
+            ExposeDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
+            ExposeDecl::LegacyService(ls) => (&ls.source, &ls.target),
+            ExposeDecl::Directory(d) => (&d.source, &d.target),
         };
-        if let Some(expose) = expose {
-            let (source, target) = match expose {
-                ExposeDecl::Service(_) => {
-                    return Err(ModelError::unsupported("Service capability"))
-                }
-                ExposeDecl::LegacyService(ls) => (&ls.source, &ls.target),
-                ExposeDecl::Directory(d) => (&d.source, &d.target),
-            };
-            if target != &ExposeTarget::Realm {
-                return Err(ModelError::capability_discovery_error(format_err!(
-                    "matching exposed capability {:?} from component {} has non-realm target",
-                    pos.capability,
-                    pos.moniker()
-                )));
-            }
-            match source {
-                ExposeSource::Self_ => {
-                    // The offered capability comes from the current component, return our
-                    // current location in the tree.
-                    return Ok(CapabilitySource::Component(
-                        RoutedCapability::Expose(expose.clone()),
-                        current_realm.clone(),
-                    ));
-                }
-                ExposeSource::Child(child_name) => {
-                    // The offered capability comes from a child, so follow the child.
-                    pos.capability = RoutedCapability::Expose(expose.clone());
-                    let partial = PartialMoniker::new(child_name.to_string(), None);
-                    pos.moniker =
-                        Some(realm_state.extend_moniker_with(&pos.moniker(), &partial).ok_or(
-                            ModelError::capability_discovery_error(format_err!(
-                                "no child {} found from component {} for expose source",
-                                partial,
-                                pos.moniker().clone(),
-                            )),
-                        )?);
-                    continue;
-                }
-                ExposeSource::Framework => {
-                    let capability_decl =
-                        FrameworkCapabilityDecl::try_from(expose).map_err(|_| {
-                            ModelError::capability_discovery_error(format_err!(
-                                "no matching offers found for capability {:?} from component {}",
-                                pos.capability,
-                                pos.moniker(),
-                            ))
-                        })?;
-                    return Ok(CapabilitySource::Framework(capability_decl, current_realm.clone()));
-                }
-            }
-        } else {
-            // We didn't find any matching exposes! Oh no!
+        if target != &ExposeTarget::Realm {
             return Err(ModelError::capability_discovery_error(format_err!(
-                "no matching exposes found for capability {:?} from component {}",
+                "matching exposed capability {:?} from component {} has non-realm target",
                 pos.capability,
                 pos.moniker()
             )));
+        }
+        match source {
+            ExposeSource::Self_ => {
+                // The offered capability comes from the current component, return our
+                // current location in the tree.
+                return Ok(CapabilitySource::Component(
+                    RoutedCapability::Expose(expose.clone()),
+                    current_realm.clone(),
+                ));
+            }
+            ExposeSource::Child(child_name) => {
+                // The offered capability comes from a child, so follow the child.
+                pos.capability = RoutedCapability::Expose(expose.clone());
+                let partial = PartialMoniker::new(child_name.to_string(), None);
+                pos.moniker =
+                    Some(realm_state.extend_moniker_with(&pos.moniker(), &partial).ok_or(
+                        ModelError::capability_discovery_error(format_err!(
+                            "no child {} found from component {} for expose source",
+                            partial,
+                            pos.moniker().clone(),
+                        )),
+                    )?);
+                continue;
+            }
+            ExposeSource::Framework => {
+                let capability_decl = FrameworkCapabilityDecl::try_from(expose).map_err(|_| {
+                    ModelError::capability_discovery_error(format_err!(
+                        "no matching offers found for capability {:?} from component {}",
+                        pos.capability,
+                        pos.moniker(),
+                    ))
+                })?;
+                return Ok(CapabilitySource::Framework(capability_decl, current_realm.clone()));
+            }
         }
     }
 }
