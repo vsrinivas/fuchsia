@@ -11,6 +11,8 @@
 #include <string.h>
 #include <threads.h>
 
+#include <optional>
+
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intelhda/codec.h>
@@ -45,18 +47,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   // Interrupt handler.
   void ProcessIrq();
-
-  // Mailbox constants
-  static constexpr size_t MAILBOX_SIZE = 0x1000;
-
-  // IPC helper methods
-  void SendIpcMessage(const IpcMessage& message) {
-    // HIPCIE must be programmed before setting HIPCI.BUSY
-    REG_WR(&regs()->hipcie, message.extension);
-    REG_WR(&regs()->hipci, message.primary | ADSP_REG_HIPCI_BUSY);
-  }
-  void IpcMailboxWrite(const void* data, size_t size) { mailbox_out_.Write(data, size); }
-  void IpcMailboxRead(void* data, size_t size) { mailbox_in_.Read(data, size); }
 
   zx_status_t StartPipeline(const DspPipeline& pipeline);
   zx_status_t PausePipeline(const DspPipeline& pipeline);
@@ -145,36 +135,11 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   // Pipe processintg registers
   hda_pp_registers_t* pp_regs_ = nullptr;
 
+  // PCI registers
+  fzl::VmoMapper mapped_regs_;
+
   // IPC
-  IntelDspIpc ipc_{this};
-
-  // IPC Mailboxes
-  class Mailbox {
-   public:
-    void Initialize(void* base, size_t size) {
-      base_ = base;
-      size_ = size;
-    }
-
-    size_t size() const { return size_; }
-
-    void Write(const void* data, size_t size) {
-      // It is the caller's responsibility to ensure size fits in the mailbox.
-      ZX_DEBUG_ASSERT(size <= size_);
-      memcpy(base_, data, size);
-    }
-    void Read(void* data, size_t size) {
-      // It is the caller's responsibility to ensure size fits in the mailbox.
-      ZX_DEBUG_ASSERT(size <= size_);
-      memcpy(data, base_, size);
-    }
-
-   private:
-    void* base_;
-    size_t size_;
-  };
-  Mailbox mailbox_in_;
-  Mailbox mailbox_out_;
+  std::optional<IntelDspIpc> ipc_;
 
   std::unique_ptr<Nhlt> nhlt_;
 
@@ -193,9 +158,6 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   // Log prefix storage
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
-
-  // PCI registers
-  fzl::VmoMapper mapped_regs_;
 
   // Driver connection state
   fbl::Mutex codec_driver_channel_lock_;

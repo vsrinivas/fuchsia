@@ -348,6 +348,13 @@ constexpr uint32_t ADSP_FW_STATUS_STATE_INITIALIZATION_DONE = 0x1;
 constexpr uint32_t ADSP_FW_STATUS_STATE_ENTER_BASE_FW       = 0xF;
 constexpr uint32_t ADSP_FW_STATUS_STATE_MASK                = 0x0FFFFFFF;
 
+// ADSP SRAM windows
+constexpr size_t SKL_ADSP_SRAM0_OFFSET = 0x8000;  // Shared between Skylake and Kabylake
+constexpr size_t SKL_ADSP_SRAM1_OFFSET = 0xA000;
+
+// Mailbox offsets
+constexpr size_t ADSP_MAILBOX_IN_OFFSET = 0x1000;  // Section 5.5 Offset from SRAM0
+
 #undef _SIC_
 // clang-format on
 

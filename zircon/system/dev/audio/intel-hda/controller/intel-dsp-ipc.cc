@@ -4,22 +4,27 @@
 
 #include "intel-dsp-ipc.h"
 
+#include <lib/zx/time.h>
+#include <string.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <string.h>
+#include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/utils.h>
 
-#include "intel-dsp.h"
+#include "debug-logging.h"
 
 namespace audio {
 namespace intel_hda {
 
-IntelDspIpc::IntelDspIpc(IntelDsp* dsp) : dsp_(dsp) {
-  snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP IPC (unknown BDF)");
-}
-
-void IntelDspIpc::SetLogPrefix(const char* new_prefix) {
-  snprintf(log_prefix_, sizeof(log_prefix_), "%s IPC", new_prefix);
+IntelDspIpc::IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs)
+    : log_prefix_(std::move(log_prefix)), regs_(regs) {
+  uint8_t* mapped_base = reinterpret_cast<uint8_t*>(regs);
+  mailbox_in_.Initialize(
+      static_cast<void*>(mapped_base + SKL_ADSP_SRAM0_OFFSET + ADSP_MAILBOX_IN_OFFSET),
+      MAILBOX_SIZE);
+  mailbox_out_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET), MAILBOX_SIZE);
 }
 
 void IntelDspIpc::Shutdown() {
@@ -33,9 +38,14 @@ void IntelDspIpc::Shutdown() {
 void IntelDspIpc::SendIpc(const Txn& txn) {
   // Copy tx data to outbox
   if (txn.tx_size > 0) {
-    dsp_->IpcMailboxWrite(txn.tx_data, txn.tx_size);
+    IpcMailboxWrite(txn.tx_data, txn.tx_size);
   }
-  dsp_->SendIpcMessage(txn.request);
+  SendIpcMessage(txn.request);
+}
+
+void IntelDspIpc::SendIpcMessage(const IpcMessage& message) {
+  REG_WR(&regs_->hipcie, message.extension);
+  REG_WR(&regs_->hipci, message.primary | ADSP_REG_HIPCI_BUSY);
 }
 
 zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
@@ -48,14 +58,38 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
       SendIpc(ipc_queue_.front());
     }
   }
+
   // Wait for completion
   zx_status_t res = sync_completion_wait(&txn->completion, ZX_MSEC(300));
   if (res != ZX_OK) {
-    dsp_->DeviceShutdown();
+    return res;
   }
+
   // TODO(yky): ZX-2261: Figure out why this is needed and eliminate it.
   zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
   return res;
+}
+
+void IntelDspIpc::ProcessIrq() {
+  uint32_t adspis = REG_RD(&regs_->adspis);
+  if (!(adspis & ADSP_REG_ADSPIC_IPC)) {
+    return;
+  }
+
+  IpcMessage message(REG_RD(&regs_->hipct), REG_RD(&regs_->hipcte));
+  if (message.primary & ADSP_REG_HIPCT_BUSY) {
+    // Process the incoming message
+    ProcessIpc(message);
+
+    // Ack the IRQ after reading mailboxes.
+    REG_SET_BITS(&regs_->hipct, ADSP_REG_HIPCT_BUSY);
+  }
+
+  // Ack the IPC target done IRQ
+  uint32_t val = REG_RD(&regs_->hipcie);
+  if (val & ADSP_REG_HIPCIE_DONE) {
+    REG_WR(&regs_->hipcie, val);
+  }
 }
 
 zx_status_t IntelDspIpc::InitInstance(uint16_t module_id, uint8_t instance_id,
@@ -198,11 +232,7 @@ void IntelDspIpc::ProcessIpcNotification(const IpcMessage& notif) {
       break;
     case NotificationType::RESOURCE_EVENT: {
       ResourceEventData data;
-      dsp_->IpcMailboxRead(&data, sizeof(data));
-#if 0
-        LOG(INFO, "resource event type %u id %u event %u\n",
-                  data.resource_type, data.resource_id, data.event_type);
-#endif
+      IpcMailboxRead(&data, sizeof(data));
       break;
     }
     default:
@@ -271,7 +301,7 @@ void IntelDspIpc::ProcessLargeConfigGetReply(Txn* txn) {
     ZX_DEBUG_ASSERT(size > 0);
     ZX_DEBUG_ASSERT(size <= txn->rx_size);
 
-    dsp_->IpcMailboxRead(txn->rx_data, size);
+    IpcMailboxRead(txn->rx_data, size);
     txn->rx_actual = size;
   } else {
     txn->rx_actual = 0;

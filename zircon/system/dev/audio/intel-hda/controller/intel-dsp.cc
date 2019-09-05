@@ -24,13 +24,6 @@ namespace intel_hda {
 
 namespace {
 
-// ADSP SRAM windows
-constexpr size_t SKL_ADSP_SRAM0_OFFSET = 0x8000;  // Shared between Skylake and Kabylake
-constexpr size_t SKL_ADSP_SRAM1_OFFSET = 0xA000;
-
-// Mailbox offsets
-constexpr size_t ADSP_MAILBOX_IN_OFFSET = 0x1000;  // Section 5.5 Offset from SRAM0
-
 constexpr const char* ADSP_FIRMWARE_PATH = "dsp_fw_kbl_v3420.bin";
 
 constexpr uint32_t EXT_MANIFEST_HDR_MAGIC = 0x31454124;
@@ -40,6 +33,7 @@ constexpr zx_duration_t INTEL_ADSP_POLL_NSEC = ZX_USEC(500);               // 50
 constexpr zx_duration_t INTEL_ADSP_ROM_INIT_TIMEOUT_NSEC = ZX_SEC(1);      // 1S Arbitrary
 constexpr zx_duration_t INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC = ZX_SEC(3);  // 3S Arbitrary
 constexpr zx_duration_t INTEL_ADSP_POLL_FW_NSEC = ZX_MSEC(1);              //.1mS Arbitrary
+
 }  // namespace
 
 struct skl_adspfw_ext_manifest_hdr_t {
@@ -404,8 +398,6 @@ Status IntelDsp::SetupDspDevice() {
   const zx_pcie_device_info_t& hda_dev_info = controller_->dev_info();
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", hda_dev_info.bus_id,
            hda_dev_info.dev_id, hda_dev_info.func_id);
-  ipc_.SetLogPrefix(log_prefix_);
-
   // Fetch the bar which holds the Audio DSP registers.
   zx::vmo bar_vmo;
   size_t bar_size;
@@ -438,12 +430,8 @@ Status IntelDsp::SetupDspDevice() {
     return Status(res);
   }
 
-  // Initialize mailboxes
-  uint8_t* mapped_base = static_cast<uint8_t*>(mapped_regs_.start());
-  mailbox_in_.Initialize(
-      static_cast<void*>(mapped_base + SKL_ADSP_SRAM0_OFFSET + ADSP_MAILBOX_IN_OFFSET),
-      MAILBOX_SIZE);
-  mailbox_out_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET), MAILBOX_SIZE);
+  // Initialize IPC.
+  ipc_.emplace(log_prefix_, regs());
 
   // Enable HDA interrupt. Interrupts are still masked at the DSP level.
   IrqEnable();
@@ -465,7 +453,7 @@ void IntelDsp::DeviceShutdown() {
   ResetCore(ADSP_REG_ADSPCS_CORE0_MASK);
   PowerDownCore(ADSP_REG_ADSPCS_CORE0_MASK);
 
-  ipc_.Shutdown();
+  ipc_->Shutdown();
 
   state_ = State::SHUT_DOWN;
 }
@@ -580,9 +568,9 @@ zx_status_t IntelDsp::Boot() {
 }
 
 zx_status_t IntelDsp::GetModulesInfo() {
-  uint8_t data[MAILBOX_SIZE];
+  uint8_t data[IntelDspIpc::MAILBOX_SIZE];
   IntelDspIpc::Txn txn(nullptr, 0, data, sizeof(data));
-  ipc_.LargeConfigGet(&txn, 0, 0, to_underlying(BaseFWParamType::MODULES_INFO), sizeof(data));
+  ipc_->LargeConfigGet(&txn, 0, 0, to_underlying(BaseFWParamType::MODULES_INFO), sizeof(data));
 
   if (txn.success()) {
     auto info = reinterpret_cast<const ModulesInfo*>(txn.rx_data);
@@ -725,7 +713,7 @@ zx_status_t IntelDsp::LoadFirmware() {
   // Now check whether we received the FW Ready IPC. Receiving this IPC indicates the
   // IPC system is ready. Both FW_STATUS = ADSP_FW_STATUS_STATE_ENTER_BASE_FW and
   // receiving the IPC are required for the DSP to be operational.
-  st = ipc_.WaitForFirmwareReady(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
+  st = ipc_->WaitForFirmwareReady(INTEL_ADSP_BASE_FW_INIT_TIMEOUT_NSEC);
   if (st != ZX_OK) {
     LOG(ERROR, "Error waiting for FW Ready IPC (err %d, fw_status = 0x%08x)\n", st,
         REG_RD(&fw_regs()->fw_status));
@@ -737,11 +725,11 @@ zx_status_t IntelDsp::LoadFirmware() {
 
 zx_status_t IntelDsp::RunPipeline(uint8_t pipeline_id) {
   // Pipeline must be paused before starting
-  zx_status_t st = ipc_.SetPipelineState(pipeline_id, PipelineState::PAUSED, true);
+  zx_status_t st = ipc_->SetPipelineState(pipeline_id, PipelineState::PAUSED, true);
   if (st != ZX_OK) {
     return st;
   }
-  return ipc_.SetPipelineState(pipeline_id, PipelineState::RUNNING, true);
+  return ipc_->SetPipelineState(pipeline_id, PipelineState::RUNNING, true);
 }
 
 bool IntelDsp::IsCoreEnabled(uint8_t core_mask) {
@@ -806,25 +794,10 @@ void IntelDsp::ProcessIrq() {
     uint32_t w = REG_RD(&regs()->cldma.stream.ctl_sts.w);
     REG_WR(&regs()->cldma.stream.ctl_sts.w, w);
   }
-  if (adspis & ADSP_REG_ADSPIC_IPC) {
-    IpcMessage message(REG_RD(&regs()->hipct), REG_RD(&regs()->hipcte));
-    if (message.primary & ADSP_REG_HIPCT_BUSY) {
-      if (state_ != State::OPERATING) {
-        LOG(WARN, "Got IRQ when device is not operating (state %u)\n", to_underlying(state_));
-      } else {
-        // Process the incoming message
-        ipc_.ProcessIpc(message);
-      }
 
-      // Ack the IRQ after reading mailboxes.
-      REG_SET_BITS(&regs()->hipct, ADSP_REG_HIPCT_BUSY);
-    }
-
-    // Ack the IPC target done IRQ
-    uint32_t val = REG_RD(&regs()->hipcie);
-    if (val & ADSP_REG_HIPCIE_DONE) {
-      REG_WR(&regs()->hipcie, val);
-    }
+  // Allow the IPC module to check for incoming messages.
+  if (ipc_.has_value()) {
+    ipc_->ProcessIrq();
   }
 }
 

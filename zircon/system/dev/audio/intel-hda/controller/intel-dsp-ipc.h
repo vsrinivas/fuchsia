@@ -5,24 +5,27 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_IPC_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_IPC_H_
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
-#include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
-#include "debug-logging.h"
+#include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
+#include <fbl/string.h>
+#include <intel-hda/utils/intel-audio-dsp-ipc.h>
+#include <intel-hda/utils/intel-hda-registers.h>
 
 namespace audio {
 namespace intel_hda {
 
-class IntelDsp;
-
 class IntelDspIpc {
  public:
-  IntelDspIpc(IntelDsp* dsp);
+  // Mailbox constants
+  static constexpr size_t MAILBOX_SIZE = 0x1000;
 
-  const char* log_prefix() const { return log_prefix_; }
+  // Create an IPC object, able to send and receive messages to the SST DSP.
+  //
+  // |regs| is the address of the ADSP MMIO register set in our address space.
+  IntelDspIpc(fbl::String log_prefix, adsp_registers_t* regs);
 
   class Txn : public fbl::DoublyLinkedListable<Txn*> {
    public:
@@ -49,8 +52,6 @@ class IntelDspIpc {
     sync_completion_t completion;
   };
 
-  void SetLogPrefix(const char* new_prefix);
-
   zx_status_t WaitForFirmwareReady(zx_duration_t timeout) {
     return sync_completion_wait(&fw_ready_completion_, timeout);
   }
@@ -70,15 +71,51 @@ class IntelDspIpc {
                              bool lp);
   zx_status_t SetPipelineState(uint8_t ppl_id, PipelineState state, bool sync_stop_start);
 
+  // Process an interrupt.
+  void ProcessIrq();
+
+  const char* log_prefix() const { return log_prefix_.c_str(); }
+
+ private:
+  // IPC Mailboxes
+  class Mailbox {
+   public:
+    void Initialize(void* base, size_t size) {
+      base_ = base;
+      size_ = size;
+    }
+
+    size_t size() const { return size_; }
+
+    void Write(const void* data, size_t size) {
+      // It is the caller's responsibility to ensure size fits in the mailbox.
+      ZX_DEBUG_ASSERT(size <= size_);
+      memcpy(base_, data, size);
+    }
+    void Read(void* data, size_t size) {
+      // It is the caller's responsibility to ensure size fits in the mailbox.
+      ZX_DEBUG_ASSERT(size <= size_);
+      memcpy(data, base_, size);
+    }
+
+   private:
+    void* base_;
+    size_t size_;
+  };
+
   // Process responses from DSP
   void ProcessIpc(const IpcMessage& message);
   void ProcessIpcNotification(const IpcMessage& notif);
   void ProcessIpcReply(const IpcMessage& reply);
   void ProcessLargeConfigGetReply(Txn* txn);
 
- private:
+  void IpcMailboxWrite(const void* data, size_t size) { mailbox_out_.Write(data, size); }
+  void IpcMailboxRead(void* data, size_t size) { mailbox_in_.Read(data, size); }
+
   // Send an IPC message and wait for response
   zx_status_t SendIpcWait(Txn* txn);
+
+  void SendIpcMessage(const IpcMessage& message);
 
   void SendIpc(const Txn& txn);
 
@@ -86,18 +123,21 @@ class IntelDspIpc {
     return (status == MsgStatus::IPC_SUCCESS) ? ZX_OK : ZX_ERR_INTERNAL;
   }
 
+  Mailbox mailbox_in_;
+  Mailbox mailbox_out_;
+
   // Log prefix storage
-  char log_prefix_[LOG_PREFIX_STORAGE] = {0};
+  const fbl::String log_prefix_;
 
   // Pending IPC
   fbl::Mutex ipc_lock_;
   fbl::DoublyLinkedList<Txn*> ipc_queue_ TA_GUARDED(ipc_lock_);
 
-  // A reference to the owning DSP
-  IntelDsp* dsp_;
-
   // Used to wait for firmware ready
   sync_completion_t fw_ready_completion_;
+
+  // Hardware registers.
+  adsp_registers_t* regs_;
 };
 
 }  // namespace intel_hda
