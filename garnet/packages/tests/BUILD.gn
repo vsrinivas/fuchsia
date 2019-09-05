@@ -1263,6 +1263,7 @@ group("carnelian") {
   testonly = true
   public_deps = [
     "//garnet/public/rust/carnelian:carnelian_integration_test",
+    "//garnet/public/rust/carnelian:carnelian_fb_integration_test",
     "//garnet/public/rust/carnelian:carnelian_tests",
   ]
 }

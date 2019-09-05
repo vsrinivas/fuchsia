@@ -380,8 +380,8 @@ impl FrameBufferViewStrategy {
         mapping: &Arc<Mapping>,
         pixel_size: u32,
         _pixel_format: fuchsia_framebuffer::PixelFormat,
+        stride: u32,
     ) -> ViewStrategyPtr {
-        let stride = size.width as u32 * pixel_size;
         let canvas = Canvas::new(*size, MappingPixelSink::new(mapping), stride, pixel_size);
         let framebuffer_resources = FramebufferResources { canvas: RefCell::new(canvas) };
         Box::new(FrameBufferViewStrategy { framebuffer_resources })
@@ -495,9 +495,12 @@ impl ViewController {
         pixel_size: u32,
         pixel_format: fuchsia_framebuffer::PixelFormat,
         mapping: Arc<Mapping>,
+        stride: u32,
         mut view_assistant: ViewAssistantPtr,
+        test_sender: Option<TestSender>,
     ) -> Result<ViewController, Error> {
-        let strategy = FrameBufferViewStrategy::new(&size, &mapping, pixel_size, pixel_format);
+        let strategy =
+            FrameBufferViewStrategy::new(&size, &mapping, pixel_size, pixel_format, stride);
         let initial_animation_mode = view_assistant.initial_animation_mode();
         let mut view_controller = ViewController {
             key,
@@ -507,7 +510,7 @@ impl ViewController {
             animation_mode: initial_animation_mode,
             assistant: view_assistant,
             strategy,
-            test_sender: None,
+            test_sender: test_sender,
         };
 
         view_controller

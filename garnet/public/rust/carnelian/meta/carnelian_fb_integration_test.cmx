@@ -1,0 +1,22 @@
+{
+    "program": {
+        "binary": "test/carnelian_fb_integration_test"
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
+        }
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

@@ -110,6 +110,7 @@ trait AppStrategy {
     fn get_frame_buffer_size(&self) -> Option<IntSize>;
     fn get_pixel_size(&self) -> u32;
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat;
+    fn get_linear_stride_bytes(&self) -> u32;
 }
 
 type AppStrategyPtr = Box<dyn AppStrategy>;
@@ -146,6 +147,11 @@ impl AppStrategy for FrameBufferAppStrategy {
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
         let config = self.frame_buffer.get_config();
         config.format
+    }
+
+    fn get_linear_stride_bytes(&self) -> u32 {
+        let config = self.frame_buffer.get_config();
+        config.linear_stride_bytes() as u32
     }
 }
 
@@ -203,6 +209,10 @@ impl AppStrategy for ScenicAppStrategy {
 
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
         fuchsia_framebuffer::PixelFormat::Argb8888
+    }
+
+    fn get_linear_stride_bytes(&self) -> u32 {
+        0
     }
 }
 
@@ -280,7 +290,7 @@ impl App {
             App::with(|app| {
                 let mapping =
                     app.strategy.as_ref().unwrap().get_frame_buffer_mapping().unwrap().clone();
-                app.create_view_framebuffer(mapping)
+                app.create_view_framebuffer(mapping, None)
             })?;
         }
 
@@ -313,7 +323,8 @@ impl App {
             App::with(|app| {
                 let mapping =
                     app.strategy.as_ref().unwrap().get_frame_buffer_mapping().unwrap().clone();
-                app.create_view_framebuffer(mapping).expect("create_view_framebuffer failed");
+                app.create_view_framebuffer(mapping, Some(create_view_sender))
+                    .expect("create_view_framebuffer failed");
             });
         }
 
@@ -472,7 +483,11 @@ impl App {
         Ok(())
     }
 
-    fn create_view_framebuffer(&mut self, mapping: Arc<Mapping>) -> Result<(), Error> {
+    fn create_view_framebuffer(
+        &mut self,
+        mapping: Arc<Mapping>,
+        test_sender: Option<TestSender>,
+    ) -> Result<(), Error> {
         let view_assistant = self.create_view_assistant_canvas()?;
         let strat = self.strategy.as_ref().unwrap();
         let size = strat.get_frame_buffer_size().unwrap();
@@ -482,7 +497,9 @@ impl App {
             strat.get_pixel_size(),
             strat.get_pixel_format(),
             mapping,
+            strat.get_linear_stride_bytes(),
             view_assistant,
+            test_sender,
         )?;
 
         // For framebuffer apps, always use vsync to drive update

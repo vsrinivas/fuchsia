@@ -5,14 +5,10 @@
 #![feature(async_await)]
 
 use carnelian::{
-    set_node_color, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    App, AppAssistant, Color, Point, Rect, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    ViewKey, ViewMode,
 };
 use failure::Error;
-use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
-
-const BACKGROUND_Z: f32 = 0.0;
-const SQUARE_Z: f32 = BACKGROUND_Z - 8.0;
 
 struct IntegrationTestAppAssistant;
 
@@ -21,56 +17,30 @@ impl AppAssistant for IntegrationTestAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(
-        &mut self,
-        _: ViewKey,
-        session: &SessionPtr,
-    ) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(IntegrationTestViewAssistant {
-            background_node: ShapeNode::new(session.clone()),
-            square_node: ShapeNode::new(session.clone()),
-        }))
+    fn create_view_assistant_canvas(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        let bg_color = Color::from_hash_code("#EBD5B3")?;
+        Ok(Box::new(IntegrationTestViewAssistant { bg_color }))
+    }
+
+    fn get_mode(&self) -> ViewMode {
+        ViewMode::Canvas
     }
 }
 
 struct IntegrationTestViewAssistant {
-    background_node: ShapeNode,
-    square_node: ShapeNode,
+    bg_color: Color,
 }
 
 impl ViewAssistant for IntegrationTestViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        set_node_color(
-            context.session(),
-            &self.background_node,
-            &Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff },
-        );
-        set_node_color(
-            context.session(),
-            &self.square_node,
-            &Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff },
-        );
-        context.root_node().add_child(&self.background_node);
-        context.root_node().add_child(&self.square_node);
+    fn setup(&mut self, _: &ViewAssistantContext) -> Result<(), Error> {
         Ok(())
     }
 
     fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        let center_x = context.size.width * 0.5;
-        let center_y = context.size.height * 0.5;
-        self.background_node.set_shape(&Rectangle::new(
-            context.session().clone(),
-            context.size.width,
-            context.size.height,
-        ));
-        self.background_node.set_translation(center_x, center_y, BACKGROUND_Z);
-        let square_size = context.size.width.min(context.size.height) * 0.6;
-        self.square_node.set_shape(&Rectangle::new(
-            context.session().clone(),
-            square_size,
-            square_size,
-        ));
-        self.square_node.set_translation(center_x, center_y, SQUARE_Z);
+        let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
+
+        let bounds = Rect::new(Point::zero(), context.size);
+        canvas.fill_rect(&bounds, self.bg_color);
         Ok(())
     }
 }

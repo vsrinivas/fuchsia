@@ -414,3 +414,32 @@ test_package("carnelian_integration_test") {
     },
   ]
 }
+
+rustc_binary("carnelian_fb_integration_test_bin") {
+  name = "carnelian_fb_integration_test"
+  edition = "2018"
+  source_root = "tests/carnelian_integration_test.rs"
+  deps = [
+    "//garnet/public/rust/carnelian",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-framebuffer",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+}
+
+
+test_package("carnelian_fb_integration_test") {
+  deps = [
+    ":carnelian_fb_integration_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "carnelian_fb_integration_test"
+      environments = [ nuc_env ]
+    },
+  ]
+}
