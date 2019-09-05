@@ -78,6 +78,14 @@ class ActivePageManager {
   // Populates |heads| with the page's heads.
   storage::Status GetHeads(std::vector<const storage::CommitId>* heads);
 
+  // Reports to |callback| this page's commits.
+  void GetCommits(
+      fit::function<void(Status, std::vector<std::unique_ptr<const storage::Commit>>)> callback);
+
+  // Reports to |callback| the |storage::Commit| with the given |storage::CommitId|.
+  void GetCommit(const storage::CommitId& commit_id,
+                 fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback);
+
   // Returns true if this |ActivePageManager| is not currently active in any way and can be deleted.
   bool IsEmpty();
 
@@ -108,6 +116,10 @@ class ActivePageManager {
 
   // Registered references.
   std::map<uint64_t, storage::ObjectIdentifier> references_;
+
+  // TODO(nathaniel): This should be upgraded from an integer to a weak_ptr-less-in-this-case
+  // TokenManager.
+  int64_t ongoing_page_storage_uses_;
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;
