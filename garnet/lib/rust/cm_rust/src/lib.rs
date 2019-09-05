@@ -264,32 +264,32 @@ fidl_into_struct!(ExposeServiceDecl, ExposeServiceDecl, fsys::ExposeServiceDecl,
                   {
                       source: ExposeSource,
                       source_path: CapabilityPath,
-                      target_path: CapabilityPath,
                       target: ExposeTarget,
+                      target_path: CapabilityPath,
                   });
 fidl_into_struct!(ExposeLegacyServiceDecl, ExposeLegacyServiceDecl, fsys::ExposeLegacyServiceDecl,
                   fsys::ExposeLegacyServiceDecl,
                   {
                       source: ExposeSource,
                       source_path: CapabilityPath,
-                      target_path: CapabilityPath,
                       target: ExposeTarget,
+                      target_path: CapabilityPath,
                   });
 fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirectoryDecl,
                   fsys::ExposeDirectoryDecl,
                   {
                       source: ExposeSource,
                       source_path: CapabilityPath,
-                      target_path: CapabilityPath,
                       target: ExposeTarget,
+                      target_path: CapabilityPath,
                   });
 
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
                   fsys::StorageDecl,
                   {
                       name: String,
-                      source_path: CapabilityPath,
                       source: StorageDirectorySource,
+                      source_path: CapabilityPath,
                   });
 fidl_into_enum!(OfferDecl, OfferDecl, fsys::OfferDecl, fsys::OfferDecl,
                 {
