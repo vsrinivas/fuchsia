@@ -352,7 +352,12 @@ func TestRules(t *testing.T) {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
 
-	want := []Rule{
+	netSrcSubnet := fidlnet.Subnet{PrefixLen: 32}
+	netSrcSubnet.Addr.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	netDstSubnet := fidlnet.Subnet{PrefixLen: 32}
+	netDstSubnet.Addr.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{5, 6, 7, 8}})
+
+	rules := []Rule{
 		{
 			action:               Drop,
 			direction:            Incoming,
@@ -400,21 +405,86 @@ func TestRules(t *testing.T) {
 		},
 	}
 
-	tmp, err := fromRules(want)
-	if err != nil {
-		t.Errorf("fromRules error: %v", err)
-	}
-	got, err := toRules(tmp)
-	if err != nil {
-		t.Errorf("toRules error: %v", err)
-	}
-	if len(got) != len(want) {
-		t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+	netRules := []filter.Rule{
+		{
+			Action:               filter.ActionDrop,
+			Direction:            filter.DirectionIncoming,
+			Quick:                false,
+			Proto:                filter.SocketProtocolTcp,
+			SrcSubnet:            &netSrcSubnet,
+			SrcSubnetInvertMatch: false,
+			SrcPortRange:         filter.PortRange{Start: 1000, End: 1001},
+			DstSubnet:            &netDstSubnet,
+			DstSubnetInvertMatch: false,
+			DstPortRange:         filter.PortRange{Start: 1500, End: 1501},
+			Nic:                  1,
+			Log:                  false,
+			KeepState:            false,
+		},
+		{
+			Action:               filter.ActionPass,
+			Direction:            filter.DirectionOutgoing,
+			Quick:                true,
+			Proto:                filter.SocketProtocolUdp,
+			SrcSubnet:            &netSrcSubnet,
+			SrcSubnetInvertMatch: true,
+			SrcPortRange:         filter.PortRange{Start: 2000, End: 2001},
+			DstSubnet:            &netDstSubnet,
+			DstSubnetInvertMatch: true,
+			DstPortRange:         filter.PortRange{Start: 2500, End: 2501},
+			Nic:                  2,
+			Log:                  true,
+			KeepState:            true,
+		},
+		{
+			Action:               filter.ActionPass,
+			Direction:            filter.DirectionOutgoing,
+			Quick:                true,
+			Proto:                filter.SocketProtocolUdp,
+			SrcSubnet:            nil,
+			SrcSubnetInvertMatch: true,
+			SrcPortRange:         filter.PortRange{Start: 2000, End: 2001},
+			DstSubnet:            nil,
+			DstSubnetInvertMatch: true,
+			DstPortRange:         filter.PortRange{Start: 2500, End: 2501},
+			Nic:                  3,
+			Log:                  true,
+			KeepState:            true,
+		},
 	}
 
-	for i := range want {
-		if !reflect.DeepEqual(got[i], want[i]) {
-			t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+	{
+		got, err := fromRules(rules)
+		if err != nil {
+			t.Errorf("fromRules error: %v", err)
+		}
+		want := netRules
+
+		if len(got) != len(want) {
+			t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+		}
+
+		for i := range want {
+			if !reflect.DeepEqual(got[i], want[i]) {
+				t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+			}
+		}
+	}
+	{
+		got, err := toRules(netRules)
+		if err != nil {
+			t.Errorf("toRules error: %v", err)
+		}
+		want := rules
+
+		if len(got) != len(want) {
+			t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+		}
+
+		for i := range want {
+			if !reflect.DeepEqual(got[i], want[i]) {
+				t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+			}
 		}
 	}
 }
@@ -426,7 +496,12 @@ func TestNATs(t *testing.T) {
 	}
 	srcAddr := util.Parse("5.6.7.8")
 
-	want := []NAT{
+	netSrcSubnet := fidlnet.Subnet{PrefixLen: 32}
+	netSrcSubnet.Addr.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	var netSrcAddr fidlnet.IpAddress
+	netSrcAddr.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{5, 6, 7, 8}})
+
+	nats := []NAT{
 		{
 			transProto: header.TCPProtocolNumber,
 			srcSubnet:  &srcSubnet,
@@ -441,21 +516,53 @@ func TestNATs(t *testing.T) {
 		},
 	}
 
-	tmp, err := fromNATs(want)
-	if err != nil {
-		t.Errorf("fromRules error: %v", err)
-	}
-	got, err := toNATs(tmp)
-	if err != nil {
-		t.Errorf("toRules error: %v", err)
-	}
-	if len(got) != len(want) {
-		t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+	netNats := []filter.Nat{
+		{
+			Proto:      filter.SocketProtocolTcp,
+			SrcSubnet:  netSrcSubnet,
+			NewSrcAddr: netSrcAddr,
+			Nic:        1,
+		},
+		{
+			Proto:      filter.SocketProtocolUdp,
+			SrcSubnet:  netSrcSubnet,
+			NewSrcAddr: netSrcAddr,
+			Nic:        2,
+		},
 	}
 
-	for i := range want {
-		if !reflect.DeepEqual(got[i], want[i]) {
-			t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+	{
+		got, err := fromNATs(nats)
+		if err != nil {
+			t.Errorf("fromNATs error: %v", err)
+		}
+		want := netNats
+
+		if len(got) != len(want) {
+			t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+		}
+
+		for i := range want {
+			if !reflect.DeepEqual(got[i], want[i]) {
+				t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+			}
+		}
+	}
+	{
+		got, err := toNATs(netNats)
+		if err != nil {
+			t.Errorf("toNATs error: %v", err)
+		}
+		want := nats
+
+		if len(got) != len(want) {
+			t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+		}
+
+		for i := range want {
+			if !reflect.DeepEqual(got[i], want[i]) {
+				t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+			}
 		}
 	}
 }
@@ -464,7 +571,12 @@ func TestRDRs(t *testing.T) {
 	dstAddr := util.Parse("1.2.3.4")
 	dstAddr2 := util.Parse("5.6.7.8")
 
-	want := []RDR{
+	var netDstAddr fidlnet.IpAddress
+	netDstAddr.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	var netDstAddr2 fidlnet.IpAddress
+	netDstAddr2.SetIpv4(fidlnet.Ipv4Address{Addr: [4]uint8{5, 6, 7, 8}})
+
+	rdrs := []RDR{
 		{
 			transProto:      header.TCPProtocolNumber,
 			dstAddr:         dstAddr,
@@ -483,21 +595,57 @@ func TestRDRs(t *testing.T) {
 		},
 	}
 
-	tmp, err := fromRDRs(want)
-	if err != nil {
-		t.Errorf("fromRules error: %v", err)
-	}
-	got, err := toRDRs(tmp)
-	if err != nil {
-		t.Errorf("toRules error: %v", err)
-	}
-	if len(got) != len(want) {
-		t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+	netRdrs := []filter.Rdr{
+		{
+			Proto:           filter.SocketProtocolTcp,
+			DstAddr:         netDstAddr,
+			DstPortRange:    filter.PortRange{Start: 1000, End: 1001},
+			NewDstAddr:      netDstAddr2,
+			NewDstPortRange: filter.PortRange{Start: 1500, End: 1501},
+			Nic:             1,
+		},
+		{
+			Proto:           filter.SocketProtocolUdp,
+			DstAddr:         netDstAddr,
+			DstPortRange:    filter.PortRange{Start: 2000, End: 2001},
+			NewDstAddr:      netDstAddr2,
+			NewDstPortRange: filter.PortRange{Start: 2500, End: 2501},
+			Nic:             2,
+		},
 	}
 
-	for i := range want {
-		if !reflect.DeepEqual(got[i], want[i]) {
-			t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+	{
+		got, err := fromRDRs(rdrs)
+		if err != nil {
+			t.Errorf("fromRDRs error: %v", err)
+		}
+		want := netRdrs
+
+		if len(got) != len(want) {
+			t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+		}
+
+		for i := range want {
+			if !reflect.DeepEqual(got[i], want[i]) {
+				t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+			}
+		}
+	}
+	{
+		got, err := toRDRs(netRdrs)
+		if err != nil {
+			t.Errorf("toRDRs error: %v", err)
+		}
+		want := rdrs
+
+		if len(got) != len(want) {
+			t.Errorf("len(got)=%v, len(want)=%v", len(got), len(want))
+		}
+
+		for i := range want {
+			if !reflect.DeepEqual(got[i], want[i]) {
+				t.Errorf("got[%d]=%v, want[%d]=%v", i, got[i], i, want[i])
+			}
 		}
 	}
 }
