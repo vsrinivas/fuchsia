@@ -92,7 +92,7 @@ namespace from the `framework`. The `framework` provides `hub_client` with a hub
 directory rooted at `hub_client`. In other words, `hub_client` cannot inspect
 information about component instances above it in the component hierarchy.
 
- ```
+```
 // In hub_client.cml.
 {
     "program": {
