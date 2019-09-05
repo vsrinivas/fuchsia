@@ -198,8 +198,9 @@ int main(int argc, const char** argv) {
 
   fuchsia::setui::SetUiServicePtr setui;
   std::unique_ptr<modular::BasemgrImpl> basemgr_impl;
+  bool ran = false;
   auto initialize_basemgr = [&config, &loop, &component_context, &basemgr_impl, &setui,
-                             ran = false](fuchsia::setui::SettingsObject settings_obj) mutable {
+                             &ran](fuchsia::setui::SettingsObject settings_obj) mutable {
     if (ran) {
       return;
     }
