@@ -125,6 +125,11 @@ class Binding final {
   Binding(const Binding&) = delete;
   Binding& operator=(const Binding&) = delete;
 
+  // The implementation of this class provides external references to class members via pointers.
+  // As a result, instances cannot be move-constructed or move-assigned.
+  Binding(Binding&&) = delete;
+  Binding& operator=(Binding&&) = delete;
+
   // Completes a binding by creating a new channel, binding one endpoint to
   // the previously specified implementation and returning the other endpoint.
   //

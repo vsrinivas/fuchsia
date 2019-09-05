@@ -41,6 +41,11 @@ class BindingSet final {
   BindingSet(const BindingSet&) = delete;
   BindingSet& operator=(const BindingSet&) = delete;
 
+  // The implementation of this class provides external references to class members via pointers.
+  // As a result, instances cannot be move-constructed or move-assigned.
+  BindingSet(BindingSet&&) = delete;
+  BindingSet& operator=(BindingSet&&) = delete;
+
   // Adds a binding to the set.
   //
   // The given |ImplPtr| is bound to the channel underlying the
