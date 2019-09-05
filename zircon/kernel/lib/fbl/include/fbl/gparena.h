@@ -89,48 +89,57 @@ class GPArena {
   // Returns a raw pointer and not a reference to an object of type T so that the memory can be
   // inspected prior to construction taking place.
   void* Alloc() {
-    // Need one acquire to match with the release in Free
-    FreeNode* head = free_head_.load(ktl::memory_order_acquire);
-    while (head && !free_head_.compare_exchange_strong(head, head->next, ktl::memory_order_relaxed,
-                                                       ktl::memory_order_relaxed)) {
+    // Take a local copy/snapshot of the current head node.
+    // Use an acquire to match with the release in Free.
+    HeadNode head_node = head_node_.load(ktl::memory_order_acquire);
+    while (head_node.head) {
+      FreeNode* const next = head_node.next;
+      const HeadNode next_head_node = HeadNode(next, next ? next->next : nullptr);
+      if (head_node_.compare_exchange_strong(head_node, next_head_node, ktl::memory_order_acquire,
+                                             ktl::memory_order_acquire)) {
+        count_.fetch_add(1, ktl::memory_order_relaxed);
+        return reinterpret_cast<void*>(head_node.head);
+      }
       // There is no pause here as we don't need to wait for anyone before trying again,
       // rather the sooner we retry the *more* likely we are to succeed given that we just
-      // received the most up to date copy of head.
+      // received the most up to date copy of head_node.
     }
 
-    if (head == nullptr) {
-      uintptr_t top = top_.load(ktl::memory_order_relaxed);
-      uintptr_t next_top;
-      do {
-        // Every time the compare_exchange below fails top becomes the current value and so
-        // we recalculate our potential next_top every iteration from it.
-        next_top = top + ObjectSize;
-        // See if we need to commit more memory.
-        if (next_top > committed_.load(ktl::memory_order_relaxed)) {
-          if (!Grow(next_top)) {
-            return nullptr;
-          }
+    // Nothing in the free list, we need to grow.
+    uintptr_t top = top_.load(ktl::memory_order_relaxed);
+    uintptr_t next_top;
+    do {
+      // Every time the compare_exchange below fails top becomes the current value and so
+      // we recalculate our potential next_top every iteration from it.
+      next_top = top + ObjectSize;
+      // See if we need to commit more memory.
+      if (next_top > committed_.load(ktl::memory_order_relaxed)) {
+        if (!Grow(next_top)) {
+          return nullptr;
         }
-      } while (!top_.compare_exchange_strong(top, next_top, ktl::memory_order_relaxed,
-                                             ktl::memory_order_relaxed));
-      head = reinterpret_cast<FreeNode*>(top);
-    }
+      }
+    } while (!top_.compare_exchange_strong(top, next_top, ktl::memory_order_relaxed,
+                                           ktl::memory_order_relaxed));
     count_.fetch_add(1, ktl::memory_order_relaxed);
-    return reinterpret_cast<void*>(head);
+    return reinterpret_cast<void*>(top);
   }
 
   // Takes a raw pointer as the destructor is expected to have already been run.
   void Free(void* node) {
     FreeNode* free_node = reinterpret_cast<FreeNode*>(node);
-    FreeNode* head = free_head_.load(ktl::memory_order_relaxed);
+    // Take a local copy/snapshot of the current head node.
+    HeadNode head_node = head_node_.load(ktl::memory_order_relaxed);
+    HeadNode next_head_node;
     do {
-      // Every time the compare_exchange below fails head becomes the current value and so
+      // Every time the compare_exchange below fails head_node becomes the current value and so
       // we need to reset our intended next pointer every iteration.
-      free_node->next = head;
-      // Use release semantics so that any writes to the Persist area are visible before the
-      // node can be reused.
-    } while (!free_head_.compare_exchange_strong(head, free_node, ktl::memory_order_release,
-                                                 ktl::memory_order_relaxed));
+      free_node->next = head_node.head;
+      // Build our candidate next head node.
+      next_head_node = HeadNode(free_node, head_node.head);
+      // Use release semantics so that any writes to the Persist area, and our write to
+      // free_node->next, are visible before the node can be seen in the free list and reused.
+    } while (!head_node_.compare_exchange_strong(
+        head_node, next_head_node, ktl::memory_order_release, ktl::memory_order_relaxed));
     count_.fetch_sub(1, ktl::memory_order_relaxed);
   }
 
@@ -203,8 +212,10 @@ class GPArena {
   struct FreeNode {
     char data[PersistSize];
     // This struct is explicitly not packed to allow for the next field to be naturally aligned.
-    // As a result we *may* preserve more than PersistSize, but that is fine.
-    ktl::atomic<FreeNode*> next;
+    // As a result we *may* preserve more than PersistSize, but that is fine. This is not an atomic
+    // as reads and writes will be serialized with our updates to head_node_, which acts like a
+    // lock.
+    FreeNode* next;
   };
   static_assert(sizeof(FreeNode) <= ObjectSize, "Not enough free space in object");
   static_assert((ObjectSize % alignof(FreeNode)) == 0,
@@ -225,7 +236,23 @@ class GPArena {
 
   ktl::atomic<size_t> count_ = 0;
 
-  ktl::atomic<FreeNode*> free_head_ = nullptr;
+  // Stores the current head pointer and copy of the head's next pointer. Storing the next pointer
+  // allows us to known when we perform a CAS that the object head points to hasn't changed.
+  struct HeadNode {
+    FreeNode* head = nullptr;
+    FreeNode* next = nullptr;
+    HeadNode() = default;
+    HeadNode(FreeNode* h, FreeNode* n) : head(h), next(n) {}
+  };
+  ktl::atomic<HeadNode> head_node_{};
+#ifdef __clang__
+  static_assert(ktl::atomic<HeadNode>::is_always_lock_free, "atomic<HeadNode> not lock free");
+#else
+  // For gcc we have a custom libatomic implementation that *is* lock free, but the compiler doesn't
+  // know that at this point. Instead we ensure HeadNode is 16bytes so ensure our atomics will be
+  // the ones used.
+  static_assert(sizeof(HeadNode) == 16, "HeadNode must be 16 bytes");
+#endif
 };
 
 }  // namespace fbl
