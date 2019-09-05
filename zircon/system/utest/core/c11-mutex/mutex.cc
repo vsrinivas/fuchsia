@@ -180,7 +180,7 @@ typedef struct {
 } timeout_args;
 
 static int test_timeout_helper(void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS {
-  timeout_args* args = ctx;
+  timeout_args* args = static_cast<timeout_args*>(ctx);
   ASSERT_EQ(mtx_lock(&args->mutex), thrd_success, "f to lock");
   // Inform the main thread that we have acquired the lock.
   ASSERT_EQ(zx_object_signal(args->start_event, 0, ZX_EVENT_SIGNALED), ZX_OK, "failed to signal");

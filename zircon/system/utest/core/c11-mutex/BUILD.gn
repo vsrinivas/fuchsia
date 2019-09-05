@@ -5,7 +5,7 @@
 source_set("c11-mutex") {
   testonly = true
   sources = [
-    "mutex.c",
+    "mutex.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
