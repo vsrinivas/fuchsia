@@ -100,7 +100,7 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx::interrupt irq_;
   const aml_sd_emmc_config_t board_config_;
 
-  thrd_t irq_thread_;
+  thrd_t irq_thread_ = {};
   sdmmc_host_info_t dev_info_;
   ddk::IoBuffer descs_buffer_;
   sync_completion_t req_completion_;

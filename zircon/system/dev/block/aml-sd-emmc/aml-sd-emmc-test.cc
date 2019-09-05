@@ -4,22 +4,19 @@
 
 #include "aml-sd-emmc.h"
 
-#include <fbl/auto_call.h>
-#include <mock-mmio-reg/mock-mmio-reg.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zxtest/zxtest.h>
+#include <vector>
 
-namespace {
-static constexpr uint32_t kMmioRegCount = 768;
-}  // namespace
+#include <lib/fake_ddk/fake_ddk.h>
+#include <soc/aml-s912/s912-hw.h>
+#include <zxtest/zxtest.h>
 
 namespace sdmmc {
 
-class AmlSdEmmcTest : public AmlSdEmmc {
+class TestAmlSdEmmc : public AmlSdEmmc {
  public:
-  AmlSdEmmcTest(const mmio_buffer_t& mmio, const mmio_pinned_buffer_t& pinned_mmio)
+  explicit TestAmlSdEmmc(const mmio_buffer_t& mmio)
       : AmlSdEmmc(fake_ddk::kFakeParent, zx::bti(ZX_HANDLE_INVALID), ddk::MmioBuffer(mmio),
-                  ddk::MmioPinnedBuffer(pinned_mmio),
+                  ddk::MmioPinnedBuffer({&mmio, ZX_HANDLE_INVALID, 0x100}),
                   aml_sd_emmc_config_t{
                       .supports_dma = false,
                       .min_freq = 400000,
@@ -42,41 +39,54 @@ class AmlSdEmmcTest : public AmlSdEmmc {
   }
 };
 
-TEST(AmlSdEmmcTest, DdkLifecycle) {
-  ddk_mock::MockMmioReg reg_array[kMmioRegCount];
-  ddk_mock::MockMmioRegRegion regs(reg_array, sizeof(uint32_t), kMmioRegCount);
-  mmio_buffer_t buff = regs.GetMmioBuffer();
-  mmio_pinned_buffer_t pinned_mmio = {
-      .mmio = &buff,
-      .pmt = ZX_HANDLE_INVALID,
-      .paddr = 0x100,
-  };
-  AmlSdEmmcTest dut(buff, pinned_mmio);
+class AmlSdEmmcTest : public zxtest::Test {
+ public:
+  AmlSdEmmcTest() : mmio_({&mmio_, 0, 0, ZX_HANDLE_INVALID}) {}
+
+  void SetUp() override {
+    registers_.reset(new uint8_t[S912_SD_EMMC_B_LENGTH]);
+    memset(registers_.get(), 0, S912_SD_EMMC_B_LENGTH);
+
+    mmio_buffer_t mmio_buffer = {
+        .vaddr = registers_.get(),
+        .offset = 0,
+        .size = S912_SD_EMMC_B_LENGTH,
+        .vmo = ZX_HANDLE_INVALID,
+    };
+
+    mmio_ = ddk::MmioBuffer(mmio_buffer);
+    dut_ = new TestAmlSdEmmc(mmio_buffer);
+  }
+
+  void TearDown() override {
+    if (dut_ != nullptr) {
+      dut_->DdkRelease();
+    }
+  }
+
+ protected:
+  ddk::MmioBuffer mmio_;
+  TestAmlSdEmmc* dut_ = nullptr;
+
+ private:
+  std::unique_ptr<uint8_t[]> registers_;
+};
+
+TEST_F(AmlSdEmmcTest, DdkLifecycle) {
   fake_ddk::Bind ddk;
-  EXPECT_OK(dut.TestDdkAdd());
-  dut.DdkUnbind();
+  EXPECT_OK(dut_->TestDdkAdd());
+  dut_->DdkUnbind();
   EXPECT_TRUE(ddk.Ok());
 }
 
-TEST(AmlSdEmmcTest, SetClockPhase) {
-  ddk_mock::MockMmioReg reg_array[kMmioRegCount];
-  ddk_mock::MockMmioRegRegion regs(reg_array, sizeof(uint32_t), kMmioRegCount);
+TEST_F(AmlSdEmmcTest, SetClockPhase) {
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_HS200));
+  EXPECT_EQ(mmio_.Read32(0), (3 << 8) | (0 << 10));
 
-  mmio_buffer_t buff = regs.GetMmioBuffer();
-  mmio_pinned_buffer_t pinned_mmio = {
-      .mmio = &buff,
-      .pmt = ZX_HANDLE_INVALID,
-      .paddr = 0x100,
-  };
+  mmio_.Write32(0, 0);
 
-  AmlSdEmmcTest dut(buff, pinned_mmio);
-
-  reg_array[0].ReadReturns(0).ExpectWrite((3 << 8) | (0 << 10)).ExpectWrite((1 << 8) | (2 << 10));
-
-  EXPECT_OK(dut.SdmmcSetTiming(SDMMC_TIMING_HS200));
-  EXPECT_OK(dut.SdmmcSetTiming(SDMMC_TIMING_LEGACY));
-
-  ASSERT_NO_FATAL_FAILURES(reg_array[0].VerifyAndClear());
+  EXPECT_OK(dut_->SdmmcSetTiming(SDMMC_TIMING_LEGACY));
+  EXPECT_EQ(mmio_.Read32(0), (1 << 8) | (2 << 10));
 }
 
 }  // namespace sdmmc
