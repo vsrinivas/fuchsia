@@ -22,6 +22,7 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -51,7 +52,9 @@ class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
   //
   // TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
   void OnNativeException(zx::process process, zx::thread thread,
-                         OnNativeExceptionCallback callback) override;
+                         OnNativeExceptionCallback callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
   void OnManagedRuntimeException(std::string component_url, ManagedRuntimeException exception,
                                  OnManagedRuntimeExceptionCallback callback) override;
 
@@ -63,18 +66,13 @@ class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
                 Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
                 std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
 
-  fit::promise<void> OnNativeException(zx::process process, zx::thread thread);
   fit::promise<void> OnManagedRuntimeException(std::string component_url,
                                                ManagedRuntimeException exception);
   fit::promise<void> File(fuchsia::feedback::CrashReport report);
 
-  // Uploads local crash report of ID |local_report_id|, attaching either the passed |annotations|
-  // or reading the annotations from its minidump.
-  //
-  // Either |annotations| or |read_annotations_from_minidump| must be set, but only one of them.
+  // Uploads local crash report of ID |local_report_id|, attaching the passed |annotations|.
   bool UploadReport(const crashpad::UUID& local_report_id, const std::string& program_name,
-                    const std::map<std::string, std::string>* annotations,
-                    bool read_annotations_from_minidump);
+                    const std::map<std::string, std::string>& annotations);
 
   // Deletes oldest crash reports to keep |database_| under a maximum size read from |config_|.
   //

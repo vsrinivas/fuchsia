@@ -60,6 +60,7 @@ executable("exception_broker_unittest") {
   testonly = true
 
   sources = [
+    "crash_report_generation_unittest.cc",
     "exception_broker_unittest.cc",
   ]
 

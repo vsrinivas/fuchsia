@@ -316,59 +316,6 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   std::unique_ptr<InspectManager> inspect_manager_;
 };
 
-TEST_F(CrashpadAgentTest, Succeed_OnNativeException) {
-  zx::job job;
-  zx::channel exception_channel;
-  zx::process process;
-  zx::thread thread;
-
-  // Create the child jobs of the current job now so we can bind to the exception channel before
-  // spawning the crashing program.
-  zx::unowned_job current_job(zx_job_default());
-  ASSERT_EQ(zx::job::create(*current_job, 0, &job), ZX_OK);
-  ASSERT_EQ(job.create_exception_channel(0u, &exception_channel), ZX_OK);
-
-  // Create child process using our utility program `crasher` that will crash on startup.
-  const char* argv[] = {"crasher", nullptr};
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  ASSERT_EQ(fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, "/pkg/bin/crasher_exe", argv, nullptr,
-                           0, nullptr, process.reset_and_get_address(), err_msg),
-            ZX_OK)
-      << err_msg;
-
-  // Wait up to 1s for the exception to be thrown. We need the process and thread to be blocked in
-  // the exception for Crashpad to analyze them.
-  ASSERT_EQ(
-      exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(1)), nullptr),
-      ZX_OK);
-
-  // Get the one thread from the child process.
-  zx_koid_t thread_ids[1];
-  size_t num_ids;
-  ASSERT_EQ(
-      process.get_info(ZX_INFO_PROCESS_THREADS, thread_ids, sizeof(zx_koid_t), &num_ids, nullptr),
-      ZX_OK);
-  ASSERT_EQ(num_ids, 1u);
-  ASSERT_EQ(process.get_child(thread_ids[0], ZX_RIGHT_SAME_RIGHTS, &thread), ZX_OK);
-
-  // Test crash analysis.
-  ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
-
-  Analyzer_OnNativeException_Result out_result;
-  agent_->OnNativeException(
-      std::move(process), std::move(thread),
-      [&out_result](Analyzer_OnNativeException_Result result) { out_result = std::move(result); });
-  ASSERT_TRUE(RunLoopUntilIdle());
-
-  EXPECT_TRUE(out_result.is_response());
-  CheckAttachments();
-
-  // We kill the job so that it doesn't try to reschedule the process, which would crash again, but
-  // this time would be handled by the real agent attached to the root job as the exception has
-  // already been handled by the parent and child jobs.
-  job.kill();
-}
-
 TEST_F(CrashpadAgentTest, Succeed_OnDartException) {
   ResetFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
   GenericException exception = {};
