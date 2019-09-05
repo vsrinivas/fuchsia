@@ -9,10 +9,10 @@ drivers.
 Notes:
 
 -   All indices start from 0.
--   Vectors of n elements are represented as <x0,x1,...,xn-1>, for example a
-    vector with two elements 5 and 6 as <5,6>.
--   Vectors can be nested, i.e. <<5,6>,<7,8>> represents a vector with 2 vectors
-    in it.
+-   Vectors of n elements are represented as `<x0,x1,...,xn-1>`, for example a
+    vector with two elements 5 and 6 as `<5,6>`.
+-   Vectors can be nested, i.e. `<<5,6>,<7,8>>` represents a vector with 2
+    vectors in it.
 
 ## Basic Vocabulary
 
@@ -94,14 +94,14 @@ GetDaiFormats function. The codec replies with a vector of DaiSupportedFormats,
 where each DaiSupportedFormats includes:
 
 1.  A vector of number of channels. This lists the number of channels supported
-    by the codec, for example <2,4,6,8>. A stereo codec will report a vector
-    with one element <2>. Note that a codec that takes one channel and outputs
+    by the codec, for example `<2,4,6,8>`. A stereo codec will report a vector
+    with one element `<2>`. Note that a codec that takes one channel and outputs
     its contents in all its outputs (e.g. 2 for a stereo amplifier) would report
-    a vector with one element <1>, if it supports either one or two input
-    channels, it would report a vector with two elements <1,2>.
-2.  A vector of sample formats. DAI sample formats, e.g. PCM_SIGNED.
-3.  A vector of justify formats. Justification options, for example JUSTIFY_LEFT
-    and JUSTIFY_RIGHT.
+    a vector with one element `<1>`, if it supports either one or two input
+    channels, it would report a vector with two elements `<1,2>`.
+2.  A vector of sample formats. DAI sample formats, e.g. `PCM_SIGNED`.
+3.  A vector of justify formats. Justification options, for example
+    `JUSTIFY_LEFT` and `JUSTIFY_RIGHT`.
 4.  A vector of rates. Frame rates, for example 44100, 48000, and 96000.
 5.  A number of bits per channel. Number of bits in each channel in the DAI,
     e.g. 32 bits per channel.
@@ -111,15 +111,15 @@ When not all combinations supported by the codec can be described with one
 DaiSupportedFormats, the codec returns more than one DaiSupportedFormats in the
 returned vector. For example, if one DaiSupportedFormats allows for 32 bits
 samples at 48KHz, and 16 bits samples at 96KHz, but not 32 bits samples at
-96KHz, then the codec will reply with 2 DaiSupportedFormats <<32bits>,<48KHz>>
-and <<16bits>,<96KHz>> (for simplicity in this example we ignore parameters
+96KHz, then the codec will reply with 2 DaiSupportedFormats `<<32bits>,<48KHz>>`
+and `<<16bits>,<96KHz>>` (for simplicity in this example we ignore parameters
 other than rate and bits per sample) as opposed to a case where the codec
 supports either 16 or 32 bits samples at either 48 or 96KHz in which case the
-codec would reply with 1 DaiSupportedFormats <<16bits,32bits>,<48KHz,96KHz>>.
+codec would reply with 1 DaiSupportedFormats `<<16bits,32bits>,<48KHz,96KHz>>`.
 
 It is assumed that bits per sample is always smaller or equal to bits per
 channel, hence a codec can report
-<<16bits_per_channel,32bits_per_channel>,<16bits_per_sample,32bits_per_sample>>
+`<<16bits_per_channel,32bits_per_channel>,<16bits_per_sample,32bits_per_sample>>`
 (for simplicity in this example we ignore parameters other than bits per channel
 and bits per sample) and this does not imply that it is reporting that 32 bits
 per sample on 16 bits samples is valid, it specifies only the 3 valid
@@ -138,11 +138,11 @@ functions takes a parameter that specifies:
     (for instance number of channels on a TDM bus, i.e. "on the wire"). For I2S
     this must be 2.
 2.  A vector of channels to use. These are the channels in the DAI to be used by
-    the codec. For I2S this must be a vector with 2 indexes <0,1>, i.e. both
+    the codec. For I2S this must be a vector with 2 indexes `<0,1>`, i.e. both
     left and right channels are used. In bridged mode this will list only the
     one channel to be used by the codec, for example a codec’s stereo amplifier
     output bridged into one electrical mono output from the right channel of an
-    I2S DAI would list only channel <1>. If not bridged, a codec with multiple
+    I2S DAI would list only channel `<1>`. If not bridged, a codec with multiple
     electrical outputs that is configured with one channel in SetDaiFormat is
     expected to replicate the samples in this mono input on all its outputs.
 3.  A sample format.
@@ -152,9 +152,10 @@ functions takes a parameter that specifies:
 7.  A number of bits per sample.
 
 Once SetDaiFormat is successful, the DAI format configuration is considered
-completed and samples can be sent across the DAI. TODO(andresoportus): Add DAI
-format loss notification support once asynchronous notifications are added to
-Banjo.
+completed and samples can be sent across the DAI.
+
+TODO(andresoportus): Add DAI format loss notification support once asynchronous
+notifications are added to Banjo.
 
 ### Gain Control
 
