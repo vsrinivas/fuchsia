@@ -49,11 +49,7 @@ package("archivist") {
     ":bin",
   ]
 
-  binaries = [
-    {
-      name = "archivist"
-    },
-  ]
+  binary = "archivist"
 
   meta = [
     {
@@ -71,25 +67,6 @@ config_data("archivist_config") {
 
   sources = [
     "configs/archivist_config.json",
-  ]
-}
-
-config_data("archivist_startup") {
-  for_pkg = "sysmgr"
-  outputs = [
-    "archivist.config",
-  ]
-
-  sources = [
-    "configs/sysmgr_config.json",
-  ]
-}
-
-group("with_default_config") {
-  deps = [
-    ":archivist",
-    ":archivist_config",
-    ":archivist_startup",
   ]
 }
 
