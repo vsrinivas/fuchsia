@@ -159,38 +159,6 @@ VK_TEST_F(VkMemoryTest, ImportReadOnlyDeviceMemory) {
   device.freeMemory(memory);
 }
 
-VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
-  auto vulkan_queues = CreateVulkanDeviceQueues();
-  auto device = vulkan_queues->vk_device();
-  auto physical_device = vulkan_queues->vk_physical_device();
-
-  vk::MemoryRequirements requirements;
-  requirements.size = kVmoSize;
-  requirements.memoryTypeBits = 0xFFFFFFFF;
-
-  // Create valid Vulkan device memory and import it into Scenic.
-  auto memory = AllocateExportableMemory(device, physical_device, requirements,
-                                         vk::MemoryPropertyFlagBits::eDeviceLocal);
-  zx::vmo device_vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
-
-  // Fill vk::MemoryAllocateInfo
-  zx::vmo clone_vmo;
-  zx_status_t status = device_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &clone_vmo);
-  ASSERT_EQ(ZX_OK, status);
-  auto import_info = vk::ImportMemoryZirconHandleInfoFUCHSIA(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, clone_vmo.release());
-  auto alloc_info = vk::MemoryAllocateInfo(
-      kVmoSize, escher::impl::GetMemoryTypeIndex(physical_device, requirements.memoryTypeBits,
-                                                 vk::MemoryPropertyFlags()));
-  alloc_info.setPNext(&import_info);
-  auto memory_resource = Memory::New(session(), kMemoryId, std::move(device_vmo), alloc_info,
-                                     session()->shared_error_reporter().get());
-
-  // Confirm that the resource has a valid Vulkan memory object and cleanup.
-  ASSERT_TRUE(memory_resource->GetGpuMem(session()->error_reporter()));
-  device.freeMemory(memory);
-}
-
 VK_TEST_F(VkMemoryTest, ImportMaliciousClient) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);

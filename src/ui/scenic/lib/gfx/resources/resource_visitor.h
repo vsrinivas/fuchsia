@@ -11,7 +11,7 @@ namespace gfx {
 class Import;
 class Memory;
 class Image;
-class ImagePipeBase;
+class ImagePipe;
 class Buffer;
 class View;
 class ViewNode;
@@ -42,7 +42,7 @@ class ResourceVisitor {
   // Memory resources.
   virtual void Visit(Memory* r) = 0;
   virtual void Visit(Image* r) = 0;
-  virtual void Visit(ImagePipeBase* r) = 0;
+  virtual void Visit(ImagePipe* r) = 0;
   virtual void Visit(Buffer* r) = 0;
 
   // Views.

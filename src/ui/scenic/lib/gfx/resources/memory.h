@@ -33,8 +33,6 @@ class Memory : public Resource {
 
   static MemoryPtr New(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args,
                        ErrorReporter* error_reporter);
-  static MemoryPtr New(Session* session, ResourceId id, zx::vmo vmo,
-                       vk::MemoryAllocateInfo alloc_info, ErrorReporter* error_reporter);
 
   // TODO(SCN-1012): Temporary solution to determine which image class to use.
   // If image classes can depend on MemoryArgs, then this can become a real
@@ -49,17 +47,13 @@ class Memory : public Resource {
     // don't need additional logic here.
     return shared_vmo_->Map();
   }
-
-  // |alloc_info| is an optional parameter. Caller can pass a specific struct or expect this class
-  // to create vk::MemoryAllocateInfo from |shared_vmo_|.
-  const escher::GpuMemPtr& GetGpuMem(ErrorReporter* reporter,
-                                     vk::MemoryAllocateInfo* alloc_info = nullptr) {
+  const escher::GpuMemPtr& GetGpuMem(ErrorReporter* reporter) {
     // TODO(SCN-999): Passive lazy instantiation may not be ideal, either from a
     // performance standpoint, or from an external logic standpoint. Consider
     // acquire/release semantics. This would also map well to vkCopyBuffer
     // commands and shadow buffers.
     if (!escher_gpu_mem_) {
-      escher_gpu_mem_ = ImportGpuMemory(reporter, alloc_info);
+      escher_gpu_mem_ = ImportGpuMemory(reporter);
     }
     return escher_gpu_mem_;
   }
@@ -72,9 +66,10 @@ class Memory : public Resource {
   static uint32_t HasSharedMemoryPools(vk::Device device, vk::PhysicalDevice physical_device);
 
  private:
-  Memory(Session* session, ResourceId id, bool is_host, zx::vmo vmo, uint64_t allocation_size);
+  Memory(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args);
 
-  escher::GpuMemPtr ImportGpuMemory(ErrorReporter* reporter, vk::MemoryAllocateInfo* alloc_info);
+  escher::GpuMemPtr ImportGpuMemory(ErrorReporter* reporter);
+  zx::vmo DuplicateVmo();
 
   const bool is_host_;
   const fxl::RefPtr<fsl::SharedVmo> shared_vmo_;

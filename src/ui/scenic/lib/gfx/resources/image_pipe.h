@@ -14,7 +14,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
+#include "src/ui/scenic/lib/gfx/resources/image_base.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 
@@ -29,7 +29,12 @@ class ImagePipe;
 using ImagePipePtr = fxl::RefPtr<ImagePipe>;
 using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 
-class ImagePipe : public ImagePipeBase {
+struct ImagePipeUpdateResults {
+  bool image_updated;
+  std::queue<PresentImageCallback> callbacks;
+};
+
+class ImagePipe : public ImageBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
@@ -50,9 +55,23 @@ class ImagePipe : public ImagePipeBase {
                     std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
                     fuchsia::images::ImagePipe::PresentImageCallback callback);
 
-  // ImagePipeBase implementation
+  void Accept(class ResourceVisitor* visitor) override;
+
+  // Update to use the most current frame for the specified presentation time.
+  // Called before rendering a frame using this ImagePipe. Returns
+  // |image_updated| as true if the current Image changed since the last time
+  // Update() was called, and false otherwise. |callbacks| is the list of
+  // callbacks passed into |ImagePipe.PresentImage()|.
+  //
+  // |release_fence_signaller| is a dependency required for signalling
+  // release fences correctly, since it has knowledge of when command buffers
+  // are released. Cannot be null.
+  //
+  // This method is idempotent when called multiple times for the same |presentation_time|,
+  // assuming that there are no intervening calls to PresentImage() with an earlier target
+  // time.
   ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                                zx::time presentation_time) override;
+                                zx::time presentation_time);
 
   // Updates the Escher image to the current frame. This should be called after
   // Update() indicates the current Image changed, and before calling

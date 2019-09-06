@@ -21,7 +21,7 @@ void ProtectedMemoryVisitor::Visit(Memory* r) { FXL_NOTREACHED(); }
 
 void ProtectedMemoryVisitor::Visit(Image* r) { FXL_NOTREACHED(); }
 
-void ProtectedMemoryVisitor::Visit(ImagePipeBase* r) { FXL_NOTREACHED(); }
+void ProtectedMemoryVisitor::Visit(ImagePipe* r) { FXL_NOTREACHED(); }
 
 void ProtectedMemoryVisitor::Visit(Buffer* r) { FXL_NOTREACHED(); }
 

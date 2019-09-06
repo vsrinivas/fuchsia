@@ -14,12 +14,7 @@ fidl("fuchsia.images") {
     "encoded_image.fidl",
     "image_info.fidl",
     "image_pipe.fidl",
-    "image_pipe2.fidl",
     "memory_type.fidl",
     "presentation_info.fidl",
-  ]
-
-  public_deps = [
-    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }

@@ -128,8 +128,6 @@ class ImagePipe2ThatCreatesDummyImages : public ImagePipe2 {
 
   fuchsia::sysmem::Allocator_Sync* sysmem_allocator() { return sysmem_allocator_.get(); }
 
-  bool use_protected_memory() override { return false; }
-
   std::vector<fxl::RefPtr<DummyImage>> dummy_images_;
 
  private:

@@ -5,7 +5,7 @@
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
+#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/util/collection_utils.h"
 
 namespace scenic_impl {
@@ -17,14 +17,14 @@ ImagePipeUpdater::ImagePipeUpdater(SessionId id, std::shared_ptr<FrameScheduler>
 ImagePipeUpdater::~ImagePipeUpdater() { scheduled_image_pipe_updates_ = {}; }
 
 void ImagePipeUpdater::ScheduleImagePipeUpdate(zx::time presentation_time,
-                                               fxl::WeakPtr<ImagePipeBase> image_pipe) {
+                                               const ImagePipePtr& image_pipe) {
   // Some tests don't create a frame scheduler, but those should definitely not be triggering
   // ImagePipe updates.
   FXL_DCHECK(frame_scheduler_);
 
   if (image_pipe) {
     FXL_DCHECK(image_pipe->session_id() == session_id_);
-    scheduled_image_pipe_updates_.push({presentation_time, std::move(image_pipe)});
+    scheduled_image_pipe_updates_.push({presentation_time, image_pipe->GetWeakPtr()});
   }
   frame_scheduler_->ScheduleUpdateForSession(presentation_time, session_id_);
 }
@@ -34,7 +34,7 @@ ImagePipeUpdater::ApplyScheduledUpdatesResult ImagePipeUpdater::ApplyScheduledUp
     escher::ReleaseFenceSignaller* release_fence_signaller) {
   ApplyScheduledUpdatesResult result{.needs_render = false};
 
-  std::unordered_map<ResourceId, ImagePipeBasePtr> image_pipe_updates_to_upload;
+  std::unordered_map<ResourceId, ImagePipePtr> image_pipe_updates_to_upload;
   while (!scheduled_image_pipe_updates_.empty() &&
          scheduled_image_pipe_updates_.top().presentation_time <= target_presentation_time) {
     auto& update = scheduled_image_pipe_updates_.top();
@@ -58,7 +58,7 @@ ImagePipeUpdater::ApplyScheduledUpdatesResult ImagePipeUpdater::ApplyScheduledUp
       // do one upload per ImagePipe.
       if (image_pipe_update_results.image_updated) {
         image_pipe_updates_to_upload.try_emplace(update.image_pipe->id(),
-                                                 ImagePipeBasePtr(update.image_pipe.get()));
+                                                 ImagePipePtr(update.image_pipe.get()));
       }
     }
     scheduled_image_pipe_updates_.pop();
@@ -66,7 +66,7 @@ ImagePipeUpdater::ApplyScheduledUpdatesResult ImagePipeUpdater::ApplyScheduledUp
 
   // Stage GPU uploads for the latest dirty image on each updated ImagePipe.
   for (const auto& entry : image_pipe_updates_to_upload) {
-    ImagePipeBasePtr image_pipe = entry.second;
+    ImagePipePtr image_pipe = entry.second;
     image_pipe->UpdateEscherImage(command_context->batch_gpu_uploader());
     // Image was updated so the image in the scene is dirty.
     result.needs_render = true;
