@@ -10,7 +10,10 @@ use {
         utils,
     },
     failure::{format_err, Error, ResultExt},
-    fidl_fuchsia_app_discover::{ModuleIdentifier, StoryModuleRequest, StoryModuleRequestStream},
+    fidl_fuchsia_app_discover::{
+        InstanceStateError, ModuleIdentifier, StoryModuleRequest, StoryModuleRequestStream,
+    },
+    fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_modular::Intent,
     fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
@@ -73,6 +76,17 @@ impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
                             responder.send()?;
                             // TODO: bind controller.
                         }
+                        StoryModuleRequest::WriteInstanceState { key, value, responder } => {
+                            self.handle_write_instance_state(&key, value).await?;
+                            responder.send(&mut Ok(()))?;
+                        }
+                        StoryModuleRequest::ReadInstanceState { key, responder } => {
+                            let mut result = self
+                                .handle_read_instance_state(&key)
+                                .await
+                                .map_err(|_| InstanceStateError::InvalidKey);
+                            responder.send(&mut result)?;
+                        }
                     }
                 }
                 Ok(())
@@ -126,6 +140,27 @@ impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
             None => context_store_lock.withdraw(&self.story_id, &self.module_id, &output_name),
         }
         Ok(())
+    }
+
+    async fn handle_write_instance_state(&self, key: &str, value: Buffer) -> Result<(), Error> {
+        let mod_manager = self.mod_manager.lock();
+        let mut story_manager = mod_manager.story_manager.lock();
+        story_manager
+            .set_instance_state(
+                &self.story_id,
+                &self.module_id,
+                key,
+                utils::vmo_buffer_to_string(Box::new(value))?,
+            )
+            .await
+    }
+
+    async fn handle_read_instance_state(&self, key: &str) -> Result<Buffer, Error> {
+        let mod_manager = self.mod_manager.lock();
+        let story_manager = mod_manager.story_manager.lock();
+        let state_string =
+            story_manager.get_instance_state(&self.story_id, &self.module_id, &key).await?;
+        Ok(utils::string_to_vmo_buffer(state_string)?)
     }
 }
 
@@ -318,6 +353,38 @@ mod tests {
         let intent = Intent::new().with_action("PLAY_MUSIC").add_parameter("artist", "garnet-ref");
         assert!(client.issue_intent(&mut intent.into(), "mod-b").await.is_ok());
 
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_instance_state() -> Result<(), Error> {
+        let (puppet_master_client, _) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+        let (entity_resolver, _) =
+            fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
+
+        // Initialize service client and server.
+        let (client, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<StoryModuleMarker>().unwrap();
+        let module = ModuleIdentifier {
+            story_id: Some("story1".to_string()),
+            module_path: Some(vec!["mod-a".to_string()]),
+        };
+        let (state, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
+        StoryModuleService::new(state.clone(), mod_manager, module).unwrap().spawn(request_stream);
+
+        // Write instance state.
+        assert!(client
+            .write_instance_state("query", &mut utils::string_to_vmo_buffer("cities in spain")?)
+            .await
+            .is_ok());
+
+        // Read instance state.
+        let state_string = utils::vmo_buffer_to_string(Box::new(
+            client.read_instance_state("query").await?.unwrap(),
+        ))?;
+        assert_eq!(state_string, "cities in spain".to_string());
+        assert!(client.read_instance_state("other_state_key").await?.is_err());
         Ok(())
     }
 }

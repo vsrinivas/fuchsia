@@ -33,7 +33,7 @@ pub struct ModManager<T> {
     pub(super) actions: HashMap<EntityReference, HashSet<AddModInfo>>,
     story_context_store: Arc<Mutex<T>>,
     puppet_master: PuppetMasterProxy,
-    story_manager: Arc<Mutex<StoryManager>>,
+    pub story_manager: Arc<Mutex<StoryManager>>,
     available_actions: Arc<Vec<Action>>,
 }
 

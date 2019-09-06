@@ -5,9 +5,13 @@
 library fuchsia.app.discover;
 
 using fuchsia.modular;
+using fuchsia.mem;
 
 const uint32 MODULE_NAME_MAX_LENGTH = 512;
+const uint32 STATE_KEY_MAX_LENGTH = 128;
+
 using ModuleName = string:MODULE_NAME_MAX_LENGTH;
+using StateKey = string:STATE_KEY_MAX_LENGTH;
 
 [Discoverable]
 protocol StoryModule {
@@ -19,6 +23,12 @@ protocol StoryModule {
     /// Starts a mod by issuing an intent to it or re-issues an intent to the mod
     /// with the given name.
     IssueIntent(fuchsia.modular.Intent intent, ModuleName mod_name) -> ();
+
+    /// Writes the `instance_state` item with the given key to storage.
+    WriteInstanceState(StateKey key, fuchsia.mem.Buffer value) -> () error InstanceStateError;
+
+    /// Reads the `instance_state` item with the given key from storage.
+    ReadInstanceState(StateKey key) -> (fuchsia.mem.Buffer value) error InstanceStateError;
 };
 
 /// Errors that can occur when writing to an output.
@@ -33,4 +43,16 @@ enum OutputError : int32 {
     /// If the entity type written doesn't match the type defined in the module
     /// manifest for the action currently being handled by the module.
     INVALID_ENTITY_TYPE = 3;
+};
+
+/// Errors that can occur when handling instance state.
+enum InstanceStateError : int32 {
+    /// If the storage fails to respond to the read/write instance state request.
+    STORAGE = 1;
+
+    /// If the given value fails to be converted to an item of state.
+    STRING_CONVERSION = 2;
+
+    /// If the key for the instance state is invalid.
+    INVALID_KEY = 3;
 };

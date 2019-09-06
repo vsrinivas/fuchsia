@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::story_manager::StoryManager,
+    crate::{story_manager::StoryManager, utils},
     failure::{Error, ResultExt},
     fidl_fuchsia_app_discover::{
         SessionDiscoverContextRequest, SessionDiscoverContextRequestStream,
@@ -78,7 +78,13 @@ impl StoryContextService {
                         }
                         StoryDiscoverContextRequest::SetProperty { key, value, responder } => {
                             let mut story_manager = self.story_manager.lock();
-                            story_manager.set_property(&self.story_id, &key, value).await?;
+                            story_manager
+                                .set_property(
+                                    &self.story_id,
+                                    &key,
+                                    utils::vmo_buffer_to_string(Box::new(value))?,
+                                )
+                                .await?;
                             // TODO: handle the errors properly in a followup CL.
                             responder.send(&mut Ok(()))?;
                         }
@@ -87,7 +93,7 @@ impl StoryContextService {
                             let story_manager = self.story_manager.lock();
                             let property = story_manager.get_property(&self.story_id, key).await?;
                             // TODO: handle the errors properly in a followup CL.
-                            responder.send(&mut Ok(property))?;
+                            responder.send(&mut Ok(utils::string_to_vmo_buffer(property)?))?;
                         }
                     }
                 }
@@ -107,8 +113,7 @@ mod tests {
             story_storage::MemoryStorage, utils,
         },
         fidl_fuchsia_app_discover::{SessionDiscoverContextMarker, StoryDiscoverContextMarker},
-        fidl_fuchsia_mem::Buffer,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async as fasync,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -167,11 +172,8 @@ mod tests {
         assert!(client.get_story_context("story_name", server_end).is_ok());
 
         // Set the title of the story via SetProperty service
-        let data_to_write = "new_title".as_bytes();
-        let vmo = zx::Vmo::create(data_to_write.len() as u64)?;
-        vmo.write(&data_to_write, 0)?;
         assert!(story_discover_context_proxy
-            .set_property(TITLE_KEY, &mut Buffer { vmo, size: data_to_write.len() as u64 })
+            .set_property(TITLE_KEY, &mut utils::string_to_vmo_buffer("new_title")?)
             .await
             .is_ok());
 

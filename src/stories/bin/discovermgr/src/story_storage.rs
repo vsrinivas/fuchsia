@@ -10,10 +10,8 @@ use {
         Entry, Error as LedgerError, LedgerMarker, PageMarker, PageProxy, PageSnapshotMarker,
         Priority, Token,
     },
-    fidl_fuchsia_mem::Buffer,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::macros::*,
-    fuchsia_zircon as zx,
     futures::future::LocalFutureObj,
     std::collections::HashMap,
     std::str::from_utf8,
@@ -44,12 +42,18 @@ pub trait StoryStorage: Send + Sync {
     // Return the number of saved stories
     fn get_story_count<'a>(&'a self) -> LocalFutureObj<'a, Result<usize, Error>>;
 
+    // Return ledger entries with the given prefix of key
+    fn get_entries<'a>(
+        &'a self,
+        prefix: &'a str,
+    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, Error>>;
+
     // Return names and stories of all stories
     fn get_name_titles<'a>(
         &'a self,
     ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>>;
 
-    // clear the storage
+    // Clear the storage
     fn clear<'a>(&'a mut self) -> LocalFutureObj<'a, Result<(), Error>>;
 }
 
@@ -90,16 +94,25 @@ impl StoryStorage for MemoryStorage {
         LocalFutureObj::new(Box::new(async move { Ok(self.get_name_titles().await?.len()) }))
     }
 
+    fn get_entries<'a>(
+        &'a self,
+        prefix: &'a str,
+    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, Error>> {
+        LocalFutureObj::new(Box::new(async move {
+            Ok(self.properties.clone().into_iter().filter(|(k, _)| k.starts_with(prefix)).collect())
+        }))
+    }
+
     fn get_name_titles<'a>(
         &'a self,
     ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            Ok(self
-                .properties
-                .clone()
+            let entries = self.get_entries(TITLE_KEY).await?;
+            let results = entries
                 .into_iter()
-                .filter(|(k, _)| k.starts_with(TITLE_KEY))
-                .collect())
+                .map(|(name, title)| (name.split_at(TITLE_KEY.len()).1.to_string(), title))
+                .collect();
+            Ok(results)
         }))
     }
 
@@ -132,12 +145,9 @@ impl LedgerStorage {
     }
 
     async fn write(&self, key: &str, value: &str) -> Result<(), Error> {
-        let data_to_write = value.as_bytes();
-        let vmo = zx::Vmo::create(data_to_write.len() as u64)?;
-        vmo.write(&data_to_write, 0)?;
         let data_ref = self
             .page
-            .create_reference_from_buffer(&mut Buffer { vmo, size: data_to_write.len() as u64 })
+            .create_reference_from_buffer(&mut utils::string_to_vmo_buffer(value)?)
             .await?;
         match data_ref {
             Ok(mut data) => {
@@ -159,33 +169,6 @@ impl LedgerStorage {
             LedgerError::KeyNotFound => Ok(None), // handle the not-found error
             _ => Err(format_err!("Unable to read with error code: {:?}", e)),
         })
-    }
-
-    async fn read_entries(&self, prefix: &str) -> Result<Vec<LedgerKeyValueEntry>, Error> {
-        let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()?;
-        self.page.get_snapshot(server_end, &mut prefix.bytes(), None)?;
-        let mut results = snapshot.get_entries(&mut "".bytes(), None).await?;
-        let mut entries: Vec<Entry> = vec![];
-        entries.append(&mut results.0);
-        let mut token: Option<Token> = results.1.and_then(|boxed_token| Some(*boxed_token));
-        while let Some(mut unwrap_token) = token.take()
-        // keep reading until token is none
-        {
-            results =
-                snapshot.get_entries(&mut "".bytes(), Some(OutOfLine(&mut unwrap_token))).await?;
-            entries.append(&mut results.0);
-            token = results.1.and_then(|boxed_token| Some(*boxed_token));
-        }
-        Ok(entries
-            .into_iter()
-            .filter_map(|e| {
-                from_utf8(&e.key.clone()).ok().and_then(|k| {
-                    e.value
-                        .and_then(|buf| utils::vmo_buffer_to_string(buf).ok())
-                        .and_then(|v| Some((k.to_string(), v)))
-                })
-            })
-            .collect())
     }
 
     async fn read_keys(&self, prefix: &str) -> Result<Vec<LedgerKey>, Error> {
@@ -239,11 +222,44 @@ impl StoryStorage for LedgerStorage {
         LocalFutureObj::new(Box::new(async move { Ok(self.read_keys(TITLE_KEY).await?.len()) }))
     }
 
+    fn get_entries<'a>(
+        &'a self,
+        prefix: &'a str,
+    ) -> LocalFutureObj<'a, Result<Vec<LedgerKeyValueEntry>, Error>> {
+        LocalFutureObj::new(Box::new(async move {
+            let (snapshot, server_end) = fidl::endpoints::create_proxy::<PageSnapshotMarker>()?;
+            self.page.get_snapshot(server_end, &mut prefix.bytes(), None)?;
+            let mut results = snapshot.get_entries(&mut "".bytes(), None).await?;
+            let mut entries: Vec<Entry> = vec![];
+            entries.append(&mut results.0);
+            let mut token = results.1.and_then(|boxed_token| Some(*boxed_token));
+            while let Some(mut unwrap_token) = token.take()
+            // keep reading until token is none
+            {
+                results = snapshot
+                    .get_entries(&mut "".bytes(), Some(OutOfLine(&mut unwrap_token)))
+                    .await?;
+                entries.append(&mut results.0);
+                token = results.1.and_then(|boxed_token| Some(*boxed_token));
+            }
+            Ok(entries
+                .into_iter()
+                .filter_map(|e| {
+                    from_utf8(&e.key.clone()).ok().and_then(|k| {
+                        e.value
+                            .and_then(|buf| utils::vmo_buffer_to_string(buf).ok())
+                            .and_then(|v| Some((k.to_string(), v)))
+                    })
+                })
+                .collect())
+        }))
+    }
+
     fn get_name_titles<'a>(
         &'a self,
     ) -> LocalFutureObj<'a, Result<Vec<(StoryName, StoryTitle)>, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let entries = self.read_entries(TITLE_KEY).await?;
+            let entries = self.get_entries(TITLE_KEY).await?;
             let results = entries
                 .into_iter()
                 .map(|(name, title)| (name.split_at(TITLE_KEY.len()).1.to_string(), title))
@@ -296,6 +312,18 @@ mod tests {
 
         memory_storage.clear().await?;
         assert_eq!(memory_storage.get_story_count().await?, 0);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn get_entries() -> Result<(), Error> {
+        let mut memory_storage = MemoryStorage::new();
+        memory_storage.set_property("story-a", "some-feature", "feature-a".to_string()).await?;
+        memory_storage.set_property("story-b", "some-feature", "feature-b".to_string()).await?;
+        let entries = memory_storage.get_entries("some-feature").await?;
+        assert_eq!(entries.len(), 2);
+        assert!(entries.iter().any(|(_, v)| v == "feature-a"));
+        assert!(entries.iter().any(|(_, v)| v == "feature-b"));
         Ok(())
     }
 }

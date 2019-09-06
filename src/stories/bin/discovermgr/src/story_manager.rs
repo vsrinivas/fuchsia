@@ -4,17 +4,14 @@
 
 use {
     crate::{
-        constants::{GRAPH_KEY, TITLE_KEY},
+        constants::{GRAPH_KEY, STATE_KEY, TITLE_KEY},
         models::{AddModInfo, OutputConsumer},
         story_context_store::Contributor,
         story_graph::{Module, StoryGraph},
         story_storage::{StoryName, StoryStorage, StoryTitle},
-        utils,
     },
     chrono::{Datelike, Timelike, Utc},
     failure::{bail, Error},
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon as zx,
 };
 
 /// Manage multiple story graphs to support restoring stories.
@@ -41,26 +38,41 @@ impl StoryManager {
         &mut self,
         story_name: &StoryName,
         key: &str,
-        value: Buffer,
+        value: String,
     ) -> Result<(), Error> {
         match key {
-            // Writing to story graph is not allowed.
-            GRAPH_KEY => bail!("Key for set_property is now allowed"),
-            _ => {
-                self.story_storage
-                    .set_property(story_name, key, utils::vmo_buffer_to_string(Box::new(value))?)
-                    .await
-            }
+            // Writing to story graph and instance state is not allowed.
+            GRAPH_KEY | STATE_KEY => bail!("Key for set_property is now allowed"),
+            _ => self.story_storage.set_property(story_name, key, value).await,
         }
     }
 
     // Get property of given story with key.
-    pub async fn get_property(&self, story_name: &StoryName, key: String) -> Result<Buffer, Error> {
-        let value = self.story_storage.get_property(story_name, &key).await?;
-        let data_to_write = value.as_bytes();
-        let vmo = zx::Vmo::create(data_to_write.len() as u64)?;
-        vmo.write(&data_to_write, 0)?;
-        Ok(Buffer { vmo, size: data_to_write.len() as u64 })
+    pub async fn get_property(&self, story_name: &StoryName, key: String) -> Result<String, Error> {
+        self.story_storage.get_property(story_name, &key).await
+    }
+
+    // Set instance state of mods given story_name, module_name and name of state.
+    pub async fn set_instance_state(
+        &mut self,
+        story_name: &str,
+        module_name: &str,
+        state_name: &str,
+        value: String,
+    ) -> Result<(), Error> {
+        let identity_path = format!("{}/{}/{}", story_name, module_name, state_name);
+        self.story_storage.set_property(&identity_path, STATE_KEY, value).await
+    }
+
+    // Get instance state of mods given story_name, module_name and name of state.
+    pub async fn get_instance_state(
+        &self,
+        story_name: &str,
+        module_name: &str,
+        state_name: &str,
+    ) -> Result<String, Error> {
+        let identity_path = format!("{}/{}/{}", story_name, module_name, state_name);
+        self.story_storage.get_property(&identity_path, STATE_KEY).await
     }
 
     // Restore the story in story_manager by returning a vector of its modules.
@@ -308,6 +320,18 @@ mod tests {
                 .count(),
             1
         );
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn set_and_get_instance_state() -> Result<(), Error> {
+        let mut story_manager = StoryManager::new(Box::new(MemoryStorage::new()));
+        story_manager
+            .set_instance_state("some-story", "some-mod", "some-state", "value".to_string())
+            .await?;
+        let instance_state =
+            story_manager.get_instance_state("some-story", "some-mod", "some-state").await?;
+        assert_eq!(instance_state, "value".to_string());
         Ok(())
     }
 }
