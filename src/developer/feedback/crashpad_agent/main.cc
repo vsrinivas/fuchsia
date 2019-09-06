@@ -23,10 +23,10 @@ int main(int argc, const char** argv) {
 
   auto inspector = ::inspect_deprecated::ComponentInspector::Initialize(context.get());
   ::inspect_deprecated::Node& root_node = inspector->root_tree()->GetRoot();
-  fuchsia::crash::InspectManager inspect_manager(&root_node);
+  feedback::InspectManager inspect_manager(&root_node);
 
-  std::unique_ptr<fuchsia::crash::CrashpadAgent> agent =
-      fuchsia::crash::CrashpadAgent::TryCreate(loop.dispatcher(), context->svc(), &inspect_manager);
+  std::unique_ptr<feedback::CrashpadAgent> agent =
+      feedback::CrashpadAgent::TryCreate(loop.dispatcher(), context->svc(), &inspect_manager);
   if (!agent) {
     return EXIT_FAILURE;
   }

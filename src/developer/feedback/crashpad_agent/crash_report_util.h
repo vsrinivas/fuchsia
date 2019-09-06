@@ -12,8 +12,7 @@
 
 #include "third_party/crashpad/client/crash_report_database.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 // Extracts the annotations from a fuchsia.feedback.CrashReport if present and upsert them into
 // |annotations|.
@@ -30,7 +29,6 @@ void ExtractAnnotations(const fuchsia::feedback::CrashReport& report,
 void ExtractAttachments(const fuchsia::feedback::CrashReport& report,
                         crashpad::CrashReportDatabase::NewReport* crashpad_report);
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASH_REPORT_UTIL_H_

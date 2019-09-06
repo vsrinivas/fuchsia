@@ -9,17 +9,15 @@
 
 #include <memory>
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 
 // Dumps an archive file containing all the feedback data collected from
 // fuchsia.feedback.DataProvider into stdout or to |out_filename| if not-null.
 //
 // fuchsia.feedback.DataProvider is expected to be in |services|.
-bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services,
+bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services,
                    const char* out_filename = nullptr);
 
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_BUGREPORT_BUG_REPORTER_H_

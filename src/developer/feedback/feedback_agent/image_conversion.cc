@@ -12,7 +12,6 @@
 
 #include "third_party/libpng/png.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -93,4 +92,3 @@ bool RawToPng(const fuchsia::mem::Buffer& raw_image, const size_t height, const 
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

@@ -25,9 +25,11 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
+
+using fuchsia::feedback::Annotation;
+using fuchsia::feedback::Attachment;
 
 fit::promise<std::string> GetDeviceBoardName() {
   // fuchsia.sysinfo.Device is not Discoverable so we need to construct the channel ourselves.
@@ -84,7 +86,7 @@ fit::promise<std::string> ReadStringFromFile(const std::string& filepath) {
 }
 
 fit::promise<std::string> BuildValue(const std::string& key, async_dispatcher_t* dispatcher,
-                                     std::shared_ptr<::sys::ServiceDirectory> services,
+                                     std::shared_ptr<sys::ServiceDirectory> services,
                                      const zx::duration timeout) {
   if (key == kAnnotationDeviceBoardName) {
     return GetDeviceBoardName();
@@ -107,7 +109,7 @@ fit::promise<std::string> BuildValue(const std::string& key, async_dispatcher_t*
 }
 
 fit::promise<Annotation> BuildAnnotation(const std::string& key, async_dispatcher_t* dispatcher,
-                                         std::shared_ptr<::sys::ServiceDirectory> services,
+                                         std::shared_ptr<sys::ServiceDirectory> services,
                                          const zx::duration timeout) {
   return BuildValue(key, dispatcher, services, timeout)
       .and_then([key](std::string& value) -> fit::result<Annotation> {
@@ -125,7 +127,7 @@ fit::promise<Annotation> BuildAnnotation(const std::string& key, async_dispatche
 }  // namespace
 
 std::vector<fit::promise<Annotation>> GetAnnotations(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, zx::duration timeout) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Annotation allowlist is empty, nothing to retrieve";
@@ -140,4 +142,3 @@ std::vector<fit::promise<Annotation>> GetAnnotations(
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

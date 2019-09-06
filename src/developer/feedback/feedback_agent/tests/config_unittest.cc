@@ -11,7 +11,6 @@
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -70,7 +69,6 @@ TEST(ConfigTest, ParseConfig_BadConfig_MissingRequiredField) {
 
 }  // namespace
 }  // namespace feedback
-}  // namespace fuchsia
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

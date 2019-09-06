@@ -4,7 +4,6 @@
 
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 
-namespace fuchsia {
 namespace feedback {
 
 void StubUpdateInfo::GetChannel(GetChannelCallback callback) { callback(channel_); }
@@ -16,4 +15,3 @@ void StubUpdateInfoClosesConnection::GetChannel(GetChannelCallback callback) {
 void StubUpdateInfoNeverReturns::GetChannel(GetChannelCallback callback) {}
 
 }  // namespace feedback
-}  // namespace fuchsia

@@ -9,10 +9,9 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 
-bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services, const char* out_filename) {
+bool MakeBugReport(std::shared_ptr<sys::ServiceDirectory> services, const char* out_filename) {
   fuchsia::feedback::DataProviderSyncPtr feedback_data_provider;
   services->Connect(feedback_data_provider.NewRequest());
 
@@ -58,5 +57,4 @@ bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services, const char
   }
 }
 
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback

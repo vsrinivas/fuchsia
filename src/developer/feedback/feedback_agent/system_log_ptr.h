@@ -19,15 +19,14 @@
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
-namespace fuchsia {
 namespace feedback {
 
 // Collects system log.
 //
 // fuchsia.logger.Log is expected to be in |services|.
-fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    zx::duration timeout);
+fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    zx::duration timeout);
 
 // Wraps around fuchsia::logger::LogListenerPtr to handle establishing the connection, losing the
 // connection, waiting for the callback, enforcing a timeout, etc.
@@ -36,7 +35,7 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
 class LogListener : public fuchsia::logger::LogListener {
  public:
   explicit LogListener(async_dispatcher_t* dispatcher,
-                       std::shared_ptr<::sys::ServiceDirectory> services);
+                       std::shared_ptr<sys::ServiceDirectory> services);
 
   // Collects the logs and returns a promise to when the collection is done or the timeout over.
   fit::promise<void> CollectLogs(zx::duration timeout);
@@ -51,7 +50,7 @@ class LogListener : public fuchsia::logger::LogListener {
   void Done() override;
 
   async_dispatcher_t* dispatcher_;
-  const std::shared_ptr<::sys::ServiceDirectory> services_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   fidl::Binding<fuchsia::logger::LogListener> binding_;
   // Enforces the one-shot nature of CollectLogs().
   bool has_called_collect_logs_ = false;
@@ -71,6 +70,5 @@ class LogListener : public fuchsia::logger::LogListener {
 };
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SYSTEM_LOG_PTR_H_

@@ -12,8 +12,7 @@
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/file/file_writer.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 // Writes a VMO into a Crashpad writer.
 bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer);
@@ -23,7 +22,6 @@ bool AddAttachment(const std::string& attachment_filename,
                    const fuchsia::mem::Buffer& attachment_content,
                    crashpad::CrashReportDatabase::NewReport* crashpad_report);
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_REPORT_UTIL_H_

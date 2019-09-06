@@ -19,9 +19,15 @@
 #include "src/developer/feedback/feedback_agent/screenshot_ptr.h"
 #include "src/lib/files/file.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
+
+using fuchsia::feedback::Annotation;
+using fuchsia::feedback::Attachment;
+using fuchsia::feedback::DataProvider_GetData_Response;
+using fuchsia::feedback::DataProvider_GetData_Result;
+using fuchsia::feedback::ImageEncoding;
+using fuchsia::feedback::Screenshot;
 
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] = "/config/data/override_config.json";
@@ -34,7 +40,7 @@ const zx::duration kScreenshotTimeout = zx::sec(10);
 }  // namespace
 
 std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services) {
   Config config;
 
   // We use the default config included in the package of this component if no override config was
@@ -65,7 +71,7 @@ std::unique_ptr<DataProviderImpl> DataProviderImpl::TryCreate(
 }
 
 DataProviderImpl::DataProviderImpl(async_dispatcher_t* dispatcher,
-                                   std::shared_ptr<::sys::ServiceDirectory> services,
+                                   std::shared_ptr<sys::ServiceDirectory> services,
                                    const Config& config)
     : dispatcher_(dispatcher), executor_(dispatcher), services_(services), config_(config) {}
 
@@ -191,4 +197,3 @@ void DataProviderImpl::GetScreenshot(ImageEncoding encoding, GetScreenshotCallba
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

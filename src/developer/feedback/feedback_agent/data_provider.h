@@ -16,34 +16,33 @@
 
 #include "src/developer/feedback/feedback_agent/config.h"
 
-namespace fuchsia {
 namespace feedback {
 
 // Provides data useful to attach in feedback reports (crash or user feedback).
-class DataProviderImpl : public DataProvider {
+class DataProviderImpl : public fuchsia::feedback::DataProvider {
  public:
   // Static factory method.
   //
   // Returns nullptr if the data provider cannot be instantiated, e.g., because the config cannot be
   // parsed.
   static std::unique_ptr<DataProviderImpl> TryCreate(
-      async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
+      async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
-  DataProviderImpl(async_dispatcher_t* dispatcher,
-                   std::shared_ptr<::sys::ServiceDirectory> services, const Config& config);
+  DataProviderImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+                   const Config& config);
 
   // |fuchsia.feedback.DataProvider|
   void GetData(GetDataCallback callback) override;
-  void GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) override;
+  void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
+                     GetScreenshotCallback callback) override;
 
  private:
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
-  const std::shared_ptr<::sys::ServiceDirectory> services_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
 };
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_DATA_PROVIDER_H_

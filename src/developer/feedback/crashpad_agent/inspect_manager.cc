@@ -10,8 +10,7 @@
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 namespace {
 
@@ -61,13 +60,13 @@ InspectManager::Report* InspectManager::AddReport(const std::string& program_nam
   return &report_list->reports.back();
 }
 
-void InspectManager::ExposeConfig(const fuchsia::crash::Config& config) {
+void InspectManager::ExposeConfig(const feedback::Config& config) {
   auto* crashpad_database = &config_.crashpad_database;
   auto* crash_server = &config_.crash_server;
 
   crashpad_database->node = config_.node.CreateChild(kCrashpadDatabaseKey);
-  crashpad_database->path =
-      config_.crashpad_database.node.CreateStringProperty(kCrashpadDatabasePathKey, config.crashpad_database.path);
+  crashpad_database->path = config_.crashpad_database.node.CreateStringProperty(
+      kCrashpadDatabasePathKey, config.crashpad_database.path);
   crashpad_database->max_size_in_kb = crashpad_database->node.CreateUIntMetric(
       kCrashpadDatabaseMaxSizeInKbKey, config.crashpad_database.max_size_in_kb);
 
@@ -85,5 +84,4 @@ void InspectManager::ExposeConfig(const fuchsia::crash::Config& config) {
                                     config.feedback_data_collection_timeout_in_milliseconds);
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

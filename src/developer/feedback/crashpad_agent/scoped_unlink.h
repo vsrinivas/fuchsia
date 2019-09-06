@@ -11,8 +11,7 @@
 
 #include "src/lib/fxl/macros.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 class ScopedUnlink {
  public:
@@ -35,7 +34,6 @@ class ScopedUnlink {
   FXL_DISALLOW_COPY_AND_ASSIGN(ScopedUnlink);
 };
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_SCOPED_UNLINK_H_

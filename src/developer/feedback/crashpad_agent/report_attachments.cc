@@ -15,8 +15,7 @@
 #include "src/developer/feedback/crashpad_agent/crashpad_report_util.h"
 #include "third_party/crashpad/util/file/file_writer.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 namespace {
 
@@ -36,18 +35,18 @@ void AddFeedbackAttachments(crashpad::CrashReportDatabase::NewReport* report,
 
 void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewReport* report,
                                            const fuchsia::feedback::Data& feedback_data,
-                                           ManagedRuntimeException* exception) {
+                                           fuchsia::crash::ManagedRuntimeException* exception) {
   AddFeedbackAttachments(report, feedback_data);
 
   // Language-specific attachments.
   switch (exception->Which()) {
-    case ManagedRuntimeException::Tag::Invalid:
+    case fuchsia::crash::ManagedRuntimeException::Tag::Invalid:
       FX_LOGS(ERROR) << "invalid ManagedRuntimeException";
       break;
-    case ManagedRuntimeException::Tag::kUnknown_:
+    case fuchsia::crash::ManagedRuntimeException::Tag::kUnknown_:
       AddAttachment("data", exception->unknown_().data, report);
       break;
-    case ManagedRuntimeException::Tag::kDart:
+    case fuchsia::crash::ManagedRuntimeException::Tag::kDart:
       AddAttachment(kAttachmentDartStackTraceFilename, exception->dart().stack_trace, report);
       break;
   }
@@ -63,5 +62,4 @@ void BuildAttachments(const fuchsia::feedback::CrashReport& report,
   ExtractAttachments(report, crashpad_report);
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

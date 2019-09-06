@@ -16,8 +16,7 @@
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 // Encapsulates the global state exposed through Inspect.
 class InspectManager {
@@ -47,7 +46,7 @@ class InspectManager {
   Report* AddReport(const std::string& program_name, const crashpad::UUID& local_report_id);
 
   // Records the configuration file of the CrashpadAgent.
-  void ExposeConfig(const fuchsia::crash::Config& config);
+  void ExposeConfig(const feedback::Config& config);
 
  private:
   // Inspect node containing a list of reports.
@@ -94,7 +93,6 @@ class InspectManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(InspectManager);
 };
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INSPECT_MANAGER_H_

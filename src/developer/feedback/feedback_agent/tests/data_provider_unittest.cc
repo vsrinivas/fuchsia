@@ -42,13 +42,14 @@
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/schema.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
-using ::feedback::MatchesAnnotation;
-using ::feedback::MatchesAttachment;
-using ::feedback::MatchesKey;
+using fuchsia::feedback::Attachment;
+using fuchsia::feedback::Data;
+using fuchsia::feedback::DataProvider_GetData_Result;
+using fuchsia::feedback::ImageEncoding;
+using fuchsia::feedback::Screenshot;
 
 const std::set<std::string> kDefaultAnnotations = {
     kAnnotationBuildBoard,   kAnnotationBuildLatestCommitDate,
@@ -137,7 +138,7 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
+class DataProviderImplTest : public sys::testing::TestWithEnvironment {
  public:
   void SetUp() override { ResetDataProvider(kDefaultConfig); }
 
@@ -229,7 +230,7 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
     ASSERT_TRUE(data.has_attachment_bundle());
     const auto& attachment_bundle = data.attachment_bundle();
     EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
-    ASSERT_TRUE(::feedback::Unpack(attachment_bundle.value, unpacked_attachments));
+    ASSERT_TRUE(Unpack(attachment_bundle.value, unpacked_attachments));
     EXPECT_EQ(unpacked_attachments->size(), data.attachments().size());
   }
 
@@ -661,7 +662,6 @@ TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
 
 }  // namespace
 }  // namespace feedback
-}  // namespace fuchsia
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

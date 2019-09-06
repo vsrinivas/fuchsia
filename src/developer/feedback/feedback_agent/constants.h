@@ -5,7 +5,6 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONSTANTS_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONSTANTS_H_
 
-namespace fuchsia {
 namespace feedback {
 
 constexpr char kAnnotationBuildBoard[] = "build.board";
@@ -25,6 +24,5 @@ constexpr char kAttachmentLogSystem[] = "log.system.txt";
 constexpr char kAttachmentBundle[] = "fuchsia_feedback_data.zip";
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONSTANTS_H_

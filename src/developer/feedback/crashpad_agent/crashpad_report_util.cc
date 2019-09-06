@@ -9,8 +9,7 @@
 
 #include <memory>
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 bool WriteVMO(const fuchsia::mem::Buffer& vmo, crashpad::FileWriter* writer) {
   // TODO(frousseau): make crashpad::FileWriter VMO-aware.
@@ -36,5 +35,4 @@ bool AddAttachment(const std::string& attachment_filename,
   return true;
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

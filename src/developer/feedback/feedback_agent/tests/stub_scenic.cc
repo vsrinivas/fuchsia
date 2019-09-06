@@ -10,7 +10,6 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -95,4 +94,3 @@ void StubScenicClosesConnection::TakeScreenshot(TakeScreenshotCallback callback)
 void StubScenicNeverReturns::TakeScreenshot(TakeScreenshotCallback callback) {}
 
 }  // namespace feedback
-}  // namespace fuchsia

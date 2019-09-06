@@ -16,7 +16,6 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace feedback {
 
 // Returns a LogMessage with the given severity, message and optional tags.
@@ -104,6 +103,5 @@ class StubLoggerDelaysAfterOneMessage : public StubLogger {
 };
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_LOGGER_H_

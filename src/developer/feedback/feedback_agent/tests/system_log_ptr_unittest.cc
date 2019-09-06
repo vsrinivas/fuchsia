@@ -27,11 +27,8 @@
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
-
-using ::feedback::MatchesStringBuffer;
 
 class CollectSystemLogTest : public gtest::TestLoopFixture {
  public:
@@ -48,8 +45,8 @@ class CollectSystemLogTest : public gtest::TestLoopFixture {
   fit::result<fuchsia::mem::Buffer> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
-        fuchsia::feedback::CollectSystemLog(
-            dispatcher(), service_directory_provider_.service_directory(), timeout)
+        feedback::CollectSystemLog(dispatcher(), service_directory_provider_.service_directory(),
+                                   timeout)
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -240,7 +237,6 @@ TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
 
 }  // namespace
 }  // namespace feedback
-}  // namespace fuchsia
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

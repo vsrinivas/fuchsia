@@ -11,8 +11,7 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 
 // Stub fuchsia.feedback.DataProvider service that returns canned responses for
 // fuchsia::feedback::DataProvider::GetData().
@@ -39,7 +38,6 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings_;
 };
 
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_BUGREPORT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_

@@ -16,18 +16,16 @@
 #include <string>
 #include <vector>
 
-namespace fuchsia {
 namespace feedback {
 
 // Returns annotations useful to attach in feedback reports (crash or user feedback).
 //
 // * only annotations which keys are in the |allowlist| will be returned.
 // * |timeout| is per annotation.
-std::vector<fit::promise<Annotation>> GetAnnotations(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+std::vector<fit::promise<fuchsia::feedback::Annotation>> GetAnnotations(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, zx::duration timeout);
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ANNOTATIONS_H_

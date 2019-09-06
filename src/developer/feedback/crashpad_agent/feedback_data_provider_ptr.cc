@@ -11,8 +11,7 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 using fuchsia::feedback::Data;
@@ -20,7 +19,7 @@ using fuchsia::feedback::Data;
 }  // namespace
 
 fit::promise<Data> GetFeedbackData(async_dispatcher_t* dispatcher,
-                                   std::shared_ptr<::sys::ServiceDirectory> services,
+                                   std::shared_ptr<sys::ServiceDirectory> services,
                                    zx::duration timeout) {
   std::unique_ptr<FeedbackDataProvider> feedback_data_provider =
       std::make_unique<FeedbackDataProvider>(dispatcher, services);
@@ -33,7 +32,7 @@ fit::promise<Data> GetFeedbackData(async_dispatcher_t* dispatcher,
 }
 
 FeedbackDataProvider::FeedbackDataProvider(async_dispatcher_t* dispatcher,
-                                           std::shared_ptr<::sys::ServiceDirectory> services)
+                                           std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
 fit::promise<Data> FeedbackDataProvider::GetData(zx::duration timeout) {
@@ -94,5 +93,4 @@ fit::promise<Data> FeedbackDataProvider::GetData(zx::duration timeout) {
   });
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

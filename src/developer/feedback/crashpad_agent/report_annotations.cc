@@ -21,8 +21,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 // The crash server expects specific key and values for some annotations in Dart crash reports.
@@ -64,17 +63,17 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
 
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
     const fuchsia::feedback::Data& feedback_data, const std::string& component_url,
-    ManagedRuntimeException* exception) {
+    fuchsia::crash::ManagedRuntimeException* exception) {
   std::map<std::string, std::string> annotations =
       MakeDefaultAnnotations(feedback_data, component_url);
   switch (exception->Which()) {
-    case ManagedRuntimeException::Tag::Invalid:
+    case fuchsia::crash::ManagedRuntimeException::Tag::Invalid:
       FX_LOGS(ERROR) << "invalid ManagedRuntimeException";
       break;
-    case ManagedRuntimeException::Tag::kUnknown_:
+    case fuchsia::crash::ManagedRuntimeException::Tag::kUnknown_:
       // No additional annotations, just a single attachment.
       break;
-    case ManagedRuntimeException::Tag::kDart:
+    case fuchsia::crash::ManagedRuntimeException::Tag::kDart:
       annotations[kDartTypeKey] = kDartTypeValue;
       annotations[kDartErrorRuntimeTypeKey] =
           std::string(reinterpret_cast<const char*>(exception->dart().type.data()));
@@ -97,5 +96,4 @@ std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::Cra
   return annotations;
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

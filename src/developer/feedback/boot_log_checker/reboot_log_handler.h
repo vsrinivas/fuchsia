@@ -25,7 +25,7 @@ namespace feedback {
 //
 // fuchsia.net.Connectivity and fuchsia.feedback.CrashReporter are expected to be in |services|.
 fit::promise<void> HandleRebootLog(const std::string& filepath,
-                                   std::shared_ptr<::sys::ServiceDirectory> services);
+                                   std::shared_ptr<sys::ServiceDirectory> services);
 
 // The type of crashes we expect in the reboot log and want file crash reports for.
 enum class CrashType { KERNEL_PANIC, OOM };
@@ -36,7 +36,7 @@ enum class CrashType { KERNEL_PANIC, OOM };
 // Handle() is expected to be called only once.
 class RebootLogHandler {
  public:
-  explicit RebootLogHandler(std::shared_ptr<::sys::ServiceDirectory> services);
+  explicit RebootLogHandler(std::shared_ptr<sys::ServiceDirectory> services);
 
   fit::promise<void> Handle(const std::string& filepath);
 
@@ -45,7 +45,7 @@ class RebootLogHandler {
   fit::promise<void> FileCrashReport(CrashType crash_type);
   fit::promise<void> SendCobaltMetrics(CrashType crash_type);
 
-  const std::shared_ptr<::sys::ServiceDirectory> services_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of Handle().
   bool has_called_handle_ = false;
 

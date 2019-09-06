@@ -13,7 +13,6 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -53,4 +52,3 @@ std::vector<zx::process> GetChildProcesses(const zx_handle_t job) {
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

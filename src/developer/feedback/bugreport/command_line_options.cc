@@ -7,8 +7,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/substitute.h"
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 namespace {
 
 constexpr char kUsage[] = R"($0
@@ -41,5 +40,4 @@ Mode ParseModeFromArgcArgv(int argc, const char* const* argv) {
   return Mode::DEFAULT;
 }
 
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback

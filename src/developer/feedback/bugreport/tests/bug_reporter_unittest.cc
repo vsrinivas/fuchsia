@@ -20,8 +20,7 @@
 #include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 namespace {
 
 class BugReporterTest : public gtest::RealLoopFixture {
@@ -73,5 +72,4 @@ TEST_F(BugReporterTest, Basic) {
 }
 
 }  // namespace
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback

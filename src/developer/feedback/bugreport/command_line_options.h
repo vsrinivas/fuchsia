@@ -5,8 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_BUGREPORT_COMMAND_LINE_OPTIONS_H_
 #define SRC_DEVELOPER_FEEDBACK_BUGREPORT_COMMAND_LINE_OPTIONS_H_
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 
 enum class Mode {
   FAILURE,
@@ -16,7 +15,6 @@ enum class Mode {
 
 Mode ParseModeFromArgcArgv(int argc, const char* const* argv);
 
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_BUGREPORT_COMMAND_LINE_OPTIONS_H_

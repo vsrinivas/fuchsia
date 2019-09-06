@@ -15,20 +15,21 @@
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
-using ::feedback::MatchesKey;
+using fuchsia::feedback::Attachment;
+using fuchsia::feedback::DataProvider_GetData_Result;
+using fuchsia::feedback::DataProviderSyncPtr;
 
 // Smoke-tests the real environment service for the fuchsia.feedback.DataProvider FIDL interface,
 // connecting through FIDL.
 class FeedbackAgentIntegrationTest : public testing::Test {
  public:
-  void SetUp() override { environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace(); }
+  void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
  protected:
-  std::shared_ptr<::sys::ServiceDirectory> environment_services_;
+  std::shared_ptr<sys::ServiceDirectory> environment_services_;
 };
 
 TEST_F(FeedbackAgentIntegrationTest, ValidOverrideConfig_SmokeTest) {
@@ -64,7 +65,7 @@ TEST_F(FeedbackAgentIntegrationTest, ValidOverrideConfig_SmokeTest) {
   const auto& attachment_bundle = out_result.response().data.attachment_bundle();
   EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
   std::vector<Attachment> unpacked_attachments;
-  ASSERT_TRUE(::feedback::Unpack(attachment_bundle.value, &unpacked_attachments));
+  ASSERT_TRUE(Unpack(attachment_bundle.value, &unpacked_attachments));
   EXPECT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
                                         MatchesKey(kAttachmentAnnotations),
                                         MatchesKey(kAttachmentBuildSnapshot),
@@ -73,4 +74,3 @@ TEST_F(FeedbackAgentIntegrationTest, ValidOverrideConfig_SmokeTest) {
 
 }  // namespace
 }  // namespace feedback
-}  // namespace fuchsia

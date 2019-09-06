@@ -13,7 +13,6 @@
 #include "third_party/rapidjson/include/rapidjson/schema.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -107,4 +106,3 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

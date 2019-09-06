@@ -11,8 +11,7 @@
 #include <memory>
 #include <string>
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 struct CrashpadDatabaseConfig {
   // Directory path under which to store the Crashpad database.
@@ -46,7 +45,6 @@ struct Config {
 // Parses the JSON config at |filepath| as |config|.
 zx_status_t ParseConfig(const std::string& filepath, Config* config);
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONFIG_H_

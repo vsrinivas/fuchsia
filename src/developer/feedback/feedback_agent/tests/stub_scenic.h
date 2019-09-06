@@ -15,7 +15,6 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace feedback {
 
 // Returns an empty screenshot, still needed when Scenic::TakeScreenshot() returns false as the FIDL
@@ -96,6 +95,5 @@ class StubScenicNeverReturns : public StubScenic {
 };
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_SCENIC_H_

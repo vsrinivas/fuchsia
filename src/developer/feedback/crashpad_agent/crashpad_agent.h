@@ -27,23 +27,22 @@
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
-class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
+class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback::CrashReporter {
  public:
   // Static factory methods.
   //
   // Returns nullptr if the agent cannot be instantiated, e.g., because the local report database
   // cannot be accessed.
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
-                                                  std::shared_ptr<::sys::ServiceDirectory> services,
+                                                  std::shared_ptr<sys::ServiceDirectory> services,
                                                   InspectManager* inspect_manager);
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
-                                                  std::shared_ptr<::sys::ServiceDirectory> services,
+                                                  std::shared_ptr<sys::ServiceDirectory> services,
                                                   Config config, InspectManager* inspect_manager);
   static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
-                                                  std::shared_ptr<::sys::ServiceDirectory> services,
+                                                  std::shared_ptr<sys::ServiceDirectory> services,
                                                   Config config,
                                                   std::unique_ptr<CrashServer> crash_server,
                                                   InspectManager* inspect_manager);
@@ -55,19 +54,20 @@ class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
                          OnNativeExceptionCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
-  void OnManagedRuntimeException(std::string component_url, ManagedRuntimeException exception,
+  void OnManagedRuntimeException(std::string component_url,
+                                 fuchsia::crash::ManagedRuntimeException exception,
                                  OnManagedRuntimeExceptionCallback callback) override;
 
   // |fuchsia::feedback::CrashReporter|
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
 
  private:
-  CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+  CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                 Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
                 std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager);
 
   fit::promise<void> OnManagedRuntimeException(std::string component_url,
-                                               ManagedRuntimeException exception);
+                                               fuchsia::crash::ManagedRuntimeException exception);
   fit::promise<void> File(fuchsia::feedback::CrashReport report);
 
   // Uploads local crash report of ID |local_report_id|, attaching the passed |annotations|.
@@ -81,7 +81,7 @@ class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
 
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
-  const std::shared_ptr<::sys::ServiceDirectory> services_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const std::unique_ptr<CrashServer> crash_server_;
@@ -90,7 +90,6 @@ class CrashpadAgent : public Analyzer, public fuchsia::feedback::CrashReporter {
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASHPAD_AGENT_H_

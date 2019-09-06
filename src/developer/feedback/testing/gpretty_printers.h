@@ -83,7 +83,7 @@ void PrintTo(const Property& property, std::ostream* os) {
   *os << fostr::NewLine << "value: " << property.value.str();
   *os << fostr::Outdent;
 }
-} // namespace inspect
+}  // namespace inspect
 }  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_GPRETTY_PRINTERS_H_

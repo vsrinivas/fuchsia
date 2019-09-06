@@ -12,19 +12,18 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 namespace {
 
 class BugReporterIntegrationTest : public testing::Test {
  public:
   void SetUp() override {
-    environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace();
+    environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
     ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_));
   }
 
  protected:
-  std::shared_ptr<::sys::ServiceDirectory> environment_services_;
+  std::shared_ptr<sys::ServiceDirectory> environment_services_;
   std::string bugreport_path_;
 
  private:
@@ -43,5 +42,4 @@ TEST_F(BugReporterIntegrationTest, SmokeTest) {
 }
 
 }  // namespace
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback

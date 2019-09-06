@@ -11,8 +11,7 @@
 #include "third_party/crashpad/util/net/http_body.h"
 #include "third_party/crashpad/util/net/http_headers.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 // Represents the HTTP crash server to which the agent uploads crash reports to.
 class CrashServer {
@@ -35,7 +34,6 @@ class CrashServer {
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashServer);
 };
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CRASH_SERVER_H_

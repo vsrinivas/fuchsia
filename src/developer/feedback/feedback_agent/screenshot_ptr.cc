@@ -11,7 +11,6 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -20,7 +19,7 @@ using fuchsia::ui::scenic::ScreenshotData;
 }  // namespace
 
 fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
-                                            std::shared_ptr<::sys::ServiceDirectory> services,
+                                            std::shared_ptr<sys::ServiceDirectory> services,
                                             zx::duration timeout) {
   std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services);
 
@@ -31,7 +30,7 @@ fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
       });
 }
 
-Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services)
+Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
 fit::promise<ScreenshotData> Scenic::TakeScreenshot(const zx::duration timeout) {
@@ -93,4 +92,3 @@ fit::promise<ScreenshotData> Scenic::TakeScreenshot(const zx::duration timeout) 
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

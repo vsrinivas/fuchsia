@@ -4,8 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 const char kStubCrashServerUrl[] = "localhost:1234";
 
@@ -18,5 +17,4 @@ bool StubCrashServer::MakeRequest(const crashpad::HTTPHeaders& headers,
   return request_return_value_;
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

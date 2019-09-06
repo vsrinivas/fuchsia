@@ -16,25 +16,24 @@
 #include <string>
 #include <vector>
 
-namespace fuchsia {
 namespace feedback {
 
 // Returns attachments useful to attach in feedback reports (crash or user feedback).
 //
 // * only attachments which keys are in the |allowlist| will be returned.
 // * |timeout| is per attachment.
-std::vector<fit::promise<Attachment>> GetAttachments(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+std::vector<fit::promise<fuchsia::feedback::Attachment>> GetAttachments(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, zx::duration timeout);
 
 // Adds the |annotations| as an extra JSON attachment to |attachments|.
-void AddAnnotationsAsExtraAttachment(const std::vector<Annotation>& annotations,
-                                     std::vector<Attachment>* attachments);
+void AddAnnotationsAsExtraAttachment(const std::vector<fuchsia::feedback::Annotation>& annotations,
+                                     std::vector<fuchsia::feedback::Attachment>* attachments);
 
 // Bundles the attachments into a single attachment.
-bool BundleAttachments(const std::vector<Attachment>& attachments, Attachment* bundle);
+bool BundleAttachments(const std::vector<fuchsia::feedback::Attachment>& attachments,
+                       fuchsia::feedback::Attachment* bundle);
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_ATTACHMENTS_H_

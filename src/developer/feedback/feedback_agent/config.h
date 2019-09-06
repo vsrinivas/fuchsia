@@ -10,7 +10,6 @@
 #include <set>
 #include <string>
 
-namespace fuchsia {
 namespace feedback {
 
 // Feedback data provider configuration.
@@ -26,6 +25,5 @@ struct Config {
 zx_status_t ParseConfig(const std::string& filepath, Config* config);
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONFIG_H_

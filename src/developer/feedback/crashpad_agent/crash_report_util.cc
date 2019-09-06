@@ -10,8 +10,7 @@
 #include "src/developer/feedback/crashpad_agent/crashpad_report_util.h"
 #include "third_party/crashpad/util/file/file_writer.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 using fuchsia::feedback::Annotation;
@@ -113,5 +112,4 @@ void ExtractAttachments(const fuchsia::feedback::CrashReport& report,
   }
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

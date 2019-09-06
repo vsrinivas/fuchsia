@@ -11,8 +11,7 @@
 
 #include "third_party/crashpad/client/crash_report_database.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 // Adds the set of file attachments we want in a crash report for managed runtime exceptions to the
 // |report|.
@@ -23,7 +22,7 @@ namespace crash {
 // TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
 void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewReport* report,
                                            const fuchsia::feedback::Data& feedback_data,
-                                           ManagedRuntimeException* exception);
+                                           fuchsia::crash::ManagedRuntimeException* exception);
 
 // Builds the final set of attachments to attach to the crash report and writes them to
 // |crashpad_report|.
@@ -36,7 +35,6 @@ void BuildAttachments(const fuchsia::feedback::CrashReport& report,
                       const fuchsia::feedback::Data& feedback_data,
                       crashpad::CrashReportDatabase::NewReport* crashpad_report);
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_REPORT_ATTACHMENTS_H_

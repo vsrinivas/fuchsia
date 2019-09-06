@@ -21,7 +21,7 @@
 namespace feedback {
 
 fit::promise<void> HandleRebootLog(const std::string& filepath,
-                                   std::shared_ptr<::sys::ServiceDirectory> services) {
+                                   std::shared_ptr<sys::ServiceDirectory> services) {
   std::unique_ptr<RebootLogHandler> handler = std::make_unique<RebootLogHandler>(services);
 
   // We move |handler| in a subsequent chained promise to guarantee its lifetime.
@@ -29,7 +29,7 @@ fit::promise<void> HandleRebootLog(const std::string& filepath,
       [handler = std::move(handler)](fit::result<void>& result) { return std::move(result); });
 }
 
-RebootLogHandler::RebootLogHandler(std::shared_ptr<::sys::ServiceDirectory> services)
+RebootLogHandler::RebootLogHandler(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services) {}
 
 namespace {

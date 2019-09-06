@@ -27,9 +27,11 @@
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/prettywriter.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
+
+using fuchsia::feedback::Annotation;
+using fuchsia::feedback::Attachment;
 
 // This is actually synchronous, but we return a fit::promise to match other attachment providers
 // that are asynchronous.
@@ -80,7 +82,7 @@ fit::promise<fuchsia::mem::Buffer> VmoFromFilename(const std::string& filename) 
 
 fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
                                               async_dispatcher_t* dispatcher,
-                                              std::shared_ptr<::sys::ServiceDirectory> services,
+                                              std::shared_ptr<sys::ServiceDirectory> services,
                                               const zx::duration timeout) {
   if (key == kAttachmentBuildSnapshot) {
     return VmoFromFilename("/config/build-info/snapshot");
@@ -97,7 +99,7 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
 }
 
 fit::promise<Attachment> BuildAttachment(const std::string& key, async_dispatcher_t* dispatcher,
-                                         std::shared_ptr<::sys::ServiceDirectory> services,
+                                         std::shared_ptr<sys::ServiceDirectory> services,
                                          const zx::duration timeout) {
   return BuildValue(key, dispatcher, services, timeout)
       .and_then([key](fuchsia::mem::Buffer& vmo) -> fit::result<Attachment> {
@@ -115,7 +117,7 @@ fit::promise<Attachment> BuildAttachment(const std::string& key, async_dispatche
 }  // namespace
 
 std::vector<fit::promise<Attachment>> GetAttachments(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const std::set<std::string>& allowlist, const zx::duration timeout) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Attachment allowlist is empty, nothing to retrieve";
@@ -164,4 +166,3 @@ bool BundleAttachments(const std::vector<Attachment>& attachments, Attachment* b
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

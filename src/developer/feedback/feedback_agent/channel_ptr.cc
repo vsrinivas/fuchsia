@@ -11,11 +11,10 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace feedback {
 
 fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<::sys::ServiceDirectory> services,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
                                                  zx::duration timeout) {
   std::unique_ptr<UpdateInfo> update_info = std::make_unique<UpdateInfo>(dispatcher, services);
 
@@ -27,7 +26,7 @@ fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
 }
 
 UpdateInfo::UpdateInfo(async_dispatcher_t* dispatcher,
-                       std::shared_ptr<::sys::ServiceDirectory> services)
+                       std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
 fit::promise<std::string> UpdateInfo::GetChannel(zx::duration timeout) {
@@ -84,4 +83,3 @@ fit::promise<std::string> UpdateInfo::GetChannel(zx::duration timeout) {
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

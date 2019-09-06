@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 
-namespace fuchsia {
 namespace feedback {
 
 // TODO(frousseau): these should move to //garnet/public/lib/fsl with unit tests.
@@ -22,6 +21,5 @@ std::vector<zx::job> GetChildJobs(zx_handle_t job);
 std::vector<zx::process> GetChildProcesses(zx_handle_t job);
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_ZX_OBJECT_UTIL_H_

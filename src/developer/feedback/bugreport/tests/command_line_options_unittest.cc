@@ -6,8 +6,7 @@
 
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 namespace {
 
 TEST(CommandLineOptionsTest, Default) {
@@ -63,5 +62,4 @@ void PrintTo(const Mode& mode, std::ostream* os) {
   }
 }
 
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback

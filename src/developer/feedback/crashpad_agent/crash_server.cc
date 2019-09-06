@@ -6,8 +6,7 @@
 
 #include "third_party/crashpad/util/net/http_transport.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 CrashServer::CrashServer(const std::string& url) : url_(url) {}
 
@@ -24,5 +23,4 @@ bool CrashServer::MakeRequest(const crashpad::HTTPHeaders& headers,
   return http_transport->ExecuteSynchronously(server_report_id);
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

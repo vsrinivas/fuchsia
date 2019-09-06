@@ -41,11 +41,13 @@
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
-using ::feedback::MatchesProperty;
-using testing::Matches;
+
+using fuchsia::crash::Analyzer_OnManagedRuntimeException_Result;
+using fuchsia::crash::GenericException;
+using fuchsia::crash::ManagedRuntimeException;
+using fuchsia::crash::UnknownException;
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
@@ -54,6 +56,7 @@ using fuchsia::feedback::GenericCrashReport;
 using fuchsia::feedback::NativeCrashReport;
 using fuchsia::feedback::RuntimeCrashReport;
 using fuchsia::feedback::SpecificCrashReport;
+using testing::Matches;
 
 // We keep the local Crashpad database size under a certain value. As we want to check the produced
 // attachments in the database, we should set the size to be at least the total size for a single
@@ -640,8 +643,7 @@ TEST_F(CrashpadAgentTest, Check_InspectDatabaseConfig) {
 
   fidl::VectorPtr<fuchsia::inspect::Property> database_properties =
       database_config->ToFidl().properties;
-  fidl::VectorPtr<fuchsia::inspect::Metric> database_metrics =
-      database_config->ToFidl().metrics;
+  fidl::VectorPtr<fuchsia::inspect::Metric> database_metrics = database_config->ToFidl().metrics;
 
   EXPECT_EQ(1u, database_properties->size());
   EXPECT_EQ(1u, database_metrics->size());
@@ -671,8 +673,10 @@ TEST_F(CrashpadAgentTest, Check_InspectServerConfigEnableUploadTrue) {
   EXPECT_EQ(0u, server_metrics->size());
 
   EXPECT_THAT(server_properties.value(),
-              testing::UnorderedElementsAreArray({MatchesProperty(kCrashServerEnableUploadKey, "true"),
-                                                  MatchesProperty(kCrashServerUrlKey, kStubCrashServerUrl)}));
+              testing::UnorderedElementsAreArray({
+                  MatchesProperty(kCrashServerEnableUploadKey, "true"),
+                  MatchesProperty(kCrashServerUrlKey, kStubCrashServerUrl),
+              }));
 }
 
 TEST_F(CrashpadAgentTest, Check_InspectServerConfigEnableUploadFalse) {
@@ -790,8 +794,7 @@ TEST_F(CrashpadAgentTest, Fail_OnInvalidInputCrashReport) {
 }
 
 }  // namespace
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

@@ -14,8 +14,7 @@
 #include "third_party/rapidjson/include/rapidjson/schema.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 const char kSchema[] = R"({
@@ -153,5 +152,4 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   return ZX_OK;
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

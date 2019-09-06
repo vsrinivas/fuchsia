@@ -22,7 +22,6 @@
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -45,8 +44,8 @@ class TakeScreenshotTest : public gtest::TestLoopFixture {
   fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
     fit::result<ScreenshotData> result;
     executor_.schedule_task(
-        fuchsia::feedback::TakeScreenshot(dispatcher(),
-                                          service_directory_provider_.service_directory(), timeout)
+        feedback::TakeScreenshot(dispatcher(), service_directory_provider_.service_directory(),
+                                 timeout)
             .then([&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -126,7 +125,6 @@ TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
 
 }  // namespace
 }  // namespace feedback
-}  // namespace fuchsia
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

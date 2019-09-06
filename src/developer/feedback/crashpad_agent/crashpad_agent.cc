@@ -42,8 +42,7 @@
 #include "third_party/crashpad/util/net/http_transport.h"
 #include "third_party/crashpad/util/net/url.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 using crashpad::CrashReportDatabase;
@@ -57,7 +56,7 @@ const char kOverrideConfigPath[] = "/config/data/override_config.json";
 }  // namespace
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     InspectManager* inspect_manager) {
   Config config;
 
@@ -90,8 +89,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    Config config, InspectManager* inspect_manager) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services, Config config,
+    InspectManager* inspect_manager) {
   std::unique_ptr<CrashServer> crash_server;
   if (config.crash_server.enable_upload && config.crash_server.url) {
     crash_server = std::make_unique<CrashServer>(*config.crash_server.url);
@@ -101,8 +100,8 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    Config config, std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager) {
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services, Config config,
+    std::unique_ptr<CrashServer> crash_server, InspectManager* inspect_manager) {
   if (!files::IsDirectory(config.crashpad_database.path)) {
     files::CreateDirectory(config.crashpad_database.path);
   }
@@ -128,7 +127,7 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
 }
 
 CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
-                             std::shared_ptr<::sys::ServiceDirectory> services, Config config,
+                             std::shared_ptr<sys::ServiceDirectory> services, Config config,
                              std::unique_ptr<crashpad::CrashReportDatabase> database,
                              std::unique_ptr<CrashServer> crash_server,
                              InspectManager* inspect_manager)
@@ -149,26 +148,27 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
 }
 
 void CrashpadAgent::OnManagedRuntimeException(std::string component_url,
-                                              ManagedRuntimeException exception,
+                                              fuchsia::crash::ManagedRuntimeException exception,
                                               OnManagedRuntimeExceptionCallback callback) {
-  auto promise = OnManagedRuntimeException(component_url, std::move(exception))
-                     .and_then([] {
-                       Analyzer_OnManagedRuntimeException_Result result;
-                       Analyzer_OnManagedRuntimeException_Response response;
-                       result.set_response(response);
-                       return fit::ok(std::move(result));
-                     })
-                     .or_else([] {
-                       FX_LOGS(ERROR) << "Failed to handle managed runtime exception. Won't retry.";
-                       Analyzer_OnManagedRuntimeException_Result result;
-                       result.set_err(ZX_ERR_INTERNAL);
-                       return fit::ok(std::move(result));
-                     })
-                     .and_then([callback = std::move(callback),
-                                this](Analyzer_OnManagedRuntimeException_Result& result) {
-                       callback(std::move(result));
-                       PruneDatabase();
-                     });
+  auto promise =
+      OnManagedRuntimeException(component_url, std::move(exception))
+          .and_then([] {
+            fuchsia::crash::Analyzer_OnManagedRuntimeException_Result result;
+            fuchsia::crash::Analyzer_OnManagedRuntimeException_Response response;
+            result.set_response(response);
+            return fit::ok(std::move(result));
+          })
+          .or_else([] {
+            FX_LOGS(ERROR) << "Failed to handle managed runtime exception. Won't retry.";
+            fuchsia::crash::Analyzer_OnManagedRuntimeException_Result result;
+            result.set_err(ZX_ERR_INTERNAL);
+            return fit::ok(std::move(result));
+          })
+          .and_then([callback = std::move(callback),
+                     this](fuchsia::crash::Analyzer_OnManagedRuntimeException_Result& result) {
+            callback(std::move(result));
+            PruneDatabase();
+          });
 
   executor_.schedule_task(std::move(promise));
 }
@@ -204,8 +204,8 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
   executor_.schedule_task(std::move(promise));
 }
 
-fit::promise<void> CrashpadAgent::OnManagedRuntimeException(std::string component_url,
-                                                            ManagedRuntimeException exception) {
+fit::promise<void> CrashpadAgent::OnManagedRuntimeException(
+    std::string component_url, fuchsia::crash::ManagedRuntimeException exception) {
   FX_LOGS(INFO) << "generating crash report for exception thrown by " << component_url;
 
   // Create local crash report.
@@ -355,5 +355,4 @@ void CrashpadAgent::PruneDatabase() {
   crashpad::PruneCrashReportDatabase(database_.get(), &pruning_condition);
 }
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

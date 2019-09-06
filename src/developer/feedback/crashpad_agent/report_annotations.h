@@ -11,8 +11,7 @@
 #include <map>
 #include <string>
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 // Returns the default annotations we want in all crash reports.
 //
@@ -35,7 +34,7 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
 // TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
     const fuchsia::feedback::Data& feedback_data, const std::string& component_url,
-    ManagedRuntimeException* exception);
+    fuchsia::crash::ManagedRuntimeException* exception);
 
 // Builds the final set of annotations to attach to the crash report.
 //
@@ -45,7 +44,6 @@ std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
 std::map<std::string, std::string> BuildAnnotations(const fuchsia::feedback::CrashReport& report,
                                                     const fuchsia::feedback::Data& feedback_data);
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_REPORT_ANNOTATIONS_H_

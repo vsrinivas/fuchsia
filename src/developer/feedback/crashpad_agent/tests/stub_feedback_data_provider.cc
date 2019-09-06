@@ -12,8 +12,7 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 using fuchsia::feedback::Annotation;
@@ -78,5 +77,4 @@ void StubFeedbackDataProviderReturnsNoData::GetData(GetDataCallback callback) {
 
 void StubFeedbackDataProviderNeverReturning::GetData(GetDataCallback callback) {}
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback

@@ -19,14 +19,13 @@
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace feedback {
 
 // Retrieves the current OTA channel.
 //
 // fuchsia.update.Info is expected to be in |services|.
 fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<::sys::ServiceDirectory> services,
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
                                                  zx::duration timeout);
 
 // Wraps around fuchsia::update::InfoPtr to handle establishing the connection, losing the
@@ -35,13 +34,13 @@ fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
 // GetChannel() is expected to be called only once.
 class UpdateInfo {
  public:
-  UpdateInfo(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
+  UpdateInfo(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
   fit::promise<std::string> GetChannel(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
-  const std::shared_ptr<::sys::ServiceDirectory> services_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of GetChannel().
   bool has_called_get_channel_ = false;
 
@@ -55,6 +54,5 @@ class UpdateInfo {
 };
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PTR_H_

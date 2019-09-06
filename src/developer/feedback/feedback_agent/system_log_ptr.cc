@@ -23,12 +23,11 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-namespace fuchsia {
 namespace feedback {
 
-fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
-    zx::duration timeout) {
+fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
+                                                    std::shared_ptr<sys::ServiceDirectory> services,
+                                                    zx::duration timeout) {
   std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(dispatcher, services);
 
   return log_listener->CollectLogs(timeout).then(
@@ -55,7 +54,7 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
 }
 
 LogListener::LogListener(async_dispatcher_t* dispatcher,
-                         std::shared_ptr<::sys::ServiceDirectory> services)
+                         std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
@@ -172,4 +171,3 @@ void LogListener::Done() {
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

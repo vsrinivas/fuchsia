@@ -11,8 +11,7 @@
 #include "third_party/crashpad/util/net/http_body.h"
 #include "third_party/crashpad/util/net/http_headers.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 extern const char kStubCrashServerUrl[];
 extern const char kStubServerReportId[];
@@ -30,7 +29,6 @@ class StubCrashServer : public CrashServer {
   const bool request_return_value_;
 };
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_STUB_CRASH_SERVER_H_

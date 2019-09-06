@@ -11,7 +11,6 @@
 
 #include <string>
 
-namespace fuchsia {
 namespace feedback {
 
 class StubUpdateInfo : public fuchsia::update::Info {
@@ -45,6 +44,5 @@ class StubUpdateInfoNeverReturns : public StubUpdateInfo {
 };
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_CHANNEL_PROVIDER_H_

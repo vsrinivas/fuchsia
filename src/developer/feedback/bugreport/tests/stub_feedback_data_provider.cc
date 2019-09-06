@@ -4,8 +4,7 @@
 
 #include "src/developer/feedback/bugreport/tests/stub_feedback_data_provider.h"
 
-namespace fuchsia {
-namespace bugreport {
+namespace feedback {
 
 void StubFeedbackDataProvider::GetData(GetDataCallback callback) {
   fuchsia::feedback::DataProvider_GetData_Result result;
@@ -15,5 +14,4 @@ void StubFeedbackDataProvider::GetData(GetDataCallback callback) {
   callback(std::move(result));
 }
 
-}  // namespace bugreport
-}  // namespace fuchsia
+}  // namespace feedback

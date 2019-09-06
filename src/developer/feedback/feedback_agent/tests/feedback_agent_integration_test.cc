@@ -31,15 +31,18 @@
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
-using ::feedback::MatchesKey;
+using fuchsia::feedback::Attachment;
+using fuchsia::feedback::DataProvider_GetData_Result;
+using fuchsia::feedback::DataProviderSyncPtr;
+using fuchsia::feedback::ImageEncoding;
+using fuchsia::feedback::Screenshot;
 
 class LogListener : public fuchsia::logger::LogListener {
  public:
-  LogListener(std::shared_ptr<::sys::ServiceDirectory> services) : binding_(this) {
+  LogListener(std::shared_ptr<sys::ServiceDirectory> services) : binding_(this) {
     binding_.Bind(log_listener_.NewRequest());
 
     fuchsia::logger::LogPtr logger = services->Connect<fuchsia::logger::Log>();
@@ -63,7 +66,7 @@ class LogListener : public fuchsia::logger::LogListener {
 // connecting through FIDL.
 class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment {
  public:
-  void SetUp() override { environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace(); }
+  void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
 
   void TearDown() override {
     if (!controller_) {
@@ -129,10 +132,10 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
     RunLoopUntil([&ready] { return ready; });
   }
 
-  std::shared_ptr<::sys::ServiceDirectory> environment_services_;
+  std::shared_ptr<sys::ServiceDirectory> environment_services_;
 
  private:
-  std::unique_ptr<::sys::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::sys::ComponentControllerPtr controller_;
 };
 
@@ -191,7 +194,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   const auto& attachment_bundle = out_result.response().data.attachment_bundle();
   EXPECT_STREQ(attachment_bundle.key.c_str(), kAttachmentBundle);
   std::vector<Attachment> unpacked_attachments;
-  ASSERT_TRUE(::feedback::Unpack(attachment_bundle.value, &unpacked_attachments));
+  ASSERT_TRUE(Unpack(attachment_bundle.value, &unpacked_attachments));
   EXPECT_THAT(unpacked_attachments, testing::UnorderedElementsAreArray({
                                         MatchesKey(kAttachmentAnnotations),
                                         MatchesKey(kAttachmentBuildSnapshot),
@@ -288,4 +291,3 @@ TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {
 
 }  // namespace
 }  // namespace feedback
-}  // namespace fuchsia

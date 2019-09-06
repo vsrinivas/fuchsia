@@ -10,8 +10,7 @@
 #include "src/lib/fxl/test/test_settings.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 void CheckEmptyConfig(const Config& config) {
@@ -76,8 +75,7 @@ TEST(ConfigTest, ParseConfig_BadConfig_MissingServerUrlWithUploadEnabled) {
 }
 
 }  // namespace
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(argc, argv)) {

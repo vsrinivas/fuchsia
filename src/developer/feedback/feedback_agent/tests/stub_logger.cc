@@ -12,7 +12,6 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
 namespace feedback {
 namespace {
 
@@ -104,4 +103,3 @@ void StubLoggerDelaysAfterOneMessage::DumpLogs(
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

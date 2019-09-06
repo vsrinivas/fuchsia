@@ -14,12 +14,12 @@
 
 namespace {
 
-using fuchsia::bugreport::Mode;
+using feedback::Mode;
 
 }  // namespace
 
 int main(int argc, char** argv) {
-  const Mode mode = fuchsia::bugreport::ParseModeFromArgcArgv(argc, argv);
+  const Mode mode = feedback::ParseModeFromArgcArgv(argc, argv);
   std::set<std::string> attachment_allowlist;
   switch (mode) {
     case Mode::FAILURE:
@@ -27,8 +27,8 @@ int main(int argc, char** argv) {
     case Mode::HELP:
       return EXIT_SUCCESS;
     case Mode::DEFAULT:
-      auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
+      auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
 
-      return fuchsia::bugreport::MakeBugReport(environment_services) ? EXIT_SUCCESS : EXIT_FAILURE;
+      return feedback::MakeBugReport(environment_services) ? EXIT_SUCCESS : EXIT_FAILURE;
   }
 }

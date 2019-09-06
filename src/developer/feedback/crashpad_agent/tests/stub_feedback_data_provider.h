@@ -16,8 +16,7 @@
 
 #include "src/lib/fxl/logging.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 // Stub fuchsia.feedback.DataProvider service that returns canned responses for
 // fuchsia::feedback::DataProvider::GetData().
@@ -99,7 +98,6 @@ class StubFeedbackDataProviderNeverReturning : public StubFeedbackDataProvider {
   void GetData(GetDataCallback callback) override;
 };
 
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_

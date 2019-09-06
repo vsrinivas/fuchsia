@@ -25,7 +25,6 @@
 
 #include "src/lib/fxl/functional/cancelable_callback.h"
 
-namespace fuchsia {
 namespace feedback {
 
 fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispatcher,
@@ -131,4 +130,3 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
 }
 
 }  // namespace feedback
-}  // namespace fuchsia

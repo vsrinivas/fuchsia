@@ -10,7 +10,6 @@
 #include <lib/fit/promise.h>
 #include <zircon/time.h>
 
-namespace fuchsia {
 namespace feedback {
 
 // Collects the Inspect data.
@@ -20,6 +19,5 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* dispat
                                                       zx::duration timeout);
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_INSPECT_PTR_H_

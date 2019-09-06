@@ -17,14 +17,13 @@
 #include "src/lib/fxl/functional/cancelable_callback.h"
 #include "src/lib/fxl/macros.h"
 
-namespace fuchsia {
 namespace feedback {
 
 // Asks Scenic to take the screenshot of the current view and return it.
 //
 // fuchsia.ui.scenic.Scenic is expected to be in |services|.
 fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
-    async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     zx::duration timeout);
 
 // Wraps around fuchsia::ui::scenic::ScenicPtr to handle establishing the connection, losing the
@@ -33,13 +32,13 @@ fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
 // TakeScreenshot() is expected to be called only once.
 class Scenic {
  public:
-  Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
+  Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services);
 
   fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(zx::duration timeout);
 
  private:
   async_dispatcher_t* dispatcher_;
-  const std::shared_ptr<::sys::ServiceDirectory> services_;
+  const std::shared_ptr<sys::ServiceDirectory> services_;
   // Enforces the one-shot nature of TakeScreenshot().
   bool has_called_take_screenshot_ = false;
 
@@ -53,6 +52,5 @@ class Scenic {
 };
 
 }  // namespace feedback
-}  // namespace fuchsia
 
 #endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCREENSHOT_PTR_H_

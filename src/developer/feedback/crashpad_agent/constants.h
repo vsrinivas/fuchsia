@@ -5,8 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONSTANTS_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONSTANTS_H_
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 
 constexpr char kInspectConfigName[] = "config";
 constexpr char kInspectReportsName[] = "reports";
@@ -17,9 +16,8 @@ const char kCrashServerKey[] = "crash_server";
 const char kCrashServerEnableUploadKey[] = "enable_upload";
 const char kCrashServerUrlKey[] = "url";
 const char kFeedbackDataCollectionTimeoutInSecondsKey[] =
-        "feedback_data_collection_timeout_in_milliseconds";
+    "feedback_data_collection_timeout_in_milliseconds";
 
-} // namespace crash
-} // namespace fuchsia
+}  // namespace feedback
 
-#endif // #SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONSTANTS_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_CONSTANTS_H_

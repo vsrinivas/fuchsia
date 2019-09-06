@@ -11,27 +11,26 @@
 
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
-namespace fuchsia {
-namespace crash {
+namespace feedback {
 namespace {
 
 // Smoke-tests the actual service for fuchsia.crash.Analyzer, connecting through FIDL.
 TEST(CrashpadAgentIntegrationTest, CrashAnalyzer_SmokeTest) {
-  AnalyzerSyncPtr crash_analyzer;
-  auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
+  fuchsia::crash::AnalyzerSyncPtr crash_analyzer;
+  auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(crash_analyzer.NewRequest());
 
   // We call OnManagedRuntimeException() to smoke test the service is up and running because it is
   // the easiest to call.
-  GenericException exception = {};
+  fuchsia::crash::GenericException exception = {};
   const std::string type = "FileSystemException";
   std::copy(type.begin(), type.end(), exception.type.data());
   const std::string message = "cannot open file";
   std::copy(message.begin(), message.end(), exception.message.data());
   ASSERT_TRUE(fsl::VmoFromString("#0", &exception.stack_trace));
-  ManagedRuntimeException dart_exception;
+  fuchsia::crash::ManagedRuntimeException dart_exception;
   dart_exception.set_dart(std::move(exception));
-  Analyzer_OnManagedRuntimeException_Result out_result;
+  fuchsia::crash::Analyzer_OnManagedRuntimeException_Result out_result;
   ASSERT_EQ(crash_analyzer->OnManagedRuntimeException("component_url", std::move(dart_exception),
                                                       &out_result),
             ZX_OK);
@@ -41,7 +40,7 @@ TEST(CrashpadAgentIntegrationTest, CrashAnalyzer_SmokeTest) {
 // Smoke-tests the actual service for fuchsia.feedback.CrashReporter, connecting through FIDL.
 TEST(CrashpadAgentIntegrationTest, CrashReporter_SmokeTest) {
   fuchsia::feedback::CrashReporterSyncPtr crash_reporter;
-  auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
+  auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(crash_reporter.NewRequest());
 
   fuchsia::feedback::CrashReport report;
@@ -53,5 +52,4 @@ TEST(CrashpadAgentIntegrationTest, CrashReporter_SmokeTest) {
 }
 
 }  // namespace
-}  // namespace crash
-}  // namespace fuchsia
+}  // namespace feedback
