@@ -334,15 +334,24 @@ void MemberAccessExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCal
     if (base.has_error())
       return cb(base);
 
-    if (!is_arrow)  // "." operator.
-      return ResolveMember(context, base.value(), member, std::move(cb));
+    auto base_value = base.value();
 
-    // Everything else should be a -> operator.
+    if (!is_arrow) {  // "." operator.
+      fxl::RefPtr<Type> concrete_base = base_value.GetConcreteType(context.get());
+
+      if (!concrete_base || concrete_base->tag() != DwarfTag::kPointerType ||
+          concrete_base->GetLanguage() != DwarfLang::kRust ||
+          concrete_base->GetAssignedName().substr(0, 1) != "&") {
+        return ResolveMember(context, base_value, member, std::move(cb));
+      }
+    }
+
+    // Everything else should be a -> operator, or a . operator being used on a Rust reference.
 
     if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(base.value().type())) {
       if (auto derefer = pretty->GetDereferencer()) {
         // The pretty type supplies dereference function. This turns foo->bar into deref(foo).bar.
-        return derefer(context, base.value(),
+        return derefer(context, base_value,
                        [context, member, cb = std::move(cb)](ErrOrValue non_ptr_base) mutable {
                          if (non_ptr_base.has_error())
                            return cb(non_ptr_base);

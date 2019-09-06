@@ -228,7 +228,6 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // Lazily computed full symbol name and identifier name.
   mutable std::optional<std::string> full_name_;
   mutable std::optional<Identifier> identifier_;
-  mutable std::optional<DwarfLang> language_;
 };
 
 }  // namespace zxdb

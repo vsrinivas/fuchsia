@@ -319,6 +319,55 @@ TEST_F(ExprNodeTest, MemberAccess) {
     EXPECT_TRUE(value.ok());
     out_value = value.take_value();
   });
+
+  // Should have run asynchronously.
+  EXPECT_FALSE(called);
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(sizeof(int32_t), out_value.data().size());
+  EXPECT_EQ(0x55667788, out_value.GetAs<int32_t>());
+}
+
+// Tests that Rust references are autodereferenced by the . operator.
+TEST_F(ExprNodeTest, RustMemberAccess) {
+  auto context = fxl::MakeRefCounted<MockEvalContext>();
+  auto unit = fxl::MakeRefCounted<CompileUnit>();
+  unit->set_language(DwarfLang::kRust);
+
+  // Define a class.
+  auto int32_type = MakeInt32Type();
+  auto sc =
+      MakeCollectionType(DwarfTag::kStructureType, "Foo", {{"a", int32_type}, {"b", int32_type}});
+  sc->set_parent(unit);
+
+  // Define a reference type.
+  auto foo_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, sc);
+  foo_ptr_type->set_parent(unit);
+  foo_ptr_type->set_assigned_name("&Foo");
+  // Add memory in two chunks since the mock data provider can only respond with the addresses it's
+  // given.
+  constexpr uint64_t kAddress = 0x1000;
+  context->data_provider()->AddMemory(kAddress, {0x44, 0x33, 0x22, 0x11});
+  context->data_provider()->AddMemory(kAddress + 4, {0x88, 0x77, 0x66, 0x55});
+
+  // Make this one evaluate the left-hand-size asynchronously. This value references kAddress
+  // (little-endian).
+  auto struct_ptr_node = fxl::MakeRefCounted<MockExprNode>(
+      false, ExprValue(foo_ptr_type, {0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}));
+  auto access_ptr_node = fxl::MakeRefCounted<MemberAccessExprNode>(
+      struct_ptr_node, ExprToken(ExprTokenType::kDot, ".", 0), ParsedIdentifier("b"));
+
+  // Do the call.
+  auto called = false;
+  auto out_value = ExprValue();
+  access_ptr_node->Eval(context, [&called, &out_value](ErrOrValue value) {
+    called = true;
+    EXPECT_TRUE(value.ok());
+    out_value = value.take_value();
+  });
+
+  // Should have run asynchronously.
+  EXPECT_FALSE(called);
   loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 

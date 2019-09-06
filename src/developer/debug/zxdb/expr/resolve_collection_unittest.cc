@@ -173,13 +173,11 @@ TEST_F(ResolveCollectionTest, ForwardDefinitionPtr) {
                          [&called, &out](ErrOrValue value, fxl::RefPtr<DataMember>) {
                            called = true;
                            out = std::move(value);
-                           debug_ipc::MessageLoop::Current()->QuitNow();
                          });
 
   // Requesting the memory for the pointer is async.
   EXPECT_FALSE(called);
-  loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
   ASSERT_FALSE(out.has_error()) << err.msg();
 
