@@ -23,87 +23,89 @@ class TabsWidget extends StatelessWidget {
               color: Theme.of(context).accentColor,
               padding: EdgeInsets.symmetric(vertical: 1.0),
               child: Row(
-                children: _buildPageTabs(context: context)
-                    .map((tab) => Expanded(child: tab, flex: 1))
-                    .toList(),
+                children: _buildPageTabs(context: context).toList(),
               ),
             )
           : Offstage(),
     );
   }
 
-  Iterable<Widget> _buildPageTabs({BuildContext context}) => bloc.tabs.map(
-        (tab) => AnimatedBuilder(
-          animation: tab.pageTitleNotifier,
-          builder: (_, __) => _buildTab(
-            context: context,
-            title: tab.pageTitle ?? 'NEW TAB',
-            selected: tab == bloc.currentTab,
-            onSelect: () {
-              bloc.request.add(FocusTabAction(tab: tab));
-            },
-            onClose: () {
-              bloc.request.add(RemoveTabAction(tab: tab));
-            },
-          ),
+  Iterable<Widget> _buildPageTabs({BuildContext context}) => bloc.tabs
+      .map(
+        (tab) => _buildTab(
+          context: context,
+          tab: tab,
         ),
-      );
+      )
+      // add a 1pip separator before every tab,
+      // divide the rest of the space between tabs
+      .expand((item) => [
+            SizedBox(width: 1),
+            Expanded(child: item, flex: 1),
+          ])
+      // skip the first separator
+      .skip(1);
 
   Widget _buildTab({
     BuildContext context,
-    String title,
-    bool selected,
-    VoidCallback onSelect,
-    VoidCallback onClose,
+    WebPageBloc tab,
   }) {
-    return GestureDetector(
-      onTap: onSelect,
-      child: Container(
-        color: selected
-            ? Theme.of(context).primaryColor
-            : Theme.of(context).accentColor,
-        child: Stack(
-          children: <Widget>[
-            Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.0),
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: selected
-                        ? Theme.of(context).accentColor
-                        : Theme.of(context).primaryColor,
+    final selected = tab == bloc.currentTab;
+    return AnimatedBuilder(
+      animation: tab.pageTitleNotifier,
+      builder: (_, __) => GestureDetector(
+        onTap: () {
+          bloc.request.add(FocusTabAction(tab: tab));
+        },
+        child: Container(
+          color: selected
+              ? Theme.of(context).accentColor
+              : Theme.of(context).primaryColor,
+          child: Stack(
+            children: <Widget>[
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Text(
+                    tab.pageTitle ?? 'NEW TAB',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected
+                          ? Theme.of(context).primaryColor
+                          : Theme.of(context).accentColor,
+                    ),
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              top: 0.0,
-              right: 0.0,
-              bottom: 0.0,
-              child: AspectRatio(
-                aspectRatio: 1.0,
-                child: GestureDetector(
-                  onTap: onClose,
-                  child: Padding(
-                    padding: const EdgeInsets.all(1.0),
-                    child: Center(
-                      child: Text(
-                        '×',
-                        style: TextStyle(
-                          color: selected
-                              ? Theme.of(context).accentColor
-                              : Theme.of(context).primaryColor,
+              Positioned(
+                top: 0.0,
+                right: 0.0,
+                bottom: 0.0,
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: GestureDetector(
+                    onTap: () {
+                      bloc.request.add(RemoveTabAction(tab: tab));
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(1.0),
+                      child: Center(
+                        child: Text(
+                          '×',
+                          style: TextStyle(
+                            color: selected
+                                ? Theme.of(context).primaryColor
+                                : Theme.of(context).accentColor,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
