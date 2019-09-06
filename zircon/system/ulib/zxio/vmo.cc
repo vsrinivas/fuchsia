@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/sync/mutex.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
@@ -31,9 +32,7 @@ typedef struct zxio_vmo {
   zx_off_t offset;
 
   // The lock that protects |offset|.
-  //
-  // TODO: Migrate to sync_mutex_t.
-  mtx_t lock;
+  sync_mutex_t lock;
 } zxio_vmo_t;
 
 static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
@@ -71,13 +70,13 @@ static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
 static zx_status_t zxio_vmo_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
-  mtx_lock(&file->lock);
+  sync_mutex_lock(&file->lock);
   if (capacity > (file->size - file->offset)) {
     capacity = file->size - file->offset;
   }
   zx_off_t offset = file->offset;
   file->offset += capacity;
-  mtx_unlock(&file->lock);
+  sync_mutex_unlock(&file->lock);
 
   zx_status_t status = file->vmo.read(buffer, offset, capacity);
   if (status == ZX_OK) {
@@ -108,13 +107,13 @@ static zx_status_t zxio_vmo_read_at(zxio_t* io, size_t offset, void* buffer, siz
 zx_status_t zxio_vmo_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
-  mtx_lock(&file->lock);
+  sync_mutex_lock(&file->lock);
   if (capacity > (file->size - file->offset)) {
     capacity = file->size - file->offset;
   }
   zx_off_t offset = file->offset;
   file->offset += capacity;
-  mtx_unlock(&file->lock);
+  sync_mutex_unlock(&file->lock);
 
   zx_status_t status = file->vmo.write(buffer, offset, capacity);
   if (status == ZX_OK) {
@@ -146,7 +145,7 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset, zxio_seek_origin_t s
                                  size_t* out_offset) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
-  mtx_lock(&file->lock);
+  sync_mutex_lock(&file->lock);
   zx_off_t at = 0u;
   switch (start) {
     case fio::SeekOrigin::START:
@@ -160,7 +159,7 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset, zxio_seek_origin_t s
       at = file->size + offset;
       break;
     default:
-      mtx_unlock(&file->lock);
+      sync_mutex_unlock(&file->lock);
       return ZX_ERR_INVALID_ARGS;
   }
   if (at > file->size) {
@@ -168,7 +167,7 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset, zxio_seek_origin_t s
   } else {
     file->offset = at;
   }
-  mtx_unlock(&file->lock);
+  sync_mutex_unlock(&file->lock);
 
   *out_offset = at;
   return ZX_OK;
@@ -203,6 +202,5 @@ zx_status_t zxio_vmo_init(zxio_storage_t* storage, zx::vmo vmo, zx_off_t offset)
       .lock = {},
   };
   zxio_init(&file->io, &zxio_vmo_ops);
-  mtx_init(&file->lock, mtx_plain);
   return ZX_OK;
 }
