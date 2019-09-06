@@ -41,7 +41,7 @@ FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
       component_context_(component_context),
       cobalt_client_name_(std::move(cobalt_client_name)) {}
 
-FactoryImpl::~FactoryImpl() {}
+FactoryImpl::~FactoryImpl() = default;
 
 void FactoryImpl::ShutDown(fit::closure callback) {
   if (providers_.empty()) {

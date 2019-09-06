@@ -14,7 +14,7 @@ LedgerSyncImpl::LedgerSyncImpl(std::unique_ptr<cloud_sync::LedgerSync> cloud_syn
                                std::unique_ptr<p2p_sync::LedgerCommunicator> p2p_sync)
     : cloud_sync_(std::move(cloud_sync)), p2p_sync_(std::move(p2p_sync)) {}
 
-LedgerSyncImpl::~LedgerSyncImpl() {}
+LedgerSyncImpl::~LedgerSyncImpl() = default;
 
 std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client) {

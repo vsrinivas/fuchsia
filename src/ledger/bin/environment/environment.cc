@@ -60,13 +60,13 @@ Environment& Environment::operator=(Environment&& other) noexcept {
   return *this;
 }
 
-Environment::~Environment() {}
+Environment::~Environment() = default;
 
 std::unique_ptr<backoff::Backoff> Environment::MakeBackoff() { return backoff_factory_(); }
 
 EnvironmentBuilder::EnvironmentBuilder() : firebase_api_key_(modular::kFirebaseApiKey) {}
 
-EnvironmentBuilder::~EnvironmentBuilder() {}
+EnvironmentBuilder::~EnvironmentBuilder() = default;
 
 EnvironmentBuilder& EnvironmentBuilder::SetDisableStatistics(bool disable_statistics) {
   disable_statistics_ = disable_statistics;

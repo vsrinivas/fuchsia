@@ -11,7 +11,7 @@ namespace ledger {
 BlockingCallbackWaiter::BlockingCallbackWaiter(LoopController* loop_controller)
     : loop_controller_(loop_controller) {}
 
-BlockingCallbackWaiter::~BlockingCallbackWaiter() {}
+BlockingCallbackWaiter::~BlockingCallbackWaiter() = default;
 
 fit::function<void()> BlockingCallbackWaiter::GetCallback() {
   live_callbacks_count_++;

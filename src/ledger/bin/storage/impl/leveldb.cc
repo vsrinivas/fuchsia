@@ -101,7 +101,7 @@ class RowIterator
     PrepareEntry();
   }
 
-  ~RowIterator() override {}
+  ~RowIterator() override = default;
 
   Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>& Next()
       override {

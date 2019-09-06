@@ -23,7 +23,7 @@ class DelayIsSyncedCallbackFakePageStorage : public storage::fake::FakePageStora
   DelayIsSyncedCallbackFakePageStorage(const DelayIsSyncedCallbackFakePageStorage&) = delete;
   DelayIsSyncedCallbackFakePageStorage& operator=(const DelayIsSyncedCallbackFakePageStorage&) =
       delete;
-  ~DelayIsSyncedCallbackFakePageStorage() override {}
+  ~DelayIsSyncedCallbackFakePageStorage() override = default;
 
   // Unblocks the call of |IsSynced| callback for the given page.
   void CallIsSyncedCallback() {

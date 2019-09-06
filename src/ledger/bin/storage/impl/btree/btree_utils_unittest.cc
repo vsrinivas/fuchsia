@@ -47,7 +47,7 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
  public:
   explicit TrackGetObjectFakePageStorage(ledger::Environment* environment, PageId id)
       : fake::FakePageStorage(environment, id) {}
-  ~TrackGetObjectFakePageStorage() override {}
+  ~TrackGetObjectFakePageStorage() override = default;
 
   void GetObject(ObjectIdentifier object_identifier, Location location,
                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) override {
@@ -68,7 +68,7 @@ class BTreeUtilsTest : public StorageTest {
  public:
   BTreeUtilsTest() : fake_storage_(&environment_, "page_id") {}
 
-  ~BTreeUtilsTest() override {}
+  ~BTreeUtilsTest() override = default;
 
  protected:
   PageStorage* GetStorage() override { return &fake_storage_; }

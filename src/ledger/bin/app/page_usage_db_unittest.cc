@@ -27,7 +27,7 @@ class PageUsageDbTest : public TestWithEnvironment {
       : db_factory_(dispatcher()),
         db_(environment_.clock(), &db_factory_, DetachedPath(tmpfs_.root_fd())){};
 
-  ~PageUsageDbTest() override {}
+  ~PageUsageDbTest() override = default;
 
   std::string RandomString(size_t size) {
     std::string result;

@@ -64,7 +64,7 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
             dispatcher(), token_manager_binding_.NewBinding().Bind(), InitBackoff(),
             std::make_unique<MockCobaltLogger>(&report_observation_count_)) {}
 
-  ~FirebaseAuthImplTest() override {}
+  ~FirebaseAuthImplTest() override = default;
 
  protected:
   std::unique_ptr<backoff::Backoff> InitBackoff() {

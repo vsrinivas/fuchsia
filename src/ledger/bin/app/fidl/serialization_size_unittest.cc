@@ -54,7 +54,7 @@ using SerializationSizeTest = gtest::TestLoopFixture;
 class FakeSnapshotImpl : public PageSnapshot {
  public:
   FakeSnapshotImpl() {}
-  ~FakeSnapshotImpl() override {}
+  ~FakeSnapshotImpl() override = default;
 
   GetEntriesInlineCallback get_entries_inline_callback;
   GetEntriesCallback get_entries_callback;

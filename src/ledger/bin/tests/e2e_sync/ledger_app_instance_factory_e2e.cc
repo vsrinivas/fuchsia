@@ -96,7 +96,7 @@ LedgerAppInstanceFactoryImpl::LedgerAppInstanceFactoryImpl(
       sync_params_(std::move(sync_params)),
       user_id_(cloud_provider_firestore::CloudProviderFactory::UserId::New()) {}
 
-LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {}
+LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() = default;
 
 std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>
 LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {

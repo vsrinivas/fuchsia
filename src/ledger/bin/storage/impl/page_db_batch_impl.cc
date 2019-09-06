@@ -28,7 +28,7 @@ using coroutine::CoroutineHandler;
 PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db)
     : batch_(std::move(batch)), db_(db) {}
 
-PageDbBatchImpl::~PageDbBatchImpl() {}
+PageDbBatchImpl::~PageDbBatchImpl() = default;
 
 Status PageDbBatchImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
                                 zx::time_utc timestamp) {

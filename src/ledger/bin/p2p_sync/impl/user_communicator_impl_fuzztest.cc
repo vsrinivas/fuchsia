@@ -23,7 +23,7 @@ p2p_provider::P2PClientId MakeP2PClientId(uint8_t id) { return p2p_provider::P2P
 class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   TestPageStorage() = default;
-  ~TestPageStorage() {}
+  ~TestPageStorage() = default;
 
   storage::PageId GetId() override { return "page"; }
 

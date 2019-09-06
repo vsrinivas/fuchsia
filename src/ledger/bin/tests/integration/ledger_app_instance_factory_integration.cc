@@ -106,7 +106,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
                         std::move(repositories_node)),
           binding_(&factory_impl_, std::move(request)),
           inspect_binding_(inspect_impl, std::move(inspect_request)) {}
-    ~LedgerRepositoryFactoryContainer() {}
+    ~LedgerRepositoryFactoryContainer() = default;
 
     void Close(fit::closure callback) { factory_impl_.Close(std::move(callback)); }
 
@@ -208,7 +208,7 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
         overnet_factory_(overnet_factory),
         host_id_(std::move(host_id)),
         weak_ptr_factory_(this) {}
-  ~FakeUserCommunicatorFactory() override {}
+  ~FakeUserCommunicatorFactory() override = default;
 
   std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
       std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) override {

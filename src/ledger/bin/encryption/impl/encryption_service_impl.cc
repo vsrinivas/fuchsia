@@ -63,7 +63,7 @@ EncryptionServiceImpl::EncryptionServiceImpl(ledger::Environment* environment,
                       }),
       chunking_key_(Status::OK, [this](auto c) { key_service_->GetChunkingKey(std::move(c)); }) {}
 
-EncryptionServiceImpl::~EncryptionServiceImpl() {}
+EncryptionServiceImpl::~EncryptionServiceImpl() = default;
 
 storage::ObjectIdentifier EncryptionServiceImpl::MakeObjectIdentifier(
     storage::ObjectIdentifierFactory* factory, storage::ObjectDigest digest) {

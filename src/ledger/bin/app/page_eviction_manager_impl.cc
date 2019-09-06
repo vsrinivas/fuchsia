@@ -46,7 +46,7 @@ PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment, PageU
       coroutine_manager_(environment_->coroutine_service()),
       weak_factory_(this) {}
 
-PageEvictionManagerImpl::~PageEvictionManagerImpl() {}
+PageEvictionManagerImpl::~PageEvictionManagerImpl() = default;
 
 void PageEvictionManagerImpl::SetDelegate(PageEvictionManager::Delegate* delegate) {
   FXL_DCHECK(delegate);

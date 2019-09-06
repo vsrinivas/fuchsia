@@ -45,7 +45,7 @@ CommitPruner::CommitPruner(ledger::Environment* environment, storage::PageStorag
       policy_(policy),
       coroutine_manager_(environment_->coroutine_service()) {}
 
-CommitPruner::~CommitPruner() {}
+CommitPruner::~CommitPruner() = default;
 
 void CommitPruner::Prune(fit::function<void(Status)> callback) {
   if (policy_ == CommitPruningPolicy::NEVER) {

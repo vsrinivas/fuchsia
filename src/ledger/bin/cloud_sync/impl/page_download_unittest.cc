@@ -76,7 +76,7 @@ class BasePageDownloadTest : public gtest::TestLoopFixture, public PageDownload:
         std::make_unique<PageDownload>(&task_runner_, &storage_, &storage_, &encryption_service_,
                                        &page_cloud_ptr_, this, NewTestBackoff());
   }
-  ~BasePageDownloadTest() override {}
+  ~BasePageDownloadTest() override = default;
 
  protected:
   void SetOnNewStateCallback(fit::closure callback) { new_state_callback_ = std::move(callback); }

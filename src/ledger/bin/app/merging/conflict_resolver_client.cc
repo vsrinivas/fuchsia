@@ -44,7 +44,7 @@ ConflictResolverClient::ConflictResolverClient(storage::PageStorage* storage,
   FXL_DCHECK(callback_);
 }
 
-ConflictResolverClient::~ConflictResolverClient() {}
+ConflictResolverClient::~ConflictResolverClient() = default;
 
 void ConflictResolverClient::Start() {
   // Prepare the journal for the merge commit.

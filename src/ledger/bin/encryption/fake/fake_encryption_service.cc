@@ -37,7 +37,7 @@ uint64_t DefaultPermutation(uint64_t chunk_window_hash) { return 1 + chunk_windo
 FakeEncryptionService::FakeEncryptionService(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}
 
-FakeEncryptionService::~FakeEncryptionService() {}
+FakeEncryptionService::~FakeEncryptionService() = default;
 
 storage::ObjectIdentifier FakeEncryptionService::MakeObjectIdentifier(
     storage::ObjectIdentifierFactory* factory, storage::ObjectDigest digest) {

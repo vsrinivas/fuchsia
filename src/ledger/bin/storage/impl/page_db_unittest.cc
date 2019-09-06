@@ -57,7 +57,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
         page_db_(&environment_, page_storage_.GetObjectIdentifierFactory(),
                  GetLevelDb(dispatcher(), base_path.SubPath("page_db"))) {}
 
-  ~PageDbTest() override {}
+  ~PageDbTest() override = default;
 
   // Test:
   void SetUp() override {

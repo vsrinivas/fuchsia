@@ -53,7 +53,7 @@ class LedgerMergeManager::ConflictResolverFactoryPtrContainer {
 
 LedgerMergeManager::LedgerMergeManager(Environment* environment) : environment_(environment) {}
 
-LedgerMergeManager::~LedgerMergeManager() {}
+LedgerMergeManager::~LedgerMergeManager() = default;
 
 void LedgerMergeManager::AddFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory) {
   using_default_conflict_resolver_ = false;

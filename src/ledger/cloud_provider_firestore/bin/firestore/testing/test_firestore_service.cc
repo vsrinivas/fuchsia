@@ -13,7 +13,7 @@ class TestListenCallHandler : public ListenCallHandler {
  public:
   TestListenCallHandler() {}
 
-  ~TestListenCallHandler() override {}
+  ~TestListenCallHandler() override = default;
 
   void Write(google::firestore::v1beta1::ListenRequest /*request*/) override {
     // do nothing
@@ -26,7 +26,7 @@ class TestListenCallHandler : public ListenCallHandler {
 }  // namespace
 
 TestFirestoreService::TestFirestoreService() : db_path_(), root_path_() {}
-TestFirestoreService::~TestFirestoreService() {}
+TestFirestoreService::~TestFirestoreService() = default;
 
 const std::string& TestFirestoreService::GetDatabasePath() { return db_path_; }
 

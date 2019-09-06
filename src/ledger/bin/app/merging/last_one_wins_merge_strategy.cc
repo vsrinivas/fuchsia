@@ -61,7 +61,7 @@ LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
   FXL_DCHECK(callback_);
 }
 
-LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() {}
+LastOneWinsMergeStrategy::LastOneWinsMerger::~LastOneWinsMerger() = default;
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::Start() {
   journal_ = storage_->StartMergeCommit(left_->Clone(), right_->Clone());
@@ -127,7 +127,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
 
 LastOneWinsMergeStrategy::LastOneWinsMergeStrategy() {}
 
-LastOneWinsMergeStrategy::~LastOneWinsMergeStrategy() {}
+LastOneWinsMergeStrategy::~LastOneWinsMergeStrategy() = default;
 
 void LastOneWinsMergeStrategy::SetOnError(fit::function<void()> /*on_error*/) {}
 

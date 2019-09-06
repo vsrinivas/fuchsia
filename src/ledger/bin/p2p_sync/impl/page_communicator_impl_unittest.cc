@@ -77,7 +77,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(async_dispatcher_t* dispatcher, std::string page_id)
       : dispatcher_(dispatcher), page_id_(std::move(page_id)) {}
-  ~FakePageStorage() override {}
+  ~FakePageStorage() override = default;
 
   storage::PageId GetId() override { return page_id_; }
 
@@ -180,7 +180,7 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
 class FakeDeviceMesh : public DeviceMesh {
  public:
   FakeDeviceMesh() {}
-  ~FakeDeviceMesh() override {}
+  ~FakeDeviceMesh() override = default;
 
   void OnNextSend(p2p_provider::P2PClientId device_name, fit::closure callback) {
     callbacks_[device_name] = std::move(callback);
@@ -321,7 +321,7 @@ void ConnectToDevice(PageCommunicatorImpl* page_communicator, p2p_provider::P2PC
 class PageCommunicatorImplTest : public gtest::TestLoopFixture {
  public:
   PageCommunicatorImplTest() {}
-  ~PageCommunicatorImplTest() override {}
+  ~PageCommunicatorImplTest() override = default;
 
  protected:
   void SetUp() override { ::testing::Test::SetUp(); }

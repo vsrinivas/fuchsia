@@ -49,7 +49,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
         top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()));
   }
 
-  ~LedgerRepositoryFactoryImplTest() override {}
+  ~LedgerRepositoryFactoryImplTest() override = default;
 
   void TearDown() override {
     bool called = false;

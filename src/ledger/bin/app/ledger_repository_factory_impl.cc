@@ -253,7 +253,7 @@ LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {}
 
-LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
+LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() = default;
 
 void LedgerRepositoryFactoryImpl::GetRepository(
     zx::channel repository_handle,

@@ -73,7 +73,7 @@ class SplitContext {
         roll_sum_split_(kMinChunkSize, kMaxChunkSize, std::move(chunk_permutation)) {}
   SplitContext(SplitContext&& other) = default;
   SplitContext& operator=(SplitContext&& other) = default;
-  ~SplitContext() {}
+  ~SplitContext() = default;
 
   void AddChunk(std::unique_ptr<DataSource::DataChunk> chunk, DataSource::Status status) {
     if (status == DataSource::Status::ERROR) {

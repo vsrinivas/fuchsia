@@ -34,7 +34,7 @@ using ::testing::SizeIs;
 class PageWatcherIntegrationTest : public IntegrationTest {
  public:
   PageWatcherIntegrationTest() {}
-  ~PageWatcherIntegrationTest() override {}
+  ~PageWatcherIntegrationTest() override = default;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageWatcherIntegrationTest);

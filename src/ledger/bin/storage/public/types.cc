@@ -59,7 +59,7 @@ ObjectIdentifier& ObjectIdentifier::operator=(const ObjectIdentifier&) = default
 ObjectIdentifier& ObjectIdentifier::operator=(ObjectIdentifier&&) = default;
 
 // The destructor must be defined even if purely virtual for destruction to work.
-ObjectIdentifier::Token::~Token() {}
+ObjectIdentifier::Token::~Token() = default;
 
 bool operator==(const ObjectIdentifier& lhs, const ObjectIdentifier& rhs) {
   return std::tie(lhs.key_index_, lhs.object_digest_) ==

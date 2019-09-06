@@ -23,7 +23,7 @@ using IntegerStream = grpc::ClientAsyncReaderInterface<int>;
 class TestIntegerStream : public IntegerStream {
  public:
   TestIntegerStream() {}
-  ~TestIntegerStream() override {}
+  ~TestIntegerStream() override = default;
 
   // IntegerStream:
   void StartCall(void* tag) override { connect_tag = static_cast<fit::function<void(bool)>*>(tag); }
@@ -58,7 +58,7 @@ class ReadStreamDrainerTest : public ::testing::Test {
                                                                        std::move(stream));
     drainer_->set_on_empty([this] { on_empty_calls_++; });
   }
-  ~ReadStreamDrainerTest() override {}
+  ~ReadStreamDrainerTest() override = default;
 
  protected:
   TestIntegerStream* stream_;

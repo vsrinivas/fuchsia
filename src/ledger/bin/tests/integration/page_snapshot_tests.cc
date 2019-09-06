@@ -32,7 +32,7 @@ namespace {
 class PageSnapshotIntegrationTest : public IntegrationTest {
  public:
   PageSnapshotIntegrationTest() {}
-  ~PageSnapshotIntegrationTest() override {}
+  ~PageSnapshotIntegrationTest() override = default;
 
   // Returns a snapshot of |page|, checking success.
   PageSnapshotPtr PageGetSnapshot(

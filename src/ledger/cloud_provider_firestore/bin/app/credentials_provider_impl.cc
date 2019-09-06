@@ -38,7 +38,7 @@ CredentialsProviderImpl::CredentialsProviderImpl(
     std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth)
     : firebase_auth_(std::move(firebase_auth)) {}
 
-CredentialsProviderImpl::~CredentialsProviderImpl() {}
+CredentialsProviderImpl::~CredentialsProviderImpl() = default;
 
 void CredentialsProviderImpl::GetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {

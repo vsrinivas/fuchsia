@@ -48,7 +48,7 @@ PageDelegate::PageDelegate(coroutine::CoroutineService* coroutine_service,
   operation_serializer_.set_on_empty([this] { CheckEmpty(); });
 }
 
-PageDelegate::~PageDelegate() {}
+PageDelegate::~PageDelegate() = default;
 
 void PageDelegate::Init(fit::function<void(Status)> on_done) {
   Status status = branch_tracker_.Init();

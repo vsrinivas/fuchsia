@@ -112,7 +112,7 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
       coroutine_manager_(environment->coroutine_service()),
       weak_factory_(this) {}
 
-PageStorageImpl::~PageStorageImpl() {}
+PageStorageImpl::~PageStorageImpl() = default;
 
 void PageStorageImpl::Init(fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(

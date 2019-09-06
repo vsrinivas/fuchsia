@@ -42,7 +42,7 @@ bool CommitHasIdAndData(const cloud_provider::Commit& commit) {
 
 TestPageCloud::TestPageCloud(fidl::InterfaceRequest<cloud_provider::PageCloud> request)
     : binding_(this, std::move(request)) {}
-TestPageCloud::~TestPageCloud() {}
+TestPageCloud::~TestPageCloud() = default;
 
 void TestPageCloud::RunPendingCallbacks() {
   for (auto& callback : pending_add_object_callbacks) {

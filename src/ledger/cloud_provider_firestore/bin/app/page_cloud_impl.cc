@@ -88,7 +88,7 @@ PageCloudImpl::PageCloudImpl(std::string page_path, rng::Random* random,
   });
 }
 
-PageCloudImpl::~PageCloudImpl() {}
+PageCloudImpl::~PageCloudImpl() = default;
 
 void PageCloudImpl::ScopedGetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {

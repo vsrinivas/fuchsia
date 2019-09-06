@@ -30,7 +30,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
   });
 }
 
-LedgerAppInstanceFactory::LedgerAppInstance::~LedgerAppInstance() {}
+LedgerAppInstanceFactory::LedgerAppInstance::~LedgerAppInstance() = default;
 
 ledger_internal::LedgerRepositoryFactory*
 LedgerAppInstanceFactory::LedgerAppInstance::ledger_repository_factory() {

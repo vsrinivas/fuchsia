@@ -13,7 +13,7 @@ namespace cloud_provider_firestore {
 class TestListenStream : public ListenStream {
  public:
   TestListenStream() {}
-  ~TestListenStream() override {}
+  ~TestListenStream() override = default;
 
   // ListenStream:
   void StartCall(void* tag) override { connect_tag = static_cast<fit::function<void(bool)>*>(tag); }
@@ -49,7 +49,7 @@ class ListenCallTest : public ::testing::Test, public ListenCallClient {
     call_ = std::make_unique<ListenCall>(this, std::move(context), std::move(stream));
     call_->set_on_empty([this] { on_empty_calls_++; });
   }
-  ~ListenCallTest() override {}
+  ~ListenCallTest() override = default;
 
   // ListenCallClient:
   void OnConnected() override { on_connected_calls_++; }

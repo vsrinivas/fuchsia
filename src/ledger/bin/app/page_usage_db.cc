@@ -45,7 +45,7 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
     PrepareEntry();
   }
 
-  ~PageInfoIterator() override {}
+  ~PageInfoIterator() override = default;
 
   storage::Iterator<const PageInfo>& Next() override {
     it_->Next();
@@ -162,7 +162,7 @@ PageUsageDb::PageUsageDb(timekeeper::Clock* clock, storage::DbFactory* db_factor
       db_factory_(db_factory),
       db_path_(db_path.SubPath(kPageUsageDbSerializationVersion)) {}
 
-PageUsageDb::~PageUsageDb() {}
+PageUsageDb::~PageUsageDb() = default;
 
 Status PageUsageDb::Init(coroutine::CoroutineHandler* handler) {
   // Initializing the DB and marking pages as closed are slow operations and we

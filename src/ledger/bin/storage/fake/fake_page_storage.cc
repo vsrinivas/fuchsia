@@ -70,7 +70,7 @@ FakePageStorage::FakePageStorage(ledger::Environment* environment, PageId page_i
       environment_(environment),
       encryption_service_(environment_->dispatcher()) {}
 
-FakePageStorage::~FakePageStorage() {}
+FakePageStorage::~FakePageStorage() = default;
 
 PageId FakePageStorage::GetId() { return page_id_; }
 

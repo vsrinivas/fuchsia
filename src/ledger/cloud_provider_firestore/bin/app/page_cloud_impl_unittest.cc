@@ -38,7 +38,7 @@ void SetTimestamp(google::firestore::v1beta1::Document* document, int64_t second
 class TestPageCloudWatcher : public cloud_provider::PageCloudWatcher {
  public:
   TestPageCloudWatcher() {}
-  ~TestPageCloudWatcher() override {}
+  ~TestPageCloudWatcher() override = default;
 
   std::vector<cloud_provider::CommitPackEntry> received_commits;
   std::vector<cloud_provider::PositionToken> received_tokens;
@@ -73,7 +73,7 @@ class PageCloudImplTest : public gtest::TestLoopFixture {
         test_credentials_provider_(dispatcher()),
         page_cloud_impl_("page_path", &random_, &test_credentials_provider_, &firestore_service_,
                          page_cloud_.NewRequest()) {}
-  ~PageCloudImplTest() override {}
+  ~PageCloudImplTest() override = default;
 
  protected:
   rng::TestRandom random_;

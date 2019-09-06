@@ -176,7 +176,7 @@ Entry WithoutEntryId(Entry e) {
 
 StorageTest::StorageTest() {}
 
-StorageTest::~StorageTest() {}
+StorageTest::~StorageTest() = default;
 
 ::testing::AssertionResult StorageTest::AddObject(std::string value,
                                                   std::unique_ptr<const Object>* object) {

@@ -58,7 +58,7 @@ std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
 class PageImplTest : public TestWithEnvironment {
  public:
   PageImplTest() {}
-  ~PageImplTest() override {}
+  ~PageImplTest() override = default;
 
  protected:
   // ApplicationTestBase:

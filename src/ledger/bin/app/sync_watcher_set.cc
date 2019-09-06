@@ -44,7 +44,7 @@ class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateW
  public:
   explicit SyncWatcherContainer(SyncWatcherPtr watcher) : watcher_(std::move(watcher)) {}
 
-  ~SyncWatcherContainer() override {}
+  ~SyncWatcherContainer() override = default;
 
   void Start(SyncStateContainer base_state) {
     pending_ = base_state;
@@ -101,7 +101,7 @@ class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateW
 
 SyncWatcherSet::SyncWatcherSet() {}
 
-SyncWatcherSet::~SyncWatcherSet() {}
+SyncWatcherSet::~SyncWatcherSet() = default;
 
 void SyncWatcherSet::AddSyncWatcher(fidl::InterfaceHandle<SyncWatcher> watcher) {
   SyncWatcherContainer& container = watchers_.emplace(watcher.Bind());

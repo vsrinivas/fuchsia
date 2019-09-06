@@ -16,7 +16,7 @@ namespace {
 class DeviceSetTest : public ValidationTest, public DeviceSetWatcher {
  public:
   DeviceSetTest() {}
-  ~DeviceSetTest() override {}
+  ~DeviceSetTest() override = default;
 
  protected:
   ::testing::AssertionResult GetDeviceSet(DeviceSetSyncPtr* device_set) {

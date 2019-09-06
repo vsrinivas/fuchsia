@@ -25,7 +25,7 @@ namespace ledger {
 LedgerImpl::LedgerImpl(Environment* environment, Delegate* delegate)
     : environment_(environment), delegate_(delegate) {}
 
-LedgerImpl::~LedgerImpl() {}
+LedgerImpl::~LedgerImpl() = default;
 
 void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              fit::function<void(Status)> callback) {

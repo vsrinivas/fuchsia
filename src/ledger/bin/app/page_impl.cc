@@ -44,7 +44,7 @@ PageImpl::PageImpl(storage::PageIdView page_id, fidl::InterfaceRequest<Page> req
   binding_.Bind(std::move(request));
 }
 
-PageImpl::~PageImpl() {}
+PageImpl::~PageImpl() = default;
 
 void PageImpl::SetPageDelegate(PageDelegate* page_delegate) {
   delaying_facade_.SetTargetObject(page_delegate);

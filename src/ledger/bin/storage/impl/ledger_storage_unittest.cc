@@ -36,7 +36,7 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
         storage_(&environment_, &encryption_service_, &db_factory_,
                  ledger::DetachedPath(tmpfs_.root_fd()), CommitPruningPolicy::NEVER) {}
 
-  ~LedgerStorageTest() override {}
+  ~LedgerStorageTest() override = default;
 
   // ledger::TestWithEnvironment:
   void SetUp() override {

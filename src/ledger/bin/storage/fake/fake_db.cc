@@ -31,7 +31,7 @@ class FakeBatch : public Db::Batch {
  public:
   FakeBatch(async_dispatcher_t* dispatcher, std::map<std::string, std::string>* key_value_store)
       : dispatcher_(dispatcher), key_value_store_(key_value_store) {}
-  ~FakeBatch() override {}
+  ~FakeBatch() override = default;
 
   Status Put(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
              fxl::StringView value) override {
@@ -98,7 +98,7 @@ class PrefixIterator
     UpdateCurrentElement();
   }
 
-  ~PrefixIterator() {}
+  ~PrefixIterator() = default;
 
   storage::Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>&
   Next() override {
@@ -147,7 +147,7 @@ class PrefixIterator
 }  // namespace
 
 FakeDb::FakeDb(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
-FakeDb::~FakeDb() {}
+FakeDb::~FakeDb() = default;
 
 Status FakeDb::StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<Batch>* batch) {
   *batch = std::make_unique<FakeBatch>(dispatcher_, &key_value_store_);

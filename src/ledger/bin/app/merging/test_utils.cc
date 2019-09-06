@@ -20,7 +20,7 @@ namespace ledger {
 
 TestWithPageStorage::TestWithPageStorage() : encryption_service_(dispatcher()) {}
 
-TestWithPageStorage::~TestWithPageStorage() {}
+TestWithPageStorage::~TestWithPageStorage() = default;
 
 fit::function<void(storage::Journal*)> TestWithPageStorage::AddKeyValueToJournal(
     const std::string& key, std::string value) {

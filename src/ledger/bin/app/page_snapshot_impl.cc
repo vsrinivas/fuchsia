@@ -238,7 +238,7 @@ PageSnapshotImpl::PageSnapshotImpl(storage::PageStorage* page_storage,
                                    std::string key_prefix)
     : page_storage_(page_storage), commit_(std::move(commit)), key_prefix_(std::move(key_prefix)) {}
 
-PageSnapshotImpl::~PageSnapshotImpl() {}
+PageSnapshotImpl::~PageSnapshotImpl() = default;
 
 void PageSnapshotImpl::GetEntries(
     std::vector<uint8_t> key_start, std::unique_ptr<Token> token,

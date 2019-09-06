@@ -7,7 +7,7 @@
 namespace cloud_provider {
 
 ValidationTest::ValidationTest() : component_context_(sys::ComponentContext::Create()) {}
-ValidationTest::~ValidationTest() {}
+ValidationTest::~ValidationTest() = default;
 
 void ValidationTest::SetUp() { component_context_->svc()->Connect(cloud_provider_.NewRequest()); }
 

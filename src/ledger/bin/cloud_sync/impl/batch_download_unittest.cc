@@ -75,7 +75,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 class BatchDownloadTest : public gtest::TestLoopFixture {
  public:
   BatchDownloadTest() : storage_(dispatcher()), encryption_service_(dispatcher()) {}
-  ~BatchDownloadTest() override {}
+  ~BatchDownloadTest() override = default;
 
  protected:
   TestPageStorage storage_;

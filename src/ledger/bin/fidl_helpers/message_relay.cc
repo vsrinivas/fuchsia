@@ -13,7 +13,7 @@ namespace fidl_helpers {
 
 MessageRelayBase::MessageRelayBase() = default;
 
-MessageRelayBase::~MessageRelayBase() {}
+MessageRelayBase::~MessageRelayBase() = default;
 
 void MessageRelayBase::SetChannel(zx::channel channel) {
   FXL_DCHECK(channel);
@@ -144,7 +144,7 @@ void MessageRelayBase::WriteChannelMessages(async_dispatcher_t* dispatcher, asyn
 
 MessageRelay::MessageRelay() {}
 
-MessageRelay::~MessageRelay() {}
+MessageRelay::~MessageRelay() = default;
 
 void MessageRelay::SetMessageReceivedCallback(fit::function<void(std::vector<uint8_t>)> callback) {
   message_received_callback_ = std::move(callback);

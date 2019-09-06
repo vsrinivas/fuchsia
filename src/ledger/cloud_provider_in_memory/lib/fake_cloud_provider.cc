@@ -40,7 +40,7 @@ FakeCloudProvider::FakeCloudProvider(const Builder& builder)
 
 FakeCloudProvider::FakeCloudProvider() : FakeCloudProvider(Builder()) {}
 
-FakeCloudProvider::~FakeCloudProvider() {}
+FakeCloudProvider::~FakeCloudProvider() = default;
 
 void FakeCloudProvider::GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
                                      GetDeviceSetCallback callback) {

@@ -12,7 +12,7 @@ UserSyncImpl::UserSyncImpl(std::unique_ptr<cloud_sync::UserSync> cloud_sync,
                            std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync)
     : cloud_sync_(std::move(cloud_sync)), p2p_sync_(std::move(p2p_sync)) {}
 
-UserSyncImpl::~UserSyncImpl() {}
+UserSyncImpl::~UserSyncImpl() = default;
 
 void UserSyncImpl::Start() {
   FXL_DCHECK(!started_);

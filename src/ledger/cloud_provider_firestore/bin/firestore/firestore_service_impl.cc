@@ -82,7 +82,7 @@ FirestoreServiceImpl::FirestoreServiceImpl(std::string server_id, async_dispatch
   polling_thread_ = std::thread(&FirestoreServiceImpl::Poll, this);
 }
 
-FirestoreServiceImpl::~FirestoreServiceImpl() {}
+FirestoreServiceImpl::~FirestoreServiceImpl() = default;
 
 void FirestoreServiceImpl::GetDocument(
     google::firestore::v1beta1::GetDocumentRequest request,

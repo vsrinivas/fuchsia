@@ -30,7 +30,7 @@ namespace {
 class CommonAncestorTest : public TestWithPageStorage {
  public:
   CommonAncestorTest() {}
-  ~CommonAncestorTest() override {}
+  ~CommonAncestorTest() override = default;
 
  protected:
   storage::PageStorage* page_storage() override { return storage_.get(); }

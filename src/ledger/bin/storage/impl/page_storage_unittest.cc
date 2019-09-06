@@ -276,7 +276,7 @@ class PageStorageTest : public StorageTest {
  public:
   PageStorageTest() : encryption_service_(dispatcher()) {}
 
-  ~PageStorageTest() override {}
+  ~PageStorageTest() override = default;
 
   // Test:
   void SetUp() override { ResetStorage(); }

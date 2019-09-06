@@ -76,7 +76,7 @@ class PageSyncImplTest : public gtest::TestLoopFixture {
         dispatcher(), &storage_, &storage_, &encryption_service_, std::move(page_cloud_ptr_),
         std::move(download_backoff), std::move(upload_backoff), std::move(watcher));
   }
-  ~PageSyncImplTest() override {}
+  ~PageSyncImplTest() override = default;
 
  protected:
   enum class UploadStatus {

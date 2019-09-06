@@ -29,7 +29,7 @@ class CloudProviderImplTest : public gtest::TestLoopFixture {
         &random_, "some user id", std::move(firebase_auth), std::move(firestore_service),
         cloud_provider_.NewRequest());
   }
-  ~CloudProviderImplTest() override {}
+  ~CloudProviderImplTest() override = default;
 
  protected:
   rng::TestRandom random_;

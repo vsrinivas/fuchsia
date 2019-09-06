@@ -15,7 +15,7 @@ namespace p2p_sync {
 UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(ledger::Environment* environment)
     : environment_(environment) {}
 
-UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}
+UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() = default;
 
 std::unique_ptr<UserCommunicator> UserCommunicatorFactoryImpl::GetUserCommunicator(
     std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) {

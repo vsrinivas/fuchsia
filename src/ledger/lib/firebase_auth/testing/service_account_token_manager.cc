@@ -32,7 +32,7 @@ ServiceAccountTokenManager::ServiceAccountTokenManager(
     std::string user_id)
     : service_account_token_minter_(network_wrapper, std::move(credentials), std::move(user_id)) {}
 
-ServiceAccountTokenManager::~ServiceAccountTokenManager() {}
+ServiceAccountTokenManager::~ServiceAccountTokenManager() = default;
 
 void ServiceAccountTokenManager::Authorize(
     AppConfig app_config, fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,

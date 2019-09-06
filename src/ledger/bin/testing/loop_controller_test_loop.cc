@@ -74,7 +74,7 @@ class CallbackWaiterImpl : public CallbackWaiter {
 
 LoopControllerTestLoop::LoopControllerTestLoop(async::TestLoop* loop) : loop_(loop) {}
 
-LoopControllerTestLoop::~LoopControllerTestLoop() {}
+LoopControllerTestLoop::~LoopControllerTestLoop() = default;
 
 void LoopControllerTestLoop::RunLoop() { loop_->RunUntilIdle(); }
 

@@ -137,7 +137,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
         attachment_node_.CreateChild(kInspectPathComponent));
   }
 
-  ~LedgerRepositoryImplTest() override {}
+  ~LedgerRepositoryImplTest() override = default;
 
  protected:
   scoped_tmpfs::ScopedTmpFS tmpfs_;

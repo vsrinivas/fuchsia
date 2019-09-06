@@ -24,7 +24,7 @@ constexpr fxl::StringView kKeyIdSeparator = "-";
 DataGenerator::DataGenerator(rng::Random* random)
     : generator_(random->NewBitGenerator<uint64_t>()) {}
 
-DataGenerator::~DataGenerator() {}
+DataGenerator::~DataGenerator() = default;
 
 std::vector<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   std::string i_str = std::to_string(i);

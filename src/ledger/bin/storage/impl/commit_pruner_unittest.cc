@@ -91,7 +91,7 @@ class CommitPrunerTest : public ledger::TestWithEnvironment {
  public:
   CommitPrunerTest() {}
 
-  ~CommitPrunerTest() override {}
+  ~CommitPrunerTest() override = default;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CommitPrunerTest);

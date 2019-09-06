@@ -22,7 +22,7 @@ class App {
   explicit App() : component_context_(sys::ComponentContext::Create()) {
     FXL_DCHECK(component_context_);
   }
-  ~App() {}
+  ~App() = default;
 
   bool Start() {
     cloud_provider_impl_ = std::make_unique<ledger::FakeCloudProvider>();

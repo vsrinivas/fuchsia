@@ -26,7 +26,7 @@ class VectorIterator : public storage::Iterator<T> {
  public:
   VectorIterator(const std::vector<T>& v) : it_(v.begin()), end_(v.end()) {}
 
-  ~VectorIterator() {}
+  ~VectorIterator() = default;
 
   storage::Iterator<T>& Next() override {
     ++it_;
@@ -52,7 +52,7 @@ class VectorIterator : public storage::Iterator<T> {
 class FakePageEvictionDelegate : public PageEvictionDelegate {
  public:
   FakePageEvictionDelegate() {}
-  ~FakePageEvictionDelegate() {}
+  ~FakePageEvictionDelegate() = default;
 
   void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
                     PageEvictionCondition condition,

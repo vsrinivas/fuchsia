@@ -7,7 +7,7 @@
 namespace ledger {
 
 TestSyncStateWatcher::TestSyncStateWatcher() : binding_(this) {}
-TestSyncStateWatcher::~TestSyncStateWatcher() {}
+TestSyncStateWatcher::~TestSyncStateWatcher() = default;
 
 void TestSyncStateWatcher::SyncStateChanged(SyncState download, SyncState upload,
                                             SyncStateChangedCallback callback) {

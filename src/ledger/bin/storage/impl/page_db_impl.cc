@@ -59,7 +59,7 @@ PageDbImpl::PageDbImpl(ledger::Environment* environment,
   FXL_DCHECK(db_);
 }
 
-PageDbImpl::~PageDbImpl() {}
+PageDbImpl::~PageDbImpl() = default;
 
 Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<Batch>* batch) {
   std::unique_ptr<Db::Batch> db_batch;

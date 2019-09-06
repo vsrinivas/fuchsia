@@ -29,7 +29,7 @@ namespace {
 class MergingIntegrationTest : public IntegrationTest {
  public:
   MergingIntegrationTest() {}
-  ~MergingIntegrationTest() override {}
+  ~MergingIntegrationTest() override = default;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(MergingIntegrationTest);
@@ -75,7 +75,7 @@ class ConflictResolverImpl : public ConflictResolver {
         binding_(this, std::move(request)) {
     binding_.set_error_handler(callback::Capture([] {}, &disconnected));
   }
-  ~ConflictResolverImpl() override {}
+  ~ConflictResolverImpl() override = default;
 
   struct ResolveRequest {
     fidl::InterfaceHandle<PageSnapshot> left_version;
@@ -256,7 +256,7 @@ class DummyConflictResolver : public ConflictResolver {
  public:
   explicit DummyConflictResolver(fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {}
-  ~DummyConflictResolver() override {}
+  ~DummyConflictResolver() override = default;
 
  private:
   // ConflictResolver:

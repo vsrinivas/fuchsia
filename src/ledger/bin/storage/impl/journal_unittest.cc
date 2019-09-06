@@ -35,7 +35,7 @@ class JournalTest : public ledger::TestWithEnvironment {
         object_identifier_(page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(
             0u, MakeObjectDigest("value"))) {}
 
-  ~JournalTest() override {}
+  ~JournalTest() override = default;
 
   // Test:
   void SetUp() override {

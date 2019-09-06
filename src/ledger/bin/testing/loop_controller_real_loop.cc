@@ -38,7 +38,7 @@ class SubLoopRealLoop : public SubLoop {
 
 LoopControllerRealLoop::LoopControllerRealLoop() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
-LoopControllerRealLoop::~LoopControllerRealLoop() {}
+LoopControllerRealLoop::~LoopControllerRealLoop() = default;
 
 void LoopControllerRealLoop::RunLoop() {
   loop_.Run();

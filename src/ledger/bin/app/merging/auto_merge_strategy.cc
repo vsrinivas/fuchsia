@@ -75,7 +75,7 @@ AutoMergeStrategy::AutoMerger::AutoMerger(storage::PageStorage* storage,
   FXL_DCHECK(callback_);
 }
 
-AutoMergeStrategy::AutoMerger::~AutoMerger() {}
+AutoMergeStrategy::AutoMerger::~AutoMerger() = default;
 
 void AutoMergeStrategy::AutoMerger::Start() {
   auto changes = std::make_unique<std::vector<storage::EntryChange>>();
@@ -261,7 +261,7 @@ AutoMergeStrategy::AutoMergeStrategy(ConflictResolverPtr conflict_resolver)
   });
 }
 
-AutoMergeStrategy::~AutoMergeStrategy() {}
+AutoMergeStrategy::~AutoMergeStrategy() = default;
 
 void AutoMergeStrategy::SetOnError(fit::closure on_error) { on_error_ = std::move(on_error); }
 

@@ -50,7 +50,7 @@ class DiffTest : public StorageTest {
  public:
   DiffTest() : fake_storage_(&environment_, "page_id") {}
 
-  ~DiffTest() override {}
+  ~DiffTest() override = default;
 
  protected:
   PageStorage* GetStorage() override { return &fake_storage_; }

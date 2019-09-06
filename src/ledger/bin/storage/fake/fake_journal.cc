@@ -13,7 +13,7 @@ namespace fake {
 
 FakeJournal::FakeJournal(FakeJournalDelegate* delegate) : delegate_(delegate) {}
 
-FakeJournal::~FakeJournal() {}
+FakeJournal::~FakeJournal() = default;
 
 void FakeJournal::Commit(
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) {

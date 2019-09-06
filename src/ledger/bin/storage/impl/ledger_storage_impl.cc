@@ -57,7 +57,7 @@ LedgerStorageImpl::LedgerStorageImpl(ledger::Environment* environment,
       pruning_policy_(policy),
       weak_factory_(this) {}
 
-LedgerStorageImpl::~LedgerStorageImpl() {}
+LedgerStorageImpl::~LedgerStorageImpl() = default;
 
 Status LedgerStorageImpl::Init() {
   if (!files::CreateDirectoryAt(storage_dir_.root_fd(), storage_dir_.path())) {

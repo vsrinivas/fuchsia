@@ -23,7 +23,7 @@ namespace {
 class PageIntegrationTest : public IntegrationTest {
  public:
   PageIntegrationTest() {}
-  ~PageIntegrationTest() override {}
+  ~PageIntegrationTest() override = default;
 
   // Returns the id of the given page.
   PageId PageGetId(PagePtr* page) {

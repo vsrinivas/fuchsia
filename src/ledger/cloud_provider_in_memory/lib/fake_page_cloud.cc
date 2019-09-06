@@ -126,7 +126,7 @@ FakePageCloud::FakePageCloud(InjectNetworkError inject_network_error)
   });
 }
 
-FakePageCloud::~FakePageCloud() {}
+FakePageCloud::~FakePageCloud() = default;
 
 void FakePageCloud::Bind(fidl::InterfaceRequest<cloud_provider::PageCloud> request) {
   bindings_.AddBinding(this, std::move(request));

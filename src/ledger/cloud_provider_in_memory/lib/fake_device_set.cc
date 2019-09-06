@@ -13,7 +13,7 @@ FakeDeviceSet::FakeDeviceSet(CloudEraseOnCheck cloud_erase_on_check,
     : cloud_erase_on_check_(cloud_erase_on_check),
       cloud_erase_from_watcher_(cloud_erase_from_watcher) {}
 
-FakeDeviceSet::~FakeDeviceSet() {}
+FakeDeviceSet::~FakeDeviceSet() = default;
 
 void FakeDeviceSet::CheckFingerprint(std::vector<uint8_t> fingerprint,
                                      CheckFingerprintCallback callback) {

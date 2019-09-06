@@ -40,7 +40,7 @@ namespace {
 class FakePageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit FakePageStorage(std::string page_id) : page_id_(std::move(page_id)) {}
-  ~FakePageStorage() override {}
+  ~FakePageStorage() override = default;
 
   storage::PageId GetId() override { return page_id_; }
 
@@ -67,7 +67,7 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
 class UserCommunicatorImplTest : public gtest::TestLoopFixture {
  public:
   UserCommunicatorImplTest() {}
-  ~UserCommunicatorImplTest() override {}
+  ~UserCommunicatorImplTest() override = default;
 
   std::unique_ptr<UserCommunicator> GetUserCommunicator(uint64_t node_id,
                                                         std::string user_name = "user") {

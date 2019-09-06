@@ -54,7 +54,7 @@ LedgerManager::LedgerManager(Environment* environment, std::string ledger_name,
   page_managers_.set_on_empty([this] { CheckEmpty(); });
 }
 
-LedgerManager::~LedgerManager() {}
+LedgerManager::~LedgerManager() = default;
 
 fit::closure LedgerManager::CreateDetacher() {
   outstanding_detachers_++;

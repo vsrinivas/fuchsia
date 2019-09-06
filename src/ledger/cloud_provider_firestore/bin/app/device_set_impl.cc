@@ -75,7 +75,7 @@ DeviceSetImpl::DeviceSetImpl(std::string user_path, CredentialsProvider* credent
   });
 }
 
-DeviceSetImpl::~DeviceSetImpl() {}
+DeviceSetImpl::~DeviceSetImpl() = default;
 
 void DeviceSetImpl::ScopedGetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {

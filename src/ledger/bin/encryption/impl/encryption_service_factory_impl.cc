@@ -11,7 +11,7 @@ namespace encryption {
 EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(ledger::Environment* environment)
     : environment_(environment) {}
 
-EncryptionServiceFactoryImpl::~EncryptionServiceFactoryImpl() {}
+EncryptionServiceFactoryImpl::~EncryptionServiceFactoryImpl() = default;
 
 std::unique_ptr<EncryptionService> EncryptionServiceFactoryImpl::MakeEncryptionService(
     std::string namespace_id) {

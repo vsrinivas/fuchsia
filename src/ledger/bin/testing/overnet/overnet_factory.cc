@@ -58,7 +58,7 @@ void OvernetFactory::Holder::OnEmpty() {
 OvernetFactory::OvernetFactory(bool return_one_host_list)
     : return_one_host_list_(return_one_host_list) {}
 
-OvernetFactory::~OvernetFactory() {}
+OvernetFactory::~OvernetFactory() = default;
 
 void OvernetFactory::AddBinding(uint64_t node_id,
                                 fidl::InterfaceRequest<fuchsia::overnet::Overnet> request) {

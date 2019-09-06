@@ -15,7 +15,7 @@ namespace {
 class StringObject : public Object {
  public:
   explicit StringObject(std::string value) : value_(std::move(value)) {}
-  ~StringObject() override {}
+  ~StringObject() override = default;
 
   ObjectIdentifier GetIdentifier() const override {
     return ObjectIdentifier(1u, ObjectDigest("digest"), nullptr);

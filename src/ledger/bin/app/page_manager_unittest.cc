@@ -52,7 +52,7 @@ class PageManagerTest : public TestWithEnvironment {
  public:
   PageManagerTest() {}
 
-  ~PageManagerTest() override {}
+  ~PageManagerTest() override = default;
 
   // gtest::TestWithEnvironment:
   void SetUp() override {

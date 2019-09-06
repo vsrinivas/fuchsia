@@ -59,7 +59,7 @@ sync_coordinator::SyncStateWatcher::SyncStateContainer ConvertToSyncState(
 
 SyncWatcherConverter::SyncWatcherConverter(sync_coordinator::SyncStateWatcher* watcher)
     : watcher_(watcher) {}
-SyncWatcherConverter::~SyncWatcherConverter() {}
+SyncWatcherConverter::~SyncWatcherConverter() = default;
 
 void SyncWatcherConverter::Notify(SyncStateContainer sync_state) {
   watcher_->Notify(ConvertToSyncState(sync_state));

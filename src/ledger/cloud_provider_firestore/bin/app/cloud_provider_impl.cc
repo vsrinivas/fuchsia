@@ -80,7 +80,7 @@ CloudProviderImpl::CloudProviderImpl(rng::Random* random, std::string user_id,
   credentials_provider_ = std::make_unique<CredentialsProviderImpl>(std::move(firebase_auth));
 }
 
-CloudProviderImpl::~CloudProviderImpl() {}
+CloudProviderImpl::~CloudProviderImpl() = default;
 
 void CloudProviderImpl::ShutDownAndReportEmpty() {
   if (binding_.is_bound()) {

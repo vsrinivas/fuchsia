@@ -28,7 +28,7 @@ CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
   });
 }
 
-CustomMergeStrategy::~CustomMergeStrategy() {}
+CustomMergeStrategy::~CustomMergeStrategy() = default;
 
 void CustomMergeStrategy::SetOnError(fit::closure on_error) { on_error_ = std::move(on_error); }
 

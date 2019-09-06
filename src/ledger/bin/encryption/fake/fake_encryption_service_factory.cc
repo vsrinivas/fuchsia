@@ -11,7 +11,7 @@ namespace encryption {
 FakeEncryptionServiceFactory::FakeEncryptionServiceFactory(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}
 
-FakeEncryptionServiceFactory::~FakeEncryptionServiceFactory() {}
+FakeEncryptionServiceFactory::~FakeEncryptionServiceFactory() = default;
 
 std::unique_ptr<EncryptionService> FakeEncryptionServiceFactory::MakeEncryptionService(
     std::string /*namespace_id*/) {

@@ -29,7 +29,7 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
         db_path_(base_path_.SubPath("databases")),
         db_factory_(&environment_, cache_path_) {}
 
-  ~LevelDbFactoryTest() override {}
+  ~LevelDbFactoryTest() override = default;
 
   // ledger::TestWithEnvironment:
   void SetUp() override {

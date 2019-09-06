@@ -125,7 +125,7 @@ class NonAssociativeConflictResolverImpl : public ConflictResolver {
  public:
   explicit NonAssociativeConflictResolverImpl(fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {}
-  ~NonAssociativeConflictResolverImpl() override {}
+  ~NonAssociativeConflictResolverImpl() override = default;
 
  private:
   // ConflictResolver:

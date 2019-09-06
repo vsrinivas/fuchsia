@@ -49,7 +49,7 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
                                        [this] { on_version_mismatch_calls_++; });
     user_sync_->SetSyncWatcher(&sync_state_watcher_);
   }
-  ~UserSyncImplTest() override {}
+  ~UserSyncImplTest() override = default;
 
  protected:
   bool SetFingerprintFile(std::string content) {

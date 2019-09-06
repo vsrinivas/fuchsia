@@ -76,7 +76,7 @@ class LedgerManagerTest : public TestWithEnvironment {
  public:
   LedgerManagerTest() {}
 
-  ~LedgerManagerTest() override {}
+  ~LedgerManagerTest() override = default;
 
   // gtest::TestWithEnvironment:
   void SetUp() override {
@@ -407,7 +407,7 @@ TEST_F(LedgerManagerTest, TrySyncClosedPageWithOpenedPage) {
 class DelayingLedgerStorage : public storage::LedgerStorage {
  public:
   DelayingLedgerStorage() {}
-  ~DelayingLedgerStorage() override {}
+  ~DelayingLedgerStorage() override = default;
 
   void CreatePageStorage(storage::PageId page_id,
                          fit::function<void(storage::Status, std::unique_ptr<storage::PageStorage>)>

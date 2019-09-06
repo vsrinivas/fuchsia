@@ -11,7 +11,7 @@ namespace cloud_sync {
 TestCloudProvider::TestCloudProvider(fidl::InterfaceRequest<cloud_provider::CloudProvider> request)
     : binding_(this, std::move(request)), device_set_binding_(&device_set) {}
 
-TestCloudProvider::~TestCloudProvider() {}
+TestCloudProvider::~TestCloudProvider() = default;
 
 void TestCloudProvider::GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> request,
                                      GetDeviceSetCallback callback) {

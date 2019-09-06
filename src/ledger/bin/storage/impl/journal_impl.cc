@@ -30,7 +30,7 @@ JournalImpl::JournalImpl(Token /* token */, ledger::Environment* environment,
       base_(std::move(base)),
       committed_(false) {}
 
-JournalImpl::~JournalImpl() {}
+JournalImpl::~JournalImpl() = default;
 
 std::unique_ptr<Journal> JournalImpl::Simple(ledger::Environment* environment,
                                              PageStorageImpl* page_storage,

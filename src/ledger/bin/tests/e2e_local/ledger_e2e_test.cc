@@ -80,7 +80,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
   LedgerEndToEndTest() : component_context_(sys::ComponentContext::Create()) {
     component_context()->svc()->Connect(launcher_.NewRequest());
   }
-  ~LedgerEndToEndTest() override {}
+  ~LedgerEndToEndTest() override = default;
 
  protected:
   void Init(std::vector<std::string> additional_args) {

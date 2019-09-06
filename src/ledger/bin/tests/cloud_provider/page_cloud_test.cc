@@ -58,7 +58,7 @@ namespace {
 class PageCloudTest : public ValidationTest, public PageCloudWatcher {
  public:
   PageCloudTest() {}
-  ~PageCloudTest() override {}
+  ~PageCloudTest() override = default;
 
  protected:
   ::testing::AssertionResult GetPageCloud(std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,

@@ -80,7 +80,7 @@ class SharedStorageBytes : public fxl::RefCountedThreadSafe<SharedStorageBytes> 
   FRIEND_REF_COUNTED_THREAD_SAFE(SharedStorageBytes);
   FRIEND_MAKE_REF_COUNTED(SharedStorageBytes);
   explicit SharedStorageBytes(std::string bytes) : bytes_(std::move(bytes)) {}
-  ~SharedStorageBytes() {}
+  ~SharedStorageBytes() = default;
 
   std::string bytes_;
 };
@@ -175,7 +175,7 @@ bool CommitFactory::CommitComparator::operator()(const Commit* left, const Commi
 CommitFactory::CommitFactory(ObjectIdentifierFactory* object_identifier_factory)
     : object_identifier_factory_(object_identifier_factory), weak_factory_(this) {}
 
-CommitFactory::~CommitFactory() {}
+CommitFactory::~CommitFactory() = default;
 
 Status CommitFactory::FromStorageBytes(CommitId id, std::string storage_bytes,
                                        std::unique_ptr<const Commit>* commit) {

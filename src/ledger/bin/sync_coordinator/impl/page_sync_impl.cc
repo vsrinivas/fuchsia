@@ -40,7 +40,7 @@ class SyncProviderHolderBase : public storage::PageSyncClient, public storage::P
 
 SyncProviderHolderBase::SyncProviderHolderBase() {}
 
-SyncProviderHolderBase::~SyncProviderHolderBase() {}
+SyncProviderHolderBase::~SyncProviderHolderBase() = default;
 
 void SyncProviderHolderBase::SetSyncDelegate(storage::PageSyncDelegate* page_sync) {
   page_sync_delegate_ = page_sync;
@@ -78,7 +78,7 @@ class PageSyncImpl::CloudSyncHolder : public SyncProviderHolderBase {
 
 PageSyncImpl::CloudSyncHolder::CloudSyncHolder() {}
 
-PageSyncImpl::CloudSyncHolder::~CloudSyncHolder() {}
+PageSyncImpl::CloudSyncHolder::~CloudSyncHolder() = default;
 
 void PageSyncImpl::CloudSyncHolder::SetCloudSync(std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
   FXL_DCHECK(!cloud_sync_);
@@ -122,7 +122,7 @@ PageSyncImpl::PageSyncImpl(storage::PageStorage* storage, storage::PageSyncClien
   FXL_DCHECK(sync_client_);
 }
 
-PageSyncImpl::~PageSyncImpl() {}
+PageSyncImpl::~PageSyncImpl() = default;
 
 storage::PageSyncClient* PageSyncImpl::CreateCloudSyncClient() {
   FXL_DCHECK(!cloud_sync_);

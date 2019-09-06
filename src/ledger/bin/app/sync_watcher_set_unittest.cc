@@ -19,7 +19,7 @@ namespace {
 class SyncWatcherSetTest : public gtest::TestLoopFixture {
  public:
   SyncWatcherSetTest() {}
-  ~SyncWatcherSetTest() override {}
+  ~SyncWatcherSetTest() override = default;
 
  protected:
   void SetUp() override { ::testing::Test::SetUp(); }

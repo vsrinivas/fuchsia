@@ -56,7 +56,7 @@ class PageUploadTest : public gtest::TestLoopFixture, public PageUpload::Delegat
     page_upload_ = std::make_unique<PageUpload>(&task_runner_, &storage_, &encryption_service_,
                                                 &page_cloud_ptr_, this, std::move(test_backoff));
   }
-  ~PageUploadTest() override {}
+  ~PageUploadTest() override = default;
 
  protected:
   void SetOnNewStateCallback(fit::closure callback) { new_state_callback_ = std::move(callback); }

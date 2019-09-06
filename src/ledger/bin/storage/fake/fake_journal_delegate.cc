@@ -46,7 +46,7 @@ FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, FakeObjectIdentifi
       generation_(generation),
       factory_(factory) {}
 
-FakeJournalDelegate::~FakeJournalDelegate() {}
+FakeJournalDelegate::~FakeJournalDelegate() = default;
 
 void FakeJournalDelegate::SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
                                    KeyPriority priority) {

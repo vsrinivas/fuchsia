@@ -44,7 +44,7 @@ class BaseBatchUploadTest : public gtest::TestLoopFixture {
       : storage_(dispatcher()),
         encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()) {}
-  ~BaseBatchUploadTest() override {}
+  ~BaseBatchUploadTest() override = default;
 
  public:
   TestPageStorage storage_;

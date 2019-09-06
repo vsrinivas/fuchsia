@@ -29,7 +29,7 @@ namespace {
 class ConflictResolverClientTest : public TestWithPageStorage {
  public:
   ConflictResolverClientTest() {}
-  ~ConflictResolverClientTest() override {}
+  ~ConflictResolverClientTest() override = default;
 
  protected:
   storage::PageStorage* page_storage() override { return page_storage_; }
@@ -90,7 +90,7 @@ class ConflictResolverImpl : public ConflictResolver {
       : binding_(this, std::move(request)), quit_callback_(std::move(quit_callback)) {
     binding_.set_error_handler([this](zx_status_t status) { this->disconnected = true; });
   }
-  ~ConflictResolverImpl() override {}
+  ~ConflictResolverImpl() override = default;
 
   struct ResolveRequest {
     fidl::InterfaceHandle<PageSnapshot> left_version;

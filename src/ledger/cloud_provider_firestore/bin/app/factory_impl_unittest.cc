@@ -24,7 +24,7 @@ class FactoryImplTest : public gtest::TestLoopFixture {
         factory_binding_(&factory_impl_, factory_.NewRequest()),
         token_manager_(dispatcher()),
         token_manager_binding_(&token_manager_) {}
-  ~FactoryImplTest() override {}
+  ~FactoryImplTest() override = default;
 
  protected:
   rng::TestRandom random_;

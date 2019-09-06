@@ -16,7 +16,7 @@ TestTokenManager::TestTokenManager(async_dispatcher_t* dispatcher) : dispatcher_
   status_to_return_ = fuchsia::auth::Status::OK;
 }
 
-TestTokenManager::~TestTokenManager() {}
+TestTokenManager::~TestTokenManager() = default;
 
 void TestTokenManager::Authorize(AppConfig app_config,
                                  fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,

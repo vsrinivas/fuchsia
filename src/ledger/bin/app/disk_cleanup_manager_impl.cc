@@ -11,7 +11,7 @@ DiskCleanupManagerImpl::DiskCleanupManagerImpl(Environment* environment, PageUsa
       policy_(
           NewLeastRecentyUsedPolicy(environment->coroutine_service(), &page_eviction_manager_)) {}
 
-DiskCleanupManagerImpl::~DiskCleanupManagerImpl() {}
+DiskCleanupManagerImpl::~DiskCleanupManagerImpl() = default;
 
 void DiskCleanupManagerImpl::SetPageEvictionDelegate(PageEvictionManager::Delegate* delegate) {
   page_eviction_manager_.SetDelegate(delegate);

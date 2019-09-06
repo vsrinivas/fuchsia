@@ -80,7 +80,7 @@ class App : public ledger_internal::LedgerController {
 
     ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
-  ~App() override {}
+  ~App() override = default;
 
   bool Start() {
     io_loop_.StartThread("io thread");

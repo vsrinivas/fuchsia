@@ -11,7 +11,7 @@ namespace cloud_provider_firestore {
 TestCredentialsProvider::TestCredentialsProvider(async_dispatcher_t* dispatcher)
     : task_runner_(dispatcher) {}
 
-TestCredentialsProvider::~TestCredentialsProvider() {}
+TestCredentialsProvider::~TestCredentialsProvider() = default;
 
 void TestCredentialsProvider::GetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {

@@ -57,7 +57,7 @@ TreeNode::TreeNode(ObjectIdentifier identifier, uint8_t level, std::vector<Entry
   FXL_DCHECK(children_.empty() || children_.cbegin()->first <= entries_.size());
 }
 
-TreeNode::~TreeNode() {}
+TreeNode::~TreeNode() = default;
 
 void TreeNode::FromIdentifier(
     PageStorage* page_storage, LocatedObjectIdentifier identifier,

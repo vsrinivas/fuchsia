@@ -51,7 +51,7 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
  public:
   CommitFactoryTest() : encryption_service_(dispatcher()) {}
 
-  ~CommitFactoryTest() override {}
+  ~CommitFactoryTest() override = default;
 
   // Test:
   void SetUp() override {
