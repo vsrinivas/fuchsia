@@ -27,7 +27,6 @@
 #include <fs/vfs.h>
 #include <minfs/allocator-promise.h>
 #include <minfs/bcache.h>
-#include <minfs/block-txn.h>
 #include <minfs/format.h>
 #include <minfs/pending-work.h>
 
@@ -37,37 +36,6 @@ class DataAssignableVnode;
 class InodeManager;
 class TransactionalFs;
 class VnodeMinfs;
-
-// A wrapper around a WriteTxn, holding references to the underlying Vnodes
-// corresponding to the txn, so their Vnodes (and VMOs) are not released
-// while being written out to disk.
-//
-// Additionally, this class allows completions to be signalled when the transaction
-// has successfully completed.
-class WritebackWork : public WriteTxn,
-                      public fbl::SinglyLinkedListable<fbl::unique_ptr<WritebackWork>> {
- public:
-  WritebackWork(Bcache* bc);
-
-  // Sets the WritebackWork to a completed state. |status| should indicate whether the work was
-  // completed successfully.
-  void MarkCompleted(zx_status_t status);
-
-  // Allow "pinning" Vnodes so they aren't destroyed while we're completing
-  // this writeback operation.
-  void PinVnode(fbl::RefPtr<VnodeMinfs> vn);
-
-  // Actually transacts the enqueued work, and resets the WritebackWork to
-  // its initial state. Returns the result of the transaction.
-  zx_status_t Complete();
-
- private:
-  size_t node_count_;
-  // May be empty. Currently '4' is the maximum number of vnodes within a
-  // single unit of writeback work, which occurs during a cross-directory
-  // rename operation.
-  fbl::RefPtr<VnodeMinfs> vn_[4];
-};
 
 // Tracks the current transaction, including any enqueued writes, and reserved blocks
 // and inodes. Also handles allocation of previously reserved blocks/inodes.
@@ -153,12 +121,7 @@ class Transaction final : public PendingWork {
   fs::UnbufferedOperationsBuilder data_operations_;
   std::vector<fbl::RefPtr<VnodeMinfs>> pinned_vnodes_;
 #else
-  WritebackWork* GetMetadataWork();
-  WritebackWork* GetDataWork();
-
-  fbl::unique_ptr<WritebackWork> metadata_work_;
-  fbl::unique_ptr<WritebackWork> data_work_;
-  Bcache* bc_;
+  fs::WriteTxn transaction_;
 #endif
 
   AllocatorPromise inode_promise_;

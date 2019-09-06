@@ -10,8 +10,6 @@
 
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fs/transaction/block_transaction.h>
-#include <minfs/block-txn.h>
 #include <minfs/format.h>
 
 #ifdef __Fuchsia__

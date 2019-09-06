@@ -18,7 +18,6 @@
 #include <fbl/auto_lock.h>
 #include <fs/remote.h>
 #include <fs/watcher.h>
-#include <minfs/writeback-async.h>
 
 #include "vnode-allocation.h"
 #endif

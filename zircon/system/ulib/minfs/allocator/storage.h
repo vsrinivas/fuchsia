@@ -10,7 +10,6 @@
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
-#include <fs/transaction/block_transaction.h>
 #include <minfs/superblock.h>
 
 #ifdef __Fuchsia__

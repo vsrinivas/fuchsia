@@ -6,6 +6,7 @@
 #define MINFS_PENDING_WORK_H_
 
 #include <fs/operation/operation.h>
+#include <zircon/device/block.h>
 #include <zircon/types.h>
 
 #include <minfs/format.h>

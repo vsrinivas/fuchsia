@@ -24,7 +24,6 @@
 #include <fs/remote.h>
 #include <fs/watcher.h>
 #include <minfs/metrics.h>
-#include <minfs/writeback-async.h>
 #endif
 
 #include <lib/zircon-internal/fnv1hash.h>

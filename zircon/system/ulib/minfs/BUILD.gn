@@ -94,7 +94,6 @@ library("minfs") {
       "bcache.cc",
       "vnode-allocation.cc",
       "work-queue.cc",
-      "writeback-async.cc",
     ]
   }
 }

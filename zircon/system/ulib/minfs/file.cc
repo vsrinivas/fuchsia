@@ -15,7 +15,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
-#include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__

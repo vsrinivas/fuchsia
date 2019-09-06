@@ -11,7 +11,6 @@
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
-#include <fs/transaction/block_transaction.h>
 #include <minfs/format.h>
 #include <minfs/mutex.h>
 #include <minfs/pending-work.h>

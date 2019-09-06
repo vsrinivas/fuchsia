@@ -15,9 +15,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
-#include <fs/transaction/block_transaction.h>
-#include <zircon/device/vfs.h>
-#include <zircon/time.h>
 
 #ifdef __Fuchsia__
 #include <lib/fdio/vfs.h>
