@@ -17,7 +17,7 @@ typedef struct zxio_vmo {
   zxio_t io;
 
   // The underlying VMO that stores the data.
-  zx_handle_t vmo;
+  zx::vmo vmo;
 
   // The size of the VMO in bytes.
   //
@@ -40,28 +40,28 @@ static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
               "zxio_vmo_t must fit inside zxio_storage_t.");
 
 static zx_status_t zxio_vmo_close(zxio_t* io) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
-  zx_handle_t vmo = file->vmo;
-  file->vmo = ZX_HANDLE_INVALID;
-  zx_handle_close(vmo);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
+  file->~zxio_vmo_t();
   return ZX_OK;
 }
 
 static zx_status_t zxio_vmo_release(zxio_t* io, zx_handle_t* out_handle) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
-  zx_handle_t vmo = file->vmo;
-  file->vmo = ZX_HANDLE_INVALID;
-  *out_handle = vmo;
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
+  *out_handle = file->vmo.release();
+  file->~zxio_vmo_t();
   return ZX_OK;
 }
 
 static zx_status_t zxio_vmo_clone(zxio_t* io, zx_handle_t* out_handle) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
-  return zx_handle_duplicate(file->vmo, ZX_RIGHT_SAME_RIGHTS, out_handle);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
+  zx::vmo vmo;
+  zx_status_t status = file->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
+  *out_handle = vmo.release();
+  return status;
 }
 
 static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
   *out_attr = {};
   out_attr->mode = S_IFREG | S_IRUSR;
   out_attr->content_size = file->size;
@@ -69,7 +69,7 @@ static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
 }
 
 static zx_status_t zxio_vmo_read(zxio_t* io, void* buffer, size_t capacity, size_t* out_actual) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
   mtx_lock(&file->lock);
   if (capacity > (file->size - file->offset)) {
@@ -79,7 +79,7 @@ static zx_status_t zxio_vmo_read(zxio_t* io, void* buffer, size_t capacity, size
   file->offset += capacity;
   mtx_unlock(&file->lock);
 
-  zx_status_t status = zx_vmo_read(file->vmo, buffer, offset, capacity);
+  zx_status_t status = file->vmo.read(buffer, offset, capacity);
   if (status == ZX_OK) {
     *out_actual = capacity;
   }
@@ -88,7 +88,7 @@ static zx_status_t zxio_vmo_read(zxio_t* io, void* buffer, size_t capacity, size
 
 static zx_status_t zxio_vmo_read_at(zxio_t* io, size_t offset, void* buffer, size_t capacity,
                                     size_t* out_actual) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
   if (offset > file->size) {
     return ZX_ERR_INVALID_ARGS;
@@ -98,7 +98,7 @@ static zx_status_t zxio_vmo_read_at(zxio_t* io, size_t offset, void* buffer, siz
     capacity = file->size - offset;
   }
 
-  zx_status_t status = zx_vmo_read(file->vmo, buffer, offset, capacity);
+  zx_status_t status = file->vmo.read(buffer, offset, capacity);
   if (status == ZX_OK) {
     *out_actual = capacity;
   }
@@ -106,7 +106,7 @@ static zx_status_t zxio_vmo_read_at(zxio_t* io, size_t offset, void* buffer, siz
 }
 
 zx_status_t zxio_vmo_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
   mtx_lock(&file->lock);
   if (capacity > (file->size - file->offset)) {
@@ -116,7 +116,7 @@ zx_status_t zxio_vmo_write(zxio_t* io, const void* buffer, size_t capacity, size
   file->offset += capacity;
   mtx_unlock(&file->lock);
 
-  zx_status_t status = zx_vmo_write(file->vmo, buffer, offset, capacity);
+  zx_status_t status = file->vmo.write(buffer, offset, capacity);
   if (status == ZX_OK) {
     *out_actual = capacity;
   }
@@ -125,7 +125,7 @@ zx_status_t zxio_vmo_write(zxio_t* io, const void* buffer, size_t capacity, size
 
 zx_status_t zxio_vmo_write_at(zxio_t* io, size_t offset, const void* buffer, size_t capacity,
                               size_t* out_actual) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
   if (offset > file->size) {
     return ZX_ERR_INVALID_ARGS;
@@ -135,7 +135,7 @@ zx_status_t zxio_vmo_write_at(zxio_t* io, size_t offset, const void* buffer, siz
     capacity = file->size - offset;
   }
 
-  zx_status_t status = zx_vmo_write(file->vmo, buffer, offset, capacity);
+  zx_status_t status = file->vmo.write(buffer, offset, capacity);
   if (status == ZX_OK) {
     *out_actual = capacity;
   }
@@ -144,7 +144,7 @@ zx_status_t zxio_vmo_write_at(zxio_t* io, size_t offset, const void* buffer, siz
 
 static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset, zxio_seek_origin_t start,
                                  size_t* out_offset) {
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(io);
+  auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
   mtx_lock(&file->lock);
   zx_off_t at = 0u;
@@ -188,21 +188,21 @@ static constexpr zxio_ops_t zxio_vmo_ops = []() {
   return ops;
 }();
 
-zx_status_t zxio_vmo_init(zxio_storage_t* storage, zx_handle_t vmo, zx_off_t offset) {
-  uint64_t size = 0u;
-  zx_status_t status = zx_vmo_get_size(vmo, &size);
+zx_status_t zxio_vmo_init(zxio_storage_t* storage, zx::vmo vmo, zx_off_t offset) {
+  uint64_t size;
+  zx_status_t status = vmo.get_size(&size);
   if (status != ZX_OK) {
-    zx_handle_close(vmo);
     return status;
   }
 
-  zxio_vmo_t* file = reinterpret_cast<zxio_vmo_t*>(storage);
+  auto file = new (storage) zxio_vmo_t{
+      .io = storage->io,
+      .vmo = std::move(vmo),
+      .size = size,
+      .offset = std::min(offset, size),
+      .lock = {},
+  };
   zxio_init(&file->io, &zxio_vmo_ops);
-  if (offset > size)
-    offset = size;
-  file->vmo = vmo;
-  file->size = size;
-  file->offset = offset;
   mtx_init(&file->lock, mtx_plain);
   return ZX_OK;
 }

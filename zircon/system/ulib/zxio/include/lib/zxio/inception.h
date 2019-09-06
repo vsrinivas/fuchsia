@@ -48,9 +48,7 @@ zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handl
 // which means the size of the file will also be a multiple of the page size.
 //
 // The |offset| is the initial seek offset within the file.
-//
-// Always consumes |vmo|.
-zx_status_t zxio_vmo_init(zxio_storage_t* file, zx_handle_t vmo, zx_off_t offset);
+zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx_off_t offset);
 
 // vmofile ---------------------------------------------------------------------
 

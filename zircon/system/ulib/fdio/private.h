@@ -175,7 +175,7 @@ fdio_t* fdio_pipe_create(zx::socket socket);
 // Creates an |fdio_t| from a VMO.
 //
 // Takes ownership of |vmo|.
-fdio_t* fdio_vmo_create(zx_handle_t vmo, zx_off_t seek);
+fdio_t* fdio_vmo_create(zx::vmo vmo, zx_off_t seek);
 
 // Creates an |fdio_t| for a VMO file.
 //

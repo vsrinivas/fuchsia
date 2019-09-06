@@ -363,7 +363,7 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
       io = fdio_pipe_create(zx::socket(handle));
       break;
     case ZX_OBJ_TYPE_VMO:
-      io = fdio_vmo_create(handle, 0u);
+      io = fdio_vmo_create(zx::vmo(handle), 0u);
       break;
     case ZX_OBJ_TYPE_LOG:
       io = fdio_logger_create(handle);

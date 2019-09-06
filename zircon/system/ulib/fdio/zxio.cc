@@ -470,17 +470,16 @@ zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
 
 // Vmo -------------------------------------------------------------------------
 
-fdio_t* fdio_vmo_create(zx_handle_t vmo, zx_off_t seek) {
-  zxio_storage_t* storage = NULL;
+fdio_t* fdio_vmo_create(zx::vmo vmo, zx_off_t seek) {
+  zxio_storage_t* storage;
   fdio_t* io = fdio_zxio_create(&storage);
-  if (io == NULL) {
-    zx_handle_close(vmo);
-    return NULL;
+  if (io == nullptr) {
+    return nullptr;
   }
-  zx_status_t status = zxio_vmo_init(storage, vmo, seek);
+  zx_status_t status = zxio_vmo_init(storage, std::move(vmo), seek);
   if (status != ZX_OK) {
     fdio_release(io);
-    return NULL;
+    return nullptr;
   }
   return io;
 }
