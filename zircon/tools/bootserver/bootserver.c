@@ -255,7 +255,8 @@ void usage(void) {
       "  --netboot    use the netboot protocol\n"
       "  --tftp       use the tftp protocol (default)\n"
       "  --nocolor    disable ANSI color (false)\n"
-      "  --allow-zedboot-version-mismatch warn on zedboot version mismatch rather than fail\n",
+      "  --allow-zedboot-version-mismatch warn on zedboot version mismatch rather than fail\n"
+      "  --fail-fast-if-version-mismatch  error if zedboot version does not match\n",
       appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
   exit(1);
 }
@@ -357,6 +358,7 @@ err:
 
 int main(int argc, char** argv) {
   bool fail_fast = false;
+  bool fail_fast_if_version_mismatch = false;
   struct in6_addr allowed_addr;
   struct sockaddr_in6 addr;
   char tmp[INET6_ADDRSTRLEN];
@@ -478,6 +480,8 @@ int main(int argc, char** argv) {
       authorized_keys = argv[1];
     } else if (!strcmp(argv[1], "--fail-fast")) {
       fail_fast = true;
+    } else if (!strcmp(argv[1], "--fail-fast-if-version-mismatch")) {
+      fail_fast_if_version_mismatch = true;
     } else if (!strcmp(argv[1], "--boot")) {
       argc--;
       argv++;
@@ -696,7 +700,7 @@ int main(int argc, char** argv) {
         log("%sWARNING: Bootserver version '%s' != remote Zedboot version '%s'."
             " Device will not be serviced. Please upgrade Zedboot.%s",
             ANSI(RED), BOOTLOADER_VERSION, adv_version, ANSI(RESET));
-        if (fail_fast) {
+        if (fail_fast || fail_fast_if_version_mismatch) {
           close(s);
           return -1;
         }
