@@ -10,8 +10,8 @@ import (
 	"net"
 	"time"
 
-	"go.fuchsia.dev/tools/lib/retry"
-	"go.fuchsia.dev/tools/net/netboot"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 )
 
 // GetNodeAddress returns the UDP address corresponding to a given node, specifically

@@ -16,13 +16,13 @@ import (
 	"sync"
 	"time"
 
-	"go.fuchsia.dev/tools/botanist"
-	"go.fuchsia.dev/tools/botanist/target"
-	"go.fuchsia.dev/tools/build/api"
-	"go.fuchsia.dev/tools/lib/command"
-	"go.fuchsia.dev/tools/lib/logger"
-	"go.fuchsia.dev/tools/lib/runner"
-	"go.fuchsia.dev/tools/net/sshutil"
+	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
+	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/lib/command"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"github.com/google/subcommands"
 )

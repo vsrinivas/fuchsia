@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go.fuchsia.dev/tools/testing/tap/tokenizer"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap/tokenizer"
 )
 
 // Parse parses the given input string into a Document. The input is allowed to contain

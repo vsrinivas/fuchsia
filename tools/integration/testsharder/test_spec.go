@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.fuchsia.dev/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
 )
 
 // OS is an operating system that a test may run in.

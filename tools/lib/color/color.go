@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"go.fuchsia.dev/tools/lib/isatty"
+	"go.fuchsia.dev/fuchsia/tools/lib/isatty"
 )
 
 // Colorfn is a function type that takes a formatted string and returns it in a certain color.

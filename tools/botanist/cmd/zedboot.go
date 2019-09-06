@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/tools/botanist/target"
-	"go.fuchsia.dev/tools/build/api"
-	"go.fuchsia.dev/tools/lib/command"
-	"go.fuchsia.dev/tools/lib/logger"
-	"go.fuchsia.dev/tools/net/netutil"
-	"go.fuchsia.dev/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/lib/command"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/net/netutil"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
 	"github.com/google/subcommands"
 )

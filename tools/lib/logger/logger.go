@@ -12,7 +12,7 @@ import (
 	goLog "log"
 	"os"
 
-	"go.fuchsia.dev/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
 )
 
 type globalLoggerKeyType struct{}

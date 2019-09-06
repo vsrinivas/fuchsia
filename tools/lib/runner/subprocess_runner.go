@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"syscall"
 
-	"go.fuchsia.dev/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // SubprocessRunner is a Runner that runs commands as local subprocesses.

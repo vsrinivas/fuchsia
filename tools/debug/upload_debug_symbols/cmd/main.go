@@ -21,7 +21,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.fuchsia.dev/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 )
 
 const (

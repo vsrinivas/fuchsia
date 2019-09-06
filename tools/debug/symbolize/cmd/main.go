@@ -12,9 +12,9 @@ import (
 	"io"
 	"os"
 
-	"go.fuchsia.dev/tools/debug/symbolize"
-	"go.fuchsia.dev/tools/lib/color"
-	"go.fuchsia.dev/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type argList []string

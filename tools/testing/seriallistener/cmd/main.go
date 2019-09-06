@@ -31,9 +31,9 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/tools/lib/color"
-	"go.fuchsia.dev/tools/lib/logger"
-	"go.fuchsia.dev/tools/lib/retry"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 )
 
 var (

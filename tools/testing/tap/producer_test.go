@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"go.fuchsia.dev/tools/testing/tap"
-	"gopkg.in/yaml.v2"
+	"github.com/go-yaml/yaml"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 )
 
 func ExampleProducer_single_test() {

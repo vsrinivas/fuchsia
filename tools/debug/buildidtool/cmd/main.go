@@ -14,9 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.fuchsia.dev/tools/debug/elflib"
-	"go.fuchsia.dev/tools/lib/color"
-	"go.fuchsia.dev/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type entry struct {

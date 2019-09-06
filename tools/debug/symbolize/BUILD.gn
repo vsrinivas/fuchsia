@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("symbolize_lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+  deps = [
+    "//tools/debug/elflib",
+    "//tools/lib/cache",
+    "//tools/lib/logger",
+  ]
+}
+
+go_library("main") {
+  name = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/cmd"
+  source_dir = "cmd"
+  deps = [
+    ":symbolize_lib",
+    "//tools/lib/color",
+  ]
+}
+
+go_binary("symbolize") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/debug/symbolize/cmd"
+  deps = [
+    ":main",
+  ]
+}
+
+go_test("symbolize_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib" ]
+  deps = [
+    ":symbolize_lib",
+  ]
+  non_go_deps = [ "//tools/debug/symbolize/testdata" ]
+}

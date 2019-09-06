@@ -27,9 +27,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-yaml/yaml"
 	"github.com/google/subcommands"
 	"golang.org/x/crypto/openpgp"
-	"gopkg.in/yaml.v2"
 )
 
 // gpg keyring file generated using:

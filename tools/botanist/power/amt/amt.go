@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"go.fuchsia.dev/tools/net/digest"
+	"go.fuchsia.dev/fuchsia/tools/net/digest"
 )
 
 const (

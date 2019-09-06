@@ -14,9 +14,9 @@ import (
 	"log"
 	"os"
 
-	"go.fuchsia.dev/tools/debug/breakpad/generator"
-	"go.fuchsia.dev/tools/debug/elflib"
-	"go.fuchsia.dev/tools/lib/tarutil"
+	"go.fuchsia.dev/fuchsia/tools/debug/breakpad/generator"
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/lib/tarutil"
 )
 
 const usage = `usage: dump_breakpad_symbols [options] paths...

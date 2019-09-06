@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("testsharder_lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+  deps = [
+    "//tools/build/api",
+  ]
+}
+
+go_library("main") {
+  name = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/cmd"
+  source_dir = "cmd"
+  deps = [
+    ":testsharder_lib",
+    "//tools/lib/command",
+  ]
+}
+
+go_binary("testsharder") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/integration/testsharder/cmd"
+  deps = [
+    ":main",
+  ]
+}
+
+go_test("testsharder_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib" ]
+  deps = [
+    ":testsharder_lib",
+  ]
+}

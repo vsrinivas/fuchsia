@@ -17,10 +17,10 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/tools/build/api"
-	"go.fuchsia.dev/tools/lib/retry"
-	"go.fuchsia.dev/tools/net/netboot"
-	"go.fuchsia.dev/tools/net/tftp"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+	"go.fuchsia.dev/fuchsia/tools/net/netboot"
+	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	"golang.org/x/crypto/ssh"
 )
 

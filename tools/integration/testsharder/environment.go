@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.fuchsia.dev/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
 )
 
 // Environment describes the full environment a test requires.

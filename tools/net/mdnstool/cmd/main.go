@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"go.fuchsia.dev/tools/net/mdns"
+	"go.fuchsia.dev/fuchsia/tools/net/mdns"
 )
 
 // TODO(jakehehrlich): This doesn't retry or anything, it just times out. It would

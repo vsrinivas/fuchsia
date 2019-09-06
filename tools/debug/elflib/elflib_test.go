@@ -7,15 +7,30 @@ package elflib
 import (
 	"encoding/hex"
 	"os"
+	"path"
+	"path/filepath"
 	"testing"
 )
 
+func getTestdataPath(filename string) (string, error) {
+	testPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		return "", err
+	}
+	outDir := filepath.Dir(testPath)
+	return path.Join(outDir, "testdata", "elflib", filename), nil
+}
+
 func TestBuildIDs(t *testing.T) {
-	f, err := os.Open("testdata/libc.elf.section-only")
+	testfile, err := getTestdataPath("libc.elf.section-only")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)
 	}
-	buildIDs, err := GetBuildIDs("testdata/libc.elf.section-only", f)
+	buildIDs, err := GetBuildIDs(testfile, f)
 	if err != nil {
 		t.Fatal("from GetBuildIDs: ", err)
 	}
@@ -29,11 +44,15 @@ func TestBuildIDs(t *testing.T) {
 }
 
 func TestStrippedBuildIDs(t *testing.T) {
-	f, err := os.Open("testdata/libc.elf.stripped")
+	testfile, err := getTestdataPath("libc.elf.stripped")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)
 	}
-	buildIDs, err := GetBuildIDs("testdata/libc.elf.stripped", f)
+	buildIDs, err := GetBuildIDs(testfile, f)
 	if err != nil {
 		t.Fatal("from GetBuildIDs: ", err)
 	}

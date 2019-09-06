@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/tools/testing/runtests"
-	"go.fuchsia.dev/tools/testing/testrunner"
-	"go.fuchsia.dev/tools/testing/testrunner/cmd/outputs"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd/outputs"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
 
 func TestSummaryOutput(t *testing.T) {

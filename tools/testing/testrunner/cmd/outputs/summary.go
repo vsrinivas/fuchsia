@@ -8,8 +8,8 @@ import (
 	"path"
 	"strings"
 
-	"go.fuchsia.dev/tools/testing/runtests"
-	"go.fuchsia.dev/tools/testing/testrunner"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
 
 // SummaryOutput records test results in a TestSummary object.

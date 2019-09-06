@@ -6,17 +6,30 @@ package symbolize
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"path"
+	"path/filepath"
 
-	"go.fuchsia.dev/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 )
 
 type mockSource []elflib.BinaryFileRef
 
 // Common binaries used for tests in this package.
 var testBinaries = mockSource{
-	{Filepath: "testdata/gobug.elf", BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149"},
-	{Filepath: "testdata/libc.elf", BuildID: "4fcb712aa6387724a9f465a32cd8c14b"},
-	{Filepath: "testdata/libcrypto.elf", BuildID: "12ef5c50b3ed3599c07c02d4509311be"},
+	{Filepath: getTestdataPath("gobug.elf"), BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149"},
+	{Filepath: getTestdataPath("libc.elf"), BuildID: "4fcb712aa6387724a9f465a32cd8c14b"},
+	{Filepath: getTestdataPath("libcrypto.elf"), BuildID: "12ef5c50b3ed3599c07c02d4509311be"},
+}
+
+func getTestdataPath(filename string) string {
+	testPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		log.Fatalf("failed to get test path: %v", err)
+	}
+	outDir := filepath.Dir(testPath)
+	return path.Join(outDir, "testdata", "symbolize", filename)
 }
 
 func (m mockSource) GetBuildObject(buildID string) (string, error) {

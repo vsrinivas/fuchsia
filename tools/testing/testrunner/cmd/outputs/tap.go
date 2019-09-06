@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"io"
 
-	"go.fuchsia.dev/tools/testing/runtests"
-	"go.fuchsia.dev/tools/testing/tap"
-	"go.fuchsia.dev/tools/testing/testrunner"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
+	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
 )
 
 // TAPOutput records test results as a TAP output stream.

@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"go.fuchsia.dev/tools/debug/elflib"
-	"go.fuchsia.dev/tools/lib/cache"
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/lib/cache"
 )
 
 // Symbolizer is an interface to an object that maps addresses in a bianry to source locations

@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+copy("testdata") {
+  sources = [
+    "libc.elf.section-only",
+    "libc.elf.stripped",
+    "libc.yaml",
+    "libc.yaml.section-only",
+  ]
+  outputs = [
+    "$root_out_dir/testdata/elflib/{{source_file_part}}",
+  ]
+  metadata = {
+    test_runtime_deps = [
+      "$root_out_dir/testdata/elflib/libc.elf.section-only",
+      "$root_out_dir/testdata/elflib/libc.elf.stripped",
+      "$root_out_dir/testdata/elflib/libc.yaml",
+      "$root_out_dir/testdata/elflib/libc.yaml.section-only",
+    ]
+  }
+}

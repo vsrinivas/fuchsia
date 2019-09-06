@@ -14,13 +14,13 @@ import (
 	"net"
 	"time"
 
-	"go.fuchsia.dev/tools/botanist"
-	"go.fuchsia.dev/tools/botanist/power"
-	"go.fuchsia.dev/tools/build/api"
-	"go.fuchsia.dev/tools/lib/logger"
-	"go.fuchsia.dev/tools/net/netboot"
-	"go.fuchsia.dev/tools/net/netutil"
-	"go.fuchsia.dev/tools/net/serial"
+	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
+	"go.fuchsia.dev/fuchsia/tools/botanist/power/lib"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/net/netboot"
+	"go.fuchsia.dev/fuchsia/tools/net/netutil"
+	"go.fuchsia.dev/fuchsia/tools/net/serial"
 
 	"golang.org/x/crypto/ssh"
 )

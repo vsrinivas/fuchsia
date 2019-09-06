@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"go.fuchsia.dev/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
 )
 
 func TestWithContext(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"go.fuchsia.dev/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 )
 
 // job is a description of some BinaryFileRef to upload to GCS. The object's name in GCS

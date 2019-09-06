@@ -1,0 +1,60 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("botanist_lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/botanist/lib"
+  deps = [
+    "//garnet/public/go/third_party:golang.org/x/crypto",
+    "//tools/build/api",
+    "//tools/lib/logger",
+    "//tools/lib/retry",
+    "//tools/lib/runner",
+    "//tools/net/mdns",
+    "//tools/net/netboot",
+    "//tools/net/tftp",
+  ]
+}
+
+go_library("target") {
+  name = "go.fuchsia.dev/fuchsia/tools/botanist/target"
+  source_dir = "target"
+  deps = [
+    ":botanist_lib",
+    "//tools/botanist/power",
+    "//tools/net/netutil",
+    "//tools/net/serial",
+    "//tools/qemu",
+  ]
+}
+
+go_library("main") {
+  name = "go.fuchsia.dev/fuchsia/tools/botanist/cmd"
+  source_dir = "cmd"
+  deps = [
+    ":botanist_lib",
+    ":target",
+    "//tools/lib/color",
+    "//tools/lib/command",
+    "//tools/lib/tarutil",
+    "//tools/testing/runtests",
+  ]
+}
+
+go_binary("botanist") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/botanist/cmd"
+  deps = [
+    ":main",
+  ]
+}
+
+go_test("botanist_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/target" ]
+  deps = [
+    ":target",
+  ]
+}

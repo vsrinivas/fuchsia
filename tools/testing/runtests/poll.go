@@ -16,11 +16,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"go.fuchsia.dev/tools/botanist"
-	"go.fuchsia.dev/tools/lib/logger"
-	"go.fuchsia.dev/tools/lib/retry"
-	"go.fuchsia.dev/tools/lib/tarutil"
-	"go.fuchsia.dev/tools/net/tftp"
+	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+	"go.fuchsia.dev/fuchsia/tools/lib/tarutil"
+	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
 
 // PollForSummary polls a node waiting for a summary.json to be written; this relies on

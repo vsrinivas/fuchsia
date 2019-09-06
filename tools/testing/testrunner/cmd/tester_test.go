@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"go.fuchsia.dev/tools/integration/testsharder"
-	"go.fuchsia.dev/tools/net/sshutil"
+	"go.fuchsia.dev/fuchsia/tools/integration/testsharder/lib"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"golang.org/x/crypto/ssh"
 )

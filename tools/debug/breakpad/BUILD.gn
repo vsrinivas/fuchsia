@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("breakpad") {
+  name = "go.fuchsia.dev/fuchsia/tools/debug/breakpad/lib"
+}
+
+go_library("generator") {
+  name = "go.fuchsia.dev/fuchsia/tools/debug/breakpad/generator"
+  source_dir = "generator"
+  deps = [
+    ":breakpad",
+    "//tools/debug/elflib",
+  ]
+}
+
+go_test("breakpad_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/debug/breakpad/lib" ]
+  deps = [
+    ":breakpad",
+  ]
+}

@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go.fuchsia.dev/tools/lib/tarutil"
+	"go.fuchsia.dev/fuchsia/tools/lib/tarutil"
 )
 
 func TestTarBuffer(t *testing.T) {

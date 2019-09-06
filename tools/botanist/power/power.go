@@ -8,10 +8,10 @@ import (
 	"context"
 	"io"
 
-	"go.fuchsia.dev/tools/botanist/power/amt"
-	"go.fuchsia.dev/tools/botanist/power/wol"
-	"go.fuchsia.dev/tools/lib/logger"
-	"go.fuchsia.dev/tools/net/sshutil"
+	"go.fuchsia.dev/fuchsia/tools/botanist/power/amt"
+	"go.fuchsia.dev/fuchsia/tools/botanist/power/wol"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"golang.org/x/crypto/ssh"
 )

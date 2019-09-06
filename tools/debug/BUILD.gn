@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tools") {
+  testonly = true
+
+  public_deps = [
+    "//tools/debug/bloatalyzer",
+    "//tools/debug/buildidtool",
+    "//tools/debug/covargs",
+    "//tools/debug/dump_breakpad_symbols",
+    "//tools/debug/symbolize",
+
+    # TODO(fxb/36097): Create BUILD file for upload_debug_symbols and add tool here.
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "//tools/debug/bloaty:bloaty_tests",
+    "//tools/debug/breakpad:breakpad_tests",
+    "//tools/debug/dump_breakpad_symbols:dump_breakpad_symbols_tests",
+    "//tools/debug/elflib:tools_debug_elflib_tests",
+    "//tools/debug/symbolize:symbolize_tests",
+  ]
+}

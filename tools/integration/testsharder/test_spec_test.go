@@ -13,7 +13,7 @@ import (
 	"sort"
 	"testing"
 
-	"go.fuchsia.dev/tools/build/api"
+	"go.fuchsia.dev/fuchsia/tools/build/api"
 )
 
 var qemuPlatform = DimensionSet{
@@ -173,7 +173,7 @@ func TestValidateTestSpecs(t *testing.T) {
 			OS:   Linux,
 		},
 		Envs: []Environment{
-			Environment{
+			{
 				Dimensions: DimensionSet{
 					DeviceType: "NON-EXISTENT-DEVICE",
 				},

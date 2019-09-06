@@ -8,9 +8,12 @@ group("tools") {
   public_deps = [
     ":infratools",
     "//tools/blackout:all",
+    "//tools/build:tools($host_toolchain)",
+    "//tools/debroot($host_toolchain)",
     "//tools/fidl/fidldoc",
     "//tools/fidlcat:fidlcat_host",
     "//tools/kazoo:kazoo_host",
+    "//tools/net:tools($host_toolchain)",
   ]
 }
 
@@ -18,7 +21,11 @@ group("infratools") {
   testonly = true
 
   public_deps = [
+    "//tools/botanist($host_toolchain)",
+    "//tools/debug:tools($host_toolchain)",
+    "//tools/integration:tools($host_toolchain)",
     "//tools/size_checker/cmd:size_checker($host_toolchain)",
+    "//tools/testing:tools($host_toolchain)",
   ]
 }
 
@@ -28,9 +35,16 @@ group("tests") {
   deps = [
     "//tools/bindc:tests",
     "//tools/blackout:tests",
+    "//tools/botanist:botanist_tests($host_toolchain)",
+    "//tools/build:tests($host_toolchain)",
+    "//tools/debug:tests($host_toolchain)",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
     "//tools/fidlcat:fidlcat_tests",
+    "//tools/integration:tests($host_toolchain)",
     "//tools/kazoo:kazoo_host_tests($host_toolchain)",
+    "//tools/lib:tests($host_toolchain)",
+    "//tools/net:tests($host_toolchain)",
     "//tools/size_checker/cmd:size_checker_tests($host_toolchain)",
+    "//tools/testing:tests($host_toolchain)",
   ]
 }

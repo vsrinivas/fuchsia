@@ -16,12 +16,12 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"go.fuchsia.dev/tools/debug/elflib"
-	"go.fuchsia.dev/tools/debug/symbolize"
-	"go.fuchsia.dev/tools/lib/color"
-	"go.fuchsia.dev/tools/lib/command"
-	"go.fuchsia.dev/tools/lib/logger"
-	"go.fuchsia.dev/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
+	"go.fuchsia.dev/fuchsia/tools/debug/symbolize/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
+	"go.fuchsia.dev/fuchsia/tools/lib/command"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 var (

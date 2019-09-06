@@ -8,7 +8,7 @@ package testrunner
 import (
 	"time"
 
-	"go.fuchsia.dev/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
 // TestResult is the result of executing a test.

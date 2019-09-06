@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tools") {
+  testonly = true
+
+  public_deps = [
+    "//tools/testing/seriallistener",
+    "//tools/testing/testrunner",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    "//tools/testing/tap:tap_tests",
+    "//tools/testing/testrunner:testrunner_outputs_tests",
+    "//tools/testing/testrunner:testrunner_tests",
+  ]
+}
