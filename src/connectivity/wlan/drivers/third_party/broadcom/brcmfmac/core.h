@@ -21,15 +21,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CORE_H_
 
+#include <lib/async/dispatcher.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
+#include <netinet/if_ether.h>
 #include <threads.h>
+
 #include <atomic>
 #include <mutex>
 
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/wlanphyimpl.h>
-#include <lib/async/dispatcher.h>
-#include <netinet/if_ether.h>
-#include <lib/sync/completion.h>
 #include <wlan/protocol/if-impl.h>
 
 #include "bus.h"
@@ -276,6 +278,7 @@ struct net_device {
     int rx_errors;
     int tx_errors;
   } stats;
+  zx::channel sme_channel;
   uint32_t features;
   uint32_t needed_headroom;
   void (*priv_destructor)(net_device*);

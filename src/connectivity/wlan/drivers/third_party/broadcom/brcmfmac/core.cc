@@ -45,9 +45,7 @@
 
 #define MAX_WAIT_FOR_8021X_TX_MSEC (950)
 
-static inline brcmf_pub* if_to_pub(struct brcmf_if* ifp) {
-  return ifp->drvr;
-}
+static inline brcmf_pub* if_to_pub(struct brcmf_if* ifp) { return ifp->drvr; }
 
 static inline brcmf_pub* ndev_to_pub(struct net_device* ndev) {
   return if_to_pub(ndev_to_if(ndev));
@@ -485,7 +483,8 @@ zx_status_t brcmf_phy_query(void* ctx, wlanphy_impl_info_t* phy_info) {
   memcpy(info->mac_addr, ifp->mac_addr, ETH_ALEN);
   info->mac_role = WLAN_INFO_MAC_ROLE_CLIENT | WLAN_INFO_MAC_ROLE_AP;
   info->supported_phys = 0x1f;  // WLAN_INFO_PHY_TYPE_;
-  info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS;
+  info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD | WLAN_INFO_DRIVER_FEATURE_DFS |
+                          WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
   info->caps = 0xf;       // WLAN_INFO_HARDWARE_CAPABILITY_;
   info->bands_count = 0;  // FIXME #29890 -- Long-term solution needed
   return ZX_OK;
@@ -511,6 +510,9 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
   zx_status_t result;
 
   BRCMF_DBG(TEMP, "brcmf_phy_create_iface called!");
+  if (req->sme_channel == ZX_HANDLE_INVALID) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -538,6 +540,7 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
 
   /* set appropriate operations */
   ndev->initialized_for_ap = true;
+  ndev->sme_channel = zx::channel(req->sme_channel);
 
   /* set the mac address & netns */
   memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
@@ -549,7 +552,7 @@ zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_re
 
 zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id) {
   BRCMF_ERR("Don't know how to destroy iface yet");
-  return ZX_ERR_IO;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country) {
@@ -911,8 +914,8 @@ void brcmf_detach(brcmf_pub* drvr) {
   brcmf_proto_detach(drvr);
 }
 
-zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data,
-                                 uint32_t len, int32_t* fwerr_ptr) {
+zx_status_t brcmf_iovar_data_set(brcmf_pub* drvr, const char* name, void* data, uint32_t len,
+                                 int32_t* fwerr_ptr) {
   struct brcmf_if* ifp = drvr->iflist[0];
 
   return brcmf_fil_iovar_data_set(ifp, name, data, len, fwerr_ptr);

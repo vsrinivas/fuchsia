@@ -35,7 +35,7 @@ FakeDevMgr::~FakeDevMgr() {
 // into the list. The allocated memory pointer is returned in out for use as device
 // context
 zx_status_t FakeDevMgr::wlan_sim_device_add(zx_device_t* parent, device_add_args_t* args,
-                                               zx_device_t** out) {
+                                            zx_device_t** out) {
   wlan_sim_dev_info_t* dev_info;
 
   // Allocated memory and copy the args
@@ -57,7 +57,7 @@ zx_status_t FakeDevMgr::wlan_sim_device_add(zx_device_t* parent, device_add_args
   }
 
   DBG_PRT("%s: Added SIM device. # devices: %lu Handle: %p\n", __func__, device_list_.size(),
-         dev_info);
+          dev_info);
   return ZX_OK;
 }
 
@@ -83,8 +83,7 @@ zx_status_t FakeDevMgr::wlan_sim_device_remove(zx_device_t* device) {
 }
 
 // WLAN_SIM get the first device on the list
-zx_device_t* FakeDevMgr::wlan_sim_device_get_first(zx_device_t** parent,
-                                                      device_add_args_t** args) {
+zx_device_t* FakeDevMgr::wlan_sim_device_get_first(zx_device_t** parent, device_add_args_t** args) {
   wlan_sim_dev_info_t* dev_info;
 
   // If there is at least one entry in the list, start the iteration
@@ -108,8 +107,7 @@ zx_device_t* FakeDevMgr::wlan_sim_device_get_first(zx_device_t** parent,
 // WLAN_SIM get the next device on the list. Note that the function
 // wlan_sim_device_get_first() has to be called once before calling
 // this function. Otherwise results are unpredictable.
-zx_device_t* FakeDevMgr::wlan_sim_device_get_next(zx_device_t** parent,
-                                                     device_add_args_t** args) {
+zx_device_t* FakeDevMgr::wlan_sim_device_get_next(zx_device_t** parent, device_add_args_t** args) {
   wlan_sim_dev_info_t* dev_info;
 
   // If there is at least one entry in the list (and assuming
@@ -130,6 +128,16 @@ zx_device_t* FakeDevMgr::wlan_sim_device_get_next(zx_device_t** parent,
   } else {
     return nullptr;
   }
+}
+
+// WLAN_SIM returns the first device which uses the same protocol as specified via `proto_id`.
+std::optional<wlan_sim_dev_info_t> FakeDevMgr::find_device_by_proto_id(uint32_t proto_id) {
+  auto iface =
+      std::find_if(begin(), end(), [proto_id](auto e) { return e->dev_args.proto_id == proto_id; });
+  if (iface == end()) {
+    return {};
+  }
+  return {*(*iface)};
 }
 
 // WLAN_SIM get the num of devices in the list

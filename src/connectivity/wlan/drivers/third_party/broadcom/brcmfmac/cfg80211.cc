@@ -18,14 +18,15 @@
 
 #include "cfg80211.h"
 
+#include <threads.h>
+#include <zircon/status.h>
+
 #include <algorithm>
+
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/protocol/ieee80211.h>
 #include <wlan/protocol/if-impl.h>
 #include <wlan/protocol/mac.h>
-#include <zircon/status.h>
-
-#include <threads.h>
 
 #include "bits.h"
 #include "brcmu_utils.h"
@@ -2567,6 +2568,9 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, const char code[3]) 
 static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t* out_sme_channel,
                                   void* cookie) {
   struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
+  if (!ndev->sme_channel.is_valid()) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
 
   BRCMF_DBG(WLANIF, "Starting wlanif interface\n");
 
@@ -2576,6 +2580,8 @@ static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, zx_handle_t
   brcmf_netdev_open(ndev);
   ndev->flags = IFF_UP;
   brcmf_cfg80211_set_country(ndev_to_wiphy(ndev), "US");
+  ZX_DEBUG_ASSERT(out_sme_channel != nullptr);
+  *out_sme_channel = ndev->sme_channel.release();
   return ZX_OK;
 }
 
@@ -3248,7 +3254,8 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
   info->role = wdev->iftype;
 
   // features
-  info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
+  info->driver_features |=
+      WLAN_INFO_DRIVER_FEATURE_DFS | WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
 
   // bands
   uint32_t bandlist[3];
