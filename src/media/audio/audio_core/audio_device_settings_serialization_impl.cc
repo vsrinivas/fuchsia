@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_device_settings_json.h"
+#include "src/media/audio/audio_core/audio_device_settings_serialization_impl.h"
 
 #include <fcntl.h>
 #include <lib/zx/clock.h>
@@ -20,7 +20,6 @@
 #include <trace/event.h>
 
 #include "src/lib/files/directory.h"
-#include "src/media/audio/audio_core/audio_device_settings_json.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 
 #include "src/media/audio/audio_core/schema/audio_device_settings_schema.inl"
@@ -74,13 +73,14 @@ std::ostream& operator<<(std::ostream& stream, const rapidjson::SchemaValidator:
 }  // namespace
 
 // static
-zx_status_t AudioDeviceSettingsJson::Create(std::unique_ptr<AudioDeviceSettingsJson>* ptr) {
+zx_status_t AudioDeviceSettingsSerializationImpl::Create(
+    std::unique_ptr<AudioDeviceSettingsSerialization>* ptr) {
   return CreateWithSchema(kAudioDeviceSettingsSchema.c_str(), ptr);
 }
 
-zx_status_t AudioDeviceSettingsJson::CreateWithSchema(
-    const char* schema, std::unique_ptr<AudioDeviceSettingsJson>* ptr) {
-  TRACE_DURATION("audio", "AudioDeviceSettingsJson::CreateWithSchema");
+zx_status_t AudioDeviceSettingsSerializationImpl::CreateWithSchema(
+    const char* schema, std::unique_ptr<AudioDeviceSettingsSerialization>* ptr) {
+  TRACE_DURATION("audio", "AudioDeviceSettingsSerializationImpl::CreateWithSchema");
 
   rapidjson::Document schema_doc;
   rapidjson::ParseResult parse_res = schema_doc.Parse(schema);
@@ -88,13 +88,14 @@ zx_status_t AudioDeviceSettingsJson::CreateWithSchema(
     FXL_LOG(ERROR) << "Failed to parse settings file JSON schema " << parse_res << "!";
     return ZX_ERR_INVALID_ARGS;
   }
-  *ptr = std::unique_ptr<AudioDeviceSettingsJson>(
-      new AudioDeviceSettingsJson(rapidjson::SchemaDocument(std::move(schema_doc))));
+  *ptr = std::unique_ptr<AudioDeviceSettingsSerialization>(
+      new AudioDeviceSettingsSerializationImpl(rapidjson::SchemaDocument(std::move(schema_doc))));
   return ZX_OK;
 }
 
-zx_status_t AudioDeviceSettingsJson::Deserialize(int fd, AudioDeviceSettings* settings) {
-  TRACE_DURATION("audio", "AudioDeviceSettingsJson::Deserialize");
+zx_status_t AudioDeviceSettingsSerializationImpl::Deserialize(int fd,
+                                                              AudioDeviceSettings* settings) {
+  TRACE_DURATION("audio", "AudioDeviceSettingsSerializationImpl::Deserialize");
   FXL_DCHECK(settings != nullptr);
   FXL_DCHECK(fd >= 0);
 
@@ -154,8 +155,9 @@ zx_status_t AudioDeviceSettingsJson::Deserialize(int fd, AudioDeviceSettings* se
   return ZX_OK;
 }
 
-zx_status_t AudioDeviceSettingsJson::Serialize(int fd, const AudioDeviceSettings& settings) {
-  TRACE_DURATION("audio", "AudioDeviceSettingsJson::Serialize");
+zx_status_t AudioDeviceSettingsSerializationImpl::Serialize(int fd,
+                                                            const AudioDeviceSettings& settings) {
+  TRACE_DURATION("audio", "AudioDeviceSettingsSerializationImpl::Serialize");
   FXL_DCHECK(fd >= 0);
 
   // Serialize our state into a string buffer.

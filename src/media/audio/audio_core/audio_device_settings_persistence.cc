@@ -13,6 +13,7 @@
 #include <trace/event.h>
 
 #include "src/lib/files/directory.h"
+#include "src/media/audio/audio_core/audio_device_settings_serialization_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 
 namespace media::audio {
@@ -29,16 +30,32 @@ static const AudioDeviceSettingsPersistence::ConfigSource kDefaultConfigSources[
 
 }  // namespace
 
+// static
+std::unique_ptr<AudioDeviceSettingsSerialization>
+AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer() {
+  std::unique_ptr<AudioDeviceSettingsSerialization> result;
+  zx_status_t status = AudioDeviceSettingsSerializationImpl::Create(&result);
+  FXL_DCHECK(status == ZX_OK);
+  FXL_DCHECK(result);
+  return result;
+}
+
 AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher)
-    : AudioDeviceSettingsPersistence(dispatcher, kDefaultConfigSources) {}
+    : AudioDeviceSettingsPersistence(dispatcher, CreateDefaultSettingsSerializer(),
+                                     kDefaultConfigSources) {}
 
 AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
-    async_dispatcher_t* dispatcher,
+    async_dispatcher_t* dispatcher, std::unique_ptr<AudioDeviceSettingsSerialization> serialization)
+    : AudioDeviceSettingsPersistence(dispatcher, std::move(serialization), kDefaultConfigSources) {}
+
+AudioDeviceSettingsPersistence::AudioDeviceSettingsPersistence(
+    async_dispatcher_t* dispatcher, std::unique_ptr<AudioDeviceSettingsSerialization> serialization,
     const AudioDeviceSettingsPersistence::ConfigSource (&configs)[2])
-    : configs_(configs), dispatcher_(dispatcher) {
+    : configs_(configs), dispatcher_(dispatcher), serialization_(std::move(serialization)) {
   // We expect one default one non-default config path.
   FXL_DCHECK(configs_[0].is_default != configs_[1].is_default);
   FXL_DCHECK(dispatcher_);
+  FXL_DCHECK(serialization_);
 }
 
 void AudioDeviceSettingsPersistence::Initialize() {
@@ -51,13 +68,6 @@ void AudioDeviceSettingsPersistence::Initialize() {
       }
     }
   }
-
-  zx_status_t status = AudioDeviceSettingsJson::Create(&json_);
-  if (status != ZX_OK) {
-    FXL_PLOG(ERROR, status) << "Failed to initialize device settings JSON";
-    return;
-  }
-  FXL_DCHECK(json_);
 }
 
 void AudioDeviceSettingsPersistence::CancelPendingWriteback() { commit_settings_task_.Cancel(); }
@@ -113,7 +123,7 @@ zx_status_t AudioDeviceSettingsPersistence::ReadSettingsFromDisk(
     storage.reset(open(path, cfg_src.is_default ? O_RDONLY : O_RDWR));
 
     if (storage) {
-      zx_status_t res = json_->Deserialize(storage.get(), holder->settings.get());
+      zx_status_t res = serialization_->Deserialize(storage.get(), holder->settings.get());
       if (res == ZX_OK) {
         if (cfg_src.is_default) {
           // If we just loaded and deserialized the fallback default config,
@@ -164,7 +174,7 @@ zx_status_t AudioDeviceSettingsPersistence::ReadSettingsFromDisk(
   }
 
   CancelCommitTimeouts(holder);
-  zx_status_t res = json_->Serialize(holder->storage.get(), *holder->settings);
+  zx_status_t res = serialization_->Serialize(holder->storage.get(), *holder->settings);
   if (res != ZX_OK) {
     FXL_PLOG(WARNING, res) << "Failed to write new settings file at \"" << path
                            << "\". Settings for this device will not be persisted";
@@ -186,7 +196,7 @@ zx::time AudioDeviceSettingsPersistence::Commit(AudioDeviceSettingsHolder* holde
   zx::time now = async::Now(dispatcher_);
   if (force || (now >= holder->next_commit_time)) {
     CancelCommitTimeouts(holder);
-    json_->Serialize(holder->storage.get(), *holder->settings);
+    serialization_->Serialize(holder->storage.get(), *holder->settings);
   }
 
   return holder->next_commit_time;

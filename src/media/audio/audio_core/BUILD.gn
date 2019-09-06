@@ -114,10 +114,11 @@ source_set("audio_core_lib") {
     "audio_device_manager.h",
     "audio_device_settings.cc",
     "audio_device_settings.h",
-    "audio_device_settings_json.cc",
-    "audio_device_settings_json.h",
     "audio_device_settings_persistence.cc",
     "audio_device_settings_persistence.h",
+    "audio_device_settings_serialization.h",
+    "audio_device_settings_serialization_impl.cc",
+    "audio_device_settings_serialization_impl.h",
     "audio_driver.cc",
     "audio_driver.h",
     "audio_input.cc",
@@ -222,8 +223,8 @@ executable("unittest_bin") {
 
   sources = [
     "audio_admin_unittest.cc",
-    "audio_device_settings_json_unittest.cc",
     "audio_device_settings_persistence_unittest.cc",
+    "audio_device_settings_serialization_impl_unittest.cc",
     "audio_device_settings_unittest.cc",
     "audio_link_packet_source_unittest.cc",
     "audio_plug_detector_impl_unittest.cc",

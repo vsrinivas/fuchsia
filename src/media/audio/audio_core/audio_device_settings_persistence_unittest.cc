@@ -11,6 +11,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
+#include "src/media/audio/audio_core/audio_device_settings_serialization_impl.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 
 namespace media::audio {
@@ -65,7 +66,9 @@ class AudioDeviceSettingsPersistenceTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(AudioDeviceSettingsPersistenceTest, InitializeShouldCreateSettingsPath) {
-  AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+  AudioDeviceSettingsPersistence settings_persistence(
+      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      kTestConfigSources);
 
   EXPECT_FALSE(files::IsDirectory(kSettingsPath));
   settings_persistence.Initialize();
@@ -74,7 +77,9 @@ TEST_F(AudioDeviceSettingsPersistenceTest, InitializeShouldCreateSettingsPath) {
 
 TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithNoDefaultShouldWriteSettings) {
   {
-    AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+    AudioDeviceSettingsPersistence settings_persistence(
+        dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+        kTestConfigSources);
     settings_persistence.Initialize();
 
     // Load settings; since none exist we expect a settings file to be created.
@@ -93,7 +98,9 @@ TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithNoDefaultShouldWriteS
 
   // Create a new AudioDeviceSettingsPersistence/AudioDeviceSettings; verify settings are loaded.
   {
-    AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+    AudioDeviceSettingsPersistence settings_persistence(
+        dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+        kTestConfigSources);
     settings_persistence.Initialize();
     auto settings =
         fbl::MakeRefCounted<AudioDeviceSettings>(kTestUniqueId, kDefaultInitialHwGainState, false);
@@ -119,7 +126,9 @@ TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithDefault) {
   ASSERT_TRUE(files::WriteFile("/tmp/default-settings/000102030405060708090a0b0c0d0e0f-output.json",
                                kDefaultSettings.data(), kDefaultSettings.size()));
 
-  AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+  AudioDeviceSettingsPersistence settings_persistence(
+      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      kTestConfigSources);
   settings_persistence.Initialize();
 
   // Initialize AudioDeviceSettings to be different from the values in the JSON above so that we
@@ -156,7 +165,9 @@ TEST_F(AudioDeviceSettingsPersistenceTest, LoadSettingsWithDefault) {
 }
 
 TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldNotWriteUnmodifiedSettings) {
-  AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+  AudioDeviceSettingsPersistence settings_persistence(
+      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      kTestConfigSources);
   settings_persistence.Initialize();
 
   // Load settings; since none exist we expect a settings file to be created.
@@ -180,7 +191,9 @@ TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldNotWriteUnmo
 }
 
 TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldWriteModifiedSettings) {
-  AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+  AudioDeviceSettingsPersistence settings_persistence(
+      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      kTestConfigSources);
   settings_persistence.Initialize();
 
   // Load settings; since none exist we expect a settings file to be created.
@@ -205,7 +218,9 @@ TEST_F(AudioDeviceSettingsPersistenceTest, CommitDirtySettingsShouldWriteModifie
 }
 
 TEST_F(AudioDeviceSettingsPersistenceTest, AudioDeviceSettingsModificationsExtendsWritebackDelay) {
-  AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+  AudioDeviceSettingsPersistence settings_persistence(
+      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      kTestConfigSources);
   settings_persistence.Initialize();
 
   // Load settings; since none exist we expect a settings file to be created.
@@ -242,7 +257,9 @@ TEST_F(AudioDeviceSettingsPersistenceTest, AudioDeviceSettingsModificationsExten
 }
 
 TEST_F(AudioDeviceSettingsPersistenceTest, AudioDeviceSettingsWritebackIsBoundedByMaxUpdateDelay) {
-  AudioDeviceSettingsPersistence settings_persistence(dispatcher(), kTestConfigSources);
+  AudioDeviceSettingsPersistence settings_persistence(
+      dispatcher(), AudioDeviceSettingsPersistence::CreateDefaultSettingsSerializer(),
+      kTestConfigSources);
   settings_persistence.Initialize();
 
   // Load settings; since none exist we expect a settings file to be created.

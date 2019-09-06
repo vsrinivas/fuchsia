@@ -12,7 +12,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
 
-#include "src/media/audio/audio_core/audio_device_settings_json.h"
+#include "src/media/audio/audio_core/audio_device_settings_serialization.h"
 
 namespace media::audio {
 
@@ -21,7 +21,12 @@ class AudioDeviceSettingsPersistence {
   static constexpr zx::duration kMaxUpdateDelay = zx::sec(5);
   static constexpr zx::duration kUpdateDelay = zx::msec(500);
 
+  static std::unique_ptr<AudioDeviceSettingsSerialization> CreateDefaultSettingsSerializer();
+
   explicit AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher);
+
+  AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher,
+                                 std::unique_ptr<AudioDeviceSettingsSerialization> serialization);
 
   struct ConfigSource {
     const std::string& prefix;
@@ -35,6 +40,7 @@ class AudioDeviceSettingsPersistence {
   // The array reference must be guaranteed to outlive this instance as an internal reference will
   // be retained.
   AudioDeviceSettingsPersistence(async_dispatcher_t* dispatcher,
+                                 std::unique_ptr<AudioDeviceSettingsSerialization> serialization,
                                  const AudioDeviceSettingsPersistence::ConfigSource (&configs)[2]);
 
   // Disallow copy and move.
@@ -103,8 +109,8 @@ class AudioDeviceSettingsPersistence {
                     &AudioDeviceSettingsPersistence::CommitDirtySettingsThunk>
       commit_settings_task_{this};
 
-  std::unique_ptr<AudioDeviceSettingsJson> json_;
   async_dispatcher_t* dispatcher_;
+  std::unique_ptr<AudioDeviceSettingsSerialization> serialization_;
 };
 
 }  // namespace media::audio

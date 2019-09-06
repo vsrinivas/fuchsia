@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/audio_device_settings_json.h"
+#include "src/media/audio/audio_core/audio_device_settings_serialization_impl.h"
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <zircon/device/audio.h>
@@ -31,7 +31,7 @@ static constexpr HwGainState kDefaultInitialHwGainState = {
     1.0f     /* gain_step */
 };
 
-class AudioDeviceSettingsJsonTest : public gtest::TestLoopFixture {
+class AudioDeviceSettingsSerializationImplTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
     file_ = std::tmpfile();
@@ -52,27 +52,27 @@ class AudioDeviceSettingsJsonTest : public gtest::TestLoopFixture {
   std::FILE* file_ = nullptr;
 };
 
-TEST_F(AudioDeviceSettingsJsonTest, CreateWithSchema) {
-  std::unique_ptr<AudioDeviceSettingsJson> device_json;
-  zx_status_t status = AudioDeviceSettingsJson::Create(&device_json);
+TEST_F(AudioDeviceSettingsSerializationImplTest, CreateWithSchema) {
+  std::unique_ptr<AudioDeviceSettingsSerialization> serialization;
+  zx_status_t status = AudioDeviceSettingsSerializationImpl::Create(&serialization);
   ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(device_json);
+  ASSERT_TRUE(serialization);
 }
 
-TEST_F(AudioDeviceSettingsJsonTest, CreateWithInvalidSchemaFails) {
-  std::unique_ptr<AudioDeviceSettingsJson> device_json;
-  zx_status_t status = AudioDeviceSettingsJson::CreateWithSchema(
-      kAudioDeviceSettingsInvalidSchema.c_str(), &device_json);
+TEST_F(AudioDeviceSettingsSerializationImplTest, CreateWithInvalidSchemaFails) {
+  std::unique_ptr<AudioDeviceSettingsSerialization> serialization;
+  zx_status_t status = AudioDeviceSettingsSerializationImpl::CreateWithSchema(
+      kAudioDeviceSettingsInvalidSchema.c_str(), &serialization);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-  ASSERT_FALSE(device_json);
+  ASSERT_FALSE(serialization);
 }
 
 // Verify we can read a valid config JSON.
-TEST_F(AudioDeviceSettingsJsonTest, Deserialize) {
-  std::unique_ptr<AudioDeviceSettingsJson> device_json;
-  zx_status_t status = AudioDeviceSettingsJson::Create(&device_json);
+TEST_F(AudioDeviceSettingsSerializationImplTest, Deserialize) {
+  std::unique_ptr<AudioDeviceSettingsSerialization> serialization;
+  zx_status_t status = AudioDeviceSettingsSerializationImpl::Create(&serialization);
   ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(device_json);
+  ASSERT_TRUE(serialization);
 
   WriteToFile(
       R"JSON({
@@ -99,7 +99,7 @@ TEST_F(AudioDeviceSettingsJsonTest, Deserialize) {
   EXPECT_FALSE(settings.Ignored());
 
   // Deserialize and verify new settings.
-  EXPECT_EQ(ZX_OK, device_json->Deserialize(fd(), &settings));
+  EXPECT_EQ(ZX_OK, serialization->Deserialize(fd(), &settings));
   settings.GetGainInfo(&gain_info);
   EXPECT_EQ(5.0f, gain_info.gain_db);
   EXPECT_TRUE(gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
@@ -109,11 +109,11 @@ TEST_F(AudioDeviceSettingsJsonTest, Deserialize) {
   EXPECT_TRUE(settings.Ignored());
 }
 
-TEST_F(AudioDeviceSettingsJsonTest, DeserializeExtraToplevelKeysFailsToDeserialize) {
-  std::unique_ptr<AudioDeviceSettingsJson> device_json;
-  zx_status_t status = AudioDeviceSettingsJson::Create(&device_json);
+TEST_F(AudioDeviceSettingsSerializationImplTest, DeserializeExtraToplevelKeysFailsToDeserialize) {
+  std::unique_ptr<AudioDeviceSettingsSerialization> serialization;
+  zx_status_t status = AudioDeviceSettingsSerializationImpl::Create(&serialization);
   ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(device_json);
+  ASSERT_TRUE(serialization);
 
   WriteToFile(
       R"JSON({
@@ -131,14 +131,14 @@ TEST_F(AudioDeviceSettingsJsonTest, DeserializeExtraToplevelKeysFailsToDeseriali
   AudioDeviceSettings settings(kTestUniqueId, kDefaultInitialHwGainState, false);
 
   // Deserialize should fail.
-  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, device_json->Deserialize(fd(), &settings));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, serialization->Deserialize(fd(), &settings));
 }
 
-TEST_F(AudioDeviceSettingsJsonTest, DeserializeExtraGainKeysFails) {
-  std::unique_ptr<AudioDeviceSettingsJson> device_json;
-  zx_status_t status = AudioDeviceSettingsJson::Create(&device_json);
+TEST_F(AudioDeviceSettingsSerializationImplTest, DeserializeExtraGainKeysFails) {
+  std::unique_ptr<AudioDeviceSettingsSerialization> serialization;
+  zx_status_t status = AudioDeviceSettingsSerializationImpl::Create(&serialization);
   ASSERT_EQ(ZX_OK, status);
-  ASSERT_TRUE(device_json);
+  ASSERT_TRUE(serialization);
 
   WriteToFile(
       R"JSON({
@@ -156,7 +156,7 @@ TEST_F(AudioDeviceSettingsJsonTest, DeserializeExtraGainKeysFails) {
   AudioDeviceSettings settings(kTestUniqueId, kDefaultInitialHwGainState, false);
 
   // Deserialize should fail.
-  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, device_json->Deserialize(fd(), &settings));
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, serialization->Deserialize(fd(), &settings));
 }
 
 }  // namespace
