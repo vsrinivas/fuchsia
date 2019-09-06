@@ -152,7 +152,9 @@ def FormatTestName(results):
     return '%s: %s' % (results['test_suite'], results['label'])
 
 
-UNIT_ABBREVIATIONS = {'nanoseconds': 'ns'}
+UNIT_ABBREVIATIONS = {
+    'milliseconds': 'ms',
+    'nanoseconds': 'ns'}
 
 
 def FormatUnit(unit_set):
