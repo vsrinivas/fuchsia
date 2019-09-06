@@ -14,13 +14,13 @@ base_package_labels += [
   "//src/experiences/bin/term",
   "//src/experiences/session_shells/ermine",
   "//src/experiences/settings",
+  "//src/experiences/story_shells/mondrian",
   "//src/flutter",
   "//src/fonts",
   "//src/modular/bundles:framework_experimental",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
   "//topaz/bin/userpicker_base_shell",
-  "//topaz/shell/mondrian_story_shell:mondrian",
   "//topaz/shell/story_shell_labs",
 ]
 
