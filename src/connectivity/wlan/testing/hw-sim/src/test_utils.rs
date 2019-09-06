@@ -5,9 +5,10 @@
 use {
     fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap as wlantap,
+    fuchsia_async::{Time, Timer},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::{self as zx, prelude::*},
-    futures::{channel::oneshot, ready, task::Context, Future, FutureExt, Poll, StreamExt},
+    futures::{channel::oneshot, task::Context, Future, FutureExt, Poll, StreamExt},
     std::{marker::Unpin, pin::Pin, sync::Arc},
     wlan_common::test_utils::ExpectWithin,
     wlantap_client::Wlantap,
@@ -45,20 +46,18 @@ where
 {
     type Output = (F::Output, EventStream);
 
+    /// Any events that accumulated in the |event_stream| since last poll will be passed to
+    /// |event_handler| before the |main_future| is polled
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = &mut *self;
-        match this.main_future.poll_unpin(cx) {
-            Poll::Ready(x) => Poll::Ready((x, this.event_stream.take().unwrap())),
-            Poll::Pending => {
-                let stream = this.event_stream.as_mut().unwrap();
-                loop {
-                    let event = ready!(stream.poll_next_unpin(cx))
-                        .expect("Unexpected end of the WlantapPhy event stream")
-                        .expect("WlantapPhy event stream returned an error");
-                    (this.event_handler)(event);
-                }
-            }
+        let stream = this.event_stream.as_mut().unwrap();
+        while let Poll::Ready(optional_result) = stream.poll_next_unpin(cx) {
+            let event = optional_result
+                .expect("Unexpected end of the WlantapPhy event stream")
+                .expect("WlantapPhy event stream returned an error");
+            (this.event_handler)(event);
         }
+        this.main_future.poll_unpin(cx).map(|x| (x, this.event_stream.take().unwrap()))
     }
 }
 
@@ -98,12 +97,17 @@ impl TestHelper {
         self.proxy.clone()
     }
 
+    /// Will run the main future until it completes or when it has run past the specified duration.
+    /// Note that any events that are observed on the event stream will be passed to the
+    /// |event_handler| closure first before making progress on the main future.
+    /// So if a test generates many events each of which requires significant computational time in
+    /// the event handler, the main future may not be able to complete in time.
     pub async fn run_until_complete_or_timeout<R, F, H, S>(
         &mut self,
         timeout: zx::Duration,
         context: S,
         event_handler: H,
-        future: F,
+        main_future: F,
     ) -> R
     where
         H: FnMut(wlantap::WlantapPhyEvent),
@@ -113,7 +117,7 @@ impl TestHelper {
         let (item, stream) = TestHelperFuture {
             event_stream: Some(self.event_stream.take().unwrap()),
             event_handler,
-            main_future: future,
+            main_future,
         }
         .expect_within(timeout, format!("Did not complete in time: {}", context.to_string()))
         .await;
@@ -123,7 +127,7 @@ impl TestHelper {
 }
 
 pub struct RetryWithBackoff {
-    deadline: zx::Time,
+    deadline: Time,
     prev_delay: zx::Duration,
     delay: zx::Duration,
 }
@@ -131,17 +135,20 @@ pub struct RetryWithBackoff {
 impl RetryWithBackoff {
     pub fn new(timeout: zx::Duration) -> Self {
         RetryWithBackoff {
-            deadline: zx::Time::after(timeout),
+            deadline: Time::after(timeout),
             prev_delay: 0.millis(),
             delay: 1.millis(),
         }
     }
 
-    pub fn sleep_unless_timed_out(&mut self) -> bool {
-        if zx::Time::after(0.millis()) > self.deadline {
+    /// Sleep (in async term) a little longer (following Fibonacci series) after each call until
+    /// timeout is reached.
+    /// Return whether it has run past the deadline.
+    pub async fn sleep_unless_timed_out(&mut self) -> bool {
+        if Time::after(0.millis()) > self.deadline {
             false
         } else {
-            ::std::cmp::min(zx::Time::after(self.delay), self.deadline).sleep();
+            let () = Timer::new(::std::cmp::min(Time::after(self.delay), self.deadline)).await;
             let new_delay = self.prev_delay + self.delay;
             self.prev_delay = self.delay;
             self.delay = new_delay;

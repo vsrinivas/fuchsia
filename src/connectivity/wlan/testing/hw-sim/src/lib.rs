@@ -371,7 +371,7 @@ pub async fn loop_until_iface_is_found() {
     loop {
         let status = wlan_service.status().await.expect("getting wlan status");
         if status.error.code != ErrCode::Ok {
-            let slept = retry.sleep_unless_timed_out();
+            let slept = retry.sleep_unless_timed_out().await;
             assert!(slept, "Wlanstack did not recognize the interface in time");
         } else {
             return;
