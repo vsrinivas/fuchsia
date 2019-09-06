@@ -166,6 +166,7 @@ source_set("audio_core_lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/sys/inspect/cpp",
     "//third_party/rapidjson",
     "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/fzl",
@@ -177,11 +178,10 @@ source_set("audio_core_lib") {
     ":json_schema_headers",
     ":media_metrics_registry",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/inspect_deprecated:component",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/media/cpp:no_converters",
-    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/lib/effects_loader",
@@ -206,7 +206,7 @@ executable("audio_core_bin") {
 
   deps = [
     ":audio_core_lib",
-    "//garnet/public/lib/inspect_deprecated:component",
+    "//garnet/public/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -245,7 +245,6 @@ executable("unittest_bin") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fzl",
     "//zircon/system/fidl/fuchsia-hardware-audio",
-    "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-scheduler",
   ]
 }

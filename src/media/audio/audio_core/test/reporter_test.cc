@@ -3,20 +3,19 @@
 
 #include "src/media/audio/audio_core/reporter.h"
 
-#include <lib/inspect_deprecated/testing/inspect.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/media/audio/audio_core/audio_device.h"
 
 namespace media::audio::test {
 
-using inspect_deprecated::testing::ChildrenMatch;
-using inspect_deprecated::testing::DoubleMetricIs;
-using inspect_deprecated::testing::MetricList;
-using inspect_deprecated::testing::NameMatches;
-using inspect_deprecated::testing::NodeMatches;
-using inspect_deprecated::testing::PropertyList;
-using inspect_deprecated::testing::UIntMetricIs;
+using inspect::testing::ChildrenMatch;
+using inspect::testing::DoubleIs;
+using inspect::testing::NameMatches;
+using inspect::testing::NodeMatches;
+using inspect::testing::PropertyList;
+using inspect::testing::UintIs;
 using testing::AllOf;
 using testing::IsEmpty;
 
@@ -27,19 +26,19 @@ class ReporterTest : public gtest::TestLoopFixture {
     under_test_.Init(component_context.get());
   }
 
-  inspect_deprecated::ObjectHierarchy GetHierarchy() {
-    zx::vmo duplicate = under_test_.tree().DuplicateVmo();
+  inspect::Hierarchy GetHierarchy() {
+    zx::vmo duplicate = under_test_.inspector().DuplicateVmo();
     if (duplicate.get() == ZX_HANDLE_INVALID) {
-      return inspect_deprecated::ObjectHierarchy();
+      return inspect::Hierarchy();
     }
 
-    auto ret = inspect_deprecated::ReadFromVmo(std::move(duplicate));
+    auto ret = inspect::ReadFromVmo(std::move(duplicate));
     EXPECT_TRUE(ret.is_ok());
     if (ret.is_ok()) {
       return ret.take_value();
     }
 
-    return inspect_deprecated::ObjectHierarchy();
+    return inspect::Hierarchy();
   }
 
   Reporter under_test_;
@@ -67,26 +66,26 @@ TEST_F(ReporterTest, InitialState) {
   EXPECT_THAT(hierarchy,
               NodeMatches(AllOf(
                   NameMatches("root"),
-                  MetricList(UnorderedElementsAre(
-                      UIntMetricIs("count of failures to open device", 0),
-                      UIntMetricIs("count of failures to obtain device fdio service channel", 0),
-                      UIntMetricIs("count of failures to obtain device stream channel", 0),
-                      UIntMetricIs("count of failures to start a device", 0))))));
+                  PropertyList(UnorderedElementsAre(
+                      UintIs("count of failures to open device", 0),
+                      UintIs("count of failures to obtain device fdio service channel", 0),
+                      UintIs("count of failures to obtain device stream channel", 0),
+                      UintIs("count of failures to start a device", 0))))));
 
   // Expect empty child nodes for devices and client ports.
   EXPECT_THAT(hierarchy,
               ChildrenMatch(UnorderedElementsAre(
                   AllOf(NodeMatches(AllOf(NameMatches("output devices"), PropertyList(IsEmpty()),
-                                          MetricList(IsEmpty()))),
+                                          PropertyList(IsEmpty()))),
                         ChildrenMatch(IsEmpty())),
                   AllOf(NodeMatches(AllOf(NameMatches("input devices"), PropertyList(IsEmpty()),
-                                          MetricList(IsEmpty()))),
+                                          PropertyList(IsEmpty()))),
                         ChildrenMatch(IsEmpty())),
                   AllOf(NodeMatches(AllOf(NameMatches("renderers"), PropertyList(IsEmpty()),
-                                          MetricList(IsEmpty()))),
+                                          PropertyList(IsEmpty()))),
                         ChildrenMatch(IsEmpty())),
                   AllOf(NodeMatches(AllOf(NameMatches("capturers"), PropertyList(IsEmpty()),
-                                          MetricList(IsEmpty()))),
+                                          PropertyList(IsEmpty()))),
                         ChildrenMatch(IsEmpty())))));
 }
 
@@ -107,11 +106,11 @@ TEST_F(ReporterTest, RootMetrics) {
   EXPECT_THAT(GetHierarchy(),
               NodeMatches(AllOf(
                   NameMatches("root"),
-                  MetricList(UnorderedElementsAre(
-                      UIntMetricIs("count of failures to open device", 1u),
-                      UIntMetricIs("count of failures to obtain device fdio service channel", 2u),
-                      UIntMetricIs("count of failures to obtain device stream channel", 3u),
-                      UIntMetricIs("count of failures to start a device", 4u))))));
+                  PropertyList(UnorderedElementsAre(
+                      UintIs("count of failures to open device", 1u),
+                      UintIs("count of failures to obtain device fdio service channel", 2u),
+                      UintIs("count of failures to obtain device stream channel", 3u),
+                      UintIs("count of failures to start a device", 4u))))));
 }
 
 // Tests methods that add and remove devices.
@@ -189,15 +188,15 @@ TEST_F(ReporterTest, DeviceInitialState) {
           AllOf(NodeMatches(NameMatches("output devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("output_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                        UIntMetricIs("agc supported", 0), UIntMetricIs("agc enabled", 0)))))))),
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                        UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))),
           AllOf(NodeMatches(NameMatches("input devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("input_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                        UIntMetricIs("agc supported", 0), UIntMetricIs("agc enabled", 0)))))))),
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                        UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
 }
@@ -216,9 +215,9 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
           AllOf(NodeMatches(NameMatches("output devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("output_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                        UIntMetricIs("agc supported", 0), UIntMetricIs("agc enabled", 0)))))))),
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                        UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))),
           AllOf(NodeMatches(NameMatches("input devices")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
@@ -238,9 +237,9 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
           AllOf(NodeMatches(NameMatches("output devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("output_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                        UIntMetricIs("agc supported", 0), UIntMetricIs("agc enabled", 0)))))))))));
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                        UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
                                     fuchsia::media::SetAudioGainFlag_GainValid);
@@ -252,9 +251,9 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
           AllOf(NodeMatches(NameMatches("output devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("output_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 0),
-                        UIntMetricIs("agc supported", 0), UIntMetricIs("agc enabled", 0)))))))))));
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", -1.0), UintIs("muted", 0),
+                        UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
                                     fuchsia::media::SetAudioGainFlag_MuteValid);
@@ -266,9 +265,9 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
           AllOf(NodeMatches(NameMatches("output devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("output_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
-                        UIntMetricIs("agc supported", 0), UIntMetricIs("agc enabled", 0)))))))))));
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", -1.0), UintIs("muted", 1),
+                        UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 
   under_test_.SettingDeviceGainInfo(output_device, gain_info_a,
                                     fuchsia::media::SetAudioGainFlag_AgcValid);
@@ -280,9 +279,9 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
           AllOf(NodeMatches(NameMatches("output devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("output_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
-                        UIntMetricIs("agc supported", 1), UIntMetricIs("agc enabled", 1)))))))))));
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", -1.0), UintIs("muted", 1),
+                        UintIs("agc supported", 1), UintIs("agc enabled", 1)))))))))));
 
   fuchsia::media::AudioGainInfo gain_info_b{.gain_db = -2.0f, .flags = 0};
   under_test_.SettingDeviceGainInfo(output_device, gain_info_b,
@@ -297,9 +296,9 @@ TEST_F(ReporterTest, SettingDeviceGainInfo) {
           AllOf(NodeMatches(NameMatches("output devices")),
                 ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                     NameMatches("output_device"),
-                    MetricList(UnorderedElementsAre(
-                        DoubleMetricIs("gain db", -2.0), UIntMetricIs("muted", 0),
-                        UIntMetricIs("agc supported", 0), UIntMetricIs("agc enabled", 0)))))))))));
+                    PropertyList(UnorderedElementsAre(
+                        DoubleIs("gain db", -2.0), UintIs("muted", 0),
+                        UintIs("agc supported", 0), UintIs("agc enabled", 0)))))))))));
 }
 
 // Tests methods that add and remove client ports.
@@ -378,13 +377,13 @@ TEST_F(ReporterTest, RendererMetrics) {
               ChildrenMatch(Contains(
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
               NodeMatches(AllOf(NameMatches("1"),
-                                MetricList(UnorderedElementsAre(
-                                    UIntMetricIs("sample format", 0), UIntMetricIs("channels", 0),
-                                    UIntMetricIs("frames per second", 0),
-                                    DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                                    UIntMetricIs("calls to SetGainWithRamp", 0),
-                                    UIntMetricIs("min clock lead time (ns)", 0),
-                                    DoubleMetricIs("pts continuity threshold (s)", 0.0))))))))))));
+                                PropertyList(UnorderedElementsAre(
+                                    UintIs("sample format", 0), UintIs("channels", 0),
+                                    UintIs("frames per second", 0),
+                                    DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                    UintIs("calls to SetGainWithRamp", 0),
+                                    UintIs("min clock lead time (ns)", 0),
+                                    DoubleIs("pts continuity threshold (s)", 0.0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
       .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
@@ -413,23 +412,23 @@ TEST_F(ReporterTest, RendererMetrics) {
               ChildrenMatch(Contains(AllOf(
                   NodeMatches(NameMatches("payload buffers")),
                   ChildrenMatch(UnorderedElementsAre(
-                      NodeMatches(AllOf(NameMatches("0"), MetricList(UnorderedElementsAre(
-                                                              UIntMetricIs("size", 4096),
-                                                              UIntMetricIs("packets", 0))))),
-                      NodeMatches(AllOf(NameMatches("10"), MetricList(UnorderedElementsAre(
-                                                               UIntMetricIs("size", 8192),
-                                                               UIntMetricIs("packets", 1)))))))))),
+                      NodeMatches(AllOf(NameMatches("0"), PropertyList(UnorderedElementsAre(
+                                                              UintIs("size", 4096),
+                                                              UintIs("packets", 0))))),
+                      NodeMatches(AllOf(NameMatches("10"), PropertyList(UnorderedElementsAre(
+                                                               UintIs("size", 8192),
+                                                               UintIs("packets", 1)))))))))),
               NodeMatches(
                   AllOf(NameMatches("1"),
-                        MetricList(UnorderedElementsAre(
-                            UIntMetricIs("sample format",
+                        PropertyList(UnorderedElementsAre(
+                            UintIs("sample format",
                                          static_cast<uint64_t>(stream_type.sample_format)),
-                            UIntMetricIs("channels", stream_type.channels),
-                            UIntMetricIs("frames per second", stream_type.frames_per_second),
-                            DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
-                            UIntMetricIs("calls to SetGainWithRamp", 2),
-                            UIntMetricIs("min clock lead time (ns)", 1000000),
-                            DoubleMetricIs("pts continuity threshold (s)", 5.0))))))))))));
+                            UintIs("channels", stream_type.channels),
+                            UintIs("frames per second", stream_type.frames_per_second),
+                            DoubleIs("gain db", -1.0), UintIs("muted", 1),
+                            UintIs("calls to SetGainWithRamp", 2),
+                            UintIs("min clock lead time (ns)", 1000000),
+                            DoubleIs("pts continuity threshold (s)", 5.0))))))))))));
 }
 
 // Tests methods that change capturer metrics.
@@ -446,11 +445,11 @@ TEST_F(ReporterTest, CapturerMetrics) {
               ChildrenMatch(Contains(
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
               NodeMatches(AllOf(NameMatches("1"),
-                                MetricList(UnorderedElementsAre(
-                                    UIntMetricIs("sample format", 0), UIntMetricIs("channels", 0),
-                                    UIntMetricIs("frames per second", 0),
-                                    DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                                    UIntMetricIs("calls to SetGainWithRamp", 0))))))))))));
+                                PropertyList(UnorderedElementsAre(
+                                    UintIs("sample format", 0), UintIs("channels", 0),
+                                    UintIs("frames per second", 0),
+                                    DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                    UintIs("calls to SetGainWithRamp", 0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
       .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
@@ -477,21 +476,21 @@ TEST_F(ReporterTest, CapturerMetrics) {
               ChildrenMatch(Contains(AllOf(
                   NodeMatches(NameMatches("payload buffers")),
                   ChildrenMatch(UnorderedElementsAre(
-                      NodeMatches(AllOf(NameMatches("0"), MetricList(UnorderedElementsAre(
-                                                              UIntMetricIs("size", 4096),
-                                                              UIntMetricIs("packets", 0))))),
-                      NodeMatches(AllOf(NameMatches("10"), MetricList(UnorderedElementsAre(
-                                                               UIntMetricIs("size", 8192),
-                                                               UIntMetricIs("packets", 1)))))))))),
+                      NodeMatches(AllOf(NameMatches("0"), PropertyList(UnorderedElementsAre(
+                                                              UintIs("size", 4096),
+                                                              UintIs("packets", 0))))),
+                      NodeMatches(AllOf(NameMatches("10"), PropertyList(UnorderedElementsAre(
+                                                               UintIs("size", 8192),
+                                                               UintIs("packets", 1)))))))))),
               NodeMatches(
                   AllOf(NameMatches("1"),
-                        MetricList(UnorderedElementsAre(
-                            UIntMetricIs("sample format",
+                        PropertyList(UnorderedElementsAre(
+                            UintIs("sample format",
                                          static_cast<uint64_t>(stream_type.sample_format)),
-                            UIntMetricIs("channels", stream_type.channels),
-                            UIntMetricIs("frames per second", stream_type.frames_per_second),
-                            DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
-                            UIntMetricIs("calls to SetGainWithRamp", 2))))))))))));
+                            UintIs("channels", stream_type.channels),
+                            UintIs("frames per second", stream_type.frames_per_second),
+                            DoubleIs("gain db", -1.0), UintIs("muted", 1),
+                            UintIs("calls to SetGainWithRamp", 2))))))))))));
 }
 
 }  // namespace media::audio::test
