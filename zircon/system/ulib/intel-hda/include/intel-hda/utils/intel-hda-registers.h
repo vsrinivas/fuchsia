@@ -205,45 +205,45 @@ namespace intel_hda {
  */
 
 /* Global Capabilities Reigster (GCAP - offset 0x00) */
-// clang-format off
-#define _SIC_ static inline constexpr
 
-_SIC_ bool     HDA_REG_GCAP_64OK(uint16_t val) { return (val & 1u) != 0; }
-_SIC_ uint16_t HDA_REG_GCAP_NSDO(uint16_t val) { return (val >>  1) & 0x03; }
-_SIC_ uint16_t HDA_REG_GCAP_BSS (uint16_t val) { return (val >>  3) & 0x1F; }
-_SIC_ uint16_t HDA_REG_GCAP_ISS (uint16_t val) { return (val >>  8) & 0x0F; }
-_SIC_ uint16_t HDA_REG_GCAP_OSS (uint16_t val) { return (val >> 12) & 0x0F; }
+static inline constexpr bool HDA_REG_GCAP_64OK(uint16_t val) { return (val & 1u) != 0; }
+static inline constexpr uint16_t HDA_REG_GCAP_NSDO(uint16_t val) { return (val >> 1) & 0x03; }
+static inline constexpr uint16_t HDA_REG_GCAP_BSS(uint16_t val) { return (val >> 3) & 0x1F; }
+static inline constexpr uint16_t HDA_REG_GCAP_ISS(uint16_t val) { return (val >> 8) & 0x0F; }
+static inline constexpr uint16_t HDA_REG_GCAP_OSS(uint16_t val) { return (val >> 12) & 0x0F; }
 
 /* Global Control Reigster (GCTL - offset 0x08) */
 constexpr uint32_t HDA_REG_GCTL_HWINIT = 0x0001u;
 constexpr uint32_t HDA_REG_GCTL_FCNTRL = 0x0002u;
-constexpr uint32_t HDA_REG_GCTL_UNSOL  = 0x0100u;
+constexpr uint32_t HDA_REG_GCTL_UNSOL = 0x0100u;
 
 /* Wake Enable and State Status (WAKEEN/STATESTS - offsets 0x0C,0x0E) */
 static constexpr uint16_t HDA_REG_STATESTS_MASK = 0x7FFFu;
 
 /* Interrupt Control Register (INTCTL - offset 0x20) */
-constexpr uint32_t HDA_REG_INTCTL_GIE      = 0x80000000u;
-constexpr uint32_t HDA_REG_INTCTL_CIE      = 0x40000000u;
+constexpr uint32_t HDA_REG_INTCTL_GIE = 0x80000000u;
+constexpr uint32_t HDA_REG_INTCTL_CIE = 0x40000000u;
 constexpr uint32_t HDA_REG_INTCTL_SIE_MASK = 0x3FFFFFFFu;
-_SIC_ uint32_t HDA_REG_INTCTL_SIE(unsigned int n) { return (0x1u << n) & HDA_REG_INTCTL_SIE_MASK; }
+static inline constexpr uint32_t HDA_REG_INTCTL_SIE(unsigned int n) {
+  return (0x1u << n) & HDA_REG_INTCTL_SIE_MASK;
+}
 
 /* Command Output Ring Buffer Read Ptr (CORBRP - offset 0x4a) */
 constexpr uint16_t HDA_REG_CORBRP_RST = 0x8000u;
 
 /* Command Output Ring Buffer Control (CORBCTL - offset 0x4c) */
-constexpr uint8_t HDA_REG_CORBCTL_MEIE   = 0x01u;  // Mem Error Int Enable
+constexpr uint8_t HDA_REG_CORBCTL_MEIE = 0x01u;    // Mem Error Int Enable
 constexpr uint8_t HDA_REG_CORBCTL_DMA_EN = 0x02u;  // DMA Enable
 
 /* Command Output Ring Buffer Status (CORBSTS - offset 0x4d) */
 constexpr uint8_t HDA_REG_CORBSTS_MEI = 0x01u;  // Memory Error Indicator
 
 /* Command Output Ring Buffer Size (CORBSIZE - offset 0x4e) */
-constexpr uint8_t HDA_REG_CORBSIZE_CFG_2ENT   = 0x00u;
-constexpr uint8_t HDA_REG_CORBSIZE_CFG_16ENT  = 0x01u;
+constexpr uint8_t HDA_REG_CORBSIZE_CFG_2ENT = 0x00u;
+constexpr uint8_t HDA_REG_CORBSIZE_CFG_16ENT = 0x01u;
 constexpr uint8_t HDA_REG_CORBSIZE_CFG_256ENT = 0x02u;
-constexpr uint8_t HDA_REG_CORBSIZE_CAP_2ENT   = 0x10u;
-constexpr uint8_t HDA_REG_CORBSIZE_CAP_16ENT  = 0x20u;
+constexpr uint8_t HDA_REG_CORBSIZE_CAP_2ENT = 0x10u;
+constexpr uint8_t HDA_REG_CORBSIZE_CAP_16ENT = 0x20u;
 constexpr uint8_t HDA_REG_CORBSIZE_CAP_256ENT = 0x40u;
 
 /* Response Input Ring Buffer Write Ptr (RIRBWP - offset 0x58) */
@@ -252,79 +252,85 @@ constexpr uint16_t HDA_REG_RIRBWP_RST = 0x1000u;
 /* Response Input Ring Buffer Control (RIRBCTL - offset 0x5c) */
 constexpr uint8_t HDA_REG_RIRBCTL_INTCTL = 0x01u;  // Interrupt Control
 constexpr uint8_t HDA_REG_RIRBCTL_DMA_EN = 0x02u;  // DMA Enable
-constexpr uint8_t HDA_REG_RIRBCTL_OIC    = 0x04u;  // Overrun Interrupt Control
+constexpr uint8_t HDA_REG_RIRBCTL_OIC = 0x04u;     // Overrun Interrupt Control
 
 /* Response Input Ring Buffer Status (RIRBSTS - offset 0x5d) */
 constexpr uint8_t HDA_REG_RIRBSTS_INTFL = 0x01u;  // Response Interrupt Flag
-constexpr uint8_t HDA_REG_RIRBSTS_OIS   = 0x04u;  // Overrun Interrupt Status
+constexpr uint8_t HDA_REG_RIRBSTS_OIS = 0x04u;    // Overrun Interrupt Status
 
 /* Response Input Ring Buffer Size (RIRBSIZE - offset 0x5e) */
-constexpr uint8_t HDA_REG_RIRBSIZE_CFG_2ENT   = 0x00u;
-constexpr uint8_t HDA_REG_RIRBSIZE_CFG_16ENT  = 0x01u;
+constexpr uint8_t HDA_REG_RIRBSIZE_CFG_2ENT = 0x00u;
+constexpr uint8_t HDA_REG_RIRBSIZE_CFG_16ENT = 0x01u;
 constexpr uint8_t HDA_REG_RIRBSIZE_CFG_256ENT = 0x02u;
-constexpr uint8_t HDA_REG_RIRBSIZE_CAP_2ENT   = 0x10u;
-constexpr uint8_t HDA_REG_RIRBSIZE_CAP_16ENT  = 0x20u;
+constexpr uint8_t HDA_REG_RIRBSIZE_CAP_2ENT = 0x10u;
+constexpr uint8_t HDA_REG_RIRBSIZE_CAP_16ENT = 0x20u;
 constexpr uint8_t HDA_REG_RIRBSIZE_CAP_256ENT = 0x40u;
 
 // Stream Descriptor Control Register bits.
-constexpr uint32_t HDA_SD_REG_CTRL_SRST    = (1u << 0); // Stream Reset
-constexpr uint32_t HDA_SD_REG_CTRL_RUN     = (1u << 1); // Stream Run
-constexpr uint32_t HDA_SD_REG_CTRL_IOCE    = (1u << 2); // Interrupt on Completion Enable
-constexpr uint32_t HDA_SD_REG_CTRL_FEIE    = (1u << 3); // FIFO Error Interrupt Enable
-constexpr uint32_t HDA_SD_REG_CTRL_DEIE    = (1u << 4); // Descripto Error Interrupt Enable
-constexpr uint32_t HDA_SD_REG_CTRL_STRIPE1 = (0u << 16); // 1 SDO line
-constexpr uint32_t HDA_SD_REG_CTRL_STRIPE2 = (1u << 16); // 2 SDO lines
-constexpr uint32_t HDA_SD_REG_CTRL_STRIPE4 = (2u << 16); // 4 SDO lines
-constexpr uint32_t HDA_SD_REG_CTRL_TP      = (1u << 18); // Traffic Priority
-constexpr uint32_t HDA_SD_REG_CTRL_DIR_IN  = (0u << 19); // Direction Control
-constexpr uint32_t HDA_SD_REG_CTRL_DIR_OUT = (1u << 19); // Direction Control
-_SIC_ uint32_t HDA_SD_REG_CTRL_STRM_TAG(uint8_t tag) {   // Stream Tag
-    return static_cast<uint32_t>(tag & 0xF) << 20;
+constexpr uint32_t HDA_SD_REG_CTRL_SRST = (1u << 0);      // Stream Reset
+constexpr uint32_t HDA_SD_REG_CTRL_RUN = (1u << 1);       // Stream Run
+constexpr uint32_t HDA_SD_REG_CTRL_IOCE = (1u << 2);      // Interrupt on Completion Enable
+constexpr uint32_t HDA_SD_REG_CTRL_FEIE = (1u << 3);      // FIFO Error Interrupt Enable
+constexpr uint32_t HDA_SD_REG_CTRL_DEIE = (1u << 4);      // Descripto Error Interrupt Enable
+constexpr uint32_t HDA_SD_REG_CTRL_STRIPE1 = (0u << 16);  // 1 SDO line
+constexpr uint32_t HDA_SD_REG_CTRL_STRIPE2 = (1u << 16);  // 2 SDO lines
+constexpr uint32_t HDA_SD_REG_CTRL_STRIPE4 = (2u << 16);  // 4 SDO lines
+constexpr uint32_t HDA_SD_REG_CTRL_TP = (1u << 18);       // Traffic Priority
+constexpr uint32_t HDA_SD_REG_CTRL_DIR_IN = (0u << 19);   // Direction Control
+constexpr uint32_t HDA_SD_REG_CTRL_DIR_OUT = (1u << 19);  // Direction Control
+static inline constexpr uint32_t HDA_SD_REG_CTRL_STRM_TAG(uint8_t tag) {  // Stream Tag
+  return static_cast<uint32_t>(tag & 0xF) << 20;
 }
 
 // Stream Descriptor Status Register bits arranged for both 8 and 32 bit access.
-constexpr uint8_t HDA_SD_REG_STS8_BCIS     = (1u << 2); // Buffer Complete IRQ Status
-constexpr uint8_t HDA_SD_REG_STS8_FIFOE    = (1u << 3); // FIFO error IRQ Status
-constexpr uint8_t HDA_SD_REG_STS8_DESE     = (1u << 4); // Descriptor Error IRQ Status
-constexpr uint8_t HDA_SD_REG_STS8_FIFORDY  = (1u << 5); // FIFO ready
-constexpr uint8_t HDA_SD_REG_STS8_ACK      = HDA_SD_REG_STS8_BCIS  |
-                                             HDA_SD_REG_STS8_FIFOE |
-                                             HDA_SD_REG_STS8_DESE;
-constexpr uint8_t HDA_SD_REG_STS8_MASK     = HDA_SD_REG_STS8_ACK |
-                                             HDA_SD_REG_STS8_FIFORDY;
+constexpr uint8_t HDA_SD_REG_STS8_BCIS = (1u << 2);     // Buffer Complete IRQ Status
+constexpr uint8_t HDA_SD_REG_STS8_FIFOE = (1u << 3);    // FIFO error IRQ Status
+constexpr uint8_t HDA_SD_REG_STS8_DESE = (1u << 4);     // Descriptor Error IRQ Status
+constexpr uint8_t HDA_SD_REG_STS8_FIFORDY = (1u << 5);  // FIFO ready
+constexpr uint8_t HDA_SD_REG_STS8_ACK =
+    HDA_SD_REG_STS8_BCIS | HDA_SD_REG_STS8_FIFOE | HDA_SD_REG_STS8_DESE;
+constexpr uint8_t HDA_SD_REG_STS8_MASK = HDA_SD_REG_STS8_ACK | HDA_SD_REG_STS8_FIFORDY;
 
-constexpr uint32_t HDA_SD_REG_STS32_BCIS     = static_cast<uint32_t>(HDA_SD_REG_STS8_BCIS)    << 24;
-constexpr uint32_t HDA_SD_REG_STS32_FIFOE    = static_cast<uint32_t>(HDA_SD_REG_STS8_FIFOE)   << 24;
-constexpr uint32_t HDA_SD_REG_STS32_DESE     = static_cast<uint32_t>(HDA_SD_REG_STS8_DESE)    << 24;
-constexpr uint32_t HDA_SD_REG_STS32_FIFORDY  = static_cast<uint32_t>(HDA_SD_REG_STS8_FIFORDY) << 24;
-constexpr uint32_t HDA_SD_REG_STS32_ACK      = static_cast<uint32_t>(HDA_SD_REG_STS8_ACK)     << 24;
-constexpr uint32_t HDA_SD_REG_STS32_MASK     = static_cast<uint32_t>(HDA_SD_REG_STS8_MASK)    << 24;
+constexpr uint32_t HDA_SD_REG_STS32_BCIS = static_cast<uint32_t>(HDA_SD_REG_STS8_BCIS) << 24;
+constexpr uint32_t HDA_SD_REG_STS32_FIFOE = static_cast<uint32_t>(HDA_SD_REG_STS8_FIFOE) << 24;
+constexpr uint32_t HDA_SD_REG_STS32_DESE = static_cast<uint32_t>(HDA_SD_REG_STS8_DESE) << 24;
+constexpr uint32_t HDA_SD_REG_STS32_FIFORDY = static_cast<uint32_t>(HDA_SD_REG_STS8_FIFORDY) << 24;
+constexpr uint32_t HDA_SD_REG_STS32_ACK = static_cast<uint32_t>(HDA_SD_REG_STS8_ACK) << 24;
+constexpr uint32_t HDA_SD_REG_STS32_MASK = static_cast<uint32_t>(HDA_SD_REG_STS8_MASK) << 24;
 
 // Stream Descriptor Status Register bits.
 
 // Multiple Links Capability Header/Pipe Processing Capability Header bits.
-constexpr uint32_t HDA_CAP_ID_MASK  = (0xFFF << 16);
-constexpr uint32_t HDA_CAP_PP_ID    = (0x003 << 16);
+constexpr uint32_t HDA_CAP_ID_MASK = (0xFFF << 16);
+constexpr uint32_t HDA_CAP_PP_ID = (0x003 << 16);
 constexpr uint32_t HDA_CAP_PTR_MASK = 0xFFFF;
 
 // Processing Pipe Control bits
-constexpr uint32_t HDA_PPCTL_PIE     = (1 << 31);
+constexpr uint32_t HDA_PPCTL_PIE = (1 << 31);
 constexpr uint32_t HDA_PPCTL_GPROCEN = (1 << 30);
 
 // Processing Pipe Status bits
 constexpr uint32_t HDA_PPSTS_PIS = (1 << 31);
 
 // Audio DSP Control and Status (ADSPCS - offset 0x04)
-_SIC_ uint32_t ADSP_REG_ADSPCS_CRST  (uint32_t core_mask) { return (core_mask & 0xFF); }
-_SIC_ uint32_t ADSP_REG_ADSPCS_CSTALL(uint32_t core_mask) { return (core_mask & 0xFF) <<  8; }
-_SIC_ uint32_t ADSP_REG_ADSPCS_SPA   (uint32_t core_mask) { return (core_mask & 0xFF) << 16; }
-_SIC_ uint32_t ADSP_REG_ADSPCS_CPA   (uint32_t core_mask) { return (core_mask & 0xFF) << 24; }
+static inline constexpr uint32_t ADSP_REG_ADSPCS_CRST(uint32_t core_mask) {
+  return (core_mask & 0xFF);
+}
+static inline constexpr uint32_t ADSP_REG_ADSPCS_CSTALL(uint32_t core_mask) {
+  return (core_mask & 0xFF) << 8;
+}
+static inline constexpr uint32_t ADSP_REG_ADSPCS_SPA(uint32_t core_mask) {
+  return (core_mask & 0xFF) << 16;
+}
+static inline constexpr uint32_t ADSP_REG_ADSPCS_CPA(uint32_t core_mask) {
+  return (core_mask & 0xFF) << 24;
+}
 
 constexpr uint8_t ADSP_REG_ADSPCS_CORE0_MASK = (1u << 0);
 
 // Audio DSP Interrupt Control (ADSPIC - offset 0x08)
 constexpr uint32_t ADSP_REG_ADSPIC_CLDMA = (1 << 1);
-constexpr uint32_t ADSP_REG_ADSPIC_IPC   = (1 << 0);
+constexpr uint32_t ADSP_REG_ADSPIC_IPC = (1 << 0);
 
 // Audio DSP Host IPC Target - (HIPCT - offset 0x40)
 constexpr uint32_t ADSP_REG_HIPCT_BUSY = (1 << 31);
@@ -333,7 +339,7 @@ constexpr uint32_t ADSP_REG_HIPCT_BUSY = (1 << 31);
 constexpr uint32_t ADSP_REG_HIPCI_BUSY = (1 << 31);
 
 // Audio DSP Host Inter Processor Communication Initiator Extension - (HIPCIE - offset 0x4C)
-constexpr uint32_t ADSP_REG_HIPCIE_ERR  = (1 << 31);
+constexpr uint32_t ADSP_REG_HIPCIE_ERR = (1 << 31);
 constexpr uint32_t ADSP_REG_HIPCIE_DONE = (1 << 30);
 
 // Audio DSP Host IPC Control - (HIPCCTL - offset 0x50)
@@ -345,8 +351,8 @@ constexpr uint32_t ADSP_REG_CL_SPBFCTL_SPIBE = (1 << 0);
 
 // Audio DSP ROM Status bits
 constexpr uint32_t ADSP_FW_STATUS_STATE_INITIALIZATION_DONE = 0x1;
-constexpr uint32_t ADSP_FW_STATUS_STATE_ENTER_BASE_FW       = 0xF;
-constexpr uint32_t ADSP_FW_STATUS_STATE_MASK                = 0x0FFFFFFF;
+constexpr uint32_t ADSP_FW_STATUS_STATE_ENTER_BASE_FW = 0xF;
+constexpr uint32_t ADSP_FW_STATUS_STATE_MASK = 0x0FFFFFFF;
 
 // ADSP SRAM windows
 constexpr size_t SKL_ADSP_SRAM0_OFFSET = 0x8000;  // Shared between Skylake and Kabylake
@@ -354,9 +360,6 @@ constexpr size_t SKL_ADSP_SRAM1_OFFSET = 0xA000;
 
 // Mailbox offsets
 constexpr size_t ADSP_MAILBOX_IN_OFFSET = 0x1000;  // Section 5.5 Offset from SRAM0
-
-#undef _SIC_
-// clang-format on
 
 // The definition of a Buffer Descriptor List entry.  See Section 3.6.3 and
 // Table 50.

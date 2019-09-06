@@ -387,10 +387,8 @@ struct IpcMessage {
 
 // Common
 
-#define _SIC_ static inline constexpr
-
-_SIC_ uint32_t IPC_PRI(MsgTarget msg_tgt, MsgDir rsp, ModuleMsgType type, uint8_t instance_id,
-                       uint16_t module_id) {
+static inline constexpr uint32_t IPC_PRI(MsgTarget msg_tgt, MsgDir rsp, ModuleMsgType type,
+                                         uint8_t instance_id, uint16_t module_id) {
   return (static_cast<uint8_t>(msg_tgt) << IPC_PRI_MSG_TGT_SHIFT) |
          (static_cast<uint8_t>(rsp) << IPC_PRI_RSP_SHIFT) |
          (static_cast<uint8_t>(type) << IPC_PRI_TYPE_SHIFT) |
@@ -399,8 +397,9 @@ _SIC_ uint32_t IPC_PRI(MsgTarget msg_tgt, MsgDir rsp, ModuleMsgType type, uint8_
 
 // Init Instance
 
-_SIC_ uint32_t IPC_INIT_INSTANCE_EXT(ProcDomain proc_domain, uint8_t core_id,
-                                     uint8_t ppl_instance_id, uint16_t param_block_size) {
+static inline constexpr uint32_t IPC_INIT_INSTANCE_EXT(ProcDomain proc_domain, uint8_t core_id,
+                                                       uint8_t ppl_instance_id,
+                                                       uint16_t param_block_size) {
   return (static_cast<uint8_t>(proc_domain) << IPC_EXT_PROC_DOMAIN_SHIFT) |
          ((core_id & IPC_EXT_CORE_ID_MASK) << IPC_EXT_CORE_ID_SHIFT) |
          (ppl_instance_id << IPC_EXT_PPL_INSTANCE_ID_SHIFT) | param_block_size;
@@ -408,8 +407,9 @@ _SIC_ uint32_t IPC_INIT_INSTANCE_EXT(ProcDomain proc_domain, uint8_t core_id,
 
 // Large Config Get/Set
 
-_SIC_ uint32_t IPC_LARGE_CONFIG_EXT(bool init_block, bool final_block, uint8_t large_param_id,
-                                    uint32_t data_off_size) {
+static inline constexpr uint32_t IPC_LARGE_CONFIG_EXT(bool init_block, bool final_block,
+                                                      uint8_t large_param_id,
+                                                      uint32_t data_off_size) {
   return (init_block ? (1 << IPC_EXT_INIT_BLOCK_SHIFT) : 0) |
          (final_block ? (1 << IPC_EXT_FINAL_BLOCK_SHIFT) : 0) |
          (large_param_id << IPC_EXT_LARGE_PARAM_ID_SHIFT) |
@@ -418,8 +418,9 @@ _SIC_ uint32_t IPC_LARGE_CONFIG_EXT(bool init_block, bool final_block, uint8_t l
 
 // Bind/Unbind
 
-_SIC_ uint32_t IPC_BIND_UNBIND_EXT(uint16_t dst_module_id, uint8_t dst_instance_id,
-                                   uint8_t dst_queue, uint8_t src_queue) {
+static inline constexpr uint32_t IPC_BIND_UNBIND_EXT(uint16_t dst_module_id,
+                                                     uint8_t dst_instance_id, uint8_t dst_queue,
+                                                     uint8_t src_queue) {
   return ((src_queue & IPC_EXT_SRC_QUEUE_MASK) << IPC_EXT_SRC_QUEUE_SHIFT) |
          ((dst_queue & IPC_EXT_DST_QUEUE_MASK) << IPC_EXT_DST_QUEUE_SHIFT) |
          (dst_instance_id << IPC_EXT_DST_INSTANCE_ID_SHIFT) | dst_module_id;
@@ -427,8 +428,8 @@ _SIC_ uint32_t IPC_BIND_UNBIND_EXT(uint16_t dst_module_id, uint8_t dst_instance_
 
 // Create Pipeline
 
-_SIC_ uint32_t IPC_CREATE_PIPELINE_PRI(uint8_t instance_id, uint8_t ppl_priority,
-                                       uint16_t ppl_mem_size) {
+static inline constexpr uint32_t IPC_CREATE_PIPELINE_PRI(uint8_t instance_id, uint8_t ppl_priority,
+                                                         uint16_t ppl_mem_size) {
   return (static_cast<uint8_t>(MsgTarget::FW_GEN_MSG) << IPC_PRI_MSG_TGT_SHIFT) |
          (static_cast<uint8_t>(MsgDir::MSG_REQUEST) << IPC_PRI_RSP_SHIFT) |
          (static_cast<uint8_t>(GlobalType::CREATE_PIPELINE) << IPC_PRI_TYPE_SHIFT) |
@@ -437,22 +438,20 @@ _SIC_ uint32_t IPC_CREATE_PIPELINE_PRI(uint8_t instance_id, uint8_t ppl_priority
          (ppl_mem_size & IPC_PRI_PPL_MEM_SIZE_MASK);
 }
 
-_SIC_ uint32_t IPC_CREATE_PIPELINE_EXT(bool lp) { return (lp ? 1 : 0); }
+static inline constexpr uint32_t IPC_CREATE_PIPELINE_EXT(bool lp) { return (lp ? 1 : 0); }
 
 // Set Pipeline State
 
-_SIC_ uint32_t IPC_SET_PIPELINE_STATE_PRI(uint8_t ppl_id, PipelineState state) {
+static inline constexpr uint32_t IPC_SET_PIPELINE_STATE_PRI(uint8_t ppl_id, PipelineState state) {
   return (static_cast<uint8_t>(MsgTarget::FW_GEN_MSG) << IPC_PRI_MSG_TGT_SHIFT) |
          (static_cast<uint8_t>(MsgDir::MSG_REQUEST) << IPC_PRI_RSP_SHIFT) |
          (static_cast<uint8_t>(GlobalType::SET_PIPELINE_STATE) << IPC_PRI_TYPE_SHIFT) |
          (ppl_id << IPC_PRI_INSTANCE_ID_SHIFT) | static_cast<uint16_t>(state);
 }
 
-_SIC_ uint32_t IPC_SET_PIPELINE_STATE_EXT(bool multi_ppl, bool sync_stop_start) {
+static inline constexpr uint32_t IPC_SET_PIPELINE_STATE_EXT(bool multi_ppl, bool sync_stop_start) {
   return (sync_stop_start ? (1 << IPC_EXT_SYNC_STOP_START_SHIFT) : 0) | (multi_ppl ? 1 : 0);
 }
-
-#undef _SIC_
 
 // Base FW Run-time Parameters
 
@@ -599,20 +598,17 @@ struct CopierGatewayCfg {
   uint8_t config_data[];
 } __PACKED;
 
-#define _SIC_ static inline constexpr
-
-_SIC_ uint32_t HDA_GATEWAY_CFG_NODE_ID(uint8_t dma_type, uint8_t dma_id) {
+static inline constexpr uint32_t HDA_GATEWAY_CFG_NODE_ID(uint8_t dma_type, uint8_t dma_id) {
   return ((dma_type & NODE_ID_DMA_TYPE_MASK) << NODE_ID_DMA_TYPE_SHIFT) |
          (dma_id & NODE_ID_DMA_ID_MASK);
 }
 
-_SIC_ uint32_t I2S_GATEWAY_CFG_NODE_ID(uint8_t dma_type, uint8_t i2s_instance, uint8_t time_slot) {
+static inline constexpr uint32_t I2S_GATEWAY_CFG_NODE_ID(uint8_t dma_type, uint8_t i2s_instance,
+                                                         uint8_t time_slot) {
   return ((dma_type & NODE_ID_DMA_TYPE_MASK) << NODE_ID_DMA_TYPE_SHIFT) |
          ((i2s_instance & NODE_ID_I2S_INSTANCE_MASK) << NODE_ID_I2S_INSTANCE_SHIFT) |
          (time_slot & NODE_ID_TIME_SLOT_MASK);
 }
-
-#undef _SIC_
 
 struct CopierCfg {
   BaseModuleCfg base_cfg;

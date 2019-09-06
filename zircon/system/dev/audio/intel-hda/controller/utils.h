@@ -31,16 +31,14 @@ constexpr size_t MAPPED_CORB_RIRB_SIZE = PAGE_SIZE;
 // Individual BDLs should be 1 page each
 constexpr size_t MAPPED_BDL_SIZE = PAGE_SIZE;
 
-#define _SIC_ static inline constexpr
 template <typename T>
-_SIC_ T OR(T x, T y) {
+static inline constexpr T OR(T x, T y) {
   return static_cast<T>(x | y);
 }
 template <typename T>
-_SIC_ T AND(T x, T y) {
+static inline constexpr T AND(T x, T y) {
   return static_cast<T>(x & y);
 }
-#undef _SIC_
 
 // Static container for the driver wide VMARs that we stash all of our register
 // mappings in, in order to make efficient use of kernel PTEs
