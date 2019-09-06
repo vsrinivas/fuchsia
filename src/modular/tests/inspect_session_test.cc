@@ -32,7 +32,7 @@ using testing::Not;
 
 constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 constexpr char kSessionmgrInspectRootGlobPath[] =
-    "/hub/r/mth_*_inspect/*/c/sessionmgr.cmx/*/out/objects/root.inspect";
+    "/hub/r/mth_*_inspect/*/c/sessionmgr.cmx/*/out/inspect/root.inspect";
 namespace {
 
 class InspectSessionTest : public modular::testing::TestHarnessFixture {

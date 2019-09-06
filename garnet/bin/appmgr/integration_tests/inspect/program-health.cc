@@ -10,8 +10,8 @@
 int main() {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
-  auto inspector = sys::ComponentInspector::Initialize(context.get());
-  sys::ComponentInspector::Get()->Health().Unhealthy("Example failure");
+  auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
+  inspector->Health().Unhealthy("Example failure");
 
   loop.Run();
   return 0;

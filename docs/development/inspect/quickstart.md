@@ -59,7 +59,7 @@ initialization work.
 async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 auto component_context = sys::ComponentContext::Create();
 auto inspector =
-      sys::ComponentInspector::Initialize(component_context.get());
+      std::make_unique<sys::ComponentInspector>(component_context.get());
 inspect::Node& root_node = inspector->root();
 // ...
 loop.Run();
@@ -343,14 +343,14 @@ $ iquery --find /hub | grep my_component.cmx
 > "system\_objects." This Inspect data is placed there by the Component Runtime
 > itself.
 
-Your component's endpoint will be listed as `<path>/my_component.cmx/<id>/out/objects/root.inspect`.
+Your component's endpoint will be listed as `<path>/my_component.cmx/<id>/out/inspect/root.inspect`.
 
 Note: If you followed [Dynamic Value Support](#dynamic-value-support) above,
 "root.inspect" will be missing.
 
 ## Read your Inspect data
 
-Navigate to the `out/objects` directory that was printed above, and run:
+Navigate to the `out/` directory that was printed above, and run:
 
 ```
 $ iquery --recursive root.inspect

@@ -12,11 +12,11 @@ int main(int argc, const char** argv) {
 
   std::vector<inspect::IntProperty> properties;
   auto context = sys::ComponentContext::Create();
-  auto inspector = sys::ComponentInspector::Initialize(context.get());
+  auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
 
   properties.emplace_back(inspector->root().CreateInt("val1", 1));
   properties.emplace_back(inspector->root().CreateInt("val2", 2));
-  properties.emplace_back(sys::ComponentInspector::Get()->root().CreateInt("val3", 3));
+  properties.emplace_back(inspector->root().CreateInt("val3", 3));
 
   inspector->Health().Ok();
 

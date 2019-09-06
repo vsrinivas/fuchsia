@@ -11,26 +11,14 @@ using inspect::NodeHealth;
 
 namespace sys {
 
-std::weak_ptr<ComponentInspector> ComponentInspector::singleton_;
-
-ComponentInspector::ComponentInspector() : inspector_("root") {}
-
-std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
-    sys::ComponentContext* startup_context) {
-  ZX_ASSERT(!singleton_.lock());
-
-  auto inspector = std::shared_ptr<ComponentInspector>(new ComponentInspector());
-
-  zx::vmo read_only_vmo = inspector->inspector()->DuplicateVmo();
+ComponentInspector::ComponentInspector(sys::ComponentContext* startup_context)
+    : inspector_("root") {
+  zx::vmo read_only_vmo = inspector_.DuplicateVmo();
   if (read_only_vmo.get() != ZX_HANDLE_INVALID) {
     auto vmo_file = std::make_unique<vfs::VmoFile>(std::move(read_only_vmo), 0, 4096);
-    ZX_ASSERT(startup_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
+    ZX_ASSERT(startup_context->outgoing()->GetOrCreateDirectory("inspect")->AddEntry(
                   "root.inspect", std::move(vmo_file)) == ZX_OK);
   }
-
-  singleton_ = inspector;
-
-  return inspector;
 }
 
 NodeHealth& ComponentInspector::Health() {

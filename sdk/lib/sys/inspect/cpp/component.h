@@ -9,8 +9,6 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <string>
-
 namespace sys {
 
 // ComponentInspector is a singleton wrapping an Inspector for a Fuchsia Component.
@@ -19,22 +17,15 @@ namespace sys {
 // of the component.
 class ComponentInspector final {
  public:
+  // Creates a new Inspector for this component, and publishes it in this component's outgoing
+  // directory at the path "inspect/root.inspect".
+  explicit ComponentInspector(sys::ComponentContext* startup_context);
+
   // Get the inspector for this component.
   ::inspect::Inspector* inspector() { return &inspector_; }
 
   // Get the root tree for this component.
   ::inspect::Node& root() { return inspector_.GetRoot(); }
-
-  // Initialize Inspection for the component. The returned ComponentInspector
-  // must remain alive as long as inspection information needs to be available.
-  //
-  // This method is NOT thread safe, and should only be called once by the main thread.
-  static std::shared_ptr<ComponentInspector> Initialize(sys::ComponentContext* startup_context);
-
-  // Gets the singleton ComponentInspector for this process, if it exists.
-  //
-  // This method is thread safe.
-  static std::shared_ptr<ComponentInspector> Get() { return singleton_.lock(); }
 
   // Gets the NodeHealth for this component.
   // This method is NOT thread safe.
@@ -42,8 +33,6 @@ class ComponentInspector final {
 
  private:
   ComponentInspector();
-
-  static std::weak_ptr<ComponentInspector> singleton_;
 
   std::unique_ptr<::inspect::NodeHealth> component_health_;
 

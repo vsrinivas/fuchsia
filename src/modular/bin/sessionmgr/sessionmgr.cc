@@ -94,7 +94,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto component_context = sys::ComponentContext::Create();
-  auto inspector = sys::ComponentInspector::Initialize(component_context.get());
+  auto inspector = std::make_unique<sys::ComponentInspector>(component_context.get());
   inspect::Node& inspect_root = inspector->root();
 
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

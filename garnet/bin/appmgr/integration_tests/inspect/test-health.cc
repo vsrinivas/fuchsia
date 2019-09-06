@@ -9,8 +9,9 @@
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-#include <src/lib/fxl/strings/substitute.h>
 #include <zircon/device/vfs.h>
+
+#include <src/lib/fxl/strings/substitute.h>
 
 #include "gmock/gmock.h"
 #include "src/lib/files/glob.h"
@@ -57,7 +58,7 @@ class InspectHealthTest : public sys::testing::TestWithEnvironment {
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
   zx_status_t GetInspectVmo(zx::vmo* out_vmo) {
-    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/objects/root.inspect", kTestProcessName));
+    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/inspect/root.inspect", kTestProcessName));
     if (glob.size() == 0) {
       return ZX_ERR_NOT_FOUND;
     }

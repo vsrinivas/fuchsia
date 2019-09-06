@@ -29,7 +29,7 @@ void Reporter::Init(sys::ComponentContext* component_context) {
 }
 
 void Reporter::InitInspect() {
-  inspector_ = sys::ComponentInspector::Initialize(component_context_);
+  inspector_ = std::make_shared<sys::ComponentInspector>(component_context_);
   inspect::Node& root_node = inspector_->root();
   failed_to_open_device_count_ = root_node.CreateUint("count of failures to open device", 0);
   failed_to_obtain_fdio_service_channel_count_ =
