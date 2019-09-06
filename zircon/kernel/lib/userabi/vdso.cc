@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/affine/ratio.h>
 #include <lib/cmdline.h>
 #include <lib/userabi/vdso-constants.h>
 #include <lib/userabi/vdso.h>
@@ -210,6 +211,17 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
                                                    VDSO_DATA_CONSTANTS);
   zx_ticks_t per_second = ticks_per_second();
 
+  // Grab a copy of the ticks to mono ratio; we need this to initialize the
+  // constants window.
+  affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
+
+  // At this point in time, we absolutely must know the rate that our tick
+  // counter is ticking at.  If we don't, then something has gone horribly
+  // wrong.
+  ASSERT(per_second != 0);
+  ASSERT(ticks_to_mono_ratio.numerator() != 0);
+  ASSERT(ticks_to_mono_ratio.denominator() != 0);
+
   // Initialize the constants that should be visible to the vDSO.
   // Rather than assigning each member individually, do this with
   // struct assignment and a compound literal so that the compiler
@@ -224,19 +236,40 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
       arch_dcache_line_size(),
       arch_icache_line_size(),
       per_second,
+      ticks_to_mono_ratio.numerator(),
+      ticks_to_mono_ratio.denominator(),
       pmm_count_total_bytes(),
       BUILDID,
   };
 
-  // If ticks_per_second has not been calibrated, it will return 0. In this
-  // case, use soft_ticks instead.
-  if (per_second == 0 || gCmdline.GetBool("vdso.soft_ticks", false)) {
-    // Make zx_ticks_per_second return nanoseconds per second.
-    constants_window.data()->ticks_per_second = ZX_SEC(1);
+  // Conditionally patch some of the entry points related to time based on
+  // platform details which get determined at runtime.
+  VDsoDynSymWindow dynsym_window(vdso->vmo()->vmo());
 
-    // Adjust the zx_ticks_get entry point to be soft_ticks_get.
-    VDsoDynSymWindow dynsym_window(vdso->vmo()->vmo());
-    REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, soft_ticks_get);
+  // If user mode cannot access the tick counter registers, or kernel command
+  // line arguments demand that we access the tick counter via a syscall
+  // instead of direct observation, then we need to make sure to redirect
+  // symbol in the vDSO such that we always syscall in order to query ticks.
+  //
+  // Since this can effect how clock monotonic is calculated as well, we may
+  // need to redirect zx_clock_get_monotonic as well.
+  const bool need_syscall_for_ticks = !platform_usermode_can_access_tick_registers() ||
+                                      gCmdline.GetBool("vdso.ticks_get_force_syscall", false);
+
+  if (need_syscall_for_ticks) {
+    REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, SYSCALL_zx_ticks_get_via_kernel);
+  }
+
+  if (gCmdline.GetBool("vdso.clock_get_monotonic_force_syscall", false)) {
+    // Force a syscall for zx_clock_get_monotonic if instructed to do so by
+    // the kernel command line arguments.
+    REDIRECT_SYSCALL(dynsym_window, zx_clock_get_monotonic,
+                     SYSCALL_zx_clock_get_monotonic_via_kernel);
+  } else if (need_syscall_for_ticks) {
+    // If ticks must be accessed via syscall, then choose the alternate form
+    // for clock_get_monotonic which performs the scaling in user mode, but
+    // thunks into the kernel to read the ticks register.
+    REDIRECT_SYSCALL(dynsym_window, zx_clock_get_monotonic, clock_get_monotonic_via_kernel_ticks);
   }
 
   DEBUG_ASSERT(!(vdso->vmo_rights() & ZX_RIGHT_WRITE));

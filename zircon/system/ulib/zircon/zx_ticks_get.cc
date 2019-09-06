@@ -25,6 +25,8 @@ zx_ticks_t _zx_ticks_get(void) {
 
 VDSO_INTERFACE_FUNCTION(zx_ticks_get);
 
-// At boot time the kernel can decide to redirect the {_,}zx_ticks_get
-// dynamic symbol table entries to point to this instead.  See VDso::VDso.
-VDSO_KERNEL_EXPORT zx_ticks_t CODE_soft_ticks_get(void) { return VDSO_zx_clock_get_monotonic(); }
+// Note: See alternates.ld for a definition of CODE_ticks_get_via_kernel, which
+// is an alias for SYSCALL_zx_ticks_get_via_kernel.  This is a version of
+// zx_ticks_get which goes through a forced syscall.  It is selected by the vDSO
+// builder at runtiem for use on platforms where the hardware tick counter is
+// not directly accessible by user mode code.

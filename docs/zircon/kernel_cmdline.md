@@ -482,11 +482,17 @@ If this option is set, userboot will attempt to power off the machine
 when the process it launches exits.  Note if `userboot.reboot` is set
 then `userboot.shutdown` will be ignored.
 
-## vdso.soft_ticks=\<bool>
+## vdso.ticks_get_force_syscall=\<bool>
 
-If this option is set, the `zx_ticks_get` and `zx_ticks_per_second` system
-calls will use `zx_clock_get_monotonic()` in nanoseconds rather than
-hardware cycle counters in a hardware-based time unit.  Defaults to false.
+If this option is set, the `zx_ticks_get` vDSO call will be forced to be a true
+syscall, even if the hardware cycle counter registers are accessible from
+user-mode.  Defaults to false.
+
+## vdso.clock_get_monotonic_force_syscall=\<bool>
+
+If this option is set, the `zx_clock_get_monotonic` vDSO call will be forced to
+be a true syscall, instead of simply performing a transformation of the tick
+counter in user-mode.  Defaults to false.
 
 ## virtcon.disable
 

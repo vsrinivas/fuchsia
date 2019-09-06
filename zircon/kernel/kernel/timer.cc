@@ -30,6 +30,7 @@
 #include <malloc.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/compiler.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

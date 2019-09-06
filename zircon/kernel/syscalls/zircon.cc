@@ -6,6 +6,7 @@
 
 #include <err.h>
 #include <inttypes.h>
+#include <lib/counters.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
@@ -35,6 +36,12 @@
 #include "priv.h"
 
 #define LOCAL_TRACE 0
+
+KCOUNTER(syscalls_zx_ticks_get, "syscalls.zx_ticks_get")
+KCOUNTER(syscalls_zx_clock_get_monotonic, "syscalls.zx_clock_get_monotonic")
+KCOUNTER(syscalls_zx_clock_get_type_monotonic, "syscalls.zx_clock_get.zx_clock_monotonic")
+KCOUNTER(syscalls_zx_clock_get_type_utc, "syscalls.zx_clock_get.zx_clock_utc")
+KCOUNTER(syscalls_zx_clock_get_type_thread, "syscalls.zx_clock_get.zx_clock_thread")
 
 constexpr size_t kMaxCPRNGDraw = ZX_CPRNG_DRAW_MAX_LEN;
 constexpr size_t kMaxCPRNGSeed = ZX_CPRNG_ADD_ENTROPY_MAX_LEN;
@@ -70,12 +77,15 @@ zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time)
   switch (clock_id) {
     case ZX_CLOCK_MONOTONIC:
       time = current_time();
+      kcounter_add(syscalls_zx_clock_get_type_monotonic, 1);
       break;
     case ZX_CLOCK_UTC:
       time = current_time() + utc_offset.load();
+      kcounter_add(syscalls_zx_clock_get_type_utc, 1);
       break;
     case ZX_CLOCK_THREAD:
       time = ThreadDispatcher::GetCurrent()->runtime_ns();
+      kcounter_add(syscalls_zx_clock_get_type_thread, 1);
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
@@ -84,7 +94,15 @@ zx_status_t sys_clock_get(zx_clock_t clock_id, user_out_ptr<zx_time_t> out_time)
   return out_time.copy_to_user(time);
 }
 
-zx_time_t sys_clock_get_monotonic() { return current_time(); }
+zx_time_t sys_clock_get_monotonic_via_kernel() {
+  kcounter_add(syscalls_zx_clock_get_monotonic, 1);
+  return current_time();
+}
+
+zx_ticks_t sys_ticks_get_via_kernel() {
+  kcounter_add(syscalls_zx_ticks_get, 1);
+  return current_ticks();
+}
 
 // zx_status_t zx_clock_adjust
 zx_status_t sys_clock_adjust(zx_handle_t hrsrc, zx_clock_t clock_id, int64_t offset) {

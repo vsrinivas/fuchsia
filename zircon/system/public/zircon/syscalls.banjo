@@ -71,6 +71,7 @@ protocol Api {
     clock_get(zx.clock clock_id) -> (zx.status status, zx.time out);
 
     /// Acquire the current monotonic time.
+    [vdsocall]
     clock_get_monotonic() -> (zx.time time);
 
     /// High resolution sleep.
@@ -93,6 +94,25 @@ protocol Api {
 
     [rights="handle must have resource kind ZX_RSRC_KIND_ROOT."]
     clock_adjust(handle<resource> handle, zx.clock clock_id, int64 offset) -> (zx.status status);
+
+    // Read the number of high-precision timer ticks since boot, but demand
+    // that the read be performed using a syscall, instead of a vdso call.
+    //
+    // Note that this is an internal syscall, not meant to be used by
+    // application code.  By default, the vdso version of this syscall will do
+    // the proper thing, either directly reading from the hardware register
+    // backing the tick counter, or by making a syscall if the register is not
+    // accessible from user mode code (for whatever reason).
+    [internal]
+    ticks_get_via_kernel() -> (zx.ticks ticks);
+
+    // Read clock monotonic, but demand that the read be performed using a
+    // syscall, instead of a vdso call.
+    //
+    // See the notes for ticks_get_via_kernel; this is not a syscall meant
+    // to be used by application code.
+    [internal]
+    clock_get_monotonic_via_kernel() -> (zx.time time);
 
     //
     //

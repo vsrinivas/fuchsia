@@ -217,6 +217,7 @@ if (is_kernel) {
       "$zx/kernel/lib/version:config-buildid-header",
       "$zx/kernel/syscalls",
       "$zx/kernel/vm:headers",
+      "$zx/system/ulib/affine",
       "$zx/system/ulib/fbl",
     ]
   }

@@ -9,7 +9,6 @@
 #define ZIRCON_KERNEL_INCLUDE_PLATFORM_H_
 
 #include <sys/types.h>
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -39,6 +38,10 @@ zx_ticks_t ticks_per_second(void);
 
 /* high-precision timer current_ticks */
 extern zx_ticks_t (*current_ticks)(void);
+
+/* a bool indicating whether or not user mode has direct access to the registers
+ * which allow directly observing the tick counter or not. */
+bool platform_usermode_can_access_tick_registers(void);
 
 /* super early platform initialization, before almost everything */
 void platform_early_init(void);
