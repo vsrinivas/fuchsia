@@ -72,12 +72,15 @@ MockObjectProvider CreateDefaultMockObjectProvider() {
   provider.AppendProcess(job1, "job1-p2");
 
   MockJobObject* job11 = provider.AppendJob(job1, "job11");
-  provider.AppendProcess(job11, "job11-p1");  // process-6
+  MockProcessObject* process = provider.AppendProcess(job11, "job11-p1");
+  provider.AppendThread(process, "second-thread");
 
-  MockJobObject* job12 = provider.AppendJob(job1, "job12");     // job-3
-  MockJobObject* job121 = provider.AppendJob(job12, "job121");  // job-4
-  provider.AppendProcess(job121, "job121-p1");                  // process-7
-  provider.AppendProcess(job121, "job121-p2");                  // process-8
+  MockJobObject* job12 = provider.AppendJob(job1, "job12");
+  MockJobObject* job121 = provider.AppendJob(job12, "job121");
+  provider.AppendProcess(job121, "job121-p1");
+  process = provider.AppendProcess(job121, "job121-p2");
+  provider.AppendThread(process, "second-thread");
+  provider.AppendThread(process, "third-thread");
 
   return provider;
 }
@@ -94,7 +97,17 @@ MockJobObject* MockObjectProvider::AppendJob(MockJobObject* job, std::string nam
 
 MockProcessObject* MockObjectProvider::AppendProcess(MockJobObject* job, std::string name) {
   job->child_processes.push_back(CreateProcess(std::move(name)));
-  return job->child_processes.back().get();
+
+  // Create the initial thread.
+  MockProcessObject* process = job->child_processes.back().get();
+  process->child_threads.push_back(CreateThread());
+
+  return process;
+}
+
+MockThreadObject* MockObjectProvider::AppendThread(MockProcessObject* process, std::string name) {
+  process->child_threads.push_back(CreateThread(std::move(name)));
+  return process->child_threads.back().get();
 }
 
 std::unique_ptr<MockJobObject> MockObjectProvider::CreateJob(std::string name) {
@@ -106,7 +119,7 @@ std::unique_ptr<MockJobObject> MockObjectProvider::CreateJob(std::string name) {
   job->type = MockObject::Type::kJob;
 
   object_map_[job->koid] = job.get();
-  name_map_[job->name] = job.get();
+  job_map_[job->name] = job.get();
 
   return job;
 }
@@ -120,9 +133,22 @@ std::unique_ptr<MockProcessObject> MockObjectProvider::CreateProcess(std::string
   process->type = MockObject::Type::kProcess;
 
   object_map_[process->koid] = process.get();
-  name_map_[process->name] = process.get();
+  process_map_[process->name] = process.get();
 
   return process;
+}
+
+std::unique_ptr<MockThreadObject> MockObjectProvider::CreateThread(std::string name) {
+  int koid = next_koid_++;
+
+  auto thread = std::make_unique<MockThreadObject>();
+  thread->koid = koid;
+  thread->name = std::move(name);
+  thread->type = MockObject::Type::kThread;
+
+  object_map_[thread->koid] = thread.get();
+
+  return thread;
 }
 
 MockObject* MockObjectProvider::ObjectByKoid(zx_koid_t koid) const {
@@ -132,9 +158,16 @@ MockObject* MockObjectProvider::ObjectByKoid(zx_koid_t koid) const {
   return it->second;
 }
 
-MockObject* MockObjectProvider::ObjectByName(const std::string& name) const {
-  auto it = name_map_.find(name);
-  if (it == name_map_.end())
+const MockJobObject* MockObjectProvider::JobByName(const std::string& name) const {
+  auto it = job_map_.find(name);
+  if (it == job_map_.end())
+    return nullptr;
+  return it->second;
+}
+
+const MockProcessObject* MockObjectProvider::ProcessByName(const std::string& name) const {
+  auto it = process_map_.find(name);
+  if (it == process_map_.end())
     return nullptr;
   return it->second;
 }

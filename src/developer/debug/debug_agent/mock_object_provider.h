@@ -22,14 +22,20 @@ struct MockObject {
   enum class Type {
     kJob,
     kProcess,
+    kThread,
+    kLast,
   };
 
   zx_koid_t koid;
   std::string name;
-  Type type;
+  Type type = Type::kLast;
 };
 
-struct MockProcessObject : public MockObject {};
+struct MockThreadObject : public MockObject {};
+
+struct MockProcessObject : public MockObject {
+  std::vector<std::unique_ptr<MockThreadObject>> child_threads;
+};
 
 struct MockJobObject : public MockObject {
   // Unique pointers so that they're fixed in memory and can cache the pointers.
@@ -51,20 +57,26 @@ class MockObjectProvider : public ObjectProvider {
 
   MockJobObject* root() const { return root_.get(); }
   MockObject* ObjectByKoid(zx_koid_t koid) const;
-  MockObject* ObjectByName(const std::string& name) const;
+
+  const MockJobObject* JobByName(const std::string& name) const;
+  const MockProcessObject* ProcessByName(const std::string& name) const;
 
   // Passing |nullptr| to |parent_job| will create a root handle.
   MockJobObject* AppendJob(MockJobObject* parent_job, std::string name);
-
   MockProcessObject* AppendProcess(MockJobObject* parent_job, std::string name);
+  MockThreadObject* AppendThread(MockProcessObject* parent_process, std::string name);
 
  private:
   std::unique_ptr<MockJobObject> CreateJob(std::string name);          // Advances the koid.
   std::unique_ptr<MockProcessObject> CreateProcess(std::string name);  // Advances the koid.
+  std::unique_ptr<MockThreadObject> CreateThread(std::string name = "initial-thread");
 
   std::unique_ptr<MockJobObject> root_;
-  std::map<zx_koid_t, MockObject*> object_map_;  // For easy access.
-  std::map<std::string, MockObject*> name_map_;  // For easy access.
+
+  std::map<zx_koid_t, MockObject*> object_map_;
+
+  std::map<std::string, MockJobObject*> job_map_;
+  std::map<std::string, MockProcessObject*> process_map_;
 
   uint64_t next_koid_ = 1;
 };
@@ -73,17 +85,28 @@ class MockObjectProvider : public ObjectProvider {
 //
 //  j: 1 root
 //    p: 2 root-p1
-//    p: 3 root-p2
-//    p: 4 root-p3
-//    j: 5 job1
-//      p: 6 job1-p1
-//      p: 7 job1-p2
-//      j: 8 job11
-//        p: 9 job11-p1
-//      j: 10 job12
-//        j: 11 job121
-//          p: 12 job121-p1
-//          p: 13 job121-p2
+//      t: 3 initial-thread
+//    p: 4 root-p2
+//      t: 5 initial-thread
+//    p: 6 root-p3
+//      t: 7 initial-thread
+//    j: 8 job1
+//      p: 9 job1-p1
+//        t: 10 initial-thread
+//      p: 11 job1-p2
+//        t: 12 initial-thread
+//      j: 13 job11
+//        p: 14 job11-p1
+//          t: 15 initial-thread
+//          t: 16 second-thread
+//      j: 17 job12
+//        j: 18 job121
+//          p: 19 job121-p1
+//            t: 20 initial-thread
+//          p: 21 job121-p2
+//            t: 22 initial-thread
+//            t: 22 second-thread
+//            t: 23 third-thread
 MockObjectProvider CreateDefaultMockObjectProvider();
 
 }  // namespace debug_agent

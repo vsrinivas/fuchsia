@@ -20,7 +20,7 @@ class MockProcessStartHandler : public ProcessStartHandler {
 
 bool IsProcessMatched(const MockObjectProvider& provider, const std::set<zx_koid_t>& matches,
                       const std::string& process_name) {
-  auto process = provider.ObjectByName(process_name);
+  auto process = provider.ProcessByName(process_name);
   FXL_DCHECK(process) << "Could not find mock process " << process_name;
   return matches.find(process->koid) != matches.end();
 }
@@ -113,7 +113,7 @@ TEST(DebuggedJob, SubJobMatching) {
   EXPECT_TRUE(IsProcessMatched(provider, matches, "job11-p1"));
   EXPECT_TRUE(IsProcessMatched(provider, matches, "job121-p1"));
 
-  MockObject* fake_sub_job = provider.ObjectByName("job1");
+  const MockObject* fake_sub_job = provider.JobByName("job1");
   ASSERT_TRUE(fake_sub_job);
 
   DebuggedJob sub_job(&provider, &start_handler, fake_sub_job->koid, zx::job(fake_sub_job->koid));
