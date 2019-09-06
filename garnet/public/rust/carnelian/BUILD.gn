@@ -32,6 +32,7 @@ rustc_library("carnelian") {
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//src/graphics/lib/compute/mold",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
@@ -185,8 +186,8 @@ rustc_binary("drawing_mold") {
     "//garnet/public/rust/fuchsia-framebuffer",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-zircon",
-    "//src/graphics/lib/compute/mold",
     "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//src/graphics/lib/compute/mold",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
@@ -429,7 +430,6 @@ rustc_binary("carnelian_fb_integration_test_bin") {
     "//third_party/rust_crates:futures-preview",
   ]
 }
-
 
 test_package("carnelian_fb_integration_test") {
   deps = [

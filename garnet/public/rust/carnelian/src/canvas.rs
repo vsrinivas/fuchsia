@@ -366,7 +366,6 @@ mod update_area_tests {
         let expected_are_iter = UpdateAreaExpectedIter::new_from_rects(&[combined]);
         assert_equal(area_iter, expected_are_iter);
     }
-
 }
 
 /// Trait abstracting a target to which pixels can be written. Only used currently
