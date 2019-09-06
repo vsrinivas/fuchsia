@@ -81,6 +81,8 @@ class JobStreamBackend : public LocalStreamBackend {
  public:
   JobStreamBackend(MessageLoop* message_loop) : message_loop_(message_loop) {}
 
+  void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
+
   void ClearAttachReply() { attach_reply_ = std::nullopt; }
 
   // Notification Handling -----------------------------------------------------
@@ -140,6 +142,7 @@ class JobStreamBackend : public LocalStreamBackend {
   std::vector<NotifyException> exceptions_;
 
   MessageLoop* message_loop_ = nullptr;
+  RemoteAPI* remote_api_ = nullptr;
 };
 
 // Process Management Utility Functions ----------------------------------------
@@ -211,7 +214,13 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   MessageLoop* message_loop = message_loop_wrapper.loop();
 
   JobStreamBackend backend(message_loop);
-  RemoteAPI* remote_api = backend.remote_api();
+
+  auto services = sys::ServiceDirectory::CreateFromNamespace();
+  DebugAgent agent(std::move(services));
+  RemoteAPI* remote_api = &agent;
+  agent.Connect(&backend.stream());
+
+  backend.set_remote_api(remote_api);
 
   FXL_VLOG(1) << "Attaching to root component.";
 
@@ -401,7 +410,13 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   MessageLoopWrapper loop_wrapper;
 
   JobStreamBackend mock_stream_backend(loop_wrapper.loop());
-  RemoteAPI* remote_api = mock_stream_backend.remote_api();
+
+  auto services = sys::ServiceDirectory::CreateFromNamespace();
+  DebugAgent agent(std::move(services));
+  RemoteAPI* remote_api = &agent;
+  agent.Connect(&mock_stream_backend.stream());
+
+  mock_stream_backend.set_remote_api(remote_api);
 
   // Request attaching to the component root job.
   debug_ipc::AttachRequest attach_request = {};

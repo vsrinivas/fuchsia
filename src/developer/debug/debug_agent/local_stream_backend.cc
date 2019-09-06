@@ -13,12 +13,7 @@
 namespace debug_agent {
 
 LocalStreamBackend::LocalStreamBackend() {
-  // We initialize the stream and pass it on to the debug agent, which will
-  // think it's correctly connected to a client.
   stream_.set_writer(this);
-  auto services = sys::ServiceDirectory::CreateFromNamespace();
-  agent_ = std::make_unique<DebugAgent>(std::move(services));
-  agent_->Connect(&stream_);
 }
 
 size_t LocalStreamBackend::ConsumeStreamBufferData(const char* data, size_t len) {

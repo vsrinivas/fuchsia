@@ -24,6 +24,8 @@ class WatchpointStreamBackend : public LocalStreamBackend {
  public:
   WatchpointStreamBackend(MessageLoop* loop) : loop_(loop) {}
 
+  void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
+
   // API -----------------------------------------------------------------------
 
   void ResumeAllThreads();
@@ -62,7 +64,9 @@ class WatchpointStreamBackend : public LocalStreamBackend {
 
   TestStage test_stage_ = TestStage::kWaitingForThread;
 
-  MessageLoop* loop_;
+  MessageLoop* loop_ = nullptr;
+  RemoteAPI* remote_api_ = nullptr;
+
   uint64_t so_test_base_addr_ = 0;
 
   zx_koid_t process_koid_ = 0;
@@ -99,8 +103,15 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
   MessageLoopWrapper loop_wrapper;
   {
     auto* loop = loop_wrapper.loop();
+
     WatchpointStreamBackend backend(loop);
-    RemoteAPI* remote_api = backend.remote_api();
+
+    auto services = sys::ServiceDirectory::CreateFromNamespace();
+    DebugAgent agent(std::move(services));
+    RemoteAPI* remote_api = &agent;
+    agent.Connect(&backend.stream());
+
+    backend.set_remote_api(remote_api);
 
     static constexpr const char kExecutable[] = "/pkg/bin/watchpoint_test_exe";
     auto [lnch_request, lnch_reply] = GetLaunchRequest(backend, kExecutable);
@@ -187,7 +198,7 @@ void WatchpointStreamBackend::ResumeAllThreads() {
   debug_ipc::ResumeRequest resume_request;
   resume_request.process_koid = process_koid();
   debug_ipc::ResumeReply resume_reply;
-  remote_api()->OnResume(resume_request, &resume_reply);
+  remote_api_->OnResume(resume_request, &resume_reply);
 }
 
 // Searches the loaded modules for specific one.

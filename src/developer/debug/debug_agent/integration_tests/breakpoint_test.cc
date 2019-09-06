@@ -140,7 +140,11 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     // This stream backend will take care of intercepting the calls from the
     // debug agent.
     BreakpointStreamBackend mock_stream_backend(loop);
-    RemoteAPI* remote_api = mock_stream_backend.remote_api();
+
+    auto services = sys::ServiceDirectory::CreateFromNamespace();
+    DebugAgent agent(std::move(services));
+    RemoteAPI* remote_api = &agent;
+    agent.Connect(&mock_stream_backend.stream());
 
     // We launch the test binary.
     debug_ipc::LaunchRequest launch_request = {};
@@ -266,7 +270,12 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     // This stream backend will take care of intercepting the calls from the
     // debug agent.
     BreakpointStreamBackend mock_stream_backend(loop);
-    RemoteAPI* remote_api = mock_stream_backend.remote_api();
+
+    auto services = sys::ServiceDirectory::CreateFromNamespace();
+    DebugAgent agent(std::move(services));
+    RemoteAPI* remote_api = &agent;
+
+    agent.Connect(&mock_stream_backend.stream());
 
     DEBUG_LOG(Test) << "Launching binary.";
 

@@ -26,8 +26,6 @@ namespace debug_agent {
 class LocalStreamBackend : public debug_ipc::StreamBuffer::Writer {
  public:
   LocalStreamBackend();
-  RemoteAPI* remote_api() const { return agent_.get(); }
-  DebugAgent* agent() const { return agent_.get(); }
 
   // Message dispatcher interface.
   // This should be overriden by every test interested in a particular set of
@@ -46,10 +44,11 @@ class LocalStreamBackend : public debug_ipc::StreamBuffer::Writer {
   // write. For this tests purposes, we always read the whole message.
   size_t ConsumeStreamBufferData(const char* data, size_t len) override;
 
+  debug_ipc::StreamBuffer& stream() { return stream_; }
+
  private:
   // This is the stream the debug agent will be given to write to.
   debug_ipc::StreamBuffer stream_;
-  std::unique_ptr<DebugAgent> agent_;
 };
 
 }  // namespace debug_agent

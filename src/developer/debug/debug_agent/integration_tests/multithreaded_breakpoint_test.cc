@@ -50,6 +50,8 @@ class BreakpointStreamBackend : public LocalStreamBackend {
   BreakpointStreamBackend(MessageLoop* loop, size_t thread_count)
       : loop_(loop), thread_count_(thread_count) {}
 
+  void set_remote_api(RemoteAPI* remote_api) { remote_api_ = remote_api; }
+
   // API -----------------------------------------------------------------------
 
   // Will send a resume notification to all threads and run the loop.
@@ -89,7 +91,9 @@ class BreakpointStreamBackend : public LocalStreamBackend {
   // Similar to ResumeAllThreadsAndRunLoop, but doesn't run the loop.
   void ResumeAllThreads();
 
-  MessageLoop* loop_;
+  MessageLoop* loop_ = nullptr;
+  RemoteAPI* remote_api_ = nullptr;
+
   uint64_t so_test_base_addr_ = 0;
 
   zx_koid_t process_koid_ = 0;
@@ -168,7 +172,13 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     // The stream backend will intercept the calls from the debug agent.
     // Second arguments is the amount of threads to create.
     BreakpointStreamBackend backend(loop, 5);
-    RemoteAPI* remote_api = backend.remote_api();
+
+    auto services = sys::ServiceDirectory::CreateFromNamespace();
+    DebugAgent agent(std::move(services));
+    RemoteAPI* remote_api = &agent;
+    agent.Connect(&backend.stream());
+
+    backend.set_remote_api(remote_api);
 
     static constexpr const char kExecutable[] = "/pkg/bin/multithreaded_breakpoint_test_exe";
     auto [lnch_request, lnch_reply] = GetLaunchRequest(backend, kExecutable);
@@ -240,7 +250,7 @@ void BreakpointStreamBackend::ResumeAllThreads() {
   debug_ipc::ResumeRequest resume_request;
   resume_request.process_koid = process_koid();
   debug_ipc::ResumeReply resume_reply;
-  remote_api()->OnResume(resume_request, &resume_reply);
+  remote_api_->OnResume(resume_request, &resume_reply);
 }
 
 // Records the exception given from the debug agent.
