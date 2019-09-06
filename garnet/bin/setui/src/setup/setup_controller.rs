@@ -4,7 +4,6 @@
 
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::registry::service_context::ServiceContext;
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
     SettingType, SetupInfo,
@@ -22,7 +21,6 @@ impl DeviceStorageCompatible for SetupInfo {
 }
 
 pub struct SetupController {
-    service_context_handle: Arc<RwLock<ServiceContext>>,
     info: SetupInfo,
     listen_notifier: Arc<RwLock<Option<Notifier>>>,
     storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
@@ -30,7 +28,6 @@ pub struct SetupController {
 
 impl SetupController {
     pub fn spawn(
-        service_context_handle: Arc<RwLock<ServiceContext>>,
         storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
     ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, Error> {
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
@@ -43,7 +40,6 @@ impl SetupController {
             }
 
             let handle = Arc::new(RwLock::new(Self {
-                service_context_handle: service_context_handle,
                 info: stored_value,
                 listen_notifier: Arc::new(RwLock::new(None)),
                 storage: storage,

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #![feature(async_await)]
-#![allow(unreachable_code)]
-#![allow(dead_code)]
 
 use {
     crate::accessibility::spawn_accessibility_controller,
@@ -242,7 +240,6 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .register(
                 switchboard::base::SettingType::Setup,
                 SetupController::spawn(
-                    service_context_handle.clone(),
                     unboxed_storage_factory.get_store::<switchboard::base::SetupInfo>(),
                 )
                 .unwrap(),
@@ -278,14 +275,6 @@ mod tests {
     };
 
     const ENV_NAME: &str = "settings_service_test_environment";
-
-    enum Services {
-        Accessibility(AccessibilityRequestStream),
-        DoNotDisturb(DoNotDisturbRequestStream),
-        Privacy(PrivacyRequestStream),
-        Timezone(fidl_fuchsia_timezone::TimezoneRequestStream),
-        Intl(IntlRequestStream),
-    }
 
     // TODO(fxb/35254): move out of main.rs
     async fn create_test_accessibility_env(

@@ -43,6 +43,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         };
     }
 
+    #[cfg(test)]
     fn set_caching_enabled(&mut self, enabled: bool) {
         self.caching_enabled = enabled;
     }
