@@ -86,6 +86,23 @@ fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 2
 fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78 ns  1975 +/- 78 ns
 
 
+### comparison_no_change_zero_width_ci
+Summary counts:
+  1 test case in total
+  1 test case had no significant difference (no_sig_diff)
+  0 test cases got faster
+  0 test cases got slower
+  0 test cases added
+  0 test cases removed
+
+
+Results from all test cases:
+
+Test case                   Improve/regress?  Factor change  Mean before   Mean after
+--------------------------  ----------------  -------------  ------------  ------------
+example_suite: ExampleTest  no_sig_diff       1.000-1.000    200 +/- 0 ns  200 +/- 0 ns
+
+
 ### comparison_regression
 Summary counts:
   2 test cases in total

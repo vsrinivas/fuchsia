@@ -256,9 +256,12 @@ def ComparePerf(args, out_fh):
             interval_after = stats[1].interval
             factor_min = interval_after[0] / interval_before[1]
             factor_max = interval_after[1] / interval_before[0]
-            if interval_after[0] >= interval_before[1]:
+            # Using a ">" comparison rather than ">=" ensures that if the
+            # intervals are equal and zero-width, they are treated as
+            # "no_sig_diff".
+            if interval_after[0] > interval_before[1]:
                 result = 'slower'
-            elif interval_after[1] <= interval_before[0]:
+            elif interval_after[1] < interval_before[0]:
                 result = 'faster'
             else:
                 result = 'no_sig_diff'

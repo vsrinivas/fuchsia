@@ -231,6 +231,16 @@ class StatisticsTest(TempDirTestCase):
         self.CheckConfidenceInterval(
             [[[100]], [[101]]], '100 +/- 31 ns')
 
+    # If the "before" and "after" results have identical confidence
+    # intervals, that should be treated as "no difference", including when
+    # the CIs are zero-width (as tested here).
+    def test_comparing_equal_zero_width_confidence_intervals(self):
+        dir_path = self.DirOfData([[[200]], [[200]]])
+        stdout = StringIO.StringIO()
+        perfcompare.Main(['compare_perf', dir_path, dir_path], stdout)
+        output = stdout.getvalue()
+        GOLDEN.AssertCaseEq('comparison_no_change_zero_width_ci', output)
+
 
 class PerfCompareTest(TempDirTestCase):
 
