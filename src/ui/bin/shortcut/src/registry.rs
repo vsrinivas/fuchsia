@@ -6,7 +6,9 @@ use failure::Error;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
 use fidl_fuchsia_ui_views as ui_views;
+use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
+use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::{Arc, Weak};
@@ -31,6 +33,7 @@ pub struct RegistryStore {
 }
 
 const DEFAULT_SHORTCUT_ID: u32 = 2;
+const DEFAULT_LISTENER_TIMEOUT_SECONDS: i64 = 3;
 
 async fn handle(
     registry: Arc<Mutex<ClientRegistry>>,
@@ -38,15 +41,39 @@ async fn handle(
     modifiers: Option<ui_input::Modifiers>,
 ) -> Result<bool, Error> {
     let registry = registry.lock().await;
-    let shortcut = registry.shortcuts.iter().find(|s| s.key == key && s.modifiers == modifiers);
-    match (&registry.subscriber, shortcut) {
-        (Some(Subscriber { ref listener, .. }), Some(shortcut)) => {
-            // TODO: timeout if the listener hangs
-            let id = shortcut.id.unwrap_or(DEFAULT_SHORTCUT_ID);
-            listener.on_shortcut(id).await.map_err(Into::into)
-        }
-        _ => Ok(false),
+    let shortcuts: Vec<&ui_shortcut::Shortcut> = registry
+        .shortcuts
+        .iter()
+        .filter(|s| {
+            if s.key != key {
+                return false;
+            }
+            match (modifiers, s.modifiers) {
+                (None, None) => true,
+                (Some(event_modifiers), Some(shortcut_modifiers)) => {
+                    event_modifiers.contains(shortcut_modifiers)
+                }
+                _ => false,
+            }
+        })
+        .collect();
+    if shortcuts.is_empty() {
+        return Ok(false);
     }
+    for shortcut in shortcuts {
+        if let Some(Subscriber { ref listener, .. }) = &registry.subscriber {
+            let id = shortcut.id.unwrap_or(DEFAULT_SHORTCUT_ID);
+            let was_handled = fasync::TimeoutExt::on_timeout(
+                listener.on_shortcut(id),
+                fasync::Time::after(zx::Duration::from_seconds(DEFAULT_LISTENER_TIMEOUT_SECONDS)),
+                || Ok(false),
+            );
+            if was_handled.await? {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 impl RegistryStore {
