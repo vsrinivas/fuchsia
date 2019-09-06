@@ -8,11 +8,14 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
+    futures::future::{join_all, BoxFuture, Future},
     futures::lock::{Mutex, MutexLockFuture},
     std::convert::TryInto,
     std::iter::Iterator,
-    std::{collections::HashMap, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    },
 };
 
 /// A realm is a container for an individual component instance and its children.  It is provided
@@ -199,18 +202,24 @@ impl Realm {
     }
 
     /// Performs the shutdown protocol for this component instance.
-    /// REQUIRES: All dependents have already been shut down.
+    /// REQUIRES: All dependents have already been stopped.
     // TODO: This is a stub because currently the shutdown protocol is not implemented.
-    pub async fn shut_down_instance(realm: Arc<Realm>, hooks: &Hooks) -> Result<(), ModelError> {
-        {
+    pub async fn stop_instance(
+        model: Model,
+        realm: Arc<Realm>,
+        shut_down: bool,
+    ) -> Result<(), ModelError> {
+        // When the realm is stopped, any child instances in transient collections must be
+        // destroyed.
+        let nf = {
             let mut state = realm.lock_state().await;
             let state = state.get_mut();
             state.execution = None;
-            state.shut_down = true;
-        }
-        // TODO: Once dedicated logic exists to stop components, this hook should live there;
-        // it's not exclusive to shutdown.
-        hooks.on_stop_instance(realm.clone()).await?;
+            state.shut_down |= shut_down;
+            Self::destroy_transient_children(model.clone(), realm.clone(), state).await?
+        };
+        nf.await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
+        model.hooks.on_stop_instance(realm.clone()).await?;
         Ok(())
     }
 
@@ -221,6 +230,39 @@ impl Realm {
     // - Delete the instance's isolated storage
     pub async fn destroy_instance(_realm: Arc<Realm>) -> Result<(), ModelError> {
         Ok(())
+    }
+
+    /// Registers actions to destroy all children of `realm` that live in transient collections.
+    /// Returns a future that completes when all those children are destroyed.
+    async fn destroy_transient_children(
+        model: Model,
+        realm: Arc<Realm>,
+        state: &mut RealmState,
+    ) -> Result<impl Future<Output = Vec<Result<(), ModelError>>>, ModelError> {
+        let transient_colls: HashSet<_> = state
+            .decl()
+            .collections
+            .iter()
+            .filter_map(|c| match c.durability {
+                fsys::Durability::Transient => Some(c.name.clone()),
+                fsys::Durability::Persistent => None,
+            })
+            .collect();
+        let mut futures = vec![];
+        let child_monikers: Vec<_> = state.all_child_realms().keys().map(|m| m.clone()).collect();
+        for m in child_monikers {
+            // Delete a child if its collection is in the set of transient collections created
+            // above.
+            if let Some(coll) = m.collection() {
+                if transient_colls.contains(coll) {
+                    let nf = state
+                        .register_action(model.clone(), realm.clone(), Action::DeleteChild(m))
+                        .await?;
+                    futures.push(nf);
+                }
+            }
+        }
+        Ok(join_all(futures))
     }
 }
 

@@ -275,7 +275,7 @@ async fn do_shutdown(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> 
     ok_or_first_error(results)?;
 
     // Now that all children have shut down, shut down the parent.
-    Realm::shut_down_instance(realm, &model.hooks).await
+    Realm::stop_instance(model, realm, true).await
 }
 
 async fn do_delete_child(
@@ -568,11 +568,17 @@ mod tests {
                         name: "coll".to_string(),
                         durability: fsys::Durability::Transient,
                     }],
+                    children: vec![ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
                     ..default_component_decl()
                 },
             ),
             ("a", default_component_decl()),
             ("b", default_component_decl()),
+            ("c", default_component_decl()),
         ];
         let test = ActionsTest::new("root", components, Some(vec!["container:0"].into())).await;
 
@@ -582,22 +588,67 @@ mod tests {
 
         // Bind to the components, causing them to start. This should cause them to have an
         // `Execution`.
+        let realm_container = test.look_up(vec!["container:0"].into()).await;
         let realm_a = test.look_up(vec!["container:0", "coll:a:1"].into()).await;
         let realm_b = test.look_up(vec!["container:0", "coll:b:2"].into()).await;
         test.model.bind_instance(realm_a.clone()).await.expect("could not bind to coll:a");
         test.model.bind_instance(realm_b.clone()).await.expect("could not bind to coll:b");
         assert!(is_executing(&realm_a).await);
         assert!(is_executing(&realm_b).await);
+        assert!(has_child(&realm_container, "coll:a:1").await);
+        assert!(has_child(&realm_container, "coll:b:2").await);
 
         // Register shutdown action, and wait for it. Components should shut down (no more
-        // `Execution`).
+        // `Execution`). Also, the instances in the collection should have been destroyed because
+        // they were transient.
         let realm_container = test.look_up(vec!["container:0"].into()).await;
         execute_action(test.model.clone(), realm_container.clone(), Action::Shutdown)
             .await
             .expect("shutdown failed");
         assert!(is_shut_down(&realm_container).await);
+        assert!(!has_child(&realm_container, "coll:a:1").await);
+        assert!(!has_child(&realm_container, "coll:b:2").await);
+        assert!(has_child(&realm_container, "c:0").await);
         assert!(is_shut_down(&realm_a).await);
         assert!(is_shut_down(&realm_b).await);
+
+        // Verify events.
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            // The leaves could be stopped in any order.
+            let mut next: Vec<_> = events.drain(0..3).collect();
+            next.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["container:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["container:0", "coll:a:1"].into()),
+                Lifecycle::Stop(vec!["container:0", "coll:b:2"].into()),
+            ];
+            assert_eq!(next, expected);
+
+            // These components were destroyed because they lived in a transient collection.
+            let mut next: Vec<_> = events.drain(0..2).collect();
+            next.sort_unstable();
+            let expected: Vec<_> = vec![
+                Lifecycle::Destroy(vec!["container:0", "coll:a:1"].into()),
+                Lifecycle::Destroy(vec!["container:0", "coll:b:2"].into()),
+            ];
+            assert_eq!(next, expected);
+
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["container:0"].into()),
+                ]
+            );
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
