@@ -1,8 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_
 
+#include <lib/fit/defer.h>
 #include <lib/zx/event.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/port.h>
@@ -15,12 +17,10 @@
 #include <zircon/threads.h>
 
 #include <iostream>
-#include <lib/fit/defer.h>
 #include <thread>
 
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-
 
 #define PRINT(...)                                                                               \
   std::cout << std::this_thread::get_id() << ": " << fxl::StringPrintf(__VA_ARGS__) << std::endl \
@@ -42,7 +42,7 @@ constexpr uint32_t kThreadToHarness = ZX_USER_SIGNAL_1;
 
 // Control struct for each running test case.
 struct ThreadSetup {
-  using Function = int(*)(void*);
+  using Function = int (*)(void*);
 
   ~ThreadSetup();
 
@@ -51,10 +51,10 @@ struct ThreadSetup {
   thrd_t c_thread;
 
   std::atomic<bool> test_running = false;
-  void* extra_data = nullptr;
+  void* user = nullptr;
 };
 
-std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func);
+std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* user = nullptr);
 
 zx_thread_state_debug_regs_t ReadGeneralRegs(const zx::thread& thread);
 
@@ -82,3 +82,5 @@ bool IsOnException(const zx::thread& thread);
 zx::suspend_token Suspend(const zx::thread& thread);
 
 void InstallHWBreakpoint(const zx::thread& thread, uint64_t address);
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_

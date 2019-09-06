@@ -3,7 +3,6 @@
 
 #include "hw_breakpointer_helpers.h"
 
-
 ThreadSetup::~ThreadSetup() {
   DEFER_PRINT("Joined thread.");
 
@@ -13,9 +12,10 @@ ThreadSetup::~ThreadSetup() {
   thrd_join(c_thread, &res);
 }
 
-std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func) {
+std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* user) {
   auto setup = std::make_unique<ThreadSetup>();
   setup->test_running = true;
+  setup->user = user;
 
   CHECK_OK(zx::event::create(0, &setup->event));
 
@@ -104,7 +104,6 @@ bool IsOnException(const zx::thread& thread) {
 
   return thread_info.state == ZX_THREAD_STATE_BLOCKED_EXCEPTION;
 }
-
 
 zx::suspend_token Suspend(const zx::thread& thread) {
   DEFER_PRINT("Suspended thread.");
