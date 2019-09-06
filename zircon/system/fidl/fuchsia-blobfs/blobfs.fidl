@@ -20,7 +20,7 @@ protocol Blobfs {
 
 [Layout = "Simple"]
 protocol BlobfsAdmin {
-    HandleCorruptBlobs(request<CorruptBlobHandler> handler) -> (zx.status status);
+    HandleCorruptBlobs(CorruptBlobHandler handler) -> (zx.status status);
 };
 
 // Action to be taken on blob corruption.
