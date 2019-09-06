@@ -125,12 +125,8 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
     called = true;
     EXPECT_TRUE(value.ok());
     out_value = value.take_value();
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
-
-  // Should complete asynchronously.
-  EXPECT_FALSE(called);
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 
   // The type should be the const base type.
@@ -166,22 +162,28 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
   EXPECT_EQ(DwarfTag::kPointerType, out_mod_type->tag());
   EXPECT_EQ(const_base_type.get(), out_mod_type->modified().Get()->AsModifiedType());
   EXPECT_EQ("const uint32_t*", out_mod_type->GetFullName());
+}
+
+TEST_F(ExprNodeTest, DereferenceErrors) {
+  auto data_provider = fxl::MakeRefCounted<MockSymbolDataProvider>();
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
+                                                      SymbolContext::ForRelativeAddresses(),
+                                                      data_provider, nullptr);
+
+  auto base_type = MakeInt32Type();
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, base_type);
 
   // Try to dereference an invalid address.
-  ExprValue bad_ptr_value(const_ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
+  ExprValue bad_ptr_value(ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
   auto bad_deref_node = fxl::MakeRefCounted<DereferenceExprNode>(
       fxl::MakeRefCounted<MockExprNode>(true, bad_ptr_value));
-  called = false;
+  bool called = false;
   bad_deref_node->Eval(context, [&called](ErrOrValue value) {
     called = true;
     EXPECT_TRUE(value.has_error());
     EXPECT_EQ("Invalid pointer 0x0", value.err().msg());
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
-
-  // Should complete asynchronously.
-  EXPECT_FALSE(called);
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 
   // Try to take the address of the invalid expression above. The error should be forwarded.
@@ -191,12 +193,20 @@ TEST_F(ExprNodeTest, DereferenceReferencePointer) {
     called = true;
     EXPECT_TRUE(value.has_error());
     EXPECT_EQ("Invalid pointer 0x0", value.err().msg());
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
+  loop().RunUntilNoTasks();
+  EXPECT_TRUE(called);
 
-  // Should complete asynchronously.
-  EXPECT_FALSE(called);
-  loop().Run();
+  // Dereference an undefined value.
+  auto undef_node = fxl::MakeRefCounted<MockExprNode>(true, Err("Undefined"));
+  auto undef_deref_node = fxl::MakeRefCounted<DereferenceExprNode>(std::move(undef_node));
+  called = false;
+  undef_deref_node->Eval(context, [&called](ErrOrValue value) {
+    called = true;
+    EXPECT_TRUE(value.has_error());
+    EXPECT_EQ("Undefined", value.err().msg());
+  });
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 }
 
@@ -237,7 +247,6 @@ TEST_F(ExprNodeTest, ArrayAccess) {
     called = true;
     EXPECT_FALSE(value.has_error()) << value.err().msg();
     out_value = value.take_value();
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
   // The two parts of the expression were set as async above, so it should not have been called yet.
@@ -248,9 +257,8 @@ TEST_F(ExprNodeTest, ArrayAccess) {
   context.reset();
   access.reset();
 
-  loop().Run();
-
-  // Should have succeeded asynchronously.
+  // Should succeed asynchronously.
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 
   // Should have found our data at the right place.
@@ -282,7 +290,6 @@ TEST_F(ExprNodeTest, MemberAccess) {
     called = true;
     EXPECT_FALSE(value.has_error());
     out_value = value.take_value();
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
   // Should have run synchronously.
@@ -311,13 +318,10 @@ TEST_F(ExprNodeTest, MemberAccess) {
     called = true;
     EXPECT_TRUE(value.ok());
     out_value = value.take_value();
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
-
-  // Should have run asynchronously.
-  EXPECT_FALSE(called);
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
+
   EXPECT_EQ(sizeof(int32_t), out_value.data().size());
   EXPECT_EQ(0x55667788, out_value.GetAs<int32_t>());
 }
@@ -415,12 +419,11 @@ TEST_F(ExprNodeTest, Cast) {
     called = true;
     EXPECT_FALSE(value.has_error()) << value.err().msg();
     out_value = value.take_value();
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
   // Dereferencing will be an asynchronous memory request so it will not have completed yet.
   EXPECT_FALSE(called);
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 
   // Should have converted to the Base2 value.
@@ -480,10 +483,9 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
     called = true;
     EXPECT_FALSE(value.has_error()) << value.err().msg();
     EXPECT_EQ(MockGetterPrettyType::kGetterValue, value.value().GetAs<int>());
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
   EXPECT_FALSE(called);
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);
 
   // Try an non-pointer with the "->" operator.
@@ -497,7 +499,6 @@ TEST_F(ExprNodeTest, PrettyTypeGetter) {
     called = true;
     EXPECT_TRUE(value.has_error());
     EXPECT_EQ("Attempting to dereference 'MyType' which is not a pointer.", value.err().msg());
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
   EXPECT_TRUE(called);  // This error is synchronous.
 
@@ -569,10 +570,9 @@ TEST_F(ExprNodeTest, Sizeof) {
     EXPECT_EQ(1u, sizeof_value);
 
     called = true;
-    debug_ipc::MessageLoop::Current()->QuitNow();
   });
 
-  loop().Run();
+  loop().RunUntilNoTasks();
   EXPECT_TRUE(called);  // Make sure callback executed.
 }
 

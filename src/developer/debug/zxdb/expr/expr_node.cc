@@ -171,6 +171,9 @@ void CastExprNode::Print(std::ostream& out, int indent) const {
 
 void DereferenceExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
   expr_->EvalFollowReferences(context, [context, cb = std::move(cb)](ErrOrValue value) mutable {
+    if (value.has_error())
+      return cb(std::move(value));
+
     // First check for pretty-printers for this type.
     if (PrettyType* pretty = context->GetPrettyTypeManager().GetForType(value.value().type())) {
       if (auto derefer = pretty->GetDereferencer()) {
