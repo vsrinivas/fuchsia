@@ -5,7 +5,9 @@
 #include "hid.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
+#include <unistd.h>
 
+#include <thread>
 #include <vector>
 
 #include <ddktl/protocol/hidbus.h>
@@ -287,6 +289,146 @@ TEST(HidDeviceTest, FailToRegister) {
   fake_hidbus.SetStartStatus(ZX_ERR_INTERNAL);
   auto client = ddk::HidbusProtocolClient(fake_hidbus.GetProto());
   ASSERT_EQ(device.Bind(client), ZX_ERR_INTERNAL);
+}
+
+TEST_F(HidDeviceTest, GetReportsSingleReport) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  // Send the reports.
+  fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  auto result = sync_client.GetReports();
+  ASSERT_OK(result.status());
+  auto response = result.Unwrap();
+  ASSERT_OK(response->status);
+  ASSERT_EQ(sizeof(mouse_report), response->data.count());
+  for (size_t i = 0; i < response->data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], response->data[i]);
+  }
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDeviceTest, GetReportsDoubleeReport) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  uint8_t double_mouse_report[] = {0xDE, 0xAD, 0xBE, 0x12, 0x34, 0x56};
+
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  // Send the reports.
+  fake_hidbus_.SendReport(double_mouse_report, sizeof(double_mouse_report));
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  auto result = sync_client.GetReports();
+  ASSERT_OK(result.status());
+  auto response = result.Unwrap();
+  ASSERT_OK(response->status);
+  ASSERT_EQ(sizeof(double_mouse_report), response->data.count());
+  for (size_t i = 0; i < response->data.count(); i++) {
+    EXPECT_EQ(double_mouse_report[i], response->data[i]);
+  }
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+TEST_F(HidDeviceTest, GetReportsBlockingWait) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  // Send the reports, but delayed.
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+  std::thread report_thread([&]() {
+    sleep(1);
+    fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+  });
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  // Get the event for the wait.
+  zx::event event;
+  {
+    auto result = sync_client.GetReportsEvent();
+    ASSERT_OK(result.status());
+    auto response = result.Unwrap();
+    ASSERT_OK(response->status);
+    event = std::move(response->event);
+  }
+  ASSERT_OK(event.wait_one(DEV_STATE_READABLE, zx::time::infinite(), nullptr));
+
+  // Get the report.
+  auto result = sync_client.GetReports();
+  ASSERT_OK(result.status());
+  auto response = result.Unwrap();
+  ASSERT_OK(response->status);
+  ASSERT_EQ(sizeof(mouse_report), response->data.count());
+  for (size_t i = 0; i < response->data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], response->data[i]);
+  }
+
+  report_thread.join();
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
+// Test that only whole reports get sent through.
+TEST_F(HidDeviceTest, GetReportsOneAndAHalfReports) {
+  SetupBootMouseDevice();
+  ASSERT_OK(device_->Bind(client_));
+
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  // Send the report.
+  uint8_t mouse_report[] = {0xDE, 0xAD, 0xBE};
+  fake_hidbus_.SendReport(mouse_report, sizeof(mouse_report));
+
+  // Send a half of a report.
+  uint8_t half_report[] = {0xDE, 0xAD};
+  fake_hidbus_.SendReport(half_report, sizeof(half_report));
+
+  auto sync_client =
+      llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(ddk_.FidlClient()));
+  auto result = sync_client.GetReports();
+  ASSERT_OK(result.status());
+  auto response = result.Unwrap();
+  ASSERT_OK(response->status);
+  ASSERT_EQ(sizeof(mouse_report), response->data.count());
+  for (size_t i = 0; i < response->data.count(); i++) {
+    EXPECT_EQ(mouse_report[i], response->data[i]);
+  }
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
 // This tests that we can set the boot mode for a non-boot device, and that the device will

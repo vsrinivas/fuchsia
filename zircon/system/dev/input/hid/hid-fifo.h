@@ -25,7 +25,6 @@ typedef struct {
   uint32_t head;
   uint32_t tail;
   bool empty;
-  mtx_t lock;
 } zx_hid_fifo_t;
 
 zx_status_t zx_hid_fifo_create(zx_hid_fifo_t** fifo);

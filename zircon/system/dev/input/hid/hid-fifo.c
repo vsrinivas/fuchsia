@@ -22,7 +22,6 @@ void zx_hid_fifo_init(zx_hid_fifo_t* fifo) {
   memset(fifo->buf, 0, HID_FIFO_SIZE);
   fifo->head = fifo->tail = 0;
   fifo->empty = true;
-  mtx_init(&fifo->lock, mtx_plain);
 }
 
 size_t zx_hid_fifo_size(zx_hid_fifo_t* fifo) {

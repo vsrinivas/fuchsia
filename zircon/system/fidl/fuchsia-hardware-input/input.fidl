@@ -16,6 +16,7 @@ enum BootProtocol : uint32 {
 
 const uint16 MAX_DESC_LEN = 8192;
 const uint16 MAX_REPORT_LEN = 8192;
+const uint16 MAX_REPORT_DATA = 8192;
 const uint16 MAX_REPORT_IDS = 256;
 
 enum ReportType : uint8 {
@@ -46,6 +47,19 @@ protocol Device {
 
     // Get the maximum size of a single input report.
     GetMaxInputReportSize() -> (uint16 size);
+
+    // Receive up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
+    // This is the interface that is supposed to be used for continuous polling.
+    // Multiple reports can be returned from this API at a time, it is up to the client
+    // to do the parsing of the reports with the correct sizes and offset.
+    // It is guaranteed that only whole reports will be sent.
+    // If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
+    // wait on the event from |GetReportsEvent|.
+    GetReports() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data);
+
+    // Receive an event that will be signalled when there are reports in the
+    // Device's report FIFO.
+    GetReportsEvent() -> (zx.status status, handle<event> event);
 
     // Get a single report of the given (type, id) pair.  This interface is not intended
     // to be used for continuous polling of the reports.

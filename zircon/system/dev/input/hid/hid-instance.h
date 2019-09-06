@@ -58,6 +58,8 @@ class HidInstance : public HidInstanceDeviceType,
   void GetReportIds(GetReportIdsCompleter::Sync _completer) override;
   void GetReportSize(ReportType type, uint8_t id, GetReportSizeCompleter::Sync _completer) override;
   void GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync _completer) override;
+  void GetReports(GetReportsCompleter::Sync _completer) override;
+  void GetReportsEvent(GetReportsEventCompleter::Sync _completer) override;
   void GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync _completer) override;
   void SetReport(ReportType type, uint8_t id, ::fidl::VectorView<uint8_t> report,
                  SetReportCompleter::Sync _completer) override;
@@ -67,16 +69,21 @@ class HidInstance : public HidInstanceDeviceType,
   void WriteToFifo(const uint8_t* report, size_t report_len);
 
  private:
+  void SetReadable();
+  void ClearReadable();
   HidDevice* base_ = nullptr;
 
   uint32_t flags_ = 0;
 
-  zx_hid_fifo_t fifo_ = {};
+  fbl::Mutex fifo_lock_;
+  zx_hid_fifo_t fifo_ __TA_GUARDED(fifo_lock_) = {};
+
+  zx::event fifo_event_;
+
   uint32_t trace_id_ = 0;
   uint32_t reports_written_ = 0;
   uint32_t reports_read_ = 0;
 };
-
 
 }  // namespace hid_driver
 

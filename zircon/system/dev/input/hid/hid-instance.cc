@@ -32,6 +32,16 @@ static constexpr uint64_t hid_report_trace_id(uint32_t instance_id, uint64_t rep
   return (report_id << 32) | instance_id;
 }
 
+void HidInstance::SetReadable() {
+  SetState(DEV_STATE_READABLE);
+  fifo_event_.signal(0, DEV_STATE_READABLE);
+}
+
+void HidInstance::ClearReadable() {
+  ClearState(DEV_STATE_READABLE);
+  fifo_event_.signal(DEV_STATE_READABLE, 0);
+}
+
 zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
   TRACE_DURATION("input", "HID Read Instance");
   zx_status_t status = ZX_OK;
@@ -41,35 +51,32 @@ zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* 
   }
 
   size_t left;
-  mtx_lock(&fifo_.lock);
   size_t xfer;
   uint8_t rpt_id;
+
+  fbl::AutoLock lock(&fifo_lock_);
   ssize_t r = zx_hid_fifo_peek(&fifo_, &rpt_id);
   if (r < 1) {
     // fifo is empty
-    mtx_unlock(&fifo_.lock);
     return ZX_ERR_SHOULD_WAIT;
   }
 
   xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
   if (xfer == 0) {
     zxlogf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
-    mtx_unlock(&fifo_.lock);
     return ZX_ERR_BAD_STATE;
   }
 
   if (xfer > count) {
     zxlogf(SPEW, "next report: %zd, read count: %zd\n", xfer, count);
-    mtx_unlock(&fifo_.lock);
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
   r = zx_hid_fifo_read(&fifo_, buf, xfer);
   left = zx_hid_fifo_size(&fifo_);
   if (left == 0) {
-    device_state_clr(zxdev_, DEV_STATE_READABLE);
+    ClearReadable();
   }
-  mtx_unlock(&fifo_.lock);
   if (r > 0) {
     TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_read_));
     ++reports_read_;
@@ -79,6 +86,76 @@ zx_status_t HidInstance::DdkRead(void* buf, size_t count, zx_off_t off, size_t* 
     status = ZX_ERR_SHOULD_WAIT;
   }
   return status;
+}
+
+void HidInstance::GetReports(GetReportsCompleter::Sync _completer) {
+  TRACE_DURATION("input", "HID GetReports Instance");
+
+  if (flags_ & kHidFlagsDead) {
+    ::fidl::VectorView<uint8_t> buf_view(0, nullptr);
+    _completer.Reply(ZX_ERR_PEER_CLOSED, buf_view);
+    return;
+  }
+
+  uint8_t buf[::llcpp::fuchsia::hardware::input::MAX_REPORT_DATA];
+  size_t buf_index = 0;
+  zx_status_t status = ZX_OK;
+
+  fbl::AutoLock lock(&fifo_lock_);
+  uint8_t rpt_id;
+  while (zx_hid_fifo_peek(&fifo_, &rpt_id) > 0) {
+    size_t xfer = base_->GetReportSizeById(rpt_id, ReportType::INPUT);
+    if (xfer == 0) {
+      zxlogf(ERROR, "error reading hid device: unknown report id (%u)!\n", rpt_id);
+      status = ZX_ERR_BAD_STATE;
+      break;
+    }
+
+    // Check if we have enough room left in the buffer.
+    if (xfer + buf_index > sizeof(buf)) {
+      // Only an error if we haven't read any reports yet.
+      if (buf_index == 0) {
+        status = ZX_ERR_INTERNAL;
+      }
+      break;
+    }
+
+    ssize_t rpt_size = zx_hid_fifo_read(&fifo_, buf + buf_index, xfer);
+    size_t left = zx_hid_fifo_size(&fifo_);
+    if (left == 0) {
+      ClearReadable();
+    }
+
+    if (rpt_size <= 0) {
+      // Something went wrong. The fifo should always contain full reports in it.
+      status = ZX_ERR_INTERNAL;
+      break;
+    }
+    ++reports_read_;
+    buf_index += rpt_size;
+  }
+  lock.release();
+
+  if (status != ZX_OK) {
+    ::fidl::VectorView<uint8_t> buf_view(0, nullptr);
+    _completer.Reply(status, buf_view);
+    return;
+  }
+
+  if (buf_index == 0) {
+    status = ZX_ERR_SHOULD_WAIT;
+  } else {
+    TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_read_));
+  }
+  ::fidl::VectorView<uint8_t> buf_view(buf_index, buf);
+  _completer.Reply(status, buf_view);
+}
+
+void HidInstance::GetReportsEvent(GetReportsEventCompleter::Sync _completer) {
+  zx::event new_event;
+  zx_status_t status = fifo_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
+
+  _completer.Reply(status, std::move(new_event));
 }
 
 zx_status_t HidInstance::DdkClose(uint32_t flags) {
@@ -107,8 +184,8 @@ void HidInstance::GetReportDesc(GetReportDescCompleter::Sync _completer) {
   size_t desc_size = base_->GetReportDescLen();
   const uint8_t* desc = base_->GetReportDesc();
 
-   // (BUG 35762) Const cast is necessary until simple data types are generated
-   // as const in LLCPP. We know the data is not modified.
+  // (BUG 35762) Const cast is necessary until simple data types are generated
+  // as const in LLCPP. We know the data is not modified.
   _completer.Reply(::fidl::VectorView<uint8_t>(desc_size, const_cast<uint8_t*>(desc)));
 }
 
@@ -169,11 +246,12 @@ void HidInstance::SetTraceId(uint32_t id, SetTraceIdCompleter::Sync _completer) 
 
 void HidInstance::CloseInstance() {
   flags_ |= kHidFlagsDead;
-  SetState(DEV_STATE_READABLE);
+  SetReadable();
 }
 
 void HidInstance::WriteToFifo(const uint8_t* report, size_t report_len) {
-  mtx_lock(&fifo_.lock);
+  fbl::AutoLock lock(&fifo_lock_);
+
   bool was_empty = zx_hid_fifo_size(&fifo_) == 0;
   ssize_t wrote = zx_hid_fifo_write(&fifo_, report, report_len);
 
@@ -187,16 +265,19 @@ void HidInstance::WriteToFifo(const uint8_t* report, size_t report_len) {
     ++reports_written_;
     flags_ &= ~kHidFlagsWriteFailed;
     if (was_empty) {
-      device_state_set(zxdev(), DEV_STATE_READABLE);
+      SetReadable();
     }
   }
-  mtx_unlock(&fifo_.lock);
 }
 
 zx_status_t HidInstance::Bind(HidDevice* base) {
   base_ = base;
+  zx_status_t status = zx::event::create(0, &fifo_event_);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   return DdkAdd("hid-instance", DEVICE_ADD_INSTANCE);
 }
-
 
 }  // namespace hid_driver
