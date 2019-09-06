@@ -40,6 +40,16 @@ union Value {
     fuchsia.mem.Buffer bytesval;
 };
 
+// FlushError enumerates the various ways in which flushing the stash
+// to disk may fail.
+enum FlushError {
+    // Failed to flush because the accessor is read-only.
+    READ_ONLY = 1;
+
+    // Failed to commit the requested operations.
+    COMMIT_FAILED = 2;
+};
+
 /// The iterator returned when a series of keys are being listed. Returns an
 /// empty vector when there are no more remaining ListItems.
 protocol ListIterator {
@@ -77,6 +87,13 @@ protocol StoreAccessor {
     /// Atomically causes all of the state modifications that happened in this
     /// accessor to take place.
     Commit();
+
+    /// Atomically causes all of the state modifications that happened
+    /// in this accessor to take place, returning only when those
+    /// modifications were written to disk.
+    /// This operation is equivalent to Commit.
+    /// Returns a FlushError if this operations could not be committed.
+    Flush() -> () error FlushError;
 };
 
 /// Interface used to interact with a given client's key/value store

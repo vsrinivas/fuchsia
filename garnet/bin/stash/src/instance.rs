@@ -7,7 +7,9 @@ use fuchsia_async as fasync;
 use failure::{err_msg, Error};
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{RequestStream, ServerEnd};
-use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream};
+use fidl_fuchsia_stash::{
+    FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
+};
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
@@ -78,6 +80,13 @@ impl Instance {
                             acc.delete_prefix(prefix).await?
                         }
                         StoreAccessorRequest::Commit { .. } => acc.commit().await?,
+                        StoreAccessorRequest::Flush { responder } => {
+                            if read_only {
+                                responder.send(&mut Err(FlushError::ReadOnly))?;
+                            } else {
+                                responder.send(&mut acc.flush().await)?;
+                            }
+                        }
                     }
                 }
                 Ok(())

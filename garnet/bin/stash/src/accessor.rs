@@ -5,9 +5,9 @@
 use failure::{err_msg, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
-    GetIteratorMarker, GetIteratorRequest, GetIteratorRequestStream, KeyValue, ListItem,
-    ListIteratorMarker, ListIteratorRequest, ListIteratorRequestStream, Value, MAX_KEY_SIZE,
-    MAX_STRING_SIZE,
+    FlushError, GetIteratorMarker, GetIteratorRequest, GetIteratorRequestStream, KeyValue,
+    ListItem, ListIteratorMarker, ListIteratorRequest, ListIteratorRequestStream, Value,
+    MAX_KEY_SIZE, MAX_STRING_SIZE,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -319,6 +319,14 @@ impl Accessor {
         }
         return commit_result;
     }
+
+    pub async fn flush(&mut self) -> Result<(), FlushError> {
+        if self.read_only {
+            Err(FlushError::ReadOnly)
+        } else {
+            self.commit().await.or(Err(FlushError::CommitFailed))
+        }
+    }
 }
 
 // A helper function for use in list_prefix and get_prefix
@@ -372,7 +380,8 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
-        sm.lock().await
+        sm.lock()
+            .await
             .set_value(&test_client_name, test_key.clone(), Value::Boolval(true))
             .unwrap();
 
@@ -416,7 +425,8 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
-        sm.lock().await
+        sm.lock()
+            .await
             .set_value(&test_client_name, "a".to_string(), Value::Boolval(true))
             .unwrap();
 
@@ -450,25 +460,27 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
 
         for key in vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"] {
-            sm.lock().await
+            sm.lock()
+                .await
                 .set_value(&test_client_name, key.to_string(), Value::Boolval(true))
                 .unwrap();
         }
 
-        let run_test = |sm: Arc<Mutex<store::StoreManager>>,
-                       prefix: String,
-                       mut expected: Vec<String>| async move {
-            let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
-            let (list_iterator, server_end) = create_proxy().unwrap();
-            acc.list_prefix(prefix.to_string(), server_end).await;
+        let run_test =
+            |sm: Arc<Mutex<store::StoreManager>>, prefix: String, mut expected: Vec<String>| {
+                async move {
+                    let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
+                    let (list_iterator, server_end) = create_proxy().unwrap();
+                    acc.list_prefix(prefix.to_string(), server_end).await;
 
-            let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
-            let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
+                    let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
+                    let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
 
-            expected.sort_unstable();
-            actual.sort_unstable();
-            assert_eq!(expected, actual);
-        };
+                    expected.sort_unstable();
+                    actual.sort_unstable();
+                    assert_eq!(expected, actual);
+                }
+            };
 
         run_test(
             sm.clone(),
@@ -476,28 +488,33 @@ mod tests {
             vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"]
                 .iter()
                 .map(|s| s.to_string())
-                .collect()
-        ).await;
+                .collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "a".to_string(),
-            vec!["a", "a/a", "a/b", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["a", "a/a", "a/b", "a/a/b"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "a/a".to_string(),
-            vec!["a/a", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["a/a", "a/a/b"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "b".to_string(),
-            vec!["b", "b/c", "bbbbb"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["b", "b/c", "bbbbb"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "bb".to_string(),
-            vec!["bbbbb"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["bbbbb"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
@@ -507,25 +524,27 @@ mod tests {
         let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
 
         for key in vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"] {
-            sm.lock().await
+            sm.lock()
+                .await
                 .set_value("test_client", key.to_string(), Value::Boolval(true))
                 .unwrap();
         }
 
-        let run_test = |sm: Arc<Mutex<store::StoreManager>>,
-                                   prefix: String,
-                                   mut expected: Vec<String>| async move {
-            let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
-            let (list_iterator, server_end) = create_proxy().unwrap();
-            acc.list_prefix(prefix.to_string(), server_end).await;
+        let run_test =
+            |sm: Arc<Mutex<store::StoreManager>>, prefix: String, mut expected: Vec<String>| {
+                async move {
+                    let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
+                    let (list_iterator, server_end) = create_proxy().unwrap();
+                    acc.list_prefix(prefix.to_string(), server_end).await;
 
-            let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
-            let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
+                    let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
+                    let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
 
-            expected.sort_unstable();
-            actual.sort_unstable();
-            assert_eq!(expected, actual);
-        };
+                    expected.sort_unstable();
+                    actual.sort_unstable();
+                    assert_eq!(expected, actual);
+                }
+            };
 
         run_test(
             sm.clone(),
@@ -533,28 +552,33 @@ mod tests {
             vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"]
                 .iter()
                 .map(|s| s.to_string())
-                .collect()
-        ).await;
+                .collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "a".to_string(),
-            vec!["a", "a/a", "a/b", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["a", "a/a", "a/b", "a/a/b"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "a/a".to_string(),
-            vec!["a/a", "a/a/b"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["a/a", "a/a/b"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "b".to_string(),
-            vec!["b", "b/c", "bbbbb"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["b", "b/c", "bbbbb"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(
             sm.clone(),
             "bb".to_string(),
-            vec!["bbbbb"].iter().map(|s| s.to_string()).collect()
-        ).await;
+            vec!["bbbbb"].iter().map(|s| s.to_string()).collect(),
+        )
+        .await;
         run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
 
@@ -572,35 +596,35 @@ mod tests {
             ("b/c", true),
             ("bbbbb", true),
         ] {
-            sm.lock().await
-                .set_value("test_client", key.to_string(), Value::Boolval(val))
-                .unwrap();
+            sm.lock().await.set_value("test_client", key.to_string(), Value::Boolval(val)).unwrap();
         }
 
         let run_test = |sm: Arc<Mutex<store::StoreManager>>,
-                                   prefix: String,
-                                   mut expected: Vec<(String, bool)>| async move {
-            let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
-            let (get_iterator, server_end) = create_proxy().unwrap();
-            acc.get_prefix(prefix.to_string(), server_end).await.unwrap();
+                        prefix: String,
+                        mut expected: Vec<(String, bool)>| {
+            async move {
+                let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
+                let (get_iterator, server_end) = create_proxy().unwrap();
+                acc.get_prefix(prefix.to_string(), server_end).await.unwrap();
 
-            let mut actual = Vec::new();
-            loop {
-                let subset = get_iterator.get_next().await.unwrap();
-                if subset.len() == 0 {
-                    break;
+                let mut actual = Vec::new();
+                loop {
+                    let subset = get_iterator.get_next().await.unwrap();
+                    if subset.len() == 0 {
+                        break;
+                    }
+                    for kv in subset.iter() {
+                        let b = match kv.val {
+                            Value::Boolval(b) => b,
+                            _ => panic!("internal test error"),
+                        };
+                        actual.push((kv.key.clone(), b));
+                    }
                 }
-                for kv in subset.iter() {
-                    let b = match kv.val {
-                        Value::Boolval(b) => b,
-                        _ => panic!("internal test error"),
-                    };
-                    actual.push((kv.key.clone(), b));
-                }
+                expected.sort_unstable();
+                actual.sort_unstable();
+                assert_eq!(expected, actual);
             }
-            expected.sort_unstable();
-            actual.sort_unstable();
-            assert_eq!(expected, actual);
         };
 
         run_test(
@@ -615,7 +639,8 @@ mod tests {
                 ("b/c".to_string(), true),
                 ("bbbbb".to_string(), true),
             ],
-        ).await;
+        )
+        .await;
         run_test(
             sm.clone(),
             "a".to_string(),
@@ -625,17 +650,20 @@ mod tests {
                 ("a/b".to_string(), false),
                 ("a/a/b".to_string(), false),
             ],
-        ).await;
+        )
+        .await;
         run_test(
             sm.clone(),
             "a/a".to_string(),
             vec![("a/a".to_string(), true), ("a/a/b".to_string(), false)],
-        ).await;
+        )
+        .await;
         run_test(
             sm.clone(),
             "b".to_string(),
-            vec![("b".to_string(), false), ("b/c".to_string(), true), ("bbbbb".to_string(), true),],
-        ).await;
+            vec![("b".to_string(), false), ("b/c".to_string(), true), ("bbbbb".to_string(), true)],
+        )
+        .await;
         run_test(sm.clone(), "bb".to_string(), vec![("bbbbb".to_string(), true)]).await;
         run_test(sm.clone(), "c".to_string(), vec![]).await;
     }
@@ -649,7 +677,8 @@ mod tests {
         let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
 
         for key in vec!["a", "a/a", "a/b", "a/a/b", "b", "b/c", "bbbbb"] {
-            sm.lock().await
+            sm.lock()
+                .await
                 .set_value(&test_client_name, key.to_string(), Value::Boolval(true))
                 .unwrap();
         }
@@ -748,6 +777,60 @@ mod tests {
         assert_eq!(0, acc1.fields_updated.lock().await.len());
 
         assert_eq!(None, sm.lock().await.get_value(&test_client_name, &"b".to_string()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_flush() {
+        let test_client_name = "test_client".to_string();
+        let tmp_dir = TempDir::new().unwrap();
+
+        {
+            let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
+            let mut acc = Accessor::new(sm.clone(), true, false, test_client_name.clone());
+
+            {
+                let mut sm = sm.lock().await;
+                sm.set_value(&test_client_name, "a".to_string(), Value::Boolval(false)).unwrap();
+            }
+
+            acc.set_value("a".to_string(), Value::Boolval(true)).await.unwrap();
+
+            assert_eq!(acc.flush().await, Ok(()));
+        }
+
+        // Create a new store manager, the old one is dropped.
+        let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
+
+        assert_eq!(
+            &Value::Boolval(true),
+            sm.lock().await.get_value(&test_client_name, &"a".to_string()).unwrap()
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_flush_readonly_fails() {
+        let test_client_name = "test_client".to_string();
+        let tmp_dir = TempDir::new().unwrap();
+
+        let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
+        let mut acc =
+            Accessor::new(sm.clone(), true, true /* read_only */, test_client_name.clone());
+
+        assert_eq!(acc.flush().await, Err(fidl_fuchsia_stash::FlushError::ReadOnly));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_flush_commit_fails() {
+        let test_client_name = "test_client".to_string();
+        let tmp_dir = TempDir::new().unwrap();
+
+        let sm = Arc::new(Mutex::new(get_tmp_store_manager(&tmp_dir)));
+        let mut acc =
+            Accessor::new(sm.clone(), true, false /* read_only */, test_client_name.clone());
+        acc.delete_value("a".to_string()).await.unwrap();
+
+        tmp_dir.close().unwrap();
+        assert_eq!(acc.flush().await, Err(fidl_fuchsia_stash::FlushError::CommitFailed));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
