@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
-#include <ktl/atomic.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <platform.h>
 #include <zircon/types.h>
@@ -91,10 +90,10 @@ zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas
   zx_time_t time = utc_offset.load();
   // See the comment for pvclock_boot_time structure in arch/x86/pvclock.h
   atomic_store_relaxed_u32(&boot_time->version, version + 1);
-  ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
+  atomic_fence();
   boot_time->seconds = static_cast<uint32_t>(time / ZX_SEC(1));
   boot_time->nseconds = static_cast<uint32_t>(time % ZX_SEC(1));
-  ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
+  atomic_fence();
   atomic_store_relaxed_u32(&boot_time->version, version + 2);
   version += 2;
   return ZX_OK;
@@ -127,13 +126,13 @@ void pvclock_update_system_time(PvClockState* pvclock,
   // See the comment for pvclock_boot_time structure in arch/x86/pvclock.h
   pvclock_system_time* system_time = pvclock->system_time;
   atomic_store_relaxed_u32(&system_time->version, pvclock->version + 1);
-  ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
+  atomic_fence();
   system_time->tsc_mul = tsc_mul;
   system_time->tsc_shift = tsc_shift;
   system_time->system_time = current_time();
   system_time->tsc_timestamp = rdtsc();
   system_time->flags = pvclock->is_stable ? kKvmSystemTimeStable : 0;
-  ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
+  atomic_fence();
   atomic_store_relaxed_u32(&system_time->version, pvclock->version + 2);
   pvclock->version += 2;
 }

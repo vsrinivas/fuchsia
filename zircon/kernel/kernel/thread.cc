@@ -20,7 +20,6 @@
 #include <debug.h>
 #include <err.h>
 #include <inttypes.h>
-#include <ktl/atomic.h>
 #include <lib/counters.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
@@ -514,7 +513,7 @@ static void thread_free_dpc(struct dpc* dpc) {
   // the thread that is queuing itself for destruction.
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
+    atomic_signal_fence();
   }
 
   free_thread_resources(t);
