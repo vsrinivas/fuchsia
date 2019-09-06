@@ -54,8 +54,8 @@ zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx_off_t offset);
 
 typedef struct zxio_vmofile {
   zxio_t io;
-  zx_handle_t control;
-  zx_handle_t vmo;
+  ::llcpp::fuchsia::io::File::SyncClient control;
+  zx::vmo vmo;
   zx_off_t off;
   zx_off_t end;
   zx_off_t ptr;
@@ -66,8 +66,8 @@ typedef struct zxio_vmofile {
 static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),
               "zxio_vmofile_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_vmofile_init(zxio_storage_t* file, zx_handle_t control, zx_handle_t vmo,
-                              zx_off_t offset, zx_off_t length, zx_off_t seek);
+zx_status_t zxio_vmofile_init(zxio_storage_t* file, ::llcpp::fuchsia::io::File::SyncClient control,
+                              zx::vmo vmo, zx_off_t offset, zx_off_t length, zx_off_t seek);
 
 // pipe ------------------------------------------------------------------------
 

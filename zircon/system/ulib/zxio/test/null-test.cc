@@ -5,11 +5,9 @@
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-bool null_basic_test(void) {
-  BEGIN_TEST;
-
+TEST(NullTest, Basic) {
   zxio_t io;
   zxio_null_init(&io);
 
@@ -30,10 +28,10 @@ bool null_basic_test(void) {
   char buffer[1024];
   memset(buffer, 0, sizeof(buffer));
   size_t actual = 5u;
-  ASSERT_EQ(ZX_OK, zxio_read(&io, buffer, sizeof(buffer), &actual));
+  ASSERT_OK(zxio_read(&io, buffer, sizeof(buffer), &actual));
   EXPECT_EQ(0u, actual);
   ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_read_at(&io, 0u, buffer, sizeof(buffer), &actual));
-  ASSERT_EQ(ZX_OK, zxio_write(&io, buffer, sizeof(buffer), &actual));
+  ASSERT_OK(zxio_write(&io, buffer, sizeof(buffer), &actual));
   EXPECT_EQ(sizeof(buffer), actual);
   ASSERT_EQ(ZX_ERR_WRONG_TYPE, zxio_write_at(&io, 0u, buffer, sizeof(buffer), &actual));
   size_t offset = 0u;
@@ -64,11 +62,5 @@ bool null_basic_test(void) {
   zxio_dirent_t* entry = nullptr;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
 
-  ASSERT_EQ(ZX_OK, zxio_close(&io));
-
-  END_TEST;
+  ASSERT_OK(zxio_close(&io));
 }
-
-BEGIN_TEST_CASE(null_test)
-RUN_TEST(null_basic_test);
-END_TEST_CASE(null_test)

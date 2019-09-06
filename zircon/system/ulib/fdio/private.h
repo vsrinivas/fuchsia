@@ -47,7 +47,7 @@ typedef struct fdio_ops {
   ssize_t (*ioctl)(fdio_t* io, uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
                    size_t out_len);
   zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
-  zx_status_t (*get_vmo)(fdio_t* io, int flags, zx_handle_t* out);
+  zx_status_t (*get_vmo)(fdio_t* io, int flags, zx::vmo* out);
   zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
   zx_status_t (*get_attr)(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
   zx_status_t (*set_attr)(fdio_t* io, uint32_t flags,
@@ -185,10 +185,8 @@ fdio_t* fdio_vmo_create(zx::vmo vmo, zx_off_t seek);
 // * |length| is the number of bytes in the file.
 // * |seek| is the initial seek offset within the file (i.e., relative to
 //   |offset| within the underlying VMO).
-//
-// Always consumes |h| and |vmo|.
-fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo, zx_off_t offset, zx_off_t length,
-                            zx_off_t seek);
+fdio_t* fdio_vmofile_create(llcpp::fuchsia::io::File::SyncClient control, zx::vmo vmo,
+                            zx_off_t offset, zx_off_t length, zx_off_t seek);
 
 // Wraps a socket with an fdio_t using socket io.
 zx_status_t fdio_socket_create(llcpp::fuchsia::posix::socket::Control::SyncClient control,
@@ -258,7 +256,7 @@ zx_status_t fdio_default_shutdown(fdio_t* io, int how);
 zx_duration_t fdio_default_get_rcvtimeo(fdio_t* io);
 zx_duration_t fdio_default_get_sndtimeo(fdio_t* io);
 zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
-zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out);
+zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx::vmo* out);
 
 typedef struct {
   mtx_t lock;

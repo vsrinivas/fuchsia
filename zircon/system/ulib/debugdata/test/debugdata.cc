@@ -2,15 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
-#include <fbl/string.h>
-#include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 #include <fcntl.h>
-#include <fs/pseudo-dir.h>
-#include <fs/service.h>
-#include <fs/synchronous-vfs.h>
-#include <fs/vmo-file.h>
 #include <fuchsia/debugdata/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -26,6 +18,17 @@
 #include <lib/zx/vmo.h>
 #include <zircon/sanitizer.h>
 #include <zircon/status.h>
+
+#include <filesystem>
+
+#include <fbl/auto_call.h>
+#include <fbl/string.h>
+#include <fbl/unique_fd.h>
+#include <fbl/vector.h>
+#include <fs/pseudo-dir.h>
+#include <fs/service.h>
+#include <fs/synchronous-vfs.h>
+#include <fs/vmo-file.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -71,8 +74,11 @@ TEST(DebugDataTest, LoadConfig) {
   ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &data));
   ASSERT_OK(data.write(kTestData, 0, sizeof(kTestData)));
 
+  const std::filesystem::path directory = "/dir";
+  const std::filesystem::path filename = "config";
+
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  dir->AddEntry("config", fbl::MakeRefCounted<fs::VmoFile>(data, 0, sizeof(kTestData)));
+  dir->AddEntry(filename.c_str(), fbl::MakeRefCounted<fs::VmoFile>(data, 0, sizeof(kTestData)));
 
   zx::channel c1, c2;
   ASSERT_OK(zx::channel::create(0, &c1, &c2));
@@ -83,7 +89,8 @@ TEST(DebugDataTest, LoadConfig) {
 
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_get_installed(&ns));
-  ASSERT_OK(fdio_ns_bind(ns, "/dir", c2.release()));
+  ASSERT_OK(fdio_ns_bind(ns, directory.c_str(), c2.release()));
+  auto unbind = fbl::MakeAutoCall([&]() { fdio_ns_unbind(ns, directory.c_str()); });
 
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
@@ -91,10 +98,10 @@ TEST(DebugDataTest, LoadConfig) {
   fidl::Bind(loop.dispatcher(), std::move(server), &svc);
   ASSERT_OK(loop.StartThread());
 
-  constexpr char kTestPath[] = "/dir/config";
+  const std::filesystem::path path = directory / filename;
 
   auto result = ::llcpp::fuchsia::debugdata::DebugData::Call::LoadConfig(
-      zx::unowned_channel(client), fidl::StringView(strlen(kTestPath), kTestPath));
+      zx::unowned_channel(client), fidl::StringView(strlen(path.c_str()), path.c_str()));
   ASSERT_OK(result.status());
   zx::vmo vmo = std::move(result->config);
 

@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/io.h>
 #include <stdint.h>
-
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <lib/fdio/io.h>
 
 #include "private.h"
 
@@ -110,6 +109,6 @@ zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx_handle_t* out) {
+zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx::vmo* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }

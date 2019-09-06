@@ -276,19 +276,18 @@ static zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, f
       io = fdio_remote_create(handle.release(), info.mutable_tty().event.release());
       break;
     case fio::NodeInfo::Tag::kVmofile: {
-      auto result =
-          fio::File::Call::Seek(zx::unowned_channel(handle.get()), 0, fio::SeekOrigin::START);
+      fio::File::SyncClient control(std::move(handle));
+      auto result = control.Seek(0, fio::SeekOrigin::START);
       zx_status_t status = result.status();
       if (status != ZX_OK) {
         return status;
       }
-      fio::File::SeekResponse* response = result.Unwrap();
-      status = response->s;
+      status = result->s;
       if (status != ZX_OK) {
         return status;
       }
-      io = fdio_vmofile_create(handle.release(), info.mutable_vmofile().vmo.release(),
-                               info.vmofile().offset, info.vmofile().length, response->offset);
+      io = fdio_vmofile_create(std::move(control), std::move(info.mutable_vmofile().vmo),
+                               info.vmofile().offset, info.vmofile().length, result->offset);
       break;
     }
     case fio::NodeInfo::Tag::kPipe: {

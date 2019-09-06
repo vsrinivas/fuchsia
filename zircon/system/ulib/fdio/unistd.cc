@@ -2,10 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "unistd.h"
+
 #include <assert.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/namespace.h>
+#include <lib/fdio/private.h>
+#include <lib/fdio/unsafe.h>
+#include <lib/fdio/vfs.h>
+#include <lib/zircon-internal/debug.h>
 #include <limits.h>
 #include <poll.h>
 #include <stdarg.h>
@@ -23,7 +34,6 @@
 #include <threads.h>
 #include <unistd.h>
 #include <utime.h>
-
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
@@ -35,18 +45,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/namespace.h>
-#include <lib/fdio/private.h>
-#include <lib/fdio/unsafe.h>
-#include <lib/fdio/vfs.h>
-#include <lib/zircon-internal/debug.h>
-
 #include "private.h"
-#include "unistd.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -1009,7 +1008,7 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
   // the corresponding replace_as_executable call below.
   vflags = vflags & (~fio::VMO_FLAG_EXEC);
 
-  zx_handle_t vmo;
+  zx::vmo vmo;
   zx_status_t r = fdio_get_ops(io)->get_vmo(io, vflags, &vmo);
   fdio_release(io);
   if (r < 0) {
@@ -1020,7 +1019,7 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
   // block can be removed once we've plumbed OPEN_RIGHT_EXECUTABLE throughout
   // all the filesystems that ought to provide it.
   if (zx_options & ZX_VM_PERM_EXECUTE) {
-    r = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+    r = vmo.replace_as_executable(zx::handle(), &vmo);
     if (r < 0) {
       return r;
     }
@@ -1028,8 +1027,7 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
 
   uintptr_t ptr = 0;
   zx_options |= ZX_VM_ALLOW_FAULTS;
-  r = zx_vmar_map(zx_vmar_root_self(), zx_options, offset, vmo, fd_off, len, &ptr);
-  zx_handle_close(vmo);
+  r = zx_vmar_map(zx_vmar_root_self(), zx_options, offset, vmo.get(), fd_off, len, &ptr);
   // TODO: map this as shared if we ever implement forking
   if (r < 0) {
     return r;
