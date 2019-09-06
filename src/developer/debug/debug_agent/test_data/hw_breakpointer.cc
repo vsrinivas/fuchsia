@@ -24,12 +24,17 @@ namespace {
 //    means that Zircon is not doing the right thing.
 
 // This is the function that we will set up the breakpoint to.
-static int __NO_INLINE FunctionToBreakpointOn(int c) { return c + c; }
+using HWBreakpointTestCaseFunctionToBeCalled = int (*)(int);
+int __NO_INLINE FunctionToBreakpointOn1(int c) { return c + c; }
+int __NO_INLINE FunctionToBreakpointOn2(int c) { return c + c; }
+int __NO_INLINE FunctionToBreakpointOn3(int c) { return c + c; }
+int __NO_INLINE FunctionToBreakpointOn4(int c) { return c + c; }
+int __NO_INLINE FunctionToBreakpointOn5(int c) { return c + c; }
 
 // This is the code that the new thread will run.
 // It's meant to be an eternal loop.
 int BreakOnFunctionThreadFunction(void* user) {
-  ThreadSetup* thread_setup = reinterpret_cast<ThreadSetup*>(user);
+  auto* thread_setup = reinterpret_cast<ThreadSetup*>(user);
 
   // We signal the test harness that we are here.
   thread_setup->event.signal(kHarnessToThread, kThreadToHarness);
@@ -41,9 +46,13 @@ int BreakOnFunctionThreadFunction(void* user) {
 
   int counter = 1;
   while (thread_setup->test_running) {
+    auto* function_to_call =
+        reinterpret_cast<HWBreakpointTestCaseFunctionToBeCalled>(thread_setup->user);
+    FXL_DCHECK(function_to_call);
+
     // We use write to avoid deadlocking with the outside libc calls.
     write(1, kBeacon, sizeof(kBeacon));
-    counter = FunctionToBreakpointOn(counter);
+    counter = function_to_call(counter);
     zx::nanosleep(zx::deadline_after(zx::sec(1)));
   }
 
@@ -53,26 +62,60 @@ int BreakOnFunctionThreadFunction(void* user) {
 int BreakOnFunctionTestCase() {
   PRINT("Running HW breakpoint when calling a function test.");
 
+  // The functions to be called sequentially by the test.
+  HWBreakpointTestCaseFunctionToBeCalled breakpoint_functions[] = {
+    FunctionToBreakpointOn1,
+    FunctionToBreakpointOn2,
+    FunctionToBreakpointOn3,
+    FunctionToBreakpointOn4,
+    FunctionToBreakpointOn5,
+  };
+
   auto thread_setup = CreateTestSetup(BreakOnFunctionThreadFunction);
 
-  auto [port, exception_channel] = WaitAsyncOnExceptionChannel(thread_setup->thread);
 
-  uint64_t breakpoint_address = reinterpret_cast<uint64_t>(FunctionToBreakpointOn);
-  InstallHWBreakpoint(thread_setup->thread, breakpoint_address);
-  PRINT("Set breakpoint on function \"FunctionToBreakpointOn\" 0x%zx", breakpoint_address);
+  zx::port port;
+  CHECK_OK(zx::port::create(0, &port));
 
-  // Tell the thread to continue.
-  thread_setup->event.signal(kThreadToHarness, kHarnessToThread);
+  zx::channel exception_channel;
+  CHECK_OK(thread_setup->thread.create_exception_channel(0, &exception_channel));
 
-  // We wait until we receive an exception.
-  Exception exception = WaitForException(port, exception_channel);
+  WaitAsyncOnExceptionChannel(port, exception_channel);
 
-  FXL_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
-  PRINT("Got HW exception!");
+  Exception exception = {};
 
-  // Remove the hw breakpoint.
+  for (size_t i = 0; i < ARRAY_SIZE(breakpoint_functions); i++) {
+    // If this is the first iteration, we don't resume the exception.
+    if (i > 0u) {
+      WaitAsyncOnExceptionChannel(port, exception_channel);
+      ResumeException(thread_setup->thread, std::move(exception));
+    }
+
+    auto* breakpoint_function = breakpoint_functions[i];
+
+    // Pass in the function to call as extra data.
+    thread_setup->user = reinterpret_cast<void*>(breakpoint_function);
+
+    // Install the breakpoint.
+    uint64_t breakpoint_address = reinterpret_cast<uint64_t>(breakpoint_function);
+    InstallHWBreakpoint(thread_setup->thread, breakpoint_address);
+
+    // Tell the thread to continue.
+    thread_setup->event.signal(kThreadToHarness, kHarnessToThread);
+
+    // We wait until we receive an exception.
+    exception = WaitForException(port, exception_channel);
+
+    FXL_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
+    PRINT("Hit HW breakpoint %zu on 0x%zx", i, exception.pc);
+
+    // Remove the breakpoint.
+    InstallHWBreakpoint(thread_setup->thread, 0);
+
+  }
+
+  // Tell the thread to exit.
   thread_setup->test_running = false;
-  InstallHWBreakpoint(thread_setup->thread, 0);
   ResumeException(thread_setup->thread, std::move(exception));
 
   return 0;
@@ -144,9 +187,54 @@ int ChannelMessagingTestCase() {
 
 // Main --------------------------------------------------------------------------------------------
 
-int main(int argc, char* argv[]) {
-  if (argc > 1) {
-    return BreakOnFunctionTestCase();
+struct TestCase {
+  using TestFunction = int(*)();
+
+  std::string name = nullptr;
+  std::string description = nullptr;
+  TestFunction test_function = nullptr;
+};
+
+TestCase kTestCases[] = {
+    {"hw_breakpoints", "Call multiple HW breakpoints on different functions.",
+     BreakOnFunctionTestCase},
+
+    {"channel_calls",
+     "Send multiple messages over a channel call and read from it after it is closed.",
+     ChannelMessagingTestCase},
+};
+
+void PrintUsage() {
+  printf("Usage: hw_breakpointer <TEST CASE>\n");
+  printf("Test cases are:\n");
+  for (auto& test_case : kTestCases) {
+    printf("- %s: %s\n", test_case.name.c_str(), test_case.description.c_str());
   }
-  return ChannelMessagingTestCase();
+  fflush(stdout);
+}
+
+TestCase::TestFunction GetTestCase(std::string test_name) {
+  for (auto& test_case : kTestCases) {
+    if (test_name == test_case.name)
+      return test_case.test_function;
+  }
+
+  return nullptr;
+}
+
+int main(int argc, char* argv[]) {
+  if (argc != 2) {
+    PrintUsage();
+    return 1;
+  }
+
+  const char* test_name = argv[1];
+  auto* test_function = GetTestCase(test_name);
+  if (!test_function) {
+    printf("Unknown test case %s\n", test_name);
+    PrintUsage();
+    return 1;
+  }
+
+  return test_function();
 }

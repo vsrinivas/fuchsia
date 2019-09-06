@@ -19,12 +19,17 @@
 #include <iostream>
 #include <thread>
 
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-#define PRINT(...)                                                                               \
-  std::cout << std::this_thread::get_id() << ": " << fxl::StringPrintf(__VA_ARGS__) << std::endl \
-            << std::flush;
+#define PRINT(...)                                                                           \
+  {                                                                                          \
+    auto base_name = files::GetBaseName(__FILE__);                                             \
+    std::cout << "[" << base_name << ":" << __LINE__ << "][t: " << std::this_thread::get_id() \
+              << "] " << fxl::StringPrintf(__VA_ARGS__) << std::endl                         \
+              << std::flush;                                                                 \
+  }
 
 #define DEFER_PRINT(...) auto __defer = fit::defer([=]() { PRINT(__VA_ARGS__); });
 
@@ -33,6 +38,9 @@
     zx_status_t __res = (stmt);                                \
     FXL_DCHECK(__res == ZX_OK) << zx_status_get_string(__res); \
   }
+
+#define ARRAY_SIZE(a) (sizeof((a)) / sizeof((a))[0])
+
 
 constexpr char kBeacon[] = "Counter: Thread running.\n";
 constexpr int kPortKey = 0x2312451;
@@ -56,15 +64,20 @@ struct ThreadSetup {
 
 std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* user = nullptr);
 
-zx_thread_state_debug_regs_t ReadGeneralRegs(const zx::thread& thread);
+zx_thread_state_general_regs_t ReadGeneralRegs(const zx::thread& thread);
 
 void WriteGeneralRegs(const zx::thread& thread, const zx_thread_state_debug_regs_t& regs);
 
 zx_port_packet_t WaitOnPort(const zx::port& port, zx_signals_t signals);
 
 struct Exception {
+  zx::process process;
+  zx::thread thread;
+
   zx::exception handle;
   zx_exception_info_t info;
+  zx_thread_state_general_regs_t regs;
+  uint64_t pc = 0;
 };
 
 Exception GetException(const zx::channel& exception_channel);
@@ -73,7 +86,7 @@ Exception WaitForException(const zx::port& port, const zx::channel& exception_ch
 
 void ResumeException(const zx::thread& thread, Exception&& exception, bool handled = true);
 
-std::pair<zx::port, zx::channel> WaitAsyncOnExceptionChannel(const zx::thread& thread);
+void WaitAsyncOnExceptionChannel(const zx::port& port, const zx::channel& exception_channel);
 
 bool IsOnException(const zx::thread& thread);
 

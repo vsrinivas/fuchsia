@@ -28,8 +28,8 @@ std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* u
   return setup;
 }
 
-zx_thread_state_debug_regs_t ReadGeneralRegs(const zx::thread& thread) {
-  zx_thread_state_debug_regs_t regs = {};
+zx_thread_state_general_regs_t ReadGeneralRegs(const zx::thread& thread) {
+  zx_thread_state_general_regs_t regs = {};
   CHECK_OK(thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
   return regs;
 }
@@ -51,13 +51,26 @@ zx_port_packet_t WaitOnPort(const zx::port& port, zx_signals_t signals) {
 }
 
 Exception GetException(const zx::channel& exception_channel) {
-  // Obtain the exception.
-  zx::exception exception;
-  zx_exception_info_t info;
-  CHECK_OK(exception_channel.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
-                                  nullptr, nullptr));
+  Exception exception = {};
 
-  return {std::move(exception), info};
+  // Obtain the exception.
+  CHECK_OK(exception_channel.read(0, &exception.info, exception.handle.reset_and_get_address(),
+                                  sizeof(exception.info), 1, nullptr, nullptr));
+
+  /* exception.handle.get_process(&exception.process); */
+  CHECK_OK(exception.handle.get_thread(&exception.thread));
+
+  exception.regs = ReadGeneralRegs(exception.thread);
+
+#if defined(__x86_64__)
+  exception.pc = exception.regs.rip;
+#elif defined(__aarch64__)
+  exception.pc = exception.regs.pc;
+#else
+#error Undefined arch.
+#endif
+
+  return exception;
 }
 
 Exception WaitForException(const zx::port& port, const zx::channel& exception_channel) {
@@ -83,18 +96,12 @@ void ResumeException(const zx::thread& thread, Exception&& exception, bool handl
   exception.handle.reset();
 }
 
-std::pair<zx::port, zx::channel> WaitAsyncOnExceptionChannel(const zx::thread& thread) {
-  // Listen on the exception channel for the thread.
-  zx::channel exception_channel;
-  CHECK_OK(thread.create_exception_channel(0, &exception_channel));
 
-  zx::port port;
-  CHECK_OK(zx::port::create(0, &port));
+void WaitAsyncOnExceptionChannel(const zx::port& port, const zx::channel& exception_channel) {
+  // Listen on the exception channel for the thread.
 
   // Wait on the exception channel.
   CHECK_OK(exception_channel.wait_async(port, kPortKey, ZX_CHANNEL_READABLE, 0));
-
-  return {std::move(port), std::move(exception_channel)};
 }
 
 bool IsOnException(const zx::thread& thread) {
@@ -130,7 +137,6 @@ zx_thread_state_debug_regs_t GetDebugRegs(uint64_t address) {
   if (address == 0)
     return {};
 
-  PRINT("Setting HW breakpoint to 0x%zx", address);
   zx_thread_state_debug_regs_t debug_regs = {};
   debug_regs.dr7 = 0b1;
   debug_regs.dr[0] = reinterpret_cast<uint64_t>(address);
@@ -157,6 +163,8 @@ zx_thread_state_debug_regs_t GetDebugRegs(uint64_t address) {
 }  // namespace
 
 void InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
+  DEFER_PRINT("Installed breakpoint on address 0x%zx", address);
+
   zx::suspend_token suspend_token = Suspend(thread);
 
   // Install the HW breakpoint.
