@@ -10,6 +10,7 @@
 #include <soc/aml-s912/s912-audio.h>
 
 #include <limits>
+#include <numeric>
 #include <utility>
 
 #include "hdmitx.h"
@@ -65,7 +66,7 @@ zx_status_t Vim2SpdifAudioStream::ChangeFormat(const audio_proto::StreamSetFmtRe
   //
   ZX_DEBUG_ASSERT(frame_size_ > 0);
   usable_buffer_size_ = fbl::round_down(static_cast<uint32_t>(pinned_ring_buffer_.region(0).size),
-                                        fbl::lcm(AIU_958_BYTES_PER_FRAME, frame_size_));
+                                        std::lcm(AIU_958_BYTES_PER_FRAME, frame_size_));
 
   // TODO(johngro): figure out the proper value for this
   fifo_depth_ = 512;
