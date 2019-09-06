@@ -177,108 +177,74 @@ func getIndexedFilename(filename string, index int) string {
 	return fmt.Sprintf("%s-%d%s", name, index, ext)
 }
 
-func (r *RunCommand) execute(ctx context.Context, args []string) error {
-	imgs, err := build.LoadImages(r.imageManifests...)
-	if err != nil {
-		return fmt.Errorf("failed to load images: %v", err)
-	}
+type targetSetup struct {
+	targets    []Target
+	syslogs    []io.ReadWriteCloser
+	serialLogs []io.ReadWriteCloser
+	err        error
+}
 
-	opts := target.Options{
-		Netboot: r.netboot,
-		SSHKey:  r.sshKey,
-	}
-
-	data, err := ioutil.ReadFile(r.configFile)
-	if err != nil {
-		return fmt.Errorf("could not open config file: %v", err)
-	}
-	var objs []json.RawMessage
-	if err := json.Unmarshal(data, &objs); err != nil {
-		return fmt.Errorf("could not unmarshal config file as a JSON list: %v", err)
-	}
-
-	var targets []Target
-	for _, obj := range objs {
-		t, err := DeriveTarget(ctx, obj, opts)
-		if err != nil {
-			return err
-		}
-		targets = append(targets, t)
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targets []Target) *targetSetup {
+	var syslogs, serialLogs []io.ReadWriteCloser
 	errs := make(chan error)
 	var wg sync.WaitGroup
+	var setupErr error
 
 	for i, t := range targets {
-		defer func() {
-			logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
-			if err := t.Stop(ctx); err == target.ErrUnimplemented {
-				t.Restart(ctx)
-			}
-		}()
-
-		var syslogFile, serialLogFile string
+		var syslog io.ReadWriteCloser
 		if r.syslogFile != "" {
-			syslogFile = r.syslogFile
+			syslogFile := r.syslogFile
 			if len(targets) > 1 {
 				syslogFile = getIndexedFilename(r.syslogFile, i)
 			}
-		}
-		if r.serialLogFile != "" {
-			serialLogFile = r.serialLogFile
-			if len(targets) > 1 {
-				serialLogFile = getIndexedFilename(r.serialLogFile, i)
+			syslog, err := os.Create(syslogFile)
+			if err != nil {
+				setupErr = err
+				break
 			}
+			syslogs = append(syslogs, syslog)
+		}
+
+		zirconArgs := r.zirconArgs
+		if t.Serial() != nil {
+			if r.serialLogFile != "" {
+				serialLogFile := r.serialLogFile
+				if len(targets) > 1 {
+					serialLogFile = getIndexedFilename(r.serialLogFile, i)
+				}
+				serialLog, err := os.Create(serialLogFile)
+				if err != nil {
+					setupErr = err
+					break
+				}
+				serialLogs = append(serialLogs, serialLog)
+
+				// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
+				// output file.  This should give us everything since Zedboot boot, and new messages should
+				// be written to directly to the serial port without needing to tail with `dlog -f`.
+				if _, err = io.WriteString(t.Serial(), "\ndlog\n"); err != nil {
+					logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
+				}
+
+				go func(t Target) {
+					for {
+						_, err := io.Copy(serialLog, t.Serial())
+						if err != nil && err != io.EOF {
+							logger.Errorf(ctx, "failed to write serial log: %v", err)
+							return
+						}
+					}
+				}(t)
+				zirconArgs = append(zirconArgs, "kernel.bypass-debuglog=true")
+			}
+			// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
+			// arm64 devices should already be enabling kernel.serial at compile time.
+			zirconArgs = append(zirconArgs, "kernel.serial=legacy")
 		}
 
 		wg.Add(1)
-		go func(t Target, syslogFile string, serialLogFile string) {
+		go func(t Target, syslog io.Writer, zirconArgs []string) {
 			defer wg.Done()
-			var syslog io.Writer
-			if syslogFile != "" {
-				syslog, err := os.Create(syslogFile)
-				if err != nil {
-					errs <- err
-					return
-				}
-				defer syslog.Close()
-			}
-
-			zirconArgs := r.zirconArgs
-			if t.Serial() != nil {
-				if serialLogFile != "" {
-					serialLog, err := os.Create(serialLogFile)
-					if err != nil {
-						errs <- err
-						return
-					}
-					defer serialLog.Close()
-
-					// Here we invoke the `dlog` command over serial to tail the existing log buffer into the
-					// output file.  This should give us everything since Zedboot boot, and new messages should
-					// be written to directly to the serial port without needing to tail with `dlog -f`.
-					if _, err = io.WriteString(t.Serial(), "\ndlog\n"); err != nil {
-						logger.Errorf(ctx, "failed to tail zedboot dlog: %v", err)
-					}
-
-					go func(t Target) {
-						for {
-							_, err := io.Copy(serialLog, t.Serial())
-							if err != nil && err != io.EOF {
-								logger.Errorf(ctx, "failed to write serial log: %v", err)
-								return
-							}
-						}
-					}(t)
-					zirconArgs = append(zirconArgs, "kernel.bypass-debuglog=true")
-				}
-				// Modify the zirconArgs passed to the kernel on boot to enable serial on x64.
-				// arm64 devices should already be enabling kernel.serial at compile time.
-				zirconArgs = append(zirconArgs, "kernel.serial=legacy")
-			}
-
 			if err := t.Start(ctx, imgs, zirconArgs); err != nil {
 				errs <- err
 				return
@@ -311,7 +277,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 					syslogger.Close()
 				}()
 			}
-		}(t, syslogFile, serialLogFile)
+		}(t, syslog, zirconArgs)
 	}
 	// Wait for all targets to finish starting.
 	wg.Wait()
@@ -319,18 +285,44 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	close(errs)
 	err, ok := <-errs
 	if ok {
-		return err
+		setupErr = err
+	}
+	return &targetSetup{
+		targets:    targets,
+		syslogs:    syslogs,
+		serialLogs: serialLogs,
+		err:        setupErr,
+	}
+}
+
+func (r *RunCommand) runCmdWithTargets(ctx context.Context, targetSetup *targetSetup, args []string) error {
+	for _, t := range targetSetup.targets {
+		defer func(t Target) {
+			logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
+			if err := t.Stop(ctx); err == target.ErrUnimplemented {
+				t.Restart(ctx)
+			}
+		}(t)
 	}
 
-	// Since errs was closed, reset it to reuse it again.
-	errs = make(chan error)
+	for _, file := range targetSetup.syslogs {
+		defer file.Close()
+	}
+	for _, file := range targetSetup.serialLogs {
+		defer file.Close()
+	}
+	if targetSetup.err != nil {
+		return targetSetup.err
+	}
+
+	errs := make(chan error)
 
 	go func() {
 		// Target doesn't matter for multi-device host tests. Just use first one.
-		errs <- r.runCmd(ctx, args, targets[0])
+		errs <- r.runCmd(ctx, args, targetSetup.targets[0])
 	}()
 
-	for _, t := range targets {
+	for _, t := range targetSetup.targets {
 		go func(t Target) {
 			if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented {
 				errs <- err
@@ -344,6 +336,42 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	case <-ctx.Done():
 	}
 	return nil
+}
+
+func (r *RunCommand) execute(ctx context.Context, args []string) error {
+	imgs, err := build.LoadImages(r.imageManifests...)
+	if err != nil {
+		return fmt.Errorf("failed to load images: %v", err)
+	}
+
+	opts := target.Options{
+		Netboot: r.netboot,
+		SSHKey:  r.sshKey,
+	}
+
+	data, err := ioutil.ReadFile(r.configFile)
+	if err != nil {
+		return fmt.Errorf("could not open config file: %v", err)
+	}
+	var objs []json.RawMessage
+	if err := json.Unmarshal(data, &objs); err != nil {
+		return fmt.Errorf("could not unmarshal config file as a JSON list: %v", err)
+	}
+
+	var targets []Target
+	for _, obj := range objs {
+		t, err := DeriveTarget(ctx, obj, opts)
+		if err != nil {
+			return err
+		}
+		targets = append(targets, t)
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	targetSetup := r.setupTargets(ctx, imgs, targets)
+	return r.runCmdWithTargets(ctx, targetSetup, args)
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
