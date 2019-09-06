@@ -11,13 +11,14 @@
 #include <fbl/algorithm.h>
 #include <zircon/assert.h>
 
+#include <numeric>
 #include <utility>
 
 namespace perftest {
 namespace {
 
 double Mean(const fbl::Vector<double>& values) {
-  double sum = fbl::accumulate(values.begin(), values.end(), 0.0);
+  double sum = std::accumulate(values.begin(), values.end(), 0.0);
   return sum / static_cast<double>(values.size());
 }
 
