@@ -22,20 +22,20 @@ namespace media::audio {
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
 
-// To what extent should client-side underflows be logged? (A "client-side underflow" refers to when
-// all or part of a packet's data is discarded because its start timestamp has already passed.)
-// For each Renderer, we will log the first underflow. For subsequent occurrances, depending on
-// audio_core's logging level, we throttle how frequently these are displayed. If log_level is set
-// to TRACE or SPEW, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
-// specified by kCaptureUnderflowTraceInterval. If set to INFO, we log less often, at log_level
-// 1: INFO, throttling by the factor kCaptureUnderflowInfoInterval. If set to WARNING or higher,
-// we throttle these even more, specified by kCaptureUnderflowErrorInterval. Note: by default we
-// set NDEBUG builds to WARNING and DEBUG builds to INFO. To disable all logging of client-side
-// underflows, set kLogCaptureUnderflow to false.
-static constexpr bool kLogCaptureUnderflow = true;
-static constexpr uint16_t kCaptureUnderflowTraceInterval = 1;
-static constexpr uint16_t kCaptureUnderflowInfoInterval = 10;
-static constexpr uint16_t kCaptureUnderflowErrorInterval = 100;
+// To what extent should client-side under/overflows be logged? (A "client-side underflow" or
+// "client-side overflow" refers to when part of a data section is discarded because its start
+// timestamp had passed.) For each Capturer, we will log the first overflow. For subsequent
+// occurrences, depending on audio_core's logging level, we throttle how frequently these are
+// displayed. If log_level is set to TRACE or SPEW, all client-side overflows are logged -- at
+// log_level -1: VLOG TRACE -- as specified by kCaptureOverflowTraceInterval. If set to INFO, we
+// log less often, at log_level 1: INFO, throttling by the factor kCaptureOverflowInfoInterval. If
+// set to WARNING or higher, we throttle these even more, specified by
+// kCaptureOverflowErrorInterval. Note: by default we set NDEBUG builds to WARNING and DEBUG builds
+// to INFO. To disable all logging of client-side overflows, set kLogCaptureOverflow to false.
+static constexpr bool kLogCaptureOverflow = true;
+static constexpr uint16_t kCaptureOverflowTraceInterval = 1;
+static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
+static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
 
 zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
 
@@ -66,8 +66,8 @@ AudioCapturerImpl::AudioCapturerImpl(
       loopback_(loopback),
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false),
-      underflow_count_(0u),
-      partial_underflow_count_(0u) {
+      overflow_count_(0u),
+      partial_overflow_count_(0u) {
   FXL_DCHECK(admin);
   FXL_DCHECK(device_manager);
   REP(AddingCapturer(*this));
@@ -937,67 +937,74 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
   Shutdown();
 }
 
-void AudioCapturerImpl::UnderflowOccurred(int64_t source_start, int64_t mix_point,
-                                          zx_duration_t underflow_duration) {
-  TRACE_INSTANT("audio", "AudioCapturerImpl::UnderflowOccurred", TRACE_SCOPE_GLOBAL);
-  uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
+void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
+                                         zx_duration_t overflow_duration) {
+  TRACE_INSTANT("audio", "AudioCapturerImpl::OverflowOccurred", TRACE_SCOPE_GLOBAL);
+  uint16_t overflow_count = std::atomic_fetch_add<uint16_t>(&overflow_count_, 1u);
 
-  if constexpr (kLogCaptureUnderflow) {
-    int64_t underflow_msec = underflow_duration / ZX_MSEC(1);
+  if constexpr (kLogCaptureOverflow) {
+    auto overflow_msec = static_cast<double>(overflow_duration) / ZX_MSEC(1);
 
-    if ((kCaptureUnderflowErrorInterval > 0) &&
-        (underflow_count % kCaptureUnderflowErrorInterval == 0)) {
-      AUD_LOG_OBJ(ERROR, this) << "#" << underflow_count + 1 << " (1/"
-                               << kCaptureUnderflowErrorInterval << "): source-start "
-                               << source_start << " missed mix-point " << mix_point << " by "
-                               << underflow_msec << " ms";
-    } else if ((kCaptureUnderflowInfoInterval > 0) &&
-               (underflow_count % kCaptureUnderflowInfoInterval == 0)) {
-      AUD_LOG_OBJ(INFO, this) << "#" << underflow_count + 1 << " (1/"
-                              << kCaptureUnderflowInfoInterval << "): source-start " << source_start
-                              << " missed mix-point " << mix_point << " by " << underflow_msec
-                              << " ms";
-    } else if ((kCaptureUnderflowTraceInterval > 0) &&
-               (underflow_count % kCaptureUnderflowTraceInterval == 0)) {
-      AUD_VLOG_OBJ(TRACE, this) << "#" << underflow_count + 1 << " (1/"
-                                << kCaptureUnderflowTraceInterval << "): source-start "
-                                << source_start << " missed mix-point " << mix_point << " by "
-                                << underflow_msec << " ms";
+    if ((kCaptureOverflowErrorInterval > 0) &&
+        (overflow_count % kCaptureOverflowErrorInterval == 0)) {
+      FXL_LOG(ERROR) << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/"
+                     << kCaptureOverflowErrorInterval << "): source-start " << frac_source_start
+                     << " missed mix-point " << frac_source_mix_point << " by "
+                     << std::setprecision(4) << overflow_msec << " ms";
+    } else if ((kCaptureOverflowInfoInterval > 0) &&
+               (overflow_count % kCaptureOverflowInfoInterval == 0)) {
+      FXL_LOG(INFO) << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/"
+                    << kCaptureOverflowInfoInterval << "): source-start " << frac_source_start
+                    << " missed mix-point " << frac_source_mix_point << " by "
+                    << std::setprecision(4) << overflow_msec << " ms";
+
+    } else if ((kCaptureOverflowTraceInterval > 0) &&
+               (overflow_count % kCaptureOverflowTraceInterval == 0)) {
+      FXL_VLOG(TRACE) << "CAPTURE OVERFLOW #" << overflow_count + 1 << " (1/"
+                      << kCaptureOverflowTraceInterval << "): source-start " << frac_source_start
+                      << " missed mix-point " << frac_source_mix_point << " by "
+                      << std::setprecision(4) << overflow_msec << " ms";
     }
   }
 }
 
-void AudioCapturerImpl::PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) {
-  TRACE_INSTANT("audio", "AudioCapturerImpl::PartialUnderflowOccurred", TRACE_SCOPE_GLOBAL);
-  uint16_t partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
+void AudioCapturerImpl::PartialOverflowOccurred(int64_t frac_source_offset,
+                                                int64_t dest_mix_offset) {
+  TRACE_INSTANT("audio", "AudioCapturerImpl::PartialOverflowOccurred", TRACE_SCOPE_GLOBAL);
 
-  if constexpr (kLogCaptureUnderflow) {
-    if (abs(source_offset) >= (Mixer::FRAC_ONE >> 1)) {
-      if ((kCaptureUnderflowErrorInterval > 0) &&
-          (partial_underflow_count % kCaptureUnderflowErrorInterval == 0)) {
-        AUD_LOG_OBJ(ERROR, this) << "#" << partial_underflow_count + 1 << " (1/"
-                                 << kCaptureUnderflowErrorInterval << "): shifting by "
-                                 << (source_offset < 0 ? "-0x" : "0x") << std::hex
-                                 << abs(source_offset) << " source subframes and " << std::dec
-                                 << mix_offset << " mix (capture) frames";
-      } else if ((kCaptureUnderflowInfoInterval > 0) &&
-                 (partial_underflow_count % kCaptureUnderflowInfoInterval == 0)) {
-        AUD_LOG_OBJ(INFO, this) << "#" << partial_underflow_count + 1 << " (1/"
-                                << kCaptureUnderflowInfoInterval << "): shifting by "
-                                << (source_offset < 0 ? "-0x" : "0x") << std::hex
-                                << abs(source_offset) << " source subframes and " << std::dec
-                                << mix_offset << " mix (capture) frames";
-      } else if ((kCaptureUnderflowTraceInterval > 0) &&
-                 (partial_underflow_count % kCaptureUnderflowTraceInterval == 0)) {
-        AUD_VLOG_OBJ(TRACE, this) << "#" << partial_underflow_count + 1 << " (1/"
-                                  << kCaptureUnderflowTraceInterval << "): shifting by "
-                                  << (source_offset < 0 ? "-0x" : "0x") << std::hex
-                                  << abs(source_offset) << " source subframes and " << std::dec
-                                  << mix_offset << " mix (capture) frames";
+  // Slips by less than four source frames do not necessarily indicate overflow. A slip of this
+  // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion
+  // ratio is sufficiently large (it can be as large as 4:1).
+  if (abs(frac_source_offset) >= (Mixer::FRAC_ONE << 2)) {
+    uint16_t partial_overflow_count = std::atomic_fetch_add<uint16_t>(&partial_overflow_count_, 1u);
+    if constexpr (kLogCaptureOverflow) {
+      if ((kCaptureOverflowErrorInterval > 0) &&
+          (partial_overflow_count % kCaptureOverflowErrorInterval == 0)) {
+        FXL_LOG(ERROR) << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
+                       << kCaptureOverflowErrorInterval << "): shifting by "
+                       << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+                       << abs(frac_source_offset) << " source subframes and " << std::dec
+                       << dest_mix_offset << " mix (capture) frames";
+      } else if ((kCaptureOverflowInfoInterval > 0) &&
+                 (partial_overflow_count % kCaptureOverflowInfoInterval == 0)) {
+        FXL_LOG(INFO) << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
+                      << kCaptureOverflowInfoInterval << "): shifting by "
+                      << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+                      << abs(frac_source_offset) << " source subframes and " << std::dec
+                      << dest_mix_offset << " mix (capture) frames";
+      } else if ((kCaptureOverflowTraceInterval > 0) &&
+                 (partial_overflow_count % kCaptureOverflowTraceInterval == 0)) {
+        FXL_VLOG(TRACE) << "CAPTURE SLIP #" << partial_overflow_count + 1 << " (1/"
+                        << kCaptureOverflowTraceInterval << "): shifting by "
+                        << (frac_source_offset < 0 ? "-0x" : "0x") << std::hex
+                        << abs(frac_source_offset) << " source subframes and " << std::dec
+                        << dest_mix_offset << " mix (capture) frames";
       }
     } else {
-      AUD_VLOG_OBJ(TRACE, this) << "Shifting by " << mix_offset
-                                << " mix (capture) frames to align with source region";
+      if constexpr (kLogCaptureOverflow) {
+        FXL_VLOG(TRACE) << "Slipping by " << dest_mix_offset
+                        << " mix (capture) frames to align with source region";
+      }
     }
   }
 }
@@ -1177,12 +1184,12 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
 
       // If this source region's final frame occurs before our filter's negative edge (centered at
       // this job's first sample), this source region is entirely in the past and must be skipped.
-      // We have underflowed; we could have started [job_start-region_start+negative_edge] sooner.
+      // We have overflowed; we could have started [job_start-region_start+negative_edge] sooner.
       if (region_last_frame_pts < (job_start - info.mixer->neg_filter_width())) {
         if (rb_last_frame_pts < (job_start - info.mixer->neg_filter_width())) {
           auto clock_mono_late = info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
               job_start - rb_last_frame_pts);
-          UnderflowOccurred(rb_last_frame_pts, job_start, clock_mono_late);
+          OverflowOccurred(rb_last_frame_pts, job_start, clock_mono_late);
         }
         // Move on to the next region
         continue;
@@ -1215,7 +1222,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
         dest_offset_64 = dest_to_src.Inverse().Scale(src_to_skip - 1) + 1;
         source_offset_64 += dest_to_src.Scale(dest_offset_64);
 
-        PartialUnderflowOccurred(source_offset_64, dest_offset_64);
+        PartialOverflowOccurred(source_offset_64, dest_offset_64);
       }
 
       FXL_DCHECK(dest_offset_64 >= 0);

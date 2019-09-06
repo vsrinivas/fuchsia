@@ -153,11 +153,12 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         zx_duration_t output_variance_from_expected_wakeup =
             cm2frames.Inverse().Scale(low_water_frames_underflow);
 
-        FXL_LOG(ERROR) << "UNDERFLOW: Missed mix target by (worst-case, expected) = ("
-                       << output_underflow_duration / ZX_MSEC(1) << ", "
+        FXL_LOG(ERROR) << "OUTPUT UNDERFLOW: Missed mix target by (worst-case, expected) = ("
+                       << std::setprecision(4)
+                       << static_cast<double>(output_underflow_duration) / ZX_MSEC(1) << ", "
                        << output_variance_from_expected_wakeup / ZX_MSEC(1)
-                       << ") mSec.  Cooling down for at least " << kUnderflowCooldown / ZX_MSEC(1)
-                       << " mSec.";
+                       << ") ms. Cooling down for " << kUnderflowCooldown / ZX_MSEC(1)
+                       << " milliseconds.";
 
         // Use our Reporter to log this to Cobalt, if enabled.
         REP(OutputUnderflow(output_underflow_duration, uptime));
@@ -187,8 +188,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         return false;
       } else {
         // Looks like we recovered.  Log and go back to mixing.
-        FXL_LOG(WARNING) << "UNDERFLOW: Recovered after "
-                         << (uptime - underflow_start_time_) / ZX_MSEC(1) << " mSec.";
+        FXL_LOG(WARNING) << "OUTPUT UNDERFLOW: Recovered after "
+                         << (uptime - underflow_start_time_) / ZX_MSEC(1) << " ms.";
         underflow_start_time_ = 0;
         underflow_cooldown_deadline_ = 0;
       }
@@ -206,7 +207,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
 
     uint32_t rb_space = rb.frames() - static_cast<uint32_t>(frames_in_flight);
     if (desired_frames > rb.frames()) {
-      FXL_LOG(ERROR) << "Fatal underflow: want to produce " << desired_frames
+      FXL_LOG(ERROR) << "OUTPUT UNDERFLOW: want to produce " << desired_frames
                      << " but the ring buffer is only " << rb.frames() << " frames long.";
       return false;
     }

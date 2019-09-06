@@ -49,8 +49,8 @@ class AudioCapturerImpl : public AudioObject,
   void SetUsage(fuchsia::media::AudioCaptureUsage usage) override;
   fuchsia::media::AudioCaptureUsage GetUsage() { return usage_; };
 
-  void UnderflowOccurred(int64_t source_start, int64_t mix_point, zx_duration_t underflow_duration);
-  void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset);
+  void OverflowOccurred(int64_t source_start, int64_t mix_point, zx_duration_t overflow_duration);
+  void PartialOverflowOccurred(int64_t source_offset, int64_t mix_offset);
 
  protected:
   friend class fbl::RefPtr<AudioCapturerImpl>;
@@ -256,8 +256,8 @@ class AudioCapturerImpl : public AudioObject,
   StopAsyncCaptureCallback pending_async_stop_cbk_;
 
   // for glitch-debugging purposes
-  std::atomic<uint16_t> underflow_count_;
-  std::atomic<uint16_t> partial_underflow_count_;
+  std::atomic<uint16_t> overflow_count_;
+  std::atomic<uint16_t> partial_overflow_count_;
 };
 
 }  // namespace media::audio
