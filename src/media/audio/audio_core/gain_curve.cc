@@ -4,12 +4,34 @@
 
 #include "gain_curve.h"
 
+#include <float.h>
+#include <fuchsia/media/cpp/fidl.h>
+
 #include <algorithm>
 
 #include "src/lib/fxl/logging.h"
+#include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/mixer_utils.h"
 
 namespace media::audio {
+
+namespace {
+
+constexpr float kDefaultGainForMinVolume = -60.0;
+
+const GainCurve kDefaultCurve = GainCurve::DefaultForMinGain(kDefaultGainForMinVolume);
+
+}  // namespace
+
+const GainCurve& GainCurve::Default() { return kDefaultCurve; }
+
+GainCurve GainCurve::DefaultForMinGain(float min_gain_db) {
+  FXL_DCHECK(min_gain_db < Gain::kUnityGainDb);
+  return GainCurve::FromMappings({{0.0, fuchsia::media::audio::MUTED_GAIN_DB},
+                                  {FLT_EPSILON, min_gain_db},
+                                  {1.0, Gain::kUnityGainDb}})
+      .take_value();
+}
 
 fit::result<GainCurve, GainCurve::Error> GainCurve::FromMappings(
     std::vector<VolumeMapping> mappings) {

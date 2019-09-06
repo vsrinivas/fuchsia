@@ -4,7 +4,11 @@
 
 #include "src/media/audio/audio_core/gain_curve.h"
 
+#include <fuchsia/media/cpp/fidl.h>
+
 #include <gtest/gtest.h>
+
+#include "src/media/audio/audio_core/mixer/gain.h"
 
 namespace media::audio {
 namespace {
@@ -100,6 +104,32 @@ TEST(GainCurveTest, VolumeToDbBasic) {
   ASSERT_EQ(curve.VolumeToDb(0.5), -50.0);
   ASSERT_EQ(curve.VolumeToDb(0.75), -25.0);
   ASSERT_EQ(curve.VolumeToDb(1.0), 0.0);
+}
+
+TEST(GainCurveTest, DefaultCurves) {
+  auto curve = GainCurve::Default();
+
+  ASSERT_EQ(curve.VolumeToDb(0.0), fuchsia::media::audio::MUTED_GAIN_DB);
+  ASSERT_EQ(curve.VolumeToDb(1.0), 0.0);
+
+  const auto middle = curve.VolumeToDb(0.5);
+  ASSERT_GT(middle, fuchsia::media::audio::MUTED_GAIN_DB);
+  ASSERT_LT(middle, 0.0);
+}
+
+TEST(GainCurveTest, DefaultCurveWithMinGainDb) {
+  auto curve100 = GainCurve::DefaultForMinGain(-100.0);
+  auto curve50 = GainCurve::DefaultForMinGain(-50.0);
+
+  ASSERT_EQ(curve100.VolumeToDb(0.0), fuchsia::media::audio::MUTED_GAIN_DB);
+  ASSERT_EQ(curve100.VolumeToDb(0.0), fuchsia::media::audio::MUTED_GAIN_DB);
+  ASSERT_EQ(curve50.VolumeToDb(1.0), Gain::kUnityGainDb);
+  ASSERT_EQ(curve50.VolumeToDb(1.0), Gain::kUnityGainDb);
+
+  const auto middle100 = curve100.VolumeToDb(0.5);
+  const auto middle50 = curve50.VolumeToDb(0.5);
+
+  ASSERT_LT(middle100, middle50);
 }
 
 }  // namespace

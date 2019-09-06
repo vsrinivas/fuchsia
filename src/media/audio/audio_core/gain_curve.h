@@ -33,6 +33,13 @@ class GainCurve {
     float gain_dbfs;
   };
 
+  // A default gain curve to use when the curve of the device is unknown.
+  static const GainCurve& Default();
+
+  // A default gain curve to use when the curve of the device is unknown, but its minimum gain is
+  // known.
+  static GainCurve DefaultForMinGain(float min_gain_db);
+
   // Attempts to construct a curve from a mapping from volume domain to gain in dbfs. Mappings must
   // represent a continuous increasing function from volume to gain in dbfs over the volume domain
   // [0.0, 1.0]. The gain range must start with a negative value and end exactly at 0.0.
