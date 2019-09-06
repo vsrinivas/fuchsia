@@ -9,6 +9,8 @@ import 'dart:io';
 import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
     show SuggestionsProxy;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
+import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
+    show RegistryProxy;
 
 import 'package:flutter/material.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
@@ -18,8 +20,7 @@ import 'package:fuchsia_modular_flutter/story_shell.dart' show StoryShell;
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 
-import '../utils/key_chord_listener.dart'
-    show KeyChordListener, KeyChordBinding;
+import '../utils/keyboard_shortcuts.dart' show KeyboardShortcuts;
 import '../utils/suggestions.dart';
 import 'ask_model.dart';
 import 'cluster_model.dart';
@@ -30,8 +31,7 @@ import 'topbar_model.dart';
 class AppModel {
   final _pointerEventsListener = PointerEventsListener();
   final _suggestionsService = SuggestionsProxy();
-  final _cancelActionBinding =
-      KeyChordBinding(action: 'cancel', hidUsage: 0x29);
+  final _shortcutRegistry = ui_shortcut.RegistryProxy();
 
   SessionShell sessionShell;
 
@@ -47,7 +47,7 @@ class AppModel {
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   ValueNotifier<bool> helpVisibility = ValueNotifier(false);
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
-  KeyChordListener _keyboardListener;
+  KeyboardShortcuts _keyboardShortcuts;
   StatusModel status;
   AskModel askModel;
   TopbarModel topbarModel;
@@ -57,6 +57,10 @@ class AppModel {
     StartupContext.fromStartupInfo()
         .incoming
         .connectToService(_suggestionsService);
+
+    StartupContext.fromStartupInfo()
+        .incoming
+        .connectToService(_shortcutRegistry);
 
     sessionShell = SessionShell(
       startupContext: _startupContext,
@@ -96,8 +100,8 @@ class AppModel {
     File file = File('/pkg/data/keyboard_shortcuts.json');
     if (file.existsSync()) {
       final bindings = await file.readAsString();
-      _keyboardListener = KeyChordListener(
-        presentation: sessionShell.presentation,
+      _keyboardShortcuts = KeyboardShortcuts(
+        registry: _shortcutRegistry,
         actions: {
           'shortcuts': onKeyboard,
           'ask': onMeta,
@@ -110,8 +114,8 @@ class AppModel {
           'logout': onLogout,
         },
         bindings: bindings,
-      )..listen();
-      keyboardShortcuts = _keyboardListener.helpText();
+      );
+      keyboardShortcuts = _keyboardShortcuts.helpText();
     } else {
       throw ArgumentError.value(
           'keyboard_shortcuts.json', 'fileName', 'File does not exist');
@@ -155,7 +159,6 @@ class AppModel {
       // Close other system overlays.
       onCancel();
       askVisibility.value = true;
-      _keyboardListener.add(_cancelActionBinding);
     }
   }
 
@@ -165,7 +168,6 @@ class AppModel {
       // Close other system overlays.
       onCancel();
       statusVisibility.value = true;
-      _keyboardListener.add(_cancelActionBinding);
     }
   }
 
@@ -175,7 +177,6 @@ class AppModel {
     askVisibility.value = false;
     statusVisibility.value = false;
     helpVisibility.value = false;
-    _keyboardListener.release(_cancelActionBinding);
   }
 
   /// Called when the user wants to delete the story.
@@ -189,7 +190,6 @@ class AppModel {
       // Close other system overlays.
       onCancel();
       helpVisibility.value = true;
-      _keyboardListener.add(_cancelActionBinding);
     }
   }
 
@@ -201,7 +201,8 @@ class AppModel {
     _suggestionsService.ctrl.close();
     askModel.dispose();
     status.dispose();
-    _keyboardListener.close();
+    _keyboardShortcuts.dispose();
+    _shortcutRegistry.ctrl.close();
     sessionShell
       ..context.logout()
       ..stop();

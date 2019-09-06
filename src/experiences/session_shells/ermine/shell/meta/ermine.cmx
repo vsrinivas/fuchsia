@@ -27,7 +27,8 @@
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.shortcut.Registry"
         ]
     }
 }

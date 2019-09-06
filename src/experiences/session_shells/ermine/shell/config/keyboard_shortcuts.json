@@ -1,128 +1,89 @@
 {
-  "shortcuts": [
+  "cancel": [
     {
-      "char": "/",
-      "modifier": 128,
-      "chord": "Left Super + /",
-      "description": "Show keyboard shortcuts"
-    },
-    {
-      "char": "/",
-      "modifier": 256,
-      "chord": "Right Super + /",
-      "description": "Show keyboard shortcuts"
+      "char": "escape",
+      "chord": "Escape",
+      "exclusive": false,
+      "description": "Dismiss system overlays"
     }
   ],
   "ask": [
     {
-      "char": " ",
-      "modifier": 128,
-      "chord": "Left Super + Space bar",
+      "char": "space",
+      "modifier": "meta",
+      "chord": "Meta + Space bar",
       "description": "Launch Ask"
     },
     {
-      "char": " ",
-      "modifier": 256,
-      "chord": "Right Super + Space bar",
+      "char": "space",
+      "modifier": "alt",
+      "chord": "Alt + Space bar",
       "description": "Launch Ask"
     },
     {
-      "char": " ",
-      "modifier": 32,
-      "chord": "Left Alt + Space bar",
-      "description": "Launch Ask"
-    },
-    {
-      "char": " ",
-      "modifier": 64,
-      "chord": "Right Alt + Space bar",
-      "description": "Launch Ask"
-    },
-    {
-      "hidUsage": 58,
+      "char": "f1",
       "chord": "F1",
       "description": "Launch Ask"
+    }
+  ],
+  "shortcuts": [
+    {
+      "char": "slash",
+      "modifier": "meta",
+      "chord": "Meta + /",
+      "description": "Show keyboard shortcuts"
     }
   ],
   "fullscreen": [
     {
       "char": "f",
-      "modifier": 128,
-      "chord": "Left Super + f",
-      "description": "Toggle focused story fullscreen"
-    },
-    {
-      "char": "f",
-      "modifier": 256,
-      "chord": "Right Super + f",
+      "modifier": "meta",
+      "chord": "Meta + f",
       "description": "Toggle focused story fullscreen"
     }
   ],
   "close": [
     {
       "char": "w",
-      "modifier": 128,
-      "chord": "Left Super + w",
-      "description": "Close focused story"
-    },
-    {
-      "char": "w",
-      "modifier": 256,
-      "chord": "Right Super + w",
+      "modifier": "meta",
+      "chord": "Meta + w",
       "description": "Close focused story"
     }
   ],
   "status": [
     {
       "char": "s",
-      "modifier": 64,
-      "chord": "Right Alt + s",
+      "modifier": "alt",
+      "chord": "Alt + s",
       "description": "Toggle status"
     },
     {
-      "hidUsage": 62,
-      "chord": "F5",
+      "char": "f6",
+      "chord": "F6",
       "description": "Toggle status"
     }
   ],
   "nextCluster": [
     {
-      "hidUsage": 79,
-      "modifier": 128,
-      "chord": "Left Super + ->",
-      "description": "Next cluster"
-    },
-    {
-      "hidUsage": 79,
-      "modifier": 256,
-      "chord": "Right Super + ->",
+      "char": "right",
+      "modifier": "meta",
+      "chord": "Meta + ->",
       "description": "Next cluster"
     }
   ],
   "previousCluster": [
     {
-      "hidUsage": 80,
-      "modifier": 128,
-      "chord": "Left Super + <-",
-      "description": "Previous cluster"
-    },
-    {
-      "hidUsage": 80,
-      "modifier": 256,
-      "chord": "Right Super + <-",
+      "char": "left",
+      "modifier": "meta",
+      "chord": "Meta + <-",
       "description": "Previous cluster"
     }
   ],
   "logout": [
     {
       "char": "o",
-      "modifier": 64,
-      "chord": "Right Alt + o",
-      "description": "Logout session"
-    },
-    {
-      "hidUsage": 63,
-      "chord": "F6",
+      "modifier": "alt",
+      "chord": "Alt + o",
       "description": "Logout session"
     }
   ]
