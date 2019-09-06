@@ -5,6 +5,7 @@
 #ifndef LIB_INSPECT_CPP_VMO_SNAPSHOT_H_
 #define LIB_INSPECT_CPP_VMO_SNAPSHOT_H_
 
+#include <lib/fit/function.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
@@ -35,14 +36,14 @@ class Snapshot final {
   struct Options final {
     // The number of attempts to read a consistent snapshot.
     // Reading fails if the number of attempts exceeds this number.
-    int read_attempts;
+    int read_attempts = 1024;
 
     // If true, skip checking the buffer for consistency.
-    bool skip_consistency_check;
+    bool skip_consistency_check = false;
   };
 
   // Type for observing reads on the VMO.
-  using ReadObserver = std::function<void(uint8_t* buffer, size_t buffer_size)>;
+  using ReadObserver = fit::function<void(uint8_t* buffer, size_t buffer_size)>;
 
   // By default, ensure consistency of the incoming Inspect VMO and retry up to
   // 1024 times.

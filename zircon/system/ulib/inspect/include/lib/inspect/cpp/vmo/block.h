@@ -14,7 +14,7 @@
 namespace inspect {
 namespace internal {
 
-enum class BlockType {
+enum class BlockType : uint8_t {
   kFree = 0,
   kReserved = 1,
   kHeader = 2,
@@ -30,7 +30,7 @@ enum class BlockType {
   kLinkValue = 12,
 };
 
-enum class PropertyBlockFormat {
+enum class PropertyBlockFormat : uint8_t {
   // The property is a UTF-8 string.
   kUtf8 = 0,
 
@@ -38,7 +38,7 @@ enum class PropertyBlockFormat {
   kBinary = 1
 };
 
-enum class ArrayBlockFormat {
+enum class ArrayBlockFormat : uint8_t {
   // The array stores N raw values in N slots.
   kDefault = 0,
 
@@ -60,7 +60,7 @@ enum class ArrayBlockFormat {
   kExponentialHistogram = 2
 };
 
-enum class LinkBlockDisposition {
+enum class LinkBlockDisposition : uint8_t {
   // The linked sub-hierarchy root is a child of the LINK_VALUE's parent.
   kChild = 0,
 

@@ -48,6 +48,7 @@ std::vector<DebugBlock> dump(const Heap& heap) {
   ZX_ASSERT(ZX_OK ==
             ScanBlocks(heap.data(), heap.size(), [&ret](BlockIndex index, const Block* block) {
               ret.push_back({index, GetType(block), GetOrder(block)});
+              return true;
             }));
 
   return ret;

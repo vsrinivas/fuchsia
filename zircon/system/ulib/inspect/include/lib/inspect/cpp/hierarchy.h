@@ -15,7 +15,7 @@
 namespace inspect {
 
 // Describes how an array of values should be displayed.
-enum class ArrayDisplayFormat {
+enum class ArrayDisplayFormat : uint8_t {
   // The array should be displayed as a flat list of numeric types.
   kFlat,
 
@@ -56,7 +56,7 @@ class Array final : public Value<std::vector<T>, FormatIndex> {
   // Describes a single bucket in a histogram.
   //
   // This contains the count of values falling in interval [floor, upper_limit).
-  struct HistogramBucket {
+  struct HistogramBucket final {
     // The floor of values falling in this bucket, inclusive.
     T floor;
 
@@ -192,7 +192,7 @@ class NamedValue final {
 }  // namespace internal
 
 // Describes the format of a parsed property.
-enum class PropertyFormat {
+enum class PropertyFormat : uint8_t {
   kInvalid = 0,
   kInt = 1,
   kUint = 2,
@@ -236,13 +236,19 @@ class NodeValue final {
 
   // Obtains reference to name.
   const std::string& name() const { return name_; }
-  std::string& name() { return name_; }
+
+  // Sets the name.
+  void set_name(std::string name) { name_ = std::move(name); }
 
   // Obtains reference to properties.
   const std::vector<PropertyValue>& properties() const { return properties_; }
-  std::vector<PropertyValue>& properties() { return properties_; }
+
+  // Adds a property to this node.
+  void add_property(PropertyValue property) { properties_.emplace_back(std::move(property)); }
 
   // Sorts the properties of this node by name.
+  //
+  // See description of Hierarchy::Sort.
   void Sort();
 
  private:
@@ -270,20 +276,36 @@ class Hierarchy final {
 
   // Obtains the NodeValue at this level of this hierarchy.
   const NodeValue& node() const { return node_; }
-  NodeValue& node() { return node_; }
+
+  // Obtains a pointer to the underlying NodeValue.
+  NodeValue* node_ptr() { return &node_; }
 
   // Obtains the name of the Node at this level of the hierarchy.
   const std::string& name() const { return node_.name(); }
 
   // Gets the children of this object in the hierarchy.
   const std::vector<Hierarchy>& children() const { return children_; }
-  std::vector<Hierarchy>& children() { return children_; }
+
+  // Adds a child to this hierarchy.
+  void add_child(Hierarchy child) { children_.emplace_back(std::move(child)); }
 
   // Gets a child in this Hierarchy by path.
   // Returns NULL if the requested child could not be found.
-  const Hierarchy* GetByPath(std::vector<std::string> path) const;
+  const Hierarchy* GetByPath(const std::vector<std::string>& path) const;
 
-  // Sort properties and children of this node by name.
+  // Sort properties and children of this node by, and recursively sort each child.
+  //
+  // This method imposes a canonical ordering on every child value in the hierarchy for purposes of
+  // comparison and output. It does not optimize operations in any way.
+  //
+  // The sorting rule for each of children and property values is as follows:
+  // - If and only if all names match non-negative integral strings, sort numerically.
+  // - Otherwise, sort lexicographically.
+  //
+  // For example:
+  //   3b 2 1 11 -> 1 11 2 3b
+  //   2 1 11 3  -> 1 2 3 11
+  //   -1 3 20   -> -1 20 3
   void Sort();
 
  private:

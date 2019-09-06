@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/inspect/cpp/hierarchy.h>
 
 #include <algorithm>
 #include <cctype>
 #include <stack>
 #include <vector>
-
-#include <lib/inspect/cpp/hierarchy.h>
 
 namespace inspect {
 
@@ -50,7 +49,7 @@ void NodeValue::Sort() { SortByName(&properties_); }
 Hierarchy::Hierarchy(NodeValue node, std::vector<Hierarchy> children)
     : node_(std::move(node)), children_(std::move(children)) {}
 
-const Hierarchy* Hierarchy::GetByPath(std::vector<std::string> path) const {
+const Hierarchy* Hierarchy::GetByPath(const std::vector<std::string>& path) const {
   const Hierarchy* current = this;
   auto path_it = path.begin();
 

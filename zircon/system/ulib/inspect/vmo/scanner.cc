@@ -9,7 +9,7 @@ namespace inspect {
 namespace internal {
 
 zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
-                       const std::function<void(BlockIndex, const Block*)>& callback) {
+                       fit::function<bool(BlockIndex, const Block*)> callback) {
   size_t offset = 0;
   while (offset < size) {
     auto* block = reinterpret_cast<const Block*>(buffer + offset);
@@ -27,7 +27,9 @@ zx_status_t ScanBlocks(const uint8_t* buffer, size_t size,
       return ZX_ERR_OUT_OF_RANGE;
     }
 
-    callback(IndexForOffset(offset), block);
+    if (!callback(IndexForOffset(offset), block)) {
+      return ZX_OK;
+    }
     offset += OrderToSize(order);
   }
 

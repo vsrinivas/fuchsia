@@ -21,9 +21,23 @@ TEST(Scanner, ReadEmpty) {
   memset(buf, 0, 1024);
 
   size_t count = 0;
-  EXPECT_TRUE(ZX_OK ==
-              ScanBlocks(buf, 1024, [&count](BlockIndex index, const Block* block) { count++; }));
+  EXPECT_TRUE(ZX_OK == ScanBlocks(buf, 1024, [&count](BlockIndex index, const Block* block) {
+                count++;
+                return true;
+              }));
   EXPECT_EQ(1024 / kMinOrderSize, count);
+}
+
+TEST(Scanner, ReadCancel) {
+  uint8_t buf[1024];
+  memset(buf, 0, 1024);
+
+  size_t count = 0;
+  EXPECT_TRUE(ZX_OK == ScanBlocks(buf, 1024, [&count](BlockIndex index, const Block* block) {
+                count++;
+                return false;
+              }));
+  EXPECT_EQ(1, count);
 }
 
 TEST(Scanner, ReadMisaligned) {
@@ -32,7 +46,10 @@ TEST(Scanner, ReadMisaligned) {
 
   size_t count = 0;
   EXPECT_TRUE(ZX_ERR_OUT_OF_RANGE ==
-              ScanBlocks(buf, 1020, [&count](BlockIndex index, const Block* block) { count++; }));
+              ScanBlocks(buf, 1020, [&count](BlockIndex index, const Block* block) {
+                count++;
+                return true;
+              }));
   EXPECT_EQ(1024 / kMinOrderSize - 1, count);
 }
 
@@ -45,6 +62,7 @@ TEST(Scanner, ReadSingle) {
   EXPECT_TRUE(ZX_OK == ScanBlocks(buf, kMinOrderSize, [&](BlockIndex index, const Block* block) {
                 count++;
                 last_index = index;
+                return true;
               }));
   EXPECT_EQ(1u, count);
   EXPECT_EQ(0u, last_index);
@@ -57,9 +75,11 @@ TEST(Scanner, ReadOutOfBounds) {
   block->header = BlockFields::Order::Make(1);
 
   size_t count = 0;
-  EXPECT_TRUE(
-      ZX_ERR_OUT_OF_RANGE ==
-      ScanBlocks(buf, kMinOrderSize, [&count](BlockIndex index, const Block* block) { count++; }));
+  EXPECT_TRUE(ZX_ERR_OUT_OF_RANGE ==
+              ScanBlocks(buf, kMinOrderSize, [&count](BlockIndex index, const Block* block) {
+                count++;
+                return true;
+              }));
   EXPECT_EQ(0u, count);
 }
 

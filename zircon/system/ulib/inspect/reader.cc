@@ -39,7 +39,7 @@ struct ParsedNode {
 
   // Initializes the stored node with the given name and parent.
   void InitializeNode(std::string name, BlockIndex parent) {
-    hierarchy.node().name() = std::move(name);
+    hierarchy.node_ptr()->set_name(std::move(name));
     this->parent = parent;
     initialized_ = true;
   }
@@ -107,7 +107,7 @@ void Reader::InnerScanBlocks() {
     BlockType type = GetType(block);
     if (index == 0) {
       if (type != BlockType::kHeader) {
-        return;
+        return false;
       }
     } else if (type == BlockType::kNodeValue) {
       // This block defines an Object, use the value to fill out the name of
@@ -125,6 +125,8 @@ void Reader::InnerScanBlocks() {
       auto parent_index = ValueBlockFields::ParentIndex::Get<BlockIndex>(block->header);
       InnerParseProperty(GetOrCreate(parent_index), block);
     }
+
+    return true;
   });
 }
 
@@ -184,7 +186,7 @@ fit::result<Hierarchy> Reader::Read() {
     auto it = parsed_nodes_.find(obj.second);
     ZX_ASSERT(it != parsed_nodes_.end());
     auto* parent = &it->second;
-    parent->hierarchy.children().emplace_back(std::move(obj.first));
+    parent->hierarchy.add_child(std::move(obj.first));
     if (parent->is_complete()) {
       // The parent node is now complete, push it onto the stack.
       complete_nodes.push(std::make_pair(std::move(parent->hierarchy), parent->parent));
@@ -218,20 +220,20 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
     return;
   }
 
-  auto& parent_props = parent->hierarchy.node().properties();
+  auto* parent_node = parent->hierarchy.node_ptr();
 
   BlockType type = GetType(block);
   switch (type) {
     case BlockType::kIntValue:
-      parent_props.emplace_back(
+      parent_node->add_property(
           PropertyValue(std::move(name), IntPropertyValue(block->payload.i64)));
       return;
     case BlockType::kUintValue:
-      parent_props.emplace_back(
+      parent_node->add_property(
           PropertyValue(std::move(name), UintPropertyValue(block->payload.u64)));
       return;
     case BlockType::kDoubleValue:
-      parent_props.emplace_back(
+      parent_node->add_property(
           PropertyValue(std::move(name), DoublePropertyValue(block->payload.f64)));
       return;
     case BlockType::kArrayValue: {
@@ -249,19 +251,19 @@ void Reader::InnerParseNumericProperty(ParsedNode* parent, const Block* block) {
         std::vector<int64_t> values;
         std::copy(GetArraySlot<const int64_t>(block, 0), GetArraySlot<const int64_t>(block, count),
                   std::back_inserter(values));
-        parent_props.emplace_back(
+        parent_node->add_property(
             PropertyValue(std::move(name), IntArrayValue(std::move(values), array_format)));
       } else if (entry_type == BlockType::kUintValue) {
         std::vector<uint64_t> values;
         std::copy(GetArraySlot<const uint64_t>(block, 0),
                   GetArraySlot<const uint64_t>(block, count), std::back_inserter(values));
-        parent_props.emplace_back(
+        parent_node->add_property(
             PropertyValue(std::move(name), UintArrayValue(std::move(values), array_format)));
       } else if (entry_type == BlockType::kDoubleValue) {
         std::vector<double> values;
         std::copy(GetArraySlot<const double>(block, 0), GetArraySlot<const double>(block, count),
                   std::back_inserter(values));
-        parent_props.emplace_back(
+        parent_node->add_property(
             PropertyValue(std::move(name), DoubleArrayValue(std::move(values), array_format)));
       }
       return;
@@ -297,13 +299,13 @@ void Reader::InnerParseProperty(ParsedNode* parent, const Block* block) {
         &snapshot_, ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header));
   }
 
-  auto& parent_properties = parent->hierarchy.node().properties();
+  auto* parent_node = parent->hierarchy.node_ptr();
   if (PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64) &
       static_cast<uint8_t>(PropertyBlockFormat::kBinary)) {
-    parent_properties.emplace_back(
+    parent_node->add_property(
         inspect::PropertyValue(std::move(name), inspect::ByteVectorPropertyValue(buf)));
   } else {
-    parent_properties.emplace_back(inspect::PropertyValue(
+    parent_node->add_property(inspect::PropertyValue(
         std::move(name), inspect::StringPropertyValue(std::string(buf.begin(), buf.end()))));
   }
 }

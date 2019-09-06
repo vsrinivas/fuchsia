@@ -148,6 +148,7 @@ Snapshot SnapshotAndScan(const zx::vmo& vmo,
         *allocated_blocks += 1;
       }
       blocks->insert(std::make_unique<ScannedBlock>(index, block));
+      return true;
     });
   }
   return snapshot;
