@@ -157,11 +157,14 @@ executable("hw_breakpointer") {
 
   sources = [
     "hw_breakpointer.cc",
+    "hw_breakpointer_helpers.cc",
+    "hw_breakpointer_helpers.h",
   ]
 
   deps = [
     "//src/developer/debug/shared",
     "//src/lib/fxl",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }

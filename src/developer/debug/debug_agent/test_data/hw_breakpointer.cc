@@ -2,18 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unistd.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/debug.h>
-#include <zircon/threads.h>
+#include "hw_breakpointer_helpers.h"
 
-#include "src/lib/fxl/logging.h"
-
-// This is a self contained binary that is meant to be run *manually*.
-// This is the smallest code that can be used to reproduce a HW breakpoint
-// exception. This is meant to be able to test the functionality of zircon
-// without having to go throught the hassle of having the whole debugger
-// context around.
+// This is a self contained binary that is meant to be run *manually*. This is the smallest code
+// that can be used to reproduce a HW breakpoint exception.
+// This is meant to be able to test the functionality of zircon without having to go throught the
+// hassle of having the whole debugger context around.
 //
 // THIS CODE IS MEANT TO CRASH WITH A HW EXCEPTION WHEN WORKING PROPERLY!
 //
@@ -27,86 +21,73 @@
 // 5. Wait for some time for the exception. If the exception never happened, it
 //    means that Zircon is not doing the right thing.
 
-static constexpr char kBeacon[] = "Counter: Thread running.\n";
+namespace {
+
+// Test Cases ======================================================================================
+
+// BreakOnFunction ---------------------------------------------------------------------------------
 
 // This is the function that we will set up the breakpoint to.
 static int __NO_INLINE FunctionToBreakpointOn(int c) { return c + c; }
 
 // This is the code that the new thread will run.
 // It's meant to be an eternal loop.
-int ThreadFunction(void*) {
+int BreakOnFunctionThreadFunction(void* user) {
+  ThreadSetup* thread_setup = reinterpret_cast<ThreadSetup*>(user);
+
+  // We signal the test harness that we are here.
+  thread_setup->event.signal(kHarnessToThread, kThreadToHarness);
+
+  PRINT("Signaled harness.");
+
+  // We wait now for the harness to tell us we can continue.
+  CHECK_OK(thread_setup->event.wait_one(kHarnessToThread, zx::time::infinite(), nullptr));
+
+  PRINT("Got signaled by harness.");
+
   int counter = 1;
-  while (true) {
+  while (thread_setup->test_running) {
     // We use write to avoid deadlocking with the outside libc calls.
     write(1, kBeacon, sizeof(kBeacon));
     counter = FunctionToBreakpointOn(counter);
-    zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
   }
 
   return 0;
 }
 
-#if defined(__x86_64__)
+int BreakOnFunctionTestCase() {
+  PRINT("Running HW breakpoint when calling a function test.");
 
-zx_thread_state_debug_regs_t GetDebugRegs() {
-  FXL_NOTREACHED() << "x64 side not implemented.";
-  return {};
+  auto thread_setup = CreateTestSetup(BreakOnFunctionThreadFunction);
+
+  auto [port, exception_channel] = WaitAsyncOnExceptionChannel(thread_setup->thread);
+
+  uint64_t breakpoint_address = reinterpret_cast<uint64_t>(FunctionToBreakpointOn);
+  InstallHWBreakpoint(thread_setup->thread, breakpoint_address);
+  PRINT("Set breakpoint on function \"FunctionToBreakpointOn\" 0x%zx", breakpoint_address);
+
+  // Tell the thread to continue.
+  thread_setup->event.signal(kThreadToHarness, kHarnessToThread);
+
+  // We wait until we receive an exception.
+  Exception exception = WaitForException(port, exception_channel);
+
+  FXL_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
+  PRINT("Got HW exception!");
+
+  // Remove the hw breakpoint.
+  thread_setup->test_running = false;
+  InstallHWBreakpoint(thread_setup->thread, 0);
+  ResumeException(thread_setup->thread, std::move(exception));
+
+  return 0;
 }
 
-#elif defined(__aarch64__)
+}  // namespace
 
-zx_thread_state_debug_regs_t GetDebugRegs() {
-  zx_thread_state_debug_regs_t debug_regs = {};
-  auto& hw_bp = debug_regs.hw_bps[0];
-  hw_bp.dbgbcr = 1;  // Activate it.
-  hw_bp.dbgbvr = reinterpret_cast<uint64_t>(FunctionToBreakpointOn);
-  return debug_regs;
-}
+// Main --------------------------------------------------------------------------------------------
 
-#else
-#error Unsupported arch.
-#endif
-
-int main() {
-  FXL_LOG(INFO) << "****** Creating thread.";
-
-  thrd_t thread;
-  thrd_create(&thread, ThreadFunction, nullptr);
-  zx_handle_t thread_handle = 0;
-  thread_handle = thrd_get_zx_handle(thread);
-
-  FXL_LOG(INFO) << "****** Suspending thread.";
-
-  zx_status_t status;
-  zx_handle_t suspend_token;
-  status = zx_task_suspend(thread_handle, &suspend_token);
-  FXL_DCHECK(status == ZX_OK) << "Could not suspend thread: " << status;
-
-  zx_signals_t observed;
-  status = zx_object_wait_one(thread_handle, ZX_THREAD_SUSPENDED, zx_deadline_after(ZX_MSEC(500)),
-                              &observed);
-  FXL_DCHECK(status == ZX_OK) << "Could not get suspended signal: " << status;
-
-  FXL_LOG(INFO) << "****** Writing debug registers.";
-
-  auto debug_regs = GetDebugRegs();
-  status = zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
-                                 sizeof(debug_regs));
-  FXL_DCHECK(status == ZX_OK) << "Could not write debug regs: " << status;
-
-  FXL_LOG(INFO) << "****** Resuming thread.";
-
-  status = zx_handle_close(suspend_token);
-  FXL_DCHECK(status == ZX_OK) << "Could not resume thread: " << status;
-
-  FXL_LOG(INFO) << "****** Waiting for a bit to hit the breakpoint.";
-
-  // The other thread won't ever stop, so there is no use waiting for a
-  // terminated signal. Instead we wait for a generous amount of time for the
-  // HW exception to happen.
-  // If it doesn't happen, it's an error.
-  zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
-
-  FXL_LOG(ERROR) << " THIS IS AN ERROR. THIS BINARY SHOULD'VE CRASHED!";
-  return 1;
+int main(int argc, char* argv[]) {
+    return BreakOnFunctionTestCase();
 }
