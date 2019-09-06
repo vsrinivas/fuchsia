@@ -4,19 +4,19 @@
 
 #pragma once
 
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/zx/channel.h>
+#include <limits.h>
+
 #include <memory>
 #include <string>
 #include <utility>
-
-#include <limits.h>
 
 #include <fbl/array.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fvm/format.h>
-#include <lib/zx/channel.h>
 #include <ramdevice-client/ramdisk.h>
 
 // This utility library introduces objects wrapping the devices we interact with, to make it clear
@@ -171,9 +171,6 @@ class RamdiskRef final : public BlockDeviceAdapter {
   RamdiskClient* ramdisk_client_ = nullptr;
 };
 
-// Forward declaration.
-class FvmAdapter;
-
 // Wrapper over a VPartitionAdapter, that provides common methods using in fvm-tests.
 class VPartitionAdapter final : public BlockDeviceAdapter {
  public:
@@ -263,4 +260,4 @@ bool AreEqual(const fvm::FormatInfo& a, const fvm::FormatInfo& b);
 // count).
 bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after);
 
-}  // namespace fvm
+}  // namespace fs_test_utils

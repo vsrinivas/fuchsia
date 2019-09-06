@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
-
-#include <fvm/format.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
-#include <zxtest/zxtest.h>
 
-#include "utils.h"
+#include <vector>
+
+#include <fvm/test/device-ref.h>
+#include <fvm/format.h>
+#include <zxtest/zxtest.h>
 
 namespace fvm {
 namespace {

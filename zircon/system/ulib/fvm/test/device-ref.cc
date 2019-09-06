@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "utils.h"
-
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
@@ -24,12 +22,12 @@
 #include <string>
 
 #include <fs-management/fvm.h>
+#include <fvm/test/device-ref.h>
 #include <zxtest/zxtest.h>
-
-namespace fuchsia = ::llcpp::fuchsia;
 
 namespace fvm {
 namespace {
+namespace fuchsia = ::llcpp::fuchsia;
 
 constexpr char kRamdiskCtlPath[] = "misc/ramctl";
 constexpr zx::duration kDeviceWaitTime = zx::sec(3);
@@ -400,4 +398,4 @@ bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after) 
          before.pslice_allocated_count == after.pslice_allocated_count;
 }
 
-}  // namespace fvm
+}  // namespace fs_test_utils

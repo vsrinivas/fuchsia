@@ -42,43 +42,13 @@ test("fvm") {
   ]
 }
 
-library("fvm-test-utils") {
-  sources = [
-    "utils.cc",
-  ]
-
-  public_deps = [
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/ulib/fbl:headers",
-    "$zx/system/ulib/fvm:headers",
-    "$zx/system/ulib/ramdevice-client:headers",
-    "$zx/system/ulib/zx:headers",
-  ]
-  deps = [
-    "$zx/system/fidl/fuchsia-device:c",
-    "$zx/system/fidl/fuchsia-hardware-block-partition:c",
-    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
-    "$zx/system/fidl/fuchsia-io:llcpp",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fs-management",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/ramdevice-client",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
-
 test("fvm-integration") {
   sources = [
     "resize-tests.cc",
   ]
 
   deps = [
-    ":fvm-test-utils",
+    "$zx/system/ulib/fvm/test:devices",
     "$zx/system/ulib/devmgr-integration-test",
     "$zx/system/ulib/devmgr-launcher",
     "$zx/system/ulib/zxtest",
