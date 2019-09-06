@@ -6,14 +6,7 @@
 
 use {
     component_manager_lib::{
-        elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::RealmServiceHost,
-        model::{
-            self,
-            hooks::*,
-            testing::test_utils::{list_directory, read_file},
-            Hub, Model, ModelParams,
-        },
+        model::{self, hooks::*, testing::test_helpers, Hub},
         startup,
     },
     failure::{self, Error},
@@ -51,34 +44,16 @@ fn file_content(content: &str) -> HubReportEvent {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test() -> Result<(), Error> {
-    let args = startup::Arguments { use_builtin_process_launcher: false, ..Default::default() };
-    let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
-    let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
-    let runner = ElfRunner::new(launcher_connector);
-    let resolver_registry = startup::available_resolvers()?;
-    let root_component_url =
-        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm".to_string();
-
+    let root_component_url = "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm";
+    let args = startup::Arguments {
+        use_builtin_process_launcher: false,
+        root_component_url: root_component_url.to_string(),
+    };
+    let model = startup::model_setup(&args).await?;
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
-    let hub = Arc::new(Hub::new(root_component_url.clone()).unwrap());
+    let hub = Arc::new(Hub::new(root_component_url.to_string()).unwrap());
     hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
     let hub_test_hook = Arc::new(HubTestHook::new());
-
-    let startup_args = startup::Arguments {
-        use_builtin_process_launcher: false,
-        root_component_url: "".to_string(),
-    };
-    let params = ModelParams {
-        root_component_url: root_component_url,
-        root_resolver_registry: resolver_registry,
-        root_default_runner: Arc::new(runner),
-        config: model::ModelConfig::default(),
-        builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
-    };
-
-    let model = Arc::new(Model::new(params));
-    let realm_service_host = RealmServiceHost::new((*model).clone());
-    model.hooks.install(realm_service_host.hooks()).await;
     model.hooks.install(hub.hooks()).await;
     model.hooks.install(vec![Hook::RouteFrameworkCapability(hub_test_hook.clone())]).await;
 
@@ -97,11 +72,20 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec!["echo_server:0", "hub_client:0"], list_directory(&children_dir_proxy).await);
+    assert_eq!(
+        vec!["echo_server:0", "hub_client:0"],
+        test_helpers::list_directory(&children_dir_proxy).await
+    );
 
     // These args are from hub_client.cml.
-    assert_eq!("Hippos", read_file(&hub_proxy, "children/hub_client:0/exec/runtime/args/0").await);
-    assert_eq!("rule!", read_file(&hub_proxy, "children/hub_client:0/exec/runtime/args/1").await);
+    assert_eq!(
+        "Hippos",
+        test_helpers::read_file(&hub_proxy, "children/hub_client:0/exec/runtime/args/0").await
+    );
+    assert_eq!(
+        "rule!",
+        test_helpers::read_file(&hub_proxy, "children/hub_client:0/exec/runtime/args/1").await
+    );
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
@@ -112,7 +96,7 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec![echo_service_name], list_directory(&expose_svc_dir_proxy).await);
+    assert_eq!(vec![echo_service_name], test_helpers::list_directory(&expose_svc_dir_proxy).await);
 
     let in_dir = "children/hub_client:0/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
@@ -124,7 +108,7 @@ async fn test() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(
         vec![echo_service_name, hub_report_service_name],
-        list_directory(&svc_dir_proxy).await
+        test_helpers::list_directory(&svc_dir_proxy).await
     );
 
     // Verify that the 'pkg' directory is avaialble.
@@ -135,7 +119,10 @@ async fn test() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec!["bin", "lib", "meta", "test"], list_directory(&pkg_dir_proxy).await);
+    assert_eq!(
+        vec!["bin", "lib", "meta", "test"],
+        test_helpers::list_directory(&pkg_dir_proxy).await
+    );
 
     // Verify that we can connect to the echo service from the in/svc directory.
     let in_echo_service_path = format!("{}/{}", svc_dir, echo_service_name);
@@ -156,7 +143,7 @@ async fn test() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(
         vec!["expose", "in", "out", "resolved_url", "runtime"],
-        list_directory(&scoped_hub_dir_proxy).await
+        test_helpers::list_directory(&scoped_hub_dir_proxy).await
     );
 
     // Verify that hub_client's view of the hub matches the view reachable from

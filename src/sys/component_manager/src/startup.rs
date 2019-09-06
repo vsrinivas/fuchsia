@@ -4,17 +4,20 @@
 
 use {
     crate::{
+        elf_runner::{ElfRunner, ProcessLauncherConnector},
+        framework::RealmServiceHost,
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver::{self, FuchsiaPkgResolver},
-        model::{error::ModelError, hub::Hub, Model, ResolverRegistry},
-        process_launcher::ProcessLauncherService, system_controller,
+        model::{error::ModelError, hub::Hub, Model, ModelConfig, ModelParams, ResolverRegistry},
+        process_launcher::ProcessLauncherService,
+        system_controller,
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_process::LauncherMarker,
-    fidl_fuchsia_sys2::{SystemControllerMarker},
+    fidl_fuchsia_sys2::SystemControllerMarker,
     fuchsia_async as fasync,
     fuchsia_component::{
         client,
@@ -224,13 +227,34 @@ impl BuiltinRootServices {
         fs.add_fidl_service(move |stream| {
             fasync::spawn(
                 system_controller::serve(stream)
-                .unwrap_or_else(|e| panic!("Error serving system controller: {}", e)))
+                    .unwrap_or_else(|e| panic!("Error serving system controller: {}", e)),
+            )
         });
 
         fs.serve_connection(server).context("Failed to serve builtin services")?;
         fasync::spawn(fs.collect::<()>());
         Ok((client, available))
     }
+}
+
+/// Creates and sets up a model with standard parameters. This is easier than setting up the
+/// model manually with `Model::new()`.
+pub async fn model_setup(args: &Arguments) -> Result<Model, Error> {
+    let builtin_services = Arc::new(BuiltinRootServices::new(&args)?);
+    let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+    let runner = ElfRunner::new(launcher_connector);
+    let resolver_registry = available_resolvers()?;
+    let params = ModelParams {
+        root_component_url: args.root_component_url.clone(),
+        root_resolver_registry: resolver_registry,
+        root_default_runner: Arc::new(runner),
+        config: ModelConfig::default(),
+        builtin_services: Arc::new(BuiltinRootServices::new(&args).unwrap()),
+    };
+    let model = Model::new(params);
+    let realm_service_host = RealmServiceHost::new(model.clone());
+    model.hooks.install(realm_service_host.hooks()).await;
+    Ok(model)
 }
 
 #[cfg(test)]

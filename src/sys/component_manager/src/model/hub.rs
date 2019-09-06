@@ -491,7 +491,7 @@ mod tests {
             testing::{
                 test_helpers::*,
                 test_hook::HubInjectionTestHook,
-                test_utils::{dir_contains, list_directory, list_directory_recursive, read_file},
+                test_helpers::{dir_contains, list_directory, list_directory_recursive, read_file},
             },
         },
         crate::startup,

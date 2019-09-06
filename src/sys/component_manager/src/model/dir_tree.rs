@@ -124,7 +124,7 @@ impl DirTree {
 mod tests {
     use {
         super::*,
-        crate::model::testing::{mocks, test_helpers::*, test_utils},
+        crate::model::testing::{mocks, test_helpers::*, test_helpers},
         cm_rust::{
             CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource,
             ExposeTarget, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
@@ -188,19 +188,19 @@ mod tests {
             .expect("failed to create directory proxy");
         assert_eq!(
             vec!["in/data/cache", "in/data/hippo", "in/data/persistent", "in/svc/hippo"],
-            test_utils::list_directory_recursive(&in_dir_proxy).await
+            test_helpers::list_directory_recursive(&in_dir_proxy).await
         );
 
         // Expect that calls on the directory nodes reach the mock directory/service.
-        assert_eq!("friend", test_utils::read_file(&in_dir_proxy, "in/data/hippo/hello").await);
+        assert_eq!("friend", test_helpers::read_file(&in_dir_proxy, "in/data/hippo/hello").await);
         assert_eq!(
             "friend",
-            test_utils::read_file(&in_dir_proxy, "in/data/persistent/hello").await
+            test_helpers::read_file(&in_dir_proxy, "in/data/persistent/hello").await
         );
-        assert_eq!("friend", test_utils::read_file(&in_dir_proxy, "in/data/cache/hello").await);
+        assert_eq!("friend", test_helpers::read_file(&in_dir_proxy, "in/data/cache/hello").await);
         assert_eq!(
             "hippos".to_string(),
-            test_utils::call_echo(&in_dir_proxy, "in/svc/hippo").await
+            test_helpers::call_echo(&in_dir_proxy, "in/svc/hippo").await
         );
     }
 
@@ -253,15 +253,15 @@ mod tests {
             .expect("failed to create directory proxy");
         assert_eq!(
             vec!["in/data/bar", "in/data/hippo", "in/svc/hippo"],
-            test_utils::list_directory_recursive(&expose_dir_proxy).await
+            test_helpers::list_directory_recursive(&expose_dir_proxy).await
         );
 
         // Expect that calls on the directory nodes reach the mock directory/service.
-        assert_eq!("friend", test_utils::read_file(&expose_dir_proxy, "in/data/bar/hello").await);
-        assert_eq!("friend", test_utils::read_file(&expose_dir_proxy, "in/data/hippo/hello").await);
+        assert_eq!("friend", test_helpers::read_file(&expose_dir_proxy, "in/data/bar/hello").await);
+        assert_eq!("friend", test_helpers::read_file(&expose_dir_proxy, "in/data/hippo/hello").await);
         assert_eq!(
             "hippos".to_string(),
-            test_utils::call_echo(&expose_dir_proxy, "in/svc/hippo").await
+            test_helpers::call_echo(&expose_dir_proxy, "in/svc/hippo").await
         );
     }
 }

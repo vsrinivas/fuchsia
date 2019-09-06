@@ -6,15 +6,10 @@
 
 use {
     component_manager_lib::{
-        elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::RealmServiceHost,
         model::{
-            testing::test_utils::list_directory,
+            testing::test_helpers,
             AbsoluteMoniker, //self,AbsoluteMoniker
             Hub,
-            Model,
-            ModelConfig,
-            ModelParams,
         },
         startup,
     },
@@ -45,33 +40,12 @@ async fn main() -> Result<(), Error> {
             return Err(err);
         }
     };
-
     info!("Component manager for test is starting up...");
-
-    let resolver_registry = startup::available_resolvers()?;
-    let builtin_services = Arc::new(startup::BuiltinRootServices::new(&args)?);
-    let launcher_connector = ProcessLauncherConnector::new(&args, builtin_services);
+    let model = startup::model_setup(&args).await?;
 
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
     let hub = Arc::new(Hub::new(args.root_component_url.clone()).unwrap());
     hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, server_chan.into()).await?;
-
-    // TODO(fsamuel): It would be nice to refactor some of this code into a helper
-    // function to create a Model and install a bunch of default hooks.
-    let startup_args = startup::Arguments {
-        use_builtin_process_launcher: false,
-        root_component_url: "".to_string(),
-    };
-    let params = ModelParams {
-        root_component_url: args.root_component_url,
-        root_resolver_registry: resolver_registry,
-        root_default_runner: Arc::new(ElfRunner::new(launcher_connector)),
-        config: ModelConfig::default(),
-        builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
-    };
-    let model = Arc::new(Model::new(params));
-    let realm_service_host = RealmServiceHost::new((*model).clone());
-    model.hooks.install(realm_service_host.hooks()).await;
     model.hooks.install(hub.hooks()).await;
 
     match model.look_up_and_bind_instance(AbsoluteMoniker::root()).await {
@@ -97,7 +71,10 @@ async fn main() -> Result<(), Error> {
     )
     .expect("Failed to open directory");
 
-    assert_eq!(vec![SuiteMarker::DEBUG_NAME], list_directory(&expose_dir_proxy).await);
+    assert_eq!(
+        vec![SuiteMarker::DEBUG_NAME],
+        test_helpers::list_directory(&expose_dir_proxy).await
+    );
 
     // bind expose/svc to out/svc of this v1 component.
     let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
