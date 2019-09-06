@@ -10,6 +10,7 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+#include <sys/mman.h>
 #include <zircon/limits.h>
 
 #include <algorithm>
@@ -18,6 +19,16 @@
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
+
+// We redeclare _mmap_file because it is implemented as part of fdio and we care
+// about its behavior with respect to other things it calls within fdio.  The
+// canonical declaration of this function lives in
+// zircon/third_party/ulib/musl/src/internal/stdio_impl.h, but including that
+// header is fraught.  The implementation in fdio just declares and exports the
+// symbol inline, so I think it's reasonable for this test to declare it itself
+// and depend on it the same way musl does.
+extern "C" zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options,
+                                  int flags, int fd, off_t fd_off, uintptr_t* out);
 
 namespace {
 
@@ -319,6 +330,43 @@ TEST(GetVMOTest, VMOFilePage) {
   zx::vmo received;
   ASSERT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
   ASSERT_EQ(get_koid(context.vmo.get()), get_koid(received.get()));
+}
+
+TEST(MmapFileTest, FilterExec) {
+  // This test verifies that _mmap_file does not call GetBuffer with VMO_FLAG_EXEC
+  // when being called with PROT_EXEC.
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("fake-filesystem"));
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+
+  Context context = {};
+  context.is_vmofile = false;
+  context.content_size = 43;
+  context.supports_get_buffer = true;
+  ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
+  ASSERT_OK(context.vmo.write("abcd", 0, 4));
+
+  ASSERT_OK(fidl_bind(dispatcher, server.release(),
+                      reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_File_dispatch), &context,
+                      &kFileOps));
+
+  int raw_fd = -1;
+  ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
+  fbl::unique_fd fd(raw_fd);
+
+  size_t offset = 0;
+  size_t len = 4;
+  off_t fd_off = 0;
+  zx_vm_option_t zx_options = PROT_READ | PROT_EXEC;
+  uintptr_t ptr;
+  ASSERT_OK(_mmap_file(offset, len, zx_options, MAP_SHARED, fd.get(), fd_off, &ptr));
+  // Verify that FileGetBuffer was called without the exec bit for now, until
+  // we've plumbed executability and the enforcement thereof throughout the
+  // filesystems.
+  EXPECT_EQ(context.last_flags, fuchsia_io_VMO_FLAG_READ);
 }
 
 }  // namespace

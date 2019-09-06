@@ -1002,11 +1002,28 @@ extern "C" __EXPORT zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_opti
   }
 
   int vflags = zx_options | (flags & MAP_PRIVATE ? fio::VMO_FLAG_PRIVATE : 0);
+
+  // TODO(fxb/35899): Temporary hack: don't request VMO_FLAG_EXEC from the remote
+  // until we've plumbed the fuchsia_io_OPEN_RIGHT_EXECUTABLE bit throughout the
+  // system.  Once we've done so, we can remove both this masking-out here and
+  // the corresponding replace_as_executable call below.
+  vflags = vflags & (~fio::VMO_FLAG_EXEC);
+
   zx_handle_t vmo;
   zx_status_t r = fdio_get_ops(io)->get_vmo(io, vflags, &vmo);
   fdio_release(io);
   if (r < 0) {
     return r;
+  }
+
+  // TODO(fxb/35899): Temporary hack: add executability if it was requested.  This
+  // block can be removed once we've plumbed OPEN_RIGHT_EXECUTABLE throughout
+  // all the filesystems that ought to provide it.
+  if (zx_options & ZX_VM_PERM_EXECUTE) {
+    r = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
+    if (r < 0) {
+      return r;
+    }
   }
 
   uintptr_t ptr = 0;
