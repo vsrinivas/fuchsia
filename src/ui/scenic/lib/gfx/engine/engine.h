@@ -127,6 +127,9 @@ class Engine : public FrameRenderer {
 
   void InitializeShaderFs();
 
+  // Returns true if layers contain protected content.
+  bool CheckForProtectedMemoryUse(const std::vector<HardwareLayerAssignment>& hlas);
+
   // Update and deliver metrics for all nodes which subscribe to metrics
   // events.
   void UpdateAndDeliverMetrics(zx::time presentation_time);
@@ -156,6 +159,8 @@ class Engine : public FrameRenderer {
   bool escher_cleanup_scheduled_ = false;
 
   bool render_continuously_ = false;
+
+  bool last_frame_uses_protected_memory_ = false;
 
   inspect_deprecated::Node inspect_node_;
   inspect_deprecated::LazyStringProperty inspect_scene_dump_;

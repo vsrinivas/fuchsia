@@ -55,7 +55,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   // FXL_LOG().
   FramePtr NewFrame(
       const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging = false,
-      escher::CommandBuffer::Type requested_type = escher::CommandBuffer::Type::kGraphics);
+      escher::CommandBuffer::Type requested_type = escher::CommandBuffer::Type::kGraphics,
+      bool use_protected_memory = false);
 
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
@@ -71,7 +72,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   TexturePtr NewTexture(vk::Format format, uint32_t width, uint32_t height, uint32_t sample_count,
                         vk::ImageUsageFlags usage_flags, vk::Filter filter,
                         vk::ImageAspectFlags aspect_flags,
-                        bool use_unnormalized_coordinates = false);
+                        bool use_unnormalized_coordinates = false,
+                        vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlags());
 
   // Construct a new Buffer, which encapsulates a newly-created VkBuffer.
   // |usage_flags| defines whether it is to be used as e.g. a uniform and/or a
@@ -90,7 +92,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
       vk::Format format, uint32_t width, uint32_t height, uint32_t sample_count, vk::Filter filter,
       vk::ImageUsageFlags additional_usage_flags = vk::ImageUsageFlags(),
       bool is_transient_attachment = false, bool is_input_attachment = false,
-      bool use_unnormalized_coordinates = false);
+      bool use_unnormalized_coordinates = false,
+      vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlags());
 
   uint64_t GetNumGpuBytesAllocated();
 
@@ -134,12 +137,15 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   impl::CommandBufferPool* transfer_command_buffer_pool() {
     return transfer_command_buffer_pool_.get();
   }
+  // Pool for CommandBuffers submitted in a protected context.
+  impl::CommandBufferPool* protected_command_buffer_pool();
 
   DefaultShaderProgramFactory* shader_program_factory() { return shader_program_factory_.get(); }
 
   // Check if GPU performance profiling is supported.
   bool supports_timer_queries() const { return supports_timer_queries_; }
   float timestamp_period() const { return timestamp_period_; }
+  bool allow_protected_memory() const { return device_->caps().allow_protected_memory; }
 
  private:
   // Called by Renderer constructor and destructor, respectively.
@@ -160,6 +166,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<impl::CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<impl::CommandBufferPool> transfer_command_buffer_pool_;
+  std::unique_ptr<impl::CommandBufferPool> protected_command_buffer_pool_;
   std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
   std::unique_ptr<shaderc::Compiler> shaderc_compiler_;
   std::unique_ptr<impl::PipelineCache> pipeline_cache_;

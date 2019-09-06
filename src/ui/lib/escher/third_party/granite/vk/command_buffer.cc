@@ -47,13 +47,14 @@
 
 namespace escher {
 
-CommandBufferPtr CommandBuffer::NewForType(Escher* escher, Type type) {
+CommandBufferPtr CommandBuffer::NewForType(Escher* escher, Type type, bool use_protected_memory) {
   switch (type) {
     case Type::kGraphics:
-      return NewForGraphics(escher);
+      return NewForGraphics(escher, use_protected_memory);
     case Type::kCompute:
-      return NewForCompute(escher);
+      return NewForCompute(escher, use_protected_memory);
     case Type::kTransfer:
+      FXL_DCHECK(!use_protected_memory);
       return NewForTransfer(escher);
     default:
       FXL_LOG(ERROR) << "Unrecognized CommandBuffer type requested. Cannot "
@@ -62,14 +63,18 @@ CommandBufferPtr CommandBuffer::NewForType(Escher* escher, Type type) {
   }
 }
 
-CommandBufferPtr CommandBuffer::NewForGraphics(Escher* escher) {
-  return fxl::AdoptRef(new CommandBuffer(escher->GetWeakPtr(), Type::kGraphics,
-                                         escher->command_buffer_pool()->GetCommandBuffer()));
+CommandBufferPtr CommandBuffer::NewForGraphics(Escher* escher, bool use_protected_memory) {
+  return fxl::AdoptRef(new CommandBuffer(
+      escher->GetWeakPtr(), Type::kGraphics,
+      use_protected_memory ? escher->protected_command_buffer_pool()->GetCommandBuffer()
+                           : escher->command_buffer_pool()->GetCommandBuffer()));
 }
 
-CommandBufferPtr CommandBuffer::NewForCompute(Escher* escher) {
-  return fxl::AdoptRef(new CommandBuffer(escher->GetWeakPtr(), Type::kCompute,
-                                         escher->command_buffer_pool()->GetCommandBuffer()));
+CommandBufferPtr CommandBuffer::NewForCompute(Escher* escher, bool use_protected_memory) {
+  return fxl::AdoptRef(new CommandBuffer(
+      escher->GetWeakPtr(), Type::kCompute,
+      use_protected_memory ? escher->protected_command_buffer_pool()->GetCommandBuffer()
+                           : escher->command_buffer_pool()->GetCommandBuffer()));
 }
 
 CommandBufferPtr CommandBuffer::NewForTransfer(Escher* escher) {

@@ -37,7 +37,8 @@ class EngineRenderer {
                                   const escher::ImagePtr& output_image,
                                   const escher::Model& overlay_model);
 
-  escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height);
+  escher::ImagePtr GetLayerFramebufferImage(uint32_t width, uint32_t height,
+                                            bool use_protected_memory);
 
   std::vector<escher::Camera> GenerateEscherCamerasForPaperRenderer(
       const escher::FramePtr& frame, Camera* camera, escher::ViewingVolume viewing_volume,

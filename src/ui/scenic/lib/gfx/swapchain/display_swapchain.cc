@@ -84,10 +84,15 @@ DisplaySwapchain::DisplaySwapchain(Sysmem* sysmem, DisplayManager* display_manag
     display_->Claim();
     frames_.resize(kSwapchainImageCount);
 
-    if (!InitializeFramebuffers(escher_->resource_recycler())) {
+    if (!InitializeFramebuffers(escher_->resource_recycler(), /*use_protected_memory=*/false)) {
       FXL_LOG(FATAL) << "Initializing buffers for display swapchain failed - check "
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
+
+    if (!display_manager_->EnableVsync(fit::bind_member(this, &DisplaySwapchain::OnVsync))) {
+      FXL_LOG(ERROR) << "Failed to enable vsync";
+    }
+
   } else {
     device_ = vk::Device();
     queue_ = vk::Queue();
@@ -121,7 +126,8 @@ static std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> DuplicateToken
   return output;
 }
 
-bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource_recycler) {
+bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
+                                              bool use_protected_memory) {
   FXL_CHECK(escher_);
   vk::ImageUsageFlags image_usage = GetFramebufferImageUsage();
 
@@ -148,6 +154,7 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
 
   display_manager_->SetImageConfig(width_in_px, height_in_px, pixel_format);
   for (uint32_t i = 0; i < kSwapchainImageCount; i++) {
+    // TODO(35784): Allocate all images in a single BufferCollection.
     // Create all the tokens.
     fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token = sysmem_->CreateBufferCollection();
     if (!local_token) {
@@ -176,6 +183,8 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
 
     // Set Vulkan buffer constraints.
     vk::ImageCreateInfo create_info;
+    create_info.flags =
+        use_protected_memory ? vk::ImageCreateFlagBits::eProtected : vk::ImageCreateFlags();
     create_info.imageType = vk::ImageType::e2D, create_info.format = format_;
     create_info.extent = vk::Extent3D{width_in_px, height_in_px, 1};
     create_info.mipLevels = 1;
@@ -289,6 +298,8 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
     image_info.width = width_in_px;
     image_info.height = height_in_px;
     image_info.usage = image_usage;
+    image_info.memory_flags =
+        use_protected_memory ? vk::MemoryPropertyFlagBits::eProtected : vk::MemoryPropertyFlags();
 
     // escher::NaiveImage::AdoptVkImage() binds the memory to the image.
     buffer.escher_image = escher::impl::NaiveImage::AdoptVkImage(
@@ -310,12 +321,11 @@ bool DisplaySwapchain::InitializeFramebuffers(escher::ResourceRecycler* resource
 
     sysmem_collection->Close();
 
-    swapchain_buffers_.push_back(std::move(buffer));
-  }
-
-  if (!display_manager_->EnableVsync(fit::bind_member(this, &DisplaySwapchain::OnVsync))) {
-    FXL_LOG(ERROR) << "Failed to enable vsync";
-    return false;
+    if (use_protected_memory) {
+      protected_swapchain_buffers_.push_back(std::move(buffer));
+    } else {
+      swapchain_buffers_.push_back(std::move(buffer));
+    }
   }
 
   return true;
@@ -349,6 +359,9 @@ DisplaySwapchain::~DisplaySwapchain() {
 
   display_->Unclaim();
   for (auto& buffer : swapchain_buffers_) {
+    display_manager_->ReleaseImage(buffer.fb_id);
+  }
+  for (auto& buffer : protected_swapchain_buffers_) {
     display_manager_->ReleaseImage(buffer.fb_id);
   }
 }
@@ -411,7 +424,8 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   FXL_DCHECK(hla.swapchain == this);
 
   // Find the next framebuffer to render into, and other corresponding data.
-  auto& buffer = swapchain_buffers_[next_frame_index_];
+  auto& buffer = use_protected_memory_ ? protected_swapchain_buffers_[next_frame_index_]
+                                       : swapchain_buffers_[next_frame_index_];
 
   // Create a record that can be used to notify |frame_timings| (and hence
   // ultimately the FrameScheduler) that the frame has been presented.
@@ -475,6 +489,19 @@ void DisplaySwapchain::SetDisplayColorConversion(const ColorTransform& transform
   display_manager_->SetDisplayColorConversion(display_, transform);
 }
 
+void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {
+  if (use_protected_memory == use_protected_memory_)
+    return;
+
+  // Allocate protected memory buffers lazily and once only.
+  // TODO(35785): Free this memory chunk when we no longer expect protected memory.
+  if (use_protected_memory && protected_swapchain_buffers_.empty()) {
+    InitializeFramebuffers(escher_->resource_recycler(), use_protected_memory);
+  }
+
+  use_protected_memory_ = use_protected_memory;
+}
+
 void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finished_time) {
   FXL_DCHECK(frame_index < kSwapchainImageCount);
   auto& record = frames_[frame_index];
@@ -508,10 +535,13 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, const std::vector<uint64_t>& 
 
   bool match = false;
   while (outstanding_frame_count_ && !match) {
-    auto& buf = swapchain_buffers_[presented_frame_idx_];
-    auto& record = frames_[presented_frame_idx_];
-    match = buf.fb_id == image_id;
+    match = swapchain_buffers_[presented_frame_idx_].fb_id == image_id;
+    // Check if the presented image was from |protected_swapchain_buffers_| list.
+    if (!match && protected_swapchain_buffers_.size() > presented_frame_idx_) {
+      match = protected_swapchain_buffers_[presented_frame_idx_].fb_id == image_id;
+    }
 
+    auto& record = frames_[presented_frame_idx_];
     // Don't double-report a frame as presented if a frame is shown twice
     // due to the next frame missing its deadline.
     if (!record->presented) {

@@ -12,13 +12,19 @@ namespace impl {
 
 CommandBufferPool::CommandBufferPool(vk::Device device, vk::Queue queue,
                                      uint32_t queue_family_index, CommandBufferSequencer* sequencer,
-                                     bool supports_graphics_and_compute)
-    : device_(device), queue_(queue), sequencer_(sequencer) {
+                                     bool supports_graphics_and_compute, bool use_protected_memory)
+    : device_(device),
+      queue_(queue),
+      sequencer_(sequencer),
+      use_protected_memory_(use_protected_memory) {
   FXL_DCHECK(device);
   FXL_DCHECK(queue);
   vk::CommandPoolCreateInfo info;
   info.flags = vk::CommandPoolCreateFlagBits::eTransient |
                vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+  if (use_protected_memory) {
+    info.flags |= vk::CommandPoolCreateFlagBits::eProtected;
+  }
   info.queueFamilyIndex = queue_family_index;
   pool_ = ESCHER_CHECKED_VK_RESULT(device_.createCommandPool(info));
 
@@ -85,7 +91,8 @@ CommandBuffer* CommandBufferPool::GetCommandBuffer() {
 
     vk::Fence fence = ESCHER_CHECKED_VK_RESULT(device_.createFence(vk::FenceCreateInfo()));
 
-    buffer = new CommandBuffer(device_, allocated_vulkan_buffers[0], fence, pipeline_stage_mask_);
+    buffer = new CommandBuffer(device_, allocated_vulkan_buffers[0], fence, pipeline_stage_mask_,
+                               use_protected_memory_);
     pending_buffers_.push(std::unique_ptr<CommandBuffer>(buffer));
   } else {
     buffer = free_buffers_.front().get();

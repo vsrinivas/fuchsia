@@ -110,7 +110,8 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
            VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME,
        },
        vk::SurfaceKHR(),
-       escher::VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
+       escher::VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent |
+           escher::VulkanDeviceQueues::Params::kAllowProtectedMemory});
 
   auto vulkan_device_queues =
       escher::VulkanDeviceQueues::New(vulkan_instance, device_queues_params);

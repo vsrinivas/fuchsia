@@ -9,7 +9,6 @@
 
 #include <cstdint>
 #include <functional>
-#include <vulkan/vulkan.hpp>
 
 #include "src/ui/lib/escher/base/reffable.h"
 #include "src/ui/lib/escher/forward_declarations.h"
@@ -18,6 +17,8 @@
 #include "src/ui/lib/escher/renderer/uniform_block_allocator.h"
 #include "src/ui/lib/escher/util/block_allocator.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -74,6 +75,8 @@ class Frame : public Resource {
     return uniform_block_allocator_.Allocate(size, alignment);
   }
 
+  bool use_protected_memory() const { return use_protected_memory_; }
+
  private:
   // These resources will be retained until the current frame is finished
   // running on the GPU.
@@ -86,7 +89,7 @@ class Frame : public Resource {
   Frame(impl::FrameManager* manager, CommandBuffer::Type requested_type, BlockAllocator allocator,
         impl::UniformBufferPoolWeakPtr uniform_buffer_pool, uint64_t frame_number,
         const char* trace_literal, const char* gpu_vthread_literal, uint64_t gpu_vthread_id,
-        bool enable_gpu_logging);
+        bool enable_gpu_logging, bool use_protected_memory);
   void BeginFrame();
 
   // Issues a new CommandBuffer for a frame, and marks the frame as InProgress.
@@ -128,6 +131,7 @@ class Frame : public Resource {
   // A unique identifier for the virtual thread this frame generates events for.
   const uint64_t gpu_vthread_id_;
   bool enable_gpu_logging_;
+  bool use_protected_memory_;
   vk::Queue queue_;
 
   CommandBuffer::Type command_buffer_type_;

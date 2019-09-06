@@ -120,6 +120,7 @@ class CommandBuffer {
 
   size_t NumWaitSemaphores() const { return wait_semaphores_.size(); }
   size_t NumSignalSemaphores() const { return signal_semaphores_.size(); }
+  bool use_protected_memory() const { return use_protected_memory_; }
 
  private:
   friend class CommandBufferPool;
@@ -128,7 +129,7 @@ class CommandBuffer {
   // the Vulkan command buffer and fence.  Submit() and Retire() use the fence
   // to determine when the command buffer has finished executing on the GPU.
   CommandBuffer(vk::Device device, vk::CommandBuffer command_buffer, vk::Fence fence,
-                vk::PipelineStageFlags pipeline_stage_mask);
+                vk::PipelineStageFlags pipeline_stage_mask, bool use_protected_memory);
   vk::Fence fence() const { return fence_; }
 
   // Called by CommandBufferPool when this buffer is obtained from it.
@@ -150,6 +151,7 @@ class CommandBuffer {
   std::vector<SemaphorePtr> signal_semaphores_;
   std::vector<vk::Semaphore> signal_semaphores_for_submit_;
 
+  const bool use_protected_memory_ = false;
   bool is_active_ = false;
   bool is_submitted_ = false;
 

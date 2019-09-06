@@ -156,6 +156,8 @@ source_set("gfx") {
     "resources/nodes/variable_binding.h",
     "resources/nodes/view_node.cc",
     "resources/nodes/view_node.h",
+    "resources/protected_memory_visitor.cc",
+    "resources/protected_memory_visitor.h",
     "resources/renderers/renderer.cc",
     "resources/renderers/renderer.h",
     "resources/resource.cc",
@@ -234,10 +236,10 @@ source_set("gfx") {
     "//garnet/public/lib/inspect_deprecated",
     "//garnet/public/lib/ui/scenic/cpp",
     "//src/ui/lib/escher/util:check_vulkan_support",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 

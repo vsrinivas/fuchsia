@@ -28,6 +28,9 @@ class FakeSwapchain : public Swapchain {
   void SetDisplayColorConversion(const ColorTransform& transform) override {
     // Do nothing.
   }
+  void SetUseProtectedMemory(bool use_protected_memory) override {
+    // Do nothing.
+  }
 };
 
 TEST_F(HLATest, HasHardwareLayerAssignment) {

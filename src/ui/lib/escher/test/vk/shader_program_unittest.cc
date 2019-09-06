@@ -115,7 +115,7 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
   auto program = escher->GetGraphicsProgram("shaders/model_renderer/main.vert",
                                             "shaders/model_renderer/main.frag", variant);
 
-  auto cb = CommandBuffer::NewForGraphics(escher);
+  auto cb = CommandBuffer::NewForGraphics(escher, /*use_protected_memory=*/false);
 
   auto color_attachment =
       escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, 512, 512, 1, vk::Filter::eNearest);

@@ -31,7 +31,7 @@ class CommandBufferTest : public ::testing::Test, public VulkanTester {
 // - that GetAndClearDirty() can be used for multiple bits simultaneously.
 VK_TEST_F(CommandBufferTest, Dirtyness) {
   auto escher = test::GetEscher();
-  auto cb = CommandBuffer::NewForGraphics(escher);
+  auto cb = CommandBuffer::NewForGraphics(escher, false);
 
   EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyStaticStateBit), DirtyBits::kDirtyStaticStateBit);
   EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyPipelineBit), DirtyBits::kDirtyPipelineBit);
@@ -81,7 +81,7 @@ VK_TEST_F(CommandBufferTest, Dirtyness) {
 // Smoke-test for CommandBufferPipelineState's bit-packing setters/getters.
 VK_TEST_F(CommandBufferTest, StaticStateSetting) {
   auto escher = test::GetEscher();
-  auto cb = CommandBuffer::NewForGraphics(escher);
+  auto cb = CommandBuffer::NewForGraphics(escher, false);
   auto static_state = VulkanTester::GetStaticState(cb);
 
   {
