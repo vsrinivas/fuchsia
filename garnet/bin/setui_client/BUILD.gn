@@ -14,8 +14,8 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:structopt",
   ]
@@ -34,14 +34,15 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:structopt",
-    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",  ]
+    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
+  ]
 }
 
 package("setui_client") {
@@ -61,12 +62,12 @@ package("setui_client") {
 
 unittest_package("setui_client_tests") {
   deps = [
-    ":bin_test",
+    ":lib_test",
   ]
 
   tests = [
     {
-      name = "setui_client_bin_test"
+      name = "setui_client_lib_lib_test"
     },
   ]
 }
