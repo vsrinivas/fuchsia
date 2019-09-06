@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{models::OutputConsumer, utils},
+    crate::{models::OutputConsumer, story_graph::Module, utils},
     derivative::*,
     failure::Error,
     fidl_fuchsia_modular::{EntityMarker, EntityProxy, EntityResolverProxy},
@@ -14,6 +14,50 @@ use {
 };
 
 type EntityReference = String;
+
+pub trait ContextReader {
+    fn get_reference(
+        &self,
+        story_id: &str,
+        module_id: &str,
+        parameter_name: &str,
+    ) -> Option<&EntityReference>;
+
+    // Compose output_consumers given consumed entity reference
+    // story id of consumer and type of consumed entity.
+    fn get_output_consumers(
+        &self,
+        entity_reference: &str,
+        consumer_story_id: &str,
+        consume_type: &str,
+    ) -> Vec<OutputConsumer>;
+
+    fn current<'a>(&'a self) -> Box<dyn Iterator<Item = &'a ContextEntity> + 'a>;
+}
+
+pub trait ContextWriter {
+    fn contribute<'a>(
+        &'a mut self,
+        story_id: &'a str,
+        module_id: &'a str,
+        parameter_name: &'a str,
+        reference: &'a str,
+    ) -> LocalFutureObj<'a, Result<(), Error>>;
+
+    fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_name: &str);
+
+    #[cfg(test)] // Will be used through the ContextManager
+    fn withdraw_all(&mut self, story_id: &str, module_id: &str);
+
+    fn clear_contributor(&mut self, contributor: &Contributor);
+
+    // Restore context store according to modules in restored story graph.
+    fn restore_from_story<'a>(
+        &'a mut self,
+        modules: &'a Vec<Module>,
+        story_id: &'a str,
+    ) -> LocalFutureObj<'a, Result<(), Error>>;
+}
 
 pub struct StoryContextStore {
     context_entities: HashMap<EntityReference, ContextEntity>,
@@ -128,43 +172,6 @@ impl ContextEntity {
     }
 }
 
-pub trait ContextReader {
-    fn get_reference(
-        &self,
-        story_id: &str,
-        module_id: &str,
-        parameter_name: &str,
-    ) -> Option<&EntityReference>;
-
-    // Compose output_consumers given consumed entity reference
-    // story id of consumer and type of consumed entity.
-    fn get_output_consumers(
-        &self,
-        entity_reference: &str,
-        consumer_story_id: &str,
-        consume_type: &str,
-    ) -> Vec<OutputConsumer>;
-
-    fn current<'a>(&'a self) -> Box<dyn Iterator<Item = &'a ContextEntity> + 'a>;
-}
-
-pub trait ContextWriter {
-    fn contribute<'a>(
-        &'a mut self,
-        story_id: &'a str,
-        module_id: &'a str,
-        parameter_name: &'a str,
-        reference: &'a str,
-    ) -> LocalFutureObj<'a, Result<(), Error>>;
-
-    fn withdraw(&mut self, story_id: &str, module_id: &str, parameter_name: &str);
-
-    #[allow(dead_code)] // Will be used through the ContextManager
-    fn withdraw_all(&mut self, story_id: &str, module_id: &str);
-
-    fn clear_contributor(&mut self, contributor: &Contributor);
-}
-
 impl StoryContextStore {
     pub fn new(entity_resolver: EntityResolverProxy) -> Self {
         StoryContextStore {
@@ -268,6 +275,7 @@ impl ContextWriter for StoryContextStore {
         self.clear_contributor(&contributor);
     }
 
+    #[cfg(test)]
     fn withdraw_all(&mut self, story_id: &str, module_id: &str) {
         let contributors: Vec<Contributor> = self
             .contributor_to_refs
@@ -299,13 +307,38 @@ impl ContextWriter for StoryContextStore {
             }
         });
     }
+
+    fn restore_from_story<'a>(
+        &'a mut self,
+        modules: &'a Vec<Module>,
+        story_id: &'a str,
+    ) -> LocalFutureObj<'a, Result<(), Error>> {
+        LocalFutureObj::new(Box::new(async move {
+            for module in modules.iter() {
+                for (output_name, module_output) in module.module_data.outputs.iter() {
+                    self.contribute(
+                        story_id,
+                        &module.module_id,
+                        output_name,
+                        &module_output.entity_reference,
+                    )
+                    .await?;
+                }
+            }
+            Ok(())
+        }))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::testing::{FakeEntityData, FakeEntityResolver},
+        crate::{
+            models::Intent,
+            story_graph::{Module, ModuleData},
+            testing::{FakeEntityData, FakeEntityResolver},
+        },
         fidl_fuchsia_modular::{EntityResolverMarker, EntityResolverProxy},
         fuchsia_async as fasync,
         maplit::{hashmap, hashset},
@@ -399,6 +432,24 @@ mod tests {
 
         // Verify case with unknown path
         assert_eq!(context_entity.get_string_data(vec!["a", "x", "c"], "foo-type").await, None);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn restore_from_story() -> Result<(), Error> {
+        let mut story_context_store = StoryContextStore::new(test_entity_resolver());
+        init_context_store(&mut story_context_store).await?;
+        assert_eq!(story_context_store.context_entities.get("foo").unwrap().contributors.len(), 2);
+
+        let mut module_data = ModuleData::new(Intent::new());
+        module_data.update_output("param-foo", Some("foo".to_string()));
+        let module = Module::new("some-mod", module_data);
+        let modules = vec![module];
+        story_context_store.restore_from_story(&modules, "some-story").await?;
+
+        // Verify that a new contributor is added.
+        assert_eq!(story_context_store.context_entities.get("foo").unwrap().contributors.len(), 3);
 
         Ok(())
     }

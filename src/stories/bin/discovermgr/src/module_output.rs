@@ -31,14 +31,14 @@ pub struct ModuleOutputWriterService<T> {
     story_context_store: Arc<Mutex<T>>,
 
     /// Reference to the intent re-issuing.
-    mod_manager: Arc<Mutex<ModManager>>,
+    mod_manager: Arc<Mutex<ModManager<T>>>,
 }
 
 impl<T: ContextReader + ContextWriter + 'static> ModuleOutputWriterService<T> {
     /// Create a new module writer instance from an identifier.
     pub fn new(
         story_context_store: Arc<Mutex<T>>,
-        mod_manager: Arc<Mutex<ModManager>>,
+        mod_manager: Arc<Mutex<ModManager<T>>>,
         module: ModuleIdentifier,
     ) -> Result<Self, Error> {
         Ok(ModuleOutputWriterService {
@@ -125,9 +125,7 @@ mod tests {
         crate::{
             models::{AddModInfo, Intent},
             story_context_store::{ContextEntity, Contributor},
-            testing::{
-                common_initialization, FakeEntityData, FakeEntityResolver, PuppetMasterFake,
-            },
+            testing::{init_state, FakeEntityData, FakeEntityResolver, PuppetMasterFake},
         },
         fidl_fuchsia_app_discover::ModuleOutputWriterMarker,
         fidl_fuchsia_modular::{
@@ -144,7 +142,7 @@ mod tests {
 
         let (entity_resolver, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<EntityResolverMarker>().unwrap();
-        let (state, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
+        let (state, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
         let mut fake_entity_resolver = FakeEntityResolver::new();
         fake_entity_resolver
             .register_entity("foo", FakeEntityData::new(vec!["some-type".into()], ""));
@@ -226,7 +224,7 @@ mod tests {
         // Set initial state of connected mods. The actions here will be executed with the new
         // entity reference in the parameter.
         let (context_store_ref, _, mod_manager_ref) =
-            common_initialization(puppet_master_client, entity_resolver);
+            init_state(puppet_master_client, entity_resolver);
         {
             let mut context_store = context_store_ref.lock();
             context_store.contribute("story1", "mod-a", "artist", "peridot-ref").await?;

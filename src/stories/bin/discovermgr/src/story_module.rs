@@ -31,14 +31,14 @@ pub struct StoryModuleService<T> {
     story_context_store: Arc<Mutex<T>>,
 
     /// Reference to the intent re-issuing.
-    mod_manager: Arc<Mutex<ModManager>>,
+    mod_manager: Arc<Mutex<ModManager<T>>>,
 }
 
 impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
     /// Create a new module writer instance from an identifier.
     pub fn new(
         story_context_store: Arc<Mutex<T>>,
-        mod_manager: Arc<Mutex<ModManager>>,
+        mod_manager: Arc<Mutex<ModManager<T>>>,
         module: ModuleIdentifier,
     ) -> Result<Self, Error> {
         Ok(StoryModuleService {
@@ -136,9 +136,7 @@ mod tests {
         crate::{
             models::{AddModInfo, Intent},
             story_context_store::{ContextEntity, Contributor},
-            testing::{
-                common_initialization, FakeEntityData, FakeEntityResolver, PuppetMasterFake,
-            },
+            testing::{init_state, FakeEntityData, FakeEntityResolver, PuppetMasterFake},
         },
         fidl_fuchsia_app_discover::StoryModuleMarker,
         fidl_fuchsia_modular::{
@@ -166,7 +164,7 @@ mod tests {
         };
         let (puppet_master_client, _) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let (state, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
+        let (state, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
 
         StoryModuleService::new(state.clone(), mod_manager, module).unwrap().spawn(request_stream);
 
@@ -235,7 +233,7 @@ mod tests {
         // Set initial state of connected mods. The actions here will be executed with the new
         // entity reference in the parameter.
         let (context_store_ref, _, mod_manager_ref) =
-            common_initialization(puppet_master_client, entity_resolver);
+            init_state(puppet_master_client, entity_resolver);
         {
             let mut context_store = context_store_ref.lock();
             context_store.contribute("story1", "mod-a", "artist", "peridot-ref").await?;
@@ -307,8 +305,7 @@ mod tests {
         puppet_master_fake.spawn(puppet_master_request_stream);
 
         // Initialize service client and server.
-        let (context_store, _, mod_manager) =
-            common_initialization(puppet_master_client, entity_resolver);
+        let (context_store, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
         let (client, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<StoryModuleMarker>().unwrap();
         let module = ModuleIdentifier {

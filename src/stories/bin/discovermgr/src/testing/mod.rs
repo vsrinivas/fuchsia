@@ -5,8 +5,10 @@
 #![cfg(test)]
 pub use {
     crate::{
-        mod_manager::ModManager, story_context_store::StoryContextStore,
-        story_manager::StoryManager, story_storage::MemoryStorage,
+        mod_manager::ModManager,
+        story_context_store::{ContextReader, ContextWriter, StoryContextStore},
+        story_manager::StoryManager,
+        story_storage::MemoryStorage,
     },
     fake_entity_resolver::*,
     fidl_fuchsia_modular::{EntityResolverProxy, PuppetMasterProxy},
@@ -24,10 +26,14 @@ pub mod puppet_master_fake;
 pub mod suggestion_providers;
 
 /// Generate Initialized story_context_store, story_manager and mod_manager.
-pub fn common_initialization(
+pub fn init_state(
     puppet_master_client: PuppetMasterProxy,
     entity_resolver: EntityResolverProxy,
-) -> (Arc<Mutex<StoryContextStore>>, Arc<Mutex<StoryManager>>, Arc<Mutex<ModManager>>) {
+) -> (
+    Arc<Mutex<StoryContextStore>>,
+    Arc<Mutex<StoryManager>>,
+    Arc<Mutex<ModManager<StoryContextStore>>>,
+) {
     let story_context_store = Arc::new(Mutex::new(StoryContextStore::new(entity_resolver)));
     let story_manager = Arc::new(Mutex::new(StoryManager::new(Box::new(MemoryStorage::new()))));
     let mod_manager = Arc::new(Mutex::new(ModManager::new(

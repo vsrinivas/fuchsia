@@ -8,7 +8,7 @@ use {
             Action, AddModInfo, OutputConsumer, Parameter, RestoreStoryInfo, SuggestedAction,
             Suggestion,
         },
-        story_context_store::{ContextReader, Contributor},
+        story_context_store::{ContextReader, ContextWriter, Contributor},
         story_manager::StoryManager,
     },
     failure::{bail, Error},
@@ -28,18 +28,18 @@ type EntityReference = String;
 
 /// Starts mods and tracks the entity references in order to reissue intents
 /// when entities change.
-pub struct ModManager {
+pub struct ModManager<T> {
     // Maps an entity reference to actions launched with it.
     pub(super) actions: HashMap<EntityReference, HashSet<AddModInfo>>,
-    story_context_store: Arc<Mutex<dyn ContextReader>>,
+    story_context_store: Arc<Mutex<T>>,
     puppet_master: PuppetMasterProxy,
     story_manager: Arc<Mutex<StoryManager>>,
     available_actions: Arc<Vec<Action>>,
 }
 
-impl ModManager {
+impl<T: ContextReader + ContextWriter> ModManager<T> {
     pub fn new(
-        story_context_store: Arc<Mutex<dyn ContextReader>>,
+        story_context_store: Arc<Mutex<T>>,
         puppet_master: PuppetMasterProxy,
         story_manager: Arc<Mutex<StoryManager>>,
         available_actions: Arc<Vec<Action>>,
@@ -125,6 +125,24 @@ impl ModManager {
         let modules =
             story_manager.restore_story_graph(restore_story_info.story_name.to_string()).await?;
 
+        let mut context_store = self.story_context_store.lock();
+        context_store.restore_from_story(&modules, &restore_story_info.story_name).await?;
+
+        for module in modules.iter() {
+            for param in module.module_data.last_intent.parameters() {
+                // Restore mod_manager.actions that record relationships
+                // between consumers of entities.
+                self.actions
+                    .entry(param.entity_reference.clone())
+                    .or_insert(HashSet::new())
+                    .insert(AddModInfo::new(
+                        module.module_data.last_intent.clone(),
+                        Some(restore_story_info.story_name.clone()),
+                        Some(module.module_id.to_string()),
+                    ));
+            }
+        }
+
         let actions = modules
             .into_iter()
             .map(|module| {
@@ -202,7 +220,7 @@ mod tests {
         super::*,
         crate::{
             models::{DisplayInfo, Intent},
-            testing::{common_initialization, puppet_master_fake::PuppetMasterFake},
+            testing::{init_state, puppet_master_fake::PuppetMasterFake},
         },
         failure::ResultExt,
         fidl_fuchsia_modular::{
@@ -251,7 +269,7 @@ mod tests {
         let entity_resolver = connect_to_service::<EntityResolverMarker>()
             .context("failed to connect to entity resolver")?;
         puppet_master_fake.spawn(request_stream);
-        let (_, _, mod_manager_arc) = common_initialization(puppet_master_client, entity_resolver);
+        let (_, _, mod_manager_arc) = init_state(puppet_master_client, entity_resolver);
         let mut mod_manager = mod_manager_arc.lock();
 
         let suggestion = suggestion!(
@@ -312,7 +330,7 @@ mod tests {
         let entity_resolver = connect_to_service::<EntityResolverMarker>()
             .context("failed to connect to entity resolver")?;
         puppet_master_fake.spawn(request_stream);
-        let (_, _, mod_manager_arc) = common_initialization(puppet_master_client, entity_resolver);
+        let (_, _, mod_manager_arc) = init_state(puppet_master_client, entity_resolver);
         let mut mod_manager = mod_manager_arc.lock();
 
         // Set initial state. The actions here will be executed with the new
@@ -335,6 +353,51 @@ mod tests {
         let action =
             AddModInfo::new(intent, Some("story_name".to_string()), Some("mod_name".to_string()));
         assert_eq!(mod_manager.actions, hashmap!("garnet-ref".to_string() => hashset!(action)));
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_restory_story() -> Result<(), Error> {
+        // Setup puppet master fake.
+        let (puppet_master_client, request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
+        let mut puppet_master_fake = PuppetMasterFake::new();
+        puppet_master_fake.set_on_execute("story_name", |_commands| {});
+        puppet_master_fake.spawn(request_stream);
+
+        // Setup mod_manager.
+        let entity_resolver = connect_to_service::<EntityResolverMarker>()
+            .context("failed to connect to entity resolver")?;
+        let (_, _, mod_manager_arc) = init_state(puppet_master_client, entity_resolver);
+        let mut mod_manager = mod_manager_arc.lock();
+
+        let suggestion = suggestion!(
+            action = "PLAY_MUSIC",
+            title = "Play music",
+            parameters = [(name = "artist", entity_reference = "peridot-ref")],
+            story = "story_name"
+        );
+
+        let mut action_clone = AddModInfo::new(Intent::new(), None, None);
+        match suggestion.action() {
+            SuggestedAction::AddMod(action) => {
+                action_clone = action.clone();
+                mod_manager.execute_suggestion(suggestion).await?;
+            }
+            SuggestedAction::RestoreStory(_) => {
+                assert!(false);
+            }
+        }
+
+        // Mock restarting the system and restoring a story.
+        mod_manager.actions.clear();
+        let restore_story_info = RestoreStoryInfo::new("story_name");
+        mod_manager.handle_restory_story(&restore_story_info).await?;
+        assert_eq!(
+            mod_manager.actions,
+            hashmap!("peridot-ref".to_string() => hashset!(action_clone))
+        );
 
         Ok(())
     }

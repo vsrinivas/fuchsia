@@ -107,7 +107,7 @@ pub struct ModuleData {
 
 impl ModuleData {
     /// Creates a new empty module data with the given |intent| as the intial one.
-    fn new(intent: Intent) -> Self {
+    pub fn new(intent: Intent) -> Self {
         let timestamp =
             SystemTime::now().duration_since(UNIX_EPOCH).expect("time went backwards").as_nanos();
         ModuleData {

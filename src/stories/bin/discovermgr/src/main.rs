@@ -86,7 +86,7 @@ async fn run_fidl_service(
     story_context_store: Arc<Mutex<StoryContextStore>>,
     story_manager: Arc<Mutex<StoryManager>>,
     suggestions_manager: Arc<Mutex<SuggestionsManager>>,
-    mod_manager: Arc<Mutex<ModManager>>,
+    mod_manager: Arc<Mutex<ModManager<StoryContextStore>>>,
     incoming_service_stream: IncomingServices,
 ) -> Result<(), Error> {
     match incoming_service_stream {

@@ -17,7 +17,7 @@ use {
 /// Handle DiscoveryRegistry requests.
 pub async fn run_server(
     story_context_store: Arc<Mutex<StoryContextStore>>,
-    mod_manager: Arc<Mutex<ModManager>>,
+    mod_manager: Arc<Mutex<ModManager<StoryContextStore>>>,
     mut stream: DiscoverRegistryRequestStream,
 ) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("Error running discover registry")? {
@@ -47,7 +47,7 @@ mod tests {
         super::*,
         crate::{
             story_context_store::{ContextEntity, ContextReader, Contributor},
-            testing::{common_initialization, FakeEntityData, FakeEntityResolver},
+            testing::{init_state, FakeEntityData, FakeEntityResolver},
         },
         fidl_fuchsia_app_discover::{
             DiscoverRegistryMarker, ModuleIdentifier, ModuleOutputWriterMarker, StoryModuleMarker,
@@ -73,7 +73,7 @@ mod tests {
 
         let (puppet_master_client, _) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
-        let (state, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
+        let (state, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
 
         let story_context = state.clone();
         fasync::spawn_local(
@@ -124,7 +124,7 @@ mod tests {
         let (puppet_master_client, _) =
             fidl::endpoints::create_proxy_and_stream::<PuppetMasterMarker>().unwrap();
 
-        let (state, _, mod_manager) = common_initialization(puppet_master_client, entity_resolver);
+        let (state, _, mod_manager) = init_state(puppet_master_client, entity_resolver);
 
         let story_context = state.clone();
         fasync::spawn_local(
