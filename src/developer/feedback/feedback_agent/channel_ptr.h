@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PROVIDER_PTR_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PROVIDER_PTR_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PTR_H_
 
 #include <fuchsia/update/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -24,7 +24,7 @@ namespace feedback {
 
 // Retrieves the current OTA channel.
 //
-// fuchsia::update::Info is expected to be in |services|.
+// fuchsia.update.Info is expected to be in |services|.
 fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<::sys::ServiceDirectory> services,
                                                  zx::duration timeout);
@@ -57,4 +57,4 @@ class UpdateInfo {
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PROVIDER_PTR_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CHANNEL_PTR_H_

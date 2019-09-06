@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/scenic_ptr_unittest"
+        "binary": "test/screenshot_ptr_unittest"
     },
     "sandbox": {
         "features": [

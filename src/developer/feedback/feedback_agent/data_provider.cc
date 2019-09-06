@@ -16,7 +16,7 @@
 #include "src/developer/feedback/feedback_agent/attachments.h"
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
-#include "src/developer/feedback/feedback_agent/scenic_ptr.h"
+#include "src/developer/feedback/feedback_agent/screenshot_ptr.h"
 #include "src/lib/files/file.h"
 
 namespace fuchsia {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SYSTEM_LOG_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SYSTEM_LOG_PTR_H_
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -24,7 +24,7 @@ namespace feedback {
 
 // Collects system log.
 //
-// fuchsia::logger::Log is expected to be in |services|.
+// fuchsia.logger.Log is expected to be in |services|.
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
     zx::duration timeout);
@@ -73,4 +73,4 @@ class LogListener : public fuchsia::logger::LogListener {
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SYSTEM_LOG_PTR_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/channel_provider_ptr.h"
+#include "src/developer/feedback/feedback_agent/channel_ptr.h"
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/single_threaded_executor.h>

@@ -99,8 +99,8 @@ source_set("src") {
     "annotations.h",
     "attachments.cc",
     "attachments.h",
-    "channel_provider_ptr.cc",
-    "channel_provider_ptr.h",
+    "channel_ptr.cc",
+    "channel_ptr.h",
     "config.cc",
     "config.h",
     "data_provider.cc",
@@ -109,10 +109,10 @@ source_set("src") {
     "image_conversion.h",
     "inspect_ptr.cc",
     "inspect_ptr.h",
-    "log_listener_ptr.cc",
-    "log_listener_ptr.h",
-    "scenic_ptr.cc",
-    "scenic_ptr.h",
+    "screenshot_ptr.cc",
+    "screenshot_ptr.h",
+    "system_log_ptr.cc",
+    "system_log_ptr.h",
   ]
 
   public_deps = [

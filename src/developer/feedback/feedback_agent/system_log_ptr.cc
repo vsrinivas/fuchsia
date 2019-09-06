@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
+#include "src/developer/feedback/feedback_agent/system_log_ptr.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <inttypes.h>
@@ -25,6 +25,7 @@
 
 namespace fuchsia {
 namespace feedback {
+
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
     zx::duration timeout) {

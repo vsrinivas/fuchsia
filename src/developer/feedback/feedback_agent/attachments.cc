@@ -21,7 +21,7 @@
 
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/inspect_ptr.h"
-#include "src/developer/feedback/feedback_agent/log_listener_ptr.h"
+#include "src/developer/feedback/feedback_agent/system_log_ptr.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"

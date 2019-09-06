@@ -31,16 +31,13 @@ test_package("feedback_agent_tests") {
 
   tests = [
     {
-      name = "channel_provider_ptr_unittest"
+      name = "channel_ptr_unittest"
     },
     {
       name = "data_provider_unittest"
     },
     {
       name = "data_provider_config_unittest"
-    },
-    {
-      name = "log_listener_ptr_unittest"
     },
     {
       name = "feedback_agent_integration_test"
@@ -55,7 +52,10 @@ test_package("feedback_agent_tests") {
       name = "feedback_agent_integration_test_invalid_override_config"
     },
     {
-      name = "scenic_ptr_unittest"
+      name = "screenshot_ptr_unittest"
+    },
+    {
+      name = "system_log_ptr_unittest"
     },
   ]
 
@@ -112,23 +112,23 @@ test_package("feedback_agent_tests") {
   ]
 
   deps = [
-    ":channel_provider_ptr_unittest",
+    ":channel_ptr_unittest",
     ":config_unittest",
     ":data_provider_unittest",
     ":feedback_agent_integration_test",
     ":feedback_agent_integration_test_invalid_override_config",
     ":feedback_agent_integration_test_valid_override_config",
     ":inspect_exe",
-    ":log_listener_ptr_unittest",
-    ":scenic_ptr_unittest",
+    ":screenshot_ptr_unittest",
+    ":system_log_ptr_unittest",
   ]
 }
 
-executable("channel_provider_ptr_unittest") {
+executable("channel_ptr_unittest") {
   testonly = true
 
   sources = [
-    "channel_provider_ptr_unittest.cc",
+    "channel_ptr_unittest.cc",
   ]
 
   deps = [
@@ -216,33 +216,6 @@ executable("inspect_exe") {
   ]
 }
 
-executable("log_listener_ptr_unittest") {
-  testonly = true
-
-  sources = [
-    "log_listener_ptr_unittest.cc",
-  ]
-
-  deps = [
-    ":stub_logger",
-    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/gtest",
-    "//garnet/public/lib/syslog/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/developer/feedback/feedback_agent:src",
-    "//src/developer/feedback/testing:gmatchers",
-    "//src/developer/feedback/testing:gpretty_printers",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-mem",
-  ]
-}
-
 executable("feedback_agent_integration_test") {
   testonly = true
 
@@ -317,11 +290,11 @@ executable("feedback_agent_integration_test_valid_override_config") {
   ]
 }
 
-executable("scenic_ptr_unittest") {
+executable("screenshot_ptr_unittest") {
   testonly = true
 
   sources = [
-    "scenic_ptr_unittest.cc",
+    "screenshot_ptr_unittest.cc",
   ]
 
   deps = [
@@ -337,6 +310,33 @@ executable("scenic_ptr_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("system_log_ptr_unittest") {
+  testonly = true
+
+  sources = [
+    "system_log_ptr_unittest.cc",
+  ]
+
+  deps = [
+    ":stub_logger",
+    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback/feedback_agent:src",
+    "//src/developer/feedback/testing:gmatchers",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-mem",
   ]
 }
 

@@ -19,7 +19,7 @@
 
 #include <string>
 
-#include "src/developer/feedback/feedback_agent/channel_provider_ptr.h"
+#include "src/developer/feedback/feedback_agent/channel_ptr.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/file.h"

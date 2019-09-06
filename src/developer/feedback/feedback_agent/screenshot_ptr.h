@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCENIC_PTR_H_
-#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCENIC_PTR_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCREENSHOT_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCREENSHOT_PTR_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -22,7 +22,7 @@ namespace feedback {
 
 // Asks Scenic to take the screenshot of the current view and return it.
 //
-// fuchsia::ui::scenic::Scenic is expected to be in |services|.
+// fuchsia.ui.scenic.Scenic is expected to be in |services|.
 fit::promise<fuchsia::ui::scenic::ScreenshotData> TakeScreenshot(
     async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
     zx::duration timeout);
@@ -55,4 +55,4 @@ class Scenic {
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCENIC_PTR_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_SCREENSHOT_PTR_H_
