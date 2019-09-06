@@ -331,6 +331,23 @@ struct I2cProxyOp {
   bool stop;
 };
 
+// ZX_PROTOCOL_SPI proxy support.
+enum class SpiOp {
+  TRANSMIT,
+  RECEIVE,
+  EXCHANGE
+};
+
+struct SpiProxyRequest {
+  ProxyRequest header;
+  SpiOp op;
+  size_t length;
+};
+
+struct SpiProxyResponse {
+  ProxyResponse header;
+};
+
 // ZX_PROTOCOL_USB_MODE_SWITCH proxy support.
 enum class UsbModeSwitchOp {
   SET_MODE,

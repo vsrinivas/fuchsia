@@ -22,6 +22,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/power.h>
+#include <ddk/protocol/spi.h>
 
 #include "../test-metadata.h"
 
@@ -44,6 +45,7 @@ enum Components_2 {
   COMPONENT_CLOCK_2,
   COMPONENT_POWER_2,
   COMPONENT_CHILD4_2,
+  COMPONENT_SPI_2,
   COMPONENT_COUNT_2,
 };
 
@@ -157,6 +159,65 @@ static zx_status_t test_i2c(i2c_protocol_t* i2c) {
   for (size_t i = 0; i < countof(read_digits); i++) {
     if (read_digits[i] != write_digits[countof(read_digits) - i - 1]) {
       zxlogf(ERROR, "%s: read_digits does not match reverse of write digits\n", DRIVER_NAME);
+      return ZX_ERR_INTERNAL;
+    }
+  }
+
+  return ZX_OK;
+}
+
+static zx_status_t test_spi(spi_protocol_t* spi) {
+  const uint8_t txbuf[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+  uint8_t rxbuf[sizeof txbuf];
+
+  // tx should just succeed
+  zx_status_t status = spi_transmit(spi, txbuf, sizeof txbuf);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: spi_transmit failed %d\n", DRIVER_NAME, status);
+    return status;
+  }
+
+  // rx should return pattern
+  size_t actual;
+  memset(rxbuf, 0, sizeof rxbuf);
+  status = spi_receive(spi, sizeof rxbuf, rxbuf, sizeof rxbuf, &actual);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: spi_receive failed %d (\n", DRIVER_NAME, status);
+    return status;
+  }
+
+  if (actual != sizeof rxbuf) {
+    zxlogf(ERROR, "%s: spi_receive returned incomplete %zu/%zu (\n", DRIVER_NAME, actual,
+           sizeof rxbuf);
+    return ZX_ERR_INTERNAL;
+  }
+
+  for (size_t i = 0; i < actual; i++) {
+    if (rxbuf[i] != (i & 0xff)) {
+      zxlogf(ERROR, "%s: spi_receive returned bad pattern rxbuf[%zu] = 0x%02x, should be 0x%02x(\n",
+             DRIVER_NAME, i, rxbuf[i], (uint8_t)(i & 0xff));
+      return ZX_ERR_INTERNAL;
+    }
+  }
+
+  // exchange copies input
+  memset(rxbuf, 0, sizeof rxbuf);
+  status = spi_exchange(spi, txbuf, sizeof txbuf, rxbuf, sizeof rxbuf, &actual);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: spi_exchange failed %d (\n", DRIVER_NAME, status);
+    return status;
+  }
+
+  if (actual != sizeof rxbuf) {
+    zxlogf(ERROR, "%s: spi_exchange returned incomplete %zu/%zu (\n", DRIVER_NAME, actual,
+           sizeof rxbuf);
+    return ZX_ERR_INTERNAL;
+  }
+
+  for (size_t i = 0; i < actual; i++) {
+    if (rxbuf[i] != txbuf[i]) {
+      zxlogf(ERROR, "%s: spi_exchange returned bad result rxbuf[%zu] = 0x%02x, should be 0x%02x(\n",
+             DRIVER_NAME, i, rxbuf[i], txbuf[i]);
       return ZX_ERR_INTERNAL;
     }
   }
@@ -467,6 +528,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   i2c_protocol_t i2c;
   codec_protocol_t codec;
   gdc_protocol_t gdc;
+  spi_protocol_t spi;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != COMPONENT_COUNT_1) {
@@ -509,7 +571,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     status = device_get_protocol(components[COMPONENT_GDC_1], ZX_PROTOCOL_GDC, &gdc);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CODEC\n", DRIVER_NAME);
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GDC\n", DRIVER_NAME);
       return status;
     }
 
@@ -565,6 +627,11 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       return status;
     }
 
+    status = device_get_protocol(components[COMPONENT_SPI_2], ZX_PROTOCOL_SPI, &spi);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_SPI\n", DRIVER_NAME);
+      return status;
+    }
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
       return status;
@@ -572,6 +639,10 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
 
     if ((status = test_power(&power)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_power failed: %d\n", DRIVER_NAME, status);
+      return status;
+    }
+    if ((status = test_spi(&spi)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_spi failed: %d\n", DRIVER_NAME, status);
       return status;
     }
   }

@@ -34,6 +34,7 @@ class TestBoard : public TestBoardType {
   zx_status_t Start();
   zx_status_t GpioInit();
   zx_status_t I2cInit();
+  zx_status_t SpiInit();
   zx_status_t PowerInit();
   zx_status_t ClockInit();
   zx_status_t AudioCodecInit();

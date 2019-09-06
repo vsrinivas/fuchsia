@@ -59,6 +59,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_POWER:
       proto->ops = &power_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_SPI:
+      proto->ops = &spi_protocol_ops_;
+      return ZX_OK;
     case ZX_PROTOCOL_SYSMEM:
       proto->ops = &sysmem_protocol_ops_;
       return ZX_OK;
@@ -906,6 +909,71 @@ zx_status_t ComponentProxy::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* ou
   *out_value = resp.reg_value;
   return status;
 }
+
+zx_status_t ComponentProxy::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {
+  return SpiExchange(txdata_list, txdata_count, NULL, 0, NULL);
+}
+
+zx_status_t ComponentProxy::SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
+                                       size_t* out_rxdata_actual) {
+  return SpiExchange(NULL, 0, out_rxdata_list, size, out_rxdata_actual);
+}
+zx_status_t ComponentProxy::SpiExchange(const uint8_t* txdata_list, size_t txdata_count,
+                                        uint8_t* out_rxdata_list, size_t rxdata_count,
+                                        size_t* out_rxdata_actual) {
+  uint8_t req_buffer[kProxyMaxTransferSize];
+  auto req = reinterpret_cast<SpiProxyRequest*>(req_buffer);
+  req->header.proto_id = ZX_PROTOCOL_SPI;
+
+  if (txdata_count && rxdata_count) {
+    req->op = SpiOp::EXCHANGE;
+    req->length = txdata_count;
+  } else if (txdata_count) {
+    req->op = SpiOp::TRANSMIT;
+    req->length = txdata_count;
+  } else {
+    req->op = SpiOp::RECEIVE;
+    req->length = rxdata_count;
+  }
+
+  size_t req_length = sizeof(SpiProxyRequest) + txdata_count;
+  if (req_length >= kProxyMaxTransferSize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  const size_t resp_length = sizeof(SpiProxyResponse) + rxdata_count;
+  if (req_length >= kProxyMaxTransferSize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  if (txdata_count) {
+    uint8_t* p_write = reinterpret_cast<uint8_t*>(&req[1]);
+    memcpy(p_write, txdata_list, txdata_count);
+  }
+
+  uint8_t resp_buffer[kProxyMaxTransferSize];
+  auto resp = reinterpret_cast<SpiProxyResponse*>(resp_buffer);
+
+  size_t actual;
+  auto status = Rpc(&req->header, static_cast<uint32_t>(req_length), &resp->header,
+                    static_cast<uint32_t>(resp_length), nullptr, 0, nullptr, 0, &actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (actual != resp_length) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (rxdata_count) {
+    uint8_t* p_read = reinterpret_cast<uint8_t*>(&resp[1]);
+    memcpy(out_rxdata_list, p_read, rxdata_count);
+    *out_rxdata_actual = rxdata_count;
+  }
+
+  return ZX_OK;
+}
+
 
 zx_status_t ComponentProxy::SysmemConnect(zx::channel allocator2_request) {
   SysmemProxyRequest req = {};

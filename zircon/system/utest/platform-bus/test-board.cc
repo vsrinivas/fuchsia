@@ -42,6 +42,11 @@ int TestBoard::Thread() {
     zxlogf(ERROR, "%s: I2cInit failed: %d\n", __func__, status);
   }
 
+  status = SpiInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: SpiInit failed: %d\n", __func__, status);
+  }
+
   status = ClockInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ClockInit failed: %d\n", __func__, status);
@@ -141,6 +146,11 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_4),
   };
+  const zx_bind_inst_t spi_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SPI),
+      BI_ABORT_IF(NE, BIND_SPI_BUS_ID, 0),
+      BI_MATCH_IF(EQ, BIND_SPI_CHIP_SELECT, 0),
+  };
   device_component_part_t gpio_component[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(gpio_match), gpio_match},
@@ -165,6 +175,10 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   device_component_part_t gdc_component[] = {
       {fbl::count_of(root_match), root_match},
       {fbl::count_of(gdc_match), gdc_match},
+  };
+  device_component_part_t spi_component[] = {
+      {fbl::count_of(root_match), root_match},
+      {fbl::count_of(spi_match), spi_match},
   };
 
   device_component_t composite[] = {
@@ -214,6 +228,7 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {fbl::count_of(clock_component), clock_component},
       {fbl::count_of(power_component), power_component},
       {fbl::count_of(child4_component), child4_component},
+      {fbl::count_of(spi_component), spi_component},
   };
 
   pbus_dev_t pdev2 = {};

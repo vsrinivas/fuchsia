@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.spi;
+
+using zx;
+
+[Layout = "ddk-protocol"]
+protocol Spi {
+    /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
+    Transmit(vector<uint8> txdata) -> (zx.status status);
+    /// Half-duplex receive data from a SPI device; always reads the full size requested.
+    Receive(uint32 size) -> (zx.status status, vector<uint8> rxdata);
+    /// Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
+    /// buffer.
+    Exchange(vector<uint8> txdata) -> (zx.status status, vector<uint8> rxdata);
+};

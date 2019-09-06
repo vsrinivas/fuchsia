@@ -39,6 +39,24 @@ zx_status_t SpiChild::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
+zx_status_t SpiChild::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {
+  size_t actual;
+  spi_.Exchange(cs_, txdata_list, txdata_count, nullptr, 0, &actual);
+  return ZX_OK;
+}
+zx_status_t SpiChild::SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
+                                 size_t* out_rxdata_actual) {
+  spi_.Exchange(cs_, nullptr, 0, out_rxdata_list, rxdata_count, out_rxdata_actual);
+  return ZX_OK;
+}
+
+zx_status_t SpiChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_count,
+                                  uint8_t* out_rxdata_list, size_t rxdata_count,
+                                  size_t* out_rxdata_actual) {
+  spi_.Exchange(cs_, txdata_list, txdata_count, out_rxdata_list, rxdata_count, out_rxdata_actual);
+  return ZX_OK;
+}
+
 void SpiChild::DdkUnbind() { DdkRemove(); }
 
 void SpiChild::DdkRelease() { __UNUSED bool dummy = Release(); }

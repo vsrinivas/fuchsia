@@ -86,6 +86,8 @@ TEST(PbusTest, Enumeration) {
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:f/component", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev/composite", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:10/component", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                 "sys/platform/11:01:12/test-spi/spi/spi-0-0", &fd));
   EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd), ZX_OK);
 
   const int dirfd = devmgr.devfs_root().get();

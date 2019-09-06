@@ -10,7 +10,7 @@
 
 __BEGIN_CDECLS
 
-static inline zx_status_t spi_transmit(zx_handle_t channel, const void* data, size_t length) {
+static inline zx_status_t spilib_transmit(zx_handle_t channel, const void* data, size_t length) {
   zx_status_t status;
   zx_status_t call_status =
       fuchsia_hardware_spi_DeviceTransmit(channel, (const uint8_t*)data, length, &status);
@@ -20,7 +20,7 @@ static inline zx_status_t spi_transmit(zx_handle_t channel, const void* data, si
   return status;
 }
 
-static inline zx_status_t spi_receive(zx_handle_t channel, void* data, size_t length) {
+static inline zx_status_t spilib_receive(zx_handle_t channel, void* data, size_t length) {
   zx_status_t status;
   size_t actual;
   zx_status_t call_status = fuchsia_hardware_spi_DeviceReceive(channel, (uint32_t)length, &status,
@@ -31,7 +31,7 @@ static inline zx_status_t spi_receive(zx_handle_t channel, void* data, size_t le
   return status;
 }
 
-static inline zx_status_t spi_exchange(zx_handle_t channel, const void* txdata, void* rxdata,
+static inline zx_status_t spilib_exchange(zx_handle_t channel, const void* txdata, void* rxdata,
                                        size_t length) {
   zx_status_t status;
   size_t actual;

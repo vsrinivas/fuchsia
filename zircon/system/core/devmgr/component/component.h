@@ -19,6 +19,7 @@
 #include <ddktl/protocol/mipicsi.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
+#include <ddktl/protocol/spi.h>
 #include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/usb/modeswitch.h>
 #include <lib/sync/completion.h>
@@ -43,6 +44,7 @@ class Component : public ComponentBase {
         codec_(parent),
         pdev_(parent),
         power_(parent),
+        spi_(parent),
         sysmem_(parent),
         ums_(parent) {}
 
@@ -94,6 +96,10 @@ class Component : public ComponentBase {
                        uint32_t* out_resp_size, const zx_handle_t* req_handles,
                        uint32_t req_handle_count, zx_handle_t* resp_handles,
                        uint32_t* resp_handle_count);
+  zx_status_t RpcSpi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                     uint32_t req_handle_count, zx_handle_t* resp_handles,
+                     uint32_t* resp_handle_count);
   zx_status_t RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                         uint32_t* out_resp_size, const zx_handle_t* req_handles,
                         uint32_t req_handle_count, zx_handle_t* resp_handles,
@@ -131,6 +137,7 @@ class Component : public ComponentBase {
   ddk::CodecProtocolClient codec_;
   ddk::PDevProtocolClient pdev_;
   ddk::PowerProtocolClient power_;
+  ddk::SpiProtocolClient spi_;
   ddk::SysmemProtocolClient sysmem_;
   ddk::UsbModeSwitchProtocolClient ums_;
 };

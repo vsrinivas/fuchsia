@@ -8,6 +8,7 @@ driver("spi") {
     "spi.cc",
   ]
   deps = [
+    "$zx/system/banjo/ddk.protocol.spi",
     "$zx/system/banjo/ddk.protocol.spiimpl",
     "$zx/system/fidl/fuchsia-hardware-spi:llcpp",
     "$zx/system/ulib/ddk",
@@ -29,6 +30,7 @@ test("spi-test") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.spi",
     "$zx/system/banjo/ddk.protocol.spiimpl",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/fidl/fuchsia-hardware-spi:llcpp",

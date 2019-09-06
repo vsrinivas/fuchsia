@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     case 'r': {
       size_t length = strtoull(argv[3], nullptr, 0);
       uint8_t buffer[length];
-      status = spi_receive(fdio_unsafe_borrow_channel(io), buffer, length);
+      status = spilib_receive(fdio_unsafe_borrow_channel(io), buffer, length);
       print_buffer(buffer, length);
       break;
     }
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
       size_t length = argc - 3;
       uint8_t buffer[length];
       convert_args(&argv[3], length, buffer);
-      status = spi_transmit(fdio_unsafe_borrow_channel(io), buffer, length);
+      status = spilib_transmit(fdio_unsafe_borrow_channel(io), buffer, length);
       break;
     }
     case 'x': {
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
       uint8_t send[length];
       uint8_t recv[length];
       convert_args(&argv[3], length, send);
-      status = spi_exchange(fdio_unsafe_borrow_channel(io), send, recv, length);
+      status = spilib_exchange(fdio_unsafe_borrow_channel(io), send, recv, length);
       print_buffer(recv, length);
       break;
     }

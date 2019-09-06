@@ -162,15 +162,15 @@ TEST(SpiDevice, SpiTest) {
     auto channel = ddk.fidl_clients_[i]->local().get();
 
     ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kTransmit;
-    zx_status_t status = spi_transmit(channel, txbuf, sizeof txbuf);
+    zx_status_t status = spilib_transmit(channel, txbuf, sizeof txbuf);
     EXPECT_OK(status, "");
 
     ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kReceive;
-    status = spi_receive(channel, rxbuf, sizeof rxbuf);
+    status = spilib_receive(channel, rxbuf, sizeof rxbuf);
     EXPECT_OK(status, "");
 
     ddk.test_mode_ = FakeDdkSpiImpl::SpiTestMode::kExchange;
-    status = spi_exchange(channel, txbuf, rxbuf, sizeof txbuf);
+    status = spilib_exchange(channel, txbuf, rxbuf, sizeof txbuf);
     EXPECT_OK(status, "");
   }
 

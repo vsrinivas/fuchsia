@@ -228,6 +228,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_COMPOSITE_1   15
 #define PDEV_DID_TEST_COMPOSITE_2   16
 #define PDEV_DID_TEST_GDC           17
+#define PDEV_DID_TEST_SPI           18
 
 // ARM
 #define PDEV_VID_ARM                18
