@@ -18,6 +18,7 @@ rustc_test("netstack_fidl_integration_test") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -102,9 +103,9 @@ test("netstack_fuchsia_c_api_test") {
   deps = [
     "//garnet/public/lib/netstack/c",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/fidl/fuchsia-posix-socket",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
+    "//zircon/system/fidl/fuchsia-posix-socket",
   ]
 }
 

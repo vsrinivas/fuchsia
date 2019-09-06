@@ -38,8 +38,8 @@ class MockNetstack : public fuchsia::netstack::Netstack {
   void SetInterfaceMetric(uint32_t nicid, uint32_t metric,
                           SetInterfaceMetricCallback callback) override {}
 
-  void SetDhcpClientStatus(uint32_t nicid, bool enabled,
-                           SetDhcpClientStatusCallback callback) override {}
+  void GetDhcpClient(uint32_t nicid, ::fidl::InterfaceRequest<::fuchsia::net::dhcp::Client> client,
+                     GetDhcpClientCallback callback) override {}
 
   void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override {}
 

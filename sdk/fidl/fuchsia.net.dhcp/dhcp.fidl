@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.dhcp;
+
+using zx;
+
+/// Client provides control operations on a DHCP client.
+protocol Client {
+    /// Start runs the DHCP client represented by this protocol.
+    ///
+    /// # Errors
+    ///
+    /// In the case that the interface this client represents no longer exists,
+    /// the server end of this protocol's channel will be closed.
+    ///
+    /// Start returns no other errors currently, but callers should check the error
+    /// value in case new errors are returned in the future.
+    Start() -> () error zx.status;
+
+    /// Stops the DHCP client (if it is running).
+    ///
+    /// # Errors
+    ///
+    /// In the case that the interface this client represents no longer exists,
+    /// the server end of this protocol's channel will be closed.
+    ///
+    /// Stop returns no other errors currently, but callers should check the error
+    /// value in case new errors are returned in the future.
+    Stop() -> () error zx.status;
+};

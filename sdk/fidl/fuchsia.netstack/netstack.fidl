@@ -6,6 +6,7 @@ library fuchsia.netstack;
 
 using fuchsia.io;
 using fuchsia.net;
+using fuchsia.net.dhcp;
 using fuchsia.hardware.ethernet;
 using zx;
 
@@ -163,13 +164,16 @@ protocol Netstack {
     /// Sets the route metric for the interface with the given nicid.
     SetInterfaceMetric(uint32 nicid, uint32 metric) -> (NetErr result);
 
-    SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
-
     /// Creates a bridge and returns the newly created nicid or an
     /// error if the creation fails.
     BridgeInterfaces(vector<uint32> nicids) -> (NetErr result, uint32 nicid);
 
     AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
+
+    // TODO(stijlist): re-home this protocol. GetDhcpClient should be a member
+    // of the protocol that eventually owns network interface management
+    // in general.
+    GetDhcpClient(uint32 nicid, request<fuchsia.net.dhcp.Client> client) -> () error zx.status;
 
     /// Begin a route transaction for atomically getting and setting the route
     /// table.  Returns true if a transaction can be started.

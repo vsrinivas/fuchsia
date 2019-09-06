@@ -6,6 +6,7 @@
 #![feature(async_await)]
 
 use failure::ResultExt;
+use std::convert::TryInto;
 
 use fidl_fuchsia_net_stack_ext::FidlReturn;
 
@@ -584,11 +585,22 @@ async fn acquire_dhcp() -> Result {
         let client_netstack =
             connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&client_environment)
                 .context("failed to connect to client netstack")?;
-        let error = client_netstack
-            .set_dhcp_client_status(id as u32, true)
+        let (dhcp_client, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
+                .context("failed to create endpoints for fuchsia.net.dhcp.Client")?;
+
+        let () = client_netstack
+            .get_dhcp_client(id.try_into().expect("should fit"), server_end)
             .await
-            .context("failed to set DHCP client status")?;
-        assert_eq!(error.status, fidl_fuchsia_netstack::Status::Ok, "{}", error.message);
+            .context("failed to call client_netstack.get_dhcp_client")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("failed to get dhcp client")?;
+        let () = dhcp_client
+            .start()
+            .await
+            .context("failed to call dhcp_client.start")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("failed to start dhcp client")?;
 
         let mut address_change_stream = futures::TryStreamExt::try_filter_map(
             client_netstack.take_event_stream(),

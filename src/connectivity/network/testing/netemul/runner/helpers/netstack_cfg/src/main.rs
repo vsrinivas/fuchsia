@@ -101,7 +101,21 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             .await
             .context("set interface address error")?;
     } else {
-        let _ = netstack.set_dhcp_client_status(nicid as u32, true).await?;
+        let (dhcp_client, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
+                .context("failed to create fidl endpoints")?;
+        netstack
+            .get_dhcp_client(nicid, server_end)
+            .await
+            .context("failed to call get_dhcp_client")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("failed to get dhcp client")?;
+        dhcp_client
+            .start()
+            .await
+            .context("failed to call dhcp_client.start")?
+            .map_err(fuchsia_zircon::Status::from_raw)
+            .context("failed to start dhcp client")?;
     };
 
     fx_log_info!("Configured nic address.");

@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/zircon_images.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//build/config/fuchsia/zircon_images.gni")
 
 package("netstack") {
   deps = [
@@ -54,20 +54,18 @@ package("netstack_tools") {
 zircon_extras_manifest("netstack_netstat_test_zircon_deps.manifest") {
   visibility = [ ":*" ]
   manifest = "image"
-  patterns = [
-    "bin/ping",
-  ]
+  patterns = [ "bin/ping" ]
 }
 
 test_package("netstack_gotests") {
   deprecated_shell = "//build"
 
   deps = [
-    ":netstack_netstat_test_zircon_deps.manifest",
     ":netstack_connectivity_test",
     ":netstack_fidlconv_test",
     ":netstack_filter_test",
     ":netstack_link_eth_test",
+    ":netstack_netstat_test_zircon_deps.manifest",
     ":netstack_test",
     "ifconfig:netstack_ifconfig_test",
     "netstack_service_test",
@@ -135,6 +133,7 @@ go_library("netstack_lib") {
     "//garnet/public/go/third_party:golang.org/x/net",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
+    "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
@@ -148,35 +147,35 @@ go_library("netstack_lib") {
 }
 
 go_test("netstack_connectivity_test") {
-  gopackages = ["netstack/connectivity"]
+  gopackages = [ "netstack/connectivity" ]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_fidlconv_test") {
-  gopackages = ["netstack/fidlconv"]
+  gopackages = [ "netstack/fidlconv" ]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_filter_test") {
-  gopackages = ["netstack/filter"]
+  gopackages = [ "netstack/filter" ]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_link_eth_test") {
-  gopackages = ["netstack/link/eth"]
+  gopackages = [ "netstack/link/eth" ]
   deps = [
     ":netstack_lib",
   ]
 }
 
 go_test("netstack_test") {
-  gopackages = ["netstack"]
+  gopackages = [ "netstack" ]
   deps = [
     ":netstack_lib",
   ]

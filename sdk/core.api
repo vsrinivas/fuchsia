@@ -44,6 +44,7 @@ sdk://fidl/fuchsia.media.sessions2
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.net
+sdk://fidl/fuchsia.net.dhcp
 sdk://fidl/fuchsia.net.http
 sdk://fidl/fuchsia.net.mdns
 sdk://fidl/fuchsia.net.oldhttp

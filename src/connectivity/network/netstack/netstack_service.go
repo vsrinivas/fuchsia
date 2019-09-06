@@ -22,6 +22,7 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/io"
 	fidlnet "fidl/fuchsia/net"
+	"fidl/fuchsia/net/dhcp"
 	"fidl/fuchsia/netstack"
 
 	"github.com/google/netstack/tcpip"
@@ -35,8 +36,9 @@ import (
 const zeroIpAddr = header.IPv4Any
 
 type netstackImpl struct {
-	ns    *Netstack
-	getIO func() io.Directory
+	ns                *Netstack
+	getIO             func() io.Directory
+	dhcpClientService dhcp.ClientService
 }
 
 // interfaces2ListToInterfacesList converts a NetInterface2 list into a
@@ -433,21 +435,22 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) error {
 	return ifState.eth.Down()
 }
 
-func (ni *netstackImpl) SetDhcpClientStatus(nicid uint32, enabled bool) (netstack.NetErr, error) {
-	nicID := tcpip.NICID(nicid)
+func (ni *netstackImpl) GetDhcpClient(id uint32, request dhcp.ClientInterfaceRequest) (netstack.NetstackGetDhcpClientResult, error) {
+	var result netstack.NetstackGetDhcpClientResult
+	nicid := tcpip.NICID(id)
 	ni.ns.mu.Lock()
-	name := ni.ns.nameLocked(nicID)
-	ifState, ok := ni.ns.mu.ifStates[nicID]
-	ni.ns.mu.Unlock()
-
-	if !ok {
-		return netstack.NetErr{Status: netstack.StatusUnknownInterface, Message: "unknown interface"}, nil
+	defer ni.ns.mu.Unlock()
+	if _, ok := ni.ns.mu.ifStates[nicid]; !ok {
+		result.SetErr(int32(zx.ErrNotFound))
+		return result, nil
 	}
-
-	ifState.mu.Lock()
-	ifState.setDHCPStatusLocked(name, enabled)
-	ifState.mu.Unlock()
-	return netstack.NetErr{Status: netstack.StatusOk, Message: ""}, nil
+	s := &dhcp.ClientStub{Impl: &clientImpl{ns: ni.ns, nicid: nicid}}
+	if _, err := ni.dhcpClientService.BindingSet.Add(s, request.Channel, nil); err != nil {
+		result.SetErr(int32(zx.ErrInternal))
+		return result, nil
+	}
+	result.SetResponse(netstack.NetstackGetDhcpClientResponse{})
+	return result, nil
 }
 
 func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConfig netstack.InterfaceConfig, device ethernet.DeviceInterface) (uint32, error) {

@@ -17,10 +17,12 @@ import (
 
 	"fidl/fuchsia/hardware/ethernet"
 	netfidl "fidl/fuchsia/net"
+	"fidl/fuchsia/net/dhcp"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/wlan/service"
 
 	"github.com/google/netstack/tcpip"
+	"github.com/pkg/errors"
 )
 
 type netstackClientApp struct {
@@ -279,15 +281,49 @@ func (a *netstackClientApp) bridge(ifNames []string) (uint32, error) {
 	return nicid, nil
 }
 
-func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop string) {
+func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop string) error {
+	req, client, err := dhcp.NewClientInterfaceRequest()
+	if err != nil {
+		return err
+	}
+
+	res, err := a.netstack.GetDhcpClient(iface.Id, req)
+	if err != nil {
+		return err
+	}
+
+	switch res.Which() {
+	case netstack.NetstackGetDhcpClientResultErr:
+		return fmt.Errorf("failed to get DHCP client controller for interface %d: %s", iface.Id, zx.Status(res.Err))
+	case netstack.NetstackGetDhcpClientResultResponse:
+	}
+
 	switch startStop {
 	case "start":
-		a.netstack.SetDhcpClientStatus(iface.Id, true)
+		res, err := client.Start()
+		if err != nil {
+			return errors.Wrap(err, "failed to start client")
+		}
+		switch res.Which() {
+		case dhcp.ClientStartResultErr:
+			return &zx.Error{Text: "dhcp client.Start()", Status: zx.Status(res.Err)}
+		case dhcp.ClientStartResultResponse:
+		}
 	case "stop":
-		a.netstack.SetDhcpClientStatus(iface.Id, false)
+		res, err := client.Stop()
+		if err != nil {
+			return errors.Wrap(err, "failed to stop client")
+		}
+		switch res.Which() {
+		case dhcp.ClientStopResultErr:
+			return &zx.Error{Text: "dhcp client.Stop()", Status: zx.Status(res.Err)}
+		case dhcp.ClientStopResultResponse:
+		}
 	default:
 		usage()
 	}
+
+	return nil
 }
 
 func (a *netstackClientApp) wlanStatus() string {
@@ -532,7 +568,9 @@ func main() {
 		case "del":
 			a.removeIfaceAddress(*iface, os.Args[3])
 		case "dhcp":
-			a.setDHCP(*iface, os.Args[3])
+			if err := a.setDHCP(*iface, os.Args[3]); err != nil {
+				fmt.Printf("ifconfig: a.setDHCP(%+v, %s) failed: %s", *iface, os.Args[3], err)
+			}
 		case "metric":
 			metric, err := strconv.ParseUint(os.Args[3], 10, 32)
 			if err != nil {

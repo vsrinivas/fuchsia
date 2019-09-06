@@ -168,7 +168,10 @@ async fn handle_cmd<'a>(
                         qmi::set_network_status(file_ref, true).await?;
                         let netstack = connect_to_service::<StackMarker>()?;
                         let old_netstack = connect_to_service::<NetstackMarker>()?;
-                        old_netstack.set_dhcp_client_status(3, false).await?;
+                        let (client, server_end) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()?;
+                        old_netstack.get_dhcp_client(3, server_end).await?.map_err(fuchsia_zircon::Status::from_raw)?;
+                        client.stop().await?.map_err(fuchsia_zircon::Status::from_raw)?;
+
                         let () = netstack
                             .add_interface_address(
                                 3,

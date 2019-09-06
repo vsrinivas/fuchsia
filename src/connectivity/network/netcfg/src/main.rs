@@ -82,7 +82,9 @@ macro_rules! cas_filter_rules {
                 let () =
                     Err(failure::format_err!("{} failed: {:?}", stringify!($get_rules), status))?;
             }
-            let status = $filter.$update_rules(&mut $rules.iter_mut(), generation).await
+            let status = $filter
+                .$update_rules(&mut $rules.iter_mut(), generation)
+                .await
                 .context("error getting response")?;
             match status {
                 fidl_fuchsia_net_filter::Status::Ok => {
@@ -93,7 +95,8 @@ macro_rules! cas_filter_rules {
                 {
                     fuchsia_async::Timer::new(
                         FILTER_CAS_RETRY_INTERVAL_MILLIS.millis().after_now(),
-                    ).await;
+                    )
+                    .await;
                 }
                 _ => {
                     let () = Err(failure::format_err!(
@@ -292,13 +295,15 @@ fn main() -> Result<(), failure::Error> {
                                 &default_config_rules,
                                 &filepath,
                             );
-                            let nic_id = netstack.add_ethernet_device(
-                                &topological_path,
-                                &mut derived_interface_config,
-                                fidl::endpoints::ClientEnd::<
-                                    fidl_fuchsia_hardware_ethernet::DeviceMarker,
-                                >::new(client),
-                            ).await
+                            let nic_id = netstack
+                                .add_ethernet_device(
+                                    &topological_path,
+                                    &mut derived_interface_config,
+                                    fidl::endpoints::ClientEnd::<
+                                        fidl_fuchsia_hardware_ethernet::DeviceMarker,
+                                    >::new(client),
+                                )
+                                .await
                                 .with_context(|_| {
                                     format!(
                                         "fidl_netstack::Netstack::add_ethernet_device({})",
@@ -331,21 +336,52 @@ fn main() -> Result<(), failure::Error> {
 
                             match derived_interface_config.ip_address_config {
                                 fidl_fuchsia_netstack::IpAddressConfig::Dhcp(_) => {
-                                    netstack.set_dhcp_client_status(nic_id as u32, true)
+                                    let (dhcp_client, server_end) =
+                                        fidl::endpoints::create_proxy::<
+                                            fidl_fuchsia_net_dhcp::ClientMarker,
+                                        >()
+                                        .context("dhcp client: failed to create fidl endpoints")?;
+                                    netstack
+                                        .get_dhcp_client(nic_id, server_end)
+                                        .await
+                                        .context("failed to call netstack.get_dhcp_client")?
+                                        .map_err(fuchsia_zircon::Status::from_raw)
+                                        .context("failed to get dhcp client")?;
+                                    dhcp_client
+                                        .start()
+                                        .map_ok(|result| match result {
+                                            Ok(()) => fidl_fuchsia_netstack::NetErr {
+                                                status: fidl_fuchsia_netstack::Status::Ok,
+                                                message: "".to_string(),
+                                            },
+                                            Err(status) => fidl_fuchsia_netstack::NetErr {
+                                                status: fidl_fuchsia_netstack::Status::UnknownError,
+                                                message: fuchsia_zircon::Status::from_raw(status)
+                                                    .to_string(),
+                                            },
+                                        })
+                                        .await
+                                        .context("failed to start dhcp client")?
                                 }
                                 fidl_fuchsia_netstack::IpAddressConfig::StaticIp(
                                     fidl_fuchsia_net::Subnet { addr: mut address, prefix_len },
-                                ) => netstack.set_interface_address(
-                                    nic_id as u32,
-                                    &mut address,
-                                    prefix_len,
-                                ),
-                            }.await?;
+                                ) => {
+                                    netstack
+                                        .set_interface_address(
+                                            nic_id as u32,
+                                            &mut address,
+                                            prefix_len,
+                                        )
+                                        .await?
+                                }
+                            };
                             let () = netstack.set_interface_status(nic_id as u32, true)?;
 
                             // TODO(chunyingw): when netcfg switches to stack.add_ethernet_interface,
                             // remove casting nic_id to u64.
-                            interface_ids.lock().await
+                            interface_ids
+                                .lock()
+                                .await
                                 .insert(derived_interface_config.name, nic_id as u64);
                         }
                     }
