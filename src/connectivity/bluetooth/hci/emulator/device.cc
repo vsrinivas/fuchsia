@@ -132,8 +132,8 @@ zx_status_t Device::Bind() {
   }
 
   fake_device_ = fbl::AdoptRef(new FakeController());
-  fake_device_->SetAdvertisingStateCallback(
-      fit::bind_member(this, &Device::OnLegacyAdvertisingStateChanged), loop_.dispatcher());
+  fake_device_->set_advertising_state_callback(
+      fit::bind_member(this, &Device::OnLegacyAdvertisingStateChanged));
 
   loop_.StartThread("bt_hci_emulator");
 
