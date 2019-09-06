@@ -22,6 +22,7 @@
 #include <kernel/event.h>
 #include <kernel/thread.h>
 #include <ktl/array.h>
+#include <ktl/forward.h>
 #include <object/dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/futex_context.h>
@@ -331,6 +332,7 @@ class ProcessDispatcher final
   }
 
  private:
+  using HandleList = fbl::DoublyLinkedList<Handle*, Handle::NodeListTraits>;
   // HandleCursor is used to reduce the lock duration while iterate over the handle table.
   //
   // It allows iteration over the handle table to be broken up into multiple critical sections.
@@ -365,7 +367,7 @@ class ProcessDispatcher final
     HandleCursor& operator=(HandleCursor&&) = delete;
 
     ProcessDispatcher* const process_;
-    fbl::DoublyLinkedList<Handle*>::iterator iter_ TA_GUARDED(&handle_table_lock_);
+    ProcessDispatcher::HandleList::iterator iter_ TA_GUARDED(&handle_table_lock_);
   };
 
   // compute the vdso code address and store in vdso_code_address_
@@ -427,7 +429,7 @@ class ProcessDispatcher final
   mutable DECLARE_BRWLOCK_PI(ProcessDispatcher) handle_table_lock_;
   // This process's handle table.  When removing one or more handles from this list, be sure to
   // advance or invalidate any cursors that might point to the handles being removed.
-  fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
+  HandleList handles_ TA_GUARDED(handle_table_lock_);
   // A list of cursors that contain pointers to elements of handles_.
   fbl::DoublyLinkedList<HandleCursor*> handle_cursors_ TA_GUARDED(handle_table_lock_);
 

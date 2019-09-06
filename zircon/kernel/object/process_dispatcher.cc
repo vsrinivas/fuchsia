@@ -412,7 +412,7 @@ void ProcessDispatcher::FinishDeadTransition() {
   // clean up the handle table
   LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
 
-  fbl::DoublyLinkedList<Handle*> to_clean;
+  HandleList to_clean;
   {
     Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_lock_};
     for (auto& cursor : handle_cursors_) {
@@ -919,9 +919,7 @@ ProcessDispatcher::HandleCursor::~HandleCursor() {
   process_->handle_cursors_.erase(*this);
 }
 
-void ProcessDispatcher::HandleCursor::Invalidate() {
-  iter_ = process_->handles_.end();
-}
+void ProcessDispatcher::HandleCursor::Invalidate() { iter_ = process_->handles_.end(); }
 
 Handle* ProcessDispatcher::HandleCursor::Next() {
   if (iter_ == process_->handles_.end()) {
