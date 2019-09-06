@@ -38,12 +38,13 @@ std::unique_ptr<EffectsLoader> CreateEffectsLoaderWithFallback() {
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
-AudioCoreImpl::AudioCoreImpl(async_dispatcher_t* dispatcher,
+AudioCoreImpl::AudioCoreImpl(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
                              std::unique_ptr<sys::ComponentContext> component_context,
                              CommandLineOptions options)
     : dispatcher_(dispatcher),
       effects_loader_{CreateEffectsLoaderWithFallback()},
-      device_manager_(dispatcher, effects_loader_.get(), *this),
+      device_settings_persistence_(io_dispatcher),
+      device_manager_(dispatcher, effects_loader_.get(), &device_settings_persistence_, *this),
       audio_admin_(this),
       component_context_(std::move(component_context)),
       vmar_manager_(

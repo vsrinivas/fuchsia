@@ -22,15 +22,15 @@ namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(async_dispatcher_t* dispatcher,
                                        EffectsLoader* effects_loader,
+                                       AudioDeviceSettingsPersistence* device_settings_persistence,
                                        const SystemGainMuteProvider& system_gain_mute)
     : dispatcher_(dispatcher),
       system_gain_mute_(system_gain_mute),
       effects_loader_(*effects_loader),
-      // TODO(35145): Use a dispatcher here appropriate for blocking operations such as disk IO
-      // instead of the main service dispatcher.
-      device_settings_persistence_(dispatcher) {
+      device_settings_persistence_(*device_settings_persistence) {
   FXL_DCHECK(dispatcher);
   FXL_DCHECK(effects_loader);
+  FXL_DCHECK(device_settings_persistence);
 }
 
 AudioDeviceManager::~AudioDeviceManager() {

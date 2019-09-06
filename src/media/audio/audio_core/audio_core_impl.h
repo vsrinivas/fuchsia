@@ -35,7 +35,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
                       SystemGainMuteProvider,
                       UsageGainAdjustment {
  public:
-  AudioCoreImpl(async_dispatcher_t* dispatcher,
+  AudioCoreImpl(async_dispatcher_t* dispatcher, async_dispatcher_t* io_dispatcher,
                 std::unique_ptr<sys::ComponentContext> component_context,
                 CommandLineOptions options);
 
@@ -96,6 +96,7 @@ class AudioCoreImpl : public fuchsia::media::AudioCore,
 
   std::unique_ptr<EffectsLoader> effects_loader_;
 
+  AudioDeviceSettingsPersistence device_settings_persistence_;
   // State for dealing with devices.
   AudioDeviceManager device_manager_;
 

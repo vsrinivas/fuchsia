@@ -30,6 +30,7 @@ class SystemGainMuteProvider;
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
  public:
   AudioDeviceManager(async_dispatcher_t* dispatcher, EffectsLoader* effects_loader,
+                     AudioDeviceSettingsPersistence* device_settings_persistence,
                      const SystemGainMuteProvider& system_gain_mute);
   ~AudioDeviceManager();
 
@@ -190,13 +191,13 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   // A helper class we will use to detect plug/unplug events for audio devices
   AudioPlugDetectorImpl plug_detector_;
 
+  AudioDeviceSettingsPersistence& device_settings_persistence_;
+
   // State which affects routing policy.
   fuchsia::media::AudioOutputRoutingPolicy routing_policy_ =
       fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT;
   uint64_t default_output_token_ = ZX_KOID_INVALID;
   uint64_t default_input_token_ = ZX_KOID_INVALID;
-
-  AudioDeviceSettingsPersistence device_settings_persistence_;
 };
 
 }  // namespace media::audio
