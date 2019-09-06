@@ -268,14 +268,7 @@ async fn validate_accessibility(
             }
         },
         AccessibilityRequest::Watch { responder } => {
-            responder.send(&mut Ok(AccessibilitySettings {
-                audio_description: Some(false),
-                screen_reader: Some(false),
-                color_inversion: Some(false),
-                enable_magnification: Some(false),
-                color_correction: Some(fidl_fuchsia_settings::ColorBlindnessType::None),
-                captions_settings: None,
-            }))?;
+            responder.send(&mut Ok(AccessibilitySettings::empty()))?;
         }
     );
 
@@ -285,6 +278,7 @@ async fn validate_accessibility(
 
     accessibility::command(
         accessibility_service,
+        false,
         expected_audio_description,
         expected_screen_reader,
         expected_color_inversion,

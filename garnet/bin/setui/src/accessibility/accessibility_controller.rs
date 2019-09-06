@@ -17,8 +17,13 @@ use {
 };
 
 impl DeviceStorageCompatible for AccessibilityInfo {
-    const DEFAULT_VALUE: Self =
-        AccessibilityInfo { audio_description: false, color_correction: ColorBlindnessType::None };
+    const DEFAULT_VALUE: Self = AccessibilityInfo {
+        audio_description: None,
+        screen_reader: None,
+        color_inversion: None,
+        enable_magnification: None,
+        color_correction: None,
+    };
     const KEY: &'static str = "accessibility_info";
 }
 
@@ -54,41 +59,44 @@ pub fn spawn_accessibility_controller(
                     Command::HandleRequest(request, responder) => {
                         #[allow(unreachable_patterns)]
                         match request {
-                            SettingRequest::SetAudioDescription(audio_description) => {
-                                stored_value.audio_description = audio_description;
-                                persist_accessibility_info(
-                                    stored_value,
-                                    storage.clone(),
-                                    responder,
-                                )
-                                .await;
-
-                                // Notify listeners of value change.
-                                if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
-                                    notifier.unbounded_send(SettingType::Accessibility)?;
-                                }
-                            }
-                            SettingRequest::SetColorCorrection(color_correction) => {
-                                stored_value.color_correction = color_correction;
-                                persist_accessibility_info(
-                                    stored_value,
-                                    storage.clone(),
-                                    responder,
-                                )
-                                .await;
-
-                                // Notify listeners of value change.
-                                if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
-                                    notifier.unbounded_send(SettingType::Accessibility)?;
-                                }
-                            }
                             SettingRequest::Get => {
                                 let _ = responder.send(Ok(Some(SettingResponse::Accessibility(
                                     stored_value.clone(),
                                 ))));
+                                // Done handling request, no need to notify listeners or persist.
+                                continue;
+                            }
+                            SettingRequest::SetAccessibilityInfo(info) => {
+                                let old_value = stored_value.clone();
+
+                                stored_value.audio_description =
+                                    info.audio_description.or(stored_value.audio_description);
+                                stored_value.screen_reader =
+                                    info.screen_reader.or(stored_value.screen_reader);
+                                stored_value.color_inversion =
+                                    info.color_inversion.or(stored_value.color_inversion);
+                                stored_value.enable_magnification =
+                                    info.enable_magnification.or(stored_value.enable_magnification);
+                                stored_value.color_correction = info
+                                    .color_correction
+                                    .map(ColorBlindnessType::into)
+                                    .or(stored_value.color_correction);
+
+                                if old_value == stored_value {
+                                    // No change in value, no need to notify listeners or persist.
+                                    continue;
+                                }
                             }
                             _ => panic!("Unexpected command to accessibility"),
                         }
+
+                        // Notify listeners of value change.
+                        if let Some(notifier) = (*notifier_lock.read().unwrap()).clone() {
+                            notifier.unbounded_send(SettingType::Accessibility)?;
+                        }
+
+                        // Persist the new value.
+                        persist_accessibility_info(stored_value, storage.clone(), responder).await;
                     }
                 }
             }

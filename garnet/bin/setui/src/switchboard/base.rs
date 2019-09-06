@@ -52,8 +52,7 @@ pub enum SettingRequest {
     Get,
 
     // Accessibility requests.
-    SetAudioDescription(bool),
-    SetColorCorrection(ColorBlindnessType),
+    SetAccessibilityInfo(AccessibilityInfo),
 
     // Audio requests.
     SetVolume(Vec<AudioStream>),
@@ -81,8 +80,11 @@ pub enum SettingRequest {
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AccessibilityInfo {
-    pub audio_description: bool,
-    pub color_correction: ColorBlindnessType,
+    pub audio_description: Option<bool>,
+    pub screen_reader: Option<bool>,
+    pub color_inversion: Option<bool>,
+    pub enable_magnification: Option<bool>,
+    pub color_correction: Option<ColorBlindnessType>,
 }
 
 #[derive(PartialEq, Debug, Clone)]

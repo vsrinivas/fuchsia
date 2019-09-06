@@ -78,3 +78,45 @@ impl FIDLClone for AudioStreamSettings {
         };
     }
 }
+
+impl FIDLClone for AccessibilitySettings {
+    fn clone(&self) -> Self {
+        let mut settings = AccessibilitySettings::empty();
+        settings.audio_description = self.audio_description;
+        settings.screen_reader = self.screen_reader;
+        settings.color_inversion = self.color_inversion;
+        settings.enable_magnification = self.enable_magnification;
+        settings.color_correction = self.color_correction;
+        settings.captions_settings = match &self.captions_settings {
+            Some(setting) => Some(setting.clone()),
+            None => None,
+        };
+        settings
+    }
+}
+
+impl FIDLClone for CaptionsSettings {
+    fn clone(&self) -> Self {
+        let mut settings = CaptionsSettings::empty();
+        settings.for_media = self.for_media;
+        settings.for_tts = self.for_tts;
+        settings.font_style = match &self.font_style {
+            Some(style) => Some(style.clone()),
+            None => None,
+        };
+        settings.window_color = self.window_color;
+        settings.background_color = self.background_color;
+        settings
+    }
+}
+
+impl FIDLClone for CaptionFontStyle {
+    fn clone(&self) -> Self {
+        let mut style = CaptionFontStyle::empty();
+        style.family = self.family;
+        style.color = self.color;
+        style.relative_size = self.relative_size;
+        style.char_edge_style = self.char_edge_style;
+        style
+    }
+}

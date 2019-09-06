@@ -300,7 +300,6 @@ mod tests {
         failure::format_err,
         fidl::endpoints::{ServerEnd, ServiceMarker},
         fidl_fuchsia_media::AudioRenderUsage,
-        fidl_fuchsia_settings::ColorBlindnessType as FidlColorBlindnessType,
         fuchsia_zircon as zx,
         futures::prelude::*,
         lazy_static::lazy_static,
@@ -338,58 +337,25 @@ mod tests {
 
     // TODO(fxb/35254): move out of main.rs
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_accessibility_audio_description() {
-        const INITIAL_AUDIO_DESCRIPTION: bool = false;
-        const CHANGED_AUDIO_DESCRIPTION: bool = true;
-
-        let expected_struct = AccessibilityInfo {
-            audio_description: CHANGED_AUDIO_DESCRIPTION,
-            color_correction: ColorBlindnessType::None,
-        };
-
-        // Create and fetch a store from device storage so we can read stored value for testing.
-        let factory = Box::new(InMemoryStorageFactory::create());
-        let store = factory.get_store::<AccessibilityInfo>();
-        let accessibility_proxy = create_test_accessibility_env(factory).await;
-
-        // Fetch the initial audio description value.
-        let settings =
-            accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
-        assert_eq!(settings.audio_description, Some(INITIAL_AUDIO_DESCRIPTION));
-
-        // Set the audio description value.
-        let mut accessibility_settings = AccessibilitySettings::empty();
-        accessibility_settings.audio_description = Some(CHANGED_AUDIO_DESCRIPTION);
-        accessibility_proxy
-            .set(accessibility_settings)
-            .await
-            .expect("set completed")
-            .expect("set successful");
-
-        // Verify the value we set is persisted in DeviceStorage.
-        let mut store_lock = store.lock().await;
-        let retrieved_struct = store_lock.get().await;
-        assert_eq!(expected_struct, retrieved_struct);
-
-        // Verify the value we set is returned when watching.
-        let settings =
-            accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
-        assert_eq!(settings.audio_description, Some(CHANGED_AUDIO_DESCRIPTION));
-    }
-
-    // TODO(fxb/35254): move out of main.rs
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_accessibility_color_correction() {
+    async fn test_accessibility() {
         const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
 
-        const INITIAL_FIDL_COLOR_BLINDNESS_TYPE: FidlColorBlindnessType =
-            FidlColorBlindnessType::None;
-        const CHANGED_FIDL_COLOR_BLINDNESS_TYPE: FidlColorBlindnessType =
-            FidlColorBlindnessType::Tritanomaly;
+        let initial_settings = AccessibilitySettings::empty();
 
-        let expected_struct = AccessibilityInfo {
-            audio_description: false,
-            color_correction: CHANGED_COLOR_BLINDNESS_TYPE,
+        let mut expected_settings = AccessibilitySettings::empty();
+        expected_settings.audio_description = Some(true);
+        expected_settings.screen_reader = Some(true);
+        expected_settings.color_inversion = Some(true);
+        expected_settings.enable_magnification = Some(true);
+        expected_settings.color_correction = Some(CHANGED_COLOR_BLINDNESS_TYPE.into());
+        expected_settings.captions_settings = None;
+
+        let expected_info = AccessibilityInfo {
+            audio_description: expected_settings.audio_description,
+            screen_reader: expected_settings.screen_reader,
+            color_inversion: expected_settings.color_inversion,
+            enable_magnification: expected_settings.enable_magnification,
+            color_correction: Some(CHANGED_COLOR_BLINDNESS_TYPE),
         };
 
         // Create and fetch a store from device storage so we can read stored value for testing.
@@ -397,16 +363,14 @@ mod tests {
         let store = factory.get_store::<AccessibilityInfo>();
         let accessibility_proxy = create_test_accessibility_env(factory).await;
 
-        // Fetch the initial color correction value.
+        // Fetch the initial value.
         let settings =
             accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
-        assert_eq!(settings.color_correction, Some(INITIAL_FIDL_COLOR_BLINDNESS_TYPE));
+        assert_eq!(settings, initial_settings);
 
-        // Set the color correction value.
-        let mut accessibility_settings = AccessibilitySettings::empty();
-        accessibility_settings.color_correction = Some(CHANGED_FIDL_COLOR_BLINDNESS_TYPE);
+        // Set the various settings values.
         accessibility_proxy
-            .set(accessibility_settings)
+            .set(expected_settings.clone())
             .await
             .expect("set completed")
             .expect("set successful");
@@ -414,12 +378,12 @@ mod tests {
         // Verify the value we set is persisted in DeviceStorage.
         let mut store_lock = store.lock().await;
         let retrieved_struct = store_lock.get().await;
-        assert_eq!(expected_struct, retrieved_struct);
+        assert_eq!(expected_info, retrieved_struct);
 
         // Verify the value we set is returned when watching.
         let settings =
             accessibility_proxy.watch().await.expect("watch completed").expect("watch successful");
-        assert_eq!(settings.color_correction, Some(CHANGED_FIDL_COLOR_BLINDNESS_TYPE));
+        assert_eq!(settings, expected_settings);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

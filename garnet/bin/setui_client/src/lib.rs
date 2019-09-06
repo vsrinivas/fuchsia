@@ -53,6 +53,10 @@ pub enum SettingClient {
 
     #[structopt(name = "accessibility")]
     Accessibility {
+        // Debug option that attempts to set some value for all fields in AccessibilitySettings.
+        #[structopt(long)]
+        debug_set_all: bool,
+
         #[structopt(short = "a", long)]
         audio_description: Option<bool>,
 
@@ -167,6 +171,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             println!("Intl: {}", output);
         }
         SettingClient::Accessibility {
+            debug_set_all,
             audio_description,
             screen_reader,
             color_inversion,
@@ -178,6 +183,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                     .context("Failed to connect to accessibility service")?;
             let output = accessibility::command(
                 accessibility_service,
+                debug_set_all,
                 audio_description,
                 screen_reader,
                 color_inversion,
