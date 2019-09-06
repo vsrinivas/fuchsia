@@ -39,6 +39,11 @@ class OperationTracker {
   // Returns a vector of Ranges describing the overlapping portions of these operations.
   std::vector<Range> Remove(Range range);
 
+  // Returns true if any tracked operations even partially overlap with the provided range.
+  bool Overlaps(Range range) {
+    return operations_.find(range) != operations_.end();
+  }
+
   void Clear() { operations_.clear(); }
 
  private:

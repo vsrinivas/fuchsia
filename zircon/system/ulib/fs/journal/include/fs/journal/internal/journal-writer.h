@@ -14,6 +14,7 @@
 #include <fbl/vector.h>
 #include <fs/buffer/blocking_ring_buffer.h>
 #include <fs/journal/format.h>
+#include <fs/journal/internal/operation-tracker.h>
 #include <fs/journal/superblock.h>
 #include <fs/operation/buffered_operation.h>
 #include <fs/transaction/block_transaction.h>
@@ -131,6 +132,10 @@ class JournalWriter {
 
   fs::TransactionHandler* transaction_handler_ = nullptr;
   JournalSuperblock journal_superblock_;
+  // Tracks all in-flight metadata operations.
+  // These operations are tracked from the moment they are written to the journal,
+  // and are dropped once the journal would avoid replaying them on reboot.
+  OperationTracker live_metadata_operations_;
   // Relative to the start of the filesystem. Points to the journal info block.
   uint64_t journal_start_block_ = 0;
   // The value of the sequence_number to be used in the next entry which is written to the

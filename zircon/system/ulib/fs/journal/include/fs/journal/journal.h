@@ -81,28 +81,6 @@ class Journal final : public fit::executor {
   // of the |WriteMetadata| method, not by the completion of the returned promise.
   Promise WriteMetadata(fbl::Vector<fs::UnbufferedOperation> operations);
 
-  // Identifies that a piece of metadata is no longer being used as metadata.
-  //
-  // This entry is essential for:
-  //   - Journaling modes which exclusively journal metadata, but not data.
-  //   - Filesystems which share storage between metadata and data.
-  //
-  // These entries prevent replaying "old" metadata on top of user data.
-  //
-  // For example, suppose the following scenario occurs:
-  //   - Allocate N, Write block N (metadata).
-  //      Journal: [N Allocation] [N Write]
-  //   - Free block N.
-  //      Journal: [N Allocation] [N Write] [N free]
-  //   - Allocate N, Write block N (data)
-  //      Journal: [N Allocation] [N Write] [N free] [N Allocation]
-  // On replay, the journal would correctly allocate N, free it, and re-allocate
-  // it as user data. However, in this process, the journal would also overwrite N
-  // with the stale copy of metadata, resulting in "valid metadata, but invalid user data".
-  //
-  // TODO(ZX-4752): Currently only returns a promise that results in ZX_ERR_NOT_SUPPORTED.
-  Promise WriteRevocation(fbl::Vector<uint64_t> operations);
-
   // Returns a promise which identifies that all previous promises returned from the journal
   // have completed (succeeded, failed, or abandoned).
   // Additionally, prompt the internal journal writer to update the info block, if it
@@ -111,7 +89,6 @@ class Journal final : public fit::executor {
   // This promise completes when the promises from all prior invocations of:
   // - WriteData
   // - WriteMetadata
-  // - WriteRevocation
   // - Sync
   // Have completed (either successfully or with an error).
   Promise Sync();

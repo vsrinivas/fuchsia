@@ -35,6 +35,31 @@ JournalWriter::JournalWriter(TransactionHandler* transaction_handler)
     : transaction_handler_(transaction_handler) {}
 
 fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
+  // If any of the data operations we're about to write overlap with in-flight metadata
+  // operations, then we risk those metadata operations "overwriting" our data blocks
+  // on replay.
+  //
+  // Before writing data, identify that those metadata blocks should not be replayed.
+  for (const auto& operation : work.operations) {
+    range::Range<uint64_t> range(operation.op.dev_offset,
+                                 operation.op.dev_offset + operation.op.length);
+    if (live_metadata_operations_.Overlaps(range)) {
+      // TODO(smklein): Write "real" revocation records instead of merely updating the info block.
+      //
+      // Currently, writing the info block is sufficient to "avoid metadata replay", but this
+      // is only the case because the JournalWriter is synchronous, single-threaded, and
+      // non-caching. If we enable asynchronous writeback, emitting revocation records
+      // may be a more desirable option than "blocking until all prior operations complete,
+      // then blocking on writing the info block".
+      zx_status_t status = WriteInfoBlock();
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("journal: Failed to write data: %s\n", zx_status_get_string(status));
+        return fit::error(status);
+      }
+      break;
+    }
+  }
+
   zx_status_t status = WriteOperations(work.operations);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("journal: Failed to write data: %s\n", zx_status_get_string(status));
@@ -52,6 +77,13 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(JournalWorkItem work
   if (status != ZX_OK) {
     FS_TRACE_ERROR("WriteMetadata: Failed to write info block: %s\n", zx_status_get_string(status));
     return fit::error(status);
+  }
+
+  // Monitor the in-flight metadata operations.
+  for (const auto& operation : work.operations) {
+    range::Range<uint64_t> range(operation.op.dev_offset,
+                                 operation.op.dev_offset + operation.op.length);
+    live_metadata_operations_.Insert(std::move(range));
   }
 
   // Write metadata to the journal itself.
@@ -221,7 +253,15 @@ zx_status_t JournalWriter::WriteInfoBlock() {
   operation.op.dev_offset = InfoStartBlock();
   operation.op.length = InfoLength();
   journal_operations.push_back(operation);
-  return WriteOperations(journal_operations);
+  zx_status_t status = WriteOperations(journal_operations);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Immediately after the info block is updated, no metadata operations should be replayed
+  // on reboot.
+  live_metadata_operations_.Clear();
+  return ZX_OK;
 }
 
 zx_status_t JournalWriter::WriteOperations(const fbl::Vector<BufferedOperation>& operations) {

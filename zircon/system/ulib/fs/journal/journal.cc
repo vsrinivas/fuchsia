@@ -136,16 +136,6 @@ Journal::Promise Journal::WriteMetadata(fbl::Vector<UnbufferedOperation> operati
   return barrier_.wrap(std::move(ordered_promise));
 }
 
-Journal::Promise Journal::WriteRevocation(fbl::Vector<uint64_t> operations) {
-  if (!writer_.IsJournalingEnabled()) {
-    return fit::make_promise([]() -> fit::result<void, zx_status_t> { return fit::ok(); });
-  }
-
-  // TODO(ZX-4752): Don't forget to wrap your promises (metadata order + sync).
-  // See: "metadata_sequencer_", "barrier_".
-  return fit::make_error_promise(ZX_ERR_NOT_SUPPORTED);
-}
-
 Journal::Promise Journal::Sync() {
   auto update = fit::make_promise(
       [this]() mutable -> fit::result<void, zx_status_t> { return writer_.Sync(); });

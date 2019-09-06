@@ -304,7 +304,7 @@ class JournalRequestVerifier {
   }
 
   void ExtendJournalOffset(uint64_t operation_length) {
-    journal_offset_ = (journal_offset_ + operation_length + kEntryMetadataBlocks) % kJournalLength;
+    journal_offset_ = (journal_offset_ + operation_length) % kJournalLength;
   }
 
   // Returns the on-disk journal offset, relative to |EntryStart()|.
@@ -343,6 +343,8 @@ class JournalRequestVerifier {
                             size_t count) const;
 
  private:
+  void VerifyJournalRequest(uint64_t entry_length, const block_fifo_request_t requests[],
+                            size_t count) const;
   uint64_t EntryStart() const { return journal_start_block_ + kJournalMetadataBlocks; }
 
   // VMO of the journal info block.
@@ -400,14 +402,13 @@ void JournalRequestVerifier::VerifyDataWrite(const fs::UnbufferedOperation& oper
   }
 }
 
-void JournalRequestVerifier::VerifyJournalWrite(const fs::UnbufferedOperation& operation,
-                                                const block_fifo_request_t requests[],
-                                                size_t count) const {
+void JournalRequestVerifier::VerifyJournalRequest(uint64_t entry_length,
+                                                  const block_fifo_request_t requests[],
+                                                  size_t count) const {
   // Verify the operation is from the metadata buffer, targeting the journal.
   EXPECT_GE(count, 1, "Not enough operations");
 
   uint64_t journal_offset = JournalOffset();
-  const uint64_t entry_length = operation.op.length + kEntryMetadataBlocks;
 
   // Validate that all operations target the expected location within the on-disk journal.
   uint64_t blocks_written = 0;
@@ -426,6 +427,14 @@ void JournalRequestVerifier::VerifyJournalWrite(const fs::UnbufferedOperation& o
     journal_offset = (journal_offset + requests[i].length) % kJournalLength;
   }
   EXPECT_EQ(entry_length, blocks_written);
+}
+
+void JournalRequestVerifier::VerifyJournalWrite(const fs::UnbufferedOperation& operation,
+                                                const block_fifo_request_t requests[],
+                                                size_t count) const {
+  uint64_t entry_length = operation.op.length + kEntryMetadataBlocks;
+
+  ASSERT_NO_FAILURES(VerifyJournalRequest(entry_length, requests, count));
 
   // Validate that all operations exist within the journal buffer.
   uint64_t buffer_offset = operation.op.vmo_offset;
@@ -607,7 +616,7 @@ TEST_F(JournalTest, WriteMetadataObserveTransactions) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operation, requests, count);
-        verifier.ExtendJournalOffset(operation.op.length);
+        verifier.ExtendJournalOffset(operation.op.length + kEntryMetadataBlocks);
         uint64_t sequence_number = 1;
         registry()->VerifyReplay({operation}, sequence_number);
         return ZX_OK;
@@ -666,7 +675,7 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -675,7 +684,7 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         registry()->VerifyReplay(operations, 2);
         return ZX_OK;
       },
@@ -738,7 +747,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -747,7 +756,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         uint64_t sequence_number = 2;
         registry()->VerifyReplay(operations, sequence_number);
         return ZX_OK;
@@ -817,7 +826,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         registry()->VerifyReplay({operations[0]}, sequence_number);
         return ZX_OK;
       },
@@ -834,7 +843,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         registry()->VerifyReplay({operations[1]}, sequence_number);
         return ZX_OK;
       },
@@ -899,7 +908,7 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -914,7 +923,7 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
         // only the second metadata operation being replayed.
@@ -986,7 +995,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1001,7 +1010,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
         // only the second metadata operation being replayed.
@@ -1074,7 +1083,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1089,7 +1098,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
         // only the second metadata operation being replayed.
@@ -1165,7 +1174,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1176,7 +1185,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
   };
@@ -1263,7 +1272,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1283,7 +1292,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1298,7 +1307,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
       [&](const block_fifo_request_t* requests, size_t count) {
         EXPECT_EQ(1, count);
         verifier.VerifyMetadataWrite(operations[2], requests, count);
-        verifier.ExtendJournalOffset(operations[2].op.length);
+        verifier.ExtendJournalOffset(operations[2].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
   };
@@ -1387,7 +1396,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1405,7 +1414,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
         // "1, 2, 3, 4" are contiguous in the in-memory buffer.
         EXPECT_EQ(1, count);
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
   };
@@ -1435,6 +1444,133 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
   result = writer.WriteMetadata(
       internal::JournalWorkItem(std::move(reservation), std::move(buffered_operations)));
   ASSERT_TRUE(result.is_ok());
+}
+
+// Tests that writing "block N" to metadata before "block N" to data will revoke the
+// block before data is written to the underlying device.
+TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(5);
+
+  const std::vector<fs::UnbufferedOperation> operations = {
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              fs::OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 10,
+              .length = 3,
+          },
+      },
+      {
+          zx::unowned_vmo(buffer.vmo().get()),
+          {
+              fs::OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 10,
+              .length = 3,
+          },
+      },
+  };
+
+  constexpr uint64_t kJournalStartBlock = 55;
+  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
+                                  registry()->writeback(), kJournalStartBlock);
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyJournalWrite(operations[0], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyMetadataWrite(operations[0], requests, count);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        // This info block is written before a data operation to intentionally avoid
+        // replaying the metadata operation on reboot.
+        uint64_t sequence_number = 1;
+        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        registry()->VerifyReplay({}, sequence_number);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyDataWrite(operations[1], requests, count);
+        return ZX_OK;
+      },
+  };
+  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  {
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
+    auto promise =
+        journal.WriteMetadata({operations[0]}).and_then(journal.WriteData({operations[1]}));
+    journal.schedule_task(std::move(promise));
+  }
+}
+
+// Tests that writing "block N" to metadata before "block M" to data will not revoke the
+// block before data is written to the underlying device (For N != M).
+TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
+  fs::VmoBuffer metadata = registry()->InitializeBuffer(kJournalLength);
+  fs::VmoBuffer buffer = registry()->InitializeBuffer(5);
+
+  const std::vector<fs::UnbufferedOperation> operations = {
+      {
+          zx::unowned_vmo(metadata.vmo().get()),
+          {
+              fs::OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 10,
+              .length = 3,
+          },
+      },
+      {
+          zx::unowned_vmo(buffer.vmo().get()),
+          {
+              fs::OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 20,
+              .length = 3,
+          },
+      },
+  };
+
+  constexpr uint64_t kJournalStartBlock = 55;
+  JournalRequestVerifier verifier(registry()->info(), registry()->journal(),
+                                  registry()->writeback(), kJournalStartBlock);
+  uint64_t sequence_number = 0;
+  MockTransactionHandler::TransactionCallback callbacks[] = {
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyJournalWrite(operations[0], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyMetadataWrite(operations[0], requests, count);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        // Since the metadata and data regions do not overlap, we're fine letting the
+        // metadata operation replay: it won't overwrite our data operation.
+        registry()->VerifyReplay({operations[0]}, ++sequence_number);
+        verifier.VerifyDataWrite(operations[1], requests, count);
+        return ZX_OK;
+      },
+      [&](const block_fifo_request_t* requests, size_t count) {
+        verifier.VerifyInfoBlockWrite(sequence_number, requests, count);
+        registry()->VerifyReplay({}, sequence_number);
+        return ZX_OK;
+      },
+  };
+  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  {
+    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
+                    kJournalStartBlock);
+    auto promise =
+        journal.WriteMetadata({operations[0]}).and_then(journal.WriteData({operations[1]}));
+    journal.schedule_task(std::move(promise));
+  }
 }
 
 // Tests that metadata updates still operate successfully if an entire entry wraps around the
@@ -1478,7 +1614,7 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1493,7 +1629,7 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
 
         // Before we update the info block, check that a power failure would result in
         // only the second metadata operation being replayed.
@@ -1567,7 +1703,7 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1576,7 +1712,7 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1707,7 +1843,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[1], requests, count);
-        verifier.ExtendJournalOffset(operations[1].op.length);
+        verifier.ExtendJournalOffset(operations[1].op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       // Operation[2]: Data.
@@ -1886,7 +2022,7 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operation, requests, count);
-        verifier.ExtendJournalOffset(operation.op.length);
+        verifier.ExtendJournalOffset(operation.op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
@@ -1897,9 +2033,7 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
         registry()->VerifyReplay({}, sequence_number);
         metadata_written = true;
         return ZX_OK;
-      }
-
-  };
+      }};
   MockTransactionHandler handler(callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
@@ -1975,23 +2109,6 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
   }
 
   EXPECT_STATUS(ZX_ERR_NO_SPACE, metadata_status);
-}
-
-// Tests that revocation records are not yet supported.
-TEST_F(JournalTest, RevocationsRecordsNotSupported) {
-  uint64_t operations[] = {5};
-
-  zx_status_t revocation_status = ZX_OK;
-  MockTransactionHandler handler;
-  {
-    Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
-    auto promise = journal.WriteRevocation({operations[0]}).or_else([&](zx_status_t& status) {
-      revocation_status = status;
-    });
-    journal.schedule_task(std::move(promise));
-  }
-
-  EXPECT_STATUS(ZX_ERR_NOT_SUPPORTED, revocation_status);
 }
 
 // Tests that the journal can be bypassed with an explicit constructor.
@@ -2252,7 +2369,7 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         return ZX_ERR_IO;
       },
   };
@@ -2324,7 +2441,7 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
       },
       [&](const block_fifo_request_t* requests, size_t count) {
         verifier.VerifyMetadataWrite(operations[0], requests, count);
-        verifier.ExtendJournalOffset(operations[0].op.length);
+        verifier.ExtendJournalOffset(operations[0].op.length + kEntryMetadataBlocks);
         // At this point, the metadata operation will succeed.
         return ZX_OK;
       },
@@ -2448,7 +2565,7 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         EXPECT_BYTES_EQ(metadata.Data(0), buffer.data(), kBlockSize,
                         "Metadata should only be escaped in the journal");
 
-        verifier.ExtendJournalOffset(operation.op.length);
+        verifier.ExtendJournalOffset(operation.op.length + kEntryMetadataBlocks);
         return ZX_OK;
       },
       [&](const block_fifo_request_t* requests, size_t count) {
