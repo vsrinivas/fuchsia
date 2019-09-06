@@ -363,7 +363,7 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
       return false;
     }
 
-    fuchsia_hardware_display_ControllerImportEventRequest import_evt_msg;
+    fuchsia_hardware_display_ControllerImportEventRequest import_evt_msg = {};
     import_evt_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportEventOrdinal;
     import_evt_msg.id = event_id++;
     import_evt_msg.event = FIDL_HANDLE_PRESENT;
@@ -381,7 +381,7 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
     info_out->event_ids[i] = import_evt_msg.id;
   }
 
-  fuchsia_hardware_display_ControllerImportVmoImageRequest import_msg;
+  fuchsia_hardware_display_ControllerImportVmoImageRequest import_msg = {};
   import_msg.hdr.ordinal = fuchsia_hardware_display_ControllerImportVmoImageOrdinal;
   GetConfig(&import_msg.image_config);
   import_msg.vmo = FIDL_HANDLE_PRESENT;
@@ -392,7 +392,7 @@ bool Image::Import(zx_handle_t dc_handle, image_import_t* info_out) {
     return false;
   }
 
-  fuchsia_hardware_display_ControllerImportVmoImageResponse import_rsp;
+  fuchsia_hardware_display_ControllerImportVmoImageResponse import_rsp = {};
   zx_channel_call_args_t import_call = {};
   import_call.wr_bytes = &import_msg;
   import_call.wr_handles = &vmo_dup;

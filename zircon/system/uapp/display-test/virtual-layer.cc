@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
+#include "virtual-layer.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <zircon/device/display-controller.h>
 
+#include <fbl/algorithm.h>
+
 #include "utils.h"
-#include "virtual-layer.h"
 
 static constexpr uint32_t kSrcFrameBouncePeriod = 90;
 static constexpr uint32_t kDestFrameBouncePeriod = 60;
@@ -75,10 +77,10 @@ layer_t* VirtualLayer::CreateLayer(zx_handle_t dc_handle) {
   layers_.push_back(layer_t());
   layers_[layers_.size() - 1].active = false;
 
-  fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg;
+  fuchsia_hardware_display_ControllerCreateLayerRequest create_layer_msg = {};
   create_layer_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCreateLayerOrdinal;
 
-  fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp;
+  fuchsia_hardware_display_ControllerCreateLayerResponse create_layer_rsp = {};
   zx_channel_call_args_t call_args = {};
   call_args.wr_bytes = &create_layer_msg;
   call_args.rd_bytes = &create_layer_rsp;
@@ -147,7 +149,7 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
       zx_object_signal(layer->import_info[alt_image_].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
     }
 
-    fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest config;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest config = {};
     config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryConfigOrdinal;
     config.layer_id = layer->id;
     images_[0]->GetConfig(&config.image_config);
@@ -157,7 +159,7 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
       return false;
     }
 
-    fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest alpha_config;
+    fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest alpha_config = {};
     alpha_config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaOrdinal;
     alpha_config.layer_id = layer->id;
     alpha_config.mode = alpha_enable_ ? fuchsia_hardware_display_AlphaMode_HW_MULTIPLY
@@ -297,7 +299,7 @@ void PrimaryLayer::Render(int32_t frame_num) {
 }
 
 void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
-  fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest msg;
+  fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest msg = {};
   msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerPrimaryPositionOrdinal;
 
   for (auto& layer : layers_) {
@@ -321,7 +323,7 @@ void PrimaryLayer::SetLayerPositions(zx_handle_t dc_handle) {
 }
 
 void VirtualLayer::SetLayerImages(zx_handle_t dc_handle, bool alt_image) {
-  fuchsia_hardware_display_ControllerSetLayerImageRequest msg;
+  fuchsia_hardware_display_ControllerSetLayerImageRequest msg = {};
   msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerImageOrdinal;
 
   for (auto& layer : layers_) {
@@ -382,7 +384,7 @@ bool CursorLayer::Init(zx_handle_t dc_handle) {
     }
     zx_object_signal(layer->import_info[0].events[WAIT_EVENT], 0, ZX_EVENT_SIGNALED);
 
-    fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest config;
+    fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest config = {};
     config.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerCursorConfigOrdinal;
     config.layer_id = layer->id;
     config.image_config.height = info.height;
@@ -409,7 +411,7 @@ void CursorLayer::StepLayout(int32_t frame_num) {
 }
 
 void CursorLayer::SendLayout(zx_handle_t dc_handle) {
-  fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest msg;
+  fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest msg = {};
   msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetLayerCursorPositionOrdinal;
 
   uint32_t display_start = 0;

@@ -2,29 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <errno.h>
-#include <string.h>
-
-#include <zircon/device/display-controller.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
-#include <fbl/algorithm.h>
-#include <fbl/vector.h>
-#include <fbl/unique_fd.h>
+#include <fcntl.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/cpp/vector_view.h>
 #include <lib/fzl/fdio.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
+#include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
+#include <fbl/vector.h>
 
 #include "display.h"
 #include "fuchsia/hardware/display/c/fidl.h"
@@ -125,7 +122,7 @@ static bool bind_display(fbl::Vector<Display>* displays) {
     }
   }
 
-  fuchsia_hardware_display_ControllerEnableVsyncRequest enable_vsync;
+  fuchsia_hardware_display_ControllerEnableVsyncRequest enable_vsync = {};
   enable_vsync.hdr.ordinal = fuchsia_hardware_display_ControllerEnableVsyncOrdinal;
   enable_vsync.enable = true;
   if (zx_channel_write(dc_handle, 0, &enable_vsync, sizeof(enable_vsync), nullptr, 0) != ZX_OK) {
@@ -198,7 +195,7 @@ bool update_display_layers(const fbl::Vector<fbl::unique_ptr<VirtualLayer>>& lay
 }
 
 bool apply_config() {
-  fuchsia_hardware_display_ControllerCheckConfigRequest check_msg;
+  fuchsia_hardware_display_ControllerCheckConfigRequest check_msg = {};
   uint8_t check_resp_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   check_msg.discard = false;
   check_msg.hdr.ordinal = fuchsia_hardware_display_ControllerCheckConfigOrdinal;
@@ -234,7 +231,7 @@ bool apply_config() {
     return false;
   }
 
-  fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg;
+  fuchsia_hardware_display_ControllerApplyConfigRequest apply_msg = {};
   apply_msg.hdr.ordinal = fuchsia_hardware_display_ControllerApplyConfigOrdinal;
   if (zx_channel_write(dc_handle, 0, &apply_msg, sizeof(apply_msg), nullptr, 0) != ZX_OK) {
     printf("Apply failed\n");

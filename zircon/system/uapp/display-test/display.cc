@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "display.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
@@ -58,7 +59,7 @@ void Display::Dump() {
 
 void Display::Init(zx_handle_t dc_handle) {
   if (mode_idx_ != 0) {
-    fuchsia_hardware_display_ControllerSetDisplayModeRequest set_mode_msg;
+    fuchsia_hardware_display_ControllerSetDisplayModeRequest set_mode_msg = {};
     set_mode_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayModeOrdinal;
     set_mode_msg.display_id = id_;
     set_mode_msg.mode = modes_[mode_idx_];
@@ -67,7 +68,7 @@ void Display::Init(zx_handle_t dc_handle) {
   }
 
   if (grayscale_) {
-    fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest cc_msg;
+    fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest cc_msg = {};
     cc_msg.hdr.ordinal = fuchsia_hardware_display_ControllerSetDisplayColorConversionOrdinal;
     cc_msg.display_id = id_;
     cc_msg.postoffsets[0] = nanf("post");
