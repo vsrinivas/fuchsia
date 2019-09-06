@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.accessibility.SettingsManager",
             "fuchsia.logger.LogSink",
+            "fuchsia.media.AudioCore",
             "fuchsia.net.Connectivity",
             "fuchsia.netstack.Netstack",
             "fuchsia.stash.Store",

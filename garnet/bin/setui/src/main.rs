@@ -170,7 +170,10 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
         registry_handle
             .write()
             .unwrap()
-            .register(switchboard::base::SettingType::Audio, spawn_audio_controller())
+            .register(
+                switchboard::base::SettingType::Audio,
+                spawn_audio_controller(service_context_handle.clone()),
+            )
             .unwrap();
 
         let switchboard_handle_clone = switchboard_handle.clone();
@@ -286,7 +289,7 @@ fn create_fidl_service<'a, T: DeviceStorageFactory>(
 mod tests {
     use {
         super::*,
-        crate::audio::create_default_audio_stream,
+        crate::audio::{create_default_audio_stream, get_gain_db},
         crate::fidl_clone::FIDLClone,
         crate::registry::device_storage::testing::*,
         crate::registry::device_storage::DeviceStorageFactory,
@@ -296,9 +299,12 @@ mod tests {
         },
         failure::format_err,
         fidl::endpoints::{ServerEnd, ServiceMarker},
+        fidl_fuchsia_media::AudioRenderUsage,
         fidl_fuchsia_settings::ColorBlindnessType as FidlColorBlindnessType,
         fuchsia_zircon as zx,
         futures::prelude::*,
+        lazy_static::lazy_static,
+        std::collections::HashMap,
     };
 
     const ENV_NAME: &str = "settings_service_test_environment";
@@ -418,21 +424,59 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_audio() {
-        let mut fs = ServiceFs::new();
-
         let default_media_stream =
             AudioStreamSettings::from(create_default_audio_stream(AudioStreamType::Media));
+
+        const CHANGED_VOLUME_LEVEL: f32 = 0.7;
+        const CHANGED_VOLUME_MUTED: bool = true;
 
         let changed_media_stream = AudioStreamSettings {
             stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
             source: Some(AudioStreamSettingSource::User),
-            user_volume: Some(Volume { level: Some(0.7), muted: Some(true) }),
+            user_volume: Some(Volume {
+                level: Some(CHANGED_VOLUME_LEVEL),
+                muted: Some(CHANGED_VOLUME_MUTED),
+            }),
         };
+
+        lazy_static! {
+            static ref AUDIO_STREAMS: RwLock<HashMap<AudioRenderUsage, f32>> =
+                { RwLock::new(HashMap::new()) };
+        }
+
+        let service_gen = |service_name: &str, channel: zx::Channel| {
+            if service_name != fidl_fuchsia_media::AudioCoreMarker::NAME {
+                return Err(format_err!("unsupported!"));
+            }
+
+            let mut manager_stream =
+                ServerEnd::<fidl_fuchsia_media::AudioCoreMarker>::new(channel).into_stream()?;
+
+            fasync::spawn(async move {
+                while let Some(req) = manager_stream.try_next().await.unwrap() {
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        fidl_fuchsia_media::AudioCoreRequest::SetRenderUsageGain {
+                            usage,
+                            gain_db,
+                            control_handle: _,
+                        } => {
+                            (*AUDIO_STREAMS.write().unwrap()).insert(usage, gain_db);
+                        }
+                        _ => {}
+                    }
+                }
+            });
+
+            Ok(())
+        };
+
+        let mut fs = ServiceFs::new();
 
         create_fidl_service(
             fs.root_dir(),
             [SettingType::Audio].iter().cloned().collect(),
-            Arc::new(RwLock::new(ServiceContext::new(None))),
+            Arc::new(RwLock::new(ServiceContext::new(Some(Box::new(service_gen))))),
             Box::new(InMemoryStorageFactory::create()),
         );
 
@@ -463,6 +507,13 @@ mod tests {
             .into_iter()
             .find(|x| *x == changed_media_stream)
             .expect("contains changed media stream");
+
+        assert_eq!(
+            get_gain_db(CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+            *(*AUDIO_STREAMS.read().unwrap())
+                .get(&fidl_fuchsia_media::AudioRenderUsage::Media)
+                .expect("contains media stream")
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

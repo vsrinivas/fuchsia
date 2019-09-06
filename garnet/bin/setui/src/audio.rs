@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub use self::audio_controller::create_default_audio_stream;
+pub use self::audio_controller::get_gain_db;
 pub use self::audio_controller::spawn_audio_controller;
 pub use self::audio_fidl_handler::spawn_audio_fidl_handler;
 
