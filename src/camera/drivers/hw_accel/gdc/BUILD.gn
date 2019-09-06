@@ -8,6 +8,7 @@ import("//build/package.gni")
 driver_module("gdc-driver") {
   output_name = "gdc"
   sources = [
+    "gdc-task.cc",
     "gdc.cc",
     "test/gdc-on-device-test.cc",
   ]

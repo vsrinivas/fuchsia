@@ -63,9 +63,13 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_t* input_buffer_
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::unique_ptr<generictask::Task> task;
-  zx_status_t status = generictask::Task::Create(input_buffer_collection, output_buffer_collection,
-                                                 config_vmo, callback, bti_, &task);
+  fbl::AllocChecker ac;
+  auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  zx_status_t status =
+      task->Init(input_buffer_collection, output_buffer_collection, config_vmo, callback, bti_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;

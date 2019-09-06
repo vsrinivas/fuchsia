@@ -8,6 +8,7 @@ import("//build/test.gni")
 executable("gdc-task") {
   testonly = true
   sources = [
+    "../gdc-task.cc",
     "../gdc.cc",
     "task-test.cc",
   ]

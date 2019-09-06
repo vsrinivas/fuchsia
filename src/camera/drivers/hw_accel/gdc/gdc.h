@@ -32,7 +32,7 @@
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
-#include "../task/task.h"
+#include "gdc-task.h"
 
 namespace gdc {
 // |GdcDevice| is spawned by the driver in |gdc.cc|
@@ -82,7 +82,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
 
  protected:
   struct TaskInfo {
-    generictask::Task* task;
+    GdcTask* task;
     uint32_t input_buffer_index;
   };
 
@@ -112,7 +112,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   zx::interrupt gdc_irq_;
   zx::bti bti_;
   uint32_t next_task_index_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<generictask::Task>> task_map_;
+  std::unordered_map<uint32_t, std::unique_ptr<GdcTask>> task_map_;
   std::deque<TaskInfo> processing_queue_ __TA_GUARDED(lock_);
   thrd_t processing_thread_;
   fbl::ConditionVariable frame_processing_signal_ __TA_GUARDED(lock_);
