@@ -8,7 +8,7 @@ use {
     wlan_common::bss::Protection,
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
-        info::{DisconnectCause, ScanResult},
+        info::{ConnectionMilestone, DisconnectCause, ScanResult},
         ConnectFailure, ConnectResult, EstablishRsnaFailure, SelectNetworkFailure,
     },
 };
@@ -247,6 +247,25 @@ pub(super) fn convert_disconnect_cause(
     match disconnect_cause {
         DisconnectCause::Manual => Manual,
         DisconnectCause::Drop => Drop,
+    }
+}
+
+pub(super) fn convert_connected_milestone(
+    milestone: &ConnectionMilestone,
+) -> metrics::ConnectionCountByDurationMetricDimensionConnectedTime {
+    use metrics::ConnectionCountByDurationMetricDimensionConnectedTime::*;
+    match milestone {
+        ConnectionMilestone::Connected => Connected,
+        ConnectionMilestone::OneMinute => ConnectedOneMinute,
+        ConnectionMilestone::TenMinutes => ConnectedTenMinute,
+        ConnectionMilestone::ThirtyMinutes => ConnectedThirtyMinute,
+        ConnectionMilestone::OneHour => ConnectedOneHour,
+        ConnectionMilestone::ThreeHours => ConnectedThreeHours,
+        ConnectionMilestone::SixHours => ConnectedSixHours,
+        ConnectionMilestone::TwelveHours => ConnectedTwelveHours,
+        ConnectionMilestone::OneDay => ConnectedOneDay,
+        ConnectionMilestone::TwoDays => ConnectedTwoDays,
+        ConnectionMilestone::ThreeDays => ConnectedThreeDays,
     }
 }
 

@@ -20,7 +20,7 @@ use super::{ConnectFailure, ConnectResult, EstablishRsnaFailure, Status};
 
 use crate::client::{
     event::{self, Event},
-    info::{ConnectionMilestone, ConnectionMilestoneInfo},
+    info::ConnectionPingInfo,
     report_connect_finished, Context,
 };
 use crate::clone_utils::clone_bss_desc;
@@ -55,7 +55,7 @@ pub enum LinkState {
     LinkUp {
         protection: Protection,
         since: zx::Time,
-        next_milestone: Option<EventId>,
+        ping_event: Option<EventId>,
     },
 }
 
@@ -289,17 +289,15 @@ impl State {
                                 ));
                                 context.info.report_rsna_established(context.att_id);
                                 report_connect_finished(responder, context, ConnectResult::Success);
+
                                 let now = now();
-                                let info = ConnectionMilestoneInfo::new(
-                                    ConnectionMilestone::Connected,
-                                    now,
-                                );
-                                let next_milestone = report_milestone(info, context);
+                                let info = ConnectionPingInfo::first_connected(now);
+                                let ping_event = Some(report_ping(info, context));
                                 state_change_msg.replace("RSNA established".to_string());
                                 let link_state = LinkState::LinkUp {
                                     protection: Protection::Rsna(rsna),
                                     since: now,
-                                    next_milestone,
+                                    ping_event,
                                 };
                                 State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                             }
@@ -332,7 +330,7 @@ impl State {
                                 State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                             }
                         },
-                        LinkState::LinkUp { protection, next_milestone, since } => {
+                        LinkState::LinkUp { protection, ping_event, since } => {
                             match protection {
                                 Protection::Rsna(mut rsna) => {
                                     match process_eapol_ind(context, &mut rsna, &ind) {
@@ -349,7 +347,7 @@ impl State {
                                     };
                                     let link_state = LinkState::LinkUp {
                                         protection: Protection::Rsna(rsna),
-                                        next_milestone,
+                                        ping_event,
                                         since,
                                     };
                                     State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
@@ -357,7 +355,7 @@ impl State {
                                 // Drop EAPOL frames if the BSS is not an RSN.
                                 _ => {
                                     let link_state =
-                                        LinkState::LinkUp { protection, next_milestone, since };
+                                        LinkState::LinkUp { protection, ping_event, since };
                                     State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                                 }
                             }
@@ -462,19 +460,19 @@ impl State {
                         State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                     }
                 },
-                LinkState::LinkUp { protection, since, mut next_milestone } => match event {
-                    Event::ConnectionMilestone(ref info)
-                        if triggered(&next_milestone, event_id) =>
-                    {
-                        cancel(&mut next_milestone);
-                        if let Some(id) = report_milestone(info.clone(), context) {
-                            next_milestone.replace(id);
+                LinkState::LinkUp { protection, since, mut ping_event } => match event {
+                    Event::ConnectionPing(prev_ping) => {
+                        if !triggered(&ping_event, event_id) {
+                            let link_state = LinkState::LinkUp { protection, since, ping_event };
+                            return State::Associated { cfg, bss, last_rssi, link_state, radio_cfg };
                         }
-                        let link_state = LinkState::LinkUp { protection, since, next_milestone };
+                        cancel(&mut ping_event);
+                        ping_event.replace(report_ping(prev_ping.next_ping(now()), context));
+                        let link_state = LinkState::LinkUp { protection, since, ping_event };
                         State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                     }
                     _ => {
-                        let link_state = LinkState::LinkUp { protection, since, next_milestone };
+                        let link_state = LinkState::LinkUp { protection, since, ping_event };
                         State::Associated { cfg, bss, last_rssi, link_state, radio_cfg }
                     }
                 },
@@ -648,8 +646,8 @@ fn handle_mlme_assoc_conf(
                 Protection::Open | Protection::Wep(_) => {
                     report_connect_finished(cmd.responder, context, ConnectResult::Success);
                     let now = now();
-                    let info = ConnectionMilestoneInfo::new(ConnectionMilestone::Connected, now);
-                    let next_milestone = report_milestone(info, context);
+                    let info = ConnectionPingInfo::first_connected(now);
+                    let ping_event = Some(report_ping(info, context));
                     state_change_msg.replace("successful association".to_string());
                     let last_rssi = cmd.bss.rssi_dbm;
                     State::Associated {
@@ -659,7 +657,7 @@ fn handle_mlme_assoc_conf(
                         link_state: LinkState::LinkUp {
                             protection: Protection::Open,
                             since: now,
-                            next_milestone,
+                            ping_event,
                         },
                         radio_cfg: cmd.radio_cfg,
                     }
@@ -941,12 +939,9 @@ fn handle_supplicant_start_failure(
     report_connect_finished(responder, context, EstablishRsnaFailure::StartSupplicantFailed.into());
 }
 
-fn report_milestone(milestone: ConnectionMilestoneInfo, context: &mut Context) -> Option<EventId> {
-    context.info.report_connection_milestone(milestone.clone());
-    milestone.next_milestone().map(|next_milestone| {
-        let deadline = next_milestone.deadline();
-        context.timer.schedule_at(deadline, Event::ConnectionMilestone(next_milestone))
-    })
+fn report_ping(info: ConnectionPingInfo, context: &mut Context) -> EventId {
+    context.info.report_connection_ping(info.clone());
+    context.timer.schedule(info)
 }
 
 fn now() -> zx::Time {
@@ -1585,7 +1580,7 @@ mod tests {
     }
 
     #[test]
-    fn connection_milestone() {
+    fn connection_ping() {
         let mut h = TestHelper::new();
 
         let (cmd, _receiver) = connect_command_one();
@@ -1595,19 +1590,34 @@ mod tests {
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
-        // Verify timeout is scheduled for when connection will have lasted one minute
+        // Discard AssociationSuccess and ConnectFinished info events
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::AssociationSuccess { .. })));
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectFinished { .. })));
+
+        // Verify ping timeout is scheduled
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-        assert_variant!(timed_event.event, Event::ConnectionMilestone(ref info) => {
-            assert_eq!(info.milestone, ConnectionMilestone::OneMinute);
+        let first_ping = assert_variant!(timed_event.event.clone(), Event::ConnectionPing(info) => {
+            assert_eq!(info.connected_since, info.now);
+            assert!(info.last_reported.is_none());
+            info
+        });
+        // Verify that ping is reported
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(ref info))) => {
+            assert_eq!(info.connected_since, info.now);
+            assert!(info.last_reported.is_none());
         });
 
         // Trigger the above timeout
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
-        // Verify timeout is scheduled for when the next milestone happens (10 minutes)
+        // Verify ping timeout is scheduled again
         let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-        assert_variant!(timed_event.event, Event::ConnectionMilestone(ref info) => {
-            assert_eq!(info.milestone, ConnectionMilestone::TenMinutes);
+        assert_variant!(timed_event.event, Event::ConnectionPing(ref info) => {
+            assert_variant!(info.last_reported, Some(time) => assert_eq!(time, first_ping.now));
+        });
+        // Verify that ping is reported
+        assert_variant!(h.info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(ref info))) => {
+            assert_variant!(info.last_reported, Some(time) => assert_eq!(time, first_ping.now));
         });
     }
 
@@ -1968,7 +1978,7 @@ mod tests {
             link_state: LinkState::LinkUp {
                 protection: Protection::Open,
                 since: now(),
-                next_milestone: None,
+                ping_event: None,
             },
             radio_cfg: RadioConfig::default(),
         }
@@ -1989,7 +1999,7 @@ mod tests {
             link_state: LinkState::LinkUp {
                 protection: Protection::Rsna(rsna),
                 since: now(),
-                next_milestone: None,
+                ping_event: None,
             },
             radio_cfg: RadioConfig::default(),
         }

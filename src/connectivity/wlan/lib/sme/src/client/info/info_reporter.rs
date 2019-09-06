@@ -5,14 +5,11 @@
 use {
     super::*,
     crate::{
-        client::{
-            bss::ClientConfig, scan, ConnectResult, ConnectionAttemptId, ScanTxnId,
-        },
+        client::{bss::ClientConfig, scan, ConnectResult, ConnectionAttemptId, ScanTxnId},
         sink::InfoSink,
         Ssid,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::warn,
     wlan_rsn::rsna::UpdateSink,
 };
@@ -138,8 +135,8 @@ impl InfoReporter {
         }
     }
 
-    pub fn report_connection_milestone(&mut self, milestone: ConnectionMilestoneInfo) {
-        self.info_sink.send(InfoEvent::ConnectionMilestone(milestone));
+    pub fn report_connection_ping(&mut self, info: ConnectionPingInfo) {
+        self.info_sink.send(InfoEvent::ConnectionPing(info));
     }
 
     pub fn report_connection_lost(

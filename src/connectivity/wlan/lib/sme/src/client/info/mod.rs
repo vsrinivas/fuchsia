@@ -5,18 +5,15 @@
 mod info_reporter;
 mod stats_collector;
 
-pub(crate) use {
-    self::{
-        info_reporter::InfoReporter,
-        stats_collector::StatsCollector,
-    },
-};
+pub(crate) use self::{info_reporter::InfoReporter, stats_collector::StatsCollector};
 
 use {
     crate::{
         client::{
+            event::{self, Event},
             ConnectFailure, ConnectResult, ConnectionAttemptId, ScanTxnId,
         },
+        timer::TimeoutDuration,
         Ssid,
     },
     derivative::Derivative,
@@ -55,9 +52,9 @@ pub enum InfoEvent {
     /// Event for the aggregated stats of a connection attempt. Sent when a connection attempt
     /// has finished, whether it succeeds, fails, or gets canceled.
     ConnectStats(ConnectStats),
-    /// Event generated whenever the client first connects, or when the connection has reached
-    /// a certain milestone (e.g. 1/10/30 minutes)
-    ConnectionMilestone(ConnectionMilestoneInfo),
+    /// Event generated whenever the client first connects or periodically while the client
+    /// remains connected
+    ConnectionPing(ConnectionPingInfo),
     /// Event generated whenever SME receives a deauth or disassoc indication while connected
     ConnectionLost(ConnectionLostInfo),
 }
@@ -226,25 +223,72 @@ fn to_duration(end: &Option<zx::Time>, start: &Option<zx::Time>) -> Option<zx::D
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ConnectionMilestoneInfo {
-    pub milestone: ConnectionMilestone,
+pub struct ConnectionPingInfo {
+    /// Start time of connected session.
     pub connected_since: zx::Time,
+    /// Time when last ping was reported. This is None if this is the first ping since client
+    /// is connected.
+    pub last_reported: Option<zx::Time>,
+    /// Time of this ping.
+    pub now: zx::Time,
+}
+impl From<ConnectionPingInfo> for Event {
+    fn from(info: ConnectionPingInfo) -> Self {
+        Event::ConnectionPing(info)
+    }
+}
+impl TimeoutDuration for ConnectionPingInfo {
+    // Things to consider when setting timeout for ConnectionPingInfo:
+    //
+    // ConnectionPingInfo is used to log both the connection milestone (connection count by
+    // duration) and connection ping metrics. The timeout should be set low enough so that none
+    // of the milestone is missed. This is set at one minute because the first milestone
+    // (connected one-minute) happens one minute after connected, and this is the smallest
+    // granularity. To keep it simple, we just use one minute.
+    //
+    // Another thing to consider is that how often ConnectionPingInfo is sent affects how often
+    // the connection ping metric is logged. In the case where device is offline, observations
+    // are kept locally, but there's a limit on how much space unsent observations can occupy.
+    // Because the ping metric only uses locally-aggregated report, which is space efficient,
+    // it's okay if we send out ping often. If this situation changes, consider using a more
+    // flexible timeout (for example, send a ping every hour after the first hour, with
+    // consideration on whether to handle day change as well).
+    fn timeout_duration(&self) -> zx::Duration {
+        event::CONNECTION_PING_TIMEOUT_MINUTES.minutes()
+    }
 }
 
-impl ConnectionMilestoneInfo {
-    pub fn new(milestone: ConnectionMilestone, connected_since: zx::Time) -> Self {
-        Self { connected_since, milestone }
+impl ConnectionPingInfo {
+    /// Construct a ping when first connected.
+    pub fn first_connected(now: zx::Time) -> Self {
+        Self { connected_since: now, last_reported: None, now }
     }
 
-    pub fn next_milestone(&self) -> Option<Self> {
-        self.milestone
-            .next_milestone()
-            .map(|milestone| ConnectionMilestoneInfo::new(milestone, self.connected_since))
+    /// Construct a new ping, treating self as a previously reported ping.
+    pub fn next_ping(self, now: zx::Time) -> Self {
+        Self { connected_since: self.connected_since, last_reported: Some(self.now), now }
     }
 
-    /// Return the earliest that at which this connection milestone would be satisfied
-    pub fn deadline(&self) -> zx::Time {
-        self.connected_since + self.milestone.duration()
+    pub fn connected_duration(&self) -> zx::Duration {
+        self.now - self.connected_since
+    }
+
+    /// Return the highest connection milestone that this ping satisfies.
+    pub fn get_milestone(&self) -> ConnectionMilestone {
+        ConnectionMilestone::from_duration(self.connected_duration())
+    }
+
+    /// Return whether this ping reaches a new connection milestone compared to the last reported
+    /// ping.
+    pub fn reaches_new_milestone(&self) -> bool {
+        match self.last_reported {
+            Some(last) => {
+                let last_milestone =
+                    ConnectionMilestone::from_duration(last - self.connected_since);
+                self.get_milestone() != last_milestone
+            }
+            None => true,
+        }
     }
 }
 
@@ -259,27 +303,46 @@ pub enum ConnectionMilestone {
     SixHours,
     TwelveHours,
     OneDay,
+    TwoDays,
+    ThreeDays,
 }
 
 impl ConnectionMilestone {
-    /// Given the current connection milestone, return the next milestone. If current milestone
-    /// is already the highest that's tracked, return None.
-    pub fn next_milestone(&self) -> Option<Self> {
-        match self {
-            ConnectionMilestone::Connected => Some(ConnectionMilestone::OneMinute),
-            ConnectionMilestone::OneMinute => Some(ConnectionMilestone::TenMinutes),
-            ConnectionMilestone::TenMinutes => Some(ConnectionMilestone::ThirtyMinutes),
-            ConnectionMilestone::ThirtyMinutes => Some(ConnectionMilestone::OneHour),
-            ConnectionMilestone::OneHour => Some(ConnectionMilestone::ThreeHours),
-            ConnectionMilestone::ThreeHours => Some(ConnectionMilestone::SixHours),
-            ConnectionMilestone::SixHours => Some(ConnectionMilestone::TwelveHours),
-            ConnectionMilestone::TwelveHours => Some(ConnectionMilestone::OneDay),
-            ConnectionMilestone::OneDay => None,
+    pub fn all() -> &'static [Self] {
+        &[
+            ConnectionMilestone::Connected,
+            ConnectionMilestone::OneMinute,
+            ConnectionMilestone::TenMinutes,
+            ConnectionMilestone::ThirtyMinutes,
+            ConnectionMilestone::OneHour,
+            ConnectionMilestone::ThreeHours,
+            ConnectionMilestone::SixHours,
+            ConnectionMilestone::TwelveHours,
+            ConnectionMilestone::OneDay,
+            ConnectionMilestone::TwoDays,
+            ConnectionMilestone::ThreeDays,
+        ]
+    }
+
+    /// Return the highest milestone that duration satisfies
+    pub fn from_duration(duration: zx::Duration) -> Self {
+        match duration {
+            x if x >= 72.hours() => ConnectionMilestone::ThreeDays,
+            x if x >= 48.hours() => ConnectionMilestone::TwoDays,
+            x if x >= 24.hours() => ConnectionMilestone::OneDay,
+            x if x >= 12.hours() => ConnectionMilestone::TwelveHours,
+            x if x >= 6.hours() => ConnectionMilestone::SixHours,
+            x if x >= 3.hours() => ConnectionMilestone::ThreeHours,
+            x if x >= 1.hour() => ConnectionMilestone::OneHour,
+            x if x >= 30.minutes() => ConnectionMilestone::ThirtyMinutes,
+            x if x >= 10.minutes() => ConnectionMilestone::TenMinutes,
+            x if x >= 1.minute() => ConnectionMilestone::OneMinute,
+            _ => ConnectionMilestone::Connected,
         }
     }
 
     /// Return the minimum connected duration required to satisfy current milestone.
-    pub fn duration(&self) -> zx::Duration {
+    pub fn min_duration(&self) -> zx::Duration {
         match self {
             ConnectionMilestone::Connected => 0.millis(),
             ConnectionMilestone::OneMinute => 1.minutes(),
@@ -290,6 +353,8 @@ impl ConnectionMilestone {
             ConnectionMilestone::SixHours => 6.hours(),
             ConnectionMilestone::TwelveHours => 12.hours(),
             ConnectionMilestone::OneDay => 24.hours(),
+            ConnectionMilestone::TwoDays => 48.hours(),
+            ConnectionMilestone::ThreeDays => 72.hours(),
         }
     }
 }
@@ -314,4 +379,36 @@ pub enum DisconnectCause {
     Manual,
     /// Disconnect happens due to deauth or diassociate indication from MLME.
     Drop,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_whether_ping_reaches_new_milestone() {
+        let start = zx::Time::get(zx::ClockId::Monotonic);
+        // First ping reaches Connected milestone
+        let ping = ConnectionPingInfo::first_connected(start);
+        assert!(ping.reaches_new_milestone());
+
+        // One-minute ping reaches OneMinute milestone
+        let one_min_ping = ping.next_ping(start + 1.minute());
+        assert!(one_min_ping.reaches_new_milestone());
+
+        // Three-minutes ping hasn't reached TenMinutes milestone
+        let three_min_ping = one_min_ping.next_ping(start + 3.minutes());
+        assert!(!three_min_ping.reaches_new_milestone());
+
+        // Ten-minutes ping reaches TenMinutes milestone
+        let ten_min_ping = three_min_ping.next_ping(start + 10.minutes());
+        assert!(ten_min_ping.reaches_new_milestone());
+    }
+
+    #[test]
+    fn test_connection_milestone() {
+        assert_eq!(ConnectionMilestone::from_duration(5.seconds()), ConnectionMilestone::Connected);
+        assert_eq!(ConnectionMilestone::from_duration(1.minute()), ConnectionMilestone::OneMinute);
+        assert_eq!(ConnectionMilestone::from_duration(3.minutes()), ConnectionMilestone::OneMinute);
+    }
 }

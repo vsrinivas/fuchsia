@@ -5,14 +5,11 @@
 use {
     super::*,
     crate::{
-        client::{
-            bss::ClientConfig, ConnectFailure, ConnectResult,
-        },
+        client::{bss::ClientConfig, ConnectFailure, ConnectResult},
         Ssid,
     },
     failure::Fail,
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::VecDeque,
     wlan_common::bss::{get_channel_map, get_phy_standard_map},
     wlan_rsn::{
@@ -661,23 +658,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_connection_milestone() {
-        let start = zx::Time::from_nanos(3);
-        use ConnectionMilestone::*;
-
-        let milestone = ConnectionMilestoneInfo::new(ConnectionMilestone::Connected, start);
-        let milestone = expect_next_milestone(milestone, OneMinute, 60_000000003);
-        let milestone = expect_next_milestone(milestone, TenMinutes, 600_000000003);
-        let milestone = expect_next_milestone(milestone, ThirtyMinutes, 1_800_000000003);
-        let milestone = expect_next_milestone(milestone, OneHour, 3_600_000000003);
-        let milestone = expect_next_milestone(milestone, ThreeHours, 10_800_000000003);
-        let milestone = expect_next_milestone(milestone, SixHours, 21_600_000000003);
-        let milestone = expect_next_milestone(milestone, TwelveHours, 43_200_000000003);
-        let milestone = expect_next_milestone(milestone, OneDay, 86_400_000000003);
-        assert_eq!(milestone.next_milestone(), None);
-    }
-
     fn simulate_connect_lifecycle(
         stats_collector: &mut StatsCollector,
     ) -> Result<ConnectStats, StatsError> {
@@ -693,18 +673,5 @@ mod tests {
         assert!(stats_collector.report_rsna_started().is_ok());
         assert!(stats_collector.report_rsna_established().is_ok());
         stats_collector.report_connect_finished(ConnectResult::Success)
-    }
-
-    fn expect_next_milestone(
-        milestone: ConnectionMilestoneInfo,
-        expected_next_milestone: ConnectionMilestone,
-        nanos_deadline: i64,
-    ) -> ConnectionMilestoneInfo {
-        let next_milestone = milestone.next_milestone();
-        assert_variant!(next_milestone, Some(next_milestone) => {
-            assert_eq!(next_milestone.milestone, expected_next_milestone);
-            assert_eq!(next_milestone.deadline().into_nanos(), nanos_deadline);
-            next_milestone
-        })
     }
 }

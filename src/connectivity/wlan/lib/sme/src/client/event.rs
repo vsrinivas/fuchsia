@@ -4,19 +4,20 @@
 
 use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
-use crate::client::info::ConnectionMilestoneInfo;
+use crate::client::info::ConnectionPingInfo;
 use crate::timer::TimeoutDuration;
 use crate::MacAddr;
 
 pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
 pub const KEY_FRAME_EXCHANGE_MAX_ATTEMPTS: u32 = 3;
+pub const CONNECTION_PING_TIMEOUT_MINUTES: i64 = 1;
 
 #[derive(Debug, Clone)]
 pub enum Event {
     EstablishingRsnaTimeout(EstablishingRsnaTimeout),
     KeyFrameExchangeTimeout(KeyFrameExchangeTimeout),
-    ConnectionMilestone(ConnectionMilestoneInfo),
+    ConnectionPing(ConnectionPingInfo),
 }
 impl From<EstablishingRsnaTimeout> for Event {
     fn from(timeout: EstablishingRsnaTimeout) -> Self {

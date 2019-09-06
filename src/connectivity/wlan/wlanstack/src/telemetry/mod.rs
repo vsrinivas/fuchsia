@@ -33,8 +33,7 @@ use {
     },
     wlan_sme::client::{
         info::{
-            ConnectStats, ConnectionLostInfo, ConnectionMilestone, ConnectionMilestoneInfo,
-            ScanStats,
+            ConnectStats, ConnectionLostInfo, ConnectionMilestone, ConnectionPingInfo, ScanStats,
         },
         ConnectFailure, ConnectResult,
     },
@@ -815,22 +814,23 @@ pub fn log_connection_gap_time_stats(sender: &mut CobaltSender, connect_stats: &
     }
 }
 
-pub fn log_connection_milestone(sender: &mut CobaltSender, info: &ConnectionMilestoneInfo) {
-    use metrics::ConnectionCountByDurationMetricDimensionConnectedTime::*;
+pub fn log_connection_ping(sender: &mut CobaltSender, info: &ConnectionPingInfo) {
+    for milestone in ConnectionMilestone::all().iter() {
+        if info.connected_duration() >= milestone.min_duration() {
+            let dur_dim = convert_connected_milestone(milestone);
+            sender.log_event(metrics::CONNECTION_UPTIME_PING_METRIC_ID, dur_dim as u32);
+        }
+    }
 
-    let dur_dim = match info.milestone {
-        ConnectionMilestone::Connected => Connected,
-        ConnectionMilestone::OneMinute => ConnectedOneMinute,
-        ConnectionMilestone::TenMinutes => ConnectedTenMinute,
-        ConnectionMilestone::ThirtyMinutes => ConnectedThirtyMinute,
-        ConnectionMilestone::OneHour => ConnectedOneHour,
-        ConnectionMilestone::ThreeHours => ConnectedThreeHours,
-        ConnectionMilestone::SixHours => ConnectedSixHours,
-        ConnectionMilestone::TwelveHours => ConnectedTwelveHours,
-        ConnectionMilestone::OneDay => ConnectedOneDay,
-    };
-
-    sender.log_event_count(metrics::CONNECTION_COUNT_BY_DURATION_METRIC_ID, dur_dim as u32, 0, 1);
+    if info.reaches_new_milestone() {
+        let dur_dim = convert_connected_milestone(&info.get_milestone());
+        sender.log_event_count(
+            metrics::CONNECTION_COUNT_BY_DURATION_METRIC_ID,
+            dur_dim as u32,
+            0,
+            1,
+        );
+    }
 }
 
 pub fn log_connection_lost(sender: &mut CobaltSender, info: &ConnectionLostInfo) {
@@ -878,11 +878,11 @@ mod tests {
         },
         pin_utils::pin_mut,
         std::collections::HashSet,
+        wlan_common::assert_variant,
         wlan_sme::client::{
             info::{
-                ConnectStats, ConnectionLostInfo, ConnectionMilestone, ConnectionMilestoneInfo,
-                DisconnectCause, PreviousDisconnectInfo, ScanEndStats, ScanResult, ScanStartStats,
-                SupplicantProgress,
+                ConnectStats, ConnectionLostInfo, DisconnectCause, PreviousDisconnectInfo,
+                ScanEndStats, ScanResult, ScanStartStats, SupplicantProgress,
             },
             ConnectFailure, ConnectResult, EstablishRsnaFailure, SelectNetworkFailure,
         },
@@ -1199,16 +1199,51 @@ mod tests {
     }
 
     #[test]
-    fn test_log_connection_milestone() {
-        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
-        let connection_milestone = ConnectionMilestoneInfo {
-            milestone: ConnectionMilestone::Connected,
-            connected_since: now(),
-        };
-        log_connection_milestone(&mut cobalt_sender, &connection_milestone);
+    fn test_log_connection_ping() {
+        use metrics::ConnectionCountByDurationMetricDimensionConnectedTime::*;
 
-        if let Ok(Some(event)) = cobalt_receiver.try_next() {
+        let (mut cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let start = now();
+        let ping = ConnectionPingInfo::first_connected(start);
+        log_connection_ping(&mut cobalt_sender, &ping);
+        assert_ping_metrics(&mut cobalt_receiver, &[Connected as u32]);
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event.metric_id, metrics::CONNECTION_COUNT_BY_DURATION_METRIC_ID);
+            assert_eq!(event.event_codes, vec![Connected as u32])
+        });
+
+        let ping = ping.next_ping(start + 1.minute());
+        log_connection_ping(&mut cobalt_sender, &ping);
+        assert_ping_metrics(&mut cobalt_receiver, &[Connected as u32, ConnectedOneMinute as u32]);
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event.metric_id, metrics::CONNECTION_COUNT_BY_DURATION_METRIC_ID);
+            assert_eq!(event.event_codes, vec![ConnectedOneMinute as u32])
+        });
+
+        let ping = ping.next_ping(start + 3.minutes());
+        log_connection_ping(&mut cobalt_sender, &ping);
+        assert_ping_metrics(&mut cobalt_receiver, &[Connected as u32, ConnectedOneMinute as u32]);
+        // check that CONNECTION_COUNT_BY_DURATION isn't logged since new milestone is not reached
+        assert_variant!(cobalt_receiver.try_next(), Ok(None) | Err(..));
+
+        let ping = ping.next_ping(start + 10.minutes());
+        log_connection_ping(&mut cobalt_sender, &ping);
+        assert_ping_metrics(
+            &mut cobalt_receiver,
+            &[Connected as u32, ConnectedOneMinute as u32, ConnectedTenMinute as u32],
+        );
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event.metric_id, metrics::CONNECTION_COUNT_BY_DURATION_METRIC_ID);
+            assert_eq!(event.event_codes, vec![ConnectedTenMinute as u32])
+        });
+    }
+
+    fn assert_ping_metrics(cobalt_receiver: &mut mpsc::Receiver<CobaltEvent>, milestones: &[u32]) {
+        for milestone in milestones {
+            assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
+                assert_eq!(event.metric_id, metrics::CONNECTION_UPTIME_PING_METRIC_ID);
+                assert_eq!(event.event_codes, vec![*milestone]);
+            });
         }
     }
 
@@ -1222,9 +1257,9 @@ mod tests {
         };
         log_connection_lost(&mut cobalt_sender, &connection_lost_info);
 
-        if let Ok(Some(event)) = cobalt_receiver.try_next() {
+        assert_variant!(cobalt_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event.metric_id, metrics::LOST_CONNECTION_COUNT_METRIC_ID);
-        }
+        });
     }
 
     fn test_metric_subset(

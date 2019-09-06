@@ -286,9 +286,7 @@ fn handle_info_event(
         InfoEvent::ConnectStats(connect_stats) => {
             telemetry::log_connect_stats(cobalt_sender, &connect_stats)
         }
-        InfoEvent::ConnectionMilestone(milestone) => {
-            telemetry::log_connection_milestone(cobalt_sender, &milestone)
-        }
+        InfoEvent::ConnectionPing(info) => telemetry::log_connection_ping(cobalt_sender, &info),
         InfoEvent::ConnectionLost(info) => telemetry::log_connection_lost(cobalt_sender, &info),
     }
 }

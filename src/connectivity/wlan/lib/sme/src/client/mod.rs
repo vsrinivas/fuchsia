@@ -391,7 +391,7 @@ impl super::Station for ClientSme {
         self.state = self.state.take().map(|state| match timed_event.event {
             event @ Event::EstablishingRsnaTimeout(..)
             | event @ Event::KeyFrameExchangeTimeout(..)
-            | event @ Event::ConnectionMilestone(..) => {
+            | event @ Event::ConnectionPing(..) => {
                 state.handle_timeout(timed_event.id, event, &mut self.context)
             }
         });
@@ -468,7 +468,6 @@ mod tests {
     use crate::Config as SmeConfig;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use fuchsia_inspect as finspect;
-    use info::ConnectionMilestone;
     use maplit::hashmap;
     use wlan_common::{assert_variant, bss::Standard, RadioConfig};
 
@@ -938,9 +937,7 @@ mod tests {
             assert!(stats.candidate_network.is_some());
             assert!(stats.previous_disconnect_info.is_none());
         });
-        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionMilestone(info))) => {
-            assert_eq!(info.milestone, ConnectionMilestone::Connected);
-        });
+        assert_variant!(info_stream.try_next(), Ok(Some(InfoEvent::ConnectionPing(..))));
     }
 
     #[test]
