@@ -255,7 +255,7 @@ template("rustc_artifact") {
   first_party_crate_root = "${root_out_dir}/rust_crates"
   third_party_crate_root = "${root_out_dir}/rust_third_party_crates"
   unstripped_output_dir = "${root_out_dir}/exe.unstripped"
-  not_needed(["unstripped_output_dir"])
+  not_needed([ "unstripped_output_dir" ])
   if (defined(invoker.output_file_override)) {
     output_filename = invoker.output_file_override
   } else {
@@ -437,8 +437,8 @@ template("rustc_artifact") {
     rebase_path(third_party_crate_root),
     "--edition",
     edition,
-    "--warnings",
-    rust_warnings,
+    "--cap-lints",
+    rust_cap_lints,
     "--remap-path-prefix",
     "$absolute_path=$relative_path",
     "--opt-level",

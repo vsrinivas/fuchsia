@@ -65,6 +65,16 @@ You can run unit tests on connected devices using `fx`, with the `fx run-test
 {package name}` command.  See [Testing Rust code](testing.md) for information
 on adding and running tests.
 
+## Warnings & Errors
+
+By default our build configuration makes all Rust warnings into errors. This requirement can be
+onerous during development, and on your local machine you may wish to see warnings as warnings and
+let CQ enforce the hard boundary.
+
+The `rust_cap_lints` GN arg allows you to control this behavior in your development environment.
+Setting `rust_cap_lints = "warn"` in `fx args` or `fx set` will allow you to develop locally without
+being blocked by warnings.
+
 ## Style
 
 We don't currently have a style guide for Rust, but you should run `fx rustfmt`

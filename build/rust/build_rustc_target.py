@@ -117,9 +117,9 @@ def main():
                         help="Symbols to include (0=none, 1=minimal, 2=full)",
                         choices=["0", "1", "2"],
                         required=True)
-    parser.add_argument("--warnings",
-                        help="Whether or not to error on warnings (deny=error, allow=ignore)",
-                        choices=["deny", "allow"],
+    parser.add_argument("--cap-lints",
+                        help="Maximum error promotion for lints",
+                        choices=["deny", "allow", "warn"],
                         required=True)
     parser.add_argument("--unstable-rust-feature",
                         help="Unstable Rust feature to allow",
@@ -156,11 +156,6 @@ def main():
 
     create_base_directory(args.output_file)
 
-    if args.warnings == "allow":
-        warnings_flag = "-Awarnings"
-    else:
-        warnings_flag = "-Dwarnings"
-
     if args.lib_dir_file:
         with open(args.lib_dir_file) as f:
             args.lib_dir += [line.strip() for line in f.readlines()]
@@ -168,7 +163,9 @@ def main():
     call_args = [
         args.rustc,
         args.crate_root,
-        warnings_flag,
+        "-Dwarnings",
+        "--cap-lints",
+        args.cap_lints,
         "--edition=%s" % args.edition,
         "--crate-type=%s" % args.crate_type,
         "--crate-name=%s" % args.crate_name,

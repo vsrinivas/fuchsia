@@ -1433,9 +1433,10 @@ Sets the fuchsia toolchain target triple suffix (after arch)
 
 From //build/rust/config.gni:23
 
-### rust_warnings
-Sets whether Rust compiler warnings cause errors or not.
-"deny" will make all warnings into errors, while "allow" will ignore warnings
+### rust_cap_lints
+Sets the maximum lint level.
+"deny" will make all warnings into errors, "warn" preserves them as warnings, and "allow" will
+ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
@@ -2667,4 +2668,3 @@ From //build/config/arm.gni:28
 **Current value (from the default):** `8`
 
 From //build/config/arm.gni:12
-

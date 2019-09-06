@@ -23,8 +23,9 @@ declare_args() {
   rust_toolchain_triple_suffix = "fuchsia"
 
   # Sets whether Rust compiler warnings cause errors or not.
-  # "deny" will make all warnings into errors, while "allow" will ignore warnings
-  rust_warnings = "deny"
+  # "deny" will make all warnings into errors, "warn" presents them as warnings, while "allow" will
+  # ignore warnings
+  rust_cap_lints = "deny"
 
   # Overrides the optimization level for all Rust builds, regardless of
   # debug/release flags or the `force_opt` arg to the rustc_ templates.
@@ -118,5 +119,6 @@ rust_build_deps = _sysroot_deps + _std_deps
 # changes since artifacts from an older version of the toolchain may or
 # may not be compatible with newer ones.
 # To achieve this, we insert a build dependency on the rust version.
-rust_build_inputs =
-    [ "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version" ]
+rust_build_inputs = [
+  "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version",
+]
