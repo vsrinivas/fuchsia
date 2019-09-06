@@ -19,3 +19,8 @@ bitflags = "1"
 path = "fuchsia-zircon-sys"
 version = "0.3.3"
 edition = "2018"
+
+[dependencies.fuchsia-zircon-status]
+path = "fuchsia-zircon-status"
+version = "0.1"
+edition = "2018"

@@ -4,11 +4,49 @@
 
 //! Type-safe bindings for Zircon status.
 
-use failure;
 use fuchsia_zircon_sys as sys;
+use std::error;
 use std::ffi::NulError;
 use std::fmt;
 use std::io;
+
+// Creates associated constants of TypeName of the form
+// `pub const NAME: TypeName = TypeName(path::to::value);`
+// and provides a private `assoc_const_name` method and a `Debug` implementation
+// for the type based on `$name`.
+// If multiple names match, the first will be used in `name` and `Debug`.
+macro_rules! assoc_values {
+    ($typename:ident, [$($(#[$attr:meta])* $name:ident = $value:path;)*]) => {
+        #[allow(non_upper_case_globals)]
+        impl $typename {
+            $(
+                $(#[$attr])*
+                pub const $name: $typename = $typename($value);
+            )*
+
+            fn assoc_const_name(&self) -> Option<&'static str> {
+                match self.0 {
+                    $(
+                        $(#[$attr])*
+                        $value => Some(stringify!($name)),
+                    )*
+                    _ => None,
+                }
+            }
+        }
+
+        impl ::std::fmt::Debug for $typename {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                f.write_str(concat!(stringify!($typename), "("))?;
+                match self.assoc_const_name() {
+                    Some(name) => f.write_str(&name)?,
+                    None => ::std::fmt::Debug::fmt(&self.0, f)?,
+                }
+                f.write_str(")")
+            }
+        }
+    }
+}
 
 /// Status type indicating the result of a Fuchsia syscall.
 ///
@@ -181,7 +219,7 @@ impl fmt::Display for Status {
     }
 }
 
-impl failure::Fail for Status {}
+impl error::Error for Status {}
 
 impl From<io::Error> for Status {
     fn from(err: io::Error) -> Status {

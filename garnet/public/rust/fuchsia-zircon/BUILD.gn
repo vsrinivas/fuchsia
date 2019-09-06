@@ -13,6 +13,7 @@ rustc_library("fuchsia-zircon") {
   version = "0.3.3"
   edition = "2018"
   deps = [
+    "fuchsia-zircon-status",
     "fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:failure",
@@ -26,6 +27,7 @@ rustc_library("fuchsia-zircon") {
 rustc_test("fuchsia-zircon-unittest") {
   edition = "2018"
   deps = [
+    "fuchsia-zircon-status",
     "fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:failure",
