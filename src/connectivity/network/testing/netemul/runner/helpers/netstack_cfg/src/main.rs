@@ -8,6 +8,7 @@ use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_net,
     fidl_fuchsia_net_stack::StackMarker,
+    fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_async as fasync,
@@ -85,20 +86,20 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         metric: DEFAULT_METRIC,
         ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
     };
-    let nicid =
-        netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth).await
-            .context("can't add ethernet device")?;
+    let nicid = netstack
+        .add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth)
+        .await
+        .context("can't add ethernet device")?;
     let () = netstack.set_interface_status(nicid as u32, true)?;
     fx_log_info!("Added ethernet to stack.");
 
     if let Some(ip) = opt.ip {
         let mut subnet: fidl_fuchsia_net::Subnet =
             ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("Can't parse provided ip").into();
-        let _ = netstack.set_interface_address(
-            nicid as u32,
-            &mut subnet.addr,
-            subnet.prefix_len,
-        ).await?;
+        let _ = netstack
+            .set_interface_address(nicid as u32, &mut subnet.addr, subnet.prefix_len)
+            .await
+            .context("set interface address error")?;
     } else {
         let _ = netstack.set_dhcp_client_status(nicid as u32, true).await?;
     };
@@ -121,19 +122,22 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         .into();
 
         let stack = client::connect_to_service::<StackMarker>()?;
-        let error =
-            stack.add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
+        let () = stack
+            .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
                 subnet: fidl_fuchsia_net::Subnet { addr: unspec_addr, prefix_len: 0 },
                 destination: fidl_fuchsia_net_stack::ForwardingDestination::NextHop(gw_addr),
-            }).await
-            .context("failed to call add_forward_entry for gateway")?;
-        assert_eq!(error.as_ref(), None);
+            })
+            .await
+            .squash_result()
+            .context("failed to add forwarding entry for gateway")?;
 
         fx_log_info!("Configured the default route with gateway address.");
     }
 
     fx_log_info!("Waiting for interface up...");
-    let (if_id, hwaddr) = if_changed.try_next().await
+    let (if_id, hwaddr) = if_changed
+        .try_next()
+        .await
         .context("wait for interfaces")?
         .ok_or_else(|| format_err!("interface added"))?;
 

@@ -5,6 +5,7 @@
 use failure::{format_err, Error, ResultExt};
 use fidl::encoding::Decodable;
 use fidl_fuchsia_io as fidl_io;
+use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_netemul_network as net;
 use fidl_fuchsia_netemul_sandbox as sandbox;
 use fuchsia_async as fasync;
@@ -226,52 +227,6 @@ impl TestStack {
     async fn run_future<F: Future>(&mut self, fut: F) -> F::Output {
         pin_mut!(fut);
         self.event_loop.run_until(fut).await.expect("Stack execution failed")
-    }
-}
-
-/// Helper trait to reduce boilerplate issuing calls to netstack FIDL.
-trait NetstackFidlReturn {
-    type Item;
-    fn into_result(self) -> Result<Self::Item, fidl_net_stack::Error>;
-}
-
-/// Helper trait to reduce boilerplate issuing FIDL calls.
-trait FidlResult {
-    type Item;
-    fn squash_result(self) -> Result<Self::Item, Error>;
-}
-
-impl<R> NetstackFidlReturn for (Option<Box<fidl_net_stack::Error>>, R) {
-    type Item = R;
-    fn into_result(self) -> Result<R, fidl_net_stack::Error> {
-        match self {
-            (Some(err), _) => Err(*err),
-            (None, value) => Ok(value),
-        }
-    }
-}
-
-impl NetstackFidlReturn for Option<Box<fidl_net_stack::Error>> {
-    type Item = ();
-    fn into_result(self) -> Result<(), fidl_net_stack::Error> {
-        match self {
-            Some(err) => Err(*err),
-            None => Ok(()),
-        }
-    }
-}
-
-impl<R> FidlResult for Result<R, fidl::Error>
-where
-    R: NetstackFidlReturn,
-{
-    type Item = R::Item;
-
-    fn squash_result(self) -> Result<Self::Item, Error> {
-        match self {
-            Ok(r) => r.into_result().map_err(|e| format_err!("Netstack error: {:?}", e)),
-            Err(e) => Err(e.into()),
-        }
     }
 }
 
@@ -658,9 +613,8 @@ async fn test_add_remove_interface() {
         .run_future(stack.del_ethernet_interface(if_id))
         .await
         .unwrap()
-        .into_result()
         .expect_err("Failed to remove twice");
-    assert_eq!(res.type_, fidl_net_stack::ErrorType::NotFound);
+    assert_eq!(res, fidl_net_stack::ErrorType::NotFound);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -956,13 +910,13 @@ async fn test_disable_enable_interface() {
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
-        test_stack.run_future(stack.enable_interface(12345)).await.unwrap().unwrap().type_,
+        test_stack.run_future(stack.enable_interface(12345)).await.unwrap().unwrap_err(),
         fidl_net_stack::ErrorType::NotFound
     );
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
-        test_stack.run_future(stack.disable_interface(12345)).await.unwrap().unwrap().type_,
+        test_stack.run_future(stack.disable_interface(12345)).await.unwrap().unwrap_err(),
         fidl_net_stack::ErrorType::NotFound
     );
 }
@@ -1021,8 +975,7 @@ async fn test_add_device_routes() {
             .run_future(stack.add_forwarding_entry(&mut bad_entry))
             .await
             .unwrap()
-            .unwrap()
-            .type_,
+            .unwrap_err(),
         fidl_net_stack::ErrorType::AlreadyExists
     );
     // an entry with an invalid subnet should fail with Invalidargs:
@@ -1038,8 +991,7 @@ async fn test_add_device_routes() {
             .run_future(stack.add_forwarding_entry(&mut bad_entry))
             .await
             .unwrap()
-            .unwrap()
-            .type_,
+            .unwrap_err(),
         fidl_net_stack::ErrorType::InvalidArgs
     );
     // an entry with a bad devidce id should fail with NotFound:
@@ -1055,8 +1007,7 @@ async fn test_add_device_routes() {
             .run_future(stack.add_forwarding_entry(&mut bad_entry))
             .await
             .unwrap()
-            .unwrap()
-            .type_,
+            .unwrap_err(),
         fidl_net_stack::ErrorType::NotFound
     );
 }
@@ -1119,7 +1070,7 @@ async fn test_list_del_routes() {
     // can't delete again:
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
     assert_eq!(
-        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap().type_,
+        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap_err(),
         fidl_net_stack::ErrorType::NotFound
     );
 
@@ -1139,7 +1090,7 @@ async fn test_list_del_routes() {
     // can't delete again:
     let mut fidl = route2.into_subnet_dest().0.into_fidl();
     assert_eq!(
-        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap().type_,
+        test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap_err(),
         fidl_net_stack::ErrorType::NotFound
     );
 
@@ -1188,8 +1139,7 @@ async fn test_add_remote_routes() {
             .run_future(stack.add_forwarding_entry(&mut bad_entry))
             .await
             .unwrap()
-            .unwrap()
-            .type_,
+            .unwrap_err(),
         fidl_net_stack::ErrorType::AlreadyExists
     );
 }

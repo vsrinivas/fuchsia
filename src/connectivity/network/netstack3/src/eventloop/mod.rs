@@ -466,9 +466,7 @@ impl EventLoop {
                 self.fidl_add_ethernet_interface(topological_path, device, responder);
             }
             StackRequest::DelEthernetInterface { id, responder } => {
-                responder.send(
-                    self.fidl_del_ethernet_interface(id).as_mut().map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_del_ethernet_interface(id));
             }
             StackRequest::ListInterfaces { responder } => {
                 responder.send(&mut self.fidl_list_interfaces().await.iter_mut());
@@ -484,45 +482,25 @@ impl EventLoop {
                 );
             }
             StackRequest::EnableInterface { id, responder } => {
-                responder.send(
-                    self.fidl_enable_interface(id)
-                        .await
-                        .err()
-                        .as_mut()
-                        .map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_enable_interface(id).await);
             }
             StackRequest::DisableInterface { id, responder } => {
-                responder.send(
-                    self.fidl_disable_interface(id).err().as_mut().map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_disable_interface(id));
             }
             StackRequest::AddInterfaceAddress { id, addr, responder } => {
-                responder.send(
-                    self.fidl_add_interface_address(id, addr)
-                        .as_mut()
-                        .map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_add_interface_address(id, addr));
             }
             StackRequest::DelInterfaceAddress { id, addr, responder } => {
-                responder.send(
-                    self.fidl_del_interface_address(id, addr)
-                        .as_mut()
-                        .map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_del_interface_address(id, addr));
             }
             StackRequest::GetForwardingTable { responder } => {
                 responder.send(&mut self.fidl_get_forwarding_table().iter_mut());
             }
             StackRequest::AddForwardingEntry { entry, responder } => {
-                responder.send(
-                    self.fidl_add_forwarding_entry(entry).as_mut().map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_add_forwarding_entry(entry));
             }
             StackRequest::DelForwardingEntry { subnet, responder } => {
-                responder.send(
-                    self.fidl_del_forwarding_entry(subnet).as_mut().map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_del_forwarding_entry(subnet));
             }
             StackRequest::EnablePacketFilter { id, responder } => {
                 // TODO(toshik)
@@ -553,15 +531,15 @@ impl EventLoop {
         setup.spawn(self.ctx.dispatcher().event_send.clone());
     }
 
-    fn fidl_del_ethernet_interface(&mut self, id: u64) -> Option<fidl_net_stack::Error> {
+    fn fidl_del_ethernet_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::ErrorType> {
         match self.ctx.dispatcher_mut().devices.remove_device(id) {
             Some(info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
-                None
+                Ok(())
             }
             None => {
                 // Invalid device ID
-                Some(stack_fidl_error!(NotFound))
+                Err(fidl_net_stack::ErrorType::NotFound)
             }
         }
     }
@@ -661,7 +639,7 @@ impl EventLoop {
         &mut self,
         id: u64,
         addr: InterfaceAddress,
-    ) -> Option<fidl_net_stack::Error> {
+    ) -> Result<(), fidl_net_stack::ErrorType> {
         let device_info = self.ctx.dispatcher().get_device_info(id);
         if let Some(device_info) = device_info {
             match device_info.core_id() {
@@ -671,16 +649,16 @@ impl EventLoop {
                     if let Ok(addr_sub) = addr.try_into_core() {
                         add_ip_addr_subnet(&mut self.ctx, device_id, addr_sub);
                     }
-                    None
+                    Ok(())
                 }
                 None => {
                     // TODO(brunodalbo): We should probably allow adding static addresses
                     // to interfaces that are not installed, return BadState for now
-                    Some(stack_fidl_error!(BadState))
+                    Err(fidl_net_stack::ErrorType::BadState)
                 }
             }
         } else {
-            Some(stack_fidl_error!(NotFound)) // Invalid device ID
+            Err(fidl_net_stack::ErrorType::NotFound) // Invalid device ID
         }
     }
 
@@ -688,9 +666,9 @@ impl EventLoop {
         &mut self,
         id: u64,
         addr: fidl_net_stack::InterfaceAddress,
-    ) -> Option<fidl_net_stack::Error> {
+    ) -> Result<(), fidl_net_stack::ErrorType> {
         // TODO(eyalsoha): Implement this.
-        None
+        Err(fidl_net_stack::ErrorType::NotSupported)
     }
 
     fn fidl_get_forwarding_table(&self) -> Vec<fidl_net_stack::ForwardingEntry> {
@@ -708,16 +686,16 @@ impl EventLoop {
     fn fidl_add_forwarding_entry(
         &mut self,
         entry: ForwardingEntry,
-    ) -> Option<fidl_net_stack::Error> {
+    ) -> Result<(), fidl_net_stack::ErrorType> {
         let entry = match EntryEither::try_from_fidl_with_ctx(self.ctx.dispatcher(), entry) {
             Ok(entry) => entry,
-            Err(e) => return Some(e.into()),
+            Err(e) => return Err(e.into()),
         };
         match add_route(&mut self.ctx, entry) {
-            Ok(_) => None,
+            Ok(_) => Ok(()),
             Err(NetstackError::Exists) => {
                 // Subnet already in routing table.
-                Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::AlreadyExists })
+                Err(fidl_net_stack::ErrorType::AlreadyExists)
             }
             Err(_) => unreachable!(),
         }
@@ -726,23 +704,23 @@ impl EventLoop {
     fn fidl_del_forwarding_entry(
         &mut self,
         subnet: fidl_net::Subnet,
-    ) -> Option<fidl_net_stack::Error> {
+    ) -> Result<(), fidl_net_stack::ErrorType> {
         if let Ok(subnet) = subnet.try_into_core() {
             match del_device_route(&mut self.ctx, subnet) {
-                Ok(_) => None,
-                Err(NetstackError::NotFound) => Some(stack_fidl_error!(NotFound)),
+                Ok(_) => Ok(()),
+                Err(NetstackError::NotFound) => Err(fidl_net_stack::ErrorType::NotFound),
                 Err(_) => unreachable!(),
             }
         } else {
-            Some(stack_fidl_error!(InvalidArgs))
+            Err(fidl_net_stack::ErrorType::InvalidArgs)
         }
     }
 
-    async fn fidl_enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
+    async fn fidl_enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::ErrorType> {
         self.enable_interface(id, |dev_info| dev_info.set_admin_enabled(true)).await
     }
 
-    fn fidl_disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
+    fn fidl_disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::ErrorType> {
         self.disable_interface(id, |dev_info| dev_info.set_admin_enabled(false))
     }
 
@@ -750,10 +728,10 @@ impl EventLoop {
         &mut self,
         id: u64,
         handle_device_state: F,
-    ) -> Result<(), fidl_net_stack::Error> {
+    ) -> Result<(), fidl_net_stack::ErrorType> {
         let (state, disp) = self.ctx.state_and_dispatcher();
-        let device = disp.get_device_info(id).ok_or(stack_fidl_error!(NotFound))?;
-        let info = device.client().info().await.map_err(|_| stack_fidl_error!(Internal))?;
+        let device = disp.get_device_info(id).ok_or(fidl_net_stack::ErrorType::NotFound)?;
+        let info = device.client().info().await.map_err(|_| fidl_net_stack::ErrorType::Internal)?;
         // TODO(rheacock, NET-2140): Handle core and driver state in two stages: add device to the
         // core to get an id, then reach into the driver to get updated info before triggering the
         // core to allow traffic on the interface.
@@ -771,7 +749,7 @@ impl EventLoop {
             Err(toggle_error) => {
                 match toggle_error {
                     ToggleError::NoChange => Ok(()),
-                    ToggleError::NotFound => Err(stack_fidl_error!(NotFound)), // Invalid device ID
+                    ToggleError::NotFound => Err(fidl_net_stack::ErrorType::NotFound), // Invalid device ID
                 }
             }
         }
@@ -781,9 +759,12 @@ impl EventLoop {
         &mut self,
         id: u64,
         handle_device_state: F,
-    ) -> Result<(), fidl_net_stack::Error> {
-        let device =
-            self.ctx.dispatcher_mut().get_device_info(id).ok_or(stack_fidl_error!(NotFound))?;
+    ) -> Result<(), fidl_net_stack::ErrorType> {
+        let device = self
+            .ctx
+            .dispatcher_mut()
+            .get_device_info(id)
+            .ok_or(fidl_net_stack::ErrorType::NotFound)?;
         match self.ctx.dispatcher_mut().devices.deactivate_device(id) {
             Ok((core_id, device_info)) => {
                 handle_device_state(device_info);
@@ -797,7 +778,7 @@ impl EventLoop {
             Err(toggle_error) => {
                 match toggle_error {
                     ToggleError::NoChange => Ok(()),
-                    ToggleError::NotFound => Err(stack_fidl_error!(NotFound)), // Invalid device ID
+                    ToggleError::NotFound => Err(fidl_net_stack::ErrorType::NotFound), // Invalid device ID
                 }
             }
         }

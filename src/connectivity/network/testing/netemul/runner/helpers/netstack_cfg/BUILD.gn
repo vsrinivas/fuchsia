@@ -10,6 +10,7 @@ rustc_binary("netstack_cfg") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",

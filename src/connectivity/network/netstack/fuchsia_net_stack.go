@@ -102,19 +102,22 @@ func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceI
 	return nil, uint64(ifs.nicid)
 }
 
-func (ns *Netstack) delInterface(id uint64) *stack.Error {
+func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResult {
+	var result stack.StackDelEthernetInterfaceResult
+
 	ns.mu.Lock()
 	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
 	ns.mu.Unlock()
 
-	if ok {
-		if err := ifs.eth.Close(); err != nil {
-			syslog.Errorf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
-			return &stack.Error{Type: stack.ErrorTypeInternal}
-		}
-		return nil
+	if !ok {
+		result.SetErr(stack.ErrorTypeNotFound)
+	} else if err := ifs.eth.Close(); err != nil {
+		syslog.Errorf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
+		result.SetErr(stack.ErrorTypeInternal)
+	} else {
+		result.SetResponse(stack.StackDelEthernetInterfaceResponse{})
 	}
-	return &stack.Error{Type: stack.ErrorTypeNotFound}
+	return result
 }
 
 func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error) {
@@ -134,27 +137,40 @@ func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error)
 	return &interfaceInfo, nil
 }
 
-func (ns *Netstack) setInterfaceState(id uint64, enabled bool) *stack.Error {
+func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceResult {
+	var result stack.StackEnableInterfaceResult
+
 	ns.mu.Lock()
 	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
 	ns.mu.Unlock()
 
 	if !ok {
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
-	}
-
-	if enabled {
-		if err := ifs.eth.Up(); err != nil {
-			syslog.Errorf("ifs.eth.Up() failed (NIC %d): %s", id, err)
-			return &stack.Error{Type: stack.ErrorTypeInternal}
-		}
+		result.SetErr(stack.ErrorTypeNotFound)
+	} else if err := ifs.eth.Up(); err != nil {
+		syslog.Errorf("ifs.eth.Up() failed (NIC %d): %s", id, err)
+		result.SetErr(stack.ErrorTypeInternal)
 	} else {
-		if err := ifs.eth.Down(); err != nil {
-			syslog.Errorf("ifs.eth.Down() failed (NIC %d): %s", id, err)
-			return &stack.Error{Type: stack.ErrorTypeInternal}
-		}
+		result.SetResponse(stack.StackEnableInterfaceResponse{})
 	}
-	return nil
+	return result
+}
+
+func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResult {
+	var result stack.StackDisableInterfaceResult
+
+	ns.mu.Lock()
+	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
+	ns.mu.Unlock()
+
+	if !ok {
+		result.SetErr(stack.ErrorTypeNotFound)
+	} else if err := ifs.eth.Down(); err != nil {
+		syslog.Errorf("ifs.eth.Down() failed (NIC %d): %s", id, err)
+		result.SetErr(stack.ErrorTypeInternal)
+	} else {
+		result.SetResponse(stack.StackDisableInterfaceResponse{})
+	}
+	return result
 }
 
 func toProtocolAddr(ifAddr stack.InterfaceAddress) tcpip.ProtocolAddress {
@@ -177,36 +193,42 @@ func toProtocolAddr(ifAddr stack.InterfaceAddress) tcpip.ProtocolAddress {
 	return protocolAddr
 }
 
-func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
+func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackAddInterfaceAddressResult {
+	var result stack.StackAddInterfaceAddressResult
 	protocolAddr := toProtocolAddr(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
+		result.SetErr(stack.ErrorTypeInvalidArgs)
+	} else {
+		found, err := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr)
+		if err != nil {
+			syslog.Errorf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
+			result.SetErr(stack.ErrorTypeBadState)
+		} else if !found {
+			result.SetErr(stack.ErrorTypeNotFound)
+		} else {
+			result.SetResponse(stack.StackAddInterfaceAddressResponse{})
+		}
 	}
-	found, err := ns.addInterfaceAddress(tcpip.NICID(id), protocolAddr)
-	if err != nil {
-		syslog.Errorf("(*Netstack).addInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
-		return &stack.Error{Type: stack.ErrorTypeBadState}
-	}
-	if !found {
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
-	}
-	return nil
+	return result
 }
 
-func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) *stack.Error {
+func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackDelInterfaceAddressResult  {
+	var result stack.StackDelInterfaceAddressResult
 	protocolAddr := toProtocolAddr(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
-		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
+		result.SetErr(stack.ErrorTypeInvalidArgs)
+	} else {
+		found, err := ns.removeInterfaceAddress(tcpip.NICID(id), protocolAddr)
+		if err != nil {
+			syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
+			result.SetErr(stack.ErrorTypeInternal)
+		} else if !found {
+			result.SetErr(stack.ErrorTypeNotFound)
+		} else {
+			result.SetResponse(stack.StackDelInterfaceAddressResponse{})
+		}
 	}
-	found, err := ns.removeInterfaceAddress(tcpip.NICID(id), protocolAddr)
-	if err != nil {
-		syslog.Errorf("(*Netstack).delInterfaceAddr(%s) failed (NIC %d): %s", protocolAddr.AddressWithPrefix, id, err)
-		return &stack.Error{Type: stack.ErrorTypeInternal}
-	}
-	if !found {
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
-	}
-	return nil
+	return result
 }
 
 func (ns *Netstack) getForwardingTable() []stack.ForwardingEntry {
@@ -248,30 +270,31 @@ func validateSubnet(subnet net.Subnet) bool {
 	return true
 }
 
-func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) *stack.Error {
+func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackAddForwardingEntryResult {
+	var result stack.StackAddForwardingEntryResult
 	if !validateSubnet(entry.Subnet) {
-		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
-	}
-
-	if err := ns.AddRoute(fidlconv.ForwardingEntryToTcpipRoute(entry), metricNotSet, false /* not dynamic */); err != nil {
+		result.SetErr(stack.ErrorTypeInvalidArgs)
+	} else if err := ns.AddRoute(fidlconv.ForwardingEntryToTcpipRoute(entry), metricNotSet, false /* not dynamic */); err != nil {
 		syslog.Errorf("adding forwarding entry %+v to route table failed: %s", entry, err)
-		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
+		result.SetErr(stack.ErrorTypeInvalidArgs)
+	} else {
+		result.SetResponse(stack.StackAddForwardingEntryResponse{})
 	}
-
-	return nil
+	return result
 }
 
-func (ns *Netstack) delForwardingEntry(subnet net.Subnet) *stack.Error {
+func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardingEntryResult {
+	var result stack.StackDelForwardingEntryResult
 	if !validateSubnet(subnet) {
-		return &stack.Error{Type: stack.ErrorTypeInvalidArgs}
-	}
-
-	if err := ns.DelRoute(tcpip.Route{Destination: fidlconv.ToTCPIPSubnet(subnet)}); err != nil {
+		result.SetErr(stack.ErrorTypeInvalidArgs)
+	} else if err := ns.DelRoute(tcpip.Route{Destination: fidlconv.ToTCPIPSubnet(subnet)}); err != nil {
 		syslog.Errorf("deleting forwarding entry %+v from route table failed: %s", subnet, err)
-		return &stack.Error{Type: stack.ErrorTypeNotFound}
+		result.SetErr(stack.ErrorTypeNotFound)
+	} else {
+		result.SetResponse(stack.StackDelForwardingEntryResponse{})
 	}
 
-	return nil
+	return result
 }
 
 func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64, error) {
@@ -279,7 +302,7 @@ func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device etherne
 	return err, id, nil
 }
 
-func (ni *stackImpl) DelEthernetInterface(id uint64) (*stack.Error, error) {
+func (ni *stackImpl) DelEthernetInterface(id uint64) (stack.StackDelEthernetInterfaceResult, error) {
 	return ni.ns.delInterface(id), nil
 }
 
@@ -292,19 +315,19 @@ func (ni *stackImpl) GetInterfaceInfo(id uint64) (*stack.InterfaceInfo, *stack.E
 	return info, err, nil
 }
 
-func (ni *stackImpl) EnableInterface(id uint64) (*stack.Error, error) {
-	return ni.ns.setInterfaceState(id, true), nil
+func (ni *stackImpl) EnableInterface(id uint64) (stack.StackEnableInterfaceResult, error) {
+	return ni.ns.enableInterface(id), nil
 }
 
-func (ni *stackImpl) DisableInterface(id uint64) (*stack.Error, error) {
-	return ni.ns.setInterfaceState(id, false), nil
+func (ni *stackImpl) DisableInterface(id uint64) (stack.StackDisableInterfaceResult, error) {
+	return ni.ns.disableInterface(id), nil
 }
 
-func (ni *stackImpl) AddInterfaceAddress(id uint64, addr stack.InterfaceAddress) (*stack.Error, error) {
+func (ni *stackImpl) AddInterfaceAddress(id uint64, addr stack.InterfaceAddress) (stack.StackAddInterfaceAddressResult, error) {
 	return ni.ns.addInterfaceAddr(id, addr), nil
 }
 
-func (ni *stackImpl) DelInterfaceAddress(id uint64, addr stack.InterfaceAddress) (*stack.Error, error) {
+func (ni *stackImpl) DelInterfaceAddress(id uint64, addr stack.InterfaceAddress) (stack.StackDelInterfaceAddressResult, error) {
 	return ni.ns.delInterfaceAddr(id, addr), nil
 }
 
@@ -312,11 +335,11 @@ func (ni *stackImpl) GetForwardingTable() ([]stack.ForwardingEntry, error) {
 	return ni.ns.getForwardingTable(), nil
 }
 
-func (ni *stackImpl) AddForwardingEntry(entry stack.ForwardingEntry) (*stack.Error, error) {
+func (ni *stackImpl) AddForwardingEntry(entry stack.ForwardingEntry) (stack.StackAddForwardingEntryResult, error) {
 	return ni.ns.addForwardingEntry(entry), nil
 }
 
-func (ni *stackImpl) DelForwardingEntry(subnet net.Subnet) (*stack.Error, error) {
+func (ni *stackImpl) DelForwardingEntry(subnet net.Subnet) (stack.StackDelForwardingEntryResult, error) {
 	return ni.ns.delForwardingEntry(subnet), nil
 }
 
@@ -372,8 +395,8 @@ type logImpl struct {
 	logger *syslog.Logger
 }
 
-func (li *logImpl) SetLogLevel(level stack.LogLevelFilter) (*stack.Error, error) {
+func (li *logImpl) SetLogLevel(level stack.LogLevelFilter) (stack.LogSetLogLevelResult, error) {
 	li.logger.SetSeverity(syslog.LogLevel(level))
 	syslog.VLogTf(syslog.DebugVerbosity, "fuchsia_net_stack", "SetSyslogLevel: %s", level)
-	return nil, nil
+	return stack.LogSetLogLevelResultWithResponse(stack.LogSetLogLevelResponse{}), nil
 }

@@ -298,17 +298,13 @@ impl From<AddrClassError> for ForwardingConversionError {
     }
 }
 
-impl From<ForwardingConversionError> for fidl_net_stack::Error {
+impl From<ForwardingConversionError> for fidl_net_stack::ErrorType {
     fn from(fwd_error: ForwardingConversionError) -> Self {
-        fidl_net_stack::Error {
-            type_: match fwd_error {
-                ForwardingConversionError::DeviceNotFound => fidl_net_stack::ErrorType::NotFound,
-                ForwardingConversionError::TypeMismatch
-                | ForwardingConversionError::InvalidSubnet
-                | ForwardingConversionError::AddrClassError => {
-                    fidl_net_stack::ErrorType::InvalidArgs
-                }
-            },
+        match fwd_error {
+            ForwardingConversionError::DeviceNotFound => fidl_net_stack::ErrorType::NotFound,
+            ForwardingConversionError::TypeMismatch
+            | ForwardingConversionError::InvalidSubnet
+            | ForwardingConversionError::AddrClassError => fidl_net_stack::ErrorType::InvalidArgs,
         }
     }
 }

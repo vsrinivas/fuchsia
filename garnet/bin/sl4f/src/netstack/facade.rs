@@ -99,10 +99,13 @@ impl NetstackFacade {
         let tag = "NestackFacade::enable_interface";
         match &self.inner.read().netstack_proxy {
             Some(proxy) => {
-                let err = proxy.enable_interface(id).await?;
-                if let Some(e) = err {
-                    let err_msg = format!("Unable to enable interface id {:?}: {:?}", id, e);
-                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                let res = proxy.enable_interface(id).await?;
+                match res {
+                    Ok(()) => (),
+                    Err(e) => {
+                        let err_msg = format!("Unable to enable interface id {:?}: {:?}", id, e);
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
+                    }
                 }
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
@@ -114,10 +117,13 @@ impl NetstackFacade {
         let tag = "NestackFacade::disable_interface";
         match &self.inner.read().netstack_proxy {
             Some(proxy) => {
-                let err = proxy.disable_interface(id).await?;
-                if let Some(e) = err {
-                    let err_msg = format!("Unable to disable interface id {:?}: {:?}", id, e);
-                    fx_err_and_bail!(&with_line!(tag), err_msg)
+                let res = proxy.disable_interface(id).await?;
+                match res {
+                    Ok(()) => (),
+                    Err(e) => {
+                        let err_msg = format!("Unable to disable interface id {:?}: {:?}", id, e);
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
+                    }
                 }
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),

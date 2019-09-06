@@ -22,6 +22,7 @@ use {
     fidl_fuchsia_net_stack::{
         ForwardingDestination, ForwardingEntry, InterfaceAddress, StackMarker,
     },
+    fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netstack::NetstackMarker,
     fidl_fuchsia_telephony_manager::ManagerMarker,
     fidl_fuchsia_telephony_ril::{
@@ -168,9 +169,15 @@ async fn handle_cmd<'a>(
                         let netstack = connect_to_service::<StackMarker>()?;
                         let old_netstack = connect_to_service::<NetstackMarker>()?;
                         old_netstack.set_dhcp_client_status(3, false).await?;
-                        netstack.add_interface_address(3, &mut u32_to_netaddr(settings.ip_v4_addr, settings.ip_v4_subnet)?).await?;
+                        let () = netstack
+                            .add_interface_address(
+                                3,
+                                &mut u32_to_netaddr(settings.ip_v4_addr, settings.ip_v4_subnet)?
+                            )
+                            .await
+                            .squash_result()?;
                         let ip = settings.ip_v4_addr;
-                        netstack.add_forwarding_entry(&mut ForwardingEntry {
+                        let () = netstack.add_forwarding_entry(&mut ForwardingEntry {
                             destination: ForwardingDestination::NextHop(IpAddress::Ipv4(Ipv4Address{
                                 addr: [
                                     ((settings.ip_v4_gateway >> 24) & 0xFF) as u8,
@@ -186,7 +193,7 @@ async fn handle_cmd<'a>(
                                         (ip & 0xFF) as u8]}),
                                 prefix_len: u32_to_cidr(settings.ip_v4_subnet)?
                             },
-                        }).await?;
+                        }).await.squash_result()?;
                         Ok("connected".to_string())
                     }
                     None => Ok("set up connection on radio. Did not configure ethernet device, exclusive access required".to_string())

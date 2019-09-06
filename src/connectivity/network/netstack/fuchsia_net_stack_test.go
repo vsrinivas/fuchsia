@@ -94,17 +94,17 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 
 		// Add an invalid entry.
-		status, err := ni.AddForwardingEntry(invalidRoute)
+		addResult, err := ni.AddForwardingEntry(invalidRoute)
 		AssertNoError(t, err)
-		if status == nil || status.Type != stack.ErrorTypeInvalidArgs {
-			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = ErrorTypeInvalidArgs", invalidRoute, status)
+		if addResult != stack.StackAddForwardingEntryResultWithErr(stack.ErrorTypeInvalidArgs) {
+			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = Err(ErrorTypeInvalidArgs)", invalidRoute, addResult)
 		}
 
 		// Add a local subnet route.
-		status, err = ni.AddForwardingEntry(localRoute)
+		addResult, err = ni.AddForwardingEntry(localRoute)
 		AssertNoError(t, err)
-		if status != nil {
-			t.Fatalf("got ni.AddForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
+		if addResult != stack.StackAddForwardingEntryResultWithResponse(stack.StackAddForwardingEntryResponse{}) {
+			t.Fatalf("got ni.AddForwardingEntry(%#v) = %#v, want = Response()", localRoute, addResult)
 		}
 		table, err = ni.GetForwardingTable()
 		AssertNoError(t, err)
@@ -114,10 +114,10 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 
 		// Add the same entry again.
-		status, err = ni.AddForwardingEntry(localRoute)
+		addResult, err = ni.AddForwardingEntry(localRoute)
 		AssertNoError(t, err)
-		if status != nil {
-			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
+		if addResult != stack.StackAddForwardingEntryResultWithResponse(stack.StackAddForwardingEntryResponse{}) {
+			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = Response()", localRoute, addResult)
 		}
 		table, err = ni.GetForwardingTable()
 		AssertNoError(t, err)
@@ -126,10 +126,10 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 
 		// Add default route.
-		status, err = ni.AddForwardingEntry(defaultRoute)
+		addResult, err = ni.AddForwardingEntry(defaultRoute)
 		AssertNoError(t, err)
-		if status != nil {
-			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = nil", defaultRoute, status)
+		if addResult != stack.StackAddForwardingEntryResultWithResponse(stack.StackAddForwardingEntryResponse{}) {
+			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = Response()", defaultRoute, addResult)
 		}
 		table, err = ni.GetForwardingTable()
 		AssertNoError(t, err)
@@ -139,21 +139,24 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 
 		// Remove nonexistent subnet.
-		status, err = ni.DelForwardingEntry(nonexistentSubnet)
-		if status == nil || status.Type != stack.ErrorTypeNotFound {
-			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = ErrorTypeNotFound", nonexistentSubnet, status)
+		delResult, err := ni.DelForwardingEntry(nonexistentSubnet)
+		AssertNoError(t, err)
+		if delResult != stack.StackDelForwardingEntryResultWithErr(stack.ErrorTypeNotFound) {
+			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = Err(ErrorTypeNotFound)", nonexistentSubnet, delResult)
 		}
 
 		// Remove subnet with bad subnet mask.
-		status, err = ni.DelForwardingEntry(badMaskSubnet)
-		if status == nil || status.Type != stack.ErrorTypeInvalidArgs {
-			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = ErrorTypeInvalidArgs", badMaskSubnet, status)
+		delResult, err = ni.DelForwardingEntry(badMaskSubnet)
+		AssertNoError(t, err)
+		if delResult != stack.StackDelForwardingEntryResultWithErr(stack.ErrorTypeInvalidArgs) {
+			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = Err(ErrorTypeInvalidArgs)", badMaskSubnet, delResult)
 		}
 
 		// Remove local route.
-		status, err = ni.DelForwardingEntry(localSubnet)
-		if status != nil {
-			t.Fatalf("got ni.DelForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
+		delResult, err = ni.DelForwardingEntry(localSubnet)
+		AssertNoError(t, err)
+		if delResult != stack.StackDelForwardingEntryResultWithResponse(stack.StackDelForwardingEntryResponse{}) {
+			t.Fatalf("got ni.DelForwardingEntry(%#v) = Err(%s), want = Response()", localRoute, delResult.Err)
 		}
 		table, err = ni.GetForwardingTable()
 		AssertNoError(t, err)
@@ -163,9 +166,10 @@ func TestFuchsiaNetStack(t *testing.T) {
 		}
 
 		// Remove default route.
-		status, err = ni.DelForwardingEntry(defaultSubnet)
-		if status != nil {
-			t.Fatalf("got ni.DelForwardingEntry(%#v) = %#v, want = nil", localRoute, status)
+		delResult, err = ni.DelForwardingEntry(defaultSubnet)
+		AssertNoError(t, err)
+		if delResult != stack.StackDelForwardingEntryResultWithResponse(stack.StackDelForwardingEntryResponse{}) {
+			t.Fatalf("got ni.DelForwardingEntry(%#v) = Err(%s), want = Response()", localRoute, delResult.Err)
 		}
 		table, err = ni.GetForwardingTable()
 		AssertNoError(t, err)
@@ -186,8 +190,8 @@ func TestFuchsiaNetStack(t *testing.T) {
 		{
 			result, err := ni.EnablePacketFilter(1)
 			AssertNoError(t, err)
-			if result.Which() != stack.StackEnablePacketFilterResultResponse {
-				t.Fatalf("got ni.EnablePacketFilter(1) = Err(%s), want = Response()", result.Err)
+			if result != stack.StackEnablePacketFilterResultWithResponse(stack.StackEnablePacketFilterResponse{}) {
+				t.Fatalf("got ni.EnablePacketFilter(1) = %#v, want = Response()", result)
 			}
 			enabled, err := ni.isPacketFilterEnabled(1)
 			AssertNoError(t, err)
@@ -198,8 +202,8 @@ func TestFuchsiaNetStack(t *testing.T) {
 		{
 			result, err := ni.DisablePacketFilter(1)
 			AssertNoError(t, err)
-			if result.Which() != stack.StackDisablePacketFilterResultResponse {
-				t.Fatalf("got ni.DisablePacketFilter(1) = Err(%s), want = Response()", result.Err)
+			if result != stack.StackDisablePacketFilterResultWithResponse(stack.StackDisablePacketFilterResponse{}) {
+				t.Fatalf("got ni.DisablePacketFilter(1) = %#v, want = Response()", result)
 			}
 			enabled, err := ni.isPacketFilterEnabled(1)
 			AssertNoError(t, err)
@@ -210,8 +214,8 @@ func TestFuchsiaNetStack(t *testing.T) {
 		{
 			result, err := ni.EnablePacketFilter(1)
 			AssertNoError(t, err)
-			if result.Which() != stack.StackEnablePacketFilterResultResponse {
-				t.Fatalf("got ni.EnablePacketFilter(1) = Err(%s), want = Response()", result.Err)
+			if result != stack.StackEnablePacketFilterResultWithResponse(stack.StackEnablePacketFilterResponse{}) {
+				t.Fatalf("got ni.EnablePacketFilter(1) = %#v, want = Response()", result)
 			}
 			enabled, err := ni.isPacketFilterEnabled(1)
 			AssertNoError(t, err)

@@ -12,6 +12,7 @@ rustc_test("netstack_fidl_integration_test") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/lib/rust/files_async",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",

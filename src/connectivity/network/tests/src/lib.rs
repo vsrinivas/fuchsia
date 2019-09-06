@@ -7,6 +7,8 @@
 
 use failure::ResultExt;
 
+use fidl_fuchsia_net_stack_ext::FidlReturn;
+
 type Result = std::result::Result<(), failure::Error>;
 
 fn connect_to_service<S: fidl::endpoints::ServiceMarker>(
@@ -274,11 +276,11 @@ async fn add_del_interface_address() -> Result {
         }),
         prefix_len: 32,
     };
-    let error = stack
+    let res = stack
         .add_interface_address(loopback.id, &mut interface_address)
         .await
         .context("failed to call add interface address")?;
-    assert_eq!(error.as_ref(), None);
+    assert_eq!(res, Ok(()));
     let (loopback, error) =
         stack.get_interface_info(loopback.id).await.context("failed to get loopback interface")?;
     assert_eq!(error.as_ref(), None);
@@ -291,11 +293,11 @@ async fn add_del_interface_address() -> Result {
         loopback.properties.addresses
     );
 
-    let error = stack
+    let res = stack
         .del_interface_address(loopback.id, &mut interface_address)
         .await
         .context("failed to call del interface address")?;
-    assert_eq!(error.as_ref(), None);
+    assert_eq!(res, Ok(()));
     let (loopback, error) =
         stack.get_interface_info(loopback.id).await.context("failed to get loopback interface")?;
     assert_eq!(error.as_ref(), None);
@@ -341,11 +343,8 @@ async fn add_remove_interface_address_errors() -> Result {
         .add_interface_address(max_id + 1, &mut interface_address)
         .await
         .context("failed to call add interface address")?
-        .ok_or(failure::err_msg("failed to get add interface address error"))?;
-    assert_eq!(
-        error.as_ref(),
-        &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::NotFound }
-    );
+        .unwrap_err();
+    assert_eq!(error, fidl_fuchsia_net_stack::ErrorType::NotFound);
 
     let error = netstack
         .remove_interface_address(
@@ -370,11 +369,8 @@ async fn add_remove_interface_address_errors() -> Result {
         .add_interface_address(max_id, &mut interface_address)
         .await
         .context("failed to call add interface address")?
-        .ok_or(failure::err_msg("failed to get add interface address error"))?;
-    assert_eq!(
-        error.as_ref(),
-        &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::InvalidArgs }
-    );
+        .unwrap_err();
+    assert_eq!(error, fidl_fuchsia_net_stack::ErrorType::InvalidArgs);
 
     let error = netstack
         .remove_interface_address(
@@ -446,7 +442,7 @@ async fn disable_interface_loopback() -> Result {
     );
     assert_eq!(
         stack.disable_interface(localhost.id).await.context("failed to disable interface")?,
-        None
+        Ok(())
     );
     let (info, error) =
         stack.get_interface_info(localhost.id).await.context("failed to get interface info")?;
@@ -492,7 +488,7 @@ async fn acquire_dhcp() -> Result {
             .await
             .context("failed to add server ethernet interface")?;
         assert_eq!(error, None);
-        let error = server_stack
+        let () = server_stack
             .add_interface_address(
                 id,
                 &mut fidl_fuchsia_net_stack::InterfaceAddress {
@@ -503,11 +499,13 @@ async fn acquire_dhcp() -> Result {
                 },
             )
             .await
+            .squash_result()
             .context("failed to add interface address")?;
-        assert_eq!(error, None);
-        let error =
-            server_stack.enable_interface(id).await.context("failed to enable server interface")?;
-        assert_eq!(error, None);
+        let () = server_stack
+            .enable_interface(id)
+            .await
+            .squash_result()
+            .context("failed to enable server interface")?;
     }
     let launcher = {
         let (client, server) = fidl::endpoints::create_proxy::<fidl_fuchsia_sys::LauncherMarker>()
@@ -578,9 +576,11 @@ async fn acquire_dhcp() -> Result {
             .await
             .context("failed to add client ethernet interface")?;
         assert_eq!(error, None);
-        let error =
-            client_stack.enable_interface(id).await.context("failed to enable client interface")?;
-        assert_eq!(error, None);
+        let () = client_stack
+            .enable_interface(id)
+            .await
+            .squash_result()
+            .context("failed to enable client interface")?;
         let client_netstack =
             connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>(&client_environment)
                 .context("failed to connect to client netstack")?;

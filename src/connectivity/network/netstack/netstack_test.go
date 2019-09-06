@@ -210,15 +210,16 @@ func TestStaticIPConfiguration(t *testing.T) {
 	name := ifs.ns.nameLocked(ifs.nicid)
 	ifs.ns.mu.Unlock()
 
-	if err := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr); err != nil {
-		t.Fatal(err)
+	result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
+	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
+		t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
 	}
 
 	ifs.mu.Lock()
 	if info, err := ifs.toNetInterface2Locked(); err != nil {
 		t.Errorf("couldn't get interface info: %s", err)
 	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testV4Address {
-		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want = %+v", got, testV4Address)
+		t.Errorf("got ifs.toNetInterface2Locked().Addr = %#v, want = %#v", got, testV4Address)
 	}
 
 	if ifs.mu.dhcp.enabled {
@@ -279,14 +280,15 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr); err != nil {
-		t.Fatal(err)
+	result := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr)
+	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
+		t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
 	}
 
 	if info, err := ifs.toNetInterface2Locked(); err != nil {
 		t.Errorf("couldn't get interface info: %s", err)
 	} else if got := fidlconv.ToTCPIPAddress(info.Addr); got != testV4Address {
-		t.Errorf("got ifs.toNetInterface2Locked().Addr = %+v, want = %+v", got, testV4Address)
+		t.Errorf("got ifs.toNetInterface2Locked().Addr = %#v, want = %#v", got, testV4Address)
 	}
 }
 
@@ -418,8 +420,10 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				if stackErr, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
-					t.Fatalf("ni.AddInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+				result, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr);
+				AssertNoError(t, err)
+				if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
+					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
 
 				wantAddrs = append(wantAddrs, addr)
@@ -438,8 +442,10 @@ func TestListInterfaceAddresses(t *testing.T) {
 					PrefixLen: uint8(addr.PrefixLen),
 				}
 
-				if stackErr, err := ni.DelInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
-					t.Fatalf("ni.DelInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+				result, err := ni.DelInterfaceAddress(uint64(ifState.nicid), ifAddr);
+				AssertNoError(t, err)
+				if result != stack.StackDelInterfaceAddressResultWithResponse(stack.StackDelInterfaceAddressResponse{}) {
+					t.Fatalf("got ni.DelInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
 
 				// Remove address from list.
@@ -478,8 +484,10 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 		PrefixLen: uint8(addr.PrefixLen),
 	}
 
-	if stackErr, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
-		t.Fatalf("ni.AddInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+	result, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr)
+	AssertNoError(t, err)
+	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
+		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 	}
 
 	wantAddrs := append(initialAddrs, addr)
@@ -490,8 +498,10 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 	addr.PrefixLen *= 2
 	ifAddr.PrefixLen *= 2
 
-	if stackErr, err := ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr); stackErr != nil || err != nil {
-		t.Fatalf("ni.AddInterfaceAddress(nicid=%d, addr=%+v) failed: stackErr=%v, err=%v", uint64(ifState.nicid), ifAddr, stackErr, err)
+	result, err = ni.AddInterfaceAddress(uint64(ifState.nicid), ifAddr)
+	AssertNoError(t, err)
+	if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
+		t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 	}
 
 	wantAddrs = append(initialAddrs, addr)

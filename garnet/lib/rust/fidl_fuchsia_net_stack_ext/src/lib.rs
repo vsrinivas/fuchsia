@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod error;
+pub use self::error::{FidlReturn, NetstackFidlReturn, NetstackError};
+
 use fidl_fuchsia_net_stack as fidl;
 
 pub struct InterfaceAddress {

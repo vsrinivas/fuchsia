@@ -9,6 +9,7 @@ use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
+use fidl_fuchsia_net_stack_ext::FidlReturn;
 use fidl_fuchsia_posix_socket;
 use fuchsia_async as fasync;
 use fuchsia_component::{
@@ -107,7 +108,10 @@ impl Netstack {
             // Safe because we checked the return status above.
             zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
         );
-        let (err, id) = self.stack.add_ethernet_interface(&topological_path, dev).await
+        let (err, id) = self
+            .stack
+            .add_ethernet_interface(&topological_path, dev)
+            .await
             .context("error adding device")?;
 
         match err {
@@ -124,23 +128,22 @@ impl Netstack {
     ) -> Result<(), Error> {
         let mut fidl_addr =
             netstack::InterfaceAddress { ip_address: copy_ip(&ip_address), prefix_len };
-        let response = self.stack.add_interface_address(id, &mut fidl_addr).await
-            .context("error setting interface address")?;
-
-        if let Some(e) = response {
-            return Err(format_err!("Error adding interface address {}: {:?}", id, e));
-        }
-
-        let response = self.stack.add_forwarding_entry(&mut netstack::ForwardingEntry {
-            subnet: net::Subnet { addr: mask_with_prefix(ip_address, prefix_len), prefix_len },
-            destination: netstack::ForwardingDestination::DeviceId(id),
-        }).await
-        .context("error adding forwarding entry")?;
-
-        match response {
-            Some(e) => Err(format_err!("Error adding forwarding entry: {:?}", e)),
-            None => Ok(()),
-        }
+        let () = self
+            .stack
+            .add_interface_address(id, &mut fidl_addr)
+            .await
+            .squash_result()
+            .context(format!("error adding interface address {}", id))?;
+        let () = self
+            .stack
+            .add_forwarding_entry(&mut netstack::ForwardingEntry {
+                subnet: net::Subnet { addr: mask_with_prefix(ip_address, prefix_len), prefix_len },
+                destination: netstack::ForwardingDestination::DeviceId(id),
+            })
+            .await
+            .squash_result()
+            .context("error adding forwarding entry")?;
+        Ok(())
     }
 }
 

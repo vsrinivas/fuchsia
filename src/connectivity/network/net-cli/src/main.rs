@@ -132,8 +132,9 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
         IfCmd::Del { id } => {
             let response =
                 stack.del_ethernet_interface(id).await.context("error removing device")?;
-            if let Some(e) = response {
-                println!("Error removing interface {}: {:?}", id, e)
+            match response {
+                Ok(()) => println!("Interface {} deleted", id),
+                Err(e) => println!("Error removing interface {}: {:?}", id, e),
             }
         }
         IfCmd::Get { id } => {
@@ -146,18 +147,16 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
         }
         IfCmd::Enable { id } => {
             let response = stack.enable_interface(id).await.context("error getting response")?;
-            if let Some(e) = response {
-                println!("Error enabling interface {}: {:?}", id, e)
-            } else {
-                println!("Interface {} enabled", id)
+            match response {
+                Ok(()) => println!("Interface {} enabled", id),
+                Err(e) => println!("Error enabling interface {}: {:?}", id, e),
             }
         }
         IfCmd::Disable { id } => {
             let response = stack.disable_interface(id).await.context("error getting response")?;
-            if let Some(e) = response {
-                println!("Error disabling interface {}: {:?}", id, e)
-            } else {
-                println!("Interface {} disabled", id)
+            match response {
+                Ok(()) => println!("Interface {} disabled", id),
+                Err(e) => println!("Error disabling interface {}: {:?}", id, e),
             }
         }
         IfCmd::Addr(AddrCmd::Add { id, addr, prefix }) => {
@@ -168,14 +167,13 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
                 .add_interface_address(id, &mut fidl_addr)
                 .await
                 .context("error setting interface address")?;
-            if let Some(e) = response {
-                println!("Error adding interface address {}: {:?}", id, e)
-            } else {
-                println!(
+            match response {
+                Ok(()) => println!(
                     "Address {} added to interface {}",
                     pretty::InterfaceAddress::from(fidl_addr),
                     id
-                )
+                ),
+                Err(e) => println!("Error adding interface address {}: {:?}", id, e),
             }
         }
         IfCmd::Addr(AddrCmd::Del { .. }) => {
@@ -202,10 +200,11 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 })
                 .await
                 .context("error adding forwarding entry")?;
-            if let Some(e) = response {
-                println!("Error adding forwarding entry: {:?}", e);
-            } else {
-                println!("Added forwarding entry for {}/{} to device {}", addr, prefix, id);
+            match response {
+                Ok(()) => {
+                    println!("Added forwarding entry for {}/{} to device {}", addr, prefix, id)
+                }
+                Err(e) => println!("Error adding forwarding entry: {:?}", e),
             }
         }
         FwdCmd::AddHop { next_hop, addr, prefix } => {
@@ -218,10 +217,11 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 })
                 .await
                 .context("error adding forwarding entry")?;
-            if let Some(e) = response {
-                println!("Error adding forwarding entry: {:?}", e);
-            } else {
-                println!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
+            match response {
+                Ok(()) => {
+                    println!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop)
+                }
+                Err(e) => println!("Error adding forwarding entry: {:?}", e),
             }
         }
         FwdCmd::Del { addr, prefix } => {
@@ -232,10 +232,9 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
                 })
                 .await
                 .context("error removing forwarding entry")?;
-            if let Some(e) = response {
-                println!("Error removing forwarding entry: {:?}", e);
-            } else {
-                println!("Removed forwarding entry for {}/{}", addr, prefix);
+            match response {
+                Ok(()) => println!("Removed forwarding entry for {}/{}", addr, prefix),
+                Err(e) => println!("Error removing forwarding entry: {:?}", e),
             }
         }
     }
@@ -387,12 +386,9 @@ async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Erro
 async fn do_log(cmd: opts::LogCmd, log: LogProxy) -> Result<(), Error> {
     match cmd {
         LogCmd::SetLevel { log_level } => {
-            let response =
-                log.set_log_level(log_level.into()).await.context("failed to set log level")?;
-            if let Some(e) = response {
-                eprintln!("failed to set log level to {:?}: {:?}", log_level, e);
-            } else {
-                println!("log level set to {:?}", log_level);
+            match log.set_log_level(log_level.into()).await.context("failed to set log level")? {
+                Ok(()) => println!("log level set to {:?}", log_level),
+                Err(e) => eprintln!("failed to set log level to {:?}: {:?}", log_level, e),
             }
         }
     }
