@@ -321,6 +321,11 @@ inline void DisplayValue<uint32_t>(const Colors& colors, SyscallType type, uint3
       ThreadStateName(value, os);
       os << colors.reset;
       break;
+    case SyscallType::kThreadStateTopic:
+      os << colors.blue;
+      ThreadStateTopicName(value, os);
+      os << colors.reset;
+      break;
     case SyscallType::kVmOption:
       os << colors.red;
       VmOptionName(value, os);
@@ -469,6 +474,44 @@ inline void DisplayValue<uintptr_t>(const Colors& colors, SyscallType type, uint
   }
 }
 #endif
+
+template <>
+inline void DisplayValue<zx_uint128_t>(const Colors& colors, SyscallType type, zx_uint128_t value,
+                                       std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint128Hexa: {
+      std::vector<char> buffer(sizeof(uint64_t) * kCharatersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%016lx", value.low);
+      os << colors.blue << "{ low = " << buffer.data();
+      snprintf(buffer.data(), buffer.size(), "%016lx", value.high);
+      os << ", high = " << buffer.data() << " }" << colors.reset;
+      break;
+    }
+    default:
+      os << "unimplemented zx_uint128_t value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
+
+template <>
+inline void DisplayValue<std::pair<const zx_uint128_t*, int>>(
+    const Colors& colors, SyscallType type, std::pair<const zx_uint128_t*, int> value,
+    std::ostream& os) {
+  switch (type) {
+    case SyscallType::kUint128ArrayHexa: {
+      const char* separator = "";
+      for (int i = 0; i < value.second; ++i) {
+        os << separator;
+        DisplayValue(colors, SyscallType::kUint128Hexa, value.first[i], os);
+        separator = ", ";
+      }
+      break;
+    }
+    default:
+      os << "unimplemented zx_uint128_t array value " << static_cast<uint32_t>(type);
+      break;
+  }
+}
 
 // Base class for all conditions on fields.
 template <typename ClassType>
@@ -621,6 +664,24 @@ class ClassClassField : public ClassFieldBase<ClassType> {
   const Class<Type>* const field_class_;
 };
 
+// Define a class field which is an array of objects.
+template <typename ClassType, typename Type>
+class ArrayClassField : public ClassFieldBase<ClassType> {
+ public:
+  ArrayClassField(std::string_view name, std::pair<const Type*, int> (*get)(const ClassType* from),
+                  const Class<Type>* sub_class)
+      : ClassFieldBase<ClassType>(name, SyscallType::kStruct), get_(get), sub_class_(sub_class) {}
+
+  void Display(const ClassType* object, debug_ipc::Arch arch, const Colors& colors,
+               std::string_view line_header, int tabs, std::ostream& os) const override;
+
+ private:
+  // Function which can extract the address of the field for a given object.
+  std::pair<const Type*, int> (*get_)(const ClassType* from);
+  // Definition of the array items' class.
+  const Class<Type>* const sub_class_;
+};
+
 // Define a class.
 template <typename ClassType>
 class Class {
@@ -648,6 +709,14 @@ class Class {
   template <typename Type>
   ClassClassField<ClassType, Type>* AddField(
       std::unique_ptr<ClassClassField<ClassType, Type>> field) {
+    auto result = field.get();
+    fields_.push_back(std::move(field));
+    return result;
+  }
+
+  template <typename Type>
+  ArrayClassField<ClassType, Type>* AddField(
+      std::unique_ptr<ArrayClassField<ClassType, Type>> field) {
     auto result = field.get();
     fields_.push_back(std::move(field));
     return result;
@@ -691,6 +760,21 @@ void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ip
   const Type* sub_object = get_(object);
   field_class_->DisplayObject(sub_object, arch, colors, line_header, tabs, os);
   os << '\n';
+}
+
+template <typename ClassType, typename Type>
+void ArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
+                                               const Colors& colors, std::string_view line_header,
+                                               int tabs, std::ostream& os) const {
+  os << line_header << std::string(tabs * kTabSize, ' ') << ClassFieldBase<ClassType>::name() << ':'
+     << colors.green << sub_class_->name() << colors.reset << "[]: {\n";
+  std::pair<const Type*, int> array = get_(object);
+  for (int i = 0; i < array.second; ++i) {
+    os << line_header << std::string((tabs + 1) * kTabSize, ' ');
+    sub_class_->DisplayObject(array.first + i, arch, colors, line_header, tabs + 1, os);
+    os << '\n';
+  }
+  os << line_header << std::string(tabs * kTabSize, ' ') << "}\n";
 }
 
 // Base class (not templated) for system call arguments.
@@ -1024,6 +1108,24 @@ class SyscallInputOutputCondition : public SyscallInputOutputConditionBase {
   Type value_;
 };
 
+// Condition which checks that the architecture has an expected value.
+class SyscallInputOutputArchCondition : public SyscallInputOutputConditionBase {
+ public:
+  explicit SyscallInputOutputArchCondition(debug_ipc::Arch arch) : arch_(arch) {}
+
+  void Load(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override {}
+
+  bool ValueValid(SyscallDecoder* /*decoder*/, Stage /*stage*/) const override { return true; }
+
+  bool True(SyscallDecoder* decoder, Stage /*stage*/) const override {
+    return decoder->arch() == arch_;
+  }
+
+ private:
+  // The architecture we check.
+  const debug_ipc::Arch arch_;
+};
+
 // Base class for the inputs/outputs we want to display for a system call.
 class SyscallInputOutputBase {
  public:
@@ -1043,6 +1145,12 @@ class SyscallInputOutputBase {
   SyscallInputOutputBase* DisplayIfEqual(std::unique_ptr<Access<Type>> access, Type value) {
     conditions_.push_back(
         std::make_unique<SyscallInputOutputCondition<Type>>(std::move(access), value));
+    return this;
+  }
+
+  // Define the architecture needed to display the input/output.
+  SyscallInputOutputBase* DisplayIfArch(debug_ipc::Arch arch) {
+    conditions_.push_back(std::make_unique<SyscallInputOutputArchCondition>(arch));
     return this;
   }
 
@@ -1133,6 +1241,34 @@ class SyscallInputOutputActualAndRequested : public SyscallInputOutputBase {
   const std::unique_ptr<Access<Type>> actual_;
   // Value which has been asked or value that should have been asked.
   const std::unique_ptr<Access<Type>> asked_;
+};
+
+// An input/output which is one indirect value (access via a pointer).
+// This is always displayed inline.
+template <typename Type, typename FromType>
+class SyscallInputOutputIndirect : public SyscallInputOutputBase {
+ public:
+  SyscallInputOutputIndirect(int64_t error_code, std::string_view name, SyscallType syscall_type,
+                             std::unique_ptr<Access<FromType>> buffer)
+      : SyscallInputOutputBase(error_code, name),
+        syscall_type_(syscall_type),
+        buffer_(std::move(buffer)) {}
+
+  void Load(SyscallDecoder* decoder, Stage stage) const override {
+    SyscallInputOutputBase::Load(decoder, stage);
+    buffer_->LoadArray(decoder, stage, sizeof(Type));
+  }
+
+  const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                            Stage stage, const char* separator, std::ostream& os) const override;
+
+ private:
+  // Type of the value.
+  SyscallType syscall_type_;
+  // Access to the buffer which contains all the items.
+  const std::unique_ptr<Access<FromType>> buffer_;
+  // Item count in the buffer.
+  const std::unique_ptr<Access<size_t>> buffer_size_;
 };
 
 // An input/output which is a composed of several items of the same type.
@@ -1401,6 +1537,17 @@ class Syscall {
     inputs_.push_back(std::make_unique<SyscallInputOutput<Type>>(0, name, std::move(access)));
   }
 
+  // Adds an indirect input to display.
+  template <typename Type, typename FromType>
+  SyscallInputOutputIndirect<Type, FromType>* InputIndirect(
+      std::string_view name, SyscallType syscall_type, std::unique_ptr<Access<FromType>> buffer) {
+    auto object = std::make_unique<SyscallInputOutputIndirect<Type, FromType>>(
+        0, name, syscall_type, std::move(buffer));
+    auto result = object.get();
+    inputs_.push_back(std::move(object));
+    return result;
+  }
+
   // Adds an input buffer to display.
   template <typename Type, typename FromType>
   void InputBuffer(std::string_view name, SyscallType syscall_type,
@@ -1467,6 +1614,18 @@ class Syscall {
       std::unique_ptr<Access<Type>> asked) {
     auto object = std::make_unique<SyscallInputOutputActualAndRequested<Type>>(
         error_code, name, std::move(actual), std::move(asked));
+    auto result = object.get();
+    outputs_.push_back(std::move(object));
+    return result;
+  }
+
+  // Adds an indirect output to display.
+  template <typename Type, typename FromType>
+  SyscallInputOutputIndirect<Type, FromType>* OutputIndirect(
+      int64_t error_code, std::string_view name, SyscallType syscall_type,
+      std::unique_ptr<Access<FromType>> buffer) {
+    auto object = std::make_unique<SyscallInputOutputIndirect<Type, FromType>>(
+        error_code, name, syscall_type, std::move(buffer));
     auto result = object.get();
     outputs_.push_back(std::move(object));
     return result;
@@ -1682,6 +1841,22 @@ const char* SyscallInputOutputActualAndRequested<Type>::DisplayInline(
     DisplayValue<Type>(colors, asked_->GetSyscallType(), asked_->Value(decoder, stage), os);
   } else {
     os << colors.red << "(nullptr)" << colors.reset;
+  }
+  return ", ";
+}
+
+template <typename Type, typename FromType>
+const char* SyscallInputOutputIndirect<Type, FromType>::DisplayInline(
+    SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, Stage stage,
+    const char* separator, std::ostream& os) const {
+  os << separator << name();
+  const Colors& colors = dispatcher->colors();
+  DisplayType(colors, syscall_type_, os);
+  const FromType* buffer = buffer_->Content(decoder, stage);
+  if (buffer == nullptr) {
+    os << colors.red << "nullptr" << colors.reset;
+  } else {
+    DisplayValue<Type>(colors, syscall_type_, *reinterpret_cast<const Type*>(buffer), os);
   }
   return ", ";
 }

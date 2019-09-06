@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <ostream>
 
+#include "zircon/system/public/zircon/syscalls/debug.h"
+
 namespace fidlcat {
 
 #define kOneBillion 1'000'000'000L
@@ -46,6 +48,8 @@ enum class SyscallType {
   kUint64Hexa,
   kUint64ArrayDecimal,
   kUint64ArrayHexa,
+  kUint128Hexa,
+  kUint128ArrayHexa,
   kCachePolicy,
   kClock,
   kDuration,
@@ -73,6 +77,7 @@ enum class SyscallType {
   kSystemEventType,
   kSystemPowerctl,
   kThreadState,
+  kThreadStateTopic,
   kTime,
   kUintptr,
   kVaddr,
@@ -129,6 +134,7 @@ void StatusName(const Colors& colors, zx_status_t status, std::ostream& os);
 void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os);
 void SystemPowerctlName(uint32_t powerctl, std::ostream& os);
 void ThreadStateName(uint32_t state, std::ostream& os);
+void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os);
 void TopicName(uint32_t topic, std::ostream& os);
 void VmOptionName(zx_vm_option_t option, std::ostream& os);
 void VmoTypeName(uint32_t type, std::ostream& os);
@@ -240,6 +246,11 @@ inline std::ostream& operator<<(std::ostream& os, const DisplayTime& time) {
   return os;
 }
 
+typedef struct {
+  uint64_t low;
+  uint64_t high;
+} zx_uint128_t;
+
 // This is a copy of zx_packet_guest_mem from zircon/system/public/zircon/syscalls/port.h
 // specialized for AArch64.
 struct zx_packet_guest_mem_aarch64 {
@@ -253,6 +264,9 @@ struct zx_packet_guest_mem_aarch64 {
 };
 using zx_packet_guest_mem_aarch64_t = struct zx_packet_guest_mem_aarch64;
 
+// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=36188): Remove all
+// these copies when zircon will define them.
+
 // This is a copy of zx_packet_guest_mem from zircon/system/public/zircon/syscalls/port.h
 // specialized for X86.
 struct zx_packet_guest_mem_x86 {
@@ -265,6 +279,123 @@ struct zx_packet_guest_mem_x86 {
   uint8_t reserved[7];
 };
 using zx_packet_guest_mem_x86_t = struct zx_packet_guest_mem_x86;
+
+// This is a copy of zx_thread_state_general_regs_t from
+// zircon/system/public/zircon/syscalls/debug.h for __aarch64__.
+typedef struct zx_thread_state_general_regs_aarch64 {
+  uint64_t r[30];
+  uint64_t lr;
+  uint64_t sp;
+  uint64_t pc;
+  uint64_t cpsr;
+  uint64_t tpidr;
+} zx_thread_state_general_regs_aarch64_t;
+
+// This is a copy of zx_thread_state_general_regs_t from
+// zircon/system/public/zircon/syscalls/debug.h for __x86_64__.
+typedef struct zx_thread_state_general_regs_x86 {
+  uint64_t rax;
+  uint64_t rbx;
+  uint64_t rcx;
+  uint64_t rdx;
+  uint64_t rsi;
+  uint64_t rdi;
+  uint64_t rbp;
+  uint64_t rsp;
+  uint64_t r8;
+  uint64_t r9;
+  uint64_t r10;
+  uint64_t r11;
+  uint64_t r12;
+  uint64_t r13;
+  uint64_t r14;
+  uint64_t r15;
+  uint64_t rip;
+  uint64_t rflags;
+  uint64_t fs_base;
+  uint64_t gs_base;
+} zx_thread_state_general_regs_x86_t;
+
+// This is a copy of zx_thread_state_fp_regs_t from
+// zircon/system/public/zircon/syscalls/debug.h for __x86_64__.
+typedef struct zx_thread_state_fp_regs_x86 {
+  uint16_t fcw;  // Control word.
+  uint16_t fsw;  // Status word.
+  uint8_t ftw;   // Tag word.
+  uint8_t reserved;
+  uint16_t fop;  // Opcode.
+  uint64_t fip;  // Instruction pointer.
+  uint64_t fdp;  // Data pointer.
+
+  // The x87/MMX state. For x87 the each "st" entry has the low 80 bits used for the register
+  // contents. For MMX, the low 64 bits are used. The higher bits are unused.
+  __ALIGNED(16)
+  zx_uint128_t st[8];
+} zx_thread_state_fp_regs_x86_t;
+
+// This is a copy of zx_thread_state_vector_regs_t from
+// zircon/system/public/zircon/syscalls/debug.h for __aarch64__.
+typedef struct zx_thread_state_vector_regs_aarch64 {
+  uint32_t fpcr;
+  uint32_t fpsr;
+  zx_uint128_t v[32];
+} zx_thread_state_vector_regs_aarch64_t;
+
+// This is a copy of zx_thread_state_vector_regs_t from
+// zircon/system/public/zircon/syscalls/debug.h for __x86_64__
+typedef struct {
+  uint64_t v[8];
+} zx_thread_state_vector_regs_x86_zmm_t;
+
+typedef struct zx_thread_state_vector_regs_x86 {
+  zx_thread_state_vector_regs_x86_zmm_t zmm[32];
+
+  // AVX-512 opmask registers. Will be 0 unless AVX-512 is supported.
+  uint64_t opmask[8];
+
+  // SIMD control and status register.
+  uint32_t mxcsr;
+} zx_thread_state_vector_regs_x86_t;
+
+// This is a copy of zx_thread_state_debug_regs_t from
+// zircon/system/public/zircon/syscalls/debug.h for __aarch64__.
+
+// ARMv8-A provides 2 to 16 hardware breakpoint registers.
+// The number is obtained by the BRPs field in the EDDFR register.
+#define AARCH64_MAX_HW_BREAKPOINTS 16
+// ARMv8-A provides 2 to 16 watchpoint breakpoint registers.
+// The number is obtained by the WRPs field in the EDDFR register.
+#define AARCH64_MAX_HW_WATCHPOINTS 16
+
+typedef struct {
+  uint32_t dbgbcr;  //  HW Breakpoint Control register.
+  uint64_t dbgbvr;  //  HW Breakpoint Value register.
+} zx_thread_state_debug_regs_aarch64_bp_t;
+
+typedef struct {
+  uint32_t dbgwcr;  // HW Watchpoint Control register.
+  uint64_t dbgwvr;  // HW Watchpoint Value register.
+} zx_thread_state_debug_regs_aarch64_wp_t;
+
+// Value for XZ_THREAD_STATE_DEBUG_REGS for ARM64 platforms.
+typedef struct zx_thread_state_debug_regs_aarch64 {
+  zx_thread_state_debug_regs_aarch64_bp_t hw_bps[AARCH64_MAX_HW_BREAKPOINTS];
+  uint8_t hw_bps_count;
+  zx_thread_state_debug_regs_aarch64_wp_t hw_wps[AARCH64_MAX_HW_WATCHPOINTS];
+  uint8_t hw_wps_count;
+
+  // The esr value since the last exception.
+  uint32_t esr;
+} zx_thread_state_debug_regs_aarch64_t;
+
+// This is a copy of zx_thread_state_debug_regs_t from
+// zircon/system/public/zircon/syscalls/debug.h for __x86_64__
+typedef struct zx_thread_state_debug_regs_x86 {
+  uint64_t dr[4];
+  // DR4 and D5 are not used.
+  uint64_t dr6;  // Status register.
+  uint64_t dr7;  // Control register.
+} zx_thread_state_debug_regs_x86_t;
 
 }  // namespace fidlcat
 

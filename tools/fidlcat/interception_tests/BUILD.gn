@@ -20,6 +20,7 @@ if (current_toolchain == host_toolchain) {
       "port_test.cc",
       "socket_test.cc",
       "system_test.cc",
+      "thread_test.cc",
       "ticks_test.cc",
     ]
 

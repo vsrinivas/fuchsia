@@ -501,6 +501,26 @@ void ThreadStateName(uint32_t state, std::ostream& os) {
   }
 }
 
+#define ThreadStateTopicNameCase(name) \
+  case name:                           \
+    os << #name;                       \
+    return
+
+void ThreadStateTopicName(zx_thread_state_topic_t topic, std::ostream& os) {
+  switch (topic) {
+    ThreadStateTopicNameCase(ZX_THREAD_STATE_GENERAL_REGS);
+    ThreadStateTopicNameCase(ZX_THREAD_STATE_FP_REGS);
+    ThreadStateTopicNameCase(ZX_THREAD_STATE_VECTOR_REGS);
+    ThreadStateTopicNameCase(ZX_THREAD_STATE_DEBUG_REGS);
+    ThreadStateTopicNameCase(ZX_THREAD_STATE_SINGLE_STEP);
+    ThreadStateTopicNameCase(ZX_THREAD_X86_REGISTER_FS);
+    ThreadStateTopicNameCase(ZX_THREAD_X86_REGISTER_GS);
+    default:
+      os << static_cast<uint32_t>(topic);
+      return;
+  }
+}
+
 #define TopicNameCase(name) \
   case name:                \
     os << #name;            \
@@ -674,6 +694,12 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
     case SyscallType::kUint64ArrayHexa:
       os << ":" << colors.green << "uint64[]" << colors.reset << ": ";
       break;
+    case SyscallType::kUint128Hexa:
+      os << ":" << colors.green << "uint128" << colors.reset << ": ";
+      break;
+    case SyscallType::kUint128ArrayHexa:
+      os << ":" << colors.green << "uint128[]" << colors.reset << ": ";
+      break;
     case SyscallType::kCachePolicy:
       os << ":" << colors.green << "zx_cache_policy_t" << colors.reset << ": ";
       break;
@@ -755,6 +781,9 @@ void DisplayType(const Colors& colors, SyscallType type, std::ostream& os) {
       break;
     case SyscallType::kThreadState:
       os << ":" << colors.green << "zx_info_thread_t::state" << colors.reset << ": ";
+      break;
+    case SyscallType::kThreadStateTopic:
+      os << ":" << colors.green << "zx_thread_state_topic_t" << colors.reset << ": ";
       break;
     case SyscallType::kTime:
       os << ":" << colors.green << "time" << colors.reset << ": ";

@@ -359,64 +359,68 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
 }
 
 void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
-  const Colors& colors = dispatcher_->colors();
-  // Displays the returned value.
-  if (dispatcher_->last_displayed_syscall() != this) {
-    // Add a blank line to tell the user that this display is not linked to the
-    // previous displayed lines.
-    os_ << "\n";
-    // Then always display the process info to be able able to know for which thread
-    // we are displaying the output.
-    std::string first_line_header = decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
-                                    std::to_string(decoder->thread()->GetProcess()->GetKoid()) +
-                                    colors.reset + ':' + colors.red +
-                                    std::to_string(decoder->thread_id()) + colors.reset + ' ';
-    os_ << first_line_header << "  -> ";
-  } else {
-    os_ << line_header_ << "  -> ";
-  }
-  switch (decoder->syscall()->return_type()) {
-    case SyscallReturnType::kVoid:
-      break;
-    case SyscallReturnType::kStatus:
-      StatusName(colors, static_cast<zx_status_t>(decoder->syscall_return_value()), os_);
-      break;
-    case SyscallReturnType::kTicks:
-      os_ << colors.green << "ticks" << colors.reset << ": " << colors.blue
-          << static_cast<uint64_t>(decoder->syscall_return_value()) << colors.reset;
-      break;
-    case SyscallReturnType::kTime:
-      os_ << colors.green << "time" << colors.reset << ": "
-          << DisplayTime(colors, static_cast<zx_time_t>(decoder->syscall_return_value()));
-      break;
-    case SyscallReturnType::kUint32:
-      os_ << colors.blue << static_cast<uint32_t>(decoder->syscall_return_value()) << colors.reset;
-      break;
-    case SyscallReturnType::kUint64:
-      os_ << colors.blue << static_cast<uint64_t>(decoder->syscall_return_value()) << colors.reset;
-      break;
-  }
-  // And the inline output arguments (if any).
-  const char* separator = " (";
-  for (const auto& output : decoder->syscall()->outputs()) {
-    if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-        output->ConditionsAreTrue(decoder, Stage::kExit)) {
-      separator = output->DisplayInline(dispatcher_, decoder, Stage::kExit, separator, os_);
+  if (decoder->syscall()->return_type() != SyscallReturnType::kVoid) {
+    const Colors& colors = dispatcher_->colors();
+    // Displays the returned value.
+    if (dispatcher_->last_displayed_syscall() != this) {
+      // Add a blank line to tell the user that this display is not linked to the
+      // previous displayed lines.
+      os_ << "\n";
+      // Then always display the process info to be able able to know for which thread
+      // we are displaying the output.
+      std::string first_line_header =
+          decoder->thread()->GetProcess()->GetName() + ' ' + colors.red +
+          std::to_string(decoder->thread()->GetProcess()->GetKoid()) + colors.reset + ':' +
+          colors.red + std::to_string(decoder->thread_id()) + colors.reset + ' ';
+      os_ << first_line_header << "  -> ";
+    } else {
+      os_ << line_header_ << "  -> ";
     }
-  }
-  if (std::string(" (") != separator) {
-    os_ << ')';
-  }
-  os_ << '\n';
-  // Displays the outline output arguments.
-  for (const auto& output : decoder->syscall()->outputs()) {
-    if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-        output->ConditionsAreTrue(decoder, Stage::kExit)) {
-      output->DisplayOutline(dispatcher_, decoder, Stage::kExit, line_header_, /*tabs=*/2, os_);
+    switch (decoder->syscall()->return_type()) {
+      case SyscallReturnType::kVoid:
+        break;
+      case SyscallReturnType::kStatus:
+        StatusName(colors, static_cast<zx_status_t>(decoder->syscall_return_value()), os_);
+        break;
+      case SyscallReturnType::kTicks:
+        os_ << colors.green << "ticks" << colors.reset << ": " << colors.blue
+            << static_cast<uint64_t>(decoder->syscall_return_value()) << colors.reset;
+        break;
+      case SyscallReturnType::kTime:
+        os_ << colors.green << "time" << colors.reset << ": "
+            << DisplayTime(colors, static_cast<zx_time_t>(decoder->syscall_return_value()));
+        break;
+      case SyscallReturnType::kUint32:
+        os_ << colors.blue << static_cast<uint32_t>(decoder->syscall_return_value())
+            << colors.reset;
+        break;
+      case SyscallReturnType::kUint64:
+        os_ << colors.blue << static_cast<uint64_t>(decoder->syscall_return_value())
+            << colors.reset;
+        break;
     }
-  }
+    // And the inline output arguments (if any).
+    const char* separator = " (";
+    for (const auto& output : decoder->syscall()->outputs()) {
+      if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
+          output->ConditionsAreTrue(decoder, Stage::kExit)) {
+        separator = output->DisplayInline(dispatcher_, decoder, Stage::kExit, separator, os_);
+      }
+    }
+    if (std::string(" (") != separator) {
+      os_ << ')';
+    }
+    os_ << '\n';
+    // Displays the outline output arguments.
+    for (const auto& output : decoder->syscall()->outputs()) {
+      if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
+          output->ConditionsAreTrue(decoder, Stage::kExit)) {
+        output->DisplayOutline(dispatcher_, decoder, Stage::kExit, line_header_, /*tabs=*/2, os_);
+      }
+    }
 
-  dispatcher_->set_last_displayed_syscall(this);
+    dispatcher_->set_last_displayed_syscall(this);
+  }
 
   // Now our job is done, we can destroy the object.
   decoder->Destroy();

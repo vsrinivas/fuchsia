@@ -1560,6 +1560,436 @@ const ZxSystemPowerctlArgX86PowerLimit* ZxSystemPowerctlArgX86PowerLimit::GetCla
   return instance_;
 }
 
+class ZxThreadStateDebugRegsAArch64Bp : public Class<zx_thread_state_debug_regs_aarch64_bp_t> {
+ public:
+  static const ZxThreadStateDebugRegsAArch64Bp* GetClass();
+
+  static uint32_t dbgbcr(const zx_thread_state_debug_regs_aarch64_bp_t* from) {
+    return from->dbgbcr;
+  }
+  static uint64_t dbgbvr(const zx_thread_state_debug_regs_aarch64_bp_t* from) {
+    return from->dbgbvr;
+  }
+
+ private:
+  ZxThreadStateDebugRegsAArch64Bp() : Class("zx_thread_state_debug_regs_aarch64_bp_t") {
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_aarch64_bp_t, uint32_t>>(
+        "dbgbcr", SyscallType::kUint32Hexa, dbgbcr));
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_aarch64_bp_t, uint64_t>>(
+        "dbgbvr", SyscallType::kUint64Hexa, dbgbvr));
+  }
+  ZxThreadStateDebugRegsAArch64Bp(const ZxThreadStateDebugRegsAArch64Bp&) = delete;
+  ZxThreadStateDebugRegsAArch64Bp& operator=(const ZxThreadStateDebugRegsAArch64Bp&) = delete;
+  static ZxThreadStateDebugRegsAArch64Bp* instance_;
+};
+
+ZxThreadStateDebugRegsAArch64Bp* ZxThreadStateDebugRegsAArch64Bp::instance_ = nullptr;
+
+const ZxThreadStateDebugRegsAArch64Bp* ZxThreadStateDebugRegsAArch64Bp::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateDebugRegsAArch64Bp;
+  }
+  return instance_;
+}
+
+class ZxThreadStateDebugRegsAArch64Wp : public Class<zx_thread_state_debug_regs_aarch64_wp_t> {
+ public:
+  static const ZxThreadStateDebugRegsAArch64Wp* GetClass();
+
+  static uint32_t dbgwcr(const zx_thread_state_debug_regs_aarch64_wp_t* from) {
+    return from->dbgwcr;
+  }
+  static uint64_t dbgwvr(const zx_thread_state_debug_regs_aarch64_wp_t* from) {
+    return from->dbgwvr;
+  }
+
+ private:
+  ZxThreadStateDebugRegsAArch64Wp() : Class("zx_thread_state_debug_regs_aarch64_wp_t") {
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_aarch64_wp_t, uint32_t>>(
+        "dbgwcr", SyscallType::kUint32Hexa, dbgwcr));
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_aarch64_wp_t, uint64_t>>(
+        "dbgwvr", SyscallType::kUint64Hexa, dbgwvr));
+  }
+  ZxThreadStateDebugRegsAArch64Wp(const ZxThreadStateDebugRegsAArch64Wp&) = delete;
+  ZxThreadStateDebugRegsAArch64Wp& operator=(const ZxThreadStateDebugRegsAArch64Wp&) = delete;
+  static ZxThreadStateDebugRegsAArch64Wp* instance_;
+};
+
+ZxThreadStateDebugRegsAArch64Wp* ZxThreadStateDebugRegsAArch64Wp::instance_ = nullptr;
+
+const ZxThreadStateDebugRegsAArch64Wp* ZxThreadStateDebugRegsAArch64Wp::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateDebugRegsAArch64Wp;
+  }
+  return instance_;
+}
+
+class ZxThreadStateDebugRegsAArch64 : public Class<zx_thread_state_debug_regs_aarch64_t> {
+ public:
+  static const ZxThreadStateDebugRegsAArch64* GetClass();
+
+  static std::pair<const zx_thread_state_debug_regs_aarch64_bp_t*, int> hw_bps(
+      const zx_thread_state_debug_regs_aarch64_t* from) {
+    return std::make_pair(
+        reinterpret_cast<const zx_thread_state_debug_regs_aarch64_bp_t*>(from->hw_bps),
+        sizeof(from->hw_bps) / sizeof(from->hw_bps[0]));
+  }
+  static uint8_t hw_bps_count(const zx_thread_state_debug_regs_aarch64_t* from) {
+    return from->hw_bps_count;
+  }
+  static std::pair<const zx_thread_state_debug_regs_aarch64_wp_t*, int> hw_wps(
+      const zx_thread_state_debug_regs_aarch64_t* from) {
+    return std::make_pair(
+        reinterpret_cast<const zx_thread_state_debug_regs_aarch64_wp_t*>(from->hw_wps),
+        sizeof(from->hw_wps) / sizeof(from->hw_wps[0]));
+  }
+  static uint8_t hw_wps_count(const zx_thread_state_debug_regs_aarch64_t* from) {
+    return from->hw_wps_count;
+  }
+  static uint32_t esr(const zx_thread_state_debug_regs_aarch64_t* from) { return from->esr; }
+
+ private:
+  ZxThreadStateDebugRegsAArch64() : Class("zx_thread_state_debug_regs_aarch64_t") {
+    AddField(std::make_unique<ArrayClassField<zx_thread_state_debug_regs_aarch64_t,
+                                              zx_thread_state_debug_regs_aarch64_bp_t>>(
+        "hw_bps", hw_bps, ZxThreadStateDebugRegsAArch64Bp::GetClass()));
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_aarch64_t, uint8_t>>(
+        "hw_bps_count", SyscallType::kUint8Hexa, hw_bps_count));
+    AddField(std::make_unique<ArrayClassField<zx_thread_state_debug_regs_aarch64_t,
+                                              zx_thread_state_debug_regs_aarch64_wp_t>>(
+        "hw_wps", hw_wps, ZxThreadStateDebugRegsAArch64Wp::GetClass()));
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_aarch64_t, uint8_t>>(
+        "hw_wps_count", SyscallType::kUint8Hexa, hw_wps_count));
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_aarch64_t, uint32_t>>(
+        "esr", SyscallType::kUint32Hexa, esr));
+  }
+  ZxThreadStateDebugRegsAArch64(const ZxThreadStateDebugRegsAArch64&) = delete;
+  ZxThreadStateDebugRegsAArch64& operator=(const ZxThreadStateDebugRegsAArch64&) = delete;
+  static ZxThreadStateDebugRegsAArch64* instance_;
+};
+
+ZxThreadStateDebugRegsAArch64* ZxThreadStateDebugRegsAArch64::instance_ = nullptr;
+
+const ZxThreadStateDebugRegsAArch64* ZxThreadStateDebugRegsAArch64::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateDebugRegsAArch64;
+  }
+  return instance_;
+}
+
+class ZxThreadStateDebugRegsX86 : public Class<zx_thread_state_debug_regs_x86_t> {
+ public:
+  static const ZxThreadStateDebugRegsX86* GetClass();
+
+  static std::pair<const uint64_t*, int> dr(const zx_thread_state_debug_regs_x86_t* from) {
+    return std::make_pair(reinterpret_cast<const uint64_t*>(from->dr),
+                          sizeof(from->dr) / sizeof(uint64_t));
+  }
+  static uint64_t dr6(const zx_thread_state_debug_regs_x86_t* from) { return from->dr6; }
+  static uint64_t dr7(const zx_thread_state_debug_regs_x86_t* from) { return from->dr7; }
+
+ private:
+  ZxThreadStateDebugRegsX86() : Class("zx_thread_state_debug_regs_x86_t") {
+    AddField(std::make_unique<
+             ClassField<zx_thread_state_debug_regs_x86_t, std::pair<const uint64_t*, int>>>(
+        "dr", SyscallType::kUint64ArrayHexa, dr));
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_x86_t, uint64_t>>(
+        "dr6", SyscallType::kUint64Hexa, dr6));
+    AddField(std::make_unique<ClassField<zx_thread_state_debug_regs_x86_t, uint64_t>>(
+        "dr7", SyscallType::kUint64Hexa, dr7));
+  }
+  ZxThreadStateDebugRegsX86(const ZxThreadStateDebugRegsX86&) = delete;
+  ZxThreadStateDebugRegsX86& operator=(const ZxThreadStateDebugRegsX86&) = delete;
+  static ZxThreadStateDebugRegsX86* instance_;
+};
+
+ZxThreadStateDebugRegsX86* ZxThreadStateDebugRegsX86::instance_ = nullptr;
+
+const ZxThreadStateDebugRegsX86* ZxThreadStateDebugRegsX86::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateDebugRegsX86;
+  }
+  return instance_;
+}
+
+class ZxThreadStateGeneralRegsAArch64 : public Class<zx_thread_state_general_regs_aarch64_t> {
+ public:
+  static const ZxThreadStateGeneralRegsAArch64* GetClass();
+
+  static std::pair<const uint64_t*, int> r(const zx_thread_state_general_regs_aarch64_t* from) {
+    return std::make_pair(reinterpret_cast<const uint64_t*>(from->r),
+                          sizeof(from->r) / sizeof(uint64_t));
+  }
+  static uint64_t lr(const zx_thread_state_general_regs_aarch64_t* from) { return from->lr; }
+  static uint64_t sp(const zx_thread_state_general_regs_aarch64_t* from) { return from->sp; }
+  static uint64_t pc(const zx_thread_state_general_regs_aarch64_t* from) { return from->pc; }
+  static uint64_t cpsr(const zx_thread_state_general_regs_aarch64_t* from) { return from->cpsr; }
+  static uint64_t tpidr(const zx_thread_state_general_regs_aarch64_t* from) { return from->tpidr; }
+
+ private:
+  ZxThreadStateGeneralRegsAArch64() : Class("zx_thread_state_general_regs_aarch64_t") {
+    AddField(std::make_unique<
+             ClassField<zx_thread_state_general_regs_aarch64_t, std::pair<const uint64_t*, int>>>(
+        "r", SyscallType::kUint64ArrayHexa, r));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_aarch64_t, uint64_t>>(
+        "lr", SyscallType::kUint64Hexa, lr));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_aarch64_t, uint64_t>>(
+        "sp", SyscallType::kUint64Hexa, sp));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_aarch64_t, uint64_t>>(
+        "pc", SyscallType::kUint64Hexa, pc));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_aarch64_t, uint64_t>>(
+        "cpsr", SyscallType::kUint64Hexa, cpsr));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_aarch64_t, uint64_t>>(
+        "tpidr", SyscallType::kUint64Hexa, tpidr));
+  }
+  ZxThreadStateGeneralRegsAArch64(const ZxThreadStateGeneralRegsAArch64&) = delete;
+  ZxThreadStateGeneralRegsAArch64& operator=(const ZxThreadStateGeneralRegsAArch64&) = delete;
+  static ZxThreadStateGeneralRegsAArch64* instance_;
+};
+
+ZxThreadStateGeneralRegsAArch64* ZxThreadStateGeneralRegsAArch64::instance_ = nullptr;
+
+const ZxThreadStateGeneralRegsAArch64* ZxThreadStateGeneralRegsAArch64::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateGeneralRegsAArch64;
+  }
+  return instance_;
+}
+
+class ZxThreadStateGeneralRegsX86 : public Class<zx_thread_state_general_regs_x86_t> {
+ public:
+  static const ZxThreadStateGeneralRegsX86* GetClass();
+
+  static uint64_t rax(const zx_thread_state_general_regs_x86_t* from) { return from->rax; }
+  static uint64_t rbx(const zx_thread_state_general_regs_x86_t* from) { return from->rbx; }
+  static uint64_t rcx(const zx_thread_state_general_regs_x86_t* from) { return from->rcx; }
+  static uint64_t rdx(const zx_thread_state_general_regs_x86_t* from) { return from->rdx; }
+  static uint64_t rsi(const zx_thread_state_general_regs_x86_t* from) { return from->rsi; }
+  static uint64_t rdi(const zx_thread_state_general_regs_x86_t* from) { return from->rdi; }
+  static uint64_t rbp(const zx_thread_state_general_regs_x86_t* from) { return from->rbp; }
+  static uint64_t rsp(const zx_thread_state_general_regs_x86_t* from) { return from->rsp; }
+  static uint64_t r8(const zx_thread_state_general_regs_x86_t* from) { return from->r8; }
+  static uint64_t r9(const zx_thread_state_general_regs_x86_t* from) { return from->r9; }
+  static uint64_t r10(const zx_thread_state_general_regs_x86_t* from) { return from->r10; }
+  static uint64_t r11(const zx_thread_state_general_regs_x86_t* from) { return from->r11; }
+  static uint64_t r12(const zx_thread_state_general_regs_x86_t* from) { return from->r12; }
+  static uint64_t r13(const zx_thread_state_general_regs_x86_t* from) { return from->r13; }
+  static uint64_t r14(const zx_thread_state_general_regs_x86_t* from) { return from->r14; }
+  static uint64_t r15(const zx_thread_state_general_regs_x86_t* from) { return from->r15; }
+  static uint64_t rip(const zx_thread_state_general_regs_x86_t* from) { return from->rip; }
+  static uint64_t rflags(const zx_thread_state_general_regs_x86_t* from) { return from->rflags; }
+  static uint64_t fs_base(const zx_thread_state_general_regs_x86_t* from) { return from->fs_base; }
+  static uint64_t gs_base(const zx_thread_state_general_regs_x86_t* from) { return from->gs_base; }
+
+ private:
+  ZxThreadStateGeneralRegsX86() : Class("zx_thread_state_general_regs_x86_t") {
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rax", SyscallType::kUint64Hexa, rax));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rbx", SyscallType::kUint64Hexa, rbx));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rcx", SyscallType::kUint64Hexa, rcx));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rdx", SyscallType::kUint64Hexa, rdx));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rsi", SyscallType::kUint64Hexa, rsi));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rdi", SyscallType::kUint64Hexa, rdi));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rbp", SyscallType::kUint64Hexa, rbp));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rsp", SyscallType::kUint64Hexa, rsp));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r8", SyscallType::kUint64Hexa, r8));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r9", SyscallType::kUint64Hexa, r9));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r10", SyscallType::kUint64Hexa, r10));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r11", SyscallType::kUint64Hexa, r11));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r12", SyscallType::kUint64Hexa, r12));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r13", SyscallType::kUint64Hexa, r13));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r14", SyscallType::kUint64Hexa, r14));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "r15", SyscallType::kUint64Hexa, r15));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rip", SyscallType::kUint64Hexa, rip));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "rflags", SyscallType::kUint64Hexa, rflags));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "fs_base", SyscallType::kUint64Hexa, fs_base));
+    AddField(std::make_unique<ClassField<zx_thread_state_general_regs_x86_t, uint64_t>>(
+        "gs_base", SyscallType::kUint64Hexa, gs_base));
+  }
+  ZxThreadStateGeneralRegsX86(const ZxThreadStateGeneralRegsX86&) = delete;
+  ZxThreadStateGeneralRegsX86& operator=(const ZxThreadStateGeneralRegsX86&) = delete;
+  static ZxThreadStateGeneralRegsX86* instance_;
+};
+
+ZxThreadStateGeneralRegsX86* ZxThreadStateGeneralRegsX86::instance_ = nullptr;
+
+const ZxThreadStateGeneralRegsX86* ZxThreadStateGeneralRegsX86::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateGeneralRegsX86;
+  }
+  return instance_;
+}
+
+class ZxThreadStateFpRegsX86 : public Class<zx_thread_state_fp_regs_x86_t> {
+ public:
+  static const ZxThreadStateFpRegsX86* GetClass();
+
+  static uint16_t fcw(const zx_thread_state_fp_regs_x86_t* from) { return from->fcw; }
+  static uint16_t fsw(const zx_thread_state_fp_regs_x86_t* from) { return from->fsw; }
+  static uint8_t ftw(const zx_thread_state_fp_regs_x86_t* from) { return from->ftw; }
+  static uint16_t fop(const zx_thread_state_fp_regs_x86_t* from) { return from->fop; }
+  static uint64_t fip(const zx_thread_state_fp_regs_x86_t* from) { return from->fip; }
+  static uint64_t fdp(const zx_thread_state_fp_regs_x86_t* from) { return from->fdp; }
+  static std::pair<const zx_uint128_t*, int> st(const zx_thread_state_fp_regs_x86_t* from) {
+    return std::make_pair(reinterpret_cast<const zx_uint128_t*>(from->st),
+                          sizeof(from->st) / sizeof(from->st[0]));
+  }
+
+ private:
+  ZxThreadStateFpRegsX86() : Class("zx_thread_state_fp_regs_x86_t") {
+    AddField(std::make_unique<ClassField<zx_thread_state_fp_regs_x86_t, uint16_t>>(
+        "fcw", SyscallType::kUint16Hexa, fcw));
+    AddField(std::make_unique<ClassField<zx_thread_state_fp_regs_x86_t, uint16_t>>(
+        "fsw", SyscallType::kUint16Hexa, fsw));
+    AddField(std::make_unique<ClassField<zx_thread_state_fp_regs_x86_t, uint8_t>>(
+        "ftw", SyscallType::kUint8Hexa, ftw));
+    AddField(std::make_unique<ClassField<zx_thread_state_fp_regs_x86_t, uint16_t>>(
+        "fop", SyscallType::kUint16Hexa, fop));
+    AddField(std::make_unique<ClassField<zx_thread_state_fp_regs_x86_t, uint64_t>>(
+        "fip", SyscallType::kUint64Hexa, fip));
+    AddField(std::make_unique<ClassField<zx_thread_state_fp_regs_x86_t, uint64_t>>(
+        "fdp", SyscallType::kUint64Hexa, fdp));
+    AddField(std::make_unique<
+             ClassField<zx_thread_state_fp_regs_x86_t, std::pair<const zx_uint128_t*, int>>>(
+        "st", SyscallType::kUint128ArrayHexa, st));
+  }
+  ZxThreadStateFpRegsX86(const ZxThreadStateFpRegsX86&) = delete;
+  ZxThreadStateFpRegsX86& operator=(const ZxThreadStateFpRegsX86&) = delete;
+  static ZxThreadStateFpRegsX86* instance_;
+};
+
+ZxThreadStateFpRegsX86* ZxThreadStateFpRegsX86::instance_ = nullptr;
+
+const ZxThreadStateFpRegsX86* ZxThreadStateFpRegsX86::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateFpRegsX86;
+  }
+  return instance_;
+}
+
+class ZxThreadStateVectorRegsAArch64 : public Class<zx_thread_state_vector_regs_aarch64_t> {
+ public:
+  static const ZxThreadStateVectorRegsAArch64* GetClass();
+
+  static uint32_t fpcr(const zx_thread_state_vector_regs_aarch64_t* from) { return from->fpcr; }
+  static uint32_t fpsr(const zx_thread_state_vector_regs_aarch64_t* from) { return from->fpsr; }
+  static std::pair<const zx_uint128_t*, int> v(const zx_thread_state_vector_regs_aarch64_t* from) {
+    return std::make_pair(reinterpret_cast<const zx_uint128_t*>(from->v),
+                          sizeof(from->v) / sizeof(from->v[0]));
+  }
+
+ private:
+  ZxThreadStateVectorRegsAArch64() : Class("zx_thread_state_vector_regs_aarch64_t") {
+    AddField(std::make_unique<ClassField<zx_thread_state_vector_regs_aarch64_t, uint32_t>>(
+        "fpcr", SyscallType::kUint32Hexa, fpcr));
+    AddField(std::make_unique<ClassField<zx_thread_state_vector_regs_aarch64_t, uint32_t>>(
+        "fpsr", SyscallType::kUint32Hexa, fpsr));
+    AddField(
+        std::make_unique<
+            ClassField<zx_thread_state_vector_regs_aarch64_t, std::pair<const zx_uint128_t*, int>>>(
+            "v", SyscallType::kUint128ArrayHexa, v));
+  }
+  ZxThreadStateVectorRegsAArch64(const ZxThreadStateVectorRegsAArch64&) = delete;
+  ZxThreadStateVectorRegsAArch64& operator=(const ZxThreadStateVectorRegsAArch64&) = delete;
+  static ZxThreadStateVectorRegsAArch64* instance_;
+};
+
+ZxThreadStateVectorRegsAArch64* ZxThreadStateVectorRegsAArch64::instance_ = nullptr;
+
+const ZxThreadStateVectorRegsAArch64* ZxThreadStateVectorRegsAArch64::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateVectorRegsAArch64;
+  }
+  return instance_;
+}
+
+class ZxThreadStateVectorRegsX86Zmm : public Class<zx_thread_state_vector_regs_x86_zmm_t> {
+ public:
+  static const ZxThreadStateVectorRegsX86Zmm* GetClass();
+
+  static std::pair<const uint64_t*, int> v(const zx_thread_state_vector_regs_x86_zmm_t* from) {
+    return std::make_pair(reinterpret_cast<const uint64_t*>(from->v),
+                          sizeof(from->v) / sizeof(from->v[0]));
+  }
+
+ private:
+  ZxThreadStateVectorRegsX86Zmm() : Class("zx_thread_state_vector_regs_x86_zmm_t") {
+    AddField(std::make_unique<
+             ClassField<zx_thread_state_vector_regs_x86_zmm_t, std::pair<const uint64_t*, int>>>(
+        "v", SyscallType::kUint64ArrayHexa, v));
+  }
+  ZxThreadStateVectorRegsX86Zmm(const ZxThreadStateVectorRegsX86Zmm&) = delete;
+  ZxThreadStateVectorRegsX86Zmm& operator=(const ZxThreadStateVectorRegsX86Zmm&) = delete;
+  static ZxThreadStateVectorRegsX86Zmm* instance_;
+};
+
+ZxThreadStateVectorRegsX86Zmm* ZxThreadStateVectorRegsX86Zmm::instance_ = nullptr;
+
+const ZxThreadStateVectorRegsX86Zmm* ZxThreadStateVectorRegsX86Zmm::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateVectorRegsX86Zmm;
+  }
+  return instance_;
+}
+
+class ZxThreadStateVectorRegsX86 : public Class<zx_thread_state_vector_regs_x86_t> {
+ public:
+  static const ZxThreadStateVectorRegsX86* GetClass();
+
+  static std::pair<const zx_thread_state_vector_regs_x86_zmm_t*, int> zmm(
+      const zx_thread_state_vector_regs_x86_t* from) {
+    return std::make_pair(reinterpret_cast<const zx_thread_state_vector_regs_x86_zmm_t*>(from->zmm),
+                          sizeof(from->zmm) / sizeof(from->zmm[0]));
+  }
+  static std::pair<const uint64_t*, int> opmask(const zx_thread_state_vector_regs_x86_t* from) {
+    return std::make_pair(reinterpret_cast<const uint64_t*>(from->opmask),
+                          sizeof(from->opmask) / sizeof(from->opmask[0]));
+  }
+  static uint32_t mxcsr(const zx_thread_state_vector_regs_x86_t* from) { return from->mxcsr; }
+
+ private:
+  ZxThreadStateVectorRegsX86() : Class("zx_thread_state_vector_regs_x86_t") {
+    AddField(std::make_unique<ArrayClassField<zx_thread_state_vector_regs_x86_t,
+                                              zx_thread_state_vector_regs_x86_zmm_t>>(
+        "zmm", zmm, ZxThreadStateVectorRegsX86Zmm::GetClass()));
+    AddField(std::make_unique<
+             ClassField<zx_thread_state_vector_regs_x86_t, std::pair<const uint64_t*, int>>>(
+        "opmask", SyscallType::kUint64ArrayHexa, opmask));
+    AddField(std::make_unique<ClassField<zx_thread_state_vector_regs_x86_t, uint32_t>>(
+        "mxcsr", SyscallType::kUint32Hexa, mxcsr));
+  }
+  ZxThreadStateVectorRegsX86(const ZxThreadStateVectorRegsX86&) = delete;
+  ZxThreadStateVectorRegsX86& operator=(const ZxThreadStateVectorRegsX86&) = delete;
+  static ZxThreadStateVectorRegsX86* instance_;
+};
+
+ZxThreadStateVectorRegsX86* ZxThreadStateVectorRegsX86::instance_ = nullptr;
+
+const ZxThreadStateVectorRegsX86* ZxThreadStateVectorRegsX86::GetClass() {
+  if (instance_ == nullptr) {
+    instance_ = new ZxThreadStateVectorRegsX86;
+  }
+  return instance_;
+}
+
 class ZxWaitItem : public Class<zx_wait_item_t> {
  public:
   static const ZxWaitItem* GetClass();
@@ -2316,6 +2746,215 @@ void SyscallDecoderDispatcher::Populate() {
     zx_socket_shutdown->Input<uint32_t>("options",
                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
   }
+
+  { Add("zx_thread_exit", SyscallReturnType::kVoid); }
+
+  {
+    Syscall* zx_thread_create = Add("zx_thread_create", SyscallReturnType::kStatus);
+    // Arguments
+    auto process = zx_thread_create->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto name = zx_thread_create->PointerArgument<char>(SyscallType::kChar);
+    auto name_size = zx_thread_create->Argument<size_t>(SyscallType::kSize);
+    auto options = zx_thread_create->Argument<uint32_t>(SyscallType::kUint32);
+    auto out = zx_thread_create->PointerArgument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_thread_create->Input<zx_handle_t>("process",
+                                         std::make_unique<ArgumentAccess<zx_handle_t>>(process));
+    zx_thread_create->InputString("name", std::make_unique<ArgumentAccess<char>>(name),
+                                  std::make_unique<ArgumentAccess<size_t>>(name_size));
+    zx_thread_create->Input<uint32_t>("options",
+                                      std::make_unique<ArgumentAccess<uint32_t>>(options));
+    // Outputs
+    zx_thread_create->Output<zx_handle_t>(ZX_OK, "out",
+                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+  }
+
+  {
+    Syscall* zx_thread_start = Add("zx_thread_start", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_thread_start->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto thread_entry = zx_thread_start->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto stack = zx_thread_start->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    auto arg1 = zx_thread_start->Argument<uintptr_t>(SyscallType::kUintptr);
+    auto arg2 = zx_thread_start->Argument<uintptr_t>(SyscallType::kUintptr);
+    // Inputs
+    zx_thread_start->Input<zx_handle_t>("handle",
+                                        std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_thread_start->Input<zx_vaddr_t>("thread_entry",
+                                       std::make_unique<ArgumentAccess<zx_vaddr_t>>(thread_entry));
+    zx_thread_start->Input<zx_vaddr_t>("stack",
+                                       std::make_unique<ArgumentAccess<zx_vaddr_t>>(stack));
+    zx_thread_start->Input<uintptr_t>("arg1", std::make_unique<ArgumentAccess<uintptr_t>>(arg1));
+    zx_thread_start->Input<uintptr_t>("arg2", std::make_unique<ArgumentAccess<uintptr_t>>(arg2));
+  }
+
+  {
+    Syscall* zx_thread_read_state = Add("zx_thread_read_state", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_thread_read_state->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kind = zx_thread_read_state->Argument<uint32_t>(SyscallType::kThreadStateTopic);
+    auto buffer = zx_thread_read_state->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto buffer_size = zx_thread_read_state->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_thread_read_state->Input<zx_handle_t>("handle",
+                                             std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_thread_read_state->Input<uint32_t>("kind", std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    zx_thread_read_state->Input<size_t>("buffer_size",
+                                        std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    // Outputs
+    zx_thread_read_state
+        ->OutputObject<zx_thread_state_general_regs_aarch64_t>(
+            ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateGeneralRegsAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_GENERAL_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_thread_read_state
+        ->OutputObject<zx_thread_state_general_regs_x86_t>(
+            ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateGeneralRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_GENERAL_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_read_state
+        ->OutputObject<zx_thread_state_fp_regs_x86_t>(
+            ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateFpRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_FP_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_read_state
+        ->OutputObject<zx_thread_state_vector_regs_aarch64_t>(
+            ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateVectorRegsAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_VECTOR_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_thread_read_state
+        ->OutputObject<zx_thread_state_vector_regs_x86_t>(
+            ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateVectorRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_VECTOR_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_read_state
+        ->OutputObject<zx_thread_state_debug_regs_aarch64_t>(
+            ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateDebugRegsAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_DEBUG_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_thread_read_state
+        ->OutputObject<zx_thread_state_debug_regs_x86_t>(
+            ZX_OK, "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateDebugRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_DEBUG_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_read_state
+        ->OutputIndirect<zx_thread_state_single_step_t, uint8_t>(
+            ZX_OK, "single_step", SyscallType::kUint32,
+            std::make_unique<ArgumentAccess<uint8_t>>(buffer))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_SINGLE_STEP);
+    zx_thread_read_state
+        ->OutputIndirect<zx_thread_x86_register_fs_t, uint8_t>(
+            ZX_OK, "reg", SyscallType::kUint64Hexa,
+            std::make_unique<ArgumentAccess<uint8_t>>(buffer))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_X86_REGISTER_FS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_read_state
+        ->OutputIndirect<zx_thread_x86_register_gs_t, uint8_t>(
+            ZX_OK, "reg", SyscallType::kUint64Hexa,
+            std::make_unique<ArgumentAccess<uint8_t>>(buffer))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_X86_REGISTER_GS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+  }
+
+  {
+    Syscall* zx_thread_write_state = Add("zx_thread_write_state", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_thread_write_state->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto kind = zx_thread_write_state->Argument<uint32_t>(SyscallType::kThreadStateTopic);
+    auto buffer = zx_thread_write_state->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto buffer_size = zx_thread_write_state->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_thread_write_state->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_thread_write_state->Input<uint32_t>("kind",
+                                           std::make_unique<ArgumentAccess<uint32_t>>(kind));
+    zx_thread_write_state->Input<size_t>("buffer_size",
+                                         std::make_unique<ArgumentAccess<size_t>>(buffer_size));
+    zx_thread_write_state
+        ->InputObject<zx_thread_state_general_regs_aarch64_t>(
+            "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateGeneralRegsAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_GENERAL_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_thread_write_state
+        ->InputObject<zx_thread_state_general_regs_x86_t>(
+            "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateGeneralRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_GENERAL_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_write_state
+        ->InputObject<zx_thread_state_fp_regs_x86_t>(
+            "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateFpRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_FP_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_write_state
+        ->InputObject<zx_thread_state_vector_regs_aarch64_t>(
+            "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateVectorRegsAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_VECTOR_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_thread_write_state
+        ->InputObject<zx_thread_state_vector_regs_x86_t>(
+            "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateVectorRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_VECTOR_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_write_state
+        ->InputObject<zx_thread_state_debug_regs_aarch64_t>(
+            "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateDebugRegsAArch64::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_DEBUG_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kArm64);
+    zx_thread_write_state
+        ->InputObject<zx_thread_state_debug_regs_x86_t>(
+            "regs", std::make_unique<ArgumentAccess<uint8_t>>(buffer),
+            ZxThreadStateDebugRegsX86::GetClass())
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_DEBUG_REGS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_write_state
+        ->InputIndirect<zx_thread_state_single_step_t, uint8_t>(
+            "single_step", SyscallType::kUint32, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_STATE_SINGLE_STEP);
+    zx_thread_write_state
+        ->InputIndirect<zx_thread_x86_register_fs_t, uint8_t>(
+            "reg", SyscallType::kUint64Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_X86_REGISTER_FS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+    zx_thread_write_state
+        ->InputIndirect<zx_thread_x86_register_gs_t, uint8_t>(
+            "reg", SyscallType::kUint64Hexa, std::make_unique<ArgumentAccess<uint8_t>>(buffer))
+        ->DisplayIfEqual<uint32_t>(std::make_unique<ArgumentAccess<uint32_t>>(kind),
+                                   ZX_THREAD_X86_REGISTER_GS)
+        ->DisplayIfArch(debug_ipc::Arch::kX64);
+  }
+
   {
     Syscall* zx_port_create = Add("zx_port_create", SyscallReturnType::kStatus);
     // Arguments

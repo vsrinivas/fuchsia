@@ -127,6 +127,23 @@ void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
   ASSERT_EQ(expected, result_.str());
 }
 
+void InterceptionWorkflowTest::PerformNoReturnDisplayTest(const char* syscall_name,
+                                                          std::unique_ptr<SystemCallTest> syscall,
+                                                          const char* expected) {
+  ProcessController controller(this, session(), loop());
+  controller.Initialize(session(),
+                        std::make_unique<SyscallDisplayDispatcherTest>(
+                            nullptr, decode_options_, display_options_, result_, &controller),
+                        syscall_name);
+
+  data_.set_syscall(std::move(syscall));
+  data_.load_syscall_data();
+
+  TriggerSyscallBreakpoint(kFirstPid, kFirstThreadKoid);
+
+  ASSERT_EQ(expected, result_.str());
+}
+
 void InterceptionWorkflowTest::PerformTest(const char* syscall_name,
                                            std::unique_ptr<SystemCallTest> syscall1,
                                            std::unique_ptr<SystemCallTest> syscall2,
