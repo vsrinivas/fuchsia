@@ -35,8 +35,6 @@
  *****************************************************************************/
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
 #include <threads.h>
@@ -44,6 +42,9 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <ddk/debug.h>
+#include <ddk/driver.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"
