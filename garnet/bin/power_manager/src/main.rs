@@ -229,7 +229,7 @@ impl BatteryInfoHelper {
 
             // level percent
             self.battery_info.level_percent =
-                (bi.remaining_capacity * 100) as f32 / bi.last_full_capacity as f32;
+                (bi.remaining_capacity.saturating_mul(100)) as f32 / bi.last_full_capacity as f32;
 
             // level_status
             if power_info.state & hpower::POWER_STATE_CRITICAL != 0 {
@@ -247,10 +247,11 @@ impl BatteryInfoHelper {
 
             if bi.present_rate < 0 {
                 // discharging
-                let remaining_hours = bi.remaining_capacity as f32 / (bi.present_rate * -1) as f32;
+                let remaining_hours =
+                    bi.remaining_capacity as f32 / (bi.present_rate.saturating_mul(-1)) as f32;
                 self.battery_info.time_remaining =
                     TimeRemainingWrapper(fpower::TimeRemaining::BatteryLife(
-                        remaining_hours as i64 * nanos_in_one_hour.into_nanos(),
+                        (remaining_hours as i64).saturating_mul(nanos_in_one_hour.into_nanos()),
                     ));
             } else {
                 // charging
@@ -258,7 +259,7 @@ impl BatteryInfoHelper {
                     / (bi.present_rate) as f32;
                 self.battery_info.time_remaining =
                     TimeRemainingWrapper(fpower::TimeRemaining::FullCharge(
-                        remaining_hours as i64 * nanos_in_one_hour.into_nanos(),
+                        (remaining_hours as i64).saturating_mul(nanos_in_one_hour.into_nanos()),
                     ));
             }
 
@@ -607,5 +608,21 @@ mod tests {
         want.time_remaining = TimeRemainingWrapper(fpower::TimeRemaining::FullCharge(0));
         let _ = bsh.update_battery_info(power_info.clone(), Some(battery_info.clone()));
         check_status(&bsh.battery_info, &want, true, 9);
+
+        // state: ac powered/charging with extreme values (check overflow)
+        power_info.state = 0x5; // ONLINE | CHARGING
+        battery_info.last_full_capacity = u32::max_value();
+        battery_info.remaining_capacity = u32::min_value();
+        battery_info.present_rate = 1;
+        let mut want = bsh.get_battery_info_copy();
+        want.status = fpower::BatteryStatus::Ok;
+        want.charge_status = fpower::ChargeStatus::Charging;
+        want.charge_source = fpower::ChargeSource::AcAdapter;
+        want.level_status = fpower::LevelStatus::Low;
+        want.level_percent = 0.0;
+        want.time_remaining =
+            TimeRemainingWrapper(fpower::TimeRemaining::FullCharge(i64::max_value()));
+        let _ = bsh.update_battery_info(power_info.clone(), Some(battery_info.clone()));
+        check_status(&bsh.battery_info, &want, true, 10);
     }
 }
