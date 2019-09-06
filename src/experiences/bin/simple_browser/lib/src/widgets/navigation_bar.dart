@@ -7,6 +7,8 @@ import '../blocs/webpage_bloc.dart';
 import 'history_buttons.dart';
 import 'navigation_field.dart';
 
+const _kNavbarHeight = 24.0;
+
 enum _LayoutId { historyButtons, url, addTabButton }
 
 class NavigationBar extends StatelessWidget {
@@ -18,7 +20,7 @@ class NavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
         child: SizedBox(
-          height: 16.0,
+          height: _kNavbarHeight,
           child: Stack(
             children: <Widget>[
               Positioned.fill(child: _buildWidgets(context)),
@@ -81,10 +83,7 @@ class NavigationBar extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 '+',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Theme.of(context).primaryColor,
-                ),
+                style: TextStyle(color: Theme.of(context).primaryColor),
               ),
             ),
           ),
@@ -125,7 +124,7 @@ class _LayoutDelegate extends MultiChildLayoutDelegate {
     positionChild(
       _LayoutId.url,
       Offset(
-        (size.width - urlSize.width) * 0.5,
+        historyButtonsSize.width,
         (size.height - urlSize.height) * 0.5,
       ),
     );

@@ -13,6 +13,7 @@ import 'src/widgets/tabs_widget.dart';
 const _kBackgroundColor = Color(0xFFE5E5E5);
 const _kForegroundColor = Color(0xFF191919);
 const _kSelectionColor = Color(0x26191919);
+const _kTextStyle = TextStyle(color: _kForegroundColor, fontSize: 14.0);
 
 class App extends StatelessWidget {
   final TabsBloc<WebPageBloc> tabsBloc;
@@ -32,8 +33,8 @@ class App extends StatelessWidget {
         canvasColor: _kBackgroundColor,
         accentColor: _kForegroundColor,
         textTheme: TextTheme(
-          body1: TextStyle(color: _kForegroundColor),
-          subhead: TextStyle(color: _kForegroundColor),
+          body1: _kTextStyle,
+          subhead: _kTextStyle,
         ),
       ),
       title: 'Browser',

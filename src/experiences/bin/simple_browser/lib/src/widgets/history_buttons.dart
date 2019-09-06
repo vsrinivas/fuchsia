@@ -9,7 +9,6 @@ import '../models/webpage_action.dart';
 const _kEnabledOpacity = 1.0;
 const _kDisabledOpacity = 0.54;
 const _kPadding = EdgeInsets.symmetric(horizontal: 4.0);
-const _kTextStyle = TextStyle(fontSize: 11);
 
 class HistoryButtons extends StatelessWidget {
   const HistoryButtons({@required this.bloc});
@@ -56,10 +55,7 @@ class _HistoryButton extends StatelessWidget {
           child: Center(
             child: Opacity(
               opacity: isEnabled ? _kEnabledOpacity : _kDisabledOpacity,
-              child: Text(
-                title,
-                style: _kTextStyle,
-              ),
+              child: Text(title),
             ),
           ),
         ),

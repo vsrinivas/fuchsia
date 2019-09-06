@@ -7,7 +7,7 @@ import '../blocs/tabs_bloc.dart';
 import '../blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
 
-const double _kTabBarHeight = 16.0;
+const double _kTabBarHeight = 24.0;
 
 class TabsWidget extends StatelessWidget {
   final TabsBloc<WebPageBloc> bloc;
@@ -72,7 +72,6 @@ class TabsWidget extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 11.0,
                     color: selected
                         ? Theme.of(context).accentColor
                         : Theme.of(context).primaryColor,
@@ -94,7 +93,6 @@ class TabsWidget extends StatelessWidget {
                       child: Text(
                         '×',
                         style: TextStyle(
-                          fontSize: 11.0,
                           color: selected
                               ? Theme.of(context).accentColor
                               : Theme.of(context).primaryColor,

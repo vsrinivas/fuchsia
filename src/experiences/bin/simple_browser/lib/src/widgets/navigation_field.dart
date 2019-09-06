@@ -75,12 +75,11 @@ class _NavigationFieldState extends State<NavigationField> {
         focusNode: _focusNode,
         autofocus: _controller.text.isEmpty,
         controller: _controller,
-        cursorWidth: 6,
+        cursorWidth: 8,
         cursorRadius: Radius.zero,
         cursorColor: Colors.black,
         textAlign: TextAlign.center,
         keyboardType: TextInputType.url,
-        style: TextStyle(fontSize: 11.0),
         decoration: InputDecoration(
           contentPadding: EdgeInsets.zero,
           // Extra spaces before SEARCH are meant to visually center the S,
