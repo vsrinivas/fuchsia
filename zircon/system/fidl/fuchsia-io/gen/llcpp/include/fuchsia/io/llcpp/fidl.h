@@ -346,6 +346,9 @@ constexpr uint32_t OPEN_RIGHT_WRITABLE = 2u;
 // Can read from target object.
 constexpr uint32_t OPEN_RIGHT_READABLE = 1u;
 
+// Connection can map target object executable.
+constexpr uint32_t OPEN_RIGHT_EXECUTABLE = 8u;
+
 // Connection can mount/umount filesystem.
 constexpr uint32_t OPEN_RIGHT_ADMIN = 4u;
 
@@ -354,9 +357,10 @@ constexpr uint32_t OPEN_FLAG_TRUNCATE = 262144u;
 
 // Specify this flag to request POSIX-compatibility. Currently, it affects permission handling.
 // During Open:
-// - If the target path is a directory, the rights on the new connection expands to include
+// - If the target path is a directory, the rights on the new connection expand to include
 //   `OPEN_RIGHT_WRITABLE` if and only if the current connection and all intermediate mount points
-//   are writable.
+//   are writable, and to include `OPEN_RIGHT_EXECUTABLE` if and only if the current connection and
+//   all intermediate mount points are executable.
 // - Otherwise, this flag is ignored. It is an access denied error to request more rights
 //   than those on the current connection, or any intermediate mount points.
 //
