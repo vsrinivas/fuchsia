@@ -4,12 +4,8 @@
 
 import("$zx_build/public/gn/banjo.gni")
 
-banjo_library("ddk.protocol.gdc") {
+banjo_library("ddk.protocol.camerahwaccel") {
   sources = [
-    "gdc.banjo",
-  ]
-  public_deps = [
-    "$zx/system/banjo/ddk.protocol.camerahwaccel",
-    "$zx/system/banjo/zircon.device.sysmem",
+    "camerahwaccel.banjo",
   ]
 }

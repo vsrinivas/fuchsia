@@ -32,7 +32,7 @@
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 
-#include "task.h"
+#include "../task/task.h"
 
 namespace gdc {
 // |GdcDevice| is spawned by the driver in |gdc.cc|
@@ -69,7 +69,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   // ZX_PROTOCOL_GDC (Refer to gdc.banjo for documentation).
   zx_status_t GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
                           const buffer_collection_info_t* output_buffer_collection,
-                          zx::vmo config_vmo, const gdc_callback_t* callback,
+                          zx::vmo config_vmo, const hw_accel_callback_t* callback,
                           uint32_t* out_task_index);
   zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);
   void GdcRemoveTask(uint32_t task_index);
@@ -82,7 +82,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
 
  protected:
   struct TaskInfo {
-    Task* task;
+    generictask::Task* task;
     uint32_t input_buffer_index;
   };
 
@@ -112,7 +112,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   zx::interrupt gdc_irq_;
   zx::bti bti_;
   uint32_t next_task_index_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<Task>> task_map_;
+  std::unordered_map<uint32_t, std::unique_ptr<generictask::Task>> task_map_;
   std::deque<TaskInfo> processing_queue_ __TA_GUARDED(lock_);
   thrd_t processing_thread_;
   fbl::ConditionVariable frame_processing_signal_ __TA_GUARDED(lock_);

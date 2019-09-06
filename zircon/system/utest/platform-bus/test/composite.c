@@ -360,7 +360,7 @@ static zx_status_t test_gdc(gdc_protocol_t* gdc) {
   buffer_collection_info_t input_buffer_collection;
   buffer_collection_info_t output_buffer_collection;
   zx_handle_t config_vmo = ZX_HANDLE_INVALID;
-  gdc_callback_t callback;
+  hw_accel_callback_t callback;
   uint32_t task_index;
 
   callback.frame_ready = frame_ready;

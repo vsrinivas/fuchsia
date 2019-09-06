@@ -1,0 +1,12 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.camerahwaccel;
+
+[Layout = "ddk-callback"]
+protocol HwAccelCallback {
+    // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
+    // frame is ready to be consumed.
+    FrameReady(uint32 buffer_index);
+};

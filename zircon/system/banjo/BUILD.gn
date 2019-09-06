@@ -19,6 +19,7 @@ group("banjo") {
     "ddk.protocol.block.volume",
     "ddk.protocol.bt.gattsvc",
     "ddk.protocol.bt.hci",
+    "ddk.protocol.camerahwaccel",
     "ddk.protocol.camerasensor",
     "ddk.protocol.clock",
     "ddk.protocol.clockimpl",

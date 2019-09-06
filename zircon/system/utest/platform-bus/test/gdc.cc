@@ -48,7 +48,7 @@ class TestGdcDevice : public DeviceType,
   // ZX_PROTOCOL_GDC (Refer to gdc.banjo for documentation).
   zx_status_t GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
                           const buffer_collection_info_t* output_buffer_collection,
-                          zx::vmo config_vmo, const gdc_callback_t* callback,
+                          zx::vmo config_vmo, const hw_accel_callback_t* callback,
                           uint32_t* out_task_index) {
     if (input_buffer_collection == nullptr || output_buffer_collection == nullptr ||
         callback == nullptr || out_task_index == nullptr || !config_vmo.is_valid() ||

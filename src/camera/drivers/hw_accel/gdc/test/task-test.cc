@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../task.h"
+#include "../../task/task.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
@@ -138,7 +138,7 @@ class TaskTest : public zxtest::Test {
   zx::bti bti_handle_;
   zx::port port_;
   zx::interrupt irq_;
-  gdc_callback_t callback_;
+  hw_accel_callback_t callback_;
   buffer_collection_info_t input_buffer_collection_;
   buffer_collection_info_t output_buffer_collection_;
   std::unique_ptr<GdcDevice> gdc_device_;
@@ -147,27 +147,29 @@ class TaskTest : public zxtest::Test {
 
 TEST_F(TaskTest, BasicCreationTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  std::unique_ptr<Task> task;
-  zx_status_t status = gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
-                                         config_vmo_, &callback_, bti_handle_, &task);
+  std::unique_ptr<generictask::Task> task;
+  zx_status_t status =
+      generictask::Task::Create(&input_buffer_collection_, &output_buffer_collection_, config_vmo_,
+                                &callback_, bti_handle_, &task);
   EXPECT_OK(status);
 }
 
 TEST_F(TaskTest, InvalidFormatTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  std::unique_ptr<Task> task;
+  std::unique_ptr<generictask::Task> task;
 
   input_buffer_collection_.format.image.pixel_format.type = fuchsia_sysmem_PixelFormatType_YUY2;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_, config_vmo_,
-                              &callback_, bti_handle_, &task));
+            generictask::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
+                                      config_vmo_, &callback_, bti_handle_, &task));
 }
 
 TEST_F(TaskTest, InputBufferTest) {
   SetUpBufferCollections(kNumberOfBuffers);
-  std::unique_ptr<Task> task;
-  zx_status_t status = gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
-                                         config_vmo_, &callback_, bti_handle_, &task);
+  std::unique_ptr<generictask::Task> task;
+  zx_status_t status =
+      generictask::Task::Create(&input_buffer_collection_, &output_buffer_collection_, config_vmo_,
+                                &callback_, bti_handle_, &task);
   EXPECT_OK(status);
 
   // Get the input buffers physical addresses
@@ -184,9 +186,10 @@ TEST_F(TaskTest, InputBufferTest) {
 TEST_F(TaskTest, InvalidVmoTest) {
   SetUpBufferCollections(0);
 
-  std::unique_ptr<Task> task;
-  zx_status_t status = gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
-                                         config_vmo_, &callback_, bti_handle_, &task);
+  std::unique_ptr<generictask::Task> task;
+  zx_status_t status =
+      generictask::Task::Create(&input_buffer_collection_, &output_buffer_collection_, config_vmo_,
+                                &callback_, bti_handle_, &task);
   // Expecting Task setup to be returning an error when there are
   // no VMOs in the buffer collection. At the moment VmoPool library
   // doesn't return an error.
@@ -389,7 +392,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
 
 TEST(TaskTest, NonContigVmoTest) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
-  gdc_callback_t callback;
+  hw_accel_callback_t callback;
   zx_handle_t config_vmo;
   buffer_collection_info_t input_buffer_collection;
   buffer_collection_info_t output_buffer_collection;
@@ -406,9 +409,9 @@ TEST(TaskTest, NonContigVmoTest) {
   status = zx_vmo_create(kConfigSize, 0, &config_vmo);
   ASSERT_OK(status);
 
-  std::unique_ptr<Task> task;
-  status = gdc::Task::Create(&input_buffer_collection, &output_buffer_collection,
-                             zx::vmo(config_vmo), &callback, zx::bti(bti_handle), &task);
+  std::unique_ptr<generictask::Task> task;
+  status = generictask::Task::Create(&input_buffer_collection, &output_buffer_collection,
+                                     zx::vmo(config_vmo), &callback, zx::bti(bti_handle), &task);
   // Expecting Task setup to be returning an error when config vmo is not
   // contig.
   EXPECT_NE(ZX_OK, status);
@@ -416,16 +419,16 @@ TEST(TaskTest, NonContigVmoTest) {
 
 TEST(TaskTest, InvalidBufferCollectionTest) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
-  gdc_callback_t callback;
+  hw_accel_callback_t callback;
   zx_handle_t config_vmo;
   ASSERT_OK(fake_bti_create(&bti_handle));
 
   zx_status_t status = zx_vmo_create_contiguous(bti_handle, kConfigSize, 0, &config_vmo);
   ASSERT_OK(status);
 
-  std::unique_ptr<Task> task;
-  status = gdc::Task::Create(nullptr, nullptr, zx::vmo(config_vmo), &callback, zx::bti(bti_handle),
-                             &task);
+  std::unique_ptr<generictask::Task> task;
+  status = generictask::Task::Create(nullptr, nullptr, zx::vmo(config_vmo), &callback,
+                                     zx::bti(bti_handle), &task);
   EXPECT_NE(ZX_OK, status);
 }
 

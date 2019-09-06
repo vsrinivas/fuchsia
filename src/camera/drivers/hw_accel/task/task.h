@@ -15,7 +15,7 @@
 #include <ddktl/protocol/gdc.h>
 #include <fbl/unique_ptr.h>
 
-namespace gdc {
+namespace generictask {
 // The |Task| class store all the information pertaining to
 // a task when registered. It maintains the VMO pool for the
 // output buffer collections.
@@ -66,7 +66,7 @@ class Task {
 
   image_format_t input_format() { return input_format_; }
   image_format_t output_format() { return output_format_; }
-  const gdc_callback_t* callback() { return callback_; }
+  const hw_accel_callback_t* callback() { return callback_; }
 
   // Static function to create a task object.
   // |input_buffer_collection|              : Input buffer collection.
@@ -77,7 +77,7 @@ class Task {
   // object returned to the caller.
   static zx_status_t Create(const buffer_collection_info_t* input_buffer_collection,
                             const buffer_collection_info_t* output_buffer_collection,
-                            const zx::vmo& config_vmo, const gdc_callback_t* callback,
+                            const zx::vmo& config_vmo, const hw_accel_callback_t* callback,
                             const zx::bti& bti, std::unique_ptr<Task>* out);
 
  private:
@@ -92,9 +92,9 @@ class Task {
   fbl::Array<fzl::PinnedVmo> input_buffers_;
   image_format_t input_format_;
   image_format_t output_format_;
-  const gdc_callback_t* callback_;
+  const hw_accel_callback_t* callback_;
   std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;
 };
-}  // namespace gdc
+}  // namespace generictask
 
 #endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_TASK_H_

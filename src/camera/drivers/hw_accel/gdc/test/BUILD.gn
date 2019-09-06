@@ -12,13 +12,8 @@ executable("gdc-task") {
     "task-test.cc",
   ]
   deps = [
-    "//src/camera/drivers/hw_accel/gdc:gdc-task",
+    "//src/camera/drivers/hw_accel/task:camera-task",
     "//src/camera/drivers/test_utils",
-    "//zircon/system/banjo/ddk.protocol.gdc",
-    "//zircon/system/banjo/ddk.protocol.platform.bus",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
@@ -37,5 +32,10 @@ executable("gdc-task") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.gdc",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
 }

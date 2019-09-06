@@ -57,15 +57,15 @@ void GdcDevice::InitClocks() {
 
 zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
                                    const buffer_collection_info_t* output_buffer_collection,
-                                   zx::vmo config_vmo, const gdc_callback_t* callback,
+                                   zx::vmo config_vmo, const hw_accel_callback_t* callback,
                                    uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  std::unique_ptr<Task> task;
-  zx_status_t status = gdc::Task::Create(input_buffer_collection, output_buffer_collection,
-                                         config_vmo, callback, bti_, &task);
+  std::unique_ptr<generictask::Task> task;
+  zx_status_t status = generictask::Task::Create(input_buffer_collection, output_buffer_collection,
+                                                 config_vmo, callback, bti_, &task);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;

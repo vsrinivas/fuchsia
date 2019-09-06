@@ -13,7 +13,7 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
-namespace gdc {
+namespace generictask {
 
 // Validates the buffer collection.
 static bool IsBufferCollectionValid(const buffer_collection_info_t* buffer_collection) {
@@ -118,7 +118,7 @@ zx_status_t Task::InitBuffers(const buffer_collection_info_t* input_buffer_colle
 // static
 zx_status_t Task::Create(const buffer_collection_info_t* input_buffer_collection,
                          const buffer_collection_info_t* output_buffer_collection,
-                         const zx::vmo& config_vmo, const gdc_callback_t* callback,
+                         const zx::vmo& config_vmo, const hw_accel_callback_t* callback,
                          const zx::bti& bti, std::unique_ptr<Task>* out) {
   if (callback == nullptr || out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -145,4 +145,4 @@ zx_status_t Task::Create(const buffer_collection_info_t* input_buffer_collection
   return status;
 }
 
-}  // namespace gdc
+}  // namespace generictask

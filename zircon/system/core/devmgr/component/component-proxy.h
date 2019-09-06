@@ -79,7 +79,7 @@ class ComponentProxy : public ComponentProxyBase,
   zx_status_t EthBoardResetPhy();
   zx_status_t GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
                           const buffer_collection_info_t* output_buffer_collection,
-                          zx::vmo config_vmo, const gdc_callback_t* callback,
+                          zx::vmo config_vmo, const hw_accel_callback_t* callback,
                           uint32_t* out_task_index);
   void GdcRemoveTask(uint32_t task_index);
   zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);

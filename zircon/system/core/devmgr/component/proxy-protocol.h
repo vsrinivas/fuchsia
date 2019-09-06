@@ -80,7 +80,7 @@ struct GdcProxyRequest {
   GdcOp op;
   buffer_collection_info_t input_buffer_collection;
   buffer_collection_info_t output_buffer_collection;
-  gdc_callback_t callback;
+  hw_accel_callback_t callback;
   zx::vmo config_vmo;
   uint32_t task_index;
   uint32_t input_buffer_index;
