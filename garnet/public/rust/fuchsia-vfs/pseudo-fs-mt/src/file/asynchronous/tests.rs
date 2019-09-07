@@ -4,7 +4,7 @@
 
 //! Tests for the asynchronous files.
 
-use super::{read_only, read_write, write_only};
+use super::{read_only, read_only_static, read_write, write_only};
 
 // Macros are exported into the root of the crate.
 use crate::{
@@ -59,6 +59,16 @@ fn read_only_read() {
 }
 
 #[test]
+fn read_only_static_read() {
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static(b"Read only test"), |proxy| {
+        async move {
+            assert_read!(proxy, "Read only test");
+            assert_close!(proxy);
+        }
+    });
+}
+
+#[test]
 fn read_only_ignore_posix_flag() {
     run_server_client(
         OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
@@ -85,19 +95,15 @@ fn read_only_ignore_posix_flag() {
 fn read_only_read_no_status() {
     let (check_event_send, check_event_recv) = oneshot::channel::<()>();
 
-    test_server_client(
-        OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Read only test".to_vec()))),
-        |proxy| {
-            async move {
-                // Make sure `open()` call is complete, before we start checking.
-                check_event_recv.await.unwrap();
-                assert_no_event!(proxy);
-                // NOTE: logic added after `assert_no_event!` will not currently be run. this test will
-                // need to be updated after ZX-3923 is completed.
-            }
-        },
-    )
+    test_server_client(OPEN_RIGHT_READABLE, read_only_static(b"Read only test"), |proxy| {
+        async move {
+            // Make sure `open()` call is complete, before we start checking.
+            check_event_recv.await.unwrap();
+            assert_no_event!(proxy);
+            // NOTE: logic added after `assert_no_event!` will not currently be run. this test will
+            // need to be updated after ZX-3923 is completed.
+        }
+    })
     .coordinator(|mut controller| {
         controller.run_until_stalled();
         check_event_send.send(()).unwrap();
@@ -111,7 +117,7 @@ fn read_only_read_with_describe() {
     let exec = Executor::new().expect("Executor creation failed");
     let scope = ExecutionScope::new(Box::new(exec.ehandle()));
 
-    let server = read_only(|| future::ready(Ok(b"Read only test".to_vec())));
+    let server = read_only_static(b"Read only test");
 
     run_client(exec, || {
         async move {
@@ -491,25 +497,21 @@ fn open_truncate() {
 
 #[test]
 fn read_at_0() {
-    run_server_client(
-        OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Whole file content".to_vec()))),
-        |proxy| {
-            async move {
-                assert_read_at!(proxy, 0, "Whole file content");
-                assert_close!(proxy);
-            }
-        },
-    );
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static(b"Whole file content"), |proxy| {
+        async move {
+            assert_read_at!(proxy, 0, "Whole file content");
+            assert_close!(proxy);
+        }
+    });
 }
 
 #[test]
 fn read_at_overlapping() {
     run_server_client(
         OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Content of the file".to_vec()))),
-        //                              0         1
-        //                              0123456789012345678
+        read_only_static(b"Content of the file"),
+        //                 0         1
+        //                 0123456789012345678
         |proxy| {
             async move {
                 assert_read_at!(proxy, 3, "tent of the");
@@ -524,9 +526,9 @@ fn read_at_overlapping() {
 fn read_mixed_with_read_at() {
     run_server_client(
         OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Content of the file".to_vec()))),
-        //                              0         1
-        //                              0123456789012345678
+        read_only_static(b"Content of the file"),
+        //                 0         1
+        //                 0123456789012345678
         |proxy| {
             async move {
                 assert_read!(proxy, "Content");
@@ -643,9 +645,9 @@ fn seek_read_write() {
 fn seek_valid_positions() {
     run_server_client(
         OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Long file content".to_vec()))),
-        //                              0         1
-        //                              01234567890123456
+        read_only_static(b"Long file content"),
+        //                 0         1
+        //                 01234567890123456
         |proxy| {
             async move {
                 assert_seek!(proxy, 5, Start);
@@ -706,9 +708,9 @@ fn seek_valid_after_size_before_capacity() {
 fn seek_invalid_before_0() {
     run_server_client(
         OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Seek position is unaffected".to_vec()))),
-        //                              0         1         2
-        //                              012345678901234567890123456
+        read_only_static(b"Seek position is unaffected"),
+        //                 0         1         2
+        //                 012345678901234567890123456
         |proxy| {
             async move {
                 assert_seek_err!(proxy, -10, Current, Status::OUT_OF_RANGE, 0);
@@ -860,16 +862,12 @@ fn truncate_beyond_capacity() {
 
 #[test]
 fn truncate_read_only_file() {
-    run_server_client(
-        OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Read-only content".to_vec()))),
-        |proxy| {
-            async move {
-                assert_truncate_err!(proxy, 10, Status::ACCESS_DENIED);
-                assert_close!(proxy);
-            }
-        },
-    );
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static(b"Read-only content"), |proxy| {
+        async move {
+            assert_truncate_err!(proxy, 10, Status::ACCESS_DENIED);
+            assert_close!(proxy);
+        }
+    });
 }
 
 #[test]
@@ -984,27 +982,23 @@ fn clone_inherit_access() {
 
 #[test]
 fn get_attr_read_only() {
-    run_server_client(
-        OPEN_RIGHT_READABLE,
-        read_only(|| future::ready(Ok(b"Content".to_vec()))),
-        |proxy| {
-            async move {
-                assert_get_attr!(
-                    proxy,
-                    NodeAttributes {
-                        mode: MODE_TYPE_FILE | S_IRUSR,
-                        id: INO_UNKNOWN,
-                        content_size: 0,
-                        storage_size: 0,
-                        link_count: 1,
-                        creation_time: 0,
-                        modification_time: 0,
-                    }
-                );
-                assert_close!(proxy);
-            }
-        },
-    );
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static(b"Content"), |proxy| {
+        async move {
+            assert_get_attr!(
+                proxy,
+                NodeAttributes {
+                    mode: MODE_TYPE_FILE | S_IRUSR,
+                    id: INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
+            assert_close!(proxy);
+        }
+    });
 }
 
 #[test]

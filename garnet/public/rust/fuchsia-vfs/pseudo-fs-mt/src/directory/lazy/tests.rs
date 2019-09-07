@@ -22,7 +22,7 @@ use crate::{
         traversal_position::AlphabeticalTraversal,
     },
     execution_scope::ExecutionScope,
-    file::asynchronous::read_only,
+    file::asynchronous::{read_only, read_only_static},
 };
 
 use {
@@ -226,33 +226,25 @@ fn static_entries_with_traversal() {
             match &*name {
                 "etc" => {
                     // pseudo_directory! {
-                    //     "fstab" => read_only(|| Ok(b"/dev/fs /".to_vec())),
+                    //     "fstab" => read_only_static(b"/dev/fs /",
                     //     "ssh" => pseudo_directory! {
-                    //         "sshd_config" => read_only(|| Ok(b"# Empty".to_vec())),
+                    //         "sshd_config" => read_only_static(b"# Empty"),
                     //     },
                     // }
                     let etc = simple();
-                    etc.clone()
-                        .add_entry("fstab", read_only(|| future::ready(Ok(b"/dev/fs /".to_vec()))))
-                        .unwrap();
+                    etc.clone().add_entry("fstab", read_only_static(b"/dev/fs /")).unwrap();
                     etc.clone()
                         .add_entry("ssh", {
                             let ssh = simple();
                             ssh.clone()
-                                .add_entry(
-                                    "sshd_config",
-                                    read_only(|| future::ready(Ok(b"# Empty".to_vec()))),
-                                )
+                                .add_entry("sshd_config", read_only_static(b"# Empty"))
                                 .unwrap();
                             ssh
                         })
                         .unwrap();
                     Ok(etc as Arc<dyn DirectoryEntry>)
                 }
-                "files" => {
-                    Ok(read_only(|| future::ready(Ok(b"Content".to_vec())))
-                        as Arc<dyn DirectoryEntry>)
-                }
+                "files" => Ok(read_only_static(b"Content") as Arc<dyn DirectoryEntry>),
                 _ => Err(Status::NOT_FOUND),
             }
         })
