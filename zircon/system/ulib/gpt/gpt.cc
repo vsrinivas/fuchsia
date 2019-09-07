@@ -19,12 +19,17 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>  // for zx_cprng_draw
 
+#include <fbl/vector.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
+#include <range/range.h>
 
 namespace gpt {
 
 namespace {
+
+using BlockRange = range::Range<uint64_t>;
+
 #define G_PRINTF(f, ...) \
   if (debug_out)         \
     printf((f), ##__VA_ARGS__);
@@ -246,6 +251,8 @@ const char* HeaderStatusToCString(zx_status_t status) {
       return "invalid entry size";
     case ZX_ERR_BUFFER_TOO_SMALL:
       return "last block > block count";
+    case ZX_ERR_OUT_OF_RANGE:
+      return "invalid usable blocks";
     default:
       return "unknown error";
   }
@@ -280,7 +287,42 @@ zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
+  if (header->first > header->last) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
   return ZX_OK;
+}
+
+fit::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry) {
+  guid_t zero_guid = {};
+  bool guid_valid = memcmp(entry->guid, &zero_guid, sizeof(zero_guid)) != 0;
+  bool type_valid = memcmp(entry->type, &zero_guid, sizeof(zero_guid)) != 0;
+  bool range_valid = (entry->first != 0) && (entry->first <= entry->last);
+
+  if (!guid_valid && !type_valid && !range_valid) {
+    // None of the fields are initialized. It is unused entry but this is not
+    // an error case.
+    return fit::ok(false);
+  }
+
+  // Guid is one/few of the fields that is uninitialized.
+  if (!guid_valid) {
+    return fit::error(ZX_ERR_BAD_STATE);
+  }
+
+  // Type is one/few of the fields that is uninitialized.
+  if (!type_valid) {
+    return fit::error(ZX_ERR_BAD_STATE);
+  }
+
+  // The range seems to be the problem.
+  if (!range_valid) {
+    return fit::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  // All fields are initialized and contain valid data.
+  return fit::ok(true);
 }
 
 bool IsPartitionVisible(const gpt_partition_t* partition) {
@@ -400,6 +442,101 @@ void GptDevice::PrintTable() const {
   print_array(partitions_, count);
 }
 
+bool RangesOverlapsWithOtherRanges(const fbl::Vector<BlockRange>& ranges, const BlockRange& range) {
+  for (auto r = ranges.begin(); r != ranges.end(); r++) {
+    if (Overlap(*r, range)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer) const {
+  ZX_DEBUG_ASSERT(buffer != nullptr);
+  ZX_DEBUG_ASSERT(!valid_);
+
+  const gpt_partition_t* partitions = reinterpret_cast<const gpt_partition_t*>(buffer);
+
+  fbl::Vector<BlockRange> ranges;
+  // Range is half-open and gpt is close range. Add 1 to last.
+  BlockRange usable_range(header_.first, header_.last + 1);
+
+  // We should be here after we have validated the header. Length should be
+  // greater than zero.
+  ZX_ASSERT(usable_range.Length() > 0);
+
+  // Verify crc before we process entries.
+  if (header_.entries_crc != crc32(0, buffer, EntryArraySize())) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Entries are not guaranteed to be sorted. We have to validate the range
+  // of blocks they occupy by comparing each valid partition against all others.
+  for (uint32_t i = 0; i < header_.entries_count; i++) {
+    const gpt_entry_t* entry = &partitions[i];
+
+    auto result = ValidateEntry(entry);
+    // It is ok to have an empty entry but it is not ok entry.
+    if (result.is_error()) {
+      return result.error();
+    }
+    if (result.value() == false) {
+      continue;
+    }
+
+    // Range is half-open and gpt is close range. Add 1 to last.
+    BlockRange range(entry->first, entry->last + 1);
+
+    // Entry's first block should be greater than or equal to GPT's first usable block.
+    // Entry's last block should be less than or equal to GPT's last usable block.
+    if (!Contains(usable_range, range)) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    if (RangesOverlapsWithOtherRanges(ranges, range)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    ranges.push_back(range);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size) {
+  zx_status_t status;
+  size_t entries_size = header_.entries_count * kEntrySize;
+
+  // Ensure that we have large buffer that can contain all the
+  // entries in the GPT.
+  if (buffer_size < entries_size) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  if ((status = ValidateEntries(buffer)) != ZX_OK) {
+    return status;
+  }
+
+  memcpy(ptable_, buffer, entries_size);
+
+  // save original state so we can know what we changed
+  memcpy(ptable_backup_, buffer, entries_size);
+
+  // fill the table of valid partitions
+  for (unsigned i = 0; i < header_.entries_count; i++) {
+    auto result = ValidateEntry(&ptable_[i]);
+    // It is ok to have an empty entry but not invalid entry.
+    if (result.is_error()) {
+      return result.error();
+    } else if (result.value() == false) {
+      continue;
+    }
+    partitions_[i] = &ptable_[i];
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
   *diffs = 0;
 
@@ -435,100 +572,96 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
   return ZX_OK;
 }
 
-zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
-  ssize_t ptable_size;
-  uint32_t crc;
-  gpt_partition_t* ptable;
-  gpt_header_t* header;
+zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
+                            fbl::unique_ptr<GptDevice>* out_dev) {
   ssize_t ret;
   off_t offset;
 
-  fd_.reset(dup(fd));
-  if (!fd_.is_valid()) {
+  fbl::unique_fd fdp(dup(fd));
+  if (!fdp.is_valid()) {
     G_PRINTF("failed to dup the fd\n");
     return ZX_ERR_INTERNAL;
   }
 
-  blocksize_ = blocksize;
-  blocks_ = blocks;
-
   uint8_t block[blocksize];
 
-  if (blocksize_ < 512) {
-    G_PRINTF("blocksize < 512 not supported\n");
+  if (blocksize < kMinimumBlockSize) {
+    G_PRINTF("blocksize < %u not supported\n", kMinimumBlockSize);
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (blocksize > kMaximumBlockSize) {
+    G_PRINTF("blocksize > %u not supported\n", kMaximumBlockSize);
     return ZX_ERR_INTERNAL;
   }
 
   offset = 0;
-  ret = pread(fd_.get(), block, blocksize, offset);
+  ret = pread(fdp.get(), block, blocksize, offset);
   if (ret != blocksize) {
     return ZX_ERR_IO;
   }
-  mbr_ = block[0x1fe] == 0x55 && block[0x1ff] == 0xaa;
 
   // read the gpt header (lba 1)
-  offset = blocksize;
-  ret = pread(fd_.get(), block, blocksize, offset);
-  if (ret != blocksize) {
+  offset = kPrimaryHeaderStartBlock * blocksize;
+  ssize_t size = PerCopyBufferSize(blocksize);
+  std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
+  ret = pread(fdp.get(), buffer.get(), size, offset);
+  if (ret != size) {
     return ZX_ERR_IO;
   }
 
-  header = &header_;
-  memcpy(header, block, sizeof(*header));
-  zx_status_t status = ValidateHeader(header, blocks);
+  fbl::unique_ptr<GptDevice> dev;
+  zx_status_t status = Load(buffer.get(), size, blocksize, block_count, &dev);
 
-  // Invalid header.
   if (status != ZX_OK) {
+    // We did not find valid gpt on the file. Initialize new gpt.
     G_PRINTF("%s\n", HeaderStatusToCString(status));
-    return ZX_OK;
+    dev.reset(new GptDevice());
+    dev->blocksize_ = blocksize;
+    dev->blocks_ = block_count;
   }
-
-  valid_ = true;
-
-  if (header->entries_count == 0) {
-    return ZX_OK;
-  }
-
-  ptable = ptable_;
-  ptable_size = header->entries_size * header->entries_count;
-  if (static_cast<size_t>(ptable_size) > SIZE_MAX) {
-    G_PRINTF("partition table too big\n");
-    return ZX_OK;
-  }
-
-  // read the partition table
-  offset = header->entries * blocksize;
-  ret = pread(fd_.get(), ptable, ptable_size, offset);
-  if (ret != ptable_size) {
-    return ZX_ERR_IO;
-  }
-
-  // partition table checksum
-  crc = crc32(0, reinterpret_cast<const uint8_t*>(ptable), ptable_size);
-  if (crc != header->entries_crc) {
-    G_PRINTF("table crc check failed\n");
-    return ZX_OK;
-  }
-
-  // save original state so we can know what we changed
-  memcpy(ptable_backup_, ptable_, sizeof(ptable_));
-
-  // fill the table of valid partitions
-  for (unsigned i = 0; i < header->entries_count; i++) {
-    if (ptable[i].first == 0 && ptable[i].last == 0)
-      continue;
-    partitions_[i] = &ptable[i];
-  }
+  dev->mbr_ = block[0x1fe] == 0x55 && block[0x1ff] == 0xaa;
+  dev->fd_ = std::move(fdp);
+  *out_dev = std::move(dev);
   return ZX_OK;
 }
 
 zx_status_t GptDevice::Create(int fd, uint32_t blocksize, uint64_t blocks,
                               fbl::unique_ptr<GptDevice>* out) {
-  fbl::unique_ptr<GptDevice> dev(new GptDevice());
-  zx_status_t status = dev->Init(fd, blocksize, blocks);
-  if (status == ZX_OK) {
-    *out = std::move(dev);
+  return Init(fd, blocksize, blocks, out);
+}
+
+zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_t blocksize,
+                            uint64_t blocks, fbl::unique_ptr<GptDevice>* out) {
+  if (buffer == nullptr || out == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
   }
+
+  if (blocksize < kHeaderSize) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (buffer_size < kHeaderSize) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx_status_t status = ValidateHeader(reinterpret_cast<const gpt_header_t*>(buffer), blocks);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fbl::unique_ptr<GptDevice> dev(new GptDevice());
+  memcpy(&dev->header_, buffer, sizeof(gpt_header_t));
+
+  if ((status = dev->LoadEntries(&buffer[blocksize], buffer_size - blocksize)) != ZX_OK) {
+    return status;
+  }
+
+  dev->blocksize_ = blocksize;
+  dev->blocks_ = blocks;
+
+  dev->valid_ = true;
+  *out = std::move(dev);
 
   return status;
 }

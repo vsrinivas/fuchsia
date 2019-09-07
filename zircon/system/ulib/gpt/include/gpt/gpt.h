@@ -32,11 +32,20 @@ constexpr uint64_t kPrimaryHeaderStartBlock = 1;
 // entries array start in the next block i.e. 2.
 constexpr uint64_t kPrimaryEntriesStartBlock = kPrimaryHeaderStartBlock + 1;
 
+// Last block should contain the header for GPT backup copy.
+constexpr uint64_t BackupHeaderStartBlock(uint64_t block_count) { return block_count - 1; }
+
 // Maximum number of partitions supported.
 constexpr uint32_t kPartitionCount = 128;
 
 // Number of blocks required to hold gpt_header_t. This should be always 1.
 constexpr uint32_t kHeaderBlocks = 1;
+
+// Minimum supperted block size.
+constexpr uint32_t kMinimumBlockSize = 512;
+
+// Maximum supported blocks size. 1MiB.
+constexpr uint32_t kMaximumBlockSize = 1 << 20;
 
 // GPT expect fixed size entry structure. Verify that size of gpt_entry_t meets
 // the standards.
@@ -45,6 +54,16 @@ static_assert(kEntrySize == sizeof(gpt_entry_t), "invalid gpt entry size");
 
 // Maximum size of the partition entry table.
 constexpr size_t kMaxPartitionTableSize = kPartitionCount * kEntrySize;
+
+// Returns the maximum size in bytes to hold header block and partition table.
+constexpr size_t PerCopyBufferSize(uint32_t blocksize) {
+  return blocksize + kMaxPartitionTableSize;
+}
+
+// Returns the maximum blocks needed to hold header block and partition table.
+constexpr size_t PerCopyBlockCount(uint32_t blocksize) {
+  return (PerCopyBufferSize(blocksize) + blocksize - 1) / blocksize;
+}
 
 // Size of array need to store "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 // There are other places where we use different macros to get this
@@ -75,6 +94,13 @@ class GptDevice {
  public:
   static zx_status_t Create(int fd, uint32_t blocksize, uint64_t blocks,
                             fbl::unique_ptr<GptDevice>* out_dev);
+
+  // Loads gpt header and gpt entries array from |buffer| of length |size|
+  // belonging to "block device" with |blocks| number of blocks and each
+  // block of size |blocksize|. On finding valid header and entries, returns
+  // pointer to GptDevice in |oput_dev|.
+  static zx_status_t Load(const uint8_t* buffer, uint64_t size, uint32_t blocksize, uint64_t blocks,
+                          fbl::unique_ptr<GptDevice>* out_dev);
 
   // returns true if the partition table on the device is valid
   bool Valid() const { return valid_; }
@@ -148,6 +174,20 @@ class GptDevice {
   // Return device's block size
   uint64_t BlockSize() const { return blocksize_; }
 
+  // Return number of bytes entries array occupies.
+  uint64_t EntryArraySize() const {
+    if (!valid_) {
+      return kMaxPartitionTableSize;
+    }
+
+    return (header_.entries_count * kEntrySize);
+  }
+
+  // Return number of blocks that entries array occupies.
+  uint64_t EntryArrayBlockCount() const {
+    return ((EntryArraySize() + blocksize_ - 1) / blocksize_);
+  }
+
   // Return total number of blocks in the device
   uint64_t TotalBlockCount() const { return blocks_; }
 
@@ -157,7 +197,13 @@ class GptDevice {
   zx_status_t FinalizeAndSync(bool persist);
 
   // read the partition table from the device.
-  zx_status_t Init(int fd, uint32_t blocksize, uint64_t blocks);
+  static zx_status_t Init(int fd, uint32_t blocksize, uint64_t blocks,
+                          fbl::unique_ptr<GptDevice>* out_dev);
+
+  zx_status_t LoadEntries(const uint8_t* buffer, uint64_t buffer_size);
+
+  // Walks entries array and returns error if crc doesn't match or ValidateEntry returns error.
+  zx_status_t ValidateEntries(const uint8_t* buffer) const;
 
   // true if the partition table on the device is valid
   bool valid_;
@@ -166,7 +212,7 @@ class GptDevice {
   gpt_partition_t* partitions_[kPartitionCount] = {};
 
   // device to use
-  fbl::unique_fd fd_;
+  fbl::unique_fd fd_ = {};
 
   // block size in bytes
   uint64_t blocksize_ = 0;
@@ -195,6 +241,16 @@ fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_si
 // Validates gpt header. Each type of inconsistency leads to unique status code.
 // The status can be used to print user friendly error messages.
 zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count);
+
+// A gpt entry can exists in three states
+//  - unused; where all fields are zeroed.
+//  - valid; field have sensible values;
+//  - error; one or more fields are in inconsistent state.
+// Returns
+//  - true if the entry is valid
+//  - false if entry is unused
+//  - error if entry fields are inconsistent
+fit::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry);
 
 // Converts status returned by ValidateHeader to a human readable error message.
 const char* HeaderStatusToCString(zx_status_t status);
