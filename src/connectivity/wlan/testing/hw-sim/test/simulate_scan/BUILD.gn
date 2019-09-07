@@ -13,6 +13,7 @@ rustc_test("simulate_scan") {
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
+    "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

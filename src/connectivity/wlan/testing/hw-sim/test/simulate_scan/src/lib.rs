@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
+    wlan_common::bss::Protection,
     wlan_hw_sim::*,
 };
 
@@ -38,7 +39,8 @@ async fn scan(
                         _ => None,
                     };
                     if let Some((bssid, ssid)) = network {
-                        send_beacon(&mut vec![], &args.chan, bssid, ssid, false, &phy).unwrap();
+                        send_beacon(&mut vec![], &args.chan, bssid, ssid, &Protection::Open, &phy)
+                            .unwrap();
                     }
                 }
             },

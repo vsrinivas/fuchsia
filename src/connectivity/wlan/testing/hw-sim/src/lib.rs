@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_wlan_tap::{WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::prelude::*,
-    wlan_common::{appendable::Appendable, data_writer, ie, mac, mgmt_writer},
+    wlan_common::{appendable::Appendable, bss::Protection, data_writer, ie, mac, mgmt_writer},
 };
 
 pub mod test_utils;
@@ -56,8 +56,7 @@ pub fn send_beacon(
     channel: &WlanChan,
     bss_id: &[u8; 6],
     ssid: &[u8],
-    // TODO(eyw): replace with wlan-common::Protection once it is available.
-    use_wpa2_psk: bool,
+    protection: &Protection,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -76,15 +75,19 @@ pub fn send_beacon(
     frame_buf.append_value(&mac::BeaconHdr {
         timestamp: 0,
         beacon_interval: 100,
-        capabilities: mac::CapabilityInfo(0).with_privacy(use_wpa2_psk),
+        capabilities: mac::CapabilityInfo(0).with_privacy(*protection != Protection::Open),
     })?;
 
     ie::write_ssid(frame_buf, ssid)?;
     ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
     ie::write_dsss_param_set(frame_buf, &ie::DsssParamSet { current_chan: channel.primary })?;
-    if use_wpa2_psk {
-        create_wpa2_psk_rsne().write_into(frame_buf)?;
-    }
+    // TODO(eyw): Add implementations for remaining protection types.
+    match protection {
+        Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
+        Protection::Open => (),
+        Protection::Wpa2Personal => create_wpa2_psk_rsne().write_into(frame_buf)?,
+        _ => unimplemented!(),
+    };
 
     proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
     Ok(())
@@ -224,15 +227,14 @@ fn handle_connect_events(
     phy: &WlantapPhyProxy,
     ssid: &[u8],
     bssid: &[u8; 6],
-    passphrase: Option<&str>,
+    protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
 ) {
     match event {
         WlantapPhyEvent::SetChannel { args } => {
             println!("channel: {:?}", args.chan);
             if args.chan.primary == CHANNEL.primary {
-                send_beacon(&mut vec![], &args.chan, bssid, ssid, passphrase.is_some(), &phy)
-                    .unwrap();
+                send_beacon(&mut vec![], &args.chan, bssid, ssid, protection, &phy).unwrap();
             }
         }
         WlantapPhyEvent::Tx { args } => {
@@ -299,12 +301,16 @@ pub async fn connect(
     let mut connect_config = create_connect_config(ssid, passphrase.unwrap_or(&""));
     let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p));
     let connect_fut = wlan_service.connect(&mut connect_config);
+    let protection = match passphrase {
+        Some(_) => Protection::Wpa2Personal,
+        None => Protection::Open,
+    };
     let error = helper
         .run_until_complete_or_timeout(
             30.seconds(),
             format!("connect to {}({:2x?})", String::from_utf8_lossy(ssid), bssid),
             |event| {
-                handle_connect_events(event, &phy, ssid, bssid, passphrase, &mut authenticator);
+                handle_connect_events(event, &phy, ssid, bssid, &protection, &mut authenticator);
             },
             connect_fut,
         )
