@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <ddktl/protocol/platform/device.h>
+#ifndef ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
+#define ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
 
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
-#include <optional>
 #include <zircon/types.h>
+
+#include <optional>
+
+#include <ddktl/protocol/platform/device.h>
 
 namespace ddk {
 
@@ -35,9 +37,15 @@ class PDev : public PDevProtocolClient {
     return PDevProtocolClient::GetInterrupt(index, 0, out);
   }
 
+  zx_status_t GetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out) {
+    return PDevProtocolClient::GetInterrupt(index, flags, out);
+  }
+
   zx_status_t GetBti(uint32_t index, zx::bti* out) {
     return PDevProtocolClient::GetBti(index, out);
   }
 };
 
 }  // namespace ddk
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_PDEV_INCLUDE_LIB_DEVICE_PROTOCOL_PDEV_H_
