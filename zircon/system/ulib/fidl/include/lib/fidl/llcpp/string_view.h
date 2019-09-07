@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_STRING_VIEW_H_
-#define LIB_FIDL_CPP_STRING_VIEW_H_
+#ifndef LIB_FIDL_LLCPP_STRING_VIEW_H_
+#define LIB_FIDL_LLCPP_STRING_VIEW_H_
 
 #include <zircon/fidl.h>
 
@@ -36,4 +36,4 @@ class StringView final : private fidl_string_t {
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_CPP_STRING_VIEW_H_
+#endif  // LIB_FIDL_LLCPP_STRING_VIEW_H_

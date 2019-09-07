@@ -57,8 +57,8 @@ TEST(ProxyController, Send) {
   EXPECT_EQ(0u, message.txid());
   EXPECT_EQ(5u, message.ordinal());
 
-  StringView* view = message.GetPayloadAs<StringView>();
-  EXPECT_EQ(6u, view->size());
+  fidl_string_t* view = message.GetPayloadAs<fidl_string_t>();
+  EXPECT_EQ(6u, view->size);
 }
 
 TEST(ProxyController, Callback) {

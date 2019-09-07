@@ -613,7 +613,7 @@ FIDL                                        | Low-Level C++
 
 #### fidl::StringView
 
-Defined in [lib/fidl/cpp/string_view.h](/zircon/system/ulib/fidl/include/lib/fidl/cpp/string_view.h)
+Defined in [lib/fidl/llcpp/string_view.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/string_view.h)
 
 Holds a reference to a variable-length string stored within the buffer. C++
 wrapper of **fidl_string**. Does not own the memory of the contents.

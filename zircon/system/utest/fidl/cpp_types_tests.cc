@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/builder.h>
-#include <lib/fidl/cpp/string_view.h>
+#include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <unittest/unittest.h>
 

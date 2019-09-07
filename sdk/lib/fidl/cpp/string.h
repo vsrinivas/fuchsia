@@ -6,7 +6,6 @@
 #define LIB_FIDL_CPP_STRING_H_
 
 #include <lib/fidl/cpp/builder.h>
-#include <lib/fidl/cpp/string_view.h>
 #include <lib/fit/optional.h>
 #include <zircon/assert.h>
 
