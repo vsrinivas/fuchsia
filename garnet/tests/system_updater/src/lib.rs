@@ -7,6 +7,7 @@
 use {
     cobalt_sw_delivery_registry as metrics,
     failure::Error,
+    fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::PackageResolverRequestStream,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fuchsia_async as fasync,
@@ -19,6 +20,7 @@ use {
     parking_lot::Mutex,
     std::{
         collections::HashMap,
+        convert::TryInto,
         fs::{create_dir, File},
         path::{Path, PathBuf},
         sync::Arc,
@@ -29,6 +31,7 @@ use {
 struct TestEnv {
     env: NestedEnvironment,
     resolver: Arc<MockResolverService>,
+    paver_service: Arc<MockPaverService>,
     reboot_service: Arc<MockRebootService>,
     logger_factory: Arc<MockLoggerFactory>,
     _test_dir: TempDir,
@@ -52,6 +55,16 @@ impl TestEnv {
                 resolver_clone
                     .run_resolver_service(stream)
                     .unwrap_or_else(|e| panic!("error running resolver service: {:?}", e)),
+            )
+        });
+        let paver_service = Arc::new(MockPaverService::new());
+        let paver_service_clone = paver_service.clone();
+        fs.add_fidl_service(move |stream| {
+            let paver_service_clone = paver_service_clone.clone();
+            fasync::spawn(
+                paver_service_clone
+                    .run_paver_service(stream)
+                    .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
             )
         });
         let reboot_service = Arc::new(MockRebootService::new());
@@ -93,6 +106,7 @@ impl TestEnv {
         Self {
             env,
             resolver,
+            paver_service,
             reboot_service,
             logger_factory,
             _test_dir: test_dir,
@@ -226,6 +240,84 @@ impl MockResolverService {
     fn mock_package_result(&self, url: impl Into<String>, response: Result<PathBuf, Status>) {
         self.expectations.lock().insert(url.into(), response);
     }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum PaverEvent {
+    WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
+    WriteBootloader(Vec<u8>),
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum PaverMode {
+    Record,
+    Fail,
+}
+
+struct MockPaverService {
+    mode: Mutex<PaverMode>,
+    events: Mutex<Vec<PaverEvent>>,
+}
+
+impl MockPaverService {
+    fn new() -> Self {
+        Self { mode: Mutex::new(PaverMode::Record), events: Mutex::new(vec![]) }
+    }
+
+    fn set_mode(&self, mode: PaverMode) {
+        *self.mode.lock() = mode;
+    }
+
+    fn take_events(&self) -> Vec<PaverEvent> {
+        std::mem::replace(&mut *self.events.lock(), vec![])
+    }
+
+    async fn run_paver_service(
+        self: Arc<Self>,
+        mut stream: paver::PaverRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                paver::PaverRequest::WriteAsset { configuration, asset, payload, responder } => {
+                    let status = match *self.mode.lock() {
+                        PaverMode::Record => {
+                            self.events.lock().push(PaverEvent::WriteAsset {
+                                configuration,
+                                asset,
+                                payload: read_mem_buffer(&payload),
+                            });
+                            Status::OK
+                        }
+                        PaverMode::Fail => Status::INTERNAL,
+                    };
+
+                    responder.send(status.into_raw()).expect("paver response to send");
+                }
+                paver::PaverRequest::WriteBootloader { payload, responder } => {
+                    let status = match *self.mode.lock() {
+                        PaverMode::Record => {
+                            self.events
+                                .lock()
+                                .push(PaverEvent::WriteBootloader(read_mem_buffer(&payload)));
+                            Status::OK
+                        }
+                        PaverMode::Fail => Status::INTERNAL,
+                    };
+
+                    responder.send(status.into_raw()).expect("paver response to send");
+                }
+                request => panic!("Unhandled method Paver::{}", request.method_name()),
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn read_mem_buffer(buffer: &fidl_fuchsia_mem::Buffer) -> Vec<u8> {
+    let mut res = vec![0; buffer.size.try_into().expect("usize")];
+    buffer.vmo.read(&mut res[..], 0).expect("vmo read to succeed");
+    res
 }
 
 struct MockRebootService {
@@ -576,6 +668,66 @@ async fn test_failing_package_fetch() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_writes_bootloader() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("bootloader", "new bootloader");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![PaverEvent::WriteBootloader(b"new bootloader".to_vec())]
+    );
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_writes_recovery() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages",
+            "system_image/0=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296\n",
+        )
+        .add_file("zedboot", "new recovery");
+
+    env.run_system_updater(SystemUpdaterArgs {
+        initiator: "manual",
+        target: "m3rk13",
+        update: None,
+        reboot: None,
+    })
+    .await
+    .expect("success");
+
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![PaverEvent::WriteAsset {
+            configuration: paver::Configuration::Recovery,
+            asset: paver::Asset::Kernel,
+            payload: b"new recovery".to_vec(),
+        }]
+    );
+
+    assert_eq!(*env.reboot_service.called.lock(), 1);
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_working_image_write() {
     let mut env = TestEnv::new();
 
@@ -609,6 +761,15 @@ async fn test_working_image_write() {
         }
     );
 
+    assert_eq!(
+        env.paver_service.take_events(),
+        vec![PaverEvent::WriteAsset {
+            configuration: paver::Configuration::A,
+            asset: paver::Asset::Kernel,
+            payload: b"fake_zbi".to_vec(),
+        }]
+    );
+
     assert_eq!(*env.reboot_service.called.lock(), 1);
 }
 
@@ -623,8 +784,7 @@ async fn test_failing_image_write() {
         )
         .add_file("zbi", "fake_zbi");
 
-    std::fs::write(env.fake_path.join("install-disk-image-should-fail"), "for sure")
-        .expect("create fake/install-disk-image-should-fail");
+    env.paver_service.set_mode(PaverMode::Fail);
 
     let result = env
         .run_system_updater(SystemUpdaterArgs {

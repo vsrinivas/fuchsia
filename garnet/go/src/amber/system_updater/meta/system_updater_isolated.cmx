@@ -7,10 +7,11 @@
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
-            "fuchsia.pkg.PackageResolver",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
+            "fuchsia.paver.Paver",
+            "fuchsia.pkg.PackageResolver",
             "fuchsia.process.Launcher"
         ]
     }
