@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Tests for the simple directory.
+//! Tests for the immutable simple directory.
 
 use super::simple;
 

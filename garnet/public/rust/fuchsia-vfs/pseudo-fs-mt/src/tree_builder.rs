@@ -8,7 +8,7 @@
 //! tree structure to be defined at compile time, while this helper allows the tree structure to be
 //! dynamic.
 
-use crate::directory::{self, entry::DirectoryEntry};
+use crate::directory::{self, entry::DirectoryEntry, immutable};
 
 use {
     failure::Fail,
@@ -83,7 +83,7 @@ pub enum TreeBuilder {
 }
 
 /// Collects a number of [`DirectoryEntry`] nodes and corresponding paths and the constructs a tree
-/// of [`directory::simple::Simple`] directories that hold these nodes.  This is a companion tool,
+/// of [`immutable::simple::Simple`] directories that hold these nodes.  This is a companion tool,
 /// related to the [`pseudo_directory!`] macro, except that it is collecting the paths dynamically,
 /// while the [`pseudo_directory!`] expects the tree to be specified at compilation time.
 ///
@@ -260,7 +260,7 @@ impl TreeBuilder {
     pub fn build(self) -> Arc<directory::simple::Simple> {
         match self {
             TreeBuilder::Directory(mut entries) => {
-                let res = directory::simple();
+                let res = immutable::simple();
                 for (name, child) in entries.drain() {
                     res.clone()
                         .add_entry(&name, child.build_dyn())
@@ -281,7 +281,7 @@ impl TreeBuilder {
     fn build_dyn(self) -> Arc<dyn DirectoryEntry> {
         match self {
             TreeBuilder::Directory(mut entries) => {
-                let res = directory::simple();
+                let res = immutable::simple();
                 for (name, child) in entries.drain() {
                     res.clone()
                         .add_entry(&name, child.build_dyn())
@@ -355,7 +355,7 @@ mod tests {
     };
 
     use crate::{
-        directory::{simple, test_utils::run_server_client},
+        directory::{immutable::simple, test_utils::run_server_client},
         file::pcb::asynchronous::read_only_static,
     };
 

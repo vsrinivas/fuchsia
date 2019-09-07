@@ -13,12 +13,10 @@ mod connection;
 mod traversal_position;
 mod watchers;
 
+pub mod immutable;
+
+pub mod simple;
+
 pub mod dirents_sink;
 pub mod entry;
 pub mod read_dirents;
-
-pub mod simple;
-pub use simple::simple;
-
-pub mod lazy;
-pub use lazy::lazy;

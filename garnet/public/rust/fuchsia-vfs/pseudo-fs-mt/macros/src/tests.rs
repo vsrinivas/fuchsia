@@ -36,7 +36,7 @@ fn empty() {
     check_pseudo_directory_impl!(
         "",
         "{ \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: simple ( ) ; \
+             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              __dir \
          }"
     );
@@ -52,12 +52,12 @@ fn one_entry() {
         "#
         ),
         "{ \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: simple ( ) ; \
+             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"name\" , \"Span\" , \
                  __dir . clone ( ) . add_entry ( \"name\" , read_only_static ( \"content\" ) ) ) ; \
              __dir \
-         }"
+        }"
     );
 }
 
@@ -72,7 +72,7 @@ fn two_entries() {
         "#
         ),
         "{ \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: simple ( ) ; \
+             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
                  __dir . clone ( ) . add_entry ( \"first\" , read_only_static ( \"A\" ) ) ) ; \
@@ -96,7 +96,7 @@ fn assign_to() {
         "#
         ),
         "{ \
-             my_dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: simple ( ) ; \
+             my_dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
                  my_dir . clone ( ) . add_entry ( \"first\" , read_only_static ( \"A\" ) ) ) ; \
@@ -118,7 +118,7 @@ fn entry_has_name_from_ref() {
         "#
         ),
         "{ \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: simple ( ) ; \
+             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
              :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
                  test_name , \"Span\" , \
                  __dir . clone ( ) . add_entry ( test_name , read_only_static ( \"content\" ) ) ) ; \

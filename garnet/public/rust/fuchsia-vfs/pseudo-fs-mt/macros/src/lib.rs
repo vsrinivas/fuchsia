@@ -82,7 +82,7 @@ fn pseudo_directory_impl(input: TokenStream) -> TokenStream {
     // Should be def_site, but it is behind cfg(procmacro2_semver_exempt).
     let span = Span::call_site();
 
-    let directory_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::directory);
+    let directory_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::directory::immutable);
     let macro_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::pseudo_directory);
 
     let (dir_var, constructor, result) = match parsed.assign_to {

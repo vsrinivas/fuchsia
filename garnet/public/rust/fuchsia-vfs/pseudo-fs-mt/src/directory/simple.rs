@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Implementation of a "simple" pseudo directory.  See [`Simple`] for details.
+//! This is an implementation of "simple" pseudo directories.  Use [`directory::immutable::simple`]
+//! to construct actual instances.  See [`Simple`] for details.
 
 use crate::{
     common::send_on_open_with_error,
@@ -30,14 +31,6 @@ use {
     std::{collections::BTreeMap, iter, sync::Arc},
 };
 
-#[cfg(test)]
-mod tests;
-
-/// Creates an empty directory.
-pub fn simple() -> Arc<Simple> {
-    Simple::new()
-}
-
 /// An implementation of a "simple" pseudo directory.  This directory holds a "static" set of
 /// entries, allowing the server to add or remove entries via the [`add_entry`] and
 /// [`remove_entry`] methods.  Compare to the [`directory::lazy::Lazy`] directory, where the
@@ -57,7 +50,7 @@ struct Inner {
 type SimpleDirectoryConnection = DirectoryConnection<AlphabeticalTraversal>;
 
 impl Simple {
-    fn new() -> Arc<Self> {
+    pub(super) fn new() -> Arc<Self> {
         Arc::new(Simple {
             inner: Mutex::new(Inner { entries: BTreeMap::new(), watchers: Watchers::new() }),
         })
