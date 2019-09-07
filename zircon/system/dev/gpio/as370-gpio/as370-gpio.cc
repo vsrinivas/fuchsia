@@ -4,14 +4,15 @@
 
 #include "as370-gpio.h"
 
-#include <lib/device-protocol/pdev.h>
-
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <lib/device-protocol/pdev.h>
+
+#include "as370-gpio-reg.h"
 
 namespace {
 
@@ -38,8 +39,25 @@ constexpr uint32_t kPinmuxPinsPerReg = 10;
 
 constexpr uint32_t kGpioPinmuxWindowOffset = 18;
 
+// Maps possible drive strengths in milliamps to register values.
+constexpr uint8_t kDriveStrengthMap[] = {2, 4, 8, 12};
+
 uint32_t GetGpioBitOffset(uint32_t index) {
   return (index < kGpiosPerPort) ? index : (index - kGpiosPerPort);
+}
+
+uint32_t GpioToPinmuxIndex(uint32_t index) {
+  // The pinmux registers have a gap with respect to the GPIOs, like this:
+  // |----- GPIOs 0-17 -----|--- NAND pins ---|--------------- GPIOs 18-63 ---------------|
+  // The NAND pins are mapped to GPIOs 64-71, so the index parameter must be adjusted accordingly.
+
+  if (index >= kPorts * kGpiosPerPort) {
+    return index - (kPorts * kGpiosPerPort) + kGpioPinmuxWindowOffset;
+  }
+  if (index >= kGpioPinmuxWindowOffset) {
+    return index + kTotalPins - (kPorts * kGpiosPerPort);
+  }
+  return index;
 }
 
 constexpr uint32_t kPortKeyTerminate = 0x01;
@@ -208,15 +226,22 @@ bool As370Gpio::IsInterruptEnabled(uint32_t index) {
 }
 
 zx_status_t As370Gpio::GpioImplConfigIn(uint32_t index, uint32_t flags) {
-  if (index >= kPorts * kGpiosPerPort) {
+  if (index >= kTotalPins) {
     return ZX_ERR_OUT_OF_RANGE;
-  } else if (flags != GPIO_NO_PULL) {
-    // TODO(bradenkell): Add support for enabling pull up/down resistors.
-    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  const ddk::MmioBuffer& gpio_mmio = (index < kGpiosPerPort) ? gpio1_mmio_ : gpio2_mmio_;
-  gpio_mmio.ClearBit<uint32_t>(GetGpioBitOffset(index), kGpioSwPortADdr);
+  IoCntl::Get(GpioToPinmuxIndex(index))
+      .ReadFrom(&pinmux_mmio_)
+      .set_pden((flags & GPIO_PULL_MASK) == GPIO_PULL_DOWN ? 1 : 0)
+      .set_puen((flags & GPIO_PULL_MASK) == GPIO_PULL_UP ? 1 : 0)
+      .WriteTo(&pinmux_mmio_);
+
+  // The eight NAND data pins aren't GPIOs and can't be set to input, however they still have
+  // pull-up/down resistors. Just skip them and report ZX_OK.
+  if (index < kPorts * kGpiosPerPort) {
+    const ddk::MmioBuffer& gpio_mmio = (index < kGpiosPerPort) ? gpio1_mmio_ : gpio2_mmio_;
+    gpio_mmio.ClearBit<uint32_t>(GetGpioBitOffset(index), kGpioSwPortADdr);
+  }
 
   return ZX_OK;
 }
@@ -235,17 +260,11 @@ zx_status_t As370Gpio::GpioImplConfigOut(uint32_t index, uint8_t initial_value) 
 }
 
 zx_status_t As370Gpio::GpioImplSetAltFunction(uint32_t index, uint64_t function) {
-  // The pinmux registers have a gap with respect to the GPIOs, like this:
-  // |----- GPIOs 0-17 -----|--- NAND pins ---|--------------- GPIOs 18-63 ---------------|
-  // The NAND pins are mapped to GPIOs 63-71, so the index parameter must be adjusted accordingly.
-
-  if (index >= kTotalPins || function > ((1 << kPinmuxFunctionWidth) - 1)) {
+  if (index >= kTotalPins || function >= (1 << kPinmuxFunctionWidth)) {
     return ZX_ERR_OUT_OF_RANGE;
-  } else if (index >= kPorts * kGpiosPerPort) {
-    index -= (kPorts * kGpiosPerPort) - kGpioPinmuxWindowOffset;
-  } else if (index >= kGpioPinmuxWindowOffset) {
-    index += kTotalPins - (kPorts * kGpiosPerPort);
   }
+
+  index = GpioToPinmuxIndex(index);
 
   zx_off_t reg_offset = (sizeof(uint32_t) * (index / kPinmuxPinsPerReg)) + kPinmuxCntlBusBase;
   uint32_t bit_offset = (index % kPinmuxPinsPerReg) * kPinmuxFunctionWidth;
@@ -256,8 +275,22 @@ zx_status_t As370Gpio::GpioImplSetAltFunction(uint32_t index, uint64_t function)
 }
 
 zx_status_t As370Gpio::GpioImplSetDriveStrength(uint32_t index, uint8_t m_a) {
-  // TODO(bradenkell): Implement this.
-  return ZX_ERR_NOT_SUPPORTED;
+  if (index >= kTotalPins) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  for (uint32_t i = 0; i < fbl::count_of(kDriveStrengthMap); i++) {
+    if (kDriveStrengthMap[i] == m_a) {
+      IoCntl::Get(GpioToPinmuxIndex(index))
+          .ReadFrom(&pinmux_mmio_)
+          .set_drv(i)
+          .WriteTo(&pinmux_mmio_);
+
+      return ZX_OK;
+    }
+  }
+
+  return ZX_ERR_INVALID_ARGS;
 }
 
 zx_status_t As370Gpio::GpioImplRead(uint32_t index, uint8_t* out_value) {
@@ -336,8 +369,11 @@ zx_status_t As370Gpio::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
 }
 
 zx_status_t As370Gpio::GpioImplReleaseInterrupt(uint32_t index) {
-  if (index >= kMaxInterruptPins || !IsInterruptEnabled(index)) {
-    return ZX_ERR_INVALID_ARGS;
+  if (index >= kMaxInterruptPins) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  if (!IsInterruptEnabled(index)) {
+    return ZX_ERR_BAD_STATE;
   }
   gpio1_mmio_.ModifyBit<uint32_t>(false, GetGpioBitOffset(index), kGpioPortAIntrEn);
   interrupts_[index].destroy();
@@ -347,7 +383,7 @@ zx_status_t As370Gpio::GpioImplReleaseInterrupt(uint32_t index) {
 
 zx_status_t As370Gpio::GpioImplSetPolarity(uint32_t index, gpio_polarity_t polarity) {
   if (index >= kMaxInterruptPins) {
-    return ZX_ERR_INVALID_ARGS;
+    return ZX_ERR_OUT_OF_RANGE;
   }
   if (polarity == GPIO_POLARITY_LOW) {
     SetInterruptPolarity(index, false);

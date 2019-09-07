@@ -58,7 +58,7 @@ class As370GpioTest : public As370Gpio {
   }
 
  private:
-  ddk_mock::MockMmioReg pinmux_reg_array_[64];
+  ddk_mock::MockMmioReg pinmux_reg_array_[96];
   ddk_mock::MockMmioReg gpio1_reg_array_[128];
   ddk_mock::MockMmioReg gpio2_reg_array_[128];
 
@@ -88,15 +88,27 @@ TEST(As370GpioTest, ConfigIn) {
       .ExpectRead(0x89ab0123)
       .ExpectWrite(0x09ab0123);
 
-  EXPECT_OK(dut.GpioImplConfigIn(0, GPIO_NO_PULL));
+  dut.mock_pinmux_regs()[0x060].ExpectRead(0b0100).ExpectWrite(0b1000);
+  dut.mock_pinmux_regs()[0x090].ExpectRead(0b1100).ExpectWrite(0b0000);
+  dut.mock_pinmux_regs()[0x0fc].ExpectRead(0b0000).ExpectWrite(0b0100);
+  dut.mock_pinmux_regs()[0x100].ExpectRead(0b0100).ExpectWrite(0b0000);
+  dut.mock_pinmux_regs()[0x16c].ExpectRead(0b0000).ExpectWrite(0b0100);
+  dut.mock_pinmux_regs()[0x17c].ExpectRead(0b1100).ExpectWrite(0b1000);
+  dut.mock_pinmux_regs()[0x0b0].ExpectRead(0b0000).ExpectWrite(0b1000);
+  dut.mock_pinmux_regs()[0x0c0].ExpectRead(0b1000).ExpectWrite(0b0100);
+
+  EXPECT_OK(dut.GpioImplConfigIn(0, GPIO_PULL_UP));
   EXPECT_OK(dut.GpioImplConfigIn(12, GPIO_NO_PULL));
-  EXPECT_OK(dut.GpioImplConfigIn(31, GPIO_NO_PULL));
+  EXPECT_OK(dut.GpioImplConfigIn(31, GPIO_PULL_DOWN));
 
   EXPECT_OK(dut.GpioImplConfigIn(32, GPIO_NO_PULL));
-  EXPECT_OK(dut.GpioImplConfigIn(59, GPIO_NO_PULL));
-  EXPECT_OK(dut.GpioImplConfigIn(63, GPIO_NO_PULL));
+  EXPECT_OK(dut.GpioImplConfigIn(59, GPIO_PULL_DOWN));
+  EXPECT_OK(dut.GpioImplConfigIn(63, GPIO_PULL_UP));
 
-  EXPECT_NE(ZX_OK, dut.GpioImplConfigIn(64, GPIO_NO_PULL));
+  EXPECT_OK(dut.GpioImplConfigIn(66, GPIO_PULL_UP));
+  EXPECT_OK(dut.GpioImplConfigIn(70, GPIO_PULL_DOWN));
+
+  EXPECT_NOT_OK(dut.GpioImplConfigIn(72, GPIO_NO_PULL));
 
   dut.VerifyAll();
 }
@@ -136,7 +148,7 @@ TEST(As370GpioTest, ConfigOut) {
   EXPECT_OK(dut.GpioImplConfigOut(39, 0));
   EXPECT_OK(dut.GpioImplConfigOut(63, 1));
 
-  EXPECT_NE(ZX_OK, dut.GpioImplConfigOut(64, 0));
+  EXPECT_NOT_OK(dut.GpioImplConfigOut(64, 0));
 
   dut.VerifyAll();
 }
@@ -158,8 +170,8 @@ TEST(As370GpioTest, SetAltFunction) {
   EXPECT_OK(dut.GpioImplSetAltFunction(68, 5));
   EXPECT_OK(dut.GpioImplSetAltFunction(71, 1));
 
-  EXPECT_NE(ZX_OK, dut.GpioImplSetAltFunction(72, 0));
-  EXPECT_NE(ZX_OK, dut.GpioImplSetAltFunction(0, 8));
+  EXPECT_NOT_OK(dut.GpioImplSetAltFunction(72, 0));
+  EXPECT_NOT_OK(dut.GpioImplSetAltFunction(0, 8));
 
   dut.VerifyAll();
 }
@@ -186,7 +198,7 @@ TEST(As370GpioTest, Read) {
   EXPECT_OK(dut.GpioImplRead(63, &value));
   EXPECT_EQ(1, value);
 
-  EXPECT_NE(ZX_OK, dut.GpioImplRead(64, &value));
+  EXPECT_NOT_OK(dut.GpioImplRead(64, &value));
 
   dut.VerifyAll();
 }
@@ -217,7 +229,7 @@ TEST(As370GpioTest, Write) {
   EXPECT_OK(dut.GpioImplWrite(40, 0xba));
   EXPECT_OK(dut.GpioImplWrite(63, 0x00));
 
-  EXPECT_NE(ZX_OK, dut.GpioImplWrite(64, 0));
+  EXPECT_NOT_OK(dut.GpioImplWrite(64, 0));
 
   dut.VerifyAll();
 }
@@ -257,6 +269,25 @@ TEST(As370GpioTest, Interrupt) {
   EXPECT_OK(dut.GpioImplReleaseInterrupt(0));
 
   dut.Shutdown();
+  dut.VerifyAll();
+}
+
+TEST(As370GpioTest, SetDriveStrength) {
+  As370GpioTest dut;
+
+  dut.mock_pinmux_regs()[0x088].ExpectWrite(2);
+  dut.mock_pinmux_regs()[0x12c].ExpectWrite(0);
+  dut.mock_pinmux_regs()[0x0b8].ExpectWrite(3);
+
+  EXPECT_OK(dut.GpioImplSetDriveStrength(10, 8));
+  EXPECT_NOT_OK(dut.GpioImplSetDriveStrength(10, 0));
+  EXPECT_OK(dut.GpioImplSetDriveStrength(43, 2));
+  EXPECT_NOT_OK(dut.GpioImplSetDriveStrength(43, 10));
+  EXPECT_OK(dut.GpioImplSetDriveStrength(68, 12));
+  EXPECT_NOT_OK(dut.GpioImplSetDriveStrength(68, 16));
+
+  EXPECT_NOT_OK(dut.GpioImplSetDriveStrength(72, 12));
+
   dut.VerifyAll();
 }
 
