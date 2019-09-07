@@ -52,8 +52,6 @@ class AmlSdEmmcClock : public hwreg::RegisterBase<AmlSdEmmcClock, uint32_t> {
   static constexpr uint32_t kDefaultClkDiv = 60;          // Defaults to 400KHz
   static constexpr uint32_t kDefaultClkRxPhase = 0;
   static constexpr uint32_t kMaxClkDiv = 63;
-  static constexpr uint32_t kMaxClkPhase = 3;
-  static constexpr uint32_t kMaxDelay = 63;
 
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcClock>(kAmlSdEmmcClockOffset); }
 
@@ -186,18 +184,11 @@ class AmlSdEmmcCmdResp3 : public hwreg::RegisterBase<AmlSdEmmcCmdResp3, uint32_t
 class AmlSdEmmcDelay1 : public hwreg::RegisterBase<AmlSdEmmcDelay1, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelay1>(kAmlSdEmmcDelay1Offset); }
-
-  DEF_FIELD(5, 0, dly_0);
-  DEF_FIELD(11, 6, dly_1);
-  DEF_FIELD(17, 12, dly_2);
-  DEF_FIELD(23, 18, dly_3);
 };
 
 class AmlSdEmmcDelay2 : public hwreg::RegisterBase<AmlSdEmmcDelay2, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<AmlSdEmmcDelay2>(kAmlSdEmmcDelay2Offset); }
-
-  DEF_FIELD(29, 24, dly_9);
 };
 
 class AmlSdEmmcCalout : public hwreg::RegisterBase<AmlSdEmmcCalout, uint32_t> {

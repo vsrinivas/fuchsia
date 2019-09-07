@@ -17,8 +17,6 @@
 #include <threads.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
-#include "aml-sd-emmc-regs.h"
-
 namespace sdmmc {
 
 class AmlSdEmmc;
@@ -30,14 +28,14 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
                      ddk::MmioPinnedBuffer pinned_mmio, aml_sd_emmc_config_t config,
                      zx::interrupt irq, const ddk::GpioProtocolClient& gpio)
       : AmlSdEmmcType(parent),
-        mmio_(std::move(mmio)),
         bti_(std::move(bti)),
+        mmio_(std::move(mmio)),
         pinned_mmio_(std::move(pinned_mmio)),
         reset_gpio_(gpio),
         irq_(std::move(irq)),
         board_config_(config) {}
 
-  virtual ~AmlSdEmmc() {}
+  ~AmlSdEmmc() {}
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation
@@ -55,27 +53,11 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   zx_status_t SdmmcRequest(sdmmc_req_t* req);
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
 
-  // Visible for tests
-  zx_status_t Init();
-
  protected:
+  // Visible for tests
   zx_status_t Bind();
 
-  virtual zx_status_t WaitForInterrupt();
-
-  ddk::MmioBuffer mmio_;
-  fbl::Mutex mtx_;
-  // cur pending req
-  sdmmc_req_t* cur_req_ TA_GUARDED(mtx_) = nullptr;
-
  private:
-  struct TuneWindow {
-    uint32_t start = 0;
-    uint32_t size = 0;
-
-    uint32_t BestDelay() const { return (start + (size / 2)) % (AmlSdEmmcClock::kMaxDelay + 1); }
-  };
-
   enum {
     COMPONENT_PDEV,
     COMPONENT_GPIO_RESET,
@@ -90,10 +72,6 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   uint32_t GetClkFreq(uint32_t clk_src) const;
   zx_status_t TuningDoTransfer(uint8_t* tuning_res, uint16_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
-  template <typename DelayCallback>
-  TuneWindow TestDelaySettings(DelayCallback set_delay, const uint8_t* pattern, uint16_t size,
-                               uint32_t cmd_idx);
-  zx_status_t TuneDelayLines(const uint8_t* pattern, uint16_t size, uint32_t cmd_idx);
   bool TuningTestDelay(const uint8_t* blk_pattern, uint16_t blk_pattern_size, uint32_t adj_delay,
                        uint32_t tuning_cmd_idx);
   // Calculates the best window size for tuning
@@ -112,9 +90,11 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
                              aml_sd_emmc_desc_t** last_desc);
   zx_status_t FinishReq(sdmmc_req_t* req);
   int IrqThread();
+  zx_status_t Init();
 
   zx::bti bti_;
 
+  ddk::MmioBuffer mmio_;
   ddk::MmioPinnedBuffer pinned_mmio_;
   const ddk::GpioProtocolClient reset_gpio_;
   zx::interrupt irq_;
@@ -124,6 +104,9 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
   sdmmc_host_info_t dev_info_;
   ddk::IoBuffer descs_buffer_;
   sync_completion_t req_completion_;
+  fbl::Mutex mtx_;
+  // cur pending req
+  sdmmc_req_t* cur_req_ TA_GUARDED(mtx_);
   uint32_t max_freq_, min_freq_;
 };
 
