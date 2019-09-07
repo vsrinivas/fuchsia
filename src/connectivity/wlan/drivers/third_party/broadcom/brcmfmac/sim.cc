@@ -52,10 +52,10 @@ static const struct brcmf_bus_ops brcmf_sim_bus_ops = {
         },
     .device_add =
         [](brcmf_bus* bus, zx_device_t* parent, device_add_args_t* args, zx_device_t** out) {
-          return bus->bus_priv.sim->dev_mgr->wlan_sim_device_add(parent, args, out);
+          return bus->bus_priv.sim->dev_mgr->DeviceAdd(parent, args, out);
         },
-    .device_remove = [](brcmf_bus* bus, zx_device_t* dev) {
-                        return bus->bus_priv.sim->dev_mgr->wlan_sim_device_remove(dev); },
+    .device_remove = [](brcmf_bus* bus,
+                        zx_device_t* dev) { return bus->bus_priv.sim->dev_mgr->DeviceRemove(dev); },
 };
 #undef BUS_OP
 

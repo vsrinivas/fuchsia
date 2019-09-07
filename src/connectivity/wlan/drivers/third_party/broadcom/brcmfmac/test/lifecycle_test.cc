@@ -54,7 +54,7 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   std::unique_ptr<SimDevice> device;
   zx_status_t status = SimDevice::Create(nullptr, dev_mgr, env, &device);
   ASSERT_EQ(status, ZX_OK);
-  EXPECT_EQ(dev_mgr->wlan_sim_device_get_num_devices(), static_cast<size_t>(1));
+  EXPECT_EQ(dev_mgr->DevicesCount(), static_cast<size_t>(1));
 
   // Create iface.
   auto [local, _remote] = make_channel();
@@ -63,10 +63,10 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   uint16_t iface_id;
   status = device->WlanphyImplCreateIface(&create_iface_req, &iface_id);
   ASSERT_EQ(status, ZX_OK);
-  EXPECT_EQ(dev_mgr->wlan_sim_device_get_num_devices(), static_cast<size_t>(2));
+  EXPECT_EQ(dev_mgr->DevicesCount(), static_cast<size_t>(2));
 
   // Simulate start call from Fuchsia's generic wlanif-impl driver.
-  auto iface = dev_mgr->find_device_by_proto_id(ZX_PROTOCOL_WLANIF_IMPL);
+  auto iface = dev_mgr->FindFirstByProtocolId(ZX_PROTOCOL_WLANIF_IMPL);
   ASSERT_TRUE(iface.has_value());
   void* ctx = iface->dev_args.ctx;
   auto* iface_ops = static_cast<wlanif_impl_protocol_ops_t*>(iface->dev_args.proto_ops);

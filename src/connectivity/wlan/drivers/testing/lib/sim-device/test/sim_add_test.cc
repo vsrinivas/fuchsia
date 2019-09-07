@@ -12,83 +12,88 @@
 
 #define NUM_DEVS (10)
 
+namespace wlan {
+namespace simulation {
 namespace {
 
-class TestDeviceOps : public testing::Test {
- public:
-  TestDeviceOps();
-  ~TestDeviceOps();
+TEST(TestDeviceOps, AddRemoveDevs) {
   device_add_args_t dev_args[NUM_DEVS];
   zx_device_t *ctx[NUM_DEVS];
-  uint32_t num_devices;
-};
-
-TestDeviceOps::TestDeviceOps() { num_devices = 0; }
-
-TestDeviceOps::~TestDeviceOps() {}
-
-TEST_F(TestDeviceOps, AddRemoveDevs) {
-  uint32_t num_devs;
   zx_status_t last_sts;
-  zx_device_t *my_dev, *dev, *parent;
-  device_add_args_t *temp;
-  wlan::simulation::FakeDevMgr DevMgr;
-
-  printf("Allocate mem for parent dev context\n");
-  // Allocate memory for parent
-  my_dev = (zx_device_t *)std::calloc(1, 32);
-  EXPECT_NE(my_dev, nullptr);
+  zx_device_t *my_dev = DeviceId(123).as_device();
+  wlan::simulation::FakeDevMgr dev_mgr;
 
   printf("Adding a device\n");
   // Add the first device
   dev_args[0].name = "dev1";
-  last_sts = DevMgr.wlan_sim_device_add(my_dev, &dev_args[0], &ctx[0]);
+  last_sts = dev_mgr.DeviceAdd(my_dev, &dev_args[0], &ctx[0]);
   EXPECT_EQ(last_sts, ZX_OK);
-  num_devices++;
+  EXPECT_EQ(dev_mgr.DevicesCount(), static_cast<size_t>(1));
 
   printf("Adding another device\n");
   // Add another device
   dev_args[1].name = "dev2";
-  last_sts = DevMgr.wlan_sim_device_add(my_dev, &dev_args[1], &ctx[1]);
+  last_sts = dev_mgr.DeviceAdd(my_dev, &dev_args[1], &ctx[1]);
   EXPECT_EQ(last_sts, ZX_OK);
-  num_devices++;
 
   printf("Check if # devs is 2\n");
   // Check number of devices is TWO
-  num_devs = DevMgr.wlan_sim_device_get_num_devices();
-  EXPECT_EQ(num_devices, num_devs);
+  EXPECT_EQ(dev_mgr.DevicesCount(), static_cast<size_t>(2));
 
   printf("Iterate through the list\n");
   // Iterate through the dev list
-  dev = DevMgr.wlan_sim_device_get_first(&parent, &temp);
-  EXPECT_NE(dev, nullptr);
-  EXPECT_EQ(parent, my_dev);
-  while (dev != nullptr) {
-    dev = DevMgr.wlan_sim_device_get_next(&parent, &temp);
-    if (dev != nullptr) {
-      EXPECT_EQ(parent, my_dev);
-    }
+
+  for (const auto &[_dev, dev_info] : dev_mgr) {
+    EXPECT_EQ(dev_info.parent, my_dev);
   }
 
   printf("Remove the devs\n");
   // Remove the devices (deliberately not in the add order)
 
-  last_sts = DevMgr.wlan_sim_device_remove(ctx[1]);
+  last_sts = dev_mgr.DeviceRemove(ctx[1]);
   EXPECT_EQ(last_sts, ZX_OK);
 
-  last_sts = DevMgr.wlan_sim_device_remove(ctx[0]);
+  last_sts = dev_mgr.DeviceRemove(ctx[0]);
   EXPECT_EQ(last_sts, ZX_OK);
 
   printf("Check if # devs is 0\n");
   // Check if num devices in the list is zero
-  num_devices = DevMgr.wlan_sim_device_get_num_devices();
-  EXPECT_EQ(num_devices, 0u);
+  EXPECT_EQ(dev_mgr.DevicesCount(), static_cast<size_t>(0));
 
   printf("Remove a non-existent dev\n");
   // Negative test...attempt to remove from empty list
-  last_sts = DevMgr.wlan_sim_device_remove(ctx[0]);
+  last_sts = dev_mgr.DeviceRemove(ctx[0]);
   EXPECT_NE(last_sts, ZX_OK);
-  free(my_dev);
+}
+
+TEST(TestDeviceOps, RetrieveDevice) {
+  zx_device_t *fakeParent = DeviceId(123).as_device();
+  wlan::simulation::FakeDevMgr dev_mgr;
+
+  device_add_args_t add_args{
+      .proto_id = 42,
+  };
+  zx_device_t *dev = nullptr;
+  auto status = dev_mgr.DeviceAdd(fakeParent, &add_args, &dev);
+  ASSERT_EQ(status, ZX_OK);
+
+  // Retrieve via protocol:
+  auto child_dev = dev_mgr.FindFirstByProtocolId(42);
+  ASSERT_TRUE(child_dev.has_value());
+  EXPECT_EQ(child_dev->parent, fakeParent);
+  child_dev = dev_mgr.FindFirstByProtocolId(43);
+  ASSERT_FALSE(child_dev.has_value());
+
+  // Retrieve via zx_device:
+  child_dev = dev_mgr.GetDevice(dev);
+  ASSERT_TRUE(child_dev.has_value());
+  EXPECT_EQ(child_dev->parent, fakeParent);
+  child_dev = dev_mgr.GetDevice(DeviceId(999).as_device());
+  ASSERT_FALSE(child_dev.has_value());
+  child_dev = dev_mgr.GetDevice(nullptr);
+  ASSERT_FALSE(child_dev.has_value());
 }
 
 }  // namespace
+}  // namespace simulation
+}  // namespace wlan

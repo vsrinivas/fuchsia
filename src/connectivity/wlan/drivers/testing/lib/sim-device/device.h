@@ -9,14 +9,12 @@
  * devmgr.
  */
 
-#include <list>
-#include <optional>
+#include <unordered_map>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
-namespace wlan {
-namespace simulation {
+namespace wlan::simulation {
 
 #ifdef DEBUG
 #define DBG_PRT(fmt, ...) printf(fmt, ##__VA_ARGS__)
@@ -24,35 +22,67 @@ namespace simulation {
 #define DBG_PRT(fmt, ...)
 #endif  // DEBUG
 
-using wlan_sim_dev_info_t = struct wlan_sim_dev_info {
+struct DeviceIdHasher;
+
+class DeviceId {
+ public:
+  friend DeviceIdHasher;
+
+  explicit DeviceId(uint64_t id) : id_(id) {}
+
+  static DeviceId FromDevice(zx_device_t* device) {
+    return DeviceId(reinterpret_cast<uint64_t>(device));
+  }
+
+  zx_device_t* as_device() const { return reinterpret_cast<zx_device_t*>(id_); }
+
+  bool operator==(const DeviceId& other) const { return id_ == other.id_; }
+
+ private:
+  uint64_t id_;
+};
+
+struct DeviceIdHasher {
+  std::size_t operator()(const DeviceId& deviceId) const {
+    return std::hash<uint64_t>()(deviceId.id_);
+  }
+};
+
+struct wlan_sim_dev_info_t {
   zx_device* parent;
   device_add_args_t dev_args;
 };
 
-// Simulated device_add()
+// Fake DeviceManager is a drop-in replacement for Fuchsia's DeviceManager in unit tests.
+// In particular, this fake DeviceManager provides functionality to add and remove devices,
+// as well as iterate through the device list. It also provides some convenience methods
+// for accessing previously added devices.
+// Note: Devices are *not* ordered in any particular way.
 class FakeDevMgr {
  public:
-  using devices_t = std::list<wlan_sim_dev_info_t*>;
+  using devices_t = std::unordered_map<DeviceId, wlan_sim_dev_info_t, DeviceIdHasher>;
+  using iterator = devices_t::iterator;
   using const_iterator = devices_t::const_iterator;
+  using Predicate = std::function<bool(DeviceId, wlan_sim_dev_info_t&)>;
 
-  const_iterator begin() const { return device_list_.begin(); }
-  const_iterator end() const { return device_list_.end(); }
-  const_iterator cbegin() const { return device_list_.cbegin(); }
-  const_iterator cend() const { return device_list_.cend(); }
+  // Default C++ iterator implementation:
+  iterator begin() { return devices_.begin(); }
+  iterator end() { return devices_.end(); }
+  const_iterator begin() const { return devices_.begin(); }
+  const_iterator end() const { return devices_.end(); }
+  const_iterator cbegin() const { return devices_.cbegin(); }
+  const_iterator cend() const { return devices_.cend(); }
 
-  FakeDevMgr();
-  ~FakeDevMgr();
-  zx_status_t wlan_sim_device_add(zx_device_t* parent, device_add_args_t* args, zx_device_t** out);
-  zx_status_t wlan_sim_device_remove(zx_device_t* device);
-  zx_device_t* wlan_sim_device_get_first(zx_device_t** parent, device_add_args_t** args);
-  zx_device_t* wlan_sim_device_get_next(zx_device_t** parent, device_add_args_t** args);
-  size_t wlan_sim_device_get_num_devices();
-  std::optional<wlan_sim_dev_info_t> find_device_by_proto_id(uint32_t proto_id);
+  zx_status_t DeviceAdd(zx_device_t* parent, device_add_args_t* args, zx_device_t** out);
+  zx_status_t DeviceRemove(zx_device_t* device);
+  std::optional<wlan_sim_dev_info_t> FindFirst(const Predicate& pred);
+  std::optional<wlan_sim_dev_info_t> FindFirstByProtocolId(uint32_t proto_id);
+  std::optional<wlan_sim_dev_info_t> GetDevice(zx_device_t* device);
+  size_t DevicesCount();
 
  private:
-  std::list<wlan_sim_dev_info_t*> device_list_;
-  std::list<wlan_sim_dev_info_t*>::iterator dev_list_itr_;
+  uint64_t dev_counter_ = 1;
+  devices_t devices_;
 };
-}  // namespace simulation
-}  // namespace wlan
+}  // namespace wlan::simulation
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_DEVICE_DEVICE_H_

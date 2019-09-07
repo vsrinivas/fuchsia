@@ -37,7 +37,7 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device,
       // The tests don't access any of the other fields yet
   };
 
-  if ((status = dev_mgr->wlan_sim_device_add(parent_device, &add_args, &phy_device)) != ZX_OK) {
+  if ((status = dev_mgr->DeviceAdd(parent_device, &add_args, &phy_device)) != ZX_OK) {
     return status;
   }
 
@@ -63,7 +63,7 @@ zx_status_t SimDevice::BusRegister(brcmf_pub* drvr) {
 SimDevice::~SimDevice() {
   DisableDispatcher();
   if (fake_dev_mgr_ != nullptr && phy_device_ != nullptr) {
-    fake_dev_mgr_->wlan_sim_device_remove(phy_device_);
+    fake_dev_mgr_->DeviceRemove(phy_device_);
   }
   if (brcmf_bus_) {
     brcmf_sim_exit(brcmf_bus_.get());
