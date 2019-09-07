@@ -17,23 +17,80 @@ class AppContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dragOffset = ValueNotifier<double>(0);
+    final isDragging = ValueNotifier<bool>(false);
     return AnimatedBuilder(
       animation: Listenable.merge([
         model.clustersModel.fullscreenStoryNotifier,
         model.peekNotifier,
+        dragOffset,
       ]),
-      child: child,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        child: child,
+        onVerticalDragDown: (details) =>
+            _onDragDown(details, dragOffset, isDragging),
+        onVerticalDragUpdate: (details) =>
+            _onDragUpdate(details, dragOffset, isDragging),
+        onVerticalDragEnd: (details) =>
+            _onDragEnd(details, dragOffset, isDragging),
+        onVerticalDragCancel: () => _onDragEnd(null, dragOffset, isDragging),
+      ),
       builder: (context, child) {
         double top = model.isFullscreen && !model.peekNotifier.value
-            ? -ErmineStyle.kTopBarHeight - ErmineStyle.kStoryTitleHeight
+            ? -ErmineStyle.kTopBarHeight -
+                ErmineStyle.kStoryTitleHeight +
+                dragOffset.value
             : 0;
+        final duration = isDragging.value
+            ? Duration.zero
+            : ErmineStyle.kScreenAnimationDuration;
+        final curve = isDragging.value
+            ? Curves.linear
+            : ErmineStyle.kScreenAnimationCurve;
         return AnimatedContainer(
           transform: Matrix4.translation(Vector3(0, top, 0)),
           child: child,
-          duration: ErmineStyle.kScreenAnimationDuration,
-          curve: ErmineStyle.kScreenAnimationCurve,
+          duration: duration,
+          curve: curve,
         );
       },
     );
+  }
+
+  void _onDragDown(DragDownDetails details, ValueNotifier<double> offset,
+      ValueNotifier<bool> isDragging) {
+    if (model.isFullscreen && !model.peekNotifier.value) {
+      if (details.globalPosition.dy < ErmineStyle.kTopBarHeight) {
+        offset.value = details.globalPosition.dy;
+        isDragging.value = true;
+      }
+    }
+  }
+
+  void _onDragUpdate(DragUpdateDetails details, ValueNotifier<double> offset,
+      ValueNotifier<bool> isDragging) {
+    if (model.isFullscreen && !model.peekNotifier.value && isDragging.value) {
+      if (offset.value >
+          ErmineStyle.kTopBarHeight + ErmineStyle.kStoryTitleHeight) {
+        offset.value += details.delta.dy / 4;
+      } else {
+        offset.value += details.delta.dy;
+      }
+    }
+  }
+
+  void _onDragEnd(DragEndDetails details, ValueNotifier<double> offset,
+      ValueNotifier<bool> isDragging) {
+    if (model.isFullscreen &&
+        !model.peekNotifier.value &&
+        isDragging.value &&
+        details != null &&
+        offset.value + details.velocity.pixelsPerSecond.dy * 2 >
+            ErmineStyle.kTopBarHeight + ErmineStyle.kStoryTitleHeight) {
+      model.onFullscreen();
+    }
+    offset.value = 0;
+    isDragging.value = false;
   }
 }
