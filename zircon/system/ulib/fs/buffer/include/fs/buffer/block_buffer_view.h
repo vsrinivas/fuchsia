@@ -46,7 +46,7 @@ class BlockBufferView {
   size_t start() const { return start_; }
   // Returns the length of the view, in blocks.
   size_t length() const { return length_; }
-  vmoid_t vmoid() const { return buffer_ ? buffer_->vmoid() : VMOID_INVALID; }
+  vmoid_t vmoid() const { return buffer_ ? buffer_->vmoid() : BLOCK_VMOID_INVALID; }
 
   // Returns one block of data starting at block |index| within this view.
   void* Data(size_t index) {

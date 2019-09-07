@@ -25,7 +25,7 @@ TEST(HKDF, Init) {
   Secret ikm;
   Bytes salt;
   ASSERT_OK(ikm.Generate(md_size));
-  ASSERT_OK(salt.Randomize(GUID_LEN));
+  ASSERT_OK(salt.Randomize(BLOCK_GUID_LEN));
 
   // Bad version
   HKDF hkdf;
@@ -39,7 +39,7 @@ TEST(HKDF, Init) {
   // Salt is optional
   ASSERT_OK(salt.Resize(0));
   EXPECT_OK(hkdf.Init(digest::kSHA256, ikm, salt));
-  ASSERT_OK(salt.Randomize(GUID_LEN));
+  ASSERT_OK(salt.Randomize(BLOCK_GUID_LEN));
 
   // Invalid flags
   EXPECT_STATUS(hkdf.Init(digest::kSHA256, ikm, salt, 0x8000), ZX_ERR_INVALID_ARGS);
@@ -56,7 +56,7 @@ TEST(HKDF, Derive) {
   Secret ikm, key1, key2, key3;
   Bytes salt;
   ASSERT_OK(ikm.Generate(md_size));
-  ASSERT_OK(salt.Randomize(GUID_LEN));
+  ASSERT_OK(salt.Randomize(BLOCK_GUID_LEN));
 
   // Uninitialized
   EXPECT_STATUS(hkdf.Derive("init", md_size, &key1), ZX_ERR_INVALID_ARGS);

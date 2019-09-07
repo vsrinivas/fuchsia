@@ -161,11 +161,11 @@ zx_status_t MbrDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_g
   }
   switch (partition_.type) {
     case kPartitionTypeFuchsiaData: {
-      memcpy(out_guid, kDataGuid, GUID_LEN);
+      memcpy(out_guid, kDataGuid, BLOCK_GUID_LEN);
       return ZX_OK;
     }
     case kPartitionTypeFuchsiaSys: {
-      memcpy(out_guid, kSysGuid, GUID_LEN);
+      memcpy(out_guid, kSysGuid, BLOCK_GUID_LEN);
       return ZX_OK;
     }
     default: {

@@ -489,16 +489,16 @@ zx_status_t VPartitionManager::Upgrade(const uint8_t* old_guid, const uint8_t* n
   size_t old_index = 0;
   size_t new_index = 0;
 
-  if (!memcmp(old_guid, new_guid, GUID_LEN)) {
+  if (!memcmp(old_guid, new_guid, BLOCK_GUID_LEN)) {
     old_guid = nullptr;
   }
 
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     auto entry = GetVPartEntryLocked(i);
     if (entry->slices != 0) {
-      if (old_guid && entry->IsActive() && !memcmp(entry->guid, old_guid, GUID_LEN)) {
+      if (old_guid && entry->IsActive() && !memcmp(entry->guid, old_guid, BLOCK_GUID_LEN)) {
         old_index = i;
-      } else if (entry->IsInactive() && !memcmp(entry->guid, new_guid, GUID_LEN)) {
+      } else if (entry->IsInactive() && !memcmp(entry->guid, new_guid, BLOCK_GUID_LEN)) {
         new_index = i;
       }
     }

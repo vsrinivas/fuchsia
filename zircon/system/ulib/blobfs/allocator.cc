@@ -63,8 +63,8 @@ zx_status_t Allocator::ResetFromStorage(fs::ReadTxn txn) {
     return status;
   }
 
-  vmoid_t block_map_vmoid = VMOID_INVALID;
-  vmoid_t node_map_vmoid = VMOID_INVALID;
+  vmoid_t block_map_vmoid = BLOCK_VMOID_INVALID;
+  vmoid_t node_map_vmoid = BLOCK_VMOID_INVALID;
 
   // Always attempt to detach vmoids before returning. Even if one or both vmoids are invalid,
   // this is okay since the return status is ignored.
