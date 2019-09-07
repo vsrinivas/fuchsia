@@ -11,5 +11,4 @@
  * entry points without some reference chain from an exported symbol.
  * This file injects synthetic references to keep the symbols alive.
  */
-
-EXTERN(CODE_clock_get_monotonic_via_kernel_ticks)
+EXTERN(CODE_soft_ticks_get)

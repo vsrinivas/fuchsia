@@ -17,21 +17,7 @@
 // hash. There is also a 4 byte 'git-' prefix, and possibly a 6 byte
 // '-dirty' suffix. Let's be generous and use 64 bytes.
 #define MAX_BUILDID_SIZE 64
-
-// The manifest for the constants size is currently...
-// + 8 32-bit integers
-// |++ max_num_cpus (1)
-// |++ features (3)
-// |++ cache lines sizes (2)
-// |++ ticks to mono ratio (2)
-// |
-// + 2 64-bit integers
-// | ticks_per_second (1)
-// | physmem amount (1)
-// |
-// + max build ID size (64 bytes)
-//
-#define VDSO_CONSTANTS_SIZE ((8 * 4) + (2 * 8) + MAX_BUILDID_SIZE)
+#define VDSO_CONSTANTS_SIZE (4 * 4 + 2 * 8 + 2 * 4 + MAX_BUILDID_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -68,14 +54,6 @@ struct vdso_constants {
 
   // Conversion factor for zx_ticks_get return values to seconds.
   zx_ticks_t ticks_per_second;
-
-  // Ratio which relates ticks (zx_ticks_get) to clock monotonic (zx_clock_get_monotonic).
-  // Specifically...
-  //
-  // ClockMono(ticks) = (ticks * N) / D
-  //
-  uint32_t ticks_to_mono_numerator;
-  uint32_t ticks_to_mono_denominator;
 
   // Total amount of physical memory in the system, in bytes.
   uint64_t physmem;
