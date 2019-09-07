@@ -112,7 +112,7 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   // simplest_app
   {
     constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename("input_latency");
+    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
     benchmarks_runner->AddCustomBenchmark(
         kLabel,
         {"/bin/run",
@@ -124,7 +124,7 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   // yuv_to_image_pipe
   {
     constexpr const char* kLabel = "fuchsia.input_latency.yuv_to_image_pipe";
-    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename("input_latency");
+    std::string out_file = benchmarks_runner->MakePerfResultsOutputFilename(kLabel);
     benchmarks_runner->AddCustomBenchmark(
         kLabel,
         {"/bin/run",
