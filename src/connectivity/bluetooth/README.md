@@ -21,6 +21,7 @@ Source code shortcuts:
 For more orientation, see
 - [System Architecture](/docs/the-book/bluetooth_architecture.md)
 - [Detailed Source Layout](/docs/the-book/bluetooth_source_layout.md)
+- [Respectful Code](#Respectful-Code)
 
 For a note on used (and avoided) vocabulary, see
 - [Bluetooth Vocabulary](docs/vocabulary.md)
@@ -193,3 +194,34 @@ bt-gap, bt-a2dp-sink, and bt-snoop all expose information though Inspect.
 * All Bluetooth components: `fx iquery bt-*`
 
 See the [iquery documentation](https://fuchsia.dev/fuchsia-src/development/inspect/iquery) for complete instructions on using `iquery`.
+
+### Respectful Code
+
+Inclusivity is central to Fuchsia's culture, and our values include treating
+each other with dignity. As such, it’s important that everyone can contribute
+without facing the harmful effects of bias and discrimination.
+
+The Bluetooth standard makes use of the terms "master" and "slave" to define
+link layer connection roles in many of the protocol specifications. Here are a
+few rules of thumb when referring to these roles in code and comments:
+
+1. Do not propagate these terms beyond the layer of code directly involved with link layer
+roles. Use the suggested alternative terminology at FIDL API boundaries. See
+[Bluetooth Vocabulary Guide](//src/connectivity/bluetooth/docs/vocabulary.md).
+
+2. Whenever possible, prefer different terms that more specifically describe function. For example,
+the SMP specification defines "initiator" and "responder" roles that correspond to the
+aforementioned roles without loss of clarity.
+
+3. If an explicit reference to the link layer role is necessary, then try to
+avoid the term "slave" where possible. For example this formulation avoids the
+term without losing clarity:
+
+```
+   if (link->role() != hci::Connection::Role::kMaster) {
+     ...
+   }
+```
+
+See the Fuchsia project [guide](//docs/best-practices/respectful_code.md) on best practices
+for more information.

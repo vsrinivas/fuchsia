@@ -30,3 +30,18 @@ Suggestion:
 * When referring to a system device (e.g. represented in /dev), use the term ‘device’ (this is consistent with the rest of Fuchsia)
 * When referring to a remote Bluetooth Host/Controller pair that we may communiate and interact with, use the term ‘peer’
 * In situations where standard Bluetooth terms like 'paging device' or 'inquiring device' are used to describe peers in a specific situation, these terms may be used, but should be used in full. If in the given context it is clearer and more consistent to avoid the term 'peer', then the qualified term 'remote device' can be used, but the standalone term 'device' should be avoided.
+
+## Leader/Follower
+
+The Bluetooth Link Layer specification uses the terms 'Master' and 'Slave' to define the role of a
+Bluetooth device in a Piconet Physical Channel. Following our
+[guidelines](//docs/best-practices/respectful_code.md) for respectful code, we suggest the following
+alternatives:
+
+* Leader: Used specifically to refer to the 'Master' of the piconet, as defined in Bluetooth Core
+  Specification Version 5.1, Vol 2, Part B, Section 2.2.1. The use of 'Leader' in the Bluetooth APIs
+  can be considered to have the same meaning as the term 'Master'.
+
+* Follower: Used specifically to refer to a 'Slave' of the piconet, as defined in Bluetooth Core
+  Specification Version 5.1, Vol 2, Part B, Section 2.2.1. The use of 'Follower' in the Bluetooth APIs
+  can be considered to have the same meaning as the term 'Slave'.
