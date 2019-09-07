@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/fuzzer.gni")
+import("$zx/public/gn/resource.gni")
+import("$zx/public/gn/zbi.gni")
+
 library("zbi-bootfs") {
   sdk_headers = [ "zbi-bootfs/zbi-bootfs.h" ]
   sdk = "shared"
@@ -19,6 +23,91 @@ library("zbi-bootfs") {
     "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/hermetic-decompressor",
+    "$zx/system/ulib/hermetic-decompressor:headers",
+    "$zx/third_party/ulib/lz4",
+    "$zx/third_party/ulib/zstd",
+  ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":zbi-bootfs-fuzzer",
+    ":zbi-bootfs-test",
+  ]
+}
+
+test("zbi-bootfs-test") {
+  sources = [
+    "zbi-bootfs-test.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zbi-bootfs",
+    "$zx/system/ulib/zxtest",
+  ]
+  data_deps = [
+    ":generated-zbi",
+    ":lz4f-zbi",
+    ":zstd-zbi",
+  ]
+}
+
+resource("generated-zbi") {
+  sources = [
+    "$target_out_dir/generated.zbi",
+  ]
+  outputs = [
+    "testdata/zbi-bootfs/generated.zbi",
+  ]
+  deps = [
+    ":generated",
+  ]
+  testonly = true
+}
+
+# TODO(ashleycoleman): Use generated zbi instead of raw binaries after fxb/36181
+resource("lz4f-zbi") {
+  sources = [
+    "$zx/system/ulib/zbi-bootfs/test/resource/lz4f.zbi",
+  ]
+  outputs = [
+    "testdata/zbi-bootfs/lz4f.zbi",
+  ]
+  testonly = true
+}
+
+resource("zstd-zbi") {
+  sources = [
+    "$zx/system/ulib/zbi-bootfs/test/resource/zstd.zbi",
+  ]
+  outputs = [
+    "testdata/zbi-bootfs/zstd.zbi",
+  ]
+  testonly = true
+}
+
+zbi_input("create-zbi-image") {
+  testonly = true
+  sources = [
+    "$zx/system/ulib/zbi-bootfs/test/payload/",
+  ]
+}
+
+# This makes a zbi() to run tests.
+zbi("generated") {
+  testonly = true
+  cpu = ""
+  deps = [
+    ":create-zbi-image",
+  ]
+}
+
+fuzzer("zbi-bootfs-fuzzer") {
+  sources = [
+    "zbi-bootfs-fuzzer.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/zbi-bootfs",
   ]
 }

@@ -179,7 +179,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/trace-vthread:tests",
       "$zx/system/ulib/unittest/test",
       "$zx/system/ulib/utf_conversion/test",
-      "$zx/system/ulib/zbi-bootfs/test",
+      "$zx/system/ulib/zbi-bootfs:test",
       "$zx/system/ulib/zx-panic-libc/test",
       "$zx/system/ulib/zx/test",
       "$zx/system/ulib/zxio/test",

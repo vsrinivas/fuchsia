@@ -23,9 +23,14 @@
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+#include <lz4/lz4frame.h>
 #include <zbi-bootfs/zbi-bootfs.h>
+#include <zstd/zstd.h>
 
 namespace zbi_bootfs {
+
+constexpr uint32_t kLz4fMagic = HermeticDecompressorEngineService::kLz4fMagic;
+constexpr uint32_t kZstdMagic = HermeticDecompressorEngineService::kZstdMagic;
 
 bool ZbiBootfsParser::IsSkipBlock(const char* path,
                                   fuchsia_hardware_skipblock_PartitionInfo* partition_info) {
@@ -99,8 +104,7 @@ __EXPORT zx_status_t ZbiBootfsParser::ProcessZbi(const char* filename, Entry* en
         if (hdr.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
           status = zx::vmo::create(hdr.extra, 0, &bootfs_vmo);
           if (status == ZX_OK) {
-            HermeticDecompressor decompress;
-            status = decompress(zbi_vmo, off + sizeof(hdr), hdr.length, bootfs_vmo, 0, hdr.extra);
+            status = Decompress(zbi_vmo, off + sizeof(hdr), hdr.length, bootfs_vmo, 0, hdr.extra);
           }
           if (status != ZX_OK) {
             fprintf(stderr, "Failed to decompress bootfs: %s\n", zx_status_get_string(status));
@@ -320,4 +324,112 @@ __EXPORT zx_status_t ZbiBootfsParser::LoadZbi(const char* input, size_t byte_off
   zbi_vmo = std::move(vmo);
   return ZX_OK;
 }
+
+zx_status_t ZbiBootfsParser::Decompress(zx::vmo& input, uint64_t input_offset, size_t input_size,
+                                        zx::vmo& output, uint64_t output_offset,
+                                        size_t output_size) {
+  uint32_t magic;
+
+  zx_status_t status = input.read(&magic, input_offset, sizeof(magic));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (magic == kLz4fMagic) {
+    return DecompressLz4f(input, input_offset, input_size, output, output_offset, output_size);
+  } else if (magic == kZstdMagic) {
+    return DecompressZstd(input, input_offset, input_size, output, output_offset, output_size);
+  }
+
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t ZbiBootfsParser::DecompressZstd(zx::vmo& input, uint64_t input_offset,
+                                            size_t input_size, zx::vmo& output,
+                                            uint64_t output_offset, size_t output_size) {
+  auto input_buffer = std::make_unique<std::byte[]>(input_size);
+  zx_status_t status = input.read(input_buffer.get(), input_offset, input_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto output_buffer = std::make_unique<std::byte[]>(output_size);
+
+  auto rc = ZSTD_decompress(output_buffer.get(), output_size, input_buffer.get(), input_size);
+  if (ZSTD_isError(rc) || rc != output_size) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  status = output.write(output_buffer.get(), output_offset, output_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ZbiBootfsParser::DecompressLz4f(zx::vmo& input, uint64_t input_offset,
+                                            size_t input_size, zx::vmo& output,
+                                            uint64_t output_offset, size_t output_size) {
+  auto input_buffer = std::make_unique<std::byte[]>(input_size);
+  zx_status_t status = input.read(input_buffer.get(), input_offset, input_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto output_buffer = std::make_unique<std::byte[]>(output_size);
+
+  LZ4F_decompressionContext_t ctx;
+  LZ4F_errorCode_t result = LZ4F_createDecompressionContext(&ctx, LZ4F_VERSION);
+  if (LZ4F_isError(result)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  // Calls freeDecompressionContext when cleanup goes out of scope
+  auto cleanup = fbl::MakeAutoCall([&]() { LZ4F_freeDecompressionContext(ctx); });
+
+  std::byte* dst = output_buffer.get();
+  size_t dst_size = output_size;
+
+  auto src = input_buffer.get();
+  size_t src_size = input_size;
+  do {
+    if (dst_size == 0) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+
+    size_t nwritten = dst_size, nread = src_size;
+    static constexpr const LZ4F_decompressOptions_t kDecompressOpt{};
+    result = LZ4F_decompress(ctx, dst, &nwritten, src, &nread, &kDecompressOpt);
+    if (LZ4F_isError(result)) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+
+    if (nread > src_size) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+
+    src += nread;
+    src_size -= nread;
+
+    if (nwritten > dst_size) {
+      return ZX_ERR_IO_DATA_INTEGRITY;
+    }
+
+    dst += nwritten;
+    dst_size -= nwritten;
+  } while (src_size > 0);
+
+  if (dst_size > 0) {
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  status = output.write(output_buffer.get(), output_offset, output_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace zbi_bootfs

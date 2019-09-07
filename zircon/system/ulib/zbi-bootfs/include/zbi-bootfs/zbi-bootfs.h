@@ -20,20 +20,28 @@ struct Entry {
 // Only ZBI_TYPE_STORAGE_BOOTFS type payloads are supported currently.
 class ZbiBootfsParser {
  public:
+  virtual ~ZbiBootfsParser() {}
+
   // This loads the ZBI image from "input" to a vmo. It takes an optional parameter
   // byte_offset
   // byte_offset = 0 implies that bytes will be read without any offset
   // relative to the start of the file/partition
-  zx_status_t Init(const char* input, size_t byte_offset = 0);
+  virtual zx_status_t Init(const char* input, size_t byte_offset = 0);
 
   // This parses the VMO for "filename" and writes its contents to "vmo_out"
-  zx_status_t ProcessZbi(const char* filename, Entry* entry);
+  virtual zx_status_t ProcessZbi(const char* filename, Entry* entry);
 
  protected:
   zx_status_t LoadZbi(const char* input, size_t byte_offset);
 
  private:
   bool IsSkipBlock(const char* path, fuchsia_hardware_skipblock_PartitionInfo* partition_info);
+  zx_status_t Decompress(zx::vmo& input, uint64_t input_offset, size_t input_size, zx::vmo& output,
+                         uint64_t output_offset, size_t output_size);
+  zx_status_t DecompressZstd(zx::vmo& input, uint64_t input_offset, size_t input_size,
+                             zx::vmo& output, uint64_t output_offset, size_t output_size);
+  zx_status_t DecompressLz4f(zx::vmo& input, uint64_t input_offset, size_t input_size,
+                             zx::vmo& output, uint64_t output_offset, size_t output_size);
   zx::vmo zbi_vmo;
 };
 
