@@ -16,7 +16,6 @@ library("minfs") {
     "inspector.cc",
     "metrics.cc",
     "minfs.cc",
-    "superblock.cc",
     "transaction-limits.cc",
     "vnode.cc",
     "writeback.cc",
@@ -28,6 +27,7 @@ library("minfs") {
       "allocator/storage-host.cc",
       "bcache-host.cc",
       "host.cc",
+      "superblock-host.cc",
     ]
   }
   public_deps = [
@@ -92,6 +92,7 @@ library("minfs") {
       "allocator/inode-manager.cc",
       "allocator/storage.cc",
       "bcache.cc",
+      "superblock.cc",
       "vnode-allocation.cc",
       "work-queue.cc",
     ]

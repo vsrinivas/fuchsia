@@ -30,57 +30,65 @@ namespace minfs {
 // caution should be taken to avoid Writing a snapshot of the
 // superblock to disk while another thread has only partially
 // updated the superblock.
+
+#ifdef __Fuchsia__
+
 class SuperblockManager {
  public:
   SuperblockManager() = delete;
   ~SuperblockManager();
   DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
 
-#ifdef __Fuchsia__
   static zx_status_t Create(block_client::BlockDevice* device, const Superblock* info,
                             uint32_t max_blocks, IntegrityCheck checks,
                             fbl::unique_ptr<SuperblockManager>* out);
-#else
-  static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
-                            fbl::unique_ptr<SuperblockManager>* out);
-#endif
 
-  const Superblock& Info() const {
-#ifdef __Fuchsia__
-    return *reinterpret_cast<const Superblock*>(mapping_.start());
-#else
-    return *reinterpret_cast<const Superblock*>(&info_blk_[0]);
-#endif
-  }
+  const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(mapping_.start()); }
 
   // Acquire a pointer to the superblock, such that any
   // modifications will be carried out to persistent storage
   // the next time "Write" is invoked.
-  Superblock* MutableInfo() {
-#ifdef __Fuchsia__
-    return reinterpret_cast<Superblock*>(mapping_.start());
-#else
-    return reinterpret_cast<Superblock*>(&info_blk_[0]);
-#endif
-  }
+  Superblock* MutableInfo() { return reinterpret_cast<Superblock*>(mapping_.start()); }
 
   // Write the superblock/backup superblock back to persistent storage at respective locations.
   // If write_backup is kUpdate, also update the backup superblock.
   void Write(PendingWork* transaction, UpdateBackupSuperblock write_backup);
 
  private:
-#ifdef __Fuchsia__
   SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper);
-#else
-  SuperblockManager(const Superblock* info);
-#endif
 
-#ifdef __Fuchsia__
   fzl::OwnedVmoMapper mapping_;
-#else
-  uint8_t info_blk_[kMinfsBlockSize];
-#endif
 };
+
+#else  // __Fuchsia__
+
+class SuperblockManager {
+ public:
+  SuperblockManager() = delete;
+  ~SuperblockManager();
+  DISALLOW_COPY_ASSIGN_AND_MOVE(SuperblockManager);
+
+  static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
+                            fbl::unique_ptr<SuperblockManager>* out);
+
+  const Superblock& Info() const { return *reinterpret_cast<const Superblock*>(&info_blk_[0]); }
+
+  // Acquire a pointer to the superblock, such that any
+  // modifications will be carried out to persistent storage
+  // the next time "Write" is invoked.
+  Superblock* MutableInfo() { return reinterpret_cast<Superblock*>(&info_blk_[0]); }
+
+  // Write the superblock/backup superblock back to persistent storage at respective locations.
+  // If write_backup is kUpdate, also update the backup superblock.
+  void Write(PendingWork* transaction, UpdateBackupSuperblock write_backup);
+
+ private:
+  SuperblockManager(const Superblock* info);
+
+  uint8_t info_blk_[kMinfsBlockSize];
+};
+
+#endif
 
 }  // namespace minfs
 
