@@ -22,9 +22,9 @@ static zx_status_t zxio_vmofile_close(zxio_t* io) {
 static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->lock);
-  uint64_t seek = file->ptr - file->off;
-  sync_mutex_unlock(&file->lock);
+  sync_mutex_lock(&file->vmo.lock);
+  uint64_t seek = file->vmo.offset;
+  sync_mutex_unlock(&file->vmo.lock);
 
   auto result = file->control.Seek(seek, fio::SeekOrigin::START);
   if (result.status() != ZX_OK) {
@@ -58,7 +58,7 @@ static zx_status_t zxio_vmofile_attr_get(zxio_t* io, zxio_node_attr_t* out_attr)
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
   *out_attr = {};
   out_attr->mode = S_IFREG | S_IRUSR;
-  out_attr->content_size = file->end - file->off;
+  out_attr->content_size = file->vmo.size;
   return ZX_OK;
 }
 
@@ -66,15 +66,15 @@ static zx_status_t zxio_vmofile_read(zxio_t* io, void* buffer, size_t capacity,
                                      size_t* out_actual) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->lock);
-  if (capacity > (file->end - file->ptr)) {
-    capacity = file->end - file->ptr;
+  sync_mutex_lock(&file->vmo.lock);
+  if (capacity > file->vmo.size - file->vmo.offset) {
+    capacity = file->vmo.size - file->vmo.offset;
   }
-  zx_off_t offset = file->ptr;
-  file->ptr += capacity;
-  sync_mutex_unlock(&file->lock);
+  zx_off_t offset = file->vmo.offset;
+  file->vmo.offset += capacity;
+  sync_mutex_unlock(&file->vmo.lock);
 
-  zx_status_t status = file->vmo.read(buffer, offset, capacity);
+  zx_status_t status = file->vmo.vmo.read(buffer, file->start + offset, capacity);
   if (status == ZX_OK) {
     *out_actual = capacity;
   }
@@ -86,19 +86,16 @@ static zx_status_t zxio_vmofile_read_at(zxio_t* io, size_t offset, void* buffer,
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
   // Make sure we're within the file's bounds.
-  if (offset > file->end - file->off) {
+  if (offset > file->vmo.size) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Adjust to vmo offset.
-  offset += file->off;
-
   // Clip length to file bounds.
-  if (capacity > file->end - offset) {
-    capacity = file->end - offset;
+  if (capacity > file->vmo.size - offset) {
+    capacity = file->vmo.size - offset;
   }
 
-  zx_status_t status = file->vmo.read(buffer, offset, capacity);
+  zx_status_t status = file->vmo.vmo.read(buffer, file->start + offset, capacity);
   if (status == ZX_OK) {
     *out_actual = capacity;
   }
@@ -109,28 +106,28 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset, zxio_seek_origin
                                      size_t* out_offset) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
 
-  sync_mutex_lock(&file->lock);
-  zx_off_t at = 0u;
+  sync_mutex_lock(&file->vmo.lock);
+  zx_off_t at;
   switch (start) {
     case fio::SeekOrigin::START:
       at = offset;
       break;
     case fio::SeekOrigin::CURRENT:
-      at = (file->ptr - file->off) + offset;
+      at = file->vmo.offset + offset;
       break;
     case fio::SeekOrigin::END:
-      at = (file->end - file->off) + offset;
+      at = file->vmo.size + offset;
       break;
     default:
-      sync_mutex_unlock(&file->lock);
+      sync_mutex_unlock(&file->vmo.lock);
       return ZX_ERR_INVALID_ARGS;
   }
-  if (at > file->end - file->off) {
-    at = ZX_ERR_OUT_OF_RANGE;
-  } else {
-    file->ptr = file->off + at;
+  if (at > file->vmo.size) {
+    sync_mutex_unlock(&file->vmo.lock);
+    return ZX_ERR_OUT_OF_RANGE;
   }
-  sync_mutex_unlock(&file->lock);
+  file->vmo.offset = at;
+  sync_mutex_unlock(&file->vmo.lock);
 
   *out_offset = at;
   return ZX_OK;
@@ -151,14 +148,17 @@ static constexpr zxio_ops_t zxio_vmofile_ops = []() {
 zx_status_t zxio_vmofile_init(zxio_storage_t* storage, fio::File::SyncClient control, zx::vmo vmo,
                               zx_off_t offset, zx_off_t length, zx_off_t seek) {
   auto file = new (storage) zxio_vmofile_t{
-      .io = storage->io,
+      .vmo =
+          {
+              .io = storage->io,
+              .vmo = std::move(vmo),
+              .size = length,
+              .offset = std::min(seek, length),
+              .lock = {},
+          },
+      .start = offset,
       .control = std::move(control),
-      .vmo = std::move(vmo),
-      .off = offset,
-      .end = offset + length,
-      .ptr = offset + std::min(seek, length),
-      .lock = {},
   };
-  zxio_init(&file->io, &zxio_vmofile_ops);
+  zxio_init(&file->vmo.io, &zxio_vmofile_ops);
   return ZX_OK;
 }

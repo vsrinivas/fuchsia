@@ -497,22 +497,21 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags, zx::vmo* out
     return ZX_ERR_INVALID_ARGS;
   }
 
-  size_t length = file->end - file->off;
   if (flags & fio::VMO_FLAG_PRIVATE) {
-    // Why don't we consider file->off in this branch? It seems like we
-    // want to clone the part of the VMO from file->off to file->end rather
-    // than length bytes at the start of the VMO.
-    return file->vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, out_vmo);
+    // Why don't we consider file->start in this branch? It seems like we want to clone
+    // file->vmo.length bytes from file->start in the VMO rather than from the start of the VMO.
+    return file->vmo.vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, file->vmo.size, out_vmo);
   } else {
-    size_t vmo_length = 0;
-    if (file->off != 0 || file->vmo.get_size(&vmo_length) != ZX_OK || length != vmo_length) {
+    size_t vmo_length;
+    if (file->start != 0 || file->vmo.vmo.get_size(&vmo_length) != ZX_OK ||
+        file->vmo.size != vmo_length) {
       return ZX_ERR_NOT_FOUND;
     }
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
     rights |= (flags & fio::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & fio::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
     rights |= (flags & fio::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-    return file->vmo.duplicate(rights, out_vmo);
+    return file->vmo.vmo.duplicate(rights, out_vmo);
   }
 }
 

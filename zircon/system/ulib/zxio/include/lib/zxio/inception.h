@@ -42,6 +42,27 @@ zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handl
 
 // vmo -------------------------------------------------------------------------
 
+typedef struct zxio_vmo {
+  // The |zxio_t| control structure for this object.
+  zxio_t io;
+
+  // The underlying VMO that stores the data.
+  zx::vmo vmo;
+
+  // The size of the VMO in bytes.
+  //
+  // This value is never changed.
+  zx_off_t size;
+
+  // The current seek offset within the file.
+  //
+  // Protected by |lock|.
+  zx_off_t offset;
+
+  // The lock that protects |offset|.
+  sync_mutex_t lock;
+} zxio_vmo_t;
+
 // Initialize |file| with from a VMO.
 //
 // The file will be sized to match the underlying VMO by reading the size of the
@@ -54,13 +75,14 @@ zx_status_t zxio_vmo_init(zxio_storage_t* file, zx::vmo vmo, zx_off_t offset);
 // vmofile ---------------------------------------------------------------------
 
 typedef struct zxio_vmofile {
-  zxio_t io;
+  zxio_vmo_t vmo;
+
+  // The start of content within the VMO.
+  //
+  // This value is never changed.
+  zx_off_t start;
+
   ::llcpp::fuchsia::io::File::SyncClient control;
-  zx::vmo vmo;
-  zx_off_t off;
-  zx_off_t end;
-  zx_off_t ptr;
-  sync_mutex_t lock;
 } zxio_vmofile_t;
 
 static_assert(sizeof(zxio_vmofile_t) <= sizeof(zxio_storage_t),

@@ -12,28 +12,6 @@
 
 namespace fio = ::llcpp::fuchsia::io;
 
-typedef struct zxio_vmo {
-  // The |zxio_t| control structure for this object.
-  zxio_t io;
-
-  // The underlying VMO that stores the data.
-  zx::vmo vmo;
-
-  // The size of the VMO in bytes.
-  //
-  // This value is read from the kernel during |zxio_vmo_init|, is always a
-  // multiple of the page size, and is never changed.
-  zx_off_t size;
-
-  // The current seek offset within the file.
-  //
-  // Protected by |lock|.
-  zx_off_t offset;
-
-  // The lock that protects |offset|.
-  sync_mutex_t lock;
-} zxio_vmo_t;
-
 static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
               "zxio_vmo_t must fit inside zxio_storage_t.");
 
@@ -145,7 +123,7 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset, zxio_seek_origin_t s
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
   sync_mutex_lock(&file->lock);
-  zx_off_t at = 0u;
+  zx_off_t at;
   switch (start) {
     case fio::SeekOrigin::START:
       at = offset;
@@ -153,7 +131,6 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset, zxio_seek_origin_t s
     case fio::SeekOrigin::CURRENT:
       at = file->offset + offset;
       break;
-
     case fio::SeekOrigin::END:
       at = file->size + offset;
       break;
@@ -162,10 +139,10 @@ static zx_status_t zxio_vmo_seek(zxio_t* io, size_t offset, zxio_seek_origin_t s
       return ZX_ERR_INVALID_ARGS;
   }
   if (at > file->size) {
-    at = ZX_ERR_OUT_OF_RANGE;
-  } else {
-    file->offset = at;
+    sync_mutex_unlock(&file->lock);
+    return ZX_ERR_OUT_OF_RANGE;
   }
+  file->offset = at;
   sync_mutex_unlock(&file->lock);
 
   *out_offset = at;
