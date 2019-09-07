@@ -38,17 +38,17 @@ static_assert(gen::SMALL_DIR_VECTOR_SIZE == 3);
 gen::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
     gen::DirEnt{
         .is_dir = false,
-        .name = fidl::StringView{2, "ab"},
+        .name = fidl::StringView{"ab"},
         .some_flags = 0,
     },
     gen::DirEnt{
         .is_dir = true,
-        .name = fidl::StringView{3, "cde"},
+        .name = fidl::StringView{"cde"},
         .some_flags = 1,
     },
     gen::DirEnt{
         .is_dir = false,
-        .name = fidl::StringView{4, "fghi"},
+        .name = fidl::StringView{"fghi"},
         .some_flags = 2,
     },
 };
@@ -449,7 +449,7 @@ fidl::Array<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
     bool is_dir = random.UpTo(2) == 0;
     int32_t flags = static_cast<int32_t>(random.UpTo(1000));
     dirents[i] = gen::DirEnt{.is_dir = is_dir,
-                             .name = fidl::StringView{static_cast<uint64_t>(str_len), name},
+                             .name = fidl::StringView{name, static_cast<uint64_t>(str_len)},
                              .some_flags = flags};
   }
   return dirents;

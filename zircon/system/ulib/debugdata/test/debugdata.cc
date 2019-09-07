@@ -48,7 +48,7 @@ TEST(DebugDataTest, PublishData) {
   ASSERT_OK(vmo.write(kTestData, 0, sizeof(kTestData)));
 
   ASSERT_OK(::llcpp::fuchsia::debugdata::DebugData::Call::Publish(
-                zx::unowned_channel(client), fidl::StringView(strlen(kTestSink), kTestSink),
+                zx::unowned_channel(client), fidl::StringView(kTestSink),
                 std::move(vmo))
                 .status());
 
@@ -98,10 +98,10 @@ TEST(DebugDataTest, LoadConfig) {
   fidl::Bind(loop.dispatcher(), std::move(server), &svc);
   ASSERT_OK(loop.StartThread());
 
-  const std::filesystem::path path = directory / filename;
+  const auto path = (directory / filename).string();
 
   auto result = ::llcpp::fuchsia::debugdata::DebugData::Call::LoadConfig(
-      zx::unowned_channel(client), fidl::StringView(strlen(path.c_str()), path.c_str()));
+      zx::unowned_channel(client), fidl::StringView(path));
   ASSERT_OK(result.status());
   zx::vmo vmo = std::move(result->config);
 

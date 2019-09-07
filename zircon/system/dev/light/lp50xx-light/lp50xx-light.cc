@@ -150,19 +150,19 @@ zx_status_t Lp50xxLight::GetRgbValue(uint32_t index, llcpp::fuchsia::hardware::l
 
 void Lp50xxLight::GetName(uint32_t index, GetNameCompleter::Sync completer) {
   if (index >= led_count_) {
-    completer.Reply(ZX_ERR_OUT_OF_RANGE, fidl::StringView(0, nullptr));
+    completer.Reply(ZX_ERR_OUT_OF_RANGE, fidl::StringView(nullptr, 0));
     return;
   }
 
   if (names_.size() > 0) {
     // TODO(puneetha): Currently names_ is not set from metadata. This code will not be executed.
     auto* name = names_[index];
-    completer.Reply(ZX_OK, fidl::StringView(strlen(name) + 1, name));
+    completer.Reply(ZX_OK, fidl::StringView(name, strlen(name) + 1));
   } else {
     // Return "lp50xx-led-X" if no metadata was provided.
     char name[kNameLength];
     snprintf(name, sizeof(name), "lp50xx-led-%u\n", index);
-    completer.Reply(ZX_OK, fidl::StringView(strlen(name) + 1, name));
+    completer.Reply(ZX_OK, fidl::StringView(name, strlen(name) + 1));
   }
   return;
 }

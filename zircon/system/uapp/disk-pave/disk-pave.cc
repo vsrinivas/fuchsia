@@ -318,7 +318,7 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      auto result = paver_client.WriteDataFile(fidl::StringView(strlen(flags.path), flags.path),
+      auto result = paver_client.WriteDataFile(fidl::StringView(flags.path, strlen(flags.path)),
                                                std::move(payload));
       status = result.ok() ? result.value().status : result.status();
       break;

@@ -32,9 +32,9 @@ namespace {
 
 namespace usb_peripheral = ::llcpp::fuchsia::hardware::usb::peripheral;
 
-constexpr const char* kManufacturer  = "Google";
-constexpr const char* kProduct = "USB test drive";
-constexpr const char* kSerial = "ebfd5ad49d2a";
+constexpr const char kManufacturer[] = "Google";
+constexpr const char kProduct[] = "USB test drive";
+constexpr const char kSerial[] = "ebfd5ad49d2a";
 
 usb_peripheral::DeviceDescriptor GetDeviceDescriptor() {
   usb_peripheral::DeviceDescriptor device_desc = {};
@@ -48,9 +48,9 @@ usb_peripheral::DeviceDescriptor GetDeviceDescriptor() {
   // iManufacturer; iProduct and iSerialNumber are filled in later
   device_desc.bNumConfigurations = 1;
 
-  device_desc.manufacturer = fidl::StringView(strlen(kManufacturer), kManufacturer);
-  device_desc.product = fidl::StringView(strlen(kProduct), kProduct);
-  device_desc.serial = fidl::StringView(strlen(kSerial), kSerial);
+  device_desc.manufacturer = fidl::StringView(kManufacturer);
+  device_desc.product = fidl::StringView(kProduct);
+  device_desc.serial = fidl::StringView(kSerial);
 
   device_desc.idVendor = htole16(0x18D1);
   device_desc.idProduct = htole16(0xA021);

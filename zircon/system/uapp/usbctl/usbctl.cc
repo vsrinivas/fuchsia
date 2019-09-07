@@ -155,9 +155,9 @@ static int open_usb_device(void) {
 static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   device_desc.idVendor = htole16(config->vid);
   device_desc.idProduct = htole16(config->pid);
-  device_desc.manufacturer = fidl::StringView(strlen(MANUFACTURER_STRING), MANUFACTURER_STRING);
-  device_desc.product = fidl::StringView(strlen(config->product_string), config->product_string);
-  device_desc.serial = fidl::StringView(strlen(SERIAL_STRING), SERIAL_STRING);
+  device_desc.manufacturer = fidl::StringView(MANUFACTURER_STRING);
+  device_desc.product = fidl::StringView(config->product_string, strlen(config->product_string));
+  device_desc.serial = fidl::StringView(SERIAL_STRING);
 
   peripheral::FunctionDescriptor func_descs[config->descs_count];
   memcpy(func_descs, config->descs, sizeof(peripheral::FunctionDescriptor) * config->descs_count);

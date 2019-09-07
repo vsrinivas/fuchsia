@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
   }
 
   DeviceNameProviderServer server(
-      fidl::StringView(strnlen(device_name, sizeof(device_name)), device_name));
+      fidl::StringView(device_name, strnlen(device_name, sizeof(device_name))));
 
   outgoing.svc_dir()->AddEntry(
       llcpp::fuchsia::device::NameProvider::Name,

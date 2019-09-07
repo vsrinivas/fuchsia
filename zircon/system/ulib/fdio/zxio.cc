@@ -332,7 +332,7 @@ static zx_status_t fdio_zxio_remote_rewind(fdio_t* io) {
 static zx_status_t fdio_zxio_remote_unlink(fdio_t* io, const char* path, size_t len) {
   zxio_remote_t* rio = fdio_get_zxio_remote(io);
   auto result =
-      fio::Directory::Call::Unlink(zx::unowned_channel(rio->control), fidl::StringView(len, path));
+      fio::Directory::Call::Unlink(zx::unowned_channel(rio->control), fidl::StringView(path, len));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
@@ -340,8 +340,8 @@ static zx_status_t fdio_zxio_remote_rename(fdio_t* io, const char* src, size_t s
                                            zx_handle_t dst_token, const char* dst, size_t dstlen) {
   zxio_remote_t* rio = fdio_get_zxio_remote(io);
   auto result =
-      fio::Directory::Call::Rename(zx::unowned_channel(rio->control), fidl::StringView(srclen, src),
-                                   zx::handle(dst_token), fidl::StringView(dstlen, dst));
+      fio::Directory::Call::Rename(zx::unowned_channel(rio->control), fidl::StringView(src, srclen),
+                                   zx::handle(dst_token), fidl::StringView(dst, dstlen));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
@@ -349,8 +349,8 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
                                          zx_handle_t dst_token, const char* dst, size_t dstlen) {
   zxio_remote_t* rio = fdio_get_zxio_remote(io);
   auto result =
-      fio::Directory::Call::Link(zx::unowned_channel(rio->control), fidl::StringView(srclen, src),
-                                 zx::handle(dst_token), fidl::StringView(dstlen, dst));
+      fio::Directory::Call::Link(zx::unowned_channel(rio->control), fidl::StringView(src, srclen),
+                                 zx::handle(dst_token), fidl::StringView(dst, dstlen));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 

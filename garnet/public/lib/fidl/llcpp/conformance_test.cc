@@ -160,11 +160,11 @@ TEST(Conformance, EmptyStructSandwich_Encode) {
 
   {
     llcpp::conformance::EmptyStructSandwich v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
     llcpp::conformance::EmptyStruct v3{};
     v1.es = std::move(v3);
-    fidl::StringView v4(5, "after");
+    fidl::StringView v4("after", 5);
     v1.after = std::move(v4);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
@@ -297,7 +297,7 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Encode) {
   {
     llcpp::conformance::StructOfTableWithStringAndVector v1{};
     auto v2 = llcpp::conformance::TableWithStringAndVector::Build();
-    fidl::StringView v3(5, "hello");
+    fidl::StringView v3("hello", 5);
     v2.set_foo(&v3);
     int32_t v4 = 27ull;
     v2.set_bar(&v4);
@@ -350,13 +350,13 @@ TEST(Conformance, InlineXUnionInStruct_Encode) {
 
   {
     llcpp::conformance::TestInlineXUnionInStruct v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
     llcpp::conformance::SampleXUnion v3;
     uint32_t v4 = 3735928559ull;
     v3.set_u(&v4);
     v1.xu = std::move(v3);
-    fidl::StringView v5(5, "after");
+    fidl::StringView v5("after", 5);
     v1.after = std::move(v5);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
@@ -375,9 +375,9 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Encode) {
 
   {
     llcpp::conformance::TestOptionalXUnionInStruct v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
-    fidl::StringView v3(5, "after");
+    fidl::StringView v3("after", 5);
     v1.after = std::move(v3);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
@@ -397,13 +397,13 @@ TEST(Conformance, OptionalXUnionInStructPresent_Encode) {
 
   {
     llcpp::conformance::TestOptionalXUnionInStruct v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
     llcpp::conformance::SampleXUnion v3;
     uint32_t v4 = 3735928559ull;
     v3.set_u(&v4);
     v1.xu = std::move(v3);
-    fidl::StringView v5(5, "after");
+    fidl::StringView v5("after", 5);
     v1.after = std::move(v5);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
@@ -426,9 +426,9 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Encode) {
   {
     llcpp::conformance::TestXUnionInTable v1{};
     auto v2 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v3(6, "before");
+    fidl::StringView v3("before", 6);
     v2.set_before(&v3);
-    fidl::StringView v4(5, "after");
+    fidl::StringView v4("after", 5);
     v2.set_after(&v4);
     auto v5 = v2.view();
     v1.value = std::move(v5);
@@ -455,13 +455,13 @@ TEST(Conformance, XUnionInTableXUnionPresent_Encode) {
   {
     llcpp::conformance::TestXUnionInTable v1{};
     auto v2 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v3(6, "before");
+    fidl::StringView v3("before", 6);
     v2.set_before(&v3);
     llcpp::conformance::SampleXUnion v4;
     uint32_t v5 = 3735928559ull;
     v4.set_u(&v5);
     v2.set_xu(&v4);
-    fidl::StringView v6(5, "after");
+    fidl::StringView v6("after", 5);
     v2.set_after(&v6);
     auto v7 = v2.view();
     v1.value = std::move(v7);
@@ -504,10 +504,10 @@ TEST(Conformance, AddEthernetDeviceRequest_Encode) {
 
   {
     llcpp::conformance::TestAddEthernetDeviceRequest v1{};
-    fidl::StringView v2(36, "@/dev/sys/pci/00:03.0/e1000/ethernet");
+    fidl::StringView v2("@/dev/sys/pci/00:03.0/e1000/ethernet", 36);
     v1.topological_path = std::move(v2);
     llcpp::conformance::InterfaceConfig v3{};
-    fidl::StringView v4(8, "ethp0003");
+    fidl::StringView v4("ethp0003", 8);
     v3.name = std::move(v4);
     llcpp::conformance::IpAddressConfig v5;
     bool v6 = true;
@@ -622,8 +622,8 @@ TEST(Conformance, Arrays_Encode) {
     int32_t v3 = 2ull;
     auto v4 = fidl::Array<int32_t, 2>{v2, v3};
     v1.arr_int = std::move(v4);
-    fidl::StringView v5(1, "a");
-    fidl::StringView v6(1, "b");
+    fidl::StringView v5("a", 1);
+    fidl::StringView v6("b", 1);
     auto v7 = fidl::Array<fidl::StringView, 2>{v5, v6};
     v1.arr_string = std::move(v7);
     llcpp::conformance::StructWithInt v8{};
@@ -676,8 +676,8 @@ TEST(Conformance, Vectors_Encode) {
     auto v5 = fidl::Array<int32_t, 2>{v3, v4};
     auto v6 = fidl::VectorView<int32_t>(v5.data(), 2);
     v1.vec_int = std::move(v6);
-    fidl::StringView v7(1, "a");
-    fidl::StringView v8(1, "b");
+    fidl::StringView v7("a", 1);
+    fidl::StringView v8("b", 1);
     auto v9 = fidl::Array<fidl::StringView, 2>{v7, v8};
     auto v10 = fidl::VectorView<fidl::StringView>(v9.data(), 2);
     v1.vec_string = std::move(v10);
@@ -848,11 +848,11 @@ TEST(Conformance, EmptyStructSandwich_Decode) {
 
   {
     llcpp::conformance::EmptyStructSandwich v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
     llcpp::conformance::EmptyStruct v3{};
     v1.es = std::move(v3);
-    fidl::StringView v4(5, "after");
+    fidl::StringView v4("after", 5);
     v1.after = std::move(v4);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, expected));
@@ -985,7 +985,7 @@ TEST(Conformance, TableWithStringAndVectorNoVectorContent_Decode) {
   {
     llcpp::conformance::StructOfTableWithStringAndVector v1{};
     auto v2 = llcpp::conformance::TableWithStringAndVector::Build();
-    fidl::StringView v3(5, "hello");
+    fidl::StringView v3("hello", 5);
     v2.set_foo(&v3);
     int32_t v4 = 27ull;
     v2.set_bar(&v4);
@@ -1038,13 +1038,13 @@ TEST(Conformance, InlineXUnionInStruct_Decode) {
 
   {
     llcpp::conformance::TestInlineXUnionInStruct v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
     llcpp::conformance::SampleXUnion v3;
     uint32_t v4 = 3735928559ull;
     v3.set_u(&v4);
     v1.xu = std::move(v3);
-    fidl::StringView v5(5, "after");
+    fidl::StringView v5("after", 5);
     v1.after = std::move(v5);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, expected));
@@ -1063,9 +1063,9 @@ TEST(Conformance, OptionalXUnionInStructAbsent_Decode) {
 
   {
     llcpp::conformance::TestOptionalXUnionInStruct v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
-    fidl::StringView v3(5, "after");
+    fidl::StringView v3("after", 5);
     v1.after = std::move(v3);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, expected));
@@ -1085,13 +1085,13 @@ TEST(Conformance, OptionalXUnionInStructPresent_Decode) {
 
   {
     llcpp::conformance::TestOptionalXUnionInStruct v1{};
-    fidl::StringView v2(6, "before");
+    fidl::StringView v2("before", 6);
     v1.before = std::move(v2);
     llcpp::conformance::SampleXUnion v3;
     uint32_t v4 = 3735928559ull;
     v3.set_u(&v4);
     v1.xu = std::move(v3);
-    fidl::StringView v5(5, "after");
+    fidl::StringView v5("after", 5);
     v1.after = std::move(v5);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, expected));
@@ -1114,9 +1114,9 @@ TEST(Conformance, XUnionInTableXUnionAbsent_Decode) {
   {
     llcpp::conformance::TestXUnionInTable v1{};
     auto v2 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v3(6, "before");
+    fidl::StringView v3("before", 6);
     v2.set_before(&v3);
-    fidl::StringView v4(5, "after");
+    fidl::StringView v4("after", 5);
     v2.set_after(&v4);
     auto v5 = v2.view();
     v1.value = std::move(v5);
@@ -1143,13 +1143,13 @@ TEST(Conformance, XUnionInTableXUnionPresent_Decode) {
   {
     llcpp::conformance::TestXUnionInTable v1{};
     auto v2 = llcpp::conformance::XUnionInTable::Build();
-    fidl::StringView v3(6, "before");
+    fidl::StringView v3("before", 6);
     v2.set_before(&v3);
     llcpp::conformance::SampleXUnion v4;
     uint32_t v5 = 3735928559ull;
     v4.set_u(&v5);
     v2.set_xu(&v4);
-    fidl::StringView v6(5, "after");
+    fidl::StringView v6("after", 5);
     v2.set_after(&v6);
     auto v7 = v2.view();
     v1.value = std::move(v7);
@@ -1192,10 +1192,10 @@ TEST(Conformance, AddEthernetDeviceRequest_Decode) {
 
   {
     llcpp::conformance::TestAddEthernetDeviceRequest v1{};
-    fidl::StringView v2(36, "@/dev/sys/pci/00:03.0/e1000/ethernet");
+    fidl::StringView v2("@/dev/sys/pci/00:03.0/e1000/ethernet", 36);
     v1.topological_path = std::move(v2);
     llcpp::conformance::InterfaceConfig v3{};
-    fidl::StringView v4(8, "ethp0003");
+    fidl::StringView v4("ethp0003", 8);
     v3.name = std::move(v4);
     llcpp::conformance::IpAddressConfig v5;
     bool v6 = true;
@@ -1310,8 +1310,8 @@ TEST(Conformance, Arrays_Decode) {
     int32_t v3 = 2ull;
     auto v4 = fidl::Array<int32_t, 2>{v2, v3};
     v1.arr_int = std::move(v4);
-    fidl::StringView v5(1, "a");
-    fidl::StringView v6(1, "b");
+    fidl::StringView v5("a", 1);
+    fidl::StringView v6("b", 1);
     auto v7 = fidl::Array<fidl::StringView, 2>{v5, v6};
     v1.arr_string = std::move(v7);
     llcpp::conformance::StructWithInt v8{};
@@ -1364,8 +1364,8 @@ TEST(Conformance, Vectors_Decode) {
     auto v5 = fidl::Array<int32_t, 2>{v3, v4};
     auto v6 = fidl::VectorView<int32_t>(v5.data(), 2);
     v1.vec_int = std::move(v6);
-    fidl::StringView v7(1, "a");
-    fidl::StringView v8(1, "b");
+    fidl::StringView v7("a", 1);
+    fidl::StringView v8("b", 1);
     auto v9 = fidl::Array<fidl::StringView, 2>{v7, v8};
     auto v10 = fidl::VectorView<fidl::StringView>(v9.data(), 2);
     v1.vec_string = std::move(v10);

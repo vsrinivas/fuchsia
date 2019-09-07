@@ -7,12 +7,38 @@
 
 #include <zircon/fidl.h>
 
+#include <type_traits>
+
 namespace fidl {
 
 class StringView final : private fidl_string_t {
  public:
   StringView() : fidl_string_t{} {}
-  StringView(uint64_t size, const char* data) : fidl_string_t{size, const_cast<char*>(data)} {}
+  constexpr StringView(const char* data, uint64_t size)
+      : fidl_string_t{size, const_cast<char*>(data)} {}
+
+  // Constructs a fidl::StringView referencing a string literal. For example:
+  //
+  //     fidl::StringView view("hello");
+  //     view.size() == 5;
+  //
+  template <size_t N>
+  constexpr explicit StringView(const char (&literal)[N])
+      : fidl_string_t{N - 1, const_cast<char*>(literal)} {
+    static_assert(N > 0, "Empty string should be null-terminated");
+  }
+
+  // Creates a view over any container that implements |[const] char* data()| and |size()|.
+  // E.g. an std::string.
+  template <typename C,
+            typename = decltype(std::declval<C&>().data()),
+            typename = decltype(std::declval<C&>().size()),
+            typename = std::enable_if_t<std::is_same_v<
+                typename std::remove_const<typename std::remove_pointer<
+                    decltype(std::declval<C&>().data())>::type>::type,
+                char>>>
+  explicit StringView(C& container)
+      : fidl_string_t{container.size(), const_cast<char*>(container.data())} {}
 
   uint64_t size() const { return fidl_string_t::size; }
   void set_size(uint64_t size) { fidl_string_t::size = size; }

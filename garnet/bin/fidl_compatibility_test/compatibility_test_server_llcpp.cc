@@ -107,7 +107,7 @@ class EchoConnection final : public Echo::Interface {
       completer.Reply(std::move(value));
     } else {
       EchoClientApp app(forward_to_server);
-      auto result = app.EchoStruct(std::move(value), ::fidl::StringView{0, ""});
+      auto result = app.EchoStruct(std::move(value), ::fidl::StringView{""});
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
@@ -122,7 +122,7 @@ class EchoConnection final : public Echo::Interface {
     } else {
       EchoClientApp app(forward_to_server);
       zx_status_t status = app.EchoStructNoRetVal(
-          std::move(value), ::fidl::StringView{0, ""},
+          std::move(value), ::fidl::StringView{""},
           Echo::EventHandlers{.echo_event =
                                   [&](Struct value) {
                                     return Echo::SendEchoEventEvent(zx::unowned_channel(channel_),
@@ -148,7 +148,7 @@ class EchoConnection final : public Echo::Interface {
       EchoClientApp app(forward_to_server);
       auto result = app.EchoArrays(
           ::fidl::BytePart(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(value), ::fidl::StringView{0, ""},
+          std::move(value), ::fidl::StringView{""},
           ::fidl::BytePart(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
@@ -162,7 +162,7 @@ class EchoConnection final : public Echo::Interface {
     } else {
       EchoClientApp app(forward_to_server);
       VectorsStruct out_value;
-      auto result = app.EchoVectors(std::move(value), ::fidl::StringView{0, ""});
+      auto result = app.EchoVectors(std::move(value), ::fidl::StringView{""});
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }
@@ -178,7 +178,7 @@ class EchoConnection final : public Echo::Interface {
       EchoClientApp app(forward_to_server);
       auto result = app.EchoTable(
           ::fidl::BytePart(&request_buffer[0], static_cast<uint32_t>(request_buffer.size())),
-          std::move(value), ::fidl::StringView{0, ""},
+          std::move(value), ::fidl::StringView{""},
           ::fidl::BytePart(&response_buffer[0], static_cast<uint32_t>(response_buffer.size())));
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
@@ -191,7 +191,7 @@ class EchoConnection final : public Echo::Interface {
       completer.Reply(std::move(value));
     } else {
       EchoClientApp app(forward_to_server);
-      auto result = app.EchoXunions(std::move(value), ::fidl::StringView{0, ""});
+      auto result = app.EchoXunions(std::move(value), ::fidl::StringView{""});
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s", result.error());
       completer.Reply(std::move(result.Unwrap()->value));
     }

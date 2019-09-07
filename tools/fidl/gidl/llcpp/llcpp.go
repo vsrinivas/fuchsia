@@ -201,7 +201,7 @@ func (b *llcppValueBuilder) OnUint64(value uint64, subtype fidlir.PrimitiveSubty
 func (b *llcppValueBuilder) OnString(value string) {
 	newVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(
-		"fidl::StringView %s(%d, %s)\n;", newVar, len(value), strconv.Quote(value)))
+		"fidl::StringView %s(%s, %d)\n;", newVar, strconv.Quote(value), len(value)))
 	b.lastVar = newVar
 }
 

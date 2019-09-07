@@ -594,7 +594,7 @@ FIDL                                        | Low-Level C++
 `float32`                                   | `float`
 `float64`                                   | `double`
 `handle`, `handle?`                         | `zx::handle`
-`handle<T>`,`handle<T>?`                    | `zx::T` *(subclass of zx::object<T>)*
+`handle<T>`,`handle<T>?`                    | `zx::T` *(subclass of zx::object\<T\>)*
 `string`                                    | `fidl::StringView`
 `string?`                                   | `fidl::StringView`
 `vector<T>`                                 | `fidl::VectorView<T>`
@@ -617,6 +617,11 @@ Defined in [lib/fidl/llcpp/string_view.h](/zircon/system/ulib/fidl/include/lib/f
 
 Holds a reference to a variable-length string stored within the buffer. C++
 wrapper of **fidl_string**. Does not own the memory of the contents.
+
+`fidl::StringView` may be constructed by supplying the pointer and number of
+UTF-8 bytes (excluding trailing `\0`) separately. Alternatively, one could pass
+a C++ string literal, or any value which implements `[const] char* data()`
+and `size()`. The string view would borrow the contents of the container.
 
 It is memory layout compatible with **fidl_string**.
 

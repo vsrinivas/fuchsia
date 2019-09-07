@@ -99,7 +99,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
     }
 
     auto result = ::llcpp::fuchsia::device::manager::DeviceController::Call::BindDriver(
-        std::move(unowned_channel), ::fidl::StringView(1, ""), std::move(vmo));
+        std::move(unowned_channel), ::fidl::StringView("", 1), std::move(vmo));
 
     if (result.status() != ZX_ERR_CANCELED) {
       thread_status = WRONG_CALL_STATUS;

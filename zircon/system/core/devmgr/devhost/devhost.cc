@@ -652,9 +652,9 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
         zx::unowned_channel(rpc.get()), std::move(hsend),
         ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
                            prop_count),
-        ::fidl::StringView(strlen(child->name), child->name), child->protocol_id,
-        ::fidl::StringView(child->driver->libname().size(), child->driver->libname().data()),
-        ::fidl::StringView(proxy_args_len, proxy_args), std::move(client_remote));
+        ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
+        ::fidl::StringView(child->driver->libname()),
+        ::fidl::StringView(proxy_args, proxy_args_len), std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {
@@ -668,9 +668,9 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
         zx::unowned_channel(rpc.get()), std::move(hsend),
         ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
                            prop_count),
-        ::fidl::StringView(strlen(child->name), child->name), child->protocol_id,
-        ::fidl::StringView(child->driver->libname().size(), child->driver->libname().data()),
-        ::fidl::StringView(proxy_args_len, proxy_args), add_device_config,
+        ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
+        ::fidl::StringView(child->driver->libname()),
+        ::fidl::StringView(proxy_args, proxy_args_len), add_device_config,
         std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
@@ -840,7 +840,7 @@ zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char*
     return ZX_ERR_IO_REFUSED;
   }
   log_rpc(dev, "bind-device");
-  auto driver_path = ::fidl::StringView(strlen(drv_libname), drv_libname);
+  auto driver_path = ::fidl::StringView(drv_libname, strlen(drv_libname));
   auto response = fuchsia::device::manager::Coordinator::Call::BindDevice(
       zx::unowned_channel(rpc.get()), driver_path);
   zx_status_t status = response.status();
@@ -888,7 +888,7 @@ zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const cha
     return ZX_ERR_IO_REFUSED;
   }
   log_rpc(dev, "load-firmware");
-  auto str_path = ::fidl::StringView(strlen(path), path);
+  auto str_path = ::fidl::StringView(path, strlen(path));
   auto response = fuchsia::device::manager::Coordinator::Call::LoadFirmware(
       zx::unowned_channel(rpc.get()), str_path);
   zx_status_t status = response.status();
@@ -1016,7 +1016,7 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
   }
   log_rpc(dev, "publish-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::PublishMetadata(
-      zx::unowned_channel(rpc.get()), ::fidl::StringView(strlen(path), const_cast<char*>(path)),
+      zx::unowned_channel(rpc.get()), ::fidl::StringView(path, strlen(path)),
       type, ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
@@ -1070,7 +1070,7 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
   log_rpc(dev, "create-composite");
   static_assert(sizeof(props[0]) == sizeof(uint64_t));
   auto response = fuchsia::device::manager::Coordinator::Call::AddCompositeDevice(
-      zx::unowned_channel(rpc.get()), ::fidl::StringView(strlen(name), name),
+      zx::unowned_channel(rpc.get()), ::fidl::StringView(name, strlen(name)),
       ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop*>(props)),
                          props_count),
       ::fidl::VectorView(compvec), coresident_device_index);

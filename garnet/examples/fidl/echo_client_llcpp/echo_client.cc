@@ -48,7 +48,7 @@ int main(int argc, const char** argv) {
 
   // Using low-level C++ bindings to perform a call
   ::llcpp::fidl::examples::echo::Echo::SyncClient client(std::move(client_end));
-  auto result = client.EchoString(fidl::StringView(msg.size(), &msg[0]));
+  auto result = client.EchoString(fidl::StringView(msg));
   if (result.status() != ZX_OK) {
     std::cerr << "Failed to call server: " << result.status() << " (" << result.error() << ")"
               << std::endl;

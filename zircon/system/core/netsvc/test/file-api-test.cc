@@ -78,7 +78,7 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::Device::Interface {
   }
 
   void GetBoardName(GetBoardNameCompleter::Sync completer) {
-    completer.Reply(ZX_OK, fidl::StringView(32, board_));
+    completer.Reply(ZX_OK, fidl::StringView(board_, 32));
   }
 
   void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {

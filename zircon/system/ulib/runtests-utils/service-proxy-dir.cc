@@ -52,7 +52,7 @@ zx_status_t ServiceProxyDir::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiec
       entry_name, *out = fbl::MakeRefCounted<fs::Service>([this, entry_name](zx::channel request) {
         return fio::Directory::Call::Open(zx::unowned_channel(proxy_dir_),
                                           fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, 0755,
-                                          fidl::StringView(entry_name.length(), entry_name.data()),
+                                          fidl::StringView(entry_name),
                                           std::move(request))
             .status();
       }));

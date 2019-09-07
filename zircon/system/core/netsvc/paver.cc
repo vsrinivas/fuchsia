@@ -165,7 +165,7 @@ int Paver::MonitorBuffer() {
   switch (command_) {
     case Command::kDataFile: {
       auto res =
-          paver_svc_->WriteDataFile(fidl::StringView(strlen(path_), path_), std::move(buffer));
+          paver_svc_->WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
