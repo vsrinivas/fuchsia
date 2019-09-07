@@ -4,13 +4,15 @@
 
 #pragma once
 
-#include "scsilib_controller.h"
+#include <stdint.h>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
-#include <stdint.h>
+
+#include "scsilib_controller.h"
 
 namespace scsi {
 
@@ -227,6 +229,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
     *block_op_size_out = sizeof(block_op_t);
   }
   void BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb, void* cookie);
+  uint32_t BlockSize() { return block_size_; }
 
   Disk(const Disk&) = delete;
   Disk& operator=(const Disk&) = delete;

@@ -4,23 +4,24 @@
 
 #include "scsi.h"
 
-#include <ddk/debug.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
 #include <inttypes.h>
 #include <lib/scsi/scsilib.h>
 #include <lib/scsi/scsilib_controller.h>
-#include <pretty/hexdump.h>
+#include <netinet/in.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
-#include <virtio/scsi.h>
 #include <zircon/compiler.h>
-#include <netinet/in.h>
 
 #include <utility>
+
+#include <ddk/debug.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
+#include <pretty/hexdump.h>
+#include <virtio/scsi.h>
 
 #include "trace.h"
 
@@ -36,22 +37,151 @@ void ScsiDevice::FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t targe
   req->lun[3] = static_cast<uint8_t>(lun) & 0xff;
 }
 
+ScsiDevice::scsi_io_slot* ScsiDevice::GetIO() {
+  // For testing purposes, this condition can be triggered
+  // by lowering MAX_IOS (to say 2). And running biotime
+  // (with default IO concurrency).
+  while (active_ios_ == MAX_IOS) {
+    ioslot_cv_.Wait(&lock_);
+  }
+  active_ios_++;
+  for (int i = 0; i < MAX_IOS; i++) {
+    if (scsi_io_slot_table_[i].avail) {
+      scsi_io_slot_table_[i].avail = false;
+      return &scsi_io_slot_table_[i];
+    }
+  }
+  ZX_DEBUG_ASSERT(false);  // Unexpected.
+  return NULL;
+}
+
+void ScsiDevice::FreeIO(scsi_io_slot* io_slot) {
+  io_slot->avail = true;
+  active_ios_--;
+  ioslot_cv_.Signal();
+}
+
+void ScsiDevice::IrqRingUpdate() {
+  // Parse our descriptor chain and add back to the free queue.
+  auto free_chain = [this](vring_used_elem* elem) TA_NO_THREAD_SAFETY_ANALYSIS {
+    auto index = static_cast<uint16_t>(elem->id);
+    vring_desc const* tail_desc;
+
+    // Reclaim the entire descriptor chain.
+    for (;;) {
+      vring_desc const* desc = request_queue_.DescFromIndex(index);
+      const bool has_next = desc->flags & VRING_DESC_F_NEXT;
+      const auto next = desc->next;
+
+      this->request_queue_.FreeDesc(index);
+      if (!has_next) {
+        tail_desc = desc;
+        break;
+      }
+      index = next;
+    }
+    desc_cv_.Broadcast();
+    // Search for the IO that just completed, using tail_desc.
+    for (int i = 0; i < MAX_IOS; i++) {
+      scsi_io_slot* io_slot = &scsi_io_slot_table_[i];
+
+      if (io_slot->avail)
+        continue;
+      if (io_slot->tail_desc == tail_desc) {
+        // Capture response before freeing iobuffer.
+        zx_status_t status;
+        if (io_slot->response->response || io_slot->response->status) {
+          status = ZX_ERR_INTERNAL;
+        } else {
+          status = ZX_OK;
+        }
+        // If Read, copy data from iobuffer to the iovec.
+        if (status == ZX_OK && io_slot->data_in.iov_len) {
+          memcpy(io_slot->data_in.iov_base, io_slot->data_in_region,
+                 io_slot->data_in.iov_len);
+        }
+        void* cookie = io_slot->cookie;
+        auto (*callback)(void* cookie, zx_status_t status) = io_slot->callback;
+        FreeIO(io_slot);
+        lock_.Release();
+        callback(cookie, status);
+        lock_.Acquire();
+        return;
+      }
+    }
+    ZX_DEBUG_ASSERT(false);  // Unexpected.
+  };
+
+  // Tell the ring to find free chains and hand it back to our lambda.
+  fbl::AutoLock lock(&lock_);
+  request_queue_.IrqRingUpdate(free_chain);
+}
+
 zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun, struct iovec cdb,
                                            struct iovec data_out, struct iovec data_in) {
-  fbl::AutoLock lock(&lock_);
+  struct scsi_sync_callback_state {
+    sync_completion_t completion;
+    zx_status_t status;
+  };
+  scsi_sync_callback_state cookie;
+  sync_completion_reset(&cookie.completion);
+  auto callback = [](void* cookie, zx_status_t status) {
+    auto* state = reinterpret_cast<scsi_sync_callback_state*>(cookie);
+    state->status = status;
+    sync_completion_signal(&state->completion);
+  };
+  ExecuteCommandAsync(target, lun, cdb, data_out, data_in, callback, &cookie);
+  sync_completion_wait(&cookie.completion, ZX_TIME_INFINITE);
+  return cookie.status;
+}
+
+zx_status_t ScsiDevice::ExecuteCommandAsync(uint8_t target, uint16_t lun, struct iovec cdb,
+                                            struct iovec data_out, struct iovec data_in,
+                                            void (*cb)(void*, zx_status_t), void* cookie) {
+  // We do all of the error checking up front, so we don't need to fail the IO
+  // after acquiring the IO slot and the descriptors.
+  // If data_in fits within request_buffers_, all the regions of this request will fit.
+  if ((sizeof(struct virtio_scsi_req_cmd) + data_out.iov_len + sizeof(struct virtio_scsi_resp_cmd) +
+       data_in.iov_len) > request_buffers_size_) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  uint16_t descriptor_chain_length = 2;
+  if (data_out.iov_len) {
+    descriptor_chain_length++;
+  }
+  if (data_in.iov_len) {
+    descriptor_chain_length++;
+  }
+
+  lock_.Acquire();
+  // Get both the IO slot and the descriptors needed up front.
+  auto io_slot = GetIO();
+  uint16_t id = 0;
+  auto request_desc = request_queue_.AllocDescChain(/*count=*/descriptor_chain_length, &id);
+  // For testing purposes, this condition can be triggered by failing
+  // AllocDescChain every N attempts. But we would have to Signal the cv
+  // somewhere. A good place to do that is at the bottom of WorkerThread,
+  // after the luns are probed, in a loop. If we do the signaling there,
+  // we'd need to ensure error injection doesn't start until after luns are
+  // probed.
+  while (request_desc == nullptr) {
+    // Drop the request buf, before blocking, waiting for descs to free up.
+    FreeIO(io_slot);
+    desc_cv_.Wait(&lock_);
+    io_slot = GetIO();
+    request_desc = request_queue_.AllocDescChain(/*count=*/descriptor_chain_length, &id);
+  }
+
+  auto* request_buffers = &io_slot->request_buffer;
   // virtio-scsi requests have a 'request' region, an optional data-out region, a 'response'
   // region, and an optional data-in region. Allocate and fill them and then execute the request.
   const auto request_offset = 0ull;
   const auto data_out_offset = request_offset + sizeof(struct virtio_scsi_req_cmd);
   const auto response_offset = data_out_offset + data_out.iov_len;
   const auto data_in_offset = response_offset + sizeof(struct virtio_scsi_resp_cmd);
-  // If data_in fits within request_buffers_, all the regions of this request will fit.
-  if (data_in_offset + data_in.iov_len > request_buffers_.size) {
-    return ZX_ERR_NO_MEMORY;
-  }
 
-  uint8_t* const request_buffers_addr =
-      reinterpret_cast<uint8_t*>(io_buffer_virt(&request_buffers_));
+  auto* const request_buffers_addr = reinterpret_cast<uint8_t*>(io_buffer_virt(request_buffers));
   auto* const request =
       reinterpret_cast<struct virtio_scsi_req_cmd*>(request_buffers_addr + request_offset);
   auto* const data_out_region = reinterpret_cast<uint8_t*>(request_buffers_addr + data_out_offset);
@@ -63,86 +193,51 @@ zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun, struct 
   memset(response, 0, sizeof(*response));
   memcpy(&request->cdb, cdb.iov_base, cdb.iov_len);
   FillLUNStructure(request, /*target=*/target, /*lun=*/lun);
+  request->id = scsi_transport_tag_++;
 
-  uint16_t descriptor_chain_length = 2;
-  if (data_out.iov_len) {
-    descriptor_chain_length++;
-  }
-  if (data_in.iov_len) {
-    descriptor_chain_length++;
-  }
-
-  uint16_t id = 0;
-  uint16_t next_id;
-  auto request_desc = request_queue_.AllocDescChain(/*count=*/descriptor_chain_length, &id);
-  request_desc->addr = io_buffer_phys(&request_buffers_) + request_offset;
+  vring_desc* tail_desc;
+  request_desc->addr = io_buffer_phys(request_buffers) + request_offset;
   request_desc->len = sizeof(*request);
   request_desc->flags = VRING_DESC_F_NEXT;
-  next_id = request_desc->next;
+  auto next_id = request_desc->next;
 
   if (data_out.iov_len) {
     memcpy(data_out_region, data_out.iov_base, data_out.iov_len);
-    auto data_out_desc = request_queue_.DescFromIndex(next_id);
-    data_out_desc->addr = io_buffer_phys(&request_buffers_) + data_out_offset;
+    auto* data_out_desc = request_queue_.DescFromIndex(next_id);
+    data_out_desc->addr = io_buffer_phys(request_buffers) + data_out_offset;
     data_out_desc->len = static_cast<uint32_t>(data_out.iov_len);
     data_out_desc->flags = VRING_DESC_F_NEXT;
     next_id = data_out_desc->next;
   }
 
-  auto response_desc = request_queue_.DescFromIndex(next_id);
-  response_desc->addr = io_buffer_phys(&request_buffers_) + response_offset;
+  auto* response_desc = request_queue_.DescFromIndex(next_id);
+  response_desc->addr = io_buffer_phys(request_buffers) + response_offset;
   response_desc->len = sizeof(*response);
   response_desc->flags = VRING_DESC_F_WRITE;
 
   if (data_in.iov_len) {
     response_desc->flags |= VRING_DESC_F_NEXT;
-    auto data_in_desc = request_queue_.DescFromIndex(response_desc->next);
-    data_in_desc->addr = io_buffer_phys(&request_buffers_) + data_in_offset;
+    auto* data_in_desc = request_queue_.DescFromIndex(response_desc->next);
+    data_in_desc->addr = io_buffer_phys(request_buffers) + data_in_offset;
     data_in_desc->len = static_cast<uint32_t>(data_in.iov_len);
     data_in_desc->flags = VRING_DESC_F_WRITE;
+    tail_desc = data_in_desc;
+  } else {
+    tail_desc = response_desc;
   }
+
+  io_slot->tail_desc = tail_desc;
+  io_slot->data_in = data_in;
+  io_slot->data_in_region = data_in_region;
+  io_slot->callback = cb;
+  io_slot->cookie = cookie;
+  io_slot->request_buffers = request_buffers;
+  io_slot->response = response;
 
   request_queue_.SubmitChain(id);
   request_queue_.Kick();
 
-  // Wait for request to complete.
-  sync_completion_t sync;
-  for (;;) {
-    // annotalysis is unable to determine that ScsiDevice::lock_ is held when the IrqRingUpdate
-    // lambda is invoked.
-    request_queue_.IrqRingUpdate([this, &sync](vring_used_elem* elem) TA_NO_THREAD_SAFETY_ANALYSIS {
-      auto index = static_cast<uint16_t>(elem->id);
-
-      // Synchronously reclaim the entire descriptor chain.
-      for (;;) {
-        vring_desc const* desc = request_queue_.DescFromIndex(index);
-        const bool has_next = desc->flags & VRING_DESC_F_NEXT;
-        const uint16_t next = desc->next;
-
-        this->request_queue_.FreeDesc(index);
-        if (!has_next) {
-          break;
-        }
-        index = next;
-      }
-      sync_completion_signal(&sync);
-    });
-    auto status = sync_completion_wait_deadline(&sync, ZX_MSEC(5));
-    if (status == ZX_OK) {
-      break;
-    }
-  }
-
-  // If there was either a transport or SCSI level error, return a failure.
-  if (response->response || response->status) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  // Copy data-in region to the caller.
-  if (data_in.iov_len) {
-    memcpy(data_in.iov_base, data_in_region, data_in.iov_len);
-  }
-
+  lock_.Release();
   return ZX_OK;
 }
 
@@ -240,6 +335,8 @@ zx_status_t ScsiDevice::WorkerThread() {
         } else {
           max_xfer_size_sectors = fbl::min(max_sectors, SCSI_MAX_XFER_SIZE);
         }
+        zxlogf(INFO, "Virtio SCSI %u:%u Max Xfer Size %ukb\n", target, lun,
+               max_xfer_size_sectors * 2);
         scsi::Disk::Create(this, device_, /*target=*/target, /*lun=*/lun, max_xfer_size_sectors);
         luns_found++;
       }
@@ -252,7 +349,6 @@ zx_status_t ScsiDevice::WorkerThread() {
       }
     }
   }
-
   return ZX_OK;
 }
 
@@ -298,24 +394,21 @@ zx_status_t ScsiDevice::Init() {
       zxlogf(ERROR, "failed to allocate request queue\n");
       return err;
     }
-
-    // We only queue up 1 command at a time, so we only need space in the io
-    // buffer for just 1 scsi req, 1 scsi resp and either data in or out.
-    // TODO: The allocation of the IO buffer region for data will go away
-    // once we initiate DMA in/out of pages. Then we would need to allocate
-    // IO buffer regions for the indirect scatter-gather list of paddrs (we
-    // would need as many of those as the # of concurrent IOs).
-    const size_t request_buffers_size =
+    request_buffers_size_ =
         (SCSI_SECTOR_SIZE * fbl::min(config_.max_sectors, SCSI_MAX_XFER_SIZE)) +
         (sizeof(struct virtio_scsi_req_cmd) + sizeof(struct virtio_scsi_resp_cmd));
-    auto status = io_buffer_init(&request_buffers_, bti().get(),
-                                 /*size=*/request_buffers_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (status) {
-      zxlogf(ERROR, "failed to allocate queue working memory\n");
-      return status;
+    for (int i = 0; i < MAX_IOS; i++) {
+      auto status = io_buffer_init(&scsi_io_slot_table_[i].request_buffer, bti().get(),
+                                   /*size=*/request_buffers_size_, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+      if (status) {
+        zxlogf(ERROR, "failed to allocate queue working memory\n");
+        return status;
+      }
+      scsi_io_slot_table_[i].avail = true;
     }
+    active_ios_ = 0;
+    scsi_transport_tag_ = 0;
   }
-
   Device::StartIrqThread();
   Device::DriverStatusOk();
 
@@ -324,7 +417,6 @@ zx_status_t ScsiDevice::Init() {
   args.name = "virtio-scsi";
   args.ops = &device_ops_;
   args.ctx = this;
-
   // Synchronize against Unbind()/Release() before the worker thread is running.
   fbl::AutoLock lock(&lock_);
   auto status = device_add(Device::bus_device_, &args, &device_);
@@ -350,6 +442,9 @@ void ScsiDevice::Release() {
   {
     fbl::AutoLock lock(&lock_);
     worker_thread_should_exit_ = true;
+    for (int i = 0; i < MAX_IOS; i++) {
+      io_buffer_release(&scsi_io_slot_table_[i].request_buffer);
+    }
   }
   thrd_join(worker_thread_, nullptr);
   Device::Release();

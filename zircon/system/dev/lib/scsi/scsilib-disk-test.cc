@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
 #include <endian.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 #include <lib/scsi/scsilib.h>
 #include <lib/scsi/scsilib_controller.h>
 #include <sys/types.h>
-#include <zxtest/zxtest.h>
 
 #include <map>
+
+#include <ddk/binding.h>
+#include <fbl/auto_lock.h>
+#include <fbl/condition_variable.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -39,6 +42,65 @@ class ScsiControllerForTest : public scsi::Controller {
 
   ~ScsiControllerForTest() { ASSERT_EQ(times_, 0); }
 
+  // Init the state required for testing async IOs.
+  zx_status_t AsyncIoInit() {
+    {
+      fbl::AutoLock lock(&lock_);
+      list_initialize(&queued_ios_);
+      worker_thread_exit_ = false;
+    }
+    auto cb = [](void* arg) -> int {
+      return static_cast<ScsiControllerForTest*>(arg)->WorkerThread();
+    };
+    if (thrd_create_with_name(&worker_thread_, cb, this, "scsi-test-controller") != thrd_success) {
+      printf("%s: Failed to create worker thread\n", __FILE__);
+      return ZX_ERR_INTERNAL;
+    }
+    return ZX_OK;
+  }
+
+  // De-Init the state required for testing async IOs.
+  void AsyncIoRelease() {
+    {
+      fbl::AutoLock lock(&lock_);
+      worker_thread_exit_ = true;
+      cv_.Signal();
+    }
+    thrd_join(worker_thread_, nullptr);
+    list_node_t* node;
+    list_node_t* temp_node;
+    fbl::AutoLock lock(&lock_);
+    list_for_every_safe(&queued_ios_, node, temp_node) {
+      auto* io = containerof(node, struct queued_io, node);
+      list_delete(node);
+      free(io);
+    }
+  }
+
+  zx_status_t ExecuteCommandAsync(uint8_t target, uint16_t lun, struct iovec cdb,
+                                  struct iovec data_out, struct iovec data_in,
+                                  void (*cb)(void*, zx_status_t), void* cookie) override {
+    // In the caller, enqueue the request for the worker thread,
+    // poke the worker thread and return. The worker thread, on
+    // waking up, will do the actual IO and call the callback.
+    auto* io = reinterpret_cast<struct queued_io*>(new queued_io);
+    io->target = target;
+    io->lun = lun;
+    // The cbd is allocated on the stack in the scsilib's BlockImplQueue.
+    // So make a copy of that locally, and point to that instead
+    memcpy(reinterpret_cast<void*>(&io->cdbptr), cdb.iov_base, cdb.iov_len);
+    io->cdb.iov_base = &io->cdbptr;
+    io->cdb.iov_len = cdb.iov_len;
+    io->data_out = data_out;
+    io->data_in = data_in;
+    io->cb = cb;
+    io->cookie = cookie;
+    fbl::AutoLock lock(&lock_);
+    list_add_tail(&queued_ios_, &io->node);
+    cv_.Signal();
+    return ZX_OK;
+  }
+
   zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, struct iovec cdb,
                                  struct iovec data_out, struct iovec data_in) override {
     EXPECT_TRUE(do_io_);
@@ -64,6 +126,52 @@ class ScsiControllerForTest : public scsi::Controller {
  private:
   IOCallbackType do_io_;
   int times_ = 0;
+
+  int WorkerThread() {
+    fbl::AutoLock lock(&lock_);
+    while (true) {
+      if (worker_thread_exit_ == true)
+        return ZX_OK;
+      // While non-empty, remove requests and execute them
+      list_node_t* node;
+      list_node_t* temp_node;
+      list_for_every_safe(&queued_ios_, node, temp_node) {
+        auto* io = containerof(node, struct queued_io, node);
+        list_delete(node);
+        zx_status_t status;
+        status = ExecuteCommandSync(io->target, io->lun, io->cdb, io->data_out, io->data_in);
+        io->cb(io->cookie, status);
+        delete io;
+      }
+      cv_.Wait(&lock_);
+    }
+    return ZX_OK;
+  }
+
+  struct queued_io {
+    list_node_t node;
+    uint8_t target;
+    uint16_t lun;
+    // Deep copy of the CDB.
+    union {
+      scsi::Read16CDB readcdb;
+      scsi::Write16CDB writecdb;
+    } cdbptr;
+    struct iovec cdb;
+    struct iovec data_out;
+    struct iovec data_in;
+    void (*cb)(void*, zx_status_t);
+    void* cookie;
+  };
+
+  // These are the state for testing Async IOs.
+  // The test enqueues Async IOs and pokes the worker thread, which
+  // does the IO, and calls back.
+  fbl::Mutex lock_;
+  fbl::ConditionVariable cv_;
+  thrd_t worker_thread_;
+  bool worker_thread_exit_ __TA_GUARDED(lock_);
+  list_node_t queued_ios_ __TA_GUARDED(lock_);
 };
 
 class ScsilibDiskTest : public zxtest::Test {
@@ -190,22 +298,36 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
       /*times=*/1);
 
   // Issue a read to block 1 that should work.
+  struct IoWait {
+    fbl::Mutex lock_;
+    fbl::ConditionVariable cv_;
+  };
+  IoWait iowait_;
   block_op_t read = {};
-  block_impl_queue_callback done = [](void*, zx_status_t, block_op_t*) {};
+  block_impl_queue_callback done = [](void* ctx, zx_status_t status, block_op_t* op) {
+    IoWait* iowait_ = reinterpret_cast<struct IoWait*>(ctx);
+
+    fbl::AutoLock lock(&iowait_->lock_);
+    iowait_->cv_.Signal();
+  };
   read.command = BLOCK_OP_READ;
   read.rw.length = 1;      // Read one block
   read.rw.offset_dev = 1;  // Read logical block 1
   read.rw.offset_vmo = 0;
   EXPECT_OK(zx_vmo_create(PAGE_SIZE, 0, &read.rw.vmo));
-  bind.device()->BlockImplQueue(&read, done, nullptr);  // NOTE: Assumes synchronous controller
-
+  controller_.AsyncIoInit();
+  {
+    fbl::AutoLock lock(&iowait_.lock_);
+    bind.device()->BlockImplQueue(&read, done, &iowait_);  // NOTE: Assumes asynchronous controller
+    iowait_.cv_.Wait(&iowait_.lock_);
+  }
   // Make sure the contents of the VMO we read into match the expected test pattern
   DiskBlock check_buffer = {};
   EXPECT_OK(zx_vmo_read(read.rw.vmo, check_buffer, 0, sizeof(DiskBlock)));
   for (uint i = 0; i < sizeof(DiskBlock); i++) {
     EXPECT_EQ(check_buffer[i], 0x01);
   }
-
+  controller_.AsyncIoRelease();
   bind.device()->DdkRemove();
   EXPECT_TRUE(bind.Ok());
 }

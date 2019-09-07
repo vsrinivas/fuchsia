@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/scsi/scsilib.h>
+#include <netinet/in.h>
+#include <zircon/process.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/block.h>
 #include <fbl/alloc_checker.h>
-#include <lib/scsi/scsilib.h>
-#include <netinet/in.h>
-#include <zircon/process.h>
 
 namespace scsi {
 
@@ -99,6 +100,37 @@ zx_status_t Disk::Bind() {
   return DdkAdd(tag_);
 }
 
+struct scsilib_cb {
+  void* ScsiDisk;
+  void* blk_cookie;
+  block_impl_queue_callback completion_cb;
+  block_op_t* op;
+  zx_vaddr_t mapped_addr;
+  void* data;
+};
+
+static void ScsiLibCompletionCb(void* c, zx_status_t status) {
+  auto cookie = reinterpret_cast<struct scsilib_cb*>(c);
+  auto disk = reinterpret_cast<class Disk*>(cookie->ScsiDisk);
+  uint64_t length = cookie->op->rw.length * disk->BlockSize();
+  uint64_t vmo_offset = cookie->op->rw.offset_vmo * disk->BlockSize();
+
+  if (cookie->mapped_addr != reinterpret_cast<zx_vaddr_t>(nullptr)) {
+    status = zx_vmar_unmap(zx_vmar_root_self(), cookie->mapped_addr, length);
+  } else {
+    auto op_type = cookie->op->command & BLOCK_OP_MASK;
+
+    if (op_type == BLOCK_OP_READ) {
+      if (status == ZX_OK) {
+        status = zx_vmo_write(cookie->op->rw.vmo, cookie->data, vmo_offset, length);
+      }
+    }
+    free(cookie->data);
+  }
+  cookie->completion_cb(cookie->blk_cookie, status, cookie->op);
+  delete cookie;
+}
+
 void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb, void* cookie) {
   auto op_type = op->command & BLOCK_OP_MASK;
   if (!(op_type == BLOCK_OP_READ || op_type == BLOCK_OP_WRITE)) {
@@ -131,36 +163,34 @@ void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_c
       }
     }
   }
+  auto scsilib_cookie = reinterpret_cast<struct scsilib_cb*>(new scsilib_cb);
+  scsilib_cookie->ScsiDisk = this;
+  scsilib_cookie->blk_cookie = cookie;
+  scsilib_cookie->completion_cb = completion_cb;
+  scsilib_cookie->op = op;
+  scsilib_cookie->mapped_addr = mapped_addr;
+  scsilib_cookie->data = data;
   if (op_type == BLOCK_OP_READ) {
     Read16CDB cdb = {};
     cdb.opcode = Opcode::READ_16;
     cdb.logical_block_address = htobe64(op->rw.offset_dev);
     cdb.transfer_length = htonl(op->rw.length);
-    status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
-                                             /*cdb=*/{&cdb, sizeof(cdb)},
-                                             /*data_out=*/{nullptr, 0},
-                                             /*data_in=*/{data, length});
+    status = controller_->ExecuteCommandAsync(/*target=*/target_, /*lun=*/lun_,
+                                              /*cdb=*/{&cdb, sizeof(cdb)},
+                                              /*data_out=*/{nullptr, 0},
+                                              /*data_in=*/{data, length}, ScsiLibCompletionCb,
+                                              scsilib_cookie);
   } else {
     Write16CDB cdb = {};
     cdb.opcode = Opcode::WRITE_16;
     cdb.logical_block_address = htobe64(op->rw.offset_dev);
     cdb.transfer_length = htonl(op->rw.length);
-    status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
-                                             /*cdb=*/{&cdb, sizeof(cdb)},
-                                             /*data_out=*/{data, length},
-                                             /*data_in=*/{nullptr, 0});
+    status = controller_->ExecuteCommandAsync(/*target=*/target_, /*lun=*/lun_,
+                                              /*cdb=*/{&cdb, sizeof(cdb)},
+                                              /*data_out=*/{data, length},
+                                              /*data_in=*/{nullptr, 0}, ScsiLibCompletionCb,
+                                              scsilib_cookie);
   }
-  if (mapped_addr != reinterpret_cast<zx_vaddr_t>(nullptr)) {
-    status = zx_vmar_unmap(zx_vmar_root_self(), mapped_addr, length);
-  } else {
-    if (op_type == BLOCK_OP_READ) {
-      if (status == ZX_OK) {
-        status = zx_vmo_write(op->rw.vmo, data, vmo_offset, length);
-      }
-    }
-    free(data);
-  }
-  completion_cb(cookie, status, op);
 }
 
 Disk::Disk(Controller* controller, zx_device_t* parent, uint8_t target, uint16_t lun)

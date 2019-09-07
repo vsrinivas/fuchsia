@@ -19,6 +19,9 @@ class Controller {
   // condition happened.
   virtual zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, struct iovec cdb,
                                          struct iovec data_out, struct iovec data_in) = 0;
+  virtual zx_status_t ExecuteCommandAsync(uint8_t target, uint16_t lun, struct iovec cdb,
+                                          struct iovec data_out, struct iovec data_in,
+                                          void (*cb)(void*, zx_status_t), void* cookie) = 0;
 };
 
 }  // namespace scsi
