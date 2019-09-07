@@ -14,7 +14,6 @@ library("fidl_base") {
     "lib/fidl/cpp/message_builder.h",
     "lib/fidl/cpp/message_part.h",
     "lib/fidl/cpp/string_view.h",
-    "lib/fidl/cpp/vector_view.h",
     "lib/fidl/envelope_frames.h",
     "lib/fidl/internal.h",
     "lib/fidl/internal_callable_traits.h",
@@ -65,6 +64,7 @@ library("fidl-llcpp") {
     "lib/fidl/llcpp/sync_call.h",
     "lib/fidl/llcpp/traits.h",
     "lib/fidl/llcpp/transaction.h",
+    "lib/fidl/llcpp/vector_view.h",
   ]
   sources = [
     "llcpp_transaction.cc",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_VECTOR_VIEW_H_
-#define LIB_FIDL_CPP_VECTOR_VIEW_H_
+#ifndef LIB_FIDL_LLCPP_VECTOR_VIEW_H_
+#define LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 
 #include <zircon/fidl.h>
 
@@ -45,4 +45,4 @@ class VectorView : public fidl_vector_t {
 
 }  // namespace fidl
 
-#endif  // LIB_FIDL_CPP_VECTOR_VIEW_H_
+#endif  // LIB_FIDL_LLCPP_VECTOR_VIEW_H_

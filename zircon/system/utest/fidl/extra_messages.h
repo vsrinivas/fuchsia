@@ -7,7 +7,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/string_view.h>
-#include <lib/fidl/cpp/vector_view.h>
+#include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fidl/internal.h>
 
 // "extern" definitions copied from extra_messages.cpp

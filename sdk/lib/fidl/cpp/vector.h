@@ -7,7 +7,6 @@
 
 #include <lib/fidl/cpp/builder.h>
 #include <lib/fidl/cpp/comparison.h>
-#include <lib/fidl/cpp/vector_view.h>
 #include <lib/fit/optional.h>
 #include <zircon/assert.h>
 

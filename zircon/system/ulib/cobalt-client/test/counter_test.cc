@@ -16,7 +16,6 @@
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fuchsia/cobalt/c/fidl.h>
-#include <lib/fidl/cpp/vector_view.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>

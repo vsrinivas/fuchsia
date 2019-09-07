@@ -6,7 +6,6 @@
 #include <fcntl.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/string_view.h>
-#include <lib/fidl/cpp/vector_view.h>
 #include <lib/fzl/fdio.h>
 #include <stdio.h>
 #include <stdlib.h>

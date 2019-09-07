@@ -13,11 +13,11 @@ namespace controlflow {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kControlFlow_Shutdown_GenOrdinal = 0x7d0a313700000000lu;
+constexpr uint64_t kControlFlow_Shutdown_Ordinal = 0x7d0a313700000000lu;
 [[maybe_unused]]
-constexpr uint64_t kControlFlow_NoReplyMustSendAccessDeniedEpitaph_GenOrdinal = 0x2141b1d000000000lu;
+constexpr uint64_t kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal = 0x2141b1d000000000lu;
 [[maybe_unused]]
-constexpr uint64_t kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal = 0x531dcb0700000000lu;
+constexpr uint64_t kControlFlow_MustSendAccessDeniedEpitaph_Ordinal = 0x531dcb0700000000lu;
 extern "C" const fidl_type_t fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphResponseTable;
 
 }  // namespace
@@ -49,7 +49,7 @@ ControlFlow::ResultOf::Shutdown ControlFlow::Call::Shutdown(zx::unowned_channel 
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<ShutdownRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlFlow_Shutdown_GenOrdinal;
+  params.message()->_hdr.ordinal = kControlFlow_Shutdown_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -92,7 +92,7 @@ ControlFlow::ResultOf::NoReplyMustSendAccessDeniedEpitaph ControlFlow::Call::NoR
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<NoReplyMustSendAccessDeniedEpitaphRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlFlow_NoReplyMustSendAccessDeniedEpitaph_GenOrdinal;
+  params.message()->_hdr.ordinal = kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::internal::StatusAndError::FromFailure(
@@ -154,7 +154,7 @@ ControlFlow::UnownedResultOf::MustSendAccessDeniedEpitaph ControlFlow::Call::Mus
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<MustSendAccessDeniedEpitaphRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal;
+  params.message()->_hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
     return ::fidl::DecodeResult<ControlFlow::MustSendAccessDeniedEpitaphResponse>::FromFailure(
@@ -178,7 +178,7 @@ bool ControlFlow::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kControlFlow_Shutdown_GenOrdinal:
+    case kControlFlow_Shutdown_Ordinal:
     {
       auto result = ::fidl::DecodeAs<ShutdownRequest>(msg);
       if (result.status != ZX_OK) {
@@ -189,7 +189,7 @@ bool ControlFlow::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::ShutdownCompleter::Sync(txn));
       return true;
     }
-    case kControlFlow_NoReplyMustSendAccessDeniedEpitaph_GenOrdinal:
+    case kControlFlow_NoReplyMustSendAccessDeniedEpitaph_Ordinal:
     {
       auto result = ::fidl::DecodeAs<NoReplyMustSendAccessDeniedEpitaphRequest>(msg);
       if (result.status != ZX_OK) {
@@ -200,7 +200,7 @@ bool ControlFlow::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         Interface::NoReplyMustSendAccessDeniedEpitaphCompleter::Sync(txn));
       return true;
     }
-    case kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal:
+    case kControlFlow_MustSendAccessDeniedEpitaph_Ordinal:
     {
       auto result = ::fidl::DecodeAs<MustSendAccessDeniedEpitaphRequest>(msg);
       if (result.status != ZX_OK) {
@@ -231,7 +231,7 @@ void ControlFlow::Interface::MustSendAccessDeniedEpitaphCompleterBase::Reply(int
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MustSendAccessDeniedEpitaphResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<MustSendAccessDeniedEpitaphResponse*>(_write_bytes);
-  _response._hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal;
+  _response._hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_Ordinal;
   _response.reply = std::move(reply);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MustSendAccessDeniedEpitaphResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MustSendAccessDeniedEpitaphResponse>(std::move(_response_bytes)));
@@ -243,7 +243,7 @@ void ControlFlow::Interface::MustSendAccessDeniedEpitaphCompleterBase::Reply(::f
     return;
   }
   auto& _response = *reinterpret_cast<MustSendAccessDeniedEpitaphResponse*>(_buffer.data());
-  _response._hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal;
+  _response._hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_Ordinal;
   _response.reply = std::move(reply);
   _buffer.set_actual(sizeof(MustSendAccessDeniedEpitaphResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<MustSendAccessDeniedEpitaphResponse>(std::move(_buffer)));
@@ -251,7 +251,7 @@ void ControlFlow::Interface::MustSendAccessDeniedEpitaphCompleterBase::Reply(::f
 
 void ControlFlow::Interface::MustSendAccessDeniedEpitaphCompleterBase::Reply(::fidl::DecodedMessage<MustSendAccessDeniedEpitaphResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_GenOrdinal;
+  params.message()->_hdr.ordinal = kControlFlow_MustSendAccessDeniedEpitaph_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

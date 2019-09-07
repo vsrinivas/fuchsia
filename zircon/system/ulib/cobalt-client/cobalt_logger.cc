@@ -8,7 +8,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/coding.h>
-#include <lib/fidl/cpp/vector_view.h>
 
 #include <utility>
 

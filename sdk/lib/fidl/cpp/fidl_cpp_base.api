@@ -9,5 +9,5 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "c337c571adf78d4be70eb604f7091416",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "c9727f4c4685d6b7664196b3fae50123",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "bf975c948375bc68a1c4e912b152c9f8",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "c78abc65376ff836e372dedd124ee1f5"
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "159f030e30e8e1d33ac3571d13b0836a"
 }

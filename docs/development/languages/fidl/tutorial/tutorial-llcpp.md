@@ -623,7 +623,7 @@ No constructor or destructor so this is POD.
 
 #### fidl::VectorView\<T\>
 
-Defined in [lib/fidl/cpp/vector_view.h](/zircon/system/ulib/fidl/include/lib/fidl/cpp/vector_view.h)
+Defined in [lib/fidl/llcpp/vector_view.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/vector_view.h)
 
 Holds a reference to a variable-length vector of elements stored within the
 buffer. C++ wrapper of **fidl_vector**. Does not own the memory of elements.

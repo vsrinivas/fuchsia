@@ -3,13 +3,13 @@
 #pragma once
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/cpp/vector_view.h>
 #include <lib/fidl/cpp/string_view.h>
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>

@@ -19,10 +19,12 @@ extern const fidl_type_t fidl_test_coding_TableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_IntStructTable;
 extern const fidl_type_t fidl_test_coding_SimpleTableTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionTable;
+extern const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable;
 extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleUnionTable;
 extern const fidl_type_t fidl_test_coding_SampleStrictXUnionTable;
+extern const fidl_type_t fidl_test_coding_SampleStrictXUnionNullableRefTable;
 extern const fidl_type_t fidl_test_coding_SampleStrictXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
@@ -61,13 +63,6 @@ static const ::fidl::FidlStructField Fields52fidl_test_coding_LinearizerTestVect
     ::fidl::FidlStructField(&Vector4294967295nonnullable27String4294967295nonnullableTable, 16u, 0u)
 };
 const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields52fidl_test_coding_LinearizerTestVectorOfStringRequest, 1u, 32u, "fidl.test.coding/LinearizerTestVectorOfStringRequest"));
-
-static const ::fidl::FidlXUnionField Fields40fidl_test_coding_SampleXUnionNullableRef[] = {
-    ::fidl::FidlXUnionField(&::fidl::internal::kInt32Table,319709411u),
-    ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,376675050u),
-    ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,586453270u)
-};
-const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, Fields40fidl_test_coding_SampleXUnionNullableRef, ::fidl::kNullable, "fidl.test.coding/SampleXUnion", ::fidl::kFlexible));
 
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Uint8Enum(uint64_t v) { return (v == 0ul) || (v == 255ul) || (v == 42ul) || false; }
@@ -141,6 +136,13 @@ static const ::fidl::FidlXUnionField Fields29fidl_test_coding_SampleXUnion[] = {
 };
 const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, Fields29fidl_test_coding_SampleXUnion, ::fidl::kNonnullable, "fidl.test.coding/SampleXUnion", ::fidl::kFlexible));
 
+static const ::fidl::FidlXUnionField Fields40fidl_test_coding_SampleXUnionNullableRef[] = {
+    ::fidl::FidlXUnionField(&::fidl::internal::kInt32Table,319709411u),
+    ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,376675050u),
+    ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,586453270u)
+};
+const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, Fields40fidl_test_coding_SampleXUnionNullableRef, ::fidl::kNullable, "fidl.test.coding/SampleXUnion", ::fidl::kFlexible));
+
 static const ::fidl::FidlStructField Fields35fidl_test_coding_SampleXUnionStruct[] = {
     ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionTable, 0u, 0u)
 };
@@ -164,6 +166,13 @@ static const ::fidl::FidlXUnionField Fields35fidl_test_coding_SampleStrictXUnion
     ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,1928460319u)
 };
 const fidl_type_t fidl_test_coding_SampleStrictXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, Fields35fidl_test_coding_SampleStrictXUnion, ::fidl::kNonnullable, "fidl.test.coding/SampleStrictXUnion", ::fidl::kStrict));
+
+static const ::fidl::FidlXUnionField Fields46fidl_test_coding_SampleStrictXUnionNullableRef[] = {
+    ::fidl::FidlXUnionField(&::fidl::internal::kInt32Table,419938224u),
+    ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,915108668u),
+    ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,1928460319u)
+};
+const fidl_type_t fidl_test_coding_SampleStrictXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, Fields46fidl_test_coding_SampleStrictXUnionNullableRef, ::fidl::kNullable, "fidl.test.coding/SampleStrictXUnion", ::fidl::kStrict));
 
 static const ::fidl::FidlStructField Fields41fidl_test_coding_SampleStrictXUnionStruct[] = {
     ::fidl::FidlStructField(&fidl_test_coding_SampleStrictXUnionTable, 0u, 0u)

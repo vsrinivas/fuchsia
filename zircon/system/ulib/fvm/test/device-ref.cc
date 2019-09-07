@@ -10,8 +10,8 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
-#include <lib/fidl/cpp/vector_view.h>
 #include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
