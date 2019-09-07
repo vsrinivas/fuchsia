@@ -33,9 +33,10 @@ typedef uint32_t ino_t;
 
 constexpr uint64_t kMinfsMagic0         = (0x002153466e694d21ULL);
 constexpr uint64_t kMinfsMagic1         = (0x385000d3d3d3d304ULL);
-constexpr uint32_t kMinfsMajorVersionOld     = 0x00000007;
-constexpr uint32_t kMinfsMajorVersion        = 0x00000008;
-constexpr uint32_t kMinfsMinorVersion        = 0x00000000;
+constexpr uint32_t kMinfsMajorVersionOld1  = 0x00000007;
+constexpr uint32_t kMinfsMajorVersionOld2  = 0x00000008;
+constexpr uint32_t kMinfsMajorVersion      = 0x00000009;
+constexpr uint32_t kMinfsMinorVersion      = 0x00000000;
 
 constexpr ino_t    kMinfsRootIno        = 1;
 constexpr uint32_t kMinfsFlagClean      = 0x00000001; // Currently unused
@@ -166,23 +167,11 @@ static_assert(sizeof(Superblock) == kMinfsBlockSize,
 //   at offset: ino % kMinfsInodesPerBlock
 // - inode 0 is never used, should be marked allocated but ignored
 
-constexpr uint64_t kJournalMagic = (0x6d696e6a75726e6cULL);
-
 // The minimal number of slices to allocate a MinFS partition:
 // Superblock, Inode bitmap, Data bitmap, Inode Table, Journal (2), and actual data.
 constexpr size_t kMinfsMinimumSlices = 7;
 
 constexpr uint64_t kMinfsDefaultInodeCount = 32768;
-
-struct JournalInfo {
-    uint64_t magic;
-    uint64_t reserved0;
-    uint64_t reserved1;
-    uint64_t reserved2;
-    uint64_t reserved3;
-};
-
-static_assert(sizeof(JournalInfo) <= kMinfsBlockSize, "Journal info size is too large");
 
 struct Inode {
     uint32_t magic;
@@ -273,7 +262,8 @@ constexpr bool GetMinfsFlagFvm(Superblock& info) {
 
 constexpr uint64_t InodeBitmapBlocks(const Superblock& info) {
     if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
-        return info.ibm_slices;
+        auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
+        return info.ibm_slices * blocks_per_slice;
     }
 
     return info.abm_block - info.ibm_block;
@@ -281,7 +271,8 @@ constexpr uint64_t InodeBitmapBlocks(const Superblock& info) {
 
 constexpr uint64_t BlockBitmapBlocks(const Superblock& info) {
     if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
-        return info.abm_slices;
+        auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
+        return info.abm_slices * blocks_per_slice;
     }
 
     return info.ino_block - info.abm_block;
@@ -289,7 +280,8 @@ constexpr uint64_t BlockBitmapBlocks(const Superblock& info) {
 
 constexpr uint64_t InodeBlocks(const Superblock& info) {
     if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
-        return info.ino_slices;
+        auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
+        return info.ino_slices * blocks_per_slice;
     }
 
     return info.journal_start_block - info.ino_block;
@@ -297,7 +289,8 @@ constexpr uint64_t InodeBlocks(const Superblock& info) {
 
 constexpr uint64_t JournalBlocks(const Superblock& info) {
     if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
-        return info.journal_slices;
+        auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
+        return info.journal_slices * blocks_per_slice - 1;
     }
 
     return info.dat_block - info.journal_start_block;
@@ -305,7 +298,8 @@ constexpr uint64_t JournalBlocks(const Superblock& info) {
 
 constexpr uint64_t DataBlocks(const Superblock& info) {
     if ((info.flags & kMinfsFlagFVM) == kMinfsFlagFVM) {
-        return info.dat_slices;
+        auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
+        return info.dat_slices * blocks_per_slice;
     }
 
     return info.block_count;

@@ -13,6 +13,7 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fs/journal/format.h>
 #include <minfs/format.h>
 
 #include "allocator/inode-manager.h"
@@ -125,7 +126,7 @@ class JournalObject : public disk_inspector::DiskObject {
   JournalObject& operator=(const JournalObject&) = delete;
   JournalObject& operator=(JournalObject&&) = delete;
 
-  JournalObject(std::unique_ptr<JournalInfo> info) : journal_info_(std::move(info)) {}
+  explicit JournalObject(std::unique_ptr<fs::JournalInfo> info) : journal_info_(std::move(info)) {}
 
   // DiskObject interface:
   const char* GetName() const override { return kJournalName; }
@@ -141,7 +142,7 @@ class JournalObject : public disk_inspector::DiskObject {
   fbl::String name_;
 
   // Pointer to the minfs journal info.
-  std::unique_ptr<JournalInfo> journal_info_;
+  std::unique_ptr<fs::JournalInfo> journal_info_;
 };
 
 class RootObject : public disk_inspector::DiskObject {

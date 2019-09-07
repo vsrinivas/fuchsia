@@ -49,10 +49,11 @@ enum class Repair {
 // Updates generation_count and checksum of the superblock.
 void UpdateChecksum(Superblock* info);
 
- // TODO(ZX-4623): Remove this code after migration to major version 8 and replace calling sites
+ // TODO(ZX-4623): Remove this code after migration to major version 9 and replace calling sites
  // with LoadSuperblock.
- // Loads the superblock and upgrades if needed from version 7 to version 8.
-zx_status_t LoadAndUpgradeSuperblock(Bcache* bc, bool is_fs_writable, Superblock* out_info);
+ // Loads the superblock and upgrades if needed from version 7 or version 8 to version 9.
+zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
+                                               Superblock* out_info);
 
 // Loads superblock from disk and checks it for integrity.
 zx_status_t LoadSuperblock(Bcache* bc, Superblock* out);
