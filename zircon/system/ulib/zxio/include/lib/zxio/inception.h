@@ -6,6 +6,7 @@
 #define LIB_ZXIO_INCEPTION_H_
 
 #include <lib/sync/mutex.h>
+#include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxs/zxs.h>
 #include <threads.h>
@@ -130,7 +131,7 @@ zx_status_t zxio_socket_init(zxio_storage_t* pipe, zxs_socket_t socket);
 // Initializes a |zxio_storage_t| to use the given |handle| for output.
 //
 // The |handle| should be a Zircon debuglog object.
-zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx_handle_t handle);
+zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
 
 __END_CDECLS
 

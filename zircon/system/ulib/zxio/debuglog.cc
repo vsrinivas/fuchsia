@@ -10,71 +10,63 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
+#include <array>
 
-typedef struct zxio_debuglog_buffer {
-  unsigned next;
-  char pending[LOGBUF_MAX];
-} zxio_debuglog_buffer_t;
+#define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
 
 // A |zxio_t| backend that uses a debuglog.
 //
 // The |handle| handle is a Zircon debuglog object.
 typedef struct zxio_debuglog {
   zxio_t io;
-  zx_handle_t handle;
-  zxio_debuglog_buffer_t* buffer;
+  zx::debuglog handle;
+  struct {
+    unsigned next;
+    std::unique_ptr<std::array<char, LOGBUF_MAX>> pending;
+  } buffer;
 } zxio_debuglog_t;
 
 static_assert(sizeof(zxio_debuglog_t) <= sizeof(zxio_storage_t),
               "zxio_debuglog_t must fit inside zxio_storage_t.");
 
 static zx_status_t zxio_debuglog_close(zxio_t* io) {
-  zxio_debuglog_t* debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
-  zx_handle_t handle = debuglog->handle;
-  debuglog->handle = ZX_HANDLE_INVALID;
-  zx_handle_close(handle);
-  if (debuglog->buffer != nullptr) {
-    free(debuglog->buffer);
-    debuglog->buffer = nullptr;
-  }
+  auto debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
+  debuglog->~zxio_debuglog_t();
   return ZX_OK;
 }
 
 zx_status_t zxio_debuglog_clone(zxio_t* io, zx_handle_t* out_handle) {
-  zxio_debuglog_t* debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
-  return zx_handle_duplicate(debuglog->handle, ZX_RIGHT_SAME_RIGHTS, out_handle);
+  auto debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
+  zx::debuglog handle;
+  zx_status_t status = debuglog->handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
+  *out_handle = handle.release();
+  return status;
 }
 
 static zx_status_t zxio_debuglog_write(zxio_t* io, const void* buffer, size_t capacity,
                                        size_t* out_actual) {
-  zxio_debuglog_t* debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
+  auto debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
 
-  if (debuglog->buffer == nullptr) {
-    debuglog->buffer = static_cast<zxio_debuglog_buffer_t*>(calloc(1, sizeof(*debuglog->buffer)));
-    if (debuglog->buffer == nullptr) {
-      *out_actual = capacity;
-      return ZX_OK;
-    }
+  auto& outgoing = debuglog->buffer;
+  if (outgoing.pending == nullptr) {
+    outgoing.pending = std::make_unique<std::array<char, LOGBUF_MAX>>();
   }
 
-  zxio_debuglog_buffer_t* outgoing = debuglog->buffer;
-  const uint8_t* data = static_cast<const uint8_t*>(buffer);
-  size_t n = capacity;
-  while (n-- > 0u) {
+  const char* data = static_cast<const char*>(buffer);
+  for (size_t i = 0; i < capacity; ++i) {
     char c = *data++;
     if (c == '\n') {
-      zx_debuglog_write(debuglog->handle, 0u, outgoing->pending, outgoing->next);
-      outgoing->next = 0u;
+      debuglog->handle.write(0, outgoing.pending->data(), debuglog->buffer.next);
+      outgoing.next = 0;
       continue;
     }
     if (c < ' ') {
       continue;
     }
-    outgoing->pending[outgoing->next++] = c;
-    if (outgoing->next == LOGBUF_MAX) {
-      zx_debuglog_write(debuglog->handle, 0u, outgoing->pending, outgoing->next);
-      outgoing->next = 0u;
+    (*outgoing.pending)[outgoing.next++] = c;
+    if (outgoing.next == LOGBUF_MAX) {
+      debuglog->handle.write(0, outgoing.pending->data(), debuglog->buffer.next);
+      outgoing.next = 0;
       continue;
     }
   }
@@ -99,10 +91,12 @@ static constexpr zxio_ops_t zxio_debuglog_ops = ([]() {
   return ops;
 })();
 
-zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx_handle_t handle) {
-  zxio_debuglog_t* debuglog = reinterpret_cast<zxio_debuglog_t*>(storage);
+zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle) {
+  auto debuglog = new (storage) zxio_debuglog_t{
+      .io = storage->io,
+      .handle = std::move(handle),
+      .buffer = {},
+  };
   zxio_init(&debuglog->io, &zxio_debuglog_ops);
-  debuglog->handle = handle;
-  debuglog->buffer = nullptr;
   return ZX_OK;
 }

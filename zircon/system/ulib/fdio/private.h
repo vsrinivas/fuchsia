@@ -10,6 +10,7 @@
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
+#include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -155,7 +156,7 @@ fdio_t* fdio_remote_create(zx_handle_t h, zx_handle_t event);
 // creates a fdio that wraps a log object
 // this will allocate a buffer (on demand) to assemble
 // entire log-lines and flush them on newline or buffer full.
-fdio_t* fdio_logger_create(zx_handle_t);
+fdio_t* fdio_logger_create(zx::debuglog);
 
 // Creates an |fdio_t| from a remote directory connection.
 //

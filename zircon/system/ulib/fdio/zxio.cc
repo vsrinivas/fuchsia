@@ -746,14 +746,13 @@ zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) {
 
 // Debuglog --------------------------------------------------------------------
 
-fdio_t* fdio_logger_create(zx_handle_t handle) {
+fdio_t* fdio_logger_create(zx::debuglog handle) {
   zxio_storage_t* storage = NULL;
   fdio_t* io = fdio_zxio_create(&storage);
   if (io == NULL) {
-    zx_handle_close(handle);
     return NULL;
   }
-  zx_status_t status = zxio_debuglog_init(storage, handle);
+  zx_status_t status = zxio_debuglog_init(storage, std::move(handle));
   ZX_ASSERT(status == ZX_OK);
   return io;
 }

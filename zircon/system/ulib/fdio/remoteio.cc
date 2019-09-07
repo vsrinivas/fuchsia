@@ -365,7 +365,7 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
       io = fdio_vmo_create(zx::vmo(handle), 0u);
       break;
     case ZX_OBJ_TYPE_LOG:
-      io = fdio_logger_create(handle);
+      io = fdio_logger_create(zx::debuglog(handle));
       break;
     default: {
       zx_handle_close(handle);
