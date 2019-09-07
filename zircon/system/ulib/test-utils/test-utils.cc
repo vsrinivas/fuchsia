@@ -254,10 +254,10 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   {
     fidl::VectorView<uint8_t> data[argc];
     for (int i = 0; i < argc; i++) {
-      data[i] = fidl::VectorView<uint8_t>(strlen(argv[i]),
-                                          reinterpret_cast<uint8_t*>(const_cast<char*>(argv[i])));
+      data[i] = fidl::VectorView<uint8_t>(reinterpret_cast<uint8_t*>(const_cast<char*>(argv[i])),
+                                          strlen(argv[i]));
     }
-    fidl::VectorView<fidl::VectorView<uint8_t>> args(argc, data);
+    fidl::VectorView<fidl::VectorView<uint8_t>> args(data, argc);
     fprocess::Launcher::ResultOf::AddArgs result = launcher.AddArgs(args);
     tu_check("sending arguments", result.status());
   }
@@ -267,10 +267,10 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   if (envp) {
     fidl::VectorView<uint8_t> data[envc];
     for (int i = 0; i < envc; i++) {
-      data[i] = fidl::VectorView<uint8_t>(strlen(envp[i]),
-                                          reinterpret_cast<uint8_t*>(const_cast<char*>(envp[i])));
+      data[i] = fidl::VectorView<uint8_t>(reinterpret_cast<uint8_t*>(const_cast<char*>(envp[i])),
+                                          strlen(envp[i]));
     }
-    fidl::VectorView<fidl::VectorView<uint8_t>> env(envc, data);
+    fidl::VectorView<fidl::VectorView<uint8_t>> env(data, envc);
     fprocess::Launcher::ResultOf::AddEnvirons result = launcher.AddEnvirons(env);
     tu_check("sending environment", result.status());
   }
@@ -288,7 +288,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
       data[i].path = fidl::StringView(strlen(path), path);
       data[i].directory.reset(flat->handle[i]);
     }
-    fidl::VectorView<fprocess::NameInfo> names(count, data);
+    fidl::VectorView<fprocess::NameInfo> names(data, count);
     fprocess::Launcher::ResultOf::AddNames result = launcher.AddNames(names);
     tu_check("sending names", result.status());
     free(flat);
@@ -315,7 +315,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
     tu_check("getting loader service", status);
     handle_infos[index++].id = PA_LDSVC_LOADER;
 
-    fidl::VectorView<fprocess::HandleInfo> handle_vector(handle_count, handle_infos);
+    fidl::VectorView<fprocess::HandleInfo> handle_vector(handle_infos, handle_count);
     fprocess::Launcher::ResultOf::AddHandles result = launcher.AddHandles(handle_vector);
     tu_check("sending handles", result.status());
   }

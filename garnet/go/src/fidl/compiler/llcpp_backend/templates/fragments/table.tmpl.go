@@ -53,7 +53,7 @@ struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
 
  private:
-  {{ .Name }}(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+  {{ .Name }}(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
 };
 
 class {{ .Name }}::Builder {

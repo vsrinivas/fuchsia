@@ -27,7 +27,7 @@ TEST(Table, BuildTableVectorOfStruct) {
       {.x = 30},
       {.x = 42},
   };
-  fidl::VectorView<test::CopyableStruct> vector_view(structs.size(), &structs[0]);
+  fidl::VectorView<test::CopyableStruct> vector_view(structs);
   auto builder = test::SampleTable::Build()
       .set_vector_of_struct(&vector_view);
   const auto& table = builder.view();

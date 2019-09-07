@@ -187,7 +187,7 @@ zx_status_t zxio_remote_write_once(const Remote& rio, const uint8_t* buffer, siz
   fidl::Buffer<fio::File::WriteRequest> request_buffer;
   fidl::Buffer<fio::File::WriteResponse> response_buffer;
   auto result = fio::File::Call::Write(rio.control(), request_buffer.view(),
-                                       fidl::VectorView(capacity, const_cast<uint8_t*>(buffer)),
+                                       fidl::VectorView(const_cast<uint8_t*>(buffer), capacity),
                                        response_buffer.view());
   if (result.status() != ZX_OK) {
     return result.status();
@@ -231,7 +231,7 @@ zx_status_t zxio_remote_write_once_at(const Remote& rio, size_t offset, const ui
   fidl::Buffer<fio::File::WriteAtRequest> request_buffer;
   fidl::Buffer<fio::File::WriteAtResponse> response_buffer;
   auto result = fio::File::Call::WriteAt(rio.control(), request_buffer.view(),
-                                         fidl::VectorView(capacity, const_cast<uint8_t*>(buffer)),
+                                         fidl::VectorView(const_cast<uint8_t*>(buffer), capacity),
                                          offset, response_buffer.view());
   if (result.status() != ZX_OK) {
     return result.status();

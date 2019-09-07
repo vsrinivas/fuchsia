@@ -53,7 +53,7 @@ gen::DirEnt golden_dirents_array[gen::SMALL_DIR_VECTOR_SIZE] = {
     },
 };
 
-fidl::VectorView golden_dirents = fidl::VectorView{3, golden_dirents_array};
+fidl::VectorView golden_dirents = fidl::VectorView{golden_dirents_array, 3};
 
 }  // namespace
 
@@ -473,8 +473,7 @@ void SimpleCountNumDirectories() {
   // Stress test linearizing dirents
   for (uint64_t iter = 0; iter < kNumIterations; iter++) {
     auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
-    auto result = client.CountNumDirectories(
-        fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()});
+    auto result = client.CountNumDirectories(fidl::VectorView<gen::DirEnt>{dirents});
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
       if (dirent.is_dir) {
@@ -510,7 +509,7 @@ void CallerAllocateCountNumDirectories() {
     fidl::Buffer<gen::DirEntTestInterface::CountNumDirectoriesResponse> response_buffer;
     auto result = client.CountNumDirectories(
         request_buffer.view(),
-        fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()},
+        fidl::VectorView<gen::DirEnt>{dirents},
         response_buffer.view());
     int64_t expected_num_dir = 0;
     for (const auto& dirent : dirents) {
@@ -750,7 +749,7 @@ TEST(DirentServerTest, CFlavorSendOnDirents) {
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto status = gen::DirEntTestInterface::SendOnDirentsEvent(
       zx::unowned_channel(server_chan),
-      fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()});
+      fidl::VectorView<gen::DirEnt>{dirents});
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
@@ -768,7 +767,7 @@ TEST(DirentServerTest, CallerAllocateSendOnDirents) {
   auto buffer = std::make_unique<fidl::Buffer<gen::DirEntTestInterface::OnDirentsResponse>>();
   auto status = gen::DirEntTestInterface::SendOnDirentsEvent(
       zx::unowned_channel(server_chan), buffer->view(),
-      fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()});
+      fidl::VectorView<gen::DirEnt>{dirents});
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
@@ -785,8 +784,7 @@ TEST(DirentServerTest, InPlaceSendOnDirents) {
   auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
   auto buffer = std::make_unique<fidl::Buffer<gen::DirEntTestInterface::OnDirentsResponse>>();
   ::gen::DirEntTestInterface::OnDirentsResponse event = {};
-  event.dirents =
-      fidl::VectorView<gen::DirEnt>{static_cast<uint64_t>(dirents.size()), dirents.data()};
+  event.dirents = fidl::VectorView<gen::DirEnt>{dirents};
   auto linearize_result = ::fidl::Linearize(&event, buffer->view());
   ASSERT_OK(linearize_result.status, "%s", linearize_result.error);
   auto status = gen::DirEntTestInterface::SendOnDirentsEvent(zx::unowned_channel(server_chan),

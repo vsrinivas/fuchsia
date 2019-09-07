@@ -353,8 +353,8 @@ func (b *llcppValueBuilder) OnVector(value []interface{}, decl *gidlmixer.Vector
 	b.Builder.WriteString(fmt.Sprintf("auto %s = fidl::Array<%s, %d>{%s};\n",
 		arrayVar, elemName(decl), len(elements), strings.Join(elements, ", ")))
 	sliceVar := b.newVar()
-	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(%d, %s.data());\n",
-		sliceVar, typeName(decl), len(elements), arrayVar))
+	b.Builder.WriteString(fmt.Sprintf("auto %s = %s(%s.data(), %d);\n",
+		sliceVar, typeName(decl), arrayVar, len(elements)))
 	b.lastVar = sliceVar
 }
 

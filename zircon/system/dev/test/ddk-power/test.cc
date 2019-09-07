@@ -58,8 +58,7 @@ class PowerTestCase : public zxtest::Test {
     ASSERT_NE(child_device_handle.get(), ZX_HANDLE_INVALID);
   }
   void AddChildWithPowerArgs(DevicePowerStateInfo *states, uint8_t count) {
-    auto power_states = ::fidl::VectorView<DevicePowerStateInfo>(
-        count, reinterpret_cast<DevicePowerStateInfo *>(states));
+    auto power_states = ::fidl::VectorView(states, count);
     auto response =
         TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states);
     ASSERT_OK(response.status());
@@ -87,8 +86,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_Less) {
   DevicePowerStateInfo states[1];
   states[0].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
   states[0].is_supported = true;
-  auto power_states =
-      ::fidl::VectorView<DevicePowerStateInfo>(1, reinterpret_cast<DevicePowerStateInfo *>(states));
+  auto power_states = ::fidl::VectorView(states);
   auto response =
       TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states);
   ASSERT_OK(response.status());
@@ -105,8 +103,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_More) {
     states[i].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
     states[i].is_supported = true;
   }
-  auto power_states = ::fidl::VectorView<DevicePowerStateInfo>(
-      MAX_DEVICE_POWER_STATES + 1, reinterpret_cast<DevicePowerStateInfo *>(states));
+  auto power_states = ::fidl::VectorView(states);
   auto response =
       TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states);
   ASSERT_OK(response.status());
@@ -125,8 +122,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_MissingRequired) {
     states[i].state_id = DevicePowerState::DEVICE_POWER_STATE_D1;
     states[i].is_supported = true;
   }
-  auto power_states = ::fidl::VectorView<DevicePowerStateInfo>(
-      MAX_DEVICE_POWER_STATES, reinterpret_cast<DevicePowerStateInfo *>(states));
+  auto power_states = ::fidl::VectorView(states);
   auto response =
       TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states);
   ASSERT_OK(response.status());
@@ -147,8 +143,7 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_DuplicateCaps) {
   // Repeat
   states[2].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[2].is_supported = true;
-  auto power_states = ::fidl::VectorView<DevicePowerStateInfo>(
-      MAX_DEVICE_POWER_STATES, reinterpret_cast<DevicePowerStateInfo *>(states));
+  auto power_states = ::fidl::VectorView(states);
   auto response =
       TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states);
   ASSERT_OK(response.status());
@@ -166,8 +161,7 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_Success) {
   states[0].is_supported = true;
   states[1].state_id = DevicePowerState::DEVICE_POWER_STATE_D3COLD;
   states[1].is_supported = true;
-  auto power_states = ::fidl::VectorView<DevicePowerStateInfo>(
-      fbl::count_of(states), reinterpret_cast<DevicePowerStateInfo *>(states));
+  auto power_states = ::fidl::VectorView(states);
   auto response =
       TestDevice::Call::AddDeviceWithPowerArgs(zx::unowned(child_device_handle), power_states);
   ASSERT_OK(response.status());

@@ -11,6 +11,8 @@ source_set("common") {
     "linearizing_tests.cc",
     "llcpp_transaction_tests.cc",
     "llcpp_types_tests.cc",
+    "llcpp_views_tests.cc",
+    "main.cc",
     "on_error_handle_tests.cc",
 
     # Generated coding table for generated/extra_messages.fidl Cannot yet use
@@ -30,6 +32,7 @@ source_set("common") {
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
 

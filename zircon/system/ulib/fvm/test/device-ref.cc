@@ -66,7 +66,7 @@ fidl::BytePart ToBytePart(fbl::Array<uint8_t>* message) {
 }
 
 fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
-  return fidl::VectorView<uint8_t>(data.size(), const_cast<uint8_t*>(data.data()));
+  return fidl::VectorView<uint8_t>(const_cast<uint8_t*>(data.data()), data.size());
 }
 
 using FidlGuid = fuchsia_hardware_block_partition_GUID;

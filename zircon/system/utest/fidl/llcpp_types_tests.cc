@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <optional>
+#include <vector>
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>

@@ -78,7 +78,7 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Encode) {
     uint8_t v13 = 9ull;
     v10.elem3 = std::move(v13);
     auto v14 = fidl::Array<llcpp::conformance::ThreeByte, 3>{v2, v6, v10};
-    auto v15 = fidl::VectorView<llcpp::conformance::ThreeByte>(3, v14.data());
+    auto v15 = fidl::VectorView<llcpp::conformance::ThreeByte>(v14.data(), 3);
     v1.elems = std::move(v15);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
@@ -111,7 +111,7 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Encode) {
     uint8_t v10 = 15ull;
     v8.elem2 = std::move(v10);
     auto v11 = fidl::Array<llcpp::conformance::FiveByte, 3>{v2, v5, v8};
-    auto v12 = fidl::VectorView<llcpp::conformance::FiveByte>(3, v11.data());
+    auto v12 = fidl::VectorView<llcpp::conformance::FiveByte>(v11.data(), 3);
     v1.elems = std::move(v12);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
@@ -674,28 +674,28 @@ TEST(Conformance, Vectors_Encode) {
     int32_t v3 = 1ull;
     int32_t v4 = 2ull;
     auto v5 = fidl::Array<int32_t, 2>{v3, v4};
-    auto v6 = fidl::VectorView<int32_t>(2, v5.data());
+    auto v6 = fidl::VectorView<int32_t>(v5.data(), 2);
     v1.vec_int = std::move(v6);
     fidl::StringView v7(1, "a");
     fidl::StringView v8(1, "b");
     auto v9 = fidl::Array<fidl::StringView, 2>{v7, v8};
-    auto v10 = fidl::VectorView<fidl::StringView>(2, v9.data());
+    auto v10 = fidl::VectorView<fidl::StringView>(v9.data(), 2);
     v1.vec_string = std::move(v10);
     llcpp::conformance::StructWithInt v11{};
     int32_t v12 = 1ull;
     v11.x = std::move(v12);
     auto v13 = fidl::Array<llcpp::conformance::StructWithInt, 1>{v11};
-    auto v14 = fidl::VectorView<llcpp::conformance::StructWithInt>(1, v13.data());
+    auto v14 = fidl::VectorView<llcpp::conformance::StructWithInt>(v13.data(), 1);
     v1.vec_struct = std::move(v14);
     int32_t v15 = 1ull;
     int32_t v16 = 2ull;
     auto v17 = fidl::Array<int32_t, 2>{v15, v16};
-    auto v18 = fidl::VectorView<int32_t>(2, v17.data());
+    auto v18 = fidl::VectorView<int32_t>(v17.data(), 2);
     int32_t v19 = 3ull;
     auto v20 = fidl::Array<int32_t, 1>{v19};
-    auto v21 = fidl::VectorView<int32_t>(1, v20.data());
+    auto v21 = fidl::VectorView<int32_t>(v20.data(), 1);
     auto v22 = fidl::Array<fidl::VectorView<int32_t>, 2>{v18, v21};
-    auto v23 = fidl::VectorView<fidl::VectorView<int32_t>>(2, v22.data());
+    auto v23 = fidl::VectorView<fidl::VectorView<int32_t>>(v22.data(), 2);
     v1.vec_vec_int = std::move(v23);
 
     EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
@@ -766,7 +766,7 @@ TEST(Conformance, 3ByteObjectAlignmentInVector_Decode) {
     uint8_t v13 = 9ull;
     v10.elem3 = std::move(v13);
     auto v14 = fidl::Array<llcpp::conformance::ThreeByte, 3>{v2, v6, v10};
-    auto v15 = fidl::VectorView<llcpp::conformance::ThreeByte>(3, v14.data());
+    auto v15 = fidl::VectorView<llcpp::conformance::ThreeByte>(v14.data(), 3);
     v1.elems = std::move(v15);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, expected));
@@ -799,7 +799,7 @@ TEST(Conformance, 5ByteObjectAlignmentInVector_Decode) {
     uint8_t v10 = 15ull;
     v8.elem2 = std::move(v10);
     auto v11 = fidl::Array<llcpp::conformance::FiveByte, 3>{v2, v5, v8};
-    auto v12 = fidl::VectorView<llcpp::conformance::FiveByte>(3, v11.data());
+    auto v12 = fidl::VectorView<llcpp::conformance::FiveByte>(v11.data(), 3);
     v1.elems = std::move(v12);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, expected));
@@ -1362,28 +1362,28 @@ TEST(Conformance, Vectors_Decode) {
     int32_t v3 = 1ull;
     int32_t v4 = 2ull;
     auto v5 = fidl::Array<int32_t, 2>{v3, v4};
-    auto v6 = fidl::VectorView<int32_t>(2, v5.data());
+    auto v6 = fidl::VectorView<int32_t>(v5.data(), 2);
     v1.vec_int = std::move(v6);
     fidl::StringView v7(1, "a");
     fidl::StringView v8(1, "b");
     auto v9 = fidl::Array<fidl::StringView, 2>{v7, v8};
-    auto v10 = fidl::VectorView<fidl::StringView>(2, v9.data());
+    auto v10 = fidl::VectorView<fidl::StringView>(v9.data(), 2);
     v1.vec_string = std::move(v10);
     llcpp::conformance::StructWithInt v11{};
     int32_t v12 = 1ull;
     v11.x = std::move(v12);
     auto v13 = fidl::Array<llcpp::conformance::StructWithInt, 1>{v11};
-    auto v14 = fidl::VectorView<llcpp::conformance::StructWithInt>(1, v13.data());
+    auto v14 = fidl::VectorView<llcpp::conformance::StructWithInt>(v13.data(), 1);
     v1.vec_struct = std::move(v14);
     int32_t v15 = 1ull;
     int32_t v16 = 2ull;
     auto v17 = fidl::Array<int32_t, 2>{v15, v16};
-    auto v18 = fidl::VectorView<int32_t>(2, v17.data());
+    auto v18 = fidl::VectorView<int32_t>(v17.data(), 2);
     int32_t v19 = 3ull;
     auto v20 = fidl::Array<int32_t, 1>{v19};
-    auto v21 = fidl::VectorView<int32_t>(1, v20.data());
+    auto v21 = fidl::VectorView<int32_t>(v20.data(), 1);
     auto v22 = fidl::Array<fidl::VectorView<int32_t>, 2>{v18, v21};
-    auto v23 = fidl::VectorView<fidl::VectorView<int32_t>>(2, v22.data());
+    auto v23 = fidl::VectorView<fidl::VectorView<int32_t>>(v22.data(), 2);
     v1.vec_vec_int = std::move(v23);
 
     EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, expected));

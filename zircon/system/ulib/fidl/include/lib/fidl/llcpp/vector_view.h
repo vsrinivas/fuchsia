@@ -7,13 +7,38 @@
 
 #include <zircon/fidl.h>
 
+#include <iterator>
+#include <type_traits>
+
 namespace fidl {
 
 template <typename T>
 class VectorView : public fidl_vector_t {
  public:
   VectorView() : fidl_vector_t{} {}
-  VectorView(uint64_t count, T* data) : fidl_vector_t{count, data} {}
+  VectorView(T* data, uint64_t count) : fidl_vector_t{count, data} {}
+
+  // Creates a view over any container that implements |std::data| and |std::size|. For example:
+  //
+  //     std::vector<Foo> foo_vec = /* ... */;
+  //     auto my_view = fidl::VectorView(foo_vec);
+  //
+  // Note: The constness requirement of C follows that of T, meaning that if the LLCPP call asks for
+  // a VectorView<T> where |T| is non-const, this constructor would require a non-const |container|
+  // as well.
+  template <typename C,
+            typename = decltype(std::data(std::declval<C&>())),
+            typename = decltype(std::size(std::declval<C&>())),
+            typename = std::enable_if_t<std::is_same_v<
+                std::is_const<typename std::remove_pointer<
+                    decltype(std::data(std::declval<C&>()))>::type>,
+                std::is_const<T>>>>
+  explicit VectorView(C& container)
+      : fidl_vector_t{
+            std::size(container),
+            // |data| of fidl_vector_t is always |void*|, hence first const cast then static cast.
+            static_cast<void*>(
+                const_cast<typename std::remove_const<T>::type*>(std::data(container)))} {}
 
   uint64_t count() const { return fidl_vector_t::count; }
   void set_count(uint64_t count) { fidl_vector_t::count = count; }
@@ -42,6 +67,12 @@ class VectorView : public fidl_vector_t {
 
   fidl_vector_t* impl() { return this; }
 };
+
+template <typename C,
+          typename = decltype(std::data(std::declval<C&>())),
+          typename = decltype(std::size(std::declval<C&>()))>
+explicit VectorView(C&)
+    -> VectorView<typename std::remove_pointer<decltype(std::data(std::declval<C&>()))>::type>;
 
 }  // namespace fidl
 

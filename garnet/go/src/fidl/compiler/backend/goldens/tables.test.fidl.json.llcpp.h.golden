@@ -70,7 +70,7 @@ struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 48;
 
  private:
-  SimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+  SimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
 };
 
 class SimpleTable::Builder {
@@ -127,7 +127,7 @@ struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 24;
 
  private:
-  OlderSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+  OlderSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
 };
 
 class OlderSimpleTable::Builder {
@@ -206,7 +206,7 @@ struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 72;
 
  private:
-  NewerSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+  NewerSimpleTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
 };
 
 class NewerSimpleTable::Builder {
@@ -253,7 +253,7 @@ struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
   static constexpr uint32_t MaxOutOfLine = 0;
 
  private:
-  EmptyTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(max_ordinal, data) {}
+  EmptyTable(uint64_t max_ordinal, fidl_envelope_t* data) : EnvelopesView(data, max_ordinal) {}
 };
 
 class EmptyTable::Builder {

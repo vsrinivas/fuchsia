@@ -130,7 +130,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
   }
 
   auto result = socket->control.Connect(
-      fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))));
+      fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), len));
   zx_status_t status = result.status();
   if (status != ZX_OK) {
     fdio_release(io);
@@ -151,7 +151,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
       }
       // Call Connect() again after blocking to find connect's result.
       auto result = socket->control.Connect(
-          fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))));
+          fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), len));
       status = result.status();
       if (status != ZX_OK) {
         fdio_release(io);
@@ -184,7 +184,7 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
   }
 
   auto result = socket->control.Bind(
-      fidl::VectorView(len, reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr))));
+      fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), len));
   fdio_release(io);
   zx_status_t status = result.status();
   if (status != ZX_OK) {
@@ -573,7 +573,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   }
   auto result = socket->control.SetSockOpt(
       static_cast<int16_t>(level), static_cast<int16_t>(optname),
-      fidl::VectorView(optlen, static_cast<uint8_t*>(const_cast<void*>(optval))));
+      fidl::VectorView(static_cast<uint8_t*>(const_cast<void*>(optval)), optlen));
   fdio_release(io);
   zx_status_t status = result.status();
   if (status != ZX_OK) {

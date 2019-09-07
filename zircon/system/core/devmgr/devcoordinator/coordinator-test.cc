@@ -776,10 +776,10 @@ void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bu
   }
 
   auto prop_view = ::fidl::VectorView<uint64_t>(
-      props_count, reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)));
+      reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)), props_count);
   devmgr::Coordinator* coordinator = platform_bus->coordinator;
   ASSERT_EQ(coordinator->AddCompositeDevice(platform_bus, name, prop_view,
-                                            ::fidl::VectorView(component_count, components.data()),
+                                            ::fidl::VectorView(components),
                                             0 /* coresident index */),
             expected_status);
 }

@@ -275,7 +275,7 @@ static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf, size_t i
   fidl::Buffer<fsocket::Control::IoctlPOSIXResponse> response_buffer;
   auto result = fdio_get_zxio_socket(io)->socket.control.IoctlPOSIX(
       request_buffer.view(), static_cast<int16_t>(op),
-      fidl::VectorView(in_len, const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf))),
+      fidl::VectorView(const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf)), in_len),
       response_buffer.view());
   zx_status_t status = result.status();
   if (status != ZX_OK) {

@@ -87,7 +87,7 @@ void USBVirtualBusBase::SetupPeripheralDevice(const DeviceDescriptor& device_des
   ASSERT_OK(set_result.status());
 
   auto set_config = peripheral_->SetConfiguration(
-      device_desc, ::fidl::VectorView(function_descs.size(), function_descs.data()));
+      device_desc, ::fidl::VectorView(function_descs));
   ASSERT_OK(set_config.status());
   ASSERT_FALSE(set_config->result.is_err());
 

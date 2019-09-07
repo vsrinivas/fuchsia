@@ -92,7 +92,7 @@ void HidInstance::GetReports(GetReportsCompleter::Sync _completer) {
   TRACE_DURATION("input", "HID GetReports Instance");
 
   if (flags_ & kHidFlagsDead) {
-    ::fidl::VectorView<uint8_t> buf_view(0, nullptr);
+    ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
     _completer.Reply(ZX_ERR_PEER_CLOSED, buf_view);
     return;
   }
@@ -137,7 +137,7 @@ void HidInstance::GetReports(GetReportsCompleter::Sync _completer) {
   lock.release();
 
   if (status != ZX_OK) {
-    ::fidl::VectorView<uint8_t> buf_view(0, nullptr);
+    ::fidl::VectorView<uint8_t> buf_view(nullptr, 0);
     _completer.Reply(status, buf_view);
     return;
   }
@@ -147,7 +147,7 @@ void HidInstance::GetReports(GetReportsCompleter::Sync _completer) {
   } else {
     TRACE_FLOW_STEP("input", "hid_report", hid_report_trace_id(trace_id_, reports_read_));
   }
-  ::fidl::VectorView<uint8_t> buf_view(buf_index, buf);
+  ::fidl::VectorView<uint8_t> buf_view(buf, buf_index);
   _completer.Reply(status, buf_view);
 }
 
@@ -186,7 +186,7 @@ void HidInstance::GetReportDesc(GetReportDescCompleter::Sync _completer) {
 
   // (BUG 35762) Const cast is necessary until simple data types are generated
   // as const in LLCPP. We know the data is not modified.
-  _completer.Reply(::fidl::VectorView<uint8_t>(desc_size, const_cast<uint8_t*>(desc)));
+  _completer.Reply(::fidl::VectorView<uint8_t>(const_cast<uint8_t*>(desc), desc_size));
 }
 
 void HidInstance::GetNumReports(GetNumReportsCompleter::Sync _completer) {
@@ -197,7 +197,7 @@ void HidInstance::GetReportIds(GetReportIdsCompleter::Sync _completer) {
   uint8_t report_ids[::llcpp::fuchsia::hardware::input::MAX_REPORT_IDS];
   base_->GetReportIds(report_ids);
 
-  fidl::VectorView id_view(base_->GetNumReports(), report_ids);
+  fidl::VectorView id_view(report_ids, base_->GetNumReports());
 
   _completer.Reply(id_view);
 }
@@ -215,7 +215,7 @@ void HidInstance::GetMaxInputReportSize(GetMaxInputReportSizeCompleter::Sync _co
 void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Sync _completer) {
   input_report_size_t needed = base_->GetReportSizeById(id, type);
   if (needed == 0) {
-    _completer.Reply(ZX_ERR_NOT_FOUND, fidl::VectorView<uint8_t>(0, nullptr));
+    _completer.Reply(ZX_ERR_NOT_FOUND, fidl::VectorView<uint8_t>(nullptr, 0));
     return;
   }
 
@@ -224,7 +224,7 @@ void HidInstance::GetReport(ReportType type, uint8_t id, GetReportCompleter::Syn
   zx_status_t status = base_->GetHidbusProtocol()->GetReport(static_cast<uint8_t>(type), id, report,
                                                              needed, &actual);
 
-  fidl::VectorView<uint8_t> report_view(actual, report);
+  fidl::VectorView<uint8_t> report_view(report, actual);
   _completer.Reply(status, report_view);
 }
 

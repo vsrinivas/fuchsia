@@ -650,8 +650,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   if (add_invisible) {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDeviceInvisible(
         zx::unowned_channel(rpc.get()), std::move(hsend),
-        ::fidl::VectorView(prop_count,
-                           reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props))),
+        ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
+                           prop_count),
         ::fidl::StringView(strlen(child->name), child->name), child->protocol_id,
         ::fidl::StringView(child->driver->libname().size(), child->driver->libname().data()),
         ::fidl::StringView(proxy_args_len, proxy_args), std::move(client_remote));
@@ -666,8 +666,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
   } else {
     auto response = fuchsia::device::manager::Coordinator::Call::AddDevice(
         zx::unowned_channel(rpc.get()), std::move(hsend),
-        ::fidl::VectorView(prop_count,
-                           reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props))),
+        ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop_t*>(props)),
+                           prop_count),
         ::fidl::StringView(strlen(child->name), child->name), child->protocol_id,
         ::fidl::StringView(child->driver->libname().size(), child->driver->libname().data()),
         ::fidl::StringView(proxy_args_len, proxy_args), add_device_config,
@@ -993,7 +993,7 @@ zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
   log_rpc(dev, "add-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::AddMetadata(
       zx::unowned_channel(rpc.get()), type,
-      ::fidl::VectorView(length, reinterpret_cast<uint8_t*>(const_cast<void*>(data))));
+      ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {
@@ -1017,7 +1017,7 @@ zx_status_t devhost_publish_metadata(const fbl::RefPtr<zx_device_t>& dev, const 
   log_rpc(dev, "publish-metadata");
   auto response = fuchsia::device::manager::Coordinator::Call::PublishMetadata(
       zx::unowned_channel(rpc.get()), ::fidl::StringView(strlen(path), const_cast<char*>(path)),
-      type, ::fidl::VectorView(length, reinterpret_cast<uint8_t*>(const_cast<void*>(data))));
+      type, ::fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<void*>(data)), length));
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {
@@ -1071,9 +1071,9 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
   static_assert(sizeof(props[0]) == sizeof(uint64_t));
   auto response = fuchsia::device::manager::Coordinator::Call::AddCompositeDevice(
       zx::unowned_channel(rpc.get()), ::fidl::StringView(strlen(name), name),
-      ::fidl::VectorView(props_count,
-                         reinterpret_cast<uint64_t*>(const_cast<zx_device_prop*>(props))),
-      ::fidl::VectorView(components_count, compvec.data()), coresident_device_index);
+      ::fidl::VectorView(reinterpret_cast<uint64_t*>(const_cast<zx_device_prop*>(props)),
+                         props_count),
+      ::fidl::VectorView(compvec), coresident_device_index);
   zx_status_t status = response.status();
   zx_status_t call_status = ZX_OK;
   if (status == ZX_OK && response.Unwrap()->result.is_err()) {

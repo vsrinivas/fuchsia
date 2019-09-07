@@ -197,7 +197,7 @@ static zx_status_t fidl_ioctl(zx_handle_t h, uint32_t op, const void* in_buf, si
   fidl::Buffer<fio::Node::IoctlResponse> response_buffer;
   auto result = fio::Node::Call::Ioctl(
       zx::unowned_channel(h), request_buffer.view(), op, out_len, fidl::VectorView<zx::handle>(),
-      fidl::VectorView(in_len, const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf))),
+      fidl::VectorView(const_cast<uint8_t*>(static_cast<const uint8_t*>(in_buf)), in_len),
       response_buffer.view());
   zx_status_t status = result.status();
   if (status != ZX_OK) {

@@ -90,7 +90,7 @@ TEST_F(UsbHidTest, SetAndGetReport) {
   uint8_t buf[sizeof(hid_boot_mouse_report_t)] = {0xab, 0xbc, 0xde};
 
   auto result = input_client.SetReport(::llcpp::fuchsia::hardware::input::ReportType::INPUT, 0,
-                                       fidl::VectorView(sizeof(buf), buf));
+                                       fidl::VectorView(buf));
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
 

@@ -968,7 +968,7 @@ void Device::GetMetadata(uint32_t key, GetMetadataCompleter::Sync completer) {
     completer.Reply(std::move(response));
     return;
   }
-  auto data_view = ::fidl::VectorView<uint8_t>(actual, data);
+  auto data_view = ::fidl::VectorView<uint8_t>(data, actual);
   response.set_response(
       llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response{.data = data_view});
   completer.Reply(std::move(response));
