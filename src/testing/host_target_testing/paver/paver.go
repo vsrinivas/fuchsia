@@ -49,7 +49,7 @@ func (p *Paver) Pave(deviceName string) error {
 		return err
 	}
 
-	args := []string{"-1", "--fail-fast-if-version-mismatch", "--authorized-keys", authorizedKeys.Name()}
+	args := []string{"-1", "--fail-fast", "--authorized-keys", authorizedKeys.Name()}
 	if deviceName != "" {
 		args = append(args, "-n", deviceName)
 	}
