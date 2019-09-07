@@ -64,7 +64,6 @@ static inline zx_vaddr_t X64IncrementPcAfterBreak(zx_vaddr_t pc) { return pc; }
 
 static inline zx_vaddr_t Arm64IncrementPcAfterBreak(zx_vaddr_t pc) {
   return pc + sizeof(kArm64BreakpointInstruction);
-  ;
 }
 
 // For native debugging.
