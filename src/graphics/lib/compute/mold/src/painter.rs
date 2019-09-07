@@ -20,6 +20,7 @@ pub enum PixelFormat {
 
 pub trait ColorBuffer: Clone + Send + Sync {
     fn pixel_format(&self) -> PixelFormat;
+    fn stride(&self) -> usize;
     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize);
 
     unsafe fn write_color_at<C: Copy + Sized>(&mut self, offset: usize, src: &[C]) {
@@ -500,7 +501,7 @@ impl Painter {
             let y = context.tile.tile_j * TILE_SIZE + tile_j;
 
             if y < context.height {
-                let buffer_index = x + y * context.width;
+                let buffer_index = x + y * context.buffer.stride();
                 let tile_index = tile_j * TILE_SIZE;
                 let d = cmp::min(context.width - x, TILE_SIZE);
 

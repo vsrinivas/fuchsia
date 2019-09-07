@@ -402,7 +402,7 @@ impl PixelSink for MappingPixelSink {
 pub struct Canvas<T: PixelSink> {
     // Assumes a pixel format of BGRA8 and a color space of sRGB.
     pub pixel_sink: T,
-    row_stride: u32,
+    pub row_stride: u32,
     pub col_stride: u32,
     bounds: IntRect,
     current_clip: Option<IntRect>,

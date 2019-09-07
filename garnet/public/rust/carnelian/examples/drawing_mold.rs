@@ -173,18 +173,20 @@ impl DrawingViewAssistant {
 #[derive(Clone)]
 struct PixelSinkWrapper<P: PixelSink> {
     pixel_sink: P,
-    format: PixelFormat
+    format: PixelFormat,
+    stride: usize,
 }
 
 impl<P: PixelSink> PixelSinkWrapper<P> {
-    pub fn new(pixel_sink: P, col_stride: u32) -> Self {
+    pub fn new(pixel_sink: P, col_stride: u32, row_stride: u32) -> Self {
         Self {
             pixel_sink,
             format: if col_stride == 2 {
                 PixelFormat::RGB565
             } else {
                 PixelFormat::BGRA8888
-            }
+            },
+            stride: (row_stride / col_stride) as usize,
         }
     }
 }
@@ -192,6 +194,10 @@ impl<P: PixelSink> PixelSinkWrapper<P> {
 impl<P: PixelSink> ColorBuffer for PixelSinkWrapper<P> {
     fn pixel_format(&self) -> PixelFormat {
         self.format
+    }
+
+    fn stride(&self) -> usize {
+        self.stride
     }
 
     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize) {
@@ -261,7 +267,11 @@ impl ViewAssistant for DrawingViewAssistant {
             },
         );
 
-        map.render(PixelSinkWrapper::new(canvas.pixel_sink.clone(), canvas.col_stride));
+        map.render(PixelSinkWrapper::new(
+            canvas.pixel_sink.clone(),
+            canvas.col_stride,
+            canvas.row_stride,
+        ));
 
         Ok(())
     }

@@ -342,7 +342,7 @@ impl Map {
     pub fn render_to_bitmap(&mut self) -> Vec<u32> {
         let mut bitmap = vec![0u32; self.width * self.height];
 
-        self.render(BitMap::new(bitmap.as_mut_ptr() as *mut u8));
+        self.render(BitMap::new(bitmap.as_mut_ptr() as *mut u8, self.width));
 
         bitmap
     }
@@ -355,11 +355,12 @@ impl Map {
 #[derive(Clone, Debug)]
 struct BitMap {
     buffer: *mut u8,
+    stride: usize,
 }
 
 impl BitMap {
-    pub fn new(buffer: *mut u8) -> Self {
-        Self { buffer }
+    pub fn new(buffer: *mut u8, stride: usize) -> Self {
+        Self { buffer, stride }
     }
 }
 
@@ -369,6 +370,10 @@ unsafe impl Sync for BitMap {}
 impl ColorBuffer for BitMap {
     fn pixel_format(&self) -> PixelFormat {
         PixelFormat::RGBA8888
+    }
+
+    fn stride(&self) -> usize {
+        self.stride
     }
 
     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize) {
@@ -501,5 +506,26 @@ mod tests {
             map.tiles[5].layers,
             vec![LayerNode::Layer(0), LayerNode::Layer(1), LayerNode::Edges(0..HALF),],
         );
+    }
+
+    #[test]
+    fn stride() {
+        const WIDTH: usize = TILE_SIZE * 4;
+        const HEIGHT: usize = TILE_SIZE * 4;
+        let mut map = Map::new(WIDTH, HEIGHT);
+
+        let mut path = Path::new();
+        polygon(&mut path, &[(0.5, 0.5), (0.5, 1.5), (1.5, 1.5), (1.5, 0.5)]);
+
+        let raster = Raster::new(&path);
+
+        map.global(0, vec![TileOp::ColorAccZero]);
+        map.print(1, Layer { raster: raster.clone(), ops: vec![TileOp::CoverWipNonZero] });
+
+        // Multiple of 8.
+        const STRIDE: usize = (WIDTH + 7) & !7;
+
+        let mut bitmap = vec![0u32; STRIDE * HEIGHT];
+        map.render(BitMap::new(bitmap.as_mut_ptr() as *mut u8, STRIDE));
     }
 }
