@@ -50,7 +50,6 @@ struct MountOptions {
   bool readonly;
   bool metrics;
   bool verbose;
-  bool journal;
 
   // Number of slices to preallocate for data when the filesystem is created.
   uint32_t fvm_data_slices = 1;

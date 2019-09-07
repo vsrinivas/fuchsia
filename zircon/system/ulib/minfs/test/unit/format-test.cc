@@ -51,7 +51,6 @@ TEST(MinfsFormat, MinfsSuperblockOnFvm) {
   info.journal_start_block = 11;
   info.dat_block = 19;
 
-  info.slice_size = 81920;
   info.ibm_slices = 3;
   info.abm_slices = 5;
   info.ino_slices = 11;
@@ -61,20 +60,18 @@ TEST(MinfsFormat, MinfsSuperblockOnFvm) {
   SetMinfsFlagFvm(info);
   ASSERT_TRUE(GetMinfsFlagFvm(info));
 
-  auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
+  ASSERT_EQ(InodeBitmapBlocks(info), info.ibm_slices);
 
-  ASSERT_EQ(InodeBitmapBlocks(info), info.ibm_slices * blocks_per_slice);
+  ASSERT_EQ(BlockBitmapBlocks(info), info.abm_slices);
 
-  ASSERT_EQ(BlockBitmapBlocks(info), info.abm_slices * blocks_per_slice);
+  ASSERT_EQ(InodeBlocks(info), info.ino_slices);
 
-  ASSERT_EQ(InodeBlocks(info), info.ino_slices * blocks_per_slice);
+  ASSERT_EQ(JournalBlocks(info), info.journal_slices);
 
-  ASSERT_EQ(JournalBlocks(info), info.journal_slices * blocks_per_slice - 1);
+  ASSERT_EQ(DataBlocks(info), info.dat_slices);
 
-  ASSERT_EQ(DataBlocks(info), info.dat_slices * blocks_per_slice);
-
-  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info)
-                                 + InodeBlocks(info) + JournalBlocks(info));
+  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info) +
+                                     InodeBlocks(info) + JournalBlocks(info));
 }
 
 }  // namespace

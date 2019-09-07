@@ -256,20 +256,20 @@ std::unique_ptr<disk_inspector::DiskObject> JournalObject::GetElementAt(uint32_t
       return CreateUint64DiskObj("magic", &(journal_info_->magic));
     }
     case 1: {
-      // uint64_t start_block
-      return CreateUint64DiskObj("start_block", &(journal_info_->start_block));
+      // uint64_t reserved0.
+      return CreateUint64DiskObj("reserved0", &(journal_info_->reserved0));
     }
     case 2: {
-      // uint64_t reserved
-      return CreateUint64DiskObj("reserved", &(journal_info_->reserved));
+      // uint64_t reserved1.
+      return CreateUint64DiskObj("reserved1", &(journal_info_->reserved1));
     }
     case 3: {
-      // uint64_t timestamp
-      return CreateUint64DiskObj("timestamp", &(journal_info_->timestamp));
+      // uint64_t reserved2.
+      return CreateUint64DiskObj("reserved2", &(journal_info_->reserved2));
     }
     case 4: {
-      // uint64_t checksum
-      return CreateUint32DiskObj("checksum", &(journal_info_->checksum));
+      // uint64_t reserved3.
+      return CreateUint64DiskObj("reserved3", &(journal_info_->reserved3));
     }
   }
   return nullptr;
@@ -338,8 +338,8 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournalInfo() const {
     return nullptr;
   }
 
-  fs::JournalInfo* info = reinterpret_cast<fs::JournalInfo*>(data);
-  std::unique_ptr<fs::JournalInfo> journal_info(new fs::JournalInfo);
+  JournalInfo* info = reinterpret_cast<JournalInfo*>(data);
+  std::unique_ptr<JournalInfo> journal_info(new JournalInfo);
   memcpy(journal_info.get(), info, sizeof(*info));
   return std::unique_ptr<disk_inspector::DiskObject>(new JournalObject(std::move(journal_info)));
 }

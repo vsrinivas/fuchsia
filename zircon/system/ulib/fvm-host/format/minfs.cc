@@ -94,8 +94,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
     dat_blocks = minimum_data_blocks;
   }
 
-  // Include an additional journal block to account for the backup superblock.
-  uint32_t journal_blocks = fvm_info_.dat_block - fvm_info_.journal_start_block + 1;
+  uint32_t journal_blocks = fvm_info_.dat_block - fvm_info_.journal_start_block;
 
   // TODO(planders): Once blobfs journaling patch is landed, use fvm::BlocksToSlices() here.
   fvm_info_.ibm_slices =
@@ -194,10 +193,10 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
       return ZX_OK;
     }
     case 4: {
-      vslice_info->vslice_start = minfs::kFvmSuperblockBackup;
+      vslice_info->vslice_start = minfs::kFVMBlockJournalStart;
       vslice_info->slice_count = fvm_info_.journal_slices;
-      vslice_info->block_offset = info_.journal_start_block - 1;
-      vslice_info->block_count = info_.dat_block - info_.journal_start_block + 1;
+      vslice_info->block_offset = info_.journal_start_block;
+      vslice_info->block_count = info_.dat_block - info_.journal_start_block;
       vslice_info->zero_fill = false;
       return ZX_OK;
     }

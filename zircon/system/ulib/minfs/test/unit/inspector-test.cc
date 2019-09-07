@@ -139,9 +139,9 @@ TEST(InspectorTest, TestSuperblock) {
 }
 
 TEST(InspectorTest, TestJournal) {
-  fs::JournalInfo jinfo;
-  jinfo.magic = fs::kJournalMagic;
-  auto info = std::make_unique<fs::JournalInfo>(jinfo);
+  JournalInfo jinfo;
+  jinfo.magic = kJournalMagic;
+  auto info = std::make_unique<JournalInfo>(jinfo);
 
   std::unique_ptr<JournalObject> journalObj(new JournalObject(std::move(info)));
   ASSERT_STR_EQ(kJournalName, journalObj->GetName());
@@ -152,7 +152,7 @@ TEST(InspectorTest, TestJournal) {
 
   std::unique_ptr<disk_inspector::DiskObject> obj0 = journalObj->GetElementAt(0);
   obj0->GetValue(&buffer, &size);
-  ASSERT_EQ(fs::kJournalMagic, *(reinterpret_cast<const uint64_t*>(buffer)));
+  ASSERT_EQ(kJournalMagic, *(reinterpret_cast<const uint64_t*>(buffer)));
 }
 
 TEST(InspectorTest, TestInode) {

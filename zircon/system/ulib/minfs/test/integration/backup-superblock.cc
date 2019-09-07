@@ -124,7 +124,7 @@ TEST_F(FvmBackupSuperblockTest, FvmMountCorruptedSuperblock)  {
 void FillOldSuperblockFields(minfs::Superblock *info, minfs::SuperblockOld *old_info) {
   old_info->magic0 = minfs::kMinfsMagic0;
   old_info->magic1 = minfs::kMinfsMagic1;
-  old_info->version = minfs::kMinfsMajorVersionOld1;
+  old_info->version = minfs::kMinfsMajorVersionOld;
   old_info->flags   = info->flags;
   old_info->block_size = info->block_size;
   old_info->inode_size = info->inode_size;
@@ -149,8 +149,8 @@ void FillOldSuperblockFields(minfs::Superblock *info, minfs::SuperblockOld *old_
 }
 
 // TODO(ZX-4623): Remove this test after migration to major version 8.
-// Tests upgrade from older superblock version 7 to version 9.
-TEST_F(FvmBackupSuperblockTest, FvmUpgradeSuperblockV7) {
+// Tests upgrade from older superblock version 7 to version 8.
+TEST_F(FvmBackupSuperblockTest, FvmUpgradeSuperblock) {
   fbl::unique_fd block_fd(open(block_device_path(), O_RDWR));
   ASSERT_TRUE(block_fd);
   fbl::unique_fd fs_fd(open(partition_path(), O_RDWR));
@@ -195,47 +195,7 @@ TEST_F(FvmBackupSuperblockTest, FvmUpgradeSuperblockV7) {
   ASSERT_GE(pread(fd_mount, &info, minfs::kMinfsBlockSize, minfs::kSuperblockStart), 0,
             "Unable to read superblock.");
 
-  // Verify that the superblock was upgraded from version 7 to version 9.
-  ASSERT_EQ(info.version_major, minfs::kMinfsMajorVersion);
-  ASSERT_EQ(info.version_minor, minfs::kMinfsMinorVersion);
-}
-
-// TODO(36164): Remove this test after migration to major version 9.
-// Tests upgrade from older superblock version 8 to version 9.
-TEST_F(FvmBackupSuperblockTest, FvmUpgradeSuperblockV8) {
-  fbl::unique_fd block_fd(open(block_device_path(), O_RDWR));
-  ASSERT_TRUE(block_fd);
-  fbl::unique_fd fs_fd(open(partition_path(), O_RDWR));
-  ASSERT_TRUE(fs_fd);
-  minfs::Superblock info;
-
-  // Try reading the superblock.
-  ASSERT_GE(pread(fs_fd.get(), &info, minfs::kMinfsBlockSize, minfs::kSuperblockStart), 0,
-            "Unable to read superblock.");
-
-  info.version_major = minfs::kMinfsMajorVersionOld2;
-
-  // Write old version 8 superblock to disk.
-  uint8_t block[minfs::kMinfsBlockSize];
-  memset(block, 0, sizeof(info));
-  memcpy(block, &info, sizeof(info));
-  ASSERT_GE(pwrite(fs_fd.get(), block, minfs::kMinfsBlockSize, minfs::kSuperblockStart), 0,
-            "Unable to write older superblock.");
-
-  // Running mount to upgrade the filesystem.
-  ASSERT_EQ(ZX_OK, mount(fs_fd.get(), mount_path(), DISK_FORMAT_MINFS, &default_mount_options,
-      launch_stdio_async));
-  ASSERT_EQ(ZX_OK, umount(mount_path()));
-
-  // Mount consumes the fd, hence block device needs to be opened again.
-  int fd_mount = open(partition_path(), O_RDWR);
-  ASSERT_GE(fd_mount, 0, "Could not open block device.");
-
-  // Try reading the superblock.
-  ASSERT_GE(pread(fd_mount, &info, minfs::kMinfsBlockSize, minfs::kSuperblockStart), 0,
-            "Unable to read superblock.");
-
-  // Verify that the superblock was upgraded from version 8 to version 9.
+  // Verify that the superblock was upgraded from version 7 to version 8.
   ASSERT_EQ(info.version_major, minfs::kMinfsMajorVersion);
   ASSERT_EQ(info.version_minor, minfs::kMinfsMinorVersion);
 }

@@ -134,7 +134,6 @@ int main(int argc, char** argv) {
   options.readonly = false;
   options.metrics = false;
   options.verbose = false;
-  options.journal = false;
 
   while (1) {
     static struct option opts[] = {
@@ -159,8 +158,9 @@ int main(int argc, char** argv) {
         options.metrics = true;
         break;
       case 'j':
-        options.journal = true;
-        break;
+        // TODO(planders): Enable journaling here once minfs supports it.
+        fprintf(stderr, "minfs: Journaling option not supported\n");
+        return usage();
       case 'v':
         options.verbose = true;
         break;
