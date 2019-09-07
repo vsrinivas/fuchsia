@@ -134,6 +134,8 @@ zx_status_t Device::Bind() {
   fake_device_ = fbl::AdoptRef(new FakeController());
   fake_device_->set_advertising_state_callback(
       fit::bind_member(this, &Device::OnLegacyAdvertisingStateChanged));
+  fake_device_->set_connection_state_callback(
+      fit::bind_member(this, &Device::OnPeerConnectionStateChanged));
 
   loop_.StartThread("bt_hci_emulator");
 
@@ -333,8 +335,9 @@ void Device::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback c
 }
 
 void Device::AddPeer(std::unique_ptr<Peer> peer) {
-  peer->set_closed_callback([this, ptr = peer.get()] { peers_.erase(ptr); });
-  peers_[peer.get()] = std::move(peer);
+  auto address = peer->address();
+  peer->set_closed_callback([this, address] { peers_.erase(address); });
+  peers_[address] = std::move(peer);
 }
 
 void Device::OnLegacyAdvertisingStateChanged() {
@@ -393,6 +396,19 @@ void Device::UnpublishHci() {
   if (hci_dev_) {
     device_remove(hci_dev_);
     hci_dev_ = nullptr;
+  }
+}
+
+void Device::OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
+                                          bt::hci::ConnectionHandle handle, bool connected,
+                                          bool canceled) {
+  logf(TRACE, "Peer connection state changed: %s (handle: %#.4x) (connected: %s) (canceled: %s):\n",
+       address.ToString().c_str(), handle, (connected ? "true" : "false"),
+       (canceled ? "true" : "false"));
+
+  auto iter = peers_.find(address);
+  if (iter != peers_.end()) {
+    iter->second->UpdateConnectionState(connected);
   }
 }
 

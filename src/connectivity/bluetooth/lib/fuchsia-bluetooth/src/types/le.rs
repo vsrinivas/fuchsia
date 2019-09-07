@@ -18,11 +18,20 @@
 //!   }
 //! ```
 
+use crate::types::uuid::Uuid;
 use {fidl_fuchsia_bluetooth_le as fidl, std::fmt};
 
 #[derive(Clone)]
 pub struct RemoteDevice {
     pub identifier: String,
+    pub connectable: bool,
+    pub rssi: Option<i8>,
+    pub advertising_data: Option<AdvertisingData>,
+}
+
+#[derive(Clone)]
+pub struct Peer {
+    pub id: Option<fidl_fuchsia_bluetooth::PeerId>,
     pub connectable: bool,
     pub rssi: Option<i8>,
     pub advertising_data: Option<AdvertisingData>,
@@ -63,6 +72,49 @@ impl From<fidl::RemoteDevice> for RemoteDevice {
     }
 }
 
+impl From<fidl::Peer> for Peer {
+    fn from(src: fidl::Peer) -> Peer {
+        Peer {
+            id: src.id,
+            connectable: src.connectable.unwrap_or(false),
+            rssi: src.rssi,
+            advertising_data: src.advertising_data.map(|ad| ad.into()),
+        }
+    }
+}
+
+impl From<fidl::AdvertisingData> for AdvertisingData {
+    fn from(src: fidl::AdvertisingData) -> AdvertisingData {
+        AdvertisingData {
+            name: src.name,
+            tx_power_level: src.tx_power_level,
+            // TODO(armansito): Change the target appearance type once users of the old format are
+            // removed.
+            appearance: src.appearance.map(|v| v as u16),
+            service_uuids: src
+                .service_uuids
+                .unwrap_or(vec![])
+                .into_iter()
+                .map(|e| Uuid::from(e).to_string())
+                .collect(),
+            service_data: src
+                .service_data
+                .unwrap_or(vec![])
+                .into_iter()
+                .map(|data| data.into())
+                .collect(),
+            manufacturer_specific_data: src
+                .manufacturer_data
+                .unwrap_or(vec![])
+                .into_iter()
+                .map(|data| data.into())
+                .collect(),
+            solicited_service_uuids: vec![],
+            uris: src.uris.unwrap_or(vec![]),
+        }
+    }
+}
+
 impl From<fidl::AdvertisingDataDeprecated> for AdvertisingData {
     fn from(src: fidl::AdvertisingDataDeprecated) -> AdvertisingData {
         AdvertisingData {
@@ -94,8 +146,20 @@ impl From<fidl::ServiceDataEntry> for ServiceDataEntry {
     }
 }
 
+impl From<fidl::ServiceData> for ServiceDataEntry {
+    fn from(src: fidl::ServiceData) -> ServiceDataEntry {
+        ServiceDataEntry { uuid: Uuid::from(src.uuid).to_string(), data: src.data }
+    }
+}
+
 impl From<fidl::ManufacturerSpecificDataEntry> for ManufacturerSpecificDataEntry {
     fn from(src: fidl::ManufacturerSpecificDataEntry) -> ManufacturerSpecificDataEntry {
+        ManufacturerSpecificDataEntry { company_id: src.company_id, data: src.data }
+    }
+}
+
+impl From<fidl::ManufacturerData> for ManufacturerSpecificDataEntry {
+    fn from(src: fidl::ManufacturerData) -> ManufacturerSpecificDataEntry {
         ManufacturerSpecificDataEntry { company_id: src.company_id, data: src.data }
     }
 }
@@ -119,3 +183,5 @@ impl fmt::Display for RemoteDevice {
         write!(f, "id: {}]", self.identifier)
     }
 }
+
+// TODO(armansito): Add unit tests once the deprecated FIDL types are removed.

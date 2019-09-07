@@ -6,7 +6,6 @@
 
 #include <fuchsia/bluetooth/test/cpp/fidl.h>
 
-#include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 #include "src/connectivity/bluetooth/hci/emulator/log.h"
 
 namespace fbt = fuchsia::bluetooth;
@@ -22,6 +21,18 @@ bt::DeviceAddress::Type LeAddressTypeFromFidl(fbt::AddressType type) {
 
 bt::DeviceAddress LeAddressFromFidl(const fbt::Address& address) {
   return bt::DeviceAddress(LeAddressTypeFromFidl(address.type), address.bytes);
+}
+
+bt::hci::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
+  switch (role) {
+    case fbt::ConnectionRole::LEADER:
+      return bt::hci::ConnectionRole::kMaster;
+    case fbt::ConnectionRole::FOLLOWER:
+      [[fallthrough]];
+    default:
+      break;
+  }
+  return bt::hci::ConnectionRole::kSlave;
 }
 
 }  // namespace
@@ -64,8 +75,7 @@ Peer::Result Peer::NewLowEnergy(ftest::LowEnergyPeerParameters parameters,
     return fit::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
   }
 
-  return fit::ok(
-      std::unique_ptr<Peer>(new Peer(address, std::move(request), std::move(fake_controller))));
+  return fit::ok(std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
 }
 
 // static
@@ -96,8 +106,7 @@ Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
     return fit::error(ftest::EmulatorPeerError::ADDRESS_REPEATED);
   }
 
-  return fit::ok(
-      std::unique_ptr<Peer>(new Peer(address, std::move(request), std::move(fake_controller))));
+  return fit::ok(std::unique_ptr<Peer>(new Peer(address, std::move(request), fake_controller)));
 }
 
 Peer::Peer(bt::DeviceAddress address, fidl::InterfaceRequest<ftest::Peer> request,
@@ -122,13 +131,64 @@ void Peer::AssignConnectionStatus(ftest::HciError status, AssignConnectionStatus
   callback();
 }
 
+void Peer::EmulateLeConnectionComplete(fbt::ConnectionRole role) {
+  logf(TRACE, "Peer.EmulateLeConnectionComplete\n");
+  fake_controller_->ConnectLowEnergy(address_, ConnectionRoleFromFidl(role));
+}
+
+void Peer::EmulateDisconnectionComplete() {
+  logf(TRACE, "Peer.EmulateDisconnectionComplete\n");
+  fake_controller_->Disconnect(address_);
+}
+
+// TODO(armansito): The hanging-get pattern with batches and stashed callbacks always involves some
+// amount of juggling that is common to all cases. Define a generic utility class next time this
+// pattern is added.
+void Peer::WatchConnectionStates(WatchConnectionStatesCallback callback) {
+  logf(TRACE, "Peer.WatchConnectionState\n");
+
+  if (connection_state_watcher_) {
+    logf(TRACE, "Watcher already registered! Closing Peer channel");
+    binding_.Unbind();
+    NotifyChannelClosed();
+    return;
+  }
+  connection_state_watcher_ = std::move(callback);
+  NotifyConnectionStateWatcher();
+}
+
+void Peer::UpdateConnectionState(bool connected) {
+  if (!connection_states_) {
+    connection_states_.emplace();
+  }
+  connection_states_->push_back(connected ? ftest::ConnectionState::CONNECTED
+                                          : ftest::ConnectionState::DISCONNECTED);
+  NotifyConnectionStateWatcher();
+}
+
 void Peer::OnChannelClosed(zx_status_t status) {
   logf(TRACE, "Peer channel closed\n");
+  NotifyChannelClosed();
+}
+
+void Peer::CleanUp() { fake_controller_->RemovePeer(address_); }
+
+void Peer::NotifyChannelClosed() {
   if (closed_callback_) {
     closed_callback_();
   }
 }
 
-void Peer::CleanUp() { fake_controller_->RemovePeer(address_); }
+void Peer::NotifyConnectionStateWatcher() {
+  if (!connection_state_watcher_ || connection_states_->empty()) {
+    // No watcher; nothing to do.
+    return;
+  }
+
+  auto f = std::move(connection_state_watcher_);
+  auto states = std::move(*connection_states_);
+  connection_states_.reset();
+  f(std::move(states));
+}
 
 }  // namespace bt_hci_emulator

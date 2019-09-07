@@ -97,6 +97,9 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
         )
         .await?;
 
+    // TODO(armansito): Generalize Emulator/Peer state tracking from low_energy_peripheral tests and
+    // verify the controller state here.
+
     // We can safely unwrap here as this is guarded by the previous expectation
     let peer = state.peers.iter().find(|(_, d)| &d.address == &peer_address_string).unwrap().0;
 

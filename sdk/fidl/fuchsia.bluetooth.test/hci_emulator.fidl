@@ -100,12 +100,34 @@ table BredrPeerParameters {
     3: bt.DeviceClass device_class;
 };
 
+enum ConnectionState {
+    CONNECTED = 1;
+    DISCONNECTED = 2;
+};
+
 /// Protocol used to drive the state of a fake peer device.
 protocol Peer {
     /// Assign a HCI `status` for the controller to generate in response to connection requests.
     /// Applies to all successive HCI_Create_Connection and HCI_LE_Create_Connection commands. The
     /// procedure is acknowledged with an empty response.
     AssignConnectionStatus(HciError status) -> ();
+
+    /// Emulates a LE connection event. Does nothing if the peer is already connected. The
+    /// `role` parameter determines the link layer connection role.
+    EmulateLeConnectionComplete(bt.ConnectionRole role);
+
+    /// Emulate disconnection. Does nothing if the peer is not connected.
+    EmulateDisconnectionComplete();
+
+    /// Watch connection state changes using the
+    /// [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets).
+    /// Notifies the most recent controller connection state if there has been a change since the
+    /// last time this method was called.
+    ///
+    /// Only one call to this method can be outstanding at a given time. The
+    /// [`fuchsia.bluetooth.test/Peer`] channel will be closed if a call is received when one is
+    /// already pending.
+    WatchConnectionStates() -> (vector<ConnectionState> states);
 };
 
 /// Protocol used to emulate a Bluetooth controller that supports the standard Bluetooth HCI.

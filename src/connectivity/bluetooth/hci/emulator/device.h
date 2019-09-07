@@ -78,6 +78,10 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   // Remove the bt-hci device.
   void UnpublishHci();
 
+  void OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
+                                    bt::hci::ConnectionHandle handle, bool connected,
+                                    bool canceled);
+
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t hci_fidl_ops_ = {
       .OpenCommandChannel = OpenCommandChannel,
       .OpenAclDataChannel = OpenAclDataChannel,
@@ -113,7 +117,7 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   fidl::Binding<fuchsia::bluetooth::test::HciEmulator> binding_;
 
   // List of active peers that have been registered with us.
-  std::unordered_map<Peer*, std::unique_ptr<Peer>> peers_;
+  std::unordered_map<bt::DeviceAddress, std::unique_ptr<Peer>> peers_;
 
   WatchLegacyAdvertisingStatesCallback legacy_adv_watcher_;
   std::vector<fuchsia::bluetooth::test::LegacyAdvertisingState> legacy_adv_states_;

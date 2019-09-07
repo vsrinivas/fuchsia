@@ -10,9 +10,13 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/result.h>
 
+#include <optional>
+#include <vector>
+
 #include <fbl/macros.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
+#include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
 
 namespace bt_hci_emulator {
 
@@ -41,13 +45,25 @@ class Peer : public fuchsia::bluetooth::test::Peer {
   // The destructor unregisters the Peer if initialized.
   ~Peer();
 
+  // Rerturns the device address that this instance was initialized with based on the FIDL
+  // parameters.
+  const bt::DeviceAddress& address() const { return address_; }
+
   // Assign a callback that will run when the Peer handle gets closed.
   void set_closed_callback(fit::callback<void()> closed_callback) {
     closed_callback_ = std::move(closed_callback);
   }
 
+  // fuchsia::bluetooth::test::Peer overrides:
   void AssignConnectionStatus(fuchsia::bluetooth::test::HciError status,
                               AssignConnectionStatusCallback callback) override;
+  void EmulateLeConnectionComplete(fuchsia::bluetooth::ConnectionRole role) override;
+  void EmulateDisconnectionComplete() override;
+  void WatchConnectionStates(WatchConnectionStatesCallback callback) override;
+
+  // Updates this peer with the current connection state which is used to notify its FIDL client
+  // of state changes that it is observing.
+  void UpdateConnectionState(bool connected);
 
  private:
   Peer(bt::DeviceAddress address, fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
@@ -55,11 +71,18 @@ class Peer : public fuchsia::bluetooth::test::Peer {
 
   void OnChannelClosed(zx_status_t status);
   void CleanUp();
+  void NotifyChannelClosed();
+  void NotifyConnectionStateWatcher();
 
   bt::DeviceAddress address_;
   fbl::RefPtr<bt::testing::FakeController> fake_controller_;
   fidl::Binding<fuchsia::bluetooth::test::Peer> binding_;
   fit::callback<void()> closed_callback_;
+
+  // Contains the delta between the last call to WatchConnectionState and the most recent connection
+  // state change. If valid, then there is a value to report.
+  std::optional<std::vector<fuchsia::bluetooth::test::ConnectionState>> connection_states_;
+  WatchConnectionStatesCallback connection_state_watcher_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Peer);
 };
