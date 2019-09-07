@@ -101,7 +101,7 @@ while true; do
   fi
 
   if [[ "$state" == "discover" ]]; then
-    fx-command-run shell 'PATH=;echo' > /dev/null 2>&1
+    fx-command-run shell exit 2>/dev/null
     ping_result=$?
   else
     fx-command-run shell -O check > /dev/null 2>&1
