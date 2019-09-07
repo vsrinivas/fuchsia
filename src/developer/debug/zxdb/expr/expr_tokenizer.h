@@ -27,6 +27,8 @@ class ExprTokenizer {
 
   const std::string& input() const { return input_; }
 
+  ExprLanguage language() const { return language_; }
+
   // The result of parsing. This will be multiline and will indicate the
   // location of the problem.
   const Err& err() const { return err_; }

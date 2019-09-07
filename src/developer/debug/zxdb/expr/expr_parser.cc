@@ -130,8 +130,9 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
 // static
 const ExprToken ExprParser::kInvalidToken;
 
-ExprParser::ExprParser(std::vector<ExprToken> tokens, NameLookupCallback name_lookup)
-    : name_lookup_callback_(std::move(name_lookup)), tokens_(std::move(tokens)) {
+ExprParser::ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
+                       NameLookupCallback name_lookup)
+    : language_(lang), name_lookup_callback_(std::move(name_lookup)), tokens_(std::move(tokens)) {
   static_assert(arraysize(ExprParser::kDispatchInfo) == static_cast<int>(ExprTokenType::kNumTypes),
                 "kDispatchInfo needs updating to match ExprTokenType");
 }
@@ -169,7 +170,7 @@ Err ExprParser::ParseIdentifier(const std::string& input, ParsedIdentifier* outp
   if (!tokenizer.Tokenize())
     return tokenizer.err();
 
-  ExprParser parser(tokenizer.TakeTokens());
+  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language());
   auto root = parser.Parse();
   if (!root)
     return parser.err();
@@ -588,6 +589,23 @@ fxl::RefPtr<ExprNode> ExprParser::DotOrArrowInfix(fxl::RefPtr<ExprNode> left,
                                                   const ExprToken& token) {
   // These are left-associative so use the same precedence as the token.
   fxl::RefPtr<ExprNode> right = ParseExpression(kPrecedenceCallAccess);
+
+  auto literal = right ? right->AsLiteral() : nullptr;
+
+  // Rust supports tuple structs, which can be addressed like "foo.0"
+  if (language_ == ExprLanguage::kRust && literal && token.type() == ExprTokenType::kDot) {
+    auto literal_token = literal->token();
+
+    if (literal_token.type() == ExprTokenType::kInteger) {
+      auto value = literal_token.value();
+
+      if (value.find_first_not_of("0123456789") == std::string::npos &&
+          (value.length() <= 1 || value[0] != '0')) {
+        right = fxl::MakeRefCounted<IdentifierExprNode>(value);
+      }
+    }
+  }
+
   if (!right || !right->AsIdentifier()) {
     SetError(token, fxl::StringPrintf("Expected identifier for right-hand-side of \"%s\".",
                                       token.value().c_str()));

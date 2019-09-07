@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
@@ -22,7 +23,8 @@ class ExprParser {
   // symbol context. This means that we can't disambiguate some cases like how
   // to parse "Foo < 1 > bar". In this mode, we'll assume that "<" after a
   // name always mean a template rather than a comparison operation.
-  ExprParser(std::vector<ExprToken> tokens, NameLookupCallback name_lookup = NameLookupCallback());
+  ExprParser(std::vector<ExprToken> tokens, ExprLanguage lang,
+             NameLookupCallback name_lookup = NameLookupCallback());
 
   // Returns the root expression node on successful parsing. On error, returns
   // an empty pointer in which case the error message can be read from err()
@@ -155,6 +157,8 @@ class ExprParser {
 
   static const DispatchInfo& DispatchForToken(const ExprToken& token);
   static DispatchInfo kDispatchInfo[];
+
+  ExprLanguage language_;
 
   // Possibly null, see constructor.
   NameLookupCallback name_lookup_callback_;

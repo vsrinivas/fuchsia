@@ -53,17 +53,22 @@ class ExprParserTest : public testing::Test {
   // Valid after Parse() is called.
   ExprParser& parser() { return *parser_; }
 
-  fxl::RefPtr<ExprNode> Parse(const char* input,
+  fxl::RefPtr<ExprNode> Parse(const char* input, NameLookupCallback name_lookup) {
+    return Parse(input, ExprLanguage::kC, std::move(name_lookup));
+  }
+
+  fxl::RefPtr<ExprNode> Parse(const char* input, ExprLanguage lang = ExprLanguage::kC,
                               NameLookupCallback name_lookup = NameLookupCallback()) {
     parser_.reset();
 
-    tokenizer_ = std::make_unique<ExprTokenizer>(input);
+    tokenizer_ = std::make_unique<ExprTokenizer>(input, lang);
     if (!tokenizer_->Tokenize()) {
       ADD_FAILURE() << "Tokenization failure: " << input;
       return nullptr;
     }
 
-    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), std::move(name_lookup));
+    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), tokenizer_->language(),
+                                           std::move(name_lookup));
     return parser_->Parse();
   }
 
@@ -119,6 +124,42 @@ TEST_F(ExprParserTest, Dot) {
 
   // Member name.
   EXPECT_EQ("member", access->member().GetFullName());
+}
+
+TEST_F(ExprParserTest, DotNumber) {
+  auto result = Parse("base.0", ExprLanguage::kRust);
+  ASSERT_TRUE(result);
+
+  const MemberAccessExprNode* access = result->AsMemberAccess();
+  ASSERT_TRUE(access);
+  EXPECT_EQ(ExprTokenType::kDot, access->accessor().type());
+  EXPECT_EQ(".", access->accessor().value());
+
+  // Left side is the "base" identifier.
+  const IdentifierExprNode* base = access->left()->AsIdentifier();
+  ASSERT_TRUE(base);
+  EXPECT_EQ("base", base->ident().GetFullName());
+
+  // Member name.
+  EXPECT_EQ("0", access->member().GetFullName());
+}
+
+TEST_F(ExprParserTest, DotNumberNoHex) {
+  auto result = Parse("base.0xA", ExprLanguage::kRust);
+  ASSERT_FALSE(result);
+
+  EXPECT_EQ("Expected identifier for right-hand-side of \".\".", parser().err().msg());
+  EXPECT_EQ(4u, parser().error_token().byte_offset());
+  EXPECT_EQ(".", parser().error_token().value());
+}
+
+TEST_F(ExprParserTest, DotNumberNoRust) {
+  auto result = Parse("base.0");
+  ASSERT_FALSE(result);
+
+  EXPECT_EQ("Expected identifier for right-hand-side of \".\".", parser().err().msg());
+  EXPECT_EQ(4u, parser().error_token().byte_offset());
+  EXPECT_EQ(".", parser().error_token().value());
 }
 
 TEST_F(ExprParserTest, AccessorAtEnd) {
