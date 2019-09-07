@@ -203,6 +203,23 @@ def ResultsFromDir(filename):
     return ResultsFromDirs(filenames)
 
 
+def FormatFactor(val_before, val_after):
+    # Avoid division by zero.
+    if val_before == 0:
+        return 'inf'
+    return '%.3f' % (val_after / val_before)
+
+
+def FormatFactorRange(interval_before, interval_after):
+    if interval_before == (0, 0) and interval_after == (0, 0):
+        return 'no_change'
+    if interval_before[0] < 0 or interval_after[0] < 0:
+        return 'ci_too_wide'
+    factor_min = FormatFactor(interval_before[1], interval_after[0])
+    factor_max = FormatFactor(interval_before[0], interval_after[1])
+    return '%s-%s' % (factor_min, factor_max)
+
+
 def FormatTable(heading_row, rows, out_fh):
     column_count = len(heading_row)
     for row in rows:
@@ -254,8 +271,6 @@ def ComparePerf(args, out_fh):
             stats = [results_map[label] for results_map in results_maps]
             interval_before = stats[0].interval
             interval_after = stats[1].interval
-            factor_min = interval_after[0] / interval_before[1]
-            factor_max = interval_after[1] / interval_before[0]
             # Using a ">" comparison rather than ">=" ensures that if the
             # intervals are equal and zero-width, they are treated as
             # "no_sig_diff".
@@ -267,7 +282,7 @@ def ComparePerf(args, out_fh):
                 result = 'no_sig_diff'
             before_range = stats[0].FormatConfidenceInterval()
             after_range = stats[1].FormatConfidenceInterval()
-            factor_range = '%.3f-%.3f' % (factor_min, factor_max)
+            factor_range = FormatFactorRange(interval_before, interval_after)
         counts[result] += 1
         row = [label, result, factor_range, before_range, after_range]
         all_rows.append(row)

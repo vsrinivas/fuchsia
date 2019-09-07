@@ -12,6 +12,8 @@ import tarfile
 import tempfile
 import unittest
 
+import numpy
+
 import perfcompare
 
 
@@ -353,6 +355,37 @@ class PerfCompareTest(TempDirTestCase):
         after_dir = self.ExampleDataDir(drop_one=True)
         output = self.ComparePerf(before_dir, after_dir)
         GOLDEN.AssertCaseEq('removing_test', output)
+
+    def test_factor_range_formatting(self):
+        # Construct an interval pair of the same type used in the
+        # software-under-test, checking that the interval is well-formed.
+        def Interval(min_val, max_val):
+            assert min_val <= max_val
+            return (numpy.float64(min_val), numpy.float64(max_val))
+
+        # Check that the values are of the same type as in the
+        # software-under-test.
+        interval_test = Interval(10, 20)
+        interval_real = perfcompare.Stats([1, 2, 3], 'some_unit').interval
+        self.assertEquals(type(interval_test[0]), type(interval_real[0]))
+        self.assertEquals(type(interval_test[1]), type(interval_real[1]))
+
+        def Format(interval_before, interval_after):
+            return perfcompare.FormatFactorRange(Interval(*interval_before),
+                                                 Interval(*interval_after))
+
+        self.assertEquals(Format((1, 2), (3, 4)), '1.500-4.000')
+        # Test zero "min" values.
+        self.assertEquals(Format((0, 2), (3, 4)), '1.500-inf')
+        self.assertEquals(Format((1, 2), (0, 4)), '0.000-4.000')
+        # Test zero "min" and "max" values.
+        self.assertEquals(Format((0, 0), (3, 4)), 'inf-inf')
+        self.assertEquals(Format((1, 2), (0, 0)), '0.000-0.000')
+        # Test zero "max" values, with negative "min".
+        self.assertEquals(Format((-1, 0), (3, 4)), 'ci_too_wide')
+        self.assertEquals(Format((1, 2), (-3, 0)), 'ci_too_wide')
+        # All values zero.
+        self.assertEquals(Format((0, 0), (0, 0)), 'no_change')
 
     def test_mismatch_rate(self):
         self.assertEquals(perfcompare.MismatchRate([(0,1), (2,3)]), 1)
