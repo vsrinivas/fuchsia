@@ -1,0 +1,90 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.ge2d;
+using zx;
+using zircon.device.sysmem;
+using ddk.protocol.camerahwaccel;
+
+enum Ge2dRotation : uint8 {
+    ROTATION_0 = 0;
+    ROTATION_90 = 1;
+    ROTATION_180 = 2;
+    ROTATION_270 = 3;
+    MAX = 4;
+};
+
+struct Resolution {
+    uint32 height;
+    uint32 width;
+};
+
+struct CropRectangle {
+    uint32 crop_x;
+    uint32 crop_y;
+    uint32 crop_width;
+    uint32 crop_height;
+};
+
+struct ResizeInfo {
+    Resolution res;
+    CropRectangle crop; // Initially this will be the same size as the canvas.
+    // Rotation is needed for video playback
+    Ge2dRotation output_rotation;
+};
+
+struct WaterMarkInfo {
+    Resolution res;
+    handle<vmo> watermark_vmo;
+    // Where to place WaterMark on the input image
+    uint32 loc_x;
+    uint32 loc_y;
+    // Size of WaterMark image
+    uint32 size_width;
+    uint32 size_height;
+};
+
+[Layout = "ddk-protocol"]
+protocol Ge2d {
+    // Registers the buffer collections and configuration which the GE2D will be using
+    // for this task and also the callback functions for a particular task and
+    // returns a task index.
+    // |input_buffer_collection| : Pool of VMOs as input to the GE2D.
+    // |output_buffer_collection| : Pool of VMOs as output to the GE2D.
+    // [info] : Resize Info
+    // |callback| : This function is called when GDC is done processing the task.
+    // @Returns: |task_index| : Task ID for this task.
+    InitTaskResize(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
+                   zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
+                   ResizeInfo info,
+                   ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
+
+    InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo input_buffer_collection,
+                      zircon.device.sysmem.BufferCollectionInfo output_buffer_collection,
+                      WaterMarkInfo info,
+                      ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
+
+    // De-registers the task.
+    RemoveTask(uint32 task_index);
+
+    // Processes the frame at |input_buffer_index| within |input_buffer_collection|
+    // in the task corresponding to |task_index| and stores the ouput in the
+    // |output_buffer_collection| after applying the correct configuration.
+    // After processing we call the callback registered for this task with the
+    // output buffer index.
+    ProcessFrame(uint32 task_index, uint32 input_buffer_index) -> (zx.status s);
+
+    // Releases the frame |buffer_index| from the |output_buffer_collection| to be
+    // used again by GDC driver again later.
+    ReleaseFrame(uint32 task_index, uint32 buffer_index);
+
+    // Set the output resolution. This call sets the resolution on all the canvas ids,
+    // for the specified task. This operation is queued to the worker thread to be
+    // performed in sequence.
+    SetOutputResolution(uint32 task_index, Resolution res);
+
+    // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
+    // the camera controller is notified by Smart Framing to crop and resize.
+    SetCropRectangle(uint32 task_index, CropRectangle crop);
+};
