@@ -18,6 +18,7 @@ pub type zx_object_info_topic_t = u32;
 pub type zx_off_t = u64;
 pub type zx_paddr_t = usize;
 pub type zx_rights_t = u32;
+pub type zx_rsrc_kind_t = u32;
 pub type zx_signals_t = u32;
 pub type zx_ssize_t = isize;
 pub type zx_status_t = i32;
@@ -328,6 +329,16 @@ multiconst!(u32, [
     ZX_PROP_JOB_KILL_ON_OOM           = 15;
 ]);
 
+multiconst!(zx_rsrc_kind_t, [
+    ZX_RSRC_KIND_MMIO       = 0;
+    ZX_RSRC_KIND_IRQ        = 1;
+    ZX_RSRC_KIND_IOPORT     = 2;
+    ZX_RSRC_KIND_HYPERVISOR = 3;
+    ZX_RSRC_KIND_ROOT       = 4;
+    ZX_RSRC_KIND_VMEX       = 5;
+    ZX_RSRC_KIND_SMC        = 6;
+]);
+
 pub const ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET: usize = 1;
 
 // clock ids
@@ -359,6 +370,9 @@ pub const ZX_TASK_RETCODE_OOM_KILL: i64 = -1025;
 pub const ZX_TASK_RETCODE_POLICY_KILL: i64 = -1026;
 pub const ZX_TASK_RETCODE_VDSO_KILL: i64 = -1027;
 pub const ZX_TASK_RETCODE_EXCEPTION_KILL: i64 = -1028;
+
+// Resource flags.
+pub const ZX_RSRC_FLAG_EXCLUSIVE: u32 = 0x00010000;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
