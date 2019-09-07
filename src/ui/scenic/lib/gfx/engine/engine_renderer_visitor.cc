@@ -35,7 +35,7 @@ void EngineRendererVisitor::Visit(Memory* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(Image* r) { FXL_CHECK(false); }
 
-void EngineRendererVisitor::Visit(ImagePipe* r) { FXL_CHECK(false); }
+void EngineRendererVisitor::Visit(ImagePipeBase* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(Buffer* r) { FXL_CHECK(false); }
 

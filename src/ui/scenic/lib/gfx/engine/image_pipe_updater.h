@@ -15,8 +15,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-class ImagePipe;
-using ImagePipePtr = fxl::RefPtr<ImagePipe>;
+class ImagePipeBase;
+using ImagePipeBasePtr = fxl::RefPtr<ImagePipeBase>;
 using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 
 // ImagePipeUpdater is a helper class responsible for the scheduling and application of ImagePipe
@@ -43,7 +43,7 @@ class ImagePipeUpdater {
   // Called by ImagePipe::PresentImage(). Stashes the arguments without applying them; they will
   // later be applied by ApplyScheduledUpdates(). This method can also be used to clean up after an
   // ImagePipe when it is being closed/cleaned-up; in this case, pass in a null ImagePipe.
-  void ScheduleImagePipeUpdate(zx::time presentation_time, const ImagePipePtr& image_pipe);
+  void ScheduleImagePipeUpdate(zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe);
 
  private:
   // Make it clear that ImagePipe should only call ScheduleImagePipeUpdate(); the session is
@@ -55,7 +55,7 @@ class ImagePipeUpdater {
 
   struct ImagePipeUpdate {
     zx::time presentation_time;
-    fxl::WeakPtr<ImagePipe> image_pipe;
+    fxl::WeakPtr<ImagePipeBase> image_pipe;
 
     bool operator>(const ImagePipeUpdate& rhs) const {
       return presentation_time > rhs.presentation_time;

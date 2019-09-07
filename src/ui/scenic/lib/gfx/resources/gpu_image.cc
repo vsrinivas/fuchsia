@@ -118,6 +118,37 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   return fxl::AdoptRef(new GpuImage(session, id, std::move(gpu_mem), escher_image_info, vk_image));
 }
 
+GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
+                          vk::ImageCreateInfo create_info, ErrorReporter* error_reporter) {
+  auto vk_device = session->resource_context().vk_device;
+  auto image_result = vk_device.createImage(create_info);
+  if (image_result.result != vk::Result::eSuccess) {
+    error_reporter->ERROR() << "VkCreateImage failed: " << vk::to_string(image_result.result);
+    return nullptr;
+  }
+
+  // Make sure that the image is within range of its associated memory.
+  vk::MemoryRequirements memory_reqs;
+  vk_device.getImageMemoryRequirements(image_result.value, &memory_reqs);
+
+  escher::GpuMemPtr gpu_mem = memory->GetGpuMem(error_reporter);
+  FXL_DCHECK(gpu_mem);
+
+  escher::ImageInfo image_info;
+  image_info.format = create_info.format;
+  image_info.width = create_info.extent.width;
+  image_info.height = create_info.extent.height;
+  image_info.usage = create_info.usage;
+  image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+  if (create_info.flags & vk::ImageCreateFlagBits::eProtected) {
+    image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
+  }
+  image_info.is_external = true;
+
+  return fxl::AdoptRef(
+      new GpuImage(session, id, std::move(gpu_mem), image_info, image_result.value));
+}
+
 bool GpuImage::UpdatePixels(escher::BatchGpuUploader* uploader) { return false; }
 
 }  // namespace gfx

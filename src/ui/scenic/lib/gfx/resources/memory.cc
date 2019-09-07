@@ -69,6 +69,101 @@ uint32_t GetImageMemoryBits(vk::Device device) {
   return cached_bits;
 }
 
+zx::vmo DuplicateVmo(const zx::vmo* vmo) {
+  zx::vmo the_clone;
+  zx_status_t status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &the_clone);
+  ZX_ASSERT_MSG(status == ZX_OK, "duplicate failed: status=%d", status);
+  return the_clone;
+}
+
+// Fills |alloc_info| and |memory_import_info| with the given parameters.
+bool FillMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resource_context,
+                            const zx::vmo* vmo, bool is_host, uint64_t size,
+                            scenic_impl::ErrorReporter* reporter,
+                            vk::MemoryAllocateInfo* alloc_info,
+                            vk::ImportMemoryZirconHandleInfoFUCHSIA* memory_import_info) {
+  FXL_DCHECK(alloc_info);
+  FXL_DCHECK(memory_import_info);
+
+  auto vk_device = resource_context.vk_device;
+  // TODO(SCN-151): If we're allowed to import the same vmo twice to two
+  // different resources, we may need to change driver semantics so that you
+  // can import a VMO twice. Referencing the test bug for now, since it should
+  // uncover the bug.
+  vk::MemoryZirconHandlePropertiesFUCHSIA handle_properties;
+  vk::Result err = vk_device.getMemoryZirconHandlePropertiesFUCHSIA(
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, vmo->get(), &handle_properties,
+      resource_context.vk_loader);
+  if (err != vk::Result::eSuccess) {
+    reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
+                         "VkGetMemoryFuchsiaHandlePropertiesKHR failed.";
+    return false;
+  }
+  if (handle_properties.memoryTypeBits == 0) {
+    if (!is_host) {
+      reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
+                           "VkGetMemoryFuchsiaHandlePropertiesKHR "
+                           "returned zero valid memory types.";
+    } else {
+      // Importing read-only host memory into the Vulkan driver should not work,
+      // but it is not an error to try to do so. Returning a nullptr here should
+      // not result in a closed session channel, as this flow should only happen
+      // when Scenic is attempting to optimize image importation. See SCN-1012
+      // for other issues this this flow.
+      FXL_LOG(INFO) << "Host memory VMO could not be imported to any valid Vulkan memory types.";
+    }
+    return false;
+  }
+
+  // TODO(SCN-1012): This function is only used on host memory when we are
+  // performing a zero-copy import. So it is currently hardcoded to look for a
+  // valid UMA-style memory pool -- one that can be used as both host and device
+  // memory.
+  vk::MemoryPropertyFlags required_flags =
+      is_host ? vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible
+              : vk::MemoryPropertyFlagBits::eDeviceLocal;
+
+  auto vk_physical_device = resource_context.vk_physical_device;
+
+  uint32_t memory_type_bits = handle_properties.memoryTypeBits;
+
+// TODO(SCN-1368): This code should be unnecessary once we have a code flow that
+// understands how the memory is expected to be used.
+#if __x86_64__
+  memory_type_bits &= GetBufferMemoryBits(vk_device);
+  memory_type_bits &= GetImageMemoryBits(vk_device);
+  FXL_CHECK(memory_type_bits != 0)
+      << "This platform does not have a single memory pool that is valid for "
+         "both images and buffers. Please fix SCN-1368.";
+#endif  // __x86_64__
+
+  uint32_t memory_type_index =
+      escher::impl::GetMemoryTypeIndex(vk_physical_device, memory_type_bits, required_flags);
+
+  vk::PhysicalDeviceMemoryProperties memory_types = vk_physical_device.getMemoryProperties();
+  if (memory_type_index >= memory_types.memoryTypeCount) {
+    if (!is_host) {
+      // Because vkGetMemoryZirconHandlePropertiesFUCHSIA may work on normal CPU
+      // memory on UMA platforms, importation failure is only an error for
+      // device memory.
+      reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): could not find a "
+                           "valid memory type for importation.";
+    } else {
+      // TODO(SCN-1012): Error message is UMA specific.
+      FXL_LOG(INFO) << "Host memory VMO could not find a UMA-style memory type.";
+    }
+    return false;
+  }
+
+  // Import a VkDeviceMemory from the VMO. VkAllocateMemory takes ownership of
+  // the VMO handle it is passed.
+  *memory_import_info = vk::ImportMemoryZirconHandleInfoFUCHSIA(
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, DuplicateVmo(vmo).release());
+  *alloc_info = vk::MemoryAllocateInfo(size, memory_type_index);
+  alloc_info->setPNext(memory_import_info);
+  return true;
+}
+
 }  // namespace
 
 namespace scenic_impl {
@@ -76,13 +171,11 @@ namespace gfx {
 
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
-Memory::Memory(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args)
+Memory::Memory(Session* session, ResourceId id, bool is_host, zx::vmo vmo, uint64_t allocation_size)
     : Resource(session, id, kTypeInfo),
-      is_host_(args.memory_type == fuchsia::images::MemoryType::HOST_MEMORY),
-      shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(args.vmo), ZX_VM_PERM_READ)),
-      allocation_size_(args.allocation_size) {
-  FXL_DCHECK(args.allocation_size > 0);
-}
+      is_host_(is_host),
+      shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), ZX_VM_PERM_READ)),
+      allocation_size_(allocation_size) {}
 
 MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args,
                       ErrorReporter* error_reporter) {
@@ -107,8 +200,9 @@ MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::Memor
     return nullptr;
   }
 
-  auto retval = fxl::AdoptRef(new Memory(session, id, std::move(args)));
-
+  auto retval = fxl::AdoptRef(
+      new Memory(session, id, args.memory_type == fuchsia::images::MemoryType::HOST_MEMORY,
+                 std::move(args.vmo), args.allocation_size));
   if (!retval->is_host()) {
     if (!retval->GetGpuMem(error_reporter)) {
       // Device memory must be able to be imported to the GPU. If not, this
@@ -118,112 +212,59 @@ MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::Memor
       return nullptr;
     }
   }
+  return retval;
+}
+
+MemoryPtr Memory::New(Session* session, ResourceId id, zx::vmo vmo,
+                      vk::MemoryAllocateInfo alloc_info, ErrorReporter* error_reporter) {
+  uint64_t size;
+  auto status = vmo.get_size(&size);
+  if (status != ZX_OK) {
+    error_reporter->ERROR() << "Memory::New(): zx_vmo_get_size failed (err=" << status << ").";
+    return nullptr;
+  }
+  alloc_info.allocationSize = size;
+
+  auto retval = fxl::AdoptRef(
+      new Memory(session, id, /*is_host=*/false, std::move(vmo), alloc_info.allocationSize));
+  if (!retval->GetGpuMem(error_reporter, &alloc_info)) {
+    // It is an error if we cannot map GPU memory through this factory function.
+    return nullptr;
+  }
 
   return retval;
 }
 
-escher::GpuMemPtr Memory::ImportGpuMemory(ErrorReporter* reporter) {
+escher::GpuMemPtr Memory::ImportGpuMemory(ErrorReporter* reporter,
+                                          vk::MemoryAllocateInfo* alloc_info) {
   TRACE_DURATION("gfx", "Memory::ImportGpuMemory");
 
+  vk::MemoryAllocateInfo vmo_alloc_info;
+  vk::ImportMemoryZirconHandleInfoFUCHSIA memory_import_info;
+  if (!alloc_info) {
+    const bool retval =
+        FillMemoryAllocateInfo(resource_context(), &shared_vmo_->vmo(), is_host(), allocation_size_,
+                               reporter, &vmo_alloc_info, &memory_import_info);
+    if (!retval) {
+      return nullptr;
+    }
+    alloc_info = &vmo_alloc_info;
+  }
+
   auto vk_device = resource_context().vk_device;
-
-  // TODO(SCN-151): If we're allowed to import the same vmo twice to two
-  // different resources, we may need to change driver semantics so that you
-  // can import a VMO twice. Referencing the test bug for now, since it should
-  // uncover the bug.
-  vk::MemoryZirconHandlePropertiesFUCHSIA handle_properties;
-  vk::Result err = vk_device.getMemoryZirconHandlePropertiesFUCHSIA(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, shared_vmo_->vmo().get(),
-      &handle_properties, resource_context().vk_loader);
-  if (err != vk::Result::eSuccess) {
-    reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-                         "VkGetMemoryFuchsiaHandlePropertiesKHR failed.";
-    return nullptr;
-  }
-  if (handle_properties.memoryTypeBits == 0) {
-    if (!is_host_) {
-      reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-                           "VkGetMemoryFuchsiaHandlePropertiesKHR "
-                           "returned zero valid memory types.";
-    } else {
-      // Importing read-only host memory into the Vulkan driver should not work,
-      // but it is not an error to try to do so. Returning a nullptr here should
-      // not result in a closed session channel, as this flow should only happen
-      // when Scenic is attempting to optimize image importation. See SCN-1012
-      // for other issues this this flow.
-      FXL_LOG(INFO) << "Host memory VMO could not be imported to any valid Vulkan memory types.";
-    }
-    return nullptr;
-  }
-
-  // TODO(SCN-1012): This function is only used on host memory when we are
-  // performing a zero-copy import. So it is currently hardcoded to look for a
-  // valid UMA-style memory pool -- one that can be used as both host and device
-  // memory.
-  vk::MemoryPropertyFlags required_flags =
-      is_host_ ? vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible
-               : vk::MemoryPropertyFlagBits::eDeviceLocal;
-
-  auto vk_physical_device = resource_context().vk_physical_device;
-
-  uint32_t memory_type_bits = handle_properties.memoryTypeBits;
-
-// TODO(SCN-1368): This code should be unnecessary once we have a code flow that
-// understands how the memory is expected to be used.
-#if __x86_64__
-  memory_type_bits &= GetBufferMemoryBits(vk_device);
-  memory_type_bits &= GetImageMemoryBits(vk_device);
-  FXL_CHECK(memory_type_bits != 0)
-      << "This platform does not have a single memory pool that is valid for "
-         "both images and buffers. Please fix SCN-1368.";
-#endif  // __x86_64__
-
-  uint32_t memory_type_index =
-      escher::impl::GetMemoryTypeIndex(vk_physical_device, memory_type_bits, required_flags);
-
-  vk::PhysicalDeviceMemoryProperties memory_types = vk_physical_device.getMemoryProperties();
-  if (memory_type_index >= memory_types.memoryTypeCount) {
-    if (!is_host_) {
-      // Because vkGetMemoryZirconHandlePropertiesFUCHSIA may work on normal CPU
-      // memory on UMA platforms, importation failure is only an error for
-      // device memory.
-      reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): could not find a "
-                           "valid memory type for importation.";
-    } else {
-      // TODO(SCN-1012): Error message is UMA specific.
-      FXL_LOG(INFO) << "Host memory VMO could not find a UMA-style memory type.";
-    }
-    return nullptr;
-  }
-
-  // Import a VkDeviceMemory from the VMO. VkAllocateMemory takes ownership of
-  // the VMO handle it is passed.
-  vk::ImportMemoryZirconHandleInfoFUCHSIA memory_import_info(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, DuplicateVmo().release());
-  vk::MemoryAllocateInfo memory_allocate_info(size(), memory_type_index);
-  memory_allocate_info.setPNext(&memory_import_info);
-
   vk::DeviceMemory memory = nullptr;
-  err = vk_device.allocateMemory(&memory_allocate_info, nullptr, &memory);
+  vk::Result err = vk_device.allocateMemory(alloc_info, nullptr, &memory);
   if (err != vk::Result::eSuccess) {
     reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
                          "VkAllocateMemory failed.";
     return nullptr;
   }
-
   // TODO(SCN-1115): If we can rely on all memory being importable into Vulkan
   // (either as host or device memory), then we can always make a GpuMem
   // object, and rely on its mapped pointer accessor instead of storing our
   // own local uint8_t*.
   return escher::GpuMem::AdoptVkMemory(vk_device, vk::DeviceMemory(memory), vk::DeviceSize(size()),
-                                       is_host_ /* needs_mapped_ptr */);
-}
-
-zx::vmo Memory::DuplicateVmo() {
-  zx::vmo the_clone;
-  zx_status_t status = shared_vmo_->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &the_clone);
-  ZX_ASSERT_MSG(status == ZX_OK, "duplicate failed: status=%d", status);
-  return the_clone;
+                                       is_host() /* needs_mapped_ptr */);
 }
 
 uint32_t Memory::HasSharedMemoryPools(vk::Device device, vk::PhysicalDevice physical_device) {
