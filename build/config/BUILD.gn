@@ -256,6 +256,7 @@ config("default_warnings") {
     # and we do some cleanup, this will be re-enabled.
     "-Wno-unknown-warning-option",
     "-Wno-c99-designator",
+    "-Wno-reorder-init-list",
   ]
 }
 
