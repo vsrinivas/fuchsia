@@ -109,7 +109,7 @@ class MockVmoidRegistry : public fs::VmoidRegistry {
   zx::vmo journal_vmo_;
   zx::vmo writeback_vmo_;
   zx::vmo info_vmo_;
-  vmoid_t next_vmoid_ = BLOCK_VMOID_INVALID;
+  vmoid_t next_vmoid_ = VMOID_INVALID;
 };
 
 void MockVmoidRegistry::VerifyReplay(

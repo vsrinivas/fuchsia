@@ -36,7 +36,7 @@ VmoBuffer& VmoBuffer::operator=(VmoBuffer&& other) {
 }
 
 VmoBuffer::~VmoBuffer() {
-  if (vmoid_ != BLOCK_VMOID_INVALID) {
+  if (vmoid_ != VMOID_INVALID) {
     vmoid_registry_->DetachVmo(vmoid_);
   }
 }
@@ -44,13 +44,13 @@ VmoBuffer::~VmoBuffer() {
 void VmoBuffer::Reset() {
   vmoid_registry_ = nullptr;
   mapper_.Reset();
-  vmoid_ = BLOCK_VMOID_INVALID;
+  vmoid_ = VMOID_INVALID;
   capacity_ = 0;
 }
 
 zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
                                   const char* label) {
-  ZX_DEBUG_ASSERT(vmoid_ == BLOCK_VMOID_INVALID);
+  ZX_DEBUG_ASSERT(vmoid_ == VMOID_INVALID);
   fzl::OwnedVmoMapper mapper;
   zx_status_t status = mapper.CreateAndMap(blocks * block_size, label);
   if (status != ZX_OK) {

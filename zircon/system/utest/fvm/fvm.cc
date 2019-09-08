@@ -694,9 +694,9 @@ bool TestAllocateOne() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -744,19 +744,19 @@ bool TestAllocateMany() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd data_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(data_fd);
 
   strcpy(request.name, kTestPartName2);
-  memcpy(request.type, kTestPartGUIDBlob, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
   fbl::unique_fd blob_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(blob_fd);
 
   strcpy(request.name, kTestPartName3);
-  memcpy(request.type, kTestPartGUIDSystem, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDSystem, GUID_LEN);
   fbl::unique_fd sys_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(sys_fd);
 
@@ -788,9 +788,9 @@ bool TestCloseDuringAccess() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -859,9 +859,9 @@ bool TestReleaseDuringAccess() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -913,9 +913,9 @@ bool TestDestroyDuringAccess() {
 
   alloc_req_t request;
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -989,9 +989,9 @@ bool TestVPartitionExtend() {
   memset(&request, 0, sizeof(request));
   size_t slice_count = 1;
   request.slice_count = slice_count;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd, "Couldn't open Volume");
   slices_left--;
@@ -1064,7 +1064,7 @@ bool TestVPartitionExtend() {
 
   // We can't allocate a new VPartition
   strcpy(request.name, kTestPartName2);
-  memcpy(request.type, kTestPartGUIDBlob, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
   ASSERT_LT(fvm_allocate_partition(fd.get(), &request), 0, "Expected VPart allocation failure");
 
   ASSERT_TRUE(FVMCheckSliceSize(fvm_driver, 64lu * (1 << 20)));
@@ -1091,9 +1091,9 @@ bool TestVPartitionExtendSparse() {
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
   slices_left--;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
   ASSERT_TRUE(CheckWriteReadBlock(vp_fd.get(), 0, 1));
@@ -1167,9 +1167,9 @@ bool TestVPartitionShrink() {
   memset(&request, 0, sizeof(request));
   size_t slice_count = 1;
   request.slice_count = slice_count;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd, "Couldn't open Volume");
   slices_left--;
@@ -1288,9 +1288,9 @@ bool TestVPartitionSplit() {
   memset(&request, 0, sizeof(request));
   size_t slice_count = 5;
   request.slice_count = slice_count;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
   slices_left--;
@@ -1446,23 +1446,23 @@ bool TestVPartitionDestroy() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd data_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(data_fd);
   fzl::UnownedFdioCaller data_caller(data_fd.get());
   zx::unowned_channel data_channel(data_caller.borrow_channel());
 
   strcpy(request.name, kTestPartName2);
-  memcpy(request.type, kTestPartGUIDBlob, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDBlob, GUID_LEN);
   fbl::unique_fd blob_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(blob_fd);
   fzl::UnownedFdioCaller blob_caller(blob_fd.get());
   zx::unowned_channel blob_channel(blob_caller.borrow_channel());
 
   strcpy(request.name, kTestPartName3);
-  memcpy(request.type, kTestPartGUIDSystem, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDSystem, GUID_LEN);
   fbl::unique_fd sys_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(sys_fd);
   fzl::UnownedFdioCaller sys_caller(sys_fd.get());
@@ -1528,9 +1528,9 @@ bool TestVPartitionQuery() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 10;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd part_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(part_fd);
   fzl::FdioCaller partition_caller(std::move(part_fd));
@@ -1638,9 +1638,9 @@ bool TestSliceAccessContiguous() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -1717,9 +1717,9 @@ bool TestSliceAccessMany() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -1807,12 +1807,12 @@ bool TestSliceAccessNonContiguousPhysical() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
 
   constexpr size_t kNumVParts = 3;
   typedef struct vdata {
     fbl::unique_fd fd;
-    uint8_t guid[BLOCK_GUID_LEN];
+    uint8_t guid[GUID_LEN];
     char name[32];
     size_t slices_used;
   } vdata_t;
@@ -1825,7 +1825,7 @@ bool TestSliceAccessNonContiguousPhysical() {
 
   for (size_t i = 0; i < fbl::count_of(vparts); i++) {
     strcpy(request.name, vparts[i].name);
-    memcpy(request.type, vparts[i].guid, BLOCK_GUID_LEN);
+    memcpy(request.type, vparts[i].guid, GUID_LEN);
     vparts[i].fd.reset(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(vparts[i].fd);
   }
@@ -1960,12 +1960,12 @@ bool TestSliceAccessNonContiguousVirtual() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
 
   constexpr size_t kNumVParts = 3;
   typedef struct vdata {
     fbl::unique_fd fd;
-    uint8_t guid[BLOCK_GUID_LEN];
+    uint8_t guid[GUID_LEN];
     char name[32];
     size_t slices_used;
     size_t last_slice;
@@ -1979,7 +1979,7 @@ bool TestSliceAccessNonContiguousVirtual() {
 
   for (size_t i = 0; i < fbl::count_of(vparts); i++) {
     strcpy(request.name, vparts[i].name);
-    memcpy(request.type, vparts[i].guid, BLOCK_GUID_LEN);
+    memcpy(request.type, vparts[i].guid, GUID_LEN);
     vparts[i].fd.reset(fvm_allocate_partition(fd.get(), &request));
     ASSERT_TRUE(vparts[i].fd);
   }
@@ -2062,9 +2062,9 @@ bool TestPersistenceSimple() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
   slices_left--;
@@ -2332,9 +2332,9 @@ bool TestCorruptMount() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
   ASSERT_EQ(close(vp_fd.release()), 0);
@@ -2396,15 +2396,15 @@ bool TestVPartitionUpgrade() {
   memset(&request, 0, sizeof(request));
   request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(volume_manager.fd().get(), &request));
   ASSERT_TRUE(vp_fd, "Couldn't open Volume");
   ASSERT_EQ(close(vp_fd.release()), 0);
 
   request.flags = 0;
-  memcpy(request.guid, kTestUniqueGUID2, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID2, GUID_LEN);
   strcpy(request.name, kTestPartName2);
   vp_fd.reset(fvm_allocate_partition(volume_manager.fd().get(), &request));
   ASSERT_TRUE(vp_fd, "Couldn't open volume");
@@ -2424,7 +2424,7 @@ bool TestVPartitionUpgrade() {
 
   // Try to upgrade the partition (from GUID2 --> GUID)
   request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
   fbl::unique_fd new_fd(fvm_allocate_partition(volume_manager.fd().get(), &request));
   ASSERT_TRUE(new_fd, "Couldn't open new volume");
@@ -2462,14 +2462,14 @@ bool TestVPartitionUpgrade() {
 
   // Try upgrading when the "old" version doesn't exist.
   request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
-  memcpy(request.guid, kTestUniqueGUID2, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID2, GUID_LEN);
   strcpy(request.name, kTestPartName2);
   new_fd.reset(fvm_allocate_partition(volume_manager.fd().get(), &request));
   ASSERT_TRUE(new_fd, "Couldn't open volume");
   ASSERT_EQ(close(new_fd.release()), 0);
 
-  uint8_t fake_guid[BLOCK_GUID_LEN];
-  memset(fake_guid, 0, BLOCK_GUID_LEN);
+  uint8_t fake_guid[GUID_LEN];
+  memset(fake_guid, 0, GUID_LEN);
   ASSERT_TRUE(Upgrade(volume_manager, fake_guid, kTestUniqueGUID2, ZX_OK));
 
   const partition_entry_t upgraded_entries_both[] = {
@@ -2494,7 +2494,7 @@ bool TestVPartitionUpgrade() {
   ASSERT_EQ(status, ZX_OK);
   partition_caller.reset();
   request.flags = fuchsia_hardware_block_volume_AllocatePartitionFlagInactive;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
   new_fd.reset(fvm_allocate_partition(volume_manager.fd().get(), &request));
   ASSERT_TRUE(new_fd, "Couldn't open volume");
@@ -2532,9 +2532,9 @@ bool TestMounting() {
   // Allocate one VPart
   alloc_req_t request;
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -2592,9 +2592,9 @@ bool TestMkfs() {
   // Allocate one VPart.
   alloc_req_t request;
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -2684,9 +2684,9 @@ bool TestCorruptionOk() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -2766,9 +2766,9 @@ bool TestCorruptionRegression() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -2847,9 +2847,9 @@ bool TestCorruptionUnrecoverable() {
   alloc_req_t request;
   memset(&request, 0, sizeof(request));
   request.slice_count = 1;
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
   strcpy(request.name, kTestPartName1);
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
   fbl::unique_fd vp_fd(fvm_allocate_partition(fd.get(), &request));
   ASSERT_TRUE(vp_fd);
 
@@ -3179,8 +3179,8 @@ bool TestRandomOpMultithreaded() {
   size_t slice_count = 1;
   request.slice_count = slice_count;
   strcpy(request.name, "TestPartition");
-  memcpy(request.type, kTestPartGUIDData, BLOCK_GUID_LEN);
-  memcpy(request.guid, kTestUniqueGUID, BLOCK_GUID_LEN);
+  memcpy(request.type, kTestPartGUIDData, GUID_LEN);
+  memcpy(request.guid, kTestUniqueGUID, GUID_LEN);
 
   for (size_t i = 0; i < ThreadCount; i++) {
     // Change the GUID enough to be distinct for each thread

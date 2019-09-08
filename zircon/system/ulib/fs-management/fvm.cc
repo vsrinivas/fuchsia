@@ -49,14 +49,14 @@ bool IsPartition(const fbl::unique_fd& fd, const uint8_t* uniqueGUID, const uint
   if (typeGUID) {
     io_status =
         fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status, &guid);
-    if (io_status != ZX_OK || status != ZX_OK || memcmp(guid.value, typeGUID, BLOCK_GUID_LEN) != 0) {
+    if (io_status != ZX_OK || status != ZX_OK || memcmp(guid.value, typeGUID, GUID_LEN) != 0) {
       return false;
     }
   }
   if (uniqueGUID) {
     io_status =
         fuchsia_hardware_block_partition_PartitionGetInstanceGuid(channel->get(), &status, &guid);
-    if (io_status != ZX_OK || status != ZX_OK || memcmp(guid.value, uniqueGUID, BLOCK_GUID_LEN) != 0) {
+    if (io_status != ZX_OK || status != ZX_OK || memcmp(guid.value, uniqueGUID, GUID_LEN) != 0) {
       return false;
     }
   }
@@ -270,14 +270,14 @@ int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
   fzl::UnownedFdioCaller caller(fvm_fd);
 
   fuchsia_hardware_block_partition_GUID type_guid;
-  memcpy(type_guid.value, request->type, BLOCK_GUID_LEN);
+  memcpy(type_guid.value, request->type, GUID_LEN);
   fuchsia_hardware_block_partition_GUID instance_guid;
-  memcpy(instance_guid.value, request->guid, BLOCK_GUID_LEN);
+  memcpy(instance_guid.value, request->guid, GUID_LEN);
 
   zx_status_t status;
   zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
       caller.borrow_channel(), request->slice_count, &type_guid, &instance_guid, request->name,
-      BLOCK_NAME_LEN, request->flags, &status);
+      NAME_LEN, request->flags, &status);
   if (io_status != ZX_OK || status != ZX_OK) {
     return -1;
   }

@@ -65,7 +65,7 @@ class VmoBuffer final : public BlockBuffer {
 
   VmoidRegistry* vmoid_registry_ = nullptr;
   fzl::OwnedVmoMapper mapper_;
-  vmoid_t vmoid_ = BLOCK_VMOID_INVALID;
+  vmoid_t vmoid_ = VMOID_INVALID;
   uint32_t block_size_ = 0;
   size_t capacity_ = 0;
 };

@@ -403,10 +403,10 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   memset(&req, 0, sizeof(alloc_req_t));
   req.slice_count = (kDeviceSize / fvm::kBlockSize) - 1;
   memcpy(req.type, zxcrypt_magic, sizeof(zxcrypt_magic));
-  for (uint8_t i = 0; i < BLOCK_GUID_LEN; ++i) {
+  for (uint8_t i = 0; i < GUID_LEN; ++i) {
     req.guid[i] = i;
   }
-  snprintf(req.name, BLOCK_NAME_LEN, "data");
+  snprintf(req.name, NAME_LEN, "data");
   fvm_part_.reset(fvm_allocate_partition_with_devfs(dev_root.get(), fvm_fd.get(), &req));
   ASSERT_TRUE(fvm_part_);
   parent_caller_.reset(fvm_part_.get());

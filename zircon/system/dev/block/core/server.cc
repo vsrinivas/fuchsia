@@ -207,7 +207,7 @@ zx_status_t BlockServer::FindVmoIDLocked(vmoid_t* out) {
       return ZX_OK;
     }
   }
-  for (vmoid_t i = BLOCK_VMOID_INVALID + 1; i < last_id_; i++) {
+  for (vmoid_t i = VMOID_INVALID + 1; i < last_id_; i++) {
     if (!tree_.find(i).IsValid()) {
       *out = i;
       last_id_ = static_cast<vmoid_t>(i + 1);
@@ -521,7 +521,7 @@ BlockServer::BlockServer(ddk::BlockProtocolClient* bp)
       block_op_size_(0),
       pending_count_(0),
       barrier_in_progress_(false),
-      last_id_(BLOCK_VMOID_INVALID + 1) {
+      last_id_(VMOID_INVALID + 1) {
   size_t block_op_size;
   bp->Query(&info_, &block_op_size);
 }

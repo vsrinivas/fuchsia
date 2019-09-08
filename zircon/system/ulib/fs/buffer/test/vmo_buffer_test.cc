@@ -38,7 +38,7 @@ class MockVmoidRegistry : public VmoidRegistry {
 TEST(VmoBufferTest, EmptyTest) {
   VmoBuffer buffer;
   EXPECT_EQ(0, buffer.capacity());
-  EXPECT_EQ(BLOCK_VMOID_INVALID, buffer.vmoid());
+  EXPECT_EQ(VMOID_INVALID, buffer.vmoid());
 }
 
 TEST(VmoBufferTest, TestLabel) {

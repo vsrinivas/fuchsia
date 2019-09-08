@@ -41,7 +41,7 @@ class MockVmoidRegistry : public fs::VmoidRegistry {
     return ZX_OK;
   }
 
-  vmoid_t next_vmoid_ = BLOCK_VMOID_INVALID;
+  vmoid_t next_vmoid_ = VMOID_INVALID;
   std::map<vmoid_t, zx::unowned_vmo> vmos_;
 };
 

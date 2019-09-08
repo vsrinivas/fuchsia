@@ -43,7 +43,7 @@ TEST(BlockBufferViewTest, EmptyView) {
   BlockBufferView view;
   EXPECT_EQ(0, view.start());
   EXPECT_EQ(0, view.length());
-  EXPECT_EQ(BLOCK_VMOID_INVALID, view.vmoid());
+  EXPECT_EQ(VMOID_INVALID, view.vmoid());
 }
 
 class BlockBufferViewFixture : public zxtest::Test {
