@@ -17,171 +17,20 @@ use {
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectableStateExt},
-        types::{emulator::LegacyAdvertisingState, Address},
+        types::Address,
     },
     fuchsia_zircon::{Duration, DurationNum},
     futures::{Future, Stream, TryFutureExt, TryStream, TryStreamExt},
     std::mem::drop,
 };
 
-use crate::harness::{
-    expect::expect_ok,
-    low_energy_peripheral::{watch_emulator_peer_connection_states, PeripheralHarness},
-};
+use crate::harness::{emulator, expect::expect_ok, low_energy_peripheral::PeripheralHarness};
 
 mod expectation {
     use {
         crate::harness::low_energy_peripheral::PeripheralState,
-        fidl_fuchsia_bluetooth_test::{ConnectionState, LegacyAdvertisingType},
-        fuchsia_bluetooth::{
-            expectation::Predicate,
-            types::{emulator::LegacyAdvertisingState, Address},
-        },
+        fuchsia_bluetooth::expectation::Predicate,
     };
-
-    fn state_partial_match(
-        state: &LegacyAdvertisingState,
-        expected: &LegacyAdvertisingState,
-    ) -> bool {
-        if state.enabled != expected.enabled {
-            return false;
-        }
-        if expected.type_.is_some() && state.type_ != expected.type_ {
-            return false;
-        }
-        if expected.address_type.is_some() && state.address_type != expected.address_type {
-            return false;
-        }
-        if expected.interval_min.is_some() && state.interval_min != expected.interval_min {
-            return false;
-        }
-        if expected.interval_max.is_some() && state.interval_max != expected.interval_max {
-            return false;
-        }
-        if expected.advertising_data.is_some()
-            && state.advertising_data != expected.advertising_data
-        {
-            return false;
-        }
-        if expected.scan_response.is_some() && state.scan_response != expected.scan_response {
-            return false;
-        }
-        true
-    }
-
-    fn to_slices(ms: u16) -> u16 {
-        let slices = (ms as u32) * 1000 / 625;
-        slices as u16
-    }
-
-    // Performs a partial match over all valid (not None) fields of `expected` for the latest state.
-    pub fn emulator_advertising_state_is(
-        expected: LegacyAdvertisingState,
-    ) -> Predicate<PeripheralState> {
-        let descr = format!("latest advertising state matches {:#?}", expected);
-        Predicate::new(
-            move |state: &PeripheralState| -> bool {
-                match state.advertising_state_changes.last() {
-                    Some(s) => state_partial_match(s, &expected),
-                    None => false,
-                }
-            },
-            Some(&descr),
-        )
-    }
-
-    // Performs a partial match over all valid (not None) fields of `expected` for the latest state.
-    pub fn emulator_advertising_state_was(
-        expected: LegacyAdvertisingState,
-    ) -> Predicate<PeripheralState> {
-        let descr = format!("a past advertising state matched {:#?}", expected);
-        Predicate::new(
-            move |state: &PeripheralState| -> bool {
-                state.advertising_state_changes.iter().any(|s| state_partial_match(s, &expected))
-            },
-            Some(&descr),
-        )
-    }
-
-    pub fn emulator_advertising_is_enabled() -> Predicate<PeripheralState> {
-        emulator_advertising_state_is(LegacyAdvertisingState {
-            enabled: true,
-            ..LegacyAdvertisingState::default()
-        })
-    }
-
-    pub fn emulator_advertising_is_disabled() -> Predicate<PeripheralState> {
-        emulator_advertising_state_is(LegacyAdvertisingState {
-            enabled: false,
-            ..LegacyAdvertisingState::default()
-        })
-    }
-
-    pub fn emulator_advertising_was_enabled() -> Predicate<PeripheralState> {
-        emulator_advertising_state_was(LegacyAdvertisingState {
-            enabled: true,
-            ..LegacyAdvertisingState::default()
-        })
-    }
-
-    pub fn emulator_advertising_was_disabled() -> Predicate<PeripheralState> {
-        emulator_advertising_state_was(LegacyAdvertisingState {
-            enabled: false,
-            ..LegacyAdvertisingState::default()
-        })
-    }
-
-    pub fn emulator_advertising_type_is(
-        expected: LegacyAdvertisingType,
-    ) -> Predicate<PeripheralState> {
-        emulator_advertising_state_is(LegacyAdvertisingState {
-            enabled: true,
-            type_: Some(expected),
-            ..LegacyAdvertisingState::default()
-        })
-    }
-
-    pub fn emulator_advertising_interval_no_more_than(
-        expected_ms: u16,
-    ) -> Predicate<PeripheralState> {
-        emulator_advertising_state_is(LegacyAdvertisingState {
-            enabled: true,
-            interval_max: Some(to_slices(expected_ms)),
-            ..LegacyAdvertisingState::default()
-        })
-    }
-
-    pub fn emulator_peer_connection_state_was(
-        address: Address,
-        conn_state: ConnectionState,
-    ) -> Predicate<PeripheralState> {
-        let descr = format!("emulated peer connection state was: {:?}", conn_state);
-        Predicate::new(
-            move |state: &PeripheralState| -> bool {
-                match state.connection_states.get(&address) {
-                    Some(states) => states.contains(&conn_state),
-                    None => false,
-                }
-            },
-            Some(&descr),
-        )
-    }
-
-    pub fn emulator_peer_connection_state_is(
-        address: Address,
-        conn_state: ConnectionState,
-    ) -> Predicate<PeripheralState> {
-        let descr = format!("emulated peer connection state is: {:?}", conn_state);
-        Predicate::new(
-            move |state: &PeripheralState| -> bool {
-                match state.connection_states.get(&address) {
-                    Some(states) => states.last() == Some(&conn_state),
-                    None => false,
-                }
-            },
-            Some(&descr),
-        )
-    }
 
     pub fn peripheral_received_connection() -> Predicate<PeripheralState> {
         Predicate::new(
@@ -232,7 +81,7 @@ async fn test_enable_advertising(harness: PeripheralHarness) -> Result<(), Error
     expect_ok(result, "failed to start advertising")?;
 
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_is_enabled(), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_is_enabled(true), test_timeout())
         .await?;
     Ok(())
 }
@@ -242,13 +91,13 @@ async fn test_enable_and_disable_advertising(harness: PeripheralHarness) -> Resu
     let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_is_enabled(), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_is_enabled(true), test_timeout())
         .await?;
 
     // Closing the advertising handle should stop advertising.
     drop(handle);
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_is_disabled(), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_is_enabled(false), test_timeout())
         .await?;
     Ok(())
 }
@@ -266,8 +115,8 @@ async fn test_advertising_handle_closed_while_pending(
     // Advertising should become disabled after getting enabled once.
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_was_enabled()
-                .and(expectation::emulator_advertising_is_disabled()),
+            emulator::expectation::advertising_was_enabled(true)
+                .and(emulator::expectation::advertising_is_enabled(false)),
             test_timeout(),
         )
         .await?;
@@ -279,11 +128,11 @@ async fn test_update_advertising(harness: PeripheralHarness) -> Result<(), Error
     let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_is_enabled(), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_is_enabled(true), test_timeout())
         .await?;
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_type_is(LegacyAdvertisingType::AdvNonconnInd),
+            emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvNonconnInd),
             test_timeout(),
         )
         .await?;
@@ -299,14 +148,14 @@ async fn test_update_advertising(harness: PeripheralHarness) -> Result<(), Error
     // Advertising should stop and start with the new parameters.
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_was_disabled()
-                .and(expectation::emulator_advertising_is_enabled()),
+            emulator::expectation::advertising_was_enabled(false)
+                .and(emulator::expectation::advertising_is_enabled(true)),
             test_timeout(),
         )
         .await?;
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_type_is(LegacyAdvertisingType::AdvInd),
+            emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvInd),
             test_timeout(),
         )
         .await?;
@@ -322,7 +171,7 @@ async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error>
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_type_is(LegacyAdvertisingType::AdvNonconnInd),
+            emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvNonconnInd),
             test_timeout(),
         )
         .await?;
@@ -334,7 +183,7 @@ async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error>
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_type_is(LegacyAdvertisingType::AdvInd),
+            emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvInd),
             test_timeout(),
         )
         .await?;
@@ -353,7 +202,7 @@ async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error>
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_type_is(LegacyAdvertisingType::AdvScanInd),
+            emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvScanInd),
             test_timeout(),
         )
         .await?;
@@ -372,7 +221,7 @@ async fn test_advertising_types(harness: PeripheralHarness) -> Result<(), Error>
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
         .when_satisfied(
-            expectation::emulator_advertising_type_is(LegacyAdvertisingType::AdvInd),
+            emulator::expectation::advertising_type_is(LegacyAdvertisingType::AdvInd),
             test_timeout(),
         )
         .await?;
@@ -390,7 +239,7 @@ async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error>
     let result = start_advertising(&harness, params, handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_interval_no_more_than(60), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_max_interval_is(60), test_timeout())
         .await?;
 
     // Fast advertising interval (<= 150 ms)
@@ -402,10 +251,7 @@ async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error>
     let result = start_advertising(&harness, params, handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
-        .when_satisfied(
-            expectation::emulator_advertising_interval_no_more_than(150),
-            test_timeout(),
-        )
+        .when_satisfied(emulator::expectation::advertising_max_interval_is(150), test_timeout())
         .await?;
 
     // Slow advertising intterval (<= 1.2 s)
@@ -417,10 +263,7 @@ async fn test_advertising_modes(harness: PeripheralHarness) -> Result<(), Error>
     let result = start_advertising(&harness, params, handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
-        .when_satisfied(
-            expectation::emulator_advertising_interval_no_more_than(1200),
-            test_timeout(),
-        )
+        .when_satisfied(emulator::expectation::advertising_max_interval_is(1200), test_timeout())
         .await?;
 
     Ok(())
@@ -436,26 +279,26 @@ async fn test_advertising_data(harness: PeripheralHarness) -> Result<(), Error> 
     let result = start_advertising(&harness, params, handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
 
-    let expected = LegacyAdvertisingState {
-        enabled: true,
-        advertising_data: Some(vec![
-            // Flags (General discoverable mode)
-            0x02,
-            0x01,
-            0x02,
-            // The local name, as above.
-            0x06,
-            0x09,
-            ('h' as u8),
-            ('e' as u8),
-            ('l' as u8),
-            ('l' as u8),
-            ('o' as u8),
-        ]),
-        ..LegacyAdvertisingState::default()
-    };
+    let data = vec![
+        // Flags (General discoverable mode)
+        0x02,
+        0x01,
+        0x02,
+        // The local name, as above.
+        0x06,
+        0x09,
+        ('h' as u8),
+        ('e' as u8),
+        ('l' as u8),
+        ('l' as u8),
+        ('o' as u8),
+    ];
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_state_is(expected), test_timeout())
+        .when_satisfied(
+            emulator::expectation::advertising_is_enabled(true)
+                .and(emulator::expectation::advertising_data_is(data)),
+            test_timeout(),
+        )
         .await?;
 
     Ok(())
@@ -483,26 +326,27 @@ async fn test_scan_response(harness: PeripheralHarness) -> Result<(), Error> {
     let result = start_advertising(&harness, params, handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
 
-    let expected = LegacyAdvertisingState {
-        enabled: true,
-        advertising_data: Some(vec![
-            0x02, 0x01, 0x02, // Flags (General discoverable mode)
-            0x03, 0x02, 0x0d, 0x18, // Incomplete list of service UUIDs
-        ]),
-        scan_response: Some(vec![
-            // The local name, as above.
-            0x06,
-            0x09,
-            ('h' as u8),
-            ('e' as u8),
-            ('l' as u8),
-            ('l' as u8),
-            ('o' as u8),
-        ]),
-        ..LegacyAdvertisingState::default()
-    };
+    let data = vec![
+        0x02, 0x01, 0x02, // Flags (General discoverable mode)
+        0x03, 0x02, 0x0d, 0x18, // Incomplete list of service UUIDs
+    ];
+    let scan_rsp = vec![
+        // The local name, as above.
+        0x06,
+        0x09,
+        ('h' as u8),
+        ('e' as u8),
+        ('l' as u8),
+        ('l' as u8),
+        ('o' as u8),
+    ];
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_state_is(expected), test_timeout())
+        .when_satisfied(
+            emulator::expectation::advertising_is_enabled(true)
+                .and(emulator::expectation::advertising_data_is(data))
+                .and(emulator::expectation::scan_response_is(scan_rsp)),
+            test_timeout(),
+        )
         .await?;
 
     Ok(())
@@ -556,7 +400,7 @@ async fn test_receive_connection(harness: PeripheralHarness) -> Result<(), Error
     let result = start_advertising(&harness, params, handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_is_enabled(), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_is_enabled(true), test_timeout())
         .await?;
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
@@ -567,7 +411,7 @@ async fn test_receive_connection(harness: PeripheralHarness) -> Result<(), Error
     // Receiving a connection is expected to stop advertising. Verify that the emulator no longer
     // advertises.
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_is_disabled(), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_is_enabled(false), test_timeout())
         .await?;
 
     // Similarly our AdvertisingHandle should be closed by the system. Polling for events should
@@ -589,7 +433,7 @@ async fn test_connection_dropped_when_not_connectable(
     let result = start_advertising(&harness, default_parameters(), handle_remote).await?;
     expect_ok(result, "failed to start advertising")?;
     let _ = harness
-        .when_satisfied(expectation::emulator_advertising_is_enabled(), test_timeout())
+        .when_satisfied(emulator::expectation::advertising_is_enabled(true), test_timeout())
         .await?;
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
@@ -598,14 +442,14 @@ async fn test_connection_dropped_when_not_connectable(
     // connectable. We assign our own PeerId here for tracking purposes (this is distinct from the
     // PeerId that the Peripheral proxy would report).
     fasync::spawn(
-        watch_emulator_peer_connection_states(harness.clone(), address, peer.clone())
+        emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
     );
 
     let _ = harness
         .when_satisfied(
-            expectation::emulator_peer_connection_state_was(address, ConnectionState::Connected)
-                .and(expectation::emulator_peer_connection_state_is(
+            emulator::expectation::peer_connection_state_was(address, ConnectionState::Connected)
+                .and(emulator::expectation::peer_connection_state_is(
                     address,
                     ConnectionState::Disconnected,
                 )),
@@ -633,7 +477,7 @@ async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
     fasync::spawn(
-        watch_emulator_peer_connection_states(harness.clone(), address, peer.clone())
+        emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
     );
 
@@ -648,8 +492,8 @@ async fn test_drop_connection(harness: PeripheralHarness) -> Result<(), Error> {
     drop(conn);
     let _ = harness
         .when_satisfied(
-            expectation::emulator_peer_connection_state_was(address, ConnectionState::Connected)
-                .and(expectation::emulator_peer_connection_state_is(
+            emulator::expectation::peer_connection_state_was(address, ConnectionState::Connected)
+                .and(emulator::expectation::peer_connection_state_is(
                     address,
                     ConnectionState::Disconnected,
                 )),
@@ -676,7 +520,7 @@ async fn test_connection_handle_closes_on_disconnect(
 
     peer.emulate_le_connection_complete(ConnectionRole::Follower)?;
     fasync::spawn(
-        watch_emulator_peer_connection_states(harness.clone(), address, peer.clone())
+        emulator::watch_peer_connection_states(harness.clone(), address, peer.clone())
             .unwrap_or_else(|_| ()),
     );
 
@@ -691,8 +535,8 @@ async fn test_connection_handle_closes_on_disconnect(
     peer.emulate_disconnection_complete()?;
     let _ = harness
         .when_satisfied(
-            expectation::emulator_peer_connection_state_was(address, ConnectionState::Connected)
-                .and(expectation::emulator_peer_connection_state_is(
+            emulator::expectation::peer_connection_state_was(address, ConnectionState::Connected)
+                .and(emulator::expectation::peer_connection_state_is(
                     address,
                     ConnectionState::Disconnected,
                 )),

@@ -14,6 +14,7 @@ pub mod expect;
 
 // Test harnesses
 pub mod control;
+pub mod emulator;
 pub mod host_driver;
 pub mod low_energy_central;
 pub mod low_energy_peripheral;
@@ -52,23 +53,6 @@ impl TestHarness for () {
     {
         let mut executor = fasync::Executor::new().context("error creating event loop")?;
         executor.run_singlethreaded(test_func(()))
-    }
-}
-
-/// Harness auxiliary type that carries a generic FIDL proxy and a bt-emulator FIDL proxy. This is
-/// useful for tests that exercise a FIDL interface against programmable emulator functionality.
-pub struct EmulatorHarnessAux<T> {
-    proxy: T,
-    emulator: fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
-}
-
-impl<T> EmulatorHarnessAux<T> {
-    pub fn proxy(&self) -> &T {
-        &self.proxy
-    }
-
-    pub fn emulator(&self) -> &fidl_fuchsia_bluetooth_test::HciEmulatorProxy {
-        &self.emulator
     }
 }
 

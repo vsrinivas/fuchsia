@@ -24,7 +24,7 @@ use {
     std::{borrow::Borrow, collections::HashMap, path::PathBuf},
 };
 
-use crate::harness::{EmulatorHarnessAux, TestHarness};
+use crate::harness::{emulator::EmulatorHarnessAux, TestHarness};
 
 const TIMEOUT_SECONDS: i64 = 10; // in seconds
 
@@ -104,7 +104,7 @@ async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
     let peers = HashMap::new();
 
     let harness = ExpectationHarness::init(
-        HostDriverHarnessAux { proxy: host_proxy, emulator: emulator.emulator().clone() },
+        HostDriverHarnessAux::new(host_proxy, emulator.emulator().clone()),
         HostState { host_path, host_info, peers },
     );
     Ok((harness, emulator))

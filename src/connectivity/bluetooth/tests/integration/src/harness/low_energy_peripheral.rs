@@ -7,28 +7,27 @@ use {
     fidl_fuchsia_bluetooth_le::{
         ConnectionProxy, PeripheralEvent, PeripheralMarker, PeripheralProxy,
     },
-    fidl_fuchsia_bluetooth_test::{ConnectionState, PeerProxy},
+    fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
-        types::emulator::LegacyAdvertisingState,
-        types::{le::Peer, Address},
+        types::le::Peer,
     },
     futures::{select, Future, FutureExt, TryStreamExt},
+    parking_lot::MappedRwLockWriteGuard,
     pin_utils::pin_mut,
-    std::collections::HashMap,
 };
 
-use crate::harness::{control::ActivatedFakeHost, EmulatorHarnessAux, TestHarness};
+use crate::harness::{
+    control::ActivatedFakeHost,
+    emulator::{watch_advertising_states, EmulatorHarness, EmulatorHarnessAux, EmulatorState},
+    TestHarness,
+};
 
 /// A snapshot of the current LE peripheral procedure states of the controller.
 #[derive(Clone)]
 pub struct PeripheralState {
-    /// Observed changes to the controller's advertising state and parameters.
-    pub advertising_state_changes: Vec<LegacyAdvertisingState>,
-
-    /// List of observed peer connection states.
-    pub connection_states: HashMap<Address, Vec<ConnectionState>>,
+    emulator_state: EmulatorState,
 
     /// Observed peer connections.
     pub connections: Vec<(Peer, ConnectionProxy)>,
@@ -37,24 +36,43 @@ pub struct PeripheralState {
 impl PeripheralState {
     /// Resets to the default state.
     pub fn reset(&mut self) {
-        self.advertising_state_changes.clear();
-        self.connection_states.clear();
+        self.emulator_state = EmulatorState::default();
         self.connections.clear();
     }
 }
 
 impl Default for PeripheralState {
     fn default() -> PeripheralState {
-        PeripheralState {
-            advertising_state_changes: Vec::new(),
-            connection_states: HashMap::new(),
-            connections: Vec::new(),
-        }
+        PeripheralState { emulator_state: EmulatorState::default(), connections: Vec::new() }
+    }
+}
+
+impl std::convert::AsMut<EmulatorState> for PeripheralState {
+    fn as_mut(&mut self) -> &mut EmulatorState {
+        &mut self.emulator_state
+    }
+}
+
+impl std::convert::AsRef<EmulatorState> for PeripheralState {
+    fn as_ref(&self) -> &EmulatorState {
+        &self.emulator_state
     }
 }
 
 pub type PeripheralHarness = ExpectationHarness<PeripheralState, PeripheralHarnessAux>;
 type PeripheralHarnessAux = EmulatorHarnessAux<PeripheralProxy>;
+
+impl EmulatorHarness for PeripheralHarness {
+    type State = PeripheralState;
+
+    fn emulator(&self) -> HciEmulatorProxy {
+        self.aux().emulator().clone()
+    }
+
+    fn state(&self) -> MappedRwLockWriteGuard<PeripheralState> {
+        self.write_state()
+    }
+}
 
 impl TestHarness for PeripheralHarness {
     fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
@@ -76,11 +94,10 @@ where
     let host = ActivatedFakeHost::new("bt-integration-le-peripheral").await?;
     let proxy = fuchsia_component::client::connect_to_service::<PeripheralMarker>()
         .context("Failed to connect to BLE Peripheral service")?;
-    let state =
-        PeripheralHarness::new(PeripheralHarnessAux { proxy, emulator: host.emulator().clone() });
+    let state = PeripheralHarness::new(PeripheralHarnessAux::new(proxy, host.emulator().clone()));
 
     // Initialize the state update watcher and the test run tasks.
-    let watch_adv = watch_advertising_state(state.clone());
+    let watch_adv = watch_advertising_states(state.clone());
     let watch_conn = watch_connections(state.clone());
     let run_test = test(state);
 
@@ -98,17 +115,6 @@ where
     result
 }
 
-async fn watch_advertising_state(harness: PeripheralHarness) -> Result<(), Error> {
-    loop {
-        let states = harness.aux().emulator().watch_legacy_advertising_states().await?;
-        harness
-            .write_state()
-            .advertising_state_changes
-            .append(&mut states.into_iter().map(|s| s.into()).collect());
-        harness.notify_state_changed();
-    }
-}
-
 async fn watch_connections(harness: PeripheralHarness) -> Result<(), Error> {
     let mut events = harness.aux().proxy().take_event_stream();
     while let Some(e) = events.try_next().await? {
@@ -123,26 +129,4 @@ async fn watch_connections(harness: PeripheralHarness) -> Result<(), Error> {
         harness.notify_state_changed();
     }
     Ok(())
-}
-
-/// Process connection state events for a particular peer over the given `proxy`.
-pub async fn watch_emulator_peer_connection_states(
-    harness: PeripheralHarness,
-    address: Address,
-    proxy: PeerProxy,
-) -> Result<(), Error> {
-    loop {
-        let mut result = proxy.watch_connection_states().await?;
-        // Introduce a scope as it is important not to hold a mutable lock to the harness state when
-        // we call `harness.notify_state_changed()` below.
-        {
-            let state_map = &mut harness.write_state().connection_states;
-            if !state_map.contains_key(&address) {
-                state_map.insert(address, vec![]);
-            }
-            let states = state_map.get_mut(&address).unwrap();
-            states.append(&mut result);
-        }
-        harness.notify_state_changed();
-    }
 }

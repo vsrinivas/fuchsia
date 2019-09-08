@@ -13,7 +13,7 @@ use {
     futures::{Future, TryFutureExt, TryStreamExt},
 };
 
-use crate::harness::{control::ActivatedFakeHost, EmulatorHarnessAux, TestHarness};
+use crate::harness::{control::ActivatedFakeHost, emulator::EmulatorHarnessAux, TestHarness};
 
 /// Sets up the test environment and the given test case.
 /// Each integration test case is asynchronous and must return a Future that completes with the
@@ -28,8 +28,7 @@ where
     let proxy = fuchsia_component::client::connect_to_service::<CentralMarker>()
         .context("Failed to connect to BLE Central service")?;
 
-    let harness =
-        CentralHarness::new(CentralHarnessAux { proxy, emulator: fake_host.emulator().clone() });
+    let harness = CentralHarness::new(CentralHarnessAux::new(proxy, fake_host.emulator().clone()));
     fasync::spawn(
         handle_central_events(harness.clone())
             .unwrap_or_else(|e| eprintln!("Error handling central events: {:?}", e)),
