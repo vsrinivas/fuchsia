@@ -18,6 +18,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
+#include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -508,103 +509,40 @@ static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
   }
 }
 
-#define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
-
-static zx::debuglog devhost_log_handle;
-
-static ssize_t devhost_log_write_internal(uint32_t flags, const void* void_data, size_t len) {
-  struct Context {
-    Context() = default;
-
-    uint32_t next = 0;
-    zx::unowned_debuglog handle;
-    char data[LOGBUF_MAX] = {};
-  };
-  static thread_local fbl::unique_ptr<Context> ctx;
-
-  if (ctx == nullptr) {
-    ctx = std::make_unique<Context>();
-    if (ctx == nullptr) {
-      return len;
-    }
-    ctx->handle = zx::unowned_debuglog(devhost_log_handle);
-  }
-
-  const char* data = static_cast<const char*>(void_data);
-  size_t r = len;
-
-  auto flush_context = [&]() {
-    ctx->handle->write(flags, ctx->data, ctx->next);
-    ctx->next = 0;
-  };
-
-  while (len-- > 0) {
-    char c = *data++;
-    if (c == '\n') {
-      if (ctx->next) {
-        flush_context();
-      }
-      continue;
-    }
-    if (c < ' ') {
-      continue;
-    }
-    ctx->data[ctx->next++] = c;
-    if (ctx->next == LOGBUF_MAX) {
-      flush_context();
-    }
-  }
-  return r;
-}
+static zxio_t* devhost_zxio_logger = nullptr;
 
 }  // namespace devmgr
 
 __EXPORT void driver_printf(uint32_t flags, const char* fmt, ...) {
+  if (devmgr::devhost_zxio_logger == nullptr) {
+    return;
+  }
   char buffer[512];
   va_list ap;
   va_start(ap, fmt);
-  int r = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+  size_t r = vsnprintf(buffer, sizeof(buffer), fmt, ap);
   va_end(ap);
 
-  if (r > (int)sizeof(buffer)) {
-    r = sizeof(buffer);
-  }
-
-  devmgr::devhost_log_write_internal(flags, buffer, r);
+  size_t actual;
+  zxio_write(devmgr::devhost_zxio_logger, buffer, std::min(r, sizeof(buffer)), &actual);
 }
 
 namespace devmgr {
 
-static zx_status_t devhost_log_write(zxio_t* io, const void* buffer, size_t capacity,
-                                     size_t* out_actual) {
-  devhost_log_write_internal(0, buffer, capacity);
-  *out_actual = capacity;
-  return ZX_OK;
-}
-
-static zx_status_t devhost_log_isatty(zxio_t* io, bool* tty) {
-  // Claim to be a TTY to get line buffering
-  *tty = true;
-  return ZX_OK;
-}
-
-static constexpr zxio_ops_t devhost_log_ops = []() {
-  zxio_ops_t ops = zxio_default_ops;
-  ops.write = devhost_log_write;
-  ops.isatty = devhost_log_isatty;
-  return ops;
-}();
-
 static void devhost_io_init() {
-  if (zx::debuglog::create(zx::resource(), 0, &devhost_log_handle) < 0) {
+  zx::debuglog handle;
+  if (zx::debuglog::create(zx::resource(), 0, &handle) != ZX_OK) {
     return;
   }
-  fdio_t* io = nullptr;
-  zxio_storage_t* storage = nullptr;
-  if ((io = fdio_zxio_create(&storage)) == nullptr) {
+  zxio_storage_t* storage;
+  fdio_t* io = fdio_zxio_create(&storage);
+  if (io == nullptr) {
     return;
   }
-  zxio_init(&storage->io, &devhost_log_ops);
+  if (zxio_debuglog_init(storage, std::move(handle)) != ZX_OK) {
+    return;
+  }
+  devhost_zxio_logger = &storage->io;
   close(1);
   fdio_bind_to_fd(io, 1, 0);
   dup2(1, 2);
