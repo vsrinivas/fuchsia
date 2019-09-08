@@ -4,17 +4,29 @@
 
 use {
     crate::{
-        framework::RealmServiceHost,
-        model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*},
+        framework::{FrameworkCapability, REALM_SERVICE},
+        model::*,
+        model::{
+            hooks::*,
+            testing::{routing_test_helpers::*, test_helpers::*},
+        },
     },
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
-        OfferDirectoryDecl, OfferDirectorySource, OfferLegacyServiceDecl, OfferServiceSource,
-        OfferTarget, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
+        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget,
+        FrameworkCapabilityDecl, OfferDecl, OfferDirectoryDecl, OfferDirectorySource,
+        OfferLegacyServiceDecl, OfferServiceSource, OfferTarget, UseDecl, UseDirectoryDecl,
+        UseLegacyServiceDecl, UseSource,
     },
-    fidl_fuchsia_sys2 as fsys,
-    std::convert::{TryFrom, TryInto},
+    failure::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::{future::BoxFuture, lock::Mutex, TryStreamExt},
+    log::*,
+    std::{
+        convert::{TryFrom, TryInto},
+        sync::Arc,
+    },
 };
 
 ///   a
@@ -24,6 +36,128 @@ use {
 /// b: uses framework service /svc/fuchsia.sys2.Realm
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_framework_service() {
+    pub struct MockRealmServiceCapability {
+        realm: Arc<Realm>,
+        host: MockRealmServiceHost,
+    }
+
+    impl MockRealmServiceCapability {
+        pub fn new(realm: Arc<Realm>, host: MockRealmServiceHost) -> Self {
+            Self { realm, host }
+        }
+
+        pub async fn open_async(
+            &self,
+            _flags: u32,
+            _open_mode: u32,
+            _relative_path: String,
+            server_end: zx::Channel,
+        ) -> Result<(), ModelError> {
+            let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
+                .into_stream()
+                .expect("could not convert channel into stream");
+            let realm = self.realm.clone();
+            let host = self.host.clone();
+            fasync::spawn(async move {
+                if let Err(e) = host.serve(realm, stream).await {
+                    // TODO: Set an epitaph to indicate this was an unexpected error.
+                    warn!("serve_realm failed: {}", e);
+                }
+            });
+            Ok(())
+        }
+    }
+
+    impl FrameworkCapability for MockRealmServiceCapability {
+        fn open(
+            &self,
+            flags: u32,
+            open_mode: u32,
+            relative_path: String,
+            server_chan: zx::Channel,
+        ) -> BoxFuture<Result<(), ModelError>> {
+            Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
+        }
+    }
+
+    impl RouteFrameworkCapabilityHook for MockRealmServiceHost {
+        fn on<'a>(
+            &'a self,
+            realm: Arc<Realm>,
+            capability_decl: &'a FrameworkCapabilityDecl,
+            capability: Option<Box<dyn FrameworkCapability>>,
+        ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+            Box::pin(self.on_route_framework_capability_async(realm, capability_decl, capability))
+        }
+    }
+
+    #[derive(Clone)]
+    pub struct MockRealmServiceHost {
+        /// List of calls to `BindChild` with component's relative moniker.
+        bind_calls: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl MockRealmServiceHost {
+        pub fn new() -> Self {
+            Self { bind_calls: Arc::new(Mutex::new(vec![])) }
+        }
+
+        pub fn hooks(&self) -> Vec<Hook> {
+            // List the hooks the Hub implements here.
+            vec![Hook::RouteFrameworkCapability(Arc::new(self.clone()))]
+        }
+
+        pub fn bind_calls(&self) -> Arc<Mutex<Vec<String>>> {
+            self.bind_calls.clone()
+        }
+
+        async fn serve(
+            &self,
+            realm: Arc<Realm>,
+            mut stream: fsys::RealmRequestStream,
+        ) -> Result<(), Error> {
+            while let Some(request) = stream.try_next().await? {
+                match request {
+                    fsys::RealmRequest::BindChild { responder, .. } => {
+                        self.bind_calls.lock().await.push(
+                            realm
+                                .abs_moniker
+                                .path()
+                                .last()
+                                .expect("did not expect root component")
+                                .name()
+                                .to_string(),
+                        );
+                        responder.send(&mut Ok(()))?;
+                    }
+                    _ => {}
+                }
+            }
+            Ok(())
+        }
+
+        pub async fn on_route_framework_capability_async<'a>(
+            &'a self,
+            realm: Arc<Realm>,
+            capability_decl: &'a FrameworkCapabilityDecl,
+            capability: Option<Box<dyn FrameworkCapability>>,
+        ) -> Result<Option<Box<dyn FrameworkCapability>>, ModelError> {
+            // If some other capability has already been installed, then there's nothing to
+            // do here.
+            match capability_decl {
+                FrameworkCapabilityDecl::LegacyService(capability_path)
+                    if *capability_path == *REALM_SERVICE =>
+                {
+                    return Ok(Some(Box::new(MockRealmServiceCapability::new(
+                        realm.clone(),
+                        self.clone(),
+                    )) as Box<dyn FrameworkCapability>));
+                }
+                _ => return Ok(capability),
+            }
+        }
+    }
+
     let components = vec![
         (
             "a",
@@ -48,10 +182,12 @@ async fn use_framework_service() {
             },
         ),
     ];
+    let test = RoutingTest::new("a", components).await;
+    // RoutingTest installs the real RealmServiceHost. Installing the
+    // MockRealmServiceHost here overrides the previously installed one.
     let realm_service_host = MockRealmServiceHost::new();
-    let bind_calls = realm_service_host.bind_calls();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
-    test.check_use_realm(vec!["b:0"].into(), bind_calls).await;
+    test.model.hooks.install(realm_service_host.hooks()).await;
+    test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;
 }
 
 ///   a
@@ -127,8 +263,7 @@ async fn use_from_parent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -226,8 +361,7 @@ async fn use_from_grandparent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -298,8 +432,7 @@ async fn use_builtin_from_grandparent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: true },
@@ -401,8 +534,7 @@ async fn use_from_sibling_no_root() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -496,8 +628,7 @@ async fn use_from_sibling_root() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -619,8 +750,7 @@ async fn use_from_niece() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -831,8 +961,7 @@ async fn use_kitchen_sink() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "e:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: true },
@@ -912,8 +1041,7 @@ async fn use_from_component_manager_namespace() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.install_hippo_dir();
     test.check_use(
         vec!["b:0"].into(),
@@ -967,8 +1095,7 @@ async fn use_not_offered() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1045,8 +1172,7 @@ async fn use_offer_source_not_exposed() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1128,8 +1254,7 @@ async fn use_offer_source_not_offered() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1211,8 +1336,7 @@ async fn use_from_expose() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1306,7 +1430,7 @@ async fn use_from_expose_to_framework() {
             },
         ),
     ];
-    let test = RoutingTest::new("a", components, vec![]).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1375,8 +1499,7 @@ async fn offer_from_non_executable() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Directory { path: default_directory_capability(), should_succeed: false },
@@ -1479,9 +1602,7 @@ async fn use_in_collection() {
         ),
     ];
     // `RealmServiceHost` is needed to create dynamic children.
-    let test = RoutingTest::new("a", components, vec![]).await;
-    let realm_service_host = RealmServiceHost::new(test.model.clone());
-    test.model.hooks.install(realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),
         "coll",
@@ -1585,9 +1706,7 @@ async fn use_in_collection_not_offered() {
         ),
     ];
     // `RealmServiceHost` is needed to create dynamic children.
-    let test = RoutingTest::new("a", components, vec![]).await;
-    let realm_service_host = RealmServiceHost::new(test.model.clone());
-    test.model.hooks.install(realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.create_dynamic_child(
         vec!["b:0"].into(),
         "coll",
@@ -1670,8 +1789,7 @@ async fn expose_from_self_and_child() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use_exposed_dir(
         vec!["b:0"].into(),
         CheckUse::Directory { path: "/data/bar/hippo".try_into().unwrap(), should_succeed: true },
@@ -1743,8 +1861,7 @@ async fn use_not_exposed() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     // Capability is only exposed from "c", so it only be usable from there.
     test.check_use_exposed_dir(
         vec!["b:0"].into(),

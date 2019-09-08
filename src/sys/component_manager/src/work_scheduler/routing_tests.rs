@@ -105,7 +105,7 @@ async fn use_work_scheduler_with_expose_to_framework() {
             },
         ),
     ];
-    let test = RoutingTest::new(
+    let test = RoutingTest::new_with_hooks(
         "a",
         components,
         vec![Hook::RouteFrameworkCapability(Arc::new(WorkSchedulerHook::new()))],
@@ -146,7 +146,7 @@ async fn use_work_scheduler_without_expose() {
             },
         ),
     ];
-    let test = RoutingTest::new(
+    let test = RoutingTest::new_with_hooks(
         "a",
         components,
         vec![Hook::RouteFrameworkCapability(Arc::new(WorkSchedulerHook::new()))],
@@ -193,7 +193,7 @@ async fn use_work_scheduler_with_expose_to_realm() {
             },
         ),
     ];
-    let test = RoutingTest::new(
+    let test = RoutingTest::new_with_hooks(
         "a",
         components,
         vec![Hook::RouteFrameworkCapability(Arc::new(WorkSchedulerHook::new()))],

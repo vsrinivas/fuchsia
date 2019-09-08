@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        directory_broker, klog, model::routing::generate_storage_path,
+        directory_broker, framework::RealmServiceHost, klog, model::routing::generate_storage_path,
         model::testing::memfs::Memfs, model::testing::mocks::*, model::*, startup,
     },
     cm_rust::{
@@ -76,6 +76,7 @@ pub enum CheckUse {
 pub struct RoutingTest {
     components: Vec<(&'static str, ComponentDecl)>,
     pub model: Model,
+    pub realm_service_host: RealmServiceHost,
     pub namespaces: Namespaces,
     memfs: Memfs,
 }
@@ -83,6 +84,13 @@ pub struct RoutingTest {
 impl RoutingTest {
     /// Initializes a new test.
     pub async fn new(
+        root_component: &'static str,
+        components: Vec<(&'static str, ComponentDecl)>,
+    ) -> Self {
+        RoutingTest::new_with_hooks(root_component, components, vec![]).await
+    }
+
+    pub async fn new_with_hooks(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
         additional_hooks: Vec<Hook>,
@@ -128,8 +136,10 @@ impl RoutingTest {
             builtin_services: Arc::new(builtin_services),
         });
 
+        let realm_service_host = RealmServiceHost::new(model.clone());
+        model.hooks.install(realm_service_host.hooks()).await;
         model.hooks.install(additional_hooks).await;
-        Self { components, model, namespaces, memfs }
+        Self { components, model, realm_service_host, namespaces, memfs }
     }
 
     /// Installs a new directory at /hippo in our namespace. Does nothing if this directory already

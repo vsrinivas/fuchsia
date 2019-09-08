@@ -622,8 +622,6 @@ mod tests {
             config: model::ModelConfig::default(),
             builtin_services: Arc::new(startup::BuiltinRootServices::new(&startup_args).unwrap()),
         }));
-        let realm_service_host = mocks::MockRealmServiceHost::new();
-        model.hooks.install(realm_service_host.hooks()).await;
         model.hooks.install(hub.hooks()).await;
         model.hooks.install(additional_hooks).await;
 

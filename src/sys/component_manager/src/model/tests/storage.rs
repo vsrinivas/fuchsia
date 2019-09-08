@@ -4,7 +4,7 @@
 
 use {
     crate::model::moniker::RelativeMoniker,
-    crate::model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*},
+    crate::model::testing::{routing_test_helpers::*, test_helpers::*},
     cm_rust::{
         self, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl, ExposeSource,
         ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferDirectorySource, OfferStorage,
@@ -53,8 +53,7 @@ async fn storage_and_dir_from_parent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage {
@@ -103,8 +102,7 @@ async fn meta_storage_and_dir_from_parent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage {
@@ -173,8 +171,7 @@ async fn storage_from_parent_dir_from_grandparent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
@@ -241,8 +238,7 @@ async fn storage_and_dir_from_grandparent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
@@ -309,8 +305,7 @@ async fn meta_storage_and_dir_from_grandparent() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage {
@@ -379,8 +374,7 @@ async fn storage_from_parent_dir_from_sibling() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Storage {
@@ -491,8 +485,7 @@ async fn storage_multiple_types() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["c:0"].into(),
         CheckUse::Storage {
@@ -569,8 +562,7 @@ async fn use_the_wrong_type_of_storage() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
@@ -617,8 +609,7 @@ async fn directories_are_not_storage() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
@@ -663,8 +654,7 @@ async fn use_storage_when_not_offered() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Cache, storage_relation: None },
@@ -745,8 +735,7 @@ async fn dir_offered_from_nonexecutable() {
             },
         ),
     ];
-    let realm_service_host = MockRealmServiceHost::new();
-    let test = RoutingTest::new("a", components, realm_service_host.hooks()).await;
+    let test = RoutingTest::new("a", components).await;
     test.check_use(
         vec!["b:0", "c:0"].into(),
         CheckUse::Storage { type_: fsys::StorageType::Data, storage_relation: None },
