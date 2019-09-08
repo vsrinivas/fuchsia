@@ -15,23 +15,9 @@
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/eventpair.h>
 
+#include "color_source.h"
+
 namespace virtual_camera {
-
-// ColorSource steps through hue at a constant rate in HSV colorspace,
-// with saturation and value remaining constant. An RGB color is written to
-// a buffer provided.
-class ColorSource {
- public:
-  // Write the next color in the progression to the buffer.
-  void FillARGB(void* start, size_t buffer_size);
-
- private:
-  void hsv_color(uint32_t index, uint8_t* r, uint8_t* g, uint8_t* b);
-
-  uint32_t frame_color_ = 0x80;
-  static constexpr uint32_t kFrameColorInc = 0x01;
-  static constexpr uint32_t kMaxFrameColor = 0x600;
-};
 
 class VirtualCameraControlImpl : public fuchsia::camera::Control {
  public:

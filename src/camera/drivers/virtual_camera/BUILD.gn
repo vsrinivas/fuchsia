@@ -9,6 +9,8 @@ driver_module("virtual_camera_driver") {
   output_name = "virtual_camera_driver"
 
   sources = [
+    "color_source.cc",
+    "color_source.h",
     "virtual_camera.cc",
     "virtual_camera_control.cc",
     "virtual_camera_control.h",
@@ -21,8 +23,6 @@ driver_module("virtual_camera_driver") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
     "//src/lib/fxl",
-    "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -34,6 +34,8 @@ driver_module("virtual_camera_driver") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
