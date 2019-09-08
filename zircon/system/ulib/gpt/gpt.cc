@@ -180,17 +180,6 @@ const char* gpt_guid_to_type(const char* guid) { return gpt::KnownGuid::GuidStrT
 
 __END_CDECLS
 
-uint64_t MinimumRequiredBlocksPerCopy(uint64_t block_size) {
-  uint64_t header_blocks = kHeaderBlocks;
-  uint64_t table_blocks = ((kMaxPartitionTableSize + block_size - 1) / block_size);
-  return header_blocks + table_blocks;
-}
-
-uint64_t MinimumRequiredBlocks(uint64_t block_size) {
-  // There are two copies of GPT and a block for MBR(or such use).
-  return kPrimaryHeaderStartBlock + (2 * MinimumRequiredBlocksPerCopy(block_size));
-}
-
 fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
                                                                uint64_t block_count) {
   gpt_header_t header = {};
@@ -199,7 +188,7 @@ fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_si
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
-  if (block_count <= MinimumRequiredBlocks(block_size)) {
+  if (block_count <= MinimumBlockDeviceSize(block_size).value()) {
     return fit::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
 
@@ -212,12 +201,12 @@ fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_si
   header.backup = block_count - 1;
 
   // First usable block is the block after end of primary copy.
-  header.first = kPrimaryHeaderStartBlock + MinimumRequiredBlocksPerCopy(block_size);
+  header.first = kPrimaryHeaderStartBlock + MinimumBlocksPerCopy(block_size).value();
 
   // Last usable block is the block before beginning of backup entries array.
-  header.last = block_count - MinimumRequiredBlocksPerCopy(block_size) - 1;
+  header.last = block_count - MinimumBlocksPerCopy(block_size).value() - 1;
 
-  // We have ensured above that there are more blocks than MinimumRequiredBlocks().
+  // We have ensured above that there are more blocks than MinimumBlockDeviceSize().
   ZX_DEBUG_ASSERT(header.first <= header.last);
 
   // generate a guid
@@ -292,6 +281,22 @@ zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count) {
   }
 
   return ZX_OK;
+}
+
+fit::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry) {
+  if (entry == nullptr) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  auto result = ValidateEntry(entry);
+  if (result.is_error()) {
+    return fit::error(ZX_ERR_BAD_STATE);
+  }
+
+  if (result.value() == false) {
+    return fit::error(ZX_ERR_NOT_FOUND);
+  }
+
+  return fit::ok(entry->last - entry->first + 1);
 }
 
 fit::result<bool, zx_status_t> ValidateEntry(const gpt_entry_t* entry) {
@@ -603,9 +608,10 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
 
   // read the gpt header (lba 1)
   offset = kPrimaryHeaderStartBlock * blocksize;
-  ssize_t size = PerCopyBufferSize(blocksize);
+  ssize_t size = MinimumBytesPerCopy(blocksize).value();
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
   ret = pread(fdp.get(), buffer.get(), size, offset);
+
   if (ret != size) {
     return ZX_ERR_IO;
   }

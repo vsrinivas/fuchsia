@@ -55,16 +55,6 @@ static_assert(kEntrySize == sizeof(gpt_entry_t), "invalid gpt entry size");
 // Maximum size of the partition entry table.
 constexpr size_t kMaxPartitionTableSize = kPartitionCount * kEntrySize;
 
-// Returns the maximum size in bytes to hold header block and partition table.
-constexpr size_t PerCopyBufferSize(uint32_t blocksize) {
-  return blocksize + kMaxPartitionTableSize;
-}
-
-// Returns the maximum blocks needed to hold header block and partition table.
-constexpr size_t PerCopyBlockCount(uint32_t blocksize) {
-  return (PerCopyBufferSize(blocksize) + blocksize - 1) / blocksize;
-}
-
 // Size of array need to store "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 // There are other places where we use different macros to get this
 // string length. Assert that we are in sync with the rest.
@@ -82,6 +72,38 @@ constexpr uint32_t kGptDiffFlags = 0x10;
 constexpr uint32_t kGptDiffName = 0x20;
 
 constexpr uint64_t kFlagHidden = 0x2;
+
+// Returns the maximum size in bytes to hold header block and partition table.
+constexpr fit::result<size_t, zx_status_t> MinimumBytesPerCopy(uint64_t block_size) {
+  if (block_size < kHeaderSize) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  return fit::ok(block_size + kMaxPartitionTableSize);
+}
+
+// Returns the maximum blocks needed to hold header block and partition table.
+constexpr fit::result<uint64_t, zx_status_t> MinimumBlocksPerCopy(uint64_t block_size) {
+  if (block_size < kHeaderSize) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  return fit::ok((MinimumBytesPerCopy(block_size).value() + block_size - 1) / block_size);
+}
+
+// Returns the minimum blocks needed to hold two copies of GPT at appropriate
+// offset (considering mbr block).
+constexpr fit::result<uint64_t, zx_status_t> MinimumBlockDeviceSize(uint64_t block_size) {
+  if (block_size < kHeaderSize) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  // There are two copies of GPT and a block for MBR(or such use).
+  return fit::ok(kPrimaryHeaderStartBlock + (2 * MinimumBlocksPerCopy(block_size).value()));
+}
+
+// Returns number of addressable blocks. On finding entry
+//  - nullptr, returns ZX_ERR_INVALID_ARGS
+//  - invalid, returns ZX_ERR_BAD_STATE
+//  - uninitialized, returns ZX_ERR_NOT_FOUND
+fit::result<uint64_t, zx_status_t> EntryBlockCount(const gpt_entry_t* entry);
 
 // Sets or clears partition visibility flag
 void SetPartitionVisibility(gpt_partition_t* partition, bool visible);
@@ -173,6 +195,13 @@ class GptDevice {
 
   // Return device's block size
   uint64_t BlockSize() const { return blocksize_; }
+
+  uint64_t EntryCount() const {
+    if (!valid_) {
+      return kPartitionCount;
+    }
+    return header_.entries_count;
+  }
 
   // Return number of bytes entries array occupies.
   uint64_t EntryArraySize() const {

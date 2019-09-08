@@ -793,6 +793,100 @@ void DiffsTestHelper(LibGptTest* libGptTest, uint32_t total_partitions) {
   EXPECT_EQ(diffs, 0, "Diffs not zero after syncing partition");
 }
 
+uint64_t ComputePerCopySize(uint64_t block_size) {
+  return block_size + (kPartitionCount * kEntrySize);
+}
+
+uint64_t ComputePerCopyBlockCount(uint64_t block_size) {
+  return (ComputePerCopySize(block_size) + block_size - 1) / block_size;
+}
+
+uint64_t ComputeMinimumBlockDeviceSize(uint64_t block_size) {
+  // One mbr block.
+  return 1 + (2 * ComputePerCopyBlockCount(block_size));
+}
+
+TEST(MinimumBytesPerCopyTest, BlockSizeTooSmall) {
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, MinimumBytesPerCopy(kHeaderSize - 1).error());
+}
+
+TEST(MinimumBytesPerCopyTest, BlockSizeDefaultBlockSize) {
+  ASSERT_EQ(ComputePerCopySize(kBlockSize), MinimumBytesPerCopy(kBlockSize).value());
+}
+
+TEST(MinimumBytesPerCopyTest, BlockSize1Meg) {
+  ASSERT_EQ(ComputePerCopySize(1 << 20), MinimumBytesPerCopy(1 << 20).value());
+}
+
+TEST(MinimumBlocksPerCopyTest, BlockSizeTooSmall) {
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, MinimumBlocksPerCopy(kHeaderSize - 1).error());
+}
+
+TEST(MinimumBlocksPerCopyTest, BlockSizeDefaultBlockSize) {
+  ASSERT_EQ(ComputePerCopyBlockCount(kBlockSize), MinimumBlocksPerCopy(kBlockSize).value());
+}
+
+TEST(MinimumBlocksPerCopyTest, BlockSize1Meg) {
+  ASSERT_EQ(ComputePerCopyBlockCount(1 << 20), MinimumBlocksPerCopy(1 << 20).value());
+}
+
+TEST(MinimumBlockDeviceSizeTest, BlockSizeTooSmall) {
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, MinimumBlockDeviceSize(kHeaderSize - 1).error());
+}
+
+TEST(MinimumBlockDeviceSizeTest, BlockSizeDefaultBlockSize) {
+  ASSERT_EQ(ComputeMinimumBlockDeviceSize(kBlockSize), MinimumBlockDeviceSize(kBlockSize).value());
+}
+
+TEST(MinimumBlockDeviceSizeTest, BlockSize1Meg) {
+  ASSERT_EQ(ComputeMinimumBlockDeviceSize(1 << 20), MinimumBlockDeviceSize(1 << 20).value());
+}
+
+TEST(EntryBlockCountTest, ValidEntry) {
+  gpt_entry_t entry = {};
+  entry.guid[0] = 1;
+  entry.type[0] = 1;
+  entry.first = 10;
+  entry.last = 20;
+  ASSERT_EQ(EntryBlockCount(&entry).value(), 11);
+}
+
+TEST(EntryBlockCountTest, UninitializedEntry) {
+  gpt_entry_t entry = {};
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, EntryBlockCount(&entry).error());
+}
+
+TEST(EntryBlockCountTest, NullPointer) {
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, EntryBlockCount(nullptr).error());
+}
+
+TEST(EntryBlockCountTest, UninitializedGuid) {
+  gpt_entry_t entry = {};
+  entry.guid[0] = 0;
+  entry.type[0] = 1;
+  entry.first = 10;
+  entry.last = 20;
+  ASSERT_EQ(ZX_ERR_BAD_STATE, EntryBlockCount(&entry).error());
+}
+
+TEST(EntryBlockCountTest, UninitializedType) {
+  gpt_entry_t entry = {};
+  entry.guid[0] = 1;
+  entry.type[0] = 0;
+  entry.first = 10;
+  entry.last = 20;
+  ASSERT_EQ(ZX_ERR_BAD_STATE, EntryBlockCount(&entry).error());
+}
+
+TEST(EntryBlockCountTest, BadRange) {
+  gpt_entry_t entry = {};
+  entry.guid[0] = 1;
+  entry.type[0] = 1;
+  entry.first = 20;
+  entry.last = 10;
+  ASSERT_EQ(ZX_ERR_BAD_STATE, EntryBlockCount(&entry).error());
+}
+
 // Tests if we can create a GptDevice.
 TEST_F(GptDeviceTest, ValidGptOnUninitilizedDisk) {
   LibGptTest* libGptTest = GetLibGptTest();
@@ -907,34 +1001,36 @@ TEST_F(GptDeviceTest, GetDiffsForAddingMultiplePartition) { DiffsTestHelper(GetL
 
 TEST(GptDeviceLoad, ValidHeader) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  uint8_t blocks[PerCopyBufferSize(kBlockSize)] = {};
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  uint8_t blocks[MinimumBytesPerCopy(kBlockSize).value()] = {};
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_OK(GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kBlockSize, kBlockCount, &gpt));
+  ASSERT_OK(GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(), kBlockSize,
+                            kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoad, SmallBlockSize) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  uint8_t blocks[PerCopyBufferSize(kBlockSize)] = {};
+  uint8_t blocks[MinimumBytesPerCopy(kBlockSize).value()] = {};
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize),
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(),
                                                  kHeaderSize - 1, kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoad, NullGpt) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  uint8_t blocks[PerCopyBufferSize(kBlockSize)] = {};
+  uint8_t blocks[MinimumBytesPerCopy(kBlockSize).value()] = {};
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kHeaderSize,
-                                                 kBlockCount, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(),
+                                                 kHeaderSize, kBlockCount, nullptr));
 }
 
 TEST(GptDeviceLoad, NullBuffer) {
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, GptDevice::Load(nullptr, PerCopyBufferSize(kBlockSize),
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, GptDevice::Load(nullptr, MinimumBytesPerCopy(kBlockSize).value(),
                                                  kHeaderSize, kBlockCount, &gpt));
 }
 
@@ -942,27 +1038,31 @@ TEST(GptDeviceLoad, NullBuffer) {
 TEST(GptDeviceLoadEntries, NoValidEntries) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
 
-  uint8_t blocks[PerCopyBufferSize(kBlockSize)] = {};
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  uint8_t blocks[MinimumBytesPerCopy(kBlockSize).value()] = {};
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_OK(GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kBlockSize, kBlockCount, &gpt));
+  ASSERT_OK(GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(), kBlockSize,
+                            kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoadEntries, SmallEntryArray) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
 
-  uint8_t blocks[PerCopyBufferSize(kBlockSize)] = {};
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  uint8_t blocks[MinimumBytesPerCopy(kBlockSize).value()] = {};
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL, GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize) - 1,
-                                                     kBlockSize, kBlockCount, &gpt));
+  ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
+            GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value() - 1, kBlockSize,
+                            kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoadEntries, EntryFirstSmallerThanFirstUsable) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[PerCopyBufferSize(kBlockSize)]());
+  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[MinimumBytesPerCopy(kBlockSize).value()]());
   uint8_t* blocks = buffer.get();
   gpt_entry_t* entry = reinterpret_cast<gpt_entry_t*>(&blocks[kBlockSize]);
 
@@ -972,16 +1072,18 @@ TEST(GptDeviceLoadEntries, EntryFirstSmallerThanFirstUsable) {
   entry->first = header.first - 1;
   entry->last = header.last;
 
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS,
-            GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kBlockSize, kBlockCount, &gpt));
+
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(),
+                                                   kBlockSize, kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoadEntries, EntryLastLargerThanLastUsable) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[PerCopyBufferSize(kBlockSize)]());
+  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[MinimumBytesPerCopy(kBlockSize).value()]());
   uint8_t* blocks = buffer.get();
   gpt_entry_t* entry = reinterpret_cast<gpt_entry_t*>(&blocks[kBlockSize]);
 
@@ -991,16 +1093,18 @@ TEST(GptDeviceLoadEntries, EntryLastLargerThanLastUsable) {
   entry->first = header.first;
   entry->last = header.last + 1;
 
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS,
-            GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kBlockSize, kBlockCount, &gpt));
+
+  ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(),
+                                                   kBlockSize, kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoadEntries, EntryFirstLargerThanEntryLast) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[PerCopyBufferSize(kBlockSize)]());
+  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[MinimumBytesPerCopy(kBlockSize).value()]());
   uint8_t* blocks = buffer.get();
   gpt_entry_t* entry = reinterpret_cast<gpt_entry_t*>(&blocks[kBlockSize]);
 
@@ -1010,16 +1114,18 @@ TEST(GptDeviceLoadEntries, EntryFirstLargerThanEntryLast) {
   entry->first = header.last;
   entry->last = header.first;
 
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
-            GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kBlockSize, kBlockCount, &gpt));
+
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(),
+                                                 kBlockSize, kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoadEntries, EntriesOverlap) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[PerCopyBufferSize(kBlockSize)]());
+  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[MinimumBytesPerCopy(kBlockSize).value()]());
   uint8_t* blocks = buffer.get();
   gpt_entry_t* entry1 = reinterpret_cast<gpt_entry_t*>(&blocks[kBlockSize]);
 
@@ -1043,17 +1149,18 @@ TEST(GptDeviceLoadEntries, EntriesOverlap) {
   entry3->last = entry2->first - 1;
   EXPECT_TRUE(entry3->first <= entry3->last);
 
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
-            GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kBlockSize, kBlockCount, &gpt));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(),
+                                                 kBlockSize, kBlockCount, &gpt));
 }
 
 TEST(GptDeviceLoadEntries, EntryOverlapsWithLastEntry) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
 
-  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[PerCopyBufferSize(kBlockSize)]);
+  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[MinimumBytesPerCopy(kBlockSize).value()]);
   uint8_t* blocks = buffer.get();
   gpt_entry_t* entry1 = reinterpret_cast<gpt_entry_t*>(&blocks[kBlockSize]);
 
@@ -1077,11 +1184,42 @@ TEST(GptDeviceLoadEntries, EntryOverlapsWithLastEntry) {
   entry3->last = entry2->first;  // Block shared with entry2
   EXPECT_TRUE(entry3->first <= entry3->last);
 
-  UpdateHeaderCrcs(&header, &blocks[kBlockSize], PerCopyBufferSize(kBlockSize) - kBlockSize);
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
   memcpy(blocks, &header, sizeof(header));
   fbl::unique_ptr<GptDevice> gpt;
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE,
-            GptDevice::Load(blocks, PerCopyBufferSize(kBlockSize), kBlockSize, kBlockCount, &gpt));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(),
+                                                 kBlockSize, kBlockCount, &gpt));
+}
+
+TEST(GptDeviceEntryCountTest, DefaultValue) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[MinimumBytesPerCopy(kBlockSize).value()]());
+  uint8_t* blocks = buffer.get();
+
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
+  memcpy(blocks, &header, sizeof(header));
+  fbl::unique_ptr<GptDevice> gpt;
+  EXPECT_OK(GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(), kBlockSize,
+                            kBlockCount, &gpt));
+  ASSERT_EQ(gpt->EntryCount(), kPartitionCount);
+}
+
+TEST(GptDeviceEntryCountTest, FewerEntries) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  fbl::unique_ptr<uint8_t[]> buffer(new uint8_t[MinimumBytesPerCopy(kBlockSize).value()]());
+  uint8_t* blocks = buffer.get();
+
+  uint32_t entry_count = 4;
+  header.entries_count = entry_count;
+  UpdateHeaderCrcs(&header, &blocks[kBlockSize],
+                   MinimumBytesPerCopy(kBlockSize).value() - kBlockSize);
+  memcpy(blocks, &header, sizeof(header));
+  fbl::unique_ptr<GptDevice> gpt;
+  EXPECT_OK(GptDevice::Load(blocks, MinimumBytesPerCopy(kBlockSize).value(), kBlockSize,
+                            kBlockCount, &gpt));
+  ASSERT_EQ(gpt->EntryCount(), entry_count);
 }
 
 // KnownGuid is statically built. Verify that there are no double entries for
