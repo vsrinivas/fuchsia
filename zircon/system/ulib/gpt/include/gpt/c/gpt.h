@@ -9,8 +9,8 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
-#include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 typedef gpt_entry_t gpt_partition_t;
