@@ -21,9 +21,8 @@ value if you need a different version or omit it to use a local version.
 Build the sysroot:
 ```
 $ ./src/virtualization/packages/linux_guest/mksysroot.sh \
-  -r \
   -u \
-  -p prebuilt/virtualization/packages/linux_guest/images/${ARCH}/disk.img \
+  -o prebuilt/virtualization/packages/linux_guest/images/${ARCH}/disk.img \
   -d /tmp/toybox \
   -s /tmp/dash \
   S{ARCH}
