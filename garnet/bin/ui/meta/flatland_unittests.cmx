@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/flatland_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

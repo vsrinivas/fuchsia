@@ -1,0 +1,23 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":unittests",
+  ]
+}
+
+executable("unittests") {
+  output_name = "flatland_unittests"
+  testonly = true
+  sources = [
+    "flatland_unittest.cc",
+  ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/scenic/lib/flatland",
+  ]
+}

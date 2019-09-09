@@ -14,6 +14,7 @@ fidl("fuchsia.ui.scenic.internal") {
   sdk_category = "internal"
 
   sources = [
+    "flatland.fidl",
     "snapshot.fidl",
   ]
 
