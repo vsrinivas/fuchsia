@@ -64,3 +64,20 @@ source_set("unittests") {
 
   configs += [ "//src/ledger:ledger_config" ]
 }
+
+source_set("parametrized_tests") {
+  testonly = true
+
+  sources = [
+    "db_unittest.cc",
+    "db_unittest.h",
+  ]
+
+  public_deps = [
+    ":public",
+    "//peridot/lib/scoped_tmpfs",
+    "//src/ledger/bin/testing:lib",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
