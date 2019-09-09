@@ -12,6 +12,19 @@
 
 namespace storage {
 
+// An interface abstracting access to a key-value database.
+//
+// All operations accessing the database are asynchronous, through the use of coroutines.
+//
+// Implementations of this interface do not need to guarantee that operations complete in order: two
+// |Get| operations may return out of order, for instance.
+//
+// However, implementations of this database must ensure that operations are strictly consistent
+// when issued from the same thread (but potentially different coroutines): reads and writes are not
+// allowed to be reordered, ie. any write to the database must be seen by all coroutines performing
+// subsequent reads, and by none which issued its read beforehand. Writes are considered issued at
+// the time when |Batch::Execute| is called, and reads at the time when |Get| (or |HasKey| and other
+// related methods) is called.
 class Db {
  public:
   class Batch {

@@ -64,7 +64,8 @@ PageDbImpl::~PageDbImpl() = default;
 Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<Batch>* batch) {
   std::unique_ptr<Db::Batch> db_batch;
   RETURN_ON_ERROR(db_->StartBatch(handler, &db_batch));
-  *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this);
+  *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this, db_.get(),
+                                             object_identifier_factory_);
   return Status::OK;
 }
 
@@ -285,6 +286,15 @@ Status PageDbImpl::WriteObject(CoroutineHandler* handler, const Piece& piece,
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->WriteObject(handler, piece, object_status, references));
+  return batch->Execute(handler);
+}
+
+Status PageDbImpl::DeleteObject(coroutine::CoroutineHandler* handler,
+                                const ObjectDigest& object_digest,
+                                const ObjectReferencesAndPriority& references) {
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->DeleteObject(handler, object_digest, references));
   return batch->Execute(handler);
 }
 

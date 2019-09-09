@@ -37,6 +37,14 @@ enum class PageDbObjectStatus {
   SYNCED,
 };
 
+// IMPORTANT NOTE for the correctness of garbage-collection:
+// When adding or modifying methods to |PageDbMutator| and |PageDb|, use ObjectIdentifier for inputs
+// to ensure concurrent calls to DeleteObject for the same object are aborted. This is necessary
+// even if, at the storage level, the method only needs to read or write an ObjectDigest: tracking
+// of live references occurs at the ObjectIdentifier level. The only exception is DeleteObject
+// itself, to avoid deletion aborting itself.
+// See the implementation comment on |DeleteObject| in page_db_batch_impl.cc for more details.
+
 // |PageDbMutator| provides all update (insertion and deletion) operations
 // over |PageDb|.
 class PageDbMutator {
@@ -72,15 +80,26 @@ class PageDbMutator {
                                                               const ObjectIdentifier& root_node,
                                                               fxl::StringView storage_bytes) = 0;
 
+  // Deletes the commit with given |commit_id|, referencing |root_node|, from the database.
   FXL_WARN_UNUSED_RESULT virtual Status DeleteCommit(coroutine::CoroutineHandler* handler,
                                                      CommitIdView commit_id,
                                                      const ObjectIdentifier& root_node) = 0;
 
   // Object data.
   // Writes the content of the given object, and reference information from this
-  // object to its |children|.
+  // object to its children.
   FXL_WARN_UNUSED_RESULT virtual Status WriteObject(
       coroutine::CoroutineHandler* handler, const Piece& piece, PageDbObjectStatus object_status,
+      const ObjectReferencesAndPriority& references) = 0;
+
+  // Deletes the object with the given |object_digest|, and reference information from this
+  // object to its children. Aborts and returns an INTERNAL_ERROR if the object is referenced either
+  // from other on-disk objects, or from in-memory object identifiers.
+  // In the |PageDb::Batch| implementation of this method, if the object becomes referenced between
+  // this method successfully returning and |Execute| being called, |Execute| will return an error
+  // instead (but other intermediate method calls on the batch will be unaffected).
+  FXL_WARN_UNUSED_RESULT virtual Status DeleteObject(
+      coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
       const ObjectReferencesAndPriority& references) = 0;
 
   // Object sync metadata.
@@ -117,8 +136,12 @@ class PageDbMutator {
 // cloud.
 class PageDb : public PageDbMutator {
  public:
-  // A |Batch| can be used to execute a number of updates in |PageDb|
-  // atomically.
+  // A |Batch| can be used to execute a number of updates in |PageDb| atomically.
+  // No further operations in a batch are supported after a failed call to any method.
+  //
+  // ObjectIdentifiers passed to batch methods are not automatically kept alive: it is the caller's
+  // responsibility to keep the objects alive until |Execute| has completed, and potentially longer
+  // if they cannot ensure that they already have on-disk references at that point.
   class Batch : public PageDbMutator {
    public:
     Batch() {}

@@ -5,6 +5,8 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_BATCH_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_PAGE_DB_BATCH_IMPL_H_
 
+#include <set>
+
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -13,7 +15,8 @@ namespace storage {
 
 class PageDbBatchImpl : public PageDb::Batch {
  public:
-  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db);
+  explicit PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* page_db, Db* db,
+                           ObjectIdentifierFactory* factory);
   ~PageDbBatchImpl() override;
 
   // Heads.
@@ -37,6 +40,8 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
                      PageDbObjectStatus object_status,
                      const ObjectReferencesAndPriority& references) override;
+  Status DeleteObject(coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
+                      const ObjectReferencesAndPriority& references) override;
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus object_status) override;
@@ -57,10 +62,18 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status Execute(coroutine::CoroutineHandler* handler) override;
 
  private:
+  // Returns true if the object can be garbage collected.
+  bool IsGarbageCollectable(coroutine::CoroutineHandler* handler, const ObjectDigest& digest,
+                            PageDbObjectStatus object_status);
+
   Status DCheckHasObject(coroutine::CoroutineHandler* handler, const ObjectIdentifier& key);
 
   std::unique_ptr<Db::Batch> batch_;
-  PageDb* const db_;
+  PageDb* const page_db_;
+  Db* const db_;
+  ObjectIdentifierFactory* const factory_;
+  // Object digests to be deleted when the batch is executed.
+  std::set<ObjectDigest> pending_deletion_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDbBatchImpl);
 };

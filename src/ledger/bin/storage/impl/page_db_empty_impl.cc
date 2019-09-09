@@ -109,6 +109,11 @@ Status PageDbEmptyImpl::WriteObject(CoroutineHandler* /*handler*/, const Piece& 
                                     const ObjectReferencesAndPriority& /*children*/) {
   return Status::NOT_IMPLEMENTED;
 }
+Status PageDbEmptyImpl::DeleteObject(coroutine::CoroutineHandler* /*handler*/,
+                                     const ObjectDigest& /*object_digest*/,
+                                     const ObjectReferencesAndPriority& /*references*/) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status PageDbEmptyImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
                                         const ObjectIdentifier& /*object_identifier*/,
                                         PageDbObjectStatus /*object_status*/) {

@@ -68,6 +68,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
                      PageDbObjectStatus object_status,
                      const ObjectReferencesAndPriority& references) override;
+  Status DeleteObject(coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
+                      const ObjectReferencesAndPriority& references) override;
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
                             const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler, const CommitId& commit_id,

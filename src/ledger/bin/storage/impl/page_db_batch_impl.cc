@@ -4,11 +4,13 @@
 
 #include "src/ledger/bin/storage/impl/page_db_batch_impl.h"
 
+#include <map>
 #include <memory>
 
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
@@ -25,8 +27,9 @@ namespace storage {
 
 using coroutine::CoroutineHandler;
 
-PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* db)
-    : batch_(std::move(batch)), db_(db) {}
+PageDbBatchImpl::PageDbBatchImpl(std::unique_ptr<Db::Batch> batch, PageDb* page_db, Db* db,
+                                 ObjectIdentifierFactory* factory)
+    : batch_(std::move(batch)), page_db_(page_db), db_(db), factory_(factory) {}
 
 PageDbBatchImpl::~PageDbBatchImpl() = default;
 
@@ -71,7 +74,7 @@ Status PageDbBatchImpl::WriteObject(CoroutineHandler* handler, const Piece& piec
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
   const ObjectIdentifier& object_identifier = piece.GetIdentifier();
-  Status status = db_->HasObject(handler, object_identifier);
+  Status status = page_db_->HasObject(handler, object_identifier);
   if (status == Status::OK) {
     if (object_status == PageDbObjectStatus::TRANSIENT) {
       return Status::OK;
@@ -93,6 +96,89 @@ Status PageDbBatchImpl::WriteObject(CoroutineHandler* handler, const Piece& piec
   return batch_->Put(handler, ObjectStatusRow::GetKeyFor(object_status, object_identifier), "");
 }
 
+// Object deletion of |object_digest| proceeds in several steps:
+// - register the object as pending deletion, and fail if the object already has any live reference.
+//   From this point on, if any other part of the code attempts to create an ObjectIdentifier for
+//   this object (in particular to read or write it), it will automatically mark the deletion as
+//   aborted.
+// - collect all the synchronization statuses for the object. A given object may be known under
+//   different identifiers, with different sync statuses. Do not decode those object identifiers, as
+//   it would create a live reference to the object, that would abort the deletion (see below).
+// - for each status, abort if the object is not garbage collectable (ie. has some on-disk
+//   references) and batch a delete of the associated keys.
+// - batch a delete of the object itself, and all its |references|.
+// - store the digest as pending deletion for this batch.
+//
+// When |Execute| eventually runs, it checks that none of the pending deletions have been aborted,
+// ie. that no live references to the object has been introduced since the first step. No on-disk
+// reference or change of status can have happened either, because all the entry points in PageDb
+// that allow those changes require an ObjectIdentifier as input, the creation of which would have
+// aborted the deletion. This is the reason this method is the only one in |PageDb| operating on
+// ObjectDigest rather than ObjectIdentifier.
+Status PageDbBatchImpl::DeleteObject(coroutine::CoroutineHandler* handler,
+                                     const ObjectDigest& object_digest,
+                                     const ObjectReferencesAndPriority& references) {
+  if (!factory_->StartDeletion(object_digest)) {
+    FXL_VLOG(1) << "Object is live, cannot be deleted: " << object_digest;
+    return Status::INTERNAL_ERROR;
+  }
+  std::map<std::string, PageDbObjectStatus> keys;
+  RETURN_ON_ERROR(page_db_->GetObjectStatusKeys(handler, object_digest, &keys));
+  // |seen_status| is used to ensure that we call |IsGarbageCollectable| only once per status.
+  std::set<PageDbObjectStatus> seen_status;
+  for (const auto& [object_status_key, object_status] : keys) {
+    if (seen_status.insert(object_status).second &&
+        !IsGarbageCollectable(handler, object_digest, object_status)) {
+      // Abort the deletion.
+      (void)factory_->CompleteDeletion(object_digest);
+      FXL_VLOG(1) << "Object is not garbage collectable, cannot be deleted: " << object_digest;
+      return Status::INTERNAL_ERROR;
+    }
+    RETURN_ON_ERROR(batch_->Delete(handler, object_status_key));
+  }
+  RETURN_ON_ERROR(batch_->Delete(handler, ObjectRow::GetKeyFor(object_digest)));
+  for (const auto& [child, priority] : references) {
+    FXL_DCHECK(!GetObjectDigestInfo(child).is_inlined());
+    RETURN_ON_ERROR(
+        batch_->Delete(handler, ReferenceRow::GetKeyForObject(object_digest, child, priority)));
+  }
+  pending_deletion_.insert(object_digest);
+  return Status::OK;
+}
+
+bool PageDbBatchImpl::IsGarbageCollectable(coroutine::CoroutineHandler* handler,
+                                           const ObjectDigest& digest,
+                                           PageDbObjectStatus object_status) {
+  std::string prefix;
+  switch (object_status) {
+    case PageDbObjectStatus::UNKNOWN:
+      FXL_NOTREACHED();
+      return false;
+    case PageDbObjectStatus::SYNCED:
+      // object-object links only for synced objects: even if referenced by on-disk commits,
+      // it is safe to discard them (and recover them later from the cloud).
+      prefix = ReferenceRow::GetObjectKeyPrefixFor(digest);
+      break;
+    case PageDbObjectStatus::TRANSIENT:
+    case PageDbObjectStatus::LOCAL:
+      // object-object and commit-object links must both be zero for all other types of objects.
+      prefix = ReferenceRow::GetKeyPrefixFor(digest);
+      break;
+  }
+  Status status = db_->HasPrefix(handler, prefix);
+  switch (status) {
+    case Status::INTERNAL_NOT_FOUND:
+      // The object is garbage collectable if nothing references it.
+      return true;
+    case Status::OK:
+      // Some references have been found, the object is not collectable.
+      return false;
+    default:
+      // In case of unexpected errors, be conservative.
+      return false;
+  }
+}
+
 Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
                                         const ObjectIdentifier& object_identifier,
                                         PageDbObjectStatus object_status) {
@@ -100,7 +186,7 @@ Status PageDbBatchImpl::SetObjectStatus(CoroutineHandler* handler,
   RETURN_ON_ERROR(DCheckHasObject(handler, object_identifier));
 
   PageDbObjectStatus previous_object_status;
-  RETURN_ON_ERROR(db_->GetObjectStatus(handler, object_identifier, &previous_object_status));
+  RETURN_ON_ERROR(page_db_->GetObjectStatus(handler, object_identifier, &previous_object_status));
   if (previous_object_status >= object_status) {
     return Status::OK;
   }
@@ -131,13 +217,22 @@ Status PageDbBatchImpl::MarkPageOnline(coroutine::CoroutineHandler* handler) {
   return batch_->Put(handler, PageIsOnlineRow::kKey, "");
 }
 
-Status PageDbBatchImpl::Execute(CoroutineHandler* handler) { return batch_->Execute(handler); }
+Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {
+  // Check that no deletion has been aborted.
+  for (const ObjectDigest& object_digest : pending_deletion_) {
+    if (!factory_->CompleteDeletion(object_digest)) {
+      FXL_VLOG(1) << "Deletion has been aborted, object cannot be deleted: " << object_digest;
+      return Status::INTERNAL_ERROR;
+    }
+  }
+  return batch_->Execute(handler);
+}
 
 Status PageDbBatchImpl::DCheckHasObject(CoroutineHandler* handler, const ObjectIdentifier& key) {
 #ifdef NDEBUG
   return Status::OK;
 #else
-  Status status = db_->HasObject(handler, key);
+  Status status = page_db_->HasObject(handler, key);
   if (status == Status::INTERRUPTED) {
     return status;
   }

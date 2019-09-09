@@ -11,6 +11,7 @@
 
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
+#include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -78,6 +79,8 @@ class PageDbImpl : public PageDb {
   Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
                      PageDbObjectStatus object_status,
                      const ObjectReferencesAndPriority& references) override;
+  Status DeleteObject(coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
+                      const ObjectReferencesAndPriority& references) override;
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
                             const CommitId& commit_id) override;
   Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler, const CommitId& commit_id,
@@ -91,7 +94,7 @@ class PageDbImpl : public PageDb {
 
  private:
   ledger::Environment* environment_;
-  ObjectIdentifierFactory* object_identifier_factory_;
+  ObjectIdentifierFactory* const object_identifier_factory_;
   std::unique_ptr<Db> db_;
 };
 

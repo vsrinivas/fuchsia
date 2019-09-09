@@ -38,6 +38,7 @@ namespace {
 using ::coroutine::CoroutineHandler;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
@@ -73,6 +74,22 @@ class PageDbTest : public ledger::TestWithEnvironment {
   ObjectIdentifier RandomObjectIdentifier() {
     return storage::RandomObjectIdentifier(environment_.random(),
                                            page_storage_.GetObjectIdentifierFactory());
+  }
+
+  // Utility function to delete commit |commit_id|. PageDb::DeleteCommit cannot be called directly,
+  // the implementation requires it to be part of a batch.
+  Status DeleteCommit(CoroutineHandler* handler, const CommitId& commit_id,
+                      const ObjectDigest& root_node_digest) {
+    std::unique_ptr<PageDbImpl::Batch> batch;
+    Status status = page_db_.StartBatch(handler, &batch);
+    if (status != Status::OK)
+      return status;
+    status = batch->DeleteCommit(
+        handler, commit_id,
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, root_node_digest));
+    if (status != Status::OK)
+      return status;
+    return batch->Execute(handler);
   }
 
  protected:
@@ -253,6 +270,248 @@ TEST_F(PageDbTest, LazyAndEagerReferences) {
     EXPECT_THAT(references,
                 UnorderedElementsAre(Pair(object_identifier.object_digest(), KeyPriority::LAZY),
                                      Pair(object_identifier.object_digest(), KeyPriority::EAGER)));
+  });
+}
+
+// Tests object deletion is correct, and possible only when there is no in-memory reference to the
+// deleted object.
+TEST_F(PageDbTest, DeleteObjectWithLiveReference) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    // Create an object referencing another one (through both lazy and eager references), but not
+    // referenced by anything.
+    ObjectIdentifier object_identifier = RandomObjectIdentifier();
+    const ObjectDigest object_digest = object_identifier.object_digest();
+    const ObjectIdentifier child_identifier = RandomObjectIdentifier();
+    const ObjectReferencesAndPriority object_references = {
+        {child_identifier.object_digest(), KeyPriority::LAZY},
+        {child_identifier.object_digest(), KeyPriority::EAGER}};
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, object_references),
+              Status::OK);
+
+    // Check that the object, status and references have been written correctly.
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier), Status::OK);
+
+    PageDbObjectStatus object_status;
+    EXPECT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+    EXPECT_EQ(object_status, PageDbObjectStatus::LOCAL);
+
+    ObjectReferencesAndPriority references;
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, child_identifier, &references),
+              Status::OK);
+    EXPECT_THAT(references, Not(IsEmpty()));
+
+    // First attempt to delete the object. This should fail because |object_identifier| still
+    // references it.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, object_references),
+              Status::INTERNAL_ERROR);
+
+    // Discard the live reference.
+    object_identifier = ObjectIdentifier();
+
+    // Second attempt to delete the object and its references.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, object_references), Status::OK);
+
+    // Mint a new reference to the object.
+    object_identifier =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest);
+
+    // Check that object, its status and its references are gone.
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier), Status::INTERNAL_NOT_FOUND);
+    EXPECT_EQ(page_db_.GetObjectStatus(handler, object_identifier, &object_status), Status::OK);
+    EXPECT_EQ(object_status, PageDbObjectStatus::UNKNOWN);
+    EXPECT_EQ(page_db_.GetInboundObjectReferences(handler, child_identifier, &references),
+              Status::OK);
+    EXPECT_THAT(references, IsEmpty());
+  });
+}
+
+// Tests that creating an in-memory reference to an object pending deletion aborts the deletion.
+TEST_F(PageDbTest, DeleteObjectAbortedByLiveReference) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    // Create an object not referenced by anything.
+    ObjectIdentifier object_identifier = RandomObjectIdentifier();
+    const ObjectDigest object_digest = object_identifier.object_digest();
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, {}),
+              Status::OK);
+
+    // Check that the object, status and references have been written correctly.
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier), Status::OK);
+
+    // Attempt to start deletion, fails because the object is live.
+    std::unique_ptr<PageDbImpl::Batch> batch;
+    ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+
+    // Discard the live reference.
+    object_identifier = ObjectIdentifier();
+
+    // Second attempt to start deletion.
+    ASSERT_EQ(page_db_.StartBatch(handler, &batch), Status::OK);
+    EXPECT_EQ(batch->DeleteObject(handler, object_digest, {}), Status::OK);
+
+    // Mint a new reference to the object, which aborts the pending deletion.
+    object_identifier =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest);
+
+    // Check that deletion has been aborted.
+    EXPECT_EQ(batch->Execute(handler), Status::INTERNAL_ERROR);
+  });
+}
+
+// Tests that on-disk references prevent deletion of a transient object, discarding commit-object
+// reference first.
+TEST_F(PageDbTest, DeleteTransientObjectWithOnDiskReferences) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    // Create an object referenced by another object and a commit.
+    ObjectIdentifier object_identifier = RandomObjectIdentifier();
+    const ObjectDigest object_digest = object_identifier.object_digest();
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::TRANSIENT, {}),
+              Status::OK);
+
+    ObjectIdentifier parent_identifier = RandomObjectIdentifier();
+    const ObjectDigest parent_digest = parent_identifier.object_digest();
+    const ObjectReferencesAndPriority parent_references = {{object_digest, KeyPriority::EAGER}};
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(parent_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, parent_references),
+              Status::OK);
+
+    const CommitId commit_id = RandomCommitId(environment_.random());
+    EXPECT_EQ(
+        page_db_.AddCommitStorageBytes(handler, commit_id, object_identifier, "fake storage bytes"),
+        Status::OK);
+
+    // Discard the live references.
+    object_identifier = ObjectIdentifier();
+    parent_identifier = ObjectIdentifier();
+
+    // Deletion should fail because of the on-disk references.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+
+    // Discard the commit-object on-disk reference.
+    EXPECT_EQ(DeleteCommit(handler, commit_id, object_digest), Status::OK);
+
+    // Deletion should still fail because of the object-object reference.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+
+    // Discard the object-object on-disk reference.
+    EXPECT_EQ(page_db_.DeleteObject(handler, parent_digest, parent_references), Status::OK);
+
+    // Deletion now succeeds.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::OK);
+
+    // Mint a new reference to the object.
+    object_identifier =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest);
+
+    // Check that object is gone.
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier), Status::INTERNAL_NOT_FOUND);
+  });
+}
+
+// Tests that on-disk references prevent deletion of a local object, discarding object-object
+// reference first.
+TEST_F(PageDbTest, DeleteLocalObjectWithOnDiskReferences) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    // Create an object referenced by another object and a commit.
+    ObjectIdentifier object_identifier = RandomObjectIdentifier();
+    const ObjectDigest object_digest = object_identifier.object_digest();
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, {}),
+              Status::OK);
+
+    ObjectIdentifier parent_identifier = RandomObjectIdentifier();
+    const ObjectDigest parent_digest = parent_identifier.object_digest();
+    const ObjectReferencesAndPriority parent_references = {{object_digest, KeyPriority::EAGER}};
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(parent_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, parent_references),
+              Status::OK);
+
+    const CommitId commit_id = RandomCommitId(environment_.random());
+    EXPECT_EQ(
+        page_db_.AddCommitStorageBytes(handler, commit_id, object_identifier, "fake storage bytes"),
+        Status::OK);
+
+    // Discard the live references.
+    object_identifier = ObjectIdentifier();
+    parent_identifier = ObjectIdentifier();
+
+    // Deletion should fail because of the on-disk references.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+
+    // Discard the object-object on-disk reference.
+    EXPECT_EQ(page_db_.DeleteObject(handler, parent_digest, parent_references), Status::OK);
+
+    // Deletion should still fail because of the commit-object reference.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+
+    // Discard the commit-object on-disk reference.
+    EXPECT_EQ(DeleteCommit(handler, commit_id, object_digest), Status::OK);
+
+    // Deletion now succeeds.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::OK);
+
+    // Mint a new reference to the object.
+    object_identifier =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest);
+
+    // Check that object is gone.
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier), Status::INTERNAL_NOT_FOUND);
+  });
+}
+
+// Tests that object-object on-disk references prevent deletion of a synchronized object.
+// Commit-object reference should not prevent deletion.
+TEST_F(PageDbTest, DeleteSyncedObjectWithOnDiskReferences) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    // Create an object referenced by another object and a commit.
+    ObjectIdentifier object_identifier = RandomObjectIdentifier();
+    const ObjectDigest object_digest = object_identifier.object_digest();
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(object_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::SYNCED, {}),
+              Status::OK);
+
+    ObjectIdentifier parent_identifier = RandomObjectIdentifier();
+    const ObjectDigest parent_digest = parent_identifier.object_digest();
+    const ObjectReferencesAndPriority parent_references = {{object_digest, KeyPriority::EAGER}};
+    ASSERT_EQ(page_db_.WriteObject(
+                  handler, DataChunkPiece(parent_identifier, DataSource::DataChunk::Create("")),
+                  PageDbObjectStatus::LOCAL, parent_references),
+              Status::OK);
+
+    const CommitId commit_id = RandomCommitId(environment_.random());
+    EXPECT_EQ(
+        page_db_.AddCommitStorageBytes(handler, commit_id, object_identifier, "fake storage bytes"),
+        Status::OK);
+
+    // Discard the live references.
+    object_identifier = ObjectIdentifier();
+    parent_identifier = ObjectIdentifier();
+
+    // Deletion should fail because of the object-object reference.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::INTERNAL_ERROR);
+
+    // Discard the object-object on-disk reference.
+    EXPECT_EQ(page_db_.DeleteObject(handler, parent_digest, parent_references), Status::OK);
+
+    // Deletion now succeeds.
+    EXPECT_EQ(page_db_.DeleteObject(handler, object_digest, {}), Status::OK);
+
+    // Mint a new reference to the object.
+    object_identifier =
+        page_storage_.GetObjectIdentifierFactory()->MakeObjectIdentifier(1u, object_digest);
+
+    // Check that object is gone.
+    EXPECT_EQ(page_db_.HasObject(handler, object_identifier), Status::INTERNAL_NOT_FOUND);
   });
 }
 

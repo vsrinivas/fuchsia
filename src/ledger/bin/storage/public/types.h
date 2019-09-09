@@ -163,7 +163,6 @@ class ObjectIdentifierFactory {
   // pending deletion and the deletion was not aborted already. Returns false otherwise (which means
   // that deletion cannot proceed safely).
   FXL_WARN_UNUSED_RESULT virtual bool CompleteDeletion(const ObjectDigest& object_digest) = 0;
-
 };
 
 // Object-object references, for garbage collection.
