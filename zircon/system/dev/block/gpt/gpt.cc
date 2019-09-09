@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/cksum.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +29,7 @@
 #include <ddk/metadata/gpt.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/block/partition.h>
+#include <fbl/auto_call.h>
 #include <gpt/c/gpt.h>
 #include <gpt/gpt.h>
 
@@ -121,22 +123,6 @@ void utf16_to_cstring(char* dst, uint8_t* src, size_t charcount) {
   }
 }
 
-uint64_t get_lba_count(gptpart_device_t* dev) {
-  // last LBA is inclusive
-  return dev->gpt_entry.last - dev->gpt_entry.first + 1;
-}
-
-bool validate_header(const gpt_t* header, const block_info_t* info) {
-  zx_status_t status = ValidateHeader(header, info->block_count);
-
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "gpt: %s\n", HeaderStatusToCString(status));
-    return false;
-  }
-
-  return true;
-}
-
 void apply_guid_map(const guid_map_t* guid_map, size_t entries, const char* name, uint8_t* type) {
   for (size_t i = 0; i < entries; i++) {
     if (strncmp(name, guid_map[i].name, GPT_NAME_LEN) == 0) {
@@ -160,7 +146,7 @@ void gpt_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_
     case BLOCK_OP_READ:
     case BLOCK_OP_WRITE: {
       size_t blocks = bop->rw.length;
-      size_t max = get_lba_count(gpt);
+      size_t max = EntryBlockCount(&gpt->gpt_entry).value();
 
       // Ensure that the request is in-bounds
       if ((bop->rw.offset_dev >= max) || ((max - bop->rw.offset_dev) < blocks)) {
@@ -272,13 +258,41 @@ void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
   sync_completion_signal((sync_completion_t*)cookie);
 }
 
-zx_status_t vmo_read(zx_handle_t vmo, void* data, uint64_t off, size_t len) {
-  return zx_vmo_read(vmo, data, off, len);
+zx_status_t ReadBlocks(block_impl_protocol_t* block_protocol, size_t block_op_size,
+                       const block_info_t& block_info, uint32_t block_count, uint64_t block_offset,
+                       uint8_t* out_buffer) {
+  zx_status_t status;
+  sync_completion_t completion;
+  std::unique_ptr<uint8_t[]> bop_buffer(new uint8_t[block_op_size]);
+  block_op_t* bop = reinterpret_cast<block_op_t*>(bop_buffer.get());
+  zx::vmo vmo;
+  if ((status = zx::vmo::create(block_count * block_info.block_size, 0, &vmo)) != ZX_OK) {
+    zxlogf(ERROR, "gpt: VMO create failed(%d)\n", status);
+    return status;
+  }
+
+  bop->command = BLOCK_OP_READ;
+  bop->rw.vmo = vmo.get();
+  bop->rw.length = block_count;
+  bop->rw.offset_dev = block_offset;
+  bop->rw.offset_vmo = 0;
+
+  block_protocol->ops->queue(block_protocol->ctx, bop, gpt_read_sync_complete, &completion);
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  if (bop->command != ZX_OK) {
+    zxlogf(ERROR, "gpt: error %d reading GPT\n", bop->command);
+    return bop->command;
+  }
+
+  return vmo.read(out_buffer, 0, block_info.block_size * block_count);
 }
 
 int gpt_bind_thread(void* arg) {
   std::unique_ptr<ThreadArgs> thread_args(static_cast<ThreadArgs*>(arg));
   gptpart_device_t* first_dev = thread_args->first_device();
+
+  auto remove_first_dev = fbl::MakeAutoCall([&first_dev]() { device_remove(first_dev->zxdev); });
+
   zx_device_t* dev = first_dev->parent;
 
   const guid_map_t* guid_map = thread_args->guid_map();
@@ -286,11 +300,6 @@ int gpt_bind_thread(void* arg) {
 
   // used to keep track of number of partitions found
   unsigned partitions = 0;
-  uint64_t dev_block_count;
-  uint64_t length;
-  uint32_t crc;
-  size_t table_sz;
-  sync_completion_t completion;
 
   block_impl_protocol_t block_protocol;
   memcpy(&block_protocol, &first_dev->block_protocol, sizeof(block_protocol));
@@ -299,108 +308,66 @@ int gpt_bind_thread(void* arg) {
   size_t block_op_size;
   block_protocol.ops->query(block_protocol.ctx, &block_info, &block_op_size);
 
-  zx_handle_t vmo = ZX_HANDLE_INVALID;
-  block_op_t* bop = static_cast<block_op_t*>(calloc(1, block_op_size));
-  if (bop == NULL) {
-    goto unbind;
+  auto result = MinimumBlocksPerCopy(block_info.block_size);
+  if (result.is_error()) {
+    zxlogf(ERROR, "gpt: block_size(%u) minimum blocks failed: %d\n", block_info.block_size,
+           result.error());
+    return -1;
+  } else if (result.value() > UINT32_MAX) {
+    zxlogf(ERROR, "gpt: number of blocks(%lu) required for gpt is too large!\n", result.value());
+    return -1;
   }
 
-  if (zx_vmo_create(kMaxPartitionTableSize, 0, &vmo) != ZX_OK) {
-    zxlogf(ERROR, "gpt: cannot allocate vmo\n");
-    goto unbind;
+  auto minimum_device_blocks = MinimumBlockDeviceSize(block_info.block_size);
+  if (minimum_device_blocks.is_error()) {
+    zxlogf(ERROR, "gpt: failed to get minimum device blocks for block_size(%u)\n",
+           block_info.block_size);
+    return -1;
   }
+
+  if (block_info.block_count <= minimum_device_blocks.value()) {
+    zxlogf(ERROR, "gpt: block device too small to hold GPT required:%lu found:%lu\n",
+           minimum_device_blocks.value(), block_info.block_count);
+    return -1;
+  }
+
+  uint32_t gpt_block_count = static_cast<uint32_t>(result.value());
+  size_t gpt_buffer_size = gpt_block_count * block_info.block_size;
+  std::unique_ptr<uint8_t[]> buffer(new uint8_t[gpt_buffer_size]);
+  fbl::unique_ptr<GptDevice> gpt;
 
   // sanity check the default txn size with the block size
   if ((kMaxPartitionTableSize % block_info.block_size) ||
       (kMaxPartitionTableSize < block_info.block_size)) {
     zxlogf(ERROR, "gpt: default txn size=%lu is not aligned to blksize=%u!\n",
            kMaxPartitionTableSize, block_info.block_size);
-    goto unbind;
+    return -1;
   }
 
-  // read partition table header synchronously (LBA1)
-  bop->command = BLOCK_OP_READ;
-  bop->rw.vmo = vmo;
-  bop->rw.length = 1;
-  bop->rw.offset_dev = 1;
-  bop->rw.offset_vmo = 0;
-
-  block_protocol.ops->queue(block_protocol.ctx, bop, gpt_read_sync_complete, &completion);
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  if (bop->command != ZX_OK) {
-    zxlogf(ERROR, "gpt: error %d reading partition header\n", bop->command);
-    goto unbind;
+  if (ReadBlocks(&block_protocol, block_op_size, block_info, gpt_block_count, 1, buffer.get()) !=
+      ZX_OK) {
+    return -1;
   }
 
-  // read the header
-  gpt_t header;
-  if (vmo_read(vmo, &header, 0, sizeof(gpt_t)) != ZX_OK) {
-    goto unbind;
-  }
-  if (!validate_header(&header, &block_info)) {
-    goto unbind;
+  zx_status_t status;
+  if ((status = GptDevice::Load(buffer.get(), gpt_buffer_size, block_info.block_size,
+                                block_info.block_count, &gpt)) != ZX_OK) {
+    zxlogf(ERROR, "gpt: failed to load gpt- %s\n", HeaderStatusToCString(status));
+    return -1;
   }
 
-  zxlogf(SPEW, "gpt: found gpt header %u entries @ lba%" PRIu64 "\n", header.entries_count,
-         header.entries);
+  zxlogf(SPEW, "gpt: found gpt header\n");
 
-  // read partition table entries
-  table_sz = header.entries_count * header.entries_size;
-  if (table_sz > kMaxPartitionTableSize) {
-    zxlogf(INFO, "gpt: partition table is larger than the buffer!\n");
-    // FIXME read the whole partition table. ok for now because on pixel2, this is
-    // enough to read the entries that actually contain valid data
-    table_sz = kMaxPartitionTableSize;
-  }
+  for (partitions = 0; partitions < gpt->EntryCount(); partitions++) {
+    auto entry = gpt->GetPartition(partitions);
 
-  bop->command = BLOCK_OP_READ;
-  bop->rw.vmo = vmo;
-  length = (table_sz + (block_info.block_size - 1)) / block_info.block_size;
-  ZX_DEBUG_ASSERT(length <= UINT32_MAX);
-  bop->rw.length = static_cast<uint32_t>(length);
-  bop->rw.offset_dev = header.entries;
-  bop->rw.offset_vmo = 0;
-
-  sync_completion_reset(&completion);
-  block_protocol.ops->queue(block_protocol.ctx, bop, gpt_read_sync_complete, &completion);
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
-  if (bop->command != ZX_OK) {
-    zxlogf(ERROR, "gpt: error %d reading partition table\n", bop->command);
-    goto unbind;
-  }
-
-  uint8_t entries[kMaxPartitionTableSize];
-  if (vmo_read(vmo, entries, 0, kMaxPartitionTableSize) != ZX_OK) {
-    goto unbind;
-  }
-
-  crc = crc32(0, static_cast<const unsigned char*>(entries), table_sz);
-  if (crc != header.entries_crc) {
-    zxlogf(ERROR, "gpt: entries crc invalid\n");
-    goto unbind;
-  }
-
-  dev_block_count = block_info.block_count;
-
-  for (partitions = 0; partitions < header.entries_count; partitions++) {
-    if (partitions * header.entries_size > table_sz)
-      break;
-
-    // skip over entries that look invalid
-    gpt_entry_t* entry = (gpt_entry_t*)(entries + (partitions * sizeof(gpt_entry_t)));
-    if (entry->first < header.first || entry->last > header.last) {
+    if (entry == nullptr) {
       continue;
     }
-    if (entry->first == entry->last) {
-      continue;
-    }
-    if ((entry->last - entry->first + 1) > dev_block_count) {
-      zxlogf(ERROR,
-             "gpt: entry %u too large, last = 0x%" PRIx64 " first = 0x%" PRIx64
-             " block_count = 0x%" PRIx64 "\n",
-             partitions, entry->last, entry->first, dev_block_count);
-      continue;
-    }
+
+    auto result = ValidateEntry(entry);
+    ZX_DEBUG_ASSERT(result.is_ok());
+    ZX_DEBUG_ASSERT(result.value() == true);
 
     gptpart_device_t* device;
     // use first_dev for first partition
@@ -410,7 +377,7 @@ int gpt_bind_thread(void* arg) {
       device = static_cast<gptpart_device_t*>(calloc(1, sizeof(gptpart_device_t)));
       if (!device) {
         zxlogf(ERROR, "gpt: out of memory!\n");
-        goto unbind;
+        return -1;
       }
       device->parent = dev;
       memcpy(&device->block_protocol, &block_protocol, sizeof(block_protocol));
@@ -435,6 +402,7 @@ int gpt_bind_thread(void* arg) {
       // make our initial device visible and use if for partition zero
       device_make_visible(first_dev->zxdev);
       first_dev = NULL;
+      remove_first_dev.cancel();
     } else {
       char name[128];
       snprintf(name, sizeof(name), "part-%03u", partitions);
@@ -460,19 +428,7 @@ int gpt_bind_thread(void* arg) {
     }
   }
 
-  free(bop);
-  zx_handle_close(vmo);
   return 0;
-
-unbind:
-  free(bop);
-  zx_handle_close(vmo);
-
-  if (first_dev) {
-    // handle case where no partitions were found
-    device_remove(first_dev->zxdev);
-  }
-  return -1;
 }
 
 zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
