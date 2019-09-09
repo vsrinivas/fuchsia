@@ -170,18 +170,19 @@ mod tests {
             .expect("failed to wait for blobfs load generator process");
 
         println!("remounting blobfs");
-        let mount_point = "/test-blobfs-root";
+        // let mount_point = "/test-blobfs-root";
         blobfs.unmount().expect("failed to unmount blobfs the first time");
-        blobfs.mount(mount_point).expect("failed to mount blobfs");
+        // TODO(36143): re-enable this part of the test once it's deflaked
+        // blobfs.mount(mount_point).expect("failed to mount blobfs");
 
-        println!("confirming there is at least one file in blobfs");
-        let mut dir = std::fs::read_dir(mount_point).expect("failed to read blobfs directory");
+        // println!("confirming there is at least one file in blobfs");
+        // let mut dir = std::fs::read_dir(mount_point).expect("failed to read blobfs directory");
 
-        let entry = dir.next().expect("no files in blobfs").expect("failed to get directory entry");
-        let typ = entry.file_type().expect("failed to get file type");
-        assert!(typ.is_file());
+        // let entry = dir.next().expect("no files in blobfs").expect("failed to get directory entry");
+        // let typ = entry.file_type().expect("failed to get file type");
+        // assert!(typ.is_file());
 
-        println!("unmounting blobfs");
-        blobfs.unmount().expect("failed to unmount blobfs the second time");
+        // println!("unmounting blobfs");
+        // blobfs.unmount().expect("failed to unmount blobfs the second time");
     }
 }
