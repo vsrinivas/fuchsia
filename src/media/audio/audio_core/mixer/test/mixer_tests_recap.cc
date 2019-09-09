@@ -1,6 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include "src/media/audio/audio_core/mixer/test/mixer_tests_recap.h"
+
 #include "gtest/gtest.h"
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/mixer_tests_shared.h"
@@ -8,11 +10,18 @@
 namespace media::audio::test {
 
 //
-// These test functions, run after all other details tests have executed, producing a digest of the
-// various audio fidelity measurements made.
+// These produce a digest of the results from our detailed audio fidelity tests.
 //
-TEST(Recap, FreqResp) {
-  printf("\n Frequency Response");
+void MixerTestsRecap::PrintFidelityResultsSummary() {
+  PrintFrequencyResponseSummary();
+  PrintSinadSummary();
+  PrintOutOfBandRejectionSummary();
+  PrintNoiseFloorSummary();
+  PrintDynamicRangeSummary();
+}
+
+void MixerTestsRecap::PrintFrequencyResponseSummary() {
+  printf("\n\n Frequency Response");
   printf("\n   (in dB, with prior results)");
   const uint32_t num_freqs =
       (FrequencySet::UseFullFrequencySet ? FrequencySet::kNumInBandReferenceFreqs
@@ -180,8 +189,8 @@ TEST(Recap, FreqResp) {
   printf("\n\n");
 }
 
-TEST(Recap, SINAD) {
-  printf("\n Signal-to-Noise-and-Distortion (SINAD)");
+void MixerTestsRecap::PrintSinadSummary() {
+  printf("\n\n Signal-to-Noise-and-Distortion (SINAD)");
   printf("\n   (in dB, with prior results)");
   uint32_t num_freqs = (FrequencySet::UseFullFrequencySet ? FrequencySet::kNumInBandReferenceFreqs
                                                           : FrequencySet::kSummaryIdxs.size());
@@ -346,12 +355,12 @@ TEST(Recap, SINAD) {
   printf("\n\n");
 }
 
-TEST(Recap, Rejection) {
-  printf("\n Out-of-band Rejection");
+void MixerTestsRecap::PrintOutOfBandRejectionSummary() {
+  printf("\n\n Out-of-band Rejection");
   printf("\n   (in dB, with prior results)");
 
   if (!FrequencySet::UseFullFrequencySet) {
-    printf("\n\n   Results are not applicable, for summary testing\n\n");
+    printf("\n\n   Results only given for full-spectrum testing\n\n");
     return;
   }
 
@@ -423,7 +432,7 @@ TEST(Recap, Rejection) {
   }
 
   printf("\n\n");
-}  // namespace media::audio::test
+}
 
 //
 // Display our baseline noise floor measurements, in decibels below full-scale
@@ -432,8 +441,8 @@ TEST(Recap, Rejection) {
 // AudioRenderer or audio Input device, for example). 'Output' noise floor is the demonstrated
 // best-case background noise when emitting audio (to an audio Output device or AudioCapturer, for
 // example).
-TEST(Recap, NoiseFloor) {
-  printf("\n Best-case noise-floor");
+void MixerTestsRecap::PrintNoiseFloorSummary() {
+  printf("\n\n Best-case noise-floor");
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n   Sources");
@@ -479,8 +488,8 @@ TEST(Recap, NoiseFloor) {
 //
 // Display our gain sensitivity and dynamic range, in decibels
 //
-TEST(Recap, DynamicRange) {
-  printf("\n Dynamic Range");
+void MixerTestsRecap::PrintDynamicRangeSummary() {
+  printf("\n\n Dynamic Range");
   printf("\n   (in dB, with prior results)");
 
   printf("\n\n      Input Gain       Mixed Result          Usable Range\n");

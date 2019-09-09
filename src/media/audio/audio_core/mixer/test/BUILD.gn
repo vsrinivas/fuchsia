@@ -33,6 +33,7 @@ executable("test_bin") {
     "mixer_resampling_tests.cc",
     "mixer_response_tests.cc",
     "mixer_tests_recap.cc",
+    "mixer_tests_recap.h",
     "mixer_tests_shared.cc",
     "mixer_tests_shared.h",
   ]

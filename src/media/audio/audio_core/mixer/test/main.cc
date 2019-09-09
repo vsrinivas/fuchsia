@@ -8,6 +8,8 @@
 #include "src/media/audio/audio_core/mixer/test/audio_performance.h"
 #include "src/media/audio/audio_core/mixer/test/audio_result.h"
 #include "src/media/audio/audio_core/mixer/test/frequency_set.h"
+#include "src/media/audio/audio_core/mixer/test/mixer_tests_recap.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -15,6 +17,13 @@ int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(command_line)) {
     return EXIT_FAILURE;
   }
+
+#ifdef NDEBUG
+  media::audio::Logging::Init(fxl::LOG_WARNING);
+#else
+  // For verbose logging, set to -media::audio::TRACE or -media::audio::SPEW
+  media::audio::Logging::Init(fxl::LOG_INFO);
+#endif
 
   // --full     Display results for the full frequency spectrum.
   // --dump     Display results in importable format.
@@ -29,6 +38,8 @@ int main(int argc, char** argv) {
 
   testing::InitGoogleTest(&argc, argv);
   int result = RUN_ALL_TESTS();
+
+  media::audio::test::MixerTestsRecap::PrintFidelityResultsSummary();
 
   if (dump_threshold_values) {
     media::audio::test::AudioResult::DumpThresholdValues();
