@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "src/ledger/bin/app/active_page_manager_container.h"
+#include "src/ledger/bin/app/commits_children_manager.h"
 #include "src/ledger/bin/app/heads_children_manager.h"
 #include "src/ledger/bin/app/inspectable_page.h"
 #include "src/ledger/bin/app/ledger_impl.h"
@@ -168,7 +169,8 @@ class PageManager : InspectablePage {
   // The static Inspect object to which this |PageManager|'s commits are
   // attached.
   inspect_deprecated::Node commits_node_;
-  fit::deferred_callback children_manager_retainer_;
+  CommitsChildrenManager commits_children_manager_;
+  fit::deferred_callback commits_children_manager_retainer_;
 
   // A nonnegative count of the number of "registered interests" for this
   // |PageManager|. This field is incremented by calls to |CreateDetacher| and

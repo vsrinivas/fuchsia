@@ -83,6 +83,8 @@ class ActivePageManager {
       fit::function<void(Status, std::vector<std::unique_ptr<const storage::Commit>>)> callback);
 
   // Reports to |callback| the |storage::Commit| with the given |storage::CommitId|.
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=35416): What status is passed to the
+  // callback in the commit-was-garbage-collected circumstance?
   void GetCommit(const storage::CommitId& commit_id,
                  fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback);
 

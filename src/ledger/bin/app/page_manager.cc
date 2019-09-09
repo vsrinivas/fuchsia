@@ -20,6 +20,7 @@
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/active_page_manager_container.h"
+#include "src/ledger/bin/app/commits_children_manager.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/heads_children_manager.h"
 #include "src/ledger/bin/app/ledger_impl.h"
@@ -54,12 +55,19 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
       heads_children_manager_(&heads_node_, this),
       heads_children_manager_retainer_(heads_node_.SetChildrenManager(&heads_children_manager_)),
       commits_node_(inspect_node_.CreateChild(kCommitsInspectPathComponent.ToString())),
+      commits_children_manager_(&commits_node_, this),
+      commits_children_manager_retainer_(
+          commits_node_.SetChildrenManager(&commits_children_manager_)),
       weak_factory_(this) {
   page_availability_manager_.set_on_empty([this] { CheckEmpty(); });
   heads_children_manager_.set_on_empty([this] { CheckEmpty(); });
+  commits_children_manager_.set_on_empty([this] { CheckEmpty(); });
 }
 
-PageManager::~PageManager() { heads_children_manager_retainer_.cancel(); }
+PageManager::~PageManager() {
+  heads_children_manager_retainer_.cancel();
+  commits_children_manager_retainer_.cancel();
+}
 
 fit::closure PageManager::CreateDetacher() {
   outstanding_detachers_++;
@@ -340,7 +348,8 @@ void PageManager::CheckEmpty() {
   if (on_empty_callback_ &&
       (!active_page_manager_container_ || active_page_manager_container_->IsEmpty()) &&
       outstanding_operations_ == 0 && page_availability_manager_.IsEmpty() &&
-      outstanding_detachers_ == 0 && heads_children_manager_.IsEmpty()) {
+      outstanding_detachers_ == 0 && heads_children_manager_.IsEmpty() &&
+      commits_children_manager_.IsEmpty()) {
     on_empty_callback_();
   }
 }

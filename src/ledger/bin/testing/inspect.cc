@@ -126,9 +126,31 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
   return Inspect(&inspect_ptr, &loop_controller, hierarchy);
 }
 
+::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> CommitMatches(
+    const std::optional<const storage::CommitId>& commit_id,
+    const std::set<storage::CommitId>& parents) {
+  std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>> parent_matchers;
+  parent_matchers.reserve(parents.size());
+  for (const storage::CommitId& parent : parents) {
+    parent_matchers.push_back(NodeMatches(NameMatches(CommitIdToDisplayName(parent))));
+  }
+  const testing::Matcher<const inspect_deprecated::ObjectHierarchy&> children_matcher =
+      ChildrenMatch(
+          ElementsAre(AllOf(NodeMatches(NameMatches(kParentsInspectPathComponent.ToString())),
+                            ChildrenMatch(ElementsAreArray(parent_matchers)))));
+  if (commit_id) {
+    return AllOf(NodeMatches(NameMatches(CommitIdToDisplayName(commit_id.value()))),
+                 children_matcher);
+  } else {
+    return children_matcher;
+  }
+}
+
 ::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> PageMatches(
     const convert::ExtendedStringView& page_id,
-    const std::set<const std::optional<const storage::CommitId>>& heads) {
+    const std::set<const std::optional<const storage::CommitId>>& heads,
+    const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
+        commit_matchers) {
   std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>> head_matchers;
   head_matchers.reserve(heads.size());
   for (const std::optional<const storage::CommitId>& head : heads) {
@@ -140,7 +162,8 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
   }
   return AllOf(NodeMatches(NameMatches(PageIdToDisplayName(page_id.ToString()))),
                ChildrenMatch(ElementsAre(
-                   NodeMatches(NameMatches(kCommitsInspectPathComponent.ToString())),
+                   AllOf(NodeMatches(NameMatches(kCommitsInspectPathComponent.ToString())),
+                         ChildrenMatch(UnorderedElementsAreArray(commit_matchers))),
                    AllOf(NodeMatches(NameMatches(kHeadsInspectPathComponent.ToString())),
                          ChildrenMatch(UnorderedElementsAreArray(head_matchers))))));
 }

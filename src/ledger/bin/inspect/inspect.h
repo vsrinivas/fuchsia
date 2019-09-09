@@ -21,6 +21,7 @@ inline fxl::StringView kLedgersInspectPathComponent = "ledgers";
 inline fxl::StringView kPagesInspectPathComponent = "pages";
 inline fxl::StringView kHeadsInspectPathComponent = "heads";
 inline fxl::StringView kCommitsInspectPathComponent = "commits";
+inline fxl::StringView kParentsInspectPathComponent = "parents";
 inline fxl::StringView kEntriesInspectPathComponent = "entries";
 // TODO(nathaniel): "requests" was introduced as a demonstration; it should be
 // either given real meaning or cleaned up.

@@ -56,23 +56,21 @@ testing::AssertionResult Inspect(fidl::InterfacePtr<fuchsia::inspect::Inspect>* 
 // at |kSystemUnderTestAttachmentPointPathComponent|, reads the exposed Inspect data of the system
 // under test and assigned to |hierarchy| the |inspect_deprecated::ObjectHierarchy| of the read
 // data.
-testing::AssertionResult Inspect(fidl::InterfacePtr<fuchsia::inspect::Inspect>* top_level,
-                                 LoopController* loop_controller,
-                                 inspect_deprecated::ObjectHierarchy* hierarchy);
-
-// Given an |inspect_deprecated::Node| under which another |inspect_deprecated::Node| is available
-// at |kSystemUnderTestAttachmentPointPathComponent|, reads the exposed Inspect data of the system
-// under test and assigned to |hierarchy| the |inspect_deprecated::ObjectHierarchy| of the read
-// data.
 testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
                                  async::TestLoop* test_loop,
                                  inspect_deprecated::ObjectHierarchy* hierarchy);
 
+testing::Matcher<const inspect_deprecated::ObjectHierarchy&> CommitMatches(
+    const std::optional<const storage::CommitId>& commit_id,
+    const std::set<storage::CommitId>& parents);
+
 // Matches an |inspect_deprecated::ObjectHierarchy| node named according to |page_id| with heads
-// |heads|.
+// |heads| and commits matching |commit_matchers|.
 testing::Matcher<const inspect_deprecated::ObjectHierarchy&> PageMatches(
     const convert::ExtendedStringView& page_id,
-    const std::set<const std::optional<const storage::CommitId>>& heads);
+    const std::set<const std::optional<const storage::CommitId>>& heads,
+    const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
+        commit_matchers);
 
 // Matches an |inspect_deprecated::ObjectHierarchy| node named according to |ledger_name| under
 // which is a node named according to |kPagesInspectPathComponent| under which are nodes that match

@@ -103,6 +103,8 @@ class PageStorage : public PageSyncClient {
   // Finds the commit with the given |commit_id| and calls the given |callback|
   // with the result. |PageStorage| must outlive any |Commit| obtained through
   // it.
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=35416): What status is passed to the
+  // callback in the commit-was-garbage-collected circumstance?
   virtual void GetCommit(CommitIdView commit_id,
                          fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
 
@@ -244,7 +246,7 @@ class PageStorage : public PageSyncClient {
   // Iterates over the entries of the given |commit| and calls |on_next| on
   // found entries with a key equal to or greater than |min_key|. Returning
   // false from |on_next| will immediately stop the iteration. |on_done| is
-  // called once, upon successfull completion, i.e. when there are no more
+  // called once, upon successful completion, i.e. when there are no more
   // elements or iteration was interrupted, or if an error occurs.
   virtual void GetCommitContents(const Commit& commit, std::string min_key,
                                  fit::function<bool(Entry)> on_next,
@@ -270,7 +272,7 @@ class PageStorage : public PageSyncClient {
 
   // Iterates over the difference between the contents of two commits and calls |on_next_diff| on
   // found changed entries. Returning false from |on_next_diff| will immediately stop the iteration.
-  // |on_done| is called once, upon successfull completion, i.e. when there are no more differences
+  // |on_done| is called once, upon successful completion, i.e. when there are no more differences
   // or iteration was interrupted, or if an error occurs.
   virtual void GetCommitContentsDiff(const Commit& base_commit, const Commit& other_commit,
                                      std::string min_key,
@@ -279,7 +281,7 @@ class PageStorage : public PageSyncClient {
 
   // Computes the 3-way diff between a base commit and two other commits. Calls |on_next_diff| on
   // found changed entries. Returning false from |on_next_diff| will immediately stop the iteration.
-  // |on_done| is called once, upon successfull completion, i.e. when there are no more differences
+  // |on_done| is called once, upon successful completion, i.e. when there are no more differences
   // or iteration was interrupted, or if an error occurs.
   virtual void GetThreeWayContentsDiff(const Commit& base_commit, const Commit& left_commit,
                                        const Commit& right_commit, std::string min_key,
