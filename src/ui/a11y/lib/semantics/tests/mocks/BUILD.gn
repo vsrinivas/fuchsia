@@ -7,12 +7,17 @@ source_set("mocks") {
 
   public = [
     "mock_semantic_provider.h",
+    "mock_semantic_provider_new.h",
   ]
 
   sources = [
     "mock_semantic_action_listener.cc",
     "mock_semantic_action_listener.h",
+    "mock_semantic_listener.cc",
+    "mock_semantic_listener.h",
     "mock_semantic_provider.cc",
+    "mock_semantic_provider.h",
+    "mock_semantic_provider_new.cc",
   ]
 
   public_deps = [
@@ -24,5 +29,6 @@ source_set("mocks") {
 
   deps = [
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 }

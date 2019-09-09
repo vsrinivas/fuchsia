@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider_new.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -63,7 +64,7 @@ class SemanticsManagerTest : public gtest::RealLoopFixture {
  public:
   SemanticsManagerTest() : semantics_manager_(context_provider_.context()) { syslog::InitLogger(); }
 
-  Node CreateTestNode(uint32_t node_id, std::string label);
+  static Node CreateTestNode(uint32_t node_id, std::string label);
   void InitializeActionListener(std::string file_path,
                                 accessibility_test::MockSemanticProvider *provider);
   int OpenAsFD(vfs::internal::Node *node, async_dispatcher_t *dispatcher);
@@ -519,6 +520,39 @@ TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoid) {
   // Check that the committed node is present in the semantic tree.
   zx_koid_t koid = a11y::GetKoid(semantic_provider.view_ref());
   NodePtr returned_node = semantics_manager_.GetAccessibilityNodeByKoid(koid, 0);
+  EXPECT_NE(returned_node, nullptr);
+  EXPECT_EQ(node.node_id(), returned_node->node_id());
+  EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
+}
+
+// Basic test to check that a node update with commit will result in
+// node being changed in the tree using the new RegisterViewForSemantics function.
+//
+// This will eventually be deleted and all the above tests will be using the latest
+// RegisterViewForSemantics.
+TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoidWithNewMock) {
+  accessibility_test::MockSemanticProviderNew semantic_provider(&semantics_manager_);
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // Creating test node to update.
+  std::vector<Node> update_nodes;
+  Node node = CreateTestNode(0, "Label A");
+  Node clone_node;
+  node.Clone(&clone_node);
+  update_nodes.push_back(std::move(clone_node));
+
+  // Update the node created above.
+  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
+  RunLoopUntilIdle();
+
+  // Commit nodes.
+  semantic_provider.Commit();
+  RunLoopUntilIdle();
+
+  // Check that the committed node is present in the semantic tree.
+  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());

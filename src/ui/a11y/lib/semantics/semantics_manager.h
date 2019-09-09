@@ -54,6 +54,20 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree)
       override;
 
+  // |fuchsia::accessibility::semantics::SemanticsManager|:
+  void RegisterViewForSemantics(
+      fuchsia::ui::views::ViewRef view_ref,
+      fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
+      override;
+
+  void CompleteSemanticRegistration(
+      fuchsia::ui::views::ViewRef view_ref,
+      fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener,
+      fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
+          semantic_tree_request);
+
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> bindings_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree, std::unique_ptr<SemanticTree>>

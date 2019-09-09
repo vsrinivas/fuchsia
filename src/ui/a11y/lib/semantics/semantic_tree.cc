@@ -25,9 +25,11 @@ constexpr int kRootNode = 0;
 SemanticTree::SemanticTree(
     fuchsia::ui::views::ViewRef view_ref,
     fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
+    fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     vfs::PseudoDir* debug_dir)
     : view_ref_(std::move(view_ref)),
       client_action_listener_(std::move(client_action_listener)),
+      semantic_listener_(std::move(semantic_listener)),
       debug_dir_(debug_dir) {
   InitializeDebugEntry(debug_dir_);
 }

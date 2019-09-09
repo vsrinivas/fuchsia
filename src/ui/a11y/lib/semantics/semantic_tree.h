@@ -25,6 +25,7 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
  public:
   SemanticTree(fuchsia::ui::views::ViewRef view_ref,
                fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
+               fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
                vfs::PseudoDir* debug_dir);
 
   ~SemanticTree() override;
@@ -111,6 +112,7 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
 
   fuchsia::ui::views::ViewRef view_ref_;
   fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener_;
+  fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;
   vfs::PseudoDir* const debug_dir_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTree);
