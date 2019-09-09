@@ -56,8 +56,8 @@
 //   State changes of the object are propagated from the object
 //   to the port via |p| --> observer --> |rc| calls.
 //
-// 2) Situation after the packet is queued in the one-shot case on
-//    signal match or the wait is canceled.
+// 2) Situation after the packet is queued on signal match or the wait
+//    is canceled.
 //
 //                                          +--------+
 //                                          |  Port  |
@@ -74,9 +74,6 @@
 //
 //   Note that the object no longer has a |p| to the observer
 //   but the observer still owns the port via |rc|.
-//
-//   For repeating ports |p| is always valid until the wait is
-//   canceled.
 //
 //   The |o| pointer is used to destroy the port observer only
 //   when cancellation happens and the port still owns the packet.
@@ -171,8 +168,6 @@ class PortObserver final : public StateObserver {
 // cases:
 //  1- Exception notification: task_bind_exception_port()
 //  2- Object state change notification: zx_object_wait_async()
-//      a) single-shot mode
-//      b) repeating mode
 //  3- Manual queuing: zx_port_queue()
 //  4- Interrupt change notification: zx_interrupt_bind()
 //
