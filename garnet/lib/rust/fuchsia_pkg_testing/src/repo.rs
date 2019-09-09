@@ -229,7 +229,9 @@ impl Repository {
     pub fn iter_packages(
         &self,
     ) -> Result<impl Iterator<Item = Result<PackageEntry, Error>>, Error> {
-        iter_packages(File::open(self.dir.path().join("repository/targets.json"))?)
+        iter_packages(io::BufReader::new(File::open(
+            self.dir.path().join("repository/targets.json"),
+        )?))
     }
 
     /// Returns a sorted vector of all packages contained in this repository.
@@ -279,9 +281,9 @@ impl Repository {
             public: String,
         }
 
-        let root_json: RootJson = serde_json::from_reader(
+        let root_json: RootJson = serde_json::from_reader(io::BufReader::new(
             File::open(self.dir.path().join("repository/root.json")).unwrap(),
-        )
+        ))
         .unwrap();
         let root = root_json.signed;
 
