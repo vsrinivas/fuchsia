@@ -12,7 +12,8 @@ use packet::{BufferMut, ParseBuffer, Serializer, TruncateDirection, TruncatingSe
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::ByteSlice;
 
-use crate::context::{CounterContext, StateContext};
+use crate::context::{CounterContext, InstantContext, StateContext};
+use crate::data_structures::token_bucket::TokenBucket;
 use crate::device::ndp::NdpPacketHandler;
 use crate::device::FrameDestination;
 use crate::error;
@@ -31,6 +32,11 @@ use crate::wire::icmp::{
 use crate::wire::ipv4::{Ipv4Header, Ipv4PacketRaw};
 use crate::{BufferDispatcher, Context, EventDispatcher, StackState};
 
+/// The default number of ICMP error messages to send per second.
+///
+/// Beyond this rate, error messages will be silently dropped.
+pub const DEFAULT_ERRORS_PER_SECOND: u64 = 2 << 16;
+
 /// An ICMPv4 error type and code.
 ///
 /// Each enum variant corresponds to a particular error type, and contains the
@@ -48,11 +54,15 @@ pub enum Icmpv4ErrorCode {
 #[derive(Copy, Clone)]
 pub struct Icmpv4StateBuilder {
     send_timestamp_reply: bool,
+    errors_per_second: u64,
 }
 
 impl Default for Icmpv4StateBuilder {
     fn default() -> Icmpv4StateBuilder {
-        Icmpv4StateBuilder { send_timestamp_reply: false }
+        Icmpv4StateBuilder {
+            send_timestamp_reply: false,
+            errors_per_second: DEFAULT_ERRORS_PER_SECOND,
+        }
     }
 }
 
@@ -68,22 +78,35 @@ impl Icmpv4StateBuilder {
         self
     }
 
-    pub(crate) fn build(self) -> Icmpv4State {
+    /// Configure the number of ICMPv4 error messages to send per second
+    /// (default: [`DEFAULT_ERRORS_PER_SECOND`]).
+    ///
+    /// The number of ICMPv4 error messages sent by the stack will be rate
+    /// limited to the given number of errors per second. Any messages that
+    /// exceed this rate will be silently dropped.
+    pub fn errors_per_second(&mut self, errors_per_second: u64) -> &mut Self {
+        self.errors_per_second = errors_per_second;
+        self
+    }
+
+    pub(crate) fn build<Instant>(self) -> Icmpv4State<Instant> {
         Icmpv4State {
             conns: ConnAddrMap::default(),
+            error_send_bucket: TokenBucket::new(self.errors_per_second),
             send_timestamp_reply: self.send_timestamp_reply,
         }
     }
 }
 
 /// The state associated with the ICMPv4 protocol.
-pub(crate) struct Icmpv4State {
+pub(crate) struct Icmpv4State<Instant> {
     conns: ConnAddrMap<IcmpAddr<Ipv4Addr>>,
+    error_send_bucket: TokenBucket<Instant>,
     send_timestamp_reply: bool,
 }
 
 // Used by `receive_icmp_echo_reply`.
-impl AsRef<ConnAddrMap<IcmpAddr<Ipv4Addr>>> for Icmpv4State {
+impl<Instant> AsRef<ConnAddrMap<IcmpAddr<Ipv4Addr>>> for Icmpv4State<Instant> {
     fn as_ref(&self) -> &ConnAddrMap<IcmpAddr<Ipv4Addr>> {
         &self.conns
     }
@@ -199,7 +222,7 @@ impl<D: EventDispatcher> Icmpv4SocketContext for Context<D> {
 /// Unlike [`IcmpSocketContext`], `IcmpContext` is not exposed outside of this
 /// crate.
 pub(crate) trait IcmpContext<I: IcmpIpExt, B: BufferMut>:
-    IpDeviceIdContext + IcmpSocketContext<I, B> + CounterContext
+    IpDeviceIdContext + IcmpSocketContext<I, B> + CounterContext + InstantContext
 {
     /// Send an ICMP reply to a remote host.
     ///
@@ -270,7 +293,9 @@ pub(crate) trait IcmpContext<I: IcmpIpExt, B: BufferMut>:
 
 /// The execution context for ICMP(v4).
 pub(crate) trait Icmpv4Context<B: BufferMut>:
-    IcmpContext<Ipv4, B> + StateContext<(), Icmpv4State> + Icmpv4SocketContext
+    IcmpContext<Ipv4, B>
+    + StateContext<(), Icmpv4State<<Self as InstantContext>::Instant>>
+    + Icmpv4SocketContext
 {
     // TODO(joshlf): If we end up needing to respond to these messages with new
     // outbound packets, then perhaps it'd be worth passing the original buffer
@@ -291,6 +316,34 @@ pub(crate) trait Icmpv6Context<B: BufferMut>:
 {
 }
 impl<B: BufferMut, C: IcmpContext<Ipv6, B> + StateContext<(), Icmpv6State>> Icmpv6Context<B> for C {}
+
+/// Attempt to send an ICMP or ICMPv6 error message, applying a rate limit.
+///
+/// `try_send_error($ctx, $e)` attempts to consume a token from the token bucket
+/// at `$ctx.get_state_mut(()).error_send_bucket`. If it succeeds, it invokes
+/// the expression `$e`, and otherwise does nothing. It assumes that the type of
+/// `$e` is `Result<(), _>` and, in the case that the rate limit is exceeded and
+/// it does not invoke `$e`, returns `Ok(())`.
+///
+/// [RFC 4443 Section 2.4] (f) requires that we MUST limit the rate of outbound
+/// ICMPv6 error messages. To our knowledge, there is no similar requirement for
+/// ICMPv4, but the same rationale applies, so we do it for ICMPv4 as well.
+///
+/// [RFC 4443 Section 2.4]: https://tools.ietf.org/html/rfc4443#section-2.4
+macro_rules! try_send_error {
+    ($ctx:expr, $e:expr) => {
+        // TODO(joshlf): Figure out a way to avoid querying for the current time
+        // unconditionally. See the documentation on the `CachedInstantContext`
+        // type for more information.
+        let instant_ctx = crate::context::new_cached_instant_context($ctx);
+        if $ctx.get_state_mut(()).error_send_bucket.try_take(&instant_ctx) {
+            $e
+        } else {
+            trace!("ip::icmp::try_send_error!: dropping rate-limited ICMP error message");
+            Ok(())
+        }
+    };
+}
 
 /// Receive an ICMP(v4) packet.
 pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHandler<Ipv4>>(
@@ -333,12 +386,14 @@ pub(crate) fn receive_icmpv4_packet<B: BufferMut, C: Icmpv4Context<B> + PmtuHand
             trace!("receive_icmpv4_packet: Received an EchoReply message");
             let id = echo_reply.message().id();
             let seq = echo_reply.message().seq();
-            receive_icmp_echo_reply::<_, _, Icmpv4State, _>(ctx, src_ip, dst_ip, id, seq, buffer);
+            receive_icmp_echo_reply::<_, _, Icmpv4State<_>, _>(
+                ctx, src_ip, dst_ip, id, seq, buffer,
+            );
         }
         Icmpv4Packet::TimestampRequest(timestamp_request) => {
             ctx.increment_counter("receive_icmpv4_packet::timestamp_request");
             if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-                if StateContext::<(), Icmpv4State>::get_state(ctx, ()).send_timestamp_reply {
+                if StateContext::<(), Icmpv4State<_>>::get_state(ctx, ()).send_timestamp_reply {
                     trace!("receive_icmpv4_packet: Responding to Timestamp Request message");
                     // We're supposed to respond with the time that we processed
                     // this message as measured in milliseconds since midnight
@@ -594,7 +649,7 @@ pub(crate) fn receive_icmpv6_packet<
 /// `original_packet` contains the contents of the entire original packet,
 /// including the IP header. `header_len` is the length of the header including
 /// all options.
-pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: IcmpContext<Ipv4, B>>(
+pub(crate) fn send_icmpv4_protocol_unreachable<B: BufferMut, C: Icmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
@@ -677,7 +732,7 @@ pub(crate) fn send_icmpv6_protocol_unreachable<B: BufferMut, C: IcmpContext<Ipv6
 /// `original_packet` contains the contents of the entire original packet,
 /// including the IP packet header. `header_len` is the length of the entire
 /// header, including options.
-pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: IcmpContext<Ipv4, B>>(
+pub(crate) fn send_icmpv4_port_unreachable<B: BufferMut, C: Icmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
@@ -740,7 +795,7 @@ pub(crate) fn send_icmpv6_port_unreachable<B: BufferMut, C: IcmpContext<Ipv6, B>
 /// `original_packet` contains the contents of the entire original packet -
 /// including all IP headers. `header_len` is the length of the IPv4 header. It
 /// is ignored for IPv6.
-pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: IcmpContext<Ipv4, B>>(
+pub(crate) fn send_icmpv4_net_unreachable<B: BufferMut, C: Icmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
@@ -820,7 +875,7 @@ pub(crate) fn send_icmpv6_net_unreachable<B: BufferMut, C: IcmpContext<Ipv6, B>>
 /// `original_packet` contains the contents of the entire original packet,
 /// including the header. `header_len` is the length of the IP header including
 /// options.
-pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: IcmpContext<Ipv4, B>>(
+pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: Icmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
@@ -844,21 +899,24 @@ pub(crate) fn send_icmpv4_ttl_expired<B: BufferMut, C: IcmpContext<Ipv4, B>>(
         original_packet.shrink_back_to(header_len + 64);
         // TODO(joshlf): Do something if send_icmp_error_message returns an
         // error?
-        ctx.send_icmp_error_message(
-            device,
-            frame_dst,
-            src_ip,
-            dst_ip,
-            |local_ip| {
-                original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                    local_ip,
-                    src_ip,
-                    Icmpv4TimeExceededCode::TtlExpired,
-                    IcmpTimeExceeded::default(),
-                ))
-            },
-            None,
-            false,
+        try_send_error!(
+            ctx,
+            ctx.send_icmp_error_message(
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                |local_ip| {
+                    original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        local_ip,
+                        src_ip,
+                        Icmpv4TimeExceededCode::TtlExpired,
+                        IcmpTimeExceeded::default(),
+                    ))
+                },
+                None,
+                false,
+            )
         );
     }
 }
@@ -980,7 +1038,7 @@ pub(crate) fn send_icmpv6_packet_too_big<B: BufferMut, C: IcmpContext<Ipv6, B>>(
     }
 }
 
-pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: IcmpContext<Ipv4, B>>(
+pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: Icmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
@@ -999,21 +1057,24 @@ pub(crate) fn send_icmpv4_parameter_problem<B: BufferMut, C: IcmpContext<Ipv4, B
         original_packet.shrink_back_to(header_len + 64);
         // TODO(joshlf): Do something if send_icmp_error_message returns an
         // error?
-        ctx.send_icmp_error_message(
-            device,
-            frame_dst,
-            src_ip,
-            dst_ip,
-            |local_ip| {
-                original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                    local_ip,
-                    src_ip,
-                    code,
-                    parameter_problem,
-                ))
-            },
-            None,
-            false,
+        try_send_error!(
+            ctx,
+            ctx.send_icmp_error_message(
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                |local_ip| {
+                    original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        local_ip,
+                        src_ip,
+                        code,
+                        parameter_problem,
+                    ))
+                },
+                None,
+                false,
+            )
         );
     } else {
         trace!("send_icmpv4_parameter_problem: Can't send ICMP error response to the unspecified address");
@@ -1076,7 +1137,7 @@ pub(crate) fn send_icmpv6_parameter_problem<B: BufferMut, C: IcmpContext<Ipv6, B
     }
 }
 
-fn send_icmpv4_dest_unreachable<B: BufferMut, C: IcmpContext<Ipv4, B>>(
+fn send_icmpv4_dest_unreachable<B: BufferMut, C: Icmpv4Context<B>>(
     ctx: &mut C,
     device: C::DeviceId,
     frame_dst: FrameDestination,
@@ -1094,21 +1155,24 @@ fn send_icmpv4_dest_unreachable<B: BufferMut, C: IcmpContext<Ipv4, B>>(
         original_packet.shrink_back_to(header_len + 64);
         // TODO(joshlf): Do something if send_icmp_error_message returns an
         // error?
-        ctx.send_icmp_error_message(
-            device,
-            frame_dst,
-            src_ip,
-            dst_ip,
-            |local_ip| {
-                original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                    local_ip,
-                    src_ip,
-                    code,
-                    IcmpDestUnreachable::default(),
-                ))
-            },
-            None,
-            false,
+        try_send_error!(
+            ctx,
+            ctx.send_icmp_error_message(
+                device,
+                frame_dst,
+                src_ip,
+                dst_ip,
+                |local_ip| {
+                    original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        local_ip,
+                        src_ip,
+                        code,
+                        IcmpDestUnreachable::default(),
+                    ))
+                },
+                None,
+                false,
+            )
         );
     }
 }
@@ -1434,12 +1498,14 @@ mod tests {
     use std::fmt::Debug;
     #[cfg(feature = "udp-icmp-port-unreachable")]
     use std::num::NonZeroU16;
+    use std::time::Duration;
 
     use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
     use packet::{Buf, Serializer};
     use specialize_ip_macro::specialize_ip;
 
     use super::*;
+    use crate::context::testutil::DummyInstant;
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
     use crate::ip::path_mtu::testutil::DummyPmtuState;
     use crate::ip::{receive_ipv4_packet, DummyDeviceId, IpExt};
@@ -1868,7 +1934,7 @@ mod tests {
         // which will in turn call `Icmpv4SocketContext::receive_icmpv4_error`.
         receive_icmpv4_error: Vec<ReceiveIcmpv4ErrorArgs>,
         receive_icmpv4_socket_error: Vec<ReceiveIcmpv4SocketErrorArgs>,
-        icmpv4_state: Icmpv4State,
+        icmpv4_state: Icmpv4State<DummyInstant>,
     }
 
     impl Default for DummyIcmpv4Context {
@@ -1879,6 +1945,14 @@ mod tests {
                 receive_icmpv4_socket_error: Vec::new(),
                 icmpv4_state: Icmpv4StateBuilder::default().build(),
             }
+        }
+    }
+
+    impl DummyIcmpv4Context {
+        fn with_errors_per_second(errors_per_second: u64) -> DummyIcmpv4Context {
+            let mut ctx = DummyIcmpv4Context::default();
+            ctx.icmpv4_state.error_send_bucket = TokenBucket::new(errors_per_second);
+            ctx
         }
     }
 
@@ -1939,12 +2013,21 @@ mod tests {
             ip_mtu: Option<u32>,
             allow_dst_multicast: bool,
         ) -> Result<(), S> {
+            self.increment_counter("IcmpContext::send_icmp_error_message");
             let sent = should_send_icmpv4_error(frame_dst, src_ip, dst_ip);
             self.get_mut().inner.send_icmp_error_message.push(SendIcmpErrorMessageArgs {
                 frame_dst,
                 src_ip,
                 dst_ip,
-                body: unimplemented!(),
+                // Use `unwrap_or_else` like this rather than `unwrap` because
+                // the error variant of the return value of
+                // `serialize_vec_outer` doesn't implement `Debug`, which is
+                // required for `unwrap`.
+                body: get_body(SpecifiedAddr::new(dst_ip).unwrap())
+                    .serialize_vec_outer()
+                    .unwrap_or_else(|_| panic!("failed to serialize body"))
+                    .as_ref()
+                    .to_vec(),
                 ip_mtu,
                 allow_dst_multicast,
                 sent,
@@ -1967,12 +2050,12 @@ mod tests {
         }
     }
 
-    impl StateContext<(), Icmpv4State> for Dummyv4Context {
-        fn get_state(&self, _id: ()) -> &Icmpv4State {
+    impl StateContext<(), Icmpv4State<DummyInstant>> for Dummyv4Context {
+        fn get_state(&self, _id: ()) -> &Icmpv4State<DummyInstant> {
             &self.get_ref().icmpv4_state
         }
 
-        fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State {
+        fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State<DummyInstant> {
             &mut self.get_mut().icmpv4_state
         }
     }
@@ -2277,5 +2360,109 @@ mod tests {
                 assert_eq!(ctx.get_ref().receive_icmpv4_socket_error, []);
             },
         );
+    }
+
+    #[test]
+    fn test_error_rate_limit() {
+        crate::testutil::set_logger_for_test();
+
+        /// Call `send_icmpv4_ttl_expired` with reasonable values.
+        fn send_icmpv4_ttl_expired_helper(ctx: &mut Dummyv4Context) {
+            send_icmpv4_ttl_expired(
+                ctx,
+                DummyDeviceId,
+                FrameDestination::Unicast,
+                DUMMY_CONFIG_V4.remote_ip.get(),
+                DUMMY_CONFIG_V4.local_ip.get(),
+                IpProto::Udp,
+                Buf::new(&mut [], ..),
+                0,
+            );
+        }
+
+        /// Call `send_icmpv4_parameter_problem` with reasonable values.
+        fn send_icmpv4_parameter_problem_helper(ctx: &mut Dummyv4Context) {
+            send_icmpv4_parameter_problem(
+                ctx,
+                DummyDeviceId,
+                FrameDestination::Unicast,
+                DUMMY_CONFIG_V4.remote_ip.get(),
+                DUMMY_CONFIG_V4.local_ip.get(),
+                Icmpv4ParameterProblemCode::PointerIndicatesError,
+                Icmpv4ParameterProblem::new(0),
+                Buf::new(&mut [], ..),
+                0,
+            );
+        }
+
+        /// Call `send_icmpv4_dest_unreachable` with reasonable values.
+        fn send_icmpv4_dest_unreachable_helper(ctx: &mut Dummyv4Context) {
+            send_icmpv4_dest_unreachable(
+                ctx,
+                DummyDeviceId,
+                FrameDestination::Unicast,
+                DUMMY_CONFIG_V4.remote_ip.get(),
+                DUMMY_CONFIG_V4.local_ip.get(),
+                Icmpv4DestUnreachableCode::DestNetworkUnreachable,
+                Buf::new(&mut [], ..),
+                0,
+            );
+        }
+
+        // Run tests for each function that sends error messages to make sure
+        // they're all properly rate limited.
+
+        fn run_test<F: Fn(&mut Dummyv4Context)>(send: F) {
+            // Note that we could theoretically have more precise tests here
+            // (e.g., a test that we send at the correct rate over the long
+            // term), but those would amount to testing the `TokenBucket`
+            // implementation, which has its own exhaustive tests. Instead, we
+            // just have a few sanity checks to make sure that we're actually
+            // invoking it when we expect to (as opposed to bypassing it
+            // entirely or something).
+
+            // Test that, if no time has elapsed, we can successfully send up to
+            // `ERRORS_PER_SECOND` error messages, but no more.
+
+            // Don't use `DEFAULT_ERRORS_PER_SECOND` because it's 2^16 and it
+            // makes this test take a long time.
+            const ERRORS_PER_SECOND: u64 = 64;
+
+            let mut ctx = Dummyv4Context::with_state(DummyIcmpv4Context::with_errors_per_second(
+                ERRORS_PER_SECOND,
+            ));
+
+            for i in 0..ERRORS_PER_SECOND {
+                send(&mut ctx);
+                assert_eq!(ctx.get_counter("IcmpContext::send_icmp_error_message"), i as usize + 1);
+            }
+
+            assert_eq!(
+                ctx.get_counter("IcmpContext::send_icmp_error_message"),
+                ERRORS_PER_SECOND as usize
+            );
+            send(&mut ctx);
+            assert_eq!(
+                ctx.get_counter("IcmpContext::send_icmp_error_message"),
+                ERRORS_PER_SECOND as usize
+            );
+
+            // Test that, if we set a rate of 0, we are not able to send any
+            // error messages regardless of how much time has elapsed.
+
+            let mut ctx = Dummyv4Context::with_state(DummyIcmpv4Context::with_errors_per_second(0));
+            send(&mut ctx);
+            assert_eq!(ctx.get_counter("IcmpContext::send_icmp_error_message"), 0);
+            ctx.sleep_skip_timers(Duration::from_secs(1));
+            send(&mut ctx);
+            assert_eq!(ctx.get_counter("IcmpContext::send_icmp_error_message"), 0);
+            ctx.sleep_skip_timers(Duration::from_secs(1));
+            send(&mut ctx);
+            assert_eq!(ctx.get_counter("IcmpContext::send_icmp_error_message"), 0);
+        }
+
+        run_test(send_icmpv4_ttl_expired_helper);
+        run_test(send_icmpv4_parameter_problem_helper);
+        run_test(send_icmpv4_dest_unreachable_helper);
     }
 }

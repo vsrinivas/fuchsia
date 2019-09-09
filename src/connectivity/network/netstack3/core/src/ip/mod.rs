@@ -275,7 +275,7 @@ impl Ipv6StateBuilder {
 
 pub(crate) struct Ipv4State<Instant: crate::Instant> {
     inner: IpStateInner<Ipv4, Instant>,
-    icmp: Icmpv4State,
+    icmp: Icmpv4State<Instant>,
     igmp: IdMap<IgmpInterface<Instant>>,
 }
 
@@ -1676,12 +1676,12 @@ where
         .map_err(|ser| ser.into_inner())
 }
 
-impl<D: EventDispatcher> StateContext<(), Icmpv4State> for Context<D> {
-    fn get_state(&self, _id: ()) -> &Icmpv4State {
+impl<D: EventDispatcher> StateContext<(), Icmpv4State<D::Instant>> for Context<D> {
+    fn get_state(&self, _id: ()) -> &Icmpv4State<D::Instant> {
         &self.state().ipv4.icmp
     }
 
-    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State {
+    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv4State<D::Instant> {
         &mut self.state_mut().ipv4.icmp
     }
 }

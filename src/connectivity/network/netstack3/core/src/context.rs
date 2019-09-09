@@ -73,6 +73,33 @@ impl<D: EventDispatcher> InstantContext for Context<D> {
     }
 }
 
+/// An [`InstantContext`] which stores a cached value for the current time.
+///
+/// `CachedInstantContext`s are constructed via [`new_cached_instant_context`].
+pub(crate) struct CachedInstantContext<I>(I);
+
+impl<I: Instant> InstantContext for CachedInstantContext<I> {
+    type Instant = I;
+    fn now(&self) -> I {
+        self.0.clone()
+    }
+}
+
+/// Construct a new `CachedInstantContext` from the current time.
+///
+/// This is a hack until we figure out a strategy for splitting context objects.
+/// Currently, since most context methods take a `&mut self` argument, lifetimes
+/// which don't need to conflict in principle - such as the lifetime of state
+/// obtained mutably from [`StateContext`] and the lifetime required to call the
+/// [`InstantContext::now`] method on the same object - do conflict, and thus
+/// cannot overlap. Until we figure out an approach to deal with that problem,
+/// this exists as a workaround.
+pub(crate) fn new_cached_instant_context<I: InstantContext + ?Sized>(
+    ctx: &I,
+) -> CachedInstantContext<I::Instant> {
+    CachedInstantContext(ctx.now())
+}
+
 /// A context that supports scheduling timers.
 pub(crate) trait TimerContext<Id>: InstantContext {
     /// Schedule a timer to fire after some duration.
@@ -620,6 +647,26 @@ pub(crate) mod testutil {
     }
 
     impl<S, Id, Meta> DummyContext<S, Id, Meta> {
+        /// Constructs a `DummyContext` with the given state and default
+        /// `DummyTimerContext`, `DummyFrameContext`, and `DummyCounterContext`.
+        pub(crate) fn with_state(state: S) -> DummyContext<S, Id, Meta> {
+            DummyContext {
+                state,
+                timers: DummyTimerContext::default(),
+                frames: DummyFrameContext::default(),
+                counters: DummyCounterContext::default(),
+            }
+        }
+
+        /// Move the clock forward by the given duration without firing any
+        /// timers.
+        ///
+        /// If any timers are scheduled to fire in the given duration, future
+        /// use of this `DummyContext` may have surprising or buggy behavior.
+        pub(crate) fn sleep_skip_timers(&mut self, duration: Duration) {
+            self.timers.instant.sleep(duration);
+        }
+
         /// Get an immutable reference to the inner state.
         ///
         /// This method is provided instead of an [`AsRef`] impl to avoid
