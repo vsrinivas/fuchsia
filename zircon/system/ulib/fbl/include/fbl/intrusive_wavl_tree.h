@@ -6,12 +6,13 @@
 #define FBL_INTRUSIVE_WAVL_TREE_H_
 
 #include <zircon/assert.h>
+
+#include <utility>
+
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree_internal.h>
-
-#include <utility>
 
 // Implementation Notes:
 //
@@ -124,21 +125,14 @@ template <typename PtrType, typename TagType_ = DefaultObjectTag>
 struct WAVLTreeContainable {
  public:
   using TagType = TagType_;
-  template <typename TagType = TagType_>
   bool InContainer() const {
-    using Node = NodeType<TagType>;
+    using Node = WAVLTreeContainable<PtrType, TagType>;
     return Node::wavl_node_state_.InContainer();
   }
 
  private:
   friend DefaultWAVLTreeTraits<PtrType, DefaultWAVLTreeRankType>;
   WAVLTreeNodeState<PtrType, DefaultWAVLTreeRankType> wavl_node_state_;
-
-  using ValueType = typename internal::ContainerPtrTraits<PtrType>::ValueType;
-
-  template <typename TagType>
-  using NodeType = std::conditional_t<std::is_same_v<TagType, DefaultObjectTag>,
-                                      WAVLTreeContainable<PtrType, TagType>, ValueType>;
 };
 
 template <typename KeyType_, typename PtrType_,

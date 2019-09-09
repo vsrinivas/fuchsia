@@ -1175,6 +1175,12 @@ class TestEnvironment : public TestEnvironmentSpecialized<TestEnvTraits> {
       ContainerUtils<typename ContainerTraits::TaggedType3>::MoveInto(tagged3, iter.CopyPointer());
     }
 
+    for (auto& obj : tagged1) {
+      EXPECT_TRUE(InContainer<typename ContainerTraits::Tag1>(obj), "");
+      EXPECT_TRUE(InContainer<typename ContainerTraits::Tag2>(obj), "");
+      EXPECT_TRUE(InContainer<typename ContainerTraits::Tag3>(obj), "");
+    }
+
     // The three containers should be the same length, and nothing should have
     // changed about the live object count.
     EXPECT_EQ(OBJ_COUNT, ObjType::live_obj_count(), "");

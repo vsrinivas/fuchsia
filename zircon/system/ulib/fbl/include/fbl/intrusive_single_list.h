@@ -6,10 +6,11 @@
 #define FBL_INTRUSIVE_SINGLE_LIST_H_
 
 #include <zircon/assert.h>
-#include <fbl/intrusive_container_utils.h>
-#include <fbl/intrusive_pointer_traits.h>
 
 #include <utility>
+
+#include <fbl/intrusive_container_utils.h>
+#include <fbl/intrusive_pointer_traits.h>
 
 // Usage Notes:
 //
@@ -226,21 +227,14 @@ template <typename T, typename TagType_ = DefaultObjectTag>
 struct SinglyLinkedListable {
  public:
   using TagType = TagType_;
-  template <typename TagType = TagType_>
   bool InContainer() const {
-    using Node = NodeType<TagType>;
+    using Node = SinglyLinkedListable<T, TagType>;
     return Node::sll_node_state_.InContainer();
   }
 
  private:
   friend struct DefaultSinglyLinkedListTraits<T>;
   SinglyLinkedListNodeState<T> sll_node_state_;
-
-  using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
-
-  template <typename TagType>
-  using NodeType = std::conditional_t<std::is_same_v<TagType, DefaultObjectTag>,
-                                      SinglyLinkedListable<T, TagType>, ValueType>;
 };
 
 template <typename T, typename NodeTraits_ = DefaultSinglyLinkedListTraits<T>,

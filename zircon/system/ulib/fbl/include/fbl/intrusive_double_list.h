@@ -6,11 +6,12 @@
 #define FBL_INTRUSIVE_DOUBLE_LIST_H_
 
 #include <zircon/assert.h>
+
+#include <utility>
+
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_pointer_traits.h>
-
-#include <utility>
 
 // Usage and Implementation Notes:
 //
@@ -96,21 +97,14 @@ template <typename T, typename TagType_ = DefaultObjectTag>
 struct DoublyLinkedListable {
  public:
   using TagType = TagType_;
-  template <typename TagType = TagType_>
   bool InContainer() const {
-    using Node = NodeType<TagType>;
+    using Node = DoublyLinkedListable<T, TagType>;
     return Node::dll_node_state_.InContainer();
   }
 
  private:
   friend struct DefaultDoublyLinkedListTraits<T>;
   DoublyLinkedListNodeState<T> dll_node_state_;
-
-  using ValueType = typename internal::ContainerPtrTraits<T>::ValueType;
-
-  template <typename TagType>
-  using NodeType = std::conditional_t<std::is_same_v<TagType, DefaultObjectTag>,
-                                      DoublyLinkedListable<T, TagType>, ValueType>;
 };
 
 template <typename T, typename NodeTraits_ = DefaultDoublyLinkedListTraits<T>,

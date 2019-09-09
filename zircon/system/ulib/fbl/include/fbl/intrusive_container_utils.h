@@ -5,10 +5,10 @@
 #ifndef FBL_INTRUSIVE_CONTAINER_UTILS_H_
 #define FBL_INTRUSIVE_CONTAINER_UTILS_H_
 
+#include <type_traits>
+
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/macros.h>
-
-#include <type_traits>
 
 namespace fbl {
 
@@ -103,14 +103,15 @@ struct ContainableBaseClasses;
 
 template <>
 struct ContainableBaseClasses<> {
+  using ContainableTypes = std::tuple<>;
   using TagTypes = std::tuple<>;
 };
 
-template <template <typename, typename> class Container, typename PtrType, typename TagType,
+template <template <typename, typename> class Containable, typename PtrType, typename TagType,
           typename... Rest>
-struct ContainableBaseClasses<Container<PtrType, TagType>, Rest...>
-    : public Container<PtrType, TagType>, public ContainableBaseClasses<Rest...> {
-  static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy,
+struct ContainableBaseClasses<Containable<PtrType, TagType>, Rest...>
+    : public Containable<PtrType, TagType>, public ContainableBaseClasses<Rest...> {
+  static_assert(internal::ContainerPtrTraits<PtrType>::CanCopy || sizeof...(Rest) == 0,
                 "You can't have a unique_ptr in multiple containers at once.");
   static_assert(!std::is_same_v<TagType, DefaultObjectTag>,
                 "Do not use fbl::DefaultObjectTag when inheriting from "
@@ -118,10 +119,50 @@ struct ContainableBaseClasses<Container<PtrType, TagType>, Rest...>
   static_assert((!std::is_same_v<TagType, typename Rest::TagType> && ...),
                 "All tag types used with fbl::ContainableBaseClasses must be unique.");
 
+  using ContainableTypes =
+    decltype(std::tuple_cat(std::declval<std::tuple<Containable<PtrType, TagType>>>(),
+                            std::declval<
+                              typename ContainableBaseClasses<Rest...>::ContainableTypes>()));
   using TagTypes =
-      decltype(std::tuple_cat(std::declval<std::tuple<TagType>>(),
-                              std::declval<typename ContainableBaseClasses<Rest...>::TagTypes>()));
+    decltype(std::tuple_cat(std::declval<std::tuple<TagType>>(),
+                            std::declval<typename ContainableBaseClasses<Rest...>::TagTypes>()));
 };
+
+namespace internal {
+DECLARE_HAS_MEMBER_TYPE(has_tag_types, TagTypes);
+}
+
+// This is a free function because making it a member function presents complicated lookup issues
+// since the specific Containable classes already have a non-template InContainer, and you'd need to
+// say obj.template InContainer<TagType>(), which is super ugly.
+template <typename TagType, typename Containable, size_t Index = 0,
+          typename = std::enable_if_t<internal::has_tag_types_v<Containable>>>
+bool InContainer(const Containable& c) {
+  static_assert(Index < std::tuple_size_v<typename Containable::TagTypes>,
+                "Containable is not a member of a container with the specified tag type.");
+
+  using SpecificContainable = std::tuple_element_t<Index, typename Containable::ContainableTypes>;
+  if constexpr (std::is_same_v<TagType, typename SpecificContainable::TagType>) {
+    return InContainer(static_cast<const SpecificContainable&>(c));
+  } else {
+    return InContainer<TagType, Containable, Index + 1>(c);
+  }
+}
+
+// Overload for specific containables so this function can be used generically in any situation,
+// similarly to std::begin, std::end, std::size, etc.
+template <typename TagType = DefaultObjectTag, typename Containable,
+          typename = std::enable_if_t<!internal::has_tag_types_v<Containable>>>
+bool InContainer(const Containable& c) {
+  // It's okay to let people leave TagType as DefaultObjectTag because if there are multiple TagType
+  // member typedefs, the compiler will complain. We just want to prevent people from passing a
+  // nonsensical TagType parameter.
+  static_assert(std::is_same_v<TagType, typename Containable::TagType> ||
+                std::is_same_v<TagType, DefaultObjectTag>,
+                "Containable is not a member of a container with the specified tag type.");
+
+  return c.InContainer();
+}
 
 }  // namespace fbl
 
@@ -258,7 +299,6 @@ constexpr bool valid_sentinel_ptr(const T* ptr) {
 }
 
 DECLARE_HAS_MEMBER_FN(has_node_state, node_state);
-DECLARE_HAS_MEMBER_TYPE(has_tag_types, TagTypes);
 
 }  // namespace fbl::internal
 
