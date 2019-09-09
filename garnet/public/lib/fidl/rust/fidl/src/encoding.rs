@@ -1938,24 +1938,39 @@ macro_rules! fidl_table {
     }
 }
 
+// Alignment factor of union is defined by the maximal alignment factor of the tag field and any of its options.
+// tag field will always be same size as E in the case of results
+fn result_align<O: Decodable>() -> usize {
+    std::cmp::max(O::inline_align(), <u32 as Decodable>::inline_align())
+}
+
+fn result_field_offset<O: Decodable>() -> usize {
+    round_up_to_align(<u32 as Decodable>::inline_size(), result_align::<O>())
+}
+
+fn result_field_padding<O: Decodable>() -> usize {
+    result_field_offset::<O>() - <u32 as Decodable>::inline_size()
+}
+
+// Size of union is the size of the tag field plus the size of the largest option including padding necessary
+// to satisfy its alignment requirements.
+fn result_inline_size<O: Decodable>() -> usize {
+    <u32 as Decodable>::inline_size()
+    + result_field_padding::<O>()
+    + std::cmp::max(O::inline_size(), <u32 as Decodable>::inline_size())
+}
+
 impl<O, E> Encodable for std::result::Result<O, E>
 where
     O: Decodable + Encodable,
     E: Decodable + Encodable,
 {
     fn inline_align(&self) -> usize {
-        // Alignment factor of union is defined by the maximal alignment factor of the tag field and any of its options.
-        // tag field will always be same size as E in the case of results
-        std::cmp::max(fidl_inline_align!(O), fidl_inline_align!(u32))
+        result_align::<O>()
     }
 
     fn inline_size(&self) -> usize {
-        // Size of union is the size of the tag field plus the size of the largest option including padding necessary
-        // to satisfy its alignment requirements.
-        round_up_to_align(
-            std::cmp::max(fidl_inline_size!(O), fidl_inline_size!(E)) + fidl_inline_size!(u32),
-            fidl_inline_align!(Self),
-        )
+        result_inline_size::<O>()
     }
 
     fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
@@ -1964,13 +1979,13 @@ where
         match self {
             Ok(val) => {
                 // Encode success tag
-                fidl_encode!(&mut 0, encoder)?;
+                0u32.encode(encoder)?;
 
                 // Padding
-                encoder.next_slice(fidl_inline_align!(Self) - 4)?;
+                encoder.next_slice(result_field_padding::<O>())?;
 
                 // Encode success value
-                fidl_encode!(val, encoder)?;
+                val.encode(encoder)?;
 
                 // Ok() and Err() branches may be of a different size. We need to make sure we
                 // always encode inline_size() bytes.
@@ -1978,13 +1993,13 @@ where
             }
             Err(val) => {
                 // Encode Error tag
-                fidl_encode!(&mut 1, encoder)?;
+                1u32.encode(encoder)?;
 
                 // Padding
-                encoder.next_slice(fidl_inline_align!(Self) - 4)?;
+                encoder.next_slice(result_field_padding::<O>())?;
 
                 // Encode Error value
-                fidl_encode!(val, encoder)?;
+                val.encode(encoder)?;
 
                 // Ok() and Err() branches may be of a different size. We need to make sure we
                 // always encode inline_size() bytes.
@@ -2001,18 +2016,15 @@ where
     E: Decodable,
 {
     fn new_empty() -> Self {
-        return Ok(<O as Decodable>::new_empty());
+        Ok(<O as Decodable>::new_empty())
     }
 
     fn inline_align() -> usize {
-        std::cmp::max(fidl_inline_align!(O), fidl_inline_align!(u32))
+        result_align::<O>()
     }
 
     fn inline_size() -> usize {
-        round_up_to_align(
-            std::cmp::max(fidl_inline_size!(O), fidl_inline_size!(E)) + fidl_inline_size!(u32),
-            fidl_inline_align!(Self),
-        )
+        result_inline_size::<O>()
     }
 
     fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
@@ -2021,7 +2033,7 @@ where
         let mut tag: u32 = 0;
         fidl_decode!(&mut tag, decoder)?;
         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-        decoder.next_slice(fidl_inline_align!(Self) - 4)?;
+        decoder.next_slice(result_field_padding::<O>())?;
 
         match tag {
             0 => {
@@ -2729,6 +2741,18 @@ mod test {
             Animal::Frog,
             Animal::from_primitive(0).expect("should be dog"),
             Animal::from_primitive(Animal::Cat.into_primitive()).expect("should be cat"),
+        ];
+    }
+
+    #[test]
+    fn result_with_size_non_multiple_of_align() {
+        type Res = std::result::Result<(Vec<u8>, bool), u32>;
+
+        identities![
+            Res::Ok((vec![], true)),
+            Res::Ok((vec![], false)),
+            Res::Ok((vec![1, 2, 3, 4, 5], true)),
+            Res::Err(7u32),
         ];
     }
 
