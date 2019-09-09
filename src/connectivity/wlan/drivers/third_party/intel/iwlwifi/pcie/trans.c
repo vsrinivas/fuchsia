@@ -1850,11 +1850,6 @@ void iwl_trans_pcie_free(struct iwl_trans* trans) {
     }
     iwl_pcie_rx_free(trans);
 
-    if (trans_pcie->rba.alloc_wq) {
-        destroy_workqueue(trans_pcie->rba.alloc_wq);
-        trans_pcie->rba.alloc_wq = NULL;
-    }
-
     if (trans_pcie->msix_enabled) {
         for (i = 0; i < trans_pcie->alloc_vecs; i++) {
             irq_set_affinity_hint(trans_pcie->msix_entries[i].vector, NULL);
@@ -3449,11 +3444,6 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
     thrd_detach(trans_pcie->irq_thread);
 
     trans_pcie->inta_mask = CSR_INI_SET_MASK;
-
-#if 0   // NEEDS_PORTING
-    trans_pcie->rba.alloc_wq = alloc_workqueue("rb_allocator", WQ_HIGHPRI | WQ_UNBOUND, 1);
-    INIT_WORK(&trans_pcie->rba.rx_alloc, iwl_pcie_rx_allocator_work);
-#endif  // NEEDS_PORTING
   }
 
 #ifdef CPTCFG_IWLWIFI_PCIE_RTPM

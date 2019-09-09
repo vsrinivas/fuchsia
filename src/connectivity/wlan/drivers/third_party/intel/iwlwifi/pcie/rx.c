@@ -47,7 +47,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 
 zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans);
-void iwl_pcie_rxq_alloc_rbs(struct iwl_trans* trans, struct iwl_rxq* rxq);
 void iwl_pcie_free_rbs_pool(struct iwl_trans* trans);
 void iwl_pcie_rx_init_rxb_lists(struct iwl_rxq* rxq);
 zx_status_t iwl_pcie_rx_alloc(struct iwl_trans* trans);
@@ -370,49 +369,6 @@ static void iwl_pcie_rxq_restock(struct iwl_trans* trans, struct iwl_rxq* rxq) {
   }
 }
 
-/*
- * iwl_pcie_rxq_alloc_rbs - allocate a page for each used RBD
- *
- * A used RBD is an Rx buffer that has been given to the stack. To use it again
- * a page must be allocated and the RBD must point to the page. This function
- * doesn't change the HW pointer but handles the list of pages that is used by
- * iwl_pcie_rxq_restock. The latter function will update the HW to use the newly
- * allocated buffers.
- */
-void iwl_pcie_rxq_alloc_rbs(struct iwl_trans* trans, struct iwl_rxq* rxq) {
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_rx_mem_buffer* rxb;
-  size_t buffer_size = iwl_trans_get_rb_size(trans_pcie->rx_buf_size);
-
-  while (1) {
-    // Pull a buffer from rx_used.
-    mtx_lock(&rxq->lock);
-    rxb = list_remove_head_type(&rxq->rx_used, struct iwl_rx_mem_buffer, list);
-    mtx_unlock(&rxq->lock);
-    if (!rxb) {
-      return;
-    }
-
-    // Initialize it.
-    zx_status_t status =
-        io_buffer_init(&rxb->io_buf, trans_pcie->bti, buffer_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-    if (status != ZX_OK) {
-      IWL_WARN(trans, "Failed to allocate io buffer\n");
-
-      mtx_lock(&rxq->lock);
-      list_add_head(&rxq->rx_used, &rxb->list);
-      mtx_unlock(&rxq->lock);
-      return;
-    }
-
-    // Push it onto rx_free.
-    mtx_lock(&rxq->lock);
-    list_add_tail(&rxq->rx_free, &rxb->list);
-    rxq->free_count++;
-    mtx_unlock(&rxq->lock);
-  }
-}
-
 void iwl_pcie_free_rbs_pool(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   int i;
@@ -424,132 +380,6 @@ void iwl_pcie_free_rbs_pool(struct iwl_trans* trans) {
     io_buffer_release(&trans_pcie->rx_pool[i].io_buf);
   }
 }
-
-/*
- * iwl_pcie_rx_allocator - Allocates pages in the background for RX queues
- *
- * Allocates for each received request 8 pages
- * Called as a scheduled work item.
- */
-__UNUSED static void iwl_pcie_rx_allocator(struct iwl_trans* trans) {
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_rb_allocator* rba = &trans_pcie->rba;
-  int pending = atomic_xchg(&rba->req_pending, 0);
-  size_t buffer_size = iwl_trans_get_rb_size(trans_pcie->rx_buf_size);
-
-  IWL_DEBUG_RX(trans, "Pending allocation requests = %d\n", pending);
-
-  /* If we were scheduled - there is at least one request */
-  mtx_lock(&rba->lock);
-
-  /* swap out the rba->rbd_empty to a local list */
-  list_node_t local_empty;
-  list_move(&rba->rbd_empty, &local_empty);
-  mtx_unlock(&rba->lock);
-
-  while (pending) {
-    int i;
-    list_node_t local_allocated = LIST_INITIAL_VALUE(local_allocated);
-
-    for (i = 0; i < RX_CLAIM_REQ_ALLOC;) {
-      struct iwl_rx_mem_buffer* rxb;
-
-      /* List should never be empty - each reused RBD is
-       * returned to the list, and initial pool covers any
-       * possible gap between the time the page is allocated
-       * to the time the RBD is added.
-       */
-      ZX_ASSERT(!list_is_empty(&local_empty));
-      /* Get the first rxb from the rbd list */
-      rxb = list_remove_head_type(&local_empty, struct iwl_rx_mem_buffer, list);
-      ZX_ASSERT(!io_buffer_is_valid(&rxb->io_buf));
-
-      /* Alloc a new receive buffer */
-      zx_status_t status = io_buffer_init(&rxb->io_buf, trans_pcie->bti, buffer_size,
-                                          IO_BUFFER_RW | IO_BUFFER_CONTIG);
-      if (status != ZX_OK) {
-        /* Do not post a warning if there are only a few requests */
-        if (pending >= RX_PENDING_WATERMARK) {
-          IWL_WARN(trans, "Failed to allocate io buffer\n");
-        }
-        continue;
-      }
-
-      /* move the allocated entry to the out list */
-      list_move(&rxb->list, &local_allocated);
-      i++;
-    }
-
-    pending--;
-    if (!pending) {
-      pending = atomic_xchg(&rba->req_pending, 0);
-      IWL_DEBUG_RX(trans, "Pending allocation requests = %d\n", pending);
-    }
-
-    mtx_lock(&rba->lock);
-    /* add the allocated rbds to the allocator allocated list */
-    list_splice_after_tail(&local_allocated, &rba->rbd_allocated);
-    /* get more empty RBDs for current pending requests */
-    list_splice_after_tail(&rba->rbd_empty, &local_empty);
-    mtx_unlock(&rba->lock);
-
-    atomic_inc(&rba->req_ready);
-  }
-
-  mtx_lock(&rba->lock);
-  /* return unused rbds to the allocator empty list */
-  list_splice_after_tail(&local_empty, &rba->rbd_empty);
-  mtx_unlock(&rba->lock);
-}
-
-/*
- * iwl_pcie_rx_allocator_get - returns the pre-allocated pages
-.*
-.* Called by queue when the queue posted allocation request and
- * has freed 8 RBDs in order to restock itself.
- * This function directly moves the allocated RBs to the queue's ownership
- * and updates the relevant counters.
- */
-static void iwl_pcie_rx_allocator_get(struct iwl_trans* trans, struct iwl_rxq* rxq) {
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_rb_allocator* rba = &trans_pcie->rba;
-  int i;
-
-  lockdep_assert_held(&rxq->lock);
-
-  /*
-   * atomic_dec_if_positive returns req_ready - 1 for any scenario.
-   * If req_ready is 0 atomic_dec_if_positive will return -1 and this
-   * function will return early, as there are no ready requests.
-   * atomic_dec_if_positive will perofrm the *actual* decrement only if
-   * req_ready > 0, i.e. - there are ready requests and the function
-   * hands one request to the caller.
-   */
-  if (atomic_dec_if_positive(&rba->req_ready) < 0) {
-    return;
-  }
-
-  mtx_lock(&rba->lock);
-  for (i = 0; i < RX_CLAIM_REQ_ALLOC; i++) {
-    // Get next allocated Rx buffer, remove it from allocated list. This should not fail since this
-    // function is only called when the allocator contains 8 RBDs.
-    list_node_t* rxb = list_remove_head(&rba->rbd_allocated);
-    list_add_head(&rxq->rx_free, rxb);
-  }
-  mtx_unlock(&rba->lock);
-
-  rxq->used_count -= RX_CLAIM_REQ_ALLOC;
-  rxq->free_count += RX_CLAIM_REQ_ALLOC;
-}
-
-#if 0  // NEEDS_PORTING
-__UNUSED void iwl_pcie_rx_allocator_work(struct work_struct* data) {
-  struct iwl_rb_allocator* rba_p = container_of(data, struct iwl_rb_allocator, rx_alloc);
-  struct iwl_trans_pcie* trans_pcie = container_of(rba_p, struct iwl_trans_pcie, rba);
-
-  iwl_pcie_rx_allocator(trans_pcie->trans);
-}
-#endif
 
 static int iwl_pcie_free_bd_size(struct iwl_trans* trans, bool use_rx_td) {
   struct iwl_rx_transfer_desc* rx_td;
@@ -678,7 +508,6 @@ err:
 
 zx_status_t iwl_pcie_rx_alloc(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_rb_allocator* rba = &trans_pcie->rba;
 
   if (WARN_ON(trans_pcie->rxq)) {
     return ZX_ERR_BAD_STATE;
@@ -688,8 +517,6 @@ zx_status_t iwl_pcie_rx_alloc(struct iwl_trans* trans) {
   if (!trans_pcie->rxq) {
     return ZX_ERR_NO_MEMORY;
   }
-
-  mtx_init(&rba->lock, mtx_plain);
 
   for (int i = 0; i < trans->num_rx_queues; i++) {
     struct iwl_rxq* rxq = &trans_pcie->rxq[i];
@@ -858,8 +685,7 @@ int iwl_pcie_dummy_napi_poll(struct napi_struct* napi, int budget) {
 zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct iwl_rxq* def_rxq;
-  struct iwl_rb_allocator* rba = &trans_pcie->rba;
-  int i, queue_size, allocator_pool_size, num_alloc;
+  int i, queue_size;
 
   if (!trans_pcie->rxq) {
     zx_status_t status = iwl_pcie_rx_alloc(trans);
@@ -868,17 +694,6 @@ zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
     }
   }
   def_rxq = trans_pcie->rxq;
-
-#if 0   // NEEDS_PORTING
-  cancel_work_sync(&rba->rx_alloc);
-#endif  // NEEDS_PORTING
-
-  mtx_lock(&rba->lock);
-  atomic_set(&rba->req_pending, 0);
-  atomic_set(&rba->req_ready, 0);
-  list_initialize(&rba->rbd_allocated);
-  list_initialize(&rba->rbd_empty);
-  mtx_unlock(&rba->lock);
 
   /* free all first - we might be reconfigured for a different size */
   iwl_pcie_free_rbs_pool(trans);
@@ -906,9 +721,7 @@ zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
                                                                   : sizeof(struct iwl_rb_status));
 
     list_initialize(&rxq->rx_free);
-    list_initialize(&rxq->rx_used);
     rxq->free_count = 0;
-    rxq->used_count = 0;
 
 #if 0   // NEEDS_PORTING
     if (!rxq->napi.poll) {
@@ -919,25 +732,31 @@ zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
     mtx_unlock(&rxq->lock);
   }
 
-  /* move the pool to the default queue and allocator ownerships */
+  size_t buffer_size = iwl_trans_get_rb_size(trans_pcie->rx_buf_size);
   queue_size = trans->cfg->mq_rx_supported ? MQ_RX_NUM_RBDS : RX_QUEUE_SIZE;
-  allocator_pool_size = trans->num_rx_queues * (RX_CLAIM_REQ_ALLOC - RX_POST_REQ_ALLOC);
-  num_alloc = queue_size + allocator_pool_size;
   BUILD_BUG_ON(ARRAY_SIZE(trans_pcie->global_table) != ARRAY_SIZE(trans_pcie->rx_pool));
-  for (i = 0; i < num_alloc; i++) {
+
+  for (i = 0; i < queue_size; i++) {
     struct iwl_rx_mem_buffer* rxb = &trans_pcie->rx_pool[i];
 
-    if (i < allocator_pool_size) {
-      list_add_head(&rba->rbd_empty, &rxb->list);
-    } else {
-      list_add_head(&def_rxq->rx_used, &rxb->list);
+    // Initialize the io buffer.
+    zx_status_t status =
+        io_buffer_init(&rxb->io_buf, trans_pcie->bti, buffer_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+      IWL_WARN(trans, "Failed to allocate io buffer\n");
+      mtx_unlock(&def_rxq->lock);
+      return status;
     }
+
+    mtx_lock(&def_rxq->lock);
+    list_add_tail(&def_rxq->rx_free, &rxb->list);
+    def_rxq->free_count++;
+    mtx_unlock(&def_rxq->lock);
+
     trans_pcie->global_table[i] = rxb;
     rxb->vid = (uint16_t)(i + 1);
     rxb->invalid = true;
   }
-
-  iwl_pcie_rxq_alloc_rbs(trans, def_rxq);
 
   return ZX_OK;
 }
@@ -994,11 +813,6 @@ void iwl_pcie_rx_free(struct iwl_trans* trans) {
     return;
   }
 
-#if 0   // NEEDS_PORTING
-  struct iwl_rb_allocator* rba = &trans_pcie->rba;
-  cancel_work_sync(&rba->rx_alloc);
-#endif  // NEEDS_PORTING
-
   iwl_pcie_free_rbs_pool(trans);
 
   for (int i = 0; i < trans->num_rx_queues; i++) {
@@ -1015,55 +829,9 @@ void iwl_pcie_rx_free(struct iwl_trans* trans) {
   free(trans_pcie->rxq);
 }
 
-static void iwl_pcie_rx_move_to_allocator(struct iwl_rxq* rxq, struct iwl_rb_allocator* rba) {
-  mtx_lock(&rba->lock);
-  list_splice_after_tail(&rxq->rx_used, &rba->rbd_empty);
-  mtx_unlock(&rba->lock);
-}
-
-/*
- * iwl_pcie_rx_reuse_rbd - Recycle used RBDs
- *
- * Called when a RBD can be reused. The RBD is transferred to the allocator.
- * When there are 2 empty RBDs - a request for allocation is posted
- */
-static void iwl_pcie_rx_reuse_rbd(struct iwl_trans* trans, struct iwl_rx_mem_buffer* rxb,
-                                  struct iwl_rxq* rxq, bool emergency) {
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_rb_allocator* rba = &trans_pcie->rba;
-
-  /* Move the RBD to the used list, will be moved to allocator in batches
-   * before claiming or posting a request*/
-  list_add_tail(&rxb->list, &rxq->rx_used);
-
-  if (unlikely(emergency)) {
-    return;
-  }
-
-  /* Count the allocator owned RBDs */
-  rxq->used_count++;
-
-  /* If we have RX_POST_REQ_ALLOC new released rx buffers -
-   * issue a request for allocator. Modulo RX_CLAIM_REQ_ALLOC is
-   * used for the case we failed to claim RX_CLAIM_REQ_ALLOC,
-   * after but we still need to post another request.
-   */
-  if ((rxq->used_count % RX_CLAIM_REQ_ALLOC) == RX_POST_REQ_ALLOC) {
-    /* Move the 2 RBDs to the allocator ownership.
-     Allocator has another 6 from pool for the request completion*/
-    iwl_pcie_rx_move_to_allocator(rxq, rba);
-
-    atomic_inc(&rba->req_pending);
-#if 0   // NEEDS_PORTING
-    queue_work(rba->alloc_wq, &rba->rx_alloc);
-#endif  // NEEDS_PORTING
-  }
-}
-
 static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
-                                  struct iwl_rx_mem_buffer* rxb, bool emergency, int i) {
+                                  struct iwl_rx_mem_buffer* rxb, int i) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  bool page_stolen = false;
   uint32_t offset = 0;
 
   if (WARN_ON(!rxb)) {
@@ -1076,7 +844,6 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     struct iwl_rx_cmd_buffer rxcb = {
         ._offset = offset,
         ._io_buf = rxb->io_buf,
-        ._page_stolen = false,
     };
 
 #if 0   // NEEDS_PORTING
@@ -1145,11 +912,6 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
       txq->entries[cmd_index].free_buf = NULL;
     }
 
-    /*
-     * After here, we should always check rxcb._page_stolen,
-     * if it is true then one of the handlers took the page.
-     */
-
     if (reclaim) {
       /* Invoke any callbacks, transfer the buffer to caller,
        * and fire off the (possibly) blocking
@@ -1163,27 +925,15 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     }
 #endif  // NEEDS_PORTING
 
-    page_stolen |= rxcb._page_stolen;
     if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
       break;
     }
     offset += ALIGN(len, FH_RSCSR_FRAME_ALIGN);
   }
 
-  /* page was stolen from us -- free our reference */
-  if (page_stolen) {
-    io_buffer_release(&rxb->io_buf);
-  }
-
-  /* Reuse the page if possible. For notification packets and
-   * SKBs that fail to Rx correctly, add them back into the
-   * rx_free list for reuse later. */
-  if (io_buffer_is_valid(&rxb->io_buf)) {
-    list_add_tail(&rxq->rx_free, &rxb->list);
-    rxq->free_count++;
-  } else {
-    iwl_pcie_rx_reuse_rbd(trans, rxb, rxq, emergency);
-  }
+  // Add the buffer back to the rx_free list.
+  list_add_tail(&rxq->rx_free, &rxb->list);
+  rxq->free_count++;
 }
 
 static struct iwl_rx_mem_buffer* iwl_pcie_get_rxb(struct iwl_trans* trans, struct iwl_rxq* rxq,
@@ -1241,10 +991,8 @@ out_err:
 static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct iwl_rxq* rxq = &trans_pcie->rxq[queue];
-  uint32_t r, i, count = 0;
-  bool emergency = false;
+  uint32_t r, i;
 
-restart:
   mtx_lock(&rxq->lock);
   /* uCode's read index (stored in shared DRAM) indicates the last Rx
    * buffer that the driver may process (last buffer filled by ucode). */
@@ -1260,60 +1008,23 @@ restart:
   }
 
   while (i != r) {
-    struct iwl_rb_allocator* rba = &trans_pcie->rba;
     struct iwl_rx_mem_buffer* rxb;
-    /* number of RBDs still waiting for page allocation */
-    uint32_t rb_pending_alloc = atomic_read(&trans_pcie->rba.req_pending) * RX_CLAIM_REQ_ALLOC;
-
-    if (unlikely(rb_pending_alloc >= rxq->queue_size / 2 && !emergency)) {
-      iwl_pcie_rx_move_to_allocator(rxq, rba);
-      emergency = true;
-    }
 
     IWL_DEBUG_RX(trans, "Q %d: HW = %d, SW = %d\n", rxq->id, r, i);
 
     rxb = iwl_pcie_get_rxb(trans, rxq, i);
     if (!rxb) {
-      goto out;
+      break;
     }
 
-    iwl_pcie_rx_handle_rb(trans, rxq, rxb, emergency, i);
+    iwl_pcie_rx_handle_rb(trans, rxq, rxb, i);
 
     i = (i + 1) & (rxq->queue_size - 1);
-
-    /*
-     * If we have RX_CLAIM_REQ_ALLOC released rx buffers -
-     * try to claim the pre-allocated buffers from the allocator.
-     * If not ready - will try to reclaim next time.
-     * There is no need to reschedule work - allocator exits only
-     * on success
-     */
-    if (rxq->used_count >= RX_CLAIM_REQ_ALLOC) {
-      iwl_pcie_rx_allocator_get(trans, rxq);
-    }
-
-    if (rxq->used_count % RX_CLAIM_REQ_ALLOC == 0 && !emergency) {
-      /* Add the remaining empty RBDs for allocator use */
-      iwl_pcie_rx_move_to_allocator(rxq, rba);
-    } else if (emergency) {
-      count++;
-      if (count == 8) {
-        count = 0;
-        if (rb_pending_alloc < rxq->queue_size / 3) {
-          emergency = false;
-        }
-
-        rxq->read = i;
-        mtx_unlock(&rxq->lock);
-        iwl_pcie_rxq_alloc_rbs(trans, rxq);
-        iwl_pcie_rxq_restock(trans, rxq);
-        goto restart;
-      }
-    }
   }
-out:
+
   /* Backtrack one entry */
   rxq->read = i;
+
   /* update cr tail with the rxq read pointer */
 #if 0   // NEEDS_PORTING
   if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
@@ -1321,22 +1032,6 @@ out:
   }
 #endif  // NEEDS_PORTING
   mtx_unlock(&rxq->lock);
-
-  /*
-   * handle a case where in emergency there are some unallocated RBDs.
-   * those RBDs are in the used list, but are not tracked by the queue's
-   * used_count which counts allocator owned RBDs.
-   * unallocated emergency RBDs must be allocated on exit, otherwise
-   * when called again the function may not be in emergency mode and
-   * they will be handed to the allocator with no tracking in the RBD
-   * allocator counters, which will lead to them never being claimed back
-   * by the queue.
-   * by allocating them here, they are now in the queue free list, and
-   * will be restocked by the next call of iwl_pcie_rxq_restock.
-   */
-  if (unlikely(emergency && count)) {
-    iwl_pcie_rxq_alloc_rbs(trans, rxq);
-  }
 
 #if 0   // NEEDS_PORTING
   if (rxq->napi.poll) {

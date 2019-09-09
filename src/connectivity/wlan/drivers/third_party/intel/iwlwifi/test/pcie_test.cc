@@ -145,11 +145,9 @@ TEST_F(PcieTest, RxInit) {
   EXPECT_EQ(trans_pcie_->rxq->read, 0);
   EXPECT_EQ(trans_pcie_->rxq->write, 0);
   EXPECT_EQ(trans_pcie_->rxq->free_count, RX_QUEUE_SIZE);
-  EXPECT_EQ(trans_pcie_->rxq->used_count, 0);
   EXPECT_EQ(trans_pcie_->rxq->write_actual, 0);
   EXPECT_EQ(trans_pcie_->rxq->queue_size, RX_QUEUE_SIZE);
   EXPECT_GE(list_length(&trans_pcie_->rxq->rx_free), RX_QUEUE_SIZE);
-  EXPECT_TRUE(list_is_empty(&trans_pcie_->rxq->rx_used));
   EXPECT_TRUE(io_buffer_is_valid(&trans_pcie_->rxq->rb_status));
 
   struct iwl_rx_mem_buffer* rxb;

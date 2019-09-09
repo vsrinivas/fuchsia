@@ -240,7 +240,6 @@ struct iwl_rx_cmd_buffer {
   struct page* _page;
   io_buffer_t _io_buf;
   int _offset;
-  bool _page_stolen;
   uint8_t status;
 };
 
@@ -249,7 +248,6 @@ static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) { return io_buffer_vir
 static inline int rxb_offset(struct iwl_rx_cmd_buffer* r) { return r->_offset; }
 
 static inline struct page* rxb_steal_page(struct iwl_rx_cmd_buffer* r) {
-  r->_page_stolen = true;
 #if 0   // NEEDS_PORTING
     get_page(r->_page);
 #endif  // NEEDS_PORTING

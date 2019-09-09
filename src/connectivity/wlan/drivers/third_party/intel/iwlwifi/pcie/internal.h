@@ -167,17 +167,15 @@ struct iwl_rx_completion_desc {
  * @read: Shared index to newest available Rx buffer
  * @write: Shared index to oldest written Rx packet
  * @free_count: Number of pre-allocated buffers in rx_free
- * @used_count: Number of RBDs handled to allocator to use for allocation
  * @write_actual:
  * @rx_free: list of RBDs with allocated RB ready for use
- * @rx_used: list of RBDs with no RB attached
  * @need_update: flag to indicate we need to update read/write index
  * @rb_stts: driver's pointer to receive buffer status
  * @rb_stts_dma: bus address of receive buffer status
  * @lock:
  * @queue: actual rx queue. Not used for multi-rx queue.
  *
- * NOTE:  rx_free and rx_used are used as a FIFO for iwl_rx_mem_buffers
+ * NOTE:  rx_free is used as a FIFO for iwl_rx_mem_buffers
  */
 struct iwl_rxq {
   int id;
@@ -202,40 +200,14 @@ struct iwl_rxq {
   uint32_t read;
   uint32_t write;
   uint32_t free_count;
-  uint32_t used_count;
   uint32_t write_actual;
   uint32_t queue_size;
   list_node_t rx_free;
-  list_node_t rx_used;
   bool need_update;
   io_buffer_t rb_status;
   mtx_t lock;
   struct napi_struct napi;
   struct iwl_rx_mem_buffer* queue[RX_QUEUE_SIZE];
-};
-
-/**
- * struct iwl_rb_allocator - Rx allocator
- * @req_pending: number of requests the allocator had not processed yet
- * @req_ready: number of requests honored and ready for claiming
- * @rbd_allocated: RBDs with pages allocated and ready to be handled to
- *  the queue. This is a list of &struct iwl_rx_mem_buffer
- * @rbd_empty: RBDs with no page attached for allocator use. This is a list
- *  of &struct iwl_rx_mem_buffer
- * @lock: protects the rbd_allocated and rbd_empty lists
- * @alloc_wq: work queue for background calls
- * @rx_alloc: work struct for background calls
- */
-struct iwl_rb_allocator {
-  atomic_t req_pending;
-  atomic_t req_ready;
-  list_node_t rbd_allocated;
-  list_node_t rbd_empty;
-  mtx_t lock;
-#if 0   // NEEDS_PORTING
-    struct workqueue_struct* alloc_wq;
-    struct work_struct rx_alloc;
-#endif  // NEEDS_PORTING
 };
 
 struct iwl_dma_ptr {
@@ -520,7 +492,6 @@ struct iwl_trans_pcie {
   struct iwl_rx_mem_buffer rx_pool[RX_POOL_SIZE];
   struct iwl_rx_mem_buffer* global_table[RX_POOL_SIZE];
   zx_handle_t bti;
-  struct iwl_rb_allocator rba;
   union {
     struct iwl_context_info* ctxt_info;
     struct iwl_context_info_gen3* ctxt_info_gen3;
