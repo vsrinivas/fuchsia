@@ -21,7 +21,6 @@ namespace virtual_camera {
 class VirtualCameraDevice {
  public:
   VirtualCameraDevice();
-  ~VirtualCameraDevice();
 
   // DDK device implementation
   void Unbind();

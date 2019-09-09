@@ -10,11 +10,13 @@
 
 namespace virtual_camera {
 
-namespace {
-const char* kVirtualCameraVendorName = "Google Inc.";
-const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
-
-}  // namespace
+static const char* kVirtualCameraVendorName = "Google Inc.";
+static const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
+static constexpr uint32_t kFakeImageWidth = 640;
+static constexpr uint32_t kFakeImageHeight = 480;
+static constexpr uint32_t kFakeImageBytesPerPixel = 4;
+static constexpr uint32_t kFakeImageFps = 30;
+static constexpr uint64_t kNanosecondsPerSecond = 1e9;
 
 void VirtualCameraControlImpl::OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame) {
   stream_->OnFrameAvailable(frame);
@@ -25,7 +27,7 @@ VirtualCameraControlImpl::VirtualCameraControlImpl(fidl::InterfaceRequest<Contro
                                                    fit::closure on_connection_closed)
     : binding_(this, std::move(control), dispatcher) {
   binding_.set_error_handler(
-      [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
+      [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
 }
 
 void VirtualCameraControlImpl::PostNextCaptureTask() {
@@ -36,7 +38,8 @@ void VirtualCameraControlImpl::PostNextCaptureTask() {
       << "TimelineFunction gave negative result!";
   task_.PostForTime(async_get_default_dispatcher(), zx::time(next_frame_time));
   FXL_VLOG(4) << "VirtualCameraSource: setting next frame to: " << next_frame_time << "   "
-              << next_frame_time - (int64_t)zx_clock_get_monotonic() << " nsec from now";
+              << next_frame_time - (static_cast<int64_t>(zx_clock_get_monotonic()))
+              << " nsec from now";
 }
 
 // Checks which buffer can be written to,
@@ -67,19 +70,18 @@ void VirtualCameraControlImpl::ProduceFrame() {
   PostNextCaptureTask();
 }
 
-void VirtualCameraControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
+void VirtualCameraControlImpl::GetFormats(uint32_t /*index*/, GetFormatsCallback callback) {
   std::vector<fuchsia::camera::VideoFormat> formats;
 
   fuchsia::camera::VideoFormat format = {
       .format =
           {
-              .width = 640,
-              .height = 480,
+              .width = kFakeImageWidth,
+              .height = kFakeImageHeight,
               .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::BGRA32},
-              // .bits_per_pixel = 4,
           },
-      .rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1}};
-  format.format.planes[0].bytes_per_row = 4 * 640;
+      .rate = {.frames_per_sec_numerator = kFakeImageFps, .frames_per_sec_denominator = 1}};
+  format.format.planes[0].bytes_per_row = kFakeImageBytesPerPixel * kFakeImageWidth;
 
   formats.push_back(format);
   callback(std::move(formats), 1, ZX_OK);
@@ -133,7 +135,7 @@ void VirtualCameraControlImpl::VirtualCameraStreamImpl::Start() {
   // conversion function from frame to time is:
   // frames_per_sec_denominator * 1e9 * num_frames) / frames_per_sec_numerator
   owner_.frame_to_timestamp_ = media::TimelineFunction(
-      zx_clock_get_monotonic(), 0, owner_.rate_.frames_per_sec_denominator * 1e9,
+      zx_clock_get_monotonic(), 0, owner_.rate_.frames_per_sec_denominator * kNanosecondsPerSecond,
       owner_.rate_.frames_per_sec_numerator);
 
   owner_.frame_count_ = 0;

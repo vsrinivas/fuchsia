@@ -11,16 +11,14 @@ namespace virtual_camera {
 
 std::unique_ptr<async::Loop> VirtualCameraDevice::fidl_dispatch_loop_ = nullptr;
 
-#define DEV(c) static_cast<VirtualCameraDevice*>(c)
 static zx_protocol_device_t virtual_camera_device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
-    .release = [](void* ctx) { DEV(ctx)->Release(); },
+    .unbind = [](void* ctx) { static_cast<VirtualCameraDevice*>(ctx)->Unbind(); },
+    .release = [](void* ctx) { static_cast<VirtualCameraDevice*>(ctx)->Release(); },
     .message = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
-      return DEV(ctx)->Message(msg, txn);
+      return static_cast<VirtualCameraDevice*>(ctx)->Message(msg, txn);
     },
 };
-#undef DEV
 
 VirtualCameraDevice::VirtualCameraDevice() {
   if (fidl_dispatch_loop_ == nullptr) {
@@ -28,8 +26,6 @@ VirtualCameraDevice::VirtualCameraDevice() {
     fidl_dispatch_loop_->StartThread();
   }
 }
-
-VirtualCameraDevice::~VirtualCameraDevice() {}
 
 zx_status_t VirtualCameraDevice::Bind(zx_device_t* device) {
   device_add_args_t args = {};
@@ -77,9 +73,8 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
         [] { virtual_camera_camera_control_server_.reset(); });
 
     return ZX_OK;
-  } else {
-    return ZX_ERR_INTERNAL;
   }
+  return ZX_ERR_INTERNAL;
 }
 
 const fuchsia_hardware_camera_Device_ops_t VirtualCameraDevice::CAMERA_FIDL_THUNKS{
