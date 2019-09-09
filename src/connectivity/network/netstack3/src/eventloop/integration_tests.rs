@@ -614,7 +614,7 @@ async fn test_add_remove_interface() {
         .await
         .unwrap()
         .expect_err("Failed to remove twice");
-    assert_eq!(res, fidl_net_stack::ErrorType::NotFound);
+    assert_eq!(res, fidl_net_stack::Error::NotFound);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -835,7 +835,7 @@ async fn test_get_interface_info() {
         .await
         .unwrap()
         .expect_err("Get interface info fails");
-    assert_eq!(err, fidl_net_stack::ErrorType::NotFound);
+    assert_eq!(err, fidl_net_stack::Error::NotFound);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -901,13 +901,13 @@ async fn test_disable_enable_interface() {
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
         test_stack.run_future(stack.enable_interface(12345)).await.unwrap().unwrap_err(),
-        fidl_net_stack::ErrorType::NotFound
+        fidl_net_stack::Error::NotFound
     );
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
         test_stack.run_future(stack.disable_interface(12345)).await.unwrap().unwrap_err(),
-        fidl_net_stack::ErrorType::NotFound
+        fidl_net_stack::Error::NotFound
     );
 }
 
@@ -966,7 +966,7 @@ async fn test_add_device_routes() {
             .await
             .unwrap()
             .unwrap_err(),
-        fidl_net_stack::ErrorType::AlreadyExists
+        fidl_net_stack::Error::AlreadyExists
     );
     // an entry with an invalid subnet should fail with Invalidargs:
     let mut bad_entry = fidl_net_stack::ForwardingEntry {
@@ -982,7 +982,7 @@ async fn test_add_device_routes() {
             .await
             .unwrap()
             .unwrap_err(),
-        fidl_net_stack::ErrorType::InvalidArgs
+        fidl_net_stack::Error::InvalidArgs
     );
     // an entry with a bad devidce id should fail with NotFound:
     let mut bad_entry = fidl_net_stack::ForwardingEntry {
@@ -998,7 +998,7 @@ async fn test_add_device_routes() {
             .await
             .unwrap()
             .unwrap_err(),
-        fidl_net_stack::ErrorType::NotFound
+        fidl_net_stack::Error::NotFound
     );
 }
 
@@ -1061,7 +1061,7 @@ async fn test_list_del_routes() {
     let mut fidl = route1.into_subnet_dest().0.into_fidl();
     assert_eq!(
         test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap_err(),
-        fidl_net_stack::ErrorType::NotFound
+        fidl_net_stack::Error::NotFound
     );
 
     // check that route was deleted (should've disappeared from core)
@@ -1081,7 +1081,7 @@ async fn test_list_del_routes() {
     let mut fidl = route2.into_subnet_dest().0.into_fidl();
     assert_eq!(
         test_stack.run_future(stack.del_forwarding_entry(&mut fidl)).await.unwrap().unwrap_err(),
-        fidl_net_stack::ErrorType::NotFound
+        fidl_net_stack::Error::NotFound
     );
 
     // check that both routes were deleted (should've disappeared from core)
@@ -1130,7 +1130,7 @@ async fn test_add_remote_routes() {
             .await
             .unwrap()
             .unwrap_err(),
-        fidl_net_stack::ErrorType::AlreadyExists
+        fidl_net_stack::Error::AlreadyExists
     );
 }
 

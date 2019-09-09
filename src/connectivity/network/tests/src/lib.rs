@@ -347,7 +347,7 @@ async fn add_remove_interface_address_errors() -> Result {
         .await
         .context("failed to call add interface address")?
         .unwrap_err();
-    assert_eq!(error, fidl_fuchsia_net_stack::ErrorType::NotFound);
+    assert_eq!(error, fidl_fuchsia_net_stack::Error::NotFound);
 
     let error = netstack
         .remove_interface_address(
@@ -373,7 +373,7 @@ async fn add_remove_interface_address_errors() -> Result {
         .await
         .context("failed to call add interface address")?
         .unwrap_err();
-    assert_eq!(error, fidl_fuchsia_net_stack::ErrorType::InvalidArgs);
+    assert_eq!(error, fidl_fuchsia_net_stack::Error::InvalidArgs);
 
     let error = netstack
         .remove_interface_address(
@@ -410,7 +410,7 @@ async fn get_interface_info_not_found() -> Result {
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
     let res =
         stack.get_interface_info(max_id + 1).await.context("failed to call get interface info")?;
-    assert_eq!(res, Err(fidl_fuchsia_net_stack::ErrorType::NotFound));
+    assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::NotFound));
     Ok(())
 }
 

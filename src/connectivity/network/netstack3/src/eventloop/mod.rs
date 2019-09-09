@@ -318,7 +318,7 @@ impl EventLoop {
                     }
                     None => {
                         // Send internal error if we can't allocate an id
-                        setup.responder.send(&mut Err(fidl_net_stack::ErrorType::Internal));
+                        setup.responder.send(&mut Err(fidl_net_stack::Error::Internal));
                     }
                 }
             }
@@ -512,7 +512,7 @@ impl EventLoop {
         setup.spawn(self.ctx.dispatcher().event_send.clone());
     }
 
-    fn fidl_del_ethernet_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::ErrorType> {
+    fn fidl_del_ethernet_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         match self.ctx.dispatcher_mut().devices.remove_device(id) {
             Some(info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
@@ -520,7 +520,7 @@ impl EventLoop {
             }
             None => {
                 // Invalid device ID
-                Err(fidl_net_stack::ErrorType::NotFound)
+                Err(fidl_net_stack::Error::NotFound)
             }
         }
     }
@@ -576,13 +576,13 @@ impl EventLoop {
     async fn fidl_get_interface_info(
         &mut self,
         id: u64,
-    ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::ErrorType> {
+    ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
         let device =
-            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::ErrorType::NotFound)?;
+            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
         // TODO(wesleyac): Cache info and status
-        let info = device.client().info().await.map_err(|_| fidl_net_stack::ErrorType::Internal)?;
+        let info = device.client().info().await.map_err(|_| fidl_net_stack::Error::Internal)?;
         let phy_status =
-            device.client().get_status().await.map_err(|_| fidl_net_stack::ErrorType::Internal)?;
+            device.client().get_status().await.map_err(|_| fidl_net_stack::Error::Internal)?;
         let mut addresses = vec![];
         if let Some(core_id) = device.core_id() {
             for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -620,7 +620,7 @@ impl EventLoop {
         &mut self,
         id: u64,
         addr: InterfaceAddress,
-    ) -> Result<(), fidl_net_stack::ErrorType> {
+    ) -> Result<(), fidl_net_stack::Error> {
         let device_info = self.ctx.dispatcher().get_device_info(id);
         if let Some(device_info) = device_info {
             match device_info.core_id() {
@@ -635,11 +635,11 @@ impl EventLoop {
                 None => {
                     // TODO(brunodalbo): We should probably allow adding static addresses
                     // to interfaces that are not installed, return BadState for now
-                    Err(fidl_net_stack::ErrorType::BadState)
+                    Err(fidl_net_stack::Error::BadState)
                 }
             }
         } else {
-            Err(fidl_net_stack::ErrorType::NotFound) // Invalid device ID
+            Err(fidl_net_stack::Error::NotFound) // Invalid device ID
         }
     }
 
@@ -647,9 +647,9 @@ impl EventLoop {
         &mut self,
         id: u64,
         addr: fidl_net_stack::InterfaceAddress,
-    ) -> Result<(), fidl_net_stack::ErrorType> {
+    ) -> Result<(), fidl_net_stack::Error> {
         // TODO(eyalsoha): Implement this.
-        Err(fidl_net_stack::ErrorType::NotSupported)
+        Err(fidl_net_stack::Error::NotSupported)
     }
 
     fn fidl_get_forwarding_table(&self) -> Vec<fidl_net_stack::ForwardingEntry> {
@@ -667,7 +667,7 @@ impl EventLoop {
     fn fidl_add_forwarding_entry(
         &mut self,
         entry: ForwardingEntry,
-    ) -> Result<(), fidl_net_stack::ErrorType> {
+    ) -> Result<(), fidl_net_stack::Error> {
         let entry = match EntryEither::try_from_fidl_with_ctx(self.ctx.dispatcher(), entry) {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
@@ -676,7 +676,7 @@ impl EventLoop {
             Ok(_) => Ok(()),
             Err(NetstackError::Exists) => {
                 // Subnet already in routing table.
-                Err(fidl_net_stack::ErrorType::AlreadyExists)
+                Err(fidl_net_stack::Error::AlreadyExists)
             }
             Err(_) => unreachable!(),
         }
@@ -685,23 +685,23 @@ impl EventLoop {
     fn fidl_del_forwarding_entry(
         &mut self,
         subnet: fidl_net::Subnet,
-    ) -> Result<(), fidl_net_stack::ErrorType> {
+    ) -> Result<(), fidl_net_stack::Error> {
         if let Ok(subnet) = subnet.try_into_core() {
             match del_device_route(&mut self.ctx, subnet) {
                 Ok(_) => Ok(()),
-                Err(NetstackError::NotFound) => Err(fidl_net_stack::ErrorType::NotFound),
+                Err(NetstackError::NotFound) => Err(fidl_net_stack::Error::NotFound),
                 Err(_) => unreachable!(),
             }
         } else {
-            Err(fidl_net_stack::ErrorType::InvalidArgs)
+            Err(fidl_net_stack::Error::InvalidArgs)
         }
     }
 
-    async fn fidl_enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::ErrorType> {
+    async fn fidl_enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         self.enable_interface(id, |dev_info| dev_info.set_admin_enabled(true)).await
     }
 
-    fn fidl_disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::ErrorType> {
+    fn fidl_disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         self.disable_interface(id, |dev_info| dev_info.set_admin_enabled(false))
     }
 
@@ -709,10 +709,10 @@ impl EventLoop {
         &mut self,
         id: u64,
         handle_device_state: F,
-    ) -> Result<(), fidl_net_stack::ErrorType> {
+    ) -> Result<(), fidl_net_stack::Error> {
         let (state, disp) = self.ctx.state_and_dispatcher();
-        let device = disp.get_device_info(id).ok_or(fidl_net_stack::ErrorType::NotFound)?;
-        let info = device.client().info().await.map_err(|_| fidl_net_stack::ErrorType::Internal)?;
+        let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
+        let info = device.client().info().await.map_err(|_| fidl_net_stack::Error::Internal)?;
         // TODO(rheacock, NET-2140): Handle core and driver state in two stages: add device to the
         // core to get an id, then reach into the driver to get updated info before triggering the
         // core to allow traffic on the interface.
@@ -730,7 +730,7 @@ impl EventLoop {
             Err(toggle_error) => {
                 match toggle_error {
                     ToggleError::NoChange => Ok(()),
-                    ToggleError::NotFound => Err(fidl_net_stack::ErrorType::NotFound), // Invalid device ID
+                    ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound), // Invalid device ID
                 }
             }
         }
@@ -740,12 +740,9 @@ impl EventLoop {
         &mut self,
         id: u64,
         handle_device_state: F,
-    ) -> Result<(), fidl_net_stack::ErrorType> {
-        let device = self
-            .ctx
-            .dispatcher_mut()
-            .get_device_info(id)
-            .ok_or(fidl_net_stack::ErrorType::NotFound)?;
+    ) -> Result<(), fidl_net_stack::Error> {
+        let device =
+            self.ctx.dispatcher_mut().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
         match self.ctx.dispatcher_mut().devices.deactivate_device(id) {
             Ok((core_id, device_info)) => {
                 handle_device_state(device_info);
@@ -759,7 +756,7 @@ impl EventLoop {
             Err(toggle_error) => {
                 match toggle_error {
                     ToggleError::NoChange => Ok(()),
-                    ToggleError::NotFound => Err(fidl_net_stack::ErrorType::NotFound), // Invalid device ID
+                    ToggleError::NotFound => Err(fidl_net_stack::Error::NotFound), // Invalid device ID
                 }
             }
         }

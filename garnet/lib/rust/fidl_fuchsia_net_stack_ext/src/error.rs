@@ -7,7 +7,7 @@ use failure::ResultExt;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 
 #[derive(Debug)]
-pub struct NetstackError(fidl_net_stack::ErrorType);
+pub struct NetstackError(fidl_net_stack::Error);
 
 impl std::fmt::Display for NetstackError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -23,7 +23,7 @@ pub trait FidlReturn {
     fn squash_result(self) -> Result<Self::Item, failure::Error>;
 }
 
-impl<T> FidlReturn for Result<Result<T, fidl_net_stack::ErrorType>, fidl::Error> {
+impl<T> FidlReturn for Result<Result<T, fidl_net_stack::Error>, fidl::Error> {
     type Item = T;
 
     fn squash_result(self) -> Result<Self::Item, failure::Error> {

@@ -111,7 +111,7 @@ struct InterfaceStatusChange {
     InterfaceStatus status;
 };
 
-enum ErrorType {
+enum Error {
     INTERNAL = 1;
     NOT_SUPPORTED = 2;
     INVALID_ARGS = 3;
@@ -126,48 +126,48 @@ enum ErrorType {
 protocol Stack {
     /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
     /// by the stack for use in subsequent calls.
-    AddEthernetInterface(string topological_path, fuchsia.hardware.ethernet.Device device) -> (uint64 id) error ErrorType;
+    AddEthernetInterface(string topological_path, fuchsia.hardware.ethernet.Device device) -> (uint64 id) error Error;
 
     /// Remove an Ethernet interface from the network stack.
-    DelEthernetInterface(uint64 id) -> () error ErrorType;
+    DelEthernetInterface(uint64 id) -> () error Error;
 
     /// List all the interfaces available in the network stack.
     ListInterfaces() -> (vector<InterfaceInfo> ifs);
 
     /// Retrieve info about a specific interface.
-    GetInterfaceInfo(uint64 id) -> (InterfaceInfo info) error ErrorType;
+    GetInterfaceInfo(uint64 id) -> (InterfaceInfo info) error Error;
 
     /// Enable the interface. Packets may be processed by the stack after this call is processed.
-    EnableInterface(uint64 id) -> () error ErrorType;
+    EnableInterface(uint64 id) -> () error Error;
 
     /// Disable the interface. The stack will no longer process packets after this call.
-    DisableInterface(uint64 id) -> () error ErrorType;
+    DisableInterface(uint64 id) -> () error Error;
 
     /// Add an address to the interface. If the interface already has an address of a given type that
     /// does not allow duplicates, this method will return an error.
-    AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> () error ErrorType;
+    AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> () error Error;
 
     /// Remove the address from the interface. If the address is not assigned to the interface, an
     /// error is returned.
-    DelInterfaceAddress(uint64 id, InterfaceAddress addr) -> () error ErrorType;
+    DelInterfaceAddress(uint64 id, InterfaceAddress addr) -> () error Error;
 
     /// List all the entries in the forwarding table for the network stack.
     GetForwardingTable() -> (vector<ForwardingEntry> table);
 
     /// Add a new entry to the forwarding table. If the table already contains an entry with the same
     /// subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
-    AddForwardingEntry(ForwardingEntry entry) -> () error ErrorType;
+    AddForwardingEntry(ForwardingEntry entry) -> () error Error;
 
     /// Removes the forwarding entry with the given subnet. This will not affect any overlapping
     /// subnets (superset or subset) so the subnet must exactly match an entry in the forwarding
     /// table. If no entry for the subnet exists, an error is returned.
-    DelForwardingEntry(fuchsia.net.Subnet subnet) -> () error ErrorType;
+    DelForwardingEntry(fuchsia.net.Subnet subnet) -> () error Error;
 
     /// Enable the packet filter on a specific interface.
-    EnablePacketFilter(uint64 id) -> () error ErrorType;
+    EnablePacketFilter(uint64 id) -> () error Error;
 
     /// Disable the packet filter on a specific interface.
-    DisablePacketFilter(uint64 id) -> () error ErrorType;
+    DisablePacketFilter(uint64 id) -> () error Error;
 
     /// Enable IP Forwarding.
     EnableIpForwarding() -> ();
@@ -198,5 +198,5 @@ enum LogLevelFilter : int32 {
 protocol Log {
     /// Dynamically set a syslog level.
     /// See syslog/logger.go for level definition.
-    SetLogLevel(LogLevelFilter level) -> () error ErrorType;
+    SetLogLevel(LogLevelFilter level) -> () error Error;
 };

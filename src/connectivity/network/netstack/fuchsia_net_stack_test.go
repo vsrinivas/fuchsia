@@ -96,8 +96,8 @@ func TestFuchsiaNetStack(t *testing.T) {
 		// Add an invalid entry.
 		addResult, err := ni.AddForwardingEntry(invalidRoute)
 		AssertNoError(t, err)
-		if addResult != stack.StackAddForwardingEntryResultWithErr(stack.ErrorTypeInvalidArgs) {
-			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = Err(ErrorTypeInvalidArgs)", invalidRoute, addResult)
+		if addResult != stack.StackAddForwardingEntryResultWithErr(stack.ErrorInvalidArgs) {
+			t.Errorf("got ni.AddForwardingEntry(%#v) = %#v, want = Err(ErrorInvalidArgs)", invalidRoute, addResult)
 		}
 
 		// Add a local subnet route.
@@ -141,15 +141,15 @@ func TestFuchsiaNetStack(t *testing.T) {
 		// Remove nonexistent subnet.
 		delResult, err := ni.DelForwardingEntry(nonexistentSubnet)
 		AssertNoError(t, err)
-		if delResult != stack.StackDelForwardingEntryResultWithErr(stack.ErrorTypeNotFound) {
-			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = Err(ErrorTypeNotFound)", nonexistentSubnet, delResult)
+		if delResult != stack.StackDelForwardingEntryResultWithErr(stack.ErrorNotFound) {
+			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = Err(ErrorNotFound)", nonexistentSubnet, delResult)
 		}
 
 		// Remove subnet with bad subnet mask.
 		delResult, err = ni.DelForwardingEntry(badMaskSubnet)
 		AssertNoError(t, err)
-		if delResult != stack.StackDelForwardingEntryResultWithErr(stack.ErrorTypeInvalidArgs) {
-			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = Err(ErrorTypeInvalidArgs)", badMaskSubnet, delResult)
+		if delResult != stack.StackDelForwardingEntryResultWithErr(stack.ErrorInvalidArgs) {
+			t.Errorf("got ni.DelForwardingEntry(%#v) = %#v, want = Err(ErrorInvalidArgs)", badMaskSubnet, delResult)
 		}
 
 		// Remove local route.

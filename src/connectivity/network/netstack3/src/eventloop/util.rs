@@ -130,11 +130,11 @@ impl FidlCompatible<fidl_net::IpAddress> for IpAddr {
 /// example, a unicast address used where a multicast address is required).
 pub struct AddrClassError;
 
-// TODO(joshlf): Introduce a separate variant to `fidl_net_stack::ErrorType` for
+// TODO(joshlf): Introduce a separate variant to `fidl_net_stack::Error` for
 // `AddrClassError`?
-impl From<AddrClassError> for fidl_net_stack::ErrorType {
+impl From<AddrClassError> for fidl_net_stack::Error {
     fn from(_err: AddrClassError) -> Self {
-        fidl_net_stack::ErrorType::InvalidArgs
+        fidl_net_stack::Error::InvalidArgs
     }
 }
 
@@ -298,13 +298,13 @@ impl From<AddrClassError> for ForwardingConversionError {
     }
 }
 
-impl From<ForwardingConversionError> for fidl_net_stack::ErrorType {
+impl From<ForwardingConversionError> for fidl_net_stack::Error {
     fn from(fwd_error: ForwardingConversionError) -> Self {
         match fwd_error {
-            ForwardingConversionError::DeviceNotFound => fidl_net_stack::ErrorType::NotFound,
+            ForwardingConversionError::DeviceNotFound => fidl_net_stack::Error::NotFound,
             ForwardingConversionError::TypeMismatch
             | ForwardingConversionError::InvalidSubnet
-            | ForwardingConversionError::AddrClassError => fidl_net_stack::ErrorType::InvalidArgs,
+            | ForwardingConversionError::AddrClassError => fidl_net_stack::Error::InvalidArgs,
         }
     }
 }
