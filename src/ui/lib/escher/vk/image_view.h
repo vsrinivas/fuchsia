@@ -7,6 +7,7 @@
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/resources/resource.h"
+#include "src/ui/lib/escher/util/hash_cache.h"
 #include "src/ui/lib/escher/vk/image.h"
 
 namespace escher {
@@ -58,6 +59,22 @@ class ImageView : public Resource {
 };
 
 typedef fxl::RefPtr<ImageView> ImageViewPtr;
+
+class ImageViewAllocator {
+ public:
+  explicit ImageViewAllocator(ResourceRecycler* resource_recycler);
+  ImageViewPtr ObtainImageView(ImagePtr image,
+                               vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags());
+
+  void BeginFrame() { image_view_cache_.BeginFrame(); }
+
+ private:
+  struct CacheItem : public HashCacheItem<CacheItem> {
+    ImageViewPtr image_view;
+  };
+  ResourceRecycler* const resource_recycler_;
+  HashCache<CacheItem, DefaultObjectPoolPolicy<CacheItem>> image_view_cache_;
+};
 
 }  // namespace escher
 

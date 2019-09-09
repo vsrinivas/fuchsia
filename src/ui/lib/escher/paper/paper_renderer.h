@@ -238,7 +238,7 @@ class PaperRenderer final : public Renderer {
   void BindSceneAndCameraUniforms(uint32_t camera_index);
   void GenerateCommandsForNoShadows(uint32_t camera_index);
   void GenerateCommandsForShadowVolumes(uint32_t camera_index);
-  static void InitRenderPassInfo(RenderPassInfo* render_pass_info, ResourceRecycler* recycler,
+  static void InitRenderPassInfo(RenderPassInfo* render_pass_info, ImageViewAllocator* allocator,
                                  const FrameData& frame_data, uint32_t camera_index);
 
   // Called to write text onto screen

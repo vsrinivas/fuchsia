@@ -443,7 +443,7 @@ void PaperRenderer::DrawMesh(const MeshPtr& mesh, const PaperMaterialPtr& materi
   draw_call_factory_.DrawMesh(mesh, *material.get(), flags);
 }
 
-void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp, ResourceRecycler* recycler,
+void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp, ImageViewAllocator* allocator,
                                        const FrameData& frame_data, uint32_t camera_index) {
   const ImagePtr& output_image = frame_data.output_image;
   const TexturePtr& depth_texture = frame_data.depth_texture;
@@ -455,7 +455,7 @@ void PaperRenderer::InitRenderPassInfo(RenderPassInfo* rp, ResourceRecycler* rec
   static constexpr uint32_t kRenderTargetAttachmentIndex = 0;
   static constexpr uint32_t kResolveTargetAttachmentIndex = 1;
   {
-    rp->color_attachments[kRenderTargetAttachmentIndex] = ImageView::New(recycler, output_image);
+    rp->color_attachments[kRenderTargetAttachmentIndex] = allocator->ObtainImageView(output_image);
     rp->num_color_attachments = 1;
     // Clear and store color attachment 0, the sole color attachment.
     rp->clear_attachments = 1u << kRenderTargetAttachmentIndex;
@@ -510,7 +510,7 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
-  InitRenderPassInfo(&render_pass_info, escher()->resource_recycler(), *frame_data_.get(),
+  InitRenderPassInfo(&render_pass_info, escher()->image_view_allocator(), *frame_data_.get(),
                      camera_index);
 
   cmd_buf->BeginRenderPass(render_pass_info);
@@ -558,7 +558,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
-  InitRenderPassInfo(&render_pass_info, escher()->resource_recycler(), *frame_data_.get(),
+  InitRenderPassInfo(&render_pass_info, escher()->image_view_allocator(), *frame_data_.get(),
                      camera_index);
 
   cmd_buf->BeginRenderPass(render_pass_info);

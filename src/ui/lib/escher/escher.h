@@ -130,6 +130,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   impl::PipelineLayoutCache* pipeline_layout_cache() { return pipeline_layout_cache_.get(); }
   impl::RenderPassCache* render_pass_cache() const { return render_pass_cache_.get(); }
   impl::FramebufferAllocator* framebuffer_allocator() const { return framebuffer_allocator_.get(); }
+  ImageViewAllocator* image_view_allocator() const { return image_view_allocator_.get(); }
 
   // Pool for CommandBuffers submitted on the main queue.
   impl::CommandBufferPool* command_buffer_pool() { return command_buffer_pool_.get(); }
@@ -184,6 +185,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
 
   std::unique_ptr<impl::RenderPassCache> render_pass_cache_;
   std::unique_ptr<impl::FramebufferAllocator> framebuffer_allocator_;
+  std::unique_ptr<ImageViewAllocator> image_view_allocator_;
   std::unique_ptr<impl::FrameManager> frame_manager_;
 
   HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>> descriptor_set_allocators_;

@@ -112,6 +112,7 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
   render_pass_cache_ = std::make_unique<impl::RenderPassCache>(resource_recycler());
   framebuffer_allocator_ =
       std::make_unique<impl::FramebufferAllocator>(resource_recycler(), render_pass_cache_.get());
+  image_view_allocator_ = std::make_unique<ImageViewAllocator>(resource_recycler());
   shader_program_factory_ =
       std::make_unique<DefaultShaderProgramFactory>(GetWeakPtr(), std::move(filesystem));
 
@@ -133,6 +134,7 @@ Escher::~Escher() {
 
   // Everything that refers to a ResourceRecycler must be released before their
   // ResourceRecycler is.
+  image_view_allocator_.reset();
   framebuffer_allocator_.reset();
   render_pass_cache_.reset();
   pipeline_layout_cache_.reset();
@@ -278,6 +280,7 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool
     }
   }
   if (requested_type == CommandBuffer::Type::kGraphics) {
+    image_view_allocator_->BeginFrame();
     framebuffer_allocator_->BeginFrame();
   }
 
