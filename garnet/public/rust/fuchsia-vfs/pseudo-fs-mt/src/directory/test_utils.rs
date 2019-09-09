@@ -76,7 +76,7 @@ impl DirentsSameInodeBuilder {
 
     pub fn add(&mut self, type_: u8, name: &[u8]) -> &mut Self {
         assert!(
-            name.len() < MAX_FILENAME as usize,
+            name.len() <= MAX_FILENAME as usize,
             "Expected entry name should not exceed MAX_FILENAME ({}) bytes.\n\
              Got: {:?}\n\
              Length: {} bytes",

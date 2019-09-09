@@ -79,7 +79,7 @@ impl Simple {
         let name = name.into();
 
         assert_eq_size!(u64, usize);
-        if name.len() as u64 >= MAX_FILENAME {
+        if name.len() as u64 > MAX_FILENAME {
             return Err(Status::INVALID_ARGS);
         }
 

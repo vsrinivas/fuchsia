@@ -104,8 +104,8 @@ pub fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name:
     }
 
     assert!(
-        name.len() < MAX_FILENAME as usize,
-        "Entry names are expected to be shorter than MAX_FILENAME ({}) bytes.\n\
+        name.len() <= MAX_FILENAME as usize,
+        "Entry names are expected to be no longer than MAX_FILENAME ({}) bytes.\n\
          Got entry: '{}'\n\
          Length: {} bytes",
         MAX_FILENAME,

@@ -32,14 +32,15 @@ use {
     fidl_fuchsia_io::{
         DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker,
         NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED,
-        WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
+        MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
     },
     fuchsia_async::Executor,
     fuchsia_zircon::{sys::ZX_OK, Status},
     futures::future,
     libc::{S_IRUSR, S_IWUSR},
+    static_assertions::assert_eq_size,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -1181,6 +1182,57 @@ fn read_dirents_rewind() {
             }
 
             assert_read_dirents!(root, 100, vec![]);
+            assert_close!(root);
+        }
+    });
+}
+
+#[test]
+fn add_entry_too_long_error() {
+    assert_eq_size!(u64, usize);
+
+    // It is annoying to have to write `as u64` or `as usize` everywhere.  Converting
+    // `MAX_FILENAME` to `usize` aligns the types.
+    let max_filename = MAX_FILENAME as usize;
+
+    let root = simple();
+    let name = {
+        let mut name = "This entry name will be longer than the MAX_FILENAME bytes".to_string();
+
+        // Make `name` at least `MAX_FILENAME + 1` bytes long.
+        name.reserve(max_filename + 1);
+        let filler = " - filler";
+        name.push_str(&filler.repeat((max_filename + filler.len()) / filler.len()));
+
+        // And we want exaclty `MAX_FILENAME + 1` bytes.  As all the characters are ASCII, we
+        // should be able to just cut at any byte.
+        name.truncate(max_filename + 1);
+        assert!(name.len() == max_filename + 1);
+
+        name
+    };
+    let name_len = name.len();
+
+    match root.clone().add_entry(name, read_only_static(b"Should never be used")) {
+        Ok(()) => panic!(
+            "`add_entry()` succeeded for a name of {} bytes, when MAX_FILENAME is {}",
+            name_len, max_filename
+        ),
+        Err(Status::INVALID_ARGS) => (),
+        Err(status) => panic!(
+            "`add_entry()` failed for a name of {} bytes, with status {}.  Expected status is \
+             INVALID_ARGS.  MAX_FILENAME is {}.",
+            name_len, status, max_filename
+        ),
+    }
+
+    // Make sure that after we have seen an error, the entry is not actually inserted.
+
+    run_server_client(OPEN_RIGHT_READABLE, root, |root| {
+        async move {
+            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+            expected.add(DIRENT_TYPE_DIRECTORY, b".");
+            assert_read_dirents!(root, 1000, expected.into_vec());
             assert_close!(root);
         }
     });
