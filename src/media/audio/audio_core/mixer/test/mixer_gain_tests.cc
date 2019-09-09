@@ -40,7 +40,7 @@ class GainTest : public testing::Test {
   void TestUnityGain(float source_gain_db, float dest_gain_db) {
     gain_.SetSourceGain(source_gain_db);
     gain_.SetDestGain(dest_gain_db);
-    EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
+    EXPECT_FLOAT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 
     EXPECT_FALSE(gain_.IsSilent());
     EXPECT_TRUE(gain_.IsUnity());
@@ -54,7 +54,7 @@ class GainTest : public testing::Test {
     Gain::Settings().SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage::MEDIA,
                                                   usage_gain_adjustment_db);
 
-    EXPECT_EQ(Gain::kMuteScale, gain_.GetGainScale());
+    EXPECT_FLOAT_EQ(Gain::kMuteScale, gain_.GetGainScale());
 
     EXPECT_FALSE(gain_.IsUnity());
     EXPECT_TRUE(gain_.IsSilent());
@@ -94,7 +94,7 @@ class RampTest : public GainTest {};
 class ScaleArrayTest : public GainTest {};
 
 TEST_F(GainTest, Defaults) {
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kUnityScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kUnityScale);
   EXPECT_TRUE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
@@ -103,13 +103,13 @@ TEST_F(GainTest, Defaults) {
 // Test the internally-used inline func that converts AScale gain to dB.
 TEST_F(GainTest, GainScaleToDb) {
   // Unity scale is 0.0dB (no change).
-  EXPECT_EQ(Gain::ScaleToDb(Gain::kUnityScale), Gain::kUnityGainDb);
+  EXPECT_FLOAT_EQ(Gain::ScaleToDb(Gain::kUnityScale), Gain::kUnityGainDb);
 
   // 10x scale-up in amplitude (by definition) is exactly +20.0dB.
-  EXPECT_EQ(Gain::ScaleToDb(Gain::kUnityScale * 10.0f), 20.0f);
+  EXPECT_FLOAT_EQ(Gain::ScaleToDb(Gain::kUnityScale * 10.0f), 20.0f);
 
   // 1/100x scale-down in amplitude (by definition) is exactly -40.0dB.
-  EXPECT_EQ(Gain::ScaleToDb(Gain::kUnityScale * 0.01f), -40.0f);
+  EXPECT_FLOAT_EQ(Gain::ScaleToDb(Gain::kUnityScale * 0.01f), -40.0f);
 
   // 1/2x scale-down by calculation: -6.020600... dB.
   const float half_scale = -6.0206001f;
@@ -120,10 +120,10 @@ TEST_F(GainTest, GainScaleToDb) {
 
 // Test the inline function that converts a numerical value to dB.
 TEST_F(GainTest, DoubleToDb) {
-  EXPECT_EQ(Gain::DoubleToDb(Gain::kUnityScale), 0.0);  // Unity is 0 dB
-  EXPECT_EQ(Gain::DoubleToDb(Gain::kUnityScale * 100.0),
-            40.0);                                              // 100x is 40 dB
-  EXPECT_EQ(Gain::DoubleToDb(Gain::kUnityScale * 0.1), -20.0);  // 10% is -20 dB
+  EXPECT_DOUBLE_EQ(Gain::DoubleToDb(Gain::kUnityScale), 0.0);  // Unity is 0 dB
+  EXPECT_DOUBLE_EQ(Gain::DoubleToDb(Gain::kUnityScale * 100.0),
+                   40.0);                                              // 100x is 40 dB
+  EXPECT_DOUBLE_EQ(Gain::DoubleToDb(Gain::kUnityScale * 0.1), -20.0);  // 10% is -20 dB
 
   EXPECT_GE(Gain::DoubleToDb(Gain::kUnityScale * 0.5),
             -6.0206 * 1.000001);  // 50% is roughly -6.0206 dB
@@ -154,26 +154,26 @@ TEST_F(GainTest, SourceGainCaching) {
   gain_.SetSourceGain(0.0f);
   gain_.SetDestGain(-6.0f);
   amplitude_scale = gain_.GetGainScale();
-  EXPECT_EQ(expect_amplitude_scale, amplitude_scale);
+  EXPECT_FLOAT_EQ(expect_amplitude_scale, amplitude_scale);
 
   // Now set a different renderer gain that will be cached (+3.0).
   gain_.SetSourceGain(3.0f);
   gain_.SetDestGain(-3.0f);
   amplitude_scale = gain_.GetGainScale();
-  EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
+  EXPECT_FLOAT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // If Render gain is cached val of +3, then combo should be Unity.
   gain_.SetDestGain(-3.0f);
   amplitude_scale = gain_.GetGainScale();
-  EXPECT_EQ(Gain::kUnityScale, amplitude_scale);
+  EXPECT_FLOAT_EQ(Gain::kUnityScale, amplitude_scale);
 
   // Try another Output gain; with cached +3 this should equate to -6dB.
   gain_.SetDestGain(-9.0f);
-  EXPECT_EQ(expect_amplitude_scale, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(expect_amplitude_scale, gain_.GetGainScale());
 
   // Render gain cached +3 and Output gain non-cached -3 should lead to Unity.
   gain_.SetDestGain(-3.0f);
-  EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 }
 
 // We independently limit stream and device gains to kMaxGainDb/0, respectively.
@@ -181,24 +181,24 @@ TEST_F(GainTest, SourceGainCaching) {
 TEST_F(GainTest, MaxClamp) {
   // Verify that Usage gain is clamped to 0.0db
   Gain::Settings().SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, Gain::kMaxGainDb);
-  EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 
   // Renderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
   gain_.SetSourceGain(Gain::kMaxGainDb * 2);
   gain_.SetDestGain(Gain::kUnityGainDb);
-  EXPECT_EQ(Gain::kMaxScale, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(Gain::kMaxScale, gain_.GetGainScale());
 
   // This combination (24.05 dB) is clamped to 24.0dB.
   gain_.SetSourceGain(Gain::kMaxGainDb);
   gain_.SetDestGain(0.05f);
-  EXPECT_EQ(Gain::kMaxScale, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(Gain::kMaxScale, gain_.GetGainScale());
 
   // System limits renderer gain to kMaxGainDb, even when sum is less than 0.
   // Renderer Gain +36dB (clamped to +24dB) plus system Gain -48dB ==> -24dB.
   constexpr float kScale24DbDown = 0.0630957344f;
   gain_.SetSourceGain(Gain::kMaxGainDb * 1.5f);
   gain_.SetDestGain(-2 * Gain::kMaxGainDb);
-  EXPECT_EQ(kScale24DbDown, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(kScale24DbDown, gain_.GetGainScale());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
 
@@ -206,7 +206,7 @@ TEST_F(GainTest, MaxClamp) {
   // Dest also clamps to +24dB: source(-48dB) + dest(+36dB=>24dB) becomes -24dB.
   gain_.SetSourceGain(-2 * Gain::kMaxGainDb);
   gain_.SetDestGain(Gain::kMaxGainDb * 1.5f);
-  EXPECT_EQ(kScale24DbDown, gain_.GetGainScale());
+  EXPECT_FLOAT_EQ(kScale24DbDown, gain_.GetGainScale());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
 }
@@ -290,7 +290,7 @@ TEST_F(MuteTest, SourceGainThenMute) {
   EXPECT_FALSE(gain_.IsSilent());
 
   gain_.SetSourceMute(true);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_TRUE(gain_.IsSilent());
 
   gain_.SetSourceMute(false);
@@ -298,7 +298,7 @@ TEST_F(MuteTest, SourceGainThenMute) {
   EXPECT_FALSE(gain_.IsSilent());
 
   gain_.SetDestMute(true);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
 
@@ -313,16 +313,16 @@ TEST_F(MuteTest, DestGainThenMute) {
   EXPECT_FALSE(gain_.IsSilent());
 
   gain_.SetSourceMute(true);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
 
   gain_.SetDestMute(true);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_TRUE(gain_.IsSilent());
 
   gain_.SetSourceMute(false);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_TRUE(gain_.IsSilent());
 
   gain_.SetDestMute(false);
@@ -333,7 +333,7 @@ TEST_F(MuteTest, DestGainThenMute) {
 
 TEST_F(MuteTest, SourceMuteThenGain) {
   gain_.SetSourceMute(true);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
 
@@ -344,13 +344,13 @@ TEST_F(MuteTest, SourceMuteThenGain) {
   EXPECT_TRUE(gain_.IsSilent());
 
   gain_.SetSourceGain(Gain::kUnityGainDb);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_TRUE(gain_.IsSilent());
 }
 
 TEST_F(MuteTest, DestMuteThenGain) {
   gain_.SetDestMute(true);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsSilent());
 
@@ -361,7 +361,7 @@ TEST_F(MuteTest, DestMuteThenGain) {
   EXPECT_TRUE(gain_.IsSilent());
 
   gain_.SetSourceGain(Gain::kUnityGainDb);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
   EXPECT_TRUE(gain_.IsSilent());
 }
 
@@ -637,7 +637,7 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   Gain::AScale expect_scale = Gain::kUnityScale;
-  EXPECT_EQ(gain_.GetGainScale(), expect_scale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), expect_scale);
 
   // When comparing buffers, do it within the tolerance of 32-bit float
   for (auto& val : expect_arr) {
@@ -676,9 +676,9 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   Gain::AScale expect_scale = Gain::kUnityScale;
-  EXPECT_EQ(gain_.GetGainScale(), expect_scale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), expect_scale);
   gain_.SetSourceMute(true);
-  EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
+  EXPECT_FLOAT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
 
   for (auto& val : expect_arr) {
     val = expect_scale;

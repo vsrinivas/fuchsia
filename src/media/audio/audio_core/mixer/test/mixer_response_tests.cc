@@ -65,8 +65,8 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   Bookkeeping info;
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false, &info);
-  EXPECT_EQ(kFreqTestBufSize, dest_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits), frac_src_offset);
+  EXPECT_EQ(dest_offset, kFreqTestBufSize);
+  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
@@ -315,7 +315,7 @@ void MeasureFreqRespSinad(Mixer* mixer, uint32_t src_buf_size, double* level_db,
         mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), frac_src_frames,
                    &frac_src_offset, false, &info);
       }
-      EXPECT_EQ(dest_frames, dest_offset);
+      EXPECT_EQ(dest_offset, dest_frames);
     }
 
     // Copy results to double[], for high-resolution frequency analysis (FFT).
@@ -895,7 +895,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
 
     mixer->Mix(accum.get(), dest_frames, &dest_offset, source.get(), frac_src_frames,
                &frac_src_offset, false, &info);
-    EXPECT_EQ(dest_frames, dest_offset);
+    EXPECT_EQ(dest_offset, dest_frames);
   }
 
   // Copy-deinterleave each accum[] channel into mono[] and frequency-analyze.

@@ -437,11 +437,10 @@ void TestLateSourceOffset(Resampler sampler_type) {
 
     mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
                fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
-    EXPECT_EQ(0u, dest_offset);
-    EXPECT_EQ(accum[0], 0.0f);
-    EXPECT_EQ(static_cast<int32_t>((fbl::count_of(source) << kPtsFractionalBits) -
-                                   mixer->pos_filter_width()),
-              frac_src_offset);
+    EXPECT_EQ(dest_offset, 0u);
+    EXPECT_EQ(frac_src_offset, static_cast<int32_t>((fbl::count_of(source) << kPtsFractionalBits) -
+                                                    mixer->pos_filter_width()));
+    EXPECT_FLOAT_EQ(accum[0], 0.0f);
   }
 }
 
@@ -521,9 +520,9 @@ void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_fr
 
   mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames, &frac_src_offset, false,
              &info);
-  EXPECT_EQ(1u, dest_offset);
-  EXPECT_EQ(expected_src_offset, frac_src_offset);
-  EXPECT_EQ(expect1, accum_result);
+  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(frac_src_offset, expected_src_offset);
+  EXPECT_FLOAT_EQ(accum_result, expect1);
 
   //
   // Additional check: interpolated result is negative and should round out.
@@ -540,9 +539,9 @@ void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_fr
 
   mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames, &frac_src_offset, false,
              &info);
-  EXPECT_EQ(1u, dest_offset);
-  EXPECT_EQ(expected_src_offset, frac_src_offset);
-  EXPECT_EQ(expect1, accum_result);
+  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(frac_src_offset, expected_src_offset);
+  EXPECT_FLOAT_EQ(accum_result, expect1);
 
   //
   // Base check: interpolated value is exactly calculated, no rounding.
@@ -557,9 +556,9 @@ void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_fr
 
   mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames, &frac_src_offset, false,
              &info);
-  EXPECT_EQ(1u, dest_offset);
-  EXPECT_EQ(expected_src_offset, frac_src_offset);
-  EXPECT_EQ(expect2, accum_result);
+  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(frac_src_offset, expected_src_offset);
+  EXPECT_FLOAT_EQ(accum_result, expect2);
 
   //
   // Additional check: interpolated result is positive and should round out.
@@ -576,9 +575,9 @@ void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_fr
 
   mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames, &frac_src_offset, false,
              &info);
-  EXPECT_EQ(1u, dest_offset);
-  EXPECT_EQ(expected_src_offset, frac_src_offset);
-  EXPECT_EQ(expect2, accum_result);
+  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(frac_src_offset, expected_src_offset);
+  EXPECT_FLOAT_EQ(accum_result, expect2);
 
   //
   // Check: interpolated result is positive and should round in.
@@ -597,9 +596,9 @@ void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_fr
 
   mixer->Mix(&accum_result, 1, &dest_offset, source3, frac_src_frames, &frac_src_offset, false,
              &info);
-  EXPECT_EQ(1u, dest_offset);
-  EXPECT_EQ(expected_src_offset, frac_src_offset);
-  EXPECT_EQ(expect3, accum_result);
+  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(frac_src_offset, expected_src_offset);
+  EXPECT_FLOAT_EQ(accum_result, expect3);
 
   //
   // Check: interpolated result is negative and should round in.
@@ -618,9 +617,9 @@ void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_fr
 
   mixer->Mix(&accum_result, 1, &dest_offset, source4, frac_src_frames, &frac_src_offset, false,
              &info);
-  EXPECT_EQ(1u, dest_offset);
-  EXPECT_EQ(expected_src_offset, frac_src_offset);
-  EXPECT_EQ(expect4, accum_result);
+  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(frac_src_offset, expected_src_offset);
+  EXPECT_FLOAT_EQ(accum_result, expect4);
 }
 
 // This test varies the fractional starting offsets, still with rate ratio ONE.

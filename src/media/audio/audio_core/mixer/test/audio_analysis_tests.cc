@@ -183,7 +183,7 @@ TEST(AnalysisHelpers, GetPhase) {
   static_assert(fbl::count_of(expect) == fbl::count_of(reals), "buf mismatch");
 
   for (uint32_t idx = 0; idx < fbl::count_of(reals); ++idx) {
-    EXPECT_EQ(expect[idx], GetPhase(reals[idx], imags[idx]));
+    EXPECT_DOUBLE_EQ(expect[idx], GetPhase(reals[idx], imags[idx]));
   }
 }
 
@@ -535,14 +535,14 @@ TEST(AnalysisHelpers, MeasureAudioFreq_32) {
   double magn_other = 42.0;           // will be overwritten
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 0, &magn_signal);
-  EXPECT_EQ(3.0, magn_signal);
+  EXPECT_DOUBLE_EQ(3.0, magn_signal);
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 1, &magn_signal, &magn_other);
-  EXPECT_EQ(4.0, magn_signal);
+  EXPECT_DOUBLE_EQ(4.0, magn_signal);
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 2, &magn_signal, &magn_other);
-  EXPECT_EQ(6.0, magn_signal);
-  EXPECT_EQ(5.0, magn_other);
+  EXPECT_DOUBLE_EQ(6.0, magn_signal);
+  EXPECT_DOUBLE_EQ(5.0, magn_other);
 }
 
 // Test float-based MeasureAudioFreq (only needed to validate OutputProducer).
@@ -553,14 +553,14 @@ TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
   double magn_other = 42.0;
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 0, &magn_signal);
-  EXPECT_EQ(3.0, magn_signal);
+  EXPECT_DOUBLE_EQ(3.0, magn_signal);
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 1, &magn_signal, &magn_other);
-  EXPECT_EQ(4.0, magn_signal);
+  EXPECT_DOUBLE_EQ(4.0, magn_signal);
 
   MeasureAudioFreq(reals, fbl::count_of(reals), 2, &magn_signal, &magn_other);
-  EXPECT_EQ(6.0, magn_signal);  // Magnitude is absolute value (ignore phase)
-  EXPECT_EQ(5.0, magn_other);
+  EXPECT_DOUBLE_EQ(6.0, magn_signal);  // Magnitude is absolute value (ignore phase)
+  EXPECT_DOUBLE_EQ(5.0, magn_other);
 }
 
 }  // namespace media::audio::test

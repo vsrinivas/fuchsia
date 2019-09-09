@@ -29,11 +29,11 @@ TEST(UsageGainSettingsTest, BasicRenderUsageGainPersists) {
 
   const auto test_usage = [&under_test](auto render_usage) {
     under_test.SetRenderUsageGain(render_usage, kArbitraryGainValue);
-    EXPECT_EQ(under_test.GetUsageGain(UsageFrom(render_usage)), kArbitraryGainValue);
+    EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(render_usage)), kArbitraryGainValue);
 
     under_test.SetRenderUsageGainAdjustment(render_usage, kArbitraryGainAdjustment);
-    EXPECT_EQ(under_test.GetUsageGain(UsageFrom(render_usage)),
-              kArbitraryGainValue + kArbitraryGainAdjustment);
+    EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(render_usage)),
+                    kArbitraryGainValue + kArbitraryGainAdjustment);
   };
 
   test_usage(fuchsia::media::AudioRenderUsage::BACKGROUND);
@@ -48,11 +48,11 @@ TEST(UsageGainSettingsTest, BasicCaptureUsageGainPersists) {
 
   const auto test_usage = [&under_test](auto capture_usage) {
     under_test.SetCaptureUsageGain(capture_usage, kArbitraryGainValue);
-    EXPECT_EQ(under_test.GetUsageGain(UsageFrom(capture_usage)), kArbitraryGainValue);
+    EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(capture_usage)), kArbitraryGainValue);
 
     under_test.SetCaptureUsageGainAdjustment(capture_usage, kArbitraryGainAdjustment);
-    EXPECT_EQ(under_test.GetUsageGain(UsageFrom(capture_usage)),
-              kArbitraryGainValue + kArbitraryGainAdjustment);
+    EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(capture_usage)),
+                    kArbitraryGainValue + kArbitraryGainAdjustment);
   };
 
   test_usage(fuchsia::media::AudioCaptureUsage::BACKGROUND);

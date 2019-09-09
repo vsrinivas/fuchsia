@@ -77,8 +77,8 @@ void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate,
                  &frac_src_offset, accumulate, &info);
 
   EXPECT_TRUE(mix_result);
-  EXPECT_EQ(static_cast<uint32_t>(num_frames), dest_offset);
-  EXPECT_EQ(dest_offset << kPtsFractionalBits, static_cast<uint32_t>(frac_src_offset));
+  EXPECT_EQ(dest_offset, static_cast<uint32_t>(num_frames));
+  EXPECT_EQ(static_cast<uint32_t>(frac_src_offset), dest_offset << kPtsFractionalBits);
 }
 
 }  // namespace media::audio::test

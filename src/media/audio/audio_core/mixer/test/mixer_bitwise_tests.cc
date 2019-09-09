@@ -208,8 +208,8 @@ TEST(PassThru, NoOp) {
                        fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
 
   EXPECT_FALSE(mix_result);
-  EXPECT_EQ(0u, dest_offset);
-  EXPECT_EQ(0, frac_src_offset);
+  EXPECT_EQ(dest_offset, 0u);
+  EXPECT_EQ(frac_src_offset, 0);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 
@@ -502,7 +502,7 @@ TEST(PassThru, Output_8_Silence) {
 
   output_producer->FillWithSilence(reinterpret_cast<void*>(dest), (fbl::count_of(dest) - 1) / 2);
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<uint8_t>(0x80), fbl::count_of(dest) - 1));
-  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 78);  // this val survives
+  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 78u);  // this val survives
 }
 
 // Are 16-bit output buffers correctly silenced? Do we stop when we should?
@@ -542,7 +542,7 @@ TEST(PassThru, Output_Float_Silence) {
 
   output_producer->FillWithSilence(reinterpret_cast<void*>(dest), (fbl::count_of(dest) - 1) / 2);
   EXPECT_TRUE(CompareBufferToVal(dest, static_cast<float>(0.0f), fbl::count_of(dest) - 1));
-  EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7.8f);  // this val survives
+  EXPECT_FLOAT_EQ(dest[fbl::count_of(dest) - 1], 7.8f);  // this val survives
 }
 
 }  // namespace media::audio::test

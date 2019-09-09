@@ -31,8 +31,8 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
 
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false, &info);
-  EXPECT_EQ(kFreqTestBufSize, dest_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits), frac_src_offset);
+  EXPECT_EQ(dest_offset, kFreqTestBufSize);
+  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
@@ -60,8 +60,8 @@ TEST(DynamicRange, Epsilon) {
   double near_unity_level_db, near_unity_sinad_db;
   MeasureSummaryDynamicRange(AudioResult::kMinGainDbUnity, &near_unity_level_db,
                              &near_unity_sinad_db);
-  EXPECT_EQ(near_unity_level_db, unity_level_db);
-  EXPECT_EQ(near_unity_sinad_db, unity_sinad_db);
+  EXPECT_DOUBLE_EQ(near_unity_level_db, unity_level_db);
+  EXPECT_DOUBLE_EQ(near_unity_sinad_db, unity_sinad_db);
 
   // kMaxGainDbNonUnity is the highest (closest-to-Unity) with observable effect
   // on full-scale (i.e. largest sub-Unity AScale distinguishable from Unity).
@@ -133,12 +133,12 @@ TEST(DynamicRange, MonoToStereo) {
   Bookkeeping info;
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false, &info);
-  EXPECT_EQ(kFreqTestBufSize, dest_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits), frac_src_offset);
+  EXPECT_EQ(dest_offset, kFreqTestBufSize);
+  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy left result to double-float buffer, FFT (freq-analyze) it at high-res
   for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
-    EXPECT_EQ(accum[idx * 2], accum[(idx * 2) + 1]);
+    EXPECT_FLOAT_EQ(accum[idx * 2], accum[(idx * 2) + 1]);
     left[idx] = accum[idx * 2];
   }
 
@@ -187,8 +187,8 @@ TEST(DynamicRange, StereoToMono) {
   Bookkeeping info;
   mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
              kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, false, &info);
-  EXPECT_EQ(kFreqTestBufSize, dest_offset);
-  EXPECT_EQ(static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits), frac_src_offset);
+  EXPECT_EQ(dest_offset, kFreqTestBufSize);
+  EXPECT_EQ(frac_src_offset, static_cast<int32_t>(kFreqTestBufSize << kPtsFractionalBits));
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
@@ -279,8 +279,8 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
 
   EXPECT_TRUE(mixer->Mix(accum.data(), kFreqTestBufSize, &dest_offset, source.data(),
                          kFreqTestBufSize << kPtsFractionalBits, &frac_src_offset, true, &info));
-  EXPECT_EQ(kFreqTestBufSize, dest_offset);
-  EXPECT_EQ(dest_offset << kPtsFractionalBits, static_cast<uint32_t>(frac_src_offset));
+  EXPECT_EQ(dest_offset, kFreqTestBufSize);
+  EXPECT_EQ(static_cast<uint32_t>(frac_src_offset), dest_offset << kPtsFractionalBits);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   double magn_signal, magn_other;
