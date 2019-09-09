@@ -16,6 +16,7 @@ TERM_COLOR_END = '\033[0m'
 ROOT_PATH = os.path.abspath(__file__ + "/../../..")
 sys.path += [os.path.join(ROOT_PATH, "third_party", "pytoml")]
 import pytoml
+import re
 
 # List of packages that are part of the third-party build
 # that live in-tree. In order to unify the two packages in builds
@@ -23,6 +24,9 @@ import pytoml
 # for these libraries, causing them to resolve via the patch section.
 IN_TREE_THIRD_PARTY_PACKAGES = [
 ]
+
+# semver regular expression, as suggested in http://semver.org
+SEMVER_RE='^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
 
 CARGO_TOML_CONTENTS = '''\
 # Copyright %(year)s The Fuchsia Authors. All rights reserved.
@@ -134,6 +138,13 @@ def main():
     parser.add_argument
     args = parser.parse_args()
     cargo_toml_path = os.path.join(args.out_dir, "Cargo.toml")
+
+    if re.search(SEMVER_RE, args.version) is None:
+      print(TERM_COLOR_RED)
+      print('Invalid semver version number "%s" for package %s' %
+            (args.version, args.package_name))
+      print(TERM_COLOR_END)
+      return -1
 
     third_party_json = json.load(open(args.third_party_deps_data))
 
