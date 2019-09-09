@@ -1,6 +1,6 @@
 {
   "program": {
-    "binary": "test/setui_service_bin_test"
+    "binary": "test/settings_lib_test"
   },
   "sandbox": {
     "services": [

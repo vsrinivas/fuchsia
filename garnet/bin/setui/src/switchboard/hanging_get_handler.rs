@@ -19,7 +19,7 @@ use {
 /// something that sender can use.
 pub struct HangingGetHandler<T, ST> {
     switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-    listen_session: Box<dyn ListenSession + Send + Sync>,
+    _listen_session: Box<dyn ListenSession + Send + Sync>,
     sent_latest_value: bool,
     hanging_get: Option<ST>,
     data_type: PhantomData<T>,
@@ -45,7 +45,7 @@ where
 
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST> {
             switchboard_handle: switchboard_handle.clone(),
-            listen_session: switchboard_handle
+            _listen_session: switchboard_handle
                 .clone()
                 .write()
                 .expect("got switchboard write lock")
