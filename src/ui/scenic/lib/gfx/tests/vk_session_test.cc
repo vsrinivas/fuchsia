@@ -123,7 +123,7 @@ SessionContext VkSessionTest::CreateSessionContext() {
 
 CommandContext VkSessionTest::CreateCommandContext() {
   return CommandContext(escher::BatchGpuUploader::New(escher_->GetWeakPtr(), /* trace_id = */ 0),
-                        sysmem_.get(), display_manager_.get());
+                        sysmem_.get(), display_manager_.get(), fxl::WeakPtr<SceneGraph>(/*empty*/));
 }
 
 }  // namespace test

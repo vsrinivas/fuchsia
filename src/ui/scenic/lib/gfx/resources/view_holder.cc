@@ -5,7 +5,9 @@
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 
 #include <lib/async/default.h>
+#include <zircon/types.h>
 
+#include "garnet/public/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/util/unwrap.h"
@@ -17,9 +19,19 @@ const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceTy
                                                 "ViewHolder"};
 
 ViewHolder::ViewHolder(Session* session, ResourceId node_id, ViewLinker::ExportLink link)
-    : Node(session, node_id, ViewHolder::kTypeInfo), link_(std::move(link)) {
+    : Node(session, node_id, ViewHolder::kTypeInfo),
+      link_(std::move(link)),
+      view_holder_koid_(link_.endpoint_id()),
+      gfx_session_(session),
+      weak_factory_(this) {
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
+
+  gfx_session_->TrackViewHolder(GetWeakPtr());
+}
+
+ViewHolder::~ViewHolder() {
+  gfx_session_->UntrackViewHolder(view_holder_koid_);
 }
 
 void ViewHolder::Connect() {

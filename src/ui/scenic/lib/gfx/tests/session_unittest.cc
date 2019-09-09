@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/ui/scenic/cpp/commands.h>
+
 #include "gtest/gtest.h"
-#include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
@@ -62,7 +65,10 @@ TEST_F(SessionTest, ScheduleUpdated_ShouldBeAppliedOnTime) {
       /*presentation*/ zx::time(100), std::vector<::fuchsia::ui::gfx::Command>(),
       std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
 
-  auto command_context = CreateCommandContext();
+  sys::testing::ComponentContextProvider app_context;
+  SceneGraph scene_graph(app_context.context());
+  auto command_context = CommandContext(/*uploader*/ nullptr, /*sysmem*/ nullptr,
+                                        /*display_manager*/ nullptr, scene_graph.GetWeakPtr());
   auto update_result = session()->ApplyScheduledUpdates(&command_context, zx::time(100));
   EXPECT_TRUE(update_result.success);
   EXPECT_TRUE(update_result.needs_render);

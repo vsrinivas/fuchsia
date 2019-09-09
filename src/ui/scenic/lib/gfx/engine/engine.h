@@ -7,7 +7,9 @@
 
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
+#include <lib/sys/cpp/component_context.h>
 
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -55,11 +57,11 @@ using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 // producing output when prompted through the FrameRenderer interface.
 class Engine : public FrameRenderer {
  public:
-  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler, escher::EscherWeakPtr escher,
-         inspect_deprecated::Node inspect_node);
+  Engine(sys::ComponentContext* app_context, const std::shared_ptr<FrameScheduler>& frame_scheduler,
+         escher::EscherWeakPtr escher, inspect_deprecated::Node inspect_node);
 
   // Only used for testing.
-  Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
+  Engine(sys::ComponentContext* app_context, const std::shared_ptr<FrameScheduler>& frame_scheduler,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          escher::EscherWeakPtr escher);
 

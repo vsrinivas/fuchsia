@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/zx/eventpair.h>
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
@@ -21,7 +22,8 @@ bool ContainsCompositor(const std::vector<CompositorWeakPtr>& compositors, Compo
 };
 
 TEST_F(SceneGraphTest, CompositorsGetAddedAndRemoved) {
-  SceneGraph scene_graph;
+  sys::testing::ComponentContextProvider context_provider;
+  SceneGraph scene_graph(context_provider.context());
   ASSERT_EQ(0u, scene_graph.compositors().size());
   {
     CompositorPtr c1 = Compositor::New(session(), 1, scene_graph.GetWeakPtr());
@@ -42,14 +44,16 @@ TEST_F(SceneGraphTest, CompositorsGetAddedAndRemoved) {
 }
 
 TEST_F(SceneGraphTest, LookupCompositor) {
-  SceneGraph scene_graph;
+  sys::testing::ComponentContextProvider context_provider;
+  SceneGraph scene_graph(context_provider.context());
   CompositorPtr c1 = Compositor::New(session(), 1, scene_graph.GetWeakPtr());
   auto c1_weak = scene_graph.GetCompositor(c1->global_id());
   ASSERT_EQ(c1.get(), c1_weak.get());
 }
 
 TEST_F(SceneGraphTest, FirstCompositorIsStable) {
-  SceneGraph scene_graph;
+  sys::testing::ComponentContextProvider context_provider;
+  SceneGraph scene_graph(context_provider.context());
 
   CompositorPtr c1 = Compositor::New(session(), 1, scene_graph.GetWeakPtr());
   ASSERT_EQ(scene_graph.first_compositor().get(), c1.get());

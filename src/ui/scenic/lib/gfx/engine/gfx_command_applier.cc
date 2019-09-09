@@ -67,10 +67,12 @@ constexpr std::array<fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
 }  // anonymous namespace
 
 CommandContext::CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
-                               DisplayManager* display_manager)
+                               DisplayManager* display_manager,
+                               fxl::WeakPtr<SceneGraph> scene_graph)
     : batch_gpu_uploader_(std::move(uploader)),
       sysmem_(sysmem),
-      display_manager_(display_manager) {}
+      display_manager_(display_manager),
+      scene_graph_(std::move(scene_graph)) {}
 
 void CommandContext::Flush() {
   if (batch_gpu_uploader_) {
@@ -1190,8 +1192,9 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
-      FXL_LOG(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
-                        "become a session-terminating error. For more info, see [SCN-1249].";
+      FXL_LOG(ERROR)
+          << "Error: cannot set more than one root view in a session. This will soon "
+             "become a session-terminating error. For more info, see [SCN-1249].";
       // TODO(SCN-1249) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;
@@ -1211,8 +1214,9 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
   if (auto view = CreateView(session, id, std::move(args))) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
-      FXL_LOG(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
-                        "become a session-terminating error. For more info, see [SCN-1249].";
+      FXL_LOG(ERROR)
+          << "Error: cannot set more than one root view in a session. This will soon "
+             "become a session-terminating error. For more info, see [SCN-1249].";
       // TODO(SCN-1249) Return false and report the error in this case, and
       // shut down any sessions that violate the one-view-per-session contract.
       // return false;

@@ -5,17 +5,21 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_UTIL_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_UTIL_H_
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fit/function.h>
+#include <lib/ui/scenic/cpp/resources.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
+
+#include <optional>
 
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fsl/vmo/shared_vmo.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/time/time_delta.h"
+#include "src/ui/scenic/lib/scenic/scenic.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 // Synchronously checks whether the event has signalled any of the bits in
 // |signal|.
@@ -48,8 +52,28 @@ std::vector<zx::event> CreateEventArray(size_t n);
 // caller's address space.
 fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+// A little wrapper class to capture state for managing a GFX session.
+// Tests may freely subclass this type to add more state for their specific purposes.
+class SessionWrapper {
+ public:
+  SessionWrapper(scenic_impl::Scenic* scenic);
+  virtual ~SessionWrapper();
+
+  // Allow caller to run some code in the context of this particular session.
+  void RunNow(fit::function<void(scenic::Session* session, scenic::EntityNode* session_anchor)>
+                  create_scene_callback);
+
+ protected:
+  // Client-side session object.
+  std::unique_ptr<scenic::Session> session_;
+
+  // Clients attach their nodes here to participate in the global scene graph.
+  std::unique_ptr<scenic::EntityNode> session_anchor_;
+
+  // Collect all events received.
+  std::vector<fuchsia::ui::scenic::Event> events_;
+};
+
+}  // namespace scenic_impl::gfx::test
 
 #endif  // SRC_UI_SCENIC_LIB_GFX_TESTS_UTIL_H_

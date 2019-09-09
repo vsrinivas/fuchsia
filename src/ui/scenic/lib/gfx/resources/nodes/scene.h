@@ -6,7 +6,10 @@
 #define SRC_UI_SCENIC_LIB_GFX_RESOURCES_NODES_SCENE_H_
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
+#include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -46,6 +49,11 @@ class Scene final : public Node {
 
   const std::vector<PointLightPtr>& point_lights() const { return point_lights_; }
 
+  const fuchsia::ui::views::ViewRef& view_ref() const { return view_ref_; }
+  zx_koid_t view_ref_koid() const;
+
+  fxl::WeakPtr<Scene> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
  protected:
   // |Node|
   void OnSceneChanged() override;
@@ -54,6 +62,18 @@ class Scene final : public Node {
   std::vector<AmbientLightPtr> ambient_lights_;
   std::vector<DirectionalLightPtr> directional_lights_;
   std::vector<PointLightPtr> point_lights_;
+
+  // Control_ref_ and view_ref_ are handles to an entangled eventpair.
+  // Control_ref_ is the globally unique handle to one peer, and view_ref_ is the cloneable handle
+  // to the other peer.
+  // The scene's view_ref_ serves as an element of a focus chain.
+  fuchsia::ui::views::ViewRefControl control_ref_;
+  fuchsia::ui::views::ViewRef view_ref_;
+  zx_koid_t view_ref_koid_ = ZX_KOID_INVALID;
+
+  Session* gfx_session_ = nullptr;
+
+  fxl::WeakPtrFactory<Scene> weak_factory_;  // must be last
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };

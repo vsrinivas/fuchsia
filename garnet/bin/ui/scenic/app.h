@@ -20,8 +20,8 @@ namespace scenic_impl {
 
 class App {
  public:
-  explicit App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
-               fit::closure quit_callback);
+  explicit App(std::unique_ptr<sys::ComponentContext> app_context,
+               inspect_deprecated::Node inspect_node, fit::closure quit_callback);
 
  private:
   void InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display);
@@ -31,6 +31,7 @@ class App {
   gfx::DisplayManager display_manager_;
   escher::EscherUniquePtr escher_;
   std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
+  std::unique_ptr<sys::ComponentContext> app_context_;
   std::optional<gfx::Engine> engine_;
   Scenic scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;

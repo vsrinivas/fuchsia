@@ -48,10 +48,11 @@ class Dependency : public scenic_impl::System {
 
 namespace scenic_impl {
 
-App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_node,
+App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated::Node inspect_node,
          fit::closure quit_callback)
     : executor_(async_get_default_dispatcher()),
-      scenic_(app_context, std::move(inspect_node), std::move(quit_callback)) {
+      app_context_(std::move(app_context)),
+      scenic_(app_context_.get(), std::move(inspect_node), std::move(quit_callback)) {
   FXL_DCHECK(!device_watcher_);
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
@@ -60,7 +61,7 @@ App::App(sys::ComponentContext* app_context, inspect_deprecated::Node inspect_no
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDependencyDir, [this, completer = std::move(escher_bridge.completer)](
                           int dir_fd, std::string filename) mutable {
-        completer.complete_ok(gfx::GfxSystem::CreateEscher(scenic_.app_context()));
+        completer.complete_ok(gfx::GfxSystem::CreateEscher(app_context_.get()));
         device_watcher_.reset();
       });
 
@@ -100,7 +101,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* displ
                                             gfx::DefaultFrameScheduler::kInitialUpdateDuration),
       scenic_.inspect_node()->CreateChild("FrameScheduler"));
 
-  engine_.emplace(frame_scheduler_, escher_->GetWeakPtr(),
+  engine_.emplace(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
                   scenic_.inspect_node()->CreateChild("Engine"));
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
 

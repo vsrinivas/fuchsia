@@ -7,6 +7,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <memory>
 #include <string>
@@ -91,9 +92,11 @@ TEST_F(SingleSessionHitTestTest, ViewClippingHitTest) {
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
-  std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr,
-      /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
+  sys::testing::ComponentContextProvider context_provider;
+  std::unique_ptr<Engine> engine =
+      std::make_unique<Engine>(context_provider.context(),
+                               /*frame_scheduler*/ nullptr,
+                               /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -209,9 +212,10 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParentTest) {
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
-  std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr,
-      /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
+  sys::testing::ComponentContextProvider context_provider;
+  std::unique_ptr<Engine> engine =
+      std::make_unique<Engine>(context_provider.context(), /*frame_scheduler*/ nullptr,
+                               /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -355,9 +359,10 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
 
-  std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr,
-      /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
+  sys::testing::ComponentContextProvider context_provider;
+  std::unique_ptr<Engine> engine =
+      std::make_unique<Engine>(context_provider.context(), /*frame_scheduler*/ nullptr,
+                               /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
@@ -487,9 +492,10 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
 // View/ViewHolder pairs, and checks if global hit testing has access to
 // hittable nodes across all sessions.
 TEST_F(MultiSessionHitTestTest, GlobalHits) {
-  std::unique_ptr<Engine> engine = std::make_unique<Engine>(
-      /*frame_scheduler*/ nullptr,
-      /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
+  sys::testing::ComponentContextProvider context_provider;
+  std::unique_ptr<Engine> engine =
+      std::make_unique<Engine>(context_provider.context(), /*frame_scheduler*/ nullptr,
+                               /*release fence signaller*/ nullptr, escher::EscherWeakPtr());
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token_1, view_holder_token_1] = scenic::ViewTokenPair::New();

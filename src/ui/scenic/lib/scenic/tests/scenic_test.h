@@ -20,7 +20,8 @@ namespace test {
 // required for a set of tests.
 class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
  public:
-  ScenicTest() : weak_factory_(this){};
+  ScenicTest() : weak_factory_(this) {}
+  virtual ~ScenicTest() = default;
 
   std::unique_ptr<::scenic::Session> CreateSession();
 

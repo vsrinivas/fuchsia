@@ -34,7 +34,7 @@ int main(int argc, const char** argv) {
       fuchsia::inspect::Inspect::Name_,
       std::make_unique<vfs::Service>(inspect_bindings.GetHandler(object_dir.object().get())));
 
-  scenic_impl::App app(app_context.get(), inspect_deprecated::Node(std::move(object_dir)),
+  scenic_impl::App app(std::move(app_context), inspect_deprecated::Node(std::move(object_dir)),
                        [&loop] { loop.Quit(); });
 
   loop.Run();

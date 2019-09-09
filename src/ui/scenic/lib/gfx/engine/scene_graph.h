@@ -7,6 +7,8 @@
 
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <vector>
 
@@ -25,11 +27,15 @@ using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 //
 // SceneGraph is the source of truth for the tree of ViewRefs, from which a FocusChain is generated.
 // Command processors update this tree, and the input system may read or modify the focus.
-class SceneGraph {
+class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
  public:
-  SceneGraph();
+  SceneGraph(sys::ComponentContext* app_context);
 
   SceneGraphWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
+  //
+  // Compositor functions
+  //
 
   const std::vector<CompositorWeakPtr>& compositors() const { return compositors_; }
 
@@ -48,6 +54,30 @@ class SceneGraph {
   // Returns the compositor requested, or nullptr if it does not exist.
   CompositorWeakPtr GetCompositor(GlobalId compositor_id) const;
 
+  //
+  // View tree and focus chain functions
+  //
+
+  const ViewTree& view_tree() const { return view_tree_; }
+
+  // Tree topology: Enqueue transactional updates to the view tree, but do not apply them yet.
+  // Invariant: view_tree_ not modified
+  // Post: view_tree_updates_ grows by one
+  void StageViewTreeUpdates(ViewTreeUpdates updates);
+
+  // Tree topolocy: Apply all enqueued updates to the view tree in a transactional step.
+  // Post: view_tree_ updated
+  // Post: view_tree_updates_ cleared
+  void ProcessViewTreeUpdates();
+
+  // Focus chain: Adjust focus in the view tree.
+  // Return kAccept if request was honored; otherwise return an error enum.
+  // Invariant: view_tree_ not modified
+  ViewTree::FocusChangeStatus RequestFocusChange(zx_koid_t requestor, zx_koid_t request);
+
+  // |fuchsia.ui.focus.FocusChainListenerRegistry|
+  void Register(fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener);
+
  private:
   friend class Compositor;
 
@@ -55,9 +85,15 @@ class SceneGraph {
   void AddCompositor(const CompositorWeakPtr& compositor);
   void RemoveCompositor(const CompositorWeakPtr& compositor);
 
+  // If the focus chain has changed, dispatch an updated focus chain to the FocusChainListener.
+  void MaybeDispatchFidlFocusChain(const std::vector<zx_koid_t> old_focus_chain);
+
   std::vector<CompositorWeakPtr> compositors_;
 
   ViewTree view_tree_;
+  ViewTreeUpdates view_tree_updates_;
+  fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
+  fuchsia::ui::focus::FocusChainListenerPtr focus_chain_listener_;
 
   fxl::WeakPtrFactory<SceneGraph> weak_factory_;  // Must be last.
 };

@@ -6,6 +6,7 @@
 
 #include <zircon/syscalls/object.h>
 
+#include <sstream>
 #include <utility>
 
 #include "src/lib/fxl/logging.h"
@@ -15,16 +16,6 @@ namespace scenic_impl::gfx {
 namespace {
 // Convenience functions.
 bool IsValid(zx_koid_t koid) { return koid != ZX_KOID_INVALID; }
-
-zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
-  zx_info_handle_basic_t info{};
-  if (view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
-      ZX_OK) {
-    return ZX_KOID_INVALID;  // no info
-  }
-
-  return info.koid;
-}
 
 std::optional<zx_koid_t> wrap(zx_koid_t koid) {
   return koid == ZX_KOID_INVALID ? std::nullopt : std::optional(koid);
@@ -201,14 +192,15 @@ bool ViewTree::IsStateValid() const {
   return true;
 }
 
-bool ViewTree::RequestFocusChange(const zx_koid_t requestor, const zx_koid_t request) {
+ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t requestor,
+                                                         const zx_koid_t request) {
   // Invalid requestor.
   if (!IsTracked(requestor) || !IsRefNode(requestor) || !IsConnected(requestor))
-    return false;
+    return ViewTree::FocusChangeStatus::kErrorRequestorInvalid;
 
   // Invalid request.
   if (!IsTracked(request) || !IsRefNode(request) || !IsConnected(request))
-    return false;
+    return ViewTree::FocusChangeStatus::kErrorRequestInvalid;
 
   // Transfer policy: requestor must be authorized.
   {
@@ -220,7 +212,7 @@ bool ViewTree::RequestFocusChange(const zx_koid_t requestor, const zx_koid_t req
       }
     }
     if (!has_authority)
-      return false;
+      return ViewTree::FocusChangeStatus::kErrorRequestorNotAuthorized;
   }
 
   // Transfer policy: requestor must be an ancestor of request.
@@ -240,11 +232,11 @@ bool ViewTree::RequestFocusChange(const zx_koid_t requestor, const zx_koid_t req
         curr = ptr->parent;
       } else {
         FXL_NOTREACHED() << "impossible";
-        return false;
+        return ViewTree::FocusChangeStatus::kErrorUnhandledCase;
       }
     }
     if (!is_ancestor)
-      return false;
+      return ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor;
   }
 
   // It's a valid request for a change to focus chain. Regenerate chain.
@@ -259,7 +251,7 @@ bool ViewTree::RequestFocusChange(const zx_koid_t requestor, const zx_koid_t req
         curr = ptr->parent;
       } else {
         FXL_NOTREACHED() << "impossible";
-        return false;
+        return ViewTree::FocusChangeStatus::kErrorUnhandledCase;
       }
     }
 
@@ -271,7 +263,7 @@ bool ViewTree::RequestFocusChange(const zx_koid_t requestor, const zx_koid_t req
   }
 
   FXL_DCHECK(IsStateValid()) << "postcondition";
-  return true;
+  return ViewTree::FocusChangeStatus::kAccept;
 }
 
 void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref) {
@@ -287,14 +279,14 @@ void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref) {
   FXL_DCHECK(IsStateValid()) << "postcondition";
 }
 
-void ViewTree::NewAttachNode(zx_koid_t attach_point) {
-  FXL_DCHECK(IsValid(attach_point)) << "precondition";
-  FXL_DCHECK(!IsTracked(attach_point)) << "precondition";
+void ViewTree::NewAttachNode(zx_koid_t koid) {
+  FXL_DCHECK(IsValid(koid)) << "precondition";
+  FXL_DCHECK(!IsTracked(koid)) << "precondition";
 
-  if (!IsValid(attach_point) || IsTracked(attach_point))
+  if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.
 
-  nodes_[attach_point] = AttachNode{};
+  nodes_[koid] = AttachNode{};
 
   FXL_DCHECK(IsStateValid()) << "postcondition";
 }
@@ -302,7 +294,10 @@ void ViewTree::NewAttachNode(zx_koid_t attach_point) {
 void ViewTree::DeleteNode(const zx_koid_t koid) {
   FXL_DCHECK(IsTracked(koid)) << "precondition";
 
-  // Remove |koid| if it is a parent.
+  // Remove from node set.
+  nodes_.erase(koid);
+
+  // Remove from node set's parent references.
   for (auto& item : nodes_) {
     if (auto ptr = std::get_if<AttachNode>(&item.second)) {
       if (ptr->parent == koid) {
@@ -316,7 +311,6 @@ void ViewTree::DeleteNode(const zx_koid_t koid) {
       FXL_NOTREACHED() << "unknown type";
     }
   }
-  nodes_.erase(koid);
 
   // Remove |koid| if it is the root.
   if (root_ == koid) {
@@ -329,7 +323,7 @@ void ViewTree::DeleteNode(const zx_koid_t koid) {
   FXL_DCHECK(IsStateValid()) << "postcondition";
 }
 
-void ViewTree::MakeRoot(zx_koid_t koid) {
+void ViewTree::MakeGlobalRoot(zx_koid_t koid) {
   FXL_DCHECK(!IsValid(koid) || (IsTracked(koid) && IsRefNode(koid))) << "precondition";
 
   root_ = koid;
@@ -363,9 +357,8 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
   FXL_DCHECK(IsTracked(child)) << "precondition";
 
   if (auto ptr = std::get_if<AttachNode>(&nodes_[child])) {
-    FXL_DCHECK(IsTracked(ptr->parent)) << "precondition";
-    if (!IsValid(ptr->parent) || !IsTracked(ptr->parent))
-      return;  // Bail.
+    if (!IsTracked(ptr->parent))
+      return;  // Parent (a RefNode) was never set, or already deleted.
 
     if (auto parent_ptr = std::get_if<RefNode>(&nodes_[ptr->parent])) {
       ptr->parent = ZX_KOID_INVALID;
@@ -374,9 +367,8 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
       return;
     }
   } else if (auto ptr = std::get_if<RefNode>(&nodes_[child])) {
-    FXL_DCHECK(IsTracked(ptr->parent)) << "precondition";
     if (!IsTracked(ptr->parent))
-      return;  // Bail.
+      return;  // Parent (an AttachNode) was never set, or already deleted.
 
     if (auto parent_ptr = std::get_if<AttachNode>(&nodes_[ptr->parent])) {
       ptr->parent = ZX_KOID_INVALID;
@@ -386,6 +378,30 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
     }
   }
   FXL_NOTREACHED() << "invariant: child/parent types are known and correct";
+}
+
+std::string ViewTree::ToString() const {
+  std::stringstream output;
+
+  output << std::endl << "ViewTree Dump" << std::endl;
+  output << "  root: " << root_ << std::endl;
+  output << "  nodes: " << std::endl;
+  for (const auto& item : nodes_) {
+    if (const auto ptr = std::get_if<AttachNode>(&item.second)) {
+      output << "    attach-node(" << item.first << ") -> parent: " << ptr->parent << std::endl;
+    } else if (const auto ptr = std::get_if<RefNode>(&item.second)) {
+      output << "    ref-node(" << item.first << ") -> parent:" << ptr->parent << std::endl;
+    } else {
+      FXL_NOTREACHED() << "impossible";
+    }
+  }
+  output << "  focus-chain: [ ";
+  for (auto koid : focus_chain_) {
+    output << koid << " ";
+  }
+  output << "]" << std::endl;
+
+  return output.str();
 }
 
 fuchsia::ui::views::ViewRef ViewTree::CloneViewRefOf(zx_koid_t koid) const {
@@ -435,6 +451,16 @@ void ViewTree::RepairFocus() {
   focus_chain_.erase(focus_chain_.begin() + curr, focus_chain_.end());
 
   // Run state validity check at call site.
+}
+
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+  zx_info_handle_basic_t info{};
+  if (view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
+      ZX_OK) {
+    return ZX_KOID_INVALID;  // no info
+  }
+
+  return info.koid;
 }
 
 }  // namespace scenic_impl::gfx

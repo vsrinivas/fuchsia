@@ -9,6 +9,8 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/inspect_deprecated/inspect.h>
 
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -18,9 +20,12 @@
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/gfx/engine/session_manager.h"
+#include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_context.h"
+#include "src/ui/scenic/lib/gfx/resources/view.h"
+#include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 
@@ -117,6 +122,28 @@ class Session {
   friend class GfxCommandApplier;
   bool SetRootView(fxl::WeakPtr<View> view);
 
+  friend class View;
+  friend class Scene;
+  ViewTreeUpdates& view_tree_updates();
+
+  friend class ViewHolder;
+  void TrackViewHolder(fxl::WeakPtr<ViewHolder> view_holder);
+  void UntrackViewHolder(zx_koid_t koid);
+  void UpdateViewHolderConnections();
+
+  // RAII object to ensure UpdateViewHolderConnections and StageViewTreeUpdates, on all exit paths.
+  class ViewTreeUpdateFinalizer final {
+   public:
+    ViewTreeUpdateFinalizer(Session* session, SceneGraph* scene_graph);
+    ~ViewTreeUpdateFinalizer();
+   private:
+    Session* const session_ = nullptr;
+    SceneGraph* const scene_graph_ = nullptr;
+  };
+
+  // Notify SceneGraph about accumulated ViewHolder/ViewRef updates, but do not apply them yet.
+  void StageViewTreeUpdates(SceneGraph* scene_graph);
+
   struct Update {
     zx::time presentation_time;
 
@@ -155,6 +182,23 @@ class Session {
   // transitioning to a one-root-view-per-session model. See SCN-1249 for more
   // details.
   fxl::WeakPtr<View> root_view_;
+
+
+  struct ViewHolderStatus {
+    fxl::WeakPtr<ViewHolder> view_holder;
+    // Three cases:
+    // - std::nullopt: connectivity unknown
+    // - true: connected to session's root (either a View or a Scene).
+    // - false: not connected to session's root.
+    std::optional<bool> connected_to_session_root;
+  };
+
+  // Map of Session's "live" ViewHolder objects that tracks "session root" connectivity.
+  std::unordered_map<zx_koid_t, ViewHolderStatus> tracked_view_holders_;
+
+  // Sequentially ordered updates for ViewRef and ViewHolder objects in this Session.
+  // Actively maintained over a session update.
+  ViewTreeUpdates view_tree_updates_;
 
   // Tracks the number of method calls for tracing.
   uint64_t scheduled_update_count_ = 0;

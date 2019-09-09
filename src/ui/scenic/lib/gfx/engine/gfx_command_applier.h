@@ -10,6 +10,7 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
+#include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/import.h"
@@ -40,12 +41,13 @@ class CommandContext {
   CommandContext() = default;
 
   CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
-                 DisplayManager* display_manager);
+                 DisplayManager* display_manager, fxl::WeakPtr<SceneGraph> scene_graph);
 
   escher::BatchGpuUploader* batch_gpu_uploader() const { return batch_gpu_uploader_.get(); }
 
   Sysmem* sysmem() const { return sysmem_; };
   DisplayManager* display_manager() const { return display_manager_; };
+  SceneGraph* scene_graph() const { return scene_graph_.get(); }
 
   // Flush any work accumulated during command processing.
   void Flush();
@@ -54,6 +56,7 @@ class CommandContext {
   std::unique_ptr<escher::BatchGpuUploader> batch_gpu_uploader_;
   Sysmem* sysmem_ = nullptr;
   DisplayManager* display_manager_ = nullptr;
+  fxl::WeakPtr<SceneGraph> scene_graph_;
 };
 
 // Responsible for applying gfx commands to sessions.

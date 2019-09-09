@@ -9,6 +9,8 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <zircon/types.h>
 
+#include <optional>
+#include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
@@ -65,6 +67,17 @@ class ViewTree {
     fuchsia::ui::views::ViewRef view_ref;
   };
 
+  // Provide detail on if/why focus change request was denied.
+  // Specific error-handling policy is responsibility of caller.
+  enum class FocusChangeStatus {
+    kAccept = 0,
+    kErrorRequestorInvalid,
+    kErrorRequestInvalid,
+    kErrorRequestorNotAuthorized,
+    kErrorRequestorNotRequestAncestor,
+    kErrorUnhandledCase,  // last
+  };
+
   // Return the current focus chain with cloned ViewRefs.
   // - Error conditions should not force the return of an empty focus chain; instead, the root_, if
   //   valid, should be returned. This allows client-side recovery from focus loss.
@@ -93,11 +106,11 @@ class ViewTree {
   // - Runtime is O(N^2), chiefly due to the "AttachNode, when a parent, has one child" check.
   bool IsStateValid() const;
 
-  // Request focus transfer to the proposed ViewRef's KOID. Returns true if successful.
+  // Request focus transfer to the proposed ViewRef's KOID. Return kAccept if successful.
   // - If the KOID is not in nodes_ map, or isn't a ViewRef, or isn't connected to the root, then
-  //   return false.
-  // - If the KOID is otherwise valid, but violates the focus transfer policy, then return false.
-  bool RequestFocusChange(zx_koid_t requestor, zx_koid_t request);
+  //   return error.
+  // - If the KOID is otherwise valid, but violates the focus transfer policy, then return error.
+  FocusChangeStatus RequestFocusChange(zx_koid_t requestor, zx_koid_t request);
 
   // Update tree topology.
 
@@ -105,9 +118,9 @@ class ViewTree {
   // Pre: view_ref not in nodes_ map
   void NewRefNode(fuchsia::ui::views::ViewRef view_ref);
 
-  // Pre: attach_point is a valid KOID
-  // Pre: attach_point not in nodes_ map
-  void NewAttachNode(zx_koid_t attach_point);
+  // Pre: koid is a valid KOID
+  // Pre: koid not in nodes_ map
+  void NewAttachNode(zx_koid_t koid);
 
   // Pre: koid exists in nodes_ map
   // Post: each parent reference to koid set to ZX_KOID_INVALID
@@ -118,7 +131,7 @@ class ViewTree {
   // Pre: if valid, koid is a valid RefNode
   // Post: root_ is set to koid
   // NOTE: koid can be ZX_KOID_INVALID, if the intent is to disconnect the entire tree.
-  void MakeRoot(zx_koid_t koid);
+  void MakeGlobalRoot(zx_koid_t koid);
 
   // Pre: child exists in nodes_ map
   // Pre: parent exists in nodes_ map
@@ -129,6 +142,11 @@ class ViewTree {
   // Pre: child.parent exists in nodes_ map
   // Post: child.parent set to ZX_KOID_INVALID
   void DisconnectFromParent(zx_koid_t child);
+
+  // Debug aid.
+  // - Do not rely on the concrete format for testing or any other purpose.
+  // - Do not rely on this function being runtime efficient; it is not guaranteed to be.
+  std::string ToString() const;
 
  private:
   // Utility.
@@ -160,6 +178,39 @@ class ViewTree {
   // - If no view has focus (because there is no root), then the focus chain is empty.
   std::vector<zx_koid_t> focus_chain_;
 };
+
+struct ViewTreeNewRefNode {
+  fuchsia::ui::views::ViewRef view_ref;
+};
+
+struct ViewTreeNewAttachNode {
+  zx_koid_t koid;
+};
+
+struct ViewTreeDeleteNode {
+  zx_koid_t koid;
+};
+
+struct ViewTreeMakeGlobalRoot {
+  zx_koid_t koid;
+};
+
+struct ViewTreeConnectToParent {
+  zx_koid_t child;
+  zx_koid_t parent;
+};
+
+struct ViewTreeDisconnectFromParent {
+  zx_koid_t koid;
+};
+
+// Handy alias; suitable for client usage.
+using ViewTreeUpdates = std::vector<
+    std::variant<ViewTreeNewRefNode, ViewTreeNewAttachNode, ViewTreeDeleteNode,
+                 ViewTreeMakeGlobalRoot, ViewTreeConnectToParent, ViewTreeDisconnectFromParent>>;
+
+// Handy ViewRef-specific utility.
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref);
 
 }  // namespace scenic_impl::gfx
 

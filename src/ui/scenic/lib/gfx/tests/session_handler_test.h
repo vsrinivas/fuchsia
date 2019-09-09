@@ -6,6 +6,8 @@
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_SESSION_HANDLER_TEST_H_
 
 #include <lib/fit/function.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/sys/cpp/component_context.h"
@@ -55,7 +57,7 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
   // |SessionUpdater|
   void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
 
-  std::unique_ptr<sys::ComponentContext> app_context_;
+  sys::testing::ComponentContextProvider app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<Engine> engine_;

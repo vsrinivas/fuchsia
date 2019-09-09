@@ -5,6 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_GFX_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_GFX_TEST_H_
 
+#include <lib/sys/cpp/testing/component_context_provider.h>
+
 #include <memory>
 
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
@@ -17,14 +19,20 @@ namespace test {
 
 class GfxSystemTest : public scenic_impl::test::ScenicTest {
  public:
+  GfxSystemTest() = default;
+  virtual ~GfxSystemTest() = default;
+
   // ::testing::Test virtual method.
   void TearDown() override;
 
   GfxSystem* gfx_system() { return gfx_system_.get(); }
+  Engine* engine() { return engine_.get(); }
+  sys::testing::ComponentContextProvider& context_provider() { return context_provider_; }
 
  private:
   void InitializeScenic(Scenic* scenic) override;
 
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<Display> display_;
   std::shared_ptr<FrameScheduler> frame_scheduler_;

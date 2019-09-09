@@ -11,6 +11,8 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/assert.h>
 
+#include <set>
+
 #include <trace/event.h>
 
 #include "src/ui/lib/escher/escher_process_init.h"
@@ -268,7 +270,7 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   if (!command_context_) {
     command_context_ = std::make_optional<CommandContext>(
         escher_ ? escher::BatchGpuUploader::New(escher_->GetWeakPtr(), trace_id) : nullptr, sysmem_,
-        display_manager_);
+        display_manager_, engine_->scene_graph());
   }
 
   for (auto session_id : sessions_to_update) {
@@ -320,6 +322,34 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
       ++needs_render_count_;
     }
   }
+
+  // Run through compositors, find the active Scene, stage it as the view tree root.
+  {
+    std::set<Scene*> scenes;
+    for (auto compositor : engine_->scene_graph()->compositors()) {
+      compositor->CollectScenes(&scenes);
+    }
+
+    ViewTreeUpdates updates;
+    if (scenes.empty()) {
+      updates.push_back(ViewTreeMakeGlobalRoot{.koid = ZX_KOID_INVALID});
+    } else {
+      if (scenes.size() > 1) {
+        FXL_LOG(ERROR) << "Bug 36295 - multiple scenes active, but Scenic's ViewTree is limited to "
+                          "one active focus chain.";
+      }
+      for (const auto scene : scenes) {
+        updates.push_back(ViewTreeMakeGlobalRoot{.koid = scene->view_ref_koid()});
+      }
+    }
+    engine_->scene_graph()->StageViewTreeUpdates(std::move(updates));
+  }
+
+  // NOTE: Call this operation in a quiescent state: when session updates are guaranteed finished!
+  //       This ordering ensures that all updates are accounted for consistently, and focus-related
+  //       events are dispatched just once.
+  // NOTE: Failure to call this operation will result in an inconsistent SceneGraph state.
+  engine_->scene_graph()->ProcessViewTreeUpdates();
 
   return update_results;
 }

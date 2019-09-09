@@ -32,7 +32,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
+Engine::Engine(sys::ComponentContext* app_context,
+               const std::shared_ptr<FrameScheduler>& frame_scheduler,
                escher::EscherWeakPtr weak_escher, inspect_deprecated::Node inspect_node)
     : escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
@@ -44,6 +45,7 @@ Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
       release_fence_signaller_(
           std::make_unique<escher::ReleaseFenceSignaller>(escher()->command_buffer_sequencer())),
       frame_scheduler_(frame_scheduler),
+      scene_graph_(app_context),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   FXL_DCHECK(escher_);
@@ -51,12 +53,14 @@ Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
   InitializeInspectObjects();
 }
 
-Engine::Engine(const std::shared_ptr<FrameScheduler>& frame_scheduler,
+Engine::Engine(sys::ComponentContext* app_context,
+               const std::shared_ptr<FrameScheduler>& frame_scheduler,
                std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
                escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       release_fence_signaller_(std::move(release_fence_signaller)),
       frame_scheduler_(frame_scheduler),
+      scene_graph_(app_context),
       weak_factory_(this) {
   InitializeInspectObjects();
 }

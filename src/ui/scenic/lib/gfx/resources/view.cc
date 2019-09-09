@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 
+#include "garnet/public/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
@@ -23,13 +24,20 @@ View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
       link_(std::move(link)),
       control_ref_(std::move(control_ref)),
       view_ref_(std::move(view_ref)),
+      view_ref_koid_(fsl::GetKoid(view_ref_.reference.get())),
       error_reporter_(std::move(error_reporter)),
       event_reporter_(event_reporter),
+      gfx_session_(session),
       weak_factory_(this) {
   FXL_DCHECK(error_reporter_);
   FXL_DCHECK(event_reporter_);
+  FXL_DCHECK(view_ref_koid_ != ZX_KOID_INVALID);
 
   node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, weak_factory_.GetWeakPtr()));
+
+  fuchsia::ui::views::ViewRef clone;
+  fidl::Clone(view_ref_, &clone);
+  gfx_session_->view_tree_updates().push_back(ViewTreeNewRefNode{.view_ref = std::move(clone)});
 
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
@@ -37,6 +45,8 @@ View::View(Session* session, ResourceId id, ViewLinker::ImportLink link,
 }
 
 View::~View() {
+  gfx_session_->view_tree_updates().push_back(ViewTreeDeleteNode({.koid = view_ref_koid_}));
+
   // Explicitly detach the phantom node to ensure it is cleaned up.
   node_->Detach(error_reporter_.get());
 }
@@ -60,6 +70,8 @@ void View::SignalRender() {
   }
 }
 
+zx_koid_t View::view_ref_koid() const { return view_ref_koid_; }
+
 void View::LinkResolved(ViewHolder* view_holder) {
   FXL_DCHECK(!view_holder_);
   view_holder_ = view_holder;
@@ -69,6 +81,9 @@ void View::LinkResolved(ViewHolder* view_holder) {
       << "View::LinkResolved(): error while adding ViewNode as child of ViewHolder";
 
   SendViewHolderConnectedEvent();
+
+  gfx_session_->view_tree_updates().push_back(
+      ViewTreeConnectToParent{.child = view_ref_koid_, .parent = view_holder_->view_holder_koid()});
 }
 
 void View::LinkDisconnected() {
@@ -82,6 +97,8 @@ void View::LinkDisconnected() {
   InvalidateRenderEventHandle();
 
   SendViewHolderDisconnectedEvent();
+
+  gfx_session_->view_tree_updates().push_back(ViewTreeDisconnectFromParent{.koid = view_ref_koid_});
 }
 
 void View::SendViewHolderConnectedEvent() {

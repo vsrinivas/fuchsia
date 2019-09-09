@@ -94,6 +94,7 @@ void DumpVisitor::Visit(ImagePipeBase* r) {
 void DumpVisitor::Visit(View* r) {
   ViewHolder* vh = r->view_holder();
   WriteProperty("view") << r->global_id() << "->" << (vh ? vh->global_id() : GlobalId());
+  WriteProperty("view_ref_koid") << r->view_ref_koid();
   VisitResource(r);
 }
 
@@ -163,6 +164,7 @@ void DumpVisitor::Visit(Scene* r) {
     EndSection();
   }
 
+  WriteProperty("view_ref_koid") << r->view_ref_koid();
   VisitNode(r);
   EndItem();
 }

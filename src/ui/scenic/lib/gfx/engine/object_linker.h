@@ -149,6 +149,7 @@ class ObjectLinker : public ObjectLinkerBase {
 
     bool valid() const { return linker_ && endpoint_id_ != ZX_KOID_INVALID; }
     bool initialized() const { return valid() && initialized_; }
+    zx_koid_t endpoint_id() const { return endpoint_id_; }
     PeerObj* peer() { return peer_object_; }
 
     // Initialize the Link with an |object| and callbacks for |link_resolved|

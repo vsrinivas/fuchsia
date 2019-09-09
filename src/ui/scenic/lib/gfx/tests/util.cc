@@ -4,13 +4,12 @@
 
 #include "src/ui/scenic/lib/gfx/tests/util.h"
 
+#include <lib/fsl/handles/object_info.h>
 #include <lib/zx/vmo.h>
 
 #include "gtest/gtest.h"
 
-namespace scenic_impl {
-namespace gfx {
-namespace test {
+namespace scenic_impl::gfx::test {
 
 bool IsEventSignalled(const zx::event& fence, zx_signals_t signal) {
   zx_signals_t pending = 0u;
@@ -88,6 +87,33 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   return fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), map_flags);
 }
 
-}  // namespace test
-}  // namespace gfx
-}  // namespace scenic_impl
+SessionWrapper::SessionWrapper(scenic_impl::Scenic* scenic) {
+  FXL_CHECK(scenic);
+
+  fuchsia::ui::scenic::SessionPtr session_ptr;
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
+  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> listener_request =
+      listener_handle.NewRequest();
+  scenic->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
+  session_ = std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
+  session_anchor_ = std::make_unique<scenic::EntityNode>(session_.get());
+
+  session_->set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
+    for (fuchsia::ui::scenic::Event& event : events) {
+      events_.push_back(std::move(event));
+    }
+  });
+}
+
+SessionWrapper::~SessionWrapper() {
+  session_anchor_.reset();  // Let go of the resource; enqueue the release cmd.
+  session_->Flush();   // Ensure Scenic receives the release cmd.
+}
+
+void SessionWrapper::RunNow(
+    fit::function<void(scenic::Session* session, scenic::EntityNode* session_anchor)>
+        create_scene_callback) {
+  create_scene_callback(session_.get(), session_anchor_.get());
+}
+
+}  // namespace scenic_impl::gfx::test

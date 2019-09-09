@@ -12,17 +12,8 @@ namespace lib_ui_gfx_engine_tests {
 
 using fuchsia::ui::focus::FocusChain;
 using fuchsia::ui::views::ViewRef;
+using scenic_impl::gfx::ExtractKoid;
 using scenic_impl::gfx::ViewTree;
-
-zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
-  zx_info_handle_basic_t info{};
-  if (view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
-      ZX_OK) {
-    return ZX_KOID_INVALID;  // no info
-  }
-
-  return info.koid;
-}
 
 TEST(ViewTreeLifecycle, EmptyScene) {
   ViewTree tree{};
@@ -41,7 +32,7 @@ TEST(ViewTreeLifecycle, SceneCreateThenDestroy) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref));
-  tree.MakeRoot(koid);
+  tree.MakeGlobalRoot(koid);
 
   EXPECT_EQ(tree.focus_chain().size(), 1u);
   EXPECT_EQ(tree.focus_chain()[0], koid);
@@ -69,13 +60,13 @@ TEST(ViewTreeLifecycle, SceneCreateThenReplace) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   // Replace it with another scene node.
   scenic::ViewRefPair pair_b = scenic::ViewRefPair::New();
   zx_koid_t scene_koid_b = ExtractKoid(pair_b.view_ref);
   tree.NewRefNode(std::move(pair_b.view_ref));
-  tree.MakeRoot(scene_koid_b);
+  tree.MakeGlobalRoot(scene_koid_b);
 
   EXPECT_EQ(tree.focus_chain().size(), 1u);
   FocusChain clone = tree.CloneFocusChain();
@@ -94,7 +85,7 @@ TEST(ViewTreeLifecycle, ConnectedSceneWithFocusTransfer) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   // Create an attach node for view 1, connect to scene.
   zx_koid_t attach_1_koid = 1111u;
@@ -131,8 +122,9 @@ TEST(ViewTreeLifecycle, ConnectedSceneWithFocusTransfer) {
   tree.ConnectToParent(view_2_koid, attach_2_koid);
 
   // Transfer focus: scene to view 2.
-  tree.RequestFocusChange(scene_koid, view_2_koid);
+  ViewTree::FocusChangeStatus status = tree.RequestFocusChange(scene_koid, view_2_koid);
 
+  EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
   EXPECT_EQ(tree.focus_chain()[0], scene_koid);
   EXPECT_EQ(tree.focus_chain()[1], view_2_koid);
@@ -146,8 +138,9 @@ TEST(ViewTreeLifecycle, ConnectedSceneWithFocusTransfer) {
   EXPECT_TRUE(tree.IsStateValid());
 
   // Transfer focus, scene to child 1
-  tree.RequestFocusChange(scene_koid, view_1_koid);
+  status = tree.RequestFocusChange(scene_koid, view_1_koid);
 
+  EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
   EXPECT_EQ(tree.focus_chain()[0], scene_koid);
   EXPECT_EQ(tree.focus_chain()[1], view_1_koid);
@@ -168,7 +161,7 @@ TEST(ViewTreeLifecycle, SlowlyDestroyedScene) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_1_koid = 1111u;
   tree.NewAttachNode(attach_1_koid);
@@ -191,8 +184,9 @@ TEST(ViewTreeLifecycle, SlowlyDestroyedScene) {
   EXPECT_TRUE(tree.IsStateValid());
 
   // Transfer focus to view 2.
-  tree.RequestFocusChange(scene_koid, view_2_koid);
+  ViewTree::FocusChangeStatus status = tree.RequestFocusChange(scene_koid, view_2_koid);
 
+  EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain().size(), 3u);
   EXPECT_EQ(tree.focus_chain()[0], scene_koid);
   EXPECT_EQ(tree.focus_chain()[1], view_1_koid);
@@ -228,7 +222,7 @@ TEST(ViewTreeLifecycle, SlowlyDisconnectedScene) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_1_koid = 1111u;
   tree.NewAttachNode(attach_1_koid);
@@ -251,8 +245,9 @@ TEST(ViewTreeLifecycle, SlowlyDisconnectedScene) {
   EXPECT_TRUE(tree.IsStateValid());
 
   // Transfer focus to view 2.
-  tree.RequestFocusChange(scene_koid, view_2_koid);
+  ViewTree::FocusChangeStatus status = tree.RequestFocusChange(scene_koid, view_2_koid);
 
+  EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain().size(), 3u);
   EXPECT_EQ(tree.focus_chain()[0], scene_koid);
   EXPECT_EQ(tree.focus_chain()[1], view_1_koid);
@@ -317,17 +312,17 @@ TEST(ViewTreePrimitive, DeleteNode) {
   EXPECT_FALSE(tree.IsTracked(view_koid));
 }
 
-TEST(ViewTreePrimitive, MakeRoot) {
+TEST(ViewTreePrimitive, MakeGlobalRoot) {
   ViewTree tree{};
 
-  tree.MakeRoot(ZX_KOID_INVALID);
+  tree.MakeGlobalRoot(ZX_KOID_INVALID);
 
   EXPECT_TRUE(tree.focus_chain().empty());
 
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   EXPECT_FALSE(tree.focus_chain().empty());
   EXPECT_EQ(tree.focus_chain().size(), 1u);
@@ -336,13 +331,13 @@ TEST(ViewTreePrimitive, MakeRoot) {
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
   zx_koid_t scene_koid_2 = ExtractKoid(pair_2.view_ref);
   tree.NewRefNode(std::move(pair_2.view_ref));
-  tree.MakeRoot(scene_koid_2);
+  tree.MakeGlobalRoot(scene_koid_2);
 
   EXPECT_FALSE(tree.focus_chain().empty());
   EXPECT_EQ(tree.focus_chain().size(), 1u);
   EXPECT_EQ(tree.focus_chain()[0], scene_koid_2);
 
-  tree.MakeRoot(ZX_KOID_INVALID);
+  tree.MakeGlobalRoot(ZX_KOID_INVALID);
 
   EXPECT_TRUE(tree.focus_chain().empty());
 }
@@ -354,7 +349,7 @@ TEST(ViewTreePrimitive, IsConnected) {
   scenic::ViewRefPair pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(pair.view_ref);
   tree.NewRefNode(std::move(pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   EXPECT_TRUE(tree.IsConnected(scene_koid));
 
@@ -362,7 +357,7 @@ TEST(ViewTreePrimitive, IsConnected) {
   scenic::ViewRefPair pair_2 = scenic::ViewRefPair::New();
   zx_koid_t scene_koid_2 = ExtractKoid(pair_2.view_ref);
   tree.NewRefNode(std::move(pair_2.view_ref));
-  tree.MakeRoot(scene_koid_2);
+  tree.MakeGlobalRoot(scene_koid_2);
 
   EXPECT_FALSE(tree.IsConnected(scene_koid));
   EXPECT_TRUE(tree.IsConnected(scene_koid_2));
@@ -405,7 +400,7 @@ TEST(ViewTreePrimitive, ConnectAndDisconnect) {
   scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
   tree.NewRefNode(std::move(scene_pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_koid = 1111u;
   tree.NewAttachNode(attach_koid);
@@ -447,6 +442,71 @@ TEST(ViewTreePrimitive, ConnectAndDisconnect) {
   EXPECT_FALSE(tree.ParentOf(view_koid).has_value());
 }
 
+TEST(ViewTreePrimitive, DisconnectUnconnectedChild) {
+  ViewTree tree{};
+
+  scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
+  zx_koid_t ref_koid = ExtractKoid(ref_pair.view_ref);
+  tree.NewRefNode(std::move(ref_pair.view_ref));
+
+  tree.DisconnectFromParent(ref_koid);
+
+  EXPECT_TRUE(tree.IsTracked(ref_koid));
+  EXPECT_FALSE(tree.ParentOf(ref_koid).has_value());
+
+  zx_koid_t attach_koid = 1111u;
+  tree.NewAttachNode(attach_koid);
+
+  tree.DisconnectFromParent(attach_koid);
+
+  EXPECT_TRUE(tree.IsTracked(attach_koid));
+  EXPECT_FALSE(tree.ParentOf(attach_koid).has_value());
+}
+
+TEST(ViewTreePrimitive, DeleteParentThenDisconnectChild) {
+  // 1. RefNode parent, AttachNode child
+  {
+    ViewTree tree{};
+
+    scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
+    zx_koid_t ref_koid = ExtractKoid(ref_pair.view_ref);
+    tree.NewRefNode(std::move(ref_pair.view_ref));
+
+    zx_koid_t attach_koid = 1111u;
+    tree.NewAttachNode(attach_koid);
+    tree.ConnectToParent(attach_koid, ref_koid);
+
+    EXPECT_EQ(tree.ParentOf(attach_koid), ref_koid);
+
+    tree.DeleteNode(ref_koid);
+    tree.DisconnectFromParent(attach_koid);
+
+    EXPECT_FALSE(tree.IsTracked(ref_koid));
+    EXPECT_TRUE(tree.IsTracked(attach_koid));
+  }
+
+  // 2. AttachNode parent, RefNode child
+  {
+    ViewTree tree{};
+
+    zx_koid_t attach_koid = 1111u;
+    tree.NewAttachNode(attach_koid);
+
+    scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
+    zx_koid_t ref_koid = ExtractKoid(ref_pair.view_ref);
+    tree.NewRefNode(std::move(ref_pair.view_ref));
+    tree.ConnectToParent(ref_koid, attach_koid);
+
+    EXPECT_EQ(tree.ParentOf(ref_koid), attach_koid);
+
+    tree.DeleteNode(attach_koid);
+    tree.DisconnectFromParent(ref_koid);
+
+    EXPECT_FALSE(tree.IsTracked(attach_koid));
+    EXPECT_TRUE(tree.IsTracked(ref_koid));
+  }
+}
+
 // Exercise focus transfer policies on the following view tree.
 // Note how v_4 is disconnected from the scene.
 //         scene
@@ -465,7 +525,7 @@ TEST(ViewTreePrimitive, RequestFocusChange) {
   scenic::ViewRefPair scene_pair = scenic::ViewRefPair::New();
   zx_koid_t scene_koid = ExtractKoid(scene_pair.view_ref);
   tree.NewRefNode(std::move(scene_pair.view_ref));
-  tree.MakeRoot(scene_koid);
+  tree.MakeGlobalRoot(scene_koid);
 
   zx_koid_t attach_koid_1 = 1111u;
   tree.NewAttachNode(attach_koid_1);
@@ -506,58 +566,68 @@ TEST(ViewTreePrimitive, RequestFocusChange) {
   // Transfer requests.
 
   // scene -> v_1: allow
-  EXPECT_TRUE(tree.RequestFocusChange(scene_koid, view_koid_1));
+  EXPECT_EQ(tree.RequestFocusChange(scene_koid, view_koid_1), ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain()[0], scene_koid);
   EXPECT_EQ(tree.focus_chain()[1], view_koid_1);
 
   // v_1 -> v_3: allow
-  EXPECT_TRUE(tree.RequestFocusChange(view_koid_1, view_koid_3));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_1, view_koid_3),
+            ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain()[0], scene_koid);
   EXPECT_EQ(tree.focus_chain()[1], view_koid_1);
   EXPECT_EQ(tree.focus_chain()[2], view_koid_3);
 
   // v_3 -> invalid: deny
-  EXPECT_FALSE(tree.RequestFocusChange(view_koid_3, ZX_KOID_INVALID));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_3, ZX_KOID_INVALID),
+            ViewTree::FocusChangeStatus::kErrorRequestInvalid);
   EXPECT_EQ(tree.focus_chain().size(), 3u);
 
   // v_3 -> no_such: deny
-  EXPECT_FALSE(tree.RequestFocusChange(view_koid_3, /* does not exist */ 1234u));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_3, /* does not exist */ 1234u),
+            ViewTree::FocusChangeStatus::kErrorRequestInvalid);
   EXPECT_EQ(tree.focus_chain().size(), 3u);
 
   // v_3 -> v_1: deny
-  EXPECT_FALSE(tree.RequestFocusChange(view_koid_3, view_koid_1));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_3, view_koid_1),
+            ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
   EXPECT_EQ(tree.focus_chain().size(), 3u);
 
   // v_3 -> v_2: deny
-  EXPECT_FALSE(tree.RequestFocusChange(view_koid_3, view_koid_2));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_3, view_koid_2),
+            ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
   EXPECT_EQ(tree.focus_chain().size(), 3u);
 
   // v_1 -> v_1: allow
-  EXPECT_TRUE(tree.RequestFocusChange(view_koid_1, view_koid_1));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_1, view_koid_1),
+            ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
 
   // scene -> scene: allow
-  EXPECT_TRUE(tree.RequestFocusChange(scene_koid, scene_koid));
+  EXPECT_EQ(tree.RequestFocusChange(scene_koid, scene_koid), ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain().size(), 1u);
 
   // scene -> v_2: allow
-  EXPECT_TRUE(tree.RequestFocusChange(scene_koid, view_koid_2));
+  EXPECT_EQ(tree.RequestFocusChange(scene_koid, view_koid_2), ViewTree::FocusChangeStatus::kAccept);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
 
   // v_2 -> scene: deny
-  EXPECT_FALSE(tree.RequestFocusChange(view_koid_2, scene_koid));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_2, scene_koid),
+            ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
 
   // v_2 -> v_1: deny
-  EXPECT_FALSE(tree.RequestFocusChange(view_koid_2, view_koid_1));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_2, view_koid_1),
+            ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
 
   // v_2 -> v_3: deny
-  EXPECT_FALSE(tree.RequestFocusChange(view_koid_2, view_koid_3));
+  EXPECT_EQ(tree.RequestFocusChange(view_koid_2, view_koid_3),
+            ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
 
   // scene -> v_4: deny
-  EXPECT_FALSE(tree.RequestFocusChange(scene_koid, view_koid_4));
+  EXPECT_EQ(tree.RequestFocusChange(scene_koid, view_koid_4),
+            ViewTree::FocusChangeStatus::kErrorRequestInvalid);
   EXPECT_EQ(tree.focus_chain().size(), 2u);
 }
 

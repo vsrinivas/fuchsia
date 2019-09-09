@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 
+#include <lib/sys/cpp/testing/component_context_provider.h>
+
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 
 namespace scenic_impl {
@@ -20,6 +22,8 @@ void SessionHandlerTest::SetUp() {
   InitializeEngine();
 
   InitializeSessionHandler();
+
+  RunLoopUntilIdle();  // Reset loop state; some tests are sensitive to dirty loop state.
 }
 
 void SessionHandlerTest::TearDown() {
@@ -29,17 +33,14 @@ void SessionHandlerTest::TearDown() {
   command_buffer_sequencer_.reset();
   display_manager_.reset();
   scenic_.reset();
-  app_context_.reset();
   session_manager_.reset();
 
   ErrorReportingTest::TearDown();
 }
 
 void SessionHandlerTest::InitializeScenic() {
-  // TODO(SCN-720): Wrap Create using ::gtest::Environment
-  // instead of this hack.  This code has the chance to break non-ScenicTests.
-  app_context_ = sys::ComponentContext::Create();
-  scenic_ = std::make_unique<Scenic>(app_context_.get(), inspect_deprecated::Node(), [] {});
+  sys::testing::ComponentContextProvider context_provider;
+  scenic_ = std::make_unique<Scenic>(app_context_.context(), inspect_deprecated::Node(), [] {});
 }
 
 void SessionHandlerTest::InitializeSessionHandler() {
@@ -70,8 +71,9 @@ void SessionHandlerTest::InitializeEngine() {
       display_manager_->default_display(),
       std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                        DefaultFrameScheduler::kInitialUpdateDuration));
-  engine_ = std::make_unique<Engine>(frame_scheduler_, std::move(mock_release_fence_signaller),
-                                     escher::EscherWeakPtr());
+  engine_ =
+      std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
+                               std::move(mock_release_fence_signaller), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   frame_scheduler_->AddSessionUpdater(weak_factory_.GetWeakPtr());
 }
@@ -85,7 +87,8 @@ SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
     uint64_t trace_id) {
   UpdateResults update_results;
-  CommandContext empty_command_context;
+  CommandContext command_context(/*uploader*/ nullptr, /*sysmem*/ nullptr,
+                                 /*display_manager*/ nullptr, engine_->scene_graph()->GetWeakPtr());
 
   for (auto session_id : sessions_to_update) {
     auto session_handler = session_manager_->FindSessionHandler(session_id);
@@ -100,11 +103,11 @@ SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
 
     auto session = session_handler->session();
 
-    auto apply_results = session->ApplyScheduledUpdates(&empty_command_context, presentation_time);
+    auto apply_results = session->ApplyScheduledUpdates(&command_context, presentation_time);
   }
 
   // Flush work to the GPU.
-  empty_command_context.Flush();
+  command_context.Flush();
 
   return update_results;
 }

@@ -48,10 +48,9 @@ class CompositorTest : public SessionTest {
     FXL_DCHECK(!view_linker_);
 
     // Generate scene graph.
-    scene_graph_ = std::make_unique<SceneGraph>();
+    scene_graph_ = std::make_unique<SceneGraph>(context_provider_.context());
 
     // Generate other parameters needed for session context.
-    sys::testing::ComponentContextProvider context_provider_;
     resource_linker_ = std::make_unique<ResourceLinker>();
     view_linker_ = std::make_unique<ViewLinker>();
 
@@ -67,7 +66,8 @@ class CompositorTest : public SessionTest {
   }
 
   CommandContext CreateCommandContext() {
-    return CommandContext(/* batch_gpu_uploader */ nullptr, sysmem_.get(), display_manager_.get());
+    return CommandContext(/* batch_gpu_uploader */ nullptr, sysmem_.get(), display_manager_.get(),
+                          scene_graph_->GetWeakPtr());
   }
 
   DisplayManager* display_manager() const { return display_manager_.get(); }
@@ -75,7 +75,7 @@ class CompositorTest : public SessionTest {
  private:
   std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<DisplayManager> display_manager_;
-
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<SceneGraph> scene_graph_;
 
   std::unique_ptr<ViewLinker> view_linker_;

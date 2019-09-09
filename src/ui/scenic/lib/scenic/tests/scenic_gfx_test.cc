@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/scenic/tests/scenic_gfx_test.h"
 
 #include <lib/async-testing/test_loop.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks.h"
@@ -28,7 +29,8 @@ void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
                                             gfx::DefaultFrameScheduler::kInitialUpdateDuration),
       scenic_->inspect_node()->CreateChild("FrameScheduler"));
 
-  engine_ = std::make_unique<gfx::Engine>(frame_scheduler_, std::move(signaller),
+  auto context = sys::ComponentContext::Create();
+  engine_ = std::make_unique<gfx::Engine>(context.get(), frame_scheduler_, std::move(signaller),
                                           escher::EscherWeakPtr());
   auto system = scenic->RegisterSystem<gfx::GfxSystem>(
       engine_.get(), escher::EscherWeakPtr(), /* sysmem */ nullptr,

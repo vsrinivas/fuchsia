@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_INPUT_TESTS_UTIL_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/zx/eventpair.h>
@@ -62,6 +63,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void InitializeScenic(scenic_impl::Scenic* scenic) override;
 
  private:
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<scenic_impl::gfx::Engine> engine_;
   std::unique_ptr<scenic_impl::gfx::Display> display_;

@@ -92,6 +92,9 @@ class View final : public Resource {
   // Accessor to this View's canonical ViewRef. Used to generate a FocusChain.
   const fuchsia::ui::views::ViewRef& view_ref() const { return view_ref_; }
 
+  // Convenience accessor.
+  zx_koid_t view_ref_koid() const;
+
  private:
   // |ViewLinker::ExportCallbacks|
   void LinkResolved(ViewHolder* view_holder);
@@ -119,6 +122,7 @@ class View final : public Resource {
   // the cloneable handle to the other peer.
   fuchsia::ui::views::ViewRefControl control_ref_;
   fuchsia::ui::views::ViewRef view_ref_;
+  const zx_koid_t view_ref_koid_ = ZX_KOID_INVALID;
 
   // Determines if view should render its bounding box and those of its embedded
   // view/view holders.
@@ -127,6 +131,8 @@ class View final : public Resource {
   // TODO(SCN-1504): better for these to not be raw pointers.
   const std::shared_ptr<ErrorReporter> error_reporter_;
   EventReporter* const event_reporter_;
+
+  Session* gfx_session_ = nullptr;
 
   fxl::WeakPtrFactory<View> weak_factory_;  // must be last
 };

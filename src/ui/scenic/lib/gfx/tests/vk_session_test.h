@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 
+#include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 namespace scenic_impl {

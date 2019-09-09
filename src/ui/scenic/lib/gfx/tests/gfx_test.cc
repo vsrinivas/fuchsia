@@ -29,8 +29,8 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
       display_.get(),
       std::make_unique<FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
                                        gfx::DefaultFrameScheduler::kInitialUpdateDuration));
-  engine_ =
-      std::make_unique<Engine>(frame_scheduler_, std::move(signaller), escher::EscherWeakPtr());
+  engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler_,
+                                     std::move(signaller), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
   auto system = scenic->RegisterSystem<GfxSystem>(engine_.get(), escher::EscherWeakPtr(),
                                                   /* sysmem */ nullptr,

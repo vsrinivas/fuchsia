@@ -8,7 +8,9 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <zircon/types.h>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
@@ -30,7 +32,9 @@ class ViewHolder final : public Node {
   static const ResourceTypeInfo kTypeInfo;
 
   ViewHolder(Session* session, ResourceId node_id, ViewLinker::ExportLink link);
-  ~ViewHolder() {}
+  ~ViewHolder() override;
+
+  fxl::WeakPtr<ViewHolder> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // |Resource|
   void Accept(class ResourceVisitor* visitor) override;
@@ -60,6 +64,8 @@ class ViewHolder final : public Node {
   void set_bounds_color(glm::vec4 bounds_color) { bounds_color_ = bounds_color; }
   glm::vec4 bounds_color() const { return bounds_color_; }
 
+  zx_koid_t view_holder_koid() const { return view_holder_koid_; }
+
  protected:
   // |Node|
   bool CanAddChild(NodePtr child_node) override;
@@ -83,6 +89,8 @@ class ViewHolder final : public Node {
   void SendViewStateChangedEvent();
 
   ViewLinker::ExportLink link_;
+  // Cache the link's endpoint ID (koid); it may get reset (and forgotten) over the link's lifetime.
+  const zx_koid_t view_holder_koid_ = ZX_KOID_INVALID;
   View* view_ = nullptr;
 
   fuchsia::ui::gfx::ViewProperties view_properties_;
@@ -97,6 +105,10 @@ class ViewHolder final : public Node {
   // wait is not set until after the View has connected, and is always cleared
   // in |LinkDisconnected|. The waiter must be destroyed before the event.
   async::Wait render_waiter_;
+
+  Session* gfx_session_ = nullptr;
+
+  fxl::WeakPtrFactory<ViewHolder> weak_factory_;  // must be last
 };
 
 }  // namespace gfx
