@@ -11,8 +11,8 @@ group("tests") {
     ":exception_broker_tests",
 
     # Packages for the components that we are injecting in the integration tests.
-    "//garnet/bin/logger",
     "//src/developer/exception_broker",
+    "//src/diagnostics/archivist",
   ]
 }
 

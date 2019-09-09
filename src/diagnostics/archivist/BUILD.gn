@@ -26,19 +26,24 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.diagnostics.inspect:fuchsia.diagnostics.inspect-rustc",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:json5",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:timebomb",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }
 
@@ -104,5 +109,13 @@ test_package("archivist_tests") {
       dest = "archivist_tests"
       environments = basic_envs
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":archivist_tests",
+    "//src/diagnostics/archivist/tests:logger_integration_tests",
   ]
 }

@@ -3,7 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx",
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",

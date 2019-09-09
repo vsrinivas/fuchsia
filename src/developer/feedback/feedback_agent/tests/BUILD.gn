@@ -15,7 +15,6 @@ group("tests") {
     ":valid_override_config",
 
     # Packages for the components that we are injecting in the integration tests.
-    "//garnet/bin/logger",
     "//garnet/bin/sysmem_connector",
     "//garnet/bin/system-update-checker",
     "//garnet/bin/ui:scenic",
@@ -23,6 +22,7 @@ group("tests") {
     "//src/developer/feedback/feedback_agent",
     "//src/developer/feedback/feedback_agent:fake_feedback_agent_invalid_override_config",
     "//src/developer/feedback/feedback_agent:fake_feedback_agent_valid_override_config",
+    "//src/diagnostics/archivist",
   ]
 }
 

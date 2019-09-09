@@ -1,6 +1,6 @@
-# logger
+# Diagnostics Archivist
 
-Reviewed on: 2019-07-22
+Reviewed on: 2019-08-30
 
 logger is the main logging service on Fuchsia. It provides the
 [`fuchsia.logger.LogSink`][fidl-file] service which components use to log
@@ -11,22 +11,21 @@ messages from it into its buffer.
 
 ## Building
 
-This project can be added to builds by including `--with //garnet/bin/logger` to
-the `fx set` invocation.
+This project is included in the `core` build product.
 
 ## Running
 
-logger is started by [sysmgr][sysmgr] when something needs to log, and can also
-be reached by the [`log_listener`][log_listener] command line tool.
+The diagnostics archivist is started on-demand by clients connecting to the `LogSink` protocol. In
+practice this means an instance is usually running already.
 
 ## Testing
 
-Unit tests for logger are available in the `logger_tests` package.
+Unit tests are available in the `archivist_tests` package.
 
-Integration tests are also available in the `logger_integration_tests` package.
+Integration tests for system logging are available in the `logger_integration_tests` package.
 
 ```
-$ fx run-test logger_tests
+$ fx run-test archivist_tests
 $ fx run-test logger_integration_tests
 ```
 
@@ -36,6 +35,6 @@ The entrypoint is located in `src/main.rs`, with the rest of the code living in
 `src/*.rs` files. Unit tests are co-located with the code and integration tests
 are located in the `tests/` directory.
 
-[log_listener]: ../log_listener/README.md
-[sysmgr]: ../sysmgr/README.md
-[fidl-file]: /zircon/system/fidl/fuchsia-logger/logger.fidl
+[log_listener]: ../../../garnet/bin/log_listener/README.md
+[sysmgr]: ../../../garnet/bin/sysmgr/README.md
+[fidl-file]: ../../../zircon/system/fidl/fuchsia-logger/logger.fidl

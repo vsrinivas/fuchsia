@@ -208,7 +208,6 @@ group("all") {
     "//garnet/packages/prod:installblob",
     "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:log_listener",
-    "//garnet/packages/prod:logger",
     "//garnet/packages/prod:magma-arm-mali",
     "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
@@ -587,13 +586,6 @@ group("network_time") {
   testonly = true
   public_deps = [
     "//garnet/bin/network_time_service",
-  ]
-}
-
-group("logger") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/logger",
   ]
 }
 

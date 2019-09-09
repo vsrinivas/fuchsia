@@ -16,8 +16,8 @@ namespace netemul {
 
 // Start the Log and LogSink service (the same component publishses both
 // services))
-static const char* kLogSinkServiceURL = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
-static const char* kLogServiceURL = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+static const char* kLogSinkServiceURL = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
+static const char* kLogServiceURL = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
 static const char* kLogServiceNoKLogOption = "--disable-klog";
 
 using sys::testing::EnclosingEnvironment;

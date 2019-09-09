@@ -22,6 +22,7 @@ mod archive;
 mod collection;
 mod configs;
 mod diagnostics;
+mod logs;
 mod selectors;
 
 static ARCHIVE_PATH: &str = "/data/archive";
@@ -41,6 +42,12 @@ fn main() -> Result<(), Error> {
     // Ensure that an archive exists.
     std::fs::create_dir_all(ARCHIVE_PATH).expect("failed to initialize archive");
 
+    let opt = logs::Opt::from_args();
+    let log_manager = logs::LogManager::new();
+    if !opt.disable_klog {
+        log_manager.spawn_klogger()?;
+    }
+
     let mut fs = ServiceFs::new();
     diagnostics::export(&mut fs);
     fs.add_remote(
@@ -50,6 +57,12 @@ fn main() -> Result<(), Error> {
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )?,
     );
+
+    let log_manager2 = log_manager.clone();
+    let log_manager3 = log_manager.clone();
+    fs.dir("svc")
+        .add_fidl_service(move |stream| log_manager2.spawn_log_manager(stream))
+        .add_fidl_service(move |stream| log_manager3.spawn_log_sink(stream));
     fs.take_and_serve_directory_handle()?;
 
     let archivist_configuration: configs::Config = match configs::parse_config(ARCHIVE_CONFIG_FILE)

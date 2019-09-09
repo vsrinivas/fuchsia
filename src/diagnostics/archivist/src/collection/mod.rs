@@ -420,7 +420,8 @@ impl HubCollector {
                             self.add_out_watcher(relative_path);
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {
-                        self.add_component(relative_path, data, ExistingPath(false)).await
+                        self.add_component(relative_path, data, ExistingPath(false))
+                            .await
                             .unwrap_or_else(|e| {
                                 eprintln!("Error adding component: {:?}", e);
                             });
@@ -432,7 +433,8 @@ impl HubCollector {
                             self.add_out_watcher(relative_path);
                         }
                     } else if let Ok(data) = path_to_event_data(&relative_path) {
-                        self.add_component(relative_path, data, ExistingPath(true)).await
+                        self.add_component(relative_path, data, ExistingPath(true))
+                            .await
                             .unwrap_or_else(|e| {
                                 eprintln!("Error adding existing component: {:?}", e);
                             });

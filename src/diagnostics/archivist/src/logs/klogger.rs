@@ -4,7 +4,7 @@
 
 // Read kernel logs, convert them to LogMessages and serve them.
 
-use crate::logger;
+use crate::logs::logger;
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_logger::{self, LogMessage};
 use fuchsia_async as fasync;
@@ -92,10 +92,10 @@ pub fn listen(
         async move {
             loop {
                 if !is_readable {
-                    if let Err(e) = fasync::OnSignals::new(
-                        &klogger.debuglogger,
-                        zx::Signals::LOG_READABLE
-                    ).await {
+                    if let Err(e) =
+                        fasync::OnSignals::new(&klogger.debuglogger, zx::Signals::LOG_READABLE)
+                            .await
+                    {
                         break Some((Err(e), (is_readable, klogger)));
                     }
                 }

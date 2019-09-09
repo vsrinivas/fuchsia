@@ -362,7 +362,6 @@ group("all") {
     ":libc",
     ":linux_runner",
     ":log_listener",
-    ":logger",
     ":magma",
     ":media",
     ":memory_metrics",
@@ -856,15 +855,6 @@ group("network_time") {
   ]
 }
 
-group("logger") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/logger:logger_tests",
-    "//garnet/bin/logger/tests:logger_integration_tests",
-    "//garnet/packages/prod:logger",
-  ]
-}
-
 group("telephony") {
   testonly = true
   public_deps = [
@@ -1255,8 +1245,8 @@ group("intl") {
 group("carnelian") {
   testonly = true
   public_deps = [
-    "//garnet/public/rust/carnelian:carnelian_integration_test",
     "//garnet/public/rust/carnelian:carnelian_fb_integration_test",
+    "//garnet/public/rust/carnelian:carnelian_integration_test",
     "//garnet/public/rust/carnelian:carnelian_tests",
   ]
 }

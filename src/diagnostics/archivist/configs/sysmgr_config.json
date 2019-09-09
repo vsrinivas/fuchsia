@@ -1,5 +1,9 @@
 {
   "apps": [
     "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
-  ]
+  ],
+  "services": {
+    "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
+    "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
+  }
 }

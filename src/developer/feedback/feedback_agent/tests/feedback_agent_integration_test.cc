@@ -92,16 +92,17 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
   // Returned syslog messages are restricted to the ones that were written using its LogSink while
   // kernel log messages are the same for all loggers.
   //
-  // In this integration test, we inject a "fresh copy" of logger.cmx for fuchsia.logger.Log so we
-  // can retrieve the syslog messages. But we do _not_ inject that same logger.cmx for
+  // In this integration test, we inject a "fresh copy" of archivist.cmx for fuchsia.logger.Log so
+  // we can retrieve the syslog messages. But we do _not_ inject that same archivist.cmx for
   // fuchsia.logger.LogSink as it would swallow all the error and warning messages the other
   // injected services could produce and make debugging really hard. Therefore, the injected
-  // logger.cmx does not have any syslog messages and will only have the global kernel log messages.
+  // archivist.cmx does not have any syslog messages and will only have the global kernel log
+  // messages.
   //
-  // When logger.cmx spawns, it will start collecting asynchronously kernel log messages. But if
+  // When archivist.cmx spawns, it will start collecting asynchronously kernel log messages. But if
   // DumpLogs() is called "too soon", it will immediately return empty logs instead of waiting on
   // the kernel log collection (fxb/4665), resulting in a flaky test (fxb/8303). We thus spawn
-  // logger.cmx on advance and wait for it to have at least one message before running the actual
+  // archivist.cmx on advance and wait for it to have at least one message before running the actual
   // test.
   void WaitForLogger() {
     LogListener log_listener(environment_services_);
@@ -221,7 +222,7 @@ void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_provide
   //     p: 115023 /pkg/bin/data_provider
   //     p: 115024 /pkg/bin/data_provider
   //   j: 116540
-  //     p: 116545 logger.cmx
+  //     p: 116545 archivist.cmx
   //
   // There is basically a job the for the test component and a job for each injected service. The
   // one of interest is feedback_agent.cmx and we check the number of sibling processes named

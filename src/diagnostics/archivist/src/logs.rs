@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![feature(async_await)]
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ClientEnd;
 use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
+use futures::{TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::collections::{vec_deque, VecDeque};
@@ -150,148 +148,185 @@ struct LogManagerShared {
 }
 
 #[derive(Clone)]
-struct LogManager {
+pub struct LogManager {
     shared_members: Arc<Mutex<LogManagerShared>>,
+}
+
+impl LogManager {
+    pub fn new() -> Self {
+        Self {
+            shared_members: Arc::new(Mutex::new(LogManagerShared {
+                listeners: Vec::new(),
+                log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
+            })),
+        }
+    }
+
+    pub fn spawn_klogger(&self) -> Result<(), Error> {
+        let mut kernel_logger =
+            klogger::KernelLogger::create().context("failed to read kernel logs")?;
+
+        let mut itr = kernel_logger.log_stream();
+        while let Some(res) = itr.next() {
+            match res {
+                Ok((log_msg, size)) => self.process_log(log_msg, size),
+                Err(e) => {
+                    println!("encountered an error from the kernel log iterator: {}", e);
+                    break;
+                }
+            }
+        }
+
+        let klog_stream = klogger::listen(kernel_logger);
+        let manager = self.clone();
+        fasync::spawn(
+            klog_stream
+                .map_ok(move |(log_msg, size)| {
+                    manager.process_log(log_msg, size);
+                })
+                .try_collect::<()>()
+                .unwrap_or_else(|e| eprintln!("failed to read kernel logs: {:?}", e)),
+        );
+        Ok(())
+    }
+    pub fn spawn_log_manager(&self, stream: LogRequestStream) {
+        let state = Arc::new(self.clone());
+        fasync::spawn(
+            stream
+                .map_ok(move |req| {
+                    let state = state.clone();
+                    match req {
+                        LogRequest::Listen { log_listener, options, .. } => {
+                            state.pump_messages(log_listener, options, false)
+                        }
+                        LogRequest::DumpLogs { log_listener, options, .. } => {
+                            state.pump_messages(log_listener, options, true)
+                        }
+                    }
+                })
+                .try_collect::<()>()
+                .unwrap_or_else(|e| eprintln!("Log manager failed: {:?}", e)),
+        )
+    }
+
+    fn process_log(&self, mut log_msg: LogMessage, size: usize) {
+        let mut shared_members = self.shared_members.lock();
+        run_listeners(&mut shared_members.listeners, &mut log_msg);
+        shared_members.log_msg_buffer.push(log_msg, size);
+    }
+
+    pub fn spawn_log_sink(&self, stream: LogSinkRequestStream) {
+        let state = Arc::new(self.clone());
+        fasync::spawn(
+            stream
+                .map_ok(move |req| {
+                    let state = state.clone();
+                    let LogSinkRequest::Connect { socket, .. } = req;
+                    let ls = match logger::LoggerStream::new(socket) {
+                        Err(e) => {
+                            eprintln!("Logger: Failed to create tokio socket: {:?}", e);
+                            // TODO: close channel
+                            return;
+                        }
+                        Ok(ls) => ls,
+                    };
+
+                    let f = ls
+                        .map_ok(move |(log_msg, size)| {
+                            state.process_log(log_msg, size);
+                        })
+                        .try_collect::<()>();
+
+                    fasync::spawn(f.unwrap_or_else(|e| {
+                        eprintln!("Logger: Stream failed {:?}", e);
+                    }));
+                })
+                .try_collect::<()>()
+                .unwrap_or_else(|e| eprintln!("Log sink failed: {:?}", e)),
+        )
+    }
+
+    fn pump_messages(
+        &self,
+        log_listener: ClientEnd<LogListenerMarker>,
+        options: Option<Box<LogFilterOptions>>,
+        dump_logs: bool,
+    ) {
+        let ll = match log_listener.into_proxy() {
+            Ok(ll) => ll,
+            Err(e) => {
+                eprintln!("Logger: Error getting listener proxy: {:?}", e);
+                // TODO: close channel
+                return;
+            }
+        };
+
+        let mut lw = ListenerWrapper {
+            listener: ll,
+            min_severity: None,
+            pid: None,
+            tid: None,
+            tags: HashSet::new(),
+        };
+
+        if let Some(mut options) = options {
+            lw.tags = options.tags.drain(..).collect();
+            if lw.tags.len() > fidl_fuchsia_logger::MAX_TAGS as usize {
+                // TODO: close channel
+                return;
+            }
+            for tag in &lw.tags {
+                if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN_BYTES as usize {
+                    // TODO: close channel
+                    return;
+                }
+            }
+            if options.filter_by_pid {
+                lw.pid = Some(options.pid)
+            }
+            if options.filter_by_tid {
+                lw.tid = Some(options.tid)
+            }
+            if options.verbosity > 0 {
+                lw.min_severity = Some(-(options.verbosity as i32))
+            } else if options.min_severity != LogLevelFilter::None {
+                lw.min_severity = Some(options.min_severity as i32)
+            }
+        }
+        let mut shared_members = self.shared_members.lock();
+        {
+            let mut log_length = 0;
+            let mut v = vec![];
+            for (msg, s) in shared_members.log_msg_buffer.iter_mut() {
+                if lw.filter(msg) {
+                    if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
+                        if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
+                            return;
+                        }
+                        v.clear();
+                        log_length = 0;
+                    }
+                    log_length = log_length + s;
+                    v.push(msg);
+                }
+            }
+            if v.len() > 0 {
+                if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
+                    return;
+                }
+            }
+        }
+
+        if !dump_logs {
+            shared_members.listeners.push(lw);
+        } else {
+            let _ = lw.listener.done();
+        }
+    }
 }
 
 fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &mut LogMessage) {
     listeners.retain(|l| l.send_log(log_message) == ListenerStatus::Fine);
-}
-
-fn log_manager_helper(
-    state: &LogManager,
-    log_listener: ClientEnd<LogListenerMarker>,
-    options: Option<Box<LogFilterOptions>>,
-    dump_logs: bool,
-) {
-    let ll = match log_listener.into_proxy() {
-        Ok(ll) => ll,
-        Err(e) => {
-            eprintln!("Logger: Error getting listener proxy: {:?}", e);
-            // TODO: close channel
-            return;
-        }
-    };
-
-    let mut lw = ListenerWrapper {
-        listener: ll,
-        min_severity: None,
-        pid: None,
-        tid: None,
-        tags: HashSet::new(),
-    };
-
-    if let Some(mut options) = options {
-        lw.tags = options.tags.drain(..).collect();
-        if lw.tags.len() > fidl_fuchsia_logger::MAX_TAGS as usize {
-            // TODO: close channel
-            return;
-        }
-        for tag in &lw.tags {
-            if tag.len() > fidl_fuchsia_logger::MAX_TAG_LEN_BYTES as usize {
-                // TODO: close channel
-                return;
-            }
-        }
-        if options.filter_by_pid {
-            lw.pid = Some(options.pid)
-        }
-        if options.filter_by_tid {
-            lw.tid = Some(options.tid)
-        }
-        if options.verbosity > 0 {
-            lw.min_severity = Some(-(options.verbosity as i32))
-        } else if options.min_severity != LogLevelFilter::None {
-            lw.min_severity = Some(options.min_severity as i32)
-        }
-    }
-    let mut shared_members = state.shared_members.lock();
-    {
-        let mut log_length = 0;
-        let mut v = vec![];
-        for (msg, s) in shared_members.log_msg_buffer.iter_mut() {
-            if lw.filter(msg) {
-                if log_length + s > fidl_fuchsia_logger::MAX_LOG_MANY_SIZE_BYTES as usize {
-                    if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
-                        return;
-                    }
-                    v.clear();
-                    log_length = 0;
-                }
-                log_length = log_length + s;
-                v.push(msg);
-            }
-        }
-        if v.len() > 0 {
-            if ListenerStatus::Fine != lw.send_filtered_logs(&mut v) {
-                return;
-            }
-        }
-    }
-
-    if !dump_logs {
-        shared_members.listeners.push(lw);
-    } else {
-        let _ = lw.listener.done();
-    }
-}
-
-fn spawn_log_manager(state: LogManager, stream: LogRequestStream) {
-    let state = Arc::new(state);
-    fasync::spawn(
-        stream
-            .map_ok(move |req| {
-                let state = state.clone();
-                match req {
-                    LogRequest::Listen { log_listener, options, .. } => {
-                        log_manager_helper(&state, log_listener, options, false)
-                    }
-                    LogRequest::DumpLogs { log_listener, options, .. } => {
-                        log_manager_helper(&state, log_listener, options, true)
-                    }
-                }
-            })
-            .try_collect::<()>()
-            .unwrap_or_else(|e| eprintln!("Log manager failed: {:?}", e)),
-    )
-}
-
-fn process_log(shared_members: Arc<Mutex<LogManagerShared>>, mut log_msg: LogMessage, size: usize) {
-    let mut shared_members = shared_members.lock();
-    run_listeners(&mut shared_members.listeners, &mut log_msg);
-    shared_members.log_msg_buffer.push(log_msg, size);
-}
-
-fn spawn_log_sink(state: LogManager, stream: LogSinkRequestStream) {
-    let state = Arc::new(state);
-    fasync::spawn(
-        stream
-            .map_ok(move |req| {
-                let state = state.clone();
-                let LogSinkRequest::Connect { socket, .. } = req;
-                let ls = match logger::LoggerStream::new(socket) {
-                    Err(e) => {
-                        eprintln!("Logger: Failed to create tokio socket: {:?}", e);
-                        // TODO: close channel
-                        return;
-                    }
-                    Ok(ls) => ls,
-                };
-
-                let shared_members = state.shared_members.clone();
-                let f = ls
-                    .map_ok(move |(log_msg, size)| {
-                        process_log(shared_members.clone(), log_msg, size);
-                    })
-                    .try_collect::<()>();
-
-                fasync::spawn(f.unwrap_or_else(|e| {
-                    eprintln!("Logger: Stream failed {:?}", e);
-                }));
-            })
-            .try_collect::<()>()
-            .unwrap_or_else(|e| eprintln!("Log sink failed: {:?}", e)),
-    )
 }
 
 const USAGE: &'static str = "\
@@ -302,8 +337,8 @@ available options:
     --help: shows this help page
 ";
 
-struct Opt {
-    disable_klog: bool,
+pub struct Opt {
+    pub disable_klog: bool,
 }
 
 impl Default for Opt {
@@ -317,7 +352,7 @@ impl Opt {
     // NOTE: we're manually parsing the command line to avoid the binary bloat
     // caused by command line parsing argument libraries.
     // See TC-378 for background.
-    fn from_args() -> Self {
+    pub fn from_args() -> Self {
         let mut opt = Self::default();
         let args = std::env::args().skip(1);
         for arg in args {
@@ -340,64 +375,6 @@ impl Opt {
     }
 }
 
-fn main() {
-    if let Err(e) = main_wrapper() {
-        eprintln!("LoggerService: Error: {:?}", e);
-    }
-}
-
-fn main_wrapper() -> Result<(), Error> {
-    let opt = Opt::from_args();
-
-    let mut executor = fasync::Executor::new().context("unable to create executor")?;
-    let shared_members = Arc::new(Mutex::new(LogManagerShared {
-        listeners: Vec::new(),
-        log_msg_buffer: MemoryBoundedBuffer::new(OLD_MSGS_BUF_SIZE),
-    }));
-
-    if !opt.disable_klog {
-        let mut kernel_logger =
-            klogger::KernelLogger::create().context("failed to read kernel logs")?;
-
-        let mut itr = kernel_logger.log_stream();
-        while let Some(res) = itr.next() {
-            match res {
-                Ok((log_msg, size)) => process_log(shared_members.clone(), log_msg, size),
-                Err(e) => {
-                    println!("encountered an error from the kernel log iterator: {}", e);
-                    break;
-                }
-            }
-        }
-
-        let shared_members_clone = shared_members.clone();
-        let klog_stream = klogger::listen(kernel_logger);
-        fasync::spawn(
-            klog_stream
-                .map_ok(move |(log_msg, size)| {
-                    process_log(shared_members_clone.clone(), log_msg, size);
-                })
-                .try_collect::<()>()
-                .unwrap_or_else(|e| eprintln!("failed to read kernel logs: {:?}", e)),
-        );
-    }
-
-    let mut fs = ServiceFs::new();
-    let shared_members_clone = shared_members.clone();
-    fs.dir("svc")
-        .add_fidl_service(move |stream| {
-            let ls = LogManager { shared_members: shared_members.clone() };
-            spawn_log_manager(ls, stream);
-        })
-        .add_fidl_service(move |stream| {
-            let ls = LogManager { shared_members: shared_members_clone.clone() };
-            spawn_log_sink(ls, stream)
-        });
-    fs.take_and_serve_directory_handle()?;
-
-    Ok(executor.run(fs.collect(), 3)) // 3 threads
-}
-
 #[cfg(test)]
 mod tests {
     extern crate timebomb;
@@ -406,7 +383,7 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
 
-    use crate::logger::fx_log_packet_t;
+    use crate::logs::logger::fx_log_packet_t;
     use fidl::encoding::OutOfLine;
     use fidl_fuchsia_logger::{
         LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
@@ -569,11 +546,11 @@ mod tests {
 
         let (log_proxy, log_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogMarker>().unwrap();
-        spawn_log_manager(lm.clone(), log_stream);
+        lm.spawn_log_manager(log_stream);
 
         let (log_sink_proxy, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        spawn_log_sink(lm.clone(), log_sink_stream);
+        lm.spawn_log_sink(log_sink_stream);
 
         (executor, log_proxy, log_sink_proxy, sin, sout)
     }

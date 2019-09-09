@@ -3,7 +3,7 @@
 Reviewed on: 2019-07-22
 
 `log_listener` is a command line tool for retrieving log messages from
-[logger][logger] and either writing them to disk or printing them.
+[`fuchsia.logger.Log`][logger] and either writing them to disk or printing them.
 
 ## Building
 
@@ -53,4 +53,4 @@ This will cause logs to be placed in `/data/logs.all_logs`. Once this file
 reaches half of the allowed maximum, it is renamed to `/data/logs.all_logs.old`
 and future data is written to a newly-created `/data/logs.all_logs`.
 
-[logger]: ../logger/README.md
+[logger]: ../../../src/diagnostics/archivist/README.md

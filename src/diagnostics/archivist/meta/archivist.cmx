@@ -7,9 +7,6 @@
             "config-data",
             "isolated-persistent-storage",
             "deprecated-shell"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

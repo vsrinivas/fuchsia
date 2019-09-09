@@ -46,17 +46,13 @@ mod tests {
             tags: vec![tag],
         };
         let logs = Arc::new(Mutex::new(Vec::new()));
-        let l = Listener {
-            log_messages: logs.clone(),
-        };
-        fasync::spawn(
-            async move {
-                let fut = syslog_listener::run_log_listener(l, Some(&mut options), false);
-                if let Err(e) = fut.await {
-                    panic!("test fail {:?}", e);
-                }
+        let l = Listener { log_messages: logs.clone() };
+        fasync::spawn(async move {
+            let fut = syslog_listener::run_log_listener(l, Some(&mut options), false);
+            if let Err(e) = fut.await {
+                panic!("test fail {:?}", e);
             }
-        );
+        });
         return logs;
     }
 

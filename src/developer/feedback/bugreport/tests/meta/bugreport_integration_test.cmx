@@ -3,7 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx"
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
             }
         }
     },

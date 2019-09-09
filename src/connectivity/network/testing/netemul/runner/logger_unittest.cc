@@ -4,6 +4,7 @@
 
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/wire_format.h>
+
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/string_printf.h>
 
@@ -14,7 +15,7 @@
 namespace netemul {
 namespace testing {
 
-constexpr const char* kLoggerUrl = "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+constexpr const char* kLoggerUrl = "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx";
 constexpr const char* kLoggerDisableKlog = "--disable-klog";
 
 class LoggerTest : public sys::testing::TestWithEnvironment {
