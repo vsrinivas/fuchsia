@@ -11,27 +11,26 @@
 
 namespace media::audio {
 
-// A class containing gain settings for audio usages.
+// TODO(35491): Remove when transitioned to xunion; xunions generate these functions.
+fuchsia::media::Usage UsageFrom(fuchsia::media::AudioRenderUsage render_usage);
+
+fuchsia::media::Usage UsageFrom(fuchsia::media::AudioCaptureUsage capture_usage);
+
+// Usage loudness settings in gain dbfs units.
 class UsageGainSettings {
  public:
   UsageGainSettings() = default;
 
-  void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db);
-  void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db);
-
-  void SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage, float gain_db);
-  void SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage, float gain_db);
-
-  // Gets the gain that should affect all audio elements of the given usage, taking into account the
-  // category gain and adjustment.
+  // Gets the gain that should affect all audio elements of the given usage, taking into account
+  // the category gain and adjustment.
   float GetUsageGain(const fuchsia::media::Usage& usage) const;
 
- private:
-  float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) const;
-  float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) const;
+  void SetUsageGain(fuchsia::media::Usage usage, float gain_db);
 
-  float GetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage) const;
-  float GetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage) const;
+  void SetUsageGainAdjustment(fuchsia::media::Usage usage, float gain_db);
+
+ private:
+  // TODO(36289): Determine whether mute must be tracked here
 
   std::atomic<float> render_usage_gain_[fuchsia::media::RENDER_USAGE_COUNT] = {};
   std::atomic<float> capture_usage_gain_[fuchsia::media::CAPTURE_USAGE_COUNT] = {};

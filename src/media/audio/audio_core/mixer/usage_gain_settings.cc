@@ -7,85 +7,64 @@
 #include <fbl/algorithm.h>
 #include <trace/event.h>
 
-#include "src/lib/fxl/logging.h"
-#include "src/media/audio/audio_core/mixer/constants.h"
-
 namespace media::audio {
 
 namespace {
 
-// Audio gains for AudioRenderers/AudioCapturers and output devices are
-// expressed as floating-point values, in decibels.
-static constexpr float kUnityGainDb = 0.0f;
-static constexpr float kMinGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
+constexpr float kMinGainDb = fuchsia::media::audio::MUTED_GAIN_DB;
+constexpr float kUnityGainDb = 0.0;
+
+// TODO(36296): Remove; clamping should occur at FIDL boundary
+inline float CombineGains(float gain_db_a, float gain_db_b) {
+  if (gain_db_a <= kMinGainDb || gain_db_b <= kMinGainDb) {
+    return kMinGainDb;
+  }
+
+  return fbl::clamp(gain_db_a + gain_db_b, kMinGainDb, kUnityGainDb);
+}
 
 }  // namespace
 
-float UsageGainSettings::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) const {
-  auto usage_index = fidl::ToUnderlying(usage);
-  return render_usage_gain_[usage_index].load();
+fuchsia::media::Usage UsageFrom(fuchsia::media::AudioRenderUsage render_usage) {
+  fuchsia::media::Usage usage;
+  usage.set_render_usage(render_usage);
+  return usage;
 }
 
-float UsageGainSettings::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) const {
-  auto usage_index = fidl::ToUnderlying(usage);
-  return capture_usage_gain_[usage_index].load();
-}
-
-void UsageGainSettings::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
-  TRACE_DURATION("audio", "UsageGainSettings::GetRenderUsageGain");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  render_usage_gain_[usage_index].store(clamped_gain_db);
-}
-
-void UsageGainSettings::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage,
-                                            float gain_db) {
-  TRACE_DURATION("audio", "UsageGainSettings::GetCaptureUsageGain");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  capture_usage_gain_[usage_index].store(clamped_gain_db);
-}
-
-void UsageGainSettings::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage usage,
-                                                     float gain_db) {
-  TRACE_DURATION("audio", "UsageGainSettings::SetRenderUsageGainAdjustment");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  render_usage_gain_adjustment_[usage_index].store(clamped_gain_db);
-}
-
-void UsageGainSettings::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage usage,
-                                                      float gain_db) {
-  TRACE_DURATION("audio", "UsageGainSettings::SetCaptureUsageGainAdjustment");
-  auto usage_index = fidl::ToUnderlying(usage);
-  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
-
-  capture_usage_gain_adjustment_[usage_index].store(clamped_gain_db);
-}
-
-float UsageGainSettings::GetRenderUsageGainAdjustment(
-    fuchsia::media::AudioRenderUsage usage) const {
-  auto usage_index = fidl::ToUnderlying(usage);
-  return render_usage_gain_adjustment_[usage_index].load();
-}
-
-float UsageGainSettings::GetCaptureUsageGainAdjustment(
-    fuchsia::media::AudioCaptureUsage usage) const {
-  auto usage_index = fidl::ToUnderlying(usage);
-  return capture_usage_gain_adjustment_[usage_index].load();
+fuchsia::media::Usage UsageFrom(fuchsia::media::AudioCaptureUsage capture_usage) {
+  fuchsia::media::Usage usage;
+  usage.set_capture_usage(capture_usage);
+  return usage;
 }
 
 float UsageGainSettings::GetUsageGain(const fuchsia::media::Usage& usage) const {
   TRACE_DURATION("audio", "UsageGainSettings::GetUsageGain");
   if (usage.is_render_usage()) {
-    return GetRenderUsageGain(usage.render_usage()) +
-           GetRenderUsageGainAdjustment(usage.render_usage());
+    const auto usage_index = fidl::ToUnderlying(usage.render_usage());
+    return CombineGains(render_usage_gain_[usage_index],
+                        render_usage_gain_adjustment_[usage_index]);
   } else {
-    return GetCaptureUsageGain(usage.capture_usage()) +
-           GetCaptureUsageGainAdjustment(usage.capture_usage());
+    const auto usage_index = fidl::ToUnderlying(usage.capture_usage());
+    return CombineGains(capture_usage_gain_[usage_index],
+                        capture_usage_gain_adjustment_[usage_index]);
+  }
+}
+
+void UsageGainSettings::SetUsageGain(fuchsia::media::Usage usage, float gain_db) {
+  TRACE_DURATION("audio", "UsageGainSettings::SetUsageGain");
+  if (usage.is_render_usage()) {
+    render_usage_gain_[fidl::ToUnderlying(usage.render_usage())].store(gain_db);
+  } else {
+    capture_usage_gain_[fidl::ToUnderlying(usage.capture_usage())].store(gain_db);
+  }
+}
+
+void UsageGainSettings::SetUsageGainAdjustment(fuchsia::media::Usage usage, float gain_db) {
+  TRACE_DURATION("audio", "UsageGainSettings::SetUsageGainAdjustment");
+  if (usage.is_render_usage()) {
+    render_usage_gain_adjustment_[fidl::ToUnderlying(usage.render_usage())].store(gain_db);
+  } else {
+    capture_usage_gain_adjustment_[fidl::ToUnderlying(usage.capture_usage())].store(gain_db);
   }
 }
 

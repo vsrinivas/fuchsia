@@ -12,26 +12,14 @@ namespace {
 constexpr float kArbitraryGainValue = -45.0;
 constexpr float kArbitraryGainAdjustment = -2.0;
 
-fuchsia::media::Usage UsageFrom(fuchsia::media::AudioRenderUsage render_usage) {
-  fuchsia::media::Usage usage;
-  usage.set_render_usage(render_usage);
-  return usage;
-}
-
-fuchsia::media::Usage UsageFrom(fuchsia::media::AudioCaptureUsage capture_usage) {
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(capture_usage);
-  return usage;
-}
-
 TEST(UsageGainSettingsTest, BasicRenderUsageGainPersists) {
   UsageGainSettings under_test;
 
   const auto test_usage = [&under_test](auto render_usage) {
-    under_test.SetRenderUsageGain(render_usage, kArbitraryGainValue);
+    under_test.SetUsageGain(UsageFrom(render_usage), kArbitraryGainValue);
     EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(render_usage)), kArbitraryGainValue);
 
-    under_test.SetRenderUsageGainAdjustment(render_usage, kArbitraryGainAdjustment);
+    under_test.SetUsageGainAdjustment(UsageFrom(render_usage), kArbitraryGainAdjustment);
     EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(render_usage)),
                     kArbitraryGainValue + kArbitraryGainAdjustment);
   };
@@ -47,10 +35,10 @@ TEST(UsageGainSettingsTest, BasicCaptureUsageGainPersists) {
   UsageGainSettings under_test;
 
   const auto test_usage = [&under_test](auto capture_usage) {
-    under_test.SetCaptureUsageGain(capture_usage, kArbitraryGainValue);
+    under_test.SetUsageGain(UsageFrom(capture_usage), kArbitraryGainValue);
     EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(capture_usage)), kArbitraryGainValue);
 
-    under_test.SetCaptureUsageGainAdjustment(capture_usage, kArbitraryGainAdjustment);
+    under_test.SetUsageGainAdjustment(UsageFrom(capture_usage), kArbitraryGainAdjustment);
     EXPECT_FLOAT_EQ(under_test.GetUsageGain(UsageFrom(capture_usage)),
                     kArbitraryGainValue + kArbitraryGainAdjustment);
   };
