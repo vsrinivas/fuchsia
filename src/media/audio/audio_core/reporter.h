@@ -182,8 +182,7 @@ class Reporter {
   struct Renderer : ClientPort {
     Renderer(inspect::Node node) : ClientPort(std::move(node)) {
       min_clock_lead_time_ns_ = node_.CreateUint("min clock lead time (ns)", 0);
-      pts_continuity_threshold_seconds_ =
-          node_.CreateDouble("pts continuity threshold (s)", 0.0);
+      pts_continuity_threshold_seconds_ = node_.CreateDouble("pts continuity threshold (s)", 0.0);
     }
     inspect::UintProperty min_clock_lead_time_ns_;
     inspect::DoubleProperty pts_continuity_threshold_seconds_;

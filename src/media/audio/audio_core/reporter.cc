@@ -36,8 +36,7 @@ void Reporter::InitInspect() {
       root_node.CreateUint("count of failures to obtain device fdio service channel", 0);
   failed_to_obtain_stream_channel_count_ =
       root_node.CreateUint("count of failures to obtain device stream channel", 0);
-  device_startup_failed_count_ =
-      root_node.CreateUint("count of failures to start a device", 0);
+  device_startup_failed_count_ = root_node.CreateUint("count of failures to start a device", 0);
 
   outputs_node_ = root_node.CreateChild("output devices");
   inputs_node_ = root_node.CreateChild("input devices");
