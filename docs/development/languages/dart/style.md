@@ -213,6 +213,7 @@ in time. The `const` keyword is also optional where it can be inferred by the
 compiler.
 
 `const` can be inferred in:
+
 * A const collection literal.
 * A const constructor call.
 * A metadata annotation.
