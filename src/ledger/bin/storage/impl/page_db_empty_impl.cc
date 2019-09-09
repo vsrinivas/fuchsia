@@ -41,9 +41,9 @@ Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
                                         PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetIdentifiersAndStatuses(
-    coroutine::CoroutineHandler* /*handler*/, const ObjectDigest& /*object_digest*/,
-    std::map<ObjectIdentifier, PageDbObjectStatus>* /*identifier_statuses*/) {
+Status PageDbEmptyImpl::GetObjectStatusKeys(coroutine::CoroutineHandler* /*handler*/,
+                                            const ObjectDigest& /*object_digest*/,
+                                            std::map<std::string, PageDbObjectStatus>* /*keys*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetInboundObjectReferences(coroutine::CoroutineHandler* /*handler*/,

@@ -182,10 +182,11 @@ class PageDb : public PageDbMutator {
                                                         const ObjectIdentifier& object_identifier,
                                                         PageDbObjectStatus* object_status) = 0;
 
-  // Returns all object identifiers and their status for a given |object_digest|.
-  FXL_WARN_UNUSED_RESULT virtual Status GetIdentifiersAndStatuses(
+  // Returns all object status keys in the underlying |Db| for a given |object_digest|, mapped to
+  // the status they encode.
+  FXL_WARN_UNUSED_RESULT virtual Status GetObjectStatusKeys(
       coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
-      std::map<ObjectIdentifier, PageDbObjectStatus>* identifier_statuses) = 0;
+      std::map<std::string, PageDbObjectStatus>* keys) = 0;
 
   // Returns inbound object references towards the object with the given id.
   // WARNING: this function is reversing the usual semantics of

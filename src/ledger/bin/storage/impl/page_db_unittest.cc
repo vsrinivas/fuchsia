@@ -20,6 +20,7 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
+#include "src/ledger/bin/storage/impl/db_serialization.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/object_identifier_factory_impl.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
@@ -402,7 +403,7 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
   });
 }
 
-TEST_F(PageDbTest, GetIdentifiersAndStatuses) {
+TEST_F(PageDbTest, GetObjectStatusKeys) {
   RunInCoroutine([&](CoroutineHandler* handler) {
     // Create 3 distinct object identifiers with 3 different statuses, sharing the same
     // object digest.
@@ -426,14 +427,17 @@ TEST_F(PageDbTest, GetIdentifiersAndStatuses) {
                                    PageDbObjectStatus::SYNCED, {}),
               Status::OK);
 
-    std::map<ObjectIdentifier, PageDbObjectStatus> identifier_statuses;
-    ASSERT_EQ(page_db_.GetIdentifiersAndStatuses(handler, object_digest, &identifier_statuses),
-              Status::OK);
+    std::map<std::string, PageDbObjectStatus> keys;
+    ASSERT_EQ(page_db_.GetObjectStatusKeys(handler, object_digest, &keys), Status::OK);
 
-    EXPECT_THAT(identifier_statuses,
-                UnorderedElementsAre(Pair(identifier_1, PageDbObjectStatus::TRANSIENT),
-                                     Pair(identifier_2, PageDbObjectStatus::LOCAL),
-                                     Pair(identifier_3, PageDbObjectStatus::SYNCED)));
+    EXPECT_THAT(keys,
+                UnorderedElementsAre(
+                    Pair(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::TRANSIENT, identifier_1),
+                         PageDbObjectStatus::TRANSIENT),
+                    Pair(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::LOCAL, identifier_2),
+                         PageDbObjectStatus::LOCAL),
+                    Pair(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::SYNCED, identifier_3),
+                         PageDbObjectStatus::SYNCED)));
   });
 }
 

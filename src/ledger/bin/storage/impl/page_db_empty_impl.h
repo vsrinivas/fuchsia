@@ -39,9 +39,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status GetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus* object_status) override;
-  Status GetIdentifiersAndStatuses(
-      coroutine::CoroutineHandler* handler, const ObjectDigest& object_digest,
-      std::map<ObjectIdentifier, PageDbObjectStatus>* identifier_statuses) override;
+  Status GetObjectStatusKeys(coroutine::CoroutineHandler* handler,
+                             const ObjectDigest& object_digest,
+                             std::map<std::string, PageDbObjectStatus>* keys) override;
   Status GetInboundObjectReferences(coroutine::CoroutineHandler* handler,
                                     const ObjectIdentifier& object_identifier,
                                     ObjectReferencesAndPriority* references) override;
