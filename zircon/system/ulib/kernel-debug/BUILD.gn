@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("kernel-debug") {
   sources = [
     "kernel-debug.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-kernel:c",
     "$zx/system/ulib/async",

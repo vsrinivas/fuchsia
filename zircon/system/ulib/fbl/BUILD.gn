@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("fbl") {
   sdk = "source"
   sdk_headers = [
@@ -50,7 +52,7 @@ library("fbl") {
     "alloc_checker.cc",
   ]
   if (!is_kernel) {
-    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     sources += [
       "string.cc",
       "string_buffer.cc",

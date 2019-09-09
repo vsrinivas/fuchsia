@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 # TODO(mcgrathr): In the makefile build this actually had SONAME
 # "system/ulib/crypto", which is pretty insane.  But there is
 # a conflicting libcrypto.so from //third_party/boringssl in higher layers.
@@ -37,5 +39,5 @@ library("zircon-crypto") {
     "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/uboringssl",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

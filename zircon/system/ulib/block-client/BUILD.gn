@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("block-client") {
   sources = [
     "client.c",
@@ -17,7 +19,7 @@ library("block-client") {
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/ddk:headers",

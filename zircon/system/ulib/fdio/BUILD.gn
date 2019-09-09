@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("fdio") {
   sdk = "shared"
   sdk_publishable = true
@@ -39,7 +41,7 @@ library("fdio") {
     "watcher.cc",
     "zxio.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-io:llcpp",
@@ -54,5 +56,5 @@ library("fdio") {
     "$zx/system/ulib/zxio",
     "$zx/system/ulib/zxs",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

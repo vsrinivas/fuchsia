@@ -2,10 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("gfx-font-data") {
   kernel = true
   static = true
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/ulib/gfx:headers",
   ]

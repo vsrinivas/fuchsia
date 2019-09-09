@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("fs") {
   sdk = "source"
   sdk_headers = [
@@ -78,7 +80,7 @@ library("fs") {
       # <fs/connection.h> has #include <lib/async/cpp/wait.h>.
       "$zx/system/ulib/async:async-cpp",
     ]
-    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     deps += [
       "$zx/system/fidl/fuchsia-cobalt:c",
       "$zx/system/fidl/fuchsia-io:c",
@@ -141,7 +143,7 @@ if (is_fuchsia) {
       # <fs/trace.h> has #include <trace/event.h>.
       "$zx/system/ulib/trace:headers",
     ]
-    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     deps = [
       "$zx/system/fidl/fuchsia-cobalt:c",
       "$zx/system/fidl/fuchsia-io:c",

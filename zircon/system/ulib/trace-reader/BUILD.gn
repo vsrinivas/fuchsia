@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+import("$zx_build/public/gn/test_shim.gni")
+
 library("trace-reader") {
   sdk = "source"
   sdk_headers = [
@@ -17,7 +20,7 @@ library("trace-reader") {
     "reader_internal.cc",
     "records.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <trace-reader/records.h> has #include <trace-engine/types.h>.
     "$zx/system/ulib/trace-engine:trace-engine-headers-for-reader.headers",

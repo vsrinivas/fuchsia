@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("fs-test-utils") {
   sdk = "source"
   sdk_headers = [
@@ -18,7 +20,7 @@ library("fs-test-utils") {
     "fixture.cc",
     "perftest.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <fs-test-utils/fixture.h> has #include <ramdevice-client/ramdisk.h>.
     "$zx/system/ulib/ramdevice-client:headers",

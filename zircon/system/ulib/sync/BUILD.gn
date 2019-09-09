@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("sync") {
   sdk = "static"
   sdk_publishable = true
@@ -17,7 +19,7 @@ library("sync") {
     "condition.cc",
     "mutex.c",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
@@ -26,6 +28,6 @@ library("sync") {
   if (toolchain.base_environment == "user") {
     # This code is used in early startup, where safe-stack setup is not
     # ready yet.
-    configs += [ "$zx/public/gn/config:no_sanitizers" ]
+    configs += [ "$zx_build/public/gn/config:no_sanitizers" ]
   }
 }

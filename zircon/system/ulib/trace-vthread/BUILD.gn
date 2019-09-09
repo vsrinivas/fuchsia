@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 # TODO(MA-488): Add ddk support.
 
 # Common pieces.
@@ -10,7 +12,7 @@ source_set("common") {
   sources = [
     "event_vthread.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":headers",
     "$zx/system/ulib/zircon",

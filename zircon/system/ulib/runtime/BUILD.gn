@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("runtime") {
   sources = [
     "thread.c",
@@ -13,9 +15,9 @@ library("runtime") {
   ]
 
   configs += [
-    "$zx/public/gn/config:visibility_hidden",
+    "$zx_build/public/gn/config:visibility_hidden",
 
     # This code is used in early startup, where safe-stack is not ready yet.
-    "$zx/public/gn/config:no_sanitizers",
+    "$zx_build/public/gn/config:no_sanitizers",
   ]
 }

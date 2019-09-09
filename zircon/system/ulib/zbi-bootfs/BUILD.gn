@@ -5,6 +5,7 @@
 import("$zx/public/gn/fuzzer.gni")
 import("$zx/public/gn/resource.gni")
 import("$zx/public/gn/zbi.gni")
+import("$zx_build/public/gn/library_shim.gni")
 
 library("zbi-bootfs") {
   sdk_headers = [ "zbi-bootfs/zbi-bootfs.h" ]

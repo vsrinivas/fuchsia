@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("log-writer-textfile") {
   shared = true
   host = true
@@ -13,5 +15,5 @@ library("log-writer-textfile") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/log",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

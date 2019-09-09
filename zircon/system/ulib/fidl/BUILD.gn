@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 # Base library used by both Fuchsia and host
 library("fidl_base") {
   sdk = "source"
@@ -32,7 +34,7 @@ library("fidl_base") {
     "validating.cc",
     "walker.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/zircon",
   ]
@@ -46,7 +48,7 @@ library("fidl") {
     "epitaph.c",
     "handle_closing.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":fidl_base",
     "$zx/system/ulib/zircon",
@@ -69,7 +71,7 @@ library("fidl-llcpp") {
   sources = [
     "llcpp_transaction.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     ":headers",
 

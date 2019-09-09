@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("ldmsg") {
   sdk = "static"
   sdk_headers = [ "ldmsg/ldmsg.h" ]
@@ -14,7 +16,7 @@ library("ldmsg") {
 
   if (toolchain.base_environment == "user") {
     # This library is used by libc, so suppress the circularity.
-    configs -= [ "$zx/public/gn/config:user" ]
+    configs -= [ "$zx_build/public/gn/config:user" ]
   }
 
   # However, it uses <string.h> for memcpy.
@@ -24,7 +26,7 @@ library("ldmsg") {
   # fancy stacks have been set up.  So it can't rely on safe-stack or
   # shadow-call-stack ABIs.
   configs += [
-    "$zx/public/gn/config:no_safestack",
-    "$zx/public/gn/config:no-shadow-call-stack",
+    "$zx_build/public/gn/config:no_safestack",
+    "$zx_build/public/gn/config:no-shadow-call-stack",
   ]
 }

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("cobalt-client") {
   sdk = "source"
   sdk_headers = [
@@ -25,7 +27,7 @@ library("cobalt-client") {
   if (is_fuchsia) {
     sources += [ "cobalt_logger.cc" ]
   }
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <cobalt-client/cpp/timer.h> has #include <lib/fzl/time.h>.
     "$zx/system/ulib/fzl:headers",
@@ -50,7 +52,7 @@ library("cobalt-client") {
 library("in-memory-logger") {
   testonly = true
   sources = [ "in-memory-logger.cc" ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-cobalt:c.headers",
     "$zx/system/ulib/cobalt-client:headers",

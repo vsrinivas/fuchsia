@@ -2,13 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("audio-proto-utils") {
   sdk = "source"
   sdk_headers = [ "audio-proto-utils/format-utils.h" ]
   sources = [
     "format-utils.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/fbl",
   ]

@@ -2,11 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 template("trace_library") {
   library(target_name) {
     forward_variables_from(invoker, "*")
 
-    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
 
     sdk_headers = [
       "lib/trace/internal/event_args.h",

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("bootfs") {
   sdk = "source"
   sdk_headers = [ "lib/bootfs/parser.h" ]
@@ -9,7 +11,7 @@ library("bootfs") {
   sources = [
     "parser.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",

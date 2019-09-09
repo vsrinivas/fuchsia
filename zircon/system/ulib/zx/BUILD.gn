@@ -4,6 +4,8 @@
 
 assert(is_fuchsia)
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("zx") {
   sdk = "source"
   sdk_publishable = true
@@ -62,7 +64,7 @@ library("zx") {
     "vmar.cc",
     "vmo.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/zircon",
   ]

@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+import("$zx_build/public/gn/library_shim.gni")
+
+import("$zx_build/public/gn/toolchain/environment_redirect.gni")
 
 library("mini-process") {
   testonly = true
@@ -48,7 +50,7 @@ if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
     configs += [
       # No real sanitizers should be enabled in this variant anyway.
       # But this also disables SafeStack, which is on by default.
-      "$zx/public/gn/config:no_sanitizers",
+      "$zx_build/public/gn/config:no_sanitizers",
 
       # This defeats optimizations that break the assumptions.
       ":subprocess.config",

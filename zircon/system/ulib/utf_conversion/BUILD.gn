@@ -2,12 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 library("utf_conversion") {
+import("$zx_build/public/gn/library_shim.gni")
+
   sdk = "static"
   sdk_headers = [ "utf_conversion/utf_conversion.h" ]
   sources = [
     "utf_conversion.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/fbl",
   ]

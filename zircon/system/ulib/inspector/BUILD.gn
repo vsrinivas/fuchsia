@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("inspector") {
   # This should only ever be used as a shared library because it hides
   # the otherwise problematic ngunwind symbols.
@@ -18,7 +20,7 @@ library("inspector") {
     "registers.cc",
     "utils.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/ulib/zircon:headers",
   ]
@@ -31,13 +33,13 @@ library("inspector") {
     "$zx/third_party/ulib/backtrace",
     "$zx/third_party/ulib/ngunwind",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 
   # Compile this with frame pointers so that if we crash
   # the simplistic unwinder will work.
-  if (configs + [ "$zx/public/gn/config:default_frame_pointers" ] -
-      [ "$zx/public/gn/config:default_frame_pointers" ] != configs) {
-    configs -= [ "$zx/public/gn/config:default_frame_pointers" ]
-    configs += [ "$zx/public/gn/config:frame_pointers" ]
+  if (configs + [ "$zx_build/public/gn/config:default_frame_pointers" ] -
+      [ "$zx_build/public/gn/config:default_frame_pointers" ] != configs) {
+    configs -= [ "$zx_build/public/gn/config:default_frame_pointers" ]
+    configs += [ "$zx_build/public/gn/config:frame_pointers" ]
   }
 }

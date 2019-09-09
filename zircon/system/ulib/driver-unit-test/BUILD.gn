@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("driver-unit-test") {
   sdk = "static"
   sdk_headers = [
@@ -12,7 +14,7 @@ library("driver-unit-test") {
     "logger.cc",
     "utils.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-driver-test:c",
     "$zx/system/ulib/ddk",

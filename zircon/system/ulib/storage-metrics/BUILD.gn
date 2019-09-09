@@ -2,13 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("storage-metrics") {
   sdk = "source"
   sdk_headers = [ "storage-metrics/storage-metrics.h" ]
   sources = [
     "storage-metrics.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",
   ]

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 assert(is_fuchsia)
 
 library("async") {
@@ -22,7 +24,7 @@ library("async") {
   sources = [
     "ops.c",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zircon",
@@ -56,7 +58,7 @@ library("async-cpp") {
     "trap.cc",
     "wait.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":async",
     "$zx/system/ulib/zircon",
@@ -72,7 +74,7 @@ library("async-default") {
   sources = [
     "default.c",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <lib/async/default.h> has #include <lib/async/dispatcher.h>.
     ":async.headers",

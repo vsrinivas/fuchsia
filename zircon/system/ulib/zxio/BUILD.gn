@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("zxio") {
   sdk = "static"
   sdk_headers = [
@@ -24,16 +26,17 @@ library("zxio") {
   public_deps = [
     # <lib/zxio/zxio.h> has #include <fuchsia/io/llcpp/fidl.h>.
     "$zx/system/fidl/fuchsia-io:llcpp.headers",
-    "$zx/system/ulib/sync",
+    "$zx/system/ulib/sync:headers",
 
     # <lib/zxio/inception.h> has #include <lib/zxs/zxs.h>.
-    "$zx/system/ulib/zxs",
+    "$zx/system/ulib/zxs:headers",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxs",
   ]
 }

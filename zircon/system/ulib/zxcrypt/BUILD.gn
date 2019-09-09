@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("zxcrypt-dev") {
   shared = true
   static = true
@@ -18,7 +20,7 @@ library("zxcrypt-dev") {
     "$zx/system/ulib/ddk:headers",
   ]
 
-  configs += [ "$zx/public/gn/config:integer-paranoia" ]
+  configs += [ "$zx_build/public/gn/config:integer-paranoia" ]
 
   # To minimize the set of libraries that we depend on that need to be loaded
   # from /boot/lib in early boot, we statically link most of our dependencies.
@@ -36,7 +38,7 @@ library("zxcrypt-dev") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }
 
 library("zxcrypt-fdio") {
@@ -49,7 +51,7 @@ library("zxcrypt-fdio") {
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).
     "$zx/system/ulib/crypto:headers",
   ]
-  configs += [ "$zx/public/gn/config:integer-paranoia" ]
+  configs += [ "$zx_build/public/gn/config:integer-paranoia" ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-block:c",
@@ -68,5 +70,5 @@ library("zxcrypt-fdio") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

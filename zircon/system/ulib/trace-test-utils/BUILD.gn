@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 # Note: The appearance of "sdk" does not mean this will or is intended to be
 # in the sdk. It's just the way we export from zircon for use elsewhere.
 library("trace-test-utils") {
@@ -19,7 +21,7 @@ library("trace-test-utils") {
     "read_records.cc",
     "squelch.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <trace-test-utils/fixture.h> needs these
     "$zx/system/ulib/async-loop:headers",

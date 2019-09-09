@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("zxtest") {
   host = true
   sdk = "source"
@@ -32,7 +34,7 @@ library("zxtest") {
     "test.cc",
     "zxtest-main.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>.
     "$zx/system/ulib/fbl:headers",

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 # libmemfs-cpp.a: The C++ client library.
 #
 # Used to implement the C++ components of Memfs, which
@@ -16,7 +18,7 @@ library("memfs-cpp") {
     "memfs.cc",
     "vmo.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async",
@@ -49,12 +51,12 @@ library("memfs") {
     # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
     "$zx/system/ulib/sync:headers",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":memfs-cpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 }

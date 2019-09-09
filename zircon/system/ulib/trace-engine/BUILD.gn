@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+import("$zx_build/public/gn/test_shim.gni")
+
 # Three copies of libtrace-engine are built:
 # 1) Shared library for use by userspace tracing.
 # 2) Static library for use by userspace tracing.
@@ -29,7 +32,7 @@ template("trace_engine_library") {
   library(target_name) {
     forward_variables_from(invoker, "*")
 
-    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     if (defined(extra_configs)) {
       configs += extra_configs
     }
@@ -58,7 +61,7 @@ template("trace_engine_library") {
 trace_engine_library("trace-engine") {
   sdk = "shared"
   sdk_publishable = true
-  extra_configs = [ "$zx/public/gn/config:static-libc++" ]
+  extra_configs = [ "$zx_build/public/gn/config:static-libc++" ]
   shared = true
   static = false
 }
@@ -83,7 +86,7 @@ trace_engine_library("trace-engine-driver") {
 # which is engine-agnostic.
 library("trace-engine-headers-for-handler") {
   sdk = "source"
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   sdk_headers = trace_engine_headers
   public_deps = trace_engine_header_deps
   sources = []
@@ -93,7 +96,7 @@ library("trace-engine-headers-for-handler") {
 # This code also runs on the host.
 library("trace-engine-headers-for-reader") {
   sdk = "source"
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   host = true
   sdk_headers = [
     "lib/trace-engine/fields.h",

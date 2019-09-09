@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("async-loop") {
   sdk = "source"
   sdk_publishable = true
@@ -13,7 +15,7 @@ library("async-loop") {
     # <lib/async-loop/loop.h> has #include <lib/async/dispatcher.h>.
     "$zx/system/ulib/async:headers",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-default",
@@ -28,7 +30,7 @@ library("async-loop-cpp") {
   sources = [
     "loop_wrapper.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     ":async-loop",
     "$zx/system/ulib/async",
@@ -51,7 +53,7 @@ library("async-loop-default") {
   sources = [
     "default.c",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
     "$zx/system/ulib/async:async-default",
   ]

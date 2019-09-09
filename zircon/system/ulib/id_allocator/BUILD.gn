@@ -2,13 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("id_allocator") {
   sdk = "source"
   sdk_headers = [ "id_allocator/id_allocator.h" ]
   sources = [
     "id_allocator.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <id_allocator/id_allocator.h> has #include <bitmap/bitmap.h>.
     "$zx/system/ulib/bitmap:headers",

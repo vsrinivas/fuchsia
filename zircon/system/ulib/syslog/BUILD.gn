@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("syslog") {
   sdk = "shared"
   sdk_publishable = true
@@ -24,7 +26,7 @@ library("syslog") {
     "$zx/system/ulib/zx",
   ]
   configs += [
-    "$zx/public/gn/config:static-libc++",
-    "$zx/public/gn/config:visibility_hidden",
+    "$zx_build/public/gn/config:static-libc++",
+    "$zx_build/public/gn/config:visibility_hidden",
   ]
 }

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("minfs") {
   host = true
   static = true
@@ -63,7 +65,7 @@ library("minfs") {
       "$zx/system/ulib/fzl:headers",
       "$zx/system/ulib/zx:headers",
     ]
-    configs += [ "$zx/public/gn/config:visibility_hidden" ]
+    configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
     deps += [
       "$zx/system/fidl/fuchsia-device:c",
       "$zx/system/fidl/fuchsia-io:c",

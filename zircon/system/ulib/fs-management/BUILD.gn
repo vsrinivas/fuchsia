@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("fs-management") {
   sdk = "shared"
   sdk_headers = [
@@ -33,7 +35,7 @@ library("fs-management") {
     "$zx/system/ulib/zx",
     "$zx/third_party/ulib/uboringssl",
   ]
-  configs += [ "$zx/public/gn/config:static-libc++" ]
+  configs += [ "$zx_build/public/gn/config:static-libc++" ]
 
   data_deps = [
     "$zx/system/uapp/minfs",

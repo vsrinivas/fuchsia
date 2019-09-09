@@ -2,11 +2,5 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/library_shim.gni")
-
-library("xdc-server-utils") {
-  host = true
-  sources = [
-    "packet.c",
-  ]
-}
+# No particular functionality in this file whose only purpose is to provide a hook for the Fuchsia
+# GN build to inject parameters into build files for tests.

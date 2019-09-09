@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/library_shim.gni")
+
 library("intel-hda") {
   sources = [
     "codec-utils/codec-driver-base.cc",
@@ -10,7 +12,7 @@ library("intel-hda") {
     "utils/status.cc",
     "utils/utils.cc",
   ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
+  configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_deps = [
     # <intel-hda/codec-utils/stream-base.h> has #include <ddk/protocol/intelhda/codec.h>.
     "$zx/system/banjo/ddk.protocol.intelhda.codec",
