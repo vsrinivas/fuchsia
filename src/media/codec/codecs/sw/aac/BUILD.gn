@@ -26,12 +26,12 @@ executable("codec_runner_sw_aac") {
   ]
 
   deps = [
-    "//garnet/lib/media/codec_impl",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/media/codec/codecs:chunk_input_stream",
     "//src/media/codec/codecs:output_sink",
     "//src/media/codec/codecs/sw:codec_runner_sw",
     "//src/media/codec/codecs/sw/low_layer/aac:libFraunhoferAAC",
+    "//src/media/lib/codec_impl",
     "//zircon/public/lib/fit",
   ]
 }

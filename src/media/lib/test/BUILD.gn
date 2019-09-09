@@ -35,11 +35,11 @@ source_set("frame_sink") {
   ]
 
   deps = [
-    "//garnet/lib/media/codec_impl:fourcc",
-    "//garnet/lib/media/raw_video_writer:raw_video_writer",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/media/audio/lib/wav_writer:wav_writer",
+    "//src/media/lib/codec_impl:fourcc",
+    "//src/media/lib/raw_video_writer:raw_video_writer",
   ]
 }
 
@@ -63,9 +63,9 @@ source_set("codec_client") {
   ]
 
   deps = [
-    "//garnet/lib/media/test:one_shot_event",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/lib/fxl",
+    "//src/media/lib/test:one_shot_event",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

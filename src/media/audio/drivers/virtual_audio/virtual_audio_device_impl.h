@@ -11,8 +11,8 @@
 #include <audio-proto/audio-proto.h>
 #include <fbl/ref_ptr.h>
 
-#include "garnet/lib/media/codec_impl/include/lib/media/codec_impl/closure_queue.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
+#include "src/media/lib/codec_impl/include/lib/media/codec_impl/closure_queue.h"
 
 namespace virtual_audio {
 

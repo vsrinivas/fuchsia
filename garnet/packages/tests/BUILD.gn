@@ -772,10 +772,10 @@ group("media") {
   testonly = true
   public_deps = [
     ":virtual_audio",
-    "//src/media/codec/codecs:tests",
-    "//garnet/lib/media/codec_impl:tests",
     "//sdk/lib/media/cpp:media_lib_timeline_tests",
     "//src/media:tests",
+    "//src/media/codec/codecs:tests",
+    "//src/media/lib/codec_impl:tests",
     "//src/media/playback/mediaplayer:tests",
   ]
 }

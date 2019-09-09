@@ -77,7 +77,7 @@ source_set("test_codec_packets") {
     "test_codec_packets.h",
   ]
   public_deps = [
-    "//garnet/lib/media/codec_impl",
+    "//src/media/lib/codec_impl",
     "//zircon/public/lib/fzl",
   ]
 }

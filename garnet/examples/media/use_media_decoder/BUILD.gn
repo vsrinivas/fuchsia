@@ -22,11 +22,11 @@ source_set("use_media_decoder_source_set") {
   ]
 
   public_deps = [
-    "//garnet/lib/media/codec_impl:fourcc",
     "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/media/lib/codec_impl:fourcc",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -34,14 +34,14 @@ source_set("use_media_decoder_source_set") {
   ]
 
   deps = [
-    "//garnet/lib/media/codec_impl:fourcc",
-    "//garnet/lib/media/raw_video_writer:raw_video_writer",
-    "//garnet/lib/media/test:codec_client",
-    "//garnet/lib/media/test:frame_sink",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/lib/sys/cpp",
     "//src/media/audio/lib/wav_writer:wav_writer",
+    "//src/media/lib/codec_impl:fourcc",
+    "//src/media/lib/raw_video_writer:raw_video_writer",
+    "//src/media/lib/test:codec_client",
+    "//src/media/lib/test:frame_sink",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -59,7 +59,7 @@ executable("use_media_decoder") {
 
   deps = [
     ":use_media_decoder_source_set",
-    "//garnet/lib/media/test:frame_sink",
+    "//src/media/lib/test:frame_sink",
   ]
 }
 

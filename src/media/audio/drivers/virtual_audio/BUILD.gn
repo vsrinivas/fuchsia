@@ -35,9 +35,9 @@ driver_module("virtual_audio_driver") {
   ]
 
   deps = [
-    "//garnet/lib/media/codec_impl:closure_queue",
     "//sdk/fidl/fuchsia.virtualaudio",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio_c",
+    "//src/media/lib/codec_impl:closure_queue",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/ddk",

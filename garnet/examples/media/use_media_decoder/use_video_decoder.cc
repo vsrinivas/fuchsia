@@ -6,7 +6,7 @@
 
 #include "in_stream_peeker.h"
 
-#include <garnet/lib/media/raw_video_writer/raw_video_writer.h>
+#include <src/media/lib/raw_video_writer/raw_video_writer.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/clone.h>

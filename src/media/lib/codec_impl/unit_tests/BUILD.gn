@@ -48,9 +48,9 @@ source_set("codec_impl_tests") {
   ]
 
   deps = [
-    "//garnet/lib/media/codec_impl",
-    "//garnet/lib/media/codec_impl/test_utils",
     "//garnet/public/lib/gtest",
+    "//src/media/lib/codec_impl",
+    "//src/media/lib/codec_impl/test_utils",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -68,15 +68,15 @@ executable("decryptor_adapter_tests_bin") {
   ]
 
   deps = [
-    "//garnet/lib/media/codec_impl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/media/lib/codec_impl",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 

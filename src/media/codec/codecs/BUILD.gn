@@ -48,7 +48,7 @@ source_set("chunk_input_stream") {
   public_configs = [ ":local_header_include_config" ]
   public_deps = [
     ":timestamp_extrapolator",
-    "//garnet/lib/media/codec_impl",
+    "//src/media/lib/codec_impl",
     "//zircon/public/lib/zx",
   ]
 }
@@ -62,7 +62,7 @@ source_set("output_sink") {
   ]
   public_configs = [ ":local_header_include_config" ]
   public_deps = [
-    "//garnet/lib/media/codec_impl",
+    "//src/media/lib/codec_impl",
     "//src/media/lib/mpsc_queue",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
