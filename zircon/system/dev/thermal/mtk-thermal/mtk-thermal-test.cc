@@ -284,8 +284,6 @@ TEST(ThermalTest, CriticalTemperature) {
   fbl::unique_ptr<MtkThermalTest> test;
   ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
 
-  test->mock_SetDvfsOpp().ExpectNoCall();
-
   uint32_t critical_int = TempMonIntStatus::Get().FromValue(0).set_stage_3(1).reg_value();
 
   test->mock_ReadTemperatureSensors().ExpectCall(20.0f);
