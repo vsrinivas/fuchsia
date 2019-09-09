@@ -9,10 +9,10 @@ set -x
 
 # Types for which to generate the bindings.  Expand this list if you need more.
 # The syntax is regex.
-readonly GENERATE_TYPES="UBool|UCalendar.*|UChar.*|UDate|UDateFormat.*|UEnumeration.*|UErrorCode|UText.*"
+readonly GENERATE_TYPES="UBool|UCalendar.*|UChar.*|UData.*|UDate|UDateFormat.*|UEnumeration.*|UErrorCode|UText.*"
 
 # Functions for which to generate the bindings.  Expand this list if you need more.
-readonly GENERATE_FUNCTIONS="u_.*|ucal_.*|udat_.*|uenum_.*|uloc_.*|utext_.*"
+readonly GENERATE_FUNCTIONS="u_.*|ucal_.*|udat_.*|udata_.*|uenum_.*|uloc_.*|utext_.*"
 
 if [[ $(bindgen --version) != "bindgen 0.50.0"  ]]; then
   echo "Requires bindgen version 0.50.0: check the script if you think this should work"

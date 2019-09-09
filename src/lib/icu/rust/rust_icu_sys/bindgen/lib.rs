@@ -1390,6 +1390,142 @@ extern "C" {
         status: *mut UErrorCode,
     ) -> UDateFormatOpener;
 }
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, PartialEq)]
+pub struct UDataInfo {
+    pub size: u16,
+    pub reservedWord: u16,
+    pub isBigEndian: u8,
+    pub charsetFamily: u8,
+    pub sizeofUChar: u8,
+    pub reservedByte: u8,
+    pub dataFormat: [u8; 4usize],
+    pub formatVersion: [u8; 4usize],
+    pub dataVersion: [u8; 4usize],
+}
+#[test]
+fn bindgen_test_layout_UDataInfo() {
+    assert_eq!(
+        ::std::mem::size_of::<UDataInfo>(),
+        20usize,
+        concat!("Size of: ", stringify!(UDataInfo))
+    );
+    assert_eq!(
+        ::std::mem::align_of::<UDataInfo>(),
+        2usize,
+        concat!("Alignment of ", stringify!(UDataInfo))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).size as *const _ as usize },
+        0usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(size))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).reservedWord as *const _ as usize },
+        2usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(reservedWord))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).isBigEndian as *const _ as usize },
+        4usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(isBigEndian))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).charsetFamily as *const _ as usize },
+        5usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(charsetFamily))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).sizeofUChar as *const _ as usize },
+        6usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(sizeofUChar))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).reservedByte as *const _ as usize },
+        7usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(reservedByte))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).dataFormat as *const _ as usize },
+        8usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(dataFormat))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).formatVersion as *const _ as usize },
+        12usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(formatVersion))
+    );
+    assert_eq!(
+        unsafe { &(*(::std::ptr::null::<UDataInfo>())).dataVersion as *const _ as usize },
+        16usize,
+        concat!("Offset of field: ", stringify!(UDataInfo), "::", stringify!(dataVersion))
+    );
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct UDataMemory {
+    _unused: [u8; 0],
+}
+pub type UDataMemoryIsAcceptable = ::std::option::Option<
+    unsafe extern "C" fn(
+        context: *mut ::std::os::raw::c_void,
+        type_: *const ::std::os::raw::c_char,
+        name: *const ::std::os::raw::c_char,
+        pInfo: *const UDataInfo,
+    ) -> UBool,
+>;
+extern "C" {
+    pub fn udata_open_64(
+        path: *const ::std::os::raw::c_char,
+        type_: *const ::std::os::raw::c_char,
+        name: *const ::std::os::raw::c_char,
+        pErrorCode: *mut UErrorCode,
+    ) -> *mut UDataMemory;
+}
+extern "C" {
+    pub fn udata_openChoice_64(
+        path: *const ::std::os::raw::c_char,
+        type_: *const ::std::os::raw::c_char,
+        name: *const ::std::os::raw::c_char,
+        isAcceptable: UDataMemoryIsAcceptable,
+        context: *mut ::std::os::raw::c_void,
+        pErrorCode: *mut UErrorCode,
+    ) -> *mut UDataMemory;
+}
+extern "C" {
+    pub fn udata_close_64(pData: *mut UDataMemory);
+}
+extern "C" {
+    pub fn udata_getMemory_64(pData: *mut UDataMemory) -> *const ::std::os::raw::c_void;
+}
+extern "C" {
+    pub fn udata_getInfo_64(pData: *mut UDataMemory, pInfo: *mut UDataInfo);
+}
+extern "C" {
+    pub fn udata_setCommonData_64(data: *const ::std::os::raw::c_void, err: *mut UErrorCode);
+}
+extern "C" {
+    pub fn udata_setAppData_64(
+        packageName: *const ::std::os::raw::c_char,
+        data: *const ::std::os::raw::c_void,
+        err: *mut UErrorCode,
+    );
+}
+impl UDataFileAccess {
+    pub const UDATA_DEFAULT_ACCESS: UDataFileAccess = UDataFileAccess::UDATA_FILES_FIRST;
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, PartialOrd)]
+pub enum UDataFileAccess {
+    UDATA_FILES_FIRST = 0,
+    UDATA_ONLY_PACKAGES = 1,
+    UDATA_PACKAGES_FIRST = 2,
+    UDATA_NO_FILES = 3,
+    UDATA_FILE_ACCESS_COUNT = 4,
+}
+extern "C" {
+    pub fn udata_setFileAccess_64(access: UDataFileAccess, status: *mut UErrorCode);
+}
 extern "C" {
     pub fn u_getDataDirectory_64() -> *const ::std::os::raw::c_char;
 }
