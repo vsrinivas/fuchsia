@@ -351,7 +351,8 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    #[test]
+    // #[test]
+    #[allow(dead_code)] // TODO(36120): test is flakey. Re-enable when flake is tracked down.
     fn blobfs_format_mount_write_remount_read_unmount() {
         let block_size = 512;
         let mount_point = "/test-fs-root";
@@ -433,7 +434,8 @@ mod tests {
         ramdisk.destroy().expect("failed to destroy ramdisk");
     }
 
-    #[test]
+    // #[test]
+    #[allow(dead_code)] // TODO(36120): test is flakey. Re-enable when flake is tracked down.
     fn minfs_format_mount_write_remount_read_unmount() {
         let block_size = 8192;
         let mount_point = "/test-fs-root";
