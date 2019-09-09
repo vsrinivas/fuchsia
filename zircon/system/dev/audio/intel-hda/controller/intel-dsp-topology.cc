@@ -73,7 +73,7 @@ const struct PipelineConfig {
 };
 
 // Use 48khz 16-bit stereo throughout
-const AudioDataFormat FMT_HOST = {
+constexpr AudioDataFormat FMT_HOST = {
     .sampling_frequency = SamplingFrequency::FS_48000HZ,
     .bit_depth = BitDepth::DEPTH_16BIT,
     .channel_map = 0xFFFFFF10,
@@ -85,7 +85,7 @@ const AudioDataFormat FMT_HOST = {
     .reserved = 0,
 };
 
-const AudioDataFormat FMT_I2S = {
+constexpr AudioDataFormat FMT_I2S = {
     .sampling_frequency = SamplingFrequency::FS_48000HZ,
     .bit_depth = BitDepth::DEPTH_32BIT,
     .channel_map = 0xFFFFFF10,
@@ -117,31 +117,9 @@ const CopierCfg HOST_OUT_COPIER_CFG = {
             .ibs = 384,
             .obs = 384,
             .is_pages = 0,
-            .audio_fmt =
-                {
-                    .sampling_frequency = FMT_HOST.sampling_frequency,
-                    .bit_depth = FMT_HOST.bit_depth,
-                    .channel_map = FMT_HOST.channel_map,
-                    .channel_config = FMT_HOST.channel_config,
-                    .interleaving_style = FMT_HOST.interleaving_style,
-                    .number_of_channels = FMT_HOST.number_of_channels,
-                    .valid_bit_depth = FMT_HOST.valid_bit_depth,
-                    .sample_type = FMT_HOST.sample_type,
-                    .reserved = 0,
-                },
+            .audio_fmt = FMT_HOST,
         },
-    .out_fmt =
-        {
-            .sampling_frequency = FMT_MIXER.sampling_frequency,
-            .bit_depth = FMT_MIXER.bit_depth,
-            .channel_map = FMT_MIXER.channel_map,
-            .channel_config = FMT_MIXER.channel_config,
-            .interleaving_style = FMT_MIXER.interleaving_style,
-            .number_of_channels = FMT_MIXER.number_of_channels,
-            .valid_bit_depth = FMT_MIXER.valid_bit_depth,
-            .sample_type = FMT_MIXER.sample_type,
-            .reserved = 0,
-        },
+    .out_fmt = FMT_MIXER,
     .copier_feature_mask = 0,
     .gtw_cfg =
         {
@@ -158,31 +136,9 @@ const CopierCfg HOST_IN_COPIER_CFG = {
             .ibs = 384,
             .obs = 384,
             .is_pages = 0,
-            .audio_fmt =
-                {
-                    .sampling_frequency = FMT_MIXER.sampling_frequency,
-                    .bit_depth = FMT_MIXER.bit_depth,
-                    .channel_map = FMT_MIXER.channel_map,
-                    .channel_config = FMT_MIXER.channel_config,
-                    .interleaving_style = FMT_MIXER.interleaving_style,
-                    .number_of_channels = FMT_MIXER.number_of_channels,
-                    .valid_bit_depth = FMT_MIXER.valid_bit_depth,
-                    .sample_type = FMT_MIXER.sample_type,
-                    .reserved = 0,
-                },
+            .audio_fmt = FMT_MIXER,
         },
-    .out_fmt =
-        {
-            .sampling_frequency = FMT_HOST.sampling_frequency,
-            .bit_depth = FMT_HOST.bit_depth,
-            .channel_map = FMT_HOST.channel_map,
-            .channel_config = FMT_HOST.channel_config,
-            .interleaving_style = FMT_HOST.interleaving_style,
-            .number_of_channels = FMT_HOST.number_of_channels,
-            .valid_bit_depth = FMT_HOST.valid_bit_depth,
-            .sample_type = FMT_HOST.sample_type,
-            .reserved = 0,
-        },
+    .out_fmt = FMT_HOST,
     .copier_feature_mask = 0,
     .gtw_cfg =
         {
@@ -201,31 +157,9 @@ const CopierCfg I2S_OUT_COPIER_CFG = {
             .ibs = 384,
             .obs = 384,
             .is_pages = 0,
-            .audio_fmt =
-                {
-                    .sampling_frequency = FMT_MIXER.sampling_frequency,
-                    .bit_depth = FMT_MIXER.bit_depth,
-                    .channel_map = FMT_MIXER.channel_map,
-                    .channel_config = FMT_MIXER.channel_config,
-                    .interleaving_style = FMT_MIXER.interleaving_style,
-                    .number_of_channels = FMT_MIXER.number_of_channels,
-                    .valid_bit_depth = FMT_MIXER.valid_bit_depth,
-                    .sample_type = FMT_MIXER.sample_type,
-                    .reserved = 0,
-                },
+            .audio_fmt = FMT_MIXER,
         },
-    .out_fmt =
-        {
-            .sampling_frequency = FMT_I2S.sampling_frequency,
-            .bit_depth = FMT_I2S.bit_depth,
-            .channel_map = FMT_I2S.channel_map,
-            .channel_config = FMT_I2S.channel_config,
-            .interleaving_style = FMT_I2S.interleaving_style,
-            .number_of_channels = FMT_I2S.number_of_channels,
-            .valid_bit_depth = FMT_I2S.valid_bit_depth,
-            .sample_type = FMT_I2S.sample_type,
-            .reserved = 0,
-        },
+    .out_fmt = FMT_I2S,
     .copier_feature_mask = 0,
     .gtw_cfg =
         {
@@ -244,31 +178,9 @@ const CopierCfg I2S_IN_COPIER_CFG = {
             .ibs = 384,
             .obs = 384,
             .is_pages = 0,
-            .audio_fmt =
-                {
-                    .sampling_frequency = FMT_I2S.sampling_frequency,
-                    .bit_depth = FMT_I2S.bit_depth,
-                    .channel_map = FMT_I2S.channel_map,
-                    .channel_config = FMT_I2S.channel_config,
-                    .interleaving_style = FMT_I2S.interleaving_style,
-                    .number_of_channels = FMT_I2S.number_of_channels,
-                    .valid_bit_depth = FMT_I2S.valid_bit_depth,
-                    .sample_type = FMT_I2S.sample_type,
-                    .reserved = 0,
-                },
+            .audio_fmt = FMT_I2S,
         },
-    .out_fmt =
-        {
-            .sampling_frequency = FMT_MIXER.sampling_frequency,
-            .bit_depth = FMT_MIXER.bit_depth,
-            .channel_map = FMT_MIXER.channel_map,
-            .channel_config = FMT_MIXER.channel_config,
-            .interleaving_style = FMT_MIXER.interleaving_style,
-            .number_of_channels = FMT_MIXER.number_of_channels,
-            .valid_bit_depth = FMT_MIXER.valid_bit_depth,
-            .sample_type = FMT_MIXER.sample_type,
-            .reserved = 0,
-        },
+    .out_fmt = FMT_MIXER,
     .copier_feature_mask = 0,
     .gtw_cfg =
         {
@@ -283,18 +195,7 @@ const BaseModuleCfg MIXER_CFG = {
     .ibs = 384,
     .obs = 384,
     .is_pages = 0,
-    .audio_fmt =
-        {
-            .sampling_frequency = FMT_MIXER.sampling_frequency,
-            .bit_depth = FMT_MIXER.bit_depth,
-            .channel_map = FMT_MIXER.channel_map,
-            .channel_config = FMT_MIXER.channel_config,
-            .interleaving_style = FMT_MIXER.interleaving_style,
-            .number_of_channels = FMT_MIXER.number_of_channels,
-            .valid_bit_depth = FMT_MIXER.valid_bit_depth,
-            .sample_type = FMT_MIXER.sample_type,
-            .reserved = 0,
-        },
+    .audio_fmt = FMT_MIXER,
 };
 
 }  // namespace
