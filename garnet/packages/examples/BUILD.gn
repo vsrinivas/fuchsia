@@ -239,7 +239,7 @@ group("intl") {
   public_deps = [
     "//examples/intl/tz_version_parrot",
     "//garnet/examples/intl/manager:intl_property_manager",
-    "//garnet/examples/intl/wisdom:intl_wisdom",
+    "//garnet/examples/intl/wisdom/cpp:intl_wisdom",
   ]
 }
 

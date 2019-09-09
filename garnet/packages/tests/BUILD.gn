@@ -267,7 +267,7 @@ group("intl_examples") {
   public_deps = [
     "//examples/intl/tz_version_parrot/test:tz_version_parrot_test",
     "//garnet/examples/intl/manager:tests",
-    "//garnet/examples/intl/wisdom/test:intl_wisdom_test",
+    "//garnet/examples/intl/wisdom/cpp/test:intl_wisdom_test",
   ]
 }
 
