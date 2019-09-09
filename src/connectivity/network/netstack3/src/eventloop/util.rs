@@ -132,9 +132,9 @@ pub struct AddrClassError;
 
 // TODO(joshlf): Introduce a separate variant to `fidl_net_stack::ErrorType` for
 // `AddrClassError`?
-impl From<AddrClassError> for fidl_net_stack::Error {
+impl From<AddrClassError> for fidl_net_stack::ErrorType {
     fn from(_err: AddrClassError) -> Self {
-        fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::InvalidArgs }
+        fidl_net_stack::ErrorType::InvalidArgs
     }
 }
 

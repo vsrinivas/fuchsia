@@ -138,18 +138,6 @@ use netstack3_core::{
     NetstackError, StackState, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
-macro_rules! stack_fidl_error {
-    ($err:tt) => {
-        fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::$err }
-    };
-}
-
-macro_rules! encoded_fidl_error {
-    ($err:tt) => {
-        Some(fidl::encoding::OutOfLine(&mut stack_fidl_error!($err)))
-    };
-}
-
 /// The message that is sent to the main event loop to indicate that an
 /// ethernet device has been set up, and is ready to be added to the event
 /// loop.
@@ -326,11 +314,11 @@ impl EventLoop {
                         if let Some(core_id) = self.ctx.dispatcher_mut().devices.get_core_id(id) {
                             initialize_device(&mut self.ctx, core_id);
                         }
-                        setup.responder.send(None, id);
+                        setup.responder.send(&mut Ok(id));
                     }
                     None => {
                         // Send internal error if we can't allocate an id
-                        setup.responder.send(encoded_fidl_error!(Internal), 0);
+                        setup.responder.send(&mut Err(fidl_net_stack::ErrorType::Internal));
                     }
                 }
             }
@@ -472,14 +460,7 @@ impl EventLoop {
                 responder.send(&mut self.fidl_list_interfaces().await.iter_mut());
             }
             StackRequest::GetInterfaceInfo { id, responder } => {
-                let (mut info, mut error) = match (self.fidl_get_interface_info(id).await) {
-                    Ok(info) => (Some(info), None),
-                    Err(error) => (None, Some(error)),
-                };
-                responder.send(
-                    info.as_mut().map(fidl::encoding::OutOfLine),
-                    error.as_mut().map(fidl::encoding::OutOfLine),
-                );
+                responder.send(&mut self.fidl_get_interface_info(id).await);
             }
             StackRequest::EnableInterface { id, responder } => {
                 responder.send(&mut self.fidl_enable_interface(id).await);
@@ -595,13 +576,13 @@ impl EventLoop {
     async fn fidl_get_interface_info(
         &mut self,
         id: u64,
-    ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
+    ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::ErrorType> {
         let device =
-            self.ctx.dispatcher().get_device_info(id).ok_or(stack_fidl_error!(NotFound))?;
+            self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::ErrorType::NotFound)?;
         // TODO(wesleyac): Cache info and status
-        let info = device.client().info().await.map_err(|_| stack_fidl_error!(Internal))?;
+        let info = device.client().info().await.map_err(|_| fidl_net_stack::ErrorType::Internal)?;
         let phy_status =
-            device.client().get_status().await.map_err(|_| stack_fidl_error!(Internal))?;
+            device.client().get_status().await.map_err(|_| fidl_net_stack::ErrorType::Internal)?;
         let mut addresses = vec![];
         if let Some(core_id) = device.core_id() {
             for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {

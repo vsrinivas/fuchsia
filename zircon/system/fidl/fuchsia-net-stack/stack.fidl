@@ -122,16 +122,11 @@ enum ErrorType {
     IO = 8;
 };
 
-struct Error {
-    ErrorType type;
-};
-
 [Discoverable]
 protocol Stack {
-    // TODO(fxb/34836) Use error return syntax
     /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
     /// by the stack for use in subsequent calls.
-    AddEthernetInterface(string topological_path, fuchsia.hardware.ethernet.Device device) -> (Error? err, uint64 id);
+    AddEthernetInterface(string topological_path, fuchsia.hardware.ethernet.Device device) -> (uint64 id) error ErrorType;
 
     /// Remove an Ethernet interface from the network stack.
     DelEthernetInterface(uint64 id) -> () error ErrorType;
@@ -139,9 +134,8 @@ protocol Stack {
     /// List all the interfaces available in the network stack.
     ListInterfaces() -> (vector<InterfaceInfo> ifs);
 
-    // TODO(fxb/34836) Use error return syntax
     /// Retrieve info about a specific interface.
-    GetInterfaceInfo(uint64 id) -> (InterfaceInfo? info, Error? err);
+    GetInterfaceInfo(uint64 id) -> (InterfaceInfo info) error ErrorType;
 
     /// Enable the interface. Packets may be processed by the stack after this call is processed.
     EnableInterface(uint64 id) -> () error ErrorType;

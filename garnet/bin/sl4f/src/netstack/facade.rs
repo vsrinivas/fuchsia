@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use failure::{Error, ResultExt};
 use fidl_fuchsia_net_stack::{StackMarker, StackProxy};
 use fuchsia_component as app;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
@@ -77,18 +77,12 @@ impl NetstackFacade {
         let tag = "NestackFacade::get_interface_info";
         match &self.inner.read().netstack_proxy {
             Some(proxy) => {
-                let (info, err) = proxy.get_interface_info(id).await?;
-                if let Some(e) = err {
-                    let err_msg = format!("Unable to get interface info for id {:?}: {:?}", id, e);
-                    fx_err_and_bail!(&with_line!(tag), err_msg)
-                };
-                if let Some(i) = info {
-                    Ok(CustomInterfaceInfo::new(&i))
-                } else {
-                    fx_err_and_bail!(
-                        &with_line!(tag),
-                        format!("Interface id {:?} returned None.", id)
-                    )
+                match proxy.get_interface_info(id).await.context("failed to get interface info")? {
+                    Ok(info) => Ok(CustomInterfaceInfo::new(&info)),
+                    Err(e) => {
+                        let err_msg = format!("Unable to get interface info for id {:?}: {:?}", id, e);
+                        fx_err_and_bail!(&with_line!(tag), err_msg)
+                    }
                 }
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),

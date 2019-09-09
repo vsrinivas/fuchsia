@@ -93,13 +93,18 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	return out
 }
 
-func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64) {
-	var interfaceConfig netstack.InterfaceConfig
-	ifs, err := ns.addEth(topologicalPath, interfaceConfig, &device)
+func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceInterface) stack.StackAddEthernetInterfaceResult {
+	var result stack.StackAddEthernetInterfaceResult
+
+	ifs, err := ns.addEth(topologicalPath, netstack.InterfaceConfig{}, &device)
 	if err != nil {
-		return &stack.Error{Type: stack.ErrorTypeInternal}, 0
+		result.SetErr(stack.ErrorTypeInternal)
+	} else {
+		result.SetResponse(stack.StackAddEthernetInterfaceResponse {
+			Id: uint64(ifs.nicid),
+		})
 	}
-	return nil, uint64(ifs.nicid)
+	return result
 }
 
 func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResult {
@@ -120,21 +125,25 @@ func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResul
 	return result
 }
 
-func (ns *Netstack) getInterface(id uint64) (*stack.InterfaceInfo, *stack.Error) {
+func (ns *Netstack) getInterface(id uint64) stack.StackGetInterfaceInfoResult {
+	var result stack.StackGetInterfaceInfoResult
+
 	ns.mu.Lock()
 	ifs, ok := ns.mu.ifStates[tcpip.NICID(id)]
 	if !ok {
-		ns.mu.Unlock()
-		return nil, &stack.Error{Type: stack.ErrorTypeNotFound}
+		result.SetErr(stack.ErrorTypeNotFound)
+	} else {
+		nicInfo, ok := ns.mu.stack.NICInfo()[ifs.nicid]
+		if !ok {
+			panic(fmt.Sprintf("NIC [%d] not found in %+v", ifs.nicid, nicInfo))
+		}
+		result.SetResponse(stack.StackGetInterfaceInfoResponse {
+			Info: getInterfaceInfo(ifs, nicInfo.ProtocolAddresses),
+		})
 	}
-	nicInfo, ok := ns.mu.stack.NICInfo()[ifs.nicid]
-	if !ok {
-		panic(fmt.Sprintf("NIC [%d] not found in %+v", ifs.nicid, nicInfo))
-	}
-	interfaceInfo := getInterfaceInfo(ifs, nicInfo.ProtocolAddresses)
 	ns.mu.Unlock()
 
-	return &interfaceInfo, nil
+	return result
 }
 
 func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceResult {
@@ -195,6 +204,7 @@ func toProtocolAddr(ifAddr stack.InterfaceAddress) tcpip.ProtocolAddress {
 
 func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackAddInterfaceAddressResult {
 	var result stack.StackAddInterfaceAddressResult
+
 	protocolAddr := toProtocolAddr(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		result.SetErr(stack.ErrorTypeInvalidArgs)
@@ -214,6 +224,7 @@ func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) s
 
 func (ns *Netstack) delInterfaceAddr(id uint64, ifAddr stack.InterfaceAddress) stack.StackDelInterfaceAddressResult  {
 	var result stack.StackDelInterfaceAddressResult
+
 	protocolAddr := toProtocolAddr(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
 		result.SetErr(stack.ErrorTypeInvalidArgs)
@@ -272,6 +283,7 @@ func validateSubnet(subnet net.Subnet) bool {
 
 func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackAddForwardingEntryResult {
 	var result stack.StackAddForwardingEntryResult
+
 	if !validateSubnet(entry.Subnet) {
 		result.SetErr(stack.ErrorTypeInvalidArgs)
 	} else if err := ns.AddRoute(fidlconv.ForwardingEntryToTcpipRoute(entry), metricNotSet, false /* not dynamic */); err != nil {
@@ -285,6 +297,7 @@ func (ns *Netstack) addForwardingEntry(entry stack.ForwardingEntry) stack.StackA
 
 func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardingEntryResult {
 	var result stack.StackDelForwardingEntryResult
+
 	if !validateSubnet(subnet) {
 		result.SetErr(stack.ErrorTypeInvalidArgs)
 	} else if err := ns.DelRoute(tcpip.Route{Destination: fidlconv.ToTCPIPSubnet(subnet)}); err != nil {
@@ -293,13 +306,11 @@ func (ns *Netstack) delForwardingEntry(subnet net.Subnet) stack.StackDelForwardi
 	} else {
 		result.SetResponse(stack.StackDelForwardingEntryResponse{})
 	}
-
 	return result
 }
 
-func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (*stack.Error, uint64, error) {
-	err, id := ni.ns.addInterface(topologicalPath, device)
-	return err, id, nil
+func (ni *stackImpl) AddEthernetInterface(topologicalPath string, device ethernet.DeviceInterface) (stack.StackAddEthernetInterfaceResult, error) {
+	return ni.ns.addInterface(topologicalPath, device), nil
 }
 
 func (ni *stackImpl) DelEthernetInterface(id uint64) (stack.StackDelEthernetInterfaceResult, error) {
@@ -310,9 +321,8 @@ func (ni *stackImpl) ListInterfaces() ([]stack.InterfaceInfo, error) {
 	return ni.ns.getNetInterfaces(), nil
 }
 
-func (ni *stackImpl) GetInterfaceInfo(id uint64) (*stack.InterfaceInfo, *stack.Error, error) {
-	info, err := ni.ns.getInterface(id)
-	return info, err, nil
+func (ni *stackImpl) GetInterfaceInfo(id uint64) (stack.StackGetInterfaceInfoResult, error) {
+	return ni.ns.getInterface(id), nil
 }
 
 func (ni *stackImpl) EnableInterface(id uint64) (stack.StackEnableInterfaceResult, error) {

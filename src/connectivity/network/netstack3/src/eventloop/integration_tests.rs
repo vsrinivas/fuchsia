@@ -640,7 +640,6 @@ async fn test_ethernet_link_up_down() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
@@ -659,7 +658,6 @@ async fn test_ethernet_link_up_down() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
@@ -679,7 +677,6 @@ async fn test_ethernet_link_up_down() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
@@ -700,7 +697,6 @@ async fn test_ethernet_link_up_down() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
@@ -718,7 +714,6 @@ async fn test_ethernet_link_up_down() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
@@ -825,7 +820,6 @@ async fn test_get_interface_info() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(&if_info.properties.topopath, "fake_topo_path");
     assert_eq!(if_info.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
@@ -840,9 +834,8 @@ async fn test_get_interface_info() {
         .run_future(stack.get_interface_info(12345))
         .await
         .unwrap()
-        .1
-        .expect("Get interface info fails");
-    assert_eq!(err.type_, fidl_net_stack::ErrorType::NotFound);
+        .expect_err("Get interface info fails");
+    assert_eq!(err, fidl_net_stack::ErrorType::NotFound);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -862,7 +855,6 @@ async fn test_disable_enable_interface() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
@@ -879,7 +871,6 @@ async fn test_disable_enable_interface() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
@@ -900,7 +891,6 @@ async fn test_disable_enable_interface() {
         .run_future(stack.get_interface_info(if_id))
         .await
         .unwrap()
-        .0
         .expect("Get interface info");
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);

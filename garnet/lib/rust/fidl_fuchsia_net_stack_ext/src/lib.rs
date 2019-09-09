@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 mod error;
-pub use self::error::{FidlReturn, NetstackFidlReturn, NetstackError};
+pub use self::error::{FidlReturn, NetstackError};
 
 use fidl_fuchsia_net_stack as fidl;
 

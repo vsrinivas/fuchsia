@@ -108,16 +108,13 @@ impl Netstack {
             // Safe because we checked the return status above.
             zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
         );
-        let (err, id) = self
+        let id = self
             .stack
             .add_ethernet_interface(&topological_path, dev)
             .await
+            .squash_result()
             .context("error adding device")?;
-
-        match err {
-            Some(e) => Err(format_err!("Error adding interface {}: {:?}", path, e)),
-            None => Ok(id),
-        }
+        Ok(id)
     }
 
     async fn set_ip(

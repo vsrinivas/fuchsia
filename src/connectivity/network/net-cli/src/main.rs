@@ -119,14 +119,13 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
                 // Safe because we checked the return status above.
                 zx::Channel::from(unsafe { zx::Handle::from_raw(client) }),
             );
-            let (err, id) = stack
+            let response = stack
                 .add_ethernet_interface(&topological_path, dev)
                 .await
                 .context("error adding device")?;
-            if let Some(e) = err {
-                println!("Error adding interface {}: {:?}", path, e)
-            } else {
-                println!("Added interface {}", id)
+            match response {
+                Ok(id) => println!("Added interface {}", id),
+                Err(e) => println!("Error adding interface {}: {:?}", path, e),
             }
         }
         IfCmd::Del { id } => {
@@ -139,10 +138,9 @@ async fn do_if(cmd: opts::IfCmd, stack: StackProxy) -> Result<(), Error> {
         }
         IfCmd::Get { id } => {
             let response = stack.get_interface_info(id).await.context("error getting response")?;
-            if let Some(e) = response.1 {
-                println!("Error getting interface {}: {:?}", id, e)
-            } else {
-                println!("{}", pretty::InterfaceInfo::from(*response.0.unwrap()))
+            match response {
+                Ok(info) => println!("{}", pretty::InterfaceInfo::from(info)),
+                Err(e) => println!("Error getting interface {}: {:?}", id, e),
             }
         }
         IfCmd::Enable { id } => {

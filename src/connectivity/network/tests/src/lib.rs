@@ -223,11 +223,11 @@ async fn add_ethernet_interface() -> Result {
 
     with_netstack_and_device::<_, _, fidl_fuchsia_net_stack::StackMarker>(name, |stack, device| {
         async move {
-            let (error, id) = stack
+            let id = stack
                 .add_ethernet_interface(name, device)
                 .await
+                .squash_result()
                 .context("failed to add ethernet interface")?;
-            assert_eq!(error, None);
             let interface = stack
                 .list_interfaces()
                 .await
@@ -282,10 +282,11 @@ async fn add_del_interface_address() -> Result {
         .await
         .context("failed to call add interface address")?;
     assert_eq!(res, Ok(()));
-    let (loopback, error) =
-        stack.get_interface_info(loopback.id).await.context("failed to get loopback interface")?;
-    assert_eq!(error.as_ref(), None);
-    let loopback = loopback.ok_or(failure::err_msg("failed to find loopback"))?;
+    let loopback = stack
+        .get_interface_info(loopback.id)
+        .await
+        .squash_result()
+        .context("failed to get loopback interface")?;
 
     assert!(
         loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_some(),
@@ -299,10 +300,11 @@ async fn add_del_interface_address() -> Result {
         .await
         .context("failed to call del interface address")?;
     assert_eq!(res, Ok(()));
-    let (loopback, error) =
-        stack.get_interface_info(loopback.id).await.context("failed to get loopback interface")?;
-    assert_eq!(error.as_ref(), None);
-    let loopback = loopback.ok_or(failure::err_msg("failed to find loopback"))?;
+    let loopback = stack
+        .get_interface_info(loopback.id)
+        .await
+        .squash_result()
+        .context("failed to get loopback interface")?;
 
     assert!(
         loopback.properties.addresses.iter().find(|addr| *addr == &interface_address).is_none(),
@@ -406,14 +408,9 @@ async fn get_interface_info_not_found() -> Result {
         .context("failed to connect to netstack")?;
     let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let (info, error) =
+    let res =
         stack.get_interface_info(max_id + 1).await.context("failed to call get interface info")?;
-    assert_eq!(info, None);
-    let error = error.ok_or(failure::err_msg("failed to get get interface info error"))?;
-    assert_eq!(
-        error.as_ref(),
-        &fidl_fuchsia_net_stack::Error { type_: fidl_fuchsia_net_stack::ErrorType::NotFound }
-    );
+    assert_eq!(res, Err(fidl_fuchsia_net_stack::ErrorType::NotFound));
     Ok(())
 }
 
@@ -441,17 +438,18 @@ async fn disable_interface_loopback() -> Result {
         localhost.properties.administrative_status,
         fidl_fuchsia_net_stack::AdministrativeStatus::Enabled
     );
+    let () = stack
+        .disable_interface(localhost.id)
+        .await
+        .squash_result()
+        .context("failed to disable interface")?;
+    let info = stack
+        .get_interface_info(localhost.id)
+        .await
+        .squash_result()
+        .context("failed to get interface info")?;
     assert_eq!(
-        stack.disable_interface(localhost.id).await.context("failed to disable interface")?,
-        Ok(())
-    );
-    let (info, error) =
-        stack.get_interface_info(localhost.id).await.context("failed to get interface info")?;
-    assert_eq!(error, None);
-    assert_eq!(
-        info.ok_or(failure::err_msg("expected interface info to be present"))?
-            .properties
-            .administrative_status,
+        info.properties.administrative_status,
         fidl_fuchsia_net_stack::AdministrativeStatus::Disabled
     );
     Ok(())
@@ -484,11 +482,11 @@ async fn acquire_dhcp() -> Result {
         let server_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&server_environment)
                 .context("failed to connect to server stack")?;
-        let (error, id) = server_stack
+        let id = server_stack
             .add_ethernet_interface(name, server_device)
             .await
+            .squash_result()
             .context("failed to add server ethernet interface")?;
-        assert_eq!(error, None);
         let () = server_stack
             .add_interface_address(
                 id,
@@ -572,11 +570,11 @@ async fn acquire_dhcp() -> Result {
         let client_stack =
             connect_to_service::<fidl_fuchsia_net_stack::StackMarker>(&client_environment)
                 .context("failed to connect to client stack")?;
-        let (error, id) = client_stack
+        let id = client_stack
             .add_ethernet_interface(name, client_device)
             .await
+            .squash_result()
             .context("failed to add client ethernet interface")?;
-        assert_eq!(error, None);
         let () = client_stack
             .enable_interface(id)
             .await
