@@ -1,6 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+//! Test utilities for starting a blobfs server.
+
 use {
     crate::as_dir,
     failure::{bail, format_err, Error, ResultExt},
@@ -65,6 +68,7 @@ fn mkblobfs(ramdisk: &TestRamDisk) -> Result<(), Error> {
     mkblobfs_block(ramdisk.clone_channel().context("cloning ramdisk channel")?.into())
 }
 
+/// A running BlobFs server
 pub struct TestBlobFs {
     backing_ramdisk: TestRamDisk,
     process: zx::Process,

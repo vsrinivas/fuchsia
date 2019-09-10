@@ -80,7 +80,7 @@ impl TestPkgFs {
     }
 
     /// Returns a new connection to the pkgfs root directory.
-    pub fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
+    pub fn root_dir_client_end(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
         self.proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
@@ -93,7 +93,7 @@ impl TestPkgFs {
 
     /// Opens the root of pkgfs as a directory.
     pub fn root_dir(&self) -> Result<Dir, Error> {
-        Ok(as_dir(self.root_dir_handle()?))
+        Ok(as_dir(self.root_dir_client_end()?))
     }
 
     /// Opens the root of pkgfs as a file.
@@ -101,7 +101,7 @@ impl TestPkgFs {
     /// TODO: remove once there is an equivalent API to `add_dir_to_namespace` that doesn't
     /// accept a File.
     pub fn root_dir_file(&self) -> Result<File, Error> {
-        Ok(as_file(self.root_dir_handle()?))
+        Ok(as_file(self.root_dir_client_end()?))
     }
 
     /// Restarts PkgFs with the same backing blobfs and dynamic index.

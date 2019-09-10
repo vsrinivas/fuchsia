@@ -16,7 +16,7 @@ pub use crate::repo::{
 };
 mod serve;
 
-mod blobfs;
+pub mod blobfs;
 
 pub mod pkgfs;
 
