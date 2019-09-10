@@ -37,6 +37,8 @@ namespace gpt {
 
 namespace {
 
+constexpr size_t kDeviceNameLength = 40;
+
 using gpt_t = gpt_header_t;
 
 struct Guid {
@@ -251,6 +253,29 @@ zx_protocol_device_t gpt_proto = []() {
   return gpt;
 }();
 
+// On failure to add device, frees the device.
+zx_status_t DeviceAdd(gptpart_device_t* device, uint32_t partition_number, zx_device_t* parent,
+                      uint32_t flags = 0) {
+  char name[kDeviceNameLength];
+  snprintf(name, sizeof(name), "part-%03u", partition_number);
+
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = name;
+  args.ctx = device;
+  args.ops = &gpt_proto;
+  args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
+  args.proto_ops = &block_ops;
+  args.flags = flags;
+
+  zx_status_t status = device_add(parent, &args, &device->zxdev);
+
+  if (status != ZX_OK) {
+    free(device);
+  }
+  return status;
+}
+
 void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
   // Pass 32bit status back to caller via 32bit command field
   // Saves from needing custom structs, etc.
@@ -293,7 +318,7 @@ int gpt_bind_thread(void* arg) {
 
   auto remove_first_dev = fbl::MakeAutoCall([&first_dev]() { device_remove(first_dev->zxdev); });
 
-  zx_device_t* dev = first_dev->parent;
+  zx_device_t* parent = first_dev->parent;
 
   const guid_map_t* guid_map = thread_args->guid_map();
   uint64_t guid_map_entries = thread_args->guid_map_entries();
@@ -379,7 +404,7 @@ int gpt_bind_thread(void* arg) {
         zxlogf(ERROR, "gpt: out of memory!\n");
         return -1;
       }
-      device->parent = dev;
+      device->parent = parent;
       memcpy(&device->block_protocol, &block_protocol, sizeof(block_protocol));
     }
 
@@ -404,27 +429,12 @@ int gpt_bind_thread(void* arg) {
       first_dev = NULL;
       remove_first_dev.cancel();
     } else {
-      char name[128];
-      snprintf(name, sizeof(name), "part-%03u", partitions);
-
       zxlogf(SPEW,
-             "gpt: partition %u (%s) type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64
-             "\n",
-             partitions, name, type_guid, partition_guid, pname, device->gpt_entry.first,
+             "gpt: partition=%u type=%s guid=%s name=%s first=0x%" PRIx64 " last=0x%" PRIx64 "\n",
+             partitions, type_guid, partition_guid, pname, device->gpt_entry.first,
              device->gpt_entry.last);
 
-      device_add_args_t args = {};
-      args.version = DEVICE_ADD_ARGS_VERSION;
-      args.name = name;
-      args.ctx = device;
-      args.ops = &gpt_proto;
-      args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
-      args.proto_ops = &block_ops;
-
-      if (device_add(dev, &args, &device->zxdev) != ZX_OK) {
-        free(device);
-        continue;
-      }
+      DeviceAdd(device, partitions, parent);
     }
   }
 
@@ -454,21 +464,7 @@ zx_status_t gpt_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  char name[128];
-  snprintf(name, sizeof(name), "part-%03u", 0);
-
-  device_add_args_t args = {};
-  args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = name;
-  args.ctx = device;
-  args.ops = &gpt_proto;
-  args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
-  args.proto_ops = &block_ops;
-  args.flags = DEVICE_ADD_INVISIBLE;
-
-  status = device_add(parent, &args, &device->zxdev);
-  if (status != ZX_OK) {
-    free(device);
+  if ((status = DeviceAdd(device, 0, parent, DEVICE_ADD_INVISIBLE)) != ZX_OK) {
     return status;
   }
 
