@@ -188,6 +188,7 @@ class _TabWidgetState extends State<_TabWidget> {
                       child: GestureDetector(
                         onTap: widget.onClose,
                         child: Container(
+                          color: Colors.transparent,
                           alignment: Alignment.center,
                           child: Text('×'),
                         ),
