@@ -49,6 +49,16 @@ func (a *Archive) GetBuildByName(name string) (*Build, error) {
 
 // GetBuildByID looks up a build artifact by the given id.
 func (a *Archive) GetBuildByID(id string) (*Build, error) {
+	// Make sure the build exists.
+	args := []string{"ls", "-build", id}
+	_, stderr, err := util.RunCommand(a.artifactsPath, args...)
+	if err != nil {
+		if len(stderr) != 0 {
+			return nil, fmt.Errorf("artifacts failed: %s: %s", err, string(stderr))
+		}
+		return nil, fmt.Errorf("artifacts failed: %s", err)
+	}
+
 	return &Build{ID: id, archive: a}, nil
 }
 
