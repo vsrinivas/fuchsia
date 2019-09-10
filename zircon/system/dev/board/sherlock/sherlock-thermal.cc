@@ -59,8 +59,8 @@ static const pbus_bti_t thermal_btis[] = {
 };
 
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c,
-                                                                    int32_t cpu_opp,
-                                                                    int32_t gpu_opp) {
+                                                                    uint16_t cpu_opp,
+                                                                    uint16_t gpu_opp) {
   constexpr float kHysteresis = 2.0f;
 
   return {

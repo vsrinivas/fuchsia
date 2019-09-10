@@ -27,7 +27,7 @@ ddk_mock::MockMmioReg& GetMockReg(int index, ddk_mock::MockMmioRegRegion& regist
   return registers[T::Get(index).addr()];
 }
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp, int32_t opp) {
+constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp, uint16_t opp) {
   fuchsia_hardware_thermal_ThermalTemperatureInfo trip = {};
   trip.up_temp_celsius = temp + 2.0f;
   trip.down_temp_celsius = temp - 2.0f;

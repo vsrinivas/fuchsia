@@ -407,6 +407,7 @@ group("all") {
     ":system_update_checker",
     ":telephony",
     ":terminal",
+    ":thermd",
     ":tiles",
     ":timezone",
     ":tracing",
@@ -868,6 +869,17 @@ group("profiler") {
     "//garnet/examples/profiler:profiler_example",
     "//garnet/lib/profiler/tests:profiler_tests",
   ]
+}
+
+group("thermd") {
+  testonly = true
+  if (target_cpu == "arm64") {
+    public_deps = [
+      "//garnet/bin/thermd:thermd_tests_package",
+    ]
+  } else {
+    public_deps = []
+  }
 }
 
 group("tiles") {

@@ -25,7 +25,7 @@ constexpr pbus_mmio_t thermal_mmios[] = {
 constexpr pbus_irq_t thermal_irqs[] = {
     {.irq = MT8167_IRQ_PTP_THERM, .mode = ZX_INTERRUPT_MODE_EDGE_HIGH}};
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c, int32_t opp) {
+constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c, uint16_t opp) {
   constexpr float kHysteresis = 2.0f;
 
   return {.up_temp_celsius = temp_c + kHysteresis,

@@ -16,7 +16,8 @@ namespace {
 bool FloatNear(float a, float b) { return std::abs(a - b) < 0.001f; }
 
 constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPointInfo(
-    float up_temp, float down_temp, int32_t big_cluster_dvfs_opp, int32_t little_cluster_dvfs_opp) {
+    float up_temp, float down_temp, uint16_t big_cluster_dvfs_opp,
+    uint16_t little_cluster_dvfs_opp) {
   return {.up_temp_celsius = up_temp,
           .down_temp_celsius = down_temp,
           .fan_level = 0,

@@ -66,13 +66,13 @@ struct ThermalTemperatureInfo {
     /// The temperature must fall to down_temp to get to this trip point.
     float32 down_temp_celsius;
     /// The fan level for this trip point.
-    int32 fan_level;
+    uint32 fan_level;
     /// The operating point index of the big cluster.
-    int32 big_cluster_dvfs_opp;
+    uint16 big_cluster_dvfs_opp;
     /// The operating point index of the little cluster.
-    int32 little_cluster_dvfs_opp;
+    uint16 little_cluster_dvfs_opp;
     /// The GPU clock source index.
-    int32 gpu_clk_freq_source;
+    uint32 gpu_clk_freq_source;
 };
 
 struct ThermalDeviceInfo {

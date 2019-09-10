@@ -41,7 +41,7 @@ struct ThermalDeviceInfo;
 struct ThermalTemperatureInfo {
   static constexpr const fidl_type_t* Type = nullptr;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
@@ -52,16 +52,16 @@ struct ThermalTemperatureInfo {
   float down_temp_celsius = {};
 
   // The fan level for this trip point.
-  int32_t fan_level = {};
+  uint32_t fan_level = {};
 
   // The operating point index of the big cluster.
-  int32_t big_cluster_dvfs_opp = {};
+  uint16_t big_cluster_dvfs_opp = {};
 
   // The operating point index of the little cluster.
-  int32_t little_cluster_dvfs_opp = {};
+  uint16_t little_cluster_dvfs_opp = {};
 
   // The GPU clock source index.
-  int32_t gpu_clk_freq_source = {};
+  uint32_t gpu_clk_freq_source = {};
 };
 
 
@@ -138,7 +138,7 @@ class Device final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 672;
+    static constexpr uint32_t MaxOutOfLine = 608;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
@@ -1225,7 +1225,7 @@ extern "C" const fidl_type_t fuchsia_hardware_thermal_ThermalDeviceInfoTable;
 struct ThermalDeviceInfo {
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_ThermalDeviceInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 672;
+  static constexpr uint32_t PrimarySize = 608;
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
@@ -1278,8 +1278,8 @@ static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureIn
 static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, down_temp_celsius) == 4);
 static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, fan_level) == 8);
 static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, big_cluster_dvfs_opp) == 12);
-static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, little_cluster_dvfs_opp) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, gpu_clk_freq_source) == 20);
+static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, little_cluster_dvfs_opp) == 14);
+static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo, gpu_clk_freq_source) == 16);
 static_assert(sizeof(::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo) == ::llcpp::fuchsia::hardware::thermal::ThermalTemperatureInfo::PrimarySize);
 
 template <>
@@ -1455,7 +1455,7 @@ static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo, n
 static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo, big_little) == 8);
 static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo, critical_temp_celsius) == 12);
 static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo, trip_point_info) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo, opps) == 400);
+static_assert(offsetof(::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo, opps) == 336);
 static_assert(sizeof(::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo) == ::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo::PrimarySize);
 
 }  // namespace fidl

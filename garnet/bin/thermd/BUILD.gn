@@ -4,36 +4,66 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 
-executable("bin") {
-  output_name = "thermd"
+if (target_cpu == "x64") {
+  executable("bin") {
+    output_name = "thermd"
 
-  if (target_cpu == "x64") {
     sources = [
       "thermd.cc",
     ]
-  } else if (target_cpu == "arm64") {
-    sources = [
-      "thermd_arm.cc",
+
+    deps = [
+      "//zircon/public/lib/async",
+      "//zircon/public/lib/async-default",
+      "//zircon/public/lib/async-loop-cpp",
+      "//zircon/public/lib/async-loop-default",
+      "//zircon/public/lib/ddk",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/fzl",
+      "//zircon/public/lib/trace",
+      "//zircon/public/lib/trace-provider-with-fdio",
+      "//zircon/public/lib/zx",
+      "//zircon/system/banjo/ddk.protocol.scpi",
+      "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+      "//zircon/system/fidl/fuchsia-hardware-gpu-clock:fuchsia-hardware-gpu-clock_c_client",
+      "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
+    ]
+  }
+}
+
+if (target_cpu == "arm64") {
+  rustc_binary("bin") {
+    name = "thermd"
+    edition = "2018"
+    with_unit_tests = true
+
+    deps = [
+      "//garnet/public/lib/fidl/rust/fidl",
+      "//garnet/public/rust/fdio",
+      "//garnet/public/rust/fuchsia-async",
+      "//garnet/public/rust/fuchsia-syslog",
+      "//garnet/public/rust/fuchsia-zircon",
+      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:futures-preview",
+      "//zircon/system/fidl/fuchsia-hardware-gpu-clock:fuchsia-hardware-gpu-clock-rustc",
+      "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal-rustc",
     ]
   }
 
-  deps = [
-    "//zircon/system/banjo/ddk.protocol.scpi",
-    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
-    "//zircon/system/fidl/fuchsia-hardware-gpu-clock:fuchsia-hardware-gpu-clock_c_client",
-    "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fzl",
-    "//zircon/public/lib/trace",
-    "//zircon/public/lib/trace-provider-with-fdio",
-    "//zircon/public/lib/zx",
-  ]
+  test_package("thermd_tests_package") {
+    deps = [
+      ":bin_test",
+    ]
+
+    tests = [
+      {
+        name = "thermd_bin_test"
+      },
+    ]
+  }
 }
 
 package("thermd") {

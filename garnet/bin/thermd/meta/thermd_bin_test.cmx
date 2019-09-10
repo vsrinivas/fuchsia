@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/thermd_bin_test"
+    },
+    "sandbox": {
+        "services": [
+        ],
+        "dev": [ "misc", "class/thermal", "class/gpu-thermal" ]
+    }
+}
