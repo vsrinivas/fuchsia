@@ -158,6 +158,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 15, .name = "test", .committed_bytes = 15},
                       {.koid = 16, .name = "test", .committed_bytes = 16},
                       {.koid = 17, .name = "test", .committed_bytes = 17},
+                      {.koid = 18, .name = "test", .committed_bytes = 18},
                   },
               .processes =
                   {
@@ -166,7 +167,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 3, .name = "devhost:sys", .vmos = {3}},
                       {.koid = 4, .name = "minfs:/data", .vmos = {4}},
                       {.koid = 5, .name = "blobfs:/blob", .vmos = {5}},
-                      {.koid = 6, .name = "io.flutter.product_runner.jit", .vmos = {6}},
+                      {.koid = 6, .name = "io.flutter.product_runner.aot", .vmos = {6}},
                       {.koid = 7, .name = "kronk.cmx", .vmos = {7}},
                       {.koid = 8, .name = "scenic.cmx", .vmos = {8}},
                       {.koid = 9, .name = "devhost:pdev:05:00:f", .vmos = {9}},
@@ -177,7 +178,8 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 14, .name = "web_engine_exe:renderer", .vmos = {14}},
                       {.koid = 15, .name = "web_engine_exe:gpu", .vmos = {15}},
                       {.koid = 16, .name = "chromium.cmx", .vmos = {16}},
-                      {.koid = 17, .name = "new", .vmos = {17}},
+                      {.koid = 17, .name = "fshost", .vmos = {17}},
+                      {.koid = 18, .name = "new", .vmos = {18}},
                   },
           });
   Digest d(c);
@@ -185,20 +187,21 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
 
   ConfirmBuckets(d, {
                         {"Web", 45U},
-                        {"Cast", 13},
-                        {"Pkgfs", 12},
+                        {"Fshost", 17U},
+                        {"Cast", 13U},
+                        {"Pkgfs", 12U},
                         {"Amber", 11U},
                         {"Netstack", 10U},
                         {"Amlogic", 9U},
                         {"Scenic", 8U},
                         {"Kronk", 7U},
-                        {"Opal", 6U},
+                        {"Flutter", 6U},
                         {"Blobfs", 5U},
                         {"Minfs", 4U},
                         {"Video Buffer", 3U},
                         {"Graphics", 2U},
                         {"ZBI Buffer", 1U},
-                        {"Undigested", 17U},
+                        {"Undigested", 18U},
                     });
 }
 

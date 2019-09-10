@@ -38,6 +38,7 @@ TEST_F(MetricsUnitTest, All) {
               {.koid = 13, .name = "test", .committed_bytes = 13},
               {.koid = 14, .name = "test", .committed_bytes = 14},
               {.koid = 15, .name = "test", .committed_bytes = 15},
+              {.koid = 16, .name = "test", .committed_bytes = 16},
           },
       .processes =
           {
@@ -46,7 +47,7 @@ TEST_F(MetricsUnitTest, All) {
               {.koid = 3, .name = "devhost:sys", .vmos = {3}},
               {.koid = 4, .name = "minfs:/data", .vmos = {4}},
               {.koid = 5, .name = "blobfs:/blob", .vmos = {5}},
-              {.koid = 6, .name = "io.flutter.product_runner.jit", .vmos = {6}},
+              {.koid = 6, .name = "io.flutter.product_runner.aot", .vmos = {6}},
               {.koid = 7, .name = "/pkg/web_engine_exe", .vmos = {7}},
               {.koid = 8, .name = "kronk.cmx", .vmos = {8}},
               {.koid = 9, .name = "scenic.cmx", .vmos = {9}},
@@ -56,13 +57,14 @@ TEST_F(MetricsUnitTest, All) {
               {.koid = 13, .name = "pkgfs", .vmos = {13}},
               {.koid = 14, .name = "cast_agent.cmx", .vmos = {14}},
               {.koid = 15, .name = "chromium.cmx", .vmos = {15}},
+              {.koid = 16, .name = "fshost", .vmos = {16}},
           },
   }});
   cobalt::FakeLogger_Sync logger;
   Metrics m(zx::msec(10), dispatcher(), &logger,
             [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
   RunLoopUntil([&cs] { return cs.empty(); });
-  EXPECT_EQ(15U, logger.event_count());
+  EXPECT_EQ(16U, logger.event_count());
 }
 
 TEST_F(MetricsUnitTest, One) {
