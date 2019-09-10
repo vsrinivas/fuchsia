@@ -33,10 +33,13 @@ pub(crate) struct BoundedQueue<T> {
     eviction_age_minimum: Duration,
     eviction_size_minimum: usize,
     current_size: usize,
+    /// A monotonically increasing count of the total number of items inserted over the lifetime of
+    /// the queue.
+    monotonic_count: usize,
     inner: vec_deque::VecDeque<T>,
 
     // Inspect Data
-    _inspect: inspect::Node,
+    inspect: inspect::Node,
     size_metric: inspect::UintProperty,
     len_metric: inspect::UintProperty,
 }
@@ -55,10 +58,11 @@ where
             eviction_age_minimum,
             eviction_size_minimum,
             current_size: 0,
+            monotonic_count: 0,
             inner: vec_deque::VecDeque::new(),
             size_metric: inspect.create_uint("size_in_bytes", 0),
             len_metric: inspect.create_uint("number_of_items", 0),
-            _inspect: inspect,
+            inspect,
         }
     }
 
@@ -80,6 +84,7 @@ where
         while self.eviction_size_minimum_reached(&item) && self.oldest_item_will_expire(&item) {
             self.current_size -= self.inner.pop_front().map(|item| item.size_of()).unwrap_or(0);
         }
+        self.monotonic_count += 1;
         self.current_size += item.size_of();
         self.size_metric.set(self.current_size as u64);
         self.inner.push_back(item);
@@ -89,6 +94,16 @@ where
     /// Return an `Iterator` over mutable references to elements ordered from oldest to newest.
     pub fn iter_mut(&mut self) -> IterMut<T> {
         self.inner.iter_mut()
+    }
+
+    pub fn get_inspect(&self) -> &inspect::Node {
+        &self.inspect
+    }
+
+    /// A monotonic count of the number of items that have been inserted into the data structure
+    /// over the lifetime of the queue. The count is 1 after the first element is inserted.
+    pub fn get_monotonic_count(&self) -> usize {
+        self.monotonic_count
     }
 
     #[cfg(test)]
@@ -175,10 +190,13 @@ mod tests {
         assert!(!queue.eviction_size_minimum_reached(&0.into()));
         assert_eq!(to_values(&mut queue), vec![]);
         assert_eq!(queue.len(), 0);
+        assert_eq!(queue.get_monotonic_count(), 0);
         queue.insert(0.into());
         assert!(!queue.eviction_size_minimum_reached(&1.into()));
+        assert_eq!(queue.get_monotonic_count(), 1);
         queue.insert(1.into());
         queue.insert(2.into());
+        assert_eq!(queue.get_monotonic_count(), 3);
         assert!(queue.eviction_size_minimum_reached(&3.into()));
         assert_eq!(to_values(&mut queue), vec![0, 1, 2]);
         assert_eq!(queue.len(), 3);
@@ -188,6 +206,7 @@ mod tests {
         queue.insert(4.into());
         assert_eq!(to_values(&mut queue), vec![2, 3, 4]);
         assert_eq!(queue.len(), 3);
+        assert_eq!(queue.get_monotonic_count(), 5);
 
         // create a queue with size 0 and test inserting elements into it
         let mut queue: BoundedQueue<Record> =
