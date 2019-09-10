@@ -83,7 +83,7 @@ These arguments are presented as a series of files from `0` onward.
 ## [Capability Routing](#capability-routing)
 
 You can make the **/hub** directory available in any component's incoming namespace
-with the appriorate declaration in the component's manifest.
+with the appropriate declaration in the component's manifest.
 
 ### Basic Example
 
