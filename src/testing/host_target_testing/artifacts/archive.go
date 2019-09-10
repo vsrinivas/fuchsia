@@ -9,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"fuchsia.googlesource.com/host_target_testing/util"
 )
@@ -37,14 +36,14 @@ func NewArchive(lkgbPath string, artifactsPath string, dir string) *Archive {
 	}
 }
 
+// GetBuilderByName looks up a build artifact by the given name.
+func (a *Archive) GetBuilder(name string) *Builder {
+	return &Builder{archive: a, name: name}
+}
+
 // GetBuildByName looks up a build artifact by the given name.
 func (a *Archive) GetBuildByName(name string) (*Build, error) {
-	id, err := a.LookupBuildID(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return a.GetBuildByID(id)
+	return a.GetBuilder(name).GetLatestBuild()
 }
 
 // GetBuildByID looks up a build artifact by the given id.
@@ -64,11 +63,7 @@ func (a *Archive) GetBuildByID(id string) (*Build, error) {
 
 // LookupBuildID looks up the latest build id for a given builder.
 func (a *Archive) LookupBuildID(builderName string) (string, error) {
-	stdout, stderr, err := util.RunCommand(a.lkgbPath, builderName)
-	if err != nil {
-		return "", fmt.Errorf("lkgb failed: %s: %s", err, string(stderr))
-	}
-	return strings.TrimRight(string(stdout), "\n"), nil
+	return a.GetBuilder(builderName).GetLatestBuildID()
 }
 
 // Download an artifact from the build id `buildID` named `src` and write it

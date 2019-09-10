@@ -163,12 +163,23 @@ func (c *Config) GetDowngradeBuildID() (string, error) {
 	return c.downgradeBuildID, nil
 }
 
+func (c *Config) GetUpgradeBuilder() (*artifacts.Builder, error) {
+	if c.upgradeBuilderName == "" {
+		return nil, fmt.Errorf("upgrade builder not specified")
+	}
+
+	return c.BuildArchive().GetBuilder(c.upgradeBuilderName), nil
+}
+
 func (c *Config) GetUpgradeBuildID() (string, error) {
 	if c.upgradeBuilderName != "" && c.upgradeBuildID == "" {
-		a := c.BuildArchive()
-		id, err := a.LookupBuildID(c.upgradeBuilderName)
+		b, err := c.GetUpgradeBuilder()
 		if err != nil {
-			return "", fmt.Errorf("failed to lookup build id: %s", err)
+			return "", err
+		}
+		id, err := b.GetLatestBuildID()
+		if err != nil {
+			return "", fmt.Errorf("failt to lookup build id: %s", err)
 		}
 		c.upgradeBuildID = id
 	}

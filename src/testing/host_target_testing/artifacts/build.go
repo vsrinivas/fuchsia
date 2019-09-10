@@ -142,3 +142,7 @@ func (b *Build) GetSystemSnapshot() (*SystemSnapshot, error) {
 
 	return b.snapshot, nil
 }
+
+func (b *Build) String() string {
+	return b.ID
+}
