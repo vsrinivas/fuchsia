@@ -10,6 +10,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/lib/fxl/macros.h"
 
@@ -24,9 +25,11 @@ class ValidationTest : public ::gtest::TestLoopFixture {
 
  protected:
   CloudProviderSyncPtr cloud_provider_;
+  std::vector<uint8_t> GetUniqueRandomId();
 
  private:
   std::unique_ptr<sys::ComponentContext> component_context_;
+  rng::TestRandom random_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ValidationTest);
 };

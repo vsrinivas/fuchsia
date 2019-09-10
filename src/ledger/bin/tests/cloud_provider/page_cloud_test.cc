@@ -153,12 +153,12 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
 
 TEST_F(PageCloudTest, GetPageCloud) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 }
 
 TEST_F(PageCloudTest, GetNoCommits) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   std::unique_ptr<cloud_provider::CommitPack> commit_pack;
   std::unique_ptr<PositionToken> token;
@@ -174,7 +174,7 @@ TEST_F(PageCloudTest, GetNoCommits) {
 
 TEST_F(PageCloudTest, AddAndGetCommits) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
   CommitPack commit_pack;
@@ -197,7 +197,7 @@ TEST_F(PageCloudTest, AddAndGetCommits) {
 
 TEST_F(PageCloudTest, GetCommitsByPositionToken) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add two commits.
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
@@ -232,7 +232,7 @@ TEST_F(PageCloudTest, GetCommitsByPositionToken) {
 
 TEST_F(PageCloudTest, AddAndGetObjects) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
@@ -257,7 +257,7 @@ TEST_F(PageCloudTest, AddAndGetObjects) {
 
 TEST_F(PageCloudTest, AddSameObjectTwice) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   fsl::SizedVmo data;
   ASSERT_TRUE(fsl::VmoFromString("bazinga!", &data));
@@ -277,7 +277,7 @@ TEST_F(PageCloudTest, AddSameObjectTwice) {
 
 TEST_F(PageCloudTest, WatchAndReceiveCommits) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
   Status status = Status::INTERNAL_ERROR;
   fidl::Binding<PageCloudWatcher> binding(this);
   PageCloudWatcherPtr watcher;
@@ -307,7 +307,7 @@ TEST_F(PageCloudTest, WatchAndReceiveCommits) {
 // registered.
 TEST_F(PageCloudTest, WatchWithBacklog) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
   Status status = Status::INTERNAL_ERROR;
 
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
@@ -332,7 +332,7 @@ TEST_F(PageCloudTest, WatchWithBacklog) {
 
 TEST_F(PageCloudTest, WatchWithPositionToken) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add two commits.
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
@@ -379,7 +379,7 @@ TEST_F(PageCloudTest, WatchWithPositionToken) {
 
 TEST_F(PageCloudTest, WatchWithPositionTokenBatch) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add two commits.
   std::vector<CommitPackEntry> entries{{"id0", "data0"}, {"id1", "data1"}};
@@ -417,7 +417,7 @@ TEST_F(PageCloudTest, WatchWithPositionTokenBatch) {
 
 TEST_F(PageCloudTest, Diff_GetDiffFromEmpty) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add one commit, with a diff from the empty commit.
   Diff diff;
@@ -456,7 +456,7 @@ TEST_F(PageCloudTest, Diff_GetDiffFromEmpty) {
 
 TEST_F(PageCloudTest, Diff_GetMultipleDiff) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add one commit, with a diff from the empty commit.
   Diff diff;
@@ -514,7 +514,7 @@ TEST_F(PageCloudTest, Diff_GetMultipleDiff) {
 
 TEST_F(PageCloudTest, DiffCompat_GetNoDiff) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add one commit without diff.
   Commit commit;
@@ -545,7 +545,7 @@ TEST_F(PageCloudTest, DiffCompat_GetNoDiff) {
 
 TEST_F(PageCloudTest, DiffCompat_GetDiffFromNoDiff) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add one commit without diff.
   Commit commit;
@@ -595,7 +595,7 @@ TEST_F(PageCloudTest, DiffCompat_GetDiffFromNoDiff) {
 
 TEST_F(PageCloudTest, Diff_GetDiffIntermediateCommit) {
   PageCloudSyncPtr page_cloud;
-  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), convert::ToArray("page_id"), &page_cloud));
+  ASSERT_TRUE(GetPageCloud(convert::ToArray("app_id"), GetUniqueRandomId(), &page_cloud));
 
   // Add one commit, with a diff from the empty commit.
   Diff diff;

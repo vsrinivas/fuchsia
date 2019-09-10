@@ -55,67 +55,74 @@ TEST_F(DeviceSetTest, GetDeviceSet) {
 }
 
 TEST_F(DeviceSetTest, CheckMissingFingerprint) {
+  const std::vector<uint8_t> fingerprint = GetUniqueRandomId();
+
   DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(device_set->CheckFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->CheckFingerprint(fingerprint, &status), ZX_OK);
   EXPECT_EQ(status, Status::NOT_FOUND);
 }
 
 TEST_F(DeviceSetTest, SetAndCheckFingerprint) {
+  const std::vector<uint8_t> fingerprint = GetUniqueRandomId();
+
   DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(device_set->SetFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->SetFingerprint(fingerprint, &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
-  ASSERT_EQ(device_set->CheckFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->CheckFingerprint(fingerprint, &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 }
 
 TEST_F(DeviceSetTest, WatchMisingFingerprint) {
+  const std::vector<uint8_t> fingerprint = GetUniqueRandomId();
+
   DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
   Status status = Status::INTERNAL_ERROR;
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(device_set->SetWatcher(convert::ToArray("bazinga"), std::move(watcher), &status),
-            ZX_OK);
+  ASSERT_EQ(device_set->SetWatcher(fingerprint, std::move(watcher), &status), ZX_OK);
   EXPECT_EQ(status, Status::NOT_FOUND);
 }
 
 TEST_F(DeviceSetTest, SetAndWatchFingerprint) {
+  const std::vector<uint8_t> fingerprint = GetUniqueRandomId();
+
   DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  EXPECT_EQ(device_set->SetFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
+  EXPECT_EQ(device_set->SetFingerprint(fingerprint, &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(device_set->SetWatcher(convert::ToArray("bazinga"), std::move(watcher), &status),
-            ZX_OK);
+  ASSERT_EQ(device_set->SetWatcher(fingerprint, std::move(watcher), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 }
 
 TEST_F(DeviceSetTest, EraseWhileWatching) {
+  const std::vector<uint8_t> fingerprint = GetUniqueRandomId();
+
   DeviceSetSyncPtr device_set;
   ASSERT_TRUE(GetDeviceSet(&device_set));
 
   Status status = Status::INTERNAL_ERROR;
-  ASSERT_EQ(device_set->SetFingerprint(convert::ToArray("bazinga"), &status), ZX_OK);
+  ASSERT_EQ(device_set->SetFingerprint(fingerprint, &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
   fidl::Binding<DeviceSetWatcher> binding(this);
   DeviceSetWatcherPtr watcher;
   binding.Bind(watcher.NewRequest());
-  ASSERT_EQ(device_set->SetWatcher(convert::ToArray("bazinga"), std::move(watcher), &status),
-            ZX_OK);
+  ASSERT_EQ(device_set->SetWatcher(fingerprint, std::move(watcher), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
 
   EXPECT_EQ(on_cloud_erased_calls_, 0);
