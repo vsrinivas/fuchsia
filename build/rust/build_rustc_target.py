@@ -307,8 +307,9 @@ def main():
     fix_depfile(args.depfile, os.getcwd(), args.output_file)
 
     stdout, stderr = build_job.communicate()
-    if build_job.returncode != 0:
+    if stdout or stderr:
         print(stdout + stderr)
+    if build_job.returncode != 0:
         return build_job.returncode
 
 if __name__ == '__main__':
