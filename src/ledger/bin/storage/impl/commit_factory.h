@@ -42,10 +42,18 @@ class CommitFactory : public LiveCommitTracker {
   void Empty(PageStorage* page_storage,
              fit::function<void(Status, std::unique_ptr<const Commit>)> callback);
 
+  // Adds these commits to the list of current heads. In |GetHeads()| the heads
+  // will be returned ordered by their timestamp, which is the |zx::time_utc|
+  // element of each pair.
+  void AddHeads(std::vector<std::unique_ptr<const Commit>> heads);
+
+  // Removes these commits from the set of live heads.
+  void RemoveHeads(const std::vector<CommitId>& commit_id);
+
+  // Returns the current heads of a page, ordered by their associated time.
+  std::vector<std::unique_ptr<const Commit>> GetHeads() const;
+
   // LiveCommitTracker:
-  void AddHeads(std::vector<std::unique_ptr<const Commit>> heads) override;
-  void RemoveHeads(const std::vector<CommitId>& commit_id) override;
-  std::vector<std::unique_ptr<const Commit>> GetHeads() const override;
   std::vector<std::unique_ptr<const Commit>> GetLiveCommits() const override;
 
  private:

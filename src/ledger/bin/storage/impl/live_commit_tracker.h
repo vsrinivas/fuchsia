@@ -17,17 +17,6 @@ class LiveCommitTracker {
  public:
   virtual ~LiveCommitTracker(){};
 
-  // Adds these commits to the list of current heads. In |GetHeads()| the heads
-  // will be returned ordered by their timestamp, which is the |zx::time_utc|
-  // element of each pair.
-  virtual void AddHeads(std::vector<std::unique_ptr<const Commit>> heads) = 0;
-
-  // Removes these commits from the set of live heads.
-  virtual void RemoveHeads(const std::vector<CommitId>& commit_id) = 0;
-
-  // Returns the current heads of a page, ordered by their associated time.
-  virtual std::vector<std::unique_ptr<const Commit>> GetHeads() const = 0;
-
   // Returns a copy of every currently live/tracked commit.
   virtual std::vector<std::unique_ptr<const Commit>> GetLiveCommits() const = 0;
 };

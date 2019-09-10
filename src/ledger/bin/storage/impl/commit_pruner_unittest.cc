@@ -31,16 +31,6 @@ class FakeCommitTracker : public LiveCommitTracker {
 
   ~FakeCommitTracker() override{};
 
-  void AddHeads(std::vector<std::unique_ptr<const Commit>> heads) override { FXL_NOTIMPLEMENTED(); }
-
-  void RemoveHeads(const std::vector<CommitId>& commit_id) override { FXL_NOTIMPLEMENTED(); }
-
-  // Returns the current heads of a page, ordered by their associated time.
-  std::vector<std::unique_ptr<const Commit>> GetHeads() const override {
-    FXL_NOTIMPLEMENTED();
-    return {};
-  }
-
   // Returns a copy of every currently live/tracked commit.
   std::vector<std::unique_ptr<const Commit>> GetLiveCommits() const override {
     std::vector<std::unique_ptr<const Commit>> result;
