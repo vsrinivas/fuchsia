@@ -11,6 +11,7 @@
 #include <gmock/gmock.h>
 
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
@@ -39,6 +40,10 @@ testing::Matcher<const Entry&> MatchesEntry(
 // Matcher that matches a Commit against its expected ID and parent IDs.
 testing::Matcher<const Commit&> MatchesCommit(const CommitId& id,
                                               const std::set<CommitId>& parent_ids);
+
+// Matcher that matches a CommitIdAndBytes against its expected id and bytes.
+testing::Matcher<const PageStorage::CommitIdAndBytes&> MatchesCommitIdAndBytes(
+    testing::Matcher<std::string> id, testing::Matcher<std::string> bytes);
 
 }  // namespace storage
 

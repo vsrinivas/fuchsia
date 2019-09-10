@@ -7,8 +7,10 @@
 
 #include <lib/fit/function.h>
 
-#include <list>
+#include <map>
+#include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "src/ledger/bin/p2p_provider/public/types.h"
@@ -53,14 +55,19 @@ class CommitBatch {
   void MarkPeerReady();
 
  private:
-  // Adds the commits to local storage if possible.
+  // Adds the commits to local storage if ready. This is only valid to call once all parents that
+  // are not in storage are present in the commits map.
   void AddCommits();
 
   p2p_provider::P2PClientId const device_;
   Delegate* const delegate_;
   storage::PageStorage* const storage_;
   bool peer_is_ready_ = false;
-  std::list<storage::PageStorage::CommitIdAndBytes> commits_;
+  // Map from commit ids of commits to be added to commit data and generation.
+  std::map<storage::CommitId, std::pair<std::string, uint64_t>> commits_;
+
+  // The set of missing commits that have been requested from the peer.
+  std::set<storage::CommitId> requested_commits_;
   fit::closure on_empty_;
 
   // This must be the last member of the class.

@@ -30,8 +30,10 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 
+using storage::MatchesCommitIdAndBytes;
 using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::SizeIs;
@@ -148,6 +150,14 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
     commits_from_sync_.emplace_back(std::move(ids_and_bytes), std::move(callback));
   }
 
+  void GetGenerationAndMissingParents(
+      const storage::PageStorage::CommitIdAndBytes& ids_and_bytes,
+      fit::function<void(ledger::Status, uint64_t, std::vector<storage::CommitId>)> callback)
+      override {
+    const auto& [generation, missing_parents] = generation_and_missing_parents_[ids_and_bytes.id];
+    callback(ledger::Status::OK, generation, missing_parents);
+  }
+
   void AddCommitWatcher(storage::CommitWatcher* watcher) override {
     FXL_DCHECK(!watcher_);
     watcher_ = watcher;
@@ -166,6 +176,8 @@ class FakePageStorage : public storage::PageStorageEmptyImpl {
                         fit::function<void(ledger::Status, std::vector<storage::CommitId>)>>>
       commits_from_sync_;
   ledger::Status mark_synced_to_peer_status = ledger::Status::OK;
+  std::map<storage::CommitId, std::pair<uint64_t, std::vector<storage::CommitId>>>
+      generation_and_missing_parents_;
 
  private:
   async_dispatcher_t* const dispatcher_;
@@ -946,14 +958,13 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
   ConnectToDevice(&page_communicator_1, MakeP2PClientId(2u), "ledger", "page");
 
   FakePageStorage storage_2(dispatcher(), "page");
+  storage_2.generation_and_missing_parents_["id 2"] = {1, {"id 1"}};
   PageCommunicatorImpl page_communicator_2(&coroutine_service_, &storage_2, &storage_2, "ledger",
                                            "page", &mesh);
   page_communicator_2.Start();
   ConnectToDevice(&page_communicator_2, MakeP2PClientId(1u), "ledger", "page");
   RunLoopUntilIdle();
   mesh.messages_.clear();
-
-  FXL_LOG(INFO) << "Done with itinit";
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   commits.emplace_back(std::make_unique<FakeCommit>("id 1", "data 1"));
@@ -996,11 +1007,9 @@ TEST_F(PageCommunicatorImplTest, CommitUpdate) {
 
   // The other side's storage has the commit.
   ASSERT_EQ(storage_2.commits_from_sync_.size(), 1u);
-  ASSERT_EQ(storage_2.commits_from_sync_[0].first.size(), 2u);
-  EXPECT_EQ(storage_2.commits_from_sync_[0].first[0].id, "id 1");
-  EXPECT_EQ(storage_2.commits_from_sync_[0].first[0].bytes, "data 1");
-  EXPECT_EQ(storage_2.commits_from_sync_[0].first[1].id, "id 2");
-  EXPECT_EQ(storage_2.commits_from_sync_[0].first[1].bytes, "data 2");
+  ASSERT_THAT(storage_2.commits_from_sync_[0].first,
+              ElementsAre(MatchesCommitIdAndBytes("id 1", "data 1"),
+                          MatchesCommitIdAndBytes("id 2", "data 2")));
 
   // Verify we don't crash on response from storage
   storage_2.commits_from_sync_[0].second(ledger::Status::OK, {});
@@ -1140,6 +1149,8 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   FakePageStorage storage_2(dispatcher(), "page");
   PageCommunicatorImpl page_communicator_2(&coroutine_service_, &storage_2, &storage_2, "ledger",
                                            "page", &mesh);
+  storage_2.generation_and_missing_parents_["id 1"] = {1, {"id 0"}};
+  storage_2.generation_and_missing_parents_["id 2"] = {2, {"id 1"}};
   page_communicator_2.Start();
 
   ConnectToDevice(&page_communicator_1, MakeP2PClientId(2u), "ledger", "page");
@@ -1178,12 +1189,7 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   }
   RunLoopUntilIdle();
 
-  // PageCommunicator should have tried to add the commit.
-  ASSERT_EQ(storage_2.commits_from_sync_.size(), 1u);
-  EXPECT_EQ(storage_2.commits_from_sync_[0].first.size(), 2u);
-  // Return that we miss one commit
-  storage_2.commits_from_sync_[0].second(ledger::Status::INTERNAL_NOT_FOUND, {"id 0"});
-
+  EXPECT_THAT(storage_2.commits_from_sync_, IsEmpty());
   // |page_communicator_2| should ask for the base, "id 0" commit.
   ASSERT_EQ(mesh.messages_.size(), 2u);
   EXPECT_EQ(mesh.messages_[1].first, MakeP2PClientId(1u));
@@ -1229,17 +1235,14 @@ TEST_F(PageCommunicatorImplTest, CommitBatchUpdate) {
   RunLoopUntilIdle();
 
   // Verify that we are truely adding the whole commit batch.
-  ASSERT_EQ(storage_2.commits_from_sync_.size(), 2u);
-  EXPECT_EQ(storage_2.commits_from_sync_[1].first.size(), 3u);
-  EXPECT_EQ(storage_2.commits_from_sync_[1].first[0].id, "id 0");
-  EXPECT_EQ(storage_2.commits_from_sync_[1].first[0].bytes, "data 0");
-  EXPECT_EQ(storage_2.commits_from_sync_[1].first[1].id, "id 1");
-  EXPECT_EQ(storage_2.commits_from_sync_[1].first[1].bytes, "data 1");
-  EXPECT_EQ(storage_2.commits_from_sync_[1].first[2].id, "id 2");
-  EXPECT_EQ(storage_2.commits_from_sync_[1].first[2].bytes, "data 2");
+  ASSERT_THAT(storage_2.commits_from_sync_, SizeIs(1));
+  EXPECT_THAT(storage_2.commits_from_sync_[0].first,
+              ElementsAre(MatchesCommitIdAndBytes("id 0", "data 0"),
+                          MatchesCommitIdAndBytes("id 1", "data 1"),
+                          MatchesCommitIdAndBytes("id 2", "data 2")));
 
   // Verify we don't crash on response from storage
-  storage_2.commits_from_sync_[1].second(ledger::Status::OK, {});
+  storage_2.commits_from_sync_[0].second(ledger::Status::OK, {});
 }
 
 class FakePageStorageDelayingMarkSyncedToPeer : public FakePageStorage {
@@ -1335,10 +1338,9 @@ TEST_F(PageCommunicatorImplTest, CommitBatchDelayedUntilPeerReady) {
   mesh.messages_.clear();
 
   // The commit is added.
-  EXPECT_THAT(storage.commits_from_sync_, SizeIs(1));
-  EXPECT_THAT(storage.commits_from_sync_[0].first, SizeIs(1));
-  EXPECT_EQ(storage.commits_from_sync_[0].first[0].id, "id");
-  EXPECT_EQ(storage.commits_from_sync_[0].first[0].bytes, "data");
+  ASSERT_THAT(storage.commits_from_sync_, SizeIs(1));
+  EXPECT_THAT(storage.commits_from_sync_[0].first,
+              ElementsAre(MatchesCommitIdAndBytes("id", "data")));
 
   // Calling GetObject now sends a message to device 2.
   page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,

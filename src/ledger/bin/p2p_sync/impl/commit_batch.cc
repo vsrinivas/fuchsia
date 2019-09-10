@@ -5,6 +5,13 @@
 #include "src/ledger/bin/p2p_sync/impl/commit_batch.h"
 
 #include <lib/callback/scoped_callback.h>
+#include <lib/callback/waiter.h>
+
+#include <utility>
+#include <vector>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace p2p_sync {
 
@@ -15,17 +22,64 @@ CommitBatch::CommitBatch(p2p_provider::P2PClientId device, Delegate* delegate,
 void CommitBatch::set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
 void CommitBatch::AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes> new_commits) {
-  // New commits are supposed to be the parents of the already inserted ones. We
-  // insert them before to ensure parents are processed before children.
-  //
-  // This insertion may be suboptimal in some cases, for instance when a merge
-  // commit's parents are related to each other. In that case, we may request
-  // (and insert) multiple times the same commit. A better way would be to sort
-  // these commits by generation before inserting, but we don't have access to
-  // this information here.
-  commits_.insert(commits_.begin(), std::make_move_iterator(new_commits.begin()),
-                  std::make_move_iterator(new_commits.end()));
-  AddCommits();
+  // Ask the storage for the generation and missing parents of the new commits.
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<ledger::Status, storage::PageStorage::CommitIdAndBytes,
+                                           uint64_t, std::vector<storage::CommitId>>>(
+          ledger::Status::OK);
+
+  for (auto& commit : new_commits) {
+    if (commits_.find(commit.id) != commits_.end()) {
+      continue;
+    }
+    auto commit_owner = std::make_unique<storage::PageStorage::CommitIdAndBytes>(std::move(commit));
+    auto& commit_ref = *commit_owner.get();
+    storage_->GetGenerationAndMissingParents(
+        commit_ref, [commit_owner = std::move(commit_owner), callback = waiter->NewCallback()](
+                        ledger::Status status, uint64_t generation,
+                        std::vector<storage::CommitId> parents) mutable {
+          callback(status, std::move(*commit_owner), generation, std::move(parents));
+        });
+  }
+
+  waiter->Finalize(callback::MakeScoped(
+      weak_factory_.GetWeakPtr(),
+      [this](ledger::Status status,
+             std::vector<std::tuple<storage::PageStorage::CommitIdAndBytes, uint64_t,
+                                    std::vector<storage::CommitId>>>
+                 commits_to_add) {
+        if (status != ledger::Status::OK) {
+          FXL_LOG(ERROR) << "Error while getting commit parents and generations, aborting batch: "
+                         << status;
+          if (on_empty_) {
+            on_empty_();
+          }
+          return;
+        }
+        // Collect missing parents and add the commits to the batch.
+        std::set<storage::CommitId> all_missing_parents;
+        for (auto& [commit, generation, missing_parents] : commits_to_add) {
+          std::move(missing_parents.begin(), missing_parents.end(),
+                    std::inserter(all_missing_parents, all_missing_parents.begin()));
+          requested_commits_.erase(commit.id);
+          commits_[std::move(commit.id)] = std::make_pair(std::move(commit.bytes), generation);
+        }
+        // Some missing parents may already be requested or present in the batch.
+        std::vector<storage::CommitId> new_commits_to_request;
+        for (const storage::CommitId& missing : all_missing_parents) {
+          if (commits_.find(missing) != commits_.end()) {
+            continue;
+          }
+          if (requested_commits_.insert(missing).second) {
+            new_commits_to_request.push_back(missing);
+          }
+        }
+        if (!new_commits_to_request.empty()) {
+          delegate_->RequestCommits(device_, std::move(new_commits_to_request));
+        }
+        // Attempt to add the batch.
+        AddCommits();
+      }));
 }
 
 void CommitBatch::MarkPeerReady() {
@@ -36,32 +90,40 @@ void CommitBatch::MarkPeerReady() {
 }
 
 void CommitBatch::AddCommits() {
-  if (commits_.empty() || !peer_is_ready_) {
+  if (!peer_is_ready_ || commits_.empty() || !requested_commits_.empty()) {
     return;
   }
 
-  std::vector<storage::PageStorage::CommitIdAndBytes> out;
-  out.reserve(commits_.size());
-  for (const auto& commit : commits_) {
-    out.emplace_back(commit.id, commit.bytes);
-  }
+  // All parents are present, either in storage or in the batch. Sort the commits by generation: if
+  // the commit tree is valid, this will put parents before children; otherwise the batch will be
+  // rejected by the storage.
+  std::vector<std::pair<uint64_t, storage::PageStorage::CommitIdAndBytes>> commits_and_generation;
+  commits_and_generation.reserve(commits_.size());
+  std::transform(commits_.begin(), commits_.end(), std::back_inserter(commits_and_generation),
+                 [](auto& entry) {
+                   auto& [id, data] = entry;
+                   auto& [bytes, generation] = data;
+                   return std::make_pair(generation, storage::PageStorage::CommitIdAndBytes(
+                                                         std::move(id), std::move(bytes)));
+                 });
+  commits_.clear();
+  std::sort(commits_and_generation.begin(), commits_and_generation.end(),
+            [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+
+  std::vector<storage::PageStorage::CommitIdAndBytes> commits;
+  commits.reserve(commits_and_generation.size());
+  std::transform(
+      commits_and_generation.begin(), commits_and_generation.end(), std::back_inserter(commits),
+      [](auto& commit_and_generation) { return std::move(commit_and_generation.second); });
 
   storage_->AddCommitsFromSync(
-      std::move(out), storage::ChangeSource::P2P,
+      std::move(commits), storage::ChangeSource::P2P,
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this](ledger::Status status, std::vector<storage::CommitId> missing_ids) {
-            if (status == ledger::Status::OK) {
-              if (on_empty_) {
-                on_empty_();
-              }
-              return;
+            if (status != ledger::Status::OK) {
+              FXL_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
             }
-            if (status == ledger::Status::INTERNAL_NOT_FOUND && !missing_ids.empty()) {
-              delegate_->RequestCommits(device_, std::move(missing_ids));
-              return;
-            }
-            FXL_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
             if (on_empty_) {
               on_empty_();
             }

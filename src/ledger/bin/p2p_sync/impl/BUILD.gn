@@ -54,6 +54,7 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "commit_batch_unittest.cc",
     "encoding_unittest.cc",
     "page_communicator_impl_unittest.cc",
     "user_communicator_impl_unittest.cc",

@@ -16,6 +16,11 @@ PageStorage::CommitIdAndBytes::CommitIdAndBytes(CommitIdAndBytes&& other) noexce
 PageStorage::CommitIdAndBytes& PageStorage::CommitIdAndBytes::operator=(
     CommitIdAndBytes&& other) noexcept = default;
 
+bool operator==(const PageStorage::CommitIdAndBytes& lhs,
+                const PageStorage::CommitIdAndBytes& rhs) {
+  return std::tie(lhs.id, lhs.bytes) == std::tie(rhs.id, rhs.bytes);
+}
+
 PageStorage::Location::Location() : tag_(Tag::LOCAL) {}
 
 PageStorage::Location PageStorage::Location::Local() { return Location(Tag::LOCAL, ""); }

@@ -297,6 +297,7 @@ class PageStorage : public PageSyncClient {
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorage);
 };
 
+bool operator==(const PageStorage::CommitIdAndBytes& lhs, const PageStorage::CommitIdAndBytes& rhs);
 bool operator==(const PageStorage::Location& lhs, const PageStorage::Location& rhs);
 bool operator!=(const PageStorage::Location& lhs, const PageStorage::Location& rhs);
 bool operator<(const PageStorage::Location& lhs, const PageStorage::Location& rhs);

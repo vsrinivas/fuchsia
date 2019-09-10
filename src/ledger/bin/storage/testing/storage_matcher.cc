@@ -7,6 +7,7 @@
 #include <set>
 
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 
 using testing::_;
@@ -55,6 +56,12 @@ testing::Matcher<const Commit&> MatchesCommit(const CommitId& id,
                      return parent_ids;
                    },
                    UnorderedElementsAreArray(parent_ids)));
+}
+
+testing::Matcher<const PageStorage::CommitIdAndBytes&> MatchesCommitIdAndBytes(
+    testing::Matcher<std::string> id, testing::Matcher<std::string> bytes) {
+  return AllOf(Field(&PageStorage::CommitIdAndBytes::id, id),
+               Field(&PageStorage::CommitIdAndBytes::bytes, bytes));
 }
 
 }  // namespace storage
