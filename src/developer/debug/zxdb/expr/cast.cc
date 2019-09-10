@@ -46,8 +46,7 @@ bool IsSignedBaseType(const Type* type) {
   const BaseType* base_type = type->AsBaseType();
   if (!base_type)
     return false;
-  int kind = base_type->base_type();
-  return kind == BaseType::kBaseTypeSigned || kind == BaseType::kBaseTypeSignedChar;
+  return BaseType::IsSigned(base_type->base_type());
 }
 
 bool IsBooleanBaseType(const Type* type) {

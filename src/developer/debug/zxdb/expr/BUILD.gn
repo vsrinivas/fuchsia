@@ -4,6 +4,8 @@
 
 static_library("expr") {
   sources = [
+    "bitfield.cc",
+    "bitfield.h",
     "builtin_types.cc",
     "builtin_types.h",
     "cast.cc",
@@ -94,6 +96,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "bitfield_unittest.cc",
     "builtin_types_unittest.cc",
     "cast_unittest.cc",
     "eval_context_impl_unittest.cc",

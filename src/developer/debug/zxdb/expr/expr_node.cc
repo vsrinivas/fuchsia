@@ -57,6 +57,8 @@ void AddressOfExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallba
       cb(value);
     } else if (value.value().source().type() != ExprValueSource::Type::kMemory) {
       cb(Err("Can't take the address of a temporary."));
+    } else if (value.value().source().bit_size() != 0) {
+      cb(Err("Can't take the address of a bitfield."));
     } else {
       // Construct a pointer type to the variable.
       auto ptr_type =

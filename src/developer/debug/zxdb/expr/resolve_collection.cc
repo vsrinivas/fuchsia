@@ -4,12 +4,14 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 
+#include "src/developer/debug/zxdb/expr/bitfield.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -93,20 +95,34 @@ Err GetMemberType(const fxl::RefPtr<EvalContext>& context, const Collection* col
 void DoResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                               const Collection* pointed_to_type, const FoundMember& member,
                               EvalCallback cb) {
-  Err err = base_ptr.EnsureSizeIs(kTargetPointerSize);
-  if (err.has_error())
+  if (Err err = base_ptr.EnsureSizeIs(kTargetPointerSize); err.has_error())
     return cb(err);
 
-  fxl::RefPtr<Type> member_type;
-  uint32_t member_size = 0;
-  err = GetMemberType(context, pointed_to_type, member.data_member(), &member_type, &member_size);
-  if (err.has_error())
-    return cb(err);
+  if (member.data_member()->is_bitfield()) {
+    // The bitfield case is complicated. Get the full pointed-to collection value and then resolve
+    // the member access using "." mode to re-use the non-pointer codepath. This avoids duplicating
+    // the bitfield logic. (This is actually valid logic for every case but fetches unnecessary
+    // memory which we avoid in the common case below).
+    ResolvePointer(context, base_ptr,
+                   [context, member, cb = std::move(cb)](ErrOrValue value) mutable {
+                     if (value.has_error())
+                       return cb(std::move(value));
+                     cb(ResolveBitfieldMember(context, value.value(), member));
+                   });
+  } else {
+    // Common case for non-bitfield members. We can avoid fetching the entire structure (which can
+    // be very large in some edge cases) and just get fetch the memory for the item we need.
+    fxl::RefPtr<Type> member_type;
+    uint32_t member_size = 0;
+    Err err =
+        GetMemberType(context, pointed_to_type, member.data_member(), &member_type, &member_size);
+    if (err.has_error())
+      return cb(err);
 
-  TargetPointer base_address = base_ptr.GetAs<TargetPointer>();
-
-  ResolvePointer(context, base_address + member.data_member_offset(), std::move(member_type),
-                 std::move(cb));
+    TargetPointer base_address = base_ptr.GetAs<TargetPointer>();
+    ResolvePointer(context, base_address + member.data_member_offset(), std::move(member_type),
+                   std::move(cb));
+  }
 }
 
 // Extracts an embedded type inside of a base. This can be used for finding collection data members
@@ -133,6 +149,10 @@ ErrOrValue ExtractSubType(const fxl::RefPtr<EvalContext>& context, const ExprVal
 // offset).
 ErrOrValue DoResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& base,
                                     const FoundMember& member) {
+  // Bitfields get special handling.
+  if (member.data_member()->is_bitfield())
+    return ResolveBitfieldMember(context, base, member);
+
   fxl::RefPtr<Type> concrete_type = base.GetConcreteType(context.get());
   const Collection* coll = nullptr;
   if (!base.type() || !(coll = concrete_type->AsCollection()))
@@ -153,7 +173,8 @@ void DoResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& b
                      const FoundMember& member, EvalCallback cb) {
   FXL_DCHECK(member.data_member());
   if (member.data_member()->is_external()) {
-    // A forward-declared static member.
+    // A forward-declared static member. In C++ static members can't be bitfields so we don't handle
+    // them.
     return context->GetVariableValue(
         RefPtrTo(member.data_member()),
         [cb = std::move(cb)](ErrOrValue value, fxl::RefPtr<Symbol>) mutable {

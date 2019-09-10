@@ -7,6 +7,7 @@
 #include <type_traits>
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/bitfield.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
@@ -44,14 +45,15 @@ namespace {
 
 void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left_value,
                   const ExprValue& right_value, EvalCallback cb) {
+  if (left_value.data().size() == 0)
+    return cb(Err("Can't assign 0-size value."));
+
   // Note: the calling code will have evaluated the value of the left node. Often this isn't
   // strictly necessary: we only need the "source", but optimizing in that way would complicate
   // things.
   const ExprValueSource& dest = left_value.source();
-  if (dest.type() == ExprValueSource::Type::kTemporary) {
-    cb(Err("Can't assign to a temporary."));
-    return;
-  }
+  if (dest.type() == ExprValueSource::Type::kTemporary)
+    return cb(Err("Can't assign to a temporary."));
 
   // The coerced value will be the result. It should have the "source" of the left-hand-side since
   // the location being assigned to doesn't change.
@@ -64,14 +66,20 @@ void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left
   std::vector<uint8_t> data = coerced.value().data();
 
   // Update the memory with the new data. The result of the expression is the coerced value.
-  context->GetDataProvider()->WriteMemory(
-      dest.address(), std::move(data),
-      [coerced = coerced.take_value(), cb = std::move(cb)](const Err& err) mutable {
-        if (err.has_error())
-          cb(err);
-        else
-          cb(coerced);
-      });
+  auto write_callback = [coerced = coerced.take_value(),
+                         cb = std::move(cb)](const Err& err) mutable {
+    if (err.has_error())
+      cb(err);
+    else
+      cb(coerced);
+  };
+  if (dest.is_bitfield()) {
+    WriteBitfieldToMemory(context, dest, std::move(data), std::move(write_callback));
+  } else {
+    // Normal case for non-bitfields.
+    context->GetDataProvider()->WriteMemory(dest.address(), std::move(data),
+                                            std::move(write_callback));
+  }
 }
 
 // This is used as the return type for comparison operations.

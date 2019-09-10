@@ -214,10 +214,6 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   EXPECT_EQ("int", base->GetAssignedName());
   // Try to be flexible about the size of ints on the platform.
   EXPECT_TRUE(base->byte_size() == 4 || base->byte_size() == 8);
-
-  // This is not a bitfield.
-  EXPECT_EQ(0u, base->bit_size());
-  EXPECT_EQ(0u, base->bit_offset());
 }
 
 TEST(DwarfSymbolFactory, RValueRef) {

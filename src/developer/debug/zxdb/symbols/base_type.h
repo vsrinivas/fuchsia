@@ -49,15 +49,6 @@ class BaseType final : public Type {
   int base_type() const { return base_type_; }
   void set_base_type(int type) { base_type_ = type; }
 
-  // Bitfield support.
-  uint32_t bit_size() const { return bit_size_; }
-  void set_bit_size(uint32_t bs) { bit_size_ = bs; }
-
-  // DWARF defines the bit offset as the "number of bits from the beginning of the containing entity
-  // to the beginning of the data member." The bit size will be 0 for non-bitfields.
-  uint32_t bit_offset() const { return bit_offset_; }
-  void set_bit_offset(uint32_t bo) { bit_offset_ = bo; }
-
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(BaseType);
   FRIEND_MAKE_REF_COUNTED(BaseType);
@@ -67,8 +58,6 @@ class BaseType final : public Type {
   ~BaseType();
 
   int base_type_ = kBaseTypeNone;
-  int bit_size_ = 0;
-  int bit_offset_ = 0;
 };
 
 }  // namespace zxdb

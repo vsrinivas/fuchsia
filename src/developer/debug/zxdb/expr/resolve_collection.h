@@ -29,6 +29,10 @@ class InheritedFrom;
 // within that collection (in this case the data member must be on the class itself, not on a base
 // class), or a name of a member.
 //
+// The variant that takes a DataMember only handles direct members on the current class, not
+// derived classes that may have an offset.
+// TODO(brettw) this variant should take a FoundMember instead.
+//
 // These will be synchronous in most cases, but resolving static members may require requesting the
 // memory from the target which will force an asynchronous result.
 //
@@ -41,6 +45,9 @@ void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& bas
 
 // Synchronous versions of ResolveMember for cases where the value is known not to be an extern
 // (static) member. This is generally used when hardcoding support for known structures.
+//
+// The variant that takes a DataMember only handles direct members on the current class, not
+// derived classes that may have an offset.
 //
 // The variant that takes an initializer list will interpret the strings as identifiers, parse
 // them, and resolve a nested series of members using those strings. For example, if the input
@@ -68,6 +75,7 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
 //
 // For the version that takes an InheritedFrom, the base class must be a direct base class of the
 // "value" collection, not an indirect base.
+// TODO(brettw) this variant should take a FoundMember instead.
 //
 // For the version that takes a type and an offset, the type must already have been computed as some
 // type of base class that lives at the given offset. It need not be a direct base and no type

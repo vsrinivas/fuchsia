@@ -456,12 +456,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(const llvm::DWARFDie& die
   llvm::Optional<uint64_t> byte_size;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &byte_size);
 
-  llvm::Optional<uint64_t> bit_size;
-  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &bit_size);
-
-  llvm::Optional<uint64_t> bit_offset;
-  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &bit_offset);
-
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -472,10 +466,6 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(const llvm::DWARFDie& die
     base_type->set_base_type(static_cast<int>(*encoding));
   if (byte_size)
     base_type->set_byte_size(static_cast<uint32_t>(*byte_size));
-  if (bit_size)
-    base_type->set_bit_size(static_cast<int>(*bit_size));
-  if (bit_offset)
-    base_type->set_bit_offset(static_cast<int>(*bit_offset));
 
   if (parent)
     base_type->set_parent(MakeLazy(parent));
@@ -587,6 +577,16 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& d
   llvm::Optional<uint64_t> member_offset;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_member_location, &member_offset);
 
+  llvm::Optional<uint64_t> byte_size;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_byte_size, &byte_size);
+
+  llvm::Optional<uint64_t> bit_size;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_bit_size, &bit_size);
+  llvm::Optional<int64_t> bit_offset;
+  decoder.AddSignedConstant(llvm::dwarf::DW_AT_bit_offset, &bit_offset);
+  llvm::Optional<uint64_t> data_bit_offset;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_bit_offset, &data_bit_offset);
+
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -601,6 +601,14 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& d
     result->set_is_external(*external);
   if (member_offset)
     result->set_member_location(static_cast<uint32_t>(*member_offset));
+  if (byte_size)
+    result->set_byte_size(static_cast<uint32_t>(*byte_size));
+  if (bit_offset)
+    result->set_bit_offset(static_cast<int32_t>(*bit_offset));
+  if (bit_size)
+    result->set_bit_size(static_cast<uint32_t>(*bit_size));
+  if (data_bit_offset)
+    result->set_data_bit_offset(static_cast<uint32_t>(*data_bit_offset));
   return result;
 }
 

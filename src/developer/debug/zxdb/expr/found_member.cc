@@ -8,6 +8,9 @@ namespace zxdb {
 
 FoundMember::FoundMember() = default;
 
+FoundMember::FoundMember(const DataMember* data_member)
+    : data_member_(RefPtrTo(data_member)), data_member_offset_(data_member->member_location()) {}
+
 FoundMember::FoundMember(const DataMember* data_member, uint32_t data_member_offset)
     : data_member_(RefPtrTo(data_member)), data_member_offset_(data_member_offset) {}
 

@@ -26,43 +26,16 @@ class EvalOperators : public TestWithLoop {
 
   ErrOrValue SyncEvalBinaryOperator(const ExprValue& left, ExprTokenType op,
                                     const ExprValue& right) {
-    ExprToken token(op, "", 0);
-
-    bool needs_quit = false;
-    bool called = false;
     ErrOrValue result((ExprValue()));
-    EvalBinaryOperator(eval_context(), left, token, right,
-                       [&needs_quit, &called, &result](ErrOrValue value) {
-                         called = true;
-                         result = value;
-                         if (needs_quit)
-                           debug_ipc::MessageLoop::Current()->QuitNow();
-                       });
-    if (!called) {
-      // Needs async completion.
-      needs_quit = true;
-      loop().Run();
-    }
+    EvalBinaryOperator(eval_context(), left, ExprToken(op, "", 0), right,
+                       [&result](ErrOrValue value) { result = value; });
+    loop().RunUntilNoTasks();
     return result;
   }
 
   ErrOrValue SyncEvalUnaryOperator(ExprTokenType op, const ExprValue& right) {
-    ExprToken token(op, "", 0);
-
-    bool needs_quit = false;
-    bool called = false;
     ErrOrValue result((ExprValue()));
-    EvalUnaryOperator(token, right, [&needs_quit, &called, &result](ErrOrValue value) {
-      called = true;
-      result = value;
-      if (needs_quit)
-        debug_ipc::MessageLoop::Current()->QuitNow();
-    });
-    if (!called) {
-      // Needs async completion.
-      needs_quit = true;
-      loop().Run();
-    }
+    EvalUnaryOperator(ExprToken(op, "", 0), right, [&result](ErrOrValue value) { result = value; });
     return result;
   }
 
