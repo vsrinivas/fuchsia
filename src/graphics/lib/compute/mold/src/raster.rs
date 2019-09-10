@@ -4,7 +4,6 @@
 
 use std::{
     cell::{Ref, RefCell},
-    cmp,
     rc::Rc,
 };
 
@@ -48,8 +47,8 @@ impl BoundingBox {
 
     #[allow(clippy::float_cmp)]
     pub fn enclose(&mut self, edge: &Edge<i32>) {
-        let edge_min = Point::new(cmp::min(edge.p0.x, edge.p1.x), cmp::min(edge.p0.y, edge.p1.y));
-        let edge_max = Point::new(cmp::max(edge.p0.x, edge.p1.x), cmp::max(edge.p0.y, edge.p1.y));
+        let edge_min = Point::new(edge.p0.x.min(edge.p1.x), edge.p0.y.min(edge.p1.y));
+        let edge_max = Point::new(edge.p0.x.max(edge.p1.x), edge.p0.y.max(edge.p1.y));
 
         if edge_min.x < self.min.x {
             self.min.x = edge_min.x;
@@ -99,7 +98,19 @@ pub struct Raster {
 impl Raster {
     pub fn new(path: &Path) -> Self {
         let mut bounding_box = BoundingBox::new();
-        let edges = path.edges().iter().map(Edge::to_sp_edges).flatten().collect();
+        let edges: Vec<_> = path.edges().flat_map(|edge| edge.to_sp_edges()).flatten().collect();
+
+        for edge in &edges {
+            bounding_box.enclose(edge);
+        }
+
+        Self { inner: Rc::new(RefCell::new(RasterInner { edges, new_edges: true, bounding_box })) }
+    }
+
+    pub fn with_transform(path: &Path, transform: &[f32; 9]) -> Self {
+        let mut bounding_box = BoundingBox::new();
+        let edges =
+            path.transformed(transform).flat_map(|edge| edge.to_sp_edges()).flatten().collect();
 
         for edge in &edges {
             bounding_box.enclose(edge);
@@ -122,11 +133,8 @@ impl Raster {
         Self { inner: Rc::new(RefCell::new(inner)) }
     }
 
-    pub fn translate(&mut self, translation: Point<f32>) {
-        let translation = Point::new(
-            (translation.x * PIXEL_WIDTH as f32).round() as i32,
-            (translation.y * PIXEL_WIDTH as f32).round() as i32,
-        );
+    pub fn translate(&mut self, translation: Point<i32>) {
+        let translation = Point::new(translation.x * PIXEL_WIDTH, translation.y * PIXEL_WIDTH);
 
         for edge in &mut self.inner.borrow_mut().edges {
             *edge = edge.translate(translation);

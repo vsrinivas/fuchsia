@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::cmp::{self, Ordering};
+use std::cmp::Ordering;
 
 use crate::{point::Point, GRID_LIMIT, PIXEL_WIDTH};
 
@@ -23,8 +23,12 @@ impl Edge<f32> {
         Edge { p0: self.p0.to_subpixel(), p1: self.p1.to_subpixel() }
     }
 
-    pub fn to_sp_edges(&self) -> SubPixelEdges {
+    pub fn to_sp_edges(&self) -> Option<SubPixelEdges> {
         let aligned = self.to_subpixel();
+
+        if aligned.p0.y == aligned.p1.y {
+            return None;
+        }
 
         let direction_x = match aligned.p0.x.cmp(&aligned.p1.x) {
             Ordering::Less => PIXEL_WIDTH,
@@ -47,7 +51,7 @@ impl Edge<f32> {
 
         let slope = (aligned.p1.y - aligned.p0.y) as f32 / (aligned.p1.x - aligned.p0.x) as f32;
 
-        SubPixelEdges {
+        Some(SubPixelEdges {
             start: aligned.p0,
             start_f: Point::new(aligned.p0.x as f32, aligned.p0.y as f32),
             current: aligned.p0,
@@ -59,19 +63,19 @@ impl Edge<f32> {
             cached_y: None,
             slope,
             slope_recip: slope.recip(),
-        }
+        })
     }
 }
 
 impl Edge<i32> {
     pub fn border(&self) -> Point<i32> {
-        Point::new(cmp::min(self.p0.x, self.p1.x), cmp::min(self.p0.y, self.p1.y)).border()
+        Point::new(self.p0.x.min(self.p1.x), self.p0.y.min(self.p1.y)).border()
     }
 
     pub fn double_signed_area(&self) -> i16 {
         let width = (self.p1.x - self.p0.x).abs();
         let height = self.p1.y - self.p0.y;
-        let right = cmp::max(self.p0.x, self.p1.x);
+        let right = self.p0.x.max(self.p1.x);
 
         let border = self.border().x + PIXEL_WIDTH;
 
@@ -224,7 +228,7 @@ mod tests {
         let p0 = Point::new(0.5, 0.5);
         let p1 = p0;
 
-        assert_eq!(Edge::new(p0, p1).to_sp_edges().collect::<Vec<_>>(), vec![],);
+        assert!(Edge::new(p0, p1).to_sp_edges().is_none());
     }
 
     #[test]
@@ -232,7 +236,7 @@ mod tests {
         let p0 = Point::new(0.5, 0.5);
         let p1 = Point::new(3.5, 0.5);
 
-        assert_eq!(Edge::new(p0, p1).to_sp_edges().collect::<Vec<_>>(), vec![],);
+        assert!(Edge::new(p0, p1).to_sp_edges().is_none());
     }
 
     #[test]
@@ -241,7 +245,7 @@ mod tests {
         let p1 = Point::new(0.5, -0.5);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().collect::<Vec<_>>(),
+            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
                 Edge::new(Point::new(8, 8), Point::new(8, 0),),
                 Edge::new(Point::new(8, 0), Point::new(8, -8),),
@@ -255,7 +259,7 @@ mod tests {
         let p1 = Point::new(0.5, -2.5);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().collect::<Vec<_>>(),
+            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
                 Edge::new(Point::new(8, 8), Point::new(8, 0),),
                 Edge::new(Point::new(8, 0), Point::new(8, -16),),
@@ -271,7 +275,7 @@ mod tests {
         let p1 = Point::new(-2.5, -2.5);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().collect::<Vec<_>>(),
+            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
                 Edge::new(Point::new(8, 8), Point::new(0, 0),),
                 Edge::new(Point::new(0, 0), Point::new(-16, -16),),
@@ -287,7 +291,7 @@ mod tests {
         let p1 = Point::new(-2.25, -2.75);
 
         assert_eq!(
-            Edge::new(p0, p1).to_sp_edges().collect::<Vec<_>>(),
+            Edge::new(p0, p1).to_sp_edges().unwrap().collect::<Vec<_>>(),
             vec![
                 Edge::new(Point::new(12, 4), Point::new(8, 0),),
                 Edge::new(Point::new(8, 0), Point::new(0, -8),),
@@ -307,7 +311,13 @@ mod tests {
             let p0 = Point::new(0.0, 0.0);
             let p1 = Point::new(angle.cos() * RADIUS, angle.sin() * RADIUS);
 
-            assert_eq!(Edge::new(p0, p1).to_sp_edges().collect::<Vec<_>>().len(), intersections);
+            assert_eq!(
+                match Edge::new(p0, p1).to_sp_edges() {
+                    Some(edges) => edges.collect::<Vec<_>>().len(),
+                    None => 0,
+                },
+                intersections,
+            );
         }
 
         let increment = std::f32::consts::PI / 8.0;

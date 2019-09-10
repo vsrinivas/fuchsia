@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cmp, collections::HashMap, mem};
+use std::{collections::HashMap, mem};
 
 use crate::{
     edge::Edge,
@@ -342,7 +342,7 @@ impl Painter {
         for i in 0..TILE_SIZE * TILE_SIZE {
             let wip = self.color_wip[i];
             let acc = self.color_acc[i];
-            let cover_min = cmp::min(self.cover_wip[i], acc.alpha);
+            let cover_min = self.cover_wip[i].min(acc.alpha);
 
             let red = Self::add(Self::mul(cover_min, wip.red), acc.red);
             let green = Self::add(Self::mul(cover_min, wip.green), acc.green);
@@ -444,9 +444,9 @@ impl Painter {
             PixelFormat::RGB565 => {
                 let mut new_row = [0u16; TILE_SIZE];
                 for (i, color) in row.iter().enumerate() {
-                    let red = Self::mul(color.alpha, color.red) as u16;
-                    let green = Self::mul(color.alpha, color.green) as u16;
-                    let blue = Self::mul(color.alpha, color.blue) as u16;
+                    let red = u16::from(Self::mul(color.alpha, color.red));
+                    let green = u16::from(Self::mul(color.alpha, color.green));
+                    let blue = u16::from(Self::mul(color.alpha, color.blue));
 
                     let red = ((red >> 3) & 0x1F) << 11;
                     let green = ((green >> 2) & 0x3F) << 5;
@@ -503,7 +503,7 @@ impl Painter {
             if y < context.height {
                 let buffer_index = x + y * context.buffer.stride();
                 let tile_index = tile_j * TILE_SIZE;
-                let d = cmp::min(context.width - x, TILE_SIZE);
+                let d = (context.width - x).min(TILE_SIZE);
 
                 let tile_range = tile_index..tile_index + d;
 

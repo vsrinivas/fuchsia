@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::ops::Mul;
+
 use crate::{PIXEL_SHIFT, PIXEL_WIDTH};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Point<T> {
     pub x: T,
     pub y: T,
@@ -41,6 +43,18 @@ impl Point<f32> {
 
     pub fn approx_eq(self, other: Self) -> bool {
         (self.x - other.x).abs() < std::f32::EPSILON && (self.y - other.y).abs() < std::f32::EPSILON
+    }
+
+    pub fn from_weighted(point: &[f32; 3]) -> Self {
+        Self::new(point[0] / point[2], point[1] / point[2])
+    }
+}
+
+impl Mul<f32> for Point<f32> {
+    type Output = Self;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Point::new(self.x * rhs, self.y * rhs)
     }
 }
 

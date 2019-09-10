@@ -4,7 +4,6 @@
 
 use std::{
     cell::RefCell,
-    cmp,
     collections::{HashMap, HashSet},
     ops::Range,
     ptr,
@@ -154,9 +153,9 @@ impl Map {
         p1.x >>= PIXEL_SHIFT;
         p1.y >>= PIXEL_SHIFT;
 
-        let min_x = cmp::min(p0.x, p1.x);
-        let min_x = cmp::max(min_x, 0);
-        let min_y = cmp::min(p0.y, p1.y);
+        let min_x = p0.x.min(p1.x);
+        let min_x = min_x.max(0);
+        let min_y = p0.y.min(p1.y);
 
         if min_y >= 0 {
             let min_x = min_x as usize;
@@ -180,7 +179,7 @@ impl Map {
     }
 
     fn clamp(n: i32, to: usize) -> usize {
-        cmp::min(cmp::max(n, 0) as usize, to)
+        (n.max(0) as usize).min(to)
     }
 
     fn for_each_tile(&mut self, bounding_box: &BoundingBox, mut f: impl FnMut(&mut Tile)) {
@@ -197,14 +196,12 @@ impl Map {
     }
 
     pub fn print(&mut self, id: u32, layer: Layer) {
-        if !layer.ops.is_empty() {
-            if self.layers.get(&id) != Some(&layer) {
-                self.layers.insert(id, layer.clone());
-                let bounding_box = layer.raster.bounding_box();
-                self.for_each_tile(&bounding_box, |tile| {
-                    tile.needs_render = true;
-                });
-            }
+        if !layer.ops.is_empty() && self.layers.get(&id) != Some(&layer) {
+            self.layers.insert(id, layer.clone());
+            let bounding_box = layer.raster.bounding_box();
+            self.for_each_tile(&bounding_box, |tile| {
+                tile.needs_render = true;
+            });
         }
     }
 
@@ -377,7 +374,7 @@ impl ColorBuffer for BitMap {
     }
 
     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize) {
-        let dst = self.buffer.offset(offset as isize);
+        let dst = self.buffer.add(offset);
         ptr::copy_nonoverlapping(src, dst, len);
     }
 }
@@ -416,7 +413,7 @@ mod tests {
         map.print(0, Layer { raster: Raster::new(&path), ops: vec![TileOp::CoverWipNonZero] });
 
         let mut translated = Raster::new(&path);
-        translated.translate(Point::new(TILE_SIZE as f32, TILE_SIZE as f32));
+        translated.translate(Point::new(TILE_SIZE as i32, TILE_SIZE as i32));
 
         map.print(1, Layer { raster: translated, ops: vec![TileOp::CoverWipNonZero] });
         map.reprint_all();
@@ -488,7 +485,7 @@ mod tests {
             vec![false; 16],
         );
 
-        raster.translate(Point::new(TILE_SIZE as f32, TILE_SIZE as f32));
+        raster.translate(Point::new(TILE_SIZE as i32, TILE_SIZE as i32));
 
         map.reprint_all();
 

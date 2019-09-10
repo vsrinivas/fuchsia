@@ -245,13 +245,13 @@ impl ViewAssistant for DrawingViewAssistant {
             * SECONDS_PER_NANOSECOND
             * SPEED;
 
-        self.rect.translate(mold::Point::new(DELTA * t.sin(), 0.0));
+        self.rect.translate(mold::Point::new((DELTA * t.sin()).round() as i32, 0));
 
         let canvas = context.canvas.as_ref().unwrap().borrow();
 
         let map = self.map.as_mut().unwrap();
         let mut raster = Raster::new(&Glyph::new(&self.glyph, GLYPH_SIZE * t.sin().abs()).path);
-        raster.translate(mold::Point::new(100.0, 100.0));
+        raster.translate(mold::Point::new(100, 100));
 
         map.print(
             2,
