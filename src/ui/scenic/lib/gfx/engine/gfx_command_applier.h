@@ -164,6 +164,8 @@ class GfxCommandApplier {
   static bool ApplyCreateImage(Session* session, ResourceId id, fuchsia::ui::gfx::ImageArgs args);
   static bool ApplyCreateImagePipe(Session* session, ResourceId id,
                                    fuchsia::ui::gfx::ImagePipeArgs args);
+  static bool ApplyCreateImagePipe2(Session* session, ResourceId id,
+                                    fuchsia::ui::gfx::ImagePipe2Args args);
   static bool ApplyCreateBuffer(Session* session, ResourceId id, fuchsia::ui::gfx::BufferArgs args);
   static bool ApplyCreateScene(Session* session, ResourceId id, fuchsia::ui::gfx::SceneArgs args);
   static bool ApplyCreateCamera(Session* session, ResourceId id, fuchsia::ui::gfx::CameraArgs args);
