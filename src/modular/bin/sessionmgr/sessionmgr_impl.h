@@ -29,6 +29,7 @@
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/lib/fxl/macros.h"
+#include "src/modular/bin/module_resolver/local_module_resolver.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_service_index.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
@@ -211,7 +212,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fuchsia::modular::auth::AccountPtr account_;
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> discovermgr_app_;
-  std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> module_resolver_app_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
   std::unique_ptr<ViewHost> session_shell_view_host_;
 
@@ -240,9 +240,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<UserIntelligenceProviderImpl> user_intelligence_provider_impl_;
 
-  // Services we provide to the module resolver's namespace.
-  component::ServiceProviderImpl module_resolver_ns_services_;
-  fuchsia::modular::ModuleResolverPtr module_resolver_service_;
+  std::unique_ptr<modular::LocalModuleResolver> local_module_resolver_;
 
   // Services we provide to the discovermgr's namespace.
   component::ServiceProviderImpl discovermgr_ns_services_;

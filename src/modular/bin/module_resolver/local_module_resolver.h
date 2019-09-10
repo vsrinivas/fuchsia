@@ -20,7 +20,7 @@
 
 namespace modular {
 
-class LocalModuleResolver : fuchsia::modular::ModuleResolver {
+class LocalModuleResolver : public fuchsia::modular::ModuleResolver {
  public:
   LocalModuleResolver();
   ~LocalModuleResolver() override;
@@ -31,7 +31,7 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver {
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
 
-  // |ModuleResolver|
+  // |fuchsia::modular::ModuleResolver|
   void FindModules(fuchsia::modular::FindModulesQuery query, FindModulesCallback callback) override;
 
  private:

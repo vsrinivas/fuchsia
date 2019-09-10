@@ -79,6 +79,7 @@ source_set("sessionmgr_lib") {
     "//src/ledger/bin/fidl",
     "//src/lib/fxl",
     "//src/modular/bin/basemgr/cobalt",
+    "//src/modular/bin/module_resolver:local_module_resolver",
     "//src/modular/bin/sessionmgr/entity_provider_runner",
     "//src/modular/bin/sessionmgr/message_queue",
     "//src/modular/bin/sessionmgr/puppet_master:make_production_impl",

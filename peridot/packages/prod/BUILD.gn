@@ -22,7 +22,6 @@ group("all") {
     "//peridot/packages/prod:integration_testing",
     "//peridot/packages/prod:ledger",
     "//peridot/packages/prod:modular",
-    "//peridot/packages/prod:module_resolver",
     "//peridot/packages/prod:sessionctl",
   ]
 }
@@ -79,13 +78,6 @@ group("integration_testing") {
     "//peridot/packages/testing:modular_test_harness",
     "//src/modular/bin/sessionmgr:dev_session_shell",
     "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
-  ]
-}
-
-group("module_resolver") {
-  testonly = true
-  public_deps = [
-    "//src/modular/bin/module_resolver",
   ]
 }
 

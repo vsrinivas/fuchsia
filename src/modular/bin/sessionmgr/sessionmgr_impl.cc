@@ -60,9 +60,6 @@ constexpr char kAppId[] = "modular_sessionmgr";
 constexpr char kMaxwellComponentNamespace[] = "maxwell";
 constexpr char kMaxwellUrl[] = "maxwell";
 
-constexpr char kModuleResolverUrl[] =
-    "fuchsia-pkg://fuchsia.com/module_resolver#meta/module_resolver.cmx";
-
 constexpr char kDiscovermgrUrl[] = "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx";
 
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
@@ -508,37 +505,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
                                                 (config_.session_agents()),
                                                 (config_.startup_agents()));
 
-  // Setup for kModuleResolverUrl
-  {
-    module_resolver_ns_services_.AddService<fuchsia::modular::ComponentContext>(
-        [this, component_context_info](
-            fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
-          maxwell_component_context_bindings_->AddBinding(
-              std::make_unique<ComponentContextImpl>(component_context_info,
-                                                     kMaxwellComponentNamespace, kModuleResolverUrl,
-                                                     kModuleResolverUrl),
-              std::move(request));
-        });
-    auto service_list = fuchsia::sys::ServiceList::New();
-    service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
-    module_resolver_ns_services_.AddBinding(service_list->provider.NewRequest());
-
-    fuchsia::modular::AppConfig module_resolver_config;
-    module_resolver_config.url = kModuleResolverUrl;
-
-    // For now, we want data_origin to be "", which uses our (parent process's)
-    // /data. This is appropriate for the module_resolver. We can in the future
-    // isolate the data it reads to a subdir of /data and map that in here.
-    module_resolver_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-        session_environment_->GetLauncher(), std::move(module_resolver_config),
-        "" /* data_origin */, std::move(service_list));
-    AtEnd(Reset(&module_resolver_app_));
-    AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
-  }
-
-  module_resolver_app_->services().ConnectToService(module_resolver_service_.NewRequest());
-  AtEnd(Reset(&module_resolver_service_));
-  // End kModuleResolverUrl
+  local_module_resolver_ = std::make_unique<LocalModuleResolver>();
+  AtEnd(Reset(&local_module_resolver_));
 
   session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
       component_context_info, kSessionShellComponentNamespace, session_shell_url,
@@ -576,7 +544,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       session_environment_.get(), LoadDeviceID(session_id_), session_storage_.get(),
       std::move(story_shell_config), std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider), user_intelligence_provider_impl_.get(),
-      discover_registry_service_.get(), module_resolver_service_.get(),
+      discover_registry_service_.get(),
+      static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
       entity_provider_runner_.get(), module_facet_reader_.get(), presentation_provider_impl_.get(),
       component_context_->svc()->Connect<fuchsia::ui::scenic::Snapshot>(),
       (config_.enable_story_shell_preload()), &inspect_root_node_));
@@ -606,7 +575,8 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   AtEnd(Reset(&session_storage_));
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master),
-      module_resolver_service_.get(), entity_provider_runner_.get(), std::move(module_focuser));
+      static_cast<fuchsia::modular::ModuleResolver*>(local_module_resolver_.get()),
+      entity_provider_runner_.get(), std::move(module_focuser));
   story_provider_impl_->Connect(std::move(story_provider_puppet_master_request));
   puppet_master_impl_ =
       std::make_unique<PuppetMasterImpl>(session_storage_.get(), story_command_executor_.get());
