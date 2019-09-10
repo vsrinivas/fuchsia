@@ -1460,7 +1460,7 @@ std::optional<Name> Library::CompileCompoundIdentifier(
 
   std::string message("Unknown dependent library ");
   message += NameLibrary(library_name);
-  message += " or reference to member of library";
+  message += " or reference to member of library ";
   message += NameLibrary(member_library_name);
   message += ". Did you require it with `using`?";
   const auto& location = components[0]->location();
