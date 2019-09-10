@@ -230,7 +230,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
                                             std::move(module_context_provider_request));
 
     running_mod_info.mod_inspect_node =
-        story_controller_impl_->story_inspect_node_->CreateChild(module_data_.module_url);
+        story_controller_impl_->story_inspect_node_->CreateChild(module_data_.module_url());
 
     NotifyModuleOfIntent(running_mod_info);
 
