@@ -184,10 +184,6 @@ void BenchmarksRunner::Finish() {
   }
 }
 
-std::string BenchmarksRunner::MakeTempFile() {
-  return JoinPaths({out_dir_, "benchmarking_temp_file_" + std::to_string(next_temp_file_index_++)});
-}
-
 std::string BenchmarksRunner::MakePerfResultsOutputFilename(const std::string& test_name) {
   std::string filename =
       fxl::StringPrintf("test%06d_%s.fuchsiaperf.json", next_temp_file_index_++, test_name.c_str());
