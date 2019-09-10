@@ -24,9 +24,9 @@ class RemoveModCommandRunnerTest : public testing::TestWithSessionStorage {
 
   void InitModuleData(StoryStorage* const story_storage, std::vector<std::string> path) {
     fuchsia::modular::ModuleData module_data;
-    module_data.module_path = std::move(path);
-    module_data.intent = fuchsia::modular::Intent::New();
-    module_data.module_deleted = false;
+    module_data.set_module_path(std::move(path));
+    module_data.set_intent(std::move(fuchsia::modular::Intent{}));
+    module_data.set_module_deleted(false);
 
     WriteModuleData(story_storage, std::move(module_data));
   }
@@ -57,7 +57,7 @@ TEST_F(RemoveModCommandRunnerTest, Execute) {
   done = false;
   story_storage->ReadModuleData(std::move(mod_name))
       ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_TRUE(module_data->module_deleted);
+        EXPECT_TRUE(module_data->module_deleted());
         done = true;
       });
   RunLoopUntil([&] { return done; });
@@ -112,7 +112,7 @@ TEST_F(RemoveModCommandRunnerTest, ExecuteModNameTransitional) {
   done = false;
   story_storage->ReadModuleData(std::move(mod_name))
       ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_TRUE(module_data->module_deleted);
+        EXPECT_TRUE(module_data->module_deleted());
         done = true;
       });
   RunLoopUntil([&] { return done; });

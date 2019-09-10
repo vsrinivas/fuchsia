@@ -157,7 +157,7 @@ TEST_F(StoryShellEmbeddedModTest, ReinflateModules) {
         [&](std::vector<fuchsia::modular::ModuleData> active_modules) mutable {
           size_t num_embedded_mods = 0u;
           for (const fuchsia::modular::ModuleData& mod : active_modules) {
-            num_embedded_mods += mod.is_embedded;
+            num_embedded_mods += mod.is_embedded();
           }
           if (num_embedded_mods == 0 && active_modules.size() == 2u) {
             modules_reinflated_correctly = true;

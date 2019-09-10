@@ -6,6 +6,10 @@
 namespace modular {
 namespace testing {
 
+void TestStoryCommandExecutor::SetStoryStorage(std::unique_ptr<StoryStorage> story_storage) {
+  story_storage_ = std::move(story_storage);
+}
+
 void TestStoryCommandExecutor::SetExecuteReturnResult(fuchsia::modular::ExecuteStatus status,
                                                       fidl::StringPtr error_message) {
   result_.status = status;
@@ -22,12 +26,49 @@ void TestStoryCommandExecutor::ExecuteCommandsInternal(
     fidl::StringPtr story_id, std::vector<fuchsia::modular::StoryCommand> commands,
     fit::function<void(fuchsia::modular::ExecuteResult)> done) {
   ++execute_count_;
-  last_story_id_ = story_id;
-  last_commands_ = std::move(commands);
+
   fuchsia::modular::ExecuteResult result;
   fidl::Clone(result_, &result);
   result.story_id = story_id;
-  done(std::move(result));
+
+  if (!!story_storage_) {
+    for (auto& command : commands) {
+      if (command.is_add_mod()) {
+        auto& add_mod = command.add_mod();
+
+        fuchsia::modular::ModuleData module_data;
+        if (add_mod.mod_name_transitional) {
+          module_data.set_module_url(*add_mod.mod_name_transitional);
+          module_data.set_module_path({*add_mod.mod_name_transitional});
+        } else {
+          module_data.set_module_url(add_mod.mod_name.back());
+          module_data.set_module_path(add_mod.mod_name);
+        }
+        module_data.set_module_source(fuchsia::modular::ModuleSource::INTERNAL);
+        module_data.set_module_deleted(false);
+        // This test currently ignores the following fields:
+        //   Intent intent
+        //   SurfaceRelation surface_relation
+
+        // Queue asynchronous write. The returned Future<> is not needed.
+        // done() is called after all writes complete, via the Sync callback, below.
+        story_storage_->WriteModuleData(std::move(module_data));
+
+        // This test currently only persists adding mods (assuming there is a story_storage_);
+        // other commands are not yet persisted, such as:
+        //
+        //   else if (command.is_remove_mod())
+      }
+    }
+  }
+  last_story_id_ = story_id;
+  last_commands_ = std::move(commands);
+  if (!story_storage_) {
+    done(std::move(result));
+  } else {
+    story_storage_->Sync()->Then(
+        [done = std::move(done), result = std::move(result)] { done(std::move(result)); });
+  }
 }
 
 }  // namespace testing

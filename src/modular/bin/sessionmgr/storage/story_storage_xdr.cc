@@ -4,12 +4,16 @@
 
 #include "src/modular/bin/sessionmgr/storage/story_storage_xdr.h"
 
-#include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/vmo/strings.h>
 
-#include "src/modular/lib/module_manifest/module_manifest_xdr.h"
+#include <src/modular/bin/sessionmgr/storage/annotation_xdr.h>
 
 namespace modular {
+
+// Serialization and deserialization of fuchsia::modular::ModuleData
+// and fuchsia::modular::StoryInfo to and from JSON.
+
+namespace {
 
 void XdrLinkPath(XdrContext* const xdr, fuchsia::modular::LinkPath* const data) {
   xdr->Field("module_path", &data->module_path);
@@ -117,90 +121,144 @@ void XdrIntent(XdrContext* const xdr, fuchsia::modular::Intent* const data) {
 }
 
 void XdrModuleData_v1(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
-  xdr->Field("url", &data->module_url);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("module_source", &data->module_source);
-  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_deleted);
-  xdr->Field("intent", &data->intent, XdrIntent);
+  xdr->Field("url", data->mutable_module_url());
+  xdr->Field("module_path", data->mutable_module_path());
+  xdr->Field("module_source", data->mutable_module_source());
+  xdr->Field("surface_relation", data->mutable_surface_relation(), XdrSurfaceRelation);
+  xdr->Field("module_stopped", data->mutable_module_deleted());
+  xdr->Field("intent", data->mutable_intent(), XdrIntent);
 
   // In previous versions we did not have these fields.
-  data->parameter_map.entries.resize(0);
+  data->mutable_parameter_map()->entries.resize(0);
 }
 
 void XdrModuleData_v2(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
-  xdr->Field("url", &data->module_url);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("module_source", &data->module_source);
-  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_deleted);
-  xdr->Field("intent", &data->intent, XdrIntent);
+  xdr->Field("url", data->mutable_module_url());
+  xdr->Field("module_path", data->mutable_module_path());
+  xdr->Field("module_source", data->mutable_module_source());
+  xdr->Field("surface_relation", data->mutable_surface_relation(), XdrSurfaceRelation);
+  xdr->Field("module_stopped", data->mutable_module_deleted());
+  xdr->Field("intent", data->mutable_intent(), XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
-  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
+  xdr->Field("chain_data", data->mutable_parameter_map(), XdrModuleParameterMap);
 }
 
 void XdrModuleData_v3(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
-  xdr->Field("url", &data->module_url);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("module_source", &data->module_source);
-  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_deleted);
-  xdr->Field("intent", &data->intent, XdrIntent);
+  xdr->Field("url", data->mutable_module_url());
+  xdr->Field("module_path", data->mutable_module_path());
+  xdr->Field("module_source", data->mutable_module_source());
+  xdr->Field("surface_relation", data->mutable_surface_relation(), XdrSurfaceRelation);
+  xdr->Field("module_stopped", data->mutable_module_deleted());
+  xdr->Field("intent", data->mutable_intent(), XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
-  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
+  xdr->Field("chain_data", data->mutable_parameter_map(), XdrModuleParameterMap);
 }
 
 void XdrModuleData_v4(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   if (!xdr->Version(4)) {
     return;
   }
-  xdr->Field("url", &data->module_url);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("module_source", &data->module_source);
-  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_stopped", &data->module_deleted);
-  xdr->Field("intent", &data->intent, XdrIntent);
+  xdr->Field("url", data->mutable_module_url());
+  xdr->Field("module_path", data->mutable_module_path());
+  xdr->Field("module_source", data->mutable_module_source());
+  xdr->Field("surface_relation", data->mutable_surface_relation(), XdrSurfaceRelation);
+  xdr->Field("module_stopped", data->mutable_module_deleted());
+  xdr->Field("intent", data->mutable_intent(), XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
-  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
+  xdr->Field("chain_data", data->mutable_parameter_map(), XdrModuleParameterMap);
 }
 
 void XdrModuleData_v5(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   if (!xdr->Version(5)) {
     return;
   }
-  xdr->Field("url", &data->module_url);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("module_source", &data->module_source);
-  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_deleted", &data->module_deleted);
-  xdr->Field("intent", &data->intent, XdrIntent);
+  xdr->Field("url", data->mutable_module_url());
+  xdr->Field("module_path", data->mutable_module_path());
+  xdr->Field("module_source", data->mutable_module_source());
+  xdr->Field("surface_relation", data->mutable_surface_relation(), XdrSurfaceRelation);
+  xdr->Field("module_deleted", data->mutable_module_deleted());
+  xdr->Field("intent", data->mutable_intent(), XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
-  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
+  xdr->Field("chain_data", data->mutable_parameter_map(), XdrModuleParameterMap);
 }
 
 void XdrModuleData_v6(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
   if (!xdr->Version(6)) {
     return;
   }
-  xdr->Field("url", &data->module_url);
-  xdr->Field("module_path", &data->module_path);
-  xdr->Field("module_source", &data->module_source);
-  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
-  xdr->Field("module_deleted", &data->module_deleted);
-  xdr->Field("intent", &data->intent, XdrIntent);
+  xdr->Field("url", data->mutable_module_url());
+  xdr->Field("module_path", data->mutable_module_path());
+  xdr->Field("module_source", data->mutable_module_source());
+  xdr->Field("surface_relation", data->mutable_surface_relation(), XdrSurfaceRelation);
+  xdr->Field("module_deleted", data->mutable_module_deleted());
+  xdr->Field("intent", data->mutable_intent(), XdrIntent);
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
-  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
-  xdr->Field("is_embedded", &data->is_embedded);
+  xdr->Field("chain_data", data->mutable_parameter_map(), XdrModuleParameterMap);
+  xdr->Field("is_embedded", data->mutable_is_embedded());
 }
 
+void XdrModuleData_v7(XdrContext* const xdr, fuchsia::modular::ModuleData* const data) {
+  if (!xdr->Version(7)) {
+    return;
+  }
+  if (xdr->HasField("url", data->has_module_url()))
+    xdr->Field("url", data->mutable_module_url());
+  else
+    data->clear_module_url();
+  if (xdr->HasField("module_path", data->has_module_path()))
+    xdr->Field("module_path", data->mutable_module_path());
+  else
+    data->clear_module_path();
+  if (xdr->HasField("module_source", data->has_module_source()))
+    xdr->Field("module_source", data->mutable_module_source());
+  else
+    data->clear_module_source();
+  if (xdr->HasField("surface_relation", data->has_surface_relation()))
+    xdr->Field("surface_relation", data->mutable_surface_relation(), XdrSurfaceRelation);
+  else
+    data->clear_surface_relation();
+  if (xdr->HasField("module_deleted", data->has_module_deleted()))
+    xdr->Field("module_deleted", data->mutable_module_deleted());
+  else
+    data->clear_module_deleted();
+  if (xdr->HasField("intent", data->has_intent()))
+    xdr->Field("intent", data->mutable_intent(), XdrIntent);
+  else
+    data->clear_intent();
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field name in FIDL was changed.
+  if (xdr->HasField("chain_data", data->has_parameter_map()))
+    xdr->Field("chain_data", data->mutable_parameter_map(), XdrModuleParameterMap);
+  else
+    data->clear_parameter_map();
+  if (xdr->HasField("is_embedded", data->has_is_embedded()))
+    xdr->Field("is_embedded", data->mutable_is_embedded());
+  else
+    data->clear_is_embedded();
+  if (xdr->HasField("annotations", data->has_annotations()))
+    xdr->Field("annotations", data->mutable_annotations(), XdrAnnotation);
+  else
+    data->clear_annotations();
+}
+
+}  // namespace
+
+// clang-format off
 XdrFilterType<fuchsia::modular::ModuleData> XdrModuleData[] = {
-    XdrModuleData_v6, XdrModuleData_v5, XdrModuleData_v4, XdrModuleData_v3,
-    XdrModuleData_v2, XdrModuleData_v1, nullptr,
+    XdrModuleData_v7,
+    XdrModuleData_v6,
+    XdrModuleData_v5,
+    XdrModuleData_v4,
+    XdrModuleData_v3,
+    XdrModuleData_v2,
+    XdrModuleData_v1,
+    nullptr,
 };
+// clang-format on
 
 }  // namespace modular

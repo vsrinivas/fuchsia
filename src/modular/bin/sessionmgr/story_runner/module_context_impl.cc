@@ -25,7 +25,7 @@ ModuleContextImpl::ModuleContextImpl(
       component_context_impl_(
           info.component_context_info,
           EncodeModuleComponentNamespace(info.story_controller_impl->GetStoryId().value_or("")),
-          EncodeModulePath(module_data_->module_path), module_data_->module_url),
+          EncodeModulePath(module_data_->module_path()), module_data_->module_url()),
       discover_registry_(info.discover_registry) {
   service_provider_impl_.AddService<fuchsia::modular::ComponentContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
@@ -39,13 +39,13 @@ ModuleContextImpl::ModuleContextImpl(
       [this](auto request) {
         fuchsia::app::discover::ModuleIdentifier module_scope;
         module_scope.set_story_id(story_controller_impl_->GetStoryId().value_or(""));
-        module_scope.set_module_path(module_data_->module_path);
+        module_scope.set_module_path(module_data_->module_path());
         discover_registry_->RegisterModuleOutputWriter(std::move(module_scope), std::move(request));
       });
   service_provider_impl_.AddService<fuchsia::app::discover::StoryModule>([this](auto request) {
     fuchsia::app::discover::ModuleIdentifier module_scope;
     module_scope.set_story_id(story_controller_impl_->GetStoryId().value_or(""));
-    module_scope.set_module_path(module_data_->module_path);
+    module_scope.set_module_path(module_data_->module_path());
     discover_registry_->RegisterStoryModule(std::move(module_scope), std::move(request));
   });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
@@ -57,7 +57,7 @@ void ModuleContextImpl::GetLink(fidl::StringPtr name,
                                 fidl::InterfaceRequest<fuchsia::modular::Link> request) {
   fuchsia::modular::LinkPathPtr link_path;
   // See if there's a parameter mapping for this link.
-  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path,
+  link_path = story_controller_impl_->GetLinkPathForParameterName(module_data_->module_path(),
                                                                   name.value_or(""));
   story_controller_impl_->ConnectLinkPath(std::move(link_path), std::move(request));
 }
@@ -67,7 +67,7 @@ void ModuleContextImpl::EmbedModule(
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
     fuchsia::ui::views::ViewToken view_token, EmbedModuleCallback callback) {
   AddModParams params;
-  params.parent_mod_path = module_data_->module_path;
+  params.parent_mod_path = module_data_->module_path();
   params.mod_name = name;
   params.intent = std::move(intent);
   params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
@@ -90,7 +90,7 @@ void ModuleContextImpl::AddModuleToStory(
     fidl::InterfaceRequest<fuchsia::modular::ModuleController> module_controller,
     fuchsia::modular::SurfaceRelationPtr surface_relation, AddModuleToStoryCallback callback) {
   AddModParams params;
-  params.parent_mod_path = module_data_->module_path;
+  params.parent_mod_path = module_data_->module_path();
   params.mod_name = name;
   params.intent = std::move(intent);
   params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
@@ -118,14 +118,14 @@ void ModuleContextImpl::GetStoryId(GetStoryIdCallback callback) {
 }
 
 void ModuleContextImpl::RequestFocus() {
-  story_controller_impl_->FocusModule(module_data_->module_path);
+  story_controller_impl_->FocusModule(module_data_->module_path());
   story_controller_impl_->RequestStoryFocus();
 }
 
 void ModuleContextImpl::Active() {}
 
 void ModuleContextImpl::RemoveSelfFromStory() {
-  story_controller_impl_->RemoveModuleFromStory(module_data_->module_path);
+  story_controller_impl_->RemoveModuleFromStory(module_data_->module_path());
 }
 
 void ModuleContextImpl::RequestStoryVisibilityState(

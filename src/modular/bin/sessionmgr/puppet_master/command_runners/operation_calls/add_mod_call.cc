@@ -176,16 +176,19 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult, fuchsia::mo
 
   // Write module data
   void WriteModuleData(FlowToken flow, fuchsia::modular::ModuleParameterMapPtr map) {
-    fidl::Clone(*map, &out_module_data_.parameter_map);
-    out_module_data_.module_url = candidate_module_.module_id;
-    out_module_data_.module_path = add_mod_params_.parent_mod_path;
-    out_module_data_.module_path.push_back(add_mod_params_.mod_name);
-    out_module_data_.module_source = add_mod_params_.module_source;
-    out_module_data_.module_deleted = false;
-    fidl::Clone(add_mod_params_.surface_relation, &out_module_data_.surface_relation);
-    out_module_data_.is_embedded = add_mod_params_.is_embedded;
-    out_module_data_.intent =
-        std::make_unique<fuchsia::modular::Intent>(std::move(add_mod_params_.intent));
+    fidl::Clone(*map, out_module_data_.mutable_parameter_map());
+    out_module_data_.set_module_url(candidate_module_.module_id);
+    out_module_data_.set_module_path(add_mod_params_.parent_mod_path);
+    out_module_data_.mutable_module_path()->push_back(add_mod_params_.mod_name);
+    out_module_data_.set_module_source(add_mod_params_.module_source);
+    out_module_data_.set_module_deleted(false);
+    if (!add_mod_params_.surface_relation) {
+      out_module_data_.clear_surface_relation();
+    } else {
+      fidl::Clone(*add_mod_params_.surface_relation, out_module_data_.mutable_surface_relation());
+    }
+    out_module_data_.set_is_embedded(add_mod_params_.is_embedded);
+    out_module_data_.set_intent(std::move(add_mod_params_.intent));
 
     // Operation stays alive until flow goes out of scope.
     fuchsia::modular::ModuleData module_data;

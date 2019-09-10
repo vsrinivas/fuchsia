@@ -212,16 +212,16 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
   void InitParentMod(const std::string& mod_name, const std::string& param_name,
                      const std::string& param_value, const std::string& link_path_name) {
     fuchsia::modular::ModuleData module_data;
-    module_data.module_path.push_back(mod_name);
-    module_data.intent = fuchsia::modular::Intent::New();
-    AddJsonParameter(module_data.intent.get(), param_name, param_value);
+    module_data.mutable_module_path()->push_back(mod_name);
+    module_data.set_intent(std::move(fuchsia::modular::Intent{}));
+    AddJsonParameter(module_data.mutable_intent(), param_name, param_value);
 
     fuchsia::modular::ModuleParameterMapEntry parameter_entry;
     auto link_path = MakeLinkPath(link_path_name);
-    fidl::Clone(module_data.module_path, &link_path.module_path);
+    fidl::Clone(module_data.module_path(), &link_path.module_path);
     parameter_entry.name = param_name;
     fidl::Clone(link_path, &parameter_entry.link_path);
-    module_data.parameter_map.entries.push_back(std::move(parameter_entry));
+    module_data.mutable_parameter_map()->entries.push_back(std::move(parameter_entry));
 
     SetLinkValue(story_storage_.get(), link_path, param_value);
     WriteModuleData(story_storage_.get(), std::move(module_data));
@@ -277,13 +277,13 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
   std::vector<std::string> full_path{"parent_mod", "mod"};
   story_storage_->ReadModuleData(std::move(full_path))
       ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_EQ("mod_url", module_data->module_url);
-        EXPECT_EQ(full_path, module_data->module_path);
-        EXPECT_FALSE(module_data->module_deleted);
-        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source);
-        EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
-        EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
-        EXPECT_EQ(0u, module_data->parameter_map.entries.size());
+        EXPECT_EQ("mod_url", module_data->module_url());
+        EXPECT_EQ(full_path, module_data->module_path());
+        EXPECT_FALSE(module_data->module_deleted());
+        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
+        EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
+        EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
+        EXPECT_EQ(0u, module_data->parameter_map().entries.size());
         done = true;
       });
 
@@ -330,13 +330,13 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
   std::vector<std::string> full_path{"mod"};
   story_storage_->ReadModuleData(std::move(full_path))
       ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
-        EXPECT_EQ("mod_url", module_data->module_url);
-        EXPECT_EQ(full_path, module_data->module_path);
-        EXPECT_FALSE(module_data->module_deleted);
-        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source);
-        EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
-        EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
-        EXPECT_EQ(0u, module_data->parameter_map.entries.size());
+        EXPECT_EQ("mod_url", module_data->module_url());
+        EXPECT_EQ(full_path, module_data->module_path());
+        EXPECT_FALSE(module_data->module_deleted());
+        EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
+        EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
+        EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
+        EXPECT_EQ(0u, module_data->parameter_map().entries.size());
         done = true;
       });
 
@@ -402,30 +402,30 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
       });
   RunLoopUntil([&] { return done; });
 
-  EXPECT_EQ("mod_url", module_data->module_url);
-  EXPECT_EQ(full_path, module_data->module_path);
-  EXPECT_FALSE(module_data->module_deleted);
-  EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source);
-  EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
-  EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
-  EXPECT_EQ(3u, module_data->parameter_map.entries.size());
+  EXPECT_EQ("mod_url", module_data->module_url());
+  EXPECT_EQ(full_path, module_data->module_path());
+  EXPECT_FALSE(module_data->module_deleted());
+  EXPECT_EQ(fuchsia::modular::ModuleSource::EXTERNAL, module_data->module_source());
+  EXPECT_EQ(0.5, module_data->surface_relation().emphasis);
+  EXPECT_TRUE(AreIntentsEqual(intent, module_data->intent()));
+  EXPECT_EQ(3u, module_data->parameter_map().entries.size());
 
   // Verify parameters
-  auto& link_path1 = module_data->parameter_map.entries.at(0).link_path;
-  EXPECT_EQ("param_json", module_data->parameter_map.entries.at(0).name);
+  auto& link_path1 = module_data->parameter_map().entries.at(0).link_path;
+  EXPECT_EQ("param_json", module_data->parameter_map().entries.at(0).name);
   EXPECT_EQ(full_path, link_path1.module_path);
   EXPECT_EQ("param_json", link_path1.link_name);
   EXPECT_EQ(R"({"@type": "foo"})", GetLinkValue(story_storage_.get(), link_path1));
 
-  auto& link_path2 = module_data->parameter_map.entries.at(1).link_path;
-  EXPECT_EQ("param_ref", module_data->parameter_map.entries.at(1).name);
+  auto& link_path2 = module_data->parameter_map().entries.at(1).link_path;
+  EXPECT_EQ("param_ref", module_data->parameter_map().entries.at(1).name);
   EXPECT_EQ(full_path, link_path2.module_path);
   EXPECT_EQ("param_ref", link_path2.link_name);
   EXPECT_EQ(R"({"@entityRef":")" + *reference + R"("})",
             GetLinkValue(story_storage_.get(), link_path2));
 
-  auto& link_path3 = module_data->parameter_map.entries.at(2).link_path;
-  EXPECT_EQ("param_type", module_data->parameter_map.entries.at(2).name);
+  auto& link_path3 = module_data->parameter_map().entries.at(2).link_path;
+  EXPECT_EQ("param_type", module_data->parameter_map().entries.at(2).name);
   EXPECT_EQ(full_path, link_path3.module_path);
   EXPECT_EQ("param_type", link_path3.link_name);
   EXPECT_EQ("null", GetLinkValue(story_storage_.get(), link_path3));
@@ -596,7 +596,7 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
   fuchsia::modular::LinkPath link_path;
   std::vector<std::string> full_path{"parent_mod", "mod"};
   story_storage_->ReadModuleData(full_path)->Then([&](fuchsia::modular::ModuleDataPtr result) {
-    for (auto& entry : result->parameter_map.entries) {
+    for (auto& entry : result->parameter_map().entries) {
       if (entry.name == "param_json") {
         fidl::Clone(entry.link_path, &link_path);
       }

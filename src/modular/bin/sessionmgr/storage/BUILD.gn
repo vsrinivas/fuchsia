@@ -85,6 +85,7 @@ source_set("session_storage_xdr") {
   ]
 
   deps = [
+    ":annotation_xdr",
     "//garnet/public/lib/fsl",
     "//peridot/lib/base64url",
     "//sdk/fidl/fuchsia.modular",
@@ -141,8 +142,8 @@ source_set("story_storage_xdr") {
   ]
 
   deps = [
+    ":annotation_xdr",
     "//garnet/public/lib/fsl",
-    "//peridot/lib/base64url",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/modular/lib/fidl:json_xdr",
@@ -164,5 +165,19 @@ executable("story_storage_unittest") {
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/entity:entity_watcher",
     "//src/modular/lib/testing:test_with_ledger",
+  ]
+}
+
+source_set("annotation_xdr") {
+  sources = [
+    "annotation_xdr.cc",
+    "annotation_xdr.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/base64url",
+    "//sdk/fidl/fuchsia.modular",
+    "//src/modular/lib/fidl:json_xdr",
   ]
 }

@@ -127,15 +127,15 @@ void ModuleControllerImpl::Teardown(fit::function<void()> done) {
 }
 
 void ModuleControllerImpl::Focus() {
-  story_controller_impl_->FocusModule(module_data_->module_path);
+  story_controller_impl_->FocusModule(module_data_->module_path());
 }
 
 void ModuleControllerImpl::Defocus() {
-  story_controller_impl_->DefocusModule(module_data_->module_path);
+  story_controller_impl_->DefocusModule(module_data_->module_path());
 }
 
 void ModuleControllerImpl::Stop(StopCallback done) {
-  story_controller_impl_->StopModule(module_data_->module_path, std::move(done));
+  story_controller_impl_->StopModule(module_data_->module_path(), std::move(done));
 }
 
 void ModuleControllerImpl::NotifyStateChange() {

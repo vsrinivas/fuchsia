@@ -41,7 +41,7 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
                                result_.error_message = "No module data for given name.";
                                return;
                              }
-                             (*module_data)->module_deleted = true;
+                             (*module_data)->set_module_deleted(true);
                              result_.status = fuchsia::modular::ExecuteStatus::OK;
                            })
         ->Then([flow] {});

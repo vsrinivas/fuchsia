@@ -48,7 +48,7 @@ StoryStorage::StoryStorage(LedgerClient* ledger_client, fuchsia::ledger::PageId 
 }
 
 FuturePtr<> StoryStorage::WriteModuleData(ModuleData module_data) {
-  auto module_path = fidl::Clone(module_data.module_path);
+  auto module_path = fidl::Clone(module_data.module_path());
   return UpdateModuleData(module_path,
                           [module_data = std::move(module_data)](ModuleDataPtr* module_data_ptr) {
                             *module_data_ptr = ModuleData::New();
@@ -112,7 +112,7 @@ FuturePtr<> StoryStorage::UpdateModuleData(const std::vector<std::string>& modul
         }
       }
 
-      FXL_DCHECK(new_module_data->module_path == op_state->module_path)
+      FXL_DCHECK(new_module_data->module_path() == op_state->module_path)
           << "StorageStorage::UpdateModuleData(path, ...): mutate_fn() "
              "must set "
              "ModuleData.module_path to |path|.";

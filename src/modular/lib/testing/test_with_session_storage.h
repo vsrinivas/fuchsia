@@ -23,25 +23,31 @@ class TestWithSessionStorage : public testing::TestWithLedger {
  protected:
   std::unique_ptr<SessionStorage> MakeSessionStorage(std::string ledger_page);
 
-  std::unique_ptr<StoryStorage> GetStoryStorage(SessionStorage* const storage,
-                                                std::string story_id);
+  std::unique_ptr<StoryStorage> GetStoryStorage(SessionStorage* storage, std::string story_id);
 
-  fidl::StringPtr CreateStory(SessionStorage* const storage);
+  // Create a new story with a specific story_id (name)
+  void CreateStory(const std::string& story_id, SessionStorage* storage);
 
-  void SetLinkValue(StoryStorage* const story_storage, const std::string& link_name,
+  // Create a new story and return the generated name
+  fidl::StringPtr CreateStory(SessionStorage* storage);
+
+  void SetLinkValue(StoryStorage* story_storage, const std::string& link_name,
                     const std::string& link_value);
 
-  void SetLinkValue(StoryStorage* const story_storage, const fuchsia::modular::LinkPath& link_path,
+  void SetLinkValue(StoryStorage* story_storage, const fuchsia::modular::LinkPath& link_path,
                     const std::string& link_value);
 
-  void WriteModuleData(StoryStorage* const story_storage, fuchsia::modular::ModuleData module_data);
+  void WriteModuleData(StoryStorage* story_storage, fuchsia::modular::ModuleData module_data);
 
-  std::string GetLinkValue(StoryStorage* const story_storage,
-                           const fuchsia::modular::LinkPath& path);
+  std::string GetLinkValue(StoryStorage* story_storage, const fuchsia::modular::LinkPath& path);
 
-  std::string GetLinkValue(StoryStorage* const story_storage, const std::string& link_name);
+  std::string GetLinkValue(StoryStorage* story_storage, const std::string& link_name);
 
   fuchsia::modular::LinkPath MakeLinkPath(const std::string& name);
+
+ private:
+  // Implements CreateStory on behalf of protected variants
+  fidl::StringPtr CreateStoryImpl(fidl::StringPtr story_id, SessionStorage* storage);
 };
 
 }  // namespace testing

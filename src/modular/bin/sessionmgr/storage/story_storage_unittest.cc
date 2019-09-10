@@ -71,13 +71,13 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   storage->set_on_module_data_updated([&](ModuleData) { notification_count++; });
 
   ModuleData module_data1;
-  module_data1.module_url = "url1";
-  module_data1.module_path.push_back("path1");
+  module_data1.set_module_url("url1");
+  module_data1.mutable_module_path()->push_back("path1");
   storage->WriteModuleData(Clone(module_data1));
 
   ModuleData module_data2;
-  module_data2.module_url = "url2";
-  module_data2.module_path.push_back("path2");
+  module_data2.set_module_url("url2");
+  module_data2.mutable_module_path()->push_back("path2");
   storage->WriteModuleData(Clone(module_data2));
 
   // We don't need to explicitly wait on WriteModuleData() because the
@@ -85,7 +85,7 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   // WriteModuleData() action is finished only once the data has been written.
   ModuleData read_data1;
   bool read1_done{};
-  storage->ReadModuleData(module_data1.module_path)->Then([&](ModuleDataPtr data) {
+  storage->ReadModuleData(module_data1.module_path())->Then([&](ModuleDataPtr data) {
     read1_done = true;
     ASSERT_TRUE(data);
     read_data1 = std::move(*data);
@@ -93,7 +93,7 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
 
   ModuleData read_data2;
   bool read2_done{};
-  storage->ReadModuleData(module_data2.module_path)->Then([&](ModuleDataPtr data) {
+  storage->ReadModuleData(module_data2.module_path())->Then([&](ModuleDataPtr data) {
     read2_done = true;
     ASSERT_TRUE(data);
     read_data2 = std::move(*data);
@@ -158,8 +158,8 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
                            EXPECT_FALSE(*ptr);
 
                            *ptr = ModuleData::New();
-                           (*ptr)->module_path = path;
-                           (*ptr)->module_url = "foobar";
+                           (*ptr)->set_module_path(path);
+                           (*ptr)->set_module_url("foobar");
                          })
       ->Then([&] { update_done = true; });
   RunLoopUntil([&] { return update_done; });
@@ -168,13 +168,13 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
   storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
     read_done = true;
     ASSERT_TRUE(data);
-    EXPECT_EQ(path, data->module_path);
-    EXPECT_EQ("foobar", data->module_url);
+    EXPECT_EQ(path, data->module_path());
+    EXPECT_EQ("foobar", data->module_url());
   });
   RunLoopUntil([&] { return read_done; });
   // Now something changed, so we should see a notification.
   EXPECT_TRUE(got_notification);
-  EXPECT_EQ("foobar", notified_module_data.module_url);
+  EXPECT_EQ("foobar", notified_module_data.module_url());
 
   // Case 3: Leave alone an existing record.
   got_notification = false;
@@ -184,7 +184,7 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
   storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
     read_done = true;
     ASSERT_TRUE(data);
-    EXPECT_EQ("foobar", data->module_url);
+    EXPECT_EQ("foobar", data->module_url());
   });
   RunLoopUntil([&] { return read_done; });
   // Now something changed, so we should see a notification.
@@ -193,19 +193,19 @@ TEST_F(StoryStorageTest, UpdateModuleData) {
   // Case 4: Mutate an existing record.
   storage->UpdateModuleData(path, [&](ModuleDataPtr* ptr) {
     EXPECT_TRUE(*ptr);
-    (*ptr)->module_url = "baz";
+    (*ptr)->set_module_url("baz");
   });
 
   read_done = false;
   storage->ReadModuleData(path)->Then([&](ModuleDataPtr data) {
     read_done = true;
     ASSERT_TRUE(data);
-    EXPECT_EQ("baz", data->module_url);
+    EXPECT_EQ("baz", data->module_url());
   });
   RunLoopUntil([&] { return read_done; });
   // Now something changed, so we should see a notification.
   EXPECT_TRUE(got_notification);
-  EXPECT_EQ("baz", notified_module_data.module_url);
+  EXPECT_EQ("baz", notified_module_data.module_url());
 }
 
 namespace {

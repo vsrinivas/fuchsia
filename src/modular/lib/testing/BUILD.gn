@@ -201,6 +201,10 @@ source_set("test_story_command_executor") {
     "//src/modular/bin/sessionmgr/puppet_master:story_command_executor",
     "//src/modular/lib/fidl:clone",
   ]
+
+  public_deps = [
+    "//src/modular/bin/sessionmgr/storage",
+  ]
 }
 
 source_set("test_with_ledger") {

@@ -28,7 +28,7 @@ class GetLinkPathForParameterNameCall : public Operation<fuchsia::modular::LinkP
           if (!module_data) {
             return;
           }
-          auto& param_map = module_data->parameter_map;
+          auto& param_map = module_data->parameter_map();
           auto it = std::find_if(param_map.entries.begin(), param_map.entries.end(),
                                  [this](const fuchsia::modular::ModuleParameterMapEntry& entry) {
                                    return entry.name == link_name_;

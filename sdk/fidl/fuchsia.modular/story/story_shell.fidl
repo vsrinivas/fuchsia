@@ -159,6 +159,11 @@ table SurfaceInfo2 {
     /// How the Surface was generated. By an action internal to the story or by
     /// an external action.
     4: ModuleSource module_source;
+
+    /// Collection of user-defined key-value attributes that describe this surface (module).
+    ///
+    /// The `Annotation.value` field of each `Annotation` is always set.
+    5: vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE annotations;
 };
 
 struct ContainerView {

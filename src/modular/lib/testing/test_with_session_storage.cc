@@ -21,7 +21,7 @@ std::unique_ptr<StoryStorage> TestWithSessionStorage::GetStoryStorage(SessionSto
   std::unique_ptr<StoryStorage> story_storage;
   bool done{};
   storage->GetStoryStorage(story_id)->Then([&](std::unique_ptr<StoryStorage> result) {
-    FXL_DCHECK(result);
+    FXL_DCHECK(!!result);
     story_storage = std::move(result);
     done = true;
   });
@@ -30,10 +30,10 @@ std::unique_ptr<StoryStorage> TestWithSessionStorage::GetStoryStorage(SessionSto
   return story_storage;
 }
 
-fidl::StringPtr TestWithSessionStorage::CreateStory(SessionStorage* const storage) {
-  auto future_story = storage->CreateStory(nullptr, /*story_options=*/{}, /*annotations=*/{});
+fidl::StringPtr TestWithSessionStorage::CreateStoryImpl(fidl::StringPtr story_id,
+                                                        SessionStorage* const storage) {
+  auto future_story = storage->CreateStory(story_id, /*story_options=*/{}, /*annotations=*/{});
   bool done{};
-  fidl::StringPtr story_id;
   future_story->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId) {
     done = true;
     story_id = std::move(id);
@@ -41,6 +41,16 @@ fidl::StringPtr TestWithSessionStorage::CreateStory(SessionStorage* const storag
   RunLoopUntil([&] { return done; });
 
   return story_id;
+}
+
+void TestWithSessionStorage::CreateStory(const std::string& story_id,
+                                         SessionStorage* const storage) {
+  auto created_story_id = CreateStoryImpl(story_id, storage).value_or("");
+  FXL_DCHECK(story_id == created_story_id);
+}
+
+fidl::StringPtr TestWithSessionStorage::CreateStory(SessionStorage* const storage) {
+  return CreateStoryImpl(nullptr, storage);
 }
 
 void TestWithSessionStorage::SetLinkValue(StoryStorage* const story_storage,

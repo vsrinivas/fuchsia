@@ -24,6 +24,11 @@ const uint32 MAX_ANNOTATIONS_PER_MODULE = 100;
 /// Maximum length of [`fuchsia.modular/AnnotationKey`].
 const uint32 MAX_ANNOTATION_KEY_LENGTH = 256;
 
+/// Maximum number of annotations that can be passed to either method
+/// Annotate() AnnotateModule() in fuchsia.modular protocols that support
+/// annotations.
+const uint32 MAX_ANNOTATE_SIZE = 50;
+
 /// Maximum length of [`fuchsia.modular/AnnotationValue`] fields:
 /// `text` and `bytes`.
 const uint32 MAX_ANNOTATION_VALUE_LENGTH = 1024;
@@ -59,4 +64,10 @@ enum AnnotationError {
     /// The total number of annotations on the story or module being annotated
     /// exceeds `MAX_ANNOTATIONS_PER_STORY` or `MAX_ANNOTATIONS_PER_MODULE`.
     TOO_MANY_ANNOTATIONS = 2;
+
+    /// The resource to be annotated was not found and could not be resolved
+    /// by, for example, waiting, or creating the missing resource automatically.
+    /// This error may be returned by StoryPuppetMaster.AnnotateModule(), which
+    /// can wait for a missing Module, but requires the Module's Story exist.
+    NOT_FOUND = 3;
 };

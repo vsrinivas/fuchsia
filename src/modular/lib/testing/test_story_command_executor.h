@@ -10,15 +10,23 @@
 #include <vector>
 
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
+#include "src/modular/bin/sessionmgr/storage/story_storage.h"
 
 namespace modular {
 namespace testing {
 
 class TestStoryCommandExecutor : public StoryCommandExecutor {
  public:
+  // Optional. If a |StoryStorage| is set, certain executed commands perform limited (as-needed to
+  // support existing test cases) updates to the |StoryStorage|. See ExecuteCommandsInternal().
+  void SetStoryStorage(std::unique_ptr<StoryStorage> story_storage);
+
+  // Change the default return status and optional error message to be returned from
+  // |StoryController|->Execute()
   void SetExecuteReturnResult(fuchsia::modular::ExecuteStatus status,
                               fidl::StringPtr error_message);
 
+  // Reset execute_count to 0, and clear the last_story_id and last_commands vector.
   void Reset();
 
   int execute_count() const { return execute_count_; }
@@ -37,6 +45,7 @@ class TestStoryCommandExecutor : public StoryCommandExecutor {
   fidl::StringPtr last_story_id_;
   std::vector<fuchsia::modular::StoryCommand> last_commands_;
   fuchsia::modular::ExecuteResult result_;
+  std::unique_ptr<StoryStorage> story_storage_;
 };
 
 }  // namespace testing
