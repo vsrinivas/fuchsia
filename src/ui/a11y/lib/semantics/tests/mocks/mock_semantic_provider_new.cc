@@ -7,7 +7,6 @@
 #include <lib/syslog/cpp/logger.h>
 
 namespace accessibility_test {
-
 namespace {
 
 fuchsia::ui::views::ViewRef CreateOrphanViewRef() {
@@ -31,6 +30,8 @@ MockSemanticProviderNew::MockSemanticProviderNew(
   manager->RegisterViewForSemantics(Clone(view_ref_),
                                     semantic_listener_bindings_.AddBinding(&semantic_listener_),
                                     tree_ptr_.NewRequest());
+
+  commit_failed_ = false;
 }
 
 void MockSemanticProviderNew::UpdateSemanticNodes(
@@ -43,6 +44,10 @@ void MockSemanticProviderNew::DeleteSemanticNodes(std::vector<uint32_t> node_ids
 }
 
 void MockSemanticProviderNew::Commit() { tree_ptr_->Commit(); }
+
+void MockSemanticProviderNew::CommitUpdates() {
+  tree_ptr_->CommitUpdates([this]() { commit_failed_ = true; });
+}
 
 void MockSemanticProviderNew::SetHitTestResult(uint32_t hit_test_result) {
   semantic_listener_.SetHitTestResult(hit_test_result);

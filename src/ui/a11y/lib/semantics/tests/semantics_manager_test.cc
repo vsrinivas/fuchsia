@@ -548,7 +548,7 @@ TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoidWithNewMock) {
   RunLoopUntilIdle();
 
   // Commit nodes.
-  semantic_provider.Commit();
+  semantic_provider.CommitUpdates();
   RunLoopUntilIdle();
 
   // Check that the committed node is present in the semantic tree.
@@ -556,6 +556,80 @@ TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoidWithNewMock) {
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
+}
+
+// Commit() should ensure that there are no cycles in the tree after
+// Update/Delete has been applied. If they are present, the tree should be
+// deleted.
+// Commit should also delete the channel for this particular tree.
+// This test will be replacing DetecCycleInCommit() in the future cl.
+TEST_F(SemanticsManagerTest, DetectCycleInCommit_New) {
+  // Create ActionListener.
+  accessibility_test::MockSemanticProviderNew semantic_provider(&semantics_manager_);
+
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  {
+    // Create Semantic Tree;
+    std::vector<Node> nodes_list;
+    ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(kCyclicSemanticTreePath, &nodes_list));
+
+    std::vector<Node> nodes_list_copy;
+    nodes_list_copy = fidl::Clone(nodes_list);
+
+    // Call update on the newly created semantic tree with cycle.
+    // Update the node created above.
+    semantic_provider.UpdateSemanticNodes(std::move(nodes_list));
+    RunLoopUntilIdle();
+
+    // Commit nodes.
+    semantic_provider.CommitUpdates();
+    RunLoopUntilIdle();
+
+    // Verify that Commit Called the callback on SemanticProvider.
+    RunLoopUntil([&semantic_provider] { return semantic_provider.CommitFailedStatus(); });
+
+    // Check that nodes are not present in the semantic tree.
+    for (const Node &node : nodes_list_copy) {
+      // Check that the node is not present in the tree.
+      EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(),
+                                                                 node.node_id()));
+    }
+  }
+
+  // Now since the channel is closed, Applying any more updates/commits should have no effect using
+  // the same handle.
+  {
+    // Create Semantic Tree;
+    std::vector<Node> nodes_list;
+    ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(kSemanticTreeEvenNodesPath, &nodes_list));
+
+    std::vector<Node> nodes_list_copy;
+    nodes_list_copy = fidl::Clone(nodes_list);
+
+    // Call update on the newly created semantic tree without cycle.
+    // Update the node created above.
+
+    FXL_LOG(ERROR) << "Following Error message is expected since UpdateSemanticNodes call is made "
+                      "on a channel which is closed.";
+    semantic_provider.UpdateSemanticNodes(std::move(nodes_list));
+    RunLoopUntilIdle();
+
+    // Commit nodes.
+    FXL_LOG(ERROR) << "Following Error message is expected since CommitUpdates call is made "
+                      "on a channel which is closed.";
+    semantic_provider.CommitUpdates();
+    RunLoopUntilIdle();
+
+    // Check that nodes are not present in the semantic tree.
+    for (const Node &node : nodes_list_copy) {
+      // Check that the node is not present in the tree.
+      EXPECT_EQ(nullptr, semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(),
+                                                                 node.node_id()));
+    }
+  }
 }
 
 }  // namespace accessibility_test

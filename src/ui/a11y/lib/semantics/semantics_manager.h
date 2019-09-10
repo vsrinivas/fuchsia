@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <zircon/types.h>
 
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
@@ -61,12 +62,16 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
       override;
 
+  // Helper function for semantic registration.
   void CompleteSemanticRegistration(
       fuchsia::ui::views::ViewRef view_ref,
       fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener,
       fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
           semantic_tree_request);
+
+  // Closes channel for semantic tree that matches the given "koid".
+  void CloseChannel(zx_koid_t koid);
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> bindings_;
 

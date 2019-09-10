@@ -35,15 +35,24 @@ class MockSemanticProviderNew {
   // Calls Commit() on SemanticTree.
   void Commit();
 
+  // Calls Commit() Updates.
+  void CommitUpdates();
+
   // Sets hit_test_result in MockSemanticListener.
   void SetHitTestResult(uint32_t hit_test_result);
 
+  // Returns Commit Failed status.
+  bool CommitFailedStatus() { return commit_failed_; };
+
  private:
-  fuchsia::ui::views::ViewRef view_ref_;
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
 
+  // ViewRef of the Semantic Tree.
+  fuchsia::ui::views::ViewRef view_ref_;
+
+  bool commit_failed_;
   MockSemanticListener semantic_listener_;
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticListener> semantic_listener_bindings_;
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticProviderNew);

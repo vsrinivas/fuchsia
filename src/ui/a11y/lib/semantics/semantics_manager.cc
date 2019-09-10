@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -74,7 +75,8 @@ void SemanticsManager::CompleteSemanticRegistration(
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
   auto semantic_tree = std::make_unique<SemanticTree>(
-      std::move(view_ref), std::move(action_listener), std::move(semantic_listener), debug_dir_);
+      std::move(view_ref), std::move(action_listener), std::move(semantic_listener), debug_dir_,
+      /*commit_error_callback=*/[this](zx_koid_t koid) { CloseChannel(koid); });
 
   semantic_tree_bindings_.AddBinding(std::move(semantic_tree), std::move(semantic_tree_request));
 }
@@ -92,8 +94,9 @@ fuchsia::accessibility::semantics::NodePtr SemanticsManager::GetAccessibilityNod
 fuchsia::accessibility::semantics::NodePtr SemanticsManager::GetAccessibilityNodeByKoid(
     const zx_koid_t koid, const int32_t node_id) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->IsSameKoid(koid))
+    if (binding->impl()->IsSameKoid(koid)) {
       return binding->impl()->GetAccessibilityNode(node_id);
+    }
   }
   return nullptr;
 }
@@ -117,6 +120,14 @@ void SemanticsManager::PerformHitTesting(
   }
 
   FX_LOGS(INFO) << "Given KOID(" << koid << ") doesn't match any existing ViewRef's koid.";
+}
+
+void SemanticsManager::CloseChannel(zx_koid_t koid) {
+  for (auto& binding : semantic_tree_bindings_.bindings()) {
+    if (binding->impl()->IsSameKoid(koid)) {
+      semantic_tree_bindings_.RemoveBinding(binding->impl());
+    }
+  }
 }
 
 }  // namespace a11y

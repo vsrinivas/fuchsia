@@ -23,10 +23,14 @@ namespace a11y {
 
 class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
  public:
+  // Callback which will be used to notify that an error is encountered while trying to apply the
+  // commit.
+  using CommitErrorCallback = fit::function<void(zx_koid_t)>;
+
   SemanticTree(fuchsia::ui::views::ViewRef view_ref,
                fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
                fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-               vfs::PseudoDir* debug_dir);
+               vfs::PseudoDir* debug_dir, CommitErrorCallback callback);
 
   ~SemanticTree() override;
 
@@ -71,6 +75,19 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void Commit() override;
 
+  // Semantic Tree for a particular view. Each client is responsible for
+  // maintaining the state of their tree. Nodes can be added, updated or
+  // deleted. Because the size of an update may exceed FIDL transfer limits,
+  // clients are responsible for breaking up changes into multiple update
+  // and delete calls that conform to these limits. The commit function must
+  // always be called at the end of a full update push to signal the end of
+  // an update.
+  // Updates/Deletes are processed in the order in which they are recieved. If the committed updates
+  // result in an ill formed tree(for example a missing root node or a cycle) then semantic manager
+  // will close the connection.
+  // |fuchsia::accessibility::semantics::SemanticsTree|
+  void CommitUpdates(CommitUpdatesCallback callback) override;
+
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes) override;
 
@@ -96,11 +113,14 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   void DeletePointerFromParent(uint32_t node_id);
 
   // Internal helper function to check if a point is within a bounding box.
-  bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const escher::vec2& point) const;
+  static bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const escher::vec2& point);
 
   // Function to create per view Log files under debug directory for debugging
   // semantic tree.
   void InitializeDebugEntry(vfs::PseudoDir* debug_dir);
+
+  // Helper function for applying commit.
+  bool ApplyCommit();
 
   // List of committed, cached nodes for each front-end. We represent semantics
   // tree as a map of local node ids to the actual node objects. All query
@@ -109,6 +129,9 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
 
   // List of pending semantic tree transactions.
   std::vector<SemanticTreeTransaction> pending_transactions_;
+
+  // This will be used to close the channel, if there is any issue while applying the commit.
+  CommitErrorCallback commit_error_callback_;
 
   fuchsia::ui::views::ViewRef view_ref_;
   fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener_;

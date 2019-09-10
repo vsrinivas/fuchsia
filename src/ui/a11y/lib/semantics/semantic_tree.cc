@@ -26,8 +26,9 @@ SemanticTree::SemanticTree(
     fuchsia::ui::views::ViewRef view_ref,
     fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-    vfs::PseudoDir* debug_dir)
-    : view_ref_(std::move(view_ref)),
+    vfs::PseudoDir* debug_dir, CommitErrorCallback commit_error_callback)
+    : commit_error_callback_(std::move(commit_error_callback)),
+      view_ref_(std::move(view_ref)),
       client_action_listener_(std::move(client_action_listener)),
       semantic_listener_(std::move(semantic_listener)),
       debug_dir_(debug_dir) {
@@ -45,7 +46,7 @@ void SemanticTree::OnAccessibilityActionRequested(
 
 // Internal helper function to check if a point is within a bounding box.
 bool SemanticTree::BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
-                                    const escher::vec2& point) const {
+                                    const escher::vec2& point) {
   return box.min.x <= point.x && box.max.x >= point.x && box.min.y <= point.y &&
          box.max.y >= point.y;
 }
@@ -66,7 +67,18 @@ bool SemanticTree::IsSameView(const fuchsia::ui::views::ViewRef& view_ref) {
 
 bool SemanticTree::IsSameKoid(const zx_koid_t koid) { return koid == GetKoid(view_ref_); }
 
-void SemanticTree::Commit() {
+void SemanticTree::Commit() { ApplyCommit(); }
+
+void SemanticTree::CommitUpdates(CommitUpdatesCallback callback) {
+  if (!ApplyCommit()) {
+    callback();
+    // Call Semantics Manager to close the channel for current tree.
+    FX_LOGS(ERROR) << "Closing Semantic Tree Channel for View(KOID):" << GetKoid(view_ref_);
+    commit_error_callback_(GetKoid(view_ref_));
+  }
+}
+
+bool SemanticTree::ApplyCommit() {
   // TODO(MI4-2038): Commit should ensure that there is only 1 tree rooted at
   // node_id 0.
 
@@ -89,7 +101,7 @@ void SemanticTree::Commit() {
     FX_LOGS(ERROR) << "No root node found after applying commit for view(koid):"
                    << GetKoid(view_ref_);
     nodes_.clear();
-    return;
+    return false;
   }
 
   // A tree must be acyclic. Delete if cycle found.
@@ -97,7 +109,10 @@ void SemanticTree::Commit() {
   if (IsCyclic(std::move(root_node), &visited)) {
     FX_LOGS(ERROR) << "Cycle found in semantic tree with View Id:" << GetKoid(view_ref_);
     nodes_.clear();
+    return false;
   }
+
+  return true;
 }
 
 void SemanticTree::UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes) {
