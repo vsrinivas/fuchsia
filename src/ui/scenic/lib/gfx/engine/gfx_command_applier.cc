@@ -26,7 +26,6 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
@@ -254,12 +253,8 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
       return ApplyCreateMemory(session, id, std::move(command.resource.memory()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImage:
       return ApplyCreateImage(session, id, std::move(command.resource.image()));
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe: {
+    case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe:
       return ApplyCreateImagePipe(session, id, std::move(command.resource.image_pipe()));
-    }
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe2: {
-      return ApplyCreateImagePipe2(session, id, std::move(command.resource.image_pipe2()));
-    }
     case fuchsia::ui::gfx::ResourceArgs::Tag::kBuffer:
       return ApplyCreateBuffer(session, id, std::move(command.resource.buffer()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kScene:
@@ -1036,14 +1031,6 @@ bool GfxCommandApplier::ApplyCreateImagePipe(Session* session, ResourceId id,
   auto image_pipe = fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
                                                    session->image_pipe_updater(),
                                                    session->shared_error_reporter());
-  return session->resources()->AddResource(id, image_pipe);
-}
-
-bool GfxCommandApplier::ApplyCreateImagePipe2(Session* session, ResourceId id,
-                                              fuchsia::ui::gfx::ImagePipe2Args args) {
-  auto image_pipe = fxl::MakeRefCounted<ImagePipe2>(session, id, std::move(args.image_pipe_request),
-                                                    session->image_pipe_updater(),
-                                                    session->shared_error_reporter());
   return session->resources()->AddResource(id, image_pipe);
 }
 

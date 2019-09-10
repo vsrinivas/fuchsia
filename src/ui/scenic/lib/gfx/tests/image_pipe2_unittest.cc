@@ -5,15 +5,12 @@
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
 
 #include <lib/fdio/directory.h>
-#include <lib/ui/scenic/cpp/commands.h>
 
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/flib/fence.h"
-#include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/scenic/lib/gfx/tests/session_handler_test.h"
 #include "src/ui/scenic/lib/gfx/tests/util.h"
-#include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
 namespace scenic_impl::gfx::test {
 
@@ -92,19 +89,6 @@ void SetConstraints(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
 }
 
 }  // namespace
-
-class CreateImagePipe2CmdTest : public VkSessionTest {};
-
-VK_TEST_F(CreateImagePipe2CmdTest, ApplyCommand) {
-  zx::channel image_pipe_endpoint;
-  zx::channel remote_endpoint;
-  zx::channel::create(0, &image_pipe_endpoint, &remote_endpoint);
-
-  const uint32_t kImagePipeId = 1;
-  ASSERT_TRUE(Apply(scenic::NewCreateImagePipe2Cmd(
-      kImagePipeId,
-      fidl::InterfaceRequest<fuchsia::images::ImagePipe2>(std::move(remote_endpoint)))));
-}
 
 class DummyImage : public Image {
  public:

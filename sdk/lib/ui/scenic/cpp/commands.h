@@ -39,8 +39,6 @@ fuchsia::ui::gfx::Command NewCreateImageCmd(uint32_t id, uint32_t memory_id, uin
                                             uint32_t height, uint32_t stride);
 fuchsia::ui::gfx::Command NewCreateImagePipeCmd(
     uint32_t id, fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
-fuchsia::ui::gfx::Command NewCreateImagePipe2Cmd(
-    uint32_t id, fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request);
 fuchsia::ui::gfx::Command NewCreateBufferCmd(uint32_t id, uint32_t memory_id,
                                              uint32_t memory_offset, uint32_t num_bytes);
 
