@@ -12,6 +12,7 @@
             "fuchsia.sys.Environment",
             "fuchsia.setui.SetUiService",
             "fuchsia.settings.Accessibility",
+            "fuchsia.settings.Audio",
             "fuchsia.settings.Display",
             "fuchsia.settings.DoNotDisturb",
             "fuchsia.settings.Intl",

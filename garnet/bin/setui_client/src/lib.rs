@@ -1,4 +1,5 @@
 #![feature(async_await)]
+#![allow(dead_code)]
 
 use {
     failure::{Error, ResultExt},
@@ -12,6 +13,7 @@ use {
 };
 
 mod accessibility;
+mod audio;
 mod client;
 mod display;
 mod do_not_disturb;
@@ -73,6 +75,15 @@ pub enum SettingClient {
         color_correction: Option<fidl_fuchsia_settings::ColorBlindnessType>,
     },
 
+    #[structopt(name = "audio")]
+    Audio {
+        #[structopt(flatten)]
+        streams: AudioStreams,
+
+        #[structopt(flatten)]
+        input: AudioInput,
+    },
+
     // Operations that use the new interfaces.
     #[structopt(name = "display")]
     Display {
@@ -121,6 +132,31 @@ pub enum SettingClient {
         #[structopt(short = "i", long = "interfaces", parse(from_str = "str_to_interfaces"))]
         configuration_interfaces: Option<ConfigurationInterfaces>,
     },
+}
+
+#[derive(StructOpt, Debug)]
+pub struct AudioStreams {
+    #[structopt(short = "t", long = "stream", parse(try_from_str = "str_to_audio_stream"))]
+    stream: Option<fidl_fuchsia_media::AudioRenderUsage>,
+    #[structopt(short = "s", long = "source", parse(try_from_str = "str_to_audio_source"))]
+    source: Option<fidl_fuchsia_settings::AudioStreamSettingSource>,
+    #[structopt(flatten)]
+    user_volume: UserVolume,
+}
+
+#[derive(StructOpt, Debug)]
+struct UserVolume {
+    #[structopt(short = "l", long = "level")]
+    level: Option<f32>,
+
+    #[structopt(short = "v", long = "volume_muted")]
+    volume_muted: Option<bool>,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct AudioInput {
+    #[structopt(short = "m", long = "input_muted")]
+    input_muted: Option<bool>,
 }
 
 pub async fn run_command(command: SettingClient) -> Result<(), Error> {
@@ -198,6 +234,19 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 .context("Failed to connect to privacy service")?;
             let output = privacy::command(privacy_service, user_data_sharing_consent).await?;
             println!("Privacy: {}", output);
+        }
+        SettingClient::Audio { streams, input } => {
+            let audio_service = connect_to_service::<fidl_fuchsia_settings::AudioMarker>()
+                .context("Failed to connect to audio service")?;
+            let stream = streams.stream;
+            let source = streams.source;
+            let level = streams.user_volume.level;
+            let volume_muted = streams.user_volume.volume_muted;
+            let input_muted = input.input_muted;
+            let output =
+                audio::command(audio_service, stream, source, level, volume_muted, input_muted)
+                    .await?;
+            println!("Audio: {}", output);
         }
         SettingClient::Setup { configuration_interfaces } => {
             let setup_service = connect_to_service::<fidl_fuchsia_settings::SetupMarker>()
@@ -289,13 +338,90 @@ fn str_to_color_blindness_type(
     }
 }
 
+fn str_to_audio_stream(src: &str) -> Result<fidl_fuchsia_media::AudioRenderUsage, &str> {
+    match src.to_lowercase().as_str() {
+        "background" | "b" => Ok(fidl_fuchsia_media::AudioRenderUsage::Background),
+        "media" | "m" => Ok(fidl_fuchsia_media::AudioRenderUsage::Media),
+        "interruption" | "i" => Ok(fidl_fuchsia_media::AudioRenderUsage::Interruption),
+        "system_agent" | "systemagent" | "system agent" | "s" => {
+            Ok(fidl_fuchsia_media::AudioRenderUsage::SystemAgent)
+        }
+        "communication" | "c" => Ok(fidl_fuchsia_media::AudioRenderUsage::Communication),
+        _ => Err("Couldn't parse audio stream type"),
+    }
+}
+
+fn str_to_audio_source(src: &str) -> Result<fidl_fuchsia_settings::AudioStreamSettingSource, &str> {
+    match src.to_lowercase().as_str() {
+        "default" | "d" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::Default),
+        "user" | "u" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::User),
+        "system" | "s" => Ok(fidl_fuchsia_settings::AudioStreamSettingSource::System),
+        _ => Err("Couldn't parse audio source type"),
+    }
+}
+
+// TODO(go/fxb/36262): Refactor tests out of lib
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Verifies that externally dependent values are not changed
+    /// Unit test for str_to_audio_stream.
+    #[test]
+    fn test_str_to_audio_stream() {
+        println!("Running test_str_to_audio_stream");
+        let test_cases = vec![
+            "Background",
+            "MEDIA",
+            "interruption",
+            "SYSTEM_AGENT",
+            "SystemAgent",
+            "system agent",
+            "Communication",
+            "unexpected_stream_type",
+        ];
+        let expected = vec![
+            Ok(fidl_fuchsia_media::AudioRenderUsage::Background),
+            Ok(fidl_fuchsia_media::AudioRenderUsage::Media),
+            Ok(fidl_fuchsia_media::AudioRenderUsage::Interruption),
+            Ok(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
+            Ok(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
+            Ok(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
+            Ok(fidl_fuchsia_media::AudioRenderUsage::Communication),
+            Err("Couldn't parse audio stream type"),
+        ];
+        let mut results = vec![];
+        for test_case in test_cases {
+            results.push(str_to_audio_stream(test_case));
+        }
+        for (expected, result) in expected.iter().zip(results.iter()) {
+            assert_eq!(expected, result);
+        }
+    }
+
+    /// Unit test for str_to_audio_source.
+    #[test]
+    fn test_str_to_audio_source() {
+        println!("Running test_str_to_audio_source");
+        let test_cases = vec!["Default", "USER", "system", "unexpected_source_type"];
+        let expected = vec![
+            Ok(fidl_fuchsia_settings::AudioStreamSettingSource::Default),
+            Ok(fidl_fuchsia_settings::AudioStreamSettingSource::User),
+            Ok(fidl_fuchsia_settings::AudioStreamSettingSource::System),
+            Err("Couldn't parse audio source type"),
+        ];
+        let mut results = vec![];
+        for test_case in test_cases {
+            results.push(str_to_audio_source(test_case));
+        }
+        for (expected, result) in expected.iter().zip(results.iter()) {
+            assert_eq!(expected, result);
+        }
+    }
+
+    /// Verifies that externally dependent values are not changed.
     #[test]
     fn test_describe_account_override() {
+        println!("Running test_describe_account_override");
         verify_account_override(LoginOverride::AutologinGuest, "autologinguest");
         verify_account_override(LoginOverride::None, "none");
         verify_account_override(LoginOverride::AuthProvider, "auth");
