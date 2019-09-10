@@ -83,12 +83,16 @@ void LogHitBreakpoint(const DebuggedThread* thread, ProcessBreakpoint* process_b
 }  // namespace
 
 DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t koid,
-                               zx::exception exception, ThreadCreationOption option)
+                               zx::exception exception, ThreadCreationOption option,
+                               std::shared_ptr<ObjectProvider> object_provider)
     : debug_agent_(process->debug_agent()),
       process_(process),
       thread_(std::move(thread)),
       koid_(koid),
-      exception_token_(std::move(exception)) {
+      exception_token_(std::move(exception)),
+      object_provider_(std::move(object_provider)) {
+  FXL_DCHECK(object_provider_);
+
   switch (option) {
     case ThreadCreationOption::kRunningKeepRunning:
       // do nothing
@@ -337,10 +341,9 @@ bool DebuggedThread::WaitForSuspension(zx::time deadline) {
 void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack_amount,
                                       const zx_thread_state_general_regs* optional_regs,
                                       debug_ipc::ThreadRecord* record) const {
-  ObjectProvider* provider = ObjectProvider::Get();
   record->process_koid = process_->koid();
   record->thread_koid = koid();
-  record->name = provider->NameForObject(thread_);
+  record->name = object_provider_->NameForObject(thread_);
 
   // State (running, blocked, etc.).
   zx_info_thread info;

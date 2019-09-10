@@ -8,12 +8,13 @@
 
 namespace debug_agent {
 
-MockProcess::MockProcess(zx_koid_t koid) : DebuggedProcess(nullptr, {koid, zx::process()}) {}
+MockProcess::MockProcess(zx_koid_t koid, std::shared_ptr<ObjectProvider> object_provider)
+    : DebuggedProcess(nullptr, {koid, zx::process()}, std::move(object_provider)) {}
 
 MockProcess::~MockProcess() = default;
 
 DebuggedThread* MockProcess::AddThread(zx_koid_t thread_koid) {
-  auto mock_thread = std::make_unique<MockThread>(this, thread_koid);
+  auto mock_thread = std::make_unique<MockThread>(this, thread_koid, object_provider_);
   DebuggedThread* thread_ptr = mock_thread.get();
   threads_[thread_koid] = std::move(mock_thread);
   return thread_ptr;

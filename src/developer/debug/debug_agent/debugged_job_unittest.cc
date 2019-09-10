@@ -46,10 +46,10 @@ std::string PrintMatchedKoids(const MockObjectProvider& provider,
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(DebuggedJob, NoMatch) {
-  MockObjectProvider provider = CreateDefaultMockObjectProvider();
+  std::shared_ptr<MockObjectProvider> provider = CreateDefaultMockObjectProvider();
   MockProcessStartHandler start_handler;
-  const MockJobObject* root = provider.root();
-  DebuggedJob job(&provider, &start_handler, root->koid, zx::job(root->koid));
+  const MockJobObject* root = provider->root();
+  DebuggedJob job(provider, &start_handler, root->koid, zx::job(root->koid));
 
   auto matches = job.SetFilters({"no-match"});
 
@@ -57,72 +57,72 @@ TEST(DebuggedJob, NoMatch) {
 }
 
 TEST(DebuggedJob, SingleMatch) {
-  MockObjectProvider provider = CreateDefaultMockObjectProvider();
+  std::shared_ptr<MockObjectProvider> provider = CreateDefaultMockObjectProvider();
   MockProcessStartHandler start_handler;
-  const MockJobObject* root = provider.root();
-  DebuggedJob job(&provider, &start_handler, root->koid, zx::job(root->koid));
+  const MockJobObject* root = provider->root();
+  DebuggedJob job(provider, &start_handler, root->koid, zx::job(root->koid));
 
   auto matches = job.SetFilters({"root-p1"});
 
-  ASSERT_EQ(matches.size(), 1u) << PrintMatchedKoids(provider, matches);
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "root-p1"));
+  ASSERT_EQ(matches.size(), 1u) << PrintMatchedKoids(*provider, matches);
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "root-p1"));
 }
 
 TEST(DebuggedJob, MultipleMatches) {
-  MockObjectProvider provider = CreateDefaultMockObjectProvider();
+  std::shared_ptr<MockObjectProvider> provider = CreateDefaultMockObjectProvider();
   MockProcessStartHandler start_handler;
-  const MockJobObject* root = provider.root();
-  DebuggedJob job(&provider, &start_handler, root->koid, zx::job(root->koid));
+  const MockJobObject* root = provider->root();
+  DebuggedJob job(provider, &start_handler, root->koid, zx::job(root->koid));
 
   auto matches = job.SetFilters({"job121"});
 
-  ASSERT_EQ(matches.size(), 2u) << PrintMatchedKoids(provider, matches);
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job121-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job121-p2"));
+  ASSERT_EQ(matches.size(), 2u) << PrintMatchedKoids(*provider, matches);
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job121-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job121-p2"));
 }
 
 TEST(DebuggedJob, MultipleFilters) {
-  MockObjectProvider provider = CreateDefaultMockObjectProvider();
+  std::shared_ptr<MockObjectProvider> provider = CreateDefaultMockObjectProvider();
   MockProcessStartHandler start_handler;
-  const MockJobObject* root = provider.root();
-  DebuggedJob job(&provider, &start_handler, root->koid, zx::job(root->koid));
+  const MockJobObject* root = provider->root();
+  DebuggedJob job(provider, &start_handler, root->koid, zx::job(root->koid));
 
   auto matches = job.SetFilters({"job11", "job12", "root"});
 
-  ASSERT_EQ(matches.size(), 6u) << PrintMatchedKoids(provider, matches);
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "root-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "root-p2"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "root-p3"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job11-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job121-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job121-p2"));
+  ASSERT_EQ(matches.size(), 6u) << PrintMatchedKoids(*provider, matches);
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "root-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "root-p2"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "root-p3"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job11-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job121-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job121-p2"));
 }
 
 TEST(DebuggedJob, SubJobMatching) {
-  MockObjectProvider provider = CreateDefaultMockObjectProvider();
+  std::shared_ptr<MockObjectProvider> provider = CreateDefaultMockObjectProvider();
   MockProcessStartHandler start_handler;
-  const MockJobObject* root = provider.root();
+  const MockJobObject* root = provider->root();
 
   // Taking from the root.
-  DebuggedJob job(&provider, &start_handler, root->koid, zx::job(root->koid));
+  DebuggedJob job(provider, &start_handler, root->koid, zx::job(root->koid));
   auto matches = job.SetFilters({"p1"});
 
-  ASSERT_EQ(matches.size(), 4u) << PrintMatchedKoids(provider, matches);
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "root-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job1-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job11-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job121-p1"));
+  ASSERT_EQ(matches.size(), 4u) << PrintMatchedKoids(*provider, matches);
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "root-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job1-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job11-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job121-p1"));
 
-  const MockObject* fake_sub_job = provider.JobByName("job1");
+  const MockObject* fake_sub_job = provider->JobByName("job1");
   ASSERT_TRUE(fake_sub_job);
 
-  DebuggedJob sub_job(&provider, &start_handler, fake_sub_job->koid, zx::job(fake_sub_job->koid));
+  DebuggedJob sub_job(provider, &start_handler, fake_sub_job->koid, zx::job(fake_sub_job->koid));
   matches = sub_job.SetFilters({"p1"});
 
-  ASSERT_EQ(matches.size(), 3u) << PrintMatchedKoids(provider, matches);
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job1-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job11-p1"));
-  EXPECT_TRUE(IsProcessMatched(provider, matches, "job121-p1"));
+  ASSERT_EQ(matches.size(), 3u) << PrintMatchedKoids(*provider, matches);
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job1-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job11-p1"));
+  EXPECT_TRUE(IsProcessMatched(*provider, matches, "job121-p1"));
 }
 
 }  // namespace

@@ -10,12 +10,14 @@
 
 #include <vector>
 
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
 
 // Fills the root with the process tree of the current system.
-zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root);
+zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root,
+                           const ObjectProvider& object_provider);
 
 }  // namespace debug_agent
 

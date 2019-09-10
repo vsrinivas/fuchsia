@@ -174,7 +174,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     BreakpointStreamBackend backend(loop, 5);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(std::move(services));
+    DebugAgent agent(std::move(services), ObjectProvider::Get());
     RemoteAPI* remote_api = &agent;
     agent.Connect(&backend.stream());
 

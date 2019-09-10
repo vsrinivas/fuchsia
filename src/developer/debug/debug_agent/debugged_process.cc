@@ -76,8 +76,10 @@ DebuggedProcessCreateInfo::DebuggedProcessCreateInfo() = default;
 DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(zx_koid_t process_koid, zx::process handle)
     : koid(process_koid), handle(std::move(handle)) {}
 
-DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info)
-    : debug_agent_(debug_agent),
+DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info,
+                                 std::shared_ptr<ObjectProvider> object_provider)
+    : object_provider_(std::move(object_provider)),
+      debug_agent_(debug_agent),
       koid_(create_info.koid),
       process_(std::move(create_info.handle)),
       name_(std::move(create_info.name)) {
@@ -118,11 +120,9 @@ zx_status_t DebuggedProcess::Init() {
   debug_ipc::MessageLoopTarget* loop = debug_ipc::MessageLoopTarget::Current();
   FXL_DCHECK(loop);  // Loop must be created on this thread first.
 
-  ObjectProvider* provider = ObjectProvider::Get();
-
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchProcessConfig config;
-  config.process_name = provider->NameForObject(process_);
+  config.process_name = object_provider_->NameForObject(process_);
   config.process_handle = process_.get();
   config.process_koid = koid_;
   config.watcher = this;
@@ -260,17 +260,16 @@ std::vector<DebuggedThread*> DebuggedProcess::GetThreads() const {
 }
 
 void DebuggedProcess::PopulateCurrentThreads() {
-  ObjectProvider* provider = ObjectProvider::Get();
-  for (zx_koid_t koid : provider->GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
+  for (zx_koid_t koid : object_provider_->GetChildKoids(process_.get(), ZX_INFO_PROCESS_THREADS)) {
     // We should never populate the same thread twice.
     if (threads_.find(koid) != threads_.end())
       continue;
 
     zx_handle_t handle;
     if (zx_object_get_child(process_.get(), koid, ZX_RIGHT_SAME_RIGHTS, &handle) == ZX_OK) {
-      threads_.emplace(
-          koid, std::make_unique<DebuggedThread>(this, zx::thread(handle), koid, zx::exception(),
-                                                 ThreadCreationOption::kRunningKeepRunning));
+      threads_.emplace(koid, std::make_unique<DebuggedThread>(
+                                 this, zx::thread(handle), koid, zx::exception(),
+                                 ThreadCreationOption::kRunningKeepRunning, object_provider_));
     }
   }
 }
@@ -450,13 +449,12 @@ void DebuggedProcess::OnThreadStarting(zx::exception exception,
   FXL_DCHECK(exception_info.pid == koid());
   FXL_DCHECK(threads_.find(exception_info.tid) == threads_.end());
 
-  ObjectProvider* provider = ObjectProvider::Get();
-  zx::thread thread = provider->GetThreadFromException(exception.get());
+  zx::thread thread = object_provider_->GetThreadFromException(exception.get());
 
   auto added = threads_.emplace(
       exception_info.tid, std::make_unique<DebuggedThread>(
                               this, std::move(thread), exception_info.tid, std::move(exception),
-                              ThreadCreationOption::kSuspendedKeepSuspended));
+                              ThreadCreationOption::kSuspendedKeepSuspended, object_provider_));
 
   // Notify the client.
   added.first->second->SendThreadNotification();

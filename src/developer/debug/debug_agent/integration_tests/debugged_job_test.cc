@@ -216,7 +216,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   JobStreamBackend backend(message_loop);
 
   auto services = sys::ServiceDirectory::CreateFromNamespace();
-  DebugAgent agent(std::move(services));
+  DebugAgent agent(std::move(services), ObjectProvider::Get());
   RemoteAPI* remote_api = &agent;
   agent.Connect(&backend.stream());
 
@@ -412,7 +412,7 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   JobStreamBackend mock_stream_backend(loop_wrapper.loop());
 
   auto services = sys::ServiceDirectory::CreateFromNamespace();
-  DebugAgent agent(std::move(services));
+  DebugAgent agent(std::move(services), ObjectProvider::Get());
   RemoteAPI* remote_api = &agent;
   agent.Connect(&mock_stream_backend.stream());
 
@@ -431,7 +431,7 @@ TEST(DebuggedJobIntegrationTest, AttachSpecial) {
   ASSERT_TRUE(mock_stream_backend.attach_reply());
   debug_ipc::AttachReply comp_reply = *mock_stream_backend.attach_reply();
 
-  ObjectProvider* provider = ObjectProvider::Get();
+  auto provider = ObjectProvider::Get();
 
   // At this point we can't validate that much since the test environment is
   // special and the component manager's job won't actually be the real one.

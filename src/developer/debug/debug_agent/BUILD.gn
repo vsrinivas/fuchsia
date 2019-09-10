@@ -167,6 +167,7 @@ executable("unit_tests") {
 
   sources = [
     "breakpoint_unittest.cc",
+    "debug_agent_unittest.cc",
     "debugged_job_unittest.cc",
     "debugged_thread_unittest.cc",
     "process_breakpoint_unittest.cc",

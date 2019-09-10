@@ -102,13 +102,15 @@ class ScopedFakeArchProvider {
 
 class FakeProcess : public DebuggedProcess {
  public:
-  FakeProcess(zx_koid_t koid) : DebuggedProcess(nullptr, {koid, zx::process()}) {}
+  FakeProcess(zx_koid_t koid)
+      : DebuggedProcess(nullptr, {koid, zx::process()}, ObjectProvider::Get()) {}
   ~FakeProcess() = default;
 
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
       thread_ = std::make_unique<DebuggedThread>(this, zx::thread(), tid, zx::exception(),
-                                                 ThreadCreationOption::kSuspendedKeepSuspended);
+                                                 ThreadCreationOption::kSuspendedKeepSuspended,
+                                                 ObjectProvider::Get());
     }
     return thread_.get();
   }
@@ -228,7 +230,7 @@ TEST(DebuggedThread, FillThreadRecord) {
   zx::thread current_thread;
   zx::thread::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &current_thread);
 
-  ObjectProvider* provider = ObjectProvider::Get();
+  std::shared_ptr<ObjectProvider> provider = ObjectProvider::Get();
 
   zx_koid_t current_thread_koid = provider->KoidForObject(current_thread);
 
@@ -240,7 +242,8 @@ TEST(DebuggedThread, FillThreadRecord) {
 
   auto thread = std::make_unique<DebuggedThread>(&fake_process, std::move(current_thread),
                                                  current_thread_koid, zx::exception(),
-                                                 ThreadCreationOption::kRunningKeepRunning);
+                                                 ThreadCreationOption::kRunningKeepRunning,
+                                                 provider);
 
   // Request no stack since this thread should be running.
   debug_ipc::ThreadRecord record;

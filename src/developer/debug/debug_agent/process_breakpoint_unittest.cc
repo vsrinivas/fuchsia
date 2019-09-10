@@ -147,7 +147,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
   Breakpoint main_breakpoint(&process_delegate);
   main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
   zx_koid_t process_koid = 0x1234;
-  MockProcess process(process_koid);
+  MockProcess process(process_koid, ObjectProvider::Get());
 
   ProcessBreakpoint bp(&main_breakpoint, &process, process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
@@ -183,7 +183,7 @@ TEST(ProcessBreakpoint, StepMultiple) {
   main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
 
   constexpr zx_koid_t process_koid = 0x1234;
-  MockProcess process(process_koid);
+  MockProcess process(process_koid, ObjectProvider::Get());
 
   // The step over strategy is as follows:
   // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
@@ -394,7 +394,7 @@ TEST(ProcessBreakpoint, HWBreakpointForAllThreads) {
   constexpr uint32_t kBreakpointId1 = 0x1;
   constexpr uint64_t kAddress = 0x80000000;
 
-  auto process = std::make_unique<MockProcess>(kProcessId);
+  auto process = std::make_unique<MockProcess>(kProcessId, ObjectProvider::Get());
   process->AddThread(kThreadId1);
   process->AddThread(kThreadId2);
   process->AddThread(kThreadId3);
@@ -440,7 +440,7 @@ TEST(ProcessBreakpoint, HWBreakpointWithThreadId) {
   constexpr uint64_t kAddress = BreakpointFakeMemory::kAddress;
   constexpr uint64_t kOtherAddress = 0x8fffffff;
 
-  auto process = std::make_unique<MockProcess>(kProcessId);
+  auto process = std::make_unique<MockProcess>(kProcessId, ObjectProvider::Get());
   process->AddThread(kThreadId1);
   process->AddThread(kThreadId2);
   process->AddThread(kThreadId3);

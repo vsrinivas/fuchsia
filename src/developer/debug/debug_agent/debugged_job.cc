@@ -15,9 +15,12 @@
 
 namespace debug_agent {
 
-DebuggedJob::DebuggedJob(ObjectProvider* provider, ProcessStartHandler* handler, zx_koid_t job_koid,
-                         zx::job job)
-    : provider_(provider), handler_(handler), koid_(job_koid), job_(std::move(job)) {}
+DebuggedJob::DebuggedJob(std::shared_ptr<ObjectProvider> object_provider,
+                         ProcessStartHandler* handler, zx_koid_t job_koid, zx::job job)
+    : object_provider_(std::move(object_provider)),
+      handler_(handler),
+      koid_(job_koid),
+      job_(std::move(job)) {}
 
 DebuggedJob::~DebuggedJob() = default;
 
@@ -27,7 +30,7 @@ zx_status_t DebuggedJob::Init() {
 
   // Register for debug exceptions.
   debug_ipc::MessageLoopTarget::WatchJobConfig config;
-  config.job_name = provider_->NameForObject(job_);
+  config.job_name = object_provider_->NameForObject(job_);
   config.job_handle = job_.get();
   config.job_koid = koid_;
   config.watcher = this;
@@ -45,10 +48,10 @@ bool DebuggedJob::FilterInfo::Matches(const std::string& proc_name) {
 
 void DebuggedJob::OnProcessStarting(zx::exception exception_token,
                                     zx_exception_info_t exception_info) {
-  zx::process process = provider_->GetProcessFromException(exception_token.get());
-  auto proc_name = provider_->NameForObject(process);
+  zx::process process = object_provider_->GetProcessFromException(exception_token.get());
+  auto proc_name = object_provider_->NameForObject(process);
 
-  zx::thread initial_thread = provider_->GetThreadFromException(exception_token.get());
+  zx::thread initial_thread = object_provider_->GetThreadFromException(exception_token.get());
 
   // Tools like fx serve will connect every second or so to the target, spamming
   // logging for this with a lot of "/boot/bin/sh" starting.
@@ -85,15 +88,15 @@ void DebuggedJob::OnProcessStarting(zx::exception exception_token,
 
 std::set<zx_koid_t> DebuggedJob::ApplyToJob(FilterInfo& filter, zx::job& job) {
   std::set<zx_koid_t> matches;
-  for (auto& child : provider_->GetChildProcesses(job.get())) {
-    auto proc_name = provider_->NameForObject(child);
+  for (auto& child : object_provider_->GetChildProcesses(job.get())) {
+    auto proc_name = object_provider_->NameForObject(child);
     if (filter.Matches(proc_name)) {
       DEBUG_LOG(Job) << "Filter " << filter.filter << " matches process " << proc_name;
-      matches.insert(provider_->KoidForObject(child));
+      matches.insert(object_provider_->KoidForObject(child));
     }
   }
 
-  for (auto& child : provider_->GetChildJobs(job.get())) {
+  for (auto& child : object_provider_->GetChildJobs(job.get())) {
     auto m = ApplyToJob(filter, child);
     matches.insert(m.begin(), m.end());
   }

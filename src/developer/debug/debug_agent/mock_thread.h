@@ -10,7 +10,8 @@ namespace debug_agent {
 
 class MockThread : public DebuggedThread {
  public:
-  MockThread(DebuggedProcess* process, zx_koid_t thread_koid);
+  MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
+             std::shared_ptr<ObjectProvider> object_provider);
 
   void ResumeException() override;
   void ResumeSuspension() override;

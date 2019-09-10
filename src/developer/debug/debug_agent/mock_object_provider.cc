@@ -8,9 +8,13 @@
 
 namespace debug_agent {
 
-std::vector<zx::job> MockObjectProvider::GetChildJobs(zx_handle_t job_handle) {
+std::vector<zx::job> MockObjectProvider::GetChildJobs(zx_handle_t job_handle) const {
   zx_koid_t job_koid = static_cast<zx_koid_t>(job_handle);
-  MockJobObject* job = reinterpret_cast<MockJobObject*>(object_map_[job_koid]);
+
+  auto it = object_map_.find(job_koid);
+  FXL_DCHECK(it != object_map_.end());
+  MockJobObject* job = reinterpret_cast<MockJobObject*>(it->second);
+
   FXL_DCHECK(job) << "On koid: " << job_koid;
   FXL_DCHECK(job->type == MockObject::Type::kJob);
 
@@ -22,9 +26,13 @@ std::vector<zx::job> MockObjectProvider::GetChildJobs(zx_handle_t job_handle) {
   return child_jobs;
 }
 
-std::vector<zx::process> MockObjectProvider::GetChildProcesses(zx_handle_t job_handle) {
+std::vector<zx::process> MockObjectProvider::GetChildProcesses(zx_handle_t job_handle) const {
   zx_koid_t job_koid = static_cast<zx_koid_t>(job_handle);
-  MockJobObject* job = reinterpret_cast<MockJobObject*>(object_map_[job_koid]);
+
+  auto it = object_map_.find(job_koid);
+  FXL_DCHECK(it != object_map_.end());
+
+  MockJobObject* job = reinterpret_cast<MockJobObject*>(it->second);
   FXL_DCHECK(job) << "On koid: " << job_koid;
   FXL_DCHECK(job->type == MockObject::Type::kJob);
 
@@ -36,51 +44,59 @@ std::vector<zx::process> MockObjectProvider::GetChildProcesses(zx_handle_t job_h
   return child_processes;
 }
 
-std::string MockObjectProvider::NameForObject(zx_handle_t object_handle) {
+std::string MockObjectProvider::NameForObject(zx_handle_t object_handle) const {
   zx_koid_t koid = static_cast<zx_koid_t>(object_handle);
   DEBUG_LOG(Test) << "Getting name for: " << object_handle;
-  MockObject* object = object_map_[koid];
-  FXL_DCHECK(object) << "No object for " << object_handle;
+  auto it = object_map_.find(koid);
+  FXL_DCHECK(it != object_map_.end());
 
-  DEBUG_LOG(Test) << "Getting name for " << object_handle << ", got " << object->name;
+  DEBUG_LOG(Test) << "Getting name for " << object_handle << ", got " << it->second->name;
 
-  return object->name;
+  return it->second->name;
 }
 
-zx_koid_t MockObjectProvider::KoidForObject(zx_handle_t object_handle) {
+zx_koid_t MockObjectProvider::KoidForObject(zx_handle_t object_handle) const {
   zx_koid_t koid = static_cast<zx_koid_t>(object_handle);
-  MockObject* object = object_map_[koid];
-  FXL_DCHECK(object) << "No object for " << object_handle;
+  auto it = object_map_.find(koid);
+  FXL_DCHECK(it != object_map_.end());
 
-  DEBUG_LOG(Test) << "Getting koid for " << object_handle << ", got " << object->koid;
+  DEBUG_LOG(Test) << "Getting koid for " << object_handle << ", got " << it->second->koid;
 
-  return object->koid;
+  return it->second->koid;
 };
+
+zx::job MockObjectProvider::GetRootJob() const {
+  return zx::job(GetRootJobKoid());
+}
+
+zx_koid_t MockObjectProvider::GetRootJobKoid() const {
+  return root()->koid;
+}
 
 // Test Setup Implementation.
 
-MockObjectProvider CreateDefaultMockObjectProvider() {
-  MockObjectProvider provider;
-  MockJobObject* root = provider.AppendJob(nullptr, "root");
+std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider() {
+  auto provider = std::make_unique<MockObjectProvider>();
+  MockJobObject* root = provider->AppendJob(nullptr, "root");
 
-  provider.AppendProcess(root, "root-p1");
-  provider.AppendProcess(root, "root-p2");
-  provider.AppendProcess(root, "root-p3");
+  provider->AppendProcess(root, "root-p1");
+  provider->AppendProcess(root, "root-p2");
+  provider->AppendProcess(root, "root-p3");
 
-  MockJobObject* job1 = provider.AppendJob(root, "job1");
-  provider.AppendProcess(job1, "job1-p1");
-  provider.AppendProcess(job1, "job1-p2");
+  MockJobObject* job1 = provider->AppendJob(root, "job1");
+  provider->AppendProcess(job1, "job1-p1");
+  provider->AppendProcess(job1, "job1-p2");
 
-  MockJobObject* job11 = provider.AppendJob(job1, "job11");
-  MockProcessObject* process = provider.AppendProcess(job11, "job11-p1");
-  provider.AppendThread(process, "second-thread");
+  MockJobObject* job11 = provider->AppendJob(job1, "job11");
+  MockProcessObject* process = provider->AppendProcess(job11, "job11-p1");
+  provider->AppendThread(process, "second-thread");
 
-  MockJobObject* job12 = provider.AppendJob(job1, "job12");
-  MockJobObject* job121 = provider.AppendJob(job12, "job121");
-  provider.AppendProcess(job121, "job121-p1");
-  process = provider.AppendProcess(job121, "job121-p2");
-  provider.AppendThread(process, "second-thread");
-  provider.AppendThread(process, "third-thread");
+  MockJobObject* job12 = provider->AppendJob(job1, "job12");
+  MockJobObject* job121 = provider->AppendJob(job12, "job121");
+  provider->AppendProcess(job121, "job121-p1");
+  process = provider->AppendProcess(job121, "job121-p2");
+  provider->AppendThread(process, "second-thread");
+  provider->AppendThread(process, "third-thread");
 
   return provider;
 }

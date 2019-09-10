@@ -45,8 +45,8 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   };
 
   // Caller must call Init immediately after construction and delete the object if that fails.
-  DebuggedJob(ObjectProvider* provider, ProcessStartHandler* handler, zx_koid_t job_koid,
-              zx::job job);
+  DebuggedJob(std::shared_ptr<ObjectProvider> object_provider, ProcessStartHandler* handler,
+              zx_koid_t job_koid, zx::job job);
   virtual ~DebuggedJob();
 
   zx_koid_t koid() const { return koid_; }
@@ -69,7 +69,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
   // Returns the set of koids of currently running processes that matches any of the |filters|.
   std::set<zx_koid_t> ApplyToJob(FilterInfo& filter, zx::job& job);
 
-  ObjectProvider* provider_;      // Non-owning.
+  std::shared_ptr<ObjectProvider> object_provider_;      // Non-owning.
   ProcessStartHandler* handler_;  // Non-owning.
   zx_koid_t koid_;
   zx::job job_;

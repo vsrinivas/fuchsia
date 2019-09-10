@@ -28,7 +28,9 @@ class ZirconExceptionWatcher;
 enum class WatchType : uint32_t { kTask, kFdio, kProcessExceptions, kJobExceptions, kSocket };
 const char* WatchTypeToString(WatchType);
 
-class MessageLoopTarget final : public MessageLoop {
+// MessageLoop is a virtual class to enable tests to intercept watch messages.
+// See debug_agent/debug_agent_unittest.cc for an example.
+class MessageLoopTarget : public MessageLoop {
  public:
   // Associated struct to track information about what type of resource a watch handle is following.
   //
@@ -61,8 +63,8 @@ class MessageLoopTarget final : public MessageLoop {
   // The FDWatcher must not unregister from a callback. The handle might become both readable and
   // writable at the same time which will necessitate calling both callbacks. The code does not
   // expect the FDWatcher to disappear in between these callbacks.
-  zx_status_t WatchSocket(WatchMode mode, zx_handle_t socket_handle, SocketWatcher* watcher,
-                          WatchHandle* out);
+  virtual zx_status_t WatchSocket(WatchMode mode, zx_handle_t socket_handle, SocketWatcher* watcher,
+                                  WatchHandle* out);
 
   // Attaches to the exception port of the given process and issues callbacks on the given watcher.
   // The watcher must outlive the returned WatchHandle. Must only be called on the message loop
@@ -73,7 +75,7 @@ class MessageLoopTarget final : public MessageLoop {
     zx_koid_t process_koid;
     ZirconExceptionWatcher* watcher = nullptr;
   };
-  zx_status_t WatchProcessExceptions(WatchProcessConfig config, WatchHandle* out);
+  virtual zx_status_t WatchProcessExceptions(WatchProcessConfig config, WatchHandle* out);
 
   // Attaches to the exception port of the given job and issues callbacks on the given watcher. The
   // watcher must outlive the returned WatchHandle. Must only be called on the message loop thread.
@@ -83,7 +85,7 @@ class MessageLoopTarget final : public MessageLoop {
     zx_koid_t job_koid;
     ZirconExceptionWatcher* watcher;
   };
-  zx_status_t WatchJobExceptions(WatchJobConfig config, WatchHandle* out);
+  virtual zx_status_t WatchJobExceptions(WatchJobConfig config, WatchHandle* out);
 
   void QuitNow() override;
 

@@ -62,8 +62,9 @@ std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
 
 }  // namespace
 
-DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services)
-    : services_(services), weak_factory_(this) {}
+DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services,
+                       std::shared_ptr<ObjectProvider> object_provider)
+    : services_(services), object_provider_(std::move(object_provider)), weak_factory_(this) {}
 
 DebugAgent::~DebugAgent() = default;
 
@@ -166,17 +167,15 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     return;
   }
 
-  ObjectProvider* provider = ObjectProvider::Get();
-
   // All other attach types are variants of job attaches, find the KOID.
   zx_koid_t job_koid = 0;
   if (request.type == debug_ipc::TaskType::kJob) {
     job_koid = request.koid;
   } else if (request.type == debug_ipc::TaskType::kComponentRoot) {
-    job_koid = provider->GetComponentJobKoid();
+    job_koid = object_provider_->GetComponentJobKoid();
     attached_root_job_koid_ = job_koid;
   } else if (request.type == debug_ipc::TaskType::kSystemRoot) {
-    job_koid = provider->GetRootJobKoid();
+    job_koid = object_provider_->GetRootJobKoid();
     attached_root_job_koid_ = job_koid;
   } else {
     FXL_LOG(WARNING) << "Got bad debugger attach request type, ignoring.";
@@ -187,9 +186,9 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
   reply.status = ZX_ERR_NOT_FOUND;
 
   // Don't return early since we always need to send the reply, even on fail.
-  zx::job job = provider->GetJobFromKoid(job_koid);
+  zx::job job = object_provider_->GetJobFromKoid(job_koid);
   if (job.is_valid()) {
-    reply.name = provider->NameForObject(job);
+    reply.name = object_provider_->NameForObject(job);
     reply.koid = job_koid;
     reply.status = AddDebuggedJob(job_koid, std::move(job));
   }
@@ -274,7 +273,7 @@ void DebugAgent::OnModules(const debug_ipc::ModulesRequest& request,
 
 void DebugAgent::OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
                                debug_ipc::ProcessTreeReply* reply) {
-  GetProcessTree(&reply->root);
+  GetProcessTree(&reply->root, *object_provider_);
 }
 
 void DebugAgent::OnThreads(const debug_ipc::ThreadsRequest& request,
@@ -486,8 +485,7 @@ DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid, zx_koid_t 
 }
 
 zx_status_t DebugAgent::AddDebuggedJob(zx_koid_t job_koid, zx::job zx_job) {
-  ObjectProvider* provider = ObjectProvider::Get();
-  auto job = std::make_unique<DebuggedJob>(provider, this, job_koid, std::move(zx_job));
+  auto job = std::make_unique<DebuggedJob>(object_provider_, this, job_koid, std::move(zx_job));
   zx_status_t status = job->Init();
   if (status != ZX_OK)
     return status;
@@ -501,7 +499,7 @@ zx_status_t DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_in
   *new_process = nullptr;
 
   zx_koid_t process_koid = create_info.koid;
-  auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info));
+  auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info), object_provider_);
   zx_status_t status = proc->Init();
   if (status != ZX_OK)
     return status;
@@ -516,12 +514,10 @@ void DebugAgent::AttachToProcess(uint32_t transaction_id, zx_koid_t process_koid
   debug_ipc::AttachReply reply;
   reply.status = ZX_ERR_NOT_FOUND;
 
-  ObjectProvider* provider = ObjectProvider::Get();
-
-  zx::process process = provider->GetProcessFromKoid(process_koid);
+  zx::process process = object_provider_->GetProcessFromKoid(process_koid);
   DebuggedProcess* new_process = nullptr;
   if (process.is_valid()) {
-    reply.name = provider->NameForObject(process);
+    reply.name = object_provider_->NameForObject(process);
     reply.koid = process_koid;
 
     // TODO(donosoc): change resume thread setting once we have global
@@ -560,10 +556,8 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   if (reply->status != ZX_OK)
     return;
 
-  ObjectProvider* provider = ObjectProvider::Get();
-
   zx::process process = launcher.GetProcess();
-  zx_koid_t process_koid = provider->KoidForObject(process);
+  zx_koid_t process_koid = object_provider_->KoidForObject(process);
 
   DebuggedProcessCreateInfo create_info;
   create_info.koid = process_koid;
@@ -586,7 +580,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
 
   // Success, fill out the reply.
   reply->process_id = process_koid;
-  reply->process_name = provider->NameForObject(process);
+  reply->process_name = object_provider_->NameForObject(process);
   reply->status = ZX_OK;
 }
 
@@ -672,8 +666,6 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
 }
 
 void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_handle) {
-  ObjectProvider* provider = ObjectProvider::Get();
-
   ComponentDescription description;
   ComponentHandles handles;
   auto it = expected_components_.find(filter);
@@ -685,10 +677,10 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process_h
     running_components_[description.component_id] = std::move(it->second.controller);
     expected_components_.erase(it);
   } else {
-    description.process_name = provider->NameForObject(process_handle);
+    description.process_name = object_provider_->NameForObject(process_handle);
   }
 
-  auto process_koid = provider->KoidForObject(process_handle);
+  auto process_koid = object_provider_->KoidForObject(process_handle);
 
   DEBUG_LOG(Process) << "Process starting. Name: " << description.process_name
                      << ", koid: " << process_koid << ", filter: " << filter

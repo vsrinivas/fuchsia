@@ -142,7 +142,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     BreakpointStreamBackend mock_stream_backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(std::move(services));
+    DebugAgent agent(std::move(services), ObjectProvider::Get());
     RemoteAPI* remote_api = &agent;
     agent.Connect(&mock_stream_backend.stream());
 
@@ -272,7 +272,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     BreakpointStreamBackend mock_stream_backend(loop);
 
     auto services = sys::ServiceDirectory::CreateFromNamespace();
-    DebugAgent agent(std::move(services));
+    DebugAgent agent(std::move(services), ObjectProvider::Get());
     RemoteAPI* remote_api = &agent;
 
     agent.Connect(&mock_stream_backend.stream());

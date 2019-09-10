@@ -16,6 +16,7 @@
 #include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/shared/stream_buffer.h"
@@ -35,7 +36,11 @@ class DebugAgent : public RemoteAPI,
   // The stream must outlive this class. It will be used to send data to the
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
-  explicit DebugAgent(std::shared_ptr<sys::ServiceDirectory> services);
+  //
+  // |object_provider| provides a view into the Zircon process tree.
+  // Can be overriden for test purposes.
+  explicit DebugAgent(std::shared_ptr<sys::ServiceDirectory> services,
+                      std::shared_ptr<ObjectProvider> object_provider);
   ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
@@ -141,9 +146,11 @@ class DebugAgent : public RemoteAPI,
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 
-  std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
+  // Shared pointer permits to share the same provider instance over to the process tree.
+  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
 
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
+  std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 
   std::map<uint32_t, Breakpoint> breakpoints_;
   std::map<uint32_t, Watchpoint> watchpoints_;

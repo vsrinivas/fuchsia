@@ -175,7 +175,7 @@ int main(int argc, const char* argv[]) {
       // The debug agent is independent of whether it's connected or not.
       // DebugAgent::Disconnect is called by ~SocketConnection is called by ~SocketServer, so the
       // debug agent must be destructed after the SocketServer.
-      debug_agent::DebugAgent debug_agent(services);
+      debug_agent::DebugAgent debug_agent(services, debug_agent::ObjectProvider::Get());
 
       debug_agent::SocketServer server;
       if (!server.Init(options.port)) {

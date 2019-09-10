@@ -27,6 +27,7 @@ namespace debug_agent {
 
 class Breakpoint;
 class DebugAgent;
+class ObjectProvider;
 class ProcessBreakpoint;
 class ProcessWatchpoint;
 class Watchpoint;
@@ -52,7 +53,8 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
  public:
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
-  DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&);
+  DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&,
+                  std::shared_ptr<ObjectProvider> object_provider);
   virtual ~DebuggedProcess();
 
   zx_koid_t koid() const { return koid_; }
@@ -63,6 +65,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   const std::string& name() const { return name_; }
 
   // Returns true on success. On failure, the object may not be used further.
+  // |object_provider| gives a view of the Zircon process tree. Can be overriden for test purposes.
   zx_status_t Init();
 
   // IPC handlers.
@@ -136,6 +139,9 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
     return watchpoints_;
   }
 
+ protected:
+  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
+
  private:
   // ZirconExceptionWatcher implementation.
   void OnThreadStarting(zx::exception exception_token, zx_exception_info_t exception_info) override;
@@ -168,7 +174,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher, public Process
   zx_status_t WriteProcessMemory(uintptr_t address, const void* buffer, size_t len,
                                  size_t* actual) override;
 
-  DebugAgent* debug_agent_;  // Non-owning.
+  DebugAgent* debug_agent_ = nullptr;           // Non-owning.
 
   zx_koid_t koid_;
   zx::process process_;

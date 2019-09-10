@@ -18,17 +18,17 @@ namespace debug_agent {
 
 namespace {
 
-debug_ipc::ProcessTreeRecord GetProcessTreeRecord(ObjectProvider* provider,
+debug_ipc::ProcessTreeRecord GetProcessTreeRecord(const ObjectProvider& provider,
                                                   const zx::object_base& object,
                                                   debug_ipc::ProcessTreeRecord::Type type) {
   debug_ipc::ProcessTreeRecord result;
   result.type = type;
-  result.koid = provider->KoidForObject(object);
-  result.name = provider->NameForObject(object);
+  result.koid = provider.KoidForObject(object);
+  result.name = provider.NameForObject(object);
 
   if (type == debug_ipc::ProcessTreeRecord::Type::kJob) {
-    std::vector<zx::process> child_procs = provider->GetChildProcesses(object.get());
-    std::vector<zx::job> child_jobs = provider->GetChildJobs(object.get());
+    std::vector<zx::process> child_procs = provider.GetChildProcesses(object.get());
+    std::vector<zx::job> child_jobs = provider.GetChildJobs(object.get());
     result.children.reserve(child_procs.size() + child_jobs.size());
 
     for (const auto& job : child_jobs) {
@@ -45,9 +45,8 @@ debug_ipc::ProcessTreeRecord GetProcessTreeRecord(ObjectProvider* provider,
 
 }  // namespace
 
-zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root) {
-  ObjectProvider* provider = ObjectProvider::Get();
-  *root = GetProcessTreeRecord(provider, provider->GetRootJob(),
+zx_status_t GetProcessTree(debug_ipc::ProcessTreeRecord* root, const ObjectProvider& object_provider) {
+  *root = GetProcessTreeRecord(object_provider, object_provider.GetRootJob(),
                                debug_ipc::ProcessTreeRecord::Type::kJob);
   return ZX_OK;
 }

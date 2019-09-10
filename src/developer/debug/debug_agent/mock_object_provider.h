@@ -49,11 +49,14 @@ struct MockJobObject : public MockObject {
 class MockObjectProvider : public ObjectProvider {
  public:
   // Object Provider Interface.
-  std::vector<zx::job> GetChildJobs(zx_handle_t job) override;
-  std::vector<zx::process> GetChildProcesses(zx_handle_t job) override;
+  std::vector<zx::job> GetChildJobs(zx_handle_t job) const override;
+  std::vector<zx::process> GetChildProcesses(zx_handle_t job) const override;
 
-  std::string NameForObject(zx_handle_t object) override;
-  zx_koid_t KoidForObject(zx_handle_t object) override;
+  std::string NameForObject(zx_handle_t object) const override;
+  zx_koid_t KoidForObject(zx_handle_t object) const override;
+
+  zx::job GetRootJob() const override;
+  zx_koid_t GetRootJobKoid() const override;
 
   MockJobObject* root() const { return root_.get(); }
   MockObject* ObjectByKoid(zx_koid_t koid) const;
@@ -107,7 +110,7 @@ class MockObjectProvider : public ObjectProvider {
 //            t: 22 initial-thread
 //            t: 22 second-thread
 //            t: 23 third-thread
-MockObjectProvider CreateDefaultMockObjectProvider();
+std::unique_ptr<MockObjectProvider> CreateDefaultMockObjectProvider();
 
 }  // namespace debug_agent
 

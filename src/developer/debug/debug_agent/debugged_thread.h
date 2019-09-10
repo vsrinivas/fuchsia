@@ -9,6 +9,7 @@
 #include <lib/zx/thread.h>
 #include <zircon/syscalls/exception.h>
 
+#include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
 
@@ -18,6 +19,7 @@ namespace debug_agent {
 
 class DebugAgent;
 class DebuggedProcess;
+class ObjectProvider;
 class ProcessBreakpoint;
 class ProcessWatchpoint;
 
@@ -48,7 +50,8 @@ class DebuggedThread {
   // it won't in in this state. The |starting| flag indicates that this is
   // a thread discovered via a debug notification.
   DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t thread_koid,
-                 zx::exception exception, ThreadCreationOption option);
+                 zx::exception exception, ThreadCreationOption option,
+                 std::shared_ptr<ObjectProvider> object_provider);
   virtual ~DebuggedThread();
 
   const DebuggedProcess* process() const { return process_; }
@@ -211,6 +214,8 @@ class DebuggedThread {
   // - When single-stepping over a breakpoint, this will be the breakpoint
   //   being stepped over.
   ProcessBreakpoint* current_breakpoint_ = nullptr;
+
+  std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedThread);
 };

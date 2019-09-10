@@ -8,9 +8,10 @@
 
 namespace debug_agent {
 
-MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid)
+MockThread::MockThread(DebuggedProcess* process, zx_koid_t thread_koid,
+                       std::shared_ptr<ObjectProvider> object_provider)
     : DebuggedThread(process, zx::thread(), thread_koid, zx::exception(),
-                     ThreadCreationOption::kRunningKeepRunning) {}
+                     ThreadCreationOption::kRunningKeepRunning, std::move(object_provider)) {}
 
 void MockThread::ResumeException() {
   DEBUG_LOG(Test) << "ResumeException on " << koid();
