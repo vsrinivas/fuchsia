@@ -551,7 +551,7 @@ mod tests {
 
         assert_eq!(
             transform.transform(command),
-            PathCommand::Quad([Point::new(2.0, 2.0), Point::new(4.0, 4.0), Point::new(6.0, 2.0),])
+            PathCommand::Quad([Point::new(2.0, 2.0), Point::new(4.0, 4.0), Point::new(6.0, 2.0)])
         );
     }
 
