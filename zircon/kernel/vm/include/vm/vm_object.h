@@ -56,11 +56,19 @@ enum class CloneType {
   PrivatePagerCopy,
 };
 
+namespace internal {
+struct ChildListTag {};
+struct GlobalListTag {};
+}  // namespace internal
+
 // The base vm object that holds a range of bytes of data
 //
 // Can be created without mapping and used as a container of data, or mappable
 // into an address space via VmAddressRegion::CreateVmMapping
-class VmObject : public fbl::RefCounted<VmObject>, public fbl::DoublyLinkedListable<VmObject*> {
+class VmObject : public fbl::RefCounted<VmObject>,
+                 public fbl::ContainableBaseClasses<
+                          fbl::DoublyLinkedListable<VmObject*, internal::ChildListTag>,
+                          fbl::DoublyLinkedListable<VmObject*, internal::GlobalListTag>> {
  public:
   // public API
   virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
@@ -342,7 +350,7 @@ class VmObject : public fbl::RefCounted<VmObject>, public fbl::DoublyLinkedLista
   fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);
 
   // list of every child
-  fbl::DoublyLinkedList<VmObject*> children_list_ TA_GUARDED(lock_);
+  fbl::TaggedDoublyLinkedList<VmObject*, internal::ChildListTag> children_list_ TA_GUARDED(lock_);
 
   // lengths of corresponding lists
   uint32_t mapping_list_len_ TA_GUARDED(lock_) = 0;
@@ -368,17 +376,14 @@ class VmObject : public fbl::RefCounted<VmObject>, public fbl::DoublyLinkedLista
   // This member, if not null, is used to signal the user facing Dispatcher.
   VmObjectChildObserver* child_observer_ TA_GUARDED(child_observer_lock_) = nullptr;
 
-  // Per-node state for the global VMO list.
-  using NodeState = fbl::DoublyLinkedListNodeState<VmObject*>;
-  NodeState global_list_state_;
+  using GlobalList = fbl::TaggedDoublyLinkedList<VmObject*, internal::GlobalListTag>;
 
-  // The global VMO list.
-  struct GlobalListTraits {
-    static NodeState& node_state(VmObject& vmo) { return vmo.global_list_state_; }
-  };
-  using GlobalList = fbl::DoublyLinkedList<VmObject*, GlobalListTraits>;
   DECLARE_SINGLETON_MUTEX(AllVmosLock);
   static GlobalList all_vmos_ TA_GUARDED(AllVmosLock::Get());
+
+  bool InGlobalList() {
+    return fbl::InContainer<internal::GlobalListTag>(*this);
+  }
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_OBJECT_H_

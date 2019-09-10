@@ -38,7 +38,7 @@ VmObject::~VmObject() {
   canary_.Assert();
   LTRACEF("%p\n", this);
 
-  DEBUG_ASSERT(global_list_state_.InContainer() == false);
+  DEBUG_ASSERT(!InGlobalList());
 
   DEBUG_ASSERT(mapping_list_.is_empty());
   DEBUG_ASSERT(children_list_.is_empty());
@@ -51,7 +51,7 @@ void VmObject::AddToGlobalList() {
 
 void VmObject::RemoveFromGlobalList() {
   Guard<Mutex> guard{AllVmosLock::Get()};
-  DEBUG_ASSERT(global_list_state_.InContainer() == true);
+  DEBUG_ASSERT(InGlobalList());
   all_vmos_.erase(*this);
 }
 
