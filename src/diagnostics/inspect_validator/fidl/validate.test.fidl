@@ -43,10 +43,34 @@ struct DeleteNode {
     uint32 id;
 };
 
+/// Tells the puppet to create a property with the given int value.
+struct CreateIntProperty {
+    uint32 parent;
+    uint32 id;
+    string name;
+    int64 value;
+};
+
+/// Tells the puppet to create a property with the given string value.
+struct CreateStringProperty {
+    uint32 parent;
+    uint32 id;
+    string name;
+    string value;
+};
+
+/// Tells the puppet to delete an existing property.
+struct DeleteProperty {
+    uint32 id;
+};
+
 /// Tells the puppet to do something to modify the VMO.
 xunion Action {
     CreateNode create_node;
     DeleteNode delete_node;
+    CreateIntProperty create_int_property;
+    CreateStringProperty create_string_property;
+    DeleteProperty delete_property;
 };
 
 [Discoverable]

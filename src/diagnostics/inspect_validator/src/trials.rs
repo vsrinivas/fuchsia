@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::validate;
+use super::validate::{self};
 
 pub struct Step {
     pub actions: Vec<validate::Action>,
@@ -63,6 +63,60 @@ impl Quirks {
     pub fn does_same_name_replace(&self) -> bool {
         self.replace_same_name
     }
+
+    #[allow(dead_code)]
+    pub fn new() -> Quirks {
+        Quirks { replace_same_name: false }
+    }
+}
+
+#[macro_export]
+macro_rules! create_node {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr) => {
+        validate::Action::CreateNode(validate::CreateNode {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! delete_node {
+    (id: $id:expr) => {
+        validate::Action::DeleteNode(validate::DeleteNode { id: $id })
+    };
+}
+
+#[macro_export]
+macro_rules! create_int_property {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, value: $value:expr) => {
+        validate::Action::CreateIntProperty(validate::CreateIntProperty {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            value: $value,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! create_string_property {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, value: $value:expr) => {
+        validate::Action::CreateStringProperty(validate::CreateStringProperty {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            value: $value.into(),
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! delete_property {
+    (id: $id:expr) => {
+        validate::Action::DeleteProperty(validate::DeleteProperty { id: $id })
+    };
 }
 
 fn basic_trial() -> Trial {
@@ -70,12 +124,10 @@ fn basic_trial() -> Trial {
         name: "Basic Trial".into(),
         steps: vec![Step {
             actions: vec![
-                validate::Action::CreateNode(validate::CreateNode {
-                    parent: validate::ROOT_ID,
-                    id: 1,
-                    name: "child".into(),
-                }),
-                validate::Action::DeleteNode(validate::DeleteNode { id: 1 }),
+                // TODO(cphoenix): Next CL, put these back and implement them in the
+                // puppet. This CL is just getting too long.
+                /*create_node!(parent: ROOT_ID, id: 1, name: "child"),
+                delete_node!( id: 1 ),*/
             ],
             //            metrics: vec![],
         }],

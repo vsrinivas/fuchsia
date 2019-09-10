@@ -4,6 +4,7 @@
 
 #![feature(async_await)]
 
+mod data;
 mod puppet;
 mod results;
 mod runner; // coordinates testing operations
@@ -64,8 +65,8 @@ async fn launch_and_run_puppet(
 ) -> Result<(), Error> {
     info!("URL string {}", server_url);
     let trials = trials::trial_set();
-    if let Ok(mut puppet) = puppet::Puppet::connect(server_url, results).await {
-        match runner::run(&mut puppet, trials, results) {
+    if let Ok(mut puppet) = puppet::Puppet::connect(server_url).await {
+        match runner::run(&mut puppet, trials, results).await {
             Err(e) => results.error(format!("Test failed: {}", e)),
             _ => {}
         }

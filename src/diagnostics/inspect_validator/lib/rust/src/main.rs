@@ -16,6 +16,8 @@ use {
 };
 
 async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Error> {
+    #[allow(dead_code)]
+    let mut inspector_maybe = None;
     while let Some(event) = stream.try_next().await? {
         match event {
             ValidateRequest::Initialize { params, responder } => {
@@ -25,12 +27,17 @@ async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Err
                 };
                 responder
                     .send(inspector.vmo_handle_for_test(), TestResult::Ok)
-                    .context("responding to initialize")?
+                    .context("responding to initialize")?;
+                inspector_maybe = Some(inspector);
             }
             ValidateRequest::Act { action, responder } => {
                 info!("Act was called: {:?}", action);
                 // TODO(CF-911): Implement these actions.
-                responder.send(TestResult::Ok)?;
+                responder.send(if inspector_maybe.is_none() {
+                    TestResult::Illegal
+                } else {
+                    TestResult::Ok
+                })?;
             }
         }
     }

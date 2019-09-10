@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::results,
+    super::data::Data,
     failure::{bail, Error, ResultExt},
     fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
@@ -13,10 +13,6 @@ use {
 
 const VMO_SIZE: u64 = 4096;
 
-pub struct Blocks {}
-
-impl Blocks {}
-
 pub struct Puppet {
     vmo: Vmo,
     // Need to remember the connection to avoid dropping the VMO
@@ -25,35 +21,30 @@ pub struct Puppet {
 }
 
 impl Puppet {
-    pub fn apply(&mut self, _actions: &[validate::Action], _results: &mut results::Results) {}
-
-    pub fn vmo_blocks(&self, _results: &mut results::Results) -> Result<Blocks, Error> {
-        let mut header_bytes: [u8; 16] = [0; 16];
-        self.vmo.read(&mut header_bytes, 0)?;
-
-        Ok(Blocks {})
+    pub async fn apply(&mut self, action: &mut validate::Action) -> Result<(), Error> {
+        let response = self.connection.fidl.act(action).await;
+        match response {
+            Ok(validate::TestResult::Ok) => Ok(()),
+            bad => {
+                bail!("Bad result {:?} from action {:?}", bad, action);
+            }
+        }
     }
 
-    pub async fn connect(server_url: &str, results: &mut results::Results) -> Result<Self, Error> {
-        Puppet::initialize_with_connection(
-            Connection::start_and_connect(server_url).await?,
-            results,
-        )
-        .await
+    pub async fn connect(server_url: &str) -> Result<Self, Error> {
+        Puppet::initialize_with_connection(Connection::start_and_connect(server_url).await?).await
     }
 
-    pub async fn connect_local(
-        local_fidl: validate::ValidateProxy,
-        results: &mut results::Results,
-    ) -> Result<Puppet, Error> {
-        Puppet::initialize_with_connection(Connection::new(local_fidl, None), results).await
+    pub async fn connect_local(local_fidl: validate::ValidateProxy) -> Result<Puppet, Error> {
+        Puppet::initialize_with_connection(Connection::new(local_fidl, None)).await
     }
 
-    async fn initialize_with_connection(
-        mut connection: Connection,
-        results: &mut results::Results,
-    ) -> Result<Puppet, Error> {
-        Ok(Puppet { vmo: connection.initialize_vmo(results).await?, connection })
+    async fn initialize_with_connection(mut connection: Connection) -> Result<Puppet, Error> {
+        Ok(Puppet { vmo: connection.initialize_vmo().await?, connection })
+    }
+
+    pub fn read_data(&self) -> Result<Data, Error> {
+        Data::try_from_vmo(&self.vmo)
     }
 }
 
@@ -81,52 +72,72 @@ impl Connection {
         Self { fidl, app }
     }
 
-    async fn initialize_vmo(&mut self, results: &mut results::Results) -> Result<Vmo, Error> {
+    async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
         let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
         let out = self.fidl.initialize(params).await.context("Calling vmo init")?;
         info!("Out from initialize: {:?}", out);
-        let mut handle: Option<zx::Handle> = None;
+        let handle: Option<zx::Handle>;
         if let (Some(out_handle), _) = out {
             handle = Some(out_handle);
         } else {
-            results.error("Didn't get a VMO handle".into());
+            bail!("Didn't get a VMO handle");
         }
         match handle {
             Some(unwrapped_handle) => Ok(Vmo::from(unwrapped_handle)),
             None => {
-                results.error("Didn't unwrap a handle".into());
-                bail!("Failed to connect; see JSON output for details");
+                bail!("Failed to unwrap handle");
             }
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use {
         super::*,
+        crate::create_node,
+        //failure::format_err,
         fidl::endpoints::{create_proxy, RequestStream, ServerEnd},
         fidl_test_inspect_validate::*,
         fuchsia_async as fasync,
-        fuchsia_inspect::Inspector,
+        fuchsia_inspect::{Inspector, IntProperty, Node},
         futures::prelude::*,
+        std::collections::HashMap,
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_fidl_loopback() -> Result<(), Error> {
-        let mut results = results::Results::new();
-        let (client_end, server_end) = create_proxy().unwrap();
-        serve(server_end).await;
-        let puppet = Puppet::connect_local(client_end, &mut results).await?;
+        let mut puppet = local_incomplete_puppet().await?;
         assert_eq!(puppet.vmo.get_size().unwrap(), VMO_SIZE);
+        let tree = puppet.read_data()?;
+        assert_eq!(tree.to_string(), " root ->\n\n\n".to_string());
+        let mut data = Data::new();
+        tree.compare(&data)?;
+        let mut action = create_node!(parent: 0, id: 1, name: "child");
+        puppet.apply(&mut action).await?;
+        data.apply(&action)?;
+        let tree = Data::try_from_vmo(&puppet.vmo)?;
+        assert_eq!(tree.to_string(), " root ->\n\n>  child ->\n\n\n\n".to_string());
+        tree.compare(&data)?;
         Ok(())
     }
 
-    async fn serve(server_end: ServerEnd<ValidateMarker>) {
+    // This is a partial implementation.
+    // All it can do is initialize, and then create nodes and int properties (which it
+    // will hold forever); other actions will give various kinds of incorrect results.
+    pub(crate) async fn local_incomplete_puppet() -> Result<Puppet, Error> {
+        let (client_end, server_end) = create_proxy().unwrap();
+        spawn_local_puppet(server_end).await;
+        Ok(Puppet::connect_local(client_end).await?)
+    }
+
+    async fn spawn_local_puppet(server_end: ServerEnd<ValidateMarker>) {
         fasync::spawn(
             async move {
                 // Inspector must be remembered so its VMO persists
-                let mut _inspector_maybe: Option<Inspector> = None;
+                let mut inspector_maybe: Option<Inspector> = None;
+                let mut nodes: HashMap<u32, Node> = HashMap::new();
+                let mut properties: HashMap<u32, IntProperty> = HashMap::new();
                 let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
                 let mut stream = ValidateRequestStream::from_channel(server_chan);
                 while let Some(event) = stream.try_next().await? {
@@ -139,11 +150,39 @@ mod tests {
                             responder
                                 .send(inspector.vmo_handle_for_test(), TestResult::Ok)
                                 .context("responding to initialize")?;
-                            _inspector_maybe = Some(inspector);
+                            inspector_maybe = Some(inspector);
                         }
-                        unexpected => {
-                            info!("Unexpected FIDL command {:?} was invoked.", unexpected);
-                        }
+                        ValidateRequest::Act { action, responder } => match action {
+                            Action::CreateNode(CreateNode { parent, id, name }) => {
+                                inspector_maybe.as_ref().map(|i| {
+                                    let parent_node = if parent == 0 {
+                                        i.root()
+                                    } else {
+                                        nodes.get(&parent).unwrap()
+                                    };
+                                    let new_child = parent_node.create_child(name);
+                                    nodes.insert(id, new_child);
+                                });
+                                responder.send(TestResult::Ok)?;
+                            }
+                            Action::CreateIntProperty(CreateIntProperty {
+                                parent,
+                                id,
+                                name,
+                                value,
+                            }) => {
+                                inspector_maybe.as_ref().map(|i| {
+                                    let parent_node = if parent == 0 {
+                                        i.root()
+                                    } else {
+                                        nodes.get(&parent).unwrap()
+                                    };
+                                    properties.insert(id, parent_node.create_int(name, value))
+                                });
+                                responder.send(TestResult::Ok)?;
+                            }
+                            _ => responder.send(TestResult::Illegal)?,
+                        },
                     }
                 }
                 Ok(())

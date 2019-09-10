@@ -691,6 +691,10 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         let max_len = utils::payload_size_for_order(self.order());
         if bytes.len() > max_len {
             bytes = &bytes[..min(bytes.len(), max_len)];
+            // Make sure we didn't split a multibyte UTF-8 character; if so, delete the fragment.
+            while bytes[bytes.len() - 1] & 0x80 != 0 {
+                bytes = &bytes[..bytes.len() - 1];
+            }
         }
         let mut header = self.read_header();
         header.set_block_type(BlockType::Name.to_u8().unwrap());
@@ -755,13 +759,8 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         let value = payload.header_generation_count();
         let new_value = if value == u64::max_value() { 0 } else { value + 1 };
         payload.set_header_generation_count(new_value);
-        if new_value % 2 != 0 {
-            fence(Ordering::Acquire);
-        }
         self.write_payload(payload);
-        if new_value % 2 == 0 {
-            fence(Ordering::Release);
-        }
+        fence(Ordering::Release);
     }
 }
 
@@ -1214,6 +1213,21 @@ mod tests {
             move |b| b.become_name("test"),
             &BTreeSet::from_iter(vec![BlockType::Reserved]),
         );
+        // Test to make sure UTF8 strings are truncated safely if they're too long for the block,
+        // even if the last character is multibyte and would be chopped in the middle.
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
+        let block = get_reserved(&container);
+        assert!(block.become_name("abcdefghijklmnopqrstuvwxyz").is_ok());
+        assert_eq!(block.name_contents().unwrap(), "abcdefghijklmnopqrstuvwx");
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
+        let block = get_reserved(&container);
+        assert!(block.become_name("😀abcdefghijklmnopqrstuvwxyz").is_ok());
+        assert_eq!(block.name_contents().unwrap(), "😀abcdefghijklmnopqrst");
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
+        let block = get_reserved(&container);
+        assert!(block.become_name("abcdefghijklmnopqrstu😀").is_ok());
+        assert_eq!(block.name_contents().unwrap(), "abcdefghijklmnopqrstu");
+        assert_eq!(container[31], 0);
     }
 
     #[test]

@@ -9,7 +9,10 @@ use {
     },
     failure::{self, bail, format_err, Error},
     fuchsia_zircon::Vmo,
-    std::convert::TryFrom,
+    std::{
+        convert::TryFrom,
+        sync::atomic::{fence, Ordering},
+    },
 };
 
 /// Enables to scan all the blocks in a given buffer.
@@ -91,7 +94,8 @@ fn header_generation_count(bytes: &[u8]) -> Option<u64> {
     if bytes.len() < 16 {
         None
     } else {
-        BlockIterator::from(&bytes[..])
+        fence(Ordering::Acquire);
+        BlockIterator::from(&bytes[..16])
             .find(|block| {
                 block.block_type_or().unwrap_or(BlockType::Reserved) == BlockType::Header
                     && block.header_magic().unwrap() == constants::HEADER_MAGIC_NUMBER
