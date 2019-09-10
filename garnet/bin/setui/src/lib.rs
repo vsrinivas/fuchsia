@@ -11,8 +11,8 @@ use {
     crate::default_store::DefaultStore,
     crate::display::spawn_display_controller,
     crate::display::spawn_display_fidl_handler,
-    crate::do_not_disturb::do_not_disturb_controller::spawn_do_not_disturb_controller,
-    crate::do_not_disturb::do_not_disturb_fidl_handler::spawn_do_not_disturb_fidl_handler,
+    crate::do_not_disturb::spawn_do_not_disturb_controller,
+    crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::intl::intl_controller::IntlController,
     crate::intl::intl_fidl_handler::IntlFidlHandler,
     crate::json_codec::JsonCodec,
@@ -172,7 +172,9 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     if components.contains(&SettingType::DoNotDisturb) {
         let register_result = registry_handle.write().unwrap().register(
             switchboard::base::SettingType::DoNotDisturb,
-            spawn_do_not_disturb_controller(service_context_handle.clone()),
+            spawn_do_not_disturb_controller(
+                unboxed_storage_factory.get_store::<switchboard::base::DoNotDisturbInfo>(),
+            ),
         );
         match register_result {
             Ok(_) => {}

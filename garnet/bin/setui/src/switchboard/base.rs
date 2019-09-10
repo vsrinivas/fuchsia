@@ -197,7 +197,7 @@ bitflags! {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DoNotDisturbInfo {
     pub user_dnd: bool,
     pub night_mode_dnd: bool,

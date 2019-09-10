@@ -16,7 +16,7 @@ use {
 impl Sender<DoNotDisturbSettings> for DoNotDisturbWatchResponder {
     fn send_response(self, data: DoNotDisturbSettings) {
         match self.send(data) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => fx_log_err!("failed to send do_not_disturb, {:#?}", e),
         }
     }
@@ -51,9 +51,8 @@ pub fn spawn_do_not_disturb_fidl_handler(
 ) {
     let switchboard_lock = switchboard_handle.clone();
 
-    type DNDHangingGetHandler = Arc<
-        Mutex<HangingGetHandler<DoNotDisturbSettings, DoNotDisturbWatchResponder>>
-    >;
+    type DNDHangingGetHandler =
+        Arc<Mutex<HangingGetHandler<DoNotDisturbSettings, DoNotDisturbWatchResponder>>>;
     let hanging_get_handler: DNDHangingGetHandler =
         HangingGetHandler::create(switchboard_handle, SettingType::DoNotDisturb);
 
@@ -64,22 +63,25 @@ pub fn spawn_do_not_disturb_fidl_handler(
             match req {
                 DoNotDisturbRequest::Set { settings, responder } => {
                     if let Some(request) = to_request(settings) {
-                        let (response_tx, _response_rx) =
+                        let (response_tx, response_rx) =
                             futures::channel::oneshot::channel::<SettingResponseResult>();
-                        let mut switchboard = match switchboard_lock.write() {
-                            Ok(lock) => lock,
-                            Err(err) => {
-                                panic!("failed to get switchboard write lock: {:#?}", err);
-                            }
-                        };
-                        let result =
-                            switchboard.request(SettingType::DoNotDisturb, request, response_tx);
-                        match result {
-                            Ok(_) => responder.send(&mut Ok(())).unwrap(),
-                            Err(_err) => responder.send(&mut Err(Error::Unsupported)).unwrap(),
+                        if switchboard_lock
+                            .write()
+                            .unwrap()
+                            .request(SettingType::DoNotDisturb, request, response_tx)
+                            .is_ok()
+                        {
+                            fasync::spawn(async move {
+                                match response_rx.await {
+                                    Ok(_) => responder.send(&mut Ok(())).ok(),
+                                    Err(_) => responder.send(&mut Err(Error::Failed)).ok(),
+                                };
+                            });
+                        } else {
+                            responder.send(&mut Err(Error::Failed)).ok();
                         }
                     } else {
-                        responder.send(&mut Err(Error::Unsupported)).unwrap();
+                        responder.send(&mut Err(Error::Failed)).ok();
                     }
                 }
                 DoNotDisturbRequest::Watch { responder } => {
