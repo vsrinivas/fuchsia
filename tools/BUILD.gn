@@ -22,6 +22,7 @@ group("infratools") {
 
   public_deps = [
     "//tools/botanist($host_toolchain)",
+    "//tools/build/ninjatrace($host_toolchain)",
     "//tools/debug:tools($host_toolchain)",
     "//tools/integration:tools($host_toolchain)",
     "//tools/size_checker/cmd:size_checker($host_toolchain)",
