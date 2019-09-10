@@ -86,7 +86,6 @@ group("module_resolver") {
   testonly = true
   public_deps = [
     "//src/modular/bin/module_resolver",
-    "//src/modular/bin/module_resolver/module_package_indexer",
   ]
 }
 
