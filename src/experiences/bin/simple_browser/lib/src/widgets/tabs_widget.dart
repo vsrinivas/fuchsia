@@ -77,7 +77,9 @@ class _TabWidgetState extends State<_TabWidget> {
         _hovering.value = true;
       },
       onExit: (_) {
-        _hovering.value = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _hovering.value = false;
+        });
       },
       child: GestureDetector(
         onTap: widget.onSelect,
