@@ -5,13 +5,12 @@
 import("//build/test/test_package.gni")
 
 group("lib") {
-  deps = [
+  public_deps = [
     "gesture_manager",
     "screen_reader",
     "semantics",
     "settings",
     "tts",
-    "util",
   ]
 }
 

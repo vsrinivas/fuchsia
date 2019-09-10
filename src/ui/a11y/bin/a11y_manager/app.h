@@ -55,21 +55,16 @@ class App : public fuchsia::accessibility::SettingsWatcher {
   a11y::SemanticsManager semantics_manager_;
   a11y::SettingsManager settings_manager_;
   a11y::TtsManager tts_manager_;
-
   // A simple Tts engine which logs output.
   a11y::LogEngine log_engine_;
-
-  fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
-  fidl::Binding<fuchsia::accessibility::SettingsWatcher> settings_watcher_binding_;
-
   // The gesture manager is instantiated whenever a11y manager starts listening
   // for pointer events, and destroyed when the listener disconnects.
   std::unique_ptr<a11y::GestureManager> gesture_manager_;
 
-  fidl::BindingSet<fuchsia::accessibility::SettingsWatcher> settings_watcher_bindings_;
-
+  fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
+  fidl::Binding<fuchsia::accessibility::SettingsWatcher> settings_watcher_binding_;
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
-  // Private variable for storing A11y Settings.
+
   fuchsia::accessibility::Settings settings_;
 
   // Interface between a11y manager and Root presenter to register a
