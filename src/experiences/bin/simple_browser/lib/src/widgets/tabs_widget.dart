@@ -7,52 +7,120 @@ import '../blocs/tabs_bloc.dart';
 import '../blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
 
-const double _kTabBarHeight = 24.0;
+const _kTabBarHeight = 24.0;
+const _kMinTabWidth = 120.0;
+const _kSeparatorWidth = 1.0;
+const _kTabPadding = EdgeInsets.symmetric(horizontal: _kTabBarHeight);
+const _kScrollToMargin = _kMinTabWidth * 0.333;
 
-class TabsWidget extends StatelessWidget {
+class TabsWidget extends StatefulWidget {
   final TabsBloc<WebPageBloc> bloc;
   const TabsWidget({@required this.bloc});
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([bloc.tabsNotifier, bloc.currentTabNotifier]),
-      builder: (_, __) => bloc.tabs.length > 1
-          ? Container(
-              height: _kTabBarHeight,
-              color: Theme.of(context).accentColor,
-              padding: EdgeInsets.symmetric(vertical: 1.0),
-              child: Row(
-                children: _buildPageTabs(context: context).toList(),
-              ),
-            )
-          : Offstage(),
-    );
+  _TabsWidgetState createState() => _TabsWidgetState();
+}
+
+class _TabsWidgetState extends State<TabsWidget> {
+  final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _setupBloc(null, widget);
   }
 
-  Iterable<Widget> _buildPageTabs({BuildContext context}) => bloc.tabs
+  @override
+  void dispose() {
+    _setupBloc(widget, null);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(TabsWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _setupBloc(oldWidget, widget);
+  }
+
+  void _setupBloc(TabsWidget oldWidget, TabsWidget newWidget) {
+    if (oldWidget?.bloc != newWidget?.bloc) {
+      oldWidget?.bloc?.currentTabNotifier?.removeListener(_onCurrentTabChanged);
+      widget?.bloc?.currentTabNotifier?.addListener(_onCurrentTabChanged);
+    }
+  }
+
+  void _onCurrentTabChanged() {
+    if (_scrollController.hasClients) {
+      final viewportWidth = _scrollController.position.viewportDimension;
+      final currentTabIndex = widget.bloc.tabs.indexOf(widget.bloc.currentTab);
+      final currentTabPosition =
+          currentTabIndex * (_kMinTabWidth + _kSeparatorWidth);
+
+      final offsetForLeftEdge = currentTabPosition - _kScrollToMargin;
+      final offsetForRightEdge =
+          currentTabPosition - viewportWidth + _kMinTabWidth + _kScrollToMargin;
+
+      double newOffset;
+
+      if (_scrollController.offset > offsetForLeftEdge) {
+        newOffset = offsetForLeftEdge;
+      } else if (_scrollController.offset < offsetForRightEdge) {
+        newOffset = offsetForRightEdge;
+      }
+
+      if (newOffset != null) {
+        _scrollController.animateTo(
+          newOffset,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.ease,
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: Listenable.merge(
+            [widget.bloc.tabsNotifier, widget.bloc.currentTabNotifier]),
+        builder: (_, __) => widget.bloc.tabs.length > 1
+            ? Container(
+                height: _kTabBarHeight,
+                color: Theme.of(context).accentColor,
+                padding: EdgeInsets.symmetric(vertical: 1.0),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => widget.bloc.tabs.length <
+                          constraints.maxWidth / _kMinTabWidth
+                      ? Row(children: _buildPageTabs(width: null))
+                      : ListView(
+                          controller: _scrollController,
+                          scrollDirection: Axis.horizontal,
+                          children: _buildPageTabs(width: _kMinTabWidth),
+                        ),
+                ),
+              )
+            : Offstage(),
+      );
+
+  List<Widget> _buildPageTabs({@required double width}) => widget.bloc.tabs
       .map(_buildTab)
       // add a 1pip separator before every tab,
       // divide the rest of the space between tabs
       .expand((item) => [
-            SizedBox(width: 1),
-            Expanded(child: item, flex: 1),
+            SizedBox(width: _kSeparatorWidth),
+            width == null
+                ? Expanded(child: item, flex: 1)
+                : SizedBox(child: item, width: width),
           ])
       // skip the first separator
-      .skip(1);
+      .skip(1)
+      .toList();
 
-  Widget _buildTab(
-    WebPageBloc tab,
-  ) =>
-      _TabWidget(
+  Widget _buildTab(WebPageBloc tab) => _TabWidget(
         bloc: tab,
-        selected: tab == bloc.currentTab,
-        onSelect: () {
-          bloc.request.add(FocusTabAction(tab: tab));
-        },
-        onClose: () {
-          bloc.request.add(RemoveTabAction(tab: tab));
-        },
+        selected: tab == widget.bloc.currentTab,
+        onSelect: () => widget.bloc.request.add(FocusTabAction(tab: tab)),
+        onClose: () => widget.bloc.request.add(RemoveTabAction(tab: tab)),
       );
 }
 
@@ -94,7 +162,7 @@ class _TabWidgetState extends State<_TabWidget> {
               children: <Widget>[
                 Center(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                    padding: _kTabPadding,
                     child: AnimatedBuilder(
                       animation: widget.bloc.pageTitleNotifier,
                       builder: (_, __) => Text(
@@ -120,7 +188,6 @@ class _TabWidgetState extends State<_TabWidget> {
                       child: GestureDetector(
                         onTap: widget.onClose,
                         child: Container(
-                          padding: const EdgeInsets.all(1.0),
                           alignment: Alignment.center,
                           child: Text('×'),
                         ),
