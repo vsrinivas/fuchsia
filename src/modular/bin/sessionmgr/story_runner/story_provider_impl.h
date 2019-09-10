@@ -291,14 +291,12 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider, fuchsia::modular::Foc
     // This allows us to observe changes to the StoryModel owned by |runtime|.
     std::unique_ptr<StoryObserver> model_observer;
 
-    // NOTE: The following are transitioning to StoryModel and associated
-    // classes above, as outlined in MF-85.
     std::unique_ptr<StoryControllerImpl> controller_impl;
     std::unique_ptr<StoryStorage> storage;
     std::unique_ptr<StoryEntityProvider> entity_provider;
     fuchsia::modular::internal::StoryDataPtr current_data;
 
-    inspect::Node story_node;
+    std::unique_ptr<inspect::Node> story_node;
     inspect::IntProperty last_focus_time;
   };
   std::map<std::string, StoryRuntimeContainer> story_runtime_containers_;

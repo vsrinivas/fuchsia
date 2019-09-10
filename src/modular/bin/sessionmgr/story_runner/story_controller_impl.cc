@@ -229,6 +229,9 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         std::make_unique<ModuleContextImpl>(module_context_info, running_mod_info.module_data.get(),
                                             std::move(module_context_provider_request));
 
+    running_mod_info.mod_inspect_node =
+        story_controller_impl_->story_inspect_node_->CreateChild(module_data_.module_url);
+
     NotifyModuleOfIntent(running_mod_info);
 
     story_controller_impl_->running_mod_infos_.emplace_back(std::move(running_mod_info));
@@ -979,11 +982,13 @@ StoryControllerImpl::StoryControllerImpl(SessionStorage* const session_storage,
                                          std::unique_ptr<StoryMutator> story_mutator,
                                          std::unique_ptr<StoryObserver> story_observer,
                                          StoryVisibilitySystem* const story_visibility_system,
-                                         StoryProviderImpl* const story_provider_impl)
+                                         StoryProviderImpl* const story_provider_impl,
+                                         inspect::Node* story_inspect_node)
     : story_id_(story_observer->model().name()),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
+      story_inspect_node_(story_inspect_node),
       story_mutator_(std::move(story_mutator)),
       story_observer_(std::move(story_observer)),
       story_visibility_system_(story_visibility_system),
@@ -1244,7 +1249,6 @@ void StoryControllerImpl::GetActiveModules(GetActiveModulesCallback callback) {
   // collection during some Operation.
   operation_queue_.Add(std::make_unique<SyncCall>([this, callback = std::move(callback)]() mutable {
     std::vector<fuchsia::modular::ModuleData> result;
-
     result.resize(running_mod_infos_.size());
     for (size_t i = 0; i < running_mod_infos_.size(); i++) {
       running_mod_infos_[i].module_data->Clone(&result.at(i));

@@ -144,6 +144,12 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
               story_id_, container.executor.get(), std::make_unique<NoopStoryModelStorage>());
           container.model_observer = container.model_owner->NewObserver();
 
+          container.story_node = std::make_unique<inspect::Node>(
+              session_inspect_node_->CreateChild(story_id_.value_or("")));
+
+          container.last_focus_time = container.story_node->CreateInt(
+              "last_focus_time", container.current_data->story_info().last_focus_time());
+
           // Create systems that are part of this story.
           auto story_visibility_system =
               std::make_unique<StoryVisibilitySystem>(container.model_owner->NewMutator());
@@ -151,7 +157,7 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
           container.controller_impl = std::make_unique<StoryControllerImpl>(
               session_storage_, container.storage.get(), container.model_owner->NewMutator(),
               container.model_owner->NewObserver(), story_visibility_system.get(),
-              story_provider_impl_);
+              story_provider_impl_, container.story_node.get());
           container.entity_provider =
               std::make_unique<StoryEntityProvider>(container.storage.get());
 
@@ -166,12 +172,9 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
                 story_provider->NotifyStoryStateChange(id);
               });
 
-          container.story_node = session_inspect_node_->CreateChild(story_id_.value_or(""));
-          container.last_focus_time = container.story_node.CreateInt(
-              "last_focus_time", container.current_data->story_info().last_focus_time());
-
           auto it = story_provider_impl_->story_runtime_containers_.emplace(story_id_,
                                                                             std::move(container));
+
           story_runtime_container_ = &it.first->second;
         });
   }

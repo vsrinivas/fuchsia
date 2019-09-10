@@ -21,6 +21,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/sys/inspect/cpp/component.h>
 
 #include <map>
 #include <memory>
@@ -63,7 +64,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
                       std::unique_ptr<StoryMutator> story_mutator,
                       std::unique_ptr<StoryObserver> story_observer,
                       StoryVisibilitySystem* story_visibility_system,
-                      StoryProviderImpl* story_provider_impl);
+                      StoryProviderImpl* story_provider_impl, inspect::Node* story_inspect_node);
   ~StoryControllerImpl() override;
 
   // Called by StoryProviderImpl.
@@ -193,6 +194,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
     // Metadata for the module's surface that was connected to the story shell.
     // Only set for non-embedded, non-pending modules.
     std::optional<fuchsia::modular::SurfaceInfo2> surface_info;
+
+    inspect::Node mod_inspect_node;
   };
 
   // A module's story shell-related information that we pend until we are able
@@ -271,6 +274,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   StoryProviderImpl* const story_provider_impl_;  // Not owned.
   SessionStorage* const session_storage_;         // Not owned.
   StoryStorage* const story_storage_;             // Not owned.
+
+  inspect::Node* story_inspect_node_;  // Not owned.
 
   std::unique_ptr<StoryMutator> story_mutator_;
   std::unique_ptr<StoryObserver> story_observer_;

@@ -19,6 +19,8 @@
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
+namespace {
+
 using fuchsia::modular::AddMod;
 using fuchsia::modular::StoryCommand;
 using fuchsia::modular::StoryInfo;
@@ -27,13 +29,16 @@ using fuchsia::modular::StoryState;
 using fuchsia::modular::StoryVisibilityState;
 using fuchsia::modular::ViewIdentifier;
 using ::fxl::Substitute;
+using inspect::testing::IntIs;
+using inspect::testing::NameMatches;
+using inspect::testing::NodeMatches;
+using inspect::testing::PropertyList;
 using testing::IsNull;
 using testing::Not;
 
 constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 constexpr char kSessionmgrInspectRootGlobPath[] =
     "/hub/r/mth_*_inspect/*/c/sessionmgr.cmx/*/out/inspect/root.inspect";
-namespace {
 
 class InspectSessionTest : public modular::testing::TestHarnessFixture {
  protected:
@@ -186,16 +191,18 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   zx::vmo vmo_inspect;
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
   auto hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
+  EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
 
-  // Check that the Inspect object tree is correct.
-  EXPECT_THAT(
-      hierarchy,
-      AllOf(
-          inspect::testing::NodeMatches(inspect::testing::NameMatches("root")),
-          inspect::testing::ChildrenMatch(UnorderedElementsAre(AllOf(inspect::testing::NodeMatches(
-              AllOf(inspect::testing::NameMatches("my_story"),
-                    inspect::testing::PropertyList(UnorderedElementsAre(inspect::testing::IntIs(
-                        "last_focus_time", last_focus_timestamps.back()))))))))));
+  const auto& child = hierarchy.children();
+  EXPECT_THAT(child.size(), 1);
+  EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
+  EXPECT_THAT(child.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
+                               IntIs("last_focus_time", last_focus_timestamps.back()))))));
+
+  const auto& grandchild = child.at(0).children();
+
+  EXPECT_THAT(grandchild.size(), 1);
+  EXPECT_THAT(grandchild.at(0), NodeMatches(NameMatches(kFakeModuleUrl)));
 
   bool story_deleted = false;
   puppet_master->DeleteStory(kStoryId, [&] { story_deleted = true; });
@@ -205,7 +212,6 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   // Check that a node is removed from the hierarchy when a story is removed.
   ASSERT_EQ(ZX_OK, GetInspectVmo(&vmo_inspect));
   hierarchy = inspect::ReadFromVmo(std::move(vmo_inspect)).take_value();
-  EXPECT_THAT(hierarchy,
-              AllOf(inspect::testing::NodeMatches(inspect::testing::NameMatches("root"))));
+  EXPECT_THAT(hierarchy, AllOf(NodeMatches(NameMatches("root"))));
 }
 }  // namespace
