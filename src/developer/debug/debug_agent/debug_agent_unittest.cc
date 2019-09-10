@@ -3,14 +3,14 @@
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
 
+#include <zircon/status.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
-#include "src/developer/debug/shared/message_loop_target.h"
-
 #include "src/developer/debug/debug_agent/system_info.h"
-
+#include "src/developer/debug/shared/message_loop_target.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_agent {
@@ -42,13 +42,13 @@ class DebugAgentMessageLoop : public debug_ipc::MessageLoopTarget {
 class DebugAgentStreamBackend : public LocalStreamBackend {
  public:
   void HandleAttach(debug_ipc::AttachReply attach_reply) {
-    attaches_.push_back(std::move(attach_reply));
+    attach_replies_.push_back(std::move(attach_reply));
   }
 
-  const std::vector<debug_ipc::AttachReply>& attaches() const { return attaches_; }
+  const std::vector<debug_ipc::AttachReply>& attach_replies() const { return attach_replies_; }
 
  private:
-  std::vector<debug_ipc::AttachReply> attaches_;
+  std::vector<debug_ipc::AttachReply> attach_replies_;
 };
 
 struct TestContext {
@@ -64,8 +64,9 @@ std::unique_ptr<TestContext> CreateTestContext() {
 }
 
 TEST(DebugAgent, OnAttach) {
-  auto test_context = CreateTestContext();
+  uint32_t transaction_id = 1u;
 
+  auto test_context = CreateTestContext();
   DebugAgent debug_agent(nullptr, test_context->object_provider);
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
@@ -74,7 +75,7 @@ TEST(DebugAgent, OnAttach) {
   attach_request.type = debug_ipc::TaskType::kProcess;
   attach_request.koid = 11;
 
-  remote_api->OnAttach(1u, attach_request);
+  remote_api->OnAttach(transaction_id++, attach_request);
 
   // We should've received a watch command (which does the low level exception watching).
   auto& watches = test_context->loop.watches();
@@ -84,10 +85,38 @@ TEST(DebugAgent, OnAttach) {
   EXPECT_EQ(watches[0].process_koid, 11u);
 
   // We should've gotten an attach reply.
-  auto& attaches = test_context->stream_backend.attaches();
-  ASSERT_EQ(attaches.size(), 1u);
-  EXPECT_EQ(attaches[0].koid, 11u);
-  EXPECT_EQ(attaches[0].name, "job1-p2");
+  auto& attach_replies = test_context->stream_backend.attach_replies();
+  auto reply = attach_replies.back();
+  ASSERT_EQ(attach_replies.size(), 1u);
+  EXPECT_EQ(reply.status, ZX_OK) << zx_status_get_string(reply.status);
+  EXPECT_EQ(reply.koid, 11u);
+  EXPECT_EQ(reply.name, "job1-p2");
+
+  // Asking for some invalid process should fail.
+  attach_request.koid = 0x231315;  // Some invalid value.
+  remote_api->OnAttach(transaction_id++, attach_request);
+
+  // We should've gotten an error reply.
+  ASSERT_EQ(attach_replies.size(), 2u);
+  reply = attach_replies.back();
+  EXPECT_EQ(reply.status, ZX_ERR_NOT_FOUND) << zx_status_get_string(reply.status);
+
+  // Attaching to a third process should work.
+  attach_request.koid = 21u;
+  remote_api->OnAttach(transaction_id++, attach_request);
+
+  ASSERT_EQ(attach_replies.size(), 3u);
+  reply = attach_replies.back();
+  EXPECT_EQ(reply.status, ZX_OK) << zx_status_get_string(reply.status);
+  EXPECT_EQ(reply.koid, 21u);
+  EXPECT_EQ(reply.name, "job121-p2");
+
+  // Attaching again to a process should fail.
+  remote_api->OnAttach(transaction_id++, attach_request);
+
+  ASSERT_EQ(attach_replies.size(), 4u);
+  reply = attach_replies.back();
+  EXPECT_EQ(reply.status, ZX_ERR_ALREADY_BOUND) << zx_status_get_string(reply.status);
 }
 
 }  // namespace

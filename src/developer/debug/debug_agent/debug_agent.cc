@@ -32,6 +32,8 @@
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
+#include <lib/fit/defer.h>
+
 namespace debug_agent {
 
 namespace {
@@ -512,36 +514,50 @@ zx_status_t DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_in
 void DebugAgent::AttachToProcess(uint32_t transaction_id, zx_koid_t process_koid) {
   // Don't return early without sending this reply, even in the failure case.
   debug_ipc::AttachReply reply;
-  reply.status = ZX_ERR_NOT_FOUND;
+  DebuggedProcess* new_process = nullptr;
+
+  // Independent of the result, we want to always send the reply.
+  auto defer_reply = fit::defer([this, transaction_id, &new_process, &reply]() {
+    // Send the reply.
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteReply(reply, transaction_id, &writer);
+    stream()->Write(writer.MessageComplete());
+
+    // For valid attaches, the client will as for the thread list, but we need to populate our list
+    // of threads and send the modules over.
+    if (new_process) {
+      DEBUG_LOG(Agent) << "Attached to process " << new_process->name() << " ("
+                       << new_process->koid() << ").";
+
+      new_process->PopulateCurrentThreads();
+      new_process->SuspendAndSendModulesIfKnown();
+    }
+  });
+
+  // We see if we're already attached to this process.
+  for (auto& [koid, proc] : procs_) {
+    if (koid == process_koid) {
+      DEBUG_LOG(Agent) << "Already attached to " << proc->name() << "(" << proc->koid() << ").";
+
+      reply.status = ZX_ERR_ALREADY_BOUND;
+      return;
+    }
+  }
 
   zx::process process = object_provider_->GetProcessFromKoid(process_koid);
-  DebuggedProcess* new_process = nullptr;
   if (process.is_valid()) {
     reply.name = object_provider_->NameForObject(process);
     reply.koid = process_koid;
 
-    // TODO(donosoc): change resume thread setting once we have global
-    // settings.
     DebuggedProcessCreateInfo create_info;
     create_info.name = reply.name;
     create_info.koid = process_koid;
     create_info.handle = std::move(process);
     reply.status = AddDebuggedProcess(std::move(create_info), &new_process);
+    return;
   }
 
-  // Send the reply.
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteReply(reply, transaction_id, &writer);
-  stream()->Write(writer.MessageComplete());
-
-  // For valid attaches, the client will as for the thread list, but we need to populate our list
-  // of threads and send the modules over.
-  if (new_process) {
-    DEBUG_LOG(Agent) << "Attached to process " << process_koid;
-
-    new_process->PopulateCurrentThreads();
-    new_process->SuspendAndSendModulesIfKnown();
-  }
+  reply.status = ZX_ERR_NOT_FOUND;
 }
 
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
