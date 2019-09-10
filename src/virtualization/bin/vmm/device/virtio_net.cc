@@ -112,7 +112,26 @@ class TxStream : public StreamBase {
     StreamBase::Init(phys_mem, std::move(interrupt));
   }
 
+  bool ProcessDescriptor() {
+    auto header = static_cast<virtio_net_hdr_t*>(desc_.addr);
+    uintptr_t offset = phys_mem_->offset(header + 1);
+    uintptr_t length = desc_.len - sizeof(*header);
+
+    zx_status_t status = guest_ethernet_->Send(phys_mem_->as<void>(offset, length), length);
+    return status != ZX_ERR_SHOULD_WAIT;
+  }
+
   void Notify() {
+    // If Send returned ZX_ERR_SHOULD_WAIT last time Notify was called, then we should process that
+    // descriptor first.
+    if (chain_.IsValid()) {
+      bool processed = ProcessDescriptor();
+      if (!processed) {
+        return;
+      }
+      chain_.Return();
+    }
+
     for (; queue_.NextChain(&chain_); chain_.Return()) {
       chain_.NextDescriptor(&desc_);
       if (desc_.has_next) {
@@ -129,10 +148,13 @@ class TxStream : public StreamBase {
         FXL_LOG(ERROR) << "Failed to read descriptor header";
         continue;
       }
-      auto header = static_cast<virtio_net_hdr_t*>(desc_.addr);
-      uintptr_t offset = phys_mem_->offset(header + 1);
-      uintptr_t length = desc_.len - sizeof(*header);
-      guest_ethernet_->Send(phys_mem_->as<void>(offset, length), length);
+
+      bool processed = ProcessDescriptor();
+      if (!processed) {
+        // Stop processing and wait for GuestEthernet to notify us again. Do not return the
+        // descriptor to the guest.
+        return;
+      }
     }
   }
 
@@ -143,7 +165,7 @@ class TxStream : public StreamBase {
 
 class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
                       public fuchsia::virtualization::hardware::VirtioNet,
-                      public GuestEthernetReceiver {
+                      public GuestEthernetDevice {
  public:
   VirtioNetImpl(sys::ComponentContext* context) : DeviceBase(context), context_(*context) {
     netstack_ = context_.svc()->Connect<fuchsia::netstack::Netstack>();
@@ -164,11 +186,13 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     }
   }
 
-  // Called by GuestEthernet to notify us when the netstack is trying to send a
-  // packet to the guest.
+  // Called by GuestEthernet to notify us when the netstack is trying to send a packet to the guest.
   void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) override {
     rx_stream_.Receive(addr, length, entry);
   }
+
+  // Called by GuestEthernet to notify us when the netstack is ready to receive packets.
+  void ReadyToSend() override { tx_stream_.Notify(); }
 
  private:
   // |fuchsia::virtualization::hardware::VirtioNet|

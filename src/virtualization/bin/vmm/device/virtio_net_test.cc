@@ -207,9 +207,6 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
                            .Build();
   ASSERT_EQ(status, ZX_OK);
 
-  const uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  memcpy(reinterpret_cast<void*>(&data), expected_packet, packet_size);
-
   eth_fifo_entry_t entry{
       .offset = 0,
       .length = packet_size,
@@ -245,4 +242,91 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
   EXPECT_EQ(entry.length, packet_size);
   EXPECT_EQ(entry.flags, ETH_FIFO_RX_OK);
   EXPECT_EQ(entry.cookie, 0xdeadbeef);
+}
+
+TEST_F(VirtioNetTest, ResumesReceiveFromGuest) {
+  // Build two descriptors.
+  const size_t packet_size = 10;
+  uint8_t data1[packet_size + sizeof(virtio_net_hdr_t)];
+  uint8_t data2[packet_size + sizeof(virtio_net_hdr_t)];
+
+  zx_status_t status = DescriptorChainBuilder(tx_queue_)
+                           .AppendReadableDescriptor(&data1, sizeof(virtio_net_hdr_t) + packet_size)
+                           .Build();
+  ASSERT_EQ(status, ZX_OK);
+
+  status = DescriptorChainBuilder(tx_queue_)
+               .AppendReadableDescriptor(&data2, sizeof(virtio_net_hdr_t) + packet_size)
+               .Build();
+  ASSERT_EQ(status, ZX_OK);
+
+  // Notify the device of the two descriptors we built.
+  net_->NotifyQueue(1);
+  RunLoopUntilIdle();
+
+  // Write one entry into the rx fifo.
+  eth_fifo_entry_t entry = {
+      .offset = 0,
+      .length = packet_size,
+      .flags = 0,
+      .cookie = 0xdeadbeef,
+  };
+  zx_signals_t pending = 0;
+  status = rx_.wait_one(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
+  ASSERT_EQ(status, ZX_OK);
+  status = rx_.write(sizeof(entry), static_cast<void*>(&entry), 1, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+
+  RunLoopUntilIdle();
+
+  // Attempt to ready two entries from the fifo. Since we only gave the device one entry, it should
+  // only return one to us.
+  status = rx_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
+  ASSERT_EQ(status, ZX_OK);
+  size_t actual;
+  eth_fifo_entry_t entries[2];
+  status = rx_.read(sizeof(entries[0]), static_cast<void*>(&entries), 2, &actual);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(actual, 1u);
+
+  status = WaitOnInterrupt();
+  ASSERT_EQ(status, ZX_OK);
+
+  EXPECT_EQ(entries[0].offset, 0u);
+  EXPECT_EQ(entries[0].length, packet_size);
+  EXPECT_EQ(entries[0].flags, ETH_FIFO_RX_OK);
+  EXPECT_EQ(entries[0].cookie, 0xdeadbeef);
+
+  // Now write another entry into the fifo and the device should process the descriptor without
+  // being notified by the guest (i.e. without a call to NotifyQueue).
+  entry = {
+      .offset = 100,
+      .length = packet_size,
+      .flags = 0,
+      .cookie = 0x1337cafe,
+  };
+  status = rx_.wait_one(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
+  ASSERT_EQ(status, ZX_OK);
+  status = rx_.write(sizeof(entry), static_cast<void*>(&entry), 1, nullptr);
+  ASSERT_EQ(status, ZX_OK);
+
+  RunLoopUntilIdle();
+
+  status = rx_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
+  ASSERT_EQ(status, ZX_OK);
+  status = rx_.read(sizeof(entries[0]), static_cast<void*>(&entries), 2, &actual);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(actual, 1u);
+
+  status = WaitOnInterrupt();
+  ASSERT_EQ(status, ZX_OK);
+
+  EXPECT_EQ(entries[0].offset, 100u);
+  EXPECT_EQ(entries[0].length, packet_size);
+  EXPECT_EQ(entries[0].flags, ETH_FIFO_RX_OK);
+  EXPECT_EQ(entries[0].cookie, 0x1337cafeu);
 }

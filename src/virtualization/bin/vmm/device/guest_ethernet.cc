@@ -6,6 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/zx/fifo.h>
+
 #include <src/lib/fxl/logging.h>
 
 // This is a locally administered MAC address (first byte 0x02) mixed with the
@@ -20,11 +21,19 @@ zx_status_t GuestEthernet::Send(void* data, size_t length) {
     return ZX_ERR_BAD_STATE;
   }
 
+  if (rx_fifo_wait_.is_pending()) {
+    return ZX_ERR_SHOULD_WAIT;
+  }
+
   if (rx_entries_count_ == 0) {
     size_t count;
     zx_status_t status =
         rx_fifo_.read(sizeof(eth_fifo_entry_t), rx_entries_.data(), rx_entries_.size(), &count);
-    if (status != ZX_OK) {
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      status = rx_fifo_wait_.Begin(async_get_default_dispatcher());
+      FXL_CHECK(status == ZX_OK) << "Failed to wait on rx fifo: " << status;
+      return ZX_ERR_SHOULD_WAIT;
+    } else if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to read from rx fifo: " << status;
       return status;
     }
@@ -46,11 +55,37 @@ zx_status_t GuestEthernet::Send(void* data, size_t length) {
 
   zx_status_t status =
       rx_fifo_.write(sizeof(eth_fifo_entry_t), &entry, 1, nullptr /* actual count */);
+
+  // There are a fixed number of entries in the system and if we read an entry out of the fifo then
+  // there should be enough space to write it back. However, if some transient error causes the fifo
+  // to not be writable then we should block here to avoid losing track of the fifo entry. Assuming
+  // that the netstack is behaving correctly then this should not deadlock.
+  if (status == ZX_ERR_SHOULD_WAIT) {
+    FXL_LOG(WARNING) << "Rx fifo is not writable. Guest ethernet will block.";
+    zx_signals_t pending;
+    rx_fifo_.wait_one(ZX_FIFO_WRITABLE, zx::time::infinite(), &pending);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to wait on rx fifo: " << status;
+      return status;
+    }
+    status = rx_fifo_.write(sizeof(eth_fifo_entry_t), &entry, 1, nullptr /* actual count */);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to write to rx fifo after waiting: " << status;
+      return status;
+    }
+  }
+
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to write to rx fifo";
+    FXL_LOG(ERROR) << "Failed to write to rx fifo " << status;
     return status;
   }
   return ZX_OK;
+}
+
+void GuestEthernet::OnRxFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                     zx_status_t status, const zx_packet_signal_t* signal) {
+  FXL_CHECK(status == ZX_OK) << "Wait for rx fifo readable failed " << status;
+  device_->ReadyToSend();
 }
 
 void GuestEthernet::OnTxFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -67,7 +102,7 @@ void GuestEthernet::OnTxFifoReadable(async_dispatcher_t* dispatcher, async::Wait
     }
     FXL_CHECK(status == ZX_OK) << "Failed to read tx fifo";
     for (size_t i = 0; i != count; ++i) {
-      receiver_->Receive(io_addr_ + entries[i].offset, entries[i].length, entries[i]);
+      device_->Receive(io_addr_ + entries[i].offset, entries[i].length, entries[i]);
     }
   }
 }
@@ -145,11 +180,15 @@ void GuestEthernet::Start(StartCallback callback) {
   tx_fifo_.signal(0, ZX_USER_SIGNAL_0);
 
   tx_fifo_wait_.set_object(tx_fifo_.get());
-  tx_fifo_wait_.set_trigger(ZX_SOCKET_READABLE);
+  tx_fifo_wait_.set_trigger(ZX_FIFO_READABLE);
   zx_status_t status = tx_fifo_wait_.Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait on tx fifo";
   }
+
+  rx_fifo_wait_.set_object(rx_fifo_.get());
+  rx_fifo_wait_.set_trigger(ZX_FIFO_READABLE);
+
   callback(status);
 }
 

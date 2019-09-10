@@ -11,8 +11,9 @@
 #include <zircon/device/ethernet.h>
 
 // Interface for GuestEthernet to send a packet to the guest.
-struct GuestEthernetReceiver {
+struct GuestEthernetDevice {
   virtual void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) = 0;
+  virtual void ReadyToSend() = 0;
 };
 
 class GuestEthernet : public fuchsia::hardware::ethernet::Device {
@@ -20,7 +21,8 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   using QueueTxFn =
       fit::function<zx_status_t(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry)>;
 
-  GuestEthernet(GuestEthernetReceiver* receiver) : tx_fifo_wait_(this), receiver_(receiver) {}
+  explicit GuestEthernet(GuestEthernetDevice* device)
+      : tx_fifo_wait_(this), rx_fifo_wait_(this), device_(device) {}
 
   // Interface for the virtio-net device to send a received packet to the host
   // netstack.
@@ -31,6 +33,9 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   void Complete(const eth_fifo_entry_t& entry);
 
   void OnTxFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
+
+  void OnRxFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
 
   // |fuchsia::hardware::ethernet::Device|
@@ -94,8 +99,9 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   size_t rx_entries_count_ = 0;
 
   async::WaitMethod<GuestEthernet, &GuestEthernet::OnTxFifoReadable> tx_fifo_wait_;
+  async::WaitMethod<GuestEthernet, &GuestEthernet::OnRxFifoReadable> rx_fifo_wait_;
 
-  GuestEthernetReceiver* receiver_;
+  GuestEthernetDevice* device_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_GUEST_ETHERNET_H_
