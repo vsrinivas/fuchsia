@@ -4,6 +4,8 @@
 
 #include "src/developer/memory/metrics/summary.h"
 
+#include <unordered_set>
+
 #include <trace/event.h>
 
 namespace memory {
@@ -40,16 +42,26 @@ const std::string& Namer::NameForName(const std::string& name) {
 Summary::Summary(const Capture& capture, const std::vector<const NameMatch>& name_matches)
     : time_(capture.time()), kstats_(capture.kmem()) {
   Namer namer(name_matches);
-  Init(capture, &namer);
+  std::unordered_set<zx_koid_t> empty_vmos;
+  Init(capture, &namer, empty_vmos);
 }
 
 Summary::Summary(const Capture& capture, Namer* namer)
     : time_(capture.time()), kstats_(capture.kmem()) {
-  Init(capture, namer);
+  std::unordered_set<zx_koid_t> empty_vmos;
+  Init(capture, namer, empty_vmos);
 }
 
-void Summary::Init(const Capture& capture, Namer* namer) {
+Summary::Summary(const Capture& capture, Namer* namer,
+                 const std::unordered_set<zx_koid_t>& undigested_vmos)
+    : time_(capture.time()), kstats_(capture.kmem()) {
+  Init(capture, namer, undigested_vmos);
+}
+
+void Summary::Init(const Capture& capture, Namer* namer,
+                   const std::unordered_set<zx_koid_t>& undigested_vmos) {
   TRACE_DURATION("memory_metrics", "Summary::Summary");
+  bool check_undigested = undigested_vmos.size() > 0;
   std::unordered_map<zx_koid_t, std::unordered_set<zx_koid_t>> vmo_to_processes(
       capture.koid_to_process().size() + 1);
 
@@ -60,8 +72,10 @@ void Summary::Init(const Capture& capture, Namer* namer) {
     auto& s = process_summaries_.emplace_back(process_koid, process.name);
     for (auto vmo_koid : process.vmos) {
       do {
-        vmo_to_processes[vmo_koid].insert(process_koid);
-        s.vmos_.insert(vmo_koid);
+        if (!check_undigested || undigested_vmos.find(vmo_koid) != undigested_vmos.end()) {
+          vmo_to_processes[vmo_koid].insert(process_koid);
+          s.vmos_.insert(vmo_koid);
+        }
         const auto& vmo = capture.vmo_for_koid(vmo_koid);
         // The parent koid could be missing.
         if (!vmo.parent_koid || koid_to_vmo.find(vmo.parent_koid) == koid_to_vmo.end()) {
@@ -69,6 +83,9 @@ void Summary::Init(const Capture& capture, Namer* namer) {
         }
         vmo_koid = vmo.parent_koid;
       } while (true);
+    }
+    if (s.vmos_.empty()) {
+      process_summaries_.pop_back();
     }
   }
   for (auto& s : process_summaries_) {
@@ -92,15 +109,11 @@ void Summary::Init(const Capture& capture, Namer* namer) {
     }
   }
 
-  {
-    TRACE_DURATION("memory_metrics", "Summary::Summary::vmo_bytes");
-    uint64_t vmo_bytes = 0;
-    for (const auto& pair : capture.koid_to_vmo()) {
-      vmo_bytes += pair.second.committed_bytes;
-    }
-    process_summaries_.emplace_back(kstats_, vmo_bytes);
+  uint64_t vmo_bytes = 0;
+  for (const auto& pair : capture.koid_to_vmo()) {
+    vmo_bytes += pair.second.committed_bytes;
   }
-
+  process_summaries_.emplace_back(kstats_, vmo_bytes);
 }  // namespace memory
 
 const zx_koid_t ProcessSummary::kKernelKoid = 1;

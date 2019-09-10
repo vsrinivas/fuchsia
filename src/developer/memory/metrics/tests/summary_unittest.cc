@@ -451,5 +451,107 @@ TEST_F(SummaryUnitTest, NameMatch) {
   EXPECT_EQ(100U, ps.GetSizes("foo").private_bytes);
 }
 
+TEST_F(SummaryUnitTest, AllUndigested) {
+  // One process, two vmos with different names.
+  Capture c;
+  TestUtils::CreateCapture(&c, {
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "v2", .committed_bytes = 100},
+                                       },
+                                   .processes = {{.koid = 2, .name = "p1", .vmos = {1, 2}}},
+                               });
+  Namer namer({});
+  Summary s(c, &namer, {1, 2});
+  auto process_summaries = TestUtils::GetProcessSummaries(s);
+  ASSERT_EQ(2U, process_summaries.size());
+
+  // Skip kernel summary.
+  ProcessSummary ps = process_summaries.at(1);
+  EXPECT_EQ(2U, ps.koid());
+  EXPECT_STREQ("p1", ps.name().c_str());
+  Sizes sizes = ps.sizes();
+  EXPECT_EQ(200U, sizes.private_bytes);
+  EXPECT_EQ(200U, sizes.scaled_bytes);
+  EXPECT_EQ(200U, sizes.total_bytes);
+
+  EXPECT_EQ(2U, ps.name_to_sizes().size());
+  sizes = ps.GetSizes("v1");
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+  sizes = ps.GetSizes("v2");
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+}
+
+TEST_F(SummaryUnitTest, OneUndigested) {
+  // One process, two vmos with different names.
+  Capture c;
+  TestUtils::CreateCapture(&c, {
+                                   .vmos =
+                                       {
+                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                           {.koid = 2, .name = "v2", .committed_bytes = 100},
+                                       },
+                                   .processes = {{.koid = 2, .name = "p1", .vmos = {1, 2}}},
+                               });
+
+  Namer namer({});
+  Summary s(c, &namer, {1});
+  auto process_summaries = TestUtils::GetProcessSummaries(s);
+  ASSERT_EQ(2U, process_summaries.size());
+
+  // Skip kernel summary.
+  ProcessSummary ps = process_summaries.at(1);
+  EXPECT_EQ(2U, ps.koid());
+  EXPECT_STREQ("p1", ps.name().c_str());
+  Sizes sizes = ps.sizes();
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+
+  EXPECT_EQ(1U, ps.name_to_sizes().size());
+  sizes = ps.GetSizes("v1");
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+}
+
+TEST_F(SummaryUnitTest, TwoProcessesOneUndigested) {
+  // Two processes, with different vmos.
+  Capture c;
+  TestUtils::CreateCapture(&c, {.vmos =
+                                    {
+                                        {.koid = 1, .name = "v1", .committed_bytes = 100},
+                                        {.koid = 2, .name = "v2", .committed_bytes = 100},
+                                    },
+                                .processes = {
+                                    {.koid = 2, .name = "p1", .vmos = {1}},
+                                    {.koid = 3, .name = "p2", .vmos = {2}},
+                                }});
+  Namer namer({});
+  Summary s(c, &namer, {1});
+  auto process_summaries = TestUtils::GetProcessSummaries(s);
+  ASSERT_EQ(2U, process_summaries.size());
+
+  // Skip kernel summary.
+  ProcessSummary ps = process_summaries.at(1);
+  EXPECT_EQ(2U, ps.koid());
+  EXPECT_STREQ("p1", ps.name().c_str());
+  Sizes sizes = ps.sizes();
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+
+  EXPECT_EQ(1U, ps.name_to_sizes().size());
+  sizes = ps.GetSizes("v1");
+  EXPECT_EQ(100U, sizes.private_bytes);
+  EXPECT_EQ(100U, sizes.scaled_bytes);
+  EXPECT_EQ(100U, sizes.total_bytes);
+}
+
 }  // namespace test
 }  // namespace memory

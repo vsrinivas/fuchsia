@@ -8,8 +8,8 @@
 #include <zircon/types.h>
 
 #include <regex>
-#include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "src/developer/memory/metrics/capture.h"
@@ -47,12 +47,12 @@ class Digest {
                   const std::vector<const BucketMatch>& bucket_matches = kDefaultBucketMatches);
   zx_time_t time() const { return time_; }
   const std::vector<Bucket>& buckets() const { return buckets_; }
-  const std::set<zx_koid_t>& undigested_vmos() const { return undigested_vmos_; }
+  const std::unordered_set<zx_koid_t>& undigested_vmos() const { return undigested_vmos_; }
 
  private:
   zx_time_t time_;
   std::vector<Bucket> buckets_;
-  std::set<zx_koid_t> undigested_vmos_;
+  std::unordered_set<zx_koid_t> undigested_vmos_;
 };
 
 }  // namespace memory

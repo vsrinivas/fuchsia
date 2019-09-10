@@ -124,7 +124,16 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
   if (command_line.HasOption("digest")) {
-    printer.PrintDigest(Digest(capture));
+    Digest digest(capture);
+    printer.PrintDigest(digest);
+    if (command_line.HasOption("undigested")) {
+      std::cout << capture.koid_to_vmo().size() << " VMOs, " << digest.undigested_vmos().size()
+                << " Undigested\n";
+      Namer namer(Summary::kNameMatches);
+      Summary undigested_summary(capture, &namer, digest.undigested_vmos());
+      std::cout << undigested_summary.process_summaries().size() << " Process summaries\n";
+      printer.PrintSummary(undigested_summary, memory::VMO, SORTED);
+    }
     return EXIT_SUCCESS;
   }
   printer.PrintSummary(Summary(capture, Summary::kNameMatches), VMO, SORTED);

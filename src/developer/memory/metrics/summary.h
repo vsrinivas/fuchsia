@@ -74,6 +74,8 @@ class Summary {
   Summary(const Capture& capture, Namer* namer);
   explicit Summary(const Capture& capture, const std::vector<const NameMatch>& name_matches =
                                                std::vector<const NameMatch>());
+  Summary(const Capture& capture, Namer* namer,
+          const std::unordered_set<zx_koid_t>& undigested_vmos);
   static const std::vector<const NameMatch> kNameMatches;
 
   void SortProcessSummaries();
@@ -82,7 +84,8 @@ class Summary {
   const std::vector<ProcessSummary>& process_summaries() const { return process_summaries_; }
 
  private:
-  void Init(const Capture& capture, Namer* namer);
+  void Init(const Capture& capture, Namer* namer,
+            const std::unordered_set<zx_koid_t>& undigested_vmos);
   zx_time_t time_;
   zx_info_kmem_stats_t kstats_;
   std::vector<ProcessSummary> process_summaries_;
