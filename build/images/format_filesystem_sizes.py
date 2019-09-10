@@ -12,17 +12,19 @@ import sys
 
 
 class CmdSize(object):
-    def __init__(self, name, cmd, limit):
+    def __init__(self, name, cmd, limit, debug=None):
         self.name = name
         self.size = subprocess.check_output(cmd).strip()
         self.limit = limit
+        self.debug = debug
 
 
 class PathSize(object):
-    def __init__(self, name, path, limit):
+    def __init__(self, name, path, limit, debug=None):
         self.name = name
         self.size = os.path.getsize(path)
         self.limit = limit
+        self.debug = debug
 
 
 def main():
@@ -69,7 +71,10 @@ def main():
         data_points.extend([
             CmdSize('blob/contents_size',
                     blob_tool_prefix + ['used-data-size'],
-                    args.max_blob_contents_size),
+                    args.max_blob_contents_size,
+                    debug=('To debug, reproduce the build as per '
+                           'http://go/fuchsia-infra/faq#repro-build-step,'
+                           'then run `fx blobstats`')),
             CmdSize('blob/image_size', blob_tool_prefix + ['used-size'],
                     args.max_blob_image_size)
         ])
@@ -93,11 +98,14 @@ def main():
 
     data = []
     for d in data_points:
-        data.append({
+        d_dict = {
             'name': d.name,
             'value': int(d.size),
-            'limit': int(d.limit)
-        })
+            'limit': int(d.limit),
+        }
+        if d.debug:
+            d_dict['debug_instructions'] = d.debug
+        data.append(d_dict)
 
     with open(args.output, 'w') as f:
         json.dump(data, f, indent=2)
