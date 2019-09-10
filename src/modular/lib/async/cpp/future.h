@@ -547,10 +547,8 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
 
   template <typename Callback, typename T,
             typename MapResult = std::result_of_t<Callback(Result...)>>
-  FuturePtr<MapResult> WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
-    return SubfutureCreate(Future<MapResult>::Create(trace_name_ + "(WeakMap)"),
-                           std::move(callback), SubfutureCompleter<MapResult>(),
-                           [weak_ptr] { return !!weak_ptr; });
+  auto WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback) {
+    return WeakMap(weak_ptr, std::move(callback), Tag<MapResult>{});
   }
 
   const std::string& trace_name() const { return trace_name_; }
@@ -731,7 +729,7 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
     };
   }
 
-  // The following overloads enable |Map| to flatten out functions that map to
+  // The following overloads enable |Map| and |WeakMap| to flatten out functions that map to
   // |std::tuple|.
 
   template <typename Callback, typename MapResult>
@@ -746,6 +744,22 @@ class Future : public fxl::RefCountedThreadSafe<Future<Result...>> {
   FuturePtr<MapResult...> Map(Callback callback, Tag<std::tuple<MapResult...>>) {
     return SubfutureCreate(Future<MapResult...>::Create(trace_name_ + "(Map)"), std::move(callback),
                            SubfutureCompleter<MapResult...>(), [] { return true; });
+  }
+
+  template <typename Callback, typename T, typename MapResult>
+  FuturePtr<MapResult> WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback, Tag<MapResult>) {
+    // Directly passing |callback| like this ends up relying on an implicit
+    // |std::tuple| memberwise constructor, which should be fine. It will
+    // convert from |MapResult| to |std::tuple<MapResult>| implicitly.
+    return WeakMap(weak_ptr, std::move(callback), Tag<std::tuple<MapResult>>{});
+  }
+
+  template <typename Callback, typename T, typename... MapResult>
+  FuturePtr<MapResult...> WeakMap(fxl::WeakPtr<T> weak_ptr, Callback callback,
+                                  Tag<std::tuple<MapResult...>>) {
+    return SubfutureCreate(Future<MapResult...>::Create(trace_name_ + "(WeakMap)"),
+                           std::move(callback), SubfutureCompleter<MapResult...>(),
+                           [weak_ptr] { return !!weak_ptr; });
   }
 
   std::string trace_name_;

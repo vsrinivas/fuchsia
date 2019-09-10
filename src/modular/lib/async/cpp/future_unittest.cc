@@ -824,6 +824,96 @@ TEST_F(FutureTest, MapToTuple) {
   EXPECT_EQ("3", sresult);
 }
 
+TEST_F(FutureTest, WeakMapToTuple) {
+  // Similar to WeakMap(), but with tuples, like MapToTuple.
+  int data = 0;
+  fxl::WeakPtrFactory<int> factory(&data);
+
+  auto f = Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
+
+  // First let everything run.
+  AsyncExpectations async_expectations;
+  f->Map([&](int i) {
+     async_expectations.Signal();
+     return std::make_tuple(42, "the answer");
+   })
+      ->WeakMap(factory.GetWeakPtr(),
+                [&](int i, const std::string& svalue) {
+                  async_expectations.Signal();
+                  return std::make_tuple(i + 2, std::to_string(i) + " was " + svalue);
+                })
+      ->Then([&](int i, const std::string& svalue) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(3, async_expectations.count());
+
+  // Now invalidate it.
+  f = Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("2"));
+  async_expectations.Reset();
+  f->Map([&](int i) {
+     async_expectations.Signal();
+     factory.InvalidateWeakPtrs();
+     return std::make_tuple(42, "the answer");
+   })
+      ->WeakMap(factory.GetWeakPtr(),
+                [&](int i, const std::string& svalue) {
+                  async_expectations.Signal();
+                  return std::make_tuple(i + 2, std::to_string(i) + " was " + svalue);
+                })
+      ->Then([&](int i, const std::string& svalue) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(1, async_expectations.count());
+}
+
+TEST_F(FutureTest, WeakAsyncMapToTuple) {
+  // Similar to WeakMapToTuple(), but with WeakAsyncMap
+  int data = 0;
+  fxl::WeakPtrFactory<int> factory(&data);
+
+  auto f = Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("1"));
+
+  // First let everything run.
+  AsyncExpectations async_expectations;
+  f->AsyncMap([&](int i) {
+     async_expectations.Signal();
+     return Future<float, std::string>::CreateCompleted(
+         std::string(__PRETTY_FUNCTION__) + std::string("2"), 42, "the answer");
+   })
+      ->WeakAsyncMap(factory.GetWeakPtr(),
+                     [&](int i, const std::string& svalue) {
+                       async_expectations.Signal();
+                       return Future<float, std::string>::CreateCompleted(
+                           std::string(__PRETTY_FUNCTION__) + std::string("3"), i + 2,
+                           std::to_string(i) + " was " + svalue);
+                     })
+      ->Then([&](int i, const std::string& svalue) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(3, async_expectations.count());
+
+  // Now invalidate it.
+  f = Future<int>::Create(std::string(__PRETTY_FUNCTION__) + std::string("4"));
+  async_expectations.Reset();
+  f->AsyncMap([&](int i) {
+     async_expectations.Signal();
+     factory.InvalidateWeakPtrs();
+     return Future<float, std::string>::CreateCompleted(
+         std::string(__PRETTY_FUNCTION__) + std::string("5"), 42, "the answer");
+   })
+      ->WeakAsyncMap(factory.GetWeakPtr(),
+                     [&](int i, const std::string& svalue) {
+                       async_expectations.Signal();
+                       return Future<float, std::string>::CreateCompleted(
+                           std::string(__PRETTY_FUNCTION__) + std::string("6"), i + 2,
+                           std::to_string(i) + " was " + svalue);
+                     })
+      ->Then([&](int i, const std::string& svalue) { async_expectations.Signal(); });
+
+  f->Complete(10);
+  EXPECT_EQ(1, async_expectations.count());
+}
+
 // compile-time test
 namespace MapToTupleTuple {
 FuturePtr<std::tuple<float, std::string>> f =
