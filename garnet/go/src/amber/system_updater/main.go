@@ -95,6 +95,12 @@ func run() (err error) {
 	}
 	defer resolver.Close()
 
+	paver, err := ConnectToPaver()
+	if err != nil {
+		return fmt.Errorf("unable to connect to paver service: %s", err)
+	}
+	defer paver.Close()
+
 	dataPath, err := CacheUpdatePackage(updateURL, resolver)
 	if err != nil {
 		return fmt.Errorf("error caching update package! %s", err)
@@ -127,7 +133,7 @@ func run() (err error) {
 	}
 
 	phase = metrics.PhaseImageWrite
-	if err := WriteImgs(imgs, dataPath); err != nil {
+	if err := WriteImgs(paver, imgs, dataPath); err != nil {
 		return fmt.Errorf("error writing image file: %s", err)
 	}
 
