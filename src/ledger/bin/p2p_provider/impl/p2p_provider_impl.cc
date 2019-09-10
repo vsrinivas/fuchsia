@@ -81,7 +81,7 @@ bool P2PProviderImpl::SendMessage(const P2PClientId& destination, fxl::StringVie
 void P2PProviderImpl::StartService() {
   fidl::InterfaceHandle<fuchsia::overnet::ServiceProvider> handle;
   service_binding_.Bind(handle.NewRequest());
-  overnet_->RegisterService(kRespondingServiceName + user_id_, std::move(handle));
+  overnet_->RegisterService(OvernetServiceName(), std::move(handle));
   ListenForNewDevices(kInitialOvernetVersion);
 }
 
@@ -219,7 +219,7 @@ void P2PProviderImpl::ListenForNewDevices(uint64_t version) {
 
       FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
 
-      overnet_->ConnectToService(peer.id, kRespondingServiceName + user_id_, std::move(remote));
+      overnet_->ConnectToService(peer.id, OvernetServiceName(), std::move(remote));
 
       flatbuffers::FlatBufferBuilder buffer;
       flatbuffers::Offset<Handshake> request =
@@ -277,5 +277,7 @@ void P2PProviderImpl::OnDeviceChange(P2PClientId remote_device, DeviceChangeType
   FXL_DCHECK(client_);
   client_->OnDeviceChange(remote_device, change_type);
 }
+
+std::string P2PProviderImpl::OvernetServiceName() { return kRespondingServiceName + user_id_; }
 
 }  // namespace p2p_provider

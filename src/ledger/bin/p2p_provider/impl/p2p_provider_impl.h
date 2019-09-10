@@ -67,6 +67,8 @@ class P2PProviderImpl : public P2PProvider, public fuchsia::overnet::ServiceProv
   // Callback when we establish a new device connection, or a device breaks its
   // connection.
   void OnDeviceChange(P2PClientId remote_device, DeviceChangeType change_type);
+  // The name of the service exposed by Overnet.
+  std::string OvernetServiceName();
 
   Client* client_ = nullptr;
 
