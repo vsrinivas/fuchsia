@@ -44,6 +44,13 @@ void PageStorageEmptyImpl::GetCommit(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
+void PageStorageEmptyImpl::GetGenerationAndMissingParents(
+    const CommitIdAndBytes& /*id_and_bytes*/,
+    fit::function<void(Status, uint64_t, std::vector<CommitId>)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, 0, {});
+}
+
 void PageStorageEmptyImpl::AddCommitsFromSync(
     std::vector<CommitIdAndBytes> /*ids_and_bytes*/, ChangeSource /*source*/,
     fit::function<void(Status, std::vector<CommitId>)> callback) {

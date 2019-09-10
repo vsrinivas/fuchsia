@@ -108,6 +108,12 @@ class PageStorage : public PageSyncClient {
   virtual void GetCommit(CommitIdView commit_id,
                          fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
 
+  // Returns the generation of the given commit, and the list of its parents that are not present in
+  // local storage.
+  virtual void GetGenerationAndMissingParents(
+      const CommitIdAndBytes& id_and_bytes,
+      fit::function<void(Status, uint64_t, std::vector<CommitId>)> callback) = 0;
+
   // Adds a list of commits with the given ids and bytes to storage. The
   // callback is called when the storage has finished processing the commits. If
   // the status passed to the callback is OK, this indicates that storage

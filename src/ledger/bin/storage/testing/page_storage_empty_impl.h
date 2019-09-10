@@ -37,6 +37,10 @@ class PageStorageEmptyImpl : public PageStorage {
   void GetCommit(CommitIdView commit_id,
                  fit::function<void(Status, std::unique_ptr<const Commit>)> callback) override;
 
+  void GetGenerationAndMissingParents(
+      const CommitIdAndBytes& id_and_bytes,
+      fit::function<void(Status, uint64_t, std::vector<CommitId>)> callback) override;
+
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
                           fit::function<void(Status, std::vector<CommitId>)> callback) override;
 

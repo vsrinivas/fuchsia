@@ -23,6 +23,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <utility>
 
@@ -159,6 +160,49 @@ void PageStorageImpl::GetCommit(
         Status status = SynchronousGetCommit(handler, commit_id, &commit);
         callback(status, std::move(commit));
       });
+}
+
+void PageStorageImpl::GetGenerationAndMissingParents(
+    const CommitIdAndBytes& id_and_bytes,
+    fit::function<void(Status, uint64_t, std::vector<CommitId>)> callback) {
+  std::unique_ptr<const Commit> commit;
+  Status status = commit_factory_.FromStorageBytes(std::move(id_and_bytes.id),
+                                                   std::move(id_and_bytes.bytes), &commit);
+  if (status != Status::OK) {
+    FXL_LOG(ERROR) << "Unable to load commit from storage bytes.";
+    callback(status, 0, {});
+    return;
+  }
+
+  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+
+  // The vector must not move until the finalizer is called.
+  auto result = std::make_unique<std::vector<CommitId>>();
+  auto result_ptr = result.get();
+
+  for (CommitIdView parent_id : commit->GetParentIds()) {
+    GetCommit(parent_id,
+              waiter->MakeScoped([callback = waiter->NewCallback(), parent_id, result_ptr](
+                                     Status status, std::unique_ptr<const Commit> /*commit*/) {
+                if (status == Status::INTERNAL_NOT_FOUND) {
+                  // |result| is alive, because |Waiter::MakeScoped| only calls us if the finalizer
+                  // has not run yet.
+                  result_ptr->push_back(parent_id.ToString());
+                  callback(Status::OK);
+                  return;
+                }
+                callback(status);
+              }));
+  }
+
+  waiter->Finalize([commit = std::move(commit), callback = std::move(callback),
+                    result = std::move(result)](Status status) {
+    if (status != Status::OK) {
+      callback(status, 0, {});
+      return;
+    }
+    callback(Status::OK, commit->GetGeneration(), std::move(*result));
+  });
 }
 
 void PageStorageImpl::AddCommitsFromSync(

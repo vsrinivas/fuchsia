@@ -70,6 +70,9 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                          fit::function<void(Status, std::vector<CommitId>)> callback) override;
   void GetCommit(CommitIdView commit_id,
                  fit::function<void(Status, std::unique_ptr<const Commit>)> callback) override;
+  void GetGenerationAndMissingParents(
+      const CommitIdAndBytes& id_and_bytes,
+      fit::function<void(Status, uint64_t, std::vector<CommitId>)> callback) override;
   void AddCommitsFromSync(std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
                           fit::function<void(Status, std::vector<CommitId>)> callback) override;
   std::unique_ptr<Journal> StartCommit(std::unique_ptr<const Commit> commit_id) override;

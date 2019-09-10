@@ -3742,6 +3742,42 @@ TEST_F(PageStorageTest, UpdateClock) {
 
   EXPECT_EQ(clock3, clock2);
 }
+
+TEST_F(PageStorageTest, GetGenerationAndMissingParents) {
+  std::unique_ptr<const btree::TreeNode> node;
+  ASSERT_TRUE(CreateNodeFromEntries({}, {}, &node));
+  ObjectIdentifier root_identifier = node->GetIdentifier();
+
+  // Send a commit with two parents, one missing and one not.
+  std::vector<std::unique_ptr<const Commit>> parents;
+  parents.push_back(GetFirstHead());
+  std::unique_ptr<const Commit> missing_parent =
+      storage_->GetCommitFactory()->FromContentAndParents(environment_.clock(), root_identifier,
+                                                          std::move(parents));
+
+  parents.clear();
+  parents.push_back(GetFirstHead());
+  parents.push_back(missing_parent->Clone());
+  std::unique_ptr<const Commit> commit_to_add = storage_->GetCommitFactory()->FromContentAndParents(
+      environment_.clock(), root_identifier, std::move(parents));
+
+  PageStorage::CommitIdAndBytes id_and_bytes(commit_to_add->GetId(),
+                                             commit_to_add->GetStorageBytes().ToString());
+  bool called;
+  Status status;
+  uint64_t generation;
+  std::vector<CommitId> missing;
+  storage_->GetGenerationAndMissingParents(
+      id_and_bytes,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &generation, &missing));
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_EQ(generation, commit_to_add->GetGeneration());
+  EXPECT_THAT(missing, ElementsAre(missing_parent->GetId()));
+}
+
 }  // namespace
 
 }  // namespace storage
