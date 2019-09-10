@@ -6,13 +6,16 @@
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 #include <elf.h>
+#include <elf/elf.h>
 #include <inttypes.h>
-#include <launchpad/launchpad.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
@@ -151,9 +154,18 @@ bool ElfSearchTest() {
       {"mod3", mod3_phdrs, mod3_build_id, {}},
   };
 
-  // Load the modules and get a handle to the process.
-  launchpad_t* lp;
-  launchpad_create(ZX_HANDLE_INVALID, "mod-test", &lp);
+  // Create the test process using the Launcher service, which has the proper clearance to spawn new
+  // processes. This has the side effect of loading in the VDSO and dynamic linker, which are
+  // explicitly ignored below.
+  const char* file = "bin/elf-search-test-helper";
+  const char* root_dir = getenv("TEST_ROOT_DIR");
+  ASSERT_NE("", root_dir);
+  std::string helper = std::string(root_dir) + "/" + file;
+  const char* argv[] = {helper.c_str()};
+  springboard_t* sb = tu_launch_init(ZX_HANDLE_INVALID, "mod-test", 1, argv, 0, NULL, 0, NULL,
+                                     NULL);
+  zx_handle_t vmar = springboard_get_root_vmar_handle(sb);
+
   uintptr_t base, entry;
   for (auto& mod : mods) {
     EXPECT_TRUE(MakeELF(&mod));
@@ -162,16 +174,31 @@ bool ElfSearchTest() {
       EXPECT_EQ(ZX_OK, mods[3].vmo.write(&mod3_dyns, 0x1800, sizeof(mod3_dyns)));
       EXPECT_EQ(ZX_OK, mods[3].vmo.write(mod3_soname, 0x1901, strlen(mod3_soname) + 1));
     }
-    ASSERT_EQ(ZX_OK, launchpad_elf_load_extra(lp, mod.vmo.get(), &base, &entry),
-              launchpad_error_message(lp));
+    ASSERT_EQ(ZX_OK, elf_load_extra(vmar, mod.vmo.get(), &base, &entry),
+              "Unable to load extra ELF");
   }
   zx::process process;
   auto ac = fbl::MakeAutoCall([&]() { process.kill(); });
-  EXPECT_NE(ZX_HANDLE_INVALID, *process.reset_and_get_address() = launchpad_get_process_handle(lp));
+  EXPECT_NE(ZX_HANDLE_INVALID,
+            *process.reset_and_get_address() = springboard_get_process_handle(sb));
+
+  // These modules appear in the list as they are the mimimum possible set of mappings that a
+  // process can be spawned with using fuchsia.process.Launcher, which tu_launch_init relies on.
+  const char* ignored_mods[] = {
+    // The dynamic linker, a.k.a. ld.so.1 in packages.
+    "libc.so",
+    // The VDSO.
+    "libzircon.so",
+  };
 
   // Now loop though everything, checking module info along the way.
   uint32_t matchCount = 0, moduleCount = 0;
   zx_status_t status = ForEachModule(process, [&](const ModuleInfo& info) {
+    for (const auto& mod : ignored_mods) {
+      if (info.name == mod) {
+        return;
+      }
+    }
     ++moduleCount;
     for (const auto& mod : mods) {
       if (mod.build_id == info.build_id) {
@@ -192,6 +219,7 @@ bool ElfSearchTest() {
   });
   EXPECT_EQ(ZX_OK, status, zx_status_get_string(status));
   EXPECT_EQ(moduleCount, fbl::count_of(mods), "Unexpected number of modules found.");
+
   END_TEST;
 }
 

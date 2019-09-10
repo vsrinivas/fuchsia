@@ -61,6 +61,13 @@ typedef struct springboard springboard_t;
 
 zx_handle_t springboard_get_process_handle(springboard_t* sb);
 
+// Returns the root VMAR handle associated with the springboard object.
+// The handle is still owned by the input object, and must not be closed or
+// transferred.
+// This handle will be valid for the lifetime of the springboard object.
+
+zx_handle_t springboard_get_root_vmar_handle(springboard_t* sb);
+
 // Initializes a process.
 
 springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const char* const* argv,

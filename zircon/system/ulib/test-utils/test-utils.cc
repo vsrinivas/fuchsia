@@ -218,7 +218,7 @@ struct springboard {
 
   springboard(fprocess::ProcessStartData* reference) {
     data.process.reset(reference->process.release());
-    reference->root_vmar.reset();  // Not used.
+    data.root_vmar.reset(reference->root_vmar.release());
     data.thread.reset(reference->thread.release());
     data.entry = reference->entry;
     data.stack = reference->stack;
@@ -230,6 +230,10 @@ struct springboard {
 
 zx_handle_t springboard_get_process_handle(springboard_t* sb) {
   return sb->data.process.get();
+}
+
+zx_handle_t springboard_get_root_vmar_handle(springboard_t* sb) {
+  return sb->data.root_vmar.get();
 }
 
 springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const char* const* argv,
@@ -328,6 +332,9 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   status = load_executable_vmo(filename, &launch_info.executable);
   tu_check("loading executable", status);
 
+  if (job == ZX_HANDLE_INVALID) {
+    job = zx_job_default();
+  }
   zx::unowned_job unowned_job(job);
   status = unowned_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &launch_info.job);
   tu_check("duplicating job for launch", status);

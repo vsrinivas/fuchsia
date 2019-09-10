@@ -9,17 +9,41 @@ group("test") {
   ]
 }
 
+library("elf") {
+  sources = [
+    "elf.c",
+  ]
+  deps = [
+    "$zx/system/ulib/elfload",
+    "$zx/system/ulib/zircon",
+  ]
+  testonly = true
+  visibility = [ ":*" ]
+}
+
+executable("elf-search-test-helper") {
+  sources = [
+    "helper.cc",
+  ]
+  testonly = true
+  visibility = [ ":*" ]
+}
+
 test("elf-search") {
   sources = [
     "elf-search-test.cc",
   ]
   deps = [
+    ":elf",
     "$zx/system/ulib/elf-search",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/launchpad",
+    "$zx/system/ulib/test-utils",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+  data_deps = [
+    ":elf-search-test-helper",
   ]
 }
