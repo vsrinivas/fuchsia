@@ -413,7 +413,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			// Now that we've successfully acquired the address, update the client state.
 			c.addr = requestedAddr
 
-			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s", typ, fromAddr.Addr)
+			syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s with lease %s", typ, fromAddr.Addr, cfg.LeaseLength)
 			return cfg, nil
 		case dhcpNAK:
 			if msg := opts.message(); len(msg) != 0 {
