@@ -25,7 +25,7 @@ use crate::harness::{
 };
 
 /// A snapshot of the current LE peripheral procedure states of the controller.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PeripheralState {
     emulator_state: EmulatorState,
 
@@ -38,12 +38,6 @@ impl PeripheralState {
     pub fn reset(&mut self) {
         self.emulator_state = EmulatorState::default();
         self.connections.clear();
-    }
-}
-
-impl Default for PeripheralState {
-    fn default() -> PeripheralState {
-        PeripheralState { emulator_state: EmulatorState::default(), connections: Vec::new() }
     }
 }
 

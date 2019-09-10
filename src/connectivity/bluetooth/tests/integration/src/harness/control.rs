@@ -27,6 +27,7 @@ pub fn control_timeout() -> Duration {
     10.seconds()
 }
 
+#[derive(Default)]
 pub struct ControlState {
     /// Current hosts
     pub hosts: HashMap<String, AdapterInfo>,
@@ -43,15 +44,6 @@ impl Clone for ControlState {
         let active_host = self.active_host.clone();
         let peers: HashMap<String, RemoteDevice> =
             self.peers.iter().map(|(k, v)| (k.clone(), clone_remote_device(v))).collect();
-        ControlState { hosts, active_host, peers }
-    }
-}
-
-impl Default for ControlState {
-    fn default() -> ControlState {
-        let hosts = HashMap::new();
-        let active_host = None;
-        let peers = HashMap::new();
         ControlState { hosts, active_host, peers }
     }
 }

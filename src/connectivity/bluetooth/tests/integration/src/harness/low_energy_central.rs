@@ -59,19 +59,13 @@ pub enum ScanStateChange {
 }
 
 /// A snapshot of the current LowEnergy Central State
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct CentralState {
     /// Observed scan state changes.
     pub scan_state_changes: Vec<ScanStateChange>,
 
     /// Discovered devices.
     pub remote_devices: Vec<RemoteDevice>,
-}
-
-impl Default for CentralState {
-    fn default() -> CentralState {
-        CentralState { scan_state_changes: Vec::new(), remote_devices: Vec::new() }
-    }
 }
 
 pub type CentralHarness = ExpectationHarness<CentralState, CentralHarnessAux>;
