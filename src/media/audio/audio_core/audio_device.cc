@@ -42,6 +42,21 @@ void AudioDevice::Wakeup() {
   mix_wakeup_->Signal();
 }
 
+std::optional<GainCurve> AudioDevice::GetGainCurve() const {
+  // ThrottleOutput does not have a driver.
+  if (!driver_) {
+    return std::nullopt;
+  }
+
+  // TODO(35394): Add actual curve to this config, store it in driver_ and validate at load time.
+  const auto caps = driver_->hw_gain_state();
+  if (caps.min_gain == Gain::kUnityGainDb) {
+    return std::nullopt;
+  }
+
+  return {GainCurve::DefaultForMinGain(caps.min_gain)};
+}
+
 uint64_t AudioDevice::token() const {
   return driver_ ? driver_->stream_channel_koid() : ZX_KOID_INVALID;
 }

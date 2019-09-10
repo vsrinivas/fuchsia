@@ -11,6 +11,7 @@
 #include <fbl/ref_counted.h>
 
 #include "src/lib/fxl/logging.h"
+#include "src/media/audio/audio_core/gain_curve.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 
 namespace media::audio {
@@ -50,6 +51,10 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   const fbl::RefPtr<AudioObject>& GetSource() const { return source_; }
   const fbl::RefPtr<AudioObject>& GetDest() const { return dest_; }
 
+  // The GainCurve of the link, representing either the source or destination's mapping from volume
+  // to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
+  const std::optional<GainCurve>& gain_curve() const { return gain_curve_; }
+
   SourceType source_type() const { return source_type_; }
 
   // Sources invalidate links when they change format or go away.
@@ -75,6 +80,7 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   fbl::RefPtr<AudioObject> dest_;
   std::unique_ptr<Bookkeeping> bookkeeping_;
   std::atomic_bool valid_;
+  const std::optional<GainCurve> gain_curve_;
 };
 
 }  // namespace media::audio

@@ -132,5 +132,9 @@ TEST(GainCurveTest, DefaultCurveWithMinGainDb) {
   EXPECT_LT(middle100, middle50);
 }
 
+TEST(GainCurveTest, DefaultCurveWithMuteGainDoesNotAbort) {
+  GainCurve::DefaultForMinGain(fuchsia::media::audio::MUTED_GAIN_DB);
+}
+
 }  // namespace
 }  // namespace media::audio

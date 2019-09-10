@@ -15,6 +15,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/fwd_decls.h"
+#include "src/media/audio/audio_core/gain_curve.h"
 
 namespace media::audio {
 
@@ -57,6 +58,9 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
     fbl::AutoLock lock(&links_lock_);
     new_links_allowed_ = false;
   }
+
+  // The GainCurve for the object, representing its mapping from volume to gain.
+  virtual std::optional<GainCurve> GetGainCurve() const { return std::nullopt; }
 
   Type type() const { return type_; }
   bool is_output() const { return type() == Type::Output; }

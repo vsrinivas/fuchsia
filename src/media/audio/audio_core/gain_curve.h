@@ -17,11 +17,11 @@ namespace media::audio {
 class GainCurve {
  public:
   enum Error {
-    kLessThanTwoMappingsCannotMakeCurve,
-    kDomain0to1NotCovered,
-    kNonIncreasingDomainIllegal,
-    kNonIncreasingRangeIllegal,
-    kRange0NotCovered,
+    kLessThanTwoMappingsCannotMakeCurve = 1,
+    kDomain0to1NotCovered = 2,
+    kNonIncreasingDomainIllegal = 3,
+    kNonIncreasingRangeIllegal = 4,
+    kRange0NotCovered = 5,
   };
 
   // A mapping from volume domain to gain in dbfs.

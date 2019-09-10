@@ -8,9 +8,30 @@
 
 namespace media::audio {
 
+namespace {
+
+// Returns one of two curves, if either of them exist. Otherwise returns std::nullopt;
+std::optional<GainCurve> SelectGainCurve(std::optional<GainCurve> curve_a,
+                                         std::optional<GainCurve> curve_b) {
+  FXL_DCHECK(!(curve_a.has_value() && curve_b.has_value()))
+      << "Two objects with a gain curve cannot be linked.";
+
+  if (curve_a.has_value()) {
+    return curve_a;
+  }
+
+  return curve_b;
+}
+
+}  // namespace
+
 AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
                      fbl::RefPtr<AudioObject> dest)
-    : source_type_(source_type), source_(std::move(source)), dest_(std::move(dest)), valid_(true) {
+    : source_type_(source_type),
+      source_(std::move(source)),
+      dest_(std::move(dest)),
+      valid_(true),
+      gain_curve_(SelectGainCurve(source_->GetGainCurve(), dest_->GetGainCurve())) {
   // Only outputs and AudioCapturers may be destinations.
   FXL_DCHECK(dest_ != nullptr);
   FXL_DCHECK((dest_->type() == AudioObject::Type::Output) ||

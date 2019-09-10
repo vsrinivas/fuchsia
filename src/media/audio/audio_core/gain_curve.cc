@@ -27,10 +27,20 @@ const GainCurve& GainCurve::Default() { return kDefaultCurve; }
 
 GainCurve GainCurve::DefaultForMinGain(float min_gain_db) {
   FXL_DCHECK(min_gain_db < Gain::kUnityGainDb);
-  return GainCurve::FromMappings({{0.0, fuchsia::media::audio::MUTED_GAIN_DB},
-                                  {FLT_EPSILON, min_gain_db},
-                                  {1.0, Gain::kUnityGainDb}})
-      .take_value();
+  FXL_DCHECK(min_gain_db >= fuchsia::media::audio::MUTED_GAIN_DB);
+
+  std::vector<VolumeMapping> mappings = {{0.0, fuchsia::media::audio::MUTED_GAIN_DB}};
+  if (min_gain_db != fuchsia::media::audio::MUTED_GAIN_DB) {
+    mappings.push_back({FLT_EPSILON, min_gain_db});
+  }
+  mappings.push_back({1.0, Gain::kUnityGainDb});
+
+  auto curve_result = GainCurve::FromMappings(std::move(mappings));
+  if (!curve_result.is_ok()) {
+    FXL_LOG(FATAL) << "Failed to build curve; error: " << curve_result.take_error();
+  }
+
+  return curve_result.take_value();
 }
 
 fit::result<GainCurve, GainCurve::Error> GainCurve::FromMappings(

@@ -54,6 +54,9 @@ class AudioDevice : public AudioObject, public fbl::WAVLTreeContainable<fbl::Ref
   uint64_t GetKey() const { return token(); }
   bool activated() const { return activated_; }
 
+  // AudioObject overrides.
+  std::optional<GainCurve> GetGainCurve() const override;
+
   // NotifyDestFormatPreference
   //
   // Called by clients who are destinations of ours, to inform us of their preferred format.
