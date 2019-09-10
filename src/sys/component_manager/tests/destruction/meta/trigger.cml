@@ -1,0 +1,13 @@
+// Integration test component that runs a Trigger service. When triggered, the
+// component is started but takes no action.
+{
+    "program": {
+        "binary": "bin/trigger",
+    },
+    "expose": [
+        {
+            "legacy_service": "/svc/fidl.test.components.Trigger",
+            "from": "self",
+        },
+    ],
+}

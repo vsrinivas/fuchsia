@@ -6,8 +6,8 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-rustc_test("collections_integration_test_bin") {
-  name = "collections_integration_test"
+rustc_test("destruction_integration_test_bin") {
+  name = "destruction_integration_test"
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
@@ -16,14 +16,22 @@ rustc_test("collections_integration_test_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/sys/component_manager:lib",
     "//src/sys/component_manager/tests:test_utils",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+  ]
+  non_rust_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
   ]
 }
 
-rustc_binary("collection_realm_bin") {
-  name = "collection_realm"
+rustc_binary("destruction_collection_realm_bin") {
+  name = "destruction_collection_realm"
   edition = "2018"
   source_root = "collection_realm.rs"
   deps = [
@@ -40,12 +48,11 @@ rustc_binary("collection_realm_bin") {
   ]
 }
 
-rustc_binary("trigger_bin") {
-  name = "trigger"
+rustc_binary("destruction_trigger_bin") {
+  name = "destruction_trigger"
   edition = "2018"
   source_root = "trigger.rs"
   deps = [
-    "//examples/components/routing/fidl:echo-rustc",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
@@ -54,18 +61,13 @@ rustc_binary("trigger_bin") {
   ]
 }
 
-test_package("collections_integration_test") {
+test_package("destruction_integration_test") {
   deps = [
-    ":collection_realm_bin",
-    ":collections_integration_test_bin",
-    ":trigger_bin",
-    "//examples/components/routing/echo_client",
-    "//examples/components/routing/echo_server",
+    ":destruction_integration_test_bin",
+    ":destruction_collection_realm_bin",
+    ":destruction_trigger_bin",
     "//src/sys/component_manager/tests:mock_pkg_resolver_bin",
   ]
-
-  components =
-      [ "//src/sys/component_manager:component_manager_as_v1_component" ]
 
   meta = [
     {
@@ -73,16 +75,8 @@ test_package("collections_integration_test") {
       dest = "mock_pkg_resolver.cmx"
     },
     {
-      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
-      dest = "echo_server.cm"
-    },
-    {
-      path = rebase_path("meta/trigger_a.cml")
-      dest = "trigger_a.cm"
-    },
-    {
-      path = rebase_path("meta/trigger_b.cml")
-      dest = "trigger_b.cm"
+      path = rebase_path("meta/trigger.cml")
+      dest = "trigger.cm"
     },
     {
       path = rebase_path("meta/trigger_realm.cml")
@@ -99,19 +93,20 @@ test_package("collections_integration_test") {
       name = "mock_pkg_resolver"
     },
     {
-      name = "echo_server"
-    },
-    {
       name = "trigger"
+      source = "${root_out_dir}/destruction_trigger"
     },
     {
       name = "collection_realm"
+      source = "${root_out_dir}/destruction_collection_realm"
     },
   ]
 
   tests = [
     {
-      name = "collections_integration_test"
-    },
+      name = "destruction_integration_test"
+    }
   ]
 }
+
+

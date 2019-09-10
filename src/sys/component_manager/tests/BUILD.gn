@@ -516,5 +516,6 @@ group("tests") {
     ":shutdown_integration_test",
     ":storage_integration_test",
     "collections:collections_integration_test",
+    "destruction:destruction_integration_test",
   ]
 }

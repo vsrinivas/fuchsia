@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/integration_test"
+        "binary": "test/collections_integration_test"
     },
     "sandbox": {
         "services": [

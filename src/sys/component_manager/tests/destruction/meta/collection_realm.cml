@@ -1,0 +1,21 @@
+// Realm for integration test that creates and binds to component instances in a collection.
+{
+    "program": {
+        "binary": "bin/collection_realm",
+    },
+    "use": [
+        {
+            "legacy_service": "/svc/fuchsia.logger.LogSink",
+        },
+        {
+            "legacy_service": "/svc/fuchsia.sys2.Realm",
+            "from": "framework",
+        },
+    ],
+    "collections": [
+        {
+            "name": "coll",
+            "durability": "transient",
+        },
+    ],
+}

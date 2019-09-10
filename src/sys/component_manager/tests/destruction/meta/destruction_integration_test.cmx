@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "test/destruction_integration_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.logger.LogSink",
+            "fuchsia.pkg.PackageResolver"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/mock_pkg_resolver.cmx"
+            }
+        }
+    }
+}

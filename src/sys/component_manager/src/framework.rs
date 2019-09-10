@@ -686,7 +686,7 @@ mod tests {
         moniker: AbsoluteMoniker,
         /// Receiver on which to wait to unblock `on_stop_instance`.
         stop_recv: Mutex<mpsc::Receiver<()>>,
-        /// Receiver on which to wait to unblock `on_destroy_instance`.
+        /// Receiver on which `on_destroy_instance` is signalled.
         destroy_send: Mutex<mpsc::Sender<()>>,
     }
 
