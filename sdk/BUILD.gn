@@ -153,7 +153,6 @@ sdk_molecule("core_tools") {
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
     "//src/developer/debug/zxdb:zxdb_sdk($host_toolchain)",
-    "//src/developer/feedback/bugreport:client_sdk($host_toolchain)",
     "//src/sys/cmc:cmc_sdk($host_toolchain)",
     "//tools/fidlcat:fidlcat_sdk($host_toolchain)",
     "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
