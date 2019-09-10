@@ -99,6 +99,8 @@ class WebPageBloc extends web.NavigationEventListener {
       case WebPageActionType.goForward:
         await _webView.controller.goForward();
         break;
+      case WebPageActionType.refresh:
+        await _webView.controller.reload(web.ReloadType.partialCache);
     }
   }
 

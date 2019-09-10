@@ -11,7 +11,7 @@ class WebPageAction {
 }
 
 // Operations allowed for browsing
-enum WebPageActionType { goForward, goBack, navigateTo }
+enum WebPageActionType { goForward, goBack, refresh, navigateTo }
 
 // Instructs to go to the next page.
 class GoForwardAction extends WebPageAction {
@@ -21,6 +21,11 @@ class GoForwardAction extends WebPageAction {
 // Instructs to go to the previous page.
 class GoBackAction extends WebPageAction {
   const GoBackAction() : super(WebPageActionType.goBack);
+}
+
+// Instructs to refresh the current page.
+class RefreshAction extends WebPageAction {
+  const RefreshAction() : super(WebPageActionType.refresh);
 }
 
 // Instructs to navigate to some url.

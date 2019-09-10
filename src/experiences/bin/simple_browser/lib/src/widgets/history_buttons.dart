@@ -32,6 +32,13 @@ class HistoryButtons extends StatelessWidget {
                   title: 'FWD',
                   onTap: () => bloc.request.add(GoForwardAction()),
                   isEnabled: bloc.forwardState)),
+          SizedBox(width: 8.0),
+          AnimatedBuilder(
+              animation: bloc.urlNotifier,
+              builder: (_, __) => _HistoryButton(
+                  title: 'RFRSH',
+                  onTap: () => bloc.request.add(RefreshAction()),
+                  isEnabled: (bloc.url ?? '').isNotEmpty)),
         ],
       );
 }
