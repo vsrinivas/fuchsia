@@ -29,7 +29,7 @@ using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 // Command processors update this tree, and the input system may read or modify the focus.
 class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
  public:
-  SceneGraph(sys::ComponentContext* app_context);
+  explicit SceneGraph(sys::ComponentContext* app_context);
 
   SceneGraphWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
@@ -86,7 +86,7 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
   void RemoveCompositor(const CompositorWeakPtr& compositor);
 
   // If the focus chain has changed, dispatch an updated focus chain to the FocusChainListener.
-  void MaybeDispatchFidlFocusChain(const std::vector<zx_koid_t> old_focus_chain);
+  void MaybeDispatchFidlFocusChain(const std::vector<zx_koid_t>& old_focus_chain);
 
   std::vector<CompositorWeakPtr> compositors_;
 

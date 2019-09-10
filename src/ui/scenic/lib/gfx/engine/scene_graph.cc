@@ -100,7 +100,7 @@ void SceneGraph::Register(
   focus_chain_listener_.Bind(std::move(focus_chain_listener));
 }
 
-void SceneGraph::MaybeDispatchFidlFocusChain(const std::vector<zx_koid_t> old_focus_chain) {
+void SceneGraph::MaybeDispatchFidlFocusChain(const std::vector<zx_koid_t>& old_focus_chain) {
   const std::vector<zx_koid_t>& new_focus_chain = view_tree_.focus_chain();
 
   bool focus_changed = false;

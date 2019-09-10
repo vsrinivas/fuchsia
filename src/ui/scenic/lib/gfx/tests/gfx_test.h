@@ -20,7 +20,7 @@ namespace test {
 class GfxSystemTest : public scenic_impl::test::ScenicTest {
  public:
   GfxSystemTest() = default;
-  virtual ~GfxSystemTest() = default;
+  ~GfxSystemTest() override = default;
 
   // ::testing::Test virtual method.
   void TearDown() override;

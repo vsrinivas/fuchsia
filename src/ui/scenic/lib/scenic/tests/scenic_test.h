@@ -21,7 +21,7 @@ namespace test {
 class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
  public:
   ScenicTest() : weak_factory_(this) {}
-  virtual ~ScenicTest() = default;
+  ~ScenicTest() override = default;
 
   std::unique_ptr<::scenic::Session> CreateSession();
 

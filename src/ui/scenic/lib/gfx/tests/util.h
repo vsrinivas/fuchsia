@@ -56,14 +56,14 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
 // Tests may freely subclass this type to add more state for their specific purposes.
 class SessionWrapper {
  public:
-  SessionWrapper(scenic_impl::Scenic* scenic);
+  explicit SessionWrapper(scenic_impl::Scenic* scenic);
   virtual ~SessionWrapper();
 
   // Allow caller to run some code in the context of this particular session.
   void RunNow(fit::function<void(scenic::Session* session, scenic::EntityNode* session_anchor)>
                   create_scene_callback);
 
- protected:
+ private:
   // Client-side session object.
   std::unique_ptr<scenic::Session> session_;
 
