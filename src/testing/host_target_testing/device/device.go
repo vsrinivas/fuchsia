@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"testing"
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/packages"
@@ -74,11 +73,11 @@ func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
 }
 
 // WaitForDeviceToBeUp blocks until a device is available for access.
-func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
+func (c *Client) WaitForDeviceToBeUp() error {
 	log.Printf("waiting for device %q to ping", c.deviceHostname)
 	path, err := exec.LookPath("/bin/ping")
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	for {
@@ -97,6 +96,8 @@ func (c *Client) WaitForDeviceToBeUp(t *testing.T) {
 	}
 
 	log.Printf("device up")
+
+	return nil
 }
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh
@@ -127,19 +128,19 @@ func (c *Client) GetSystemImageMerkle() (string, error) {
 
 // GetBuildSnapshot fetch the device's current system version, as expressed by the file
 // /config/build-info/snapshot.
-func (c *Client) GetBuildSnapshot(t *testing.T) []byte {
+func (c *Client) GetBuildSnapshot() ([]byte, error) {
 	const buildInfoSnapshot = "/config/build-info/snapshot"
 	snapshot, err := c.ReadRemotePath(buildInfoSnapshot)
 	if err != nil {
-		t.Fatalf("failed to read %q: %s", buildInfoSnapshot, err)
+		return nil, fmt.Errorf("failed to read %q: %s", buildInfoSnapshot, err)
 	}
 
-	return snapshot
+	return snapshot, nil
 }
 
 // RebootToRecovery asks the device to reboot into the recovery partition. It
 // waits until the device disconnects before returning.
-func (c *Client) RebootToRecovery(t *testing.T) {
+func (c *Client) RebootToRecovery() error {
 	log.Printf("rebooting to recovery")
 
 	var wg sync.WaitGroup
@@ -148,48 +149,55 @@ func (c *Client) RebootToRecovery(t *testing.T) {
 	err := c.Run("dm reboot-recovery", os.Stdout, os.Stderr)
 	if err != nil {
 		if _, ok := err.(*ssh.ExitMissingError); !ok {
-			t.Fatalf("failed to reboot into recovery: %s", err)
+			return fmt.Errorf("failed to reboot into recovery: %s", err)
 		}
 	}
 
 	// Wait until we get a signal that we have disconnected
 	wg.Wait()
+
+	return nil
 }
 
 // TriggerSystemOTA gets the device to perform a system update.
-func (c *Client) TriggerSystemOTA(t *testing.T) {
+func (c *Client) TriggerSystemOTA() error {
 	log.Printf("triggering OTA")
 
 	var wg sync.WaitGroup
 	c.RegisterDisconnectListener(&wg)
 
 	if err := c.Run("amberctl system_update", os.Stdout, os.Stderr); err != nil {
-		t.Fatalf("failed to trigger OTA: %s", err)
+		return fmt.Errorf("failed to trigger OTA: %s", err)
 	}
 
 	// Wait until we get a signal that we have disconnected
 	wg.Wait()
 
-	c.WaitForDeviceToBeUp(t)
+	if err := c.WaitForDeviceToBeUp(); err != nil {
+		return err
+	}
 	log.Printf("device rebooted")
+
+	return nil
 }
 
 // ValidateStaticPackages checks that all static packages have no missing blobs.
-func (c *Client) ValidateStaticPackages(t *testing.T) {
+func (c *Client) ValidateStaticPackages() error {
 	log.Printf("validating static packages")
 
 	path := "/pkgfs/ctl/validation/missing"
 	f, err := c.ReadRemotePath(path)
 	if err != nil {
-		t.Fatalf("error reading %q: %s", path, err)
+		return fmt.Errorf("error reading %q: %s", path, err)
 	}
 
 	merkles := strings.TrimSpace(string(f))
 	if merkles != "" {
-		t.Fatalf("static packages are missing the following blobs:\n%s", merkles)
+		return fmt.Errorf("static packages are missing the following blobs:\n%s", merkles)
 	}
 
 	log.Printf("all static package blobs are accounted for")
+	return nil
 }
 
 // ReadRemotePath read a file off the remote device.
@@ -214,22 +222,20 @@ func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 }
 
 // RemoteFileExists checks if a file exists on the remote device.
-func (c *Client) RemoteFileExists(t *testing.T, path string) bool {
+func (c *Client) RemoteFileExists(path string) (bool, error) {
 	var stderr bytes.Buffer
 	err := c.Run(fmt.Sprintf("PATH= ls %s", path), ioutil.Discard, &stderr)
 	if err == nil {
-		return true
+		return true, nil
 	}
 
 	if e, ok := err.(*ssh.ExitError); ok {
 		if e.ExitStatus() == 1 {
-			return false
+			return false, nil
 		}
 	}
 
-	t.Fatalf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
-
-	return false
+	return false, fmt.Errorf("error reading %q: %s: %s", path, err, string(stderr.Bytes()))
 }
 
 // RegisterPackageRepository adds the repository as a repository inside the device.

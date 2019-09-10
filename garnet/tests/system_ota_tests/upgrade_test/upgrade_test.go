@@ -81,14 +81,18 @@ func doPave(t *testing.T, paver *paver.Paver, repo *packages.Repository) {
 	defer device.Close()
 
 	// Reboot the device into recovery and pave it.
-	device.RebootToRecovery(t)
+	if err = device.RebootToRecovery(); err != nil {
+		t.Fatal(err)
+	}
 
 	if err = paver.Pave(c.DeviceName); err != nil {
 		t.Fatalf("device failed to pave: %s", err)
 	}
 
 	// Wait for the device to come online.
-	device.WaitForDeviceToBeUp(t)
+	if err = device.WaitForDeviceToBeUp(); err != nil {
+		t.Fatal(err)
+	}
 
 	validateDevice(t, repo, device)
 
@@ -103,7 +107,9 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	defer device.Close()
 
 	// Wait for the device to come online.
-	device.WaitForDeviceToBeUp(t)
+	if err = device.WaitForDeviceToBeUp(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Get the device's current /system/meta. Error out if it is the same
 	// version we are about to OTA to.
@@ -127,7 +133,9 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 	}
 
 	// Make sure the device doesn't have any broken static packages.
-	device.ValidateStaticPackages(t)
+	if err = device.ValidateStaticPackages(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Tell the device to connect to our repository.
 	localHostname, err := device.GetSshConnection()
@@ -148,7 +156,9 @@ func doSystemOTA(t *testing.T, repo *packages.Repository) {
 
 	// Start the system OTA process.
 	log.Printf("starting system OTA")
-	device.TriggerSystemOTA(t)
+	if err = device.TriggerSystemOTA(); err != nil {
+		t.Fatal(err)
+	}
 
 	validateDevice(t, repo, device)
 
@@ -163,7 +173,9 @@ func doSystemPrimeOTA(t *testing.T, repo *packages.Repository) {
 	defer device.Close()
 
 	// Wait for the device to come online.
-	device.WaitForDeviceToBeUp(t)
+	if err = device.WaitForDeviceToBeUp(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Get the device's current /system/meta. Error out if it is the same
 	// version we are about to OTA to.
@@ -188,7 +200,9 @@ func doSystemPrimeOTA(t *testing.T, repo *packages.Repository) {
 	}
 
 	// Make sure the device doesn't have any broken static packages.
-	device.ValidateStaticPackages(t)
+	if err = device.ValidateStaticPackages(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Tell the device to connect to our repository.
 	localHostname, err := device.GetSshConnection()
@@ -229,7 +243,9 @@ func doSystemPrimeOTA(t *testing.T, repo *packages.Repository) {
 	// Wait until we get a signal that we have disconnected
 	wg.Wait()
 
-	device.WaitForDeviceToBeUp(t)
+	if err = device.WaitForDeviceToBeUp(); err != nil {
+		t.Fatal(err)
+	}
 
 	remoteSystemImageMerkle, err = device.GetSystemImageMerkle()
 	if err != nil {
@@ -264,7 +280,9 @@ func validateDevice(t *testing.T, repo *packages.Repository, device *device.Clie
 	}
 
 	// Make sure the device doesn't have any broken static packages.
-	device.ValidateStaticPackages(t)
+	if err = device.ValidateStaticPackages(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func extractUpdateSystemImage(repo *packages.Repository) (string, error) {
