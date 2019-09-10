@@ -229,6 +229,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_COMPOSITE_2   16
 #define PDEV_DID_TEST_GDC           17
 #define PDEV_DID_TEST_SPI           18
+#define PDEV_DID_TEST_CAMERA_SENSOR 19
 
 // ARM
 #define PDEV_VID_ARM                18

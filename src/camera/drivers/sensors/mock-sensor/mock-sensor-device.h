@@ -28,15 +28,22 @@ namespace camera {
 //   *Make some calls on isp that wrap sensor*
 class MockSensorDevice;
 
-using DeviceType = ddk::Device<MockSensorDevice>;
+using DeviceType = ddk::Device<MockSensorDevice, ddk::Unbindable>;
 
 class MockSensorDevice
     : public DeviceType,
       public ddk::CameraSensorProtocol<MockSensorDevice, ddk::base_protocol> {
  public:
-  MockSensorDevice() : DeviceType(fake_ddk::kFakeParent) {}
+  explicit MockSensorDevice() : DeviceType(fake_ddk::kFakeParent) {}
+
+  explicit MockSensorDevice(zx_device_t* parent) : DeviceType(parent) {}
+
+  static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+  static zx_status_t GetDebugHandle(MockSensorDevice* device);
 
   // Methods required by ddk.
+  void DdkUnbind();
   void DdkRelease();
 
   // Methods required for ZX_PROTOCOL_CAMERA_SENSOR.

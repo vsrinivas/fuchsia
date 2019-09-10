@@ -4,8 +4,31 @@
 
 #include "mock-sensor-device.h"
 
+#include <ddk/binding.h>
+#include <ddk/debug.h>
 
 namespace camera {
+
+zx_status_t MockSensorDevice::Create(void* ctx, zx_device_t* parent) {
+  fbl::AllocChecker ac;
+  auto device = fbl::make_unique_checked<MockSensorDevice>(&ac, parent);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  zx_status_t status = device->DdkAdd("mock-sensor");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "mock-sensor-device: Could not add mock-sensor: %d\n",
+           status);
+    return status;
+  }
+  zxlogf(ERROR, "mock-sensor-device: Successfully added mock sensor: %d\n",
+         status);
+  // Device is held by DevMgr.
+  __UNUSED auto* dev = device.release();
+  return ZX_OK;
+}
+
+void MockSensorDevice::DdkUnbind() {}
 
 void MockSensorDevice::DdkRelease() {
   delete this;
@@ -82,5 +105,19 @@ zx_status_t MockSensorDevice::AddMode(const sensor_mode_t& mode) {
   return ZX_OK;
 }
 
+static constexpr zx_driver_ops_t driver_ops = []() {
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = MockSensorDevice::Create;
+  return ops;
+}();
 
 }  // namespace camera
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(mock-sensor, camera::driver_ops, "mock-sensor", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_VCAMERA_TEST),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CAMERA_SENSOR)
+ZIRCON_DRIVER_END(mock-sensor)
+// clang-format on

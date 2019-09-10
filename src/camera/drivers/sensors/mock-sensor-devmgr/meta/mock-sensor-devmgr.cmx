@@ -1,0 +1,30 @@
+{
+    "program": {
+        "args": [
+            "--svc_name=fuchsia.camera.MockSensorDevmgr",
+            "--add_namespace=/pkg",
+            "--load_driver=/pkg/data/mock-sensor.so",
+            "--sys_device=/boot/driver/platform-bus.so",
+            "--device_vid_pid_did=11:5:13",
+            "--wait_for=sys/platform/11:05:13/mock-sensor",
+            "--search_driver=/boot/driver"
+        ],
+        "binary": "bin/isolated_devmgr"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "features": [
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

@@ -6,5 +6,7 @@ group("sensors") {
   testonly = true
   deps = [
     "imx227",
+    "mock-sensor",
+    "mock-sensor-devmgr",
   ]
 }

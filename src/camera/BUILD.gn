@@ -33,6 +33,7 @@ test_package("camera_full_test") {
     "//src/camera/drivers/isp/modules:isp-mem-array",
     "//src/camera/drivers/isp/modules/test:modules_bin",
     "//src/camera/drivers/sensors/mock-sensor:mock-sensor-device-test",
+    "//src/camera/drivers/sensors/mock-sensor:mock-sensor-integration-test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
   ]
 
@@ -70,6 +71,12 @@ test_package("camera_full_test") {
     {
       name = "mock-sensor-device-test"
       manifest = "drivers/sensors/mock-sensor/meta/mock-sensor-device-test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "mock-sensor-integration-test"
+      manifest =
+          "drivers/sensors/mock-sensor/meta/mock-sensor-integration-test.cmx"
       environments = basic_envs
     },
 
