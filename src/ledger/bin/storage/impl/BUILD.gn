@@ -41,6 +41,18 @@ flatbuffer("file_index") {
   extra_configs = [ "//src/ledger:ledger_config" ]
 }
 
+flatbuffer("clock_storage") {
+  sources = [
+    "clock.fbs",
+  ]
+
+  public_deps = [
+    ":commit_storage",
+  ]
+
+  extra_configs = [ "//src/ledger:ledger_config" ]
+}
+
 source_set("object_identifier_lib") {
   sources = [
     "constants.h",
@@ -82,10 +94,14 @@ source_set("data_serialization") {
 
 source_set("lib") {
   sources = [
+    "clock_serialization.cc",
+    "clock_serialization.h",
     "commit_factory.cc",
     "commit_factory.h",
     "commit_pruner.cc",
     "commit_pruner.h",
+    "commit_serialization.cc",
+    "commit_serialization.h",
     "db_serialization.cc",
     "db_serialization.h",
     "file_index.cc",
@@ -113,6 +129,7 @@ source_set("lib") {
   ]
 
   deps = [
+    ":clock_storage",
     ":commit_storage",
     ":file_index",
     ":object_identifier_lib",
@@ -177,10 +194,12 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "clock_serialization_unittest.cc",
     "commit_factory_unittest.cc",
     "commit_pruner_unittest.cc",
     "commit_random_impl.cc",
     "commit_random_impl.h",
+    "commit_serialization_unittest.cc",
     "db_serialization_unittest.cc",
     "file_index_unittest.cc",
     "journal_unittest.cc",

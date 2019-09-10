@@ -81,8 +81,10 @@ namespace {
 
 using ::coroutine::CoroutineHandler;
 using ::testing::_;
+using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
+using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::Pair;
@@ -94,6 +96,11 @@ std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(const Commit
   std::vector<PageStorage::CommitIdAndBytes> result;
   result.emplace_back(commit.GetId(), commit.GetStorageBytes().ToString());
   return result;
+}
+
+testing::Matcher<const ClockEntry&> ClockEntryMatchesCommit(const Commit& commit) {
+  return AllOf(Field("commit_id", &ClockEntry::commit_id, commit.GetId()),
+               Field("generation", &ClockEntry::generation, commit.GetGeneration()));
 }
 
 // DataSource that returns an error on the callback to Get().
@@ -286,7 +293,7 @@ class PageStorageTest : public StorageTest {
   // Test:
   void SetUp() override { ResetStorage(); }
 
-  void ResetStorage() {
+  void ResetStorage(CommitPruningPolicy pruning_policy = CommitPruningPolicy::NEVER) {
     if (storage_) {
       storage_->SetSyncDelegate(nullptr);
       storage_.reset();
@@ -298,7 +305,7 @@ class PageStorageTest : public StorageTest {
     leveldb_ = db.get();
     ASSERT_EQ(db->Init(), Status::OK);
     storage_ = std::make_unique<PageStorageImpl>(&environment_, &encryption_service_, std::move(db),
-                                                 id, CommitPruningPolicy::NEVER);
+                                                 id, pruning_policy);
 
     bool called;
     Status status;
@@ -3185,6 +3192,90 @@ TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
               Not(Contains(Pair(non_root_piece_identifier, RetrievedObjectType::BLOB))));
 }
 
+TEST_F(PageStorageTest, UpdateClock) {
+  ResetStorage(CommitPruningPolicy::LOCAL_IMMEDIATE);
+
+  // The clock should be empty;
+  bool called;
+  Status status;
+  std::map<DeviceId, ClockEntry> clock0;
+  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock0));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  EXPECT_THAT(clock0, IsEmpty());
+
+  // Build the tree.
+  std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_A;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_A));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  // The clock should contain one element, and point to the current head commit.
+  std::map<DeviceId, ClockEntry> clock1;
+  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock1));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  EXPECT_THAT(clock1, ElementsAre(Pair(_, ClockEntryMatchesCommit(*commit_A))));
+
+  // It is updated after a new single head is present
+
+  journal = storage_->StartCommit(std::move(commit_A));
+  journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+  std::unique_ptr<const Commit> commit_B;
+  storage_->CommitJournal(std::move(journal),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_B));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  // The clock should contain one element, and point to the current head commit.
+  std::map<DeviceId, ClockEntry> clock2;
+  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock2));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  // The device ID should not have changed.
+  const DeviceId device_id = clock1.begin()->first;
+  EXPECT_THAT(clock2, ElementsAre(Pair(device_id, ClockEntryMatchesCommit(*commit_B))));
+
+  // If there is a conflict, no clock update should occur.
+  std::unique_ptr<Journal> journal1 = storage_->StartCommit(commit_B->Clone());
+  journal1->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+
+  std::unique_ptr<Journal> journal2 = storage_->StartCommit(std::move(commit_B));
+  journal2->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
+
+  std::unique_ptr<const Commit> commit_C;
+  storage_->CommitJournal(std::move(journal1),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_C));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  std::unique_ptr<const Commit> commit_D;
+  storage_->CommitJournal(std::move(journal2),
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_D));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  std::map<DeviceId, ClockEntry> clock3;
+  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock3));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  EXPECT_EQ(clock3, clock2);
+}
 }  // namespace
 
 }  // namespace storage

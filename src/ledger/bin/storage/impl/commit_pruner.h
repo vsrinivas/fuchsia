@@ -16,12 +16,28 @@ namespace storage {
 // Commit pruner computes which commits should be removed from the page storage.
 class CommitPruner {
  public:
-  CommitPruner(ledger::Environment* environment, PageStorage* storage,
-               LiveCommitTracker* commit_tracker, CommitPruningPolicy policy);
+  class CommitPrunerDelegate {
+   public:
+    virtual ~CommitPrunerDelegate() = default;
+    // Finds the commit with the given |commit_id| and calls the given |callback| with the result.
+    // |PageStorage| must outlive any |Commit| obtained through it.
+    virtual void GetCommit(CommitIdView commit_id,
+                           fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
+
+    // Deletes the provided commits from local storage.
+    virtual Status DeleteCommits(coroutine::CoroutineHandler* handler,
+                                 std::vector<std::unique_ptr<const Commit>> commits) = 0;
+
+    // Updates the clock entry for this device.
+    virtual Status UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
+                                        const ClockEntry& entry) = 0;
+  };
+  CommitPruner(CommitPrunerDelegate* delegate, LiveCommitTracker* commit_tracker,
+               CommitPruningPolicy policy);
   ~CommitPruner();
 
   // Performs a pruning cycle.
-  void Prune(fit::function<void(Status)> callback);
+  Status Prune(coroutine::CoroutineHandler* handler);
 
  private:
   // Finds the latest unique common ancestor among the live commits, as given by the
@@ -33,14 +49,11 @@ class CommitPruner {
                          std::unique_ptr<const storage::Commit> base,
                          std::vector<std::unique_ptr<const storage::Commit>>* result);
 
-  ledger::Environment* const environment_;
-  PageStorage* const storage_;
+  CommitPrunerDelegate* const delegate_;
   LiveCommitTracker* const commit_tracker_;
 
   // Policy for pruning commits. By default, we don't prune.
   CommitPruningPolicy const policy_;
-
-  coroutine::CoroutineManager coroutine_manager_;
 };
 
 }  // namespace storage

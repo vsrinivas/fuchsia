@@ -91,6 +91,12 @@ class PageDbImpl : public PageDb {
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
                          fxl::StringView value) override;
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
+  Status GetDeviceId(coroutine::CoroutineHandler* handler, DeviceId* device_id) override;
+  Status GetClock(coroutine::CoroutineHandler* handler,
+                  std::map<DeviceId, ClockEntry>* clock) override;
+  Status SetDeviceId(coroutine::CoroutineHandler* handler, DeviceIdView device_id) override;
+  Status SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdView device_id,
+                       const ClockEntry& entry) override;
 
  private:
   ledger::Environment* environment_;

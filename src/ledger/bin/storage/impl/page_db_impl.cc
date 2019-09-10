@@ -9,6 +9,8 @@
 #include <string>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/storage/impl/clock_serialization.h"
+#include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
@@ -334,6 +336,38 @@ Status PageDbImpl::MarkPageOnline(coroutine::CoroutineHandler* handler) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->MarkPageOnline(handler));
+  return batch->Execute(handler);
+}
+
+Status PageDbImpl::GetDeviceId(coroutine::CoroutineHandler* handler, DeviceId* device_id) {
+  return db_->Get(handler, ClockRow::kDeviceIdKey, device_id);
+}
+
+Status PageDbImpl::GetClock(coroutine::CoroutineHandler* handler,
+                            std::map<DeviceId, ClockEntry>* clock) {
+  std::vector<std::pair<std::string, std::string>> entries;
+  RETURN_ON_ERROR(db_->GetEntriesByPrefix(handler, ClockRow::kEntriesPrefix, &entries));
+  if (!ExtractClockFromStorage(std::move(entries), clock)) {
+    return Status::INTERNAL_ERROR;
+  }
+  return Status::OK;
+}
+
+Status PageDbImpl::SetDeviceId(coroutine::CoroutineHandler* handler, DeviceIdView device_id) {
+  // DeviceId should not be set.
+  FXL_DCHECK(db_->HasKey(handler, ClockRow::kDeviceIdKey) == Status::INTERNAL_NOT_FOUND);
+
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->SetDeviceId(handler, device_id));
+  return batch->Execute(handler);
+}
+
+Status PageDbImpl::SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdView device_id,
+                                 const ClockEntry& entry) {
+  std::unique_ptr<Batch> batch;
+  RETURN_ON_ERROR(StartBatch(handler, &batch));
+  RETURN_ON_ERROR(batch->SetClockEntry(handler, device_id, entry));
   return batch->Execute(handler);
 }
 

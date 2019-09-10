@@ -113,4 +113,14 @@ std::ostream& operator<<(std::ostream& os, const ThreeWayChange& e) {
             << "}";
 }
 
+bool operator==(const ClockEntry& lhs, const ClockEntry& rhs) {
+  return std::tie(lhs.commit_id, lhs.generation) == std::tie(rhs.commit_id, rhs.generation);
+}
+
+bool operator!=(const ClockEntry& lhs, const ClockEntry& rhs) { return !(lhs == rhs); }
+
+std::ostream& operator<<(std::ostream& os, const ClockEntry& e) {
+  return os << "ClockEntry{commit_id: " << e.commit_id << ", generation: " << e.generation << "}";
+}
+
 }  // namespace storage

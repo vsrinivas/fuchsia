@@ -59,6 +59,11 @@ class PageDbBatchImpl : public PageDb::Batch {
   // Page online state.
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
 
+  // Clocks
+  Status SetDeviceId(coroutine::CoroutineHandler* handler, DeviceIdView device_id) override;
+  Status SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdView device_id,
+                       const ClockEntry& entry) override;
+
   Status Execute(coroutine::CoroutineHandler* handler) override;
 
  private:

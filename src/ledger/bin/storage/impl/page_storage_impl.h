@@ -33,7 +33,7 @@
 
 namespace storage {
 
-class PageStorageImpl : public PageStorage {
+class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDelegate {
  public:
   PageStorageImpl(ledger::Environment* environment,
                   encryption::EncryptionService* encryption_service, std::unique_ptr<Db> db,
@@ -77,8 +77,6 @@ class PageStorageImpl : public PageStorage {
                                             std::unique_ptr<const Commit> right) override;
   void CommitJournal(std::unique_ptr<Journal> journal,
                      fit::function<void(Status, std::unique_ptr<const Commit>)> callback) override;
-  void DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
-                     fit::function<void(Status)> callback) override;
   void AddCommitWatcher(CommitWatcher* watcher) override;
   void RemoveCommitWatcher(CommitWatcher* watcher) override;
   void IsSynced(fit::function<void(Status, bool)> callback) override;
@@ -125,6 +123,14 @@ class PageStorageImpl : public PageStorage {
                                const Commit& right_commit, std::string min_key,
                                fit::function<bool(ThreeWayChange)> on_next_diff,
                                fit::function<void(Status)> on_done) override;
+
+  void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) override;
+
+  // CommitPrunerDelegate:
+  Status DeleteCommits(coroutine::CoroutineHandler* handler,
+                       std::vector<std::unique_ptr<const Commit>> commits) override;
+  Status UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
+                              const ClockEntry& entry) override;
 
   CommitFactory* GetCommitFactory();
 
@@ -274,6 +280,8 @@ class PageStorageImpl : public PageStorage {
   // Temporarily stores the root of commits being added from sync, so they can be used to apply
   // diffs. A commit will be removed from this set once it is successfully added to the storage.
   std::map<CommitId, ObjectIdentifier, std::less<>> roots_of_commits_being_added_;
+  // Identifier for this device on the page clock. It does not need to be consistent across pages.
+  DeviceId device_id_;
 
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager coroutine_manager_;

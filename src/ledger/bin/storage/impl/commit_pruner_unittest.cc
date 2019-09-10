@@ -58,7 +58,7 @@ class FakeCommitTracker : public LiveCommitTracker {
   std::vector<const Commit*> current_live_commits_;
 };
 
-class FakePageStorage : public PageStorageEmptyImpl {
+class FakeCommitPrunerDelegate : public CommitPruner::CommitPrunerDelegate {
  public:
   void AddCommit(std::unique_ptr<const Commit> commit) {
     CommitId id = commit->GetId();
@@ -75,13 +75,30 @@ class FakePageStorage : public PageStorageEmptyImpl {
     callback(Status::OK, it->second->Clone());
   }
 
-  void DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
-                     fit::function<void(Status)> callback) override {
-    delete_commit_calls_.emplace_back(std::move(commits), std::move(callback));
+  Status DeleteCommits(coroutine::CoroutineHandler* handler,
+                       std::vector<std::unique_ptr<const Commit>> commits) override {
+    Status status;
+    if (coroutine::SyncCall(
+            handler,
+            [this, commits = std::move(commits)](fit::function<void(Status)> callback) mutable {
+              delete_commit_calls_.emplace_back(std::move(commits), std::move(callback));
+            },
+            &status) == coroutine::ContinuationStatus::INTERRUPTED) {
+      return Status::INTERRUPTED;
+    }
+    return status;
   }
 
   std::vector<std::pair<std::vector<std::unique_ptr<const Commit>>, fit::function<void(Status)>>>
       delete_commit_calls_;
+
+  Status UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
+                              const ClockEntry& entry) override {
+    entries_.push_back(entry);
+    return Status::OK;
+  };
+
+  std::vector<ClockEntry> entries_;
 
  private:
   std::map<CommitId, std::unique_ptr<const Commit>, convert::StringViewComparator> commits_;
@@ -99,10 +116,10 @@ class CommitPrunerTest : public ledger::TestWithEnvironment {
 
 TEST_F(CommitPrunerTest, NoPruningPolicy) {
   FakeCommitTracker commit_tracker;
-  FakePageStorage storage;
+  FakeCommitPrunerDelegate storage;
   fake::FakeObjectIdentifierFactory factory;
 
-  CommitPruner pruner(&environment_, &storage, &commit_tracker, CommitPruningPolicy::NEVER);
+  CommitPruner pruner(&storage, &commit_tracker, CommitPruningPolicy::NEVER);
 
   // Add some commits.
   std::unique_ptr<const Commit> commit_0 =
@@ -118,13 +135,8 @@ TEST_F(CommitPrunerTest, NoPruningPolicy) {
   commit_tracker.SetLiveCommits({commit_1_ptr, commit_2.get()});
   storage.AddCommit(std::move(commit_2));
 
-  bool called;
-  Status status;
-  pruner.Prune(callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-
-  ASSERT_TRUE(called);
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) { EXPECT_EQ(pruner.Prune(handler), Status::OK); }));
 
   EXPECT_THAT(storage.delete_commit_calls_, IsEmpty());
 }
@@ -178,11 +190,10 @@ class FakeCommit : public CommitRandomImpl {
 // where commits 0, 2, 3 and 4 are live. No commit should be pruned.
 TEST_F(CommitPrunerTest, PruneBeforeLucaNoPruning) {
   FakeCommitTracker commit_tracker;
-  FakePageStorage storage;
+  FakeCommitPrunerDelegate storage;
   fake::FakeObjectIdentifierFactory factory;
 
-  CommitPruner pruner(&environment_, &storage, &commit_tracker,
-                      CommitPruningPolicy::LOCAL_IMMEDIATE);
+  CommitPruner pruner(&storage, &commit_tracker, CommitPruningPolicy::LOCAL_IMMEDIATE);
 
   // Add some commits. The parent of commit 0 does not exist in the database.
   std::unique_ptr<Commit> commit_0 =
@@ -214,13 +225,8 @@ TEST_F(CommitPrunerTest, PruneBeforeLucaNoPruning) {
   commit_tracker.SetLiveCommits({commit_0_ptr, commit_2_ptr, commit_3_ptr, commit_4_ptr});
   storage.AddCommit(std::move(commit_4));
 
-  bool called;
-  Status status;
-  pruner.Prune(callback::Capture(callback::SetWhenCalled(&called), &status));
-  RunLoopUntilIdle();
-
-  ASSERT_TRUE(called);
-  EXPECT_EQ(status, Status::OK);
+  EXPECT_TRUE(RunInCoroutine(
+      [&](coroutine::CoroutineHandler* handler) { EXPECT_EQ(pruner.Prune(handler), Status::OK); }));
   EXPECT_THAT(storage.delete_commit_calls_, IsEmpty());
 }
 
@@ -236,11 +242,10 @@ TEST_F(CommitPrunerTest, PruneBeforeLucaNoPruning) {
 // where commits 2, 3 and 4 are live. Only commit 0 should be pruned.
 TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
   FakeCommitTracker commit_tracker;
-  FakePageStorage storage;
+  FakeCommitPrunerDelegate storage;
   fake::FakeObjectIdentifierFactory factory;
 
-  CommitPruner pruner(&environment_, &storage, &commit_tracker,
-                      CommitPruningPolicy::LOCAL_IMMEDIATE);
+  CommitPruner pruner(&storage, &commit_tracker, CommitPruningPolicy::LOCAL_IMMEDIATE);
 
   // Add some commits. The parent of commit 0 does not exist in the database.
   std::unique_ptr<Commit> commit_0 =
@@ -272,8 +277,11 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
   storage.AddCommit(std::move(commit_4));
 
   bool called;
-  Status status = Status::ILLEGAL_STATE;
-  pruner.Prune(callback::Capture(callback::SetWhenCalled(&called), &status));
+  environment_.coroutine_service()->StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    called = false;
+    EXPECT_EQ(pruner.Prune(handler), Status::OK);
+    called = true;
+  });
   RunLoopUntilIdle();
 
   // Callback is not executed yet: pruner is waiting for the answer from storage.
@@ -287,7 +295,6 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_EQ(status, Status::OK);
 }
 
 // Verify that only commits before the latest unique common ancestor are pruned. Here, we have the
@@ -302,11 +309,10 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
 // where commit 4 is live. Commits 0, 1, 2, and 3 should be pruned.
 TEST_F(CommitPrunerTest, PruneBeforeLuca2) {
   FakeCommitTracker commit_tracker;
-  FakePageStorage storage;
+  FakeCommitPrunerDelegate storage;
   fake::FakeObjectIdentifierFactory factory;
 
-  CommitPruner pruner(&environment_, &storage, &commit_tracker,
-                      CommitPruningPolicy::LOCAL_IMMEDIATE);
+  CommitPruner pruner(&storage, &commit_tracker, CommitPruningPolicy::LOCAL_IMMEDIATE);
 
   // Add some commits. The parent of commit 0 does not exist in the database.
   std::unique_ptr<Commit> commit_0 =
@@ -336,8 +342,11 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca2) {
   storage.AddCommit(std::move(commit_4));
 
   bool called;
-  Status status;
-  pruner.Prune(callback::Capture(callback::SetWhenCalled(&called), &status));
+  environment_.coroutine_service()->StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    called = false;
+    EXPECT_EQ(pruner.Prune(handler), Status::OK);
+    called = true;
+  });
   RunLoopUntilIdle();
 
   // Callback is not executed yet: pruner is waiting for the answer from storage.
@@ -355,7 +364,6 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca2) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
-  EXPECT_EQ(status, Status::OK);
 }
 
 }  // namespace

@@ -21,6 +21,8 @@ using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
 using CommitIdView = convert::ExtendedStringView;
 using EntryId = std::string;
+using DeviceId = std::string;
+using DeviceIdView = convert::ExtendedStringView;
 
 // The type of object.
 // Ledger stores user created content on BTrees, where the nodes (TREE_NODE
@@ -226,6 +228,16 @@ enum class CommitPruningPolicy {
   // if the device is synchronizing with other devices.
   LOCAL_IMMEDIATE,
 };
+
+// A clock entry, for a single device.
+struct ClockEntry {
+  CommitId commit_id;
+  uint64_t generation;
+};
+
+bool operator==(const ClockEntry& lhs, const ClockEntry& rhs);
+bool operator!=(const ClockEntry& lhs, const ClockEntry& rhs);
+std::ostream& operator<<(std::ostream& os, const ClockEntry& e);
 
 }  // namespace storage
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_TYPES_H_

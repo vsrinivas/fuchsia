@@ -126,6 +126,16 @@ class PageDbMutator {
   // Updates the online state of the page.
   FXL_WARN_UNUSED_RESULT virtual Status MarkPageOnline(coroutine::CoroutineHandler* handler) = 0;
 
+  // Clock management:
+  // Sets a unique ID for this device on this page.
+  FXL_WARN_UNUSED_RESULT virtual Status SetDeviceId(coroutine::CoroutineHandler* handler,
+                                                    DeviceIdView device_id) = 0;
+
+  // Updates the clock entry for a device.
+  FXL_WARN_UNUSED_RESULT virtual Status SetClockEntry(coroutine::CoroutineHandler* handler,
+                                                      DeviceIdView device_id,
+                                                      const ClockEntry& entry) = 0;
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
 };
@@ -254,6 +264,15 @@ class PageDb : public PageDbMutator {
   // offline. Once the state is set to online, it cannot be unset.
   FXL_WARN_UNUSED_RESULT virtual Status IsPageOnline(coroutine::CoroutineHandler* handler,
                                                      bool* page_is_online) = 0;
+
+  // Clock management:
+  // Gets the unique ID for this device on this page.
+  FXL_WARN_UNUSED_RESULT virtual Status GetDeviceId(coroutine::CoroutineHandler* handler,
+                                                    DeviceId* device_id) = 0;
+
+  // Gets the full vector clock for this page as currently stored.
+  FXL_WARN_UNUSED_RESULT virtual Status GetClock(coroutine::CoroutineHandler* handler,
+                                                 std::map<DeviceId, ClockEntry>* clock) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDb);

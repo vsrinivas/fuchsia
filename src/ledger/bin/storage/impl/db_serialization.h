@@ -108,6 +108,15 @@ class PageIsOnlineRow {
   static constexpr fxl::StringView kKey = "page_is_online";
 };
 
+class ClockRow {
+ public:
+  static constexpr fxl::StringView kDeviceIdKey = "clocks/device_id";
+  static constexpr fxl::StringView kEntriesPrefix = "clocks/entries/";
+
+  // Gets the clock entry key for the provided |device_id|.
+  static std::string GetClockEntryForKey(DeviceIdView device_id);
+};
+
 }  // namespace storage
 
 #endif  // SRC_LEDGER_BIN_STORAGE_IMPL_DB_SERIALIZATION_H_

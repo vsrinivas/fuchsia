@@ -13,7 +13,7 @@ namespace {
 // Extracts the parents of commits with the highest generation in |frontier|, removing those commits
 // from |frontier| and returning their parents in |parents|.
 Status ExploreGeneration(
-    coroutine::CoroutineHandler* handler, PageStorage* storage,
+    coroutine::CoroutineHandler* handler, CommitPruner::CommitPrunerDelegate* delegate,
     std::set<std::unique_ptr<const Commit>, storage::GenerationComparator>* frontier,
     std::vector<std::unique_ptr<const Commit>>* parents) {
   uint64_t expected_generation = (*frontier->begin())->GetGeneration();
@@ -24,7 +24,7 @@ Status ExploreGeneration(
     const std::unique_ptr<const Commit>& commit = *frontier->begin();
     // Request its parents.
     for (const auto& parent_id : commit->GetParentIds()) {
-      storage->GetCommit(parent_id, waiter->NewCallback());
+      delegate->GetCommit(parent_id, waiter->NewCallback());
     }
     frontier->erase(frontier->begin());
   }
@@ -37,54 +37,40 @@ Status ExploreGeneration(
 }
 }  // namespace
 
-CommitPruner::CommitPruner(ledger::Environment* environment, storage::PageStorage* storage,
-                           LiveCommitTracker* commit_tracker, CommitPruningPolicy policy)
-    : environment_(environment),
-      storage_(storage),
-      commit_tracker_(commit_tracker),
-      policy_(policy),
-      coroutine_manager_(environment_->coroutine_service()) {}
+CommitPruner::CommitPruner(CommitPrunerDelegate* delegate, LiveCommitTracker* commit_tracker,
+                           CommitPruningPolicy policy)
+    : delegate_(delegate), commit_tracker_(commit_tracker), policy_(policy) {}
 
 CommitPruner::~CommitPruner() = default;
 
-void CommitPruner::Prune(fit::function<void(Status)> callback) {
+Status CommitPruner::Prune(coroutine::CoroutineHandler* handler) {
   if (policy_ == CommitPruningPolicy::NEVER) {
-    callback(Status::OK);
-    return;
+    return Status::OK;
   }
 
   FXL_DCHECK(policy_ == CommitPruningPolicy::LOCAL_IMMEDIATE);
 
-  coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this](coroutine::CoroutineHandler* handler, fit::function<void(Status)> callback) mutable {
-        std::unique_ptr<const storage::Commit> luca;
-        Status status = FindLatestUniqueCommonAncestorSync(handler, &luca);
-        if (status != Status::OK) {
-          callback(status);
-          return;
-        }
-        std::vector<std::unique_ptr<const Commit>> commits;
-        status = GetAllAncestors(handler, std::move(luca), &commits);
-        if (status != Status::OK) {
-          callback(status);
-          return;
-        }
-        if (commits.empty()) {
-          callback(Status::OK);
-          return;
-        }
-        if (coroutine::SyncCall(
-                handler,
-                [this, commits = std::move(commits)](fit::function<void(Status)> callback) mutable {
-                  storage_->DeleteCommits(std::move(commits), std::move(callback));
-                },
-                &status) == coroutine::ContinuationStatus::INTERRUPTED) {
-          callback(Status::INTERRUPTED);
-          return;
-        }
-        callback(status);
-      });
+  std::unique_ptr<const storage::Commit> luca;
+  Status status = FindLatestUniqueCommonAncestorSync(handler, &luca);
+  if (status != Status::OK) {
+    return status;
+  }
+  ClockEntry clock_entry{luca->GetId(), luca->GetGeneration()};
+
+  status = delegate_->UpdateSelfClockEntry(handler, clock_entry);
+  if (status != Status::OK) {
+    return status;
+  }
+
+  std::vector<std::unique_ptr<const Commit>> commits;
+  status = GetAllAncestors(handler, std::move(luca), &commits);
+  if (status != Status::OK) {
+    return status;
+  }
+  if (commits.empty()) {
+    return Status::OK;
+  }
+  return delegate_->DeleteCommits(handler, std::move(commits));
 }
 
 // The algorithm goes as follows: we keep a set of "active" commits, ordered
@@ -103,7 +89,7 @@ Status CommitPruner::FindLatestUniqueCommonAncestorSync(
   while (commits.size() > 1) {
     // Pop the newest commits and retrieve their parents.
     std::vector<std::unique_ptr<const Commit>> parents;
-    Status status = ExploreGeneration(handler, storage_, &commits, &parents);
+    Status status = ExploreGeneration(handler, delegate_, &commits, &parents);
     if (status != Status::OK) {
       return status;
     }
@@ -126,7 +112,7 @@ Status CommitPruner::GetAllAncestors(coroutine::CoroutineHandler* handler,
 
   while (!frontier.empty()) {
     std::vector<std::unique_ptr<const Commit>> parents;
-    Status status = ExploreGeneration(handler, storage_, &frontier, &parents);
+    Status status = ExploreGeneration(handler, delegate_, &frontier, &parents);
     if (status == Status::INTERNAL_NOT_FOUND) {
       // We are at the end of the commits to be pruned (the other commits are already pruned), exit
       // the loop.

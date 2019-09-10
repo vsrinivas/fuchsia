@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 
+#include "src/ledger/bin/storage/impl/clock_serialization.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
@@ -215,6 +216,17 @@ Status PageDbBatchImpl::SetSyncMetadata(CoroutineHandler* handler, fxl::StringVi
 
 Status PageDbBatchImpl::MarkPageOnline(coroutine::CoroutineHandler* handler) {
   return batch_->Put(handler, PageIsOnlineRow::kKey, "");
+}
+
+Status PageDbBatchImpl::SetDeviceId(coroutine::CoroutineHandler* handler, DeviceIdView device_id) {
+  return batch_->Put(handler, ClockRow::kDeviceIdKey, device_id);
+}
+
+Status PageDbBatchImpl::SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdView device_id,
+                                      const ClockEntry& entry) {
+  std::string data;
+  SerializeClockEntry(entry, &data);
+  return batch_->Put(handler, ClockRow::GetClockEntryForKey(device_id), data);
 }
 
 Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {

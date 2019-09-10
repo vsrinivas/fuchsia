@@ -15,6 +15,7 @@
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_generated.h"
+#include "src/ledger/bin/storage/impl/commit_serialization.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/impl/object_identifier_generated.h"
@@ -27,17 +28,6 @@
 namespace storage {
 
 namespace {
-
-static_assert(sizeof(IdStorage) == kCommitIdSize, "storage size for id is incorrect");
-
-const IdStorage* ToIdStorage(CommitIdView id) {
-  return reinterpret_cast<const IdStorage*>(id.data());
-}
-
-CommitIdView ToCommitIdView(const IdStorage* id_storage) {
-  return CommitIdView(
-      fxl::StringView(reinterpret_cast<const char*>(id_storage), sizeof(IdStorage)));
-}
 
 // Checks whether the given |storage_bytes| are a valid serialization of a
 // commit.

@@ -48,9 +48,6 @@ class PageStorageEmptyImpl : public PageStorage {
   void CommitJournal(std::unique_ptr<Journal> journal,
                      fit::function<void(Status, std::unique_ptr<const Commit>)> callback) override;
 
-  void DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
-                     fit::function<void(Status)> callback) override;
-
   void AddCommitWatcher(CommitWatcher* watcher) override;
 
   void RemoveCommitWatcher(CommitWatcher* watcher) override;
@@ -116,6 +113,8 @@ class PageStorageEmptyImpl : public PageStorage {
                                const Commit& right_commit, std::string min_key,
                                fit::function<bool(ThreeWayChange)> on_next_diff,
                                fit::function<void(Status)> on_done) override;
+
+  void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) override;
 };
 
 }  // namespace storage

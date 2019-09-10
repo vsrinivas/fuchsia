@@ -19,7 +19,9 @@ table NamespacePageId {
 // Request that the other side starts sending us new commits.
 // There is no guarantee that the other side actually sends data over, or at
 // which frequency (for instance, if low on battery).
-table WatchStartRequest {}
+table WatchStartRequest {
+
+}
 
 // Request that the other side stops sending us new commits.
 table WatchStopRequest {}

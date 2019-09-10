@@ -137,10 +137,6 @@ class PageStorage : public PageSyncClient {
       std::unique_ptr<Journal> journal,
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
 
-  // Deletes the provided commits from local storage.
-  virtual void DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
-                             fit::function<void(Status)> callback) = 0;
-
   // Registers the given |CommitWatcher| which will be notified on new commits.
   // A given |CommitWatcher| must not be added more than once.
   virtual void AddCommitWatcher(CommitWatcher* watcher) = 0;
@@ -287,6 +283,9 @@ class PageStorage : public PageSyncClient {
                                        const Commit& right_commit, std::string min_key,
                                        fit::function<bool(ThreeWayChange)> on_next_diff,
                                        fit::function<void(Status)> on_done) = 0;
+
+  // Gets the current clock for this page.
+  virtual void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageStorage);

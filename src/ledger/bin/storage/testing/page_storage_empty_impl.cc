@@ -70,12 +70,6 @@ void PageStorageEmptyImpl::CommitJournal(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-void PageStorageEmptyImpl::DeleteCommits(std::vector<std::unique_ptr<const Commit>> /*commit*/,
-                                         fit::function<void(Status)> callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(Status::NOT_IMPLEMENTED);
-}
-
 void PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
 
 void PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
@@ -205,6 +199,12 @@ void PageStorageEmptyImpl::GetThreeWayContentsDiff(
     fit::function<void(Status)> on_done) {
   FXL_NOTIMPLEMENTED();
   on_done(Status::NOT_IMPLEMENTED);
+}
+
+void PageStorageEmptyImpl::GetClock(
+    fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) {
+  FXL_NOTIMPLEMENTED();
+  callback(Status::NOT_IMPLEMENTED, {});
 }
 
 }  // namespace storage

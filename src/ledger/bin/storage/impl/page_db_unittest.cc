@@ -785,5 +785,40 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
   ASSERT_FALSE(handler2);
 }
 
+TEST_F(PageDbTest, DeviceId) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    DeviceId device_id;
+    EXPECT_EQ(page_db_.GetDeviceId(handler, &device_id), Status::INTERNAL_NOT_FOUND);
+
+    device_id = "device_id";
+    EXPECT_EQ(page_db_.SetDeviceId(handler, device_id), Status::OK);
+
+    DeviceId actual_device_id;
+    EXPECT_EQ(page_db_.GetDeviceId(handler, &actual_device_id), Status::OK);
+
+    EXPECT_EQ(actual_device_id, device_id);
+  });
+}
+
+TEST_F(PageDbTest, GetClock) {
+  RunInCoroutine([&](CoroutineHandler* handler) {
+    std::map<DeviceId, ClockEntry> clock;
+    EXPECT_EQ(page_db_.GetClock(handler, &clock), Status::OK);
+    EXPECT_THAT(clock, IsEmpty());
+
+    ClockEntry entry1{RandomCommitId(environment_.random()), 1};
+    clock.emplace("device1", entry1);
+    ClockEntry entry2{RandomCommitId(environment_.random()), 2};
+    clock.emplace("device2", entry2);
+    EXPECT_EQ(page_db_.SetClockEntry(handler, "device1", entry1), Status::OK);
+    EXPECT_EQ(page_db_.SetClockEntry(handler, "device2", entry2), Status::OK);
+
+    std::map<DeviceId, ClockEntry> actual_clock;
+    EXPECT_EQ(page_db_.GetClock(handler, &actual_clock), Status::OK);
+
+    EXPECT_EQ(actual_clock, clock);
+  });
+}
+
 }  // namespace
 }  // namespace storage

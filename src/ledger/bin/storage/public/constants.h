@@ -16,6 +16,9 @@ inline constexpr uint64_t kCommitIdSize = 32;
 
 // The ID of the first commit of a page.
 extern const fxl::StringView kFirstPageCommitId;
+
+// The size of a device id in number of bytes.
+inline constexpr uint64_t kDeviceIdSize = 32;
 }  // namespace storage
 
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_CONSTANTS_H_

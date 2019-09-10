@@ -31,7 +31,6 @@
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
-#include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/impl/journal_impl.h"
@@ -106,7 +105,7 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
       encryption_service_(encryption_service),
       page_id_(std::move(page_id)),
       commit_factory_(&object_identifier_factory_),
-      commit_pruner_(environment_, this, &commit_factory_, policy),
+      commit_pruner_(this, &commit_factory_, policy),
       db_(std::move(page_db)),
       page_sync_(nullptr),
       coroutine_manager_(environment->coroutine_service()),
@@ -212,36 +211,6 @@ void PageStorageImpl::CommitJournal(
         }
 
         callback(status, std::move(commit));
-      });
-}
-
-void PageStorageImpl::DeleteCommits(std::vector<std::unique_ptr<const Commit>> commits,
-                                    fit::function<void(Status)> callback) {
-  coroutine_manager_.StartCoroutine(
-      std::move(callback), [this, commits = std::move(commits)](
-                               CoroutineHandler* handler, fit::function<void(Status)> callback) {
-        std::unique_ptr<PageDb::Batch> batch;
-        Status status = db_->StartBatch(handler, &batch);
-        if (status != Status::OK) {
-          callback(status);
-          return;
-        }
-        for (const std::unique_ptr<const Commit>& commit : commits) {
-          auto parents = commit->GetParentIds();
-          if (parents.size() > 1) {
-            status = batch->DeleteMerge(handler, parents[0], parents[1], commit->GetId());
-            if (status != Status::OK) {
-              callback(status);
-              return;
-            }
-          }
-          status = batch->DeleteCommit(handler, commit->GetId(), commit->GetRootIdentifier());
-          if (status != Status::OK) {
-            callback(status);
-            return;
-          }
-        }
-        callback(batch->Execute(handler));
       });
 }
 
@@ -733,6 +702,46 @@ void PageStorageImpl::GetThreeWayContentsDiff(const Commit& base_commit, const C
                              std::move(min_key), std::move(on_next_diff), std::move(on_done));
 }
 
+void PageStorageImpl::GetClock(
+    fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) {
+  coroutine_manager_.StartCoroutine(
+      std::move(callback),
+      [this](coroutine::CoroutineHandler* handler,
+             fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) {
+        std::map<DeviceId, ClockEntry> clock;
+        Status status = db_->GetClock(handler, &clock);
+        callback(status, std::move(clock));
+      });
+}
+
+Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
+                                      std::vector<std::unique_ptr<const Commit>> commits) {
+  std::unique_ptr<PageDb::Batch> batch;
+  Status status = db_->StartBatch(handler, &batch);
+  if (status != Status::OK) {
+    return status;
+  }
+  for (const std::unique_ptr<const Commit>& commit : commits) {
+    auto parents = commit->GetParentIds();
+    if (parents.size() > 1) {
+      status = batch->DeleteMerge(handler, parents[0], parents[1], commit->GetId());
+      if (status != Status::OK) {
+        return status;
+      }
+    }
+    status = batch->DeleteCommit(handler, commit->GetId(), commit->GetRootIdentifier());
+    if (status != Status::OK) {
+      return status;
+    }
+  }
+  return batch->Execute(handler);
+}
+
+Status PageStorageImpl::UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
+                                             const ClockEntry& entry) {
+  return db_->SetClockEntry(handler, device_id_, entry);
+}
+
 void PageStorageImpl::NotifyWatchersOfNewCommits(
     const std::vector<std::unique_ptr<const Commit>>& new_commits, ChangeSource source) {
   for (auto& watcher : watchers_) {
@@ -1177,6 +1186,18 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   }
   commit_factory_.AddHeads(std::move(commits));
 
+  s = db_->GetDeviceId(handler, &device_id_);
+  if (s == Status::INTERNAL_NOT_FOUND) {
+    char device_id[kDeviceIdSize];
+    environment_->random()->Draw(device_id, kDeviceIdSize);
+    device_id_ = std::string(device_id, kDeviceIdSize);
+    s = db_->SetDeviceId(handler, device_id_);
+  }
+
+  if (s != Status::OK) {
+    return s;
+  }
+
   // Cache whether this page is online or not.
   return db_->IsPageOnline(handler, &page_is_online_);
 }
@@ -1536,11 +1557,9 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
                  });
   commit_factory_.AddHeads(std::move(new_heads));
   NotifyWatchersOfNewCommits(commits_to_send, source);
-  commit_pruner_.Prune([](Status status) {
-    if (status != Status::OK) {
-      FXL_LOG(ERROR) << "Error when pruning: " << status;
-    }
-  });
+
+  // TODO(etiennej): Consider spinning another coroutine to do the work out-of-band.
+  s = commit_pruner_.Prune(handler);
   return s;
 }
 

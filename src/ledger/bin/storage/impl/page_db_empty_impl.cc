@@ -137,6 +137,26 @@ Status PageDbEmptyImpl::MarkPageOnline(coroutine::CoroutineHandler* /*handlers*/
   return Status::NOT_IMPLEMENTED;
 }
 
+Status PageDbEmptyImpl::GetDeviceId(coroutine::CoroutineHandler* /*handler*/,
+                                    DeviceId* /*device_id*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+
+Status PageDbEmptyImpl::GetClock(coroutine::CoroutineHandler* /*handler*/,
+                                 std::map<DeviceId, ClockEntry>* /*clock*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+
+Status PageDbEmptyImpl::SetDeviceId(coroutine::CoroutineHandler* /*handler*/,
+                                    DeviceIdView /*device_id*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+
+Status PageDbEmptyImpl::SetClockEntry(coroutine::CoroutineHandler* /*handler*/,
+                                      DeviceIdView /*device_id*/, const ClockEntry& /*entry*/) {
+  return Status::NOT_IMPLEMENTED;
+}
+
 Status PageDbEmptyImpl::Execute(CoroutineHandler* /*handler*/) { return Status::NOT_IMPLEMENTED; }
 
 }  // namespace storage
