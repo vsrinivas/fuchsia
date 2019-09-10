@@ -217,7 +217,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
       vk::PhysicalDeviceFeatures2().setPNext(&physical_device_memory_features);
   physical_device.getFeatures2(&physical_device_features);
   if (!physical_device_memory_features.protectedMemory) {
-    FXL_LOG(WARNING) << "Protected memory is not supported.";
+    FXL_LOG(INFO) << "Protected memory is not supported.";
     caps.allow_protected_memory = false;
   } else {
     caps.allow_protected_memory = params.flags & VulkanDeviceQueues::Params::kAllowProtectedMemory;
