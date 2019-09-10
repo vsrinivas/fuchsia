@@ -87,7 +87,6 @@ group("ulib") {
     "inspect",
     "inspector",
     "intel-hda",
-    "kvstore",
     "launchpad",
     "ldmsg",
     "libzbi",

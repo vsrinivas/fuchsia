@@ -70,7 +70,6 @@ group("uapp") {
     "storage-metrics",
     "strerror",
     "suspendtest",
-    "sysconfig",
     "system-version",
     "tee-test",
     "thermal-cli",
