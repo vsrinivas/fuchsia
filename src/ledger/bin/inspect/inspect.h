@@ -23,6 +23,7 @@ inline fxl::StringView kHeadsInspectPathComponent = "heads";
 inline fxl::StringView kCommitsInspectPathComponent = "commits";
 inline fxl::StringView kParentsInspectPathComponent = "parents";
 inline fxl::StringView kEntriesInspectPathComponent = "entries";
+inline fxl::StringView kValueInspectPathComponent = "value";
 // TODO(nathaniel): "requests" was introduced as a demonstration; it should be
 // either given real meaning or cleaned up.
 inline fxl::StringView kRequestsInspectPathComponent = "requests";

@@ -117,7 +117,8 @@ void CommitsChildrenManager::Attach(std::string name, fit::function<void(fit::cl
               inspect_deprecated::Node commit_node =
                   commits_node_->CreateChild(commit_display_name);
               storage::CommitId commit_id = commit->GetId();
-              emplacement.first->second.Mature(std::move(commit_node), std::move(commit));
+              emplacement.first->second.Mature(std::move(commit_node), std::move(commit),
+                                               std::move(token), inspectable_page_);
             });
       });
 }

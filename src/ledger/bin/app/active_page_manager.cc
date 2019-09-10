@@ -6,6 +6,7 @@
 
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/vmo/vector.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
@@ -247,6 +248,56 @@ void ActivePageManager::GetCommit(
         callback(status, std::move(commit));
         ongoing_page_storage_uses_--;
         CheckEmpty();
+      });
+}
+
+void ActivePageManager::GetEntries(const storage::Commit& commit, std::string min_key,
+                                   fit::function<bool(storage::Entry)> on_next,
+                                   fit::function<void(Status)> on_done) {
+  ongoing_page_storage_uses_++;
+  page_storage_->GetCommitContents(commit, std::move(min_key), std::move(on_next),
+                                   [this, on_done = std::move(on_done)](Status status) {
+                                     on_done(status);
+                                     ongoing_page_storage_uses_--;
+                                     CheckEmpty();
+                                   });
+}
+
+void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
+                                 fit::function<void(Status, std::vector<uint8_t>)> callback) {
+  ongoing_page_storage_uses_++;
+  page_storage_->GetEntryFromCommit(
+      commit, key,
+      [this, callback = std::move(callback), key = std::move(key)](storage::Status status,
+                                                                   storage::Entry entry) mutable {
+        if (status != storage::Status::OK) {
+          ongoing_page_storage_uses_--;
+          callback(status, std::vector<uint8_t>{});
+          CheckEmpty();
+          return;
+        }
+
+        page_storage_->GetObjectPart(std::move(entry.object_identifier), 0, 1024,
+                                     storage::PageStorage::Location::Local(),
+                                     [this, callback = std::move(callback)](
+                                         storage::Status status, const fsl::SizedVmo& sized_vmo) {
+                                       ongoing_page_storage_uses_--;
+                                       if (status != storage::Status::OK) {
+                                         callback(status, std::vector<uint8_t>{});
+                                         CheckEmpty();
+                                         return;
+                                       }
+                                       std::vector<uint8_t> value{};
+                                       if (!fsl::VectorFromVmo(sized_vmo, &value)) {
+                                         FXL_LOG(ERROR) << "VMO of size " << sized_vmo.size()
+                                                        << " not converted to vector<uint8_t>.";
+                                         callback(Status::INTERNAL_ERROR, std::vector<uint8_t>{});
+                                         CheckEmpty();
+                                         return;
+                                       }
+                                       callback(Status::OK, std::move(value));
+                                       CheckEmpty();
+                                     });
       });
 }
 

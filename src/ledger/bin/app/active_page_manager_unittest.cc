@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/fsl/vmo/vector.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <map>
@@ -41,15 +42,31 @@
 namespace ledger {
 namespace {
 
-using ::testing::AllOf;
+using ::testing::Combine;
 using ::testing::Contains;
+using ::testing::Each;
 using ::testing::Eq;
+using ::testing::Field;
 using ::testing::Ne;
 using ::testing::Pointee;
-using ::testing::ResultOf;
+using ::testing::Range;
 using ::testing::SizeIs;
-using ::testing::UnorderedElementsAreArray;
+using ::testing::Values;
+using ::testing::WithParamInterface;
 
+// Used by this test and associated test substitutes to control whether or not to task-hop at
+// various opportunities throughout the test.
+enum class Synchrony {
+  ASYNCHRONOUS = 0,
+  SYNCHRONOUS = 1,
+};
+
+storage::Entry CreateStorageEntry(const std::string& key, uint32_t index) {
+  return storage::Entry{key, storage::ObjectIdentifier{index, storage::ObjectDigest(""), nullptr},
+                        storage::KeyPriority::EAGER, "This string is not a real storage::EntryId."};
+}
+
+// TODO(nathaniel): Deduplicate this duplicated-throughout-a-few-tests utility function.
 std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
                                                 storage::PageStorage* storage) {
   return std::make_unique<MergeResolver>(
@@ -58,11 +75,17 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
           zx::sec(0), 1u, zx::sec(0), environment->random()->NewBitGenerator<uint64_t>()));
 }
 
+// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=36298): Deduplicate and canonicalize
+// this test substitute.
 class IdsAndParentIdsPageStorage final : public storage::PageStorageEmptyImpl {
  public:
   explicit IdsAndParentIdsPageStorage(
-      std::map<storage::CommitId, std::set<storage::CommitId>> graph)
-      : graph_(std::move(graph)), fail_(-1) {
+      std::map<storage::CommitId, std::set<storage::CommitId>> graph,
+      Synchrony get_commit_synchrony, async_dispatcher_t* dispatcher)
+      : graph_(std::move(graph)),
+        dispatcher_(dispatcher),
+        get_commit_synchrony_(get_commit_synchrony),
+        fail_(-1) {
     for (const auto& [child, parents] : graph_) {
       heads_.insert(child);
       for (const storage::CommitId& parent : parents) {
@@ -84,7 +107,6 @@ class IdsAndParentIdsPageStorage final : public storage::PageStorageEmptyImpl {
     if (fail_ > 0) {
       fail_--;
     }
-
     for (const storage::CommitId& head : heads_) {
       head_commits->emplace_back(
           std::make_unique<storage::IdAndParentIdsCommit>(head, graph_[head]));
@@ -94,27 +116,194 @@ class IdsAndParentIdsPageStorage final : public storage::PageStorageEmptyImpl {
   void GetCommit(
       storage::CommitIdView commit_id,
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) override {
-    if (fail_ == 0) {
-      callback(storage::Status::INTERNAL_ERROR, nullptr);
-      return;
+    auto implementation = [&, commit_id = commit_id.ToString(), callback = std::move(callback)] {
+      if (fail_ == 0) {
+        callback(storage::Status::INTERNAL_ERROR, nullptr);
+        return;
+      }
+      if (fail_ > 0) {
+        fail_--;
+      }
+      if (const auto& it = graph_.find(commit_id); it == graph_.end()) {
+        callback(storage::Status::INTERNAL_NOT_FOUND, nullptr);
+        return;
+      }
+      callback(storage::Status::OK,
+               std::make_unique<storage::IdAndParentIdsCommit>(commit_id, graph_[commit_id]));
+    };
+    switch (get_commit_synchrony_) {
+      case Synchrony::ASYNCHRONOUS:
+        async::PostTask(dispatcher_, std::move(implementation));
+        break;
+      case Synchrony::SYNCHRONOUS:
+        implementation();
+        break;
     }
-    if (fail_ > 0) {
-      fail_--;
-    }
-
-    if (const auto& it = graph_.find(commit_id.ToString()); it == graph_.end()) {
-      callback(storage::Status::INTERNAL_NOT_FOUND, nullptr);
-      return;
-    }
-
-    callback(storage::Status::OK, std::make_unique<storage::IdAndParentIdsCommit>(
-                                      commit_id.ToString(), graph_[commit_id.ToString()]));
   }
   void AddCommitWatcher(storage::CommitWatcher* watcher) override {}
   void RemoveCommitWatcher(storage::CommitWatcher* watcher) override {}
 
   std::set<storage::CommitId> heads_;
   std::map<storage::CommitId, std::set<storage::CommitId>> graph_;
+  async_dispatcher_t* dispatcher_;
+  Synchrony get_commit_synchrony_;
+
+  // The number of calls to complete successfully before terminating calls unsuccessfully. -1 to
+  // always complete calls successfully.
+  int64_t fail_;
+};
+
+// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=36298): Deduplicate and canonicalize
+// this test substitute.
+class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
+ public:
+  explicit EntriesPageStorage(const std::map<std::string, std::vector<uint8_t>>& entries,
+                              Synchrony get_object_part_synchrony,
+                              Synchrony get_commit_contents_first_synchrony,
+                              Synchrony get_commit_contents_second_synchrony,
+                              Synchrony get_entry_from_commit_synchrony,
+                              async_dispatcher_t* dispatcher)
+      : get_object_part_synchrony_(get_object_part_synchrony),
+        get_commit_contents_first_synchrony_(get_commit_contents_first_synchrony),
+        get_commit_contents_second_synchrony_(get_commit_contents_second_synchrony),
+        get_entry_from_commit_synchrony_(get_entry_from_commit_synchrony),
+        dispatcher_(dispatcher),
+        fail_(-1) {
+    for (const auto& [key, value] : entries) {
+      uint32_t index = entries_.size();
+      entries_.emplace(std::piecewise_construct, std::forward_as_tuple(key),
+                       std::forward_as_tuple(value, index));
+      keys_by_index_.emplace(index, key);
+    }
+  }
+  ~EntriesPageStorage() override = default;
+
+  void fail_after_successful_calls(int64_t successful_call_count) { fail_ = successful_call_count; }
+
+ private:
+  // storage::PageStorageEmptyImpl:
+  void AddCommitWatcher(storage::CommitWatcher* watcher) override {}
+  void RemoveCommitWatcher(storage::CommitWatcher* watcher) override {}
+  void GetObjectPart(storage::ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
+                     storage::PageStorage::Location location,
+                     fit::function<void(storage::Status, fsl::SizedVmo)> callback) override {
+    if (offset != 0) {
+      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+    }
+    if (max_size != 1024) {
+      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+    }
+    if (location != storage::PageStorage::Location::Local()) {
+      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+    }
+
+    auto implementation = [this, index = object_identifier.key_index(),
+                           callback = std::move(callback)] {
+      if (fail_ == 0) {
+        callback(storage::Status::INTERNAL_ERROR, {});
+        return;
+      }
+      if (fail_ > 0) {
+        fail_--;
+      }
+      auto index_it = keys_by_index_.find(index);
+      if (index_it == keys_by_index_.end()) {
+        callback(storage::Status::INTERNAL_NOT_FOUND, {});
+        return;
+      }
+      auto value_it = entries_.find(index_it->second);
+      if (value_it == entries_.end()) {
+        callback(storage::Status::INTERNAL_NOT_FOUND, {});
+        return;
+      }
+      fsl::SizedVmo sized_vmo;
+      ASSERT_TRUE(fsl::VmoFromVector(value_it->second.first, &sized_vmo));
+      callback(storage::Status::OK, std::move(sized_vmo));
+    };
+    switch (get_object_part_synchrony_) {
+      case Synchrony::ASYNCHRONOUS:
+        async::PostTask(dispatcher_, std::move(implementation));
+        break;
+      case Synchrony::SYNCHRONOUS:
+        implementation();
+        break;
+    }
+  }
+  void GetCommitContents(const storage::Commit& commit, std::string min_key,
+                         fit::function<bool(storage::Entry)> on_next,
+                         fit::function<void(storage::Status)> on_done) override {
+    if (!min_key.empty()) {
+      FXL_NOTIMPLEMENTED();  // Feel free to implement!
+    }
+    auto implementation = [this, on_next = std::move(on_next),
+                           on_done = std::move(on_done)]() mutable {
+      if (fail_ == 0) {
+        on_done(storage::Status::INTERNAL_ERROR);
+        return;
+      }
+      if (fail_ > 0) {
+        fail_--;
+      }
+      // TODO(nathaniel): Parameterizedly delay to a later task (or not) between individual on-next
+      // calls.
+      for (const auto& [key, value_and_index] : entries_) {
+        if (!on_next(CreateStorageEntry(key, value_and_index.second))) {
+          FXL_NOTIMPLEMENTED();  // Feel free to implement!
+        }
+      }
+      switch (get_commit_contents_second_synchrony_) {
+        case Synchrony::ASYNCHRONOUS:
+          async::PostTask(dispatcher_,
+                          [on_done = std::move(on_done)] { on_done(storage::Status::OK); });
+          break;
+        case Synchrony::SYNCHRONOUS:
+          on_done(storage::Status::OK);
+          break;
+      }
+    };
+    switch (get_commit_contents_first_synchrony_) {
+      case Synchrony::ASYNCHRONOUS:
+        async::PostTask(dispatcher_, std::move(implementation));
+        break;
+      case Synchrony::SYNCHRONOUS:
+        implementation();
+        break;
+    }
+  }
+  void GetEntryFromCommit(const storage::Commit& commit, std::string key,
+                          fit::function<void(storage::Status, storage::Entry)> on_done) override {
+    auto implementation = [this, key = std::move(key), on_done = std::move(on_done)] {
+      if (fail_ == 0) {
+        on_done(storage::Status::INTERNAL_ERROR, {});
+        return;
+      }
+      if (fail_ > 0) {
+        fail_--;
+      }
+      auto it = entries_.find(key);
+      if (it == entries_.end()) {
+        on_done(storage::Status::KEY_NOT_FOUND, {});
+        return;
+      }
+      on_done(storage::Status::OK, CreateStorageEntry(key, it->second.second));
+    };
+    switch (get_entry_from_commit_synchrony_) {
+      case Synchrony::ASYNCHRONOUS:
+        async::PostTask(dispatcher_, std::move(implementation));
+        break;
+      case Synchrony::SYNCHRONOUS:
+        implementation();
+        break;
+    }
+  }
+
+  std::map<std::string, std::pair<std::vector<uint8_t>, uint32_t>> entries_;
+  std::map<uint32_t, std::string> keys_by_index_;
+  Synchrony get_object_part_synchrony_;
+  Synchrony get_commit_contents_first_synchrony_;
+  Synchrony get_commit_contents_second_synchrony_;
+  Synchrony get_entry_from_commit_synchrony_;
+  async_dispatcher_t* dispatcher_;
 
   // The number of calls to complete successfully before terminating calls unsuccessfully. -1 to
   // always complete calls successfully.
@@ -458,7 +647,16 @@ TEST_F(ActivePageManagerTest, DontDelayBindingWithLocalPageStorage) {
   EXPECT_TRUE(called);
 }
 
-TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphFullyPresent) {
+class IdsAndParentIdsPageStorageActivePageManagerTest : public ActivePageManagerTest,
+                                                        public WithParamInterface<Synchrony> {};
+class IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest
+    : public ActivePageManagerTest,
+      public WithParamInterface<std::tuple<Synchrony, size_t>> {};
+class EntriesPageStorageActivePageManagerTest
+    : public ActivePageManagerTest,
+      public WithParamInterface<std::tuple<Synchrony, Synchrony, Synchrony, Synchrony>> {};
+
+TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphFullyPresent) {
   storage::CommitId zero = storage::kFirstPageCommitId.ToString();
   storage::CommitId one =
       storage::CommitId("00000000000000000000000000000001", storage::kCommitIdSize);
@@ -502,7 +700,7 @@ TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphFullyPresent) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   bool on_empty_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
-      std::make_unique<IdsAndParentIdsPageStorage>(graph);
+      std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
 
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
@@ -512,6 +710,7 @@ TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphFullyPresent) {
 
   active_page_manager.GetCommits(
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Eq(Status::OK));
@@ -522,7 +721,7 @@ TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphFullyPresent) {
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphPartiallyPresent) {
+TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphPartiallyPresent) {
   storage::CommitId two =
       storage::CommitId("00000000000000000000000000000002", storage::kCommitIdSize);
   storage::CommitId three =
@@ -564,7 +763,7 @@ TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphPartiallyPresent) {
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   bool on_empty_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
-      std::make_unique<IdsAndParentIdsPageStorage>(graph);
+      std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
 
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
@@ -574,6 +773,7 @@ TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphPartiallyPresent) {
 
   active_page_manager.GetCommits(
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Eq(Status::OK));
@@ -584,7 +784,7 @@ TEST_F(ActivePageManagerTest, GetCommitsSuccessGraphPartiallyPresent) {
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(ActivePageManagerTest, GetCommitsInternalError) {
+TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCommitsInternalError) {
   storage::CommitId zero = storage::kFirstPageCommitId.ToString();
   storage::CommitId one =
       storage::CommitId("00000000000000000000000000000001", storage::kCommitIdSize);
@@ -625,15 +825,15 @@ TEST_F(ActivePageManagerTest, GetCommitsInternalError) {
       {zero, {}},          {one, {zero}}, {two, {one}},   {three, {zero}}, {four, {three}},
       {five, {two, four}}, {six, {five}}, {seven, {six}}, {eight, {six}},  {nine, {seven}},
   };
-  auto bit_generator = environment_.random()->NewBitGenerator<size_t>();
-  const size_t successful_storage_call_count = std::uniform_int_distribution(0u, 8u)(bit_generator);
+  const size_t successful_storage_call_count = std::get<1>(GetParam());
 
   bool callback_called;
   Status status;
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   bool on_empty_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
-      std::make_unique<IdsAndParentIdsPageStorage>(graph);
+      std::make_unique<IdsAndParentIdsPageStorage>(graph, std::get<0>(GetParam()),
+                                                   environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
 
   storage->fail_after_successful_calls(successful_storage_call_count);
@@ -644,6 +844,7 @@ TEST_F(ActivePageManagerTest, GetCommitsInternalError) {
 
   active_page_manager.GetCommits(
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Ne(Status::OK));
@@ -656,7 +857,7 @@ TEST_F(ActivePageManagerTest, GetCommitsInternalError) {
   EXPECT_THAT(on_empty_called, Eq(bool(successful_storage_call_count)));
 }
 
-TEST_F(ActivePageManagerTest, GetCommitSuccess) {
+TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
   std::map<storage::CommitId, std::set<storage::CommitId>> graph = {
       {storage::kFirstPageCommitId.ToString(), {}}};
 
@@ -665,7 +866,7 @@ TEST_F(ActivePageManagerTest, GetCommitSuccess) {
   std::unique_ptr<const storage::Commit> commit;
   bool on_empty_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
-      std::make_unique<IdsAndParentIdsPageStorage>(graph);
+      std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
 
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
@@ -676,6 +877,7 @@ TEST_F(ActivePageManagerTest, GetCommitSuccess) {
   active_page_manager.GetCommit(
       storage::kFirstPageCommitId.ToString(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commit));
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Eq(Status::OK));
@@ -683,7 +885,7 @@ TEST_F(ActivePageManagerTest, GetCommitSuccess) {
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(ActivePageManagerTest, GetCommitInternalError) {
+TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) {
   std::map<storage::CommitId, std::set<storage::CommitId>> graph = {
       {storage::kFirstPageCommitId.ToString(), {}}};
 
@@ -692,7 +894,7 @@ TEST_F(ActivePageManagerTest, GetCommitInternalError) {
   std::unique_ptr<const storage::Commit> commit;
   bool on_empty_called = false;
   std::unique_ptr<IdsAndParentIdsPageStorage> storage =
-      std::make_unique<IdsAndParentIdsPageStorage>(graph);
+      std::make_unique<IdsAndParentIdsPageStorage>(graph, GetParam(), environment_.dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
 
   storage->fail_after_successful_calls(0);
@@ -704,12 +906,189 @@ TEST_F(ActivePageManagerTest, GetCommitInternalError) {
   active_page_manager.GetCommit(
       storage::kFirstPageCommitId.ToString(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commit));
+  RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Ne(Status::OK));
   // We don't assert anything about |commit| (except the bare minimum: that it is safe to destroy).
   EXPECT_TRUE(on_empty_called);
 }
+
+TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
+  std::map<std::string, std::vector<uint8_t>> entries = {
+      {"one", {1}},  {"two", {2}}, {"three", {3}}, {"four", {4}},
+      {"five", {5}}, {"six", {6}}, {"seven", {7}}};
+
+  bool callback_called;
+  Status status;
+  std::vector<storage::Entry> storage_entries{};
+  bool on_empty_called = false;
+  std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
+      entries, std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
+      std::get<3>(GetParam()), test_loop().dispatcher());
+  std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
+
+  ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
+                                        std::move(merger),
+                                        ActivePageManager::PageStorageState::NEEDS_SYNC);
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  active_page_manager.GetEntries(
+      storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, "",
+      [&](const storage::Entry& storage_entry) {
+        storage_entries.push_back(storage_entry);
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(callback_called);
+  EXPECT_THAT(status, Eq(Status::OK));
+  EXPECT_THAT(storage_entries, SizeIs(entries.size()));
+  for (const auto& [key, unused_value] : entries) {
+    EXPECT_THAT(storage_entries, Contains(Field(&storage::Entry::key, key)));
+  }
+  EXPECT_TRUE(on_empty_called);
+}
+
+TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesInternalError) {
+  bool callback_called;
+  Status status;
+  std::vector<storage::Entry> storage_entries{};
+  bool on_empty_called = false;
+  std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
+      std::map<std::string, std::vector<uint8_t>>{}, std::get<0>(GetParam()),
+      std::get<1>(GetParam()), std::get<2>(GetParam()), std::get<3>(GetParam()),
+      test_loop().dispatcher());
+  storage->fail_after_successful_calls(0);
+  std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
+
+  ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
+                                        std::move(merger),
+                                        ActivePageManager::PageStorageState::NEEDS_SYNC);
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  active_page_manager.GetEntries(
+      storage::IdAndParentIdsCommit(storage::kFirstPageCommitId.ToString(), {}), "",
+      [&](const storage::Entry& storage_entry) {
+        storage_entries.push_back(storage_entry);
+        return true;
+      },
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(callback_called);
+  EXPECT_THAT(status, Ne(Status::OK));
+  EXPECT_TRUE(on_empty_called);
+}
+
+TEST_P(EntriesPageStorageActivePageManagerTest, GetValueSuccess) {
+  std::map<std::string, std::vector<uint8_t>> entries = {{"zero", {}},
+                                                         {"one", {1}},
+                                                         {"two", {2, 2}},
+                                                         {"three", {3, 3, 3}},
+                                                         {"four", {4, 4, 4, 4}},
+                                                         {"five", {5, 5, 5, 5, 5}},
+                                                         {"six", {6, 6, 6, 6, 6, 6}},
+                                                         {"seven", {7, 7, 7, 7, 7, 7, 7}}};
+
+  size_t callbacks_called{0};
+  std::vector<Status> statuses{};
+  std::map<std::string, std::vector<uint8_t>> emitted_entries{};
+  bool on_empty_called = false;
+  std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
+      entries, std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
+      std::get<3>(GetParam()), test_loop().dispatcher());
+  std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
+
+  ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
+                                        std::move(merger),
+                                        ActivePageManager::PageStorageState::NEEDS_SYNC);
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  for (const auto& [key, _] : entries) {
+    active_page_manager.GetValue(
+        storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, key,
+        [&, key = key](Status status, const std::vector<uint8_t>& value) {
+          callbacks_called++;
+          statuses.push_back(status);
+          emitted_entries[key] = value;
+        });
+  }
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(callbacks_called, entries.size());
+  EXPECT_THAT(statuses, Each(Eq(Status::OK)));
+  EXPECT_EQ(emitted_entries, entries);
+  EXPECT_TRUE(on_empty_called);
+}
+
+TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetEntryError) {
+  bool callback_called;
+  Status status;
+  std::vector<uint8_t> value;
+  bool on_empty_called = false;
+  std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
+      std::map<std::string, std::vector<uint8_t>>{}, std::get<0>(GetParam()),
+      std::get<1>(GetParam()), std::get<2>(GetParam()), std::get<3>(GetParam()),
+      test_loop().dispatcher());
+  storage->fail_after_successful_calls(0);
+  std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
+
+  ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
+                                        std::move(merger),
+                                        ActivePageManager::PageStorageState::NEEDS_SYNC);
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  active_page_manager.GetValue(
+      storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, "my happy fun key",
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &value));
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(callback_called);
+  EXPECT_THAT(status, Ne(Status::OK));
+  EXPECT_TRUE(on_empty_called);
+}
+
+TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetObjectPartError) {
+  std::string key = "your happy fun key";
+  bool callback_called;
+  Status status;
+  std::vector<uint8_t> value;
+  bool on_empty_called = false;
+  std::unique_ptr<EntriesPageStorage> storage = std::make_unique<EntriesPageStorage>(
+      std::map<std::string, std::vector<uint8_t>>{{key, std::vector<uint8_t>{7}}},
+      std::get<0>(GetParam()), std::get<1>(GetParam()), std::get<2>(GetParam()),
+      std::get<3>(GetParam()), test_loop().dispatcher());
+  storage->fail_after_successful_calls(1);
+  std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, storage.get());
+
+  ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
+                                        std::move(merger),
+                                        ActivePageManager::PageStorageState::NEEDS_SYNC);
+  active_page_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+
+  active_page_manager.GetValue(
+      storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, key,
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &value));
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(callback_called);
+  EXPECT_THAT(status, Ne(Status::OK));
+  EXPECT_TRUE(on_empty_called);
+}
+
+INSTANTIATE_TEST_SUITE_P(ActivePageManagerTest, IdsAndParentIdsPageStorageActivePageManagerTest,
+                         Values(Synchrony::ASYNCHRONOUS, Synchrony::SYNCHRONOUS));
+
+INSTANTIATE_TEST_SUITE_P(ActivePageManagerTest,
+                         IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest,
+                         Combine(Values(Synchrony::ASYNCHRONOUS, Synchrony::SYNCHRONOUS),
+                                 Range<size_t>(0, 9)));
+
+INSTANTIATE_TEST_SUITE_P(ActivePageManagerTest, EntriesPageStorageActivePageManagerTest,
+                         Combine(Values(Synchrony::ASYNCHRONOUS, Synchrony::SYNCHRONOUS),
+                                 Values(Synchrony::ASYNCHRONOUS, Synchrony::SYNCHRONOUS),
+                                 Values(Synchrony::ASYNCHRONOUS, Synchrony::SYNCHRONOUS),
+                                 Values(Synchrony::ASYNCHRONOUS, Synchrony::SYNCHRONOUS)));
 
 }  // namespace
 }  // namespace ledger

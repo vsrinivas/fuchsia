@@ -88,6 +88,16 @@ class ActivePageManager {
   void GetCommit(const storage::CommitId& commit_id,
                  fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback);
 
+  // Reports to |on_next| the |storage::Entry|s of the given |storage::Commit| that have a key equal
+  // to or greater than |min_key|.
+  void GetEntries(const storage::Commit& commit, std::string min_key,
+                  fit::function<bool(storage::Entry)> on_next, fit::function<void(Status)> on_done);
+
+  // Reports to |callback| the value associated with |key| in |commit|.
+  // TODO(nathaniel): Report more than the first 1024 bytes.
+  void GetValue(const storage::Commit& commit, std::string key,
+                fit::function<void(Status, std::vector<uint8_t>)> callback);
+
   // Returns true if this |ActivePageManager| is not currently active in any way and can be deleted.
   bool IsEmpty();
 

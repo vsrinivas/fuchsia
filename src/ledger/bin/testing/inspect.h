@@ -10,7 +10,10 @@
 #include <lib/inspect_deprecated/hierarchy.h>
 #include <lib/inspect_deprecated/inspect.h>
 
+#include <map>
 #include <optional>
+#include <set>
+#include <string>
 #include <vector>
 
 #include "fuchsia/ledger/cpp/fidl.h"
@@ -62,7 +65,8 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
 
 testing::Matcher<const inspect_deprecated::ObjectHierarchy&> CommitMatches(
     const std::optional<const storage::CommitId>& commit_id,
-    const std::set<storage::CommitId>& parents);
+    const std::set<storage::CommitId>& parents,
+    const std::map<std::string, std::set<std::vector<uint8_t>>>& entries);
 
 // Matches an |inspect_deprecated::ObjectHierarchy| node named according to |page_id| with heads
 // |heads| and commits matching |commit_matchers|.

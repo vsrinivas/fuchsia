@@ -66,6 +66,8 @@ source_set("lib") {
     "inspected_commit.cc",
     "inspected_commit.h",
     "inspected_container.h",
+    "inspected_entry.cc",
+    "inspected_entry.h",
     "inspected_head.cc",
     "inspected_head.h",
     "ledger_impl.cc",

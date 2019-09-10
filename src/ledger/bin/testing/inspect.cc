@@ -17,7 +17,9 @@
 #include <lib/inspect_deprecated/testing/inspect.h>
 
 #include <functional>
+#include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -35,13 +37,16 @@
 namespace ledger {
 namespace {
 
+using ::inspect_deprecated::testing::ByteVectorPropertyIs;
 using ::inspect_deprecated::testing::ChildrenMatch;
 using ::inspect_deprecated::testing::NameMatches;
 using ::inspect_deprecated::testing::NodeMatches;
+using ::inspect_deprecated::testing::PropertyList;
 using ::testing::_;
 using ::testing::AllOf;
-using ::testing::ElementsAre;
-using ::testing::ElementsAreArray;
+using ::testing::Contains;
+using ::testing::UnorderedElementsAre;
+using ::testing::UnorderedElementsAreArray;
 
 template <typename P>
 testing::AssertionResult OpenChild(P parent, const std::string& child_name,
@@ -128,16 +133,29 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
 
 ::testing::Matcher<const inspect_deprecated::ObjectHierarchy&> CommitMatches(
     const std::optional<const storage::CommitId>& commit_id,
-    const std::set<storage::CommitId>& parents) {
+    const std::set<storage::CommitId>& parents,
+    const std::map<std::string, std::set<std::vector<uint8_t>>>& entries) {
   std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>> parent_matchers;
   parent_matchers.reserve(parents.size());
   for (const storage::CommitId& parent : parents) {
     parent_matchers.push_back(NodeMatches(NameMatches(CommitIdToDisplayName(parent))));
   }
+  std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>> entry_matchers;
+  for (const auto& [key, values] : entries) {
+    std::vector<testing::Matcher<const inspect_deprecated::hierarchy::Property&>> value_matchers;
+    for (const auto& value : values) {
+      value_matchers.emplace_back(
+          ByteVectorPropertyIs(kValueInspectPathComponent.ToString(), value));
+    }
+    entry_matchers.emplace_back(NodeMatches(AllOf(
+        NameMatches(KeyToDisplayName(key)), PropertyList(Contains(AnyOfArray(value_matchers))))));
+  }
   const testing::Matcher<const inspect_deprecated::ObjectHierarchy&> children_matcher =
-      ChildrenMatch(
-          ElementsAre(AllOf(NodeMatches(NameMatches(kParentsInspectPathComponent.ToString())),
-                            ChildrenMatch(ElementsAreArray(parent_matchers)))));
+      ChildrenMatch(UnorderedElementsAre(
+          AllOf(NodeMatches(NameMatches(kParentsInspectPathComponent.ToString())),
+                ChildrenMatch(UnorderedElementsAreArray(parent_matchers))),
+          AllOf(NodeMatches(NameMatches(kEntriesInspectPathComponent.ToString())),
+                ChildrenMatch(UnorderedElementsAreArray(entry_matchers)))));
   if (commit_id) {
     return AllOf(NodeMatches(NameMatches(CommitIdToDisplayName(commit_id.value()))),
                  children_matcher);
@@ -161,7 +179,7 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
     }
   }
   return AllOf(NodeMatches(NameMatches(PageIdToDisplayName(page_id.ToString()))),
-               ChildrenMatch(ElementsAre(
+               ChildrenMatch(UnorderedElementsAre(
                    AllOf(NodeMatches(NameMatches(kCommitsInspectPathComponent.ToString())),
                          ChildrenMatch(UnorderedElementsAreArray(commit_matchers))),
                    AllOf(NodeMatches(NameMatches(kHeadsInspectPathComponent.ToString())),
@@ -173,9 +191,9 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
     const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
         page_matchers) {
   return AllOf(NodeMatches(NameMatches(ledger_name.ToString())),
-               ChildrenMatch(ElementsAre(
+               ChildrenMatch(UnorderedElementsAre(
                    AllOf(NodeMatches(NameMatches(kPagesInspectPathComponent.ToString())),
-                         ChildrenMatch(ElementsAreArray(page_matchers))))));
+                         ChildrenMatch(UnorderedElementsAreArray(page_matchers))))));
 }
 
 testing::Matcher<const inspect_deprecated::ObjectHierarchy&> RepositoryMatches(
@@ -183,8 +201,8 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> RepositoryMatches(
     const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
         ledger_matchers) {
   auto children_match = ChildrenMatch(
-      ElementsAre(AllOf(NodeMatches(NameMatches(kLedgersInspectPathComponent.ToString())),
-                        ChildrenMatch(ElementsAreArray(ledger_matchers)))));
+      UnorderedElementsAre(AllOf(NodeMatches(NameMatches(kLedgersInspectPathComponent.ToString())),
+                                 ChildrenMatch(UnorderedElementsAreArray(ledger_matchers)))));
   if (repository_name) {
     return AllOf(NodeMatches(NameMatches(repository_name.value().ToString())), children_match);
   }
@@ -195,7 +213,7 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> RepositoriesAggrega
     const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
         repository_matchers) {
   return AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
-               ChildrenMatch(ElementsAreArray(repository_matchers)));
+               ChildrenMatch(UnorderedElementsAreArray(repository_matchers)));
 }
 
 }  // namespace ledger
