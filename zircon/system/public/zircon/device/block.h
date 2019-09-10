@@ -40,17 +40,24 @@ typedef uint16_t vmoid_t;
 
 // Dummy vmoid value reserved for "invalid". Will never be allocated; can be
 // used as a local value for unallocated / freed ID.
-#define VMOID_INVALID 0
+#define BLOCK_VMOID_INVALID 0
+// TODO(surajmalhotra): Remove this after all clients transitioned.
+#define VMOID_INVALID BLOCK_VMOID_INVALID
 
-#define GUID_LEN 16
-#define NAME_LEN 24
+#define BLOCK_GUID_LEN 16
+// TODO(surajmalhotra): Remove this after all clients transitioned.
+#define GUID_LEN BLOCK_GUID_LEN
+
+#define BLOCK_NAME_LEN 24
+// TODO(surajmalhotra): Remove this after all clients transitioned.
+#define NAME_LEN BLOCK_NAME_LEN
 #define MAX_FVM_VSLICE_REQUESTS 16
 
 typedef struct {
   size_t slice_count;
-  uint8_t type[GUID_LEN];
-  uint8_t guid[GUID_LEN];
-  char name[NAME_LEN];
+  uint8_t type[BLOCK_GUID_LEN];
+  uint8_t guid[BLOCK_GUID_LEN];
+  char name[BLOCK_NAME_LEN];
   uint32_t flags;  // Refer to fvm.h for options here; default is zero.
 } alloc_req_t;
 
