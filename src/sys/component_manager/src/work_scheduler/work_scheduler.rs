@@ -5,7 +5,7 @@
 use {
     crate::{
         framework::FrameworkCapability,
-        model::{error::ModelError, hooks::RouteFrameworkCapabilityHook, AbsoluteMoniker, Realm},
+        model::{error::ModelError, hooks::*, AbsoluteMoniker, Realm},
     },
     cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget, FrameworkCapabilityDecl},
     failure::format_err,
@@ -96,13 +96,18 @@ impl WorkItem {
 /// Provides a common facility for scheduling canceling work. Each component instance manages its
 /// work items in isolation from each other, but the `WorkScheduler` maintains a collection of all
 /// items to make global scheduling decisions.
-struct WorkScheduler {
-    work_items: Mutex<Vec<WorkItem>>,
+#[derive(Clone)]
+pub struct WorkScheduler {
+    work_items: Arc<Mutex<Vec<WorkItem>>>,
 }
 
 impl WorkScheduler {
     pub fn new() -> Self {
-        WorkScheduler { work_items: Mutex::new(Vec::new()) }
+        Self { work_items: Arc::new(Mutex::new(Vec::new())) }
+    }
+
+    pub fn hooks(&self) -> Vec<Hook> {
+        vec![Hook::RouteFrameworkCapability(Arc::new(self.clone()))]
     }
 
     pub async fn schedule_work(
@@ -145,97 +150,6 @@ impl WorkScheduler {
 
         Ok(())
     }
-}
-
-/// `Capability` to invoke `WorkScheduler` FIDL API bound to a particular `WorkScheduler` object and
-/// component instance's `AbsoluteMoniker`. All FIDL operations bound to the same object and moniker
-/// observe the same `Works` collection.
-struct WorkSchedulerCapability {
-    work_scheduler: Arc<WorkScheduler>,
-    abs_moniker: AbsoluteMoniker,
-}
-
-impl WorkSchedulerCapability {
-    pub fn new(work_scheduler: Arc<WorkScheduler>, abs_moniker: AbsoluteMoniker) -> Self {
-        WorkSchedulerCapability { work_scheduler: work_scheduler, abs_moniker: abs_moniker }
-    }
-
-    /// Service `open` invocation via an event loop that dispatches FIDL operations to
-    /// `work_scheduler`.
-    async fn open_async(
-        work_scheduler: Arc<WorkScheduler>,
-        abs_moniker: &AbsoluteMoniker,
-        mut stream: fsys::WorkSchedulerRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(request) = stream.try_next().await? {
-            match request {
-                fsys::WorkSchedulerRequest::ScheduleWork {
-                    responder,
-                    work_id,
-                    work_request,
-                    ..
-                } => {
-                    let mut result =
-                        work_scheduler.schedule_work(abs_moniker, &work_id, &work_request).await;
-                    responder.send(&mut result)?;
-                }
-                fsys::WorkSchedulerRequest::CancelWork { responder, work_id, .. } => {
-                    let mut result = work_scheduler.cancel_work(abs_moniker, &work_id).await;
-                    responder.send(&mut result)?;
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
-impl FrameworkCapability for WorkSchedulerCapability {
-    /// Spawn an event loop to service `WorkScheduler` FIDL operations.
-    fn open(
-        &self,
-        _flags: u32,
-        _open_mode: u32,
-        _relative_path: String,
-        server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        let server_end: ServerEnd<fsys::WorkSchedulerMarker> = ServerEnd::new(server_end);
-        let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
-        let work_scheduler = self.work_scheduler.clone();
-        let abs_moniker = self.abs_moniker.clone();
-        fasync::spawn(async move {
-            let result = Self::open_async(work_scheduler, &abs_moniker, stream).await;
-            if let Err(e) = result {
-                // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
-                warn!("WorkSchedulerCapability.open failed: {}", e);
-            }
-        });
-
-        Box::pin(async { Ok(()) })
-    }
-}
-
-/// `Hook` for attaching `WorkScheduler` FIDL service to a component manager `Model`.
-pub struct WorkSchedulerHook {
-    work_scheduler: Arc<WorkScheduler>,
-}
-
-/// Passthrough all ops unconditionally, except `on_route_framework_capability`. (See docs for
-/// `on_route_capability_async` for details.)
-impl RouteFrameworkCapabilityHook for WorkSchedulerHook {
-    fn on<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        capability_decl: &'a FrameworkCapabilityDecl,
-        capability: Option<Box<dyn FrameworkCapability>>,
-    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
-        Box::pin(self.on_route_capability_async(realm, capability_decl, capability))
-    }
-}
-
-impl WorkSchedulerHook {
-    pub fn new() -> Self {
-        WorkSchedulerHook { work_scheduler: Arc::new(WorkScheduler::new()) }
-    }
 
     async fn on_route_capability_async<'a>(
         &'a self,
@@ -249,8 +163,8 @@ impl WorkSchedulerHook {
             {
                 Self::check_for_worker(&*realm).await?;
                 Ok(Some(Box::new(WorkSchedulerCapability::new(
-                    self.work_scheduler.clone(),
                     realm.abs_moniker.clone(),
+                    self.clone(),
                 )) as Box<dyn FrameworkCapability>))
             }
             _ => Ok(capability),
@@ -288,6 +202,84 @@ impl WorkSchedulerHook {
                     ))),
                 },
             )
+    }
+}
+
+impl RouteFrameworkCapabilityHook for WorkScheduler {
+    fn on<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        capability_decl: &'a FrameworkCapabilityDecl,
+        capability: Option<Box<dyn FrameworkCapability>>,
+    ) -> BoxFuture<Result<Option<Box<dyn FrameworkCapability>>, ModelError>> {
+        Box::pin(self.on_route_capability_async(realm, capability_decl, capability))
+    }
+}
+
+/// `Capability` to invoke `WorkScheduler` FIDL API bound to a particular `WorkScheduler` object and
+/// component instance's `AbsoluteMoniker`. All FIDL operations bound to the same object and moniker
+/// observe the same `Works` collection.
+struct WorkSchedulerCapability {
+    abs_moniker: AbsoluteMoniker,
+    work_scheduler: WorkScheduler,
+}
+
+impl WorkSchedulerCapability {
+    pub fn new(abs_moniker: AbsoluteMoniker, work_scheduler: WorkScheduler) -> Self {
+        WorkSchedulerCapability { abs_moniker, work_scheduler }
+    }
+
+    /// Service `open` invocation via an event loop that dispatches FIDL operations to
+    /// `work_scheduler`.
+    async fn open_async(
+        work_scheduler: WorkScheduler,
+        abs_moniker: &AbsoluteMoniker,
+        mut stream: fsys::WorkSchedulerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                fsys::WorkSchedulerRequest::ScheduleWork {
+                    responder,
+                    work_id,
+                    work_request,
+                    ..
+                } => {
+                    let mut result =
+                        work_scheduler.schedule_work(abs_moniker, &work_id, &work_request).await;
+                    responder.send(&mut result)?;
+                }
+                fsys::WorkSchedulerRequest::CancelWork { responder, work_id, .. } => {
+                    let mut result = work_scheduler.cancel_work(abs_moniker, &work_id).await;
+                    responder.send(&mut result)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl FrameworkCapability for WorkSchedulerCapability {
+    /// Spawn an event loop to service `WorkScheduler` FIDL operations.
+    fn open(
+        &self,
+        _flags: u32,
+        _open_mode: u32,
+        _relative_path: String,
+        server_end: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
+        let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
+        let work_scheduler = self.work_scheduler.clone();
+        let abs_moniker = self.abs_moniker.clone();
+        fasync::spawn(async move {
+            let result = Self::open_async(work_scheduler, &abs_moniker, stream).await;
+            if let Err(e) = result {
+                // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
+                warn!("WorkSchedulerCapability.open failed: {}", e);
+            }
+        });
+
+        Box::pin(async { Ok(()) })
     }
 }
 
