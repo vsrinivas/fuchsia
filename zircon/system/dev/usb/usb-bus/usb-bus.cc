@@ -81,7 +81,7 @@ zx_status_t UsbBus::UsbBusInterfaceRemoveDevice(uint32_t device_id) {
   if (device == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
-  device->DdkRemove();
+  device->DdkUnbind();
   devices_[device_id].reset();
 
   return ZX_OK;
