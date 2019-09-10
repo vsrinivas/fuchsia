@@ -36,9 +36,6 @@ class StringView {
   // Constructors.
   constexpr StringView() : data_(""), size_(0u) {}
 
-  constexpr StringView(const StringView& string_view)
-      : data_(string_view.data_), size_(string_view.size_) {}
-
   constexpr StringView(const char* str, size_t len) : data_(str), size_(len) {}
 
   explicit constexpr StringView(const char* str) : data_(str), size_(constexpr_strlen(str)) {}
@@ -50,12 +47,9 @@ class StringView {
   // Implicit constructor.
   StringView(const std::string& str) : data_(str.data()), size_(str.size()) {}
 
-  // Copy operators.
-  StringView& operator=(const StringView& other) {
-    data_ = other.data_;
-    size_ = other.size_;
-    return *this;
-  }
+  // The class is (trivially) copyable.
+  constexpr StringView(const StringView& string_view) = default;
+  StringView& operator=(const StringView& other) = default;
 
   // Capacity methods.
   constexpr size_t size() const { return size_; }

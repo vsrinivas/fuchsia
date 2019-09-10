@@ -5,6 +5,7 @@
 #include "src/lib/fxl/strings/string_view.h"
 
 #include <functional>
+#include <type_traits>
 
 #include <lib/fit/function.h>
 
@@ -113,6 +114,11 @@ TEST(StringView, CopyOperator) {
 
   sw1 = std::string(TEST_STRING);
   EXPECT_EQ(TEST_STRING_LENGTH, sw1.size());
+}
+
+TEST(StringView, TriviallyCopyable) {
+  static_assert(std::is_trivially_copyable<StringView>::value,
+                "StringView should be trivially copyable");
 }
 
 TEST(StringView, CapacityMethods) {
