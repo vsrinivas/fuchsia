@@ -14,6 +14,7 @@
 #include <functional>
 #include <queue>
 
+#include "lib/callback/destruction_sentinel.h"
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"
 #include "src/ledger/bin/cloud_sync/impl/page_download.h"
@@ -86,16 +87,22 @@ class PageSyncImpl : public PageSync, public PageDownload::Delegate, public Page
 
   void SetOnUnrecoverableError(fit::closure on_unrecoverable_error) override;
 
- private:
-  void HandleError();
-
-  void CheckIdle();
-
   // Notify the state watcher of a change of synchronization state.
+  // PageDownload::Delegate:
   void SetDownloadState(DownloadSyncState next_download_state) override;
+  // PageUpload::Delegate:
   void SetUploadState(UploadSyncState next_upload_state) override;
   bool IsDownloadIdle() override;
 
+
+ private:
+  // This may destruct the object.
+  void HandleError();
+
+  // This may destruct the object.
+  void CheckIdle();
+
+  // This may destruct the object.
   void NotifyStateWatcher();
 
   storage::PageStorage* const storage_;
@@ -127,6 +134,8 @@ class PageSyncImpl : public PageSync, public PageDownload::Delegate, public Page
   SyncStateWatcher* page_watcher_ = nullptr;
   DownloadSyncState download_state_ = DOWNLOAD_NOT_STARTED;
   UploadSyncState upload_state_ = UPLOAD_NOT_STARTED;
+
+  callback::DestructionSentinel sentinel_;
 
   // Must be the last member field.
   callback::ScopedTaskRunner task_runner_;

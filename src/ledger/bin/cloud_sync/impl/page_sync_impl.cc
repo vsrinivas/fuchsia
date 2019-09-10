@@ -41,12 +41,7 @@ PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage*
                                      &page_cloud_, this, std::move(download_backoff));
   page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_, encryption_service_,
                                               &page_cloud_, this, std::move(upload_backoff));
-  page_cloud_.set_error_handler([this](zx_status_t status) {
-    if (on_unrecoverable_error_ && !error_callback_already_called_) {
-      error_callback_already_called_ = true;
-      on_unrecoverable_error_();
-    }
-  });
+  page_cloud_.set_error_handler([this](zx_status_t status) { HandleError(); });
 }
 
 PageSyncImpl::~PageSyncImpl() {
@@ -103,6 +98,7 @@ void PageSyncImpl::SetOnUnrecoverableError(fit::closure on_unrecoverable_error) 
   on_unrecoverable_error_ = std::move(on_unrecoverable_error);
 }
 
+// This may destruct the object.
 void PageSyncImpl::HandleError() {
   if (error_callback_already_called_) {
     return;
@@ -115,14 +111,17 @@ void PageSyncImpl::HandleError() {
   }
 }
 
+// This may destruct the object.
 void PageSyncImpl::CheckIdle() {
   if (IsIdle()) {
     if (on_idle_) {
+      // This may destruct the object.
       on_idle_();
     }
   }
 }
 
+// This may destruct the object.
 void PageSyncImpl::NotifyStateWatcher() {
   if (ledger_watcher_) {
     ledger_watcher_->Notify(download_state_, upload_state_);
@@ -144,7 +143,9 @@ void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {
   }
 
   download_state_ = next_download_state;
-  NotifyStateWatcher();
+  if (sentinel_.DestructedWhile([this] { NotifyStateWatcher(); })) {
+    return;
+  }
 
   if (next_download_state == DOWNLOAD_PERMANENT_ERROR) {
     // This may destruct the object.
@@ -155,7 +156,9 @@ void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {
 
 void PageSyncImpl::SetUploadState(UploadSyncState next_upload_state) {
   upload_state_ = next_upload_state;
-  NotifyStateWatcher();
+  if (sentinel_.DestructedWhile([this] { NotifyStateWatcher(); })) {
+    return;
+  }
 
   if (next_upload_state == UPLOAD_PERMANENT_ERROR) {
     // This may destruct the object.

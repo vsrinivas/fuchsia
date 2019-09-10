@@ -294,13 +294,13 @@ TEST_F(PageSyncImplTest, UploadIdleCallback) {
 // Verifies that a failure to persist the remote commit stops syncing remote
 // commits and calls the error callback.
 TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
-  bool called;
-  page_sync_->SetOnIdle(callback::SetWhenCalled(&called));
+  bool on_idle_called;
+  page_sync_->SetOnIdle(callback::SetWhenCalled(&on_idle_called));
   int error_callback_calls = 0;
   page_sync_->SetOnUnrecoverableError([&error_callback_calls] { error_callback_calls++; });
   StartPageSync();
   RunLoopUntilIdle();
-  ASSERT_TRUE(called);
+  ASSERT_TRUE(on_idle_called);
   ASSERT_TRUE(page_cloud_.set_watcher.is_bound());
 
   auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
@@ -309,7 +309,9 @@ TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   EXPECT_EQ(error_callback_calls, 0);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
 
+  on_idle_called = false;
   RunLoopUntilIdle();
+  EXPECT_TRUE(on_idle_called);
   EXPECT_FALSE(page_cloud_.set_watcher.is_bound());
   EXPECT_EQ(error_callback_calls, 1);
 }
@@ -411,6 +413,45 @@ TEST_F(PageSyncImplTest, UnrecoverableError) {
   RunLoopUntilIdle();
   EXPECT_EQ(on_error_calls, 1);
 }
+
+// Test that when both OnIdle and OnUnrecoverableError attempt to delete PageSync, only one is
+// triggered.
+TEST_F(PageSyncImplTest, AvoidDoubleDeleteOnDownloadError) {
+  bool ready_to_delete = false;
+  auto delete_callback = [this, &ready_to_delete] {
+    ASSERT_NE(page_sync_, nullptr);
+    if (ready_to_delete) {
+      page_sync_.reset();
+    }
+  };
+  page_sync_->SetOnIdle(delete_callback);
+  page_sync_->SetOnUnrecoverableError(delete_callback);
+  StartPageSync();
+  RunLoopUntilIdle();
+
+  ready_to_delete = true;
+  page_sync_->SetDownloadState(DownloadSyncState::DOWNLOAD_PERMANENT_ERROR);
+  ASSERT_EQ(page_sync_, nullptr);
+}
+
+TEST_F(PageSyncImplTest, AvoidDoubleDeleteOnUploadError) {
+  bool ready_to_delete = false;
+  auto delete_callback = [this, &ready_to_delete] {
+    ASSERT_NE(page_sync_, nullptr);
+    if (ready_to_delete) {
+      page_sync_.reset();
+    }
+  };
+  page_sync_->SetOnIdle(delete_callback);
+  page_sync_->SetOnUnrecoverableError(delete_callback);
+  StartPageSync();
+  RunLoopUntilIdle();
+
+  ready_to_delete = true;
+  page_sync_->SetUploadState(UploadSyncState::UPLOAD_PERMANENT_ERROR);
+  ASSERT_EQ(page_sync_, nullptr);
+}
+
 
 }  // namespace
 }  // namespace cloud_sync
