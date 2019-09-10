@@ -31,15 +31,6 @@ void fb_get_config(uint32_t* width_out, uint32_t* height_out, uint32_t* linear_s
 // own the returned handle.
 zx_handle_t fb_get_single_buffer(void);
 
-// vsync functions
-
-// Enable vsync for page flip mode.
-zx_status_t fb_enable_vsync(bool enable);
-
-// Wait for vsync event. VSync time is returned in |timestamp| and scanned out
-// image in |image_id|.
-zx_status_t fb_wait_for_vsync(zx_time_t* timestamp, uint64_t* image_id);
-
 #ifdef __cplusplus
 }  // extern "C"
 #endif

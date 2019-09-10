@@ -12,12 +12,22 @@ library("framebuffer") {
   ]
   configs += [ "$zx_build/public/gn/config:visibility_hidden" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-display:c",
+    "$zx/system/fidl/fuchsia-hardware-display:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+  ]
+}
+
+test("framebuffer-test") {
+  deps = [
+    ":framebuffer",
+    "$zx/system/ulib/zxtest",
+  ]
+  sources = [
+    "framebuffer-test.cc",
   ]
 }
