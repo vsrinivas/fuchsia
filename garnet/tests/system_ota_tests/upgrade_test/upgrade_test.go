@@ -41,6 +41,17 @@ func TestMain(m *testing.M) {
 }
 
 func TestOTA(t *testing.T) {
+	device, err := c.NewDeviceClient()
+	if err != nil {
+		t.Fatalf("failed to create ota test client: %s", err)
+	}
+	defer device.Close()
+
+	// Wait for the device to come online.
+	if err = device.WaitForDeviceToBeUp(); err != nil {
+		t.Fatalf("device failed to start: %s", err)
+	}
+
 	downgradePaver, err := c.GetDowngradePaver()
 	if err != nil {
 		t.Fatal(err)
@@ -58,27 +69,26 @@ func TestOTA(t *testing.T) {
 
 	t.Run("PaveThenUpgrade", func(t *testing.T) {
 		log.Printf("starting downgrade pave")
-		doPave(t, downgradePaver, downgradeRepo)
+		doPave(t, device, downgradePaver, downgradeRepo)
 
 		log.Printf("starting upgrade test")
-		doSystemOTA(t, upgradeRepo)
+		doSystemOTA(t, device, upgradeRepo)
 	})
 
 	t.Run("NPrimeThenN", func(t *testing.T) {
 		log.Printf("starting N -> N' test")
-		doSystemPrimeOTA(t, upgradeRepo)
+		doSystemPrimeOTA(t, device, upgradeRepo)
 
 		log.Printf("starting N' -> N test")
-		doSystemOTA(t, upgradeRepo)
+		doSystemOTA(t, device, upgradeRepo)
 	})
 }
 
-func doPave(t *testing.T, paver *paver.Paver, repo *packages.Repository) {
-	device, err := c.NewDeviceClient()
+func doPave(t *testing.T, device *device.Client, paver *paver.Paver, repo *packages.Repository) {
+	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
 	if err != nil {
-		t.Fatalf("failed to create ota test client: %s", err)
+		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
-	defer device.Close()
 
 	// Reboot the device into recovery and pave it.
 	if err = device.RebootToRecovery(); err != nil {
@@ -94,135 +104,36 @@ func doPave(t *testing.T, paver *paver.Paver, repo *packages.Repository) {
 		t.Fatal(err)
 	}
 
-	validateDevice(t, repo, device)
+	validateDevice(t, device, repo, expectedSystemImageMerkle)
 
 	log.Printf("pave successful")
 }
 
-func doSystemOTA(t *testing.T, repo *packages.Repository) {
-	device, err := c.NewDeviceClient()
-	if err != nil {
-		t.Fatalf("failed to create ota test client: %s", err)
-	}
-	defer device.Close()
-
-	// Wait for the device to come online.
-	if err = device.WaitForDeviceToBeUp(); err != nil {
-		t.Fatal(err)
-	}
-
-	// Get the device's current /system/meta. Error out if it is the same
-	// version we are about to OTA to.
-	remoteSystemImageMerkle, err := device.GetSystemImageMerkle()
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("current system image merkle: %q", remoteSystemImageMerkle)
-
+func doSystemOTA(t *testing.T, device *device.Client, repo *packages.Repository) {
 	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
-	log.Printf("upgrading to system image merkle: %q", expectedSystemImageMerkle)
 
-	if expectedSystemImageMerkle == remoteSystemImageMerkle {
-		t.Fatalf("device already updated to the expected version:\n\n%q", expectedSystemImageMerkle)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Make sure the device doesn't have any broken static packages.
-	if err = device.ValidateStaticPackages(); err != nil {
-		t.Fatal(err)
-	}
-
-	// Tell the device to connect to our repository.
-	localHostname, err := device.GetSshConnection()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Serve the repository before the test begins.
-	server, err := repo.Serve(localHostname)
-	if err != nil {
-		t.Fatal(err)
-	}
+	server := setupOTAServer(t, device, repo, expectedSystemImageMerkle)
 	defer server.Shutdown(context.Background())
 
-	if err := device.RegisterPackageRepository(server); err != nil {
-		t.Fatal(err)
+	if err := device.TriggerSystemOTA(); err != nil {
+		t.Fatalf("OTA failed: %s", err)
 	}
 
-	// Start the system OTA process.
-	log.Printf("starting system OTA")
-	if err = device.TriggerSystemOTA(); err != nil {
-		t.Fatal(err)
-	}
-
-	validateDevice(t, repo, device)
-
-	log.Printf("system OTA successful")
+	log.Printf("OTA complete, validating device")
+	validateDevice(t, device, repo, expectedSystemImageMerkle)
 }
 
-func doSystemPrimeOTA(t *testing.T, repo *packages.Repository) {
-	device, err := c.NewDeviceClient()
-	if err != nil {
-		t.Fatalf("failed to create ota test client: %s", err)
-	}
-	defer device.Close()
-
-	// Wait for the device to come online.
-	if err = device.WaitForDeviceToBeUp(); err != nil {
-		t.Fatal(err)
-	}
-
-	// Get the device's current /system/meta. Error out if it is the same
-	// version we are about to OTA to.
-	remoteSystemImageMerkle, err := device.GetSystemImageMerkle()
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("current system image merkle: %q", remoteSystemImageMerkle)
-
+func doSystemPrimeOTA(t *testing.T, device *device.Client, repo *packages.Repository) {
 	expectedSystemImageMerkle, err := extractUpdateContentPackageMerkle(repo, "update_prime/0", "system_image_prime/0")
-
 	if err != nil {
 		t.Fatalf("error extracting expected system image merkle: %s", err)
 	}
-	log.Printf("upgrading to system image merkle: %q", expectedSystemImageMerkle)
 
-	if expectedSystemImageMerkle == remoteSystemImageMerkle {
-		t.Fatalf("device already updated to the expected version:\n\n%q", expectedSystemImageMerkle)
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Make sure the device doesn't have any broken static packages.
-	if err = device.ValidateStaticPackages(); err != nil {
-		t.Fatal(err)
-	}
-
-	// Tell the device to connect to our repository.
-	localHostname, err := device.GetSshConnection()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Serve the repository before the test begins.
-	server, err := repo.Serve(localHostname)
-	if err != nil {
-		t.Fatal(err)
-	}
+	server := setupOTAServer(t, device, repo, expectedSystemImageMerkle)
 	defer server.Shutdown(context.Background())
-
-	if err := device.RegisterPackageRepository(server); err != nil {
-		t.Fatal(err)
-	}
-
-	// Start the system OTA process.
-	log.Printf("starting system OTA")
 
 	// Since we're invoking system_updater.cmx directly, we need to do the GC ourselves
 	err = device.Run("rmdir /pkgfs/ctl/garbage", os.Stdout, os.Stderr)
@@ -232,6 +143,8 @@ func doSystemPrimeOTA(t *testing.T, repo *packages.Repository) {
 
 	var wg sync.WaitGroup
 	device.RegisterDisconnectListener(&wg)
+
+	log.Printf("starting system OTA")
 
 	err = device.Run(`run "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx" --update "fuchsia-pkg://fuchsia.com/update_prime" && sleep 60`, os.Stdout, os.Stderr)
 	if err != nil {
@@ -244,43 +157,66 @@ func doSystemPrimeOTA(t *testing.T, repo *packages.Repository) {
 	wg.Wait()
 
 	if err = device.WaitForDeviceToBeUp(); err != nil {
+		t.Fatalf("device failed to start: %s", err)
+	}
+
+	log.Printf("OTA complete, validating device")
+	validateDevice(t, device, repo, expectedSystemImageMerkle)
+}
+
+func setupOTAServer(t *testing.T, device *device.Client, repo *packages.Repository, expectedSystemImageMerkle string) *packages.Server {
+	if isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+		t.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
+	}
+
+	// Make sure the device doesn't have any broken static packages.
+	if err := device.ValidateStaticPackages(); err != nil {
 		t.Fatal(err)
 	}
 
-	remoteSystemImageMerkle, err = device.GetSystemImageMerkle()
+	// Tell the device to connect to our repository.
+	localHostname, err := device.GetSshConnection()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if expectedSystemImageMerkle != remoteSystemImageMerkle {
-		t.Fatalf("system version expected to be:\n\n%q\n\nbut instead got:\n\n%q", expectedSystemImageMerkle, remoteSystemImageMerkle)
+	// Serve the repository before the test begins.
+	server, err := repo.Serve(localHostname)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	log.Printf("system OTA successful")
+	if err := device.RegisterPackageRepository(server); err != nil {
+		server.Shutdown(context.Background())
+		t.Fatal(err)
+	}
+
+	return server
 }
 
-func validateDevice(t *testing.T, repo *packages.Repository, device *device.Client) {
-	// At the this point the system should have been updated to the target
-	// system version. Confirm the update by fetching the device's current
-	// /system/meta, and making sure it is the correct version.
+func isDeviceUpToDate(t *testing.T, device *device.Client, expectedSystemImageMerkle string) bool {
+	// Get the device's current /system/meta. Error out if it is the same
+	// version we are about to OTA to.
 	remoteSystemImageMerkle, err := device.GetSystemImageMerkle()
 	if err != nil {
 		t.Fatal(err)
 	}
 	log.Printf("current system image merkle: %q", remoteSystemImageMerkle)
-
-	expectedSystemImageMerkle, err := extractUpdateSystemImage(repo)
-	if err != nil {
-		t.Fatalf("error extracting expected system image merkle: %s", err)
-	}
 	log.Printf("upgrading to system image merkle: %q", expectedSystemImageMerkle)
 
-	if expectedSystemImageMerkle != remoteSystemImageMerkle {
-		t.Fatalf("system version expected to be:\n\n%q\n\nbut instead got:\n\n%q", expectedSystemImageMerkle, remoteSystemImageMerkle)
+	return expectedSystemImageMerkle == remoteSystemImageMerkle
+}
+
+func validateDevice(t *testing.T, device *device.Client, repo *packages.Repository, expectedSystemImageMerkle string) {
+	// At the this point the system should have been updated to the target
+	// system version. Confirm the update by fetching the device's current
+	// /system/meta, and making sure it is the correct version.
+	if !isDeviceUpToDate(t, device, expectedSystemImageMerkle) {
+		t.Fatalf("system version failed to update to %q", expectedSystemImageMerkle)
 	}
 
 	// Make sure the device doesn't have any broken static packages.
-	if err = device.ValidateStaticPackages(); err != nil {
+	if err := device.ValidateStaticPackages(); err != nil {
 		t.Fatal(err)
 	}
 }
