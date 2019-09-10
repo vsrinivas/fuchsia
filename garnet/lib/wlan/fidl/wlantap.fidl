@@ -17,12 +17,14 @@ struct WlantapPhyConfig {
 
 /// Instruct the wlantap-ctl device to creates a fake wlantap-phy device based on the
 /// `WlantapPhyConfig` passed in. The newly created wlantap-phy device will use the channel to
-/// allow a `WlantapPhy` client to observe and control its behavior
+/// allow a `WlantapPhy` client to observe and control its behavior.
 protocol WlantapCtl {
     CreatePhy(WlantapPhyConfig config, request<WlantapPhy> proxy) -> (zx.status status);
 };
 
-// See wlan_rx_info_t
+/// Information pertaining to incoming packets. One WlanRxInfo is associated with each packet.
+/// You are encouraged to use the default value in //src/connectivity/wlan/testing/hw-sim/src/lib.rs
+/// See wlan_rx_info_t for details about each field.
 struct WlanRxInfo {
     uint32 rx_flags;
     uint32 valid_fields;
@@ -35,7 +37,9 @@ struct WlanRxInfo {
     int16 snr_dbh;
 };
 
-// See wlan_tx_info_t
+/// Instruction from generic WLAN driver on how to send a packet. One WlanTxInfo per packet.
+/// These values are populated by the wlantap driver and should not be specified manually.
+/// See wlan_tx_info_t for details about each field.
 struct WlanTxInfo {
     uint32 tx_flags;
     uint32 valid_fields;
@@ -45,19 +49,25 @@ struct WlanTxInfo {
     uint8 mcs;
 };
 
+/// An outgoing packet that is to be "sent" by the wlantap device. |data| contains the packet
+/// in its wire format.
 struct WlanTxPacket {
     vector<uint8> data;
     WlanTxInfo info;
 };
 
-// See wlan_bss_config_t
+/// BSS that is to be configured, or "remembered", by the wlantap device.
+/// These values are populated by the wlantap driver and should not be specified manually.
+/// See wlan_bss_config_t for details about each field.
 struct WlanBssConfig {
     array<uint8>:6 bssid;
     uint8 bss_type;
     bool remote;
 };
 
-// See wlan_key_config_t
+/// Configuration pertaining to security keys, often used by RSN and other secure authentication.
+/// These values are populated by the wlantap driver and should not be specified manually.
+/// See wlan_key_config_t for details about each field.
 struct WlanKeyConfig {
     uint8 protection;
     array<uint8>:3 cipher_oui;
@@ -68,36 +78,74 @@ struct WlanKeyConfig {
     vector<uint8>:32 key;
 };
 
-// See wlan_tx_status_entry
+/// One entry in a WlanTxStatus report, 1 report can contain up to 8 entries (see below).
+/// These values are populated by the wlantap driver and should not be specified manually.
+/// See wlan_tx_status_entry_t for details about each field.
 struct WlanTxStatusEntry {
     uint16 tx_vec_idx;
     uint8 attempts;
 };
 
-// See wlan_tx_status
+/// TX status report used by Minstrel rate selection algorithm. One report per packet.
+/// You are encouraged to use the default value in //src/connectivity/wlan/testing/hw-sim/src/lib.rs
+/// See wlan_tx_status_t for details about each field.
 struct WlanTxStatus {
     array<uint8>:6 peer_addr;
     array<WlanTxStatusEntry>:8 tx_status_entries;
     bool success;
 };
 
-// See also phy.fidl SetCountryRequest/Response.
+/// Country code the device is to switch to.
+/// These values are populated by the wlantap driver and should not be specified manually.
+/// See also phy.fidl SetCountryRequest/Response.
 struct SetCountryArgs {
     array<uint8>:2 alpha2;
 };
 
+/// Allow the test program to observe and control the behavior of the wlantap-phy device.
+/// A wlantap-phy device is a special vendor device and its driver (Fuchsia being the vendor)
+/// used for testing purpose.
+/// Implements a subset of |wlanmac_ifc_t| and |wlanmac_protocol_ops_t| in
+/// //garnet/lib/wlan/protocol/include/wlan/protocol/mac.h
+/// Implements a subset of |WlanphyImpl| protocol in
+/// //zircon/system/banjo/ddk.protocol.wlanphyimpl/wlanphy-impl.banjo
 protocol WlantapPhy {
     // wlanmac_ifc_t callbacks
+    // simulating events happening at the devices side that are passed up to the driver.
+
+    /// The device "receives" a frame "over the air" and pass it up to driver.
     Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
+    /// The device report its status to the driver. (Not used).
     Status(uint16 wlanmac_id, uint32 st);
+    /// For rate selection (Minstrel), the device's last frame transmission is a success/failure,
+    /// with a certain number of retries.
     ReportTxStatus(uint16 wlanmac_id, WlanTxStatus txs);
+
     // wlanmac_protocol_ops_t
+    // events indicating that the wlanmac device received interface request calls from the driver.
+
+    /// The device is to send a frame "over the air".
     -> Tx(TxArgs args);
-    -> SetChannel(SetChannelArgs args);
-    -> ConfigureBss(ConfigureBssArgs args);
-    // TODO: ConfigureBeacon
-    -> SetKey(SetKeyArgs args);
+    /// The device created by its parent device (wlantap-phy: wlanphy) is
+    /// detected and being connected by wlanstack/wlancfg.
+    /// The device is to enter the "running" state.
     -> WlanmacStart(WlanmacStartArgs args);
+    /// The device is to switch to the specified channel.
+    -> SetChannel(SetChannelArgs args);
+    /// AP: The device is to use args.config as a template for beacon frames.
+    /// Client: The device is to be configured with this BSS as it peer.
+    -> ConfigureBss(ConfigureBssArgs args);
+
+    // TODO: ConfigureBeacon
+
+    /// The device is to install the keys (often coming from RSN, exceptions apply).
+    -> SetKey(SetKeyArgs args);
+
+    // WlantaphyImpl (defined in banjo)
+    // events indicating that the wlanphy device received interface rquest calls from the driver.
+
+    /// The device is to change its radio and power settings to conform to the regulation of the
+    /// specified country.
     -> SetCountry(SetCountryArgs args);
 };
 
