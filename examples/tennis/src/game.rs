@@ -116,7 +116,9 @@ impl Game {
     }
 
     pub fn register_new_paddle(
-        &mut self, player_name: String, paddle_proxy: PaddleProxy,
+        &mut self,
+        player_name: String,
+        paddle_proxy: PaddleProxy,
     ) -> Arc<Mutex<PlayerState>> {
         let paddle = Player {
             name: player_name.clone(),

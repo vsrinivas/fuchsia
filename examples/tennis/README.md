@@ -38,7 +38,7 @@ other, or use the `manual_player` script to play against an AI by yourself.
 Set your packages to include Tennis:
 
 ```
-fx set core.x64 --with //garnet/bin/tennis
+fx set core.x64 --with //examples/tennis
 fx build
 ```
 
@@ -48,7 +48,7 @@ tennis_example_ai`.
 
 ## Writing Your Own AI
 
-We've written an example AI in Rust in the `garnet/bin/tennis/bots/example_ai`
+We've written an example AI in Rust in the `examples/tennis/bots/example_ai`
 folder. It's not very good, so you should be able to beat it! To make your own
 AI using the base as an example, you can copy the `example_ai` folder to your
 own, taking care to rename `meta/tennis_example_ai.cmx` and the various rules in

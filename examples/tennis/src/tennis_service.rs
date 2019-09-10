@@ -24,13 +24,16 @@ impl TennisService {
         let self_clone = self.clone();
         fuchsia_async::spawn(
             async move {
-                while let Some(msg) = stream.try_next().await
+                while let Some(msg) = stream
+                    .try_next()
+                    .await
                     .context("error reading value from tennis service request stream")?
                 {
                     match msg {
                         fidl_tennis::TennisServiceRequest::GetState { responder, .. } => {
                             let TennisService(game_arc) = &self_clone;
-                            responder.send(&mut game_arc.lock().state())
+                            responder
+                                .send(&mut game_arc.lock().state())
                                 .context("error sending GetState response")?;
                         }
                         fidl_tennis::TennisServiceRequest::RegisterPaddle {
@@ -50,7 +53,8 @@ impl TennisService {
     }
 
     pub fn register_paddle(
-        &self, player_name: String,
+        &self,
+        player_name: String,
         paddle: fidl::endpoints::ClientEnd<fidl_fuchsia_game_tennis::PaddleMarker>,
     ) {
         let TennisService(game_arc) = self.clone();
@@ -60,7 +64,9 @@ impl TennisService {
         let player_state = game.register_new_paddle(player_name.clone(), paddle_proxy);
         fasync::spawn(
             async move {
-                while let Some(event) = stream.try_next().await
+                while let Some(event) = stream
+                    .try_next()
+                    .await
                     .context("error reading value from paddle event stream")?
                 {
                     let state = match event {
@@ -78,19 +84,17 @@ impl TennisService {
         if game.players_ready() {
             fx_log_info!("game is beginning");
             let game_arc = game_arc.clone();
-            fasync::spawn(
-                async move {
-                    loop {
-                        game_arc.lock().step();
-                        let time_step: i64 = (100.0 * game_arc.lock().time_scale_factor()) as i64;
-                        fuchsia_async::Timer::new(time_step.millis().after_now()).await;
-                        if !game_arc.lock().players_ready() {
-                            fx_log_info!("someone disconnected!");
-                            return;
-                        }
+            fasync::spawn(async move {
+                loop {
+                    game_arc.lock().step();
+                    let time_step: i64 = (100.0 * game_arc.lock().time_scale_factor()) as i64;
+                    fuchsia_async::Timer::new(time_step.millis().after_now()).await;
+                    if !game_arc.lock().players_ready() {
+                        fx_log_info!("someone disconnected!");
+                        return;
                     }
-                },
-            );
+                }
+            });
         }
     }
 }

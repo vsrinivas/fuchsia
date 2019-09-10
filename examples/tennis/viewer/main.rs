@@ -6,8 +6,8 @@
 
 use failure::{Error, ResultExt};
 use fidl_fuchsia_game_tennis::{GameState, TennisServiceMarker};
-use fuchsia_component::client::connect_to_service;
 use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::DurationNum;
 use std::io;
 use std::io::Write;
@@ -25,40 +25,38 @@ fn main() -> Result<(), Error> {
     let mut first_print = true;
 
     println!("connected to tennis service");
-    let resp: Result<(), Error> = executor.run_singlethreaded(
-        async move {
-            loop {
-                let time_step: i64 = 1000 / 20;
-                fuchsia_async::Timer::new(time_step.millis().after_now()).await;
+    let resp: Result<(), Error> = executor.run_singlethreaded(async move {
+        loop {
+            let time_step: i64 = 1000 / 20;
+            fuchsia_async::Timer::new(time_step.millis().after_now()).await;
 
-                let state = tennis_service.get_state().await?;
-                if state.game_num == 0 {
-                    continue;
-                }
-
-                if first_print {
-                    first_print = false;
-                } else {
-                    // Print the following to stdout:
-                    // - ESC
-                    // - [
-                    // - The number of lines to move the cursor up, in asci
-                    // - A
-                    // This is using the ECMA-48 CSI sequences as described here:
-                    // http://man7.org/linux/man-pages/man4/console_codes.4.html
-                    let mut to_print = Vec::new();
-                    to_print.push(0x1B);
-                    to_print.push(0x5B);
-                    to_print.append(&mut format!("{}", DRAW_HEIGHT).into_bytes().to_vec());
-                    to_print.push(0x46);
-
-                    io::stdout().write(&to_print)?;
-                }
-
-                print_game(state);
+            let state = tennis_service.get_state().await?;
+            if state.game_num == 0 {
+                continue;
             }
-        },
-    );
+
+            if first_print {
+                first_print = false;
+            } else {
+                // Print the following to stdout:
+                // - ESC
+                // - [
+                // - The number of lines to move the cursor up, in asci
+                // - A
+                // This is using the ECMA-48 CSI sequences as described here:
+                // http://man7.org/linux/man-pages/man4/console_codes.4.html
+                let mut to_print = Vec::new();
+                to_print.push(0x1B);
+                to_print.push(0x5B);
+                to_print.append(&mut format!("{}", DRAW_HEIGHT).into_bytes().to_vec());
+                to_print.push(0x46);
+
+                io::stdout().write(&to_print)?;
+            }
+
+            print_game(state);
+        }
+    });
     resp
 }
 

@@ -1,0 +1,134 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("tennis") {
+  testonly = true
+  deps = [
+    ":tennis_rust5_ai",
+    ":tennis_rust5_ai_bin",
+    ":tennis_service",
+    ":tennis_service_bin",
+    ":tennis_sysmgr_config",
+    ":tennis_viewer",
+    ":tennis_viewer_bin",
+    "bots",
+  ]
+}
+
+package("tennis_service") {
+  deps = [
+    ":tennis_service_bin",
+  ]
+
+  binary = "tennis_service"
+
+  meta = [
+    {
+      path = rebase_path("meta/tennis_service.cmx")
+      dest = "tennis_service.cmx"
+    },
+  ]
+}
+
+rustc_binary("tennis_service_bin") {
+  name = "tennis_service"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:rand",
+  ]
+}
+
+package("tennis_viewer") {
+  deps = [
+    ":tennis_viewer_bin",
+  ]
+
+  binary = "tennis_viewer"
+
+  meta = [
+    {
+      path = rebase_path("meta/tennis_viewer.cmx")
+      dest = "tennis_viewer.cmx"
+    },
+  ]
+}
+
+rustc_binary("tennis_viewer_bin") {
+  name = "tennis_viewer"
+  edition = "2018"
+
+  source_root = "viewer/main.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:rand",
+  ]
+}
+
+package("tennis_rust5_ai") {
+  deps = [
+    ":tennis_rust5_ai_bin",
+  ]
+
+  binary = "tennis_rust5_ai"
+
+  meta = [
+    {
+      path = rebase_path("meta/tennis_rust5_ai.cmx")
+      dest = "tennis_rust5_ai.cmx"
+    },
+  ]
+}
+
+rustc_binary("tennis_rust5_ai_bin") {
+  name = "tennis_rust5_ai"
+  edition = "2018"
+
+  source_root = "rust5_ai/main.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:parking_lot",
+  ]
+}
+
+config_data("tennis_sysmgr_config") {
+  for_pkg = "sysmgr"
+  outputs = [
+    "tennis.config",
+  ]
+  sources = [
+    "tennis_sysmgr.config",
+  ]
+}
