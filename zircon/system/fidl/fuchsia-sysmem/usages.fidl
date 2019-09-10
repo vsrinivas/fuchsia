@@ -49,3 +49,4 @@ const uint32 videoUsageHwEncoder = 2;
 // TODO(dustingreen): This bit is likely redundant with secure_required and
 // secure_permitted bool(s); this bit might be able to be removed.
 const uint32 videoUsageHwProtected = 4;
+const uint32 videoUsageCapture = 8;

@@ -109,6 +109,8 @@ constexpr uint32_t videoUsageHwEncoder = 2u;
 
 constexpr uint32_t videoUsageHwDecoder = 1u;
 
+constexpr uint32_t videoUsageCapture = 8u;
+
 constexpr uint32_t noneUsage = 1u;
 
 constexpr uint32_t displayUsageLayer = 1u;
