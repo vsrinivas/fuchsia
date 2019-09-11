@@ -86,10 +86,6 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
        },
        kRequiresSurface});
 
-  // Only enable Vulkan validation layers when in debug mode.
-#if !defined(NDEBUG)
-  instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
-#endif
   auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
 
   // Tell Escher not to filter out queues that don't support presentation.
