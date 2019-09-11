@@ -242,6 +242,7 @@ template("go_build") {
             name = output_name
             path = rebase_path(output_path, root_build_dir)
             label = get_label_info(":$main_target_name", "label_with_toolchain")
+            cpu = current_cpu
           },
         ]
       }

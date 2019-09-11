@@ -59,6 +59,7 @@ group("llvm-tools") {
     foreach(tool, _llvm_tools) {
       tool_paths += [
         {
+          cpu = host_cpu
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = tool
           path = rebase_path("$clang_tool_dir/$tool", root_build_dir)

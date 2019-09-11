@@ -270,6 +270,10 @@ build_api_module("packages") {
 #     - Required: Path to the tool's executable for the build host.
 #     - Type: path relative to $root_build_dir
 #
+#   * cpu
+#     - Required: CPU for which the tool is built.
+#     - Type: string
+#
 build_api_module("tool_paths") {
   testonly = true
   deps = [
@@ -291,6 +295,7 @@ group("tool_paths.metadata") {
     foreach(tool, _eponymous_3p_tools) {
       tool_paths += [
         {
+          cpu = host_cpu
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = tool
           path = rebase_path(
