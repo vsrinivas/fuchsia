@@ -17,7 +17,6 @@ flutter_app("a11y_demo") {
   ]
 
   sources = [
-    "a11y_demo.dart",
   ]
 
   deps = [

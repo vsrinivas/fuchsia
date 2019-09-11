@@ -35,6 +35,7 @@ class TapCounter extends StatelessWidget {
   final double width;
   final double height;
 
+  @override
   Widget build(BuildContext context) {
     return Semantics(
       container: true, // gives this a better tap target.
@@ -90,7 +91,7 @@ class TapButton extends StatelessWidget {
 }
 
 class SimpleButtonsAndLabelPage extends StatefulWidget {
-  SimpleButtonsAndLabelPage({Key key}) : super(key: key);
+  const SimpleButtonsAndLabelPage({Key key}) : super(key: key);
 
   @override
   State<SimpleButtonsAndLabelPage> createState() =>
