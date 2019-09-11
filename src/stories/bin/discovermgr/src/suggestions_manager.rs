@@ -27,14 +27,20 @@ pub trait SearchSuggestionsProvider: Send + Sync {
 /// The suggestions manager is in charge of storing suggestions after a given query
 /// and executing them when requested.
 pub struct SuggestionsManager {
-    suggestions: HashMap<String, Suggestion>,
+    suggestions: HashMap<String, usize>,
     providers: Vec<Box<dyn SearchSuggestionsProvider>>,
     mod_manager: Arc<Mutex<ModManager<StoryContextStore>>>,
+    ordered_suggestions: Vec<Suggestion>,
 }
 
 impl SuggestionsManager {
     pub fn new(mod_manager: Arc<Mutex<ModManager<StoryContextStore>>>) -> Self {
-        SuggestionsManager { suggestions: HashMap::new(), providers: vec![], mod_manager }
+        SuggestionsManager {
+            suggestions: HashMap::new(),
+            providers: vec![],
+            mod_manager,
+            ordered_suggestions: vec![],
+        }
     }
 
     /// Registers a suggestion provider.
@@ -55,7 +61,7 @@ impl SuggestionsManager {
             .map(|fut| Pin::<Box<_>>::from(Box::new(fut)));
         let results = join_all(futs).await;
         let query_lower = query.to_lowercase();
-        self.suggestions = results
+        self.ordered_suggestions = results
             .into_iter()
             .filter(|result| result.is_ok())
             .map(|result| result.unwrap())
@@ -67,9 +73,14 @@ impl SuggestionsManager {
                     true
                 }
             })
-            .map(|s| (s.id().to_string(), s))
-            .collect::<HashMap<String, Suggestion>>();
-        self.suggestions.values()
+            .collect::<Vec<Suggestion>>();
+        self.suggestions = self
+            .ordered_suggestions
+            .iter()
+            .zip(0..self.ordered_suggestions.len())
+            .map(|(s, idx)| (s.id().to_string(), idx))
+            .collect::<HashMap<String, usize>>();
+        self.ordered_suggestions.iter()
     }
 
     /// Executes the suggestion intent and removes it from the stored suggestions.
@@ -80,9 +91,14 @@ impl SuggestionsManager {
                 fx_log_err!("Suggestion not found");
                 Ok(())
             }
-            Some(suggestion) => {
+            Some(mut index) => {
                 let mut issuer = self.mod_manager.lock();
-                issuer.execute_suggestion(suggestion).await
+                for (_, v) in self.suggestions.iter_mut() {
+                    if v > &mut index {
+                        *v -= 1;
+                    }
+                }
+                issuer.execute_suggestion(self.ordered_suggestions.remove(index)).await
             }
         }
     }
@@ -189,13 +205,13 @@ mod tests {
         let mut suggestions_manager = SuggestionsManager::new(mod_manager);
 
         // Set some fake suggestions.
-        suggestions_manager.suggestions = hashmap!(
-        "12345".to_string() => suggestion!(
+        suggestions_manager.ordered_suggestions = vec![suggestion!(
             action = "SEE_CONCERTS",
             title = "See concerts for something_garnet",
             parameters = [(name = "artist", entity_reference = "abcdefgh")],
             story = "story_name"
-        ));
+        )];
+        suggestions_manager.suggestions = hashmap!("12345".to_string() => 0);
 
         // Execute the suggestion
         suggestions_manager.execute("12345").await?;

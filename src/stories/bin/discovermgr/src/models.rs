@@ -65,6 +65,26 @@ impl OutputConsumer {
     }
 }
 
+pub struct StoryMetadata {
+    pub story_name: String,
+    pub story_title: String,
+    pub last_executed_timestamp: u128,
+}
+
+impl StoryMetadata {
+    pub fn new(
+        story_name: impl Into<String>,
+        story_title: impl Into<String>,
+        last_executed_timestamp: u128,
+    ) -> Self {
+        StoryMetadata {
+            story_name: story_name.into(),
+            story_title: story_title.into(),
+            last_executed_timestamp,
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq, Hash)]
 pub struct DisplayInfo {
     pub icon: Option<String>,

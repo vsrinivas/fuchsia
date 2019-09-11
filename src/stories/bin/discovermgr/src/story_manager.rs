@@ -4,14 +4,18 @@
 
 use {
     crate::{
-        constants::{GRAPH_KEY, STATE_KEY, TITLE_KEY},
-        models::{AddModInfo, OutputConsumer},
+        constants::{GRAPH_KEY, STATE_KEY, TIME_KEY, TITLE_KEY},
+        models::{AddModInfo, OutputConsumer, StoryMetadata},
         story_context_store::Contributor,
         story_graph::{Module, StoryGraph},
-        story_storage::{StoryName, StoryStorage, StoryTitle},
+        story_storage::{StoryName, StoryStorage},
     },
     chrono::{Datelike, Timelike, Utc},
     failure::{bail, Error},
+    std::{
+        collections::HashMap,
+        time::{SystemTime, UNIX_EPOCH},
+    },
 };
 
 /// Manage multiple story graphs to support restoring stories.
@@ -38,17 +42,17 @@ impl StoryManager {
         &mut self,
         story_name: &StoryName,
         key: &str,
-        value: String,
+        value: impl Into<String>,
     ) -> Result<(), Error> {
         match key {
             // Writing to story graph and instance state is not allowed.
             GRAPH_KEY | STATE_KEY => bail!("Key for set_property is now allowed"),
-            _ => self.story_storage.set_property(story_name, key, value).await,
+            _ => self.story_storage.set_property(story_name, key, value.into()).await,
         }
     }
 
     // Get property of given story with key.
-    pub async fn get_property(&self, story_name: &StoryName, key: String) -> Result<String, Error> {
+    pub async fn get_property(&self, story_name: &StoryName, key: &str) -> Result<String, Error> {
         self.story_storage.get_property(story_name, &key).await
     }
 
@@ -58,10 +62,10 @@ impl StoryManager {
         story_name: &str,
         module_name: &str,
         state_name: &str,
-        value: String,
+        value: impl Into<String>,
     ) -> Result<(), Error> {
         let identity_path = format!("{}/{}/{}", story_name, module_name, state_name);
-        self.story_storage.set_property(&identity_path, STATE_KEY, value).await
+        self.story_storage.set_property(&identity_path, STATE_KEY, value.into()).await
     }
 
     // Get instance state of mods given story_name, module_name and name of state.
@@ -75,7 +79,14 @@ impl StoryManager {
         self.story_storage.get_property(&identity_path, STATE_KEY).await
     }
 
-    // Restore the story in story_manager by returning a vector of its modules.
+    // Update the time-stamp that a story is executed last time.
+    pub async fn update_timestamp(&mut self, story_name: &str) -> Result<(), Error> {
+        let timestamp =
+            SystemTime::now().duration_since(UNIX_EPOCH).expect("time went backwards").as_nanos();
+        self.story_storage.set_property(story_name, TIME_KEY, timestamp.to_string()).await
+    }
+
+    // Restore the story in story_manager by returning a vector of its modules
     pub async fn restore_story_graph(
         &mut self,
         target_story_name: StoryName,
@@ -84,6 +95,8 @@ impl StoryManager {
             &self.story_storage.get_property(&target_story_name, GRAPH_KEY).await?,
         )
         .unwrap_or(StoryGraph::new());
+
+        self.update_timestamp(&target_story_name).await?;
         Ok(story_graph.get_all_modules().map(|(k, v)| Module::new(k.clone(), v.clone())).collect())
     }
 
@@ -191,12 +204,30 @@ impl StoryManager {
                     now.second(),
                 ),
             )
-            .await
+            .await?;
+        self.update_timestamp(action.story_name()).await
     }
 
-    // Return names and titles of saved stories.
-    pub async fn get_name_titles(&self) -> Result<Vec<(StoryName, StoryTitle)>, Error> {
-        self.story_storage.get_name_titles().await
+    // Return saved story metadata to generate suggestions.
+    pub async fn get_story_metadata(&self) -> Result<Vec<StoryMetadata>, Error> {
+        let mut time_map = self
+            .story_storage
+            .get_entries(TIME_KEY)
+            .await?
+            .into_iter()
+            .map(|(name, time)| {
+                (name.split_at(TIME_KEY.len() + 1).1.to_string(), time.parse::<u128>().unwrap_or(0))
+            })
+            .collect::<HashMap<String, u128>>();
+        Ok(self
+            .story_storage
+            .get_name_titles()
+            .await?
+            .iter()
+            .map(|(name, title)| {
+                (StoryMetadata::new(name, title, time_map.remove(name).unwrap_or(0)))
+            })
+            .collect())
     }
 }
 
@@ -309,7 +340,7 @@ mod tests {
         let module_data_1 = story_graph.get_module_data(mod_name_1).unwrap();
         assert_eq!(module_data_1.outputs.len(), 1);
         let module_output = &module_data_1.outputs["selected"];
-        assert_eq!(module_output.entity_reference, "peridot-ref".to_string());
+        assert_eq!(&module_output.entity_reference, "peridot-ref");
         assert_eq!(module_output.consumers.len(), 1);
         assert_eq!(
             module_output
@@ -326,12 +357,75 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn set_and_get_instance_state() -> Result<(), Error> {
         let mut story_manager = StoryManager::new(Box::new(MemoryStorage::new()));
-        story_manager
-            .set_instance_state("some-story", "some-mod", "some-state", "value".to_string())
-            .await?;
+        story_manager.set_instance_state("some-story", "some-mod", "some-state", "value").await?;
         let instance_state =
             story_manager.get_instance_state("some-story", "some-mod", "some-state").await?;
-        assert_eq!(instance_state, "value".to_string());
+        assert_eq!(&instance_state, "value");
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn update_timestamp() -> Result<(), Error> {
+        let mut story_manager = StoryManager::new(Box::new(MemoryStorage::new()));
+        let story_name = "story_1".to_string();
+        story_manager.update_timestamp(&story_name).await?;
+        let timestamp_1 =
+            story_manager.get_property(&story_name, TIME_KEY).await?.parse::<u128>().unwrap_or(0);
+        story_manager.update_timestamp(&story_name).await?;
+        let timestamp_2 =
+            story_manager.get_property(&story_name, TIME_KEY).await?.parse::<u128>().unwrap_or(0);
+        assert!(timestamp_2 > timestamp_1);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn maintain_story_recency() -> Result<(), Error> {
+        let mut story_manager = StoryManager::new(Box::new(MemoryStorage::new()));
+        let suggestion_1 = suggestion!(
+            action = "PLAY_MUSIC",
+            title = "Play music",
+            parameters = [(name = "artist", entity_reference = "peridot-ref")],
+            story = "story_name_1"
+        );
+        let suggestion_2 = suggestion!(
+            action = "PLAY_MUSIC",
+            title = "Play music",
+            parameters = [(name = "artist", entity_reference = "peridot-ref")],
+            story = "story_name_2"
+        );
+
+        // Execute two addmod suggestions one by one.
+        match suggestion_1.action() {
+            SuggestedAction::AddMod(action) => {
+                story_manager.add_to_story_graph(&action, vec![]).await?;
+            }
+            SuggestedAction::RestoreStory(_) => {
+                assert!(false);
+            }
+        }
+        match suggestion_2.action() {
+            SuggestedAction::AddMod(action) => {
+                story_manager.add_to_story_graph(&action, vec![]).await?;
+            }
+            SuggestedAction::RestoreStory(_) => {
+                assert!(false);
+            }
+        }
+
+        // Ensure that the most recent story is ranked first.
+        let mut stories = story_manager.get_story_metadata().await?;
+        assert_eq!(stories.len(), 2);
+        stories.sort_by(|a, b| b.last_executed_timestamp.cmp(&a.last_executed_timestamp));
+        assert_eq!(&stories[0].story_name, "story_name_2");
+        assert_eq!(&stories[1].story_name, "story_name_1");
+
+        // Restore one story and see if the recency ranking results change.
+        let _ = story_manager.restore_story_graph("story_name_1".to_string()).await?;
+        let mut stories = story_manager.get_story_metadata().await?;
+        assert_eq!(stories.len(), 2);
+        stories.sort_by(|a, b| b.last_executed_timestamp.cmp(&a.last_executed_timestamp));
+        assert_eq!(&stories[0].story_name, "story_name_1");
+        assert_eq!(&stories[1].story_name, "story_name_2");
         Ok(())
     }
 }

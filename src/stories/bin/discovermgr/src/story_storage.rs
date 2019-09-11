@@ -69,7 +69,7 @@ impl StoryStorage for MemoryStorage {
         value: String,
     ) -> LocalFutureObj<'a, Result<(), Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let memory_key = format!("{}{}", key, story_name);
+            let memory_key = format!("{}/{}", key, story_name);
             self.properties.insert(memory_key, value);
             Ok(())
         }))
@@ -81,7 +81,7 @@ impl StoryStorage for MemoryStorage {
         key: &'a str,
     ) -> LocalFutureObj<'a, Result<String, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let memory_key = format!("{}{}", key, story_name);
+            let memory_key = format!("{}/{}", key, story_name);
             if self.properties.contains_key(&memory_key) {
                 Ok(self.properties[&memory_key].clone())
             } else {
@@ -110,7 +110,7 @@ impl StoryStorage for MemoryStorage {
             let entries = self.get_entries(TITLE_KEY).await?;
             let results = entries
                 .into_iter()
-                .map(|(name, title)| (name.split_at(TITLE_KEY.len()).1.to_string(), title))
+                .map(|(name, title)| (name.split_at(TITLE_KEY.len() + 1).1.to_string(), title))
                 .collect();
             Ok(results)
         }))
@@ -198,7 +198,7 @@ impl StoryStorage for LedgerStorage {
         value: String,
     ) -> LocalFutureObj<'a, Result<(), Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let ledger_key = format!("{}{}", key, story_name);
+            let ledger_key = format!("{}/{}", key, story_name);
             self.write(&ledger_key, &value).await?;
             Ok(())
         }))
@@ -210,7 +210,7 @@ impl StoryStorage for LedgerStorage {
         key: &'a str,
     ) -> LocalFutureObj<'a, Result<String, Error>> {
         LocalFutureObj::new(Box::new(async move {
-            let ledger_key = format!("{}{}", key, story_name);
+            let ledger_key = format!("{}/{}", key, story_name);
             self.read(&ledger_key, &ledger_key)
                 .await
                 .unwrap_or(None)
@@ -262,7 +262,7 @@ impl StoryStorage for LedgerStorage {
             let entries = self.get_entries(TITLE_KEY).await?;
             let results = entries
                 .into_iter()
-                .map(|(name, title)| (name.split_at(TITLE_KEY.len()).1.to_string(), title))
+                .map(|(name, title)| (name.split_at(TITLE_KEY.len() + 1).1.to_string(), title))
                 .collect();
             Ok(results)
         }))

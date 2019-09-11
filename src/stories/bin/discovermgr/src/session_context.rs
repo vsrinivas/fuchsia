@@ -91,7 +91,7 @@ impl StoryContextService {
 
                         StoryDiscoverContextRequest::GetProperty { key, responder } => {
                             let story_manager = self.story_manager.lock();
-                            let property = story_manager.get_property(&self.story_id, key).await?;
+                            let property = story_manager.get_property(&self.story_id, &key).await?;
                             // TODO: handle the errors properly in a followup CL.
                             responder.send(&mut Ok(utils::string_to_vmo_buffer(property)?))?;
                         }

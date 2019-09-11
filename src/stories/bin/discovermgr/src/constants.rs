@@ -5,3 +5,4 @@
 pub const TITLE_KEY: &str = "title";
 pub const GRAPH_KEY: &str = "graph";
 pub const STATE_KEY: &str = "state";
+pub const TIME_KEY: &str = "time";
