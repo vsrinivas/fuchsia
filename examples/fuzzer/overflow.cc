@@ -6,7 +6,7 @@
 
 int foo_function(const uint8_t *data, size_t size) {
   int fizzle = 1 + size;
-  if (fizzle < 1) {
+  if (fizzle < 3) {
   	return 0;
   }
   char* blah = (char*)malloc(1);
@@ -16,7 +16,7 @@ int foo_function(const uint8_t *data, size_t size) {
 
 int bar_function(const uint8_t *data, size_t size) {
   int fizzle = 1 + size;
-  if (fizzle < 1) {
+  if (fizzle < 3) {
   	return 0;
   }
   return foo_function(data, size);
