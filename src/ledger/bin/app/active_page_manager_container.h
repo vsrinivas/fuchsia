@@ -54,18 +54,12 @@ class ActivePageManagerContainer {
   // |CheckEmpty| after calling the |PageUsageListeners| only if |has_external_requests_| was true
   // when called, otherwise always calls |CheckEmpty| after (possibly) calling the
   // |PageUsageListeners|. Any given call to a |PageUsageListener|'s |OnExternallyUnused| method may
-  // result in this |ActivePageManagerContainer| being deleted; if this |ActivePageManagerContainer|
-  // is deleted during any such call this method returns early without calling
-  // appearing-later-in-the-|page_usage_listeners_|-vector |PageUsageListeners| or calling
-  // |CheckEmpty|.
+  // result in this |ActivePageManagerContainer| being deleted.
   void OnExternallyUnused(bool conditionally_check_empty);
 
   // Calls the |OnInternallyUnused| method of each |PageUsageListener| in |page_usage_listeners_|
   // and then calls |CheckEmpty|. Any given call to a |PageUsageListener|'s |OnInternallyUnused|
-  // method may result in this |ActivePageManagerContainer| being deleted; if this
-  // |ActivePageManagerContainer| is deleted during any such call this method returns early without
-  // calling appearing-later-in-the-|page_usage_listeners_|-vector |PageUsageListeners| or calling
-  // |CheckEmpty|.
+  // method may result in this |ActivePageManagerContainer| being deleted.
   void OnInternallyUnused();
 
   // Checks whether this container is empty, and calls the |on_empty_callback_|

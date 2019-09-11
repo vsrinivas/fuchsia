@@ -147,12 +147,15 @@ bool ActivePageManagerContainer::PageConnectionIsOpen() {
 void ActivePageManagerContainer::OnExternallyUnused(bool conditionally_check_empty) {
   if (has_external_requests_) {
     auto weak_this = weak_factory_.GetWeakPtr();
-    for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
-      // This might delete the ActivePageManagerContainer object.
-      page_usage_listener->OnExternallyUnused(ledger_name_, page_id_);
-      if (!weak_this) {
-        return;
-      }
+    std::string ledger_name = ledger_name_;
+    storage::PageId page_id = page_id_;
+    std::vector<PageUsageListener*> page_usage_listeners = page_usage_listeners_;
+    // This might delete the ActivePageManagerContainer object.
+    for (PageUsageListener* page_usage_listener : page_usage_listeners) {
+      page_usage_listener->OnExternallyUnused(ledger_name, page_id);
+    }
+    if (!weak_this) {
+      return;
     }
     has_external_requests_ = false;
     if (conditionally_check_empty) {
@@ -165,14 +168,16 @@ void ActivePageManagerContainer::OnExternallyUnused(bool conditionally_check_emp
 
 void ActivePageManagerContainer::OnInternallyUnused() {
   auto weak_this = weak_factory_.GetWeakPtr();
-  for (PageUsageListener* page_usage_listener : page_usage_listeners_) {
-    // This might delete the ActivePageManagerContainer object.
-    page_usage_listener->OnInternallyUnused(ledger_name_, page_id_);
-    if (!weak_this) {
-      return;
-    }
+  std::string ledger_name = ledger_name_;
+  storage::PageId page_id = page_id_;
+  std::vector<PageUsageListener*> page_usage_listeners = page_usage_listeners_;
+  // This might delete the ActivePageManagerContainer object.
+  for (PageUsageListener* page_usage_listener : page_usage_listeners) {
+    page_usage_listener->OnInternallyUnused(ledger_name, page_id);
   }
-  CheckEmpty();
+  if (weak_this) {
+    CheckEmpty();
+  }
 }
 
 bool ActivePageManagerContainer::IsEmpty() {
