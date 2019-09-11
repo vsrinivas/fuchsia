@@ -177,7 +177,7 @@ fn create_app_strategy(executor: &mut fasync::Executor) -> Result<AppStrategyPtr
                     println!("error {:#?}", e);
                 }),
         );
-        frame.present(&fb)?;
+        frame.present(&fb, None)?;
         Ok(Box::new(FrameBufferAppStrategy { frame_buffer: fb, frame }))
     }
 }

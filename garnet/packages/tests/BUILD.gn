@@ -1254,6 +1254,13 @@ group("intl") {
   ]
 }
 
+group("fuchsia-framebuffer") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/rust/fuchsia-framebuffer:fb_integration_test",
+  ]
+}
+
 group("carnelian") {
   testonly = true
   public_deps = [

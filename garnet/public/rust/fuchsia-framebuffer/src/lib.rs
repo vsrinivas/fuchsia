@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
+#![feature(async_await)]
 
 use failure::{format_err, Error, ResultExt};
 use fdio::watch_directory;
@@ -11,11 +11,11 @@ use fidl_fuchsia_hardware_display::{
     ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ImagePlane,
     ProviderSynchronousProxy,
 };
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, OnSignals};
 use fuchsia_zircon::{
     self as zx,
     sys::{zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, ZX_TIME_INFINITE},
-    HandleBased, Rights, Vmo,
+    AsHandleRef, Event, HandleBased, Rights, Signals, Vmo,
 };
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use mapped_vmo::Mapping;
@@ -118,8 +118,11 @@ impl Config {
 
 pub struct Frame {
     config: Config,
-    vmo: Vmo,
-    image_id: u64,
+    #[allow(unused)]
+    vmo: Vmo, // TODO: check to see if this reference is actually needed.
+    pub image_id: u64,
+    pub event: Event,
+    signal_event_id: u64,
     pub mapping: Arc<Mapping>,
 }
 
@@ -215,10 +218,20 @@ impl Frame {
         let image_id = Self::import_image_vmo(framebuffer, executor, imported_image_vmo)
             .context("Frame::new() import_image_vmo")?;
 
+        let my_event = Event::create()?;
+
+        let their_event = my_event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let signal_event_id = my_event.get_koid()?.raw_koid();
+        framebuffer
+            .controller
+            .import_event(Event::from_handle(their_event.into_handle()), signal_event_id)?;
+
         Ok(Frame {
             config: framebuffer.get_config(),
             image_id: image_id,
             vmo: image_vmo,
+            event: my_event,
+            signal_event_id: signal_event_id,
             mapping: Arc::new(mapping),
         })
     }
@@ -247,17 +260,28 @@ impl Frame {
         }
     }
 
-    pub fn present(&self, framebuffer: &FrameBuffer) -> Result<(), Error> {
+    pub fn present(
+        &self,
+        framebuffer: &FrameBuffer,
+        sender: Option<futures::channel::mpsc::UnboundedSender<u64>>,
+    ) -> Result<(), Error> {
         framebuffer
             .controller
-            .set_layer_image(framebuffer.layer_id, self.image_id, 0, 0)
+            .set_layer_image(framebuffer.layer_id, self.image_id, 0, self.signal_event_id)
             .context("Frame::present() set_layer_image")?;
         framebuffer.controller.apply_config().context("Frame::present() apply_config")?;
+        if let Some(signal_sender) = sender.as_ref() {
+            let signal_sender = signal_sender.clone();
+            let image_id = self.image_id;
+            let local_event = self.event.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+            local_event.as_handle_ref().signal(Signals::EVENT_SIGNALED, Signals::NONE)?;
+            fasync::spawn_local(async move {
+                let signals = OnSignals::new(&local_event, Signals::EVENT_SIGNALED);
+                signals.await.expect("to wait");
+                signal_sender.unbounded_send(image_id).expect("send to work");
+            });
+        }
         Ok(())
-    }
-
-    fn byte_size(&self) -> usize {
-        self.linear_stride_bytes() * self.config.height as usize
     }
 
     pub fn linear_stride_bytes(&self) -> usize {
@@ -276,6 +300,7 @@ pub struct VSyncMessage {
 }
 
 pub struct FrameBuffer {
+    #[allow(unused)]
     display_controller: zx::Channel,
     controller: ControllerProxy,
     config: Config,
@@ -458,18 +483,4 @@ impl FrameBuffer {
 
 impl Drop for FrameBuffer {
     fn drop(&mut self) {}
-}
-
-#[cfg(test)]
-mod tests {
-    use fuchsia_async as fasync;
-
-    use FrameBuffer;
-
-    #[test]
-    fn test_framebuffer() {
-        let mut executor = fasync::Executor::new().unwrap();
-        let fb = FrameBuffer::new(None, &mut executor).unwrap();
-        let _frame = fb.new_frame(&mut executor).unwrap();
-    }
 }

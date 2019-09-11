@@ -91,7 +91,7 @@ fn main() -> Result<(), Error> {
     let display_size = IntSize::new(config.width as i32, config.height as i32);
 
     let frame = fb.new_frame(&mut executor)?;
-    frame.present(&fb)?;
+    frame.present(&fb, None)?;
 
     let face = FontFace::new(FONT_DATA).unwrap();
 
