@@ -12,6 +12,8 @@
 #include "src/developer/debug/debug_agent/object_provider.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 struct zx_thread_state_general_regs;
 
@@ -36,6 +38,21 @@ enum class ThreadCreationOption {
 
 class DebuggedThread {
  public:
+  // Represents a ref-counted suspend token to the debugged thread.
+  // As long as one of these token is valid, the thread will maintain suspended.
+  class SuspendToken {
+   public:
+    ~SuspendToken();
+
+   private:
+    SuspendToken(DebuggedThread*);
+
+    fxl::WeakPtr<DebuggedThread> thread_;
+
+    FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(SuspendToken);
+    friend class ::debug_agent::DebuggedThread;
+  };
+
   // Represents the state the client thinks this thread is in. Certain
   // operations can suspend all the threads of a process and the debugger needs
   // to know which threads should remain suspended after that operation is done.
@@ -58,6 +75,8 @@ class DebuggedThread {
   zx::thread& thread() { return thread_; }
   const zx::thread& thread() const { return thread_; }
   zx_koid_t koid() const { return koid_; }
+
+  fxl::WeakPtr<DebuggedThread> GetWeakPtr();
 
   void OnException(zx::exception exception_token, zx_exception_info_t exception_info);
 
@@ -87,9 +106,16 @@ class DebuggedThread {
   // Returns true if the thread was running at the moment of this call being
   // made. Returns false if it was on a suspension condition (suspended or on an
   // exception).
-  //
-  // A nullopt means an error occurred while suspending.
   virtual bool Suspend(bool synchronous = false);
+
+  // Pauses execution of the thread. Pausing happens asynchronously so the thread will not
+  // necessarily have stopped when this returns. Set the |synchronous| flag for blocking on the
+  // suspended signal and make this call block.
+  //
+  // Suspension is ref-counted on the thread. This is done by returning a suspend token that will
+  // keep track of how many suspensions this thread has. As long as there is a valid one, the
+  // thread will remain suspended.
+  [[nodiscard]] virtual std::unique_ptr<SuspendToken> RefCountedSuspend(bool synchronous = false);
 
   // The typical suspend deadline users should use when suspending.
   static zx::time DefaultSuspendDeadline();
@@ -131,12 +157,18 @@ class DebuggedThread {
   bool stepping_over_breakpoint() const { return stepping_over_breakpoint_; }
   void set_stepping_over_breakpoint(bool so) { stepping_over_breakpoint_ = so; }
 
+  int ref_counted_suspend_count() const { return suspend_count_; }
+  bool is_ref_counted_suspended() const { return ref_counted_suspend_token_.is_valid(); }
+
  private:
   enum class OnStop {
     kIgnore,  // Don't do anything, keep the thread stopped and don't notify.
     kNotify,  // Send client notification like normal.
     kResume,  // The thread should be resumed from this exception.
   };
+
+  void IncreaseSuspend();
+  void DecreaseSuspend();
 
   void HandleSingleStep(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
   void HandleGeneralException(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
@@ -202,6 +234,9 @@ class DebuggedThread {
   // Active if the thread is suspended (by the debugger).
   zx::suspend_token suspend_token_;
 
+  int suspend_count_ = 0;
+  zx::suspend_token ref_counted_suspend_token_;
+
   // Active if the thread is currently on an exception.
   zx::exception exception_token_;
 
@@ -217,7 +252,11 @@ class DebuggedThread {
 
   std::shared_ptr<ObjectProvider> object_provider_ = nullptr;
 
+  fxl::WeakPtrFactory<DebuggedThread> weak_factory_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedThread);
+
+  friend class ::debug_agent::DebuggedThread::SuspendToken;
 };
 
 }  // namespace debug_agent

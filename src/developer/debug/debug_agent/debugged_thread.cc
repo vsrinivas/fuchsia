@@ -107,6 +107,21 @@ void LogExceptionNotification(debug_ipc::FileLineFunction location, const Debugg
 
 }  // namespace
 
+// DebuggedThread::SuspendToken --------------------------------------------------------------------
+
+DebuggedThread::SuspendToken::SuspendToken(DebuggedThread* thread) : thread_(thread->GetWeakPtr()) {
+  thread->IncreaseSuspend();
+}
+
+DebuggedThread::SuspendToken::~SuspendToken() {
+  if (!thread_)
+    return;
+
+  thread_->DecreaseSuspend();
+}
+
+// DebuggedThread ----------------------------------------------------------------------------------
+
 DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_koid_t koid,
                                zx::exception exception, ThreadCreationOption option,
                                std::shared_ptr<ObjectProvider> object_provider)
@@ -115,7 +130,8 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_k
       thread_(std::move(thread)),
       koid_(koid),
       exception_token_(std::move(exception)),
-      object_provider_(std::move(object_provider)) {
+      object_provider_(std::move(object_provider)),
+      weak_factory_(this) {
   FXL_DCHECK(object_provider_);
 
   switch (option) {
@@ -131,6 +147,8 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread, zx_k
 }
 
 DebuggedThread::~DebuggedThread() = default;
+
+fxl::WeakPtr<DebuggedThread> DebuggedThread::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void DebuggedThread::OnException(zx::exception exception_token,
                                  zx_exception_info_t exception_info) {
@@ -328,6 +346,14 @@ bool DebuggedThread::Suspend(bool synchronous) {
   if (synchronous)
     return WaitForSuspension(DefaultSuspendDeadline());
   return true;
+}
+
+std::unique_ptr<DebuggedThread::SuspendToken> DebuggedThread::RefCountedSuspend(bool synchronous) {
+  auto token = std::unique_ptr<SuspendToken>(new SuspendToken(this));
+
+  if (synchronous)
+    WaitForSuspension(DefaultSuspendDeadline());
+  return token;
 }
 
 zx::time DebuggedThread::DefaultSuspendDeadline() {
@@ -729,6 +755,29 @@ const char* DebuggedThread::ClientStateToString(ClientState client_state) {
 
   FXL_NOTREACHED();
   return "<unknown>";
+}
+
+void DebuggedThread::IncreaseSuspend() {
+  suspend_count_++;
+
+  // We only need to keep one suspend token around.
+  if (ref_counted_suspend_token_.is_valid())
+    return;
+
+  zx_status_t status = thread_.suspend(&ref_counted_suspend_token_);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << ThreadPreamble(this)
+                     << "Could not suspend: " << zx_status_get_string(status);
+  }
+}
+
+void DebuggedThread::DecreaseSuspend() {
+  suspend_count_--;
+  if (suspend_count_ > 0)
+    return;
+
+  FXL_DCHECK(ref_counted_suspend_token_.is_valid());
+  ref_counted_suspend_token_.reset();
 }
 
 }  // namespace debug_agent
