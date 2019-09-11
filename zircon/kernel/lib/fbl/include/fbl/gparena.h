@@ -238,7 +238,7 @@ class GPArena {
 
   // Stores the current head pointer and copy of the head's next pointer. Storing the next pointer
   // allows us to known when we perform a CAS that the object head points to hasn't changed.
-  struct HeadNode {
+  struct alignas(16) HeadNode {
     FreeNode* head = nullptr;
     FreeNode* next = nullptr;
     HeadNode() = default;
