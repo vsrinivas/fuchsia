@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/virtio_vsock.h"
 
+#include <lib/async/task.h>
 #include <lib/fit/defer.h>
 #include <lib/fsl/handles/object_info.h>
 #include <zircon/syscalls/object.h>
@@ -473,7 +474,19 @@ VirtioVsock::VirtioVsock(component::StartupContext* context, const PhysMem& phys
       tx_stream_(dispatcher, tx_queue(), this) {
   config_.guest_cid = 0;
   if (context) {
-    context->outgoing().AddPublicService(endpoint_bindings_.GetHandler(this, dispatcher));
+    // Construct a request handler that posts a task to the VirtioVsock dispatcher. VirtioVsock is
+    // not threadsafe and we must ensure that all interactions with the endpoint binding set occur
+    // on the same thread. This handler will run on the initial thread, but other interactions run
+    // on the "vsock-handler" thread. So we post a task to the dispatcher of the async loop running
+    // on that thread.
+    fidl::InterfaceRequestHandler<fuchsia::virtualization::GuestVsockEndpoint> handler =
+        [this](fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockEndpoint> request) {
+          async::PostTask(dispatcher_, [this, request = std::move(request)]() mutable {
+            endpoint_bindings_.AddBinding(this, std::move(request), dispatcher_);
+          });
+        };
+
+    context->outgoing().AddPublicService(std::move(handler));
   }
 }
 
