@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/sync/mutex.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
@@ -20,10 +21,11 @@
 typedef struct zxio_debuglog {
   zxio_t io;
   zx::debuglog handle;
+  sync_mutex_t lock;
   struct {
     unsigned next;
     std::unique_ptr<std::array<char, LOGBUF_MAX>> pending;
-  } buffer;
+  } buffer __TA_GUARDED(lock);
 } zxio_debuglog_t;
 
 static_assert(sizeof(zxio_debuglog_t) <= sizeof(zxio_storage_t),
@@ -48,15 +50,16 @@ static zx_status_t zxio_debuglog_write(zxio_t* io, const void* buffer, size_t ca
   auto debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
 
   auto& outgoing = debuglog->buffer;
+  sync_mutex_lock(&debuglog->lock);
   if (outgoing.pending == nullptr) {
     outgoing.pending = std::make_unique<std::array<char, LOGBUF_MAX>>();
   }
 
-  const char* data = static_cast<const char*>(buffer);
+  auto data = static_cast<const char*>(buffer);
   for (size_t i = 0; i < capacity; ++i) {
     char c = *data++;
     if (c == '\n') {
-      debuglog->handle.write(0, outgoing.pending->data(), debuglog->buffer.next);
+      debuglog->handle.write(0, outgoing.pending->data(), outgoing.next);
       outgoing.next = 0;
       continue;
     }
@@ -65,11 +68,12 @@ static zx_status_t zxio_debuglog_write(zxio_t* io, const void* buffer, size_t ca
     }
     (*outgoing.pending)[outgoing.next++] = c;
     if (outgoing.next == LOGBUF_MAX) {
-      debuglog->handle.write(0, outgoing.pending->data(), debuglog->buffer.next);
+      debuglog->handle.write(0, outgoing.pending->data(), outgoing.next);
       outgoing.next = 0;
       continue;
     }
   }
+  sync_mutex_unlock(&debuglog->lock);
   *out_actual = capacity;
   return ZX_OK;
 }
@@ -95,6 +99,7 @@ zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle) {
   auto debuglog = new (storage) zxio_debuglog_t{
       .io = storage->io,
       .handle = std::move(handle),
+      .lock = {},
       .buffer = {},
   };
   zxio_init(&debuglog->io, &zxio_debuglog_ops);

@@ -11,6 +11,7 @@ group("test") {
 
 test("zxio") {
   sources = [
+    "debuglog-test.cc",
     "null-test.cc",
     "vmofile-test.cc",
     "zxio-test.cc",
