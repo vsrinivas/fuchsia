@@ -155,6 +155,9 @@ enum CMD_MODE {
 
 #define DEF_CMD_PAYLOAD_SIZE 320
 
+// This value is returned when iwl_trans_read_mem32() is called but the hardware is busy.
+#define HW_IS_BUSY 0xa5a5a5a5
+
 /**
  * struct iwl_device_cmd
  *
@@ -1091,10 +1094,9 @@ static inline void iwl_trans_write_prph(struct iwl_trans* trans, uint32_t ofs, u
   return trans->ops->write_prph(trans, ofs, val);
 }
 
-#if 0  // NEEDS_PORTING
-static inline int iwl_trans_read_mem(struct iwl_trans* trans, uint32_t addr,
-                                     void* buf, int dwords) {
-    return trans->ops->read_mem(trans, addr, buf, dwords);
+static inline zx_status_t iwl_trans_read_mem(struct iwl_trans* trans, uint32_t addr, void* buf,
+                                             int dwords) {
+  return trans->ops->read_mem(trans, addr, buf, dwords);
 }
 
 #define iwl_trans_read_mem_bytes(trans, addr, buf, bufsize)             \
@@ -1105,37 +1107,35 @@ static inline int iwl_trans_read_mem(struct iwl_trans* trans, uint32_t addr,
   } while (0)
 
 static inline uint32_t iwl_trans_read_mem32(struct iwl_trans* trans, uint32_t addr) {
-    uint32_t value;
+  uint32_t value;
 
-    if (WARN_ON(iwl_trans_read_mem(trans, addr, &value, 1))) {
-        return 0xa5a5a5a5;
-    }
+  if (WARN_ON(iwl_trans_read_mem(trans, addr, &value, 1))) {
+    return HW_IS_BUSY;
+  }
 
-    return value;
+  return value;
 }
 
-static inline int iwl_trans_write_mem(struct iwl_trans* trans, uint32_t addr,
-                                      const void* buf, int dwords) {
-    return trans->ops->write_mem(trans, addr, buf, dwords);
+static inline zx_status_t iwl_trans_write_mem(struct iwl_trans* trans, uint32_t addr,
+                                              const void* buf, int dwords) {
+  return trans->ops->write_mem(trans, addr, buf, dwords);
 }
 
-static inline uint32_t iwl_trans_write_mem32(struct iwl_trans* trans, uint32_t addr,
-        uint32_t val) {
-    return iwl_trans_write_mem(trans, addr, &val, 1);
+static inline uint32_t iwl_trans_write_mem32(struct iwl_trans* trans, uint32_t addr, uint32_t val) {
+  return iwl_trans_write_mem(trans, addr, &val, 1);
 }
 
 static inline void iwl_trans_set_pmi(struct iwl_trans* trans, bool state) {
-    if (trans->ops->set_pmi) {
-        trans->ops->set_pmi(trans, state);
-    }
+  if (trans->ops->set_pmi) {
+    trans->ops->set_pmi(trans, state);
+  }
 }
 
 static inline void iwl_trans_sw_reset(struct iwl_trans* trans) {
-    if (trans->ops->sw_reset) {
-        trans->ops->sw_reset(trans);
-    }
+  if (trans->ops->sw_reset) {
+    trans->ops->sw_reset(trans);
+  }
 }
-#endif  // NEEDS_PORTING
 
 static inline void iwl_trans_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
                                            uint32_t value) {
