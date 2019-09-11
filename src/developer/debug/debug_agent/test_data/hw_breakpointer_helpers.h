@@ -64,6 +64,8 @@ struct ThreadSetup {
 
 std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* user = nullptr);
 
+std::pair<zx::port, zx::channel> CreateExceptionChannel(const zx::thread&);
+
 zx_thread_state_general_regs_t ReadGeneralRegs(const zx::thread& thread);
 
 void WriteGeneralRegs(const zx::thread& thread, const zx_thread_state_debug_regs_t& regs);
@@ -95,5 +97,9 @@ bool IsOnException(const zx::thread& thread);
 zx::suspend_token Suspend(const zx::thread& thread);
 
 void InstallHWBreakpoint(const zx::thread& thread, uint64_t address);
+void RemoveHWBreakpoint(const zx::thread& thread);
+
+void InstallWatchpoint(const zx::thread& thread, uint64_t address);
+void RemoveWatchpoint(const zx::thread& thread);
 
 #endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_

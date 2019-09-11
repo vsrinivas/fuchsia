@@ -28,6 +28,16 @@ std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* u
   return setup;
 }
 
+std::pair<zx::port, zx::channel> CreateExceptionChannel(const zx::thread& thread) {
+  zx::port port;
+  CHECK_OK(zx::port::create(0, &port));
+
+  zx::channel exception_channel;
+  CHECK_OK(thread.create_exception_channel(0, &exception_channel));
+
+  return std::make_pair<zx::port, zx::channel>(std::move(port), std::move(exception_channel));
+}
+
 zx_thread_state_general_regs_t ReadGeneralRegs(const zx::thread& thread) {
   zx_thread_state_general_regs_t regs = {};
   CHECK_OK(thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)));
@@ -133,26 +143,26 @@ namespace {
 
 #if defined(__x86_64__)
 
-zx_thread_state_debug_regs_t GetDebugRegs(uint64_t address) {
+zx_thread_state_debug_regs_t HWBreakpointRegs(uint64_t address) {
   if (address == 0)
     return {};
 
   zx_thread_state_debug_regs_t debug_regs = {};
   debug_regs.dr7 = 0b1;
-  debug_regs.dr[0] = reinterpret_cast<uint64_t>(address);
+  debug_regs.dr[0] = address;
   return debug_regs;
 }
 
 #elif defined(__aarch64__)
 
-zx_thread_state_debug_regs_t GetDebugRegs(uint64_t address) {
+zx_thread_state_debug_regs_t HWBreakpointRegs(uint64_t address) {
   if (address == 0)
     return {};
 
   zx_thread_state_debug_regs_t debug_regs = {};
   auto& hw_bp = debug_regs.hw_bps[0];
-  hw_bp.dbgbcr = 1;  // Activate it.
-  hw_bp.dbgbvr = reinterpret_cast<uint64_t>(address);
+  hw_bp.dbgbcr = 1;       // Activate it.
+  hw_bp.dbgbvr = address;
   return debug_regs;
 }
 
@@ -160,17 +170,83 @@ zx_thread_state_debug_regs_t GetDebugRegs(uint64_t address) {
 #error Unsupported arch.
 #endif
 
-}  // namespace
-
-void InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
-  DEFER_PRINT("Installed breakpoint on address 0x%zx", address);
-
+void SetHWBreakpoint(const zx::thread& thread, uint64_t address) {
   zx::suspend_token suspend_token = Suspend(thread);
 
   // Install the HW breakpoint.
-  auto debug_regs = GetDebugRegs(address);
+  auto debug_regs = HWBreakpointRegs(address);
   CHECK_OK(thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs)));
 
   // Resume the thread.
   suspend_token.reset();
 }
+
+}  // namespace
+
+void InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
+  PRINT("Installed hw breakpoint on address 0x%zx", address);
+  SetHWBreakpoint(thread, address);
+}
+
+void RemoveHWBreakpoint(const zx::thread& thread) {
+  PRINT("Removed hw breakpoint.");
+  SetHWBreakpoint(thread, 0);
+}
+
+// Watchpoint --------------------------------------------------------------------------------------
+
+namespace {
+
+#if defined(__x86_64__)
+
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address) {
+  zx_thread_state_debug_regs_t debug_regs = {};
+  if (address == 0)
+    return {};
+
+  debug_regs.dr7 = 0b1 | 1 << 16;
+  debug_regs.dr[0] = address;
+  return debug_regs;
+}
+
+#elif defined(__aarch64__)
+
+zx_thread_state_debug_regs_t WatchpointRegs(uint64_t address) {
+  if (address == 0)
+    return {};
+
+  zx_thread_state_debug_regs_t debug_regs = {};
+  auto& wp = debug_regs.hw_wps[0];
+  wp.dbgwcr = 1 | 0b10 << 3 | 1 << 5;
+  wp.dbgwvr = address;
+  return debug_regs;
+}
+
+#else
+#error Unsupported arch.
+#endif
+
+void SetWatchpoint(const zx::thread& thread, uint64_t address) {
+  zx::suspend_token suspend_token = Suspend(thread);
+
+  // Install the HW breakpoint.
+  auto debug_regs = WatchpointRegs(address);
+  CHECK_OK(thread.write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs)));
+
+  // Resume the thread.
+  suspend_token.reset();
+}
+
+
+}  // namespace
+
+void InstallWatchpoint(const zx::thread& thread, uint64_t address) {
+  PRINT("Installing one byte watchpoint on 0x%zx", address);
+  SetWatchpoint(thread, address);
+}
+
+void RemoveWatchpoint(const zx::thread& thread) {
+  PRINT("Unintalling watchpoint.");
+  SetWatchpoint(thread, 0);
+}
+

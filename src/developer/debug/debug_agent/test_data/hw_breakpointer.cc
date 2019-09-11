@@ -59,7 +59,7 @@ int BreakOnFunctionThreadFunction(void* user) {
   return 0;
 }
 
-int BreakOnFunctionTestCase() {
+void BreakOnFunctionTestCase() {
   PRINT("Running HW breakpoint when calling a function test.");
 
   // The functions to be called sequentially by the test.
@@ -72,18 +72,10 @@ int BreakOnFunctionTestCase() {
   };
 
   auto thread_setup = CreateTestSetup(BreakOnFunctionThreadFunction);
-
-
-  zx::port port;
-  CHECK_OK(zx::port::create(0, &port));
-
-  zx::channel exception_channel;
-  CHECK_OK(thread_setup->thread.create_exception_channel(0, &exception_channel));
-
+  auto [port, exception_channel] = CreateExceptionChannel(thread_setup->thread);
   WaitAsyncOnExceptionChannel(port, exception_channel);
 
   Exception exception = {};
-
   for (size_t i = 0; i < ARRAY_SIZE(breakpoint_functions); i++) {
     // If this is the first iteration, we don't resume the exception.
     if (i > 0u) {
@@ -110,15 +102,85 @@ int BreakOnFunctionTestCase() {
     PRINT("Hit HW breakpoint %zu on 0x%zx", i, exception.pc);
 
     // Remove the breakpoint.
-    InstallHWBreakpoint(thread_setup->thread, 0);
+    RemoveHWBreakpoint(thread_setup->thread);
 
   }
 
   // Tell the thread to exit.
   thread_setup->test_running = false;
   ResumeException(thread_setup->thread, std::move(exception));
+}
+
+// Watchpoints -------------------------------------------------------------------------------------
+//
+// This test has an array of bytes that will be accessed one by one by another thread.
+// The harness will set a watchpoint on each of those bytes and expects to receive an exception for
+// of them.
+
+uint8_t gDataToTouch[5] = {};
+
+int WatchpointThreadFunction(void* user) {
+  auto* thread_setup = reinterpret_cast<ThreadSetup*>(user);
+
+  // We signal the test harness that we are here.
+  thread_setup->event.signal(kHarnessToThread, kThreadToHarness);
+
+  // We wait now for the harness to tell us we can continue.
+  CHECK_OK(thread_setup->event.wait_one(kHarnessToThread, zx::time::infinite(), nullptr));
+
+  PRINT("Got signaled by harness.");
+
+  while (thread_setup->test_running) {
+    uint8_t* byte = reinterpret_cast<uint8_t*>(thread_setup->user);
+    FXL_DCHECK(byte);
+
+    // We use write to avoid deadlocking with the outside libc calls.
+    write(1, kBeacon, sizeof(kBeacon));
+    *byte += 1;
+    zx::nanosleep(zx::deadline_after(zx::sec(1)));
+  }
 
   return 0;
+}
+
+void WatchpointTestCase() {
+  PRINT("Runnint Watchpoint test case.");
+
+  auto thread_setup = CreateTestSetup(WatchpointThreadFunction);
+  auto [port, exception_channel] = CreateExceptionChannel(thread_setup->thread);
+  WaitAsyncOnExceptionChannel(port, exception_channel);
+
+  Exception exception = {};
+  for (size_t i = 0; i < ARRAY_SIZE(gDataToTouch); i++) {
+  // If this is the first iteration, we don't resume the exception.
+    if (i > 0u) {
+      WaitAsyncOnExceptionChannel(port, exception_channel);
+      ResumeException(thread_setup->thread, std::move(exception));
+    }
+
+    // Pass in the byte to break on.
+    uint8_t* data_ptr = gDataToTouch + i;
+    thread_setup->user = data_ptr;
+
+    // Install the watchpoint.
+    InstallWatchpoint(thread_setup->thread, reinterpret_cast<uint64_t>(data_ptr));
+
+    // Tell the thread to continue.
+    thread_setup->event.signal(kThreadToHarness, kHarnessToThread);
+
+    // Wait until the exception is hit.
+    exception = WaitForException(port, exception_channel);
+
+    FXL_DCHECK(exception.info.type = ZX_EXCP_HW_BREAKPOINT);
+    PRINT("Hit watchpoint %zu on 0x%zx", i, exception.pc);
+
+    // Remove the watchpoint.
+    RemoveWatchpoint(thread_setup->thread);
+  }
+
+  // Tell the thread to exit.
+  thread_setup->test_running = false;
+  ResumeException(thread_setup->thread, std::move(exception));
 }
 
 // Channel messaging -------------------------------------------------------------------------------
@@ -151,7 +213,7 @@ int ChannelMessagingThreadFunction(void* user) {
   return 0;
 }
 
-int ChannelMessagingTestCase() {
+void ChannelMessagingTestCase() {
   PRINT("Running channel messaging.");
 
   zx::channel mine, theirs;
@@ -179,8 +241,6 @@ int ChannelMessagingTestCase() {
   }
 
   thread_setup->test_running = false;
-
-  return 0;
 }
 
 }  // namespace
@@ -188,7 +248,7 @@ int ChannelMessagingTestCase() {
 // Main --------------------------------------------------------------------------------------------
 
 struct TestCase {
-  using TestFunction = int(*)();
+  using TestFunction = void(*)();
 
   std::string name = nullptr;
   std::string description = nullptr;
@@ -202,6 +262,8 @@ TestCase kTestCases[] = {
     {"channel_calls",
      "Send multiple messages over a channel call and read from it after it is closed.",
      ChannelMessagingTestCase},
+
+    {"watchpoints", "Call multiple watchpoints.", WatchpointTestCase},
 };
 
 void PrintUsage() {
@@ -236,5 +298,6 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  return test_function();
+  test_function();
+  return 0;
 }
