@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_die_scanner.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
@@ -77,9 +78,6 @@ struct SymbolStorage {
   IndexNode::RefType ref_type;
 };
 
-// Index used to indicate there is no parent.
-constexpr unsigned kNoParent = std::numeric_limits<unsigned>::max();
-
 // Returns true if the given abbreviation defines a PC range.
 bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   for (const auto spec : abbrev->attributes()) {
@@ -106,14 +104,15 @@ size_t RecursiveCountDies(const IndexNode& node) {
 }
 
 // Step 1 of the algorithm above. Fills the symbol_storage array with the information for all
-// function implementations (ones with addresses). Fills the parent_indices array with the index of
-// the parent of each DIE in the unit (it will be exactly unit->getNumDIEs() long). The root node
-// will have kNoParent set.
+// function implementations (ones with addresses).
+//
+// The die scanner will be used for this. Upon return the scanner can be used to compute parent
+// indices.
 //
 // All functions found with DW_AT_main_subprogram will be added to the main_functions array.
 void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
                                  std::vector<SymbolStorage>* symbol_storage,
-                                 std::vector<unsigned>* parent_indices,
+                                 DwarfDieScanner* scanner,
                                  std::vector<IndexNode::DieRef>* main_functions) {
   DwarfDieDecoder decoder(context, unit);
 
@@ -132,33 +131,14 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* u
   llvm::Optional<bool> is_main_subprogram;
   decoder.AddBool(llvm::dwarf::DW_AT_main_subprogram, &is_main_subprogram);
 
-  // Stores the index of the parent DIE for each one we encounter. The root DIE with no parent will
-  // be set to kNoParent.
-  unsigned die_count = unit->getNumDIEs();
-  parent_indices->resize(die_count);
-
-  // Stores the list of parent indices according to the current depth in the tree. At any given
-  // point, the parent index of the current node will be tree_stack.back(). inside_function should
-  // be set if this node or any parent node is a function.
-  struct StackEntry {
-    StackEntry(int d, unsigned i, bool f) : depth(d), index(i), inside_function(f) {}
-
-    int depth;
-    unsigned index;
-    bool inside_function;
-  };
-  std::vector<StackEntry> tree_stack;
-  tree_stack.reserve(8);
-  tree_stack.push_back(StackEntry(-1, kNoParent, false));
-
-  for (unsigned i = 0; i < die_count; i++) {
+  for (; !scanner->done(); scanner->Advance()) {
     // All optional variables need to be reset so we know which ones are set by the current DIE.
     is_declaration.reset();
     decl_unit_offset.reset();
     decl_global_offset.reset();
     is_main_subprogram.reset();
 
-    const llvm::DWARFDebugInfoEntry* die = unit->getDIEAtIndex(i).getDebugInfoEntry();
+    const llvm::DWARFDebugInfoEntry* die = scanner->Prepare();
     const llvm::DWARFAbbreviationDeclaration* abbrev = die->getAbbreviationDeclarationPtr();
     if (!abbrev)
       continue;
@@ -185,7 +165,7 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* u
       // disambiguated once the DIE is decoded below).
       ref_type = IndexNode::RefType::kType;
       should_index = true;
-    } else if (!tree_stack.back().inside_function && tag == DwarfTag::kVariable &&
+    } else if (!scanner->is_inside_function() && tag == DwarfTag::kVariable &&
                AbbrevHasLocation(abbrev)) {
       // Found variable storage outside of a function (variables inside functions are local so don't
       // get added to the global index).
@@ -217,29 +197,6 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* u
         main_functions->emplace_back(IndexNode::RefType::kFunction, die->getOffset());
       }
     }
-
-    // Fix up the parent tracking stack.
-    StackEntry& tree_stack_back = tree_stack.back();
-    int current_depth = static_cast<int>(die->getDepth());
-    if (current_depth == tree_stack_back.depth) {
-      // Common case: depth not changing. Just update the topmost item in the stack to point to the
-      // current node.
-      tree_stack_back.index = i;
-    } else {
-      // Tree changed. First check for moving up in the tree and pop the stack until we're at the
-      // parent of the current level (for going deeper in the tree this will do nothing), then add
-      // the current level.
-      while (tree_stack.back().depth >= current_depth)
-        tree_stack.pop_back();
-
-      tree_stack.push_back(StackEntry(
-          current_depth, i,
-          ref_type == IndexNode::RefType::kFunction || tree_stack.back().inside_function));
-    }
-
-    // Save parent info. The parent of this node is the one right before the
-    // current one (the last one in the stack).
-    (*parent_indices)[i] = (tree_stack.end() - 2)->index;
   }
 }
 
@@ -249,8 +206,8 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* u
 class SymbolStorageIndexer {
  public:
   SymbolStorageIndexer(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                       const std::vector<unsigned>& parent_indices, IndexNode* root)
-      : unit_(unit), parent_indices_(parent_indices), root_(root), decoder_(context, unit) {
+                       const DwarfDieScanner* scanner, IndexNode* root)
+      : unit_(unit), scanner_(scanner), root_(root), decoder_(context, unit) {
     decoder_.AddCString(llvm::dwarf::DW_AT_name, &name_);
 
     components_.reserve(8);
@@ -271,9 +228,8 @@ class SymbolStorageIndexer {
     unsigned index = unit_->getDIEIndex(die);
     while (true) {
       // Move up one level in the hierarchy.
-      FXL_DCHECK(index <= parent_indices_.size());
-      index = parent_indices_[index];
-      if (index == kNoParent) {
+      index = scanner_->GetParentIndex(index);
+      if (index == DwarfDieScanner::kNoParent) {
         // Reached the root. In practice this shouldn't happen since following the parent chain from
         // a function should always lead to the compile unit (handled below).
         break;
@@ -333,7 +289,7 @@ class SymbolStorageIndexer {
   }
 
   llvm::DWARFUnit* unit_;
-  const std::vector<unsigned>& parent_indices_;
+  const DwarfDieScanner* scanner_;
   IndexNode* root_;
 
   DwarfDieDecoder decoder_;
@@ -455,11 +411,12 @@ void Index::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
   // Find the things to index.
   std::vector<SymbolStorage> symbol_storage;
   symbol_storage.reserve(256);
-  std::vector<unsigned> parent_indices;
-  ExtractUnitIndexableEntries(context, unit, &symbol_storage, &parent_indices, &main_functions_);
+
+  DwarfDieScanner scanner(unit);
+  ExtractUnitIndexableEntries(context, unit, &symbol_storage, &scanner, &main_functions_);
 
   // Index each one.
-  SymbolStorageIndexer indexer(context, unit, parent_indices, &root_);
+  SymbolStorageIndexer indexer(context, unit, &scanner, &root_);
   for (const SymbolStorage& impl : symbol_storage)
     indexer.AddDIE(impl);
 

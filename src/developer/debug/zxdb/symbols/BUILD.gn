@@ -73,6 +73,8 @@ static_library("symbols") {
     "data_member.cc",
     "dwarf_die_decoder.cc",
     "dwarf_die_decoder.h",
+    "dwarf_die_scanner.cc",
+    "dwarf_die_scanner.h",
     "dwarf_expr_eval.cc",
     "dwarf_lang.cc",
     "dwarf_symbol_factory.cc",
