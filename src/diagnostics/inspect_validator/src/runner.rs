@@ -27,20 +27,19 @@ async fn run_trial(
     trial: &mut trials::Trial,
     _quirks: &trials::Quirks,
 ) -> Result<(), Error> {
-    println!("Starting run_trial, name {}, data {}", &trial.name, data.to_string());
     try_compare(data, puppet, &trial.name, -1, -1)?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
         for (action_number, action) in step.actions.iter_mut().enumerate() {
-            if let Err(e) = puppet.apply(action).await {
+            if let Err(e) = data.apply(action) {
                 println!(
-                    "Puppet-apply error in trial {}, step {}, action {}: {:?} ",
+                    "Local-apply error in trial {}, step {}, action {}: {:?} ",
                     trial.name, step_index, action_number, e
                 );
                 return Err(e);
             }
-            if let Err(e) = data.apply(action) {
+            if let Err(e) = puppet.apply(action).await {
                 println!(
-                    "Local-apply error in trial {}, step {}, action {}: {:?} ",
+                    "Puppet-apply error in trial {}, step {}, action {}: {:?} ",
                     trial.name, step_index, action_number, e
                 );
                 return Err(e);

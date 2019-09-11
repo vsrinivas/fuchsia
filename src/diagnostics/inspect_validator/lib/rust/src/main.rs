@@ -4,20 +4,75 @@
 
 #![feature(async_await)]
 
+/// Rust Puppet, receiving commands to drive the Rust Inspect library.
+///
+/// This code doesn't check for illegal commands such as deleting a node
+/// that doesn't exist. Illegal commands should be (and can be) filtered
+/// within the Validator program by running the command sequence against the
+/// local ("data::Data") implementation before sending them to the puppets.
 use {
-    failure::{Error, ResultExt},
+    failure::{bail, format_err, Error, ResultExt},
     fidl_test_inspect_validate::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::Inspector,
+    fuchsia_inspect::*,
     fuchsia_syslog as syslog,
     futures::prelude::*,
     log::*,
+    std::collections::HashMap,
 };
 
+enum Property {
+    String(StringProperty),
+    Int(IntProperty),
+}
+
+struct Actor {
+    inspector: Inspector,
+    nodes: HashMap<u32, Node>,
+    properties: HashMap<u32, Property>,
+}
+
+impl Actor {
+    fn act(&mut self, action: Action) -> Result<(), Error> {
+        match action {
+            Action::CreateNode(CreateNode { parent, id, name }) => {
+                self.nodes.insert(id, self.find_parent(parent)?.create_child(name));
+            }
+            Action::DeleteNode(DeleteNode { id }) => {
+                self.nodes.remove(&id);
+            }
+            Action::CreateIntProperty(CreateIntProperty { parent, id, name, value }) => {
+                self.properties
+                    .insert(id, Property::Int(self.find_parent(parent)?.create_int(name, value)));
+            }
+            Action::CreateStringProperty(CreateStringProperty { parent, id, name, value }) => {
+                self.properties.insert(
+                    id,
+                    Property::String(self.find_parent(parent)?.create_string(name, value)),
+                );
+            }
+            Action::DeleteProperty(DeleteProperty { id }) => {
+                self.properties.remove(&id);
+            }
+            unexpected => {
+                bail!("Unexpected action {:?}", unexpected);
+            }
+        };
+        Ok(())
+    }
+
+    fn find_parent<'a>(&'a self, id: u32) -> Result<&'a Node, Error> {
+        if id == 0 {
+            Ok(self.inspector.root())
+        } else {
+            self.nodes.get(&id).ok_or_else(|| format_err!("Node {} not found", id))
+        }
+    }
+}
+
 async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Error> {
-    #[allow(dead_code)]
-    let mut inspector_maybe = None;
+    let mut actor_maybe: Option<Actor> = None;
     while let Some(event) = stream.try_next().await? {
         match event {
             ValidateRequest::Initialize { params, responder } => {
@@ -28,16 +83,25 @@ async fn run_driver_service(mut stream: ValidateRequestStream) -> Result<(), Err
                 responder
                     .send(inspector.vmo_handle_for_test(), TestResult::Ok)
                     .context("responding to initialize")?;
-                inspector_maybe = Some(inspector);
+                actor_maybe = Some(Actor {
+                    inspector,
+                    nodes: HashMap::<u32, Node>::new(),
+                    properties: HashMap::<u32, Property>::new(),
+                });
             }
             ValidateRequest::Act { action, responder } => {
-                info!("Act was called: {:?}", action);
-                // TODO(CF-911): Implement these actions.
-                responder.send(if inspector_maybe.is_none() {
-                    TestResult::Illegal
+                let result = if let Some(a) = &mut actor_maybe {
+                    match a.act(action) {
+                        Ok(()) => TestResult::Ok,
+                        Err(error) => {
+                            warn!("Act saw illegal condition {:?}", error);
+                            TestResult::Illegal
+                        }
+                    }
                 } else {
-                    TestResult::Ok
-                })?;
+                    TestResult::Illegal
+                };
+                responder.send(result)?;
             }
         }
     }
@@ -60,7 +124,6 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     const MAX_CONCURRENT: usize = 1;
-    info!("Puppet about to wait for connection");
     let fut = fs.for_each_concurrent(MAX_CONCURRENT, |IncomingService::Validate(stream)| {
         run_driver_service(stream).unwrap_or_else(|e| error!("ERROR in puppet's main: {:?}", e))
     });

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::validate::{self};
+use super::validate::{self, ROOT_ID};
 
 pub struct Step {
     pub actions: Vec<validate::Action>,
@@ -124,12 +124,19 @@ fn basic_trial() -> Trial {
         name: "Basic Trial".into(),
         steps: vec![Step {
             actions: vec![
-                // TODO(cphoenix): Next CL, put these back and implement them in the
-                // puppet. This CL is just getting too long.
-                /*create_node!(parent: ROOT_ID, id: 1, name: "child"),
-                delete_node!( id: 1 ),*/
+                create_node!(parent: ROOT_ID, id: 1, name: "child"),
+                create_string_property!(parent: ROOT_ID, id:1, name: "str", value: "foo"),
+                create_int_property!(parent: ROOT_ID, id:2, name: "answer", value: 42),
+                create_node!(parent: ROOT_ID, id: 2, name: "grandchild"),
+                create_string_property!(parent: 1, id:3, name: "str2", value: "bar"),
+                create_int_property!(parent: 2, id:4, name: "question", value: 7),
+                delete_property!(id: 1),
+                delete_property!(id: 2),
+                delete_property!(id: 3),
+                delete_property!(id: 4),
+                delete_node!( id: 2),
+                delete_node!( id: 1 ),
             ],
-            //            metrics: vec![],
         }],
     }
 }
