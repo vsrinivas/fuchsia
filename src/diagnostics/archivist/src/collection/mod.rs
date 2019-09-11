@@ -10,16 +10,15 @@
 //! exposed externally over a stream for use by the Archivist.
 
 use {
+    crate::inspect,
     failure::{self, format_err, Error},
-    fidl_fuchsia_io::NodeInfo,
-    files_async, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_watch::{self, NodeType, PathEvent},
     fuchsia_zircon as zx,
+    futures::future::{join_all, BoxFuture},
     futures::{channel::mpsc, sink::SinkExt, stream::BoxStream, FutureExt, StreamExt},
-    io_util,
     std::collections::HashMap,
     std::path::{Path, PathBuf},
-    std::sync::{Arc, Mutex},
 };
 
 /// This module supports watching the Fuchsia Component Hub structure for changes that are
@@ -59,25 +58,23 @@ pub struct ComponentEventData {
     pub component_id: String,
 
     /// Extra data about this event (to be stored in extra files in the archive).
-    pub extra_data: Option<ExtraDataMap>,
+    pub component_data_map: Option<DataMap>,
 }
 
-pub type ExtraDataMap = HashMap<String, ExtraData>;
+pub type DataMap = HashMap<String, Data>;
 
-/// Extra data associated with a component event.
+/// Data associated with a component.
 ///
-/// This extra data is stored in the archive adjacent to the log file keyed by some name.
-/// For example, components that exit may make an Inspect VMO available before they exit. A
-/// reference to that data is maintains and written to disk along with ComponentEvent::Stop.
+/// This data is stored by data collectors and
+/// passed by the collectors to processors.
 ///
 /// This may be extended to new types of data.
 #[derive(Debug, Eq, PartialEq)]
-pub enum ExtraData {
+pub enum Data {
     /// Empty data, for testing.
     Empty,
 
-    /// A VMO containing data associated with the event. The contents of the VMO should be written
-    /// to disk.
+    /// A VMO containing data associated with the event.
     Vmo(zx::Vmo),
 }
 
@@ -185,7 +182,7 @@ pub fn path_to_event_data(path: impl AsRef<Path>) -> Result<ComponentEventData, 
             realm_path,
             component_name: current_component_name.unwrap(),
             component_id: current_instance_id.unwrap(),
-            extra_data: None,
+            component_data_map: None,
         })
     } else {
         Err(format_err!("process did not terminate at a component"))
@@ -198,86 +195,75 @@ pub type ComponentEventStream = BoxStream<'static, ComponentEvent>;
 /// Channel type for sending ComponentEvents.
 type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
 
-/// ExtraDataCollector holds any interesting information exposed by a component.
-#[derive(Clone, Debug)]
-struct ExtraDataCollector {
-    /// The extra data.
-    ///
-    /// This is wrapped in an Arc Mutex so it can be shared between multiple data sources.
-    /// The take_data method may be called once to retrieve the data.
-    extra_data: Arc<Mutex<Option<ExtraDataMap>>>,
+pub trait DataCollector {
+    // Processes all previously collected data from the configured sources,
+    // provides the returned DataMap with ownership of that data, returns the
+    // map, and clears the collector state.
+    //
+    // If no data has yet been collected, or if the data had previously been
+    // collected, then the return value will be None.
+    fn take_data(self: Box<Self>) -> Option<DataMap>;
+
+    // Triggers the process of collection, causing the collector to find and stage
+    // all data it is configured to collect for transfer of ownership by the next
+    // take_data call.
+    fn collect(self: Box<Self>, path: PathBuf) -> BoxFuture<'static, Result<(), Error>>;
 }
 
-impl ExtraDataCollector {
-    /// Construct a new ExtraDataCollector, wrapped by an Arc<Mutex>.
-    fn new() -> Self {
-        ExtraDataCollector { extra_data: Arc::new(Mutex::new(Some(ExtraDataMap::new()))) }
-    }
+/// ExtraDataCollector is a composed data collector, combining multiple
+/// data-collectors to retrieve [Data] from multiple sources.
+struct ExtraDataCollector {
+    data_collectors: Vec<Box<dyn DataCollector + Send>>,
+}
 
+impl DataCollector for ExtraDataCollector {
     /// Takes the contained extra data. Additions following this have no effect.
-    fn take_data(self) -> Option<ExtraDataMap> {
-        self.extra_data.lock().unwrap().take()
-    }
-
-    /// Adds a key value to the contained vector if it hasn't been taken yet. Otherwise, does
-    /// nothing.
-    fn maybe_add(&mut self, key: String, value: ExtraData) {
-        let mut data = self.extra_data.lock().unwrap();
-        match data.as_mut() {
-            Some(map) => {
-                map.insert(key, value);
-            }
-            _ => {}
-        };
+    fn take_data(mut self: Box<Self>) -> Option<DataMap> {
+        let merged_map = self.data_collectors.drain(0..).fold(
+            DataMap::new(),
+            |mut accumulator, new_collector| {
+                match new_collector.take_data() {
+                    Some(new_data_map) => accumulator.extend(new_data_map),
+                    None => (),
+                }
+                accumulator
+            },
+        );
+        return Some(merged_map);
     }
 
     /// Collect extra data stored under the given path.
     ///
-    /// This currently only does a single pass over the directory to find information.
-    async fn collect(mut self, path: PathBuf) -> Result<(), Error> {
-        let proxy = match io_util::open_directory_in_namespace(
-            &path.to_string_lossy(),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        ) {
-            Ok(proxy) => proxy,
-            Err(e) => {
-                return Err(format_err!("Failed to open out directory at {:?}: {}", path, e));
-            }
-        };
+    /// Iterates over all data_collectors and applies collect onto them.
+    fn collect(mut self: Box<Self>, path: PathBuf) -> BoxFuture<'static, Result<(), Error>> {
+        async move {
+            // TODO(lukenicholson): Can we process these async results to see if
+            // any of the collections failed and return that failure?
+            let results: Vec<BoxFuture<'static, Result<(), Error>>> = self
+                .data_collectors
+                .drain(0..)
+                .map(|collector| collector.collect(path.clone()))
+                .collect();
 
-        for entry in files_async::readdir_recursive(&proxy).await?.into_iter() {
-            // We are only currently interested in inspect files.
-            if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
-                continue;
-            }
+            let collection_succeeded = join_all(results)
+                .map(|collection_results| {
+                    collection_results.iter().fold(
+                        true,
+                        |all_collections_passed, collection_result| match collection_result {
+                            Ok(_) => all_collections_passed && true,
+                            _ => false,
+                        },
+                    )
+                })
+                .await;
 
-            let path = path.join(entry.name);
-            let proxy = match io_util::open_file_in_namespace(
-                &path.to_string_lossy(),
-                io_util::OPEN_RIGHT_READABLE,
-            ) {
-                Ok(proxy) => proxy,
-                Err(_) => {
-                    continue;
-                }
-            };
-
-            // Obtain the vmo backing any VmoFiles.
-            match proxy.describe().await {
-                Ok(nodeinfo) => match nodeinfo {
-                    NodeInfo::Vmofile(vmofile) => {
-                        self.maybe_add(
-                            path.file_name().unwrap().to_string_lossy().to_string(),
-                            ExtraData::Vmo(vmofile.vmo),
-                        );
-                    }
-                    _ => {}
-                },
-                Err(_) => {}
+            if collection_succeeded {
+                return Ok(());
+            } else {
+                return Err(format_err!("Error collecting data."));
             }
         }
-
-        Ok(())
+            .boxed()
     }
 }
 
@@ -292,7 +278,8 @@ pub struct HubCollector {
     /// A channel passed to watchers for them to announce ComponentEvents.
     component_event_sender: ComponentEventChannel,
 
-    /// Map of component paths to extra data that may have been collected for that component.
+    /// Map of component paths to a vector of DataCollectors that have data about the
+    /// component.
     component_extra_data: HashMap<PathBuf, Option<ExtraDataCollector>>,
 }
 
@@ -349,8 +336,8 @@ impl HubCollector {
         path: PathBuf,
         mut data: ComponentEventData,
     ) -> Result<(), Error> {
-        data.extra_data = match self.component_extra_data.remove(&path) {
-            Some(Some(data_ptr)) => data_ptr.take_data(),
+        data.component_data_map = match self.component_extra_data.remove(&path) {
+            Some(Some(data_collector)) => Box::new(data_collector).take_data(),
             _ => None,
         };
 
@@ -359,22 +346,43 @@ impl HubCollector {
     }
 
     fn add_out_watcher<'a>(&'a mut self, path: PathBuf) {
-        let collector = ExtraDataCollector::new();
+        // Clone the original collector to create a conceptual channel between the
+        // producer of data and the consumer. This relies on the collector managing its
+        // data with an ARC.
+        let inspect_data_collector = Box::new(inspect::InspectDataCollector::new());
+        let inspect_data_receiver = inspect_data_collector.clone();
 
-        let collector_clone = collector.clone();
+        // NOTE: If you are adding a DataCollector to the ExtraDataCollector
+        //       be aware that your DataCollector must have a shared data-source
+        //       for which calling `collect` in one instance will result in updated
+        //       data available in `take_data` of the other instance.
+        let extra_data_collector =
+            ExtraDataCollector { data_collectors: vec![inspect_data_collector] };
+
+        let extra_data_receiver =
+            ExtraDataCollector { data_collectors: vec![inspect_data_receiver] };
+
         let component_path = match path.parent() {
             Some(parent) => parent,
             None => {
                 return;
             }
         };
+
+        // Store the receiving end of the extra data collectors in the
+        // component map, to be retrieved by the archivist when the
+        // component dies.
         self.component_extra_data
             .entry(component_path.to_path_buf())
-            .and_modify(move |v| *v = Some(collector_clone));
+            .and_modify(|v| *v = Some(extra_data_receiver));
 
         // The incoming path is relative to the hub, we need to rejoin with the hub path to get an
         // absolute path.
-        fasync::spawn(collector.collect(self.path.join(path)).then(|_| futures::future::ready(())));
+        fasync::spawn(
+            Box::new(extra_data_collector)
+                .collect(self.path.join(path))
+                .then(|_| futures::future::ready(())),
+        );
     }
 
     fn check_if_out_directory(path: &Path) -> Option<ComponentEventData> {
@@ -465,26 +473,26 @@ mod tests {
                 fn [<make_ $fn_name>](
                     component_name: impl Into<String>,
                     component_id: impl Into<String>,
-                    extra_data: Option<ExtraDataMap>,
+                    component_data_map: Option<DataMap>,
                 ) -> ComponentEvent{
                     ComponentEvent::$type(ComponentEventData {
                         realm_path: vec![].into(),
                         component_name: component_name.into(),
                         component_id: component_id.into(),
-                        extra_data,
+                        component_data_map,
                     })
                 }
                 fn [<make_ $fn_name _with_realm>](
                     realm_path: impl Into<Vec<String>>,
                     component_name: impl Into<String>,
                     component_id: impl Into<String>,
-                    extra_data: Option<ExtraDataMap>,
+                    component_data_map: Option<DataMap>,
                 ) -> ComponentEvent{
                     ComponentEvent::$type(ComponentEventData {
                         realm_path: realm_path.into().into(),
                         component_name: component_name.into(),
                         component_id: component_id.into(),
-                        extra_data,
+                        component_data_map,
                     })
                 }
             }
@@ -536,18 +544,26 @@ mod tests {
             let mut executor = fasync::Executor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let collector = ExtraDataCollector::new();
+                let inspect_collector = Box::new(inspect::InspectDataCollector::new());
+                let inspect_receiver = inspect_collector.clone();
 
-                collector.clone().collect(path).await.unwrap();
+                let extra_data_collector =
+                    ExtraDataCollector { data_collectors: vec![inspect_collector] };
 
-                let extra_data = collector.take_data().expect("collector missing data");
+                let extra_data_receiver =
+                    ExtraDataCollector { data_collectors: vec![inspect_receiver] };
+                Box::new(extra_data_collector).collect(path).await.unwrap();
+
+                let extra_data =
+                    Box::new(extra_data_receiver).take_data().expect("collector missing data");
+
                 assert_eq!(1, extra_data.len());
 
                 let extra = extra_data.get("root.inspect");
                 assert!(extra.is_some());
 
                 match extra.unwrap() {
-                    ExtraData::Vmo(vmo) => {
+                    Data::Vmo(vmo) => {
                         let mut buf = [0u8; 4];
                         vmo.read(&mut buf, 0).expect("reading vmo");
                         assert_eq!(b"test", &buf);
@@ -660,7 +676,7 @@ mod tests {
                     realm_path: vec![].into(),
                     component_name: "my_component.cmx".to_string(),
                     component_id: "1".to_string(),
-                    extra_data: None,
+                    component_data_map: None,
                 }),
             ),
             ("c/my_component.cmx/1/out", None),
@@ -674,7 +690,7 @@ mod tests {
                     realm_path: vec![].into(),
                     component_name: "running.cmx".to_string(),
                     component_id: "2".to_string(),
-                    extra_data: None,
+                    component_data_map: None,
                 }),
             ),
             ("r", None),
@@ -688,7 +704,7 @@ mod tests {
                     realm_path: vec!["sys".to_string()].into(),
                     component_name: "component.cmx".to_string(),
                     component_id: "1".to_string(),
-                    extra_data: None,
+                    component_data_map: None,
                 }),
             ),
             (
@@ -697,7 +713,7 @@ mod tests {
                     realm_path: vec!["sys".to_string()].into(),
                     component_name: "run.cmx".to_string(),
                     component_id: "2".to_string(),
-                    extra_data: None,
+                    component_data_map: None,
                 }),
             ),
             (
@@ -712,7 +728,7 @@ mod tests {
                     .into(),
                     component_name: "temp.cmx".to_string(),
                     component_id: "0".to_string(),
-                    extra_data: None,
+                    component_data_map: None,
                 }),
             ),
         ];

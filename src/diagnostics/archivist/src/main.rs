@@ -22,6 +22,7 @@ mod archive;
 mod collection;
 mod configs;
 mod diagnostics;
+mod inspect;
 mod logs;
 mod selectors;
 
@@ -186,11 +187,11 @@ async fn process_event(
         event_data.component_id,
     );
 
-    if let Some(extra) = event_data.extra_data {
-        for (key, object) in extra {
+    if let Some(data_map) = event_data.component_data_map {
+        for (path, object) in data_map {
             match object {
-                collection::ExtraData::Empty => {}
-                collection::ExtraData::Vmo(vmo) => {
+                collection::Data::Empty => {}
+                collection::Data::Vmo(vmo) => {
                     let mut contents = vec![0u8; vmo.get_size()? as usize];
                     vmo.read(&mut contents[..], 0)?;
 
@@ -207,7 +208,7 @@ async fn process_event(
                     }
                     contents.resize(last_nonzero, 0);
 
-                    log = log.add_event_file(key, &contents);
+                    log = log.add_event_file(path, &contents);
                 }
             }
         }
