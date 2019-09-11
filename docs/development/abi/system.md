@@ -97,7 +97,7 @@ which conventionally contains services listed by their fully qualified discovery
 name. Similarly, by convention, the `pkg` entry in this namespace is mapped to
 the package from which the component was run.
 
-#### Outgoing directory
+#### Outgoing directory {#outgoing_directory}
 
 A component can serve an outgoing directory that lets the system and other
 components interact with the component. For example, the component exposes
