@@ -284,7 +284,7 @@ void AudioRendererImpl::UnlinkThrottle() {
 
 void AudioRendererImpl::UnderflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
                                           zx_duration_t underflow_duration) {
-  TRACE_INSTANT("audio", "AudioRendererImpl::UnderflowOccurred", TRACE_SCOPE_GLOBAL);
+  TRACE_INSTANT("audio", "AudioRendererImpl::UnderflowOccurred", TRACE_SCOPE_PROCESS);
   uint16_t underflow_count = std::atomic_fetch_add<uint16_t>(&underflow_count_, 1u);
 
   if constexpr (kLogRenderUnderflow) {
@@ -316,7 +316,7 @@ void AudioRendererImpl::UnderflowOccurred(int64_t frac_source_start, int64_t fra
 
 void AudioRendererImpl::PartialUnderflowOccurred(int64_t frac_source_offset,
                                                  int64_t dest_mix_offset) {
-  TRACE_INSTANT("audio", "AudioRendererImpl::PartialUnderflowOccurred", TRACE_SCOPE_GLOBAL);
+  TRACE_INSTANT("audio", "AudioRendererImpl::PartialUnderflowOccurred", TRACE_SCOPE_PROCESS);
 
   // Shifts by less than four source frames do not necessarily indicate underflow. A shift of this
   // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion ratio

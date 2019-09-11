@@ -8,18 +8,9 @@ import("//build/test/test_package.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 declare_args() {
-  # Set to |true| to enable collecting execution traces of audio_core.
-  #
-  # Ex:
-  #   $ fx set $TARGET \
-  #       --args="audio_core_trace_enabled=true" \
-  #       --with-base=//garnet/packages/prod:tracing
-  #   ... build and deploy ...
-  #   $ fx traceutil record \
-  #       -categories audio \
-  #       -duration 10s \
-  #       -buffer-size 64
-  audio_core_trace_enabled = false
+  # Set to |true| to enable collecting execution traces of audio_core, or |false| to remove all
+  # tracing overhead.
+  audio_core_trace_enabled = true
 }
 
 config("audio_core_config") {

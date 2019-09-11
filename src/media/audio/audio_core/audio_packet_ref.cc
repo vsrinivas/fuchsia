@@ -25,14 +25,14 @@ AudioPacketRef::AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
       end_pts_(start_pts + frac_frame_len),
       dispatcher_(callback_dispatcher) {
   TRACE_DURATION("audio", "AudioPacketRef::AudioPacketRef");
-  TRACE_FLOW_BEGIN("audio", "ProcessPacket", nonce_);
+  TRACE_FLOW_BEGIN("audio.debug", "process_packet", nonce_);
   FXL_DCHECK(dispatcher_ != nullptr);
   FXL_DCHECK(vmo_ref_ != nullptr);
 }
 
 void AudioPacketRef::fbl_recycle() {
   TRACE_DURATION("audio", "AudioPacketRef::fbl_recycle");
-  TRACE_FLOW_END("audio", "ProcessPacket", nonce_);
+  TRACE_FLOW_END("audio.debug", "process_packet", nonce_);
 
   if (callback_) {
     async::PostTask(dispatcher_, std::move(callback_));

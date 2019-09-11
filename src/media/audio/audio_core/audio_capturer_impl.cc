@@ -939,7 +939,7 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
 
 void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
                                          zx_duration_t overflow_duration) {
-  TRACE_INSTANT("audio", "AudioCapturerImpl::OverflowOccurred", TRACE_SCOPE_GLOBAL);
+  TRACE_INSTANT("audio", "AudioCapturerImpl::OverflowOccurred", TRACE_SCOPE_PROCESS);
   uint16_t overflow_count = std::atomic_fetch_add<uint16_t>(&overflow_count_, 1u);
 
   if constexpr (kLogCaptureOverflow) {
@@ -970,7 +970,7 @@ void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac
 
 void AudioCapturerImpl::PartialOverflowOccurred(int64_t frac_source_offset,
                                                 int64_t dest_mix_offset) {
-  TRACE_INSTANT("audio", "AudioCapturerImpl::PartialOverflowOccurred", TRACE_SCOPE_GLOBAL);
+  TRACE_INSTANT("audio", "AudioCapturerImpl::PartialOverflowOccurred", TRACE_SCOPE_PROCESS);
 
   // Slips by less than four source frames do not necessarily indicate overflow. A slip of this
   // duration can be caused by the round-to-nearest-dest-frame step, when our rate-conversion
