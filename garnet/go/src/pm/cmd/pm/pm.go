@@ -113,7 +113,7 @@ func doMain() int {
 		err = nil
 
 	case "serve":
-		err = serve.Run(cfg, flag.Args()[1:])
+		err = serve.Run(cfg, flag.Args()[1:], nil)
 
 	case "snapshot":
 		err = snapshot.Run(cfg, flag.Args()[1:])

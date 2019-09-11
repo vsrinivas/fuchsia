@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -91,14 +90,12 @@ func TestServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	port := getPort()
-	listen := fmt.Sprintf("127.0.0.1:%d", port)
-
+	baseURLchan := make(chan string)
 	var w sync.WaitGroup
 	w.Add(1)
 	go func() {
 		defer w.Done()
-		err := Run(cfg, []string{"-l", listen, "-repo", repoDir, "-p", manifestListPath})
+		err := Run(cfg, []string{"-l", "127.0.0.1:0", "-repo", repoDir, "-p", manifestListPath}, baseURLchan)
 		if err != nil && err != http.ErrServerClosed {
 			t.Fatal(err)
 		}
@@ -107,19 +104,7 @@ func TestServer(t *testing.T) {
 		server.Close()
 		w.Wait()
 	}()
-	baseURL := fmt.Sprintf("http://%s", listen)
-
-	// without restructuring the runtime significantly, there's not a good way to
-	// detect the server is up, so we try a few times and fail if there are no
-	// successes.
-	for i := 0; i < 10; i++ {
-		_, err := http.Get(baseURL + "/")
-		if err != nil {
-			time.Sleep(time.Second / 10)
-			continue
-		}
-		break
-	}
+	baseURL := fmt.Sprintf("http://%s", <-baseURLchan)
 
 	t.Run("serves static index", func(t *testing.T) {
 		res, err := http.Get(baseURL + "/")
@@ -316,14 +301,4 @@ func hasTarget(baseURL, target string) bool {
 	}
 	_, found := m.Signed.Targets[target]
 	return found
-}
-
-// get a free port, with a very small chance of race
-func getPort() int {
-	s, err := net.ListenTCP("tcp", &net.TCPAddr{net.IPv4(127, 0, 0, 1), 0, ""})
-	if err != nil {
-		panic(err)
-	}
-	defer s.Close()
-	return s.Addr().(*net.TCPAddr).Port
 }

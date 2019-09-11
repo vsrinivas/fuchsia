@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -66,7 +67,7 @@ func ParseFlags(args []string) error {
 	return nil
 }
 
-func Run(cfg *build.Config, args []string) error {
+func Run(cfg *build.Config, args []string, addrChan chan string) error {
 	if err := ParseFlags(args); err != nil {
 		return err
 	}
@@ -175,12 +176,6 @@ func Run(cfg *build.Config, args []string) error {
 	}, *encryptionKey)
 	http.Handle("/config.json", cs)
 
-	if !*quiet {
-		fmt.Printf("%s [pm serve] serving %s at http://%s\n",
-			time.Now().Format("2006-01-02 15:04:05"), config.RepoDir, *listen)
-	}
-
-	server.Addr = *listen
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.RequestURI, "/blobs") && strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			gw := &pmhttp.GZIPWriter{
@@ -199,5 +194,19 @@ func Run(cfg *build.Config, args []string) error {
 		}
 	})
 
-	return server.ListenAndServe()
+	listener, err := net.Listen("tcp", *listen)
+	if err != nil {
+		return err
+	}
+
+	addr := listener.Addr().String()
+	if addrChan != nil {
+		addrChan <- addr
+	}
+	if !*quiet {
+		fmt.Printf("%s [pm serve] serving %s at http://%s\n",
+			time.Now().Format("2006-01-02 15:04:05"), config.RepoDir, addr)
+	}
+
+	return server.Serve(listener)
 }
