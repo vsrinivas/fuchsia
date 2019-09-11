@@ -18,6 +18,8 @@
 // pretty much exactly corresponding to the grammar of a single fidl
 // file. File is the root of the tree, and consists of lists of
 // Declarations, and so on down to individual SourceLocations.
+// See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#compiler_internals
+// for additional context
 
 // Each node owns its children via unique_ptr and vector. All tokens
 // here, like everywhere in the fidl compiler, are backed by a string

@@ -20,6 +20,8 @@ namespace fidl {
 // The lexer does not own the data it operates on. It merely takes a
 // std::string_view and produces a stream of tokens and possibly a failure
 // partway through.
+// See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_lexing
+// for additional context
 class Lexer {
  public:
   // The Lexer assumes the final character is 0. This substantially

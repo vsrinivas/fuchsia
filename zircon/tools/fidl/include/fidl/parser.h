@@ -15,6 +15,8 @@
 
 namespace fidl {
 
+// See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_parsing
+// for additional context
 class Parser {
  public:
   Parser(Lexer* lexer, ErrorReporter* error_reporter);

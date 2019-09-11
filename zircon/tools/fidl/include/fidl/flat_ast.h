@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#compilation
+// for documentation
+
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FLAT_AST_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_FLAT_AST_H_
 

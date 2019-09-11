@@ -22,6 +22,9 @@
 // - Names have been unnested and fully qualified
 // - All data structure sizes and layouts have been computed
 
+// See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#c_family_runtime
+// for additional context
+
 namespace fidl {
 namespace coded {
 
