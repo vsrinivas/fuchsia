@@ -304,15 +304,8 @@ async fn do_destroy(model: Model, realm: Arc<Realm>) -> Result<(), ModelError> {
     // Shutdown is complete, now destroy the component. This involves marking all children
     // "deleting", destroying them all, and finishing the action.
     let child_realms = {
-        let mut state = realm.lock_state().await;
-        let state = state.get_mut();
-        let live_monikers = {
-            let res: Vec<_> = state.live_child_realms().map(|(m, _)| m.clone()).collect();
-            res
-        };
-        for m in live_monikers {
-            state.mark_child_realm_deleting(&m);
-        }
+        let state = realm.lock_state().await;
+        let state = state.get();
         state.all_child_realms().clone()
     };
     let mut futures = vec![];
