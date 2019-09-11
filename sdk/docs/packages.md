@@ -6,87 +6,141 @@ A package is the unit of installation on a Fuchsia system.
 
 _To be added..._
 
-## Building a package
+## Working with packages
 
-The majority of this process relies on a tool called `pm` which is available
-under `//tools`.
+The majority of these instructions rely on the `pm` tool which is available
+in `//tools`.
 
-This document describes the various steps to build a package. For more details about each step, see `pm`'s help messages.  We will use `$PACKAGE_DIR` to denote a staging dir where the package is going to be built.
+This document describes the various steps to build and install a package:
 
-First, **(1)** create the package ID file:
-```
-pm -o $PACKAGE_DIR -n $PACKAGE_NAME init
-```
+* [Build a package](#build-package)
+* [Publish a package](#publish-package)
+* [Install a package](#install-package)
+* [Run a component from an installed package](#run-component)
 
-The package ID file will be generated as `$PACKAGE_DIR/meta/package` and will contain the following data:
-```
-{
-  "name": "<package name>",
-  "version": "<package version>"
-}
-```
+For more details about each step, see `pm`'s help messages.
 
-The next step is to **(2)** create a manifest file `$MANIFEST_FILE` that will provide the path to our new package ID file.  Each line of a manifest file maps a single file that will be contained in the package and is in the form `destination=source` where:
-* `destination` is the path to the file in the final package
-* `source` is the path to the file on the host machine
+### Build a package {#build-package}
 
-The manifest file must include at least one line for the package ID file like
-this:
-```
-meta/package=<package ID file>
-```
+To build a package:
 
-The next step is to **(3)** generate the package metadata archive:
-```
-pm -o $PACKAGE_DIR -m $MANIFEST_FILE build
-```
-This will create the metadata archive at `$PACKAGE_DIR/meta.far`.  Next, **(4)** create the package archive `$PACKAGE_ARCHIVE`:
-```
-pm -o $PACKAGE_DIR -m $MANIFEST_FILE archive
-```
+1. Create the package ID file:
 
-This will create the package archive as `$PACKAGE_DIR/$PACKAGE_NAME-0.far`.  Note that this step needs to be re-run if the contents of the package change.
+   Note: `$PACKAGE_DIR` is a staging directory where the package
+   is built.
 
-## Publishing a package
+   ```
+   pm -o $PACKAGE_DIR -n $PACKAGE_NAME init
+   ```
 
-**(5)** initialize a directory, $REPO, that will serve as a packages repository:
-```
-pm newrepo -repo $REPO
-```
-This will create a directory structure at `$REPO` that is ready for publishing packages.  The next step is to **(6)** publish packages to that repository:
-```
-pm publish -a -r $REPO -f $PACKAGE_ARCHIVE
-```
+   The package ID file is generated as `$PACKAGE_DIR/meta/package` and contains
+   the following data:
 
-`pm publish` will parse `$PACKAGE_ARCHIVE` and publish it in the provided `$REPO` directory.
+   ```
+   {
+     "name": "<package name>",
+     "version": "<package version>"
+   }
+   ```
 
-Running this command multiple times with different package archives will publish those packages to the same repository.  Similarly, new versions of a same package can be published using the same command.
+2. Create a manifest file, `$MANIFEST_FILE`, that provides the path to
+   the package ID file.  Each line of a manifest file maps a single file that
+   is contained in the package and is in the form of `destination=source` where:
 
-## Installing a package
+   * `destination` is the path to the file in the final package
+   * `source` is the path to the file on the host machine
 
-**(7)** start the package server with:
-```
-pm serve -repo $REPO
-```
+   The manifest file must include at least one line for the package ID file like
+   this:
 
-This will start an amber server on the host machine at port `8083` by default.  Now, **on the target device** **(8)** add the new repository as an update source run `amberctl`:
-```
-amberctl add_repo_config -n $REPO -f http://$HOST_ADDRESS:8083/config.json
-```
+   ```
+   meta/package=<package ID file>
+   ```
 
-## Running a component from an installed package
-To run a component published in a package, **on the target device** **(9)** run the following command:
-```
-run $COMPONENT_URI
-```
+3. Generate the package metadata archive:
 
-where `$COMPONENT_URI` is of the form:
-```
-fuchsia-pkg://${REPO}/${PACKAGE_NAME}#meta/<component name>.cmx
-```
+   ```
+   pm -o $PACKAGE_DIR -m $MANIFEST_FILE build
+   ```
 
-The preceding installation and running steps will:
-1. Install the package providing the component if it is not already on the system.
-1. Check for updates to the package and install them if available.
-1. Run the requested component.
+   This creates  the metadata archive at `$PACKAGE_DIR/meta.far`.
+
+4. Create the package archive `$PACKAGE_ARCHIVE`:
+
+   ```
+   pm -o $PACKAGE_DIR -m $MANIFEST_FILE archive
+   ```
+
+   This creates the package archive as `$PACKAGE_DIR/$PACKAGE_NAME-0.far`. If
+   the contents of the package change, you need to re-run this command.
+
+You have succesfully built a package. You are now ready to publish the package.
+
+### Publish a package {#publish-package}
+
+To publish a package:
+
+1. Initialize a directory, `$REPO`, that serves as a packages repository:
+
+   ```
+   pm newrepo -repo $REPO
+   ```
+
+   This creates a directory structure at `$REPO` that is ready for
+   publishing packages.
+
+2.  Publish packages to the repository `$REPO`:
+
+   ```
+   pm publish -a -r $REPO -f $PACKAGE_ARCHIVE
+   ```
+
+   `pm publish` parses `$PACKAGE_ARCHIVE` and publishes the package in the
+   provided `$REPO` directory. If you run this command multiple times with
+   different package archives, `pm publish` publish the packages to the same
+   repository. New versions of a same package can be published using the same
+   command.
+
+You have successfully published a package. You are now ready to install a
+package.
+
+### Install a package {#install-package}
+
+To install a package:
+
+1. Start the package server:
+
+   ```
+   pm serve -repo $REPO
+   ```
+
+   By default, this starts an amber server on the host machine at port `8083`.
+
+2. (On the target device) Add the new repository as an update source with
+   `amberctl`:
+
+   ```
+   amberctl add_repo_config -n $REPO -f http://$HOST_ADDRESS:8083/config.json
+   ```
+
+   If the component is not already on the system, `amberctl` installs the package.
+   If the package already exists, `amberctl` installs any package updates.
+
+You have successfully installed or updated the package. You are now ready to
+run a component from the installed package.
+
+### Run a component from an installed package {#run-component}
+
+To run a component published in a package:
+
+1. (On the target device) Run:
+
+  Note: `$COMPONENT_URI` is in this form
+  `fuchsia-pkg://${REPO}/${PACKAGE_NAME}#meta/<component name>.cmx`.
+
+  ```
+  run $COMPONENT_URI
+  ```
+
+You have succesfully run a component from the installed package.
 
