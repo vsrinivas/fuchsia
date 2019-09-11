@@ -251,7 +251,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
 
   // Create local Crashpad report.
   std::unique_ptr<crashpad::CrashReportDatabase::NewReport> crashpad_report;
-  if (CrashReportDatabase::OperationStatus status =
+  if (const CrashReportDatabase::OperationStatus status =
           database_->PrepareNewCrashReport(&crashpad_report);
       status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error creating local Crashpad report (" << status << ")";
@@ -273,7 +273,7 @@ fit::promise<void> CrashpadAgent::File(fuchsia::feedback::CrashReport report) {
 
         // Finish new local crash report.
         crashpad::UUID local_report_id;
-        if (CrashReportDatabase::OperationStatus status =
+        if (const CrashReportDatabase::OperationStatus status =
                 database_->FinishedWritingCrashReport(std::move(crashpad_report), &local_report_id);
             status != crashpad::CrashReportDatabase::kNoError) {
           FX_LOGS(ERROR) << "error writing local Crashpad report (" << status << ")";
@@ -298,18 +298,21 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
     FX_LOGS(INFO) << "upload to remote crash server disabled. Local crash report, ID "
                   << local_report_id.ToString() << ", available under "
                   << config_.crashpad_database.path;
-    database_->SkipReportUpload(local_report_id,
-                                crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
+    if (const CrashReportDatabase::OperationStatus status = database_->SkipReportUpload(
+            local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadsDisabled);
+        status != crashpad::CrashReportDatabase::kNoError) {
+      FX_LOGS(WARNING) << "error skipping local crash report upload (" << status << ")";
+    }
     return true;
   }
 
   // Read local crash report as an "upload" report.
   std::unique_ptr<const crashpad::CrashReportDatabase::UploadReport> report;
-  const crashpad::CrashReportDatabase::OperationStatus database_status =
-      database_->GetReportForUploading(local_report_id, &report);
-  if (database_status != crashpad::CrashReportDatabase::kNoError) {
+  if (const CrashReportDatabase::OperationStatus status =
+          database_->GetReportForUploading(local_report_id, &report);
+      status != crashpad::CrashReportDatabase::kNoError) {
     FX_LOGS(ERROR) << "error loading local crash report, ID " << local_report_id.ToString() << " ("
-                   << database_status << ")";
+                   << status << ")";
     return false;
   }
 
@@ -333,8 +336,11 @@ bool CrashpadAgent::UploadReport(const crashpad::UUID& local_report_id,
   if (!crash_server_->MakeRequest(content_headers, http_multipart_builder.GetBodyStream(),
                                   &server_report_id)) {
     report.reset();
-    database_->SkipReportUpload(local_report_id,
-                                crashpad::Metrics::CrashSkippedReason::kUploadFailed);
+    if (const CrashReportDatabase::OperationStatus status = database_->SkipReportUpload(
+            local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
+        status != crashpad::CrashReportDatabase::kNoError) {
+      FX_LOGS(WARNING) << "error skipping local crash report upload (" << status << ")";
+    }
     FX_LOGS(ERROR) << "error uploading local crash report, ID " << local_report_id.ToString();
     return false;
   }
