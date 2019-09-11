@@ -5,7 +5,10 @@
 #ifndef ZIRCON_SYSTEM_DEV_DISPLAY_GOLDFISH_DISPLAY_DISPLAY_H_
 #define ZIRCON_SYSTEM_DEV_DISPLAY_GOLDFISH_DISPLAY_DISPLAY_H_
 
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/pmt.h>
 #include <threads.h>
+#include <zircon/types.h>
 
 #include <map>
 
@@ -17,9 +20,6 @@
 #include <ddktl/protocol/goldfish/pipe.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/pmt.h>
-#include <zircon/types.h>
 
 namespace goldfish {
 
@@ -32,6 +32,7 @@ class Display : public DisplayType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   explicit Display(zx_device_t* parent);
+
   ~Display();
 
   zx_status_t Bind();
@@ -60,6 +61,26 @@ class Display : public DisplayType,
                                                                   uint32_t collection);
   zx_status_t DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
                                                               uint32_t* out_stride);
+
+  // TESTING ONLY
+  void CreateDevices(int num_devices) {
+    constexpr uint32_t dummy_width = 1024;
+    constexpr uint32_t dummy_height = 768;
+    constexpr uint32_t dummy_fr = 60;
+    ZX_DEBUG_ASSERT(devices_.empty());
+    for (int i = 0; i < num_devices; i++) {
+      Device device;
+      device.width = dummy_width;
+      device.height = dummy_height;
+      device.refresh_rate_hz = dummy_fr;
+      devices_[i + 1] = device;
+    }
+  }
+  void RemoveDevices() {
+    ZX_DEBUG_ASSERT(!devices_.empty());
+    devices_.clear();
+    ZX_DEBUG_ASSERT(devices_.empty());
+  }
 
  private:
   struct ColorBuffer {

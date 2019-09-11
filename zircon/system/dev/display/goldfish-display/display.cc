@@ -4,6 +4,10 @@
 
 #include "display.h"
 
+#include <fuchsia/sysmem/c/fidl.h>
+#include <zircon/pixelformat.h>
+#include <zircon/threads.h>
+
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -13,9 +17,6 @@
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <fuchsia/sysmem/c/fidl.h>
-#include <zircon/pixelformat.h>
-#include <zircon/threads.h>
 
 namespace goldfish {
 namespace {
@@ -159,7 +160,12 @@ zx_status_t Display::Create(void* ctx, zx_device_t* device) {
   return status;
 }
 
-Display::Display(zx_device_t* parent) : DisplayType(parent), control_(parent), pipe_(parent) {}
+Display::Display(zx_device_t* parent) : DisplayType(parent) {
+  if (parent) {
+    control_ = parent;
+    pipe_ = parent;
+  }
+}
 
 Display::~Display() {
   {
@@ -462,42 +468,74 @@ uint32_t Display::DisplayControllerImplCheckConfiguration(const display_config_t
     return CONFIG_DISPLAY_OK;
   }
   for (unsigned i = 0; i < display_count; i++) {
-    bool success;
-    if (display_configs[i]->layer_count != 1) {
-      success = false;
-    } else {
+    const size_t layer_count = display_configs[i]->layer_count;
+    if (layer_count > 0) {
       fbl::AutoLock lock(&flush_lock_);
 
       ZX_DEBUG_ASSERT(devices_.find(display_configs[i]->display_id) != devices_.end());
       const Device& device = devices_[display_configs[i]->display_id];
 
-      primary_layer_t* layer = &display_configs[i]->layer_list[0]->cfg.primary;
-      // Scaling is allowed if destination frame match display and
-      // source frame match image.
-      frame_t dest_frame = {
-          .x_pos = 0,
-          .y_pos = 0,
-          .width = device.width,
-          .height = device.height,
-      };
-      frame_t src_frame = {
-          .x_pos = 0,
-          .y_pos = 0,
-          .width = layer->image.width,
-          .height = layer->image.height,
-      };
-      success = display_configs[i]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
-                layer->transform_mode == FRAME_TRANSFORM_IDENTITY &&
-                memcmp(&layer->dest_frame, &dest_frame, sizeof(frame_t)) == 0 &&
-                memcmp(&layer->src_frame, &src_frame, sizeof(frame_t)) == 0 &&
-                display_configs[i]->cc_flags == 0 && layer->alpha_mode == ALPHA_DISABLE;
-    }
-    if (!success) {
-      layer_cfg_results[i][0] = CLIENT_MERGE_BASE;
-      for (unsigned j = 1; j < display_configs[i]->layer_count; j++) {
-        layer_cfg_results[i][j] = CLIENT_MERGE_SRC;
+      if (display_configs[i]->cc_flags != 0) {
+        // Color Correction is not supported, but we will pretend we do.
+        // TODO(36184): Returning error will cause blank screen if scenic requests
+        // color correction. For now, lets pretend we support it, until a proper
+        // fix is done (either from scenic or from core display)
+        zxlogf(WARN, "%s: Color Correction not support. No error reported\n", __func__);
       }
-      layer_cfg_result_count[i] = display_configs[i]->layer_count;
+
+      if (display_configs[i]->layer_list[0]->type != LAYER_TYPE_PRIMARY) {
+        // We only support PRIMARY layer. Notify client to convert layer to
+        // primary type.
+        layer_cfg_results[i][0] |= CLIENT_USE_PRIMARY;
+        layer_cfg_result_count[i] = 1;
+      } else {
+        primary_layer_t* layer = &display_configs[i]->layer_list[0]->cfg.primary;
+        // Scaling is allowed if destination frame match display and
+        // source frame match image.
+        frame_t dest_frame = {
+            .x_pos = 0,
+            .y_pos = 0,
+            .width = device.width,
+            .height = device.height,
+        };
+        frame_t src_frame = {
+            .x_pos = 0,
+            .y_pos = 0,
+            .width = layer->image.width,
+            .height = layer->image.height,
+        };
+        if (memcmp(&layer->dest_frame, &dest_frame, sizeof(frame_t)) != 0) {
+          // TODO(36222): Need to provide proper flag to indicate driver only
+          // accepts full screen dest frame.
+          layer_cfg_results[i][0] |= CLIENT_FRAME_SCALE;
+        }
+        if (memcmp(&layer->src_frame, &src_frame, sizeof(frame_t)) != 0) {
+          layer_cfg_results[i][0] |= CLIENT_SRC_FRAME;
+        }
+
+        if (layer->alpha_mode != ALPHA_DISABLE) {
+          // Alpha is not supported.
+          layer_cfg_results[i][0] |= CLIENT_ALPHA;
+        }
+
+        if (layer->transform_mode != FRAME_TRANSFORM_IDENTITY) {
+          // Transformation is not supported.
+          layer_cfg_results[i][0] |= CLIENT_TRANSFORM;
+        }
+
+        // Check if any changes to the base layer were required.
+        if (layer_cfg_results[i][0] != 0) {
+          layer_cfg_result_count[i] = 1;
+        }
+      }
+      // If there is more than one layer, the rest need to be merged into the base layer.
+      if (layer_count > 1) {
+        layer_cfg_results[i][0] |= CLIENT_MERGE_BASE;
+        for (unsigned j = 1; j < layer_count; j++) {
+          layer_cfg_results[i][j] |= CLIENT_MERGE_SRC;
+        }
+        layer_cfg_result_count[i] = layer_count;
+      }
     }
   }
   return CONFIG_DISPLAY_OK;

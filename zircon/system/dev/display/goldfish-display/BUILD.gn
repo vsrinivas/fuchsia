@@ -7,6 +7,14 @@ driver("goldfish-display") {
     "display.cc",
   ]
   deps = [
+    ":common",
+  ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+  sources = []
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",
     "$zx/system/banjo/ddk.protocol.goldfish.control",
     "$zx/system/banjo/ddk.protocol.goldfish.pipe",
@@ -19,5 +27,26 @@ driver("goldfish-display") {
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":goldfish-unittests",
+  ]
+}
+test("goldfish-unittests") {
+  sources = [
+    "display-test.cc",
+    "display.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/zxtest",
   ]
 }
