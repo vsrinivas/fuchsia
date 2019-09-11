@@ -246,7 +246,9 @@ struct iwl_rx_cmd_buffer {
   uint8_t status;
 };
 
-static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) { return io_buffer_virt(&r->_io_buf); }
+static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) {
+  return (char*)io_buffer_virt(&r->_io_buf) + r->_offset;
+}
 
 static inline int rxb_offset(struct iwl_rx_cmd_buffer* r) { return r->_offset; }
 
