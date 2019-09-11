@@ -13,7 +13,7 @@ __BEGIN_CDECLS
 //
 // The |status| is |ZX_OK| if the task's deadline elapsed and the task should run.
 // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
-// the task's handler ran or the task was canceled.
+// the task's handler ran.
 typedef void(async_task_handler_t)(async_dispatcher_t* dispatcher, async_task_t* task,
                                    zx_status_t status);
 
