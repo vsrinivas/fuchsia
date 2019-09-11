@@ -13,11 +13,12 @@ pub use id_map_collection::{IdMapCollection, IdMapCollectionKey};
 /// Defines the [`IdMap`] data structure: A generic container mapped keyed
 /// by an internally managed pool of identifiers kept densely packed.
 pub(crate) mod id_map {
-
-    type Key = usize;
+    /// [`IdMap`]s use `usize`s for keys.
+    pub(crate) type Key = usize;
 
     /// IdMapEntry where all free blocks are linked together.
     #[derive(PartialEq, Eq, Debug)]
+    #[cfg_attr(test, derive(Clone))]
     enum IdMapEntry<T> {
         /// The Entry should either be allocated and contains a value...
         Allocated(T),
@@ -158,6 +159,7 @@ pub(crate) mod id_map {
     /// returning the assigned `id`. `insert` can be used for assigning a
     /// specific `id` to an object, and returns the previous object at that `id`
     /// if any.
+    #[cfg_attr(test, derive(Clone))]
     pub(crate) struct IdMap<T> {
         freelist: Option<FreeList>,
         data: Vec<IdMapEntry<T>>,
@@ -200,11 +202,19 @@ pub(crate) mod id_map {
         /// Note: the worst case complexity of `remove` is O(key) if the
         /// backing data structure of the [`IdMap`] is too sparse.
         pub(crate) fn remove(&mut self, key: Key) -> Option<T> {
+            let r = self.remove_inner(key);
+            if r.is_some() {
+                self.compress();
+            }
+            r
+        }
+
+        fn remove_inner(&mut self, key: Key) -> Option<T> {
             let old_head = self.freelist.map(|l| l.head);
             let r = self.data.get_mut(key).and_then(|v| v.take_allocated(old_head));
             if r.is_some() {
-                // If it was allocated, we add the removed entry to the
-                // head of the free-list.
+                // If it was allocated, we add the removed entry to the head of
+                // the free-list.
                 match self.freelist.as_mut() {
                     Some(FreeList { head, .. }) => {
                         self.data[*head].freelist_link_mut().prev = Some(key);
@@ -212,7 +222,6 @@ pub(crate) mod id_map {
                     }
                     None => self.freelist = Some(FreeList::singleton(key)),
                 }
-                self.compress();
             }
             r
         }
@@ -349,6 +358,58 @@ pub(crate) mod id_map {
             } else {
                 Entry::Vacant(VacantEntry { key, id_map: self })
             }
+        }
+
+        /// Update the elements of the map in-place, retaining only the elements
+        /// for which `f` returns true.
+        ///
+        /// `update_return` invokes `f` on each element of the map, and removes
+        /// from the map those elements for which `f` returns false. The return
+        /// value is an iterator over the removed elements.
+        ///
+        /// WARNING: The mutation will only occur when the returned iterator is
+        /// executed. Simply calling `update_retain` and then discarding the
+        /// return value will do nothing!
+        pub(crate) fn update_retain<'a, F: 'a + FnMut(&mut T) -> bool>(
+            &'a mut self,
+            mut f: F,
+        ) -> impl 'a + Iterator<Item = (Key, T)>
+        where
+            T: 'a,
+        {
+            (0..self.data.len()).filter_map(move |k| {
+                let ret = if let IdMapEntry::Allocated(t) = self.data.get_mut(k).unwrap() {
+                    if !f(t) {
+                        // Note the use of `remove_inner` rather than `remove`
+                        // here. `remove` calls `self.compress()`, which is an
+                        // O(n) operation. Instead, we postpone that operation
+                        // and perform it once during the last iteration so that
+                        // the overall complexity is O(n) rather than O(n^2).
+                        //
+                        // TODO(joshlf): Could we improve the performance here
+                        // by doing something smarter than just calling
+                        // `remove_inner`? E.g., perhaps we could build up a
+                        // separate linked list that we only insert into the
+                        // existing free list once at the end? That there is a
+                        // performance issue here at all is pure speculation,
+                        // and will need to be measured to determine whether
+                        // such an optimization is worth it.
+                        Some((k, self.remove_inner(k).unwrap()))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                // Compress once at the very end (see the comment above about
+                // `remove_inner`).
+                if k == self.data.len() - 1 {
+                    self.compress();
+                }
+
+                ret
+            })
         }
 
         /// Unlink an entry from the freelist.
@@ -778,6 +839,67 @@ pub(crate) mod id_map {
                 ]
             );
             assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 5 }));
+        }
+
+        #[test]
+        fn test_update_retain() {
+            // First, test that removed entries are actually removed, and that
+            // the remaining entries are actually left there.
+
+            let mut map = IdMap::new();
+            for i in 0..8 {
+                map.push(i);
+            }
+
+            let old_map = map.clone();
+
+            // Keep only the even entries, and double the rest.
+            let f = |x: &mut usize| {
+                if *x % 2 == 0 {
+                    false
+                } else {
+                    *x *= 2;
+                    true
+                }
+            };
+
+            // First, construct the iterator but then discard it, and test that
+            // nothing has been modified.
+            map.update_retain(f);
+            assert_eq!(map.data, old_map.data);
+            assert_eq!(map.freelist, old_map.freelist);
+
+            // Now actually execute the iterator.
+            let taken: Vec<_> = map.update_retain(f).collect();
+            let remaining: Vec<_> = map.iter().map(|(key, entry)| (key, entry.clone())).collect();
+
+            assert_eq!(taken.as_slice(), [(0, 0), (2, 2), (4, 4), (6, 6)]);
+            assert_eq!(remaining.as_slice(), [(1, 2), (3, 6), (5, 10), (7, 14)]);
+
+            // Second, test that the underlying vector is compressed after the
+            // iterator has been consumed.
+
+            // Make sure that the buffer is laid out as we expect it
+            // so that this test is actually valid.
+            assert_eq!(
+                map.data,
+                [
+                    free_tail(2),
+                    Allocated(2),
+                    free(4, 0),
+                    Allocated(6),
+                    free(6, 2),
+                    Allocated(10),
+                    free_head(4),
+                    Allocated(14),
+                ]
+            );
+
+            let taken: Vec<_> = map.update_retain(|x| *x < 10).collect();
+            assert_eq!(taken, [(5, 10), (7, 14)]);
+
+            // Make sure that the underlying vector has been compressed.
+            assert_eq!(map.data, [free_tail(2), Allocated(2), free_head(0), Allocated(6),]);
         }
 
         #[test]

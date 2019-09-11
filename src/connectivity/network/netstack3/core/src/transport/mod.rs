@@ -151,37 +151,63 @@ impl<A: Eq + Hash> Default for ListenerAddrMap<A> {
 ///
 /// It differs from a `ListenerAddrMap` in that only a single address per
 /// connection is supported.
-pub(crate) struct ConnAddrMap<A> {
-    conn_to_addr: IdMap<A>,
-    addr_to_conn: HashMap<A, usize>,
+pub(crate) struct ConnAddrMap<A, C = A> {
+    id_to_conn: IdMap<C>,
+    addr_to_id: HashMap<A, usize>,
 }
 
-impl<A: Eq + Hash + Clone> ConnAddrMap<A> {
-    pub(crate) fn insert(&mut self, addr: A) -> usize {
-        let conn = self.conn_to_addr.push(addr.clone());
-        self.addr_to_conn.insert(addr, conn.clone());
-        conn
-    }
-}
-
-impl<A: Eq + Hash> ConnAddrMap<A> {
-    pub(crate) fn get_by_addr(&self, addr: &A) -> Option<usize> {
-        self.addr_to_conn.get(addr).cloned()
-    }
-
-    pub(crate) fn get_by_conn(&self, conn: usize) -> Option<&A> {
-        self.conn_to_addr.get(conn)
-    }
-
-    pub(crate) fn remove_by_conn(&mut self, conn: usize) -> Option<A> {
-        let addr = self.conn_to_addr.remove(conn)?;
-        self.addr_to_conn.remove(&addr).unwrap();
-        Some(addr)
+impl<A: Eq + Hash + Clone, C> ConnAddrMap<A, C> {
+    pub(crate) fn insert(&mut self, addr: A, conn: C) -> usize {
+        let id = self.id_to_conn.push(conn);
+        self.addr_to_id.insert(addr, id);
+        id
     }
 }
 
-impl<A: Eq + Hash> Default for ConnAddrMap<A> {
-    fn default() -> ConnAddrMap<A> {
-        ConnAddrMap { conn_to_addr: IdMap::default(), addr_to_conn: HashMap::default() }
+impl<A: Eq + Hash, C> ConnAddrMap<A, C> {
+    pub(crate) fn get_id_by_addr(&self, addr: &A) -> Option<usize> {
+        self.addr_to_id.get(addr).cloned()
+    }
+
+    pub(crate) fn get_conn_by_id(&self, id: usize) -> Option<&C> {
+        self.id_to_conn.get(id)
+    }
+}
+
+impl<A: Eq + Hash, C> ConnAddrMap<A, C>
+where
+    for<'a> &'a C: Into<A>,
+{
+    pub(crate) fn remove_by_id(&mut self, id: usize) -> Option<C> {
+        let conn = self.id_to_conn.remove(id)?;
+        self.addr_to_id.remove(&(&conn).into()).unwrap();
+        Some(conn)
+    }
+
+    /// Update the elements of the map in-place, retaining only the elements for
+    /// which `f` returns true.
+    ///
+    /// `update_return` invokes `f` on each element of the map, and removes from
+    /// the map those elements for which `f` returns false. The return value is
+    /// an iterator over the removed elements.
+    ///
+    /// WARNING: The mutation will only occur when the returned iterator is
+    /// executed. Simply calling `update_retain` and then discarding the return
+    /// value will do nothing!
+    pub(crate) fn update_retain<'a, F: 'a + Fn(&mut C) -> bool>(
+        &'a mut self,
+        f: F,
+    ) -> impl 'a + Iterator<Item = (usize, C)> {
+        let addr_to_id = &mut self.addr_to_id;
+        self.id_to_conn.update_retain(f).map(move |(id, conn)| {
+            addr_to_id.remove(&(&conn).into()).unwrap();
+            (id, conn)
+        })
+    }
+}
+
+impl<A: Eq + Hash, C> Default for ConnAddrMap<A, C> {
+    fn default() -> ConnAddrMap<A, C> {
+        ConnAddrMap { id_to_conn: IdMap::default(), addr_to_id: HashMap::default() }
     }
 }

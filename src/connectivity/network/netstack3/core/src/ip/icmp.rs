@@ -1335,8 +1335,10 @@ fn receive_icmp_echo_reply<
     body: B,
 ) {
     if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        if let Some(conn) =
-            ctx.get_state(()).as_ref().get_by_addr(&IcmpAddr { remote_addr: src_ip, icmp_id: id })
+        if let Some(conn) = ctx
+            .get_state(())
+            .as_ref()
+            .get_id_by_addr(&IcmpAddr { remote_addr: src_ip, icmp_id: id })
         {
             ctx.receive_icmp_echo_reply(IcmpConnId(conn), seq, body);
         } else {
@@ -1375,8 +1377,10 @@ pub(crate) fn receive_icmpv4_socket_error<B: BufferMut, C: Icmpv4Context<B>>(
 
     if let Some(dst_ip) = SpecifiedAddr::new(original_packet.dst_ip()) {
         let id = echo_request.message().id();
-        if let Some(conn) =
-            ctx.get_state(()).as_ref().get_by_addr(&IcmpAddr { remote_addr: dst_ip, icmp_id: id })
+        if let Some(conn) = ctx
+            .get_state(())
+            .as_ref()
+            .get_id_by_addr(&IcmpAddr { remote_addr: dst_ip, icmp_id: id })
         {
             let seq = echo_request.message().seq();
             Icmpv4SocketContext::receive_icmpv4_error(ctx, IcmpConnId(conn), seq, err);
@@ -1402,7 +1406,7 @@ pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
 ) {
     let conns = get_conns::<_, Ipv4Addr>(ctx.state_mut());
     let IcmpAddr { remote_addr, icmp_id } =
-        conns.get_by_conn(conn.0).expect("icmp::send_icmpv4_echo_request: no such conn").clone();
+        conns.get_conn_by_id(conn.0).expect("icmp::send_icmpv4_echo_request: no such conn").clone();
 
     let req = IcmpEchoRequest::new(icmp_id, seq_num);
 
@@ -1434,7 +1438,7 @@ pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
 ) {
     let conns = get_conns::<_, Ipv6Addr>(ctx.state_mut());
     let IcmpAddr { remote_addr, icmp_id } =
-        conns.get_by_conn(conn.0).expect("icmp::send_icmpv6_echo_request: no such conn").clone();
+        conns.get_conn_by_id(conn.0).expect("icmp::send_icmpv6_echo_request: no such conn").clone();
 
     let req = IcmpEchoRequest::new(icmp_id, seq_num);
 
@@ -1477,10 +1481,10 @@ fn new_icmp_connection_inner<A: IpAddress>(
     // TODO(brunodalbo) ICMP connections are currently only bound to the remote
     //  address. Sockets API v2 will improve this.
     let addr = IcmpAddr { remote_addr, icmp_id };
-    if conns.get_by_addr(&addr).is_some() {
+    if conns.get_id_by_addr(&addr).is_some() {
         return Err(error::NetstackError::Exists);
     }
-    Ok(IcmpConnId(conns.insert(addr)))
+    Ok(IcmpConnId(conns.insert(addr.clone(), addr)))
 }
 
 #[specialize_ip_address]

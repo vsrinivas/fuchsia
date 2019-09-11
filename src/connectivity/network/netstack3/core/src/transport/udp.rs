@@ -222,7 +222,7 @@ pub(crate) fn receive_ip_packet<A: IpAddress, B: BufferMut, C: BufferUdpContext<
 
     if let Some(conn) = SpecifiedAddr::new(src_ip)
         .and_then(|src_ip| Conn::from_packet(src_ip, dst_ip, &packet))
-        .and_then(|conn| state.conns.get_by_addr(&conn))
+        .and_then(|conn| state.conns.get_id_by_addr(&conn))
     {
         ctx.receive_udp_from_conn(UdpConnId(conn), packet.body());
         Ok(())
@@ -277,7 +277,7 @@ pub(crate) fn send_udp_conn<I: Ip, B: BufferMut, C: BufferUdpContext<I, B>>(
 ) {
     let state = ctx.get_state(());
     let Conn { local_addr, local_port, remote_addr, remote_port } =
-        *state.conns.get_by_conn(conn.0).expect("transport::udp::send_udp_conn: no such conn");
+        *state.conns.get_conn_by_id(conn.0).expect("transport::udp::send_udp_conn: no such conn");
 
     ctx.send_frame(
         IpPacketFromArgs::new(local_addr, remote_addr, IpProto::Udp),
@@ -394,12 +394,13 @@ pub(crate) fn connect_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Ver
         let c = Conn { local_addr, local_port, remote_addr, remote_port };
         let listener = Listener { addr: local_addr, port: local_port };
         let state = ctx.get_state_mut(());
-        if state.conns.get_by_addr(&c).is_some() || state.listeners.get_by_addr(&listener).is_some()
+        if state.conns.get_id_by_addr(&c).is_some()
+            || state.listeners.get_by_addr(&listener).is_some()
         {
             // TODO(joshlf): Return error
             panic!("UDP connection in use");
         }
-        UdpConnId(state.conns.insert(c))
+        UdpConnId(state.conns.insert(c.clone(), c))
     } else {
         unimplemented!()
     }
