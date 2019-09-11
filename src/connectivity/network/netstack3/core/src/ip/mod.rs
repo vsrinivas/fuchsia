@@ -38,6 +38,7 @@ use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpContext, IcmpEventDispatcher,
     Icmpv4Context, Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder, Icmpv6State,
+    Icmpv6StateBuilder,
 };
 use crate::ip::igmp::{IgmpContext, IgmpInterface, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
@@ -238,6 +239,7 @@ impl Ipv4StateBuilder {
 #[derive(Copy, Clone)]
 pub struct Ipv6StateBuilder {
     forward: bool,
+    icmp: Icmpv6StateBuilder,
 }
 
 impl Default for Ipv6StateBuilder {
@@ -245,7 +247,7 @@ impl Default for Ipv6StateBuilder {
         // NOTE: We implement `Default` manually even though this implementation
         // is equivalent to what `#[derive(Default)]` would produce in order to
         // make the default values explicit.
-        Ipv6StateBuilder { forward: false }
+        Ipv6StateBuilder { forward: false, icmp: Icmpv6StateBuilder::default() }
     }
 }
 
@@ -259,6 +261,11 @@ impl Ipv6StateBuilder {
         self
     }
 
+    /// Get the builder for the ICMPv6 state.
+    pub fn icmpv6_builder(&mut self) -> &mut Icmpv6StateBuilder {
+        &mut self.icmp
+    }
+
     pub(crate) fn build<Instant: crate::Instant>(self) -> Ipv6State<Instant> {
         Ipv6State {
             inner: IpStateInner {
@@ -267,7 +274,7 @@ impl Ipv6StateBuilder {
                 fragment_cache: IpLayerFragmentCache::new(),
                 path_mtu: IpLayerPathMtuCache::new(),
             },
-            icmp: Icmpv6State::default(),
+            icmp: self.icmp.build(),
             mld: IdMap::default(),
         }
     }
@@ -293,7 +300,7 @@ impl<Instant: crate::Instant> Ipv4State<Instant> {
 
 pub(crate) struct Ipv6State<Instant: crate::Instant> {
     inner: IpStateInner<Ipv6, Instant>,
-    icmp: Icmpv6State,
+    icmp: Icmpv6State<Instant>,
     mld: IdMap<MldInterface<Instant>>,
 }
 
@@ -1686,12 +1693,12 @@ impl<D: EventDispatcher> StateContext<(), Icmpv4State<D::Instant>> for Context<D
     }
 }
 
-impl<D: EventDispatcher> StateContext<(), Icmpv6State> for Context<D> {
-    fn get_state(&self, _id: ()) -> &Icmpv6State {
+impl<D: EventDispatcher> StateContext<(), Icmpv6State<D::Instant>> for Context<D> {
+    fn get_state(&self, _id: ()) -> &Icmpv6State<D::Instant> {
         &self.state().ipv6.icmp
     }
 
-    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv6State {
+    fn get_state_mut(&mut self, _id: ()) -> &mut Icmpv6State<D::Instant> {
         &mut self.state_mut().ipv6.icmp
     }
 }
