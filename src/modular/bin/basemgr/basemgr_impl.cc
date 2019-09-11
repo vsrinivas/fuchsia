@@ -157,22 +157,13 @@ FuturePtr<> BasemgrImpl::StopBaseShell() {
 }
 
 FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
-  if (!token_manager_factory_app_) {
-    FXL_DLOG(INFO) << "StopTokenManagerFactoryApp() called when already stopped";
-
-    return Future<>::CreateCompleted("StopTokenManagerFactoryApp::Completed");
+  if (token_manager_factory_app_) {
+    // Force kill;  token manager does not implement |fuchsia::modular::Lifecycle|.
+    token_manager_factory_app_.reset();
+  } else {
+    FXL_DLOG(INFO) << "StopTokenManagerFactoryApp(): TokenManagerFactory already not running.";
   }
-
-  auto did_stop = Future<>::Create("StopTokenManagerFactoryApp");
-
-  token_manager_factory_app_->Teardown(kBasicTimeout, [did_stop, this] {
-    FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-
-    token_manager_factory_app_.release();
-    did_stop->Complete();
-  });
-
-  return did_stop;
+  return Future<>::CreateCompleted("StopTokenManagerFactoryApp completed");
 }
 
 void BasemgrImpl::Start() {

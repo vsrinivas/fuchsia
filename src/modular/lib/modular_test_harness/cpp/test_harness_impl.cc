@@ -380,7 +380,8 @@ zx_status_t TestHarnessImpl::SetupFakeSessionAgent() {
             std::move(startup_info.launch_info.directory_request));
         intercepted_session_agent_info_.agent_driver.reset(
             new ::modular::AgentDriver<InterceptedSessionAgent>(
-                intercepted_session_agent_info_.component_context.get(), [] {}));
+                intercepted_session_agent_info_.component_context.get(),
+                [this] { intercepted_session_agent_info_.intercepted_component->Exit(0); }));
         intercepted_session_agent_info_.intercepted_component = std::move(intercepted_component);
 
         FlushBufferedSessionAgentServices();
