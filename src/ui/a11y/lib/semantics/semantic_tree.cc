@@ -7,8 +7,10 @@
 #include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include "fuchsia/accessibility/semantics/cpp/fidl.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
+#include "zircon/third_party/uapp/dash/src/output.h"
 
 namespace a11y {
 
@@ -32,7 +34,7 @@ SemanticTree::SemanticTree(
       client_action_listener_(std::move(client_action_listener)),
       semantic_listener_(std::move(semantic_listener)),
       debug_dir_(debug_dir) {
-  InitializeDebugEntry(debug_dir_);
+  InitializeDebugEntry();
 }
 
 SemanticTree::~SemanticTree() = default;
@@ -117,12 +119,69 @@ bool SemanticTree::ApplyCommit() {
 
 void SemanticTree::UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes) {
   for (auto& node : nodes) {
+    if (!node.has_node_id()) {
+      // Skip Nodes that are missing node id.
+      FX_LOGS(ERROR) << "Update Node is missing node-id which is a required field. Ignoring the "
+                        "node as part of the update.";
+      continue;
+    }
+    fuchsia::accessibility::semantics::NodePtr node_ptr = GetAccessibilityNode(node.node_id());
+
     SemanticTreeTransaction transaction;
+    if (node_ptr) {
+      // Since node already exist, perform partial update.
+      fuchsia::accessibility::semantics::NodePtr updated_node;
+      updated_node = UpdateNode(std::move(node), std::move(node_ptr));
+      transaction.node_id = updated_node->node_id();
+      updated_node->Clone(&transaction.node);
+    } else {
+      transaction.node_id = node.node_id();
+      transaction.node = std::move(node);
+    }
     transaction.delete_node = false;
-    transaction.node_id = node.node_id();
-    transaction.node = std::move(node);
     pending_transactions_.push_back(std::move(transaction));
   }
+}
+
+fuchsia::accessibility::semantics::NodePtr SemanticTree::UpdateNode(
+    fuchsia::accessibility::semantics::Node input_node,
+    fuchsia::accessibility::semantics::NodePtr output_node) {
+  // If node id is missing, or different then return.
+  if (!input_node.has_node_id() || !output_node->has_node_id() ||
+      input_node.node_id() != output_node->node_id()) {
+    FX_LOGS(ERROR) << "Update Node is missing a node-id, which is a required field for updates. "
+                      "Ignoring this update.";
+    return output_node;
+  }
+
+  if (input_node.has_role()) {
+    output_node->set_role(input_node.role());
+  }
+
+  if (input_node.has_states()) {
+    output_node->set_states(std::move(*input_node.mutable_states()));
+  }
+
+  if (input_node.has_attributes()) {
+    output_node->set_attributes(std::move(*input_node.mutable_attributes()));
+  }
+
+  if (input_node.has_actions()) {
+    output_node->set_actions(input_node.actions());
+  }
+
+  if (input_node.has_child_ids()) {
+    output_node->set_child_ids(input_node.child_ids());
+  }
+
+  if (input_node.has_location()) {
+    output_node->set_location(input_node.location());
+  }
+
+  if (input_node.has_transform()) {
+    output_node->set_transform(input_node.transform());
+  }
+  return output_node;
 }
 
 void SemanticTree::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
@@ -197,8 +256,9 @@ bool SemanticTree::IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
                      << ") not found in the semantic tree for View(koid):" << GetKoid(view_ref_);
       continue;
     }
-    if (IsCyclic(std::move(child_ptr), visited))
+    if (IsCyclic(std::move(child_ptr), visited)) {
       return true;
+    }
   }
   return false;
 }
@@ -239,7 +299,7 @@ void SemanticTree::DeletePointerFromParent(uint32_t node_id) {
   }
 }
 
-void SemanticTree::InitializeDebugEntry(vfs::PseudoDir* debug_dir) {
+void SemanticTree::InitializeDebugEntry() {
   if (debug_dir_) {
     // Add Semantic Tree log file in Hub-Debug directory.
     debug_dir_->AddEntry(

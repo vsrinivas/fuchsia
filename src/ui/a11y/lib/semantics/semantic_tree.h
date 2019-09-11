@@ -88,6 +88,9 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void CommitUpdates(CommitUpdatesCallback callback) override;
 
+  // Semantic Tree supports partial updates of existing nodes. Clients should ensure that every node
+  // in the list of nodes contains a node-id.
+  // If node-id is missing, then semantic manager will ignore that node.
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes) override;
 
@@ -117,10 +120,15 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
 
   // Function to create per view Log files under debug directory for debugging
   // semantic tree.
-  void InitializeDebugEntry(vfs::PseudoDir* debug_dir);
+  void InitializeDebugEntry();
 
   // Helper function for applying commit.
   bool ApplyCommit();
+
+  // Helper function to partially update fields from input node to output_node.
+  static fuchsia::accessibility::semantics::NodePtr UpdateNode(
+      fuchsia::accessibility::semantics::Node input_node,
+      fuchsia::accessibility::semantics::NodePtr output_node);
 
   // List of committed, cached nodes for each front-end. We represent semantics
   // tree as a map of local node ids to the actual node objects. All query
