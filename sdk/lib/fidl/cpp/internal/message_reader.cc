@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/fidl/epitaph.h>
 #include <zircon/assert.h>
+#include <zircon/fidl.h>
 
 namespace fidl {
 namespace internal {
@@ -206,10 +207,10 @@ zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
     return status;
   }
 
-  if (message.has_header() && message.ordinal() == FIDL_EPITAPH_ORDINAL) {
+  if (message.has_header() && message.ordinal() == kFidlOrdinalEpitaph) {
     // This indicates the message is an epitaph, and that any epitaph-friendly
-    // error handlers should be invoked.  Note the epitaph error is stored in
-    // the header's reserved word.
+    // error handlers should be invoked. Note the epitaph error is stored as a
+    // struct{int32} in the message payload
 
     // TODO(FIDL-322): Use a different error code to distinguish remote encoding
     // errors from local ones.
@@ -218,7 +219,7 @@ zx_status_t MessageReader::ReadAndDispatchMessage(MessageBuffer* buffer) {
       return ZX_ERR_INVALID_ARGS;
     }
     fidl_epitaph_t* epitaph = message.GetBytesAs<fidl_epitaph_t>();
-    NotifyError(epitaph->hdr.reserved0);
+    NotifyError(epitaph->error);
     return ZX_ERR_PEER_CLOSED;
   }
 

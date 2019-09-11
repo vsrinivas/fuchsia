@@ -5,6 +5,7 @@
 #include "lib/fidl/cpp/internal/message_reader.h"
 
 #include <lib/zx/channel.h>
+#include <zircon/errors.h>
 
 #include <fidl/test/misc/cpp/fidl.h>
 
@@ -627,6 +628,34 @@ TEST(MessageReader, ReentrantErrorHandler) {
                            [echo_ptr = std::move(echo_ptr)](fidl::StringPtr echoed_value) {});
   server.Close();
   loop.RunUntilIdle();
+}
+
+TEST(MessageReader, Close) {
+  fidl::test::AsyncLoopForTest loop;
+
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+  MessageReader client, server;
+  client.Bind(std::move(h1));
+  EXPECT_TRUE(client.is_bound());
+  server.Bind(std::move(h2));
+  EXPECT_TRUE(server.is_bound());
+
+  zx_status_t error = 0;
+  client.set_error_handler([&error](zx_status_t remote_error) { error = remote_error; });
+
+  constexpr zx_status_t kSysError = 0xabDECADE;
+
+  EXPECT_EQ(ZX_OK, server.Close(kSysError));
+  EXPECT_FALSE(server.is_bound());
+
+  // should only be able to call Close successfully once
+  EXPECT_EQ(ZX_ERR_BAD_STATE, server.Close(kSysError));
+
+  loop.RunUntilIdle();
+  EXPECT_EQ(kSysError, error);
+  EXPECT_FALSE(client.is_bound());
 }
 
 }  // namespace

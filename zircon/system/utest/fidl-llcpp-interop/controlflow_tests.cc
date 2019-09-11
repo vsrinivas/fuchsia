@@ -142,7 +142,7 @@ TEST(ControlFlowTest, NoReplyMustSendEpitaph) {
           ZX_OK);
       ASSERT_EQ(out_bytes, sizeof(epitaph));
       ASSERT_EQ(out_handles, 0);
-      ASSERT_EQ(static_cast<zx_status_t>(epitaph.hdr.reserved0), ZX_ERR_ACCESS_DENIED);
+      ASSERT_EQ(static_cast<zx_status_t>(epitaph.error), ZX_ERR_ACCESS_DENIED);
     }
 
     // Verify that the remote end of |client_chan| has been closed
@@ -190,7 +190,7 @@ TEST(ControlFlowTest, MustSendEpitaph) {
           ZX_OK);
       ASSERT_EQ(out_bytes, sizeof(epitaph));
       ASSERT_EQ(out_handles, 0);
-      ASSERT_EQ(static_cast<zx_status_t>(epitaph.hdr.reserved0), ZX_ERR_ACCESS_DENIED);
+      ASSERT_EQ(static_cast<zx_status_t>(epitaph.error), ZX_ERR_ACCESS_DENIED);
     }
 
     // Verify that the remote end of |client_chan| has been closed

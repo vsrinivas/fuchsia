@@ -413,15 +413,20 @@ struct fidl_txn {
 typedef struct fidl_epitaph {
   FIDL_ALIGNDECL
 
-  // The error associated with this epitaph is stored in the reserved word of
-  // the message header.  System errors must be constants of type zx_status_t,
-  // which are all negative.  Positive numbers should be used for application
-  // errors.  A value of ZX_OK indicates no error.
+  // The method ordinal for all epitaphs must be kFidlOrdinalEpitaph
   fidl_message_header_t hdr;
+
+  // The error associated with this epitaph is stored as a struct{int32} in
+  // the message payload. System errors must be constants of type zx_status_t,
+  // which are all negative. Positive numbers should be used for application
+  // errors. A value of ZX_OK indicates no error.
+  zx_status_t error;
 } fidl_epitaph_t;
 
 // This ordinal value is reserved for Epitaphs.
-#define FIDL_EPITAPH_ORDINAL 0xFFFFFFFF
+enum {
+  kFidlOrdinalEpitaph = 0xFFFFFFFF,
+};
 
 // Assumptions.
 
