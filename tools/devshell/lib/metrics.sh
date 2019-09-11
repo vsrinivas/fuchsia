@@ -24,6 +24,13 @@ INIT_WARNING+=$'You will receive this warning until an option is selected.\n'
 INIT_WARNING+=$'To check what data we collect, run `fx metrics`\n'
 INIT_WARNING+=$'To opt in or out, run `fx metrics <enable|disable>\n'
 
+# Each Analytics batch call can send at most this many hits.
+declare -r BATCH_SIZE=20
+# Keep track of how many hits have accumulated.
+hit_count=0
+# Holds curl args for the current batch of hits.
+curl_args=()
+
 function metrics-read-config {
   METRICS_UUID=""
   METRICS_ENABLED=0
@@ -102,7 +109,16 @@ function metrics-maybe-log {
     fi
     if [[ -w "$filename" ]]; then
       TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
-      echo "${TIMESTAMP}:" "$@" >> "$filename"
+      echo -n "${TIMESTAMP}:" >> "$filename"
+      for i in "$@"; do
+        if [[ "$i" =~ ^"--" ]]; then
+          continue # Skip switches.
+        fi
+        # Space before $i is intentional.
+        echo -n " $i" >> "$filename"
+      done
+      # Add a newline at the end.
+      echo >> "$filename"
     fi
   fi
 }
@@ -124,6 +140,11 @@ function track-command-execution {
     return 0
   fi
 
+  if [[ "$subcommand" == "set" ]]; then
+    # Add separate fx_set hits for packages
+    _process-fx-set-command "$@"
+  fi
+
   # Only track arguments to the subcommands in $TRACK_ALL_ARGS
   if [[ $TRACK_ALL_ARGS != *"$subcommand"* ]]; then
     args=""
@@ -142,8 +163,54 @@ function track-command-execution {
     "el=${args}" \
     )
 
-  send-analytics-event "event" "${analytics_args[@]}"
+  _add-to-analytics-batch "${analytics_args[@]}"
+  # Send any remaining hits.
+  _send-analytics-batch
   return 0
+}
+
+# Arguments:
+#   - args of `fx set`
+function _process-fx-set-command {
+  target="$1"
+  shift
+  while [[ $# -ne 0 ]]; do
+    case $1 in
+      --with)
+        shift # remove "--with"
+        _add-fx-set-hit "$target" "fx-with" "$1"
+        ;;
+      --with-base)
+        shift # remove "--with-base"
+        _add-fx-set-hit "$target" "fx-with-base" "$1"
+        ;;
+      *)
+        ;;
+    esac
+    shift
+  done
+}
+
+# Arguments:
+#   - the product.board target for `fx set`
+#   - category name, either "fx-with" or "fx-with-base"
+#   - package(s) following "--with" or "--with-base" switch
+function _add-fx-set-hit {
+  target="$1"
+  category="$2"
+  packages="$3"
+  # Packages argument can be a comma-separated list.
+  IFS=',' read -ra packages_parts <<< "$packages"
+  for p in "${packages_parts[@]}"; do
+    analytics_args=(
+      "t=event" \
+      "ec=${category}" \
+      "ea=${p}" \
+      "el=${target}" \
+      )
+
+    _add-to-analytics-batch "${analytics_args[@]}"
+  done
 }
 
 # Arguments:
@@ -196,39 +263,73 @@ function track-command-finished {
       )
   fi
 
-  send-analytics-event "${hit_type}" "${analytics_args[@]}"
+  _add-to-analytics-batch "${analytics_args[@]}"
+  # Send any remaining hits.
+  _send-analytics-batch
   return 0
 }
 
+# Add an analytics hit with the given args to the batch of hits. This will trigger
+# sending a batch when the batch size limit is hit.
+#
 # Arguments:
-#   - the event type to log
-#   - analytics arguments
-function send-analytics-event {
-  hit_type="$1"
-  shift
-  analytics_args=("$@")
+#   - analytics arguments, e.g. "t=event" "ec=fx" etc.
+function _add-to-analytics-batch {
+  if [[ $# -eq 0 ]]; then
+    return 0
+  fi
+
+  if (( hit_count > 0 )); then
+    # Each hit in a batch must be on its own line. The below will append a newline
+    # without url-encoding it. Note that this does add a '&' to the end of each hit,
+    # but those are ignored by Google Analytics.
+    curl_args+=(--data-binary)
+    curl_args+=($'\n')
+  fi
+
+  # All hits send some common parameters
   local app_name="$(_app_name)"
   local app_version="$(_app_version)"
-
-  analytics_args+=(
+  params=(
     "v=1" \
-    "an=${app_name}" \
-    "av=${app_version}" \
     "tid=${GA_PROPERTY_ID}" \
     "cid=${METRICS_UUID}" \
+    "an=${app_name}" \
+    "av=${app_version}" \
+    "$@" \
     )
-
-  curl_args=()
-  for a in "${analytics_args[@]}"; do
+  for p in "${params[@]}"; do
     curl_args+=(--data-urlencode)
-    curl_args+=("$a")
+    curl_args+=("$p")
   done
 
+  : $(( hit_count += 1 ))
+  if ((hit_count == BATCH_SIZE)); then
+    _send-analytics-batch
+  fi
+}
+
+# Sends the current batch of hits to the Analytics server. As a side effect, clears
+# the hit count and batch data.
+function _send-analytics-batch {
+  if [[ $hit_count -eq 0 ]]; then
+    return 0
+  fi
+
   local user_agent="Fuchsia-fx $(_os_data)"
-  local url_path="/collect"
+  local url_path="/batch"
   local result=""
   if [[ $_METRICS_DEBUG == 1 && $_METRICS_USE_VALIDATION_SERVER == 1 ]]; then
     url_path="/debug/collect"
+    # Validation server does not accept batches. Send just the first hit instead.
+    local limit=0
+    for i in "${curl_args[@]}"; do
+      if [[ "$i" == "--data-binary" ]]; then
+        curl_args=("${curl_args[@]:0:$limit}")
+        break
+      fi
+      : $(( limit += 1 ))
+    done
   fi
   if [[ $_METRICS_DEBUG == 1 && $_METRICS_USE_VALIDATION_SERVER == 0 ]]; then
     # if testing and not using the validation server, always return 202
@@ -238,7 +339,11 @@ function send-analytics-event {
       -H "User-Agent: $user_agent" \
       "https://www.google-analytics.com/${url_path}")
   fi
-  metrics-maybe-log "${hit_type}" "${analytics_args[@]}" "RESULT=${result}"
+  metrics-maybe-log "${curl_args[@]}" "RESULT=${result}"
+
+  # Clear batch.
+  hit_count=0
+  curl_args=()
 }
 
 function _os_data {

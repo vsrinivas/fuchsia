@@ -66,6 +66,42 @@ function test::enable_metrics {
   fi
 }
 
+function test::fx_set_with_packages {
+  _config_file="$(mktemp)"
+  _debug_file="$(mktemp)"
+  _enable_testing "${_debug_file}" 0 "${_config_file}"
+  local enable=1
+  local test_uuid="__TEST__"
+  metrics-write-config $enable "$test_uuid"
+  metrics-read-config
+
+  foo="foo"
+  bar="bar"
+  baz="baz"
+  # exercise --with and --with-base flags, as well as comma-separated package labels
+  track-command-execution "set" "core.x64" \
+    "--with-base" "$foo" "--with" "$bar,$baz"
+
+  # debug file should not be empty
+  if [[ ! -s "$_debug_file" ]]; then
+    return 1
+  fi
+
+  expected=(
+    # debug file should have a line for the set subcommand
+    "t=event ec=fx ea=set el=core.x64 --with-base $foo --with $bar,$baz" \
+    # debug file should have a separate line for each package label
+    "t=event ec=fx-with-base ea=$foo el=core.x64" \
+    "t=event ec=fx-with ea=$bar el=core.x64" \
+    "t=event ec=fx-with ea=$baz el=core.x64" \
+    )
+  for i in "${expected[@]}"; do
+    if [[ ! $(grep "$i" "$_debug_file") ]]; then
+      return 1
+    fi
+  done
+  return 0
+}
 
 test_main "$@"
 
