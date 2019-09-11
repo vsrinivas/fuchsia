@@ -13,6 +13,7 @@
 
 #include <utility>
 
+#include <fs/journal/format.h>
 #include <minfs/format.h>
 
 #include "minfs-private.h"
@@ -40,7 +41,7 @@ class MinfsChecker {
   zx_status_t CheckForUnusedInodes() const;
   zx_status_t CheckLinkCounts() const;
   zx_status_t CheckAllocatedCounts() const;
-  zx_status_t CheckJournal() const;
+  zx_status_t CheckIntegrity() const;
 
   // "Set once"-style flag to identify if anything nonconforming
   // was found in the underlying filesystem -- even if it was fixed.
@@ -587,11 +588,18 @@ zx_status_t MinfsChecker::CheckAllocatedCounts() const {
   return status;
 }
 
-zx_status_t MinfsChecker::CheckJournal() const {
+zx_status_t MinfsChecker::CheckIntegrity() const {
   char data[kMinfsBlockSize];
   blk_t journal_block;
+
+  // TODO(36164): Remove this condition after safe migration to major version 9.
+  if (fs_->Info().version_major != kMinfsMajorVersion) {
+    // Skip integrity check if we are not on the latest Minfs version.
+    return ZX_OK;
+  }
+
 #ifdef __Fuchsia__
-  journal_block = fs_->Info().journal_start_block;
+  journal_block = static_cast<blk_t>(JournalStartBlock(fs_->Info()));
 #else
   journal_block = fs_->GetBlockOffsets().JournalStartBlock();
 #endif
@@ -601,13 +609,45 @@ zx_status_t MinfsChecker::CheckJournal() const {
     return ZX_ERR_IO;
   }
 
-  const JournalInfo* journal_info = reinterpret_cast<const JournalInfo*>(data);
-  if (journal_info->magic != kJournalMagic) {
+  // Check that the journal superblock is valid.
+  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(data);
+  if (journal_info->magic != fs::kJournalMagic) {
     FS_TRACE_ERROR("minfs: invalid journal magic\n");
     return ZX_ERR_BAD_STATE;
   }
 
-  return ZX_OK;
+  uint32_t old_checksum = journal_info->checksum;
+  journal_info->checksum = 0;
+  journal_info->checksum =
+      crc32(0, reinterpret_cast<uint8_t*>(data), sizeof(fs::JournalInfo));
+  if (journal_info->checksum != old_checksum) {
+    FS_TRACE_ERROR("minfs: invalid journal checksum\n");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Check that the backup superblock is valid.
+  blk_t backup_location;
+  if ((fs_->Info().flags & kMinfsFlagFVM) == 0) {
+    backup_location = kNonFvmSuperblockBackup;
+  } else {
+#ifdef __Fuchsia__
+    backup_location = kFvmSuperblockBackup;
+#else
+    backup_location = fs_->GetBlockOffsets().IntegrityStartBlock();
+#endif
+  }
+
+  if (fs_->bc_->Readblk(backup_location, data) < 0) {
+    FS_TRACE_ERROR("minfs: could not read backup superblock\n");
+    return ZX_ERR_IO;
+  }
+
+  Superblock* backup_info = reinterpret_cast<Superblock*>(data);
+#ifdef __Fuchsia__
+  return CheckSuperblock(backup_info, fs_->bc_->device(), fs_->bc_->Maxblk());
+#else
+  return CheckSuperblock(backup_info, fs_->bc_->Maxblk());
+#endif
 }
 
 MinfsChecker::MinfsChecker()
@@ -778,29 +818,49 @@ zx_status_t RepairSuperblock(fs::TransactionHandler* transaction_handler,
 
  // TODO(ZX-4623): Remove this code after migration to major version 8 and replace calling sites
  // with LoadSuperblock.
- // Loads the superblock and upgrades if needed from version 7 to version 8.
-zx_status_t LoadAndUpgradeSuperblock(Bcache* bc, bool is_fs_writable, Superblock* out_info) {
+ // Loads the superblock and upgrades if needed from version 7 or 8 to version 9.
+zx_status_t LoadAndUpgradeSuperblockAndJournal(Bcache* bc, bool is_fs_writable,
+                                               Superblock* out_info) {
   zx_status_t status = bc->Readblk(kSuperblockStart, out_info);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("minfs: could not read info block.\n");
     return status;
   }
 
+  // Verify that the superblock belongs to a Minfs partition.
+  if (out_info->magic0 != kMinfsMagic0 || out_info->magic1 != kMinfsMagic1) {
+    FS_TRACE_ERROR("minfs: invalid magic.\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Skip the upgrade path if we are not on Fuchsia.
+#ifdef __Fuchsia__
   if (is_fs_writable) {
-    if (out_info->version_major == kMinfsMajorVersionOld) {
+    if (out_info->version_major == kMinfsMajorVersionOld1) {
       FS_TRACE_INFO("minfs: Soft upgrade to version 8.\n");
       // Upgrade the superblock.
-#ifdef __Fuchsia__
       status = UpgradeSuperblock(bc, bc->device(), out_info);
-#else
-      status = UpgradeSuperblock(bc, out_info);
-#endif
       if (status != ZX_OK) {
         FS_TRACE_ERROR("minfs: failed to upgrade on-disk filesystem to newer version %d\n", status);
         return status;
       }
+
+      ZX_ASSERT(out_info->version_major == kMinfsMajorVersionOld2);
+    }
+
+    if (out_info->version_major == kMinfsMajorVersionOld2) {
+      FS_TRACE_INFO("minfs: Soft upgrade to version 9.\n");
+      // Upgrade the journal.
+      status = UpgradeJournal(bc, bc->device(), out_info);
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("minfs: failed to upgrade on-disk filesystem to newer version %d\n", status);
+        return status;
+      }
+
+      ZX_ASSERT(out_info->version_major == kMinfsMajorVersion);
     }
   }
+#endif
   DumpInfo(out_info);
 #ifdef __Fuchsia__
   status = CheckSuperblock(out_info, bc->device(), bc->Maxblk());
@@ -964,10 +1024,11 @@ zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
 zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair fsck_repair) {
   Superblock info = {};
 
-  // TODO(ZX-4623): Remove this code after migration to major version 8 and replace with
+  // TODO(36164): Remove this code after migration to major version 9 and replace with
   // LoadSuperblock.
-  zx_status_t status = LoadAndUpgradeSuperblock(bc.get(), fsck_repair == minfs::Repair::kEnabled,
-                                                &info);
+  zx_status_t status = LoadAndUpgradeSuperblockAndJournal(bc.get(),
+                                                          fsck_repair == minfs::Repair::kEnabled,
+                                                          &info);
   if (status != ZX_OK) {
     if (fsck_repair == Repair::kDisabled) {
       FS_TRACE_ERROR("Fsck: LoadSuperblock failure: %d\n", status);
@@ -1010,9 +1071,8 @@ zx_status_t Fsck(fbl::unique_ptr<Bcache> bc, Repair fsck_repair) {
   r = chk.CheckAllocatedCounts();
   status |= (status != ZX_OK) ? 0 : r;
 
-  // TODO(ZX-4623): Uncomment this check for journal after safe migration to major version 8.
-  // r = chk.CheckJournal();
-  // status |= (status != ZX_OK) ? 0 : r;
+  r = chk.CheckIntegrity();
+  status |= (status != ZX_OK) ? 0 : r;
 
   // TODO: check allocated inodes that were abandoned
   // TODO: check allocated blocks that were not accounted for

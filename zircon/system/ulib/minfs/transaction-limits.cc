@@ -68,7 +68,7 @@ zx_status_t GetRequiredBlockCount(size_t offset, size_t length, blk_t* num_req_b
 
 TransactionLimits::TransactionLimits(const Superblock& info) {
   CalculateDataBlocks();
-  CalculateJournalBlocks(GetBlockBitmapBlocks(info));
+  CalculateIntegrityBlocks(GetBlockBitmapBlocks(info));
 }
 
 void TransactionLimits::CalculateDataBlocks() {
@@ -91,7 +91,7 @@ void TransactionLimits::CalculateDataBlocks() {
   max_meta_data_blocks_ = fbl::max(max_directory_blocks, max_indirect_blocks);
 }
 
-void TransactionLimits::CalculateJournalBlocks(blk_t block_bitmap_blocks) {
+void TransactionLimits::CalculateIntegrityBlocks(blk_t block_bitmap_blocks) {
   max_entry_data_blocks_ = kMaxSuperblockBlocks + kMaxInodeBitmapBlocks + block_bitmap_blocks +
                            kMaxInodeTableBlocks + max_meta_data_blocks_;
 
@@ -119,8 +119,8 @@ void TransactionLimits::CalculateJournalBlocks(blk_t block_bitmap_blocks) {
   blk_t commit_blocks = 1;
 
   max_entry_blocks_ = header_blocks + revocation_blocks + max_entry_data_blocks_ + commit_blocks;
-  min_journal_blocks_ = max_entry_blocks_ + kJournalMetadataBlocks;
-  rec_journal_blocks_ = fbl::max(min_journal_blocks_, kDefaultJournalBlocks);
+  min_integrity_blocks_ = max_entry_blocks_ + kJournalMetadataBlocks + kBackupSuperblockBlocks;
+  rec_integrity_blocks_ = fbl::max(min_integrity_blocks_, kDefaultJournalBlocks);
 }
 
 }  // namespace minfs

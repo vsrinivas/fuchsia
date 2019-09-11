@@ -22,7 +22,7 @@ using block_client::FakeBlockDevice;
 constexpr size_t abm_block = 5;
 constexpr size_t ibm_block = 6;
 constexpr size_t data_block = 7;
-constexpr size_t journal_block = 8;
+constexpr size_t integrity_block = 8;
 
 // Mock TransactionHandler class to be used in superblock tests.
 class MockTransactionHandler : public fs::TransactionHandler {
@@ -69,7 +69,7 @@ void FillSuperblockFields(Superblock* info) {
   info->block_size = kMinfsBlockSize;
   info->inode_size = kMinfsInodeSize;
   info->dat_block = data_block;
-  info->journal_start_block = journal_block;
+  info->integrity_start_block = integrity_block;
   info->ibm_block = ibm_block;
   info->abm_block = abm_block;
   info->ino_block = abm_block;
@@ -180,18 +180,18 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
 
 // TODO(ZX-4623): Remove this test after migration to major version 8.
 // Tests upgrading superblock from version 7 to version 8.
-TEST(SuperblockTest, TestUpgradeSuperblock) {
+TEST(SuperblockTest, TestUpgradeSuperblockV8) {
   uint8_t block[kMinfsBlockSize];
   memset(block, 0, sizeof(block));
   SuperblockOld* old_info = reinterpret_cast<SuperblockOld*>(block);
   old_info->magic0 = kMinfsMagic0;
   old_info->magic1 = kMinfsMagic1;
-  old_info->version = kMinfsMajorVersionOld;
+  old_info->version = kMinfsMajorVersionOld1;
   old_info->flags = kMinfsFlagClean;
   old_info->block_size = kMinfsBlockSize;
   old_info->inode_size = kMinfsInodeSize;
   old_info->dat_block = kFVMBlockDataStart;
-  old_info->journal_start_block = kFVMBlockJournalStart;
+  old_info->journal_start_block = kFvmSuperblockBackup + kBackupSuperblockBlocks;
   old_info->ibm_block = ibm_block;
   old_info->abm_block = abm_block;
   old_info->block_count = 2;
@@ -225,6 +225,43 @@ TEST(SuperblockTest, TestUpgradeSuperblock) {
   zx_status_t status = UpgradeSuperblock(transaction_handler.get(), &device, old_info);
 
   ASSERT_EQ(status, ZX_OK);
+
+  Superblock upgraded_info = {};
+  Superblock backup_info = {};
+
+  // Read back the superblock and backup superblock.
+  ASSERT_OK(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &upgraded_info));
+  ASSERT_OK(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup_info));
+
+  // Confirm that the superblock is upgraded to newer version.
+  ASSERT_EQ(kMinfsMajorVersionOld2, upgraded_info.version_major);
+  ASSERT_EQ(kMinfsMinorVersion, upgraded_info.version_minor);
+
+  // Confirm that the backup superblock is updated.
+  ASSERT_BYTES_EQ(&upgraded_info, &backup_info, sizeof(upgraded_info));
+}
+
+// TODO(36164): Remove this test after migration to major version 9.
+// Tests upgrading superblock from version 8 to version 9.
+TEST(SuperblockTest, TestUpgradeSuperblockV9) {
+  uint8_t block[kMinfsBlockSize];
+  memset(block, 0, sizeof(block));
+  Superblock* info = reinterpret_cast<Superblock*>(block);
+  info->magic0 = kMinfsMagic0;
+  info->magic1 = kMinfsMagic1;
+  info->version_major = kMinfsMajorVersionOld2;
+  info->version_minor = kMinfsMinorVersion;
+
+  FakeBlockDevice device = FakeBlockDevice(100, kMinfsBlockSize);
+  auto transaction_handler =
+      std::unique_ptr<MockTransactionHandler>(new MockTransactionHandler(&device));
+
+  // Write older superblock version to disk.
+  ASSERT_OK(
+    WriteDataToDisk(transaction_handler.get(), &device, block, sizeof(block), kSuperblockStart));
+
+  // Try to upgrade to newer superblock version
+  ASSERT_OK(UpgradeJournal(transaction_handler.get(), &device, info));
 
   Superblock upgraded_info = {};
   Superblock backup_info = {};

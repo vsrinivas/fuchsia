@@ -109,8 +109,10 @@ class BlockOffsets {
   blk_t InoStartBlock() const { return ino_start_block_; }
   blk_t InoBlockCount() const { return ino_block_count_; }
 
-  blk_t JournalStartBlock() const { return journal_start_block_; }
-  blk_t JournalBlockCount() const { return journal_block_count_; }
+  blk_t IntegrityStartBlock() const { return integrity_start_block_; }
+  blk_t IntegrityBlockCount() const { return integrity_block_count_; }
+
+  blk_t JournalStartBlock() const { return integrity_start_block_ + kBackupSuperblockBlocks; }
 
   blk_t DatStartBlock() const { return dat_start_block_; }
   blk_t DatBlockCount() const { return dat_block_count_; }
@@ -125,8 +127,8 @@ class BlockOffsets {
   blk_t ino_start_block_;
   blk_t ino_block_count_;
 
-  blk_t journal_start_block_;
-  blk_t journal_block_count_;
+  blk_t integrity_start_block_;
+  blk_t integrity_block_count_;
 
   blk_t dat_start_block_;
   blk_t dat_block_count_;
@@ -193,9 +195,16 @@ class Minfs :
                             IntegrityCheck checks, fbl::unique_ptr<Minfs>* out);
 
 #ifdef __Fuchsia__
+  // Initializes the Minfs journal and writeback queue and resolves any pending disk state (e.g.,
+  // resolving unlinked nodes and existing journal entries).
+  zx_status_t InitializeJournal(fs::JournalSuperblock journal_superblock);
+
   // Initializes the Minfs writeback queue and resolves any pending disk state (e.g., resolving
-  // unlinked nodes).
-  zx_status_t InitializeWriteback();
+  // unlinked nodes and existing journal entries). Does not enable the journal.
+  zx_status_t InitializeUnjournalledWriteback();
+
+  // Initializes the Minfs work queue.
+  zx_status_t InitializeWorkQueue();
 
   // Queries the superblock flags for FVM as well as underlying FVM, if it exists.
   zx_status_t FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) const;
@@ -435,10 +444,23 @@ class Minfs :
   TransactionLimits limits_;
 };
 
-// Create and register a VMO for writes.
 #ifdef __Fuchsia__
+// Create and register a VMO for writes.
 zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
                                  fuchsia_hardware_block_VmoID* out_vmoid);
+
+// Writes |bytes| bytes of |data| to disk at block |block_num|. |bytes| must not exceed
+// kMinfsBlockSize. If |bytes| < kMinfsBlockSize, kMinfsBlockSize bytes will still be
+// written to disk with the remaining |kMinfsBlockSize - bytes| bytes set to 0.
+zx_status_t WriteDataToDisk(fs::TransactionHandler* transaction_handler,
+                            block_client::BlockDevice* device, void* data, size_t bytes,
+                            blk_t block_num);
+
+// Reads |bytes| bytes of |data| from disk at block |block_num|. |bytes| must not exceed
+// kMinfsBlockSize.
+zx_status_t ReadDataFromDisk(fs::TransactionHandler* transaction_handler,
+                             block_client::BlockDevice* device, void* data, size_t bytes,
+                             blk_t block_num);
 #endif
 
 // Upgrades superblock from older version 7 to newer version 8.
@@ -448,6 +470,13 @@ zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler,
                               block_client::BlockDevice* device, void* out_info);
 #else
 zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void* out_info);
+#endif
+
+// Upgrades superblock from older version 8 to newer version 9.
+// TODO(36164): Remove this code after migration to version 9.
+#ifdef __Fuchsia__
+zx_status_t UpgradeJournal(fs::TransactionHandler* transaction_handler,
+                           block_client::BlockDevice* device, Superblock* out_info);
 #endif
 
 // Return the block offset in vmo_indirect_ of indirect blocks pointed to by the doubly indirect

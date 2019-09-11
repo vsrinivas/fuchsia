@@ -17,13 +17,13 @@ TEST(MinfsFormat, MinfsSuperblock) {
   info.ibm_block = 2;
   info.abm_block = 3;
   info.ino_block = 5;
-  info.journal_start_block = 11;
+  info.integrity_start_block = 11;
   info.dat_block = 19;
 
   info.ibm_slices = 3;
   info.abm_slices = 5;
   info.ino_slices = 11;
-  info.journal_slices = 13;
+  info.integrity_slices = 13;
   info.dat_slices = 17;
 
   ASSERT_FALSE(GetMinfsFlagFvm(info));
@@ -32,9 +32,10 @@ TEST(MinfsFormat, MinfsSuperblock) {
 
   ASSERT_EQ(BlockBitmapBlocks(info), info.ino_block - info.abm_block);
 
-  ASSERT_EQ(InodeBlocks(info), info.journal_start_block - info.ino_block);
+  ASSERT_EQ(InodeBlocks(info), info.integrity_start_block - info.ino_block);
 
-  ASSERT_EQ(JournalBlocks(info), info.dat_block - info.journal_start_block);
+  ASSERT_EQ(JournalBlocks(info),
+            info.dat_block - info.integrity_start_block - kBackupSuperblockBlocks);
 
   ASSERT_EQ(DataBlocks(info), info.block_count);
 
@@ -48,30 +49,34 @@ TEST(MinfsFormat, MinfsSuperblockOnFvm) {
   info.ibm_block = 2;
   info.abm_block = 3;
   info.ino_block = 5;
-  info.journal_start_block = 11;
+  info.integrity_start_block = 11;
   info.dat_block = 19;
 
+  info.slice_size = 81920;
   info.ibm_slices = 3;
   info.abm_slices = 5;
   info.ino_slices = 11;
-  info.journal_slices = 13;
+  info.integrity_slices = 13;
   info.dat_slices = 17;
 
   SetMinfsFlagFvm(info);
   ASSERT_TRUE(GetMinfsFlagFvm(info));
 
-  ASSERT_EQ(InodeBitmapBlocks(info), info.ibm_slices);
+  auto blocks_per_slice = static_cast<blk_t>(info.slice_size / kMinfsBlockSize);
 
-  ASSERT_EQ(BlockBitmapBlocks(info), info.abm_slices);
+  ASSERT_EQ(InodeBitmapBlocks(info), info.ibm_slices * blocks_per_slice);
 
-  ASSERT_EQ(InodeBlocks(info), info.ino_slices);
+  ASSERT_EQ(BlockBitmapBlocks(info), info.abm_slices * blocks_per_slice);
 
-  ASSERT_EQ(JournalBlocks(info), info.journal_slices);
+  ASSERT_EQ(InodeBlocks(info), info.ino_slices * blocks_per_slice);
 
-  ASSERT_EQ(DataBlocks(info), info.dat_slices);
+  ASSERT_EQ(JournalBlocks(info),
+            info.integrity_slices * blocks_per_slice - kBackupSuperblockBlocks);
 
-  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info) +
-                                     InodeBlocks(info) + JournalBlocks(info));
+  ASSERT_EQ(DataBlocks(info), info.dat_slices * blocks_per_slice);
+
+  ASSERT_EQ(NonDataBlocks(info), InodeBitmapBlocks(info) + BlockBitmapBlocks(info)
+                                 + InodeBlocks(info) + JournalBlocks(info));
 }
 
 }  // namespace

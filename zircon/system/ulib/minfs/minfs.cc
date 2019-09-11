@@ -28,14 +28,18 @@
 #ifdef __Fuchsia__
 #include <fuchsia/minfs/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/cksum.h>
 #include <lib/zx/event.h>
 
 #include <fbl/auto_lock.h>
 #include <fs/journal/journal.h>
+#include <fs/journal/replay.h>
 #endif
+
 
 #include <utility>
 
+#include <fs/journal/format.h>
 #include <minfs/fsck.h>
 
 #include "file.h"
@@ -192,14 +196,14 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
   info->ino_slices = 1;
 
   TransactionLimits limits(*info);
-  blk_t journal_blocks = limits.GetRecommendedJournalBlocks();
+  blk_t journal_blocks = limits.GetRecommendedIntegrityBlocks();
   request.length = fbl::round_up(journal_blocks, kBlocksPerSlice) / kBlocksPerSlice;
   request.offset = kFVMBlockJournalStart / kBlocksPerSlice;
   if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
     FS_TRACE_ERROR("minfs mkfs: Failed to allocate journal blocks: %d\n", status);
     return status;
   }
-  info->journal_slices = static_cast<blk_t>(request.length);
+  info->integrity_slices = static_cast<blk_t>(request.length);
 
   ZX_ASSERT(options.fvm_data_slices > 0);
   request.length = options.fvm_data_slices;
@@ -242,18 +246,18 @@ zx_status_t VerifySlicesSize(const Superblock* info, const TransactionLimits& li
   if (ino_blocks_needed > ino_blocks_allocated) {
     FS_TRACE_ERROR("minfs: Not enough slices for inode table\n");
     return ZX_ERR_INVALID_ARGS;
-  } else if (ino_blocks_allocated + info->ino_block >= info->journal_start_block) {
+  } else if (ino_blocks_allocated + info->ino_block >= info->integrity_start_block) {
     FS_TRACE_ERROR("minfs: Inode table collides with data blocks\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
-  size_t journal_blocks_needed = limits.GetMinimumJournalBlocks();
-  size_t journal_blocks_allocated = info->journal_slices * blocks_per_slice;
+  size_t journal_blocks_needed = limits.GetMinimumIntegrityBlocks();
+  size_t journal_blocks_allocated = info->integrity_slices * blocks_per_slice;
   if (journal_blocks_needed > journal_blocks_allocated) {
     FS_TRACE_ERROR("minfs: Not enough slices for journal\n");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (journal_blocks_allocated + info->journal_start_block > info->dat_block) {
+  if (journal_blocks_allocated + info->integrity_start_block > info->dat_block) {
     FS_TRACE_ERROR("minfs: Journal collides with data blocks\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -364,7 +368,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint32_t max_blocks) {
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    if (info->dat_block - info->journal_start_block < limits.GetMinimumJournalBlocks()) {
+    if (info->dat_block - info->integrity_start_block < limits.GetMinimumIntegrityBlocks()) {
       FS_TRACE_ERROR("minfs: journal too small\n");
       return ZX_ERR_BAD_STATE;
     }
@@ -393,25 +397,25 @@ BlockOffsets::BlockOffsets(const Bcache& bc, const SuperblockManager& sb) {
     ibm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[1] / kMinfsBlockSize);
     abm_block_count_ = static_cast<blk_t>(bc.extent_lengths_[2] / kMinfsBlockSize);
     ino_block_count_ = static_cast<blk_t>(bc.extent_lengths_[3] / kMinfsBlockSize);
-    journal_block_count_ = static_cast<blk_t>(bc.extent_lengths_[4] / kMinfsBlockSize);
+    integrity_block_count_ = static_cast<blk_t>(bc.extent_lengths_[4] / kMinfsBlockSize);
     dat_block_count_ = static_cast<blk_t>(bc.extent_lengths_[5] / kMinfsBlockSize);
 
     ibm_start_block_ = static_cast<blk_t>(bc.extent_lengths_[0] / kMinfsBlockSize);
     abm_start_block_ = ibm_start_block_ + ibm_block_count_;
     ino_start_block_ = abm_start_block_ + abm_block_count_;
-    journal_start_block_ = ino_start_block_ + ino_block_count_;
-    dat_start_block_ = journal_start_block_ + journal_block_count_;
+    integrity_start_block_ = ino_start_block_ + ino_block_count_;
+    dat_start_block_ = integrity_start_block_ + integrity_block_count_;
   } else {
     ibm_start_block_ = sb.Info().ibm_block;
     abm_start_block_ = sb.Info().abm_block;
     ino_start_block_ = sb.Info().ino_block;
-    journal_start_block_ = sb.Info().journal_start_block;
+    integrity_start_block_ = sb.Info().integrity_start_block;
     dat_start_block_ = sb.Info().dat_block;
 
     ibm_block_count_ = abm_start_block_ - ibm_start_block_;
     abm_block_count_ = ino_start_block_ - abm_start_block_;
     ino_block_count_ = dat_start_block_ - ino_start_block_;
-    journal_block_count_ = dat_start_block_ - journal_start_block_;
+    integrity_block_count_ = dat_start_block_ - integrity_start_block_;
     dat_block_count_ = sb.Info().block_count;
   }
 }
@@ -1043,7 +1047,55 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info, In
 }
 
 #ifdef __Fuchsia__
-zx_status_t Minfs::InitializeWriteback() {
+zx_status_t ReplayJournal(fs::TransactionHandler* transaction_handler, fs::VmoidRegistry* registry,
+                          const Superblock& info, fs::JournalSuperblock* out) {
+  FS_TRACE_INFO("minfs: Replaying journal\n");
+
+  zx_status_t status = fs::ReplayJournal(transaction_handler, registry, JournalStartBlock(info),
+                                         JournalBlocks(info), out);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: Failed to replay journal\n");
+    return status;
+  }
+
+  FS_TRACE_DEBUG("minfs: Journal replayed\n");
+  return ZX_OK;
+}
+
+zx_status_t Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
+  if (journal_ != nullptr) {
+    FS_TRACE_ERROR("minfs: Journal was already initialized.\n");
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+
+  std::unique_ptr<fs::BlockingRingBuffer> journal_buffer;
+  zx_status_t status = fs::BlockingRingBuffer::Create(
+      GetMutableBcache(), JournalBlocks(sb_->Info()), kMinfsBlockSize, "minfs-journal-buffer",
+      &journal_buffer);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: Cannot create journal buffer\n");
+    return status;
+  }
+
+  std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer;
+  status = fs::BlockingRingBuffer::Create(GetMutableBcache(), WritebackCapacity(), kMinfsBlockSize,
+                                          "minfs-writeback-buffer", &writeback_buffer);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("minfs: Cannot create writeback buffer\n");
+    return status;
+  }
+
+  journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(journal_superblock),
+                                           std::move(journal_buffer), std::move(writeback_buffer),
+                                           sb_->Info().integrity_start_block);
+  return ZX_OK;
+}
+
+zx_status_t Minfs::InitializeUnjournalledWriteback() {
+  if (journal_ != nullptr) {
+    FS_TRACE_ERROR("minfs: Writeback was already initialized.\n");
+    return ZX_ERR_ALREADY_EXISTS;
+  }
   std::unique_ptr<fs::BlockingRingBuffer> writeback_buffer;
   zx_status_t status = fs::BlockingRingBuffer::Create(bc_.get(), WritebackCapacity(),
                                                       kMinfsBlockSize, "minfs-writeback-buffer",
@@ -1054,20 +1106,13 @@ zx_status_t Minfs::InitializeWriteback() {
   }
 
   journal_ = std::make_unique<fs::Journal>(GetMutableBcache(), std::move(writeback_buffer));
-
-  if ((status = PurgeUnlinked()) != ZX_OK) {
-    return status;
-  }
-
-  if ((status = WorkQueue::Create(this, &assigner_)) != ZX_OK) {
-    return status;
-  }
-
   return ZX_OK;
 }
-#endif
 
-#ifdef __Fuchsia__
+zx_status_t Minfs::InitializeWorkQueue() {
+  return WorkQueue::Create(this, &assigner_);
+}
+
 zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out_vmo, size_t blocks,
                                  fuchsia_hardware_block_VmoID* out_vmoid) {
   zx_status_t status = zx::vmo::create(blocks * kMinfsBlockSize, 0, out_vmo);
@@ -1083,14 +1128,83 @@ zx_status_t CreateAndRegisterVmo(block_client::BlockDevice* device, zx::vmo* out
 #endif
 
 #ifdef __Fuchsia__
+zx_status_t ReadWriteDataHelper(uint32_t opcode, fs::TransactionHandler* transaction_handler,
+                                block_client::BlockDevice* device, void* data, size_t bytes,
+                                blk_t block_num) {
+  if (opcode != BLOCKIO_WRITE && opcode != BLOCKIO_READ) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (bytes > kMinfsBlockSize) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx::vmo vmo;
+  fuchsia_hardware_block_VmoID vmoid;
+  zx_status_t status = CreateAndRegisterVmo(device, &vmo, 1, &vmoid);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (opcode == BLOCKIO_WRITE) {
+    // Prepare fifo transaction for write.
+    status = vmo.write(data, 0, bytes);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  block_fifo_request_t request;
+
+  const uint32_t kDiskBlocksPerFsBlock =
+      kMinfsBlockSize / transaction_handler->DeviceBlockSize();
+  request.opcode = opcode;
+  request.vmoid = vmoid.id;
+  request.group = transaction_handler->BlockGroupID();
+  request.length = kDiskBlocksPerFsBlock;
+  request.vmo_offset = 0;
+  request.dev_offset = block_num * kDiskBlocksPerFsBlock;
+
+  status = transaction_handler->Transaction(&request, 1);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (opcode == BLOCKIO_READ) {
+    status = vmo.read(data, 0, bytes);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  request.opcode = BLOCKIO_CLOSE_VMO;
+  return transaction_handler->Transaction(&request, 1);
+}
+
+zx_status_t WriteDataToDisk(fs::TransactionHandler* transaction_handler,
+                            block_client::BlockDevice* device, void* data, size_t bytes,
+                            blk_t block_num) {
+  return ReadWriteDataHelper(BLOCKIO_WRITE, transaction_handler, device, data, bytes, block_num);
+}
+
+zx_status_t ReadDataFromDisk(fs::TransactionHandler* transaction_handler,
+                             block_client::BlockDevice* device, void* data, size_t bytes,
+                             blk_t block_num) {
+  return ReadWriteDataHelper(BLOCKIO_READ, transaction_handler, device, data, bytes, block_num);
+}
+#endif
+
+#ifdef __Fuchsia__
 zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler,
                               block_client::BlockDevice* device, void* out_info) {
 #else
 zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void* out_info) {
 #endif
-  zx_status_t status = ZX_OK;
-
   SuperblockOld* old_info = reinterpret_cast<SuperblockOld*>(out_info);
+
+  if (old_info->version != kMinfsMajorVersionOld1) {
+    // Skip upgrade if minfs superblock version does not match expected.
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   // Update to newer superblock version.
   Superblock new_info = {};
@@ -1106,20 +1220,20 @@ zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void*
   new_info.ibm_block = old_info->ibm_block;
   new_info.abm_block = old_info->abm_block;
   new_info.ino_block = old_info->ino_block;
-  new_info.journal_start_block = old_info->journal_start_block;
+  new_info.integrity_start_block = old_info->journal_start_block;
   new_info.dat_block = old_info->dat_block;
   new_info.slice_size = static_cast<uint32_t>(old_info->slice_size);
   new_info.vslice_count = static_cast<uint32_t>(old_info->vslice_count);
   new_info.ibm_slices = old_info->ibm_slices;
   new_info.abm_slices = old_info->abm_slices;
   new_info.ino_slices = old_info->ino_slices;
-  new_info.journal_slices = old_info->journal_slices;
+  new_info.integrity_slices = old_info->journal_slices;
   new_info.dat_slices = old_info->dat_slices;
   new_info.unlinked_head = old_info->unlinked_head;
   new_info.unlinked_tail = old_info->unlinked_tail;
 
   // Upgrade to newer version.
-  new_info.version_major = kMinfsMajorVersion;
+  new_info.version_major = kMinfsMajorVersionOld2;
   new_info.version_minor = kMinfsMinorVersion;
 
   UpdateChecksum(&new_info);
@@ -1129,31 +1243,11 @@ zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void*
     block_num = kNonFvmSuperblockBackup;
   }
 
+  zx_status_t status = ZX_OK;
+
 // First try to write backup superblock info to disk.
 #ifdef __Fuchsia__
-  zx::vmo vmo;
-  fuchsia_hardware_block_VmoID vmoid;
-  status = CreateAndRegisterVmo(device, &vmo, 1, &vmoid);
-  if (status != ZX_OK) {
-    return status;
-  }
-  // Prepare fifo transaction for write.
-  status = vmo.write(&new_info, 0, sizeof(new_info));
-  if (status != ZX_OK) {
-    return status;
-  }
-  block_fifo_request_t request;
-
-  const uint32_t disk_blocks_per_fs_block =
-      kMinfsBlockSize / transaction_handler->DeviceBlockSize();
-  request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid.id;
-  request.group = transaction_handler->BlockGroupID();
-  request.length = disk_blocks_per_fs_block;
-  request.vmo_offset = 0;
-  request.dev_offset = block_num * disk_blocks_per_fs_block;
-
-  status = device->FifoTransaction(&request, 1);
+  status = WriteDataToDisk(transaction_handler, device, &new_info, sizeof(new_info), block_num);
 #else
   status = transaction_handler->Writeblk(block_num, &new_info);
 #endif
@@ -1164,20 +1258,82 @@ zx_status_t UpgradeSuperblock(fs::TransactionHandler* transaction_handler, void*
   // Finally write newer superblock info to disk.
   // If this fails, the state of the device is un-changed.
 #ifdef __Fuchsia__
-  request.opcode = BLOCKIO_WRITE;
-  request.vmoid = vmoid.id;
-  request.group = transaction_handler->BlockGroupID();
-  request.length = disk_blocks_per_fs_block;
-  request.vmo_offset = 0;
-  request.dev_offset = kSuperblockStart * disk_blocks_per_fs_block;
-
-  status = device->FifoTransaction(&request, 1);
+  status = WriteDataToDisk(transaction_handler, device, &new_info, sizeof(new_info),
+                           kSuperblockStart);
 #else
   status = transaction_handler->Writeblk(kSuperblockStart, &new_info);
 #endif
   memcpy(out_info, &new_info, sizeof(new_info));
   return status;
 }
+
+#ifdef __Fuchsia__
+zx_status_t UpgradeJournal(fs::TransactionHandler* transaction_handler,
+                              block_client::BlockDevice* device, Superblock* out_info) {
+  static_assert(kMinfsMajorVersion == 0x9, "Version 9 Upgrade code should only live for one rev.");
+
+  if (out_info->version_major != kMinfsMajorVersionOld2) {
+    // Skip upgrade if minfs superblock version does not match expected.
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Make sure that the journal start block is set correctly on FVM. If Minfs was previously
+  // upgraded from version 7 to 8, this may be out of date.
+  if (GetMinfsFlagFvm(*out_info)) {
+    out_info->integrity_start_block = kFvmSuperblockBackup + kBackupSuperblockBlocks;
+  }
+
+  zx_status_t status;
+  uint8_t journal_block[kMinfsBlockSize] = {};
+
+  blk_t journal_start_block = static_cast<blk_t>(JournalStartBlock(*out_info));
+  status = ReadDataFromDisk(transaction_handler, device, &journal_block[0], kMinfsBlockSize,
+                            journal_start_block);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(journal_block);
+  // Ideally we should check that the current journal magic on disk matches kOldJournalMagic, but
+  // in the case that this Minfs was previously upgraded to version 8, the journal superblock would
+  // have been overwritten and not moved to its new location, so this may not match as expected.
+  journal_info->magic = fs::kJournalMagic;
+  journal_info->checksum = 0;
+  journal_info->checksum =
+      crc32(0, reinterpret_cast<const uint8_t*>(journal_block), sizeof(fs::JournalInfo));
+
+  status = WriteDataToDisk(transaction_handler, device, journal_info, sizeof(*journal_info),
+                           journal_start_block);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  out_info->version_major = kMinfsMajorVersion;
+  UpdateChecksum(out_info);
+
+  blk_t block_num = kFvmSuperblockBackup;
+  if ((out_info->flags & kMinfsFlagFVM) == 0) {
+    block_num = kNonFvmSuperblockBackup;
+  }
+
+// First try to write backup superblock info to disk.
+  status = WriteDataToDisk(transaction_handler, device, out_info, sizeof(*out_info),
+                           block_num);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Finally write newer superblock info to disk.
+  // If this fails, the state of the device is un-changed.
+  status = WriteDataToDisk(transaction_handler, device, out_info, sizeof(*out_info),
+                           kSuperblockStart);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+#endif
 
 #ifdef __Fuchsia__
 zx_status_t CreateBcache(fbl::unique_fd fd, bool* out_readonly,
@@ -1225,9 +1381,9 @@ zx_status_t MountWithRepair(fbl::unique_fd device_fd, minfs::MountOptions* out_o
   }
 
   minfs::Superblock info = {};
-  // TODO(ZX-4623): Remove this code after migration to major version 8 and replace with
+  // TODO(36164): Remove this code after migration to major version 9 and replace with
   // LoadSuperblock.
-  status = LoadAndUpgradeSuperblock(bc.get(), out_options->readonly == false, &info);
+  status = LoadAndUpgradeSuperblockAndJournal(bc.get(), out_options->readonly == false, &info);
   if (status != ZX_OK) {
     if (out_options->readonly) {
       // Return without repairing.
@@ -1267,6 +1423,12 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
   if ((info->flags & kMinfsFlagClean) == 0) {
     FS_TRACE_WARN("minfs: filesystem not unmounted cleanly. Integrity check required\n");
   }
+  fs::JournalSuperblock journal_superblock;
+  if (!options.readonly) {
+    if ((status = ReplayJournal(bc.get(), bc.get(), *info, &journal_superblock)) != ZX_OK) {
+      return status;
+    }
+  }
 #endif
   fbl::unique_ptr<Minfs> fs;
   if ((status = Minfs::Create(std::move(bc), info, IntegrityCheck::kAll, &fs)) != ZX_OK) {
@@ -1274,8 +1436,24 @@ zx_status_t Mount(fbl::unique_ptr<minfs::Bcache> bc, const MountOptions& options
     return status;
   }
 #ifdef __Fuchsia__
-  if (!options.readonly && (status = fs->InitializeWriteback()) != ZX_OK) {
-    return status;
+  if (!options.readonly) {
+    if (options.journal) {
+      if ((status = fs->InitializeJournal(std::move(journal_superblock))) != ZX_OK) {
+        return status;
+      }
+    } else if ((status = fs->InitializeUnjournalledWriteback()) != ZX_OK) {
+      return status;
+    }
+
+    // After initializing the writeback buffers, purge any remaining nodes in the unlinked list.
+    if ((status = fs->PurgeUnlinked()) != ZX_OK) {
+      return status;
+    }
+
+    // Finally, bring up the async work queue.
+    if ((status = fs->InitializeWorkQueue()) != ZX_OK) {
+      return status;
+    }
   }
 #endif
 
@@ -1441,13 +1619,13 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
 
       // Calculate the journal size based on other metadata structures.
       TransactionLimits limits(info);
-      journal_blocks = limits.GetRecommendedJournalBlocks();
+      journal_blocks = limits.GetRecommendedIntegrityBlocks();
 
       non_dat_blocks = 8 + fbl::round_up(ibmblks, 8u) + alloc_bitmap_rounded + inoblks;
 
       // If the recommended journal count is too high, try using the minimum instead.
       if (non_dat_blocks + journal_blocks >= blocks) {
-        journal_blocks = limits.GetMinimumJournalBlocks();
+        journal_blocks = limits.GetMinimumIntegrityBlocks();
       }
 
       non_dat_blocks += journal_blocks;
@@ -1470,15 +1648,15 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
       }
     }
 
-    info.journal_start_block = info.ino_block + inoblks;
-    info.dat_block = info.journal_start_block + journal_blocks;
+    info.integrity_start_block = info.ino_block + inoblks;
+    info.dat_block = info.integrity_start_block + journal_blocks;
   } else {
     info.block_count = blocks;
     abmblks = (info.block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
     info.ibm_block = kFVMBlockInodeBmStart;
     info.abm_block = kFVMBlockDataBmStart;
     info.ino_block = kFVMBlockInodeStart;
-    info.journal_start_block = kFVMBlockJournalStart;
+    info.integrity_start_block = kFvmSuperblockBackup;
     info.dat_block = kFVMBlockDataStart;
   }
 
@@ -1579,9 +1757,10 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
 
   // Write the journal info block to disk.
   memset(blk, 0, sizeof(blk));
-  JournalInfo* journal_info = reinterpret_cast<JournalInfo*>(blk);
-  journal_info->magic = kJournalMagic;
-  bc->Writeblk(info.journal_start_block, blk);
+  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(blk);
+  journal_info->magic = fs::kJournalMagic;
+  journal_info->checksum = crc32(0, reinterpret_cast<const uint8_t*>(blk), sizeof(fs::JournalInfo));
+  bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info)), blk);
 
 #ifdef __Fuchsia__
   fvm_cleanup.cancel();

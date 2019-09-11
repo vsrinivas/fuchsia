@@ -75,7 +75,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
 
   uint64_t minimum_inodes = reserve->inodes().request.value_or(0);
   uint32_t ibm_blocks = fvm_info_.abm_block - fvm_info_.ibm_block;
-  uint32_t ino_blocks = fvm_info_.journal_start_block - fvm_info_.ino_block;
+  uint32_t ino_blocks = fvm_info_.integrity_start_block - fvm_info_.ino_block;
 
   if (minimum_inodes > fvm_info_.inode_count) {
     // If requested, reserve more inodes than originally allocated.
@@ -94,7 +94,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
     dat_blocks = minimum_data_blocks;
   }
 
-  uint32_t journal_blocks = fvm_info_.dat_block - fvm_info_.journal_start_block;
+  uint32_t integrity_blocks = fvm_info_.dat_block - fvm_info_.integrity_start_block;
 
   // TODO(planders): Once blobfs journaling patch is landed, use fvm::BlocksToSlices() here.
   fvm_info_.ibm_slices =
@@ -108,20 +108,20 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   //                 entries. Make sure to account for this case (or verify that the journal is
   //                 resolved prior to extension).
   minfs::TransactionLimits limits(fvm_info_);
-  journal_blocks = fbl::max(journal_blocks, limits.GetRecommendedJournalBlocks());
-  fvm_info_.journal_slices =
-      safemath::checked_cast<uint32_t>((journal_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
+  integrity_blocks = fbl::max(integrity_blocks, limits.GetRecommendedIntegrityBlocks());
+  fvm_info_.integrity_slices =
+      safemath::checked_cast<uint32_t>((integrity_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
   fvm_info_.dat_slices =
       safemath::checked_cast<uint32_t>((dat_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
   fvm_info_.vslice_count = 1 + fvm_info_.ibm_slices + fvm_info_.abm_slices + fvm_info_.ino_slices +
-                           fvm_info_.journal_slices + fvm_info_.dat_slices;
+                           fvm_info_.integrity_slices + fvm_info_.dat_slices;
 
   xprintf("Minfs: slice_size is %" PRIu64 "u, kBlocksPerSlice is %zu\n", fvm_info_.slice_size,
           kBlocksPerSlice);
   xprintf("Minfs: ibm_blocks: %u, ibm_slices: %u\n", ibm_blocks, fvm_info_.ibm_slices);
   xprintf("Minfs: abm_blocks: %u, abm_slices: %u\n", abm_blocks, fvm_info_.abm_slices);
   xprintf("Minfs: ino_blocks: %u, ino_slices: %u\n", ino_blocks, fvm_info_.ino_slices);
-  xprintf("Minfs: jnl_blocks: %u, jnl_slices: %u\n", journal_blocks, fvm_info_.journal_slices);
+  xprintf("Minfs: jnl_blocks: %u, jnl_slices: %u\n", integrity_blocks, fvm_info_.integrity_slices);
   xprintf("Minfs: dat_blocks: %u, dat_slices: %u\n", dat_blocks, fvm_info_.dat_slices);
 
   fvm_info_.inode_count = safemath::checked_cast<uint32_t>(
@@ -132,7 +132,7 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   fvm_info_.ibm_block = minfs::kFVMBlockInodeBmStart;
   fvm_info_.abm_block = minfs::kFVMBlockDataBmStart;
   fvm_info_.ino_block = minfs::kFVMBlockInodeStart;
-  fvm_info_.journal_start_block = minfs::kFVMBlockJournalStart;
+  fvm_info_.integrity_start_block = minfs::kFvmSuperblockBackup;
   fvm_info_.dat_block = minfs::kFVMBlockDataStart;
 
   reserve->set_data_reserved(fvm_info_.dat_slices * fvm_info_.slice_size);
@@ -188,15 +188,15 @@ zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vs
       vslice_info->vslice_start = minfs::kFVMBlockInodeStart;
       vslice_info->slice_count = fvm_info_.ino_slices;
       vslice_info->block_offset = info_.ino_block;
-      vslice_info->block_count = info_.journal_start_block - info_.ino_block;
+      vslice_info->block_count = info_.integrity_start_block - info_.ino_block;
       vslice_info->zero_fill = true;
       return ZX_OK;
     }
     case 4: {
-      vslice_info->vslice_start = minfs::kFVMBlockJournalStart;
-      vslice_info->slice_count = fvm_info_.journal_slices;
-      vslice_info->block_offset = info_.journal_start_block;
-      vslice_info->block_count = info_.dat_block - info_.journal_start_block;
+      vslice_info->vslice_start = minfs::kFvmSuperblockBackup;
+      vslice_info->slice_count = fvm_info_.integrity_slices;
+      vslice_info->block_offset = info_.integrity_start_block;
+      vslice_info->block_count = info_.dat_block - info_.integrity_start_block;
       vslice_info->zero_fill = false;
       return ZX_OK;
     }
@@ -221,7 +221,8 @@ zx_status_t MinfsFormat::GetSliceCount(uint32_t* slices_out) const {
 
 zx_status_t MinfsFormat::FillBlock(size_t block_offset) {
   CheckFvmReady();
-  if (block_offset == 0) {
+  if (block_offset == 0 || block_offset == info_.integrity_start_block) {
+    // If this is the superblock or backup superblock location, write out the fvm info explicitly.
     memcpy(datablk, fvm_blk_, minfs::kMinfsBlockSize);
   } else if (bc_->Readblk(safemath::checked_cast<uint32_t>(block_offset), datablk) != ZX_OK) {
     fprintf(stderr, "minfs: could not read block\n");
