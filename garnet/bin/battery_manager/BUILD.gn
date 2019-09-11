@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -8,7 +8,7 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
-  name = "power_manager"
+  name = "battery_manager"
   with_unit_tests = true
   edition = "2018"
 
@@ -29,29 +29,29 @@ rustc_binary("bin") {
   ]
 }
 
-package("power_manager") {
+package("battery_manager") {
   deps = [
     ":bin",
   ]
 
-  binary = "power_manager"
+  binary = "battery_manager"
 
   meta = [
     {
-      path = rebase_path("meta/power_manager.cmx")
-      dest = "power_manager.cmx"
+      path = rebase_path("meta/battery_manager.cmx")
+      dest = "battery_manager.cmx"
     },
   ]
 }
 
-unittest_package("power_manager_tests") {
+unittest_package("battery_manager_tests") {
   deps = [
     ":bin_test_strip_copy",
   ]
 
   tests = [
     {
-      name = "power_manager_bin_test"
+      name = "battery_manager_bin_test"
       environments = basic_envs
     },
   ]

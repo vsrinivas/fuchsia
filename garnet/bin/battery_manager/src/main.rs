@@ -415,7 +415,7 @@ fn spawn_power_manager(pm: PowerManagerServer, mut stream: fpower::BatteryManage
 }
 
 fn main() {
-    syslog::init_with_tags(&["power_manager"]).expect("Can't init logger");
+    syslog::init_with_tags(&["battery_manager"]).expect("Can't init logger");
     fx_log_info!("starting up");
     if let Err(e) = main_pm() {
         fx_log_err!("{:?}", e);

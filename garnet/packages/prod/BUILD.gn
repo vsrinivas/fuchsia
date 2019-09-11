@@ -180,6 +180,7 @@ group("all") {
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:auth",
     "//garnet/packages/prod:banjo",
+    "//garnet/packages/prod:battery_manager",
     "//garnet/packages/prod:bindc",
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_all",
@@ -231,7 +232,6 @@ group("all") {
     "//garnet/packages/prod:pkg_ctl",
     "//garnet/packages/prod:pkg_resolver",
     "//garnet/packages/prod:pm",
-    "//garnet/packages/prod:power_manager",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:root_ssl_certificates",
@@ -575,10 +575,10 @@ group("root_ssl_certificates") {
   ]
 }
 
-group("power_manager") {
+group("battery_manager") {
   testonly = true
   public_deps = [
-    "//garnet/bin/power_manager:power_manager",
+    "//garnet/bin/battery_manager:battery_manager",
   ]
 }
 

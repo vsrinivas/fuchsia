@@ -6,6 +6,7 @@ group("bin") {
   testonly = true
   deps = [
     "appmgr",
+    "battery_manager",
     "catapult_converter",
     "chrealm",
     "cpuperf",
@@ -35,7 +36,6 @@ group("bin") {
     "pkg_cache",
     "pkg_ctl",
     "pkg_resolver",
-    "power_manager",
     "rolldice",
     "run",
     "run_test_component",

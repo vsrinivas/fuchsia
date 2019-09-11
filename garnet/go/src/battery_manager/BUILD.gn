@@ -9,8 +9,8 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-go_library("power_manager_lib") {
-  name = "power_manager"
+go_library("battery_manager_lib") {
+  name = "battery_manager"
 
   deps = [
     "//garnet/public/lib/component/go/src/app",
@@ -20,20 +20,20 @@ go_library("power_manager_lib") {
   ]
 }
 
-go_test("power_manager_test") {
-  gopackages = [ "power_manager" ]
+go_test("battery_manager_test") {
+  gopackages = [ "battery_manager" ]
   deps = [
-    ":power_manager_lib",
+    ":battery_manager_lib",
   ]
 }
 
-test_package("power_manager_gotests") {
+test_package("battery_manager_gotests") {
   deps = [
-    ":power_manager_test",
+    ":battery_manager_test",
   ]
   tests = [
     {
-      name = "power_manager_test"
+      name = "battery_manager_test"
       environments = basic_envs
     },
   ]
