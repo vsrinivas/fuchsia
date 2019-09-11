@@ -69,15 +69,40 @@ const char* ExceptionTypeToString(uint32_t type) {
   return "<unknown>";
 }
 
-void LogHitBreakpoint(const DebuggedThread* thread, ProcessBreakpoint* process_breakpoint,
-                      uint64_t address) {
+void LogHitBreakpoint(debug_ipc::FileLineFunction location, const DebuggedThread* thread,
+                      ProcessBreakpoint* process_breakpoint, uint64_t address) {
+  if (!debug_ipc::IsDebugModeActive())
+    return;
+
   std::stringstream ss;
   ss << ThreadPreamble(thread) << "Hit SW breakpoint on 0x" << std::hex << address << " for: ";
   for (Breakpoint* breakpoint : process_breakpoint->breakpoints()) {
     ss << breakpoint->settings().name << ", ";
   }
 
-  DEBUG_LOG(Thread) << ss.str();
+  DEBUG_LOG_WITH_LOCATION(Thread, location) << ss.str();
+}
+
+void LogExceptionNotification(debug_ipc::FileLineFunction location, const DebuggedThread* thread,
+                              const debug_ipc::NotifyException& exception) {
+  if (!debug_ipc::IsDebugModeActive())
+    return;
+
+  std::stringstream ss;
+  ss << ThreadPreamble(thread) << "Notifying exception "
+     << debug_ipc::NotifyException::TypeToString(exception.type) << ". ";
+  ss << "Breakpoints hit: ";
+  int count = 0;
+  for (auto& bp : exception.hit_breakpoints) {
+    if (count > 0)
+      ss << ", ";
+
+    ss << bp.id;
+    if (bp.should_delete)
+      ss << " (delete)";
+  }
+
+  DEBUG_LOG_WITH_LOCATION(Thread, location) << ss.str();
 }
 
 }  // namespace
@@ -151,7 +176,7 @@ void DebuggedThread::OnException(zx::exception exception_token,
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
                                       zx_thread_state_general_regs* regs) {
   if (current_breakpoint_) {
-    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Single step over 0x" << std::hex
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Ending single stepped over 0x" << std::hex
                       << current_breakpoint_->address();
     // Getting here means that the thread is done stepping over a breakpoint.
     // Depending on whether others threads are stepping over the breakpoints, this thread might be
@@ -178,6 +203,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     // completed. It could also be a breakpoint that was deleted while
     // in the process of single-stepping over it. In both cases, the
     // least confusing thing is to resume automatically.
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Single step without breakpoint. Continuing.";
     ResumeForRunMode();
     return;
   }
@@ -187,10 +213,12 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
   if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInRange &&
       *arch::ArchProvider::Get().IPInRegs(regs) >= step_in_range_begin_ &&
       *arch::ArchProvider::Get().IPInRegs(regs) < step_in_range_end_) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping in range. Continuing.";
     ResumeForRunMode();
     return;
   }
 
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Expected single step. Notifying.";
   SendExceptionNotification(exception, regs);
 }
 
@@ -243,6 +271,8 @@ void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* excep
   // TODO(brettw) suspend other threads in the process and other debugged
   // processes as desired.
 
+  LogExceptionNotification(FROM_HERE, this, *exception);
+
   // Send notification.
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyException(*exception, &writer);
@@ -262,6 +292,7 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
 void DebuggedThread::ResumeException() {
   // We need to mark that this token is correctly handled before closing it.
   if (exception_token_.is_valid()) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming exception handle.";
     uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
     zx_status_t status =
         exception_token_.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state));
@@ -270,7 +301,12 @@ void DebuggedThread::ResumeException() {
   exception_token_.reset();
 }
 
-void DebuggedThread::ResumeSuspension() { suspend_token_.reset(); }
+void DebuggedThread::ResumeSuspension() {
+  if (suspend_token_.is_valid()) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming suspend token.";
+  }
+  suspend_token_.reset();
+}
 
 bool DebuggedThread::Suspend(bool synchronous) {
   // Subsequent suspend calls should return immediately. Note that this does
@@ -477,8 +513,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
 
   ProcessBreakpoint* found_bp = process_->FindProcessBreakpointForAddr(breakpoint_address);
   if (found_bp) {
-    if (debug_ipc::IsDebugModeActive())
-      LogHitBreakpoint(this, found_bp, breakpoint_address);
+    LogHitBreakpoint(FROM_HERE, this, found_bp, breakpoint_address);
 
     FixSoftwareBreakpointAddress(found_bp, regs);
 
@@ -486,8 +521,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     // should apply to this thread or not.
     if (!found_bp->ShouldHitThread(koid())) {
       DEBUG_LOG(Thread) << ThreadPreamble(this) << "SW Breakpoint not for me. Ignoring.";
-      // The way to go over is to step over the breakpoint as one would over
-      // a resume.
+      // The way to go over is to step over the breakpoint as one would over a resume.
       current_breakpoint_ = found_bp;
       return OnStop::kResume;
     }
@@ -532,7 +566,6 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     } else {
       DEBUG_LOG(Thread) << ThreadPreamble(this) << "Hit non debugger SW breakpoint on 0x"
                         << std::hex << breakpoint_address;
-
       // Not a breakpoint instruction. Probably the breakpoint instruction
       // used to be ours but its removal raced with the exception handler.
       // Resume from the instruction that used to be the breakpoint.
