@@ -144,7 +144,7 @@ impl Painter {
 
     fn mul(a: u8, b: u8) -> u8 {
         let product = u16::from(a) * u16::from(b);
-        (product / 255) as u8
+        ((product + 127) / 255) as u8
     }
 
     fn cover_wip_zero(&mut self) {
@@ -718,6 +718,30 @@ mod tests {
                 0xFF22_0000,
                 0xFF22_0000,
                 0xFF22_0000,
+            ],
+        );
+    }
+
+    #[test]
+    fn subtle_opacity_accumulation() {
+        assert_eq!(
+            draw_bands(
+                0x0000_0001,
+                0x0000_0001,
+                0x0000_0001,
+                TileOp::ColorAccBlendOver,
+            )
+            .render_to_bitmap(),
+            vec![
+                0xFF00_0000,
+                0xFE00_0000,
+                0xFF00_0000,
+                0xFE00_0000,
+                0xFD00_0000,
+                0xFE00_0000,
+                0xFF00_0000,
+                0xFE00_0000,
+                0xFF00_0000,
             ],
         );
     }
