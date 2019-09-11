@@ -14,7 +14,9 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <type_traits>
+#include <vector>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/ledger_impl.h"
@@ -82,7 +84,7 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   void SetConflictResolverFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
   // inspect_deprecated::ChildrenManager:
-  void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
+  void GetNames(fit::function<void(std::set<std::string>)> callback) override;
   void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
   void set_on_empty(fit::closure on_empty_callback) {

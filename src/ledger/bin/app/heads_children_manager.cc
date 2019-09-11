@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
+#include <set>
 #include <vector>
 
 #include "src/ledger/bin/inspect/inspect.h"
@@ -35,9 +36,9 @@ void HeadsChildrenManager::CheckEmpty() {
   }
 }
 
-void HeadsChildrenManager::GetNames(fit::function<void(std::vector<std::string>)> callback) {
-  fit::function<void(std::vector<std::string>)> call_ensured_callback =
-      callback::EnsureCalled(std::move(callback), std::vector<std::string>());
+void HeadsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> callback) {
+  fit::function<void(std::set<std::string>)> call_ensured_callback =
+      callback::EnsureCalled(std::move(callback), std::set<std::string>());
   inspectable_page_->NewInspection(
       [callback = std::move(call_ensured_callback)](storage::Status status, ExpiringToken token,
                                                     ActivePageManager* active_inspectable_page) {
@@ -58,10 +59,9 @@ void HeadsChildrenManager::GetNames(fit::function<void(std::vector<std::string>)
           callback({});
           return;
         }
-        std::vector<std::string> head_display_names;
-        head_display_names.reserve(heads.size());
+        std::set<std::string> head_display_names;
         for (const storage::CommitId& head : heads) {
-          head_display_names.push_back(CommitIdToDisplayName(head));
+          head_display_names.insert(CommitIdToDisplayName(head));
         }
         callback(head_display_names);
       });

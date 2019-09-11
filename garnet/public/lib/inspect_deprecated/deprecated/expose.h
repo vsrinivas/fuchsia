@@ -8,8 +8,6 @@
 #ifndef LIB_INSPECT_DEPRECATED_DEPRECATED_EXPOSE_H_
 #define LIB_INSPECT_DEPRECATED_DEPRECATED_EXPOSE_H_
 
-#include <fs/lazy-dir.h>
-#include <fs/pseudo-file.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/defer.h>
@@ -20,6 +18,9 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+
+#include <fs/lazy-dir.h>
+#include <fs/pseudo-file.h>
 
 namespace component {
 
@@ -189,7 +190,7 @@ class ChildrenManager {
   //
   // NOTE(crjohns, jeffbrown, nathaniel): This method is likely
   // to be fit::promise-ified in the future.
-  virtual void GetNames(fit::function<void(std::vector<std::string>)> callback) = 0;
+  virtual void GetNames(fit::function<void(std::set<std::string>)> callback) = 0;
 
   // Directs the system under inspection to
   //   (1) if the structure for the given child is not already

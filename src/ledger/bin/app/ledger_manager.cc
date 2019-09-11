@@ -12,6 +12,7 @@
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -97,16 +98,15 @@ void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                                            std::move(callback));
 }
 
-void LedgerManager::GetNames(fit::function<void(std::vector<std::string>)> callback) {
+void LedgerManager::GetNames(fit::function<void(std::set<std::string>)> callback) {
   storage_->ListPages(
       [callback = std::move(callback)](storage::Status status, std::set<storage::PageId> page_ids) {
         if (status != storage::Status::OK) {
           FXL_LOG(WARNING) << "Status wasn't OK; rather it was " << status << "!";
         }
-        std::vector<std::string> display_names;
-        display_names.reserve(page_ids.size());
+        std::set<std::string> display_names;
         for (const auto& page_id : page_ids) {
-          display_names.push_back(PageIdToDisplayName(page_id));
+          display_names.insert(PageIdToDisplayName(page_id));
         }
         callback(display_names);
       });

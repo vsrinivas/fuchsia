@@ -13,6 +13,8 @@
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/inspect_deprecated/inspect.h>
 
+#include <set>
+
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/background_sync_manager.h"
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
@@ -84,7 +86,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   void Close(fit::function<void(Status)> callback) override;
 
   // inspect_deprecated::ChildrenManager:
-  void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
+  void GetNames(fit::function<void(std::set<std::string>)> callback) override;
   void Attach(std::string ledger_name, fit::function<void(fit::closure)> callback) override;
 
  private:

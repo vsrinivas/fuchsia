@@ -10,6 +10,7 @@
 #include <lib/inspect_deprecated/inspect.h>
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -36,9 +37,9 @@ void CommitsChildrenManager::set_on_empty(fit::closure on_empty_callback) {
 
 bool CommitsChildrenManager::IsEmpty() { return inspected_commit_containers_.empty(); }
 
-void CommitsChildrenManager::GetNames(fit::function<void(std::vector<std::string>)> callback) {
-  fit::function<void(std::vector<std::string>)> call_ensured_callback =
-      callback::EnsureCalled(std::move(callback), std::vector<std::string>());
+void CommitsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> callback) {
+  fit::function<void(std::set<std::string>)> call_ensured_callback =
+      callback::EnsureCalled(std::move(callback), std::set<std::string>());
   inspectable_page_->NewInspection([callback = std::move(call_ensured_callback)](
                                        storage::Status status, ExpiringToken token,
                                        ActivePageManager* active_page_manager) mutable {
@@ -46,7 +47,7 @@ void CommitsChildrenManager::GetNames(fit::function<void(std::vector<std::string
       // Inspect is prepared to receive incomplete information; there's not really anything
       // further for us to do than to log that the function failed.
       FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
-      callback(std::vector<std::string>());
+      callback(std::set<std::string>());
       return;
     }
     FXL_DCHECK(active_page_manager);
@@ -57,13 +58,12 @@ void CommitsChildrenManager::GetNames(fit::function<void(std::vector<std::string
             // Inspect is prepared to receive incomplete information; there's not really anything
             // further for us to do than to log that the function failed.
             FXL_LOG(WARNING) << "NewInternalRequest called back with non-OK status: " << status;
-            callback(std::vector<std::string>());
+            callback(std::set<std::string>());
             return;
           }
-          std::vector<std::string> commit_display_names;
-          commit_display_names.reserve(commits.size());
+          std::set<std::string> commit_display_names;
           for (const std::unique_ptr<const storage::Commit>& commit : commits) {
-            commit_display_names.push_back(CommitIdToDisplayName(commit->GetId()));
+            commit_display_names.insert(CommitIdToDisplayName(commit->GetId()));
           }
           callback(std::move(commit_display_names));
         });

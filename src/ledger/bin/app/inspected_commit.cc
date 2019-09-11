@@ -10,6 +10,7 @@
 #include <lib/inspect_deprecated/inspect.h>
 
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -54,9 +55,9 @@ fit::closure InspectedCommit::CreateDetacher() {
   };
 }
 
-void InspectedCommit::GetNames(fit::function<void(std::vector<std::string>)> callback) {
-  fit::function<void(std::vector<std::string>)> call_ensured_callback =
-      callback::EnsureCalled(std::move(callback), std::vector<std::string>());
+void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callback) {
+  fit::function<void(std::set<std::string>)> call_ensured_callback =
+      callback::EnsureCalled(std::move(callback), std::set<std::string>());
   ongoing_storage_accesses_++;
   inspectable_page_->NewInspection(callback::MakeScoped(
       weak_factory_.GetWeakPtr(),
@@ -73,11 +74,11 @@ void InspectedCommit::GetNames(fit::function<void(std::vector<std::string>)> cal
         }
         FXL_DCHECK(active_page_manager);
 
-        std::unique_ptr<std::vector<std::string>> key_display_names =
-            std::make_unique<std::vector<std::string>>();
+        std::unique_ptr<std::set<std::string>> key_display_names =
+            std::make_unique<std::set<std::string>>();
         fit::function<bool(storage::Entry)> on_next =
             [key_display_names = key_display_names.get()](const storage::Entry& entry) {
-              key_display_names->push_back(KeyToDisplayName(entry.key));
+              key_display_names->insert(KeyToDisplayName(entry.key));
               return true;
             };
         fit::function<void(storage::Status)> on_done =
@@ -87,7 +88,7 @@ void InspectedCommit::GetNames(fit::function<void(std::vector<std::string>)> cal
                 // Inspect is prepared to receive incomplete information; there's not really
                 // anything further for us to do than to log that the function failed.
                 FXL_LOG(WARNING) << "GetEntries called back with non-OK status: " << status;
-                callback(std::vector<std::string>());
+                callback(std::set<std::string>());
               } else {
                 callback(std::move(*key_display_names));
               }

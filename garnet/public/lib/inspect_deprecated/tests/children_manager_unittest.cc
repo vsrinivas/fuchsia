@@ -43,21 +43,6 @@ bool NextBool(rng::Random* random) {
   return bool(std::uniform_int_distribution(0, 1)(bit_generator));
 }
 
-std::vector<std::string> RandomlyReorderAndRepeat(std::vector<std::string> items,
-                                                  rng::Random* random) {
-  size_t limit = 4 * items.size();
-  auto bit_generator = random->NewBitGenerator<size_t>();
-  std::shuffle(items.begin(), items.end(), bit_generator);
-  while (items.size() < limit) {
-    if (std::uniform_int_distribution(0, 9)(bit_generator) == 9) {
-      break;
-    }
-    items.push_back(items[0]);
-    std::shuffle(items.begin(), items.end(), bit_generator);
-  }
-  return items;
-}
-
 struct Table {
   std::map<std::string, std::unique_ptr<Table>> children;
 };
@@ -141,12 +126,11 @@ class Element final : public inspect_deprecated::ChildrenManager {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
-  void GetNames(fit::function<void(std::vector<std::string>)> callback) override {
-    std::vector<std::string> names;
+  void GetNames(fit::function<void(std::set<std::string>)> callback) override {
+    std::set<std::string> names;
     for (const auto& [child_name, unused_child_unique_pointer] : table_->children) {
-      names.push_back(child_name);
+      names.insert(child_name);
     }
-    names = RandomlyReorderAndRepeat(std::move(names), random_);
 
     if (NextBool(random_)) {
       async::PostTask(test_loop_->dispatcher(), [callback = std::move(callback),
@@ -1137,7 +1121,7 @@ TEST_F(ChildrenManagerTest, AbsentChildDoesNotDeadlock) {
     ChildrenManager(fit::closure on_detachment) : on_detachment_(std::move(on_detachment)) {}
 
    private:
-    void GetNames(fit::function<void(std::vector<std::string>)> callback) override {}
+    void GetNames(fit::function<void(std::set<std::string>)> callback) override {}
     void Attach(std::string name, fit::function<void(fit::closure)> callback) override {
       callback(std::move(on_detachment_));
     }

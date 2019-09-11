@@ -9,6 +9,8 @@
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/inspect_deprecated/deprecated/object_dir.h>
 
+#include <set>
+
 #include <trace/event.h>
 
 #include "peridot/lib/base64url/base64url.h"
@@ -152,12 +154,12 @@ void LedgerRepositoryImpl::TrySyncClosedPage(fxl::StringView ledger_name,
 // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12326): The disk
 // scan should be made to happen either asynchronously or not on the main
 // thread.
-void LedgerRepositoryImpl::GetNames(fit::function<void(std::vector<std::string>)> callback) {
-  std::vector<std::string> child_names;
+void LedgerRepositoryImpl::GetNames(fit::function<void(std::set<std::string>)> callback) {
+  std::set<std::string> child_names;
   ledger::GetDirectoryEntries(content_path_, [&child_names](fxl::StringView entry) {
     std::string decoded;
     if (base64url::Base64UrlDecode(entry, &decoded)) {
-      child_names.push_back(decoded);
+      child_names.insert(decoded);
       return true;
     } else {
       // NOTE(nathaniel): The ChildrenManager API does not currently have a

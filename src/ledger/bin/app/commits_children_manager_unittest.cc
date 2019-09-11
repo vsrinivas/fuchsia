@@ -183,7 +183,7 @@ TEST_F(CommitsChildrenManagerTest, GetNames) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   bool callback_called;
-  std::vector<std::string> names;
+  std::set<std::string> names;
 
   std::unique_ptr<inspect_deprecated::ChildrenManager> commits_children_manager =
       std::make_unique<CommitsChildrenManager>(&commits_node, &inspectable_page);
@@ -211,7 +211,7 @@ TEST_F(CommitsChildrenManagerTest, ConcurrentGetNames) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   size_t callbacks_called = 0;
-  std::vector<std::vector<std::string>> nameses(concurrency);
+  std::vector<std::set<std::string>> nameses(concurrency);
 
   std::unique_ptr<inspect_deprecated::ChildrenManager> commits_children_manager =
       std::make_unique<CommitsChildrenManager>(&commits_node, &inspectable_page);
@@ -385,7 +385,7 @@ TEST_F(CommitsChildrenManagerTest, GetNamesErrorGettingActivePageManager) {
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   bool callback_called;
-  std::vector<std::string> names;
+  std::set<std::string> names;
 
   std::unique_ptr<inspect_deprecated::ChildrenManager> commits_children_manager =
       std::make_unique<CommitsChildrenManager>(&commits_node, &inspectable_page);
@@ -410,7 +410,7 @@ TEST_F(CommitsChildrenManagerTest, GetNamesErrorGettingCommits) {
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
   bool callback_called;
-  std::vector<std::string> names;
+  std::set<std::string> names;
 
   std::unique_ptr<inspect_deprecated::ChildrenManager> commits_children_manager =
       std::make_unique<CommitsChildrenManager>(&commits_node, &inspectable_page);

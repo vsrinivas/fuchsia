@@ -311,7 +311,7 @@ TEST_F(InspectedCommitTest, GetNames) {
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
-  std::vector<std::string> names;
+  std::set<std::string> names;
   bool on_empty_called;
 
   inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
@@ -349,7 +349,7 @@ TEST_F(InspectedCommitTest, ConcurrentGetNames) {
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   size_t callbacks_called{0};
-  std::vector<std::vector<std::string>> nameses{concurrency};
+  std::vector<std::set<std::string>> nameses{concurrency};
   bool on_empty_called;
 
   inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
@@ -561,7 +561,7 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingActivePageManager) {
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
-  std::vector<std::string> names;
+  std::set<std::string> names;
   bool on_empty_called;
 
   inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));
@@ -592,7 +592,7 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingEntries) {
                           storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
                       ExpiringToken(), &inspectable_page);
   bool callback_called;
-  std::vector<std::string> names;
+  std::set<std::string> names;
   bool on_empty_called;
 
   inspected_commit.set_on_empty(callback::SetWhenCalled(&on_empty_called));

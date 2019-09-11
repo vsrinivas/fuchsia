@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/inspect_deprecated/inspect.h>
 
+#include <set>
 #include <string>
 #include <vector>
 
@@ -31,7 +32,7 @@ class CommitsChildrenManager final : public inspect_deprecated::ChildrenManager 
 
  private:
   // inspect_deprecated::ChildrenManager
-  void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
+  void GetNames(fit::function<void(std::set<std::string>)> callback) override;
   void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
   void CheckEmpty();

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/service.h>
 #include <lib/fit/defer.h>
 #include <lib/inspect_deprecated/deprecated/expose.h>
 #include <lib/syslog/cpp/logger.h>
+
+#include <fs/service.h>
 
 namespace component {
 
@@ -188,7 +189,7 @@ void Object::ListChildren(ListChildrenCallback callback) {
   std::lock_guard children_manager_lock(children_manager_mutex_);
   if (children_manager_) {
     children_manager_->GetNames([this, callback = std::move(callback)](
-                                    std::vector<std::string> children_manager_child_names) {
+                                    const std::set<std::string>& children_manager_child_names) {
       std::set<std::string> all_child_names(children_manager_child_names.begin(),
                                             children_manager_child_names.end());
       {
