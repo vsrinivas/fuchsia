@@ -17,7 +17,6 @@ fidl_library("fuchsia-sysmem") {
     "heap.fidl",
     "image_formats.fidl",
     "image_formats_deprecated.fidl",
-    "tee.fidl",
     "usages.fidl",
   ]
 }

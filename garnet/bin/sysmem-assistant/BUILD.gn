@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cipd.gni")
+import("//build/config.gni")
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "sysmem-assistant"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/fidl/fuchsia-hardware-tee",
+    "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/tee-client-api",
+  ]
+}
+
+package("sysmem-assistant") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "sysmem-assistant"
+
+  meta = [
+    {
+      path = rebase_path("meta/sysmem-assistant.cmx")
+      dest = "sysmem-assistant.cmx"
+    },
+  ]
+}
+
+config_data("config") {
+  for_pkg = "sysmgr"
+  sources = [
+    "sysmem-assistant.config",
+  ]
+}
+
+group("secmem-ta") {
+  # TA firmware is provided to the OPTEE in zircon. If the firmware isn't available, don't try
+  # launching this.
+  if (internal_access) {
+    data_deps = [
+      ":config",
+    ]
+  }
+}

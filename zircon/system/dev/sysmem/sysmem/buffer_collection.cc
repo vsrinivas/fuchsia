@@ -86,7 +86,7 @@ zx_status_t BufferCollection::SetEventSink(zx_handle_t buffer_collection_events_
   }
   if (events_) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
-    FailAsync(status, "BufferCollection::SetEventSink() may only be called at most once.");
+    FailAsync(status, "BufferCollection::SetEventSink() must be called only up to once.");
     return status;
   }
   events_ = std::move(buffer_collection_events_client);

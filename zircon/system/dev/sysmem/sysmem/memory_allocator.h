@@ -53,13 +53,6 @@ class MemoryAllocator {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // These avoid the possibility of trying to use a sysmem-configured secure
-  // heap before the TEE has told the HW to make the physical range
-  // secure/protected.  The default SetReady() implementation panics, and the
-  // default is_ready() just returns true.
-  virtual void set_ready();
-  virtual bool is_ready();
-
   void AddDestroyCallback(intptr_t key, fit::callback<void()> callback);
   void RemoveDestroyCallback(intptr_t key);
 

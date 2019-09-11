@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "common.h"
+
 #include <fuchsia/tee/cpp/fidl.h>
+#include <gtest/gtest.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <src/security/tee/third_party/optee_test/ta_storage.h>
+#include <tee-client-api/tee_client_api.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -13,12 +18,6 @@
 #include <string>
 #include <tuple>
 #include <vector>
-
-#include <gtest/gtest.h>
-#include <src/security/tee/third_party/optee_test/ta_storage.h>
-#include <tee-client-api/tee_client_api.h>
-
-#include "common.h"
 
 namespace optee {
 namespace test {
@@ -111,7 +110,7 @@ static void CreateFile(TEEC_Session* session, std::string name, std::vector<uint
   op.params[3].tmpref.buffer = static_cast<void*>(init_data->data());
   op.params[3].tmpref.size = static_cast<uint32_t>(init_data->size());
 
-  optee::test::OperationResult op_result;
+  OperationResult op_result;
   op_result.result =
       TEEC_InvokeCommand(session, TA_STORAGE_CMD_CREATE, &op, &op_result.return_origin);
   ASSERT_TRUE(IsTeecSuccess(op_result));

@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TEE_CLIENT_API_TEE_CLIENT_IMPL_H_
-#define TEE_CLIENT_API_TEE_CLIENT_IMPL_H_
+#pragma once
 
 #include <zircon/types.h>
 
@@ -18,9 +17,6 @@
 #define TEEC_NUM_PARAMS_MAX 4
 
 typedef struct teec_context_impl {
-  // TODO(36236): Currently, some driver code is directly setting tee_channel
-  // instead of using TEEC_InitializeContext() (since that doesn't work in
-  // driver code).
   zx_handle_t tee_channel;
 } teec_context_impl_t;
 
@@ -39,5 +35,3 @@ typedef struct teec_operation_impl {
   /* This is just a placeholder so that the struct is not empty. */
   char reserved;
 } teec_operation_impl_t;
-
-#endif  // TEE_CLIENT_API_TEE_CLIENT_IMPL_H_

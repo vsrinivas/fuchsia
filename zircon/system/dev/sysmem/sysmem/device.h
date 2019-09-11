@@ -7,13 +7,11 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/closure-queue/closure_queue.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 
 #include <limits>
 #include <map>
-#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -42,7 +40,8 @@ class Device final : public MemoryAllocator::Owner {
 
   zx_status_t Connect(zx_handle_t allocator_request);
   zx_status_t RegisterHeap(uint64_t heap, zx_handle_t heap_connection);
-  zx_status_t RegisterTee(zx_handle_t tee_connection);
+
+  zx_status_t GetProtectedMemoryInfo(fidl_txn* txn);
 
   // MemoryAllocator::Owner implementation.
   const zx::bti& bti() override;
@@ -71,18 +70,6 @@ class Device final : public MemoryAllocator::Owner {
   MemoryAllocator* GetAllocator(const fuchsia_sysmem_BufferMemorySettings* settings);
 
  private:
-  void Post(fit::closure to_run);
-
-  class TeeConnection {
-   public:
-    TeeConnection(zx::channel connection, fbl::unique_ptr<async::Wait> wait_for_close);
-    zx_handle_t channel();
-
-   private:
-    zx::channel connection_;
-    std::unique_ptr<async::Wait> wait_for_close_;
-  };
-
   zx_device_t* parent_device_ = nullptr;
   Driver* parent_driver_ = nullptr;
 
@@ -106,18 +93,9 @@ class Device final : public MemoryAllocator::Owner {
   // This map contains all registered memory allocators.
   std::map<fuchsia_sysmem_HeapType, fbl::unique_ptr<MemoryAllocator>> allocators_;
 
-  // This map contains only the secure allocators, if any.  The pointers are owned by allocators_.
-  //
-  // TODO(dustingreen): Consider unordered_map for this and some of above.
-  std::map<fuchsia_sysmem_HeapType, MemoryAllocator*> secure_allocators_;
+  fbl::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
 
-  // This has the connection to the TEE, if any.
-  std::unique_ptr<TeeConnection> tee_;
-
-  std::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
-
-  async_dispatcher_t* dispatcher_ = nullptr;
-  ClosureQueue closure_queue_;
+  MemoryAllocator* protected_allocator_ = nullptr;
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_

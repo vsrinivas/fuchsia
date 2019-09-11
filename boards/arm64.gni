@@ -9,7 +9,8 @@ board_name = "qemu-arm64"
 board_package_labels = [
   # Include all drivers for now.
   "//garnet/packages/prod:drivers",
+  "//garnet/packages/prod:sysmem-assistant",
 ]
 
-max_fuchsia_zbi_size = "16777216"  # 16 MiB
-max_zedboot_zbi_size = "16777216"  # 16 MiB
+max_fuchsia_zbi_size = "16777216" # 16 MiB
+max_zedboot_zbi_size = "16777216" # 16 MiB

@@ -6,7 +6,6 @@
 
 #include <inttypes.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/fit/defer.h>
 #include <string.h>
 
 #include <limits>
@@ -22,7 +21,6 @@
 #include <fbl/unique_ptr.h>
 #include <tee-client-api/tee-client-types.h>
 
-#include "log.h"
 #include "optee-client.h"
 
 namespace optee {
@@ -286,22 +284,7 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
-  // We do CreateAndServeSysmemTee() after DdkAdd() because serving tee.Device
-  // creates a child device, and creating a child device requires the parent
-  // device to exist.  If CreateAndServeSysmemTee() fails, we call DdkRemove()
-  // on the parent device sync before returning from this function.
-
-  auto unbind = fit::defer([this] { DdkUnbind(); });
-
-  status = CreateAndServeSysmemTee();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "CreateAndServeSysmemTee() failed - status: %d\n", status);
-    return status;
-  }
-
-  // Async failure is possible, but succeed for now.
-  unbind.cancel();
-  return ZX_OK;
+  return status;
 }
 
 zx_status_t OpteeController::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -314,17 +297,8 @@ zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
 }
 
 void OpteeController::DdkUnbind() {
-  finish_unbind_ = [this] {
-    ZX_DEBUG_ASSERT(!sysmem_tee_server_);
-    ddk_loop_closure_queue_.StopAndClear();
-    // Initiate the removal of this device and all of its children.
-    DdkRemove();
-  };
-  if (sysmem_tee_server_) {
-    sysmem_tee_server_->StopAsync();
-  } else {
-    finish_unbind_();
-  }
+  // Initiate the removal of this device and all of its children.
+  DdkRemove();
 }
 
 void OpteeController::DdkRelease() {
@@ -415,76 +389,6 @@ uint32_t OpteeController::CallWithMessage(const optee::Message& message, RpcHand
   }
 
   return return_value;
-}
-
-zx_status_t OpteeController::CreateAndServeSysmemTee() {
-  ddk_dispatcher_thread_ = thrd_current();
-  ddk_loop_closure_queue_.SetDispatcher(async_get_default_dispatcher(), ddk_dispatcher_thread_);
-  zx::channel loopback_tee_client;
-  zx::channel loopback_tee_server;
-  zx_status_t status = zx::channel::create(0, &loopback_tee_client, &loopback_tee_server);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: failed to create loopback tee channels - status: %d", status);
-    return status;
-  }
-  constexpr zx_handle_t kNoServiceProvider = ZX_HANDLE_INVALID;
-  status = ConnectDevice(kNoServiceProvider, loopback_tee_server.release());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: ConnectDevice() (loopback) failed - status: %d\n", status);
-    return status;
-  }
-  sysmem_tee_server_.emplace(ddk_dispatcher_thread_, std::move(loopback_tee_client));
-  zx::channel sysmem_tee_client;
-  zx::channel sysmem_tee_server;
-  status = zx::channel::create(0, &sysmem_tee_client, &sysmem_tee_server);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to create sysmem tee channels - status: %d\n", status);
-    return status;
-  }
-  status = sysmem_tee_server_->BindAsync(
-      std::move(sysmem_tee_server), &sysmem_tee_server_thread_, [this](bool is_success) {
-        ZX_DEBUG_ASSERT(thrd_current() == sysmem_tee_server_thread_);
-        ddk_loop_closure_queue_.Enqueue([this, is_success] {
-          ZX_DEBUG_ASSERT(thrd_current() == ddk_dispatcher_thread_);
-          // Else the current lambda wouldn't be running.
-          ZX_DEBUG_ASSERT(sysmem_tee_server_);
-          if (!is_success) {
-            // This unexpected loss of connection to sysmem should never happen.
-            //
-            // TODO(dustingreen): Determine if there's a way to cause the TEE Controller's devhost
-            // to get re-started cleanly.  Currently this is leaving the device in a state where
-            // DRM playback will likely be impossible (again, we should never get here).  For now,
-            // complain if we do get here.
-            LOG(ERROR, "fuchsia::sysmem::Tee channel close !is_success - DRM playback will fail");
-          }
-          // Regardless of whether this is due to DdkUnbind() or channel closure (with is_success
-          // true), we won't be serving the fuchsia::sysmem::Tee channel any more. The
-          // ~SysmemTeeServer is designed to be called on the DDK thread.
-          sysmem_tee_server_.reset();
-          LOG(INFO, "Done serving fuchsia::sysmem::Tee");
-          // If a DdkUnbind() saw sysmem_tee_server_, so couldn't complete sync, we can finish the
-          // unbind now.  It doesn't matter whether a channel close raced also - the present lambda
-          // runs exactly once as long as BindAsync() returns ZX_OK.
-          if (finish_unbind_) {
-            finish_unbind_();
-          }
-        });
-      });
-  if (status != ZX_OK) {
-    LOG(ERROR, "sysmem_tee_server_->BindAsync() failed - status: %d", status);
-    // When BindAsync() fails, we don't call StopAsync().
-    sysmem_tee_server_.reset();
-    return status;
-  }
-  // Tell sysmem about the fidl::sysmem::Tee channel that sysmem will use (async) to configure
-  // secure memory ranges.  Sysmem won't fidl call back during this banjo call.
-  status = sysmem_register_tee(&sysmem_proto_, sysmem_tee_client.release());
-  if (status != ZX_OK) {
-    // In this case sysmem_tee_server_ will get cleaned up when the channel close is noticed soon.
-    zxlogf(ERROR, "optee: Failed to RegisterTee()\n");
-    return status;
-  }
-  return ZX_OK;
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

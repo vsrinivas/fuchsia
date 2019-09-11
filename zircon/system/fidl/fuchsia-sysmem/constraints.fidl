@@ -181,9 +181,6 @@ enum HeapType : uint64 {
     /// Heap used for amlogic protected memory.
     AMLOGIC_SECURE = 0x1000000000010000;
 
-    /// Heap used for amlogic protected memory between decrypt and video decode.
-    AMLOGIC_SECURE_VDEC = 0x1000000000010001;
-
     /// Heap used by goldfish vulkan for device-local memory.
     GOLDFISH_DEVICE_LOCAL = 0x1000000000020000;
 };

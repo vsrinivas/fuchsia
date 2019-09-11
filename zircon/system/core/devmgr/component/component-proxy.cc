@@ -996,16 +996,6 @@ zx_status_t ComponentProxy::SysmemRegisterHeap(uint64_t heap, zx::channel heap_c
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
 }
 
-zx_status_t ComponentProxy::SysmemRegisterTee(zx::channel tee_connection) {
-  SysmemProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_SYSMEM;
-  req.op = SysmemOp::REGISTER_TEE;
-  zx_handle_t handle = tee_connection.release();
-
-  return Rpc(&req.header, sizeof(req), &resp, sizeof(resp), &handle, 1, nullptr, 0, nullptr);
-}
-
 zx_status_t ComponentProxy::UsbModeSwitchSetMode(usb_mode_t mode) {
   UsbModeSwitchProxyRequest req = {};
   ProxyResponse resp = {};

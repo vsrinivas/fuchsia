@@ -15,7 +15,6 @@ library("tee-client-api") {
     sdk_headers += [ "lib/tee-client-api/$file" ]
   }
   shared = true
-  static = true
   sources = [
     "tee-client-api.c",
   ]

@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_CLOSURE_QUEUE_CLOSURE_QUEUE_H_
-#define LIB_CLOSURE_QUEUE_CLOSURE_QUEUE_H_
+#ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
+#define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <threads.h>
-#include <zircon/compiler.h>
+#include <src/lib/fxl/synchronization/thread_annotations.h>
 
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <threads.h>
 
 class ClosureQueue {
  public:
@@ -70,12 +70,12 @@ class ClosureQueue {
     std::mutex lock_;
     // Starts non-nullptr.  Set to nullptr to indicate that StopAndClear() has
     // run.
-    async_dispatcher_t* dispatcher_ __TA_GUARDED(lock_){};
+    async_dispatcher_t* dispatcher_ FXL_GUARDED_BY(lock_){};
     const thrd_t dispatcher_thread_{};
-    std::queue<fit::closure> pending_ __TA_GUARDED(lock_);
+    std::queue<fit::closure> pending_ FXL_GUARDED_BY(lock_);
   };
 
   std::shared_ptr<Impl> impl_;
 };
 
-#endif  // LIB_CLOSURE_QUEUE_CLOSURE_QUEUE_H_
+#endif  // GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CLOSURE_QUEUE_H_
