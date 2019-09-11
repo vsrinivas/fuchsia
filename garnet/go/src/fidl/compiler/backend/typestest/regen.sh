@@ -50,6 +50,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
       "${llcpp_header_name}.golden",
       "${llcpp_source_name}.golden",
       "${libfuzzer_header_name}.golden",
+      "${libfuzzer_source_name}.golden",
       "${go_impl_name}.golden",
       "${rust_name}.golden",
       "${syzkaller_name}.golden",
