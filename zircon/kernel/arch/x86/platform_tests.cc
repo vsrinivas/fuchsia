@@ -131,20 +131,22 @@ namespace {
 
     {
       // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
-      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
           ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
     }
 
     {
       // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
-      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
           (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
       EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
@@ -152,25 +154,27 @@ namespace {
 
     {
       // Intel(R) Core(TM) i5-5257U has Meltdown
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x14, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x306d4, 0x100800, 0x7ffafbbf, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x1c004121, 0x1c0003f, 0x3f, 0x0}};
-      data.leaf7 = {.reg = {0x0, 0x21c27ab, 0x0, 0x9c000000}};
-      cpu_id::FakeCpuId cpu(data);
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x14, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x306d4, 0x100800, 0x7ffafbbf, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x1c004121, 0x1c0003f, 0x3f, 0x0}};
+      data->leaf7 = {.reg = {0x0, 0x21c27ab, 0x0, 0x9c000000}};
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
     }
 
     {
       // Intel(R) Xeon(R) Gold 6xxx; does not have Meltdown, reports via RDCL_NO
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-      data.leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
+      data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
 
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
       EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
@@ -179,30 +183,31 @@ namespace {
     {
       // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, _but_ old microcode
       // lacks RDCL_NO. We will misidentify this CPU as having Meltdown.
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
-      data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
+      data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
           ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
 
       FakeMsrAccess fake_msrs = {};
       {
-        cpu_id::FakeCpuId cpu(data);
-        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
+        cpu_id::FakeCpuId cpu(*data.get());
+        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
       }
 
       // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, reports via RDCL_NO
-      // (with recent microcode updates).
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+      // (with recent microcode updates)
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
           (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
 
       // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
       {
-        cpu_id::FakeCpuId cpu(data);
-        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
+        cpu_id::FakeCpuId cpu(*data.get());
+        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
       }
     }
 
@@ -228,22 +233,25 @@ namespace {
   static bool test_x64_l1tf_enumeration() {
     BEGIN_TEST;
 
+    fbl::AllocChecker ac;
     {
       // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
-      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] &=
           ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs));
     }
 
     {
       // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
-      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
           (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
       EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs));
@@ -251,13 +259,14 @@ namespace {
 
     {
       // Intel(R) Xeon(R) Gold 6xxx; does not have Meltdown, reports via RDCL_NO
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-      data.leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
+      data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
 
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
       EXPECT_FALSE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs));
@@ -265,15 +274,16 @@ namespace {
 
     {
       // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, reports via RDCL_NO
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
-      data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
+      data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
           (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
 
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
@@ -286,6 +296,7 @@ namespace {
   static bool test_x64_mds_enumeration() {
     BEGIN_TEST;
 
+    fbl::AllocChecker ac;
     {
       // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
       FakeMsrAccess fake_msrs;
@@ -294,10 +305,11 @@ namespace {
 
     {
       // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
-      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
-      data.leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
           (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
       EXPECT_TRUE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
@@ -305,13 +317,14 @@ namespace {
 
     {
       // Intel(R) Xeon(R) Gold 6xxx; does not have MDS
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-      data.leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
+      data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
 
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
       EXPECT_FALSE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
@@ -320,13 +333,14 @@ namespace {
     {
       // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have MDS but does not
       // enumerate MDS_NO with microcode 32h (at least)
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
-      data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
+      data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
 
-      cpu_id::FakeCpuId cpu(data);
+      cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
@@ -339,34 +353,36 @@ namespace {
   static bool test_x64_swapgs_bug_enumeration() {
     BEGIN_TEST;
 
+    fbl::AllocChecker ac;
     {
       // Test an Intel Xeon E5-2690 V4
-      cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
-      cpu_id::FakeCpuId cpu(data);
-      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu));
+      cpu_id::FakeCpuId cpu(cpu_id::kTestDataXeon2690v4);
+      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
     }
 
     {
       // Intel(R) Xeon(R) Gold 6xxx has SWAPGS bug
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-      data.leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
+      data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
 
-      cpu_id::FakeCpuId cpu(data);
-      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu));
+      cpu_id::FakeCpuId cpu(*data.get());
+      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
     }
 
     {
       // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have SWAPGS bug
-      cpu_id::TestDataSet data = {};
-      data.leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
-      data.leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
-      data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
-      data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
-      cpu_id::FakeCpuId cpu(data);
-      EXPECT_FALSE(x86_intel_cpu_has_swapgs_bug(&cpu));
+      auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
+      ASSERT_TRUE(ac.check(), "");
+      data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
+      data->leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
+      data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
+      data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
+      cpu_id::FakeCpuId cpu(*data.get());
+      EXPECT_FALSE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
     }
 
     END_TEST;
@@ -484,23 +500,25 @@ namespace {
     uint32_t power_unit = 1000 / (1 << (units & 0x0f));
     uint32_t new_power_limit = 4500;
 
-  zx_system_powerctl_arg_t arg;
-  arg.x86_power_limit.clamp = static_cast<uint8_t>(default_val >> 16 & 0x01);
-  arg.x86_power_limit.enable = static_cast<uint8_t>(default_val >> 15 & 0x01);
-  // changing the value to 4.5W from 7W = 0x24 in the MSR
-  // X86_MSR_PKG_POWER_LIMIT & 0x7FFF = 0x24 * power_units should give 4.5W
-  arg.x86_power_limit.power_limit = new_power_limit;
+    zx_system_powerctl_arg_t arg;
+    arg.x86_power_limit.clamp = static_cast<uint8_t>(default_val >> 16 & 0x01);
+    arg.x86_power_limit.enable = static_cast<uint8_t>(default_val >> 15 & 0x01);
+    // changing the value to 4.5W from 7W = 0x24 in the MSR
+    // X86_MSR_PKG_POWER_LIMIT & 0x7FFF = 0x24 * power_units should give 4.5W
+    arg.x86_power_limit.power_limit = new_power_limit;
 
-  // write it back again to see if the new function does it right
-  arch_system_powerctl(ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg, &fake_msrs);
+    // write it back again to see if the new function does it right
+    auto status = arch_system_powerctl(ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg, &fake_msrs);
+    if (status != ZX_ERR_NOT_SUPPORTED) {
+      uint64_t new_val = fake_msrs.read_msr(X86_MSR_PKG_POWER_LIMIT);
+      uint32_t power_limit = static_cast<uint32_t>(new_val & 0x7FFF);
 
-  uint64_t new_val = fake_msrs.read_msr(X86_MSR_PKG_POWER_LIMIT);
-  uint32_t power_limit = static_cast<uint32_t>(new_val & 0x7FFF);
+      power_limit *= power_unit;
 
-  power_limit *= power_unit;
+      EXPECT_EQ(new_power_limit, power_limit, "Set power limit failed");
+    }
 
-  EXPECT_EQ(new_power_limit, power_limit, "Set power limit failed");
-  END_TEST;
+    END_TEST;
 }
 }  // anonymous namespace
 
