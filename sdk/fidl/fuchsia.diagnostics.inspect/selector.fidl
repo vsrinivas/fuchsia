@@ -54,3 +54,10 @@ table TreeSelector {
     // This field is required.
     2: PropertySelector target_properties;
 };
+
+/// Structured selector containing all required information for the
+/// Inspect service to provide specific views into inspect data.
+struct Selector {
+    fuchsia.diagnostics.ComponentSelector component_selector;
+    TreeSelector tree_selector;
+};
