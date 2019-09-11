@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
+import("//build/config/fuchsia/zircon_images.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
@@ -52,6 +53,16 @@ metrics_registry("cobalt_sw_delivery_registry") {
   generate_binarypb = false
 }
 
+# Include install-disk-image in the build, which comes from Zircon
+zircon_extras_manifest("install-disk-image.manifest") {
+  visibility = [ ":*" ]
+  manifest = "image"
+  patterns = [ "bin/install-disk-image" ]
+}
+
+manifest_outputs = get_target_outputs(":install-disk-image.manifest")
+manifest_file = manifest_outputs[0]
+
 package("pkgfs") {
   deps = [
     "//garnet/go/src/grand_unified_binary",
@@ -77,7 +88,10 @@ package("amber") {
   deprecated_misc_storage = "//build"
   deprecated_shell = "//build"
 
+  extra = [ manifest_file ]
+
   deps = [
+    ":install-disk-image.manifest",
     "//garnet/go/src/grand_unified_binary",
   ]
 

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/fuchsia/zircon_images.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
@@ -39,9 +40,22 @@ rustc_test("driver") {
   ]
 }
 
+# Include install-disk-image in the build, which comes from Zircon
+zircon_extras_manifest("install-disk-image.manifest") {
+  visibility = [ ":*" ]
+  manifest = "image"
+  patterns = [ "bin/install-disk-image" ]
+}
+
+manifest_outputs = get_target_outputs(":install-disk-image.manifest")
+manifest_file = manifest_outputs[0]
+
 test_package("systemupdater-tests") {
+  extra = [ manifest_file ]
+
   deps = [
     ":driver",
+    ":install-disk-image.manifest",
     "//garnet/go/src/grand_unified_binary",
   ]
 

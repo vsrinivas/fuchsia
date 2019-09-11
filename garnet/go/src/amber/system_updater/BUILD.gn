@@ -21,13 +21,11 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//zircon/system/fidl/fuchsia-device-manager($go_toolchain)",
     "//zircon/system/fidl/fuchsia-io($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-paver($go_toolchain)",
   ]
 }
 
 go_test("system_updater_test") {
-  gopackages = [ "system_updater" ]
+  gopackages = ["system_updater"]
   deps = [
     ":lib",
   ]

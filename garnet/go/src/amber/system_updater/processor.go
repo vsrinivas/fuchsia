@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -21,8 +22,6 @@ import (
 
 	"app/context"
 	fuchsiaio "fidl/fuchsia/io"
-	"fidl/fuchsia/mem"
-	"fidl/fuchsia/paver"
 	"fidl/fuchsia/pkg"
 	"syslog"
 )
@@ -35,19 +34,6 @@ type Package struct {
 func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
 	context := context.CreateFromStartupInfo()
 	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
-
-	if err != nil {
-		syslog.Errorf("control interface could not be acquired: %s", err)
-		return nil, err
-	}
-
-	context.ConnectToEnvService(req)
-	return pxy, nil
-}
-
-func ConnectToPaver() (*paver.PaverInterface, error) {
-	context := context.CreateFromStartupInfo()
-	req, pxy, err := paver.NewPaverInterfaceRequest()
 
 	if err != nil {
 		syslog.Errorf("control interface could not be acquired: %s", err)
@@ -187,6 +173,8 @@ func resolvePackage(pkgURL string, resolver *pkg.PackageResolverInterface) (*fuc
 	return dirPxy, nil
 }
 
+var diskImagerPath = filepath.Join("/pkg", "bin", "install-disk-image")
+
 func ValidateImgs(imgs []string, imgsPath string) error {
 	boardPath := filepath.Join(imgsPath, "board")
 	actual, err := ioutil.ReadFile(boardPath)
@@ -207,89 +195,64 @@ func ValidateImgs(imgs []string, imgsPath string) error {
 	return nil
 }
 
-func WriteImgs(svc *paver.PaverInterface, imgs []string, imgsPath string) error {
+func WriteImgs(imgs []string, imgsPath string) error {
 	syslog.Infof("Writing images %+v from %q", imgs, imgsPath)
 
 	for _, img := range imgs {
-		if err := writeImg(svc, img, imgsPath); err != nil {
+		imgPath := filepath.Join(imgsPath, img)
+		if fi, err := os.Stat(imgPath); err != nil || fi.Size() == 0 {
+			syslog.Warnf("img_writer: %q image not found or zero length, skipping", img)
+			continue
+		}
+
+		var c *exec.Cmd
+		switch img {
+		case "zbi", "zbi.signed":
+			c = exec.Command(diskImagerPath, "install-zircona")
+		case "zedboot", "zedboot.signed":
+			c = exec.Command(diskImagerPath, "install-zirconr")
+		case "bootloader":
+			c = exec.Command(diskImagerPath, "install-bootloader")
+		case "board":
+			continue
+		default:
+			return fmt.Errorf("unrecognized image %q", img)
+		}
+
+		syslog.Infof("img_writer: writing %q from %q", img, imgPath)
+		out, err := writeImg(c, imgPath)
+		if len(out) != 0 {
+			syslog.Infof("img_writer: %s", string(out))
+		}
+		if err != nil {
+			syslog.Errorf("img_writer: error writing %q from %q: %s", img, imgPath, err)
+			if len(out) != 0 {
+				syslog.Errorf("img_writer: %s", string(out))
+			}
 			return err
 		}
+		syslog.Infof("img_writer: wrote %q successfully from %q", img, imgPath)
 	}
 	return nil
 }
 
-func writeImg(svc *paver.PaverInterface, img string, imgsPath string) error {
-	imgPath := filepath.Join(imgsPath, img)
-
-	f, err := os.Open(imgPath)
+func writeImg(c *exec.Cmd, path string) ([]byte, error) {
+	info, err := os.Stat(path)
 	if err != nil {
-		syslog.Warnf("img_writer: %q image not found, skipping", img)
-		return nil
+		return nil, err
 	}
-	if fi, err := f.Stat(); err != nil || fi.Size() == 0 {
-		syslog.Warnf("img_writer: %q zero length, skipping", img)
-		return nil
+	if info.Size() == 0 {
+		return nil, fmt.Errorf("img_writer: image file is empty!")
 	}
-	defer f.Close()
-
-	buffer, err := bufferForFile(f)
+	imgFile, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("img_writer: while getting vmo for %q: %q", img, err)
-	}
-	defer buffer.Vmo.Close()
-
-	var writeImg func() (int32, error)
-	switch img {
-	case "zbi", "zbi.signed":
-		writeImg = func() (int32, error) {
-			return svc.WriteAsset(paver.ConfigurationA, paver.AssetKernel, *buffer)
-		}
-	case "zedboot", "zedboot.signed":
-		writeImg = func() (int32, error) {
-			return svc.WriteAsset(paver.ConfigurationRecovery, paver.AssetKernel, *buffer)
-		}
-	case "bootloader":
-		writeImg = func() (int32, error) {
-			return svc.WriteBootloader(*buffer)
-		}
-	case "board":
-		return nil
-	default:
-		return fmt.Errorf("unrecognized image %q", img)
+		return nil, err
 	}
 
-	syslog.Infof("img_writer: writing %q from %q", img, imgPath)
-	status, err := writeImg()
-	if err != nil {
-		return fmt.Errorf("img_writer: error writing %q: %q", img, err)
-	}
-	statusErr := zx.Status(status)
-	if statusErr != zx.ErrOk {
-		return fmt.Errorf("img_writer: error writing %q: %q", img, statusErr)
-	}
-	syslog.Infof("img_writer: wrote %q successfully from %q", img, imgPath)
+	defer imgFile.Close()
+	c.Stdin = imgFile
 
-	return nil
-}
-
-func bufferForFile(f *os.File) (*mem.Buffer, error) {
-	fio := syscall.FDIOForFD(int(f.Fd())).(*fdio.File)
-	if fio == nil {
-		return nil, fmt.Errorf("not fdio file")
-	}
-
-	status, buffer, err := fio.FileInterface().GetBuffer(zxio.VmoFlagRead)
-	if err != nil {
-		return nil, fmt.Errorf("GetBuffer fidl error: %q", err)
-	}
-	statusErr := zx.Status(status)
-	if statusErr != zx.ErrOk {
-		return nil, fmt.Errorf("GetBuffer error: %q", statusErr)
-	}
-	return &mem.Buffer{
-		Vmo:  buffer.Vmo,
-		Size: buffer.Size,
-	}, nil
+	return c.CombinedOutput()
 }
 
 // UpdateCurrentChannel persists the update channel info for a successful update
