@@ -12,23 +12,25 @@
 
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
+#include <src/modular/lib/modular_test_harness/cpp/test_harness_impl.h>
 
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_impl.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<modular::testing::TestHarnessImpl> test_harness_impl;
-
   auto context = sys::ComponentContext::Create();
   auto env = context->svc()->Connect<fuchsia::sys::Environment>();
+
+  modular::testing::TestHarnessImpl test_harness_impl(env, [&loop] { loop.Quit(); });
   context->outgoing()->AddPublicService<fuchsia::modular::testing::TestHarness>(
-      [&loop, &env,
-       &test_harness_impl](fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request) {
-        test_harness_impl = std::make_unique<modular::testing::TestHarnessImpl>(
-            env, std::move(request), [&loop] { loop.Quit(); });
+      [&test_harness_impl](fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness> request) {
+        test_harness_impl.Bind(std::move(request));
       });
 
+  modular::LifecycleImpl lifecycle_impl(context->outgoing(), &test_harness_impl);
+
   loop.Run();
+
   return 0;
 }

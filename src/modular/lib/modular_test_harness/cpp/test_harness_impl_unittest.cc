@@ -43,8 +43,9 @@ std::string GenerateFakeUrl() {
 
 class TestHarnessImplTest : public sys::testing::TestWithEnvironment {
  public:
-  TestHarnessImplTest()
-      : harness_impl_(real_env(), harness_.NewRequest(), [this] { did_exit_ = true; }) {}
+  TestHarnessImplTest() : harness_impl_(real_env(), [this] { did_exit_ = true; }) {
+    harness_impl_.Bind(harness_.NewRequest());
+  }
 
   fuchsia::modular::testing::TestHarnessPtr& test_harness() { return harness_; };
 

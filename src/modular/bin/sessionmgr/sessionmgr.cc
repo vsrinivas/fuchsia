@@ -106,7 +106,7 @@ int main(int argc, const char** argv) {
       component_context->outgoing(),
       std::make_unique<modular::SessionmgrImpl>(component_context.get(), std::move(config),
                                                 std::move(inspect_root)),
-      [&loop, &cobalt_cleanup] {
+      [&loop, cobalt_cleanup = std::move(cobalt_cleanup)]() mutable {
         cobalt_cleanup.call();
         loop.Quit();
       });

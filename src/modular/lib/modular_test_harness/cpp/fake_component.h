@@ -60,10 +60,13 @@ class FakeComponent : public fuchsia::modular::Lifecycle {
   // Clients may override this to be notifed of component destruction.
   virtual void OnDestroy() {}
 
- private:
+  // Called when this component receives a fuchsia.modular.Lifecycle/Terminate(). This object will
+  // |Exit()| when Terminate() is received.
+  //
   // |fuchsia::modular::Lifecycle|
   void Terminate() override;
 
+ private:
   fuchsia::modular::testing::InterceptedComponentPtr intercepted_component_ptr_;
   std::unique_ptr<sys::ComponentContext> component_context_;
 
