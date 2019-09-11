@@ -48,7 +48,7 @@ class bad_optional_access : public std::exception {
 // circumstances when T can be initialized, assigned, and compared with nullptr.
 //
 template <typename T>
-class optional final : private ::fit::internal::modulate_copy_and_move<T> {
+class optional : private ::fit::internal::modulate_copy_and_move<T> {
  private:
   // Helper types and values for SFINAE and noexcept rules.
   static constexpr bool nothrow_move_constructible = std::is_nothrow_move_constructible<T>::value;
