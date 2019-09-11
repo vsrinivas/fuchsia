@@ -839,7 +839,8 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
       trans_cfg.rx_buf_size = IWL_AMSDU_12K;
       break;
     default:
-      zxlogf(ERROR, "%s: Unsupported amsdu_size: %d\n", KBUILD_MODNAME, iwlwifi_mod_params.amsdu_size);
+      zxlogf(ERROR, "%s: Unsupported amsdu_size: %d\n", KBUILD_MODNAME,
+             iwlwifi_mod_params.amsdu_size);
       trans_cfg.rx_buf_size = rb_size_default;
   }
 
@@ -1217,31 +1218,31 @@ static void iwl_mvm_rx_common(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb
 
 static void iwl_mvm_rx(struct iwl_op_mode* op_mode, struct napi_struct* napi,
                        struct iwl_rx_cmd_buffer* rxb) {
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
-    uint16_t cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
+  struct iwl_rx_packet* pkt = rxb_addr(rxb);
+  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
+  uint16_t cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-    /*
-     * RX data may be forwarded to userspace in case the user
-     * requested to monitor the rx w/o affecting the regular flow.
-     * In this case the iwl_test object will handle forwarding the rx
-     * data to user space.
-     */
-    iwl_tm_gnl_send_rx(mvm->trans, rxb);
+  /*
+   * RX data may be forwarded to userspace in case the user
+   * requested to monitor the rx w/o affecting the regular flow.
+   * In this case the iwl_test object will handle forwarding the rx
+   * data to user space.
+   */
+  iwl_tm_gnl_send_rx(mvm->trans, rxb);
 #endif
 
-    if (likely(cmd == WIDE_ID(LEGACY_GROUP, REPLY_RX_MPDU_CMD))) {
+  if (likely(cmd == WIDE_ID(LEGACY_GROUP, REPLY_RX_MPDU_CMD))) {
 #if 0   // NEEDS_PORTING
         iwl_mvm_rx_rx_mpdu(mvm, napi, rxb);
 #endif  // NEEDS_PORTING
-    } else if (cmd == WIDE_ID(LEGACY_GROUP, REPLY_RX_PHY_CMD)) {
+  } else if (cmd == WIDE_ID(LEGACY_GROUP, REPLY_RX_PHY_CMD)) {
 #if 0   // NEEDS_PORTING
         iwl_mvm_rx_rx_phy_cmd(mvm, rxb);
 #endif  // NEEDS_PORTING
-    } else {
-        iwl_mvm_rx_common(mvm, rxb, pkt);
-    }
+  } else {
+    iwl_mvm_rx_common(mvm, rxb, pkt);
+  }
 }
 
 static void iwl_mvm_rx_mq(struct iwl_op_mode* op_mode, struct napi_struct* napi,
@@ -1417,6 +1418,7 @@ static void iwl_mvm_reprobe_wk(struct work_struct* wk) {
 #endif  // NEEDS_PORTING
 
 void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
+  IWL_WARN(mvm, "%s() needs porting\n", __func__);
 #if 0  // NEEDS_PORTING
     iwl_abort_notification_waits(&mvm->notif_wait);
 
@@ -1486,9 +1488,9 @@ void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
 static void iwl_mvm_nic_error(struct iwl_op_mode* op_mode) {
   struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
 
-#if 0   // NEEDS_PORTING
-    if (!test_bit(STATUS_TRANS_DEAD, &mvm->trans->status)) { iwl_mvm_dump_nic_error_log(mvm); }
-#endif  // NEEDS_PORTING
+  if (!test_bit(STATUS_TRANS_DEAD, &mvm->trans->status)) {
+    iwl_mvm_dump_nic_error_log(mvm);
+  }
 
   iwl_mvm_nic_restart(mvm, true);
 }

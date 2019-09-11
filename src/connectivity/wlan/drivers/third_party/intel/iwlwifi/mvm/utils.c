@@ -33,6 +33,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -273,11 +276,10 @@ uint8_t iwl_mvm_next_antenna(struct iwl_mvm* mvm, uint8_t valid, uint8_t last_id
   return last_idx;
 }
 
-#if 0  // NEEDS_PORTING
 #define FW_SYSASSERT_CPU_MASK 0xf0000000
 static const struct {
-    const char* name;
-    uint8_t num;
+  const char* name;
+  uint8_t num;
 } advanced_lookup[] = {
     {"NMI_INTERRUPT_WDG", 0x34},
     {"SYSASSERT", 0x35},
@@ -301,17 +303,16 @@ static const struct {
 };
 
 static const char* desc_lookup(uint32_t num) {
-    size_t i;
+  size_t i;
 
-    for (i = 0; i < ARRAY_SIZE(advanced_lookup) - 1; i++)
-        if (advanced_lookup[i].num == (num & ~FW_SYSASSERT_CPU_MASK)) {
-            return advanced_lookup[i].name;
-        }
+  for (i = 0; i < ARRAY_SIZE(advanced_lookup) - 1; i++)
+    if (advanced_lookup[i].num == (num & ~FW_SYSASSERT_CPU_MASK)) {
+      return advanced_lookup[i].name;
+    }
 
-    /* No entry matches 'num', so it is the last: ADVANCED_SYSASSERT */
-    return advanced_lookup[i].name;
+  /* No entry matches 'num', so it is the last: ADVANCED_SYSASSERT */
+  return advanced_lookup[i].name;
 }
-#endif  // NEEDS_PORTING
 
 /*
  * Note: This structure is read from the device with IO accesses,
@@ -443,128 +444,136 @@ struct iwl_umac_error_event_table {
 #define ERROR_ELEM_SIZE (7 * sizeof(uint32_t))
 
 static void iwl_mvm_dump_umac_error_log(struct iwl_mvm* mvm) {
-#if 0   // NEEDS_PORTING
-    struct iwl_trans* trans = mvm->trans;
-    struct iwl_umac_error_event_table table;
+  struct iwl_trans* trans = mvm->trans;
+  struct iwl_umac_error_event_table table;
 
-    if (!mvm->support_umac_log) { return; }
+  if (!mvm->support_umac_log) {
+    return;
+  }
 
-    iwl_trans_read_mem_bytes(trans, mvm->umac_error_event_table, &table, sizeof(table));
+  iwl_trans_read_mem_bytes(trans, mvm->umac_error_event_table, &table, sizeof(table));
 
-    if (table.valid) { mvm->fwrt.dump.umac_err_id = table.error_id; }
+  if (table.valid) {
+    mvm->fwrt.dump.umac_err_id = table.error_id;
+  }
 
-    if (ERROR_START_OFFSET <= table.valid * ERROR_ELEM_SIZE) {
-        IWL_ERR(trans, "Start IWL Error Log Dump:\n");
-        IWL_ERR(trans, "Status: 0x%08lX, count: %d\n", mvm->status, table.valid);
-    }
+  if (ERROR_START_OFFSET <= table.valid * ERROR_ELEM_SIZE) {
+    IWL_ERR(trans, "Start IWL Error Log Dump:\n");
+    IWL_ERR(trans, "Status: 0x%08lX, count: %d\n", mvm->status, table.valid);
+  }
 
-    IWL_ERR(mvm, "0x%08X | %s\n", table.error_id, desc_lookup(table.error_id));
-    IWL_ERR(mvm, "0x%08X | umac branchlink1\n", table.blink1);
-    IWL_ERR(mvm, "0x%08X | umac branchlink2\n", table.blink2);
-    IWL_ERR(mvm, "0x%08X | umac interruptlink1\n", table.ilink1);
-    IWL_ERR(mvm, "0x%08X | umac interruptlink2\n", table.ilink2);
-    IWL_ERR(mvm, "0x%08X | umac data1\n", table.data1);
-    IWL_ERR(mvm, "0x%08X | umac data2\n", table.data2);
-    IWL_ERR(mvm, "0x%08X | umac data3\n", table.data3);
-    IWL_ERR(mvm, "0x%08X | umac major\n", table.umac_major);
-    IWL_ERR(mvm, "0x%08X | umac minor\n", table.umac_minor);
-    IWL_ERR(mvm, "0x%08X | frame pointer\n", table.frame_pointer);
-    IWL_ERR(mvm, "0x%08X | stack pointer\n", table.stack_pointer);
-    IWL_ERR(mvm, "0x%08X | last host cmd\n", table.cmd_header);
-    IWL_ERR(mvm, "0x%08X | isr status reg\n", table.nic_isr_pref);
-#endif  // NEEDS_PORTING
+  IWL_ERR(mvm, "0x%08X | %s\n", table.error_id, desc_lookup(table.error_id));
+  IWL_ERR(mvm, "0x%08X | umac branchlink1\n", table.blink1);
+  IWL_ERR(mvm, "0x%08X | umac branchlink2\n", table.blink2);
+  IWL_ERR(mvm, "0x%08X | umac interruptlink1\n", table.ilink1);
+  IWL_ERR(mvm, "0x%08X | umac interruptlink2\n", table.ilink2);
+  IWL_ERR(mvm, "0x%08X | umac data1\n", table.data1);
+  IWL_ERR(mvm, "0x%08X | umac data2\n", table.data2);
+  IWL_ERR(mvm, "0x%08X | umac data3\n", table.data3);
+  IWL_ERR(mvm, "0x%08X | umac major\n", table.umac_major);
+  IWL_ERR(mvm, "0x%08X | umac minor\n", table.umac_minor);
+  IWL_ERR(mvm, "0x%08X | frame pointer\n", table.frame_pointer);
+  IWL_ERR(mvm, "0x%08X | stack pointer\n", table.stack_pointer);
+  IWL_ERR(mvm, "0x%08X | last host cmd\n", table.cmd_header);
+  IWL_ERR(mvm, "0x%08X | isr status reg\n", table.nic_isr_pref);
 }
 
 static void iwl_mvm_dump_lmac_error_log(struct iwl_mvm* mvm, uint8_t lmac_num) {
-#if 0   // NEEDS_PORTING
-    struct iwl_trans* trans = mvm->trans;
-    struct iwl_error_event_table table;
-    uint32_t val, base = mvm->error_event_table[lmac_num];
+  struct iwl_trans* trans = mvm->trans;
+  struct iwl_error_event_table table;
+  uint32_t val, base = mvm->error_event_table[lmac_num];
 
-    if (mvm->fwrt.cur_fw_img == IWL_UCODE_INIT) {
-        if (!base) { base = mvm->fw->init_errlog_ptr; }
-    } else {
-        if (!base) { base = mvm->fw->inst_errlog_ptr; }
+  if (mvm->fwrt.cur_fw_img == IWL_UCODE_INIT) {
+    if (!base) {
+      base = mvm->fw->init_errlog_ptr;
+    }
+  } else {
+    if (!base) {
+      base = mvm->fw->inst_errlog_ptr;
+    }
+  }
+
+  if (base < 0x400000) {
+    IWL_ERR(mvm, "Not valid error log pointer 0x%08X for %s uCode\n", base,
+            (mvm->fwrt.cur_fw_img == IWL_UCODE_INIT) ? "Init" : "RT");
+    return;
+  }
+
+  /* check if there is a HW error */
+  val = iwl_trans_read_mem32(trans, base);
+  if (((val & ~0xf) == 0xa5a5a5a0) || ((val & ~0xf) == 0x5a5a5a50)) {
+    int err;
+
+    IWL_ERR(trans, "HW error, resetting before reading\n");
+
+    /* reset the device */
+    iwl_trans_sw_reset(trans);
+
+    /* set INIT_DONE flag */
+    iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
+
+    /* and wait for clock stabilization */
+    if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) {
+      zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
     }
 
-    if (base < 0x400000) {
-        IWL_ERR(mvm, "Not valid error log pointer 0x%08X for %s uCode\n", base,
-                (mvm->fwrt.cur_fw_img == IWL_UCODE_INIT) ? "Init" : "RT");
-        return;
+    err = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
+                       BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
+    if (err < 0) {
+      IWL_DEBUG_INFO(trans, "Failed to reset the card for the dump\n");
+      return;
     }
+  }
 
-    /* check if there is a HW error */
-    val = iwl_trans_read_mem32(trans, base);
-    if (((val & ~0xf) == 0xa5a5a5a0) || ((val & ~0xf) == 0x5a5a5a50)) {
-        int err;
+  iwl_trans_read_mem_bytes(trans, base, &table, sizeof(table));
 
-        IWL_ERR(trans, "HW error, resetting before reading\n");
+  if (table.valid) {
+    mvm->fwrt.dump.lmac_err_id[lmac_num] = table.error_id;
+  }
 
-        /* reset the device */
-        iwl_trans_sw_reset(trans);
+  if (ERROR_START_OFFSET <= table.valid * ERROR_ELEM_SIZE) {
+    IWL_ERR(trans, "Start IWL Error Log Dump:\n");
+    IWL_ERR(trans, "Status: 0x%08lX, count: %d\n", mvm->status, table.valid);
+  }
 
-        /* set INIT_DONE flag */
-        iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
+  /* Do not change this output - scripts rely on it */
 
-        /* and wait for clock stabilization */
-        if (trans->cfg->device_family == IWL_DEVICE_FAMILY_8000) { udelay(2); }
+  IWL_ERR(mvm, "Loaded firmware version: %s\n", mvm->fw->fw_version);
 
-        err = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                           BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
-        if (err < 0) {
-            IWL_DEBUG_INFO(trans, "Failed to reset the card for the dump\n");
-            return;
-        }
-    }
-
-    iwl_trans_read_mem_bytes(trans, base, &table, sizeof(table));
-
-    if (table.valid) { mvm->fwrt.dump.lmac_err_id[lmac_num] = table.error_id; }
-
-    if (ERROR_START_OFFSET <= table.valid * ERROR_ELEM_SIZE) {
-        IWL_ERR(trans, "Start IWL Error Log Dump:\n");
-        IWL_ERR(trans, "Status: 0x%08lX, count: %d\n", mvm->status, table.valid);
-    }
-
-    /* Do not change this output - scripts rely on it */
-
-    IWL_ERR(mvm, "Loaded firmware version: %s\n", mvm->fw->fw_version);
-
-    IWL_ERR(mvm, "0x%08X | %-28s\n", table.error_id, desc_lookup(table.error_id));
-    IWL_ERR(mvm, "0x%08X | trm_hw_status0\n", table.trm_hw_status0);
-    IWL_ERR(mvm, "0x%08X | trm_hw_status1\n", table.trm_hw_status1);
-    IWL_ERR(mvm, "0x%08X | branchlink2\n", table.blink2);
-    IWL_ERR(mvm, "0x%08X | interruptlink1\n", table.ilink1);
-    IWL_ERR(mvm, "0x%08X | interruptlink2\n", table.ilink2);
-    IWL_ERR(mvm, "0x%08X | data1\n", table.data1);
-    IWL_ERR(mvm, "0x%08X | data2\n", table.data2);
-    IWL_ERR(mvm, "0x%08X | data3\n", table.data3);
-    IWL_ERR(mvm, "0x%08X | beacon time\n", table.bcon_time);
-    IWL_ERR(mvm, "0x%08X | tsf low\n", table.tsf_low);
-    IWL_ERR(mvm, "0x%08X | tsf hi\n", table.tsf_hi);
-    IWL_ERR(mvm, "0x%08X | time gp1\n", table.gp1);
-    IWL_ERR(mvm, "0x%08X | time gp2\n", table.gp2);
-    IWL_ERR(mvm, "0x%08X | uCode revision type\n", table.fw_rev_type);
-    IWL_ERR(mvm, "0x%08X | uCode version major\n", table.major);
-    IWL_ERR(mvm, "0x%08X | uCode version minor\n", table.minor);
-    IWL_ERR(mvm, "0x%08X | hw version\n", table.hw_ver);
-    IWL_ERR(mvm, "0x%08X | board version\n", table.brd_ver);
-    IWL_ERR(mvm, "0x%08X | hcmd\n", table.hcmd);
-    IWL_ERR(mvm, "0x%08X | isr0\n", table.isr0);
-    IWL_ERR(mvm, "0x%08X | isr1\n", table.isr1);
-    IWL_ERR(mvm, "0x%08X | isr2\n", table.isr2);
-    IWL_ERR(mvm, "0x%08X | isr3\n", table.isr3);
-    IWL_ERR(mvm, "0x%08X | isr4\n", table.isr4);
-    IWL_ERR(mvm, "0x%08X | last cmd Id\n", table.last_cmd_id);
-    IWL_ERR(mvm, "0x%08X | wait_event\n", table.wait_event);
-    IWL_ERR(mvm, "0x%08X | l2p_control\n", table.l2p_control);
-    IWL_ERR(mvm, "0x%08X | l2p_duration\n", table.l2p_duration);
-    IWL_ERR(mvm, "0x%08X | l2p_mhvalid\n", table.l2p_mhvalid);
-    IWL_ERR(mvm, "0x%08X | l2p_addr_match\n", table.l2p_addr_match);
-    IWL_ERR(mvm, "0x%08X | lmpm_pmg_sel\n", table.lmpm_pmg_sel);
-    IWL_ERR(mvm, "0x%08X | timestamp\n", table.u_timestamp);
-    IWL_ERR(mvm, "0x%08X | flow_handler\n", table.flow_handler);
-#endif  // NEEDS_PORTING
+  IWL_ERR(mvm, "0x%08X | %-28s\n", table.error_id, desc_lookup(table.error_id));
+  IWL_ERR(mvm, "0x%08X | trm_hw_status0\n", table.trm_hw_status0);
+  IWL_ERR(mvm, "0x%08X | trm_hw_status1\n", table.trm_hw_status1);
+  IWL_ERR(mvm, "0x%08X | branchlink2\n", table.blink2);
+  IWL_ERR(mvm, "0x%08X | interruptlink1\n", table.ilink1);
+  IWL_ERR(mvm, "0x%08X | interruptlink2\n", table.ilink2);
+  IWL_ERR(mvm, "0x%08X | data1\n", table.data1);
+  IWL_ERR(mvm, "0x%08X | data2\n", table.data2);
+  IWL_ERR(mvm, "0x%08X | data3\n", table.data3);
+  IWL_ERR(mvm, "0x%08X | beacon time\n", table.bcon_time);
+  IWL_ERR(mvm, "0x%08X | tsf low\n", table.tsf_low);
+  IWL_ERR(mvm, "0x%08X | tsf hi\n", table.tsf_hi);
+  IWL_ERR(mvm, "0x%08X | time gp1\n", table.gp1);
+  IWL_ERR(mvm, "0x%08X | time gp2\n", table.gp2);
+  IWL_ERR(mvm, "0x%08X | uCode revision type\n", table.fw_rev_type);
+  IWL_ERR(mvm, "0x%08X | uCode version major\n", table.major);
+  IWL_ERR(mvm, "0x%08X | uCode version minor\n", table.minor);
+  IWL_ERR(mvm, "0x%08X | hw version\n", table.hw_ver);
+  IWL_ERR(mvm, "0x%08X | board version\n", table.brd_ver);
+  IWL_ERR(mvm, "0x%08X | hcmd\n", table.hcmd);
+  IWL_ERR(mvm, "0x%08X | isr0\n", table.isr0);
+  IWL_ERR(mvm, "0x%08X | isr1\n", table.isr1);
+  IWL_ERR(mvm, "0x%08X | isr2\n", table.isr2);
+  IWL_ERR(mvm, "0x%08X | isr3\n", table.isr3);
+  IWL_ERR(mvm, "0x%08X | isr4\n", table.isr4);
+  IWL_ERR(mvm, "0x%08X | last cmd Id\n", table.last_cmd_id);
+  IWL_ERR(mvm, "0x%08X | wait_event\n", table.wait_event);
+  IWL_ERR(mvm, "0x%08X | l2p_control\n", table.l2p_control);
+  IWL_ERR(mvm, "0x%08X | l2p_duration\n", table.l2p_duration);
+  IWL_ERR(mvm, "0x%08X | l2p_mhvalid\n", table.l2p_mhvalid);
+  IWL_ERR(mvm, "0x%08X | l2p_addr_match\n", table.l2p_addr_match);
+  IWL_ERR(mvm, "0x%08X | lmpm_pmg_sel\n", table.lmpm_pmg_sel);
+  IWL_ERR(mvm, "0x%08X | timestamp\n", table.u_timestamp);
+  IWL_ERR(mvm, "0x%08X | flow_handler\n", table.flow_handler);
 }
 
 void iwl_mvm_dump_nic_error_log(struct iwl_mvm* mvm) {
