@@ -11,14 +11,15 @@
 #error Fuchsia-only Header
 #endif
 
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
+
 #include <cobalt-client/cpp/collector.h>
 #include <fs/metrics/cobalt-metrics.h>
 #include <fs/metrics/composite-latency-event.h>
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
 #include <fs/ticker.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/zx/time.h>
 
 namespace blobfs {
 
@@ -127,7 +128,7 @@ class BlobfsMetrics {
 
   // Inspect instrumentation data, with an initial size of the current histogram size.
   inspect::Inspector inspector_ = inspect::Inspector(
-      "root", inspect::InspectSettings{.maximum_size = 2 * fs_metrics::Histograms::Size()});
+      inspect::InspectSettings{.maximum_size = 2 * fs_metrics::Histograms::Size()});
   inspect::Node& root_ = inspector_.GetRoot();
   fs_metrics::Histograms histograms_ = fs_metrics::Histograms(&root_);
 

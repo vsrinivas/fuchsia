@@ -101,7 +101,7 @@ inspect::ExponentialDoubleHistogram CreateArrayMetric(Node* root, size_t size) {
 
 template <typename T>
 bool TestMetricLifecycle(perftest::RepeatState* state) {
-  auto inspector = Inspector("root");
+  auto inspector = Inspector();
   auto& root = inspector.GetRoot();
   state->DeclareStep("Create");
   state->DeclareStep("Destroy");
@@ -114,7 +114,7 @@ bool TestMetricLifecycle(perftest::RepeatState* state) {
 
 template <typename T>
 bool TestArrayLifecycle(perftest::RepeatState* state, size_t size) {
-  auto inspector = Inspector("root");
+  auto inspector = Inspector();
   auto& root = inspector.GetRoot();
   state->DeclareStep("Create");
   state->DeclareStep("Destroy");
@@ -128,7 +128,7 @@ bool TestArrayLifecycle(perftest::RepeatState* state, size_t size) {
 // Measure the time taken to set and modify NumericProperty.
 template <typename T>
 bool TestMetricModify(perftest::RepeatState* state) {
-  auto inspector = Inspector("root");
+  auto inspector = Inspector();
   auto& root = inspector.GetRoot();
   auto item = CreateMetric<T>(&root);
 
@@ -148,7 +148,7 @@ bool TestMetricModify(perftest::RepeatState* state) {
 
 template <typename T>
 bool TestArrayModify(perftest::RepeatState* state, int size) {
-  auto inspector = Inspector("root", inspect::InspectSettings{.maximum_size = 1024 * 1024});
+  auto inspector = Inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
   auto& root = inspector.GetRoot();
   auto item = CreateArrayMetric<T>(&root, size);
 
@@ -170,7 +170,7 @@ bool TestArrayModify(perftest::RepeatState* state, int size) {
 
 template <typename T>
 bool TestHistogramInsert(perftest::RepeatState* state, int size, int value) {
-  auto inspector = Inspector("root", inspect::InspectSettings{.maximum_size = 1024 * 1024});
+  auto inspector = Inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
   auto& root = inspector.GetRoot();
   auto item = CreateArrayMetric<T>(&root, size);
 
@@ -193,7 +193,7 @@ bool TestHistogramInsert(perftest::RepeatState* state, int size, int value) {
 
 // Measure the time taken to set and modify Property.
 bool TestProperty(perftest::RepeatState* state, int size) {
-  auto inspector = Inspector("root", inspect::InspectSettings{.maximum_size = 1024 * 1024});
+  auto inspector = Inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
   auto& root = inspector.GetRoot();
   auto item = root.CreateString(kName, "");
   std::string string;

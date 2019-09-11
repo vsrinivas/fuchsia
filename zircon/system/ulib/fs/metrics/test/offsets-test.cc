@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/inspect/cpp/inspect.h>
+
 #include <set>
 #include <string>
 #include <string_view>
@@ -10,7 +12,6 @@
 #include <fs/metrics/internal/attributes.h>
 #include <fs/metrics/internal/object_generator.h>
 #include <fs/metrics/internal/offsets.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <zxtest/zxtest.h>
 
 namespace fs_metrics {
@@ -18,7 +19,7 @@ namespace {
 
 class NodeGeneratorTest : public zxtest::Test {
  public:
-  NodeGeneratorTest() : inspector_("root-test") {}
+  NodeGeneratorTest() : inspector_() {}
 
  protected:
   inspect::Inspector inspector_;

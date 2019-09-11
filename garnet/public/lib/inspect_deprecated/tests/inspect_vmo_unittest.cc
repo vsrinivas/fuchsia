@@ -34,8 +34,8 @@ ObjectHierarchy GetHierarchy(const inspect_deprecated::Tree& tree) {
 }
 
 TEST(InspectVmo, Object) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("test");
-  EXPECT_THAT(GetHierarchy(tree), NodeMatches(AllOf(NameMatches("test"), PropertyList(IsEmpty()),
+  auto tree = inspect_deprecated::Inspector().CreateTree();  // Note: Name is now ignored.
+  EXPECT_THAT(GetHierarchy(tree), NodeMatches(AllOf(NameMatches("root"), PropertyList(IsEmpty()),
                                                     MetricList(IsEmpty()))));
 }
 
@@ -50,7 +50,7 @@ class ValueWrapper {
 };
 
 TEST(InspectVmo, Child) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     // Create a child and check it exists.
@@ -74,7 +74,7 @@ TEST(InspectVmo, Child) {
 }
 
 TEST(InspectVmo, ChildChaining) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     ValueWrapper v(root.CreateChild("child"), 100);
@@ -114,7 +114,7 @@ TEST(InspectVmo, Metrics) {
   DefaultMetricTest<inspect_deprecated::UIntMetric>();
   DefaultMetricTest<inspect_deprecated::DoubleMetric>();
 
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     auto metric_int = root.CreateIntMetric("int", -10);
@@ -141,7 +141,7 @@ TEST(InspectVmo, Arrays) {
   DefaultArrayTest<inspect_deprecated::UIntArray>();
   DefaultArrayTest<inspect_deprecated::DoubleArray>();
 
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     auto metric_int = root.CreateIntArray("int", 5);
@@ -171,7 +171,7 @@ TEST(InspectVmo, LinearHistograms) {
   DefaultHistogramTest<inspect_deprecated::LinearUIntHistogramMetric>();
   DefaultHistogramTest<inspect_deprecated::LinearDoubleHistogramMetric>();
 
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     auto metric_int = root.CreateLinearIntHistogramMetric("int", 10, 5, 5);
@@ -212,7 +212,7 @@ TEST(InspectVmo, ExponentialHistograms) {
   DefaultHistogramTest<inspect_deprecated::ExponentialUIntHistogramMetric>();
   DefaultHistogramTest<inspect_deprecated::ExponentialDoubleHistogramMetric>();
 
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     auto metric_int = root.CreateExponentialIntHistogramMetric("int", 1, 1, 2, 4);
@@ -249,7 +249,7 @@ TEST(InspectVmo, ExponentialHistograms) {
 }
 
 TEST(InspectVmo, Properties) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     auto property_string = root.CreateStringProperty("str", "test");
@@ -269,7 +269,7 @@ TEST(InspectVmo, Properties) {
 }
 
 TEST(InspectVmo, NestedValues) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("root");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   Node& root = tree.GetRoot();
   {
     Node child_a = root.CreateChild("child_a");

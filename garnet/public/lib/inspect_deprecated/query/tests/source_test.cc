@@ -95,7 +95,7 @@ class SourceTestVmo : public TestFixture {
  public:
   SourceTestVmo()
       : inspector_(),
-        tree_(inspector_.CreateTree("root")),
+        tree_(inspector_.CreateTree()),
         vmo_file_(tree_.DuplicateVmo(), 0, 4096),
         test_data_(std::move(tree_.GetRoot())) {
     ZX_ASSERT(vmo_file_.Serve(fuchsia::io::OPEN_RIGHT_READABLE,

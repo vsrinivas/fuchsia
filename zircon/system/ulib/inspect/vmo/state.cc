@@ -334,6 +334,11 @@ Link State::CreateLink(const std::string& name, BlockIndex parent, const std::st
   return Link(weak_self_ptr_.lock(), name_index, value_index, content_index);
 }
 
+Node State::CreateRootNode() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return Node(weak_self_ptr_.lock(), 0, 0);
+}
+
 Node State::CreateNode(const std::string& name, BlockIndex parent) {
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
@@ -648,6 +653,11 @@ void State::FreeLink(Link* link) {
 void State::FreeNode(Node* object) {
   ZX_DEBUG_ASSERT_MSG(object->state_.get() == this, "Node being freed from the wrong state");
   if (object->state_.get() != this) {
+    return;
+  }
+
+  if (object->value_index_ == 0) {
+    // This is a special "root" node, it cannot be deleted.
     return;
   }
 

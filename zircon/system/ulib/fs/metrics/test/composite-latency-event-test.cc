@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/inspect/cpp/inspect.h>
+
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -12,7 +14,6 @@
 #include <fs/metrics/composite-latency-event.h>
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
-#include <lib/inspect/cpp/inspect.h>
 #include <zxtest/zxtest.h>
 
 #include "zircon/types.h"
@@ -24,7 +25,7 @@ using internal::SelectHistogram;
 
 class CompositeLatencyEventTest : public zxtest::Test {
  public:
-  CompositeLatencyEventTest() : inspector_("root-test") {
+  CompositeLatencyEventTest() : inspector_() {
     std::unique_ptr<cobalt_client::InMemoryLogger> logger =
         std::make_unique<cobalt_client::InMemoryLogger>();
     logger_ = logger.get();

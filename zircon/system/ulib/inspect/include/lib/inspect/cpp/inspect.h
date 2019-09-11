@@ -26,18 +26,18 @@ struct InspectSettings final {
 // An Inspector owns a particular tree of Inspect data.
 class Inspector final {
  public:
-  // Construct a new Inspector with the given name and default settings.
-  explicit Inspector(const std::string& name);
+  // Construct a new Inspector.
+  Inspector();
 
-  // Construct a new Inspector with the given name and settings.
-  Inspector(const std::string& name, const InspectSettings& settings);
+  // Construct a new Inspector with the given settings.
+  explicit Inspector(const InspectSettings& settings);
 
-  // Construct a new Inspector with the given name backed by the given VMO.
+  // Construct a new Inspector backed by the given VMO.
   //
   // The VMO must support ZX_RIGHT_WRITE, ZX_VM_CAN_MAP_WRITE, and ZX_VM_CAN_MAP_READ permissions.
   //
   // If an invalid VMO is passed all Node operations will will have no effect.
-  Inspector(const std::string& name, zx::vmo vmo);
+  explicit Inspector(zx::vmo vmo);
 
   // Returns a duplicated read-only version of the VMO backing this inspector.
   zx::vmo DuplicateVmo() const;
