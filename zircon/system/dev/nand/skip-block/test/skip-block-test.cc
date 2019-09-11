@@ -479,7 +479,36 @@ TEST_F(SkipBlockTest, ReadMultipleCopiesNoneSucceeds) {
     ASSERT_EQ(nand().last_op(), NAND_OP_READ);
 }
 
-TEST_F(SkipBlockTest, WriteBytesSingleBlock) {
+TEST_F(SkipBlockTest, WriteBytesSingleBlockNoOffset) {
+    ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
+
+    // Read block 5.
+    nand().set_result(ZX_OK);
+    // Erase block 5.
+    nand().set_result(ZX_OK);
+    // Write block 5.
+    nand().set_result(ZX_OK);
+
+    constexpr size_t kSize = kBlockSize - kPageSize;
+    constexpr size_t kNandOffset = 5 * kBlockSize;
+
+    zx::vmo vmo;
+    ASSERT_NO_FATAL_FAILURES(CreatePayload(kSize, &vmo));
+    nand::WriteBytesOperation op = {};
+    op.vmo = std::move(vmo);
+    op.offset = kNandOffset;
+    op.size = kSize;
+
+    bool bad_block_grown;
+    ASSERT_NO_FATAL_FAILURES(WriteBytes(std::move(op), &bad_block_grown));
+    ASSERT_FALSE(bad_block_grown);
+    ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
+    ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);
+    ASSERT_NO_FATAL_FAILURES(ValidateWritten(kNandOffset, kSize));
+    ASSERT_NO_FATAL_FAILURES(ValidateUnwritten(kNandOffset + kSize, kPageSize));
+}
+
+TEST_F(SkipBlockTest, WriteBytesSingleBlockWithOffset) {
     ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent()));
 
     // Read block 5.

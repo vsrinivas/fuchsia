@@ -446,7 +446,10 @@ zx_status_t SkipBlockDevice::ReadPartialBlocksLocked(WriteBytesOperation op, uin
             return status;
         }
     }
-    if (first_block != last_block && (op.offset + op.size) % block_size != 0) {
+
+    if ((first_block != last_block || op.offset % block_size == 0) &&
+        (op.offset + op.size) % block_size != 0) {
+
         // Need to read last block.
         zx::vmo dup;
         status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
