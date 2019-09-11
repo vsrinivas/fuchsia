@@ -1,6 +1,11 @@
 {
     "fuchsia_packages": [
         {
+            "crate_name": "async_trait",
+            "crate_type": "proc-macro",
+            "package_name": "async-trait"
+        },
+        {
             "crate_name": "base64",
             "crate_type": "lib",
             "package_name": "base64"
