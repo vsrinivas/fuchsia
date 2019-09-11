@@ -1,5 +1,5 @@
 diff --git a/src/boringssl/abort.rs b/src/boringssl/abort.rs
-index d422c91..07d098b 100644
+index d422c91..9e2d541 100644
 --- a/src/boringssl/abort.rs
 +++ b/src/boringssl/abort.rs
 @@ -1,8 +1,6 @@
@@ -8,14 +8,14 @@ index d422c91..07d098b 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Macros and functions that abort instead of unwinding.
  //!
 diff --git a/src/boringssl/mod.rs b/src/boringssl/mod.rs
-index 4ae02f6..566edcf 100644
+index b51a979..186107e 100644
 --- a/src/boringssl/mod.rs
 +++ b/src/boringssl/mod.rs
 @@ -1,8 +1,6 @@
@@ -24,7 +24,7 @@ index 4ae02f6..566edcf 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
@@ -54,34 +54,49 @@ index 4ae02f6..566edcf 100644
      NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1, NID_sha1, NID_sha256, NID_sha384,
      NID_sha512, ED25519_PRIVATE_KEY_LEN, ED25519_PUBLIC_KEY_LEN, ED25519_SIGNATURE_LEN,
      SHA256_DIGEST_LENGTH, SHA384_DIGEST_LENGTH, SHA512_DIGEST_LENGTH, SHA_DIGEST_LENGTH,
-@@ -585,12 +581,7 @@ impl CHeapWrapper<RSA> {
-         bits: c_int,
-         e: &CRef<BIGNUM>,
-     ) -> Result<(), BoringError> {
--        unsafe {
--            // NOTE: It's very important that we use 'into_mut' here so that e's
--            // refcount is not decremented. That's because RSA_generate_key_ex
--            // takes ownership of e, and thus doesn't increment its refcount.
--            RSA_generate_key_ex(self.as_mut(), bits, e.as_const(), ptr::null_mut())
--        }
-+        unsafe { RSA_generate_key_ex(self.as_mut(), bits, e.as_const(), ptr::null_mut()) }
-     }
+@@ -93,12 +89,12 @@ pub use boringssl::ffi::{
+ // wrapper types
+ pub use boringssl::wrapper::{CHeapWrapper, CRef, CStackWrapper};
  
-     /// The `RSA_marshal_private_key` function.
-@@ -760,9 +751,9 @@ macro_rules! impl_hash {
+-use std::convert::TryInto;
+ use std::ffi::CStr;
++use std::convert::TryInto;
+ use std::fmt::{self, Debug, Display, Formatter};
++use std::mem::MaybeUninit;
+ use std::num::NonZeroUsize;
+ use std::os::raw::{c_char, c_int, c_uint, c_void};
+-use std::mem::MaybeUninit;
+ use std::{ptr, slice};
+ 
+ use boringssl::abort::UnwrapAbort;
+@@ -530,7 +526,12 @@ impl CStackWrapper<HMAC_CTX> {
+         unsafe {
+             let mut ctx = MaybeUninit::uninit();
+             HMAC_CTX_init(ctx.as_mut_ptr());
+-            HMAC_Init_ex(ctx.as_mut_ptr(), key.as_ptr() as *const c_void, key.len(), md.as_const())?;
++            HMAC_Init_ex(
++                ctx.as_mut_ptr(),
++                key.as_ptr() as *const c_void,
++                key.len(),
++                md.as_const(),
++            )?;
+             Ok(CStackWrapper::new(ctx.assume_init()))
+         }
+     }
+@@ -761,9 +762,9 @@ macro_rules! impl_hash {
              #[must_use]
              pub fn $final(
                  &mut self,
 -            ) -> [u8; ::boringssl::ffi::$digest_len as usize] {
 +            ) -> [u8; ::boringssl_sys::$digest_len as usize] {
                  unsafe {
--                    let mut md: [u8; ::boringssl::ffi::$digest_len as usize] = mem::uninitialized();
-+                    let mut md: [u8; ::boringssl_sys::$digest_len as usize] = mem::uninitialized();
+-                    let mut md = MaybeUninit::<[u8; ::boringssl::ffi::$digest_len as usize]>::uninit();
++                    let mut md = MaybeUninit::<[u8; ::boringssl_sys::$digest_len as usize]>::uninit();
                      // SHA1_Final promises to return 1. SHA256_Final,
                      // SHA384_Final, and SHA512_Final all document that they
                      // only fail due to programmer error. The only input to the
 diff --git a/src/boringssl/raw.rs b/src/boringssl/raw.rs
-index 9ac8fd7..dcd8873 100644
+index 9ac8fd7..935b97a 100644
 --- a/src/boringssl/raw.rs
 +++ b/src/boringssl/raw.rs
 @@ -1,8 +1,6 @@
@@ -90,7 +105,7 @@ index 9ac8fd7..dcd8873 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
@@ -488,7 +503,7 @@ index 9ac8fd7..dcd8873 100644
      };
  }
 diff --git a/src/boringssl/wrapper.rs b/src/boringssl/wrapper.rs
-index 3b6ac46..6c1b11d 100644
+index a6953b9..99d8799 100644
 --- a/src/boringssl/wrapper.rs
 +++ b/src/boringssl/wrapper.rs
 @@ -1,8 +1,6 @@
@@ -497,18 +512,18 @@ index 3b6ac46..6c1b11d 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  use std::marker::PhantomData;
- use std::mem;
+ use std::mem::{self, MaybeUninit};
 @@ -18,7 +16,7 @@ pub trait Sealed {}
  
  macro_rules! sealed {
      ($name:ident) => {
 -        impl ::boringssl::wrapper::Sealed for ::boringssl::raw::ffi::$name {}
-+        impl ::boringssl::wrapper::Sealed for ::boringssl_sys::$name {}
++        impl ::boringssl::wrapper::Sealed for ::boringssl::raw::boringssl_sys::$name {}
      };
  }
  
@@ -517,75 +532,84 @@ index 3b6ac46..6c1b11d 100644
  macro_rules! c_new {
      ($name:ident, $new:ident) => {
 -        unsafe impl ::boringssl::wrapper::CNew for ::boringssl::raw::ffi::$name {
-+        unsafe impl ::boringssl::wrapper::CNew for ::boringssl_sys::$name {
++        unsafe impl ::boringssl::wrapper::CNew for ::boringssl::raw::boringssl_sys::$name {
              unsafe fn new_raw() -> *mut Self {
 -                ::boringssl::raw::ffi::$new()
-+                ::boringssl_sys::$new()
++                ::boringssl::raw::boringssl_sys::$new()
              }
          }
      };
-@@ -82,14 +80,11 @@ pub unsafe trait CUpRef: Sealed {
+@@ -82,12 +80,12 @@ pub unsafe trait CUpRef: Sealed {
  
  macro_rules! c_up_ref {
      ($name:ident, $up_ref:ident) => {
 -        unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl::raw::ffi::$name {
-+        unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl_sys::$name {
++        unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl::raw::boringssl_sys::$name {
              unsafe fn up_ref(slf: *mut Self) {
                  use boringssl::abort::UnwrapAbort;
--                ::boringssl::raw::one_or_err(
--                    stringify!($up_ref),
+                 ::boringssl::raw::one_or_err(
+                     stringify!($up_ref),
 -                    ::boringssl::raw::ffi::$up_ref(slf),
--                )
--                .unwrap_abort()
-+                ::boringssl::raw::one_or_err(stringify!($up_ref), ::boringssl_sys::$up_ref(slf))
-+                    .unwrap_abort()
++                    ::boringssl::raw::boringssl_sys::$up_ref(slf),
+                 )
+                 .unwrap_abort()
              }
-         }
-     };
-@@ -107,9 +102,9 @@ pub unsafe trait CFree: Sealed {
+@@ -107,9 +105,9 @@ pub unsafe trait CFree: Sealed {
  
  macro_rules! c_free {
      ($name:ident, $free:ident) => {
 -        unsafe impl ::boringssl::wrapper::CFree for ::boringssl::raw::ffi::$name {
-+        unsafe impl ::boringssl::wrapper::CFree for ::boringssl_sys::$name {
++        unsafe impl ::boringssl::wrapper::CFree for ::boringssl::raw::boringssl_sys::$name {
              unsafe fn free(slf: *mut Self) {
 -                ::boringssl::raw::ffi::$free(slf)
-+                ::boringssl_sys::$free(slf)
++                ::boringssl::raw::boringssl_sys::$free(slf)
              }
          }
      };
-@@ -128,9 +123,9 @@ pub unsafe trait CInit: Sealed {
+@@ -128,9 +126,9 @@ pub unsafe trait CInit: Sealed {
  #[allow(unused)] // TODO: Remove once it's used in the 'raw' module
  macro_rules! c_init {
      ($name:ident, $init:ident) => {
 -        unsafe impl ::boringssl::wrapper::CInit for ::boringssl::raw::ffi::$name {
-+        unsafe impl ::boringssl::wrapper::CInit for ::boringssl_sys::$name {
++        unsafe impl ::boringssl::wrapper::CInit for ::boringssl::raw::boringssl_sys::$name {
              unsafe fn init(slf: *mut Self) {
 -                ::boringssl::raw::ffi::$init(slf)
-+                ::boringssl_sys::$init(slf)
++                ::boringssl::raw::boringssl_sys::$init(slf)
              }
          }
      };
-@@ -149,14 +144,14 @@ pub unsafe trait CDestruct: Sealed {
+@@ -149,14 +147,14 @@ pub unsafe trait CDestruct: Sealed {
  
  macro_rules! c_destruct {
      ($name:ident, _) => {
 -        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::ffi::$name {
-+        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl_sys::$name {
++        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::boringssl_sys::$name {
              unsafe fn destruct(_slf: *mut Self) {}
          }
      };
      ($name:ident, $destruct:tt) => {
 -        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::ffi::$name {
-+        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl_sys::$name {
++        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::boringssl_sys::$name {
              unsafe fn destruct(slf: *mut Self) {
 -                ::boringssl::raw::ffi::$destruct(slf)
-+                ::boringssl_sys::$destruct(slf)
++                ::boringssl::raw::boringssl_sys::$destruct(slf)
              }
          }
      };
+diff --git a/src/bytes.rs b/src/bytes.rs
+index f2ef7e0..d46ae16 100644
+--- a/src/bytes.rs
++++ b/src/bytes.rs
+@@ -1,3 +1,7 @@
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
+ //! Byte manipulation.
+ 
+ use boringssl;
 diff --git a/src/hash.rs b/src/hash.rs
-index 4f2ca68..97ad2cc 100644
+index 4f2ca68..4cbec1f 100644
 --- a/src/hash.rs
 +++ b/src/hash.rs
 @@ -1,8 +1,6 @@
@@ -594,14 +618,14 @@ index 4f2ca68..97ad2cc 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Cryptographic hash functions.
  
 diff --git a/src/hmac.rs b/src/hmac.rs
-index 7db7949..2ba0a97 100644
+index 7db7949..ad4f6b0 100644
 --- a/src/hmac.rs
 +++ b/src/hmac.rs
 @@ -1,8 +1,6 @@
@@ -610,14 +634,14 @@ index 7db7949..2ba0a97 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Hash-based Message Authentication Codes (HMACs).
  
 diff --git a/src/insecure.rs b/src/insecure.rs
-index e4384ef..d0ccfc3 100644
+index e4384ef..2731efd 100644
 --- a/src/insecure.rs
 +++ b/src/insecure.rs
 @@ -1,8 +1,6 @@
@@ -626,14 +650,14 @@ index e4384ef..d0ccfc3 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! WARNING: INSECURE CRYPTOGRAPHIC OPERATIONS.
  //!
 diff --git a/src/kdf.rs b/src/kdf.rs
-index 3ed0fb3..0c8be22 100644
+index 3ed0fb3..098dec9 100644
 --- a/src/kdf.rs
 +++ b/src/kdf.rs
 @@ -1,8 +1,6 @@
@@ -642,14 +666,14 @@ index 3ed0fb3..0c8be22 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Key Derivation Functions (KDFs).
  //!
 diff --git a/src/lib.rs b/src/lib.rs
-index 986b80d..644404b 100644
+index 15c4006..ec733da 100644
 --- a/src/lib.rs
 +++ b/src/lib.rs
 @@ -1,8 +1,6 @@
@@ -658,34 +682,39 @@ index 986b80d..644404b 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Cryptography in Rust.
  //!
-@@ -51,6 +49,9 @@
+@@ -51,6 +49,8 @@
  #[macro_use]
  mod macros;
  
 +extern crate boringssl_sys;
-+extern crate failure;
 +
  // Forbid unsafe code except in the boringssl module.
  #[allow(unsafe_code)]
  mod boringssl;
 diff --git a/src/macros.rs b/src/macros.rs
-index 4c98d13..47b3a2e 100644
+index 4c98d13..9a36be7 100644
 --- a/src/macros.rs
 +++ b/src/macros.rs
-@@ -1,4 +1,4 @@
+@@ -1,8 +1,6 @@
 -// Copyright 2018 Google LLC
-+// Copyright 2019 Google LLC
- //
- // Use of this source code is governed by an MIT-style
- // license that can be found in the LICENSE file or at
+-//
+-// Use of this source code is governed by an MIT-style
+-// license that can be found in the LICENSE file or at
+-// https://opensource.org/licenses/MIT.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
+ 
+ macro_rules! impl_debug {
+     ($type:ty, $str:expr) => {
 diff --git a/src/password.rs b/src/password.rs
-index 1cb32a0..9272800 100644
+index 1cb32a0..f77bd16 100644
 --- a/src/password.rs
 +++ b/src/password.rs
 @@ -1,8 +1,6 @@
@@ -694,14 +723,14 @@ index 1cb32a0..9272800 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Password verification.
  
 diff --git a/src/public/ec/curve.rs b/src/public/ec/curve.rs
-index 8e33e78..5849742 100644
+index 8e33e78..2e04f88 100644
 --- a/src/public/ec/curve.rs
 +++ b/src/public/ec/curve.rs
 @@ -1,8 +1,6 @@
@@ -710,14 +739,14 @@ index 8e33e78..5849742 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  use std::borrow::Cow;
  use std::fmt::{self, Debug, Display, Formatter};
 diff --git a/src/public/ec/mod.rs b/src/public/ec/mod.rs
-index 3b8f120..777f4ff 100644
+index 3b8f120..7251445 100644
 --- a/src/public/ec/mod.rs
 +++ b/src/public/ec/mod.rs
 @@ -1,8 +1,6 @@
@@ -726,14 +755,14 @@ index 3b8f120..777f4ff 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Elliptic Curve-based cryptographic algorithms over NIST P curves.
  //!
 diff --git a/src/public/ed25519.rs b/src/public/ed25519.rs
-index ce253dd..ec219e8 100644
+index ce253dd..e304b62 100644
 --- a/src/public/ed25519.rs
 +++ b/src/public/ed25519.rs
 @@ -1,8 +1,6 @@
@@ -742,14 +771,14 @@ index ce253dd..ec219e8 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! The Ed25519 signature algorithm.
  
 diff --git a/src/public/mod.rs b/src/public/mod.rs
-index 574afeb..66de1e8 100644
+index 574afeb..6445fe9 100644
 --- a/src/public/mod.rs
 +++ b/src/public/mod.rs
 @@ -1,8 +1,6 @@
@@ -758,14 +787,14 @@ index 574afeb..66de1e8 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! Public key cryptography.
  
 diff --git a/src/public/rsa/bits.rs b/src/public/rsa/bits.rs
-index e0a8d7c..6950636 100644
+index e0a8d7c..e210aa4 100644
 --- a/src/public/rsa/bits.rs
 +++ b/src/public/rsa/bits.rs
 @@ -1,8 +1,6 @@
@@ -774,14 +803,14 @@ index e0a8d7c..6950636 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  use std::fmt::{self, Debug, Display, Formatter};
  
 diff --git a/src/public/rsa/mod.rs b/src/public/rsa/mod.rs
-index bd4b50a..109623b 100644
+index bd4b50a..a6ad2c5 100644
 --- a/src/public/rsa/mod.rs
 +++ b/src/public/rsa/mod.rs
 @@ -1,8 +1,6 @@
@@ -790,14 +819,14 @@ index bd4b50a..109623b 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  
  //! The RSA public-key cryptosystem.
  
 diff --git a/src/util.rs b/src/util.rs
-index 256251c..6d3e2c4 100644
+index 256251c..395ee90 100644
 --- a/src/util.rs
 +++ b/src/util.rs
 @@ -1,8 +1,6 @@
@@ -806,7 +835,7 @@ index 256251c..6d3e2c4 100644
 -// Use of this source code is governed by an MIT-style
 -// license that can be found in the LICENSE file or at
 -// https://opensource.org/licenses/MIT.
-+// Copyright 2018 The Fuchsia Authors. All rights reserved.
++// Copyright 2019 The Fuchsia Authors. All rights reserved.
 +// Use of this source code is governed by a BSD-style license that can be
 +// found in the LICENSE file.
  

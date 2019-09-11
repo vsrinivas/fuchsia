@@ -1,9 +1,9 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use std::marker::PhantomData;
-use std::mem;
+use std::mem::{self, MaybeUninit};
 use std::ptr::NonNull;
 
 /// A trait that can be used to ensure that users of the boringssl module can't
@@ -16,7 +16,7 @@ pub trait Sealed {}
 
 macro_rules! sealed {
     ($name:ident) => {
-        impl ::boringssl::wrapper::Sealed for ::boringssl_sys::$name {}
+        impl ::boringssl::wrapper::Sealed for ::boringssl::raw::boringssl_sys::$name {}
     };
 }
 
@@ -63,9 +63,9 @@ pub unsafe trait CNew: Sealed {
 
 macro_rules! c_new {
     ($name:ident, $new:ident) => {
-        unsafe impl ::boringssl::wrapper::CNew for ::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CNew for ::boringssl::raw::boringssl_sys::$name {
             unsafe fn new_raw() -> *mut Self {
-                ::boringssl_sys::$new()
+                ::boringssl::raw::boringssl_sys::$new()
             }
         }
     };
@@ -80,11 +80,14 @@ pub unsafe trait CUpRef: Sealed {
 
 macro_rules! c_up_ref {
     ($name:ident, $up_ref:ident) => {
-        unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CUpRef for ::boringssl::raw::boringssl_sys::$name {
             unsafe fn up_ref(slf: *mut Self) {
                 use boringssl::abort::UnwrapAbort;
-                ::boringssl::raw::one_or_err(stringify!($up_ref), ::boringssl_sys::$up_ref(slf))
-                    .unwrap_abort()
+                ::boringssl::raw::one_or_err(
+                    stringify!($up_ref),
+                    ::boringssl::raw::boringssl_sys::$up_ref(slf),
+                )
+                .unwrap_abort()
             }
         }
     };
@@ -102,9 +105,9 @@ pub unsafe trait CFree: Sealed {
 
 macro_rules! c_free {
     ($name:ident, $free:ident) => {
-        unsafe impl ::boringssl::wrapper::CFree for ::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CFree for ::boringssl::raw::boringssl_sys::$name {
             unsafe fn free(slf: *mut Self) {
-                ::boringssl_sys::$free(slf)
+                ::boringssl::raw::boringssl_sys::$free(slf)
             }
         }
     };
@@ -123,9 +126,9 @@ pub unsafe trait CInit: Sealed {
 #[allow(unused)] // TODO: Remove once it's used in the 'raw' module
 macro_rules! c_init {
     ($name:ident, $init:ident) => {
-        unsafe impl ::boringssl::wrapper::CInit for ::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CInit for ::boringssl::raw::boringssl_sys::$name {
             unsafe fn init(slf: *mut Self) {
-                ::boringssl_sys::$init(slf)
+                ::boringssl::raw::boringssl_sys::$init(slf)
             }
         }
     };
@@ -144,14 +147,14 @@ pub unsafe trait CDestruct: Sealed {
 
 macro_rules! c_destruct {
     ($name:ident, _) => {
-        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::boringssl_sys::$name {
             unsafe fn destruct(_slf: *mut Self) {}
         }
     };
     ($name:ident, $destruct:tt) => {
-        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl_sys::$name {
+        unsafe impl ::boringssl::wrapper::CDestruct for ::boringssl::raw::boringssl_sys::$name {
             unsafe fn destruct(slf: *mut Self) {
-                ::boringssl_sys::$destruct(slf)
+                ::boringssl::raw::boringssl_sys::$destruct(slf)
             }
         }
     };
@@ -333,9 +336,9 @@ impl<C: CInit + CDestruct> Default for CStackWrapper<C> {
     // CStackWrapper::new).
     fn default() -> CStackWrapper<C> {
         unsafe {
-            let mut obj: C = mem::uninitialized();
-            C::init(&mut obj);
-            CStackWrapper { obj, _no_sync: PhantomData }
+            let mut obj = MaybeUninit::<C>::uninit();
+            C::init(obj.as_mut_ptr());
+            CStackWrapper { obj: obj.assume_init(), _no_sync: PhantomData }
         }
     }
 }

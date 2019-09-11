@@ -7,7 +7,7 @@
 use crate::crypto_utils::prf;
 use crate::Error;
 use failure::{self, ensure};
-use mundane::rand_bytes;
+use mundane::bytes;
 use std::hash::{Hash, Hasher};
 use wlan_common::ie::rsn::cipher::Cipher;
 
@@ -20,7 +20,7 @@ pub struct GtkProvider {
 
 fn generate_random_gtk(len: usize) -> Box<[u8]> {
     let mut key = vec![0; len];
-    rand_bytes(&mut key[..]);
+    bytes::rand(&mut key[..]);
     key.into_boxed_slice()
 }
 

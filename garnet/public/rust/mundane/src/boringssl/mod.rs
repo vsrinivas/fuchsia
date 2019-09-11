@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -89,12 +89,13 @@ pub use boringssl_sys::{
 // wrapper types
 pub use boringssl::wrapper::{CHeapWrapper, CRef, CStackWrapper};
 
-use std::convert::TryInto;
 use std::ffi::CStr;
+use std::convert::TryInto;
 use std::fmt::{self, Debug, Display, Formatter};
+use std::mem::MaybeUninit;
 use std::num::NonZeroUsize;
 use std::os::raw::{c_char, c_int, c_uint, c_void};
-use std::{mem, ptr, slice};
+use std::{ptr, slice};
 
 use boringssl::abort::UnwrapAbort;
 use boringssl::raw::{
@@ -126,9 +127,9 @@ impl CStackWrapper<CBB> {
     #[must_use]
     pub fn cbb_new(initial_capacity: usize) -> Result<CStackWrapper<CBB>, BoringError> {
         unsafe {
-            let mut cbb = mem::uninitialized();
-            CBB_init(&mut cbb, initial_capacity)?;
-            Ok(CStackWrapper::new(cbb))
+            let mut cbb = MaybeUninit::uninit();
+            CBB_init(cbb.as_mut_ptr(), initial_capacity)?;
+            Ok(CStackWrapper::new(cbb.assume_init()))
         }
     }
 
@@ -180,9 +181,9 @@ impl CStackWrapper<CBS> {
         with_cbs: F,
     ) -> O {
         unsafe {
-            let mut cbs = mem::uninitialized();
-            CBS_init(&mut cbs, bytes.as_ptr(), bytes.len());
-            let mut cbs = CStackWrapper::new(cbs);
+            let mut cbs = MaybeUninit::uninit();
+            CBS_init(cbs.as_mut_ptr(), bytes.as_ptr(), bytes.len());
+            let mut cbs = CStackWrapper::new(cbs.assume_init());
             with_cbs(&mut cbs)
         }
     }
@@ -471,9 +472,9 @@ impl CStackWrapper<SHA512_CTX> {
     #[must_use]
     pub fn sha384_new() -> CStackWrapper<SHA512_CTX> {
         unsafe {
-            let mut ctx = mem::uninitialized();
-            SHA384_Init(&mut ctx);
-            CStackWrapper::new(ctx)
+            let mut ctx = MaybeUninit::uninit();
+            SHA384_Init(ctx.as_mut_ptr());
+            CStackWrapper::new(ctx.assume_init())
         }
     }
 }
@@ -523,10 +524,15 @@ impl CStackWrapper<HMAC_CTX> {
         md: &CRef<'static, EVP_MD>,
     ) -> Result<CStackWrapper<HMAC_CTX>, BoringError> {
         unsafe {
-            let mut ctx = mem::uninitialized();
-            HMAC_CTX_init(&mut ctx);
-            HMAC_Init_ex(&mut ctx, key.as_ptr() as *const c_void, key.len(), md.as_const())?;
-            Ok(CStackWrapper::new(ctx))
+            let mut ctx = MaybeUninit::uninit();
+            HMAC_CTX_init(ctx.as_mut_ptr());
+            HMAC_Init_ex(
+                ctx.as_mut_ptr(),
+                key.as_ptr() as *const c_void,
+                key.len(),
+                md.as_const(),
+            )?;
+            Ok(CStackWrapper::new(ctx.assume_init()))
         }
     }
 
@@ -581,7 +587,12 @@ impl CHeapWrapper<RSA> {
         bits: c_int,
         e: &CRef<BIGNUM>,
     ) -> Result<(), BoringError> {
-        unsafe { RSA_generate_key_ex(self.as_mut(), bits, e.as_const(), ptr::null_mut()) }
+        unsafe {
+            // NOTE: It's very important that we use 'into_mut' here so that e's
+            // refcount is not decremented. That's because RSA_generate_key_ex
+            // takes ownership of e, and thus doesn't increment its refcount.
+            RSA_generate_key_ex(self.as_mut(), bits, e.as_const(), ptr::null_mut())
+        }
     }
 
     /// The `RSA_marshal_private_key` function.
@@ -753,7 +764,7 @@ macro_rules! impl_hash {
                 &mut self,
             ) -> [u8; ::boringssl_sys::$digest_len as usize] {
                 unsafe {
-                    let mut md: [u8; ::boringssl_sys::$digest_len as usize] = mem::uninitialized();
+                    let mut md = MaybeUninit::<[u8; ::boringssl_sys::$digest_len as usize]>::uninit();
                     // SHA1_Final promises to return 1. SHA256_Final,
                     // SHA384_Final, and SHA512_Final all document that they
                     // only fail due to programmer error. The only input to the
@@ -764,8 +775,8 @@ macro_rules! impl_hash {
                     // here.
                     //
                     // TODO(joshlf): Figure out how XXX_Final can fail.
-                    ::boringssl::raw::$final_raw((&mut md[..]).as_mut_ptr(), self.as_mut()).unwrap_abort();
-                    md
+                    ::boringssl::raw::$final_raw(md.as_mut_ptr() as _, self.as_mut()).unwrap_abort();
+                    md.assume_init()
                 }
             }
         }
