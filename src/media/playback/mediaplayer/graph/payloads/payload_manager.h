@@ -86,6 +86,9 @@ class PayloadManager {
   // Dumps this |PayloadManager|'s state to |os|.
   void Dump(std::ostream& os) const;
 
+  // Register callbacks to call when the connection is ready.
+  void RegisterReadyCallbacks(fit::closure output, fit::closure input);
+
   // Applies the output configuration supplied in |config|.
   //
   // This method must be called on the main graph thread.
@@ -106,9 +109,6 @@ class PayloadManager {
 
   // Indicates whether the connection manager is ready for allocator access.
   bool ready() const;
-
-  // Registers a handler to be called when the connection is ready.
-  void ListenForReady(fit::closure handler);
 
   // Allocates and returns a |PayloadBuffer| for the output with the specified
   // size. Returns nullptr if the allocation fails.
@@ -270,7 +270,7 @@ class PayloadManager {
     return output_.vmo_allocator_ ? output_.vmo_allocator_.get() : input_.vmo_allocator_.get();
   }
 
-  // Decrements |ready_deferrals_| and signals readiness if it reaches zero.
+  // Decrements |ready_deferrals_| and signals readiness if this |PayloadManager| is ready.
   //
   // This method must be called on the main graph thread.
   void DecrementReadyDeferrals();
@@ -334,13 +334,16 @@ class PayloadManager {
   // Accessed only on the main graph thread.
   fuchsia::sysmem::AllocatorPtr sysmem_allocator_;
 
-  // Async listeners for readiness, at most one per connector.
-  // Accessed only on the main graph thread.
-  fit::closure ready_listeners_[2];
+  // Async callbacks for readiness. Accessed only on the main graph thread.
+  fit::closure ready_callback_for_output_;
+  fit::closure ready_callback_for_input_;
 
   // Count of reasons to defer readiness. This |PayloadManager| is ready when this value reaches
-  // zero.
-  uint32_t ready_deferrals_ FXL_GUARDED_BY(mutex_) = 1;
+  // zero and neither config mode is |kNotConfigured|. |ApplyOutputConfiguration| and
+  // |ApplyInputConfiguration| both increment this value on entry and decrement it on exit.
+  // Operations that defer readiness (e.g. |EnsureProvisionedSysmemVmoAllocator|) increment this
+  // value during |Apply*Configuration| and decrement it when complete.
+  uint32_t ready_deferrals_ FXL_GUARDED_BY(mutex_) = 0;
 };
 
 }  // namespace media_player

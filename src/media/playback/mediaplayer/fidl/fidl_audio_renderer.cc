@@ -257,9 +257,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   size_t size = stream_type.audio()->min_buffer_size(
       stream_type.audio()->frames_per_second());  // TODO How many seconds?
 
-  if (ConfigureInputToUseVmos(size, 0, 0, VmoAllocation::kSingleVmo)) {
-    OnInputConnectionReady(0);
-  }
+  ConfigureInputToUseVmos(size, 0, 0, VmoAllocation::kSingleVmo);
 
   // Tell the renderer that media time is in frames.
   audio_renderer_->SetPtsUnits(stream_type.audio()->frames_per_second(), 1);

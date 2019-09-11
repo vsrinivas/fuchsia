@@ -1462,15 +1462,15 @@ TEST_F(PayloadManagerTest, ProvidesLocal_UsesVmos_AggregateSizeAlignedUp) {
 }
 
 // Tests behavior when both output and input modes are |kUsesLocalMemory|. Verifies that
-// |ListenForReady| works for two listeners.
-TEST_F(PayloadManagerTest, UsesLocal_UsesLocal_ListenersCalled) {
+// |RegisterReadyCallbacks| works.
+TEST_F(PayloadManagerTest, UsesLocal_UsesLocal_CallbacksCalled) {
   PayloadManager under_test;
   EXPECT_FALSE(under_test.ready());
 
-  bool listener1_called = false;
-  under_test.ListenForReady([&listener1_called]() { listener1_called = true; });
-  bool listener2_called = false;
-  under_test.ListenForReady([&listener2_called]() { listener2_called = true; });
+  bool output_callback_called = false;
+  bool input_callback_called = false;
+  under_test.RegisterReadyCallbacks([&output_callback_called]() { output_callback_called = true; },
+                                    [&input_callback_called]() { input_callback_called = true; });
 
   under_test.ApplyOutputConfiguration(
       PayloadConfig{.mode_ = PayloadMode::kUsesLocalMemory,
@@ -1490,9 +1490,29 @@ TEST_F(PayloadManagerTest, UsesLocal_UsesLocal_ListenersCalled) {
                                      nullptr);
 
   RunLoopWithTimeoutOrUntil(
-      [&listener1_called, &listener2_called]() { return listener1_called && listener2_called; },
+      [&output_callback_called, &input_callback_called]() {
+        return output_callback_called && input_callback_called;
+      },
       kTimeout, zx::duration::infinite());
   EXPECT_TRUE(under_test.ready());
+
+  output_callback_called = false;
+  input_callback_called = false;
+
+  // Make sure we get the callbacks again when we reconfigure.
+  under_test.ApplyInputConfiguration(PayloadConfig{.mode_ = PayloadMode::kUsesLocalMemory,
+                                                   .max_aggregate_payload_size_ = 0,
+                                                   .max_payload_count_ = 0,
+                                                   .max_payload_size_ = 0,
+                                                   .vmo_allocation_ = VmoAllocation::kNotApplicable,
+                                                   .map_flags_ = ZX_VM_PERM_READ},
+                                     nullptr);
+
+  RunLoopWithTimeoutOrUntil(
+      [&output_callback_called, &input_callback_called]() {
+        return output_callback_called && input_callback_called;
+      },
+      kTimeout, zx::duration::infinite());
 }
 
 // Tests behavior when output mode is |kUsesSysmemVmos| and input mode is |kUsesVmos|. The input

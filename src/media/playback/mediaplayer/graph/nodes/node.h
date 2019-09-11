@@ -58,10 +58,9 @@ class Node : public std::enable_shared_from_this<Node> {
   //////////////////////////////////////////////////////////////////////////////
 
   // Notifies that the connection for the specified input is ready for
-  // allocation activity. Note that this method is not called if the connection
-  // becomes ready as the result of a call to a ConfigureInputXxx method on
-  // the stage. In that case, the ConfigureInputXxx method returns true to
-  // indicate the connection is ready.
+  // allocation activity.
+  //
+  // This method is called on the graph's thread.
   virtual void OnInputConnectionReady(size_t input_index) {}
 
   // Flushes an input. |hold_frame| indicates whether a video renderer should
@@ -158,10 +157,9 @@ class Node : public std::enable_shared_from_this<Node> {
   //////////////////////////////////////////////////////////////////////////////
 
   // Notifies that the connection for the specified output is ready for
-  // allocation activity. Note that this method is not called if the connection
-  // becomes ready as the result of a call to a ConfigureOutputXxx method on
-  // the stage. In that case, the ConfigureOutputXxx method returns true to
-  // indicate the connection is ready.
+  // allocation activity.
+  //
+  // This method is called on the graph's thread.
   virtual void OnOutputConnectionReady(size_t output_index) {}
 
   // Flushes an output. The callback is used to indicate that the flush
@@ -211,14 +209,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // Calling this function prohibits the use of |UseInputVmos| or
   // |ProvideInputVmos| for the specified input.
   //
-  // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::NotifyInputConnectionReady| is called
-  // when the connection becomes ready.
+  // |Node::OnInputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the input has been
   // configured previously (possibly with |ConfigureInputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+  void ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                       uint32_t max_payload_count,
                                       zx_vm_option_t map_flags = ZX_VM_PERM_READ,
                                       size_t input_index = 0);
@@ -249,14 +245,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // deal with the arbitrary VMOs provided by the output.
   // TODO(dalesat): Be explicit about what the VMOs will actually be like.
   //
-  // Returns true if the connection is ready for allocation activity.
-  // Returns false if not, in which case |Node::NotifyInputConnectionReady|
-  // is called when the connection becomes ready.
+  // |Node::OnInputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the input has been
   // configured previously (possibly with |ConfigureInputDeferred|).
   // Otherwise, it must be called on the main graph thread.
-  bool ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+  void ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                uint64_t max_payload_size, VmoAllocation vmo_allocation,
                                zx_vm_option_t map_flags = ZX_VM_PERM_READ,
                                AllocateCallback allocate_callback = nullptr,
@@ -278,14 +272,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // methods on the stage. The VMOs the allocator callback must allocate from
   // will always be the same VMOs provided by the input.
   //
-  // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::NotifyInputConnectionReady| is called
-  // when the connection becomes ready.
+  // |Node::OnInputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the input has been
   // configured previously (possibly with |ConfigureInputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureInputToProvideVmos(VmoAllocation vmo_allocation,
+  void ConfigureInputToProvideVmos(VmoAllocation vmo_allocation,
                                    zx_vm_option_t map_flags = ZX_VM_PERM_READ,
                                    AllocateCallback allocate_callback = nullptr,
                                    size_t input_index = 0);
@@ -298,11 +290,10 @@ class Node : public std::enable_shared_from_this<Node> {
   //
   // Calling this function allows the use of |TakeInputSysmemToken| for the specified input.
   //
-  // Returns true if the connection is ready for allocation activity. Returns false if not, in which
-  // case |Node::NotifyInputConnectionReady| is called when the connection becomes ready.
+  // |Node::OnInputConnectionReady| is called when the connection becomes ready.
   //
   // This method must be called on the main graph thread.
-  bool ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
+  void ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
                                      uint64_t max_aggregate_payload_size,
                                      uint32_t max_payload_count, uint64_t max_payload_size,
                                      VmoAllocation vmo_allocation,
@@ -332,8 +323,7 @@ class Node : public std::enable_shared_from_this<Node> {
   PayloadVmoProvision& ProvideInputVmos(size_t input_index = 0) const;
 
   // Takes the sysmem buffer collection token for the specified input. This method is only usable
-  // if |ConfigureInputToUseSysmemVmos| has been called to configure the specified input, and the
-  // connection is ready.
+  // if |ConfigureInputToUseSysmemVmos| has been called to configure the specified input.
   //
   // This method may be called on an arbitrary thread.
   fuchsia::sysmem::BufferCollectionTokenPtr TakeInputSysmemToken(size_t input_index = 0);
@@ -375,14 +365,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // |ProvideOutputVmos| for the specified output. |AllocatePayloadBuffer|
   // is available for allocating payloads.
   //
-  // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
-  // when the connection becomes ready.
+  // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+  void ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                        uint32_t max_payload_count, uint64_t max_payload_size,
                                        zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
                                        size_t output_index = 0);
@@ -396,14 +384,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // Calling this function prohibits the use of |UseOutputVmos|,
   // |ProvideOutputVmos| or |AllocatePayloadBuffer| for the specified output.
   //
-  // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
-  // when the connection becomes ready.
+  // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
+  void ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
                                            uint32_t max_payload_count, uint64_t max_payload_size,
                                            size_t output_index = 0);
 
@@ -426,14 +412,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // being used, and |AllocatePayloadBuffer| is available for allocating
   // payloads.
   //
-  // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
-  // when the connection becomes ready.
+  // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+  void ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                 uint64_t max_payload_size, VmoAllocation vmo_allocation,
                                 zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
                                 size_t output_index = 0);
@@ -449,14 +433,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // specified output, and |AllocatePayloadBuffer| is available for allocating
   // payloads.
   //
-  // Returns true if the connection is ready for allocation activity. Returns
-  // false if not, in which case |Node::NotifyOutputConnectionReady| is called
-  // when the connection becomes ready.
+  // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
+  void ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
                                     zx_vm_option_t map_flags = ZX_VM_PERM_WRITE,
                                     size_t output_index = 0);
 
@@ -468,11 +450,10 @@ class Node : public std::enable_shared_from_this<Node> {
   //
   // Calling this function allows the use of |TakeOutputSysmemToken| for the specified output.
   //
-  // Returns true if the connection is ready for allocation activity. Returns false if not, in which
-  // case |Node::NotifyOutputConnectionReady| is called when the connection becomes ready.
+  // |Node::OnOutputConnectionReady| is called when the connection becomes ready.
   //
   // This method must be called on the main graph thread.
-  bool ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
+  void ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
                                       uint64_t max_aggregate_payload_size,
                                       uint32_t max_payload_count, uint64_t max_payload_size,
                                       VmoAllocation vmo_allocation,
@@ -509,8 +490,7 @@ class Node : public std::enable_shared_from_this<Node> {
   PayloadVmoProvision& ProvideOutputVmos(size_t output_index = 0) const;
 
   // Takes the sysmem buffer collection token for the specified output. This method is only usable
-  // if |ConfigureOutputToUseSysmemVmos| has been called to configure the specified output, and the
-  // connection is ready.
+  // if |ConfigureOutputToUseSysmemVmos| has been called to configure the specified output.
   //
   // This method may be called on an arbitrary thread.
   fuchsia::sysmem::BufferCollectionTokenPtr TakeOutputSysmemToken(size_t output_index = 0);
@@ -555,11 +535,11 @@ class Node : public std::enable_shared_from_this<Node> {
 
   void EnsureOutput(size_t output_index);
 
-  bool ApplyInputConfiguration(Input* input,
+  void ApplyInputConfiguration(Input* input,
                                PayloadManager::AllocateCallback allocate_callback = nullptr,
                                ServiceProvider* service_provider = nullptr);
 
-  bool ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider = nullptr);
+  void ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider = nullptr);
 
   // The stage's thread is always the main graph thread.
   FXL_DECLARE_THREAD_CHECKER(thread_checker_);

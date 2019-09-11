@@ -33,6 +33,7 @@ PacketPtr CopyPacket(const Packet& original, fbl::RefPtr<PayloadBuffer> copied_p
 
 Input::Input(Node* node, size_t index) : node_(node), index_(index), state_(State::kRefusesPacket) {
   FXL_DCHECK(node_);
+  RegisterConnectionReadyCallbacks();
 }
 
 Input::Input(Input&& input)
@@ -42,6 +43,7 @@ Input::Input(Input&& input)
   FXL_DCHECK(input.mate() == nullptr);
   FXL_DCHECK(input.packet() == nullptr);
   FXL_DCHECK(input.payload_config().mode_ == PayloadMode::kNotConfigured);
+  RegisterConnectionReadyCallbacks();
 }
 
 Input::~Input() {}
@@ -129,5 +131,18 @@ void Input::RequestPacket() {
 }
 
 void Input::Flush() { TakePacket(false); }
+
+void Input::RegisterConnectionReadyCallbacks() {
+  payload_manager_.RegisterReadyCallbacks(
+      [this]() {
+        FXL_DCHECK(mate_);
+        FXL_DCHECK(mate_->node());
+        mate_->node()->NotifyOutputConnectionReady(mate_->index());
+      },
+      [this]() {
+        FXL_DCHECK(node_);
+        node_->NotifyInputConnectionReady(index());
+      });
+}
 
 }  // namespace media_player

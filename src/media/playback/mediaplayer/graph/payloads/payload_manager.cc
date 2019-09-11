@@ -148,6 +148,12 @@ void PayloadManager::DumpInternal(std::ostream& os) const {
   os << fostr::Outdent;
 }
 
+void PayloadManager::RegisterReadyCallbacks(fit::closure output, fit::closure input) {
+  FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+  ready_callback_for_output_ = std::move(output);
+  ready_callback_for_input_ = std::move(input);
+}
+
 void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
                                               ServiceProvider* service_provider) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
@@ -157,7 +163,7 @@ void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
   {
     std::lock_guard<std::mutex> locker(mutex_);
 
-    bool was_configured = (output_.config_.mode_ != PayloadMode::kNotConfigured);
+    ++ready_deferrals_;
 
     if (output_.config_.mode_ == PayloadMode::kProvidesVmos &&
         config.mode_ != PayloadMode::kProvidesVmos) {
@@ -175,15 +181,8 @@ void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
           ZX_DEFAULT_VMO_RIGHTS, output_.sysmem_token_for_mate_or_provisioning_.NewRequest());
     }
 
-    if (input_.config_.mode_ == PayloadMode::kNotConfigured) {
-      return;
-    }
-
-    UpdateAllocators();
-
-    if (was_configured) {
-      // The output was already configured, so we don't want to decrement ready deferrals.
-      return;
+    if (input_.config_.mode_ != PayloadMode::kNotConfigured) {
+      UpdateAllocators();
     }
   }
 
@@ -204,7 +203,7 @@ void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
   {
     std::lock_guard<std::mutex> locker(mutex_);
 
-    bool was_configured = (input_.config_.mode_ != PayloadMode::kNotConfigured);
+    ++ready_deferrals_;
 
     if (input_.config_.mode_ == PayloadMode::kProvidesVmos &&
         config.mode_ != PayloadMode::kProvidesVmos) {
@@ -223,15 +222,8 @@ void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
           ZX_DEFAULT_VMO_RIGHTS, input_.sysmem_token_for_mate_or_provisioning_.NewRequest());
     }
 
-    if (output_.config_.mode_ == PayloadMode::kNotConfigured) {
-      return;
-    }
-
-    UpdateAllocators();
-
-    if (was_configured) {
-      // The input was already configured, so we don't want to decrement ready deferrals.
-      return;
+    if (output_.config_.mode_ != PayloadMode::kNotConfigured) {
+      UpdateAllocators();
     }
   }
 
@@ -241,15 +233,6 @@ void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config,
 bool PayloadManager::ready() const {
   std::lock_guard<std::mutex> locker(mutex_);
   return ready_locked();
-}
-
-void PayloadManager::ListenForReady(fit::closure handler) {
-  FXL_DCHECK(!ready_listeners_[0] || !ready_listeners_[1]);
-  if (ready_listeners_[0]) {
-    ready_listeners_[1] = std::move(handler);
-  } else {
-    ready_listeners_[0] = std::move(handler);
-  }
 }
 
 fbl::RefPtr<PayloadBuffer> PayloadManager::AllocatePayloadBufferForOutput(uint64_t size) const {
@@ -383,7 +366,6 @@ void PayloadManager::OnDisconnect() {
   output_.EnsureNoAllocator();
   input_.EnsureNoAllocator();
   copy_ = false;
-  ready_deferrals_ = 1;
 
   // If the input is configured to use sysmem, we'll need a new pair of buffer collection tokens.
   if (input_.config_.mode_ == PayloadMode::kUsesSysmemVmos) {
@@ -394,7 +376,10 @@ void PayloadManager::OnDisconnect() {
   }
 }
 
-bool PayloadManager::ready_locked() const { return ready_deferrals_ == 0; }
+bool PayloadManager::ready_locked() const {
+  return ready_deferrals_ == 0 && output_.config_.mode_ != PayloadMode::kNotConfigured &&
+         input_.config_.mode_ != PayloadMode::kNotConfigured;
+}
 
 void PayloadManager::DecrementReadyDeferrals() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
@@ -402,20 +387,19 @@ void PayloadManager::DecrementReadyDeferrals() {
   {
     std::lock_guard<std::mutex> locker(mutex_);
     FXL_DCHECK(ready_deferrals_ != 0);
+    --ready_deferrals_;
 
-    if (--ready_deferrals_ != 0) {
+    if (!ready_locked()) {
       return;
     }
   }
 
-  if (ready_listeners_[0]) {
-    ready_listeners_[0]();
-    ready_listeners_[0] = nullptr;
+  if (ready_callback_for_output_) {
+    ready_callback_for_output_();
   }
 
-  if (ready_listeners_[1]) {
-    ready_listeners_[1]();
-    ready_listeners_[1] = nullptr;
+  if (ready_callback_for_input_) {
+    ready_callback_for_input_();
   }
 
   sysmem_allocator_ = nullptr;
@@ -931,6 +915,10 @@ void PayloadManager::Connector::EnsureProvisionedSysmemVmoAllocator(
   FXL_DCHECK(owner_);
 
   EnsureEmptyVmoAllocator(vmo_allocation);
+
+  if (sysmem_collection_) {
+    sysmem_collection_->Close();
+  }
 
   sysmem_token_for_mate_or_provisioning_->Sync([this, config = local_config, sysmem_allocator]() {
     FXL_DCHECK(sysmem_token_for_mate_or_provisioning_);

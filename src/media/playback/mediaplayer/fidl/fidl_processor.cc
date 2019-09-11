@@ -297,7 +297,7 @@ void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints c
   FXL_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
 
-  bool connection_ready = ConfigureInputToUseSysmemVmos(
+  ConfigureInputToUseSysmemVmos(
       service_provider_, 0, current_set.packet_count_for_server(), current_set.buffer_size(),
       current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
       0,  // map_flags
@@ -317,10 +317,6 @@ void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints c
         current_set.PartialSettings(std::move(input_sysmem_token_)));
     InitSucceeded();
   });
-
-  if (connection_ready) {
-    OnInputConnectionReady(0);
-  }
 }
 
 void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints constraints) {

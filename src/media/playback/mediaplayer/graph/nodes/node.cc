@@ -336,7 +336,7 @@ void Node::ConfigureInputDeferred(size_t input_index) {
   EnsureInput(input_index);
 }
 
-bool Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+void Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                           uint32_t max_payload_count, zx_vm_option_t map_flags,
                                           size_t input_index) {
   // This method runs on an arbitrary thread.
@@ -353,10 +353,10 @@ bool Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
   config.map_flags_ = map_flags;
 
-  return ApplyInputConfiguration(&input);
+  ApplyInputConfiguration(&input);
 }
 
-bool Node::ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+void Node::ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                    uint64_t max_payload_size, VmoAllocation vmo_allocation,
                                    zx_vm_option_t map_flags, AllocateCallback allocate_callback,
                                    size_t input_index) {
@@ -374,10 +374,10 @@ bool Node::ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
 
-  return ApplyInputConfiguration(&input, std::move(allocate_callback));
+  ApplyInputConfiguration(&input, std::move(allocate_callback));
 }
 
-bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
+void Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
                                        AllocateCallback allocate_callback, size_t input_index) {
   // This method runs on an arbitrary thread.
   EnsureInput(input_index);
@@ -391,10 +391,10 @@ bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_optio
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
 
-  return ApplyInputConfiguration(&input, std::move(allocate_callback));
+  ApplyInputConfiguration(&input, std::move(allocate_callback));
 }
 
-bool Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
+void Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
                                          uint64_t max_aggregate_payload_size,
                                          uint32_t max_payload_count, uint64_t max_payload_size,
                                          VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
@@ -412,7 +412,7 @@ bool Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
 
-  return ApplyInputConfiguration(&input, std::move(allocate_callback), service_provider);
+  ApplyInputConfiguration(&input, std::move(allocate_callback), service_provider);
 }
 
 bool Node::InputConnectionReady(size_t input_index) const {
@@ -467,7 +467,7 @@ void Node::ConfigureOutputDeferred(size_t output_index) {
   EnsureOutput(output_index);
 }
 
-bool Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
+void Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
                                            uint32_t max_payload_count, uint64_t max_payload_size,
                                            zx_vm_option_t map_flags, size_t output_index) {
   // This method runs on an arbitrary thread.
@@ -484,10 +484,10 @@ bool Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
   config.map_flags_ = map_flags;
 
-  return ApplyOutputConfiguration(&output);
+  ApplyOutputConfiguration(&output);
 }
 
-bool Node::ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
+void Node::ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_size,
                                                uint32_t max_payload_count,
                                                uint64_t max_payload_size, size_t output_index) {
   // This method runs on an arbitrary thread.
@@ -502,10 +502,10 @@ bool Node::ConfigureOutputToProvideLocalMemory(uint64_t max_aggregate_payload_si
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
   config.map_flags_ = ZX_VM_PERM_WRITE;
 
-  return ApplyOutputConfiguration(&output);
+  ApplyOutputConfiguration(&output);
 }
 
-bool Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+void Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
                                     uint64_t max_payload_size, VmoAllocation vmo_allocation,
                                     zx_vm_option_t map_flags, size_t output_index) {
   // This method runs on an arbitrary thread.
@@ -522,10 +522,10 @@ bool Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
 
-  return ApplyOutputConfiguration(&output);
+  ApplyOutputConfiguration(&output);
 }
 
-bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
+void Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
                                         size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
@@ -539,10 +539,10 @@ bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_opti
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
 
-  return ApplyOutputConfiguration(&output);
+  ApplyOutputConfiguration(&output);
 }
 
-bool Node::ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
+void Node::ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
                                           uint64_t max_aggregate_payload_size,
                                           uint32_t max_payload_count, uint64_t max_payload_size,
                                           VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
@@ -560,7 +560,7 @@ bool Node::ConfigureOutputToUseSysmemVmos(ServiceProvider* service_provider,
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
 
-  return ApplyOutputConfiguration(&output, service_provider);
+  ApplyOutputConfiguration(&output, service_provider);
 }
 
 bool Node::OutputConnectionReady(size_t output_index) const {
@@ -652,27 +652,19 @@ void Node::EnsureOutput(size_t output_index) {
   packets_per_output_.resize(output_index + 1);
 }
 
-bool Node::ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider) {
+void Node::ApplyOutputConfiguration(Output* output, ServiceProvider* service_provider) {
   FXL_DCHECK(output);
 
   if (!output->connected()) {
-    return false;
+    return;
   }
 
   auto& payload_manager = output->mate()->payload_manager();
 
   payload_manager.ApplyOutputConfiguration(output->payload_config(), service_provider);
-  if (payload_manager.ready()) {
-    return true;
-  }
-
-  payload_manager.ListenForReady(
-      [this, index = output->index()]() { NotifyOutputConnectionReady(index); });
-
-  return false;
 }
 
-bool Node::ApplyInputConfiguration(Input* input, PayloadManager::AllocateCallback allocate_callback,
+void Node::ApplyInputConfiguration(Input* input, PayloadManager::AllocateCallback allocate_callback,
                                    ServiceProvider* service_provider) {
   FXL_DCHECK(input);
 
@@ -680,14 +672,6 @@ bool Node::ApplyInputConfiguration(Input* input, PayloadManager::AllocateCallbac
 
   payload_manager.ApplyInputConfiguration(input->payload_config(), std::move(allocate_callback),
                                           service_provider);
-  if (payload_manager.ready()) {
-    return true;
-  }
-
-  payload_manager.ListenForReady(
-      [this, index = input->index()]() { NotifyInputConnectionReady(index); });
-
-  return false;
 }
 
 }  // namespace media_player
