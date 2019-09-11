@@ -185,6 +185,15 @@ async fn main() -> Result<(), Error> {
     println!("  client calls set user_data_sharing_consent");
     validate_privacy(Some(true)).await?;
 
+    println!("  set() output");
+    validate_privacy_set_output(true).await?;
+    validate_privacy_set_output(false).await?;
+
+    println!("  watch() output");
+    validate_privacy_watch_output(None).await?;
+    validate_privacy_watch_output(Some(true)).await?;
+    validate_privacy_watch_output(Some(false)).await?;
+
     println!("system service tests");
     println!("  client calls set login mode");
     validate_system_override().await?;
@@ -503,6 +512,70 @@ async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> R
         .context("Failed to connect to privacy service")?;
 
     privacy::command(privacy_service, expected_user_data_sharing_consent).await?;
+
+    Ok(())
+}
+
+async fn validate_privacy_set_output(
+    expected_user_data_sharing_consent: bool,
+) -> Result<(), Error> {
+    let env = create_service!(
+        Services::Privacy, PrivacyRequest::Set { settings: _, responder, } => {
+            responder.send(&mut Ok(()))?;
+        },
+        PrivacyRequest::Watch { responder } => {
+            responder.send(&mut Ok(PrivacySettings {
+                user_data_sharing_consent: Some(expected_user_data_sharing_consent),
+            }))?;
+        }
+    );
+
+    let privacy_service = env
+        .connect_to_service::<PrivacyMarker>()
+        .context("Failed to connect to privacy service")?;
+
+    let output =
+        privacy::command(privacy_service, Some(expected_user_data_sharing_consent)).await?;
+
+    assert_eq!(
+        output,
+        format!(
+            "Successfully set user_data_sharing_consent to {}",
+            expected_user_data_sharing_consent
+        )
+    );
+
+    Ok(())
+}
+
+async fn validate_privacy_watch_output(
+    expected_user_data_sharing_consent: Option<bool>,
+) -> Result<(), Error> {
+    let env = create_service!(
+        Services::Privacy, PrivacyRequest::Set { settings: _, responder, } => {
+            responder.send(&mut Ok(()))?;
+        },
+        PrivacyRequest::Watch { responder } => {
+            responder.send(&mut Ok(PrivacySettings {
+                user_data_sharing_consent: expected_user_data_sharing_consent,
+            }))?;
+        }
+    );
+
+    let privacy_service = env
+        .connect_to_service::<PrivacyMarker>()
+        .context("Failed to connect to privacy service")?;
+
+    // Pass in None to call Watch() on the service.
+    let output = privacy::command(privacy_service, None).await?;
+
+    assert_eq!(
+        output,
+        format!(
+            "{:?}",
+            PrivacySettings { user_data_sharing_consent: expected_user_data_sharing_consent }
+        )
+    );
 
     Ok(())
 }
