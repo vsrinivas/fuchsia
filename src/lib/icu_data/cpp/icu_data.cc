@@ -59,7 +59,7 @@ zx_status_t InitializeWithTzResourceDir(const char tz_files_dir[]) {
     // This is how we configure ICU to load time zone resource files from a
     // separate directory. See
     // http://userguide.icu-project.org/datetime/timezone#TOC-ICU4C-TZ-Update-with-Drop-in-.res-files-ICU-54-and-newer-
-    setenv("ICU_tz_files_dir", tz_files_dir,
+    setenv("ICU_TIMEZONE_FILES_DIR", tz_files_dir,
            /* overwrite existing env variable */ 1);
   }
 

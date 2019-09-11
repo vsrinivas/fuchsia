@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("icu_data") {
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/lib/icu/rust/rust_icu_sys",
+    "//src/lib/icu/rust/rust_icu_common",
+    "//src/lib/icu/rust/rust_icu_udata",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:lazy_static",
+  ]
+
+  non_rust_deps = [
+    "//third_party/icu",
+    "//third_party/icu:icudata",
+    "../../cpp:icu_data_cpp",
+  ]
+}
+
+test_package("icu_data_rust_tests") {
+  deps = [
+    ":icu_data_test",
+  ]
+  tests = [
+    {
+      name = "icu_data_lib_test"
+      dest = "icu_data_lib_test"
+      environments = basic_envs
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+
+      # This file is available to the package at "/pkg/data/icudtl.dat"
+      dest = "icudtl.dat"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":icu_data_rust_tests",
+  ]
+}

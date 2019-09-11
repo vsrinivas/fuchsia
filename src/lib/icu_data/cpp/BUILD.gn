@@ -17,3 +17,9 @@ source_set("cpp") {
     "//zircon/public/lib/zx",
   ]
 }
+
+shared_library("icu_data_cpp") {
+  deps = [
+    ":cpp",
+  ]
+}
