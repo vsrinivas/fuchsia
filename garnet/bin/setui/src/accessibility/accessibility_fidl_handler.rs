@@ -14,8 +14,8 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 
 use crate::switchboard::base::{
-    AccessibilityInfo, ColorBlindnessType, SettingRequest, SettingResponse, SettingResponseResult,
-    SettingType, Switchboard,
+    AccessibilityInfo, CaptionsSettings, ColorBlindnessType, SettingRequest, SettingResponse,
+    SettingResponseResult, SettingType, Switchboard,
 };
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 use crate::switchboard::switchboard_impl::SwitchboardImpl;
@@ -40,6 +40,8 @@ impl From<SettingResponse> for AccessibilitySettings {
             accessibility_settings.enable_magnification = info.enable_magnification;
             accessibility_settings.color_correction =
                 info.color_correction.map(ColorBlindnessType::into);
+            accessibility_settings.captions_settings =
+                info.captions_settings.map(CaptionsSettings::into);
 
             return accessibility_settings;
         }
@@ -58,6 +60,9 @@ impl From<AccessibilitySettings> for SettingRequest {
             color_correction: settings
                 .color_correction
                 .map(fidl_fuchsia_settings::ColorBlindnessType::into),
+            captions_settings: settings
+                .captions_settings
+                .map(fidl_fuchsia_settings::CaptionsSettings::into),
         })
     }
 }
@@ -121,6 +126,7 @@ fn set_accessibility(
 
 #[cfg(test)]
 mod tests {
+    use crate::switchboard::base::{CaptionFontFamily, CaptionFontStyle, ColorRgba, EdgeStyle};
     use fidl_fuchsia_settings::ColorBlindnessType;
 
     use super::*;
@@ -135,6 +141,7 @@ mod tests {
             color_inversion: None,
             enable_magnification: None,
             color_correction: None,
+            captions_settings: None,
         };
 
         assert_eq!(request, SettingRequest::SetAccessibilityInfo(EXPECTED_ACCESSIBILITY_INFO));
@@ -142,12 +149,28 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_try_from_settings_request() {
+        const TEST_COLOR: ColorRgba =
+            ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };
+        const EXPECTED_FONT_STYLE: CaptionFontStyle = CaptionFontStyle {
+            family: Some(CaptionFontFamily::Casual),
+            color: Some(TEST_COLOR),
+            relative_size: Some(1.0),
+            char_edge_style: Some(EdgeStyle::Raised),
+        };
+        const EXPECTED_CAPTION_SETTINGS: CaptionsSettings = CaptionsSettings {
+            for_media: Some(true),
+            for_tts: Some(true),
+            font_style: Some(EXPECTED_FONT_STYLE),
+            window_color: Some(TEST_COLOR),
+            background_color: Some(TEST_COLOR),
+        };
         const EXPECTED_ACCESSIBILITY_INFO: AccessibilityInfo = AccessibilityInfo {
             audio_description: Some(true),
             screen_reader: Some(true),
             color_inversion: Some(true),
             enable_magnification: Some(true),
             color_correction: Some(crate::switchboard::base::ColorBlindnessType::Protanomaly),
+            captions_settings: Some(EXPECTED_CAPTION_SETTINGS),
         };
 
         let mut accessibility_settings = AccessibilitySettings::empty();
@@ -156,7 +179,7 @@ mod tests {
         accessibility_settings.color_inversion = Some(true);
         accessibility_settings.enable_magnification = Some(true);
         accessibility_settings.color_correction = Some(ColorBlindnessType::Protanomaly);
-        accessibility_settings.captions_settings = None;
+        accessibility_settings.captions_settings = Some(EXPECTED_CAPTION_SETTINGS.into());
 
         let request = SettingRequest::from(accessibility_settings);
 

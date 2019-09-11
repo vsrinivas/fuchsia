@@ -12,6 +12,7 @@ use {
     crate::switchboard::base::SettingType,
     crate::switchboard::base::{AccessibilityInfo, ColorBlindnessType},
     fidl_fuchsia_settings::*,
+    fidl_fuchsia_ui_types::ColorRgba,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
@@ -43,6 +44,20 @@ async fn create_test_accessibility_env(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_accessibility() {
     const CHANGED_COLOR_BLINDNESS_TYPE: ColorBlindnessType = ColorBlindnessType::Tritanomaly;
+    const TEST_COLOR: ColorRgba = ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 };
+    const CHANGED_FONT_STYLE: CaptionFontStyle = CaptionFontStyle {
+        family: Some(CaptionFontFamily::Casual),
+        color: Some(TEST_COLOR),
+        relative_size: Some(1.0),
+        char_edge_style: Some(EdgeStyle::Raised),
+    };
+    const CHANGED_CAPTION_SETTINGS: CaptionsSettings = CaptionsSettings {
+        for_media: Some(true),
+        for_tts: Some(true),
+        font_style: Some(CHANGED_FONT_STYLE),
+        window_color: Some(TEST_COLOR),
+        background_color: Some(TEST_COLOR),
+    };
 
     let initial_settings = AccessibilitySettings::empty();
 
@@ -52,7 +67,7 @@ async fn test_accessibility() {
     expected_settings.color_inversion = Some(true);
     expected_settings.enable_magnification = Some(true);
     expected_settings.color_correction = Some(CHANGED_COLOR_BLINDNESS_TYPE.into());
-    expected_settings.captions_settings = None;
+    expected_settings.captions_settings = Some(CHANGED_CAPTION_SETTINGS);
 
     let expected_info = AccessibilityInfo {
         audio_description: expected_settings.audio_description,
@@ -60,6 +75,7 @@ async fn test_accessibility() {
         color_inversion: expected_settings.color_inversion,
         enable_magnification: expected_settings.enable_magnification,
         color_correction: Some(CHANGED_COLOR_BLINDNESS_TYPE),
+        captions_settings: Some(CHANGED_CAPTION_SETTINGS.into()),
     };
 
     // Create and fetch a store from device storage so we can read stored value for testing.

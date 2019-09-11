@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
@@ -12,8 +12,8 @@ group("setui") {
   testonly = true
   deps = [
     ":bin",
-    ":setui_service",
     ":lib",
+    ":setui_service",
     ":setui_service_tests",
   ]
 }
@@ -38,6 +38,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//sdk/fidl/fuchsia.timezone:fuchsia.timezone-rustc",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
@@ -62,7 +63,6 @@ test_package("setui_service_tests") {
   ]
 }
 
-
 rustc_binary("bin") {
   name = "setui_service"
   with_unit_tests = true
@@ -72,14 +72,14 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures-preview",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
   ]
 }
 
@@ -97,4 +97,3 @@ package("setui_service") {
     },
   ]
 }
-

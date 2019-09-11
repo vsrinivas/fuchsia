@@ -5,8 +5,8 @@ use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::switchboard::base::{
-        AccessibilityInfo, ColorBlindnessType, SettingRequest, SettingRequestResponder,
-        SettingResponse, SettingType,
+        AccessibilityInfo, CaptionsSettings, ColorBlindnessType, SettingRequest,
+        SettingRequestResponder, SettingResponse, SettingType,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -23,6 +23,7 @@ impl DeviceStorageCompatible for AccessibilityInfo {
         color_inversion: None,
         enable_magnification: None,
         color_correction: None,
+        captions_settings: None,
     };
     const KEY: &'static str = "accessibility_info";
 }
@@ -81,6 +82,10 @@ pub fn spawn_accessibility_controller(
                                     .color_correction
                                     .map(ColorBlindnessType::into)
                                     .or(stored_value.color_correction);
+                                stored_value.captions_settings = info
+                                    .captions_settings
+                                    .map(CaptionsSettings::into)
+                                    .or(stored_value.captions_settings);
 
                                 if old_value == stored_value {
                                     // No change in value, no need to notify listeners or persist.
