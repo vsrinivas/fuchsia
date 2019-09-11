@@ -91,7 +91,7 @@ template("sdk_source_set") {
   if (defined(invoker.sources)) {
     foreach(source_file, invoker.sources) {
       extension = get_path_info(source_file, "extension")
-      if (source_headers_are_public && extension == "h") {
+      if (extension == "h" && source_headers_are_public) {
         all_headers += [ source_file ]
       } else {
         all_sources += [ source_file ]

@@ -7,7 +7,9 @@ import("//build/fidl/fidl.gni")
 # This template simply defers to the `fidl` template widely used in the Fuchsia
 # GN build.
 template("fidl_library") {
-  fidl(target_name) {
+  main_target_name = target_name
+
+  fidl(main_target_name) {
     forward_variables_from(invoker, "*", [ "sdk" ])
 
     name = string_replace(target_name, "-", ".")
@@ -17,5 +19,32 @@ template("fidl_library") {
 
       api = "//sdk/fidl/$name/$name.api"
     }
+  }
+
+  # The following targets provide mappings from ZN names for bindings flavors to
+  # the corresponding GN names.
+
+  group("c") {
+    public_deps = [
+      ":${main_target_name}_c",
+    ]
+  }
+
+  group("c.headers") {
+    public_deps = [
+      ":${main_target_name}_c",
+    ]
+  }
+
+  group("llcpp") {
+    public_deps = [
+      ":${main_target_name}_llcpp",
+    ]
+  }
+
+  group("llcpp.headers") {
+    public_deps = [
+      ":${main_target_name}_llcpp",
+    ]
   }
 }
