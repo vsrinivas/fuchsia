@@ -148,6 +148,12 @@ def write_archive(outfile, format, images, board_name, additional_bootserver_arg
             'path': 'pave.sh'
         }),
         (generate_script([image for path, image in path_images], board_name,
+                                 'bootserver_pave_zedboot', additional_bootserver_arguments), {
+            'name': 'pave-zedboot',
+            'type': 'sh',
+            'path': 'pave-zedboot.sh'
+        }),
+        (generate_script([image for path, image in path_images], board_name,
                                  'bootserver_netboot', additional_bootserver_arguments), {
             'name': 'netboot',
             'type': 'sh',
@@ -221,6 +227,9 @@ def main():
     parser.add_argument('--pave',
                         metavar='FILE',
                         help='Write paving bootserver script to FILE')
+    parser.add_argument('--pave_zedboot',
+                        metavar='FILE',
+                        help='Write zedboot paving bootserver script to FILE')
     parser.add_argument('--netboot',
                         metavar='FILE',
                         help='Write netboot bootserver script to FILE')
@@ -263,6 +272,9 @@ def main():
     if args.pave:
         outfile = args.pave
         write_script_for(args.pave, 'bootserver_pave')
+    if args.pave_zedboot:
+        outfile = args.pave
+        write_script_for(args.pave_zedboot, 'bootserver_pave_zedboot')
     if args.netboot:
         outfile = args.netboot
         write_script_for(args.netboot, 'bootserver_netboot')
@@ -272,6 +284,7 @@ def main():
         archive_images = [image for image in images
                           if (image.get('archive', False) or
                               'bootserver_pave' in image or
+                              'bootserver_pave_zedboot' in image or
                               'bootserver_netboot' in image)]
         files_read |= set(image['path'] for image in archive_images)
         write_archive(outfile, archive_format(args, outfile), archive_images,

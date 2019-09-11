@@ -1508,6 +1508,7 @@ group("images") {
     ":paver-script",
     ":record_filesystem_sizes",
     ":root_component_index_metadata",
+    ":zedboot-script",
     "zedboot",
   ]
 }
@@ -1556,6 +1557,21 @@ paver_targets = [
     switch = "--netboot="
     json = {
       name = "netboot"
+      type = "sh"
+    }
+  },
+  {
+    name = "zedboot-script"
+    outputs = [
+      "$root_build_dir/pave-zedboot.sh",
+    ]
+    if (bootfs_only) {
+      switch = "--netboot="
+    } else {
+      switch = "--pave_zedboot="
+    }
+    json = {
+      name = "pave-zedboot"
       type = "sh"
     }
   },
