@@ -4,9 +4,9 @@
 
 use std::f32;
 
-use crate::{edge::Edge, point::Point};
+use crate::{edge::Edge, point::Point, PIXEL_WIDTH};
 
-const PIXEL_ACCURACY: f32 = 0.25;
+const PIXEL_ACCURACY: f32 = 0.5 / PIXEL_WIDTH as f32;
 
 fn full_transform(point: &[f32; 3], transform: &[f32; 9]) -> [f32; 3] {
     [
@@ -635,5 +635,14 @@ mod tests {
                 edge.p0.x * edge.p0.x + edge.p0.y * edge.p0.y - RADIUS * RADIUS < std::f32::EPSILON
             );
         }
+    }
+
+    #[test]
+    fn quad_split_into_segments() {
+        let mut path = Path::new();
+
+        path.quad(Point::new(0.0, 0.0), Point::new(1.0, 1.0), Point::new(2.0, 0.0));
+
+        assert_eq!(path.edges().count(), 3);
     }
 }
