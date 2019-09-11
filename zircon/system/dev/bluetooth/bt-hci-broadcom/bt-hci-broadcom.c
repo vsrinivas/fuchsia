@@ -379,7 +379,8 @@ static int bcm_hci_start_thread(void* arg) {
     }
     zxlogf(INFO, "bcm-hci: firmware loaded\n");
   } else {
-    zxlogf(ERROR, "bcm-hci: no firmware file found\n");
+    zxlogf(ERROR, "bcm-hci: could not load firmware file: %s\n", zx_status_get_string(status));
+    goto fail;
   }
 
   // set BDADDR to value in bootloader
