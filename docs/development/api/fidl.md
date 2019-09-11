@@ -556,7 +556,7 @@ people who use novel HTTP methods to submit a patch to the Platform Source Tree.
 For _a priori_ unbounded sets, a `string` might be a more appropriate choice if
 you foresee wanting to extend the set dynamically.  For example, use a `string`
 to represent media codec names because intermediaries might be able to do
-something reasonable with a novel media code name.
+something reasonable with a novel media codec name.
 
 If the set of enumerated values is controlled by an external entity, use an
 integer (of an appropriate size) or a `string`.  For example, use an integer (of
@@ -833,7 +833,7 @@ The key to feed-forward dataflow is to remove the need for clients to wait for
 results from prior method calls before sending subsequent messages.  For
 example, protocol request pipelining removes the need for the client to wait
 for the server to reply with a protocol before the client can use the
-protocol.  Similarly, client-assigned identifiers (see below) removes the need
+protocol.  Similarly, client-assigned identifiers (see below) remove the need
 for the client to wait for the server to assign identifiers for state held by
 the server.
 
@@ -878,7 +878,7 @@ Often a protocol will let a client manipulate multiple pieces of state held by
 the server.  When designing an object system, the typical approach to this
 problem is to create separate objects for each coherent piece of state held by
 the server.  However, when designing a protocol, using separate objects for each
-piece of state has several disadvantages:
+piece of state has several disadvantages.
 
 Creating separate protocol instances for each logical object consumes kernel
 resources because each instance requires a separate channel object.
@@ -905,7 +905,7 @@ can leak the layout of their address space.
 The client-assigned identifier pattern has some disadvantages.  For example,
 clients are more difficult to author because clients need to manage their own
 identifiers.  Developers commonly want to create a client library that provides
-an object-oriented facades for the service to hide the complexity of managing
+an object-oriented facade for the service to hide the complexity of managing
 identifiers, which itself is an anti-pattern (see _client libraries_ below).
 
 A strong signal that you should create a separate protocol instance to
