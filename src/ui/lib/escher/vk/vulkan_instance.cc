@@ -58,7 +58,7 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
 
   auto result = vk::createInstance(info);
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(WARNING) << "Could not create Vulkan Instance.";
+    FXL_LOG(WARNING) << "Could not create Vulkan Instance: " << vk::to_string(result.result) << ".";
     return fxl::RefPtr<VulkanInstance>();
   }
 

@@ -326,7 +326,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
   // Create the device.
   auto result = physical_device.createDevice(device_info);
   if (result.result != vk::Result::eSuccess) {
-    FXL_LOG(WARNING) << "Could not create Vulkan Device.";
+    FXL_LOG(WARNING) << "Could not create Vulkan Device: " << vk::to_string(result.result) << ".";
     return fxl::RefPtr<VulkanDeviceQueues>();
   }
   vk::Device device = result.value;
