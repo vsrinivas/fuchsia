@@ -41,17 +41,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestOTA(t *testing.T) {
-	device, err := c.NewDeviceClient()
-	if err != nil {
-		t.Fatalf("failed to create ota test client: %s", err)
-	}
-	defer device.Close()
-
-	// Wait for the device to come online.
-	if err = device.WaitForDeviceToBeUp(); err != nil {
-		t.Fatalf("device failed to start: %s", err)
-	}
-
 	downgradePaver, err := c.GetDowngradePaver()
 	if err != nil {
 		t.Fatal(err)
@@ -65,6 +54,17 @@ func TestOTA(t *testing.T) {
 	upgradeRepo, err := c.GetUpgradeRepository()
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	device, err := c.NewDeviceClient()
+	if err != nil {
+		t.Fatalf("failed to create ota test client: %s", err)
+	}
+	defer device.Close()
+
+	// Wait for the device to come online.
+	if err = device.WaitForDeviceToBeUp(); err != nil {
+		t.Fatalf("device failed to start: %s", err)
 	}
 
 	t.Run("PaveThenUpgrade", func(t *testing.T) {
