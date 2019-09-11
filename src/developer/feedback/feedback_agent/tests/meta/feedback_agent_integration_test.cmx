@@ -7,7 +7,7 @@
                 "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
-                "fuchsia.update.Info": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx",
+                "fuchsia.update.channel.Provider": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
             }
         }
@@ -27,7 +27,7 @@
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.update.Info",
+            "fuchsia.update.channel.Provider",
             "fuchsia.vulkan.loader.Loader"
         ]
     }

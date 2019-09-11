@@ -5,25 +5,24 @@
 use {
     super::*,
     fidl_fuchsia_recovery::FactoryResetRequestStream,
-    fidl_fuchsia_update::InfoRequestStream,
+    fidl_fuchsia_update_channel::ProviderRequestStream,
     fuchsia_async as fasync,
     futures::prelude::*,
     parking_lot::Mutex,
     serde_json::json,
-    std::{
-        fs,
-        sync::Arc,
-    },
+    std::{fs, sync::Arc},
     tempfile::TempDir,
 };
 
-fn spawn_update_info_with_channel(mut stream: InfoRequestStream, channel: String) {
+fn spawn_update_info_with_channel(mut stream: ProviderRequestStream, channel: String) {
     fasync::spawn(async move {
-        let req = stream.try_next().await
+        let req = stream
+            .try_next()
+            .await
             .expect("Failed to get request from stream")
             .expect("Failed to get request from stream");
 
-        let responder = req.into_get_channel().expect("Got unexpected Info request.");
+        let responder = req.into_get_current().expect("Got unexpected Provider request.");
         responder.send(&channel).expect("Failed to send response");
     });
 }
@@ -32,7 +31,9 @@ fn spawn_factory_reset(mut stream: FactoryResetRequestStream) -> Arc<Mutex<i32>>
     let call_count = Arc::new(Mutex::new(0));
     let ret = call_count.clone();
     fasync::spawn(async move {
-        let req = stream.try_next().await
+        let req = stream
+            .try_next()
+            .await
             .expect("Failed to get request from stream")
             .expect("Failed to get request from stream");
 
@@ -104,10 +105,7 @@ async fn test_it_fdrs_nominally() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 29),
-        ("channel-two", 44)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 29), ("channel-two", 44)]);
 
     write_stored_index(&dir, 18);
 
@@ -126,10 +124,7 @@ async fn test_it_fdrs_nominally_at_boundry() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 29),
-        ("channel-two", 44)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 29), ("channel-two", 44)]);
 
     write_stored_index(&dir, 43);
 
@@ -148,10 +143,7 @@ async fn test_it_does_not_fdr_when_equal_index() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 12),
-        ("channel-two", 17)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 12), ("channel-two", 17)]);
 
     write_stored_index(&dir, 17);
 
@@ -170,10 +162,7 @@ async fn test_it_does_not_fdr_when_greater_index() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 29),
-        ("channel-two", 17)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 29), ("channel-two", 17)]);
 
     write_stored_index(&dir, 18);
 
@@ -192,10 +181,7 @@ async fn test_it_does_not_fdr_when_channel_not_in_list() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 44),
-        ("channel-two", 29)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 44), ("channel-two", 29)]);
 
     write_stored_index(&dir, 18);
 
@@ -214,10 +200,7 @@ async fn test_it_writes_stored_file_when_missing() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 29),
-        ("channel-two", 44)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 29), ("channel-two", 44)]);
 
     // Skipping: write_stored_index(..);
 
@@ -237,10 +220,7 @@ async fn test_it_writes_stored_file_when_file_empty() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 29),
-        ("channel-two", 56)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 29), ("channel-two", 56)]);
 
     write_stored_file(&dir, "".into());
 
@@ -260,10 +240,7 @@ async fn test_it_writes_stored_file_when_file_invalid() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 29),
-        ("channel-two", 63)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 29), ("channel-two", 63)]);
 
     write_stored_file(&dir, "SOME INVALID \n\ntype of file []{}//\\123456768790)(*&^%$#@!".into());
 
@@ -359,10 +336,7 @@ async fn test_it_skips_fdr_when_channel_unavailable() {
     // Setup
     let dir = TempDir::new().expect("create tempdir");
 
-    write_config_channels(&dir, vec![
-        ("channel-one", 29),
-        ("channel-two", 44)
-    ]);
+    write_config_channels(&dir, vec![("channel-one", 29), ("channel-two", 44)]);
 
     write_stored_index(&dir, 18);
 

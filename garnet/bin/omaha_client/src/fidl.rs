@@ -210,7 +210,7 @@ where
                 let channel = server.app_set.get_target_channel().await;
                 responder.send(&channel).context("error sending response")?;
             }
-            ChannelControlRequest::GetChannel { responder } => {
+            ChannelControlRequest::GetCurrent { responder } => {
                 let channel = server.app_set.get_current_channel().await;
                 responder.send(&channel).context("error sending response")?;
             }
@@ -411,7 +411,7 @@ mod tests {
             FidlServer::handle_client(fidl, IncomingServices::ChannelControl(stream))
                 .unwrap_or_else(|e| panic!(e)),
         );
-        assert_eq!("current-channel", proxy.get_channel().await.unwrap());
+        assert_eq!("current-channel", proxy.get_current().await.unwrap());
     }
 
     #[fasync::run_singlethreaded(test)]

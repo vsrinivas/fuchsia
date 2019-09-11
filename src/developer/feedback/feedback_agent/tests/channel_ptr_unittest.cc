@@ -30,7 +30,7 @@ class RetrieveCurrentChannelTest : public gtest::TestLoopFixture {
       : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
  protected:
-  void ResetChannelProvider(std::unique_ptr<StubUpdateInfo> stub_channel_provider) {
+  void ResetChannelProvider(std::unique_ptr<StubChannelProvider> stub_channel_provider) {
     stub_channel_provider_ = std::move(stub_channel_provider);
     if (stub_channel_provider_) {
       FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
@@ -52,11 +52,11 @@ class RetrieveCurrentChannelTest : public gtest::TestLoopFixture {
   ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
  private:
-  std::unique_ptr<StubUpdateInfo> stub_channel_provider_;
+  std::unique_ptr<StubChannelProvider> stub_channel_provider_;
 };
 
 TEST_F(RetrieveCurrentChannelTest, Succeed_SomeChannel) {
-  std::unique_ptr<StubUpdateInfo> stub_channel_provider = std::make_unique<StubUpdateInfo>();
+  std::unique_ptr<StubChannelProvider> stub_channel_provider = std::make_unique<StubChannelProvider>();
   stub_channel_provider->set_channel("my-channel");
   ResetChannelProvider(std::move(stub_channel_provider));
 
@@ -67,7 +67,7 @@ TEST_F(RetrieveCurrentChannelTest, Succeed_SomeChannel) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Succeed_EmptyChannel) {
-  ResetChannelProvider(std::make_unique<StubUpdateInfo>());
+  ResetChannelProvider(std::make_unique<StubChannelProvider>());
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
@@ -84,7 +84,7 @@ TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNotAvailable) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderClosesConnection) {
-  ResetChannelProvider(std::make_unique<StubUpdateInfoClosesConnection>());
+  ResetChannelProvider(std::make_unique<StubChannelProviderClosesConnection>());
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
@@ -92,21 +92,21 @@ TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderClosesConnection) {
 }
 
 TEST_F(RetrieveCurrentChannelTest, Fail_ChannelProviderNeverReturns) {
-  ResetChannelProvider(std::make_unique<StubUpdateInfoNeverReturns>());
+  ResetChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
 
   fit::result<std::string> result = RetrieveCurrentChannel();
 
   ASSERT_TRUE(result.is_error());
 }
 
-TEST_F(RetrieveCurrentChannelTest, Fail_CallGetChannelTwice) {
-  ResetChannelProvider(std::make_unique<StubUpdateInfo>());
+TEST_F(RetrieveCurrentChannelTest, Fail_CallGetCurrentTwice) {
+  ResetChannelProvider(std::make_unique<StubChannelProvider>());
 
   const zx::duration unused_timeout = zx::sec(1);
-  UpdateInfo channel_provider(dispatcher(), service_directory_provider_.service_directory());
-  executor_.schedule_task(channel_provider.GetChannel(unused_timeout));
-  ASSERT_DEATH(channel_provider.GetChannel(unused_timeout),
-               testing::HasSubstr("GetChannel() is not intended to be called twice"));
+  ChannelProvider channel_provider(dispatcher(), service_directory_provider_.service_directory());
+  executor_.schedule_task(channel_provider.GetCurrent(unused_timeout));
+  ASSERT_DEATH(channel_provider.GetCurrent(unused_timeout),
+               testing::HasSubstr("GetCurrent() is not intended to be called twice"));
 }
 
 }  // namespace

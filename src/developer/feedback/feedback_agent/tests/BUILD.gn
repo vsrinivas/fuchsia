@@ -347,7 +347,7 @@ source_set("stub_channel_provider") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.update",
+    "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/fidl/cpp",
   ]
 }

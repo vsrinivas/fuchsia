@@ -34,11 +34,11 @@ mod tests {
 
         control.set_target("test-target-channel").await.unwrap();
         assert_eq!("test-target-channel", control.get_target().await.unwrap());
-        assert_eq!("fake-current-channel", control.get_channel().await.unwrap());
+        assert_eq!("fake-current-channel", control.get_current().await.unwrap());
 
         control.set_target("test-target-channel-2").await.unwrap();
         assert_eq!("test-target-channel-2", control.get_target().await.unwrap());
-        assert_eq!("fake-current-channel", control.get_channel().await.unwrap());
+        assert_eq!("fake-current-channel", control.get_current().await.unwrap());
     }
 
     #[test]

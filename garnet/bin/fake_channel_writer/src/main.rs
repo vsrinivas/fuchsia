@@ -28,7 +28,7 @@ async fn main() -> Result<(), Error> {
                     stream.try_next().await.context("error receiving ChannelControl request")?
                 {
                     match request {
-                        ChannelControlRequest::GetChannel { responder } => {
+                        ChannelControlRequest::GetCurrent { responder } => {
                             responder.send("fake-current-channel")?;
                         }
                         ChannelControlRequest::GetTarget { responder } => {

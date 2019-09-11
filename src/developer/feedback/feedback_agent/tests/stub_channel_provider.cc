@@ -6,12 +6,12 @@
 
 namespace feedback {
 
-void StubUpdateInfo::GetChannel(GetChannelCallback callback) { callback(channel_); }
+void StubChannelProvider::GetCurrent(GetCurrentCallback callback) { callback(channel_); }
 
-void StubUpdateInfoClosesConnection::GetChannel(GetChannelCallback callback) {
+void StubChannelProviderClosesConnection::GetCurrent(GetCurrentCallback callback) {
   CloseAllConnections();
 }
 
-void StubUpdateInfoNeverReturns::GetChannel(GetChannelCallback callback) {}
+void StubChannelProviderNeverReturns::GetCurrent(GetCurrentCallback callback) {}
 
 }  // namespace feedback

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_CHANNEL_PROVIDER_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_TESTS_STUB_CHANNEL_PROVIDER_H_
 
-#include <fuchsia/update/cpp/fidl.h>
+#include <fuchsia/update/channel/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
@@ -13,15 +13,15 @@
 
 namespace feedback {
 
-class StubUpdateInfo : public fuchsia::update::Info {
+class StubChannelProvider : public fuchsia::update::channel::Provider {
  public:
   // Returns a request handler for binding to this stub service.
-  fidl::InterfaceRequestHandler<fuchsia::update::Info> GetHandler() {
+  fidl::InterfaceRequestHandler<fuchsia::update::channel::Provider> GetHandler() {
     return bindings_.GetHandler(this);
   }
 
-  // |fuchsia.update.info|.
-  void GetChannel(GetChannelCallback callback) override;
+  // |fuchsia.update.channel.Provider|.
+  void GetCurrent(GetCurrentCallback callback) override;
 
   void set_channel(const std::string& channel) { channel_ = channel; }
 
@@ -29,18 +29,18 @@ class StubUpdateInfo : public fuchsia::update::Info {
   void CloseAllConnections() { bindings_.CloseAll(); }
 
  private:
-  fidl::BindingSet<fuchsia::update::Info> bindings_;
+  fidl::BindingSet<fuchsia::update::channel::Provider> bindings_;
   std::string channel_;
 };
 
-class StubUpdateInfoClosesConnection : public StubUpdateInfo {
+class StubChannelProviderClosesConnection : public StubChannelProvider {
  public:
-  void GetChannel(GetChannelCallback callback) override;
+  void GetCurrent(GetCurrentCallback callback) override;
 };
 
-class StubUpdateInfoNeverReturns : public StubUpdateInfo {
+class StubChannelProviderNeverReturns : public StubChannelProvider {
  public:
-  void GetChannel(GetChannelCallback callback) override;
+  void GetCurrent(GetCurrentCallback callback) override;
 };
 
 }  // namespace feedback

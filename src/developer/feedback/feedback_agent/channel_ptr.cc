@@ -16,24 +16,24 @@ namespace feedback {
 fit::promise<std::string> RetrieveCurrentChannel(async_dispatcher_t* dispatcher,
                                                  std::shared_ptr<sys::ServiceDirectory> services,
                                                  zx::duration timeout) {
-  std::unique_ptr<UpdateInfo> update_info = std::make_unique<UpdateInfo>(dispatcher, services);
+  std::unique_ptr<ChannelProvider> update_info = std::make_unique<ChannelProvider>(dispatcher, services);
 
   // We move |update_info| in a subsequent chained promise to guarantee its lifetime.
-  return update_info->GetChannel(timeout).then(
+  return update_info->GetCurrent(timeout).then(
       [update_info = std::move(update_info)](fit::result<std::string>& result) {
         return std::move(result);
       });
 }
 
-UpdateInfo::UpdateInfo(async_dispatcher_t* dispatcher,
+ChannelProvider::ChannelProvider(async_dispatcher_t* dispatcher,
                        std::shared_ptr<sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
-fit::promise<std::string> UpdateInfo::GetChannel(zx::duration timeout) {
-  FXL_CHECK(!has_called_get_channel_) << "GetChannel() is not intended to be called twice";
-  has_called_get_channel_ = true;
+fit::promise<std::string> ChannelProvider::GetCurrent(zx::duration timeout) {
+  FXL_CHECK(!has_called_get_current_) << "GetCurrent() is not intended to be called twice";
+  has_called_get_current_ = true;
 
-  update_info_ = services_->Connect<fuchsia::update::Info>();
+  update_info_ = services_->Connect<fuchsia::update::channel::Provider>();
 
   // fit::promise does not have the notion of a timeout. So we post a delayed task that will call
   // the completer after the timeout and return an error.
@@ -64,11 +64,11 @@ fit::promise<std::string> UpdateInfo::GetChannel(zx::duration timeout) {
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.update.Info";
+    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.update.channel.Provider";
     done_.completer.complete_error();
   });
 
-  update_info_->GetChannel([this](std::string channel) {
+  update_info_->GetCurrent([this](std::string channel) {
     if (!done_.completer) {
       return;
     }

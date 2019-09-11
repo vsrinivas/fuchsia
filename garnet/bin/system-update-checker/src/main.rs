@@ -10,20 +10,21 @@ mod check;
 mod config;
 mod connect;
 mod errors;
-mod info_handler;
 mod inspect;
 mod poller;
+mod provider_handler;
 mod update_manager;
 mod update_monitor;
 mod update_service;
 
 use crate::apply::Initiator;
 use crate::config::Config;
-use crate::info_handler::InfoHandler;
 use crate::poller::run_periodic_update_check;
+use crate::provider_handler::ProviderHandler;
 use crate::update_service::{RealUpdateManager, RealUpdateService};
 use failure::{Error, ResultExt};
-use fidl_fuchsia_update::{InfoRequestStream, ManagerRequestStream};
+use fidl_fuchsia_update::ManagerRequestStream;
+use fidl_fuchsia_update_channel::ProviderRequestStream;
 use forced_fdr::perform_fdr_if_necessary;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -64,7 +65,7 @@ async fn main() -> Result<(), Error> {
         current_channel_manager,
         inspector.root().create_child("update-manager"),
     ));
-    let info_handler = InfoHandler::default();
+    let info_handler = ProviderHandler::default();
 
     let mut fs = ServiceFs::new();
     let update_manager_clone = update_manager.clone();
@@ -72,7 +73,7 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(move |stream| {
             IncomingServices::Manager(stream, RealUpdateService::new(update_manager_clone.clone()))
         })
-        .add_fidl_service(move |stream| IncomingServices::Info(stream, info_handler.clone()));
+        .add_fidl_service(move |stream| IncomingServices::Provider(stream, info_handler.clone()));
 
     inspector.export(&mut fs);
 
@@ -99,7 +100,7 @@ async fn main() -> Result<(), Error> {
 
 enum IncomingServices {
     Manager(ManagerRequestStream, RealUpdateService),
-    Info(InfoRequestStream, InfoHandler),
+    Provider(ProviderRequestStream, ProviderHandler),
 }
 
 async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(), Error> {
@@ -107,7 +108,7 @@ async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(
         IncomingServices::Manager(request_stream, update_service) => {
             update_service.handle_request_stream(request_stream).await
         }
-        IncomingServices::Info(request_stream, handler) => {
+        IncomingServices::Provider(request_stream, handler) => {
             handler.handle_request_stream(request_stream).await
         }
     }

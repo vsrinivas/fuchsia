@@ -4,15 +4,13 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.update") {
+fidl("fuchsia.update.channel") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
   excluded_checks = [ "string-bounds-not-specified" ]
 
-  sources = [
-    "update.fidl",
-  ]
+  sdk_category = "partner"
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.update.channel",
+  sources = [
+    "channel.fidl",
   ]
 }

@@ -84,7 +84,7 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
 
  protected:
   // Makes sure the component serving fuchsia.logger.Log is up and running as the DumpLogs() request
-  // could time out on machines were the component is too slow to start.
+  // could time out on machines where the component is too slow to start.
   //
   // Syslog are generally handled by a single logger that implements two protocols:
   //   (1) fuchsia.logger.LogSink to write syslog messages
@@ -109,13 +109,13 @@ class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment 
     RunLoopUntil([&log_listener] { return log_listener.HasLogs(); });
   }
 
-  // Makes sure the component serving fuchsia.update.Info is up and running as the GetChannel()
-  // request could time out on machines were the component is too slow to start.
+  // Makes sure the component serving fuchsia.update.channel.Provider is up and running as the
+  // GetCurrent() request could time out on machines where the component is too slow to start.
   void WaitForChannelProvider() {
-    fuchsia::update::InfoSyncPtr channel_provider;
+    fuchsia::update::channel::ProviderSyncPtr channel_provider;
     environment_services_->Connect(channel_provider.NewRequest());
     std::string unused;
-    ASSERT_EQ(channel_provider->GetChannel(&unused), ZX_OK);
+    ASSERT_EQ(channel_provider->GetCurrent(&unused), ZX_OK);
   }
 
   // Makes sure there is at least one component in the test environment that exposes some Inspect

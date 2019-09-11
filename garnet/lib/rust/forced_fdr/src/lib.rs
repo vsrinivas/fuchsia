@@ -10,7 +10,7 @@
 use {
     failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_recovery::{FactoryResetMarker, FactoryResetProxy},
-    fidl_fuchsia_update::{InfoMarker, InfoProxy},
+    fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     serde_derive::{Deserialize, Serialize},
@@ -34,13 +34,13 @@ enum ChannelIndices {
 struct ForcedFDR {
     data_dir: PathBuf,
     config_data_dir: PathBuf,
-    info_proxy: InfoProxy,
+    info_proxy: ProviderProxy,
     factory_reset_proxy: FactoryResetProxy,
 }
 
 impl ForcedFDR {
     fn new() -> Result<Self, Error> {
-        let info_proxy = connect_to_service::<InfoMarker>()?;
+        let info_proxy = connect_to_service::<ProviderMarker>()?;
         let factory_reset_proxy = connect_to_service::<FactoryResetMarker>()?;
 
         Ok(ForcedFDR {
@@ -57,11 +57,11 @@ impl ForcedFDR {
         config_data_dir: PathBuf,
     ) -> (
         Self,
-        fidl_fuchsia_update::InfoRequestStream,
+        fidl_fuchsia_update_channel::ProviderRequestStream,
         fidl_fuchsia_recovery::FactoryResetRequestStream,
     ) {
         let (info_proxy, info_stream) =
-            fidl::endpoints::create_proxy_and_stream::<InfoMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<ProviderMarker>().unwrap();
         let (fdr_proxy, fdr_stream) =
             fidl::endpoints::create_proxy_and_stream::<FactoryResetMarker>().unwrap();
 
@@ -90,7 +90,8 @@ impl ForcedFDR {
 /// where the library is unable to determine if an FDR is necessary. In
 /// all of these cases, the library will *not* FDR.
 pub async fn perform_fdr_if_necessary() {
-    perform_fdr_if_necessary_impl().await
+    perform_fdr_if_necessary_impl()
+        .await
         .unwrap_or_else(|err| fx_log_info!(tag: "forced-fdr", "{:?}\n", err))
 }
 
@@ -146,7 +147,7 @@ fn open_channel_indices_file(fdr: &ForcedFDR) -> Result<File, Error> {
 }
 
 async fn get_current_channel(fdr: &ForcedFDR) -> Result<String, Error> {
-    Ok(fdr.info_proxy.get_channel().await?)
+    Ok(fdr.info_proxy.get_current().await?)
 }
 
 fn get_device_index(fdr: &ForcedFDR) -> Result<i32, Error> {

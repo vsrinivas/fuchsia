@@ -119,7 +119,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.update",
+    "//sdk/fidl/fuchsia.update.channel",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",

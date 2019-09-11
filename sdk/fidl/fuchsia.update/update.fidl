@@ -4,19 +4,12 @@
 
 library fuchsia.update;
 
-/// Information about the state of the update system.
-[Discoverable, FragileBase]
-protocol Info {
-    /// Retrieve the currently active update channel.
-    ///
-    /// - response `channel` the currently active update channel.
-    GetChannel() -> (string:128 channel);
-};
+using fuchsia.update.channel;
 
 /// Control the target update channel, this is the channel we will use on the next update check.
 [Discoverable]
 protocol ChannelControl {
-    compose Info;
+    compose fuchsia.update.channel.Provider;
 
     /// Set a new desired target channel.  This tells the updater to attempt to
     /// check for updates using a new channel.  This is tentative, and won't be

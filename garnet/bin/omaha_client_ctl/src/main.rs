@@ -55,7 +55,7 @@ async fn main() -> Result<(), Error> {
     enum Command {
         // fuchsia.update ChannelControl protocol:
         /// Get the current channel.
-        GetChannel,
+        GetCurrent,
         /// Get the target channel.
         GetTarget,
         /// Set the target channel.
@@ -83,14 +83,14 @@ async fn main() -> Result<(), Error> {
     let app =
         launch(&launcher, server_url, None).context("Failed to launch omaha client service")?;
     match cmd {
-        Command::GetChannel | Command::GetTarget | Command::SetTarget { .. } => {
+        Command::GetCurrent | Command::GetTarget | Command::SetTarget { .. } => {
             let channel_control = app
                 .connect_to_service::<ChannelControlMarker>()
                 .context("Failed to connect to channel control service")?;
 
             match cmd {
-                Command::GetChannel => {
-                    let channel = channel_control.get_channel().await?;
+                Command::GetCurrent => {
+                    let channel = channel_control.get_current().await?;
                     println!("current channel: {}", channel);
                 }
                 Command::GetTarget => {

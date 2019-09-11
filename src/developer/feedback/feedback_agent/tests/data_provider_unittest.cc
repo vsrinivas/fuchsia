@@ -180,7 +180,7 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
 
   // Resets the underlying |stub_channel_provider| with the given |channel|.
   void ResetChannelProvider(std::string channel) {
-    stub_channel_provider_.reset(new StubUpdateInfo());
+    stub_channel_provider_.reset(new StubChannelProvider());
     stub_channel_provider_->set_channel(channel);
     FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
               ZX_OK);
@@ -249,7 +249,7 @@ class DataProviderImplTest : public sys::testing::TestWithEnvironment {
 
   std::unique_ptr<StubScenic> stub_scenic_;
   std::unique_ptr<StubLogger> stub_logger_;
-  std::unique_ptr<StubUpdateInfo> stub_channel_provider_;
+  std::unique_ptr<StubChannelProvider> stub_channel_provider_;
 };
 
 TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
