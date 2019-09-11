@@ -163,11 +163,13 @@ EncodeResult<FidlType> Encode(DecodedMessage<FidlType> msg) {
           msg_handles->set_actual(actual_handles);
           return status;
         } else {
-          // Boring type does not need encoding
-          if (out_msg_bytes->actual() != FidlType::PrimarySize) {
+          if (out_msg_bytes->actual() != FidlAlign(FidlType::PrimarySize)) {
             result.error = "invalid size encoding";
             return ZX_ERR_INVALID_ARGS;
           }
+          memset(out_msg_bytes->data() + FidlType::PrimarySize, 0,
+                 out_msg_bytes->actual() - FidlType::PrimarySize);
+          // Boring type does not need encoding
           msg_handles->set_actual(0);
           return ZX_OK;
         }

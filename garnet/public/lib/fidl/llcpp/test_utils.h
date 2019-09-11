@@ -35,8 +35,9 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
     }
     message = std::move(linearize_result.message);
   } else {
-    message = fidl::DecodedMessage<FidlType>(
-        fidl::BytePart(reinterpret_cast<uint8_t*>(value), sizeof(FidlType), sizeof(FidlType)));
+    message = fidl::DecodedMessage<FidlType>(fidl::BytePart(reinterpret_cast<uint8_t*>(value),
+                                                            fidl::FidlAlign(sizeof(FidlType)),
+                                                            fidl::FidlAlign(sizeof(FidlType))));
   }
 
   auto encode_result = fidl::Encode(std::move(message));
@@ -56,6 +57,11 @@ bool DecodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
   // TODO(fxb/7958): For now we are only ensuring that no error is present.
   // Need deep equality to verify that the result is the same as |value|.
   return true;
+}
+
+constexpr inline uint64_t FidlAlign(uint32_t offset) {
+  constexpr uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
+  return (offset + alignment_mask) & ~alignment_mask;
 }
 
 }  // namespace llcpp_conformance_utils

@@ -220,13 +220,24 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
     set_error("Bytes must be aligned to FIDL_ALIGNMENT");
     return ZX_ERR_INVALID_ARGS;
   }
+  if (num_bytes % FIDL_ALIGNMENT != 0) {
+    set_error("num_bytes must be aligned to FIDL_ALIGNMENT");
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-  uint32_t next_out_of_line;
   zx_status_t status;
+  uint32_t next_out_of_line;
   if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
       ZX_OK) {
     return status;
   }
+
+  // Zero region between primary object and next out of line object.
+  size_t primary_size;
+  if ((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
+    return status;
+  }
+  memset(reinterpret_cast<uint8_t*>(bytes) + primary_size, 0, next_out_of_line - primary_size);
 
   FidlEncoder encoder(bytes, num_bytes, handles, max_handles, next_out_of_line, out_error_msg);
   fidl::Walk(encoder, type, StartingPoint{reinterpret_cast<uint8_t*>(bytes)});
