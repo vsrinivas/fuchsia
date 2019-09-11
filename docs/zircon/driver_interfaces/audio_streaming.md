@@ -8,15 +8,15 @@ must implement and users must follow.
 ## Overview
 
 Audio streams are device nodes published by driver services intended to be used
-by applications in order to capture and/or render audio on a Zircon device. Each
-stream in the system (input or output) represents a stream of digital audio
+by applications in order to capture or render audio on a Zircon device, or both.
+Each stream in the system (input or output) represents a stream of digital audio
 information which may be either received or transmitted by device. Streams are
 dynamic and may created or destroyed by the system at any time. Which streams
 exist at any given point in time, and what controls their lifecycles are
 considered to be issues of audio policy and codec management and are not
 discussed in this document. Additionally, the information present in audio
 outputs streams is exclusive to the application owner of the stream. Mixing of
-audio is _not_ a service provided by the audio stream interface.
+audio is not a service provided by the audio stream interface.
 
 > TODO: extend this interface to support the concept of low-latency hardware
 > mixers.
@@ -66,10 +66,9 @@ Communication with an audio stream device is performed using messages sent over
 a [channel](../objects/channel.md). Applications open the device node for a
 stream and obtain a channel by issuing a FIDL request. After obtaining the
 channel, the device node may be closed. All subsequent communication with the
-stream will occur using channels.
+stream occurs using channels.
 
-The "stream" channel will then be used for most command and control tasks,
-including:
+The stream channel is used for most command and control tasks, including:
 
 *   Capability interrogation
 *   Format negotiation
@@ -77,7 +76,6 @@ including:
 *   Determining outboard latency
 *   Plug detection notification
 *   Access control capability detection and signalling
-*   Policy level stream purpose indication/Stream Association (TBD)
 
 > TODO: Should plug/unplug detection be done by sending notifications over the
 > stream channel (as it is today), or by publishing/unpublishing the device
@@ -85,17 +83,17 @@ including:
 
 In order to actually send or receive audio information on the stream, the
 specific format to be used must first be set. The response to a successful
-SetFormat operation will contain a new "ring-buffer" channel. The ring-buffer
+`SetFormat` operation will contain a new "ring-buffer" channel. The ring-buffer
 channel may be used to request a shared buffer from the stream (delivered in the
 form of a [VMO](../objects/vm_object.md)) which may be mapped into the address
 space of the application and used to send or receive audio data as appropriate.
-Generally, the operations conducted over the ring buffer channel include...
+Generally, the operations conducted over the ring buffer channel include:
 
 *   Requesting a shared buffer
 *   Starting and Stopping stream playback/capture
 *   Receiving notifications of playback/capture progress
 *   Receiving notifications of error conditions such as HW FIFO under/overflow,
-    bus transaction failure, etc...
+    bus transaction failure, etc.
 *   Receiving clock recovery information in the case that the audio output clock
     is based on a different oscillator than the oscillator which backs
     [ZX_CLOCK_MONOTONIC](../syscalls/clock_get.md)
@@ -129,7 +127,7 @@ Output      | `ZX_PROTOCOL_AUDIO_OUTPUT` | /dev/class/audio-output
 
 After opening the device node, client applications may obtain a stream channel
 for subsequent communication using the
-`fuchsia.hardware.audio.Device/GetChannel` FIDL message. For example...
+`fuchsia.hardware.audio.Device/GetChannel` FIDL message. For example:
 
 ```C
 zx_handle_t OpenStream(const char* dev_node_path) {
@@ -206,7 +204,7 @@ In case of any violation, drivers **should** immediately quiesce their hardware
 and **must** close the channel, terminating any operations which happen to be in
 flight at the time. Additionally, they **may** log a message to a central
 logging service to assist in application developers in debugging the cause of
-the protocol violation. Examples of protocol violation include...
+the protocol violation. Examples of protocol violation include:
 
 *   Using `AUDIO_INVALID_TRANSACTION_ID` as the value of
     `message.hdr.transaction_id`
@@ -226,7 +224,7 @@ audio stream consists of a compressed bitstream instead of uncompressed LPCM
 samples. Refer to the [audio](/zircon/system/public/zircon/device/audio.h)
 protocol header for exact symbol definitions.
 
-Notes:
+The formats described by `audio_sample_format_t` have the following properties:
 
 *   With the exception of `FORMAT_BITSTREAM`, samples are always assumed to use
     linear PCM encoding. BITSTREAM is used for transporting compressed audio
@@ -310,7 +308,7 @@ this audio stream supports only stereo audio.
 Supported frame rates are signalled similarly to channel counts using a pair of
 min/max frame per second fields along with a flags field. While the min/max
 values provide an inclusive range of frame rates, the flags determine how to
-interpret this range. Currently defined flags include...
+interpret this range. Currently defined flags include:
 
 | Flag                              | Definition                               |
 | --------------------------------- | ---------------------------------------- |
