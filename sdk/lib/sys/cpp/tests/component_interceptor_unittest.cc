@@ -172,7 +172,7 @@ TEST_F(ComponentInterceptorTest, ExtraCmx) {
   env->CreateComponent(std::move(info), controller.NewRequest());
 
   // Test that we intercepting URL
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return intercepted_url; }, zx::sec(2)));
+  RunLoopUntil([&] { return intercepted_url; });
   EXPECT_TRUE(intercepted_url);
   EXPECT_EQ("randomstring", program_metadata["data"]);
 }
