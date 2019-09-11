@@ -18,6 +18,9 @@ class MsdQcomPlatformDevice {
 
   virtual uint32_t GetChipId() const = 0;
 
+  // Returns the size of the on-chip graphics memory
+  virtual uint32_t GetGmemSize() const = 0;
+
   static std::unique_ptr<MsdQcomPlatformDevice> Create(void* platform_device_handle);
 
  protected:

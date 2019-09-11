@@ -49,6 +49,7 @@ class LinuxPlatformDevice : public PlatformDevice {
   enum class MagmaGetParamKey {
     kRegisterSize = 10,
     kChipId = 11,
+    kGmemSize = 12,
   };
 
   static bool MagmaGetParam(int device_fd, MagmaGetParamKey key, uint64_t* value_out);

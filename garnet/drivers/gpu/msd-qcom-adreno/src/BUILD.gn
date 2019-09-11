@@ -17,6 +17,7 @@ source_set("src") {
   }
 
   deps = [
+    "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util/platform:device",
   ]
 }

@@ -9,13 +9,19 @@
 class MsdQcomPlatformDeviceLinux : public MsdQcomPlatformDevice {
  public:
   MsdQcomPlatformDeviceLinux(std::unique_ptr<magma::PlatformDevice> platform_device,
-                             uint32_t chip_id)
-      : MsdQcomPlatformDevice(std::move(platform_device)), chip_id_(chip_id) {}
+                             uint32_t chip_id, uint32_t gmem_size)
+      : MsdQcomPlatformDevice(std::move(platform_device)),
+        chip_id_(chip_id),
+        gmem_size_(gmem_size) {}
 
   uint32_t GetChipId() const override { return chip_id_; }
 
+  uint32_t GetGmemSize() const override { return gmem_size_; }
+
  private:
   uint32_t chip_id_;
+  // Gmem is on-chip graphics memory
+  uint32_t gmem_size_;
 };
 
 std::unique_ptr<MsdQcomPlatformDevice> MsdQcomPlatformDevice::Create(void* platform_device_handle) {
@@ -30,8 +36,15 @@ std::unique_ptr<MsdQcomPlatformDevice> MsdQcomPlatformDevice::Create(void* platf
           linux_platform_device->fd(), magma::LinuxPlatformDevice::MagmaGetParamKey::kChipId,
           &chip_id))
     return DRETP(nullptr, "Couldn't get chip id");
-
   DASSERT((chip_id >> 32) == 0);
+
+  uint64_t gmem_size;
+  if (!magma::LinuxPlatformDevice::MagmaGetParam(
+          linux_platform_device->fd(), magma::LinuxPlatformDevice::MagmaGetParamKey::kGmemSize,
+          &gmem_size))
+    return DRETP(nullptr, "Couldn't get chip id");
+  DASSERT((gmem_size >> 32) == 0);
+
   return std::unique_ptr<MsdQcomPlatformDevice>(
-      new MsdQcomPlatformDeviceLinux(std::move(platform_device), chip_id));
+      new MsdQcomPlatformDeviceLinux(std::move(platform_device), chip_id, gmem_size));
 }

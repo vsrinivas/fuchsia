@@ -15,11 +15,22 @@ class MsdQcomDevice {
 
   uint32_t GetChipId() { return qcom_platform_device_->GetChipId(); }
 
+  uint32_t GetGmemSize() { return qcom_platform_device_->GetGmemSize(); }
+
  private:
-  bool Init(void* device_handle);
+  magma::RegisterIo* register_io() { return register_io_.get(); }
+
+  static constexpr uint64_t kGmemGpuAddrBase = 0x00100000;
+  static constexpr uint64_t kClientGpuAddrBase = 0x01000000;
+
+  bool Init(void* device_handle, std::unique_ptr<magma::RegisterIo::Hook> hook);
+  bool HardwareInit();
+  bool EnableClockGating(bool enable);
 
   std::unique_ptr<MsdQcomPlatformDevice> qcom_platform_device_;
   std::unique_ptr<magma::RegisterIo> register_io_;
+
+  friend class TestQcomDevice;
 };
 
 #endif  // MSD_QCOM_DEVICE_H
