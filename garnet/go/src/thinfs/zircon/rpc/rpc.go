@@ -150,10 +150,9 @@ func (d *directoryWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) err
 	if flags&io.OpenFlagDescribe != 0 {
 		c := fidl.InterfaceRequest(node).Channel
 		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
-		info := &io.NodeInfo{
-			NodeInfoTag: io.NodeInfoDirectory,
-		}
-		return pxy.OnOpen(int32(zxErr), info)
+		var info io.NodeInfo
+		info.SetDirectory(io.DirectoryObject{})
+		return pxy.OnOpen(int32(zxErr), &info)
 	}
 	return nil
 }
@@ -175,9 +174,9 @@ func (d *directoryWrapper) ListInterfaces() ([]string, error) {
 }
 
 func (d *directoryWrapper) Describe() (io.NodeInfo, error) {
-	return io.NodeInfo{
-		NodeInfoTag: io.NodeInfoDirectory,
-	}, nil
+	var info io.NodeInfo;
+	info.SetDirectory(io.DirectoryObject{})
+	return info, nil
 }
 
 func (d *directoryWrapper) Sync() (int32, error) {
@@ -248,22 +247,17 @@ func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, node io.Nod
 
 	// Only send an OnOpen message if OpenFlagDescribe is set.
 	if inFlags&io.OpenFlagDescribe != 0 {
-		var info *io.NodeInfo
+		var info io.NodeInfo
 		if fsFile != nil {
-			info = &io.NodeInfo{
-				NodeInfoTag: io.NodeInfoFile,
-				File: io.FileObject{
-					Event: zx.Event(zx.HandleInvalid),
-				},
-			}
+			info.SetFile(io.FileObject{
+				Event: zx.Event(zx.HandleInvalid),
+			})
 		} else {
-			info = &io.NodeInfo{
-				NodeInfoTag: io.NodeInfoDirectory,
-			}
+			info.SetDirectory(io.DirectoryObject{})
 		}
 		c := fidl.InterfaceRequest(node).Channel
 		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
-		return pxy.OnOpen(int32(zxErr), info)
+		return pxy.OnOpen(int32(zxErr), &info)
 	}
 
 	return nil
@@ -453,12 +447,11 @@ func (f *fileWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) error {
 	if flags&io.OpenFlagDescribe != 0 {
 		c := fidl.InterfaceRequest(node).Channel
 		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
-		return pxy.OnOpen(int32(zx.ErrOk), &io.NodeInfo{
-			NodeInfoTag: io.NodeInfoFile,
-			File: io.FileObject{
-				Event: zx.Event(zx.HandleInvalid),
-			},
+		var info io.NodeInfo
+		info.SetFile(io.FileObject{
+			Event: zx.Event(zx.HandleInvalid),
 		})
+		return pxy.OnOpen(int32(zx.ErrOk), &info)
 	}
 	return nil
 }
@@ -478,12 +471,11 @@ func (f *fileWrapper) ListInterfaces() ([]string, error) {
 }
 
 func (f *fileWrapper) Describe() (io.NodeInfo, error) {
-	return io.NodeInfo{
-		NodeInfoTag: io.NodeInfoFile,
-		File: io.FileObject{
-			Event: zx.Event(zx.HandleInvalid),
-		},
-	}, nil
+	var info io.NodeInfo
+	info.SetFile(io.FileObject{
+		Event: zx.Event(zx.HandleInvalid),
+	})
+	return info, nil
 }
 
 func (f *fileWrapper) Sync() (int32, error) {
