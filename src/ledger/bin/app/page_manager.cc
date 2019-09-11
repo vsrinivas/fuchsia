@@ -318,21 +318,12 @@ fit::function<bool()> PageManager::NewPageTracker() {
     outstanding_operations_--;
     auto check_empty_on_return = fit::defer([this] { CheckEmpty(); });
 
-    if (was_opened_.empty()) {
-      return false;
-    }
-    // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12303): Drop
-    // this if; it's not correct and if it were it would be redundant with the
-    // immediately-following statements.
-    if (was_opened_.size() == 1) {
-      // This is the last outstanding operation; clear the vector.
-      was_opened_.clear();
-      return true;
-    }
-    // Erase the operation_id, if found, from the found vector (it->second).
-    auto operation_it = std::find(was_opened_.begin(), was_opened_.end(), operation_id);
-    if (operation_it != was_opened_.end()) {
-      was_opened_.erase(operation_it);
+    // Erase operation_id, if found, from the vector - operation_id may not be present in the vector
+    // if the vector was cleared (as happens during a call to GetPage) between when the operation
+    // started and now.
+    auto it = std::find(was_opened_.begin(), was_opened_.end(), operation_id);
+    if (it != was_opened_.end()) {
+      was_opened_.erase(it);
       return true;
     }
     return false;
