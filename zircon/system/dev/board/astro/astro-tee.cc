@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls/smc.h>
+
 #include <cstdint>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <zircon/syscalls/smc.h>
 
 #include "astro.h"
 
@@ -59,20 +61,28 @@ static const pbus_dev_t tee_dev = []() {
 }();
 
 constexpr zx_bind_inst_t root_match[] = {
-  BI_MATCH(),
+    BI_MATCH(),
 };
 constexpr zx_bind_inst_t sysmem_match[] = {
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 constexpr device_component_part_t sysmem_component[] = {
-  {countof(root_match), root_match},
-  {countof(sysmem_match), sysmem_match},
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
 };
 constexpr device_component_t components[] = {
-  {countof(sysmem_component), sysmem_component},
+    {countof(sysmem_component), sysmem_component},
 };
 
 zx_status_t Astro::TeeInit() {
+  // We must run the Tee in a separate devhost from sysmem, because sysmem devhost uses its main and
+  // only thread to make sync FIDL calls to the Tee, which is attempting to serve those partly using
+  // its main thread.  If the main thread of each is the same thread, that'll deadlock.  While we
+  // could add a thread to sysmem to simulate the ability to make async client FIDL requests, it's
+  // simpler for now to just have the TEE Controller run in a separate devhost.  Later if we need
+  // them to run in the same devhost, hopefully by then we can more easily make async client FIDL
+  // requests (or, we add a thread to sysmem to simulate that feature, but only when we really need
+  // it).
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&tee_dev, components, countof(components), UINT32_MAX);
   if (status != ZX_OK) {

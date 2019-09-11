@@ -66,7 +66,7 @@ DeviceCtx::~DeviceCtx() {
   // implemented.
 
   // TODO(dustingreen): Implement this destructor iff it's actually used/called.
-  ZX_PANIC("not implemented");
+  ZX_PANIC("amlogic-decoder DeviceCtx::~DeviceCtx not implemented\n");
 }
 
 zx_status_t DeviceCtx::Bind(zx_device_t* parent) {

@@ -16,4 +16,9 @@ protocol Sysmem {
     /// Takes the client end of a FIDL connection that'll serve
     /// fuchsia.sysmem.Heap.
     RegisterHeap(uint64 heap, handle<channel> heap_connection) -> (zx.status s);
+
+    /// Takes the client end of a FIDL connection that'll serve
+    /// fuchsia.sysmem.Tee, which is a protocol that's specific to sysmem<->Tee
+    /// concerns.
+    RegisterTee(handle<channel> tee_connection) -> (zx.status s);
 };

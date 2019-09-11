@@ -9,6 +9,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/closure-queue/closure_queue.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/fit/variant.h>
@@ -19,7 +20,6 @@
 
 #include <fbl/macros.h>
 
-#include "closure_queue.h"
 #include "codec_adapter.h"
 #include "codec_adapter_events.h"
 #include "codec_admission_control.h"

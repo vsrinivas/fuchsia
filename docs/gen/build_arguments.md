@@ -170,7 +170,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers", "//garnet/packages/prod:sysmem-assistant"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/packages/prod:drivers" ]`
 
 From //boards/arm64.gni:9
 

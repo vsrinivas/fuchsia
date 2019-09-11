@@ -485,6 +485,7 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
                                  uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                  uint32_t req_handle_count, zx_handle_t* resp_handles,
                                  uint32_t* resp_handle_count) {
+  // TODO(dustingreen): any handles in req_handles should be closed regardless of error.
   if (!sysmem_.is_valid()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -504,6 +505,8 @@ zx_status_t Component::RpcSysmem(const uint8_t* req_buf, uint32_t req_size, uint
       return sysmem_.Connect(zx::channel(req_handles[0]));
     case SysmemOp::REGISTER_HEAP:
       return sysmem_.RegisterHeap(req->heap, zx::channel(req_handles[0]));
+    case SysmemOp::REGISTER_TEE:
+      return sysmem_.RegisterTee(zx::channel(req_handles[0]));
     default:
       zxlogf(ERROR, "%s: unknown sysmem op %u\n", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;

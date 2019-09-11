@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/device/sysmem.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
-#include <zircon/device/sysmem.h>
 
 #include "sherlock.h"
 
@@ -24,10 +25,16 @@ static const pbus_bti_t sysmem_btis[] = {
 static const sysmem_metadata_t sysmem_metadata = {
     .vid = PDEV_VID_AMLOGIC,
     .pid = PDEV_PID_AMLOGIC_T931,
+    // On sherlock there are two protected memory ranges.  The protected_memory_size field
+    // configures the size of the non-VDEC range.  In contrast, the VDEC range is configured and
+    // allocated via the TEE, and is currently 7.5 MiB (on astro; to be verified on sherlock).  The
+    // VDEC range is a fixed location within the overall optee reserved range passed to Zircon
+    // during boot - the specific location is obtained by sysmem calling the secmem TA via
+    // fuchsia::sysmem::Tee protocol between sysmem and TEE Controller.
     .protected_memory_size = 16 * 1024 * 1024,
-    // Support h.264 5.1, which has a max DPB size of 70,778,880 bytes (with
-    // NV12), and add some extra size for additional pictures for buffering
-    // and several framebuffers (1024*608*4 bytes each).
+    // Support h.264 5.1, which has a max DPB size of 70,778,880 bytes (with NV12), and add some
+    // extra size for additional pictures for buffering and several framebuffers (1024*608*4 bytes
+    // each).
     .contiguous_memory_size = 100 * 1024 * 1024,
 };
 

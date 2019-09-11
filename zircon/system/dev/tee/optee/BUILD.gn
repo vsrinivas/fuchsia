@@ -8,7 +8,9 @@ driver("optee") {
     "optee-client.cc",
     "optee-controller.cc",
     "optee-message.cc",
+    "secmem-client-session.cc",
     "shared-memory.cc",
+    "sysmem-tee-server.cc",
     "util.cc",
   ]
   deps = [
@@ -18,24 +20,56 @@ driver("optee") {
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-tee:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/fidl/fuchsia-tee-manager:c",
+    "$zx/system/ulib/async:async-cpp.static",
+    "$zx/system/ulib/async-loop:async-loop-cpp.static",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/closure-queue",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp.static",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/tee-client-api:headers",
+
+    # TODO(36201): Make sure to switch back to "$zx/system/ulib/tee-client-api:headers", during move
+    # to serve fuchsia.sysmem.Tee from tee-controller to aml-securemem.  See also any other
+    # changes to this file in Ie029bd0f8f0edb66d84ca82d657497c442a25c2e, most/all of which can
+    # probably be undone during the move.
+    "$zx/system/ulib/tee-client-api:static",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
+    "$zx/third_party/ulib/safemath",
   ]
   data_deps = [
     ":keysafe_ta",
     ":secmem_ta",
     ":castauth_ta",
   ]
+
+  # TODO(ZX-2863): This driver presently violates the allowed shlib deps policy:
+  # ./prebuilt/third_party/gn/linux-x64/gn path out/default.zircon --root=zircon '//system/dev/tee/optee:optee(//public/gn/toolchain:user-arm64-clang.shlib)' '//system/ulib/async:async-default.shared(//public/gn/toolchain:user-arm64-clang.shlib)'
+  # //system/dev/tee/optee:optee --[public]-->
+  # //system/dev/tee/optee:optee._build --[private]-->
+  # //system/ulib/tee-client-api:static --[public]-->
+  # //system/ulib/tee-client-api:tee-client-api.static --[private]-->
+  # //system/ulib/tee-client-api:tee-client-api._sources --[private]-->
+  # //system/ulib/fdio:fdio --[public]-->
+  # //system/ulib/fdio:fdio.shared
+  #
+  # TODO(dustingreen): Since AFAICT we're not actually running any FDIO code in
+  # this driver, I think a reasonable solution would be to split tee-client-api
+  # into an outer and inner lib, where the outer lib provides
+  # TEEC_InitializeContext() (which uses some fdio calls to get connected) and
+  # the inner lib provides a way to init a context given a channel (without
+  # using fdio).  AFAIK there'd be nothing in that inner lib that would need to
+  # use fdio, and nothing else in tee-client-api (inner) that would be
+  # inappropriate in a driver.
+  deprecated_inhibit_driver_shlib_allowlist = true
 }
 
 firmware("keysafe_ta") {
@@ -78,7 +112,9 @@ test("optee-message-test") {
     "optee-client.cc",
     "optee-controller.cc",
     "optee-message.cc",
+    "secmem-client-session.cc",
     "shared-memory.cc",
+    "sysmem-tee-server.cc",
     "test/optee-message-test.cc",
     "util.cc",
   ]
@@ -89,14 +125,19 @@ test("optee-message-test") {
     "$zx/system/dev/lib/device-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-tee:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
+    "$zx/system/ulib/async:async-cpp.static",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/closure-queue",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/driver",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp.static",
     "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/region-alloc",
-    "$zx/system/ulib/tee-client-api",
+    "$zx/system/ulib/tee-client-api:static",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxtest",
+    "$zx/third_party/ulib/safemath",
   ]
 }
-

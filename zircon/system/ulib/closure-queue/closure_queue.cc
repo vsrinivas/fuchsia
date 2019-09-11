@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/media/codec_impl/closure_queue.h"
+#include "lib/closure-queue/closure_queue.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>

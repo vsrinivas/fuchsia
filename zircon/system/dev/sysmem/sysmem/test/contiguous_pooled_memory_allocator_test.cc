@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/platform-defs.h>
+#include "contiguous_pooled_memory_allocator.h"
+
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/vmar.h>
-#include <zxtest/zxtest.h>
 
 #include <vector>
 
-#include "contiguous_pooled_memory_allocator.h"
+#include <ddk/platform-defs.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -30,18 +31,17 @@ class FakeOwner : public MemoryAllocator::Owner {
 
 class ContiguousPooledSystem : public zxtest::Test {
  public:
-  ContiguousPooledSystem()
-    : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount, true) {
+  ContiguousPooledSystem() : allocator_(&fake_owner_, kVmoName, kVmoSize * kVmoCount, true, true) {
     // nothing else to do here
   }
 
  protected:
-   static constexpr uint32_t kVmoSize = 4096;
-   static constexpr uint32_t kVmoCount = 1024;
-   static constexpr char kVmoName[] = "test-pool";
+  static constexpr uint32_t kVmoSize = 4096;
+  static constexpr uint32_t kVmoCount = 1024;
+  static constexpr char kVmoName[] = "test-pool";
 
-   FakeOwner fake_owner_;
-   ContiguousPooledMemoryAllocator allocator_;
+  FakeOwner fake_owner_;
+  ContiguousPooledMemoryAllocator allocator_;
 };
 
 TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {

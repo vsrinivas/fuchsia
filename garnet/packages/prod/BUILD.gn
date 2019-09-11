@@ -245,7 +245,6 @@ group("all") {
     "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:ssh",
     "//garnet/packages/prod:stash",
-    "//garnet/packages/prod:sysmem-assistant",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:sysmgr",
     "//garnet/packages/prod:tee_manager",
@@ -272,15 +271,6 @@ group("all") {
     "//src/developer/memory/mem",
     "//src/fonts",
     "//src/ui/a11y:a11y",
-  ]
-}
-
-group("sysmem-assistant") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/sysmem-assistant",
-    "//garnet/bin/sysmem-assistant:secmem-ta",
-    "//garnet/packages/prod:tee_manager",
   ]
 }
 
@@ -1006,6 +996,11 @@ group("tee_manager") {
     "//garnet/bin/tee_manager",
     "//garnet/bin/tee_manager:config",
   ]
+}
+
+# TODO(dustingreen): Remove after sysmem-assistant dep removed elsewhere.
+group("sysmem-assistant") {
+  testonly = true
 }
 
 group("goldfish-vulkan") {

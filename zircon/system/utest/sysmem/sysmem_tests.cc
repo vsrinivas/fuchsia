@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/sysinfo/c/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -12,13 +13,18 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
+#include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
+#include <zircon/limits.h>
 #include <zircon/pixelformat.h>
 
 #include <limits>
+#include <string>
+#include <thread>
 
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 #include <unittest/unittest.h>
 
 // We assume one sysmem since boot, for now.
@@ -39,18 +45,30 @@ zx_status_t connect_to_sysmem_driver(zx::channel* allocator2_client_param) {
   zx::channel driver_client;
   zx::channel driver_server;
   status = zx::channel::create(0, &driver_client, &driver_server);
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   status = fdio_service_connect(kSysmemDevicePath, driver_server.release());
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   zx::channel allocator2_client;
   zx::channel allocator2_server;
   status = zx::channel::create(0, &allocator2_client, &allocator2_server);
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   status = fuchsia_sysmem_DriverConnectorConnect(driver_client.get(), allocator2_server.release());
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   *allocator2_client_param = std::move(allocator2_client);
   return ZX_OK;
@@ -62,10 +80,16 @@ zx_status_t connect_to_sysmem_service(zx::channel* allocator2_client_param) {
   zx::channel allocator2_client;
   zx::channel allocator2_server;
   status = zx::channel::create(0, &allocator2_client, &allocator2_server);
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", allocator2_server.release());
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   *allocator2_client_param = std::move(allocator2_client);
   return ZX_OK;
@@ -75,7 +99,8 @@ zx_koid_t get_koid(zx_handle_t handle) {
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  ZX_ASSERT(status == ZX_OK);
   return info.koid;
 }
 
@@ -85,16 +110,225 @@ zx_status_t verify_connectivity(zx::channel& allocator2_client) {
   zx::channel collection_client;
   zx::channel collection_server;
   status = zx::channel::create(0, &collection_client, &collection_server);
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   status = fuchsia_sysmem_AllocatorAllocateNonSharedCollection(allocator2_client.get(),
                                                                collection_server.release());
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   status = fuchsia_sysmem_BufferCollectionSync(collection_client.get());
-  ASSERT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
 
   return ZX_OK;
+}
+
+zx_status_t make_single_participant_collection(zx::channel* collection_client_channel) {
+  // We could use AllocateNonSharedCollection() to implement this function, but we're already
+  // using AllocateNonSharedCollection() during verify_connectivity(), so instead just set up the
+  // more general (and more real) way here.
+
+  zx_status_t status;
+  zx::channel allocator2_client;
+  status = connect_to_sysmem_driver(&allocator2_client);
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::channel token_client;
+  zx::channel token_server;
+  status = zx::channel::create(0, &token_client, &token_server);
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client.get(),
+                                                            token_server.release());
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_client, &collection_server);
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  EXPECT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client.get(), token_client.release(), collection_server.release());
+  EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *collection_client_channel = std::move(collection_client);
+  return ZX_OK;
+}
+
+const std::string& GetBoardName() {
+  static std::string s_board_name;
+  if (s_board_name.empty()) {
+    constexpr char kSysInfoPath[] = "/dev/misc/sysinfo";
+    fbl::unique_fd sysinfo(open(kSysInfoPath, O_RDWR));
+    ZX_ASSERT(sysinfo);
+    zx::channel channel;
+    zx_status_t status =
+        fdio_get_service_handle(sysinfo.release(), channel.reset_and_get_address());
+    ZX_ASSERT(status == ZX_OK);
+
+    char board_name[fuchsia_sysinfo_SYSINFO_BOARD_NAME_LEN + 1];
+    size_t actual_size;
+    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(channel.get(), &status, board_name,
+                                                                 sizeof(board_name), &actual_size);
+    ZX_ASSERT(fidl_status == ZX_OK);
+    ZX_ASSERT(status == ZX_OK);
+    board_name[actual_size] = '\0';
+    printf("\nFound board %s\n", board_name);
+    s_board_name = std::string(board_name, actual_size);
+  }
+  return s_board_name;
+}
+
+bool is_board_astro_or_sherlock() {
+  const std::string& board_name = GetBoardName();
+  if (board_name == "astro") {
+    return true;
+  } else if (board_name == "sherlock") {
+    return true;
+  }
+  return false;
+}
+
+bool is_board_with_amlogic_secure() { return is_board_astro_or_sherlock(); }
+
+bool is_board_with_amlogic_secure_vdec() { return is_board_astro_or_sherlock(); }
+
+void nanosleep_duration(zx::duration duration) {
+  zx_status_t status = zx::nanosleep(zx::deadline_after(duration));
+  ZX_ASSERT(status == ZX_OK);
+}
+
+// Faulting on write to a mapping to the VMO can't be checked currently
+// because maybe it goes into CPU cache without faulting because 34580?
+class SecureVmoReadTester {
+public:
+  SecureVmoReadTester(zx::vmo secure_vmo);
+  ~SecureVmoReadTester();
+  static void AttemptReadFromSecureStaticFunction(void* arg);
+  bool IsReadFromSecureAThing();
+private:
+  void AttemptReadFromSecure();
+  zx::vmo secure_vmo_;
+  zx::vmar child_vmar_;
+  // volatile only so reads in the code actually read despite the value being
+  // discarded.
+  volatile uint8_t* map_addr_ = {};
+  // This is set to true just before the attempt to read.
+  std::atomic<bool> is_read_from_secure_attempted_ = false;
+  std::atomic<bool> is_read_from_secure_a_thing_ = false;
+  std::thread let_die_thread_;
+  std::atomic<bool> is_let_die_started_ = false;
+};
+
+SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo)
+  : secure_vmo_(std::move(secure_vmo)) {
+  // We need a child VMAR so we can clean up robustly without relying on a fault
+  // to occur at location where a VMO was recently mapped but which
+  // theoretically something else could be mapped unless we're specific with a
+  // VMAR that isn't letting something else get mapped there yet.
+  zx_vaddr_t child_vaddr;
+  zx_status_t status = zx::vmar::root_self()->allocate(
+      0, ZX_PAGE_SIZE, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, &child_vmar_, &child_vaddr);
+  ZX_ASSERT(status == ZX_OK);
+
+  uintptr_t map_addr_raw;
+  status = child_vmar_.map(0, secure_vmo_, 0, ZX_PAGE_SIZE,
+                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                           &map_addr_raw);
+  ZX_ASSERT(status == ZX_OK);
+  map_addr_ = reinterpret_cast<uint8_t*>(map_addr_raw);
+  ZX_ASSERT(reinterpret_cast<uint8_t*>(child_vaddr) == map_addr_);
+
+  // But currently the read doesn't visibily fault while the vaddr is mapped to
+  // a secure page.  Instead the read gets stuck and doesn't complete (perhaps
+  // internally faulting from kernel's point of view).  While that's not ideal,
+  // we can check that the thread doing the reading doesn't get anything from
+  // the read while mapped to a secure page, and then let the thread fault
+  // normally by unmapping the secure VMO.
+  let_die_thread_ = std::thread([this]{
+    is_let_die_started_ = true;
+    // Ensure is_read_from_secure_attempted_ becomes true before we start
+    // waiting.  This just increases the liklihood that we wait long enough
+    // for the read itself to potentially execute (expected to fault instead).
+    while (!is_read_from_secure_attempted_) {
+      nanosleep_duration(zx::msec(10));
+    }
+    // Wait 500ms for the read attempt to succed; the read attempt should not
+    // succeed.  The read attempt may fail immediately or may get stuck.  It's
+    // possible we might very occasionally not wait long enough for the read
+    // to have actually started - if that occurs the test will "pass" without
+    // having actually attempted the read.
+    nanosleep_duration(zx::msec(500));
+    // Let thread running fn die if it hasn't already (if it got stuck, let it
+    // no longer be stuck).
+    //
+    // By removing ZX_VM_PERM_READ, if the read is stuck, the read will cause a
+    // process-visible fault instead.  We don't zx_vmar_unmap() here because the
+    // syscall docs aren't completely clear on whether zx_vmar_unmap() might
+    // make the vaddr page available for other uses.
+    zx_status_t status = child_vmar_.protect(
+        reinterpret_cast<uintptr_t>(map_addr_), ZX_PAGE_SIZE, 0);
+    ZX_ASSERT(status == ZX_OK);
+  });
+
+  while (!is_let_die_started_) {
+    nanosleep_duration(zx::msec(10));
+  }
+}
+
+SecureVmoReadTester::~SecureVmoReadTester() {
+  if (let_die_thread_.joinable()) {
+    let_die_thread_.join();
+  }
+
+  child_vmar_.destroy();
+}
+
+void SecureVmoReadTester::AttemptReadFromSecureStaticFunction(void* arg) {
+  static_cast<SecureVmoReadTester*>(arg)->AttemptReadFromSecure();
+}
+
+bool SecureVmoReadTester::IsReadFromSecureAThing() {
+  ZX_ASSERT(is_let_die_started_);
+  ZX_ASSERT(is_read_from_secure_attempted_);
+  return is_read_from_secure_a_thing_;
+}
+
+void SecureVmoReadTester::AttemptReadFromSecure() {
+  ZX_ASSERT(is_let_die_started_);
+  ZX_ASSERT(!is_read_from_secure_attempted_);
+  is_read_from_secure_attempted_ = true;
+  // This attempt to read from a vaddr that's mapped to a secure paddr won't
+  // succeed.  For now the read gets stuck while mapped to secure memory, and
+  // then faults when we've unmapped the VMO.  This address is in a child VMAR
+  // so we know nothing else will be getting mapped to the vaddr.
+  (void)*((volatile uint8_t*)map_addr_);
+  // We don't expect this line to run.
+  is_read_from_secure_a_thing_ = true;
 }
 
 }  // namespace
@@ -130,28 +364,8 @@ extern "C" bool test_sysmem_service_connection(void) {
 extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
   BEGIN_TEST;
 
-  zx_status_t status;
-  zx::channel allocator2_client;
-  status = connect_to_sysmem_driver(&allocator2_client);
-  ASSERT_EQ(status, ZX_OK, "");
-
-  zx::channel token_client;
-  zx::channel token_server;
-  status = zx::channel::create(0, &token_client, &token_server);
-  ASSERT_EQ(status, ZX_OK, "");
-
-  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client.get(),
-                                                            token_server.release());
-  ASSERT_EQ(status, ZX_OK, "");
-
   zx::channel collection_client;
-  zx::channel collection_server;
-  status = zx::channel::create(0, &collection_client, &collection_server);
-  ASSERT_EQ(status, ZX_OK, "");
-
-  ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
-  status = fuchsia_sysmem_AllocatorBindSharedCollection(
-      allocator2_client.get(), token_client.release(), collection_server.release());
+  zx_status_t status = make_single_participant_collection(&collection_client);
   ASSERT_EQ(status, ZX_OK, "");
 
   BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
@@ -860,8 +1074,7 @@ extern "C" bool test_sysmem_constraints_retained_beyond_clean_close() {
   // BufferCollection views still exist per LogicalBufferCollection, but that
   // call wouldn't be meant to be used by normal clients, so it seems best to
   // avoid adding such a call.
-  status = zx_nanosleep(zx_deadline_after(ZX_MSEC(250)));
-  ASSERT_EQ(status, ZX_OK, "");
+  nanosleep_duration(zx::msec(250));
 
   ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
   status = fuchsia_sysmem_AllocatorBindSharedCollection(
@@ -1303,9 +1516,10 @@ extern "C" bool test_sysmem_contiguous_system_ram_is_recycled(void) {
     if (zx::clock::get_monotonic() > deadline_time) {
       // Otherwise, we'd potentially trigger the test watchdog.  So far we've only seen this happen
       // in QEMU environments.
-      printf("\ntest_sysmem_contiguous_system_ram_is_recycled() internal timeout - fake success - "
-             "total_bytes_allocated so far: %zu\n",
-             total_bytes_allocated);
+      printf(
+          "\ntest_sysmem_contiguous_system_ram_is_recycled() internal timeout - fake success - "
+          "total_bytes_allocated so far: %zu\n",
+          total_bytes_allocated);
       END_TEST;
       ZX_PANIC("unreachable\n");
     }
@@ -1753,6 +1967,147 @@ extern "C" bool test_sysmem_pixel_format_bgr24(void) {
   END_TEST;
 }
 
+extern "C" bool test_sysmem_heap_amlogic_secure(void) {
+  BEGIN_TEST;
+  if (!is_board_with_amlogic_secure()) {
+    END_TEST;
+  }
+
+  zx::channel collection_client;
+  zx_status_t status = make_single_participant_collection(&collection_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.video = fuchsia_sysmem_videoUsageHwDecoder;
+  constraints->min_buffer_count_for_camping = 4;
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+      .min_size_bytes = 64 * 1024,
+      .max_size_bytes = 128 * 1024,
+      .physically_contiguous_required = true,
+      .secure_required = true,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = false,
+      .inaccessible_domain_supported = true,
+      .heap_permitted_count = 1,
+      .heap_permitted = {fuchsia_sysmem_HeapType_AMLOGIC_SECURE},
+  };
+  ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(allocation_status, ZX_OK, "");
+
+  EXPECT_EQ(buffer_collection_info->buffer_count, 4, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+            fuchsia_sysmem_CoherencyDomain_INACCESSIBLE, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
+            fuchsia_sysmem_HeapType_AMLOGIC_SECURE, "");
+  EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+
+  for (uint32_t i = 0; i < 64; ++i) {
+    if (i < 4) {
+      EXPECT_NE(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+      uint64_t size_bytes = 0;
+      status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
+      ASSERT_EQ(status, ZX_OK, "");
+      EXPECT_EQ(size_bytes, 64 * 1024, "");
+    } else {
+      EXPECT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+    }
+  }
+
+  zx::vmo the_vmo = zx::vmo(buffer_collection_info->buffers[0].vmo);
+  buffer_collection_info->buffers[0].vmo = ZX_HANDLE_INVALID;
+  SecureVmoReadTester tester(std::move(the_vmo));
+  ASSERT_DEATH(tester.AttemptReadFromSecureStaticFunction, &tester, "");
+  ASSERT_FALSE(tester.IsReadFromSecureAThing());
+
+  END_TEST;
+}
+
+extern "C" bool test_sysmem_heap_amlogic_secure_vdec(void) {
+  BEGIN_TEST;
+  if (!is_board_with_amlogic_secure_vdec()) {
+    END_TEST;
+  }
+
+  zx::channel collection_client;
+  zx_status_t status = make_single_participant_collection(&collection_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
+  constraints->usage.video =
+      fuchsia_sysmem_videoUsageDecryptorOutput | fuchsia_sysmem_videoUsageHwDecoder;
+  constraints->min_buffer_count_for_camping = 4;
+  constraints->has_buffer_memory_constraints = true;
+  constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+      .min_size_bytes = 64 * 1024,
+      .max_size_bytes = 128 * 1024,
+      .physically_contiguous_required = true,
+      .secure_required = true,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = false,
+      .inaccessible_domain_supported = true,
+      .heap_permitted_count = 1,
+      .heap_permitted = {fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC},
+  };
+  ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                         constraints.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client.get(), &allocation_status, buffer_collection_info.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(allocation_status, ZX_OK, "");
+
+  EXPECT_EQ(buffer_collection_info->buffer_count, 4, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.size_bytes, 64 * 1024, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_physically_contiguous, true, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.is_secure, true, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.coherency_domain,
+            fuchsia_sysmem_CoherencyDomain_INACCESSIBLE, "");
+  EXPECT_EQ(buffer_collection_info->settings.buffer_settings.heap,
+            fuchsia_sysmem_HeapType_AMLOGIC_SECURE_VDEC, "");
+  EXPECT_EQ(buffer_collection_info->settings.has_image_format_constraints, false, "");
+
+  for (uint32_t i = 0; i < 64; ++i) {
+    if (i < 4) {
+      EXPECT_NE(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+      uint64_t size_bytes = 0;
+      status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
+      ASSERT_EQ(status, ZX_OK, "");
+      EXPECT_EQ(size_bytes, 64 * 1024, "");
+    } else {
+      EXPECT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+    }
+  }
+
+  zx::vmo the_vmo = zx::vmo(buffer_collection_info->buffers[0].vmo);
+  buffer_collection_info->buffers[0].vmo = ZX_HANDLE_INVALID;
+  SecureVmoReadTester tester(std::move(the_vmo));
+  ASSERT_DEATH(tester.AttemptReadFromSecureStaticFunction, &tester, "");
+  ASSERT_FALSE(tester.IsReadFromSecureAThing());
+
+  END_TEST;
+}
+
 // TODO(dustingreen): Add tests to cover more failure cases.
 
 // clang-format off
@@ -1775,5 +2130,7 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_none_usage_and_other_usage_from_single_participant_fails)
     RUN_TEST(test_sysmem_none_usage_with_separate_other_usage_succeeds)
     RUN_TEST(test_sysmem_pixel_format_bgr24)
+    RUN_TEST(test_sysmem_heap_amlogic_secure)
+    RUN_TEST(test_sysmem_heap_amlogic_secure_vdec)
 END_TEST_CASE(sysmem_tests)
 // clang-format on

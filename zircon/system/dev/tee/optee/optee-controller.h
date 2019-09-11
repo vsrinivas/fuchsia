@@ -23,6 +23,7 @@
 #include "optee-message.h"
 #include "optee-smc.h"
 #include "shared-memory.h"
+#include "sysmem-tee-server.h"
 
 namespace optee {
 
@@ -79,6 +80,7 @@ class OpteeController : public OpteeControllerBase, public OpteeControllerProtoc
   zx_status_t ExchangeCapabilities();
   zx_status_t InitializeSharedMemory();
   zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
+  zx_status_t CreateAndServeSysmemTee();
 
   static fuchsia_hardware_tee_DeviceConnector_ops_t kFidlOps;
 
@@ -88,6 +90,19 @@ class OpteeController : public OpteeControllerBase, public OpteeControllerProtoc
   uint32_t secure_world_capabilities_ = 0;
   fuchsia_tee_OsRevision os_revision_ = {};
   fbl::unique_ptr<SharedMemoryManager> shared_memory_manager_;
+
+  // Created by ddk_dispatcher_thead_.  Ownership transferred to sysmem_tee_server_thread_ by
+  // successful BindAsync().
+  std::optional<SysmemTeeServer> sysmem_tee_server_;
+  // DdkUnbind() sometimes must be handled async, because SysmemTeeServer::StopAsync() expects the
+  // DDK dispatcher thread to be available to service TEEC_* calls until done stopping.
+  fit::callback<void()> finish_unbind_;
+
+  thrd_t ddk_dispatcher_thread_ = {};
+  thrd_t sysmem_tee_server_thread_ = {};
+
+  // Last on purpose.
+  ClosureQueue ddk_loop_closure_queue_;
 };
 
 }  // namespace optee

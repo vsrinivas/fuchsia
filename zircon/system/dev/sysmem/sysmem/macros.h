@@ -7,8 +7,15 @@
 
 #include <ddk/debug.h>
 
-#define DRIVER_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+// severity can be ERROR, WARN, INFO, TRACE, SPEW.  See ddk/debug.h.
+//
+// Using ## __VA_ARGS__ instead of __VA_OPT__(,) __VA_ARGS__ for now, since
+// __VA_OPT__ doesn't seem to be available yet.
+#define LOG(severity, fmt, ...) \
+  zxlogf(severity, "[%s:%s:%d] " fmt "\n", "sysmem", __func__, __LINE__, ##__VA_ARGS__)
 
-#define DRIVER_INFO(fmt, ...) zxlogf(INFO, "[%s %d] " fmt, __func__, __LINE__, ##__VA_ARGS__)
+#define DRIVER_ERROR(fmt, ...) LOG(ERROR, fmt, ##__VA_ARGS__)
+
+#define DRIVER_INFO(fmt, ...) LOG(INFO, fmt, ##__VA_ARGS__)
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MACROS_H_

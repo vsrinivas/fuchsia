@@ -269,6 +269,7 @@ struct PowerProxyResponse {
 enum class SysmemOp {
   CONNECT,
   REGISTER_HEAP,
+  REGISTER_TEE,
 };
 
 struct SysmemProxyRequest {

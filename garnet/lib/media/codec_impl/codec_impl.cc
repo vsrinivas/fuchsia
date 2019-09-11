@@ -4,6 +4,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/closure-queue/closure_queue.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/codec_impl.h>
@@ -11,7 +12,6 @@
 
 #include <fbl/macros.h>
 
-#include "lib/media/codec_impl/closure_queue.h"
 #include "lib/syslog/cpp/logger.h"
 
 // "is_bound_checks" - In several lambdas that just send a message, we check
