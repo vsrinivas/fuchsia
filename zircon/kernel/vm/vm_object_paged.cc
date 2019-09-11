@@ -1575,7 +1575,12 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
       return ZX_ERR_NO_MEMORY;
     }
     zx_status_t status = AddPageLocked(res_page, offset);
-    DEBUG_ASSERT(status == ZX_OK);
+    if (status != ZX_OK) {
+      // AddPageLocked failing for any other reason is a programming error.
+      DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "status=%d\n", status);
+      pmm_free_page(res_page);
+      return status;
+    }
 
     // If ARM and not fully cached, clean/invalidate the page after zeroing it. Since
     // clones must be cached, we only need to check this here.
