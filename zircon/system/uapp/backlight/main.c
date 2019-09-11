@@ -11,7 +11,7 @@
 
 static void usage(char* argv[]) {
   printf("Usage: %s [--read|--off|<brightness-val>]\n", argv[0]);
-  printf("options:\n    <brightness-val>: 0-255\n");
+  printf("options:\n    <brightness-val>: 0.0-1.0\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -45,25 +45,25 @@ int main(int argc, char* argv[]) {
   }
 
   bool on;
-  uint32_t brightness;
+  double brightness;
   if (strcmp(argv[1], "--off") == 0) {
     on = false;
-    brightness = 0;
+    brightness = 0.0f;
   } else {
     char* endptr;
-    brightness = strtoul(argv[1], &endptr, 10);
+    brightness = strtod(argv[1], &endptr);
     if (endptr == argv[1] || *endptr != '\0') {
       usage(argv);
       return -1;
     }
-    if (brightness > 255) {
-      printf("Invalid brightness %d\n", brightness);
+    if (brightness < 0.0f || brightness > 1.0f) {
+      printf("Invalid brightness %f\n", brightness);
       return -1;
     }
     on = true;
   }
 
-  fuchsia_hardware_backlight_State state = {.backlight_on = on, .brightness = (uint8_t)brightness};
+  fuchsia_hardware_backlight_State state = {.backlight_on = on, .brightness = brightness};
   zx_status_t status = fuchsia_hardware_backlight_DeviceSetState(channel, &state);
   if (status != ZX_OK) {
     printf("Set brightness failed %d\n", status);
