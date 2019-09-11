@@ -7,19 +7,10 @@ library fuchsia.crash;
 using fuchsia.mem;
 using zx;
 
-/// Analyzes crashed processes, string exceptions from managed runtimes or
-/// kernel panic crashlogs.
-[Discoverable, Layout = "Simple"]
+/// Analyzes string exceptions from managed runtimes.
+[Discoverable, Layout = "Simple", Transitional = "deprecated in favor of fuchsia.feedback.CrashReporter"]
 protocol Analyzer {
     /// Requests that the crash analyzer handles the exception thrown by the
-    /// given `thread` in `process`.
-    ///
-    /// A typical implementation might print a crash dump to the system log or
-    /// upload a crash report to a server.
-    OnNativeException(handle<process> process,
-                      handle<thread> thread)
-        -> () error zx.status;
-
     /// Requests that the crash analyzer handles the exception thrown in the
     /// managed runtime.
     ///

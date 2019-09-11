@@ -22,7 +22,6 @@
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
 #include "src/developer/feedback/crashpad_agent/inspect_manager.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
@@ -50,10 +49,6 @@ class CrashpadAgent : public fuchsia::crash::Analyzer, public fuchsia::feedback:
   // |fuchsia::crash::Analyzer|
   //
   // TODO(DX-1820): delete once transitioned to fuchsia.feedback.CrashReporter.
-  void OnNativeException(zx::process process, zx::thread thread,
-                         OnNativeExceptionCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
   void OnManagedRuntimeException(std::string component_url,
                                  fuchsia::crash::ManagedRuntimeException exception,
                                  OnManagedRuntimeExceptionCallback callback) override;
