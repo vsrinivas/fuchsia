@@ -21,10 +21,8 @@
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/active_page_manager_container.h"
 #include "src/ledger/bin/app/commits_children_manager.h"
-#include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/heads_children_manager.h"
 #include "src/ledger/bin/app/ledger_impl.h"
-#include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -102,14 +100,14 @@ void PageManager::DeletePageStorage(fit::function<void(storage::Status)> callbac
     return;
   }
   // Block all page requests until MarkAvailable is called.
-  page_availability_manager_.MarkPageBusy(page_id_);
+  page_availability_manager_.MarkPageBusy();
   ledger_storage_->DeletePageStorage(
       page_id_,
       callback::MakeScoped(weak_factory_.GetWeakPtr(),
                            [this, callback = std::move(callback)](storage::Status status) {
                              // This may destruct this
                              // |PageManager|.
-                             page_availability_manager_.MarkPageAvailable(page_id_);
+                             page_availability_manager_.MarkPageAvailable();
                              callback(status);
                            }));
 }
@@ -175,34 +173,34 @@ void PageManager::StartPageSync() {
 
 void PageManager::InitActivePageManagerContainer(ActivePageManagerContainer* container,
                                                  fit::function<void(storage::Status)> callback) {
-  page_availability_manager_.OnPageAvailable(
-      page_id_, [this, container, callback = std::move(callback)]() mutable {
-        ledger_storage_->GetPageStorage(
-            page_id_, [this, container, callback = std::move(callback)](
-                          storage::Status status,
-                          std::unique_ptr<storage::PageStorage> page_storage) mutable {
-              if (status != storage::Status::OK && status != storage::Status::PAGE_NOT_FOUND) {
-                container->SetActivePageManager(status, nullptr);
-                callback(status);
-                return;
-              }
+  page_availability_manager_.OnPageAvailable([this, container,
+                                              callback = std::move(callback)]() mutable {
+    ledger_storage_->GetPageStorage(
+        page_id_,
+        [this, container, callback = std::move(callback)](
+            storage::Status status, std::unique_ptr<storage::PageStorage> page_storage) mutable {
+          if (status != storage::Status::OK && status != storage::Status::PAGE_NOT_FOUND) {
+            container->SetActivePageManager(status, nullptr);
+            callback(status);
+            return;
+          }
 
-              // If the page was found locally, just use it and return.
-              if (status == storage::Status::OK) {
-                FXL_DCHECK(page_storage);
-                container->SetActivePageManager(
-                    storage::Status::OK,
-                    NewActivePageManager(std::move(page_storage),
-                                         ActivePageManager::PageStorageState::AVAILABLE));
-              }
-              callback(status);
-            });
-      });
+          // If the page was found locally, just use it and return.
+          if (status == storage::Status::OK) {
+            FXL_DCHECK(page_storage);
+            container->SetActivePageManager(
+                storage::Status::OK,
+                NewActivePageManager(std::move(page_storage),
+                                     ActivePageManager::PageStorageState::AVAILABLE));
+          }
+          callback(status);
+        });
+  });
 }
 
 void PageManager::CreatePageStorage(LedgerImpl::Delegate::PageState page_state,
                                     ActivePageManagerContainer* container) {
-  page_availability_manager_.OnPageAvailable(page_id_, [this, page_state, container]() mutable {
+  page_availability_manager_.OnPageAvailable([this, page_state, container]() mutable {
     ledger_storage_->CreatePageStorage(
         page_id_, [this, page_state, container](
                       storage::Status status, std::unique_ptr<storage::PageStorage> page_storage) {

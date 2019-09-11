@@ -7,33 +7,29 @@
 
 #include <lib/fit/function.h>
 
-#include <map>
+#include <optional>
 #include <vector>
-
-#include "peridot/lib/convert/convert.h"
-#include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
 
-// Stores whether a given page is busy or available. After |MarkPageBusy| has
-// been called, all calls to |OnPageAvailable| will be delayed until a call to
-// |MarkPageAvailable|. By default, all pages are available.
+// Stores whether a page is busy or available. After |MarkPageBusy| has been called, all calls to
+// |OnPageAvailable| will be delayed until a call to |MarkPageAvailable|. By default the page is
+// available.
 class PageAvailabilityManager {
  public:
-  // Marks the page as busy and delays calling the callback in
-  // |OnPageAvailable| for this page. It is an error to call this method for a
-  // page that is already busy.
-  void MarkPageBusy(convert::ExtendedStringView page_id);
+  // Marks the page as busy and delays calling the callback in |OnPageAvailable| for the page. It is
+  // an error to call this method when the page is already busy.
+  void MarkPageBusy();
 
-  // Marks the page as available and calls any pending callbacks from
-  // |OnPageAvailable| for this page.
-  void MarkPageAvailable(convert::ExtendedStringView page_id);
+  // Marks the page as available and calls any pending callbacks from |OnPageAvailable| for this
+  // page. It is an error to call this method when the page is already available.
+  void MarkPageAvailable();
 
   // If the page is available calls the given callback directly. Otherwise,
   // the callback is registered util the page becomes available.
-  void OnPageAvailable(convert::ExtendedStringView page_id, fit::closure on_page_available);
+  void OnPageAvailable(fit::closure on_page_available);
 
-  // Checks whether there are no busy pages.
+  // Checks whether the page is available.
   bool IsEmpty();
 
   void set_on_empty(fit::closure on_empty_callback);
@@ -43,8 +39,8 @@ class PageAvailabilityManager {
   // set, calls on_empty_callback_.
   void CheckEmpty();
 
-  // For each busy page, stores the list of pending callbacks.
-  std::map<storage::PageId, std::vector<fit::closure>> busy_pages_;
+  // Stores the pending callbacks while the page is busy.
+  std::optional<std::vector<fit::closure>> on_available_callbacks_;
 
   fit::closure on_empty_callback_;
 };
