@@ -488,7 +488,6 @@ void ImagePipe2::CloseConnectionAndCleanUp() {
 }
 
 void ImagePipe2::OnConnectionError() {
-  FXL_CHECK(false);
   CloseConnectionAndCleanUp();
 }
 

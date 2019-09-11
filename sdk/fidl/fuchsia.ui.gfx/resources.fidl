@@ -8,7 +8,7 @@ using fuchsia.images;
 using fuchsia.ui.views;
 
 /// These are all of the types of resources that can be created within a
-/// `Session`.
+/// `Session`. Add new fields only to the bottom of the list.
 union ResourceArgs {
     // Memory resources.
     MemoryArgs memory;
@@ -61,10 +61,16 @@ union ResourceArgs {
     ViewArgs2 view2;
     ViewHolderArgs2 view_holder2;
     ViewArgs3 view3;
+    ImagePipe2Args image_pipe2;
 };
 
 struct ImagePipeArgs {
     request<fuchsia.images.ImagePipe> image_pipe_request;
+};
+
+/// `ImagePipe2` is a `Resource` that can be used as a `Texture` for a `Material`.
+struct ImagePipe2Args {
+    request<fuchsia.images.ImagePipe2> image_pipe_request;
 };
 
 /// `Memory` is a `Resource` that wraps a client-provided Zircon vmo to register
