@@ -66,7 +66,7 @@ static bool TestConcurrentIntEventDispatcherTeardown() {
   state.fetch_or(0xff00, ktl::memory_order_seq_cst);
   // Shutdown the test.
   zx_status_t status = thread_join(int_thread, nullptr, current_time() + ZX_SEC(5));
-  EXPECT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(status, ZX_OK);
 #endif
 
   END_TEST;

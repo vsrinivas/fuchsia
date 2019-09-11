@@ -59,10 +59,10 @@ bool KernelHandleCreate() {
   fbl::RefPtr<FakeDispatcher> dispatcher = FakeDispatcher::Create();
   {
     KernelHandle handle(dispatcher);
-    EXPECT_EQ(dispatcher.get(), handle.dispatcher().get(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0, "");
+    EXPECT_EQ(dispatcher.get(), handle.dispatcher().get());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -73,10 +73,10 @@ bool KernelHandleCreateUpcast() {
   fbl::RefPtr<FakeDispatcher> dispatcher = FakeDispatcher::Create();
   {
     KernelHandle<FakeDispatcherBase> handle(dispatcher);
-    EXPECT_EQ(dispatcher.get(), handle.dispatcher().get(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0, "");
+    EXPECT_EQ(dispatcher.get(), handle.dispatcher().get());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -90,11 +90,11 @@ bool KernelHandleReset() {
     KernelHandle handle(dispatcher);
 
     handle.reset(dispatcher2);
-    EXPECT_EQ(dispatcher2.get(), handle.dispatcher().get(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
-    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0, "");
+    EXPECT_EQ(dispatcher2.get(), handle.dispatcher().get());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
+    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -108,11 +108,11 @@ bool KernelHandleResetUpcast() {
     KernelHandle<FakeDispatcherBase> handle(dispatcher);
 
     handle.reset(dispatcher2);
-    EXPECT_EQ(dispatcher2.get(), handle.dispatcher().get(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
-    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0, "");
+    EXPECT_EQ(dispatcher2.get(), handle.dispatcher().get());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
+    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -124,8 +124,8 @@ bool KernelHandleResetToNull() {
   KernelHandle handle(dispatcher);
 
   handle.reset();
-  EXPECT_NULL(handle.dispatcher(), "");
-  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
+  EXPECT_NULL(handle.dispatcher());
+  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -137,9 +137,9 @@ bool KernelHandleRelease() {
   KernelHandle handle(dispatcher);
 
   fbl::RefPtr<FakeDispatcher> dispatcher_copy = handle.release();
-  EXPECT_NULL(handle.dispatcher(), "");
-  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0, "");
-  EXPECT_EQ(dispatcher.get(), dispatcher_copy.get(), "");
+  EXPECT_NULL(handle.dispatcher());
+  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0);
+  EXPECT_EQ(dispatcher.get(), dispatcher_copy.get());
 
   END_TEST;
 }
@@ -151,11 +151,11 @@ bool KernelHandleMoveConstructor() {
   KernelHandle handle(dispatcher);
   {
     KernelHandle new_handle(ktl::move(handle));
-    EXPECT_NULL(handle.dispatcher(), "");
-    EXPECT_NONNULL(new_handle.dispatcher(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0, "");
+    EXPECT_NULL(handle.dispatcher());
+    EXPECT_NONNULL(new_handle.dispatcher());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -167,11 +167,11 @@ bool KernelHandleMoveConstructorUpcast() {
   KernelHandle handle(dispatcher);
   {
     KernelHandle<FakeDispatcherBase> new_handle(ktl::move(handle));
-    EXPECT_NULL(handle.dispatcher(), "");
-    EXPECT_NONNULL(new_handle.dispatcher(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0, "");
+    EXPECT_NULL(handle.dispatcher());
+    EXPECT_NONNULL(new_handle.dispatcher());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -186,12 +186,12 @@ bool KernelHandleMoveAssignment() {
     KernelHandle handle2(dispatcher2);
 
     handle = ktl::move(handle2);
-    EXPECT_NONNULL(handle.dispatcher(), "");
-    EXPECT_NULL(handle2.dispatcher(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
-    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0, "");
+    EXPECT_NONNULL(handle.dispatcher());
+    EXPECT_NULL(handle2.dispatcher());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
+    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -206,12 +206,12 @@ bool KernelHandleMoveAssignmentUpcast() {
     KernelHandle handle2(dispatcher2);
 
     handle = ktl::move(handle2);
-    EXPECT_NONNULL(handle.dispatcher(), "");
-    EXPECT_NULL(handle2.dispatcher(), "");
-    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1, "");
-    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0, "");
+    EXPECT_NONNULL(handle.dispatcher());
+    EXPECT_NULL(handle2.dispatcher());
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 1);
+    EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 0);
   }
-  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1, "");
+  EXPECT_EQ(dispatcher2->on_zero_handles_calls(), 1);
 
   END_TEST;
 }
@@ -224,19 +224,18 @@ bool KernelHandleUpgrade() {
   // whether its on_zero_handles() has been called.
   KernelHandle<EventPairDispatcher> eventpair[2];
   zx_rights_t rights;
-  ASSERT_EQ(EventPairDispatcher::Create(&eventpair[0], &eventpair[1], &rights), ZX_OK, "");
+  ASSERT_EQ(EventPairDispatcher::Create(&eventpair[0], &eventpair[1], &rights), ZX_OK);
   {
     HandleOwner handle_owner;
     {
       handle_owner = Handle::Make(ktl::move(eventpair[0]), rights);
-      EXPECT_NULL(eventpair[0].dispatcher(), "");
-      EXPECT_TRUE(handle_owner, "");
-      EXPECT_EQ(handle_owner->rights(), rights, "");
+      EXPECT_NULL(eventpair[0].dispatcher());
+      EXPECT_TRUE(handle_owner);
+      EXPECT_EQ(handle_owner->rights(), rights);
     }
-    EXPECT_EQ(eventpair[1].dispatcher()->user_signal_peer(0, ZX_USER_SIGNAL_0), ZX_OK, "");
+    EXPECT_EQ(eventpair[1].dispatcher()->user_signal_peer(0, ZX_USER_SIGNAL_0), ZX_OK);
   }
-  EXPECT_EQ(eventpair[1].dispatcher()->user_signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED,
-            "");
+  EXPECT_EQ(eventpair[1].dispatcher()->user_signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED);
 
   END_TEST;
 }

@@ -310,8 +310,8 @@ static bool cancel_before_deadline() {
   timer_t t = TIMER_INITIAL_VALUE(t);
   const Deadline deadline = Deadline::no_slack(current_time() + ZX_HOUR(5));
   timer_set(&t, deadline, timer_cb, &arg);
-  ASSERT_TRUE(timer_cancel(&t), "");
-  ASSERT_FALSE(atomic_load(&arg.timer_fired), "");
+  ASSERT_TRUE(timer_cancel(&t));
+  ASSERT_FALSE(atomic_load(&arg.timer_fired));
   END_TEST;
 }
 
@@ -324,7 +324,7 @@ static bool cancel_after_fired() {
   timer_set(&t, deadline, timer_cb, &arg);
   while (!atomic_load(&arg.timer_fired)) {
   }
-  ASSERT_FALSE(timer_cancel(&t), "");
+  ASSERT_FALSE(timer_cancel(&t));
   END_TEST;
 }
 
@@ -344,8 +344,8 @@ static bool cancel_from_callback() {
   timer_set(&t, deadline, timer_cancel_cb, &arg);
   while (!atomic_load(&arg.timer_fired)) {
   }
-  ASSERT_FALSE(arg.result, "");
-  ASSERT_FALSE(timer_cancel(&t), "");
+  ASSERT_FALSE(arg.result);
+  ASSERT_FALSE(timer_cancel(&t));
   END_TEST;
 }
 
@@ -428,11 +428,11 @@ static bool trylock_or_cancel_canceled() {
     atomic_store(&arg.wait, 0);
 
     // See that timer_cancel returns false indicating that the timer ran.
-    ASSERT_FALSE(timer_cancel(&t), "");
+    ASSERT_FALSE(timer_cancel(&t));
   }
 
   // See that the timer failed to acquire the lock.
-  ASSERT_TRUE(arg.result, "");
+  ASSERT_TRUE(arg.result);
   END_TEST;
 }
 
@@ -477,7 +477,7 @@ static bool trylock_or_cancel_get_lock() {
   }
 
   // See that timer_cancel returns false indicating that the timer ran.
-  ASSERT_FALSE(timer_cancel(&t), "");
+  ASSERT_FALSE(timer_cancel(&t));
 
   // Note, we cannot assert the value of arg.result. We have both released the lock and canceled
   // the timer, but we don't know which of these events the timer observed first.

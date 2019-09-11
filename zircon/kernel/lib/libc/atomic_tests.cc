@@ -18,12 +18,12 @@ bool Load16Test() {
 
   {
     ktl::atomic<unsigned __int128> v = 0u;
-    EXPECT_EQ(v.load(), 0u, "");
+    EXPECT_EQ(v.load(), 0u);
   }
 
   {
     ktl::atomic<unsigned __int128> v = kValue;
-    EXPECT_EQ(v.load(), kValue, "");
+    EXPECT_EQ(v.load(), kValue);
   }
 
   END_TEST;
@@ -33,9 +33,9 @@ bool Store16Test() {
   BEGIN_TEST;
 
   ktl::atomic<unsigned __int128> v = 0u;
-  EXPECT_EQ(v.load(), 0u, "");
+  EXPECT_EQ(v.load(), 0u);
   v.store(kValue);
-  EXPECT_EQ(v.load(), kValue, "");
+  EXPECT_EQ(v.load(), kValue);
 
   END_TEST;
 }
@@ -47,9 +47,9 @@ bool CompareExchange16Test() {
     // Comparison fails.
     ktl::atomic<unsigned __int128> v = kValue;
     unsigned __int128 expected = kValue - 1;
-    EXPECT_FALSE(v.compare_exchange_strong(expected, 0u), "");
-    EXPECT_EQ(expected, kValue, "");
-    EXPECT_EQ(v.load(), kValue, "");
+    EXPECT_FALSE(v.compare_exchange_strong(expected, 0u));
+    EXPECT_EQ(expected, kValue);
+    EXPECT_EQ(v.load(), kValue);
   }
 
   {
@@ -57,9 +57,9 @@ bool CompareExchange16Test() {
     ktl::atomic<unsigned __int128> v = kValue;
     unsigned __int128 expected = kValue;
     constexpr unsigned __int128 kDesired = 0xaaaabbbbccccdddd;
-    EXPECT_TRUE(v.compare_exchange_strong(expected, kDesired), "");
-    EXPECT_EQ(expected, kValue, "");
-    EXPECT_EQ(v.load(), kDesired, "");
+    EXPECT_TRUE(v.compare_exchange_strong(expected, kDesired));
+    EXPECT_EQ(expected, kValue);
+    EXPECT_EQ(v.load(), kDesired);
   }
 
   END_TEST;

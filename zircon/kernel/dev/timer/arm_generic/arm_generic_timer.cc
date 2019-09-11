@@ -309,7 +309,7 @@ bool test_time_conversion_check_result(uint64_t a, uint64_t b, uint64_t limit) {
 
   if (a != b) {
     uint64_t diff = abs_int64(a - b);
-    ASSERT_LE(diff, limit, "");
+    ASSERT_LE(diff, limit);
   }
 
   END_TEST;
@@ -334,7 +334,7 @@ bool test_time_to_cntpct(uint32_t cntfrq) {
   affine::Ratio time_to_ticks;
   if (cntfrq == kCurTestFreq) {
     uint64_t tps = ticks_per_second();
-    ASSERT_LE(tps, ktl::numeric_limits<uint32_t>::max(), "");
+    ASSERT_LE(tps, ktl::numeric_limits<uint32_t>::max());
     cntfrq = static_cast<uint32_t>(tps);
     time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
   } else {
@@ -358,7 +358,7 @@ bool test_time_to_cntpct(uint32_t cntfrq) {
     if (!test_time_conversion_check_result(cntpct, expected_cntpct, 1)) {
       printf("FAIL: zx_time_to_cntpct(%" PRIu64 "): got %" PRIu64 ", expect %" PRIu64 "\n", vec,
              cntpct, expected_cntpct);
-      ASSERT_TRUE(false, "");
+      ASSERT_TRUE(false);
     }
   }
 
@@ -371,7 +371,7 @@ bool test_cntpct_to_time(uint32_t cntfrq) {
   affine::Ratio ticks_to_time;
   if (cntfrq == kCurTestFreq) {
     uint64_t tps = ticks_per_second();
-    ASSERT_LE(tps, ktl::numeric_limits<uint32_t>::max(), "");
+    ASSERT_LE(tps, ktl::numeric_limits<uint32_t>::max());
     cntfrq = static_cast<uint32_t>(tps);
     ticks_to_time = platform_get_ticks_to_time_ratio();
   } else {
@@ -395,7 +395,7 @@ bool test_cntpct_to_time(uint32_t cntfrq) {
     if (!test_time_conversion_check_result(zx_time, expected_zx_time, limit)) {
       printf("cntpct_to_zx_time(0x%" PRIx64 "): got 0x%" PRIx64 ", expect 0x%" PRIx64 "\n", cntpct,
              static_cast<uint64_t>(zx_time), static_cast<uint64_t>(expected_zx_time));
-      ASSERT_TRUE(false, "");
+      ASSERT_TRUE(false);
     }
   }
 

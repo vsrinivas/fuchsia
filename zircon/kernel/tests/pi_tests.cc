@@ -285,10 +285,10 @@ class TestThread {
   // Change base the priority of the thread
   bool SetBasePriority(int base_prio) {
     BEGIN_TEST;
-    ASSERT_NONNULL(thread_, "");
-    ASSERT_EQ(state_, State::STARTED, "");
-    ASSERT_GE(base_prio, TEST_LOWEST_PRIORITY, "");
-    ASSERT_LT(base_prio, TEST_HIGHEST_PRIORITY, "");
+    ASSERT_NONNULL(thread_);
+    ASSERT_EQ(state_, State::STARTED);
+    ASSERT_GE(base_prio, TEST_LOWEST_PRIORITY);
+    ASSERT_LT(base_prio, TEST_HIGHEST_PRIORITY);
 
     thread_set_priority(thread_, base_prio);
 
@@ -361,17 +361,17 @@ Barrier TestThread::allow_shutdown_;
 bool TestThread::Create(int initial_base_priority) {
   BEGIN_TEST;
 
-  ASSERT_NULL(thread_, "");
-  ASSERT_EQ(state_, State::INITIAL, "");
-  ASSERT_GE(initial_base_priority, TEST_LOWEST_PRIORITY, "");
-  ASSERT_LT(initial_base_priority, TEST_HIGHEST_PRIORITY, "");
+  ASSERT_NULL(thread_);
+  ASSERT_EQ(state_, State::INITIAL);
+  ASSERT_GE(initial_base_priority, TEST_LOWEST_PRIORITY);
+  ASSERT_LT(initial_base_priority, TEST_HIGHEST_PRIORITY);
 
   thread_ = thread_create(
       "pi_test_thread",
       [](void* ctx) -> int { return reinterpret_cast<TestThread*>(ctx)->ThreadEntry(); },
       reinterpret_cast<void*>(this), initial_base_priority);
 
-  ASSERT_NONNULL(thread_, "");
+  ASSERT_NONNULL(thread_);
 
   // Set the NO_BOOST flag on this thread so that the scheduler does not apply
   // any priority boost and we end up with deterministic effective priority
@@ -389,23 +389,23 @@ bool TestThread::Create(int initial_base_priority) {
 
 bool TestThread::DoStall() {
   BEGIN_TEST;
-  ASSERT_EQ(state_, State::CREATED, "");
-  ASSERT_FALSE(static_cast<bool>(op_), "");
+  ASSERT_EQ(state_, State::CREATED);
+  ASSERT_FALSE(static_cast<bool>(op_));
 
   op_ = []() {};
 
   state_ = State::WAITING_TO_START;
   thread_resume(thread_);
 
-  ASSERT_TRUE(WaitForBlocked(), "");
+  ASSERT_TRUE(WaitForBlocked());
 
   END_TEST;
 }
 
 bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, Deadline timeout) {
   BEGIN_TEST;
-  ASSERT_EQ(state_, State::CREATED, "");
-  ASSERT_FALSE(static_cast<bool>(op_), "");
+  ASSERT_EQ(state_, State::CREATED);
+  ASSERT_FALSE(static_cast<bool>(op_));
 
   op_ = [this, owned_wq, owner_thrd = owner ? owner->thread_ : nullptr, timeout]() {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
@@ -417,7 +417,7 @@ bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, 
   state_ = State::WAITING_TO_START;
   thread_resume(thread_);
 
-  ASSERT_TRUE(WaitForBlocked(), "");
+  ASSERT_TRUE(WaitForBlocked());
 
   END_TEST;
 }
@@ -428,7 +428,7 @@ bool TestThread::Reset(bool explicit_kill) {
   // If we are explicitly killing the thread as part of the test, then we
   // should not expect the shutdown barrier to be cleared.
   if (!explicit_kill) {
-    EXPECT_TRUE(allow_shutdown_.state(), "");
+    EXPECT_TRUE(allow_shutdown_.state());
   }
 
   constexpr zx_duration_t join_timeout = ZX_MSEC(500);
@@ -477,7 +477,7 @@ bool TestThread::Reset(bool explicit_kill) {
 
   state_ = State::INITIAL;
   op_ = nullptr;
-  ASSERT_NULL(thread_, "");
+  ASSERT_NULL(thread_);
 
   END_TEST;
 }
@@ -514,11 +514,11 @@ bool TestThread::WaitForBlocked() {
       break;
     }
     if (state != THREAD_RUNNING) {
-      ASSERT_EQ(THREAD_READY, state, "");
+      ASSERT_EQ(THREAD_READY, state);
     }
 
     zx_time_t now = current_time();
-    ASSERT_LT(now, deadline, "");
+    ASSERT_LT(now, deadline);
     thread_sleep_relative(poll_interval);
   }
 
@@ -570,13 +570,13 @@ bool pi_test_basic() {
       // Create 2 threads, one which will sit at the end of the priority
       // chain, and one which will exert priority pressure on the end of the
       // chain.
-      ASSERT_TRUE(blocking_thread.Create(END_PRIO), "");
-      ASSERT_TRUE(pressure_thread.Create(pressure_prio), "");
+      ASSERT_TRUE(blocking_thread.Create(END_PRIO));
+      ASSERT_TRUE(pressure_thread.Create(pressure_prio));
 
       // Start the first thread, wait for it to block, and verify that it's
       // priority is correct (it should not be changed).
-      ASSERT_TRUE(blocking_thread.DoStall(), "");
-      ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority(), "");
+      ASSERT_TRUE(blocking_thread.DoStall());
+      ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
 
       // Start the second thread, and have it block on the owned wait queue,
       // and declare the blocking thread to be the owner of the queue at the
@@ -585,8 +585,8 @@ bool pi_test_basic() {
       Deadline timeout = (rel_method == ReleaseMethod::TIMEOUT)
                              ? Deadline::no_slack(current_time() + ZX_MSEC(20))
                              : Deadline::infinite();
-      ASSERT_TRUE(pressure_thread.BlockOnOwnedQueue(&owq, &blocking_thread, timeout), "");
-      ASSERT_EQ(expected_prio, blocking_thread.effective_priority(), "");
+      ASSERT_TRUE(pressure_thread.BlockOnOwnedQueue(&owq, &blocking_thread, timeout));
+      ASSERT_EQ(expected_prio, blocking_thread.effective_priority());
 
       // Finally, release the thread from the owned wait queue based on
       // the release method we are testing.  We will either explicitly
@@ -607,7 +607,7 @@ bool pi_test_basic() {
           pressure_thread.Reset(true);
           break;
       }
-      ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority(), "");
+      ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
 
       print_prio_delta.cancel();
       print_rel_method.cancel();
@@ -637,24 +637,24 @@ bool pi_test_changing_priority() {
   TestThread::ResetShutdownBarrier();
 
   // Create our threads.
-  ASSERT_TRUE(blocking_thread.Create(TEST_DEFAULT_PRIORITY), "");
-  ASSERT_TRUE(pressure_thread.Create(TEST_LOWEST_PRIORITY), "");
+  ASSERT_TRUE(blocking_thread.Create(TEST_DEFAULT_PRIORITY));
+  ASSERT_TRUE(pressure_thread.Create(TEST_LOWEST_PRIORITY));
 
   // Start the first thread, wait for it to block, and verify that it's
   // priority is correct (it should not be changed).
-  ASSERT_TRUE(blocking_thread.DoStall(), "");
-  ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority(), "");
+  ASSERT_TRUE(blocking_thread.DoStall());
+  ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
 
   // Block the second thread behind the first.
-  ASSERT_TRUE(pressure_thread.BlockOnOwnedQueue(&owq, &blocking_thread), "");
-  ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority(), "");
+  ASSERT_TRUE(pressure_thread.BlockOnOwnedQueue(&owq, &blocking_thread));
+  ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
 
   // Run up and down through a bunch of priorities
   for (int ascending = TEST_LOWEST_PRIORITY; ascending < TEST_HIGHEST_PRIORITY; ++ascending) {
     PRINT_LOOP_ITER(ascending);
     int expected = fbl::max(ascending, TEST_DEFAULT_PRIORITY);
-    ASSERT_TRUE(pressure_thread.SetBasePriority(ascending), "");
-    ASSERT_EQ(expected, blocking_thread.effective_priority(), "");
+    ASSERT_TRUE(pressure_thread.SetBasePriority(ascending));
+    ASSERT_EQ(expected, blocking_thread.effective_priority());
     print_ascending.cancel();
   }
 
@@ -662,15 +662,15 @@ bool pi_test_changing_priority() {
        --descending) {
     PRINT_LOOP_ITER(descending);
     int expected = fbl::max(descending, TEST_DEFAULT_PRIORITY);
-    ASSERT_TRUE(pressure_thread.SetBasePriority(descending), "");
-    ASSERT_EQ(expected, blocking_thread.effective_priority(), "");
+    ASSERT_TRUE(pressure_thread.SetBasePriority(descending));
+    ASSERT_EQ(expected, blocking_thread.effective_priority());
     print_descending.cancel();
   }
 
   // Release the pressure thread, validate that the priority is what we
   // started with and we are done.
   owq.ReleaseAllThreads();
-  ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority(), "");
+  ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
 
   END_TEST;
 }
@@ -754,7 +754,7 @@ bool pi_test_chain() {
           }
 
           if (t.state() != TestThread::State::WAITING_FOR_SHUTDOWN) {
-            ASSERT_EQ(TestThread::State::STARTED, t.state(), "");
+            ASSERT_EQ(TestThread::State::STARTED, t.state());
           }
 
           // If the link behind us in the chain does not exist, or exists
@@ -762,14 +762,14 @@ bool pi_test_chain() {
           // pressure.  Otherwise, the expected priority should be the
           // priority of the maximum of the base priorities we have
           // traversed so far.
-          ASSERT_LT(tndx, countof(prio_map), "");
+          ASSERT_LT(tndx, countof(prio_map));
           if ((tndx >= countof(links)) || !links[tndx].active) {
             expected_prio = prio_map[tndx];
           } else {
             expected_prio = fbl::max(expected_prio, prio_map[tndx]);
           }
 
-          ASSERT_EQ(expected_prio, t.effective_priority(), "");
+          ASSERT_EQ(expected_prio, t.effective_priority());
           print_tndx.cancel();
         }
 
@@ -782,17 +782,17 @@ bool pi_test_chain() {
 
       // Create our threads.
       for (uint32_t tndx = 0; tndx < countof(threads); ++tndx) {
-        ASSERT_LT(tndx, countof(prio_map), "");
+        ASSERT_LT(tndx, countof(prio_map));
         PRINT_LOOP_ITER(tndx);
-        ASSERT_TRUE(threads[tndx].Create(prio_map[tndx]), "");
+        ASSERT_TRUE(threads[tndx].Create(prio_map[tndx]));
         print_tndx.cancel();
       }
 
       // Start the head of the chain, wait for it to block, then verify that its
       // priority is correct (it should not be changed).
       auto& chain_head = threads[0];
-      ASSERT_TRUE(chain_head.DoStall(), "");
-      ASSERT_TRUE(ValidatePriorities(), "");
+      ASSERT_TRUE(chain_head.DoStall());
+      ASSERT_TRUE(ValidatePriorities());
 
       // Start each of the threads in the chain one at a time.  Make sure that the
       // pressure of the threads in the chain is properly transmitted each time.
@@ -800,9 +800,9 @@ bool pi_test_chain() {
         PRINT_LOOP_ITER(tndx);
 
         auto& link = links[tndx - 1];
-        ASSERT_TRUE(threads[tndx].BlockOnOwnedQueue(&link.queue, &threads[tndx - 1]), "");
+        ASSERT_TRUE(threads[tndx].BlockOnOwnedQueue(&link.queue, &threads[tndx - 1]));
         link.active = true;
-        ASSERT_TRUE(ValidatePriorities(), "");
+        ASSERT_TRUE(ValidatePriorities());
 
         print_tndx.cancel();
       }
@@ -813,11 +813,11 @@ bool pi_test_chain() {
       for (auto link_ndx : release_ordering) {
         PRINT_LOOP_ITER(link_ndx);
 
-        ASSERT_LT(link_ndx, countof(links), "");
+        ASSERT_LT(link_ndx, countof(links));
         auto& link = links[link_ndx];
         link.queue.ReleaseAllThreads();
         link.active = false;
-        ASSERT_TRUE(ValidatePriorities(), "");
+        ASSERT_TRUE(ValidatePriorities());
 
         print_link_ndx.cancel();
       }
@@ -883,13 +883,13 @@ bool pi_test_multi_waiter() {
       CreateDistribution(prio_map, PRIORITY_GENERATORS[pgen_ndx]);
 
       // Create all of the threads.
-      ASSERT_TRUE(blocking_thread.Create(bt_prio), "");
+      ASSERT_TRUE(blocking_thread.Create(bt_prio));
       for (uint32_t waiter_ndx = 0; waiter_ndx < countof(waiters); ++waiter_ndx) {
         PRINT_LOOP_ITER(waiter_ndx);
 
         auto& w = waiters[waiter_ndx];
         w.prio = prio_map[waiter_ndx];
-        ASSERT_TRUE(w.thread.Create(w.prio), "");
+        ASSERT_TRUE(w.thread.Create(w.prio));
 
         print_waiter_ndx.cancel();
       }
@@ -903,7 +903,7 @@ bool pi_test_multi_waiter() {
         // All threads in the test who are not the current owner should have
         // their effective priorty be equal to their base priority
         if (&blocking_thread != current_owner) {
-          ASSERT_EQ(bt_prio, blocking_thread.effective_priority(), "");
+          ASSERT_EQ(bt_prio, blocking_thread.effective_priority());
         }
 
         for (uint32_t waiter_ndx = 0; waiter_ndx < countof(waiters); ++waiter_ndx) {
@@ -911,7 +911,7 @@ bool pi_test_multi_waiter() {
 
           auto& w = waiters[waiter_ndx];
           if (&w.thread != current_owner) {
-            ASSERT_EQ(prio_map[waiter_ndx], w.thread.effective_priority(), "");
+            ASSERT_EQ(prio_map[waiter_ndx], w.thread.effective_priority());
           }
 
           print_waiter_ndx.cancel();
@@ -919,21 +919,21 @@ bool pi_test_multi_waiter() {
 
         // The current owner (if any) should have the max priority across all of
         // the waiters, and its own base priority.
-        ASSERT_NONNULL(current_owner, "");
+        ASSERT_NONNULL(current_owner);
         int expected_prio = current_owner->base_priority();
         for (const auto& w : waiters) {
           if (w.is_waiting && (expected_prio < w.prio)) {
             expected_prio = w.prio;
           }
         }
-        ASSERT_EQ(expected_prio, current_owner->effective_priority(), "");
+        ASSERT_EQ(expected_prio, current_owner->effective_priority());
 
         END_TEST;
       };
 
       // Start the blocking thread.
-      ASSERT_TRUE(blocking_thread.DoStall(), "");
-      ASSERT_TRUE(ValidatePriorities(), "");
+      ASSERT_TRUE(blocking_thread.DoStall());
+      ASSERT_TRUE(ValidatePriorities());
 
       // Start each of the threads and have them block on the blocking_queue,
       // declaring blocking_thread to be the owner as they go.  Verify that the
@@ -943,9 +943,9 @@ bool pi_test_multi_waiter() {
         PRINT_LOOP_ITER(waiter_ndx);
 
         auto& w = waiters[waiter_ndx];
-        ASSERT_TRUE(w.thread.BlockOnOwnedQueue(&blocking_queue, current_owner), "");
+        ASSERT_TRUE(w.thread.BlockOnOwnedQueue(&blocking_queue, current_owner));
         w.is_waiting = true;
-        ASSERT_TRUE(ValidatePriorities(), "");
+        ASSERT_TRUE(ValidatePriorities());
 
         print_waiter_ndx.cancel();
       }
@@ -983,19 +983,19 @@ bool pi_test_multi_waiter() {
         // Sanity checks.  Make sure that the new owner exists, and is not the
         // same as the old owner.  Also make sure that none of the other threads
         // have been released but have not been recognized yet.
-        ASSERT_NONNULL(new_owner, "");
-        ASSERT_NE(new_owner, current_owner, "");
+        ASSERT_NONNULL(new_owner);
+        ASSERT_NE(new_owner, current_owner);
         for (auto& w : waiters) {
           if (w.is_waiting) {
-            ASSERT_EQ(TestThread::State::STARTED, w.thread.state(), "");
+            ASSERT_EQ(TestThread::State::STARTED, w.thread.state());
           } else {
-            ASSERT_EQ(TestThread::State::WAITING_FOR_SHUTDOWN, w.thread.state(), "");
+            ASSERT_EQ(TestThread::State::WAITING_FOR_SHUTDOWN, w.thread.state());
           }
         }
         current_owner = new_owner;
 
         // Validate our priorities.
-        ASSERT_TRUE(ValidatePriorities(), "");
+        ASSERT_TRUE(ValidatePriorities());
 
         print_tndx.cancel();
       }
@@ -1062,13 +1062,13 @@ bool pi_test_multi_owned_queues() {
       CreateDistribution(prio_map, PRIORITY_GENERATORS[pgen_ndx]);
 
       // Create all of the threads.
-      ASSERT_TRUE(blocking_thread.Create(bt_prio), "");
+      ASSERT_TRUE(blocking_thread.Create(bt_prio));
       for (uint32_t queue_ndx = 0; queue_ndx < countof(queues); ++queue_ndx) {
         PRINT_LOOP_ITER(queue_ndx);
 
         auto& q = queues[queue_ndx];
         q.prio = prio_map[queue_ndx];
-        ASSERT_TRUE(q.thread.Create(q.prio), "");
+        ASSERT_TRUE(q.thread.Create(q.prio));
 
         print_queue_ndx.cancel();
       }
@@ -1084,7 +1084,7 @@ bool pi_test_multi_owned_queues() {
         // the blocking thread.
         int max_pressure = -1;
         for (const auto& q : queues) {
-          ASSERT_EQ(q.prio, q.thread.effective_priority(), "");
+          ASSERT_EQ(q.prio, q.thread.effective_priority());
           if (q.is_waiting) {
             max_pressure = fbl::max(max_pressure, q.prio);
           }
@@ -1094,7 +1094,7 @@ bool pi_test_multi_owned_queues() {
           PRINT_LOOP_ITER(queue_ndx);
           const auto& q = queues[queue_ndx];
 
-          ASSERT_EQ(q.prio, q.thread.effective_priority(), "");
+          ASSERT_EQ(q.prio, q.thread.effective_priority());
           if (q.is_waiting) {
             max_pressure = fbl::max(max_pressure, q.prio);
           }
@@ -1105,14 +1105,14 @@ bool pi_test_multi_owned_queues() {
         // Now that we know the pressure which is being applied to the
         // blocking thread, verify its effective priority.
         int expected_prio = fbl::max(max_pressure, bt_prio);
-        ASSERT_EQ(expected_prio, blocking_thread.effective_priority(), "");
+        ASSERT_EQ(expected_prio, blocking_thread.effective_priority());
 
         END_TEST;
       };
 
       // Start the blocking thread.
-      ASSERT_TRUE(blocking_thread.DoStall(), "");
-      ASSERT_TRUE(ValidatePriorities(), "");
+      ASSERT_TRUE(blocking_thread.DoStall());
+      ASSERT_TRUE(ValidatePriorities());
 
       // Start each of the threads and have them block on their associated
       // queue, declaring blocking_thread to be the owner of their queue
@@ -1121,9 +1121,9 @@ bool pi_test_multi_owned_queues() {
         PRINT_LOOP_ITER(queue_ndx);
 
         auto& q = queues[queue_ndx];
-        ASSERT_TRUE(q.thread.BlockOnOwnedQueue(&q.queue, &blocking_thread), "");
+        ASSERT_TRUE(q.thread.BlockOnOwnedQueue(&q.queue, &blocking_thread));
         q.is_waiting = true;
-        ASSERT_TRUE(ValidatePriorities(), "");
+        ASSERT_TRUE(ValidatePriorities());
 
         print_queue_ndx.cancel();
       }
@@ -1136,7 +1136,7 @@ bool pi_test_multi_owned_queues() {
         auto& q = queues[queue_ndx];
         q.queue.ReleaseOneThread();
         q.is_waiting = false;
-        ASSERT_TRUE(ValidatePriorities(), "");
+        ASSERT_TRUE(ValidatePriorities());
 
         print_queue_ndx.cancel();
       }
@@ -1183,7 +1183,7 @@ bool pi_test_cycle() {
   // Create each thread
   for (uint32_t tndx = 0; tndx < countof(nodes); ++tndx) {
     PRINT_LOOP_ITER(tndx);
-    ASSERT_TRUE(nodes[tndx].thread.Create(prio_map[tndx]), "");
+    ASSERT_TRUE(nodes[tndx].thread.Create(prio_map[tndx]));
     print_tndx.cancel();
   }
 
@@ -1198,13 +1198,13 @@ bool pi_test_cycle() {
 
     auto owner_thread = &nodes[(tndx + 1) % countof(nodes)].thread;
     auto link_ptr = &nodes[tndx].link;
-    ASSERT_TRUE(nodes[tndx].thread.BlockOnOwnedQueue(link_ptr, owner_thread), "");
+    ASSERT_TRUE(nodes[tndx].thread.BlockOnOwnedQueue(link_ptr, owner_thread));
 
     for (uint32_t validation_ndx = 0; validation_ndx <= tndx; ++validation_ndx) {
       PRINT_LOOP_ITER(validation_ndx);
 
       int expected_prio = prio_map[(tndx == (countof(nodes) - 1)) ? tndx : validation_ndx];
-      ASSERT_EQ(expected_prio, nodes[validation_ndx].thread.effective_priority(), "");
+      ASSERT_EQ(expected_prio, nodes[validation_ndx].thread.effective_priority());
 
       print_validation_ndx.cancel();
     }
@@ -1269,62 +1269,62 @@ bool pi_test_zx4153() {
   constexpr int kT1BoostPrio = 20;
 
   // Create the threads.
-  ASSERT_TRUE(T1.Create(kT1InitialPrio), "");
-  ASSERT_TRUE(T2.Create(kT2InitialPrio), "");
+  ASSERT_TRUE(T1.Create(kT1InitialPrio));
+  ASSERT_TRUE(T2.Create(kT2InitialPrio));
 
-  ASSERT_EQ(T1.base_priority(), kT1InitialPrio, "");
-  ASSERT_EQ(T1.inherited_priority(), -1, "");
-  ASSERT_EQ(T1.effective_priority(), kT1InitialPrio, "");
+  ASSERT_EQ(T1.base_priority(), kT1InitialPrio);
+  ASSERT_EQ(T1.inherited_priority(), -1);
+  ASSERT_EQ(T1.effective_priority(), kT1InitialPrio);
 
-  ASSERT_EQ(T2.base_priority(), kT2InitialPrio, "");
-  ASSERT_EQ(T2.inherited_priority(), -1, "");
-  ASSERT_EQ(T2.effective_priority(), kT2InitialPrio, "");
+  ASSERT_EQ(T2.base_priority(), kT2InitialPrio);
+  ASSERT_EQ(T2.inherited_priority(), -1);
+  ASSERT_EQ(T2.effective_priority(), kT2InitialPrio);
 
   // Form the cycle, verify the priorities
-  ASSERT_TRUE(T1.BlockOnOwnedQueue(&Q2, &T2), "");
-  ASSERT_TRUE(T2.BlockOnOwnedQueue(&Q1, &T1), "");
+  ASSERT_TRUE(T1.BlockOnOwnedQueue(&Q2, &T2));
+  ASSERT_TRUE(T2.BlockOnOwnedQueue(&Q1, &T1));
 
-  ASSERT_EQ(T1.base_priority(), kT1InitialPrio, "");
-  ASSERT_EQ(T1.inherited_priority(), kT2InitialPrio, "");
-  ASSERT_EQ(T1.effective_priority(), kT2InitialPrio, "");
+  ASSERT_EQ(T1.base_priority(), kT1InitialPrio);
+  ASSERT_EQ(T1.inherited_priority(), kT2InitialPrio);
+  ASSERT_EQ(T1.effective_priority(), kT2InitialPrio);
 
-  ASSERT_EQ(T2.base_priority(), kT2InitialPrio, "");
-  ASSERT_EQ(T2.inherited_priority(), kT2InitialPrio, "");
-  ASSERT_EQ(T2.effective_priority(), kT2InitialPrio, "");
+  ASSERT_EQ(T2.base_priority(), kT2InitialPrio);
+  ASSERT_EQ(T2.inherited_priority(), kT2InitialPrio);
+  ASSERT_EQ(T2.effective_priority(), kT2InitialPrio);
 
   // Boost T1's priority.
-  ASSERT_TRUE(T1.SetBasePriority(kT1BoostPrio), "");
+  ASSERT_TRUE(T1.SetBasePriority(kT1BoostPrio));
 
-  ASSERT_EQ(T1.base_priority(), kT1BoostPrio, "");
-  ASSERT_EQ(T1.inherited_priority(), kT1BoostPrio, "");
-  ASSERT_EQ(T1.effective_priority(), kT1BoostPrio, "");
+  ASSERT_EQ(T1.base_priority(), kT1BoostPrio);
+  ASSERT_EQ(T1.inherited_priority(), kT1BoostPrio);
+  ASSERT_EQ(T1.effective_priority(), kT1BoostPrio);
 
-  ASSERT_EQ(T2.base_priority(), kT2InitialPrio, "");
-  ASSERT_EQ(T2.inherited_priority(), kT1BoostPrio, "");
-  ASSERT_EQ(T2.effective_priority(), kT1BoostPrio, "");
+  ASSERT_EQ(T2.base_priority(), kT2InitialPrio);
+  ASSERT_EQ(T2.inherited_priority(), kT1BoostPrio);
+  ASSERT_EQ(T2.effective_priority(), kT1BoostPrio);
 
   // Relax T1's priority.  The cycle's priority cannot relax yet.
-  ASSERT_TRUE(T1.SetBasePriority(kT1InitialPrio), "");
+  ASSERT_TRUE(T1.SetBasePriority(kT1InitialPrio));
 
-  ASSERT_EQ(T1.base_priority(), kT1InitialPrio, "");
-  ASSERT_EQ(T1.inherited_priority(), kT1BoostPrio, "");
-  ASSERT_EQ(T1.effective_priority(), kT1BoostPrio, "");
+  ASSERT_EQ(T1.base_priority(), kT1InitialPrio);
+  ASSERT_EQ(T1.inherited_priority(), kT1BoostPrio);
+  ASSERT_EQ(T1.effective_priority(), kT1BoostPrio);
 
-  ASSERT_EQ(T2.base_priority(), kT2InitialPrio, "");
-  ASSERT_EQ(T2.inherited_priority(), kT1BoostPrio, "");
-  ASSERT_EQ(T2.effective_priority(), kT1BoostPrio, "");
+  ASSERT_EQ(T2.base_priority(), kT2InitialPrio);
+  ASSERT_EQ(T2.inherited_priority(), kT1BoostPrio);
+  ASSERT_EQ(T2.effective_priority(), kT1BoostPrio);
 
   // Release ownership of Q1, breaking the cycle.  T2 should feel the pressure
   // from T1, but T1 should not be inheriting any priority anymore.
   Q1.AssignOwner(nullptr);
 
-  ASSERT_EQ(T1.base_priority(), kT1InitialPrio, "");
-  ASSERT_EQ(T1.inherited_priority(), -1, "");
-  ASSERT_EQ(T1.effective_priority(), kT1InitialPrio, "");
+  ASSERT_EQ(T1.base_priority(), kT1InitialPrio);
+  ASSERT_EQ(T1.inherited_priority(), -1);
+  ASSERT_EQ(T1.effective_priority(), kT1InitialPrio);
 
-  ASSERT_EQ(T2.base_priority(), kT2InitialPrio, "");
-  ASSERT_EQ(T2.inherited_priority(), kT1InitialPrio, "");
-  ASSERT_EQ(T2.effective_priority(), kT2InitialPrio, "");
+  ASSERT_EQ(T2.base_priority(), kT2InitialPrio);
+  ASSERT_EQ(T2.inherited_priority(), kT1InitialPrio);
+  ASSERT_EQ(T2.effective_priority(), kT2InitialPrio);
 
   // Success!  Let the cleanup AutoCall do its job.
 

@@ -8,13 +8,13 @@ bool test_gic_translator_translate() {
   arm_gicv2::CpuMaskTranslator translator;
 
   translator.SetGicIdForLogicalId(0, 7);
-  ASSERT_EQ(0b10000000u, translator.GetGicMask(0), "");
+  ASSERT_EQ(0b10000000u, translator.GetGicMask(0));
 
   translator.SetGicIdForLogicalId(1, 2);
-  ASSERT_EQ(0b00000100u, translator.GetGicMask(1), "");
+  ASSERT_EQ(0b00000100u, translator.GetGicMask(1));
 
   translator.SetGicIdForLogicalId(2, 0);
-  ASSERT_EQ(0b00000001u, translator.GetGicMask(2), "");
+  ASSERT_EQ(0b00000001u, translator.GetGicMask(2));
 
   END_TEST;
 }
@@ -28,8 +28,8 @@ bool test_gic_translator_translate_mask() {
   translator.SetGicIdForLogicalId(1, 2);
   translator.SetGicIdForLogicalId(2, 0);
 
-  ASSERT_EQ(0b10000101u, translator.LogicalMaskToGic(0b00000111), "");
-  ASSERT_EQ(0b10000000u, translator.LogicalMaskToGic(0b00000001), "");
+  ASSERT_EQ(0b10000101u, translator.LogicalMaskToGic(0b00000111));
+  ASSERT_EQ(0b10000000u, translator.LogicalMaskToGic(0b00000001));
 
   END_TEST;
 }

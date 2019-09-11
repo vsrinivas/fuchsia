@@ -49,8 +49,8 @@ bool empty_ctor() {
   fbl::Name<Size> name;
   name.get(sizeof(out), out);
 
-  EXPECT_EQ(out[0], 0, "");
-  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[0], 0);
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)));
 
   END_TEST;
 }
@@ -65,8 +65,8 @@ bool named_ctor_empty() {
   fbl::Name<Size> name("", 1);
   name.get(sizeof(out), out);
 
-  EXPECT_EQ(out[0], 0, "");
-  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[0], 0);
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)));
 
   END_TEST;
 }
@@ -81,9 +81,9 @@ bool named_ctor_small() {
   fbl::Name<Size> name("a", 2);
   name.get(sizeof(out), out);
 
-  EXPECT_EQ(out[0], 'a', "");
-  EXPECT_EQ(out[1], 0, "");
-  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[0], 'a');
+  EXPECT_EQ(out[1], 0);
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)));
 
   END_TEST;
 }
@@ -103,10 +103,10 @@ bool named_ctor_exact() {
   name.get(sizeof(out), out);
 
   for (size_t idx = 0; idx < Size - 1; ++idx) {
-    EXPECT_EQ(out[idx], 'z', "");
+    EXPECT_EQ(out[idx], 'z');
   }
-  EXPECT_EQ(out[Size - 1], 0, "");
-  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[Size - 1], 0);
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)));
 
   END_TEST;
 }
@@ -128,10 +128,10 @@ bool named_ctor_overflow() {
   name.get(sizeof(out), out);
 
   for (size_t idx = 0; idx < Size - 1; ++idx) {
-    EXPECT_EQ(out[idx], 'z', "");
+    EXPECT_EQ(out[idx], 'z');
   }
-  EXPECT_EQ(out[Size - 1], 0, "");
-  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)), "");
+  EXPECT_EQ(out[Size - 1], 0);
+  EXPECT_TRUE(buffer_invariants_hold(out, sizeof(out)));
 
   END_TEST;
 }
@@ -146,8 +146,8 @@ bool zero_sized_output_buffer() {
   fbl::Name<Size> name("a", 2);
   name.get(0, out);
 
-  EXPECT_EQ(out[0], fill, "");
-  EXPECT_EQ(out[1], fill, "");
+  EXPECT_EQ(out[0], fill);
+  EXPECT_EQ(out[1], fill);
 
   END_TEST;
 }
@@ -175,12 +175,12 @@ bool output_buffer_size() {
     snprintf(msg, sizeof(msg), "idx=%zu", idx);
     EXPECT_EQ(out[idx], 'z', msg);
   }
-  EXPECT_EQ(out[OutSize - 1], 0, "");
+  EXPECT_EQ(out[OutSize - 1], 0);
 
   // Check that the extra fill is intact.
-  EXPECT_TRUE(buffer_invariants_hold(out, OutSize), "");
-  EXPECT_EQ(out[OutSize], fill, "");
-  EXPECT_EQ(out[OutSize + 1], fill, "");
+  EXPECT_TRUE(buffer_invariants_hold(out, OutSize));
+  EXPECT_EQ(out[OutSize], fill);
+  EXPECT_EQ(out[OutSize + 1], fill);
 
   END_TEST;
 }

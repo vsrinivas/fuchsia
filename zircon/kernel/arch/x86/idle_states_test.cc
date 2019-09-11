@@ -30,10 +30,10 @@ bool test_c1_only() {
   BEGIN_TEST;
 
   X86IdleStates states(&kC1OnlyIdleStates);
-  ASSERT_EQ(states.NumStates(), 1U, "");
+  ASSERT_EQ(states.NumStates(), 1U);
   X86IdleState* state = states.PickIdleState();
-  EXPECT_EQ(strcmp(state->Name(), "C1"), 0, "");
-  EXPECT_EQ(state->MwaitHint(), 0x00u, "");
+  EXPECT_EQ(strcmp(state->Name(), "C1"), 0);
+  EXPECT_EQ(state->MwaitHint(), 0x00u);
 
   END_TEST;
 }
@@ -42,31 +42,31 @@ bool test_kbl() {
   BEGIN_TEST;
 
   X86IdleStates states(&kKabyLakeIdleStates);
-  ASSERT_EQ(states.NumStates(), 4U, "");
+  ASSERT_EQ(states.NumStates(), 4U);
 
   X86IdleState* state = states.PickIdleState();
-  EXPECT_EQ(strcmp(state->Name(), "C1"), 0, "");
-  EXPECT_EQ(state->MwaitHint(), 0x00u, "");
+  EXPECT_EQ(strcmp(state->Name(), "C1"), 0);
+  EXPECT_EQ(state->MwaitHint(), 0x00u);
 
   states.RecordDuration(zx_duration_from_usec(3U));
   state = states.PickIdleState();
-  EXPECT_EQ(strcmp(state->Name(), "C1"), 0, "");
-  EXPECT_EQ(state->MwaitHint(), 0x00u, "");
+  EXPECT_EQ(strcmp(state->Name(), "C1"), 0);
+  EXPECT_EQ(state->MwaitHint(), 0x00u);
 
   states.RecordDuration(zx_duration_from_usec(4U));
   state = states.PickIdleState();
-  EXPECT_EQ(strcmp(state->Name(), "C1E"), 0, "");
-  EXPECT_EQ(state->MwaitHint(), 0x01u, "");
+  EXPECT_EQ(strcmp(state->Name(), "C1E"), 0);
+  EXPECT_EQ(state->MwaitHint(), 0x01u);
 
   states.RecordDuration(zx_duration_from_usec(34U));
   state = states.PickIdleState();
-  EXPECT_EQ(strcmp(state->Name(), "C3"), 0, "");
-  EXPECT_EQ(state->MwaitHint(), 0x20u, "");
+  EXPECT_EQ(strcmp(state->Name(), "C3"), 0);
+  EXPECT_EQ(state->MwaitHint(), 0x20u);
 
   states.RecordDuration(zx_duration_from_usec(334U));
   state = states.PickIdleState();
-  EXPECT_EQ(strcmp(state->Name(), "C6"), 0, "");
-  EXPECT_EQ(state->MwaitHint(), 0x50u, "");
+  EXPECT_EQ(strcmp(state->Name(), "C6"), 0);
+  EXPECT_EQ(state->MwaitHint(), 0x50u);
 
   END_TEST;
 }

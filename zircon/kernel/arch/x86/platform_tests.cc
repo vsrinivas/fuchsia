@@ -27,7 +27,7 @@ namespace {
     arch_disable_ints();
     // Test read_msr for an MSR that is known to always exist on x64.
     uint64_t val = read_msr(X86_MSR_IA32_LSTAR);
-    EXPECT_NE(val, 0ull, "");
+    EXPECT_NE(val, 0ull);
 
     // Test write_msr to write that value back.
     write_msr(X86_MSR_IA32_LSTAR, val);
@@ -41,7 +41,7 @@ namespace {
     uint64_t bad_val;
     // AMD MSRC001_2xxx are only readable via Processor Debug.
     auto bad_status = read_msr_safe(0xC0012000, &bad_val);
-    EXPECT_NE(bad_status, ZX_OK, "");
+    EXPECT_NE(bad_status, ZX_OK);
 #endif
 
     // Test read_msr_on_cpu.
@@ -51,7 +51,7 @@ namespace {
         continue;
       }
       uint64_t fmask = read_msr_on_cpu(/*cpu=*/i, X86_MSR_IA32_FMASK);
-      EXPECT_EQ(initial_fmask, fmask, "");
+      EXPECT_EQ(initial_fmask, fmask);
     }
 
     // Test write_msr_on_cpu
@@ -108,19 +108,19 @@ namespace {
 
     // Intel Xeon E5-2690 V4 is Broadwell
     EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdXeon2690v4)->x86_microarch,
-              X86_MICROARCH_INTEL_BROADWELL, "");
+              X86_MICROARCH_INTEL_BROADWELL);
 
     // Intel Celeron J3455 is Goldmont
     EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdCeleronJ3455)->x86_microarch,
-              X86_MICROARCH_INTEL_GOLDMONT, "");
+              X86_MICROARCH_INTEL_GOLDMONT);
 
     // AMD A4-9120C is Bulldozer
     EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdAmdA49120C)->x86_microarch,
-              X86_MICROARCH_AMD_BULLDOZER, "");
+              X86_MICROARCH_AMD_BULLDOZER);
 
     // AMD Ryzen Threadripper 2970WX is Zen
     EXPECT_EQ(get_microarch_config(&cpu_id::kCpuIdThreadRipper2970wx)->x86_microarch,
-              X86_MICROARCH_AMD_ZEN, "");
+              X86_MICROARCH_AMD_ZEN);
 
     END_TEST;
   }
@@ -136,7 +136,7 @@ namespace {
           ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
-      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
     }
 
     {
@@ -147,7 +147,7 @@ namespace {
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
-      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
     }
 
     {
@@ -159,7 +159,7 @@ namespace {
       data.leaf7 = {.reg = {0x0, 0x21c27ab, 0x0, 0x9c000000}};
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
-      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
     }
 
     {
@@ -173,7 +173,7 @@ namespace {
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
-      EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
     }
 
     {
@@ -190,7 +190,7 @@ namespace {
       FakeMsrAccess fake_msrs = {};
       {
         cpu_id::FakeCpuId cpu(data);
-        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+        EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
       }
 
       // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have Meltdown, reports via RDCL_NO
@@ -202,7 +202,7 @@ namespace {
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
       {
         cpu_id::FakeCpuId cpu(data);
-        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+        EXPECT_FALSE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
       }
     }
 
@@ -210,7 +210,7 @@ namespace {
       // Intel(R) Celeron J4005 (Goldmont+ / Gemini Lake) _does_ have Meltdown,
       // IA32_ARCH_CAPABILITIES[0] = 0
       auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-      ASSERT_TRUE(ac.check(), "");
+      ASSERT_TRUE(ac.check());
       data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
       data->leaf1 = {.reg = {0x706A1, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
       data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
@@ -219,7 +219,7 @@ namespace {
       cpu_id::FakeCpuId cpu(*data.get());
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0xA};  // microcode 2c -> Ah; 2e -> 6ah
-      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_meltdown(&cpu, &fake_msrs));
     }
 
     END_TEST;
@@ -235,7 +235,7 @@ namespace {
           ~(1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
-      EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs));
     }
 
     {
@@ -246,7 +246,7 @@ namespace {
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
-      EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs));
     }
 
     {
@@ -260,7 +260,7 @@ namespace {
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
-      EXPECT_FALSE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
+      EXPECT_FALSE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs));
     }
 
     {
@@ -277,7 +277,7 @@ namespace {
       FakeMsrAccess fake_msrs = {};
       // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
-      EXPECT_FALSE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs), "");
+      EXPECT_FALSE(x86_intel_cpu_has_l1tf(&cpu, &fake_msrs));
     }
 
     END_TEST;
@@ -289,7 +289,7 @@ namespace {
     {
       // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
       FakeMsrAccess fake_msrs;
-      EXPECT_TRUE(x86_intel_cpu_has_mds(&cpu_id::kCpuIdXeon2690v4, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_mds(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
     }
 
     {
@@ -300,7 +300,7 @@ namespace {
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
-      EXPECT_TRUE(x86_intel_cpu_has_mds(&cpu, &fake_msrs), "");
+      EXPECT_TRUE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
     }
 
     {
@@ -314,7 +314,7 @@ namespace {
       cpu_id::FakeCpuId cpu(data);
       FakeMsrAccess fake_msrs = {};
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
-      EXPECT_FALSE(x86_intel_cpu_has_mds(&cpu, &fake_msrs), "");
+      EXPECT_FALSE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
     }
 
     {
@@ -330,7 +330,7 @@ namespace {
       FakeMsrAccess fake_msrs = {};
       // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
       fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
-      EXPECT_FALSE(x86_intel_cpu_has_mds(&cpu, &fake_msrs), "");
+      EXPECT_FALSE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
     }
 
     END_TEST;
@@ -343,7 +343,7 @@ namespace {
       // Test an Intel Xeon E5-2690 V4
       cpu_id::TestDataSet data = cpu_id::kTestDataXeon2690v4;
       cpu_id::FakeCpuId cpu(data);
-      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
+      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu));
     }
 
     {
@@ -355,7 +355,7 @@ namespace {
       data.leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
 
       cpu_id::FakeCpuId cpu(data);
-      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
+      EXPECT_TRUE(x86_intel_cpu_has_swapgs_bug(&cpu));
     }
 
     {
@@ -366,7 +366,7 @@ namespace {
       data.leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
       data.leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
       cpu_id::FakeCpuId cpu(data);
-      EXPECT_FALSE(x86_intel_cpu_has_swapgs_bug(&cpu), "");
+      EXPECT_FALSE(x86_intel_cpu_has_swapgs_bug(&cpu));
     }
 
     END_TEST;
@@ -401,13 +401,13 @@ namespace {
 
       // Reject an all-zero patch.
       EXPECT_FALSE(
-          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}), "");
+          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}));
 
       // Reject patch with non-matching processor signature.
       fake_patch[0] = 0x1;
       fake_patch[4] = intel_make_microcode_checksum(fake_patch, sizeof(fake_patch));
       EXPECT_FALSE(
-          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}), "");
+          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}));
 
       // Expect matching patch to pass
       fake_patch[0] = 0x1;
@@ -416,7 +416,7 @@ namespace {
       fake_patch[4] = 0;
       fake_patch[4] = intel_make_microcode_checksum(fake_patch, sizeof(fake_patch));
       EXPECT_TRUE(
-          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}), "");
+          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}));
       // Real header from 2019-01-15, rev 38
       fake_patch[0] = 0x1;
       fake_patch[1] = 0x38;
@@ -426,7 +426,7 @@ namespace {
       fake_patch[4] = 0;
       fake_patch[4] = intel_make_microcode_checksum(fake_patch, sizeof(fake_patch));
       EXPECT_TRUE(
-          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}), "");
+          x86_intel_check_microcode_patch(&cpu, &fake_msrs, {fake_patch, sizeof(fake_patch)}));
     }
 
     END_TEST;
@@ -456,13 +456,13 @@ namespace {
     uint32_t current_patch_level = x86_intel_get_patch_level();
     fake_patch[1] = current_patch_level;
     x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
-    EXPECT_FALSE(msrs.written_, "");
+    EXPECT_FALSE(msrs.written_);
 
     // Expect that a newer patch is loaded.
     fake_patch[1] = current_patch_level + 1;
     x86_intel_load_microcode_patch(&cpu, &msrs, {fake_patch, sizeof(fake_patch)});
-    EXPECT_TRUE(msrs.written_, "");
-    EXPECT_EQ(msrs.msr_index_, X86_MSR_IA32_BIOS_UPDT_TRIG, "");
+    EXPECT_TRUE(msrs.written_);
+    EXPECT_EQ(msrs.msr_index_, X86_MSR_IA32_BIOS_UPDT_TRIG);
 
     END_TEST;
   }

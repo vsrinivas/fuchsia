@@ -21,13 +21,13 @@ bool overwrite_valid_channel_fails() {
 
   KernelHandle<ChannelDispatcher> channels[4];
   zx_rights_t rights;
-  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights), "");
-  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights), "");
+  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights));
+  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights));
 
   Exceptionate exceptionate(ExceptionPort::Type::THREAD);
-  ASSERT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[0]), 0, 0), "");
+  ASSERT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[0]), 0, 0));
 
-  EXPECT_EQ(ZX_ERR_ALREADY_BOUND, exceptionate.SetChannel(ktl::move(channels[2]), 0, 0), "");
+  EXPECT_EQ(ZX_ERR_ALREADY_BOUND, exceptionate.SetChannel(ktl::move(channels[2]), 0, 0));
 
   END_TEST;
 }
@@ -37,14 +37,14 @@ bool overwrite_invalid_channel_succeeds() {
 
   KernelHandle<ChannelDispatcher> channels[4];
   zx_rights_t rights;
-  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights), "");
-  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights), "");
+  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights));
+  ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights));
 
   Exceptionate exceptionate(ExceptionPort::Type::THREAD);
-  ASSERT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[0]), 0, 0), "");
+  ASSERT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[0]), 0, 0));
 
   channels[1].reset();
-  EXPECT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[2]), 0, 0), "");
+  EXPECT_EQ(ZX_OK, exceptionate.SetChannel(ktl::move(channels[2]), 0, 0));
 
   END_TEST;
 }

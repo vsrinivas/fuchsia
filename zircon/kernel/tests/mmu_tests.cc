@@ -161,10 +161,10 @@ static bool test_large_region_protect() {
     for (unsigned j = 0; j < fbl::count_of(target_vaddrs); j++) {
       uint retrieved_flags = 0;
       paddr_t pa;
-      EXPECT_EQ(ZX_OK, aspace.Query(target_vaddrs[j], &pa, &retrieved_flags), "");
-      EXPECT_EQ(target_vaddrs[j] - va, pa, "");
+      EXPECT_EQ(ZX_OK, aspace.Query(target_vaddrs[j], &pa, &retrieved_flags));
+      EXPECT_EQ(target_vaddrs[j] - va, pa);
 
-      EXPECT_EQ(i == j ? ARCH_MMU_FLAG_PERM_READ : arch_rw_flags, retrieved_flags, "");
+      EXPECT_EQ(i == j ? ARCH_MMU_FLAG_PERM_READ : arch_rw_flags, retrieved_flags);
     }
 
     err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
@@ -212,7 +212,7 @@ static bool test_mapping_oom() {
   });
 
   for (unsigned i = 0; i < kMappingPageCount; i++) {
-    ASSERT_EQ(pmm_alloc_page(0, mapping_pages + i, mapping_paddrs + i), ZX_OK, "");
+    ASSERT_EQ(pmm_alloc_page(0, mapping_pages + i, mapping_paddrs + i), ZX_OK);
   }
 
   // Try to create the mapping with a limited number of pages available to
@@ -240,8 +240,8 @@ static bool test_mapping_oom() {
     if (err == ZX_OK) {
       map_success = true;
       size_t unmapped;
-      EXPECT_EQ(aspace.Unmap(kMappingStart, kMappingPageCount, &unmapped), ZX_OK, "");
-      EXPECT_EQ(unmapped, kMappingPageCount, "");
+      EXPECT_EQ(aspace.Unmap(kMappingStart, kMappingPageCount, &unmapped), ZX_OK);
+      EXPECT_EQ(unmapped, kMappingPageCount);
     } else {
       // The arm aspace code isn't set up to return ZX_ERR_NO_MEMORY.
       avail_mmu_pages++;
@@ -251,7 +251,7 @@ static bool test_mapping_oom() {
     // when the mapping failed part way through.
     err = aspace.Destroy();
     ASSERT_EQ(err, ZX_OK, "destroy aspace");
-    ASSERT_TRUE(list_is_empty(&node), "");
+    ASSERT_TRUE(list_is_empty(&node));
   }
 
   END_TEST;

@@ -34,16 +34,16 @@ bool test_flat_to_heap_simple() {
   FlatTopo topo = SimpleTopology();
 
   Graph graph;
-  ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
-  ASSERT_EQ(3u, graph.processors().size(), "");
+  ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count));
+  ASSERT_EQ(3u, graph.processors().size());
 
   // Test lookup.
   system_topology::Node* node;
-  ASSERT_EQ(ZX_OK, graph.ProcessorByLogicalId(1, &node), "");
-  ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_PROCESSOR, node->entity_type, "");
-  ASSERT_EQ(ZBI_TOPOLOGY_PROCESSOR_PRIMARY, node->entity.processor.flags, "");
-  ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_CLUSTER, node->parent->entity_type, "");
-  ASSERT_EQ(1, node->parent->entity.cluster.performance_class, "");
+  ASSERT_EQ(ZX_OK, graph.ProcessorByLogicalId(1, &node));
+  ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_PROCESSOR, node->entity_type);
+  ASSERT_EQ(ZBI_TOPOLOGY_PROCESSOR_PRIMARY, node->entity.processor.flags);
+  ASSERT_EQ(ZBI_TOPOLOGY_ENTITY_CLUSTER, node->parent->entity_type);
+  ASSERT_EQ(1, node->parent->entity.cluster.performance_class);
 
   END_TEST;
 }
@@ -53,8 +53,8 @@ bool test_flat_to_heap_complex() {
   FlatTopo topo = ComplexTopology();
 
   Graph graph;
-  ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
-  ASSERT_EQ(32u, graph.processors().size(), "");
+  ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count));
+  ASSERT_EQ(32u, graph.processors().size());
 
   END_TEST;
 }
@@ -64,8 +64,8 @@ bool test_flat_to_heap_walk_result() {
   FlatTopo topo = ComplexTopology();
 
   Graph graph;
-  ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
-  ASSERT_EQ(32u, graph.processors().size(), "");
+  ASSERT_EQ(ZX_OK, Graph::Initialize(&graph, topo.nodes, topo.node_count));
+  ASSERT_EQ(32u, graph.processors().size());
 
   // For each processor we walk all the way up the graph.
   for (Node* processor : graph.processors()) {
@@ -95,7 +95,7 @@ bool test_validate_processor_not_leaf() {
   topo.nodes[1].entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
 
   Graph graph;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count));
 
   END_TEST;
 }
@@ -108,7 +108,7 @@ bool test_validate_leaf_not_processor() {
   topo.nodes[4].entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
 
   Graph graph;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count));
 
   END_TEST;
 }
@@ -121,7 +121,7 @@ bool test_validate_cycle() {
   topo.nodes[1].parent_index = 4;
 
   Graph graph;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count));
 
   END_TEST;
 }
@@ -136,7 +136,7 @@ bool test_validate_cycle_shared_parent() {
   topo.nodes[2].parent_index = 4;
 
   Graph graph;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count));
 
   END_TEST;
 }
@@ -153,7 +153,7 @@ bool test_validate_hierarchical_storage() {
   topo.nodes[2].parent_index = 4;
 
   Graph graph;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count), "");
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Graph::Initialize(&graph, topo.nodes, topo.node_count));
 
   END_TEST;
 }

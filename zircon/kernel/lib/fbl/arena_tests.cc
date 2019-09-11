@@ -19,28 +19,28 @@ struct TestObj {
 static bool init_null_name_succeeds() {
   BEGIN_TEST;
   Arena arena;
-  EXPECT_EQ(ZX_OK, arena.Init(nullptr, sizeof(TestObj), 16), "");
+  EXPECT_EQ(ZX_OK, arena.Init(nullptr, sizeof(TestObj), 16));
   END_TEST;
 }
 
 static bool init_zero_ob_size_fails() {
   BEGIN_TEST;
   Arena arena;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", 0, 16), "");
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", 0, 16));
   END_TEST;
 }
 
 static bool init_large_ob_size_fails() {
   BEGIN_TEST;
   Arena arena;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", PAGE_SIZE + 1, 16), "");
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", PAGE_SIZE + 1, 16));
   END_TEST;
 }
 
 static bool init_zero_count_fails() {
   BEGIN_TEST;
   Arena arena;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", sizeof(TestObj), 0), "");
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, arena.Init("name", sizeof(TestObj), 0));
   END_TEST;
 }
 
@@ -50,14 +50,14 @@ static bool start_and_end_look_good() {
   static const size_t expected_size = num_slots * sizeof(TestObj);
 
   Arena arena;
-  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots));
 
-  EXPECT_NONNULL(arena.start(), "");
-  EXPECT_NONNULL(arena.end(), "");
+  EXPECT_NONNULL(arena.start());
+  EXPECT_NONNULL(arena.end());
   auto start = reinterpret_cast<vaddr_t>(arena.start());
   auto end = reinterpret_cast<vaddr_t>(arena.end());
-  EXPECT_LT(start, end, "");
-  EXPECT_GE(end - start, expected_size, "");
+  EXPECT_LT(start, end);
+  EXPECT_GE(end - start, expected_size);
   END_TEST;
 }
 
@@ -66,13 +66,13 @@ static bool in_range_tests() {
   static const size_t num_slots = (2 * PAGE_SIZE) / sizeof(TestObj);
 
   Arena arena;
-  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots));
 
   auto start = reinterpret_cast<char*>(arena.start());
 
   // Nothing is allocated yet, so not even the start address
   // should be in range.
-  EXPECT_FALSE(arena.in_range(start), "");
+  EXPECT_FALSE(arena.in_range(start));
 
   // Allocate some objects, and check that each is within range.
   static const int nobjs = 16;
@@ -118,12 +118,12 @@ static bool out_of_memory() {
   static const size_t num_slots = (2 * PAGE_SIZE) / sizeof(TestObj);
 
   Arena arena;
-  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots));
 
   // Allocate all of the data objects.
   fbl::AllocChecker ac;
   ktl::unique_ptr<void*[]> objs = ktl::unique_ptr<void*[]>(new (&ac) void*[num_slots]);
-  EXPECT_TRUE(ac.check(), "");
+  EXPECT_TRUE(ac.check());
   void** top = &objs[0];
   for (size_t i = 0; i < num_slots; i++) {
     char msg[32];
@@ -133,10 +133,10 @@ static bool out_of_memory() {
   }
 
   // Any further allocations should return nullptr.
-  EXPECT_NULL(arena.Alloc(), "");
-  EXPECT_NULL(arena.Alloc(), "");
-  EXPECT_NULL(arena.Alloc(), "");
-  EXPECT_NULL(arena.Alloc(), "");
+  EXPECT_NULL(arena.Alloc());
+  EXPECT_NULL(arena.Alloc());
+  EXPECT_NULL(arena.Alloc());
+  EXPECT_NULL(arena.Alloc());
 
   // Free two objects.
   arena.Free(*--top);
@@ -144,11 +144,11 @@ static bool out_of_memory() {
 
   // Two allocations should succeed; any further should fail.
   *top++ = arena.Alloc();
-  EXPECT_NONNULL(top[-1], "");
+  EXPECT_NONNULL(top[-1]);
   *top++ = arena.Alloc();
-  EXPECT_NONNULL(top[-1], "");
-  EXPECT_NULL(arena.Alloc(), "");
-  EXPECT_NULL(arena.Alloc(), "");
+  EXPECT_NONNULL(top[-1]);
+  EXPECT_NULL(arena.Alloc());
+  EXPECT_NULL(arena.Alloc());
 
   // Free all objects.
   // Nothing much to check except that it doesn't crash.
@@ -192,7 +192,7 @@ static bool committing_tests() {
   static const size_t num_slots = (64 * PAGE_SIZE) / sizeof(TestObj);
 
   Arena arena;
-  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots), "");
+  EXPECT_EQ(ZX_OK, arena.Init("name", sizeof(TestObj), num_slots));
 
   auto start = reinterpret_cast<vaddr_t>(arena.start());
   auto end = reinterpret_cast<vaddr_t>(arena.end());
@@ -200,46 +200,46 @@ static bool committing_tests() {
   // Nothing is allocated yet, so no pages should be committed.
   size_t committed;
   size_t uncommitted;
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(0u, committed, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(0u, committed);
+  EXPECT_GT(uncommitted, 0u);
 
   // Allocate an object.
   auto obj = reinterpret_cast<vaddr_t>(arena.Alloc());
-  EXPECT_NE(0u, obj, "");
+  EXPECT_NE(0u, obj);
   size_t atotal = sizeof(TestObj);
 
   // The page containing the object should be committed.
   auto ps = ROUNDDOWN(obj, PAGE_SIZE);
   auto pe = ROUNDUP(obj + sizeof(TestObj), PAGE_SIZE);
-  EXPECT_TRUE(count_committed_pages(ps, pe, &committed, &uncommitted), "");
-  EXPECT_GT(committed, 0u, "");
-  EXPECT_EQ(0u, uncommitted, "");
+  EXPECT_TRUE(count_committed_pages(ps, pe, &committed, &uncommitted));
+  EXPECT_GT(committed, 0u);
+  EXPECT_EQ(0u, uncommitted);
 
   // The first handful of pages should also become committed, but the rest
   // should stay ucommitted.
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_GT(committed, 0u, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_GT(committed, 0u);
+  EXPECT_GT(uncommitted, 0u);
 
   // Fill the committed pages with objects; the set of committed pages
   // shouldn't change.
   auto orig_committed = committed;
   auto orig_uncommitted = uncommitted;
   while (atotal + sizeof(TestObj) <= orig_committed * PAGE_SIZE) {
-    EXPECT_NONNULL(arena.Alloc(), "");
+    EXPECT_NONNULL(arena.Alloc());
     atotal += sizeof(TestObj);
   }
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(orig_committed, committed, "");
-  EXPECT_EQ(orig_uncommitted, uncommitted, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(orig_committed, committed);
+  EXPECT_EQ(orig_uncommitted, uncommitted);
 
   // Allocating one more object should cause more pages to be committed.
-  EXPECT_NONNULL(arena.Alloc(), "");
+  EXPECT_NONNULL(arena.Alloc());
   atotal += sizeof(TestObj);
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_LT(orig_committed, committed, "");
-  EXPECT_GT(orig_uncommitted, uncommitted, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_LT(orig_committed, committed);
+  EXPECT_GT(orig_uncommitted, uncommitted);
 
   // TODO(dbort): Test uncommitting if Arena ever learns to decommit pages.
   END_TEST;
@@ -273,7 +273,7 @@ static bool uncommitting_tests() {
 
   Arena arena;
   // Use a small data slot size (1) to keep our memory usage down.
-  EXPECT_EQ(ZX_OK, arena.Init("name", 1, num_slots), "");
+  EXPECT_EQ(ZX_OK, arena.Init("name", 1, num_slots));
 
   // Get the extent of the control pool.
   vaddr_t start;
@@ -287,16 +287,16 @@ static bool uncommitting_tests() {
   // Nothing is allocated yet, so no control pages should be committed.
   size_t committed;
   size_t uncommitted;
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(num_pages, committed + uncommitted, "");
-  EXPECT_EQ(0u, committed, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(num_pages, committed + uncommitted);
+  EXPECT_EQ(0u, committed);
+  EXPECT_GT(uncommitted, 0u);
 
   // Allocate all of the data objects. Hold onto the pointers so we can free
   // them.
   fbl::AllocChecker ac;
   ktl::unique_ptr<void*[]> objs = ktl::unique_ptr<void*[]>(new (&ac) void*[num_slots]);
-  EXPECT_TRUE(ac.check(), "");
+  EXPECT_TRUE(ac.check());
   void** top = &objs[0];
   for (size_t i = 0; i < num_slots; i++) {
     char msg[32];
@@ -307,23 +307,23 @@ static bool uncommitting_tests() {
 
   // We still shouldn't see any control pages committed, becase no objects
   // have been freed yet.
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(num_pages, committed + uncommitted, "");
-  EXPECT_EQ(0u, committed, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(num_pages, committed + uncommitted);
+  EXPECT_EQ(0u, committed);
+  EXPECT_GT(uncommitted, 0u);
 
   // Demonstrate that we've allocated all of the data objects.
   void* no = arena.Alloc();
-  EXPECT_NULL(no, "");
+  EXPECT_NULL(no);
 
   // Free a data object.
   arena.Free(*--top);
 
   // We should now see some committed pages inside the control pool.
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(num_pages, committed + uncommitted, "");
-  EXPECT_GT(committed, 0u, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(num_pages, committed + uncommitted);
+  EXPECT_GT(committed, 0u);
+  EXPECT_GT(uncommitted, 0u);
 
   // Free all of the data objects.
   while (top > objs.get()) {
@@ -331,15 +331,15 @@ static bool uncommitting_tests() {
   }
 
   // All of the control pages should be committed.
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(num_pages, committed + uncommitted, "");
-  EXPECT_EQ(committed, num_pages, "");
-  EXPECT_EQ(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(num_pages, committed + uncommitted);
+  EXPECT_EQ(committed, num_pages);
+  EXPECT_EQ(uncommitted, 0u);
 
   // Allocate half of the data objects, freeing up half of the free nodes
   // (and thus half of the control slots).
   auto orig_committed = committed;
-  ASSERT_EQ(top, objs.get(), "");
+  ASSERT_EQ(top, objs.get());
   for (size_t i = 0; i < num_slots / 2; i++) {
     char msg[32];
     snprintf(msg, sizeof(msg), "[%zu]", i);
@@ -348,10 +348,10 @@ static bool uncommitting_tests() {
   }
 
   // The number of committed pages should have dropped.
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(num_pages, committed + uncommitted, "");
-  EXPECT_LT(committed, orig_committed, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(num_pages, committed + uncommitted);
+  EXPECT_LT(committed, orig_committed);
+  EXPECT_GT(uncommitted, 0u);
 
   // Free more control slots (by allocating data objects) until we see more
   // unmapping happen.
@@ -362,31 +362,31 @@ static bool uncommitting_tests() {
     *top++ = arena.Alloc();
     EXPECT_NONNULL(top[-1], msg);
 
-    EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
+    EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
     if (committed != orig_committed) {
       break;
     }
   }
-  EXPECT_GT(orig_committed, committed, "");
+  EXPECT_GT(orig_committed, committed);
 
   // Allocating one more control slot (by freeing a data object) should not
   // cause the number of committed pages to change: there should be some
   // hysteresis built into the system to avoid flickering back and forth.
   orig_committed = committed;
   arena.Free(*--top);
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(num_pages, committed + uncommitted, "");
-  EXPECT_EQ(committed, orig_committed, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(num_pages, committed + uncommitted);
+  EXPECT_EQ(committed, orig_committed);
+  EXPECT_GT(uncommitted, 0u);
 
   // Same for freeing a couple more control slots (by allocating more data
   // objects).
   *top++ = arena.Alloc();
   *top++ = arena.Alloc();
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_EQ(num_pages, committed + uncommitted, "");
-  EXPECT_EQ(committed, orig_committed, "");
-  EXPECT_GT(uncommitted, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_EQ(num_pages, committed + uncommitted);
+  EXPECT_EQ(committed, orig_committed);
+  EXPECT_GT(uncommitted, 0u);
 
   END_TEST;
 }
@@ -398,8 +398,8 @@ static bool memory_cleanup() {
 
   fbl::AllocChecker ac;
   Arena* arena = new (&ac) Arena();
-  EXPECT_TRUE(ac.check(), "");
-  EXPECT_EQ(ZX_OK, arena->Init("name", sizeof(TestObj), num_slots), "");
+  EXPECT_TRUE(ac.check());
+  EXPECT_EQ(ZX_OK, arena->Init("name", sizeof(TestObj), num_slots));
 
   auto start = reinterpret_cast<vaddr_t>(arena->start());
   auto end = reinterpret_cast<vaddr_t>(arena->end());
@@ -414,18 +414,18 @@ static bool memory_cleanup() {
   // Should see some committed pages.
   size_t committed;
   size_t uncommitted;
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
-  EXPECT_GT(committed, 0u, "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
+  EXPECT_GT(committed, 0u);
 
   // Destroying the Arena should destroy the underlying VmMapping,
   // along with all of its pages.
   delete arena;
-  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted), "");
+  EXPECT_TRUE(count_committed_pages(start, end, &committed, &uncommitted));
   // 0/0 means "no mapping at this address".
   // FLAKY: Another thread could could come in and allocate a mapping at the
   // old location.
-  EXPECT_EQ(committed, 0u, "");
-  EXPECT_EQ(uncommitted, 0u, "");
+  EXPECT_EQ(committed, 0u);
+  EXPECT_EQ(uncommitted, 0u);
   END_TEST;
 }
 
@@ -461,9 +461,9 @@ static bool content_preservation() {
       if (!afp[ix])
         continue;
 
-      EXPECT_EQ(17, afp[ix]->xx, "");
-      EXPECT_EQ(5, afp[ix]->yy, "");
-      EXPECT_EQ(ix + 100, afp[ix]->zz, "");
+      EXPECT_EQ(17, afp[ix]->xx);
+      EXPECT_EQ(5, afp[ix]->yy);
+      EXPECT_EQ(ix + 100, afp[ix]->zz);
 
       arena.Free(afp[ix]);
     }

@@ -68,18 +68,18 @@ bool on_initialize() {
   };
 
   RmOnInitialize obs;
-  EXPECT_EQ(0, obs.removals(), "");
+  EXPECT_EQ(0, obs.removals());
 
   // Cause OnInitialize() to be called.
   TestDispatcher st;
-  ASSERT_EQ(ZX_OK, st.AddObserver(&obs), "");
+  ASSERT_EQ(ZX_OK, st.AddObserver(&obs));
 
   // Should have been removed.
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   // Further On hook calls should not re-remove.
   st.CallAllOnHooks();
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   END_TEST;
 }
@@ -93,21 +93,21 @@ bool on_state_change_via_update_state() {
   BEGIN_TEST;
 
   RmOnStateChange obs;
-  EXPECT_EQ(0, obs.removals(), "");
+  EXPECT_EQ(0, obs.removals());
 
   TestDispatcher st;
-  ASSERT_EQ(ZX_OK, st.AddObserver(&obs), "");
-  EXPECT_EQ(0, obs.removals(), "");  // Not removed yet.
+  ASSERT_EQ(ZX_OK, st.AddObserver(&obs));
+  EXPECT_EQ(0, obs.removals());  // Not removed yet.
 
   // Cause OnStateChange() to be called.
   st.CallUpdateState();
 
   // Should have been removed.
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   // Further On hook calls should not re-remove.
   st.CallAllOnHooks();
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   END_TEST;
 }
@@ -121,21 +121,21 @@ bool on_cancel() {
   };
 
   RmOnCancel obs;
-  EXPECT_EQ(0, obs.removals(), "");
+  EXPECT_EQ(0, obs.removals());
 
   TestDispatcher st;
-  ASSERT_EQ(ZX_OK, st.AddObserver(&obs), "");
-  EXPECT_EQ(0, obs.removals(), "");  // Not removed yet.
+  ASSERT_EQ(ZX_OK, st.AddObserver(&obs));
+  EXPECT_EQ(0, obs.removals());  // Not removed yet.
 
   // Cause OnCancel() to be called.
   st.Cancel(/* handle= */ nullptr);
 
   // Should have been removed.
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   // Further On hook calls should not re-remove.
   st.CallAllOnHooks();
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   END_TEST;
 }
@@ -151,21 +151,21 @@ bool on_cancel_by_key() {
   };
 
   RmOnCancelByKey obs;
-  EXPECT_EQ(0, obs.removals(), "");
+  EXPECT_EQ(0, obs.removals());
 
   TestDispatcher st;
-  ASSERT_EQ(ZX_OK, st.AddObserver(&obs), "");
-  EXPECT_EQ(0, obs.removals(), "");  // Not removed yet.
+  ASSERT_EQ(ZX_OK, st.AddObserver(&obs));
+  EXPECT_EQ(0, obs.removals());  // Not removed yet.
 
   // Cause OnCancelByKey() to be called.
   st.CancelByKey(/* handle= */ nullptr, /* port= */ nullptr, /* key= */ 2u);
 
   // Should have been removed.
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   // Further On hook calls should not re-remove.
   st.CallAllOnHooks();
-  EXPECT_EQ(1, obs.removals(), "");
+  EXPECT_EQ(1, obs.removals());
 
   END_TEST;
 }

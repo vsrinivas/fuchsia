@@ -36,10 +36,10 @@ bool inline_test() {
     {
       fbl::AllocChecker ac;
       fbl::InlineArray<TestType, 3u> ia(&ac, sz);
-      EXPECT_TRUE(ac.check(), "");
+      EXPECT_TRUE(ac.check());
     }
-    EXPECT_EQ(TestType::ctor_run_count, sz, "");
-    EXPECT_EQ(TestType::dtor_run_count, sz, "");
+    EXPECT_EQ(TestType::ctor_run_count, sz);
+    EXPECT_EQ(TestType::dtor_run_count, sz);
   }
 
   END_TEST;
@@ -57,10 +57,10 @@ bool non_inline_test() {
     {
       fbl::AllocChecker ac;
       fbl::InlineArray<TestType, 3u> ia(&ac, sz);
-      EXPECT_TRUE(ac.check(), "");
+      EXPECT_TRUE(ac.check());
     }
-    EXPECT_EQ(TestType::ctor_run_count, sz, "");
-    EXPECT_EQ(TestType::dtor_run_count, sz, "");
+    EXPECT_EQ(TestType::ctor_run_count, sz);
+    EXPECT_EQ(TestType::dtor_run_count, sz);
   }
 
   END_TEST;

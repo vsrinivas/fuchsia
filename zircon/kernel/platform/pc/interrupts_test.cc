@@ -68,8 +68,8 @@ bool TestRegisterInterruptHandler() {
   FakeIoApic::Reset();
   fbl::AllocChecker ac;
   auto im = ktl::make_unique<InterruptManager<FakeIoApic>>(&ac);
-  ASSERT_TRUE(ac.check(), "");
-  ASSERT_EQ(im->Init(), ZX_OK, "");
+  ASSERT_TRUE(ac.check());
+  ASSERT_EQ(im->Init(), ZX_OK);
 
   unsigned int kIrq1 = 1;
   uint8_t handler1_arg = 0;
@@ -78,23 +78,23 @@ bool TestRegisterInterruptHandler() {
   // Register a handler for the interrupt
   ASSERT_EQ(
       im->RegisterInterruptHandler(kIrq1, reinterpret_cast<int_handler>(handler1), &handler1_arg),
-      ZX_OK, "");
+      ZX_OK);
   uint8_t irq1_x86_vector = FakeIoApic::entries[kIrq1].x86_vector;
 
   // Make sure the entry matches
   int_handler handler;
   void* arg;
   im->GetEntryByX86Vector(irq1_x86_vector, &handler, &arg);
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(handler), handler1, "");
-  EXPECT_EQ(arg, &handler1_arg, "");
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(handler), handler1);
+  EXPECT_EQ(arg, &handler1_arg);
 
   // Unregister it
-  ASSERT_EQ(im->RegisterInterruptHandler(kIrq1, nullptr, nullptr), ZX_OK, "");
-  EXPECT_EQ(FakeIoApic::entries[kIrq1].x86_vector, 0, "");
+  ASSERT_EQ(im->RegisterInterruptHandler(kIrq1, nullptr, nullptr), ZX_OK);
+  EXPECT_EQ(FakeIoApic::entries[kIrq1].x86_vector, 0);
   // Make sure the entry matches
   im->GetEntryByX86Vector(irq1_x86_vector, &handler, &arg);
-  EXPECT_EQ(handler, nullptr, "");
-  EXPECT_EQ(arg, nullptr, "");
+  EXPECT_EQ(handler, nullptr);
+  EXPECT_EQ(arg, nullptr);
 
   END_TEST;
 }
@@ -105,8 +105,8 @@ bool TestRegisterInterruptHandlerTwice() {
   FakeIoApic::Reset();
   fbl::AllocChecker ac;
   auto im = ktl::make_unique<InterruptManager<FakeIoApic>>(&ac);
-  ASSERT_TRUE(ac.check(), "");
-  ASSERT_EQ(im->Init(), ZX_OK, "");
+  ASSERT_TRUE(ac.check());
+  ASSERT_EQ(im->Init(), ZX_OK);
 
   unsigned int kIrq = 1;
 
@@ -117,27 +117,27 @@ bool TestRegisterInterruptHandlerTwice() {
 
   ASSERT_EQ(
       im->RegisterInterruptHandler(kIrq, reinterpret_cast<int_handler>(handler1), &handler1_arg),
-      ZX_OK, "");
+      ZX_OK);
   uint8_t irq_x86_vector = FakeIoApic::entries[kIrq].x86_vector;
   ASSERT_EQ(
       im->RegisterInterruptHandler(kIrq, reinterpret_cast<int_handler>(handler2), &handler2_arg),
-      ZX_ERR_ALREADY_BOUND, "");
-  ASSERT_EQ(irq_x86_vector, FakeIoApic::entries[kIrq].x86_vector, "");
+      ZX_ERR_ALREADY_BOUND);
+  ASSERT_EQ(irq_x86_vector, FakeIoApic::entries[kIrq].x86_vector);
 
   // Make sure the entry matches the first installed
   int_handler handler;
   void* arg;
   im->GetEntryByX86Vector(irq_x86_vector, &handler, &arg);
-  EXPECT_EQ(reinterpret_cast<uintptr_t>(handler), handler1, "");
-  EXPECT_EQ(arg, &handler1_arg, "");
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(handler), handler1);
+  EXPECT_EQ(arg, &handler1_arg);
 
   // Unregister it
-  ASSERT_EQ(im->RegisterInterruptHandler(kIrq, nullptr, nullptr), ZX_OK, "");
-  EXPECT_EQ(FakeIoApic::entries[kIrq].x86_vector, 0, "");
+  ASSERT_EQ(im->RegisterInterruptHandler(kIrq, nullptr, nullptr), ZX_OK);
+  EXPECT_EQ(FakeIoApic::entries[kIrq].x86_vector, 0);
   // Make sure the entry matches
   im->GetEntryByX86Vector(irq_x86_vector, &handler, &arg);
-  EXPECT_EQ(handler, nullptr, "");
-  EXPECT_EQ(arg, nullptr, "");
+  EXPECT_EQ(handler, nullptr);
+  EXPECT_EQ(arg, nullptr);
 
   END_TEST;
 }
@@ -148,13 +148,13 @@ bool TestUnregisterInterruptHandlerNotRegistered() {
   FakeIoApic::Reset();
   fbl::AllocChecker ac;
   auto im = ktl::make_unique<InterruptManager<FakeIoApic>>(&ac);
-  ASSERT_TRUE(ac.check(), "");
-  ASSERT_EQ(im->Init(), ZX_OK, "");
+  ASSERT_TRUE(ac.check());
+  ASSERT_EQ(im->Init(), ZX_OK);
 
   unsigned int kIrq1 = 1;
 
   // Unregister a vector we haven't yet registered.  Should just be ignored.
-  ASSERT_EQ(im->RegisterInterruptHandler(kIrq1, nullptr, nullptr), ZX_OK, "");
+  ASSERT_EQ(im->RegisterInterruptHandler(kIrq1, nullptr, nullptr), ZX_OK);
 
   END_TEST;
 }
@@ -165,8 +165,8 @@ bool TestRegisterInterruptHandlerTooMany() {
   FakeIoApic::Reset();
   fbl::AllocChecker ac;
   auto im = ktl::make_unique<InterruptManager<FakeIoApic>>(&ac);
-  ASSERT_TRUE(ac.check(), "");
-  ASSERT_EQ(im->Init(), ZX_OK, "");
+  ASSERT_TRUE(ac.check());
+  ASSERT_EQ(im->Init(), ZX_OK);
 
   uint8_t handler_arg = 0;
   uintptr_t handler = 2;
@@ -179,7 +179,7 @@ bool TestRegisterInterruptHandlerTooMany() {
   for (unsigned i = 0; i < InterruptManager<FakeIoApic>::kNumCpuVectors; ++i) {
     ASSERT_EQ(im->RegisterInterruptHandler(i, reinterpret_cast<int_handler>(handler + i),
                                            &handler_arg + i),
-              ZX_OK, "");
+              ZX_OK);
   }
 
   // Make sure all of the entries are registered
@@ -188,18 +188,18 @@ bool TestRegisterInterruptHandlerTooMany() {
     int_handler installed_handler;
     void* installed_arg;
     im->GetEntryByX86Vector(x86_vector, &installed_handler, &installed_arg);
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(installed_handler), handler + i, "");
-    EXPECT_EQ(installed_arg, &handler_arg + i, "");
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(installed_handler), handler + i);
+    EXPECT_EQ(installed_arg, &handler_arg + i);
   }
 
   // Try to allocate one more
   ASSERT_EQ(im->RegisterInterruptHandler(InterruptManager<FakeIoApic>::kNumCpuVectors,
                                          reinterpret_cast<int_handler>(handler), &handler_arg),
-            ZX_ERR_NO_RESOURCES, "");
+            ZX_ERR_NO_RESOURCES);
 
   // Clean up the registered handlers
   for (unsigned i = 0; i < InterruptManager<FakeIoApic>::kNumCpuVectors; ++i) {
-    ASSERT_EQ(im->RegisterInterruptHandler(i, nullptr, nullptr), ZX_OK, "");
+    ASSERT_EQ(im->RegisterInterruptHandler(i, nullptr, nullptr), ZX_OK);
   }
 
   END_TEST;
@@ -213,31 +213,31 @@ bool TestHandlerAllocationAlignment() TA_NO_THREAD_SAFETY_ANALYSIS {
 
   fbl::AllocChecker ac;
   auto im = ktl::make_unique<InterruptManager<FakeIoApic>>(&ac);
-  ASSERT_TRUE(ac.check(), "");
-  ASSERT_EQ(im->Init(), ZX_OK, "");
+  ASSERT_TRUE(ac.check());
+  ASSERT_EQ(im->Init(), ZX_OK);
 
   uint base = 0;
 
   // Allocation in new IM should succeed and be correctly aligned.
   zx_status_t status = im->AllocHandler(32, &base);
-  EXPECT_EQ(status, ZX_OK, "");
-  EXPECT_EQ(base % 32, 0u, "");
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(base % 32, 0u);
   im->FreeHandler(base, 32);
 
   // Set a high bit such that our allocation just won't fit.
   im->handler_allocated_.Set(X86_INT_PLATFORM_BASE + 31, X86_INT_PLATFORM_BASE + 31 + 1);
   status = im->AllocHandler(32, &base);
-  EXPECT_EQ(status, ZX_OK, "");
-  EXPECT_GT(base, X86_INT_PLATFORM_BASE + 31u, "");
-  EXPECT_EQ(base % 32, 0u, "");
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_GT(base, X86_INT_PLATFORM_BASE + 31u);
+  EXPECT_EQ(base % 32, 0u);
   im->FreeHandler(base, 32);
   im->FreeHandler(X86_INT_PLATFORM_BASE + 31, 1);
 
   // Set a low bit ensuring that allocation happens on the next roundup up block.
   im->handler_allocated_.Set(X86_INT_PLATFORM_BASE, X86_INT_PLATFORM_BASE + 1);
   status = im->AllocHandler(32, &base);
-  EXPECT_EQ(status, ZX_OK, "");
-  EXPECT_EQ(base % 32, 0u, "");
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(base % 32, 0u);
   im->FreeHandler(base, 32);
   im->FreeHandler(X86_INT_PLATFORM_BASE, 1);
 
@@ -246,9 +246,9 @@ bool TestHandlerAllocationAlignment() TA_NO_THREAD_SAFETY_ANALYSIS {
   im->handler_allocated_.Set(X86_INT_PLATFORM_BASE, X86_INT_PLATFORM_BASE + 1);
   im->handler_allocated_.Set(X86_INT_PLATFORM_BASE + 34, X86_INT_PLATFORM_BASE + 34 + 1);
   status = im->AllocHandler(32, &base);
-  EXPECT_EQ(status, ZX_OK, "");
-  EXPECT_GT(base, X86_INT_PLATFORM_BASE + 34u, "");
-  EXPECT_EQ(base % 32, 0u, "");
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_GT(base, X86_INT_PLATFORM_BASE + 34u);
+  EXPECT_EQ(base % 32, 0u);
   im->FreeHandler(base, 32);
   im->FreeHandler(X86_INT_PLATFORM_BASE, 1);
   im->FreeHandler(X86_INT_PLATFORM_BASE + 34, 1);

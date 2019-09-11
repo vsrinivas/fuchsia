@@ -23,7 +23,7 @@ static bool alloc_checker_ctor() {
     // called, and "new" returns NULL.  So check that ac.check()
     // indicates failure even when AllocChecker's "operator new" wasn't
     // called.
-    EXPECT_FALSE(ac.check(), "");
+    EXPECT_FALSE(ac.check());
   }
 
   END_TEST;
@@ -34,14 +34,14 @@ static bool alloc_checker_basic() {
 
   fbl::AllocChecker ac;
   ac.arm(8u, true);
-  EXPECT_TRUE(ac.check(), "");
+  EXPECT_TRUE(ac.check());
 
   ac.arm(16u, false);
-  EXPECT_FALSE(ac.check(), "");
+  EXPECT_FALSE(ac.check());
 
   // Allocating zero bytes, always succeeds.
   ac.arm(0u, false);
-  EXPECT_TRUE(ac.check(), "");
+  EXPECT_TRUE(ac.check());
 
   END_TEST;
 }
@@ -89,11 +89,11 @@ static bool alloc_checker_new() {
   const int kCount = 128;
   fbl::AllocChecker ac;
   ktl::unique_ptr<StructWithCtor[]> arr(new (&ac) StructWithCtor[kCount]);
-  EXPECT_EQ(ac.check(), true, "");
+  EXPECT_EQ(ac.check(), true);
 
   // Check that the constructor got run.
   for (int i = 0; i < kCount; ++i)
-    EXPECT_EQ(arr[i].field, 5, "");
+    EXPECT_EQ(arr[i].field, 5);
 
   END_TEST;
 }
@@ -112,8 +112,8 @@ static bool alloc_checker_new_fails() {
   // Use a type with a constructor to check that we are not attempting to
   // run the constructor when the allocation fails.
   fbl::AllocChecker ac;
-  EXPECT_EQ(new (&ac) StructWithCtor[large_size], nullptr, "");
-  EXPECT_EQ(ac.check(), false, "");
+  EXPECT_EQ(new (&ac) StructWithCtor[large_size], nullptr);
+  EXPECT_EQ(ac.check(), false);
 #endif
 
   END_TEST;
@@ -144,8 +144,8 @@ static bool test_array_size_overflow_check() {
   // declared as "noexcept" (which AllocChecker relies on anyway),
   // otherwise the compiler might generate code that raises an exception
   // (again, depending on C++ version).
-  EXPECT_EQ(new (&ac) LargeStruct[count], nullptr, "");
-  EXPECT_EQ(ac.check(), false, "");
+  EXPECT_EQ(new (&ac) LargeStruct[count], nullptr);
+  EXPECT_EQ(ac.check(), false);
 #endif
 
   END_TEST;
@@ -169,8 +169,8 @@ static bool test_negative_array_size() {
   // compiler may complain at compile time that the program is ill-formed
   // (possibly depending on C++ version).
   int count = -1;
-  EXPECT_EQ(new (&ac) char[count], nullptr, "");
-  EXPECT_EQ(ac.check(), false, "");
+  EXPECT_EQ(new (&ac) char[count], nullptr);
+  EXPECT_EQ(ac.check(), false);
 #endif
 
   END_TEST;

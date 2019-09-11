@@ -98,28 +98,28 @@ bool oom_job_kill_ordering() {
   KernelHandle<JobDispatcher> gchild1, gchild2, gchild3;
   KernelHandle<JobDispatcher> gchild4, gchild5;
 
-  ASSERT_EQ(JobDispatcher::Create(0, root.dispatcher(), &child1, &rights), ZX_OK, "");
+  ASSERT_EQ(JobDispatcher::Create(0, root.dispatcher(), &child1, &rights), ZX_OK);
   child1.dispatcher()->set_name("child1", 6);
 
-  ASSERT_EQ(JobDispatcher::Create(0, root.dispatcher(), &child2, &rights), ZX_OK, "");
+  ASSERT_EQ(JobDispatcher::Create(0, root.dispatcher(), &child2, &rights), ZX_OK);
   child2.dispatcher()->set_name("child2", 6);
   child2.dispatcher()->set_kill_on_oom(true);
 
-  ASSERT_EQ(JobDispatcher::Create(0, child1.dispatcher(), &gchild1, &rights), ZX_OK, "");
+  ASSERT_EQ(JobDispatcher::Create(0, child1.dispatcher(), &gchild1, &rights), ZX_OK);
   gchild1.dispatcher()->set_name("gchild1", 7);
 
-  ASSERT_EQ(JobDispatcher::Create(0, child1.dispatcher(), &gchild2, &rights), ZX_OK, "");
+  ASSERT_EQ(JobDispatcher::Create(0, child1.dispatcher(), &gchild2, &rights), ZX_OK);
   gchild2.dispatcher()->set_kill_on_oom(true);
   gchild2.dispatcher()->set_name("gchild2", 7);
 
-  ASSERT_EQ(JobDispatcher::Create(0, child1.dispatcher(), &gchild3, &rights), ZX_OK, "");
+  ASSERT_EQ(JobDispatcher::Create(0, child1.dispatcher(), &gchild3, &rights), ZX_OK);
   gchild3.dispatcher()->set_name("gchild3", 7);
 
-  ASSERT_EQ(JobDispatcher::Create(0, child2.dispatcher(), &gchild4, &rights), ZX_OK, "");
+  ASSERT_EQ(JobDispatcher::Create(0, child2.dispatcher(), &gchild4, &rights), ZX_OK);
   gchild4.dispatcher()->set_kill_on_oom(true);
   gchild4.dispatcher()->set_name("gchild4", 7);
 
-  ASSERT_EQ(JobDispatcher::Create(0, child2.dispatcher(), &gchild5, &rights), ZX_OK, "");
+  ASSERT_EQ(JobDispatcher::Create(0, child2.dispatcher(), &gchild5, &rights), ZX_OK);
   gchild5.dispatcher()->set_kill_on_oom(true);
   gchild5.dispatcher()->set_name("gchild5", 7);
 

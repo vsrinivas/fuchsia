@@ -25,11 +25,11 @@ static bool smoke_test() {
 
   {
     Semaphore sema(0);
-    ASSERT_EQ(1, sema.Post(), "");
-    ASSERT_EQ(2, sema.Post(), "");
-    ASSERT_EQ(ZX_OK, sema.Wait(Deadline::infinite()), "");
-    ASSERT_EQ(ZX_OK, sema.Wait(Deadline::infinite()), "");
-    ASSERT_EQ(1, sema.Post(), "");
+    ASSERT_EQ(1, sema.Post());
+    ASSERT_EQ(2, sema.Post());
+    ASSERT_EQ(ZX_OK, sema.Wait(Deadline::infinite()));
+    ASSERT_EQ(ZX_OK, sema.Wait(Deadline::infinite()));
+    ASSERT_EQ(1, sema.Post());
   }
 
   END_TEST;
@@ -41,8 +41,8 @@ static bool timeout_test() {
   auto dealine = Deadline::no_slack(current_time() + ZX_USEC(10));
 
   Semaphore sema;
-  ASSERT_EQ(ZX_ERR_TIMED_OUT, sema.Wait(dealine), "");
-  ASSERT_EQ(1, sema.Post(), "");
+  ASSERT_EQ(ZX_ERR_TIMED_OUT, sema.Wait(dealine));
+  ASSERT_EQ(1, sema.Post());
 
   END_TEST;
 }
@@ -85,8 +85,8 @@ static bool signal_test() {
 
   int retcode = ZX_OK;
   thread_join(thread, &retcode, ZX_TIME_INFINITE);
-  ASSERT_EQ(expected_error, retcode, "");
-  ASSERT_EQ(1, sema.Post(), "");
+  ASSERT_EQ(expected_error, retcode);
+  ASSERT_EQ(1, sema.Post());
 
   END_TEST;
 }

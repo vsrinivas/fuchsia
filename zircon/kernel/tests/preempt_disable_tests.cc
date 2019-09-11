@@ -66,7 +66,7 @@ static bool test_in_timer_callback() {
   timer_init(&timer);
   timer_set(&timer, Deadline::no_slack(0), timer_callback_func, &event);
 
-  ASSERT_EQ(event_wait(&event), ZX_OK, "");
+  ASSERT_EQ(event_wait(&event), ZX_OK);
   event_destroy(&event);
 
   END_TEST;
@@ -80,38 +80,38 @@ static bool test_inc_dec_disable_counts() {
   thread_t* thread = get_current_thread();
 
   // Test initial conditions.
-  ASSERT_EQ(thread_preempt_disable_count(), 0u, "");
-  ASSERT_EQ(thread_resched_disable_count(), 0u, "");
+  ASSERT_EQ(thread_preempt_disable_count(), 0u);
+  ASSERT_EQ(thread_resched_disable_count(), 0u);
   // While preemption is allowed, a preemption should not be pending.
-  ASSERT_EQ(thread->preempt_pending, false, "");
+  ASSERT_EQ(thread->preempt_pending, false);
 
   // Test incrementing and decrementing of preempt_disable.
   thread_preempt_disable();
-  EXPECT_EQ(thread_preempt_disable_count(), 1u, "");
+  EXPECT_EQ(thread_preempt_disable_count(), 1u);
   thread_preempt_reenable();
-  EXPECT_EQ(thread_preempt_disable_count(), 0u, "");
+  EXPECT_EQ(thread_preempt_disable_count(), 0u);
 
   // Test incrementing and decrementing of resched_disable.
   thread_resched_disable();
-  EXPECT_EQ(thread_resched_disable_count(), 1u, "");
+  EXPECT_EQ(thread_resched_disable_count(), 1u);
   thread_resched_reenable();
-  EXPECT_EQ(thread_resched_disable_count(), 0u, "");
+  EXPECT_EQ(thread_resched_disable_count(), 0u);
 
   // Test nesting: multiple increments and decrements.
   thread_preempt_disable();
   thread_preempt_disable();
-  EXPECT_EQ(thread_preempt_disable_count(), 2u, "");
+  EXPECT_EQ(thread_preempt_disable_count(), 2u);
   thread_preempt_reenable();
   thread_preempt_reenable();
-  EXPECT_EQ(thread_preempt_disable_count(), 0u, "");
+  EXPECT_EQ(thread_preempt_disable_count(), 0u);
 
   // Test nesting: multiple increments and decrements.
   thread_resched_disable();
   thread_resched_disable();
-  EXPECT_EQ(thread_resched_disable_count(), 2u, "");
+  EXPECT_EQ(thread_resched_disable_count(), 2u);
   thread_resched_reenable();
   thread_resched_reenable();
-  EXPECT_EQ(thread_resched_disable_count(), 0u, "");
+  EXPECT_EQ(thread_resched_disable_count(), 0u);
 
   END_TEST;
 }
@@ -126,9 +126,9 @@ static bool test_decrement_clears_preempt_pending() {
   thread_reschedule();
   // It should not be possible for an interrupt handler to block or
   // otherwise cause a reschedule before our thread_preempt_reenable().
-  EXPECT_EQ(thread->preempt_pending, true, "");
+  EXPECT_EQ(thread->preempt_pending, true);
   thread_preempt_reenable();
-  EXPECT_EQ(thread->preempt_pending, false, "");
+  EXPECT_EQ(thread->preempt_pending, false);
 
   // Test that thread_resched_reenable() clears preempt_pending.
   thread_resched_disable();
@@ -136,10 +136,10 @@ static bool test_decrement_clears_preempt_pending() {
   thread_reschedule();
   // Read preempt_pending with interrupts disabled because otherwise an
   // interrupt handler could set it to false.
-  EXPECT_EQ(thread->preempt_pending, true, "");
+  EXPECT_EQ(thread->preempt_pending, true);
   arch_enable_ints();
   thread_resched_reenable();
-  EXPECT_EQ(thread->preempt_pending, false, "");
+  EXPECT_EQ(thread->preempt_pending, false);
 
   END_TEST;
 }
@@ -153,12 +153,12 @@ static bool test_blocking_clears_preempt_pending() {
   // blocking should clear preempt_pending.
   thread_preempt_disable();
   thread_reschedule();
-  EXPECT_EQ(thread->preempt_pending, true, "");
+  EXPECT_EQ(thread->preempt_pending, true);
   arch_disable_ints();
   thread_sleep_relative(ZX_MSEC(10));
   // Read preempt_pending with interrupts disabled because otherwise an
   // interrupt handler could set it to true.
-  EXPECT_EQ(thread->preempt_pending, false, "");
+  EXPECT_EQ(thread->preempt_pending, false);
   arch_enable_ints();
   thread_preempt_reenable();
 
@@ -167,7 +167,7 @@ static bool test_blocking_clears_preempt_pending() {
   thread_resched_disable();
   thread_reschedule();
   thread_sleep_relative(ZX_MSEC(10));
-  EXPECT_EQ(thread->preempt_pending, false, "");
+  EXPECT_EQ(thread->preempt_pending, false);
   thread_resched_reenable();
 
   END_TEST;
@@ -191,14 +191,14 @@ static bool test_interrupt_preserves_preempt_pending() {
   // Simulate an interrupt handler invocation.
   int_handler_saved_state_t state;
   int_handler_start(&state);
-  EXPECT_EQ(thread_preempt_disable_count(), 1u, "");
+  EXPECT_EQ(thread_preempt_disable_count(), 1u);
   bool do_preempt = int_handler_finish(&state);
 
-  EXPECT_EQ(do_preempt, false, "");
-  EXPECT_EQ(thread->preempt_pending, true, "");
+  EXPECT_EQ(do_preempt, false);
+  EXPECT_EQ(thread->preempt_pending, true);
   arch_enable_ints();
   thread_resched_reenable();
-  EXPECT_EQ(thread->preempt_pending, false, "");
+  EXPECT_EQ(thread->preempt_pending, false);
 
   END_TEST;
 }
@@ -254,7 +254,7 @@ static bool test_interrupt_with_preempt_disable() {
   // Spin until timer_ran is set by the interrupt handler.
   while (!timer_ran.load()) {
   }
-  EXPECT_EQ(thread->preempt_pending, true, "");
+  EXPECT_EQ(thread->preempt_pending, true);
   thread_preempt_reenable();
 
   END_TEST;
@@ -281,7 +281,7 @@ static bool test_interrupt_with_resched_disable() {
   }
   // preempt_pending should be reset to false either on returning from
   // our timer interrupt, or by some other preemption.
-  EXPECT_EQ(thread->preempt_pending, false, "");
+  EXPECT_EQ(thread->preempt_pending, false);
   thread_resched_reenable();
 
   END_TEST;
@@ -292,43 +292,43 @@ static bool test_auto_preempt_disabler() {
 
   // Make sure that nothing funny is going on with our preempt disable count as
   // it stands now.
-  ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+  ASSERT_EQ(0u, thread_preempt_disable_count());
 
   {
     // Create a disabler inside of a scope, but do not have it immediately
     // request that preemption be disabled.  Our count should still be zero.
     AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler;
-    ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+    ASSERT_EQ(0u, thread_preempt_disable_count());
 
     // Now explicitly disable.  Our count should go to 1.
     ap_disabler.Disable();
-    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+    ASSERT_EQ(1u, thread_preempt_disable_count());
 
     // Do it again, our count should remain at 1.
     ap_disabler.Disable();
-    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+    ASSERT_EQ(1u, thread_preempt_disable_count());
 
     {
       // Make another inside of a new scope.  Our count should remain at 1 until
       // we explicitly use the new instance to disable preemption.
       AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> ap_disabler2;
-      ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+      ASSERT_EQ(1u, thread_preempt_disable_count());
 
       ap_disabler2.Disable();
-      ASSERT_EQ(2u, thread_preempt_disable_count(), "");
+      ASSERT_EQ(2u, thread_preempt_disable_count());
     }  // Let it go out of scope, we should drop down to a count of 1.
 
-    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+    ASSERT_EQ(1u, thread_preempt_disable_count());
   }  // Allow the original to go out of scope.  This should get us back down to a count of 0.
 
-  ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+  ASSERT_EQ(0u, thread_preempt_disable_count());
 
   // Next, do a similar test, but this time with the version which automatically
   // begins life with preemption disabled.  These versions are a bit simpler
   // under the hood as they do not require any internal state tracking.
   {
     AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
-    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+    ASSERT_EQ(1u, thread_preempt_disable_count());
 
 #if TEST_WILL_NOT_COMPILE || 0
     // Attempting to call disable should fail to build.
@@ -339,13 +339,13 @@ static bool test_auto_preempt_disabler() {
       // Add a second.  Watch the count go up as it comes into scope, and back
       // down again when it goes out.
       AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler2;
-      ASSERT_EQ(2u, thread_preempt_disable_count(), "");
+      ASSERT_EQ(2u, thread_preempt_disable_count());
     }
 
-    ASSERT_EQ(1u, thread_preempt_disable_count(), "");
+    ASSERT_EQ(1u, thread_preempt_disable_count());
   }  // Allow the original to go out of scope.  This should get us back down to a count of 0.
 
-  ASSERT_EQ(0u, thread_preempt_disable_count(), "");
+  ASSERT_EQ(0u, thread_preempt_disable_count());
 
   END_TEST;
 }
