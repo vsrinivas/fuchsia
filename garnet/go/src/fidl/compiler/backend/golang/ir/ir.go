@@ -165,61 +165,29 @@ func (t tagNew) String() string {
 	return fmt.Sprintf(`fidl2:"%s"`, strings.Join(elems, ","))
 }
 
-// Tag loosely represents a golang struct member tag for maximum elements e.g.
-// `fidl:"3,4,5"`. For a type like vector<vector<int>:3>:4, the tag would
-// look like `fidl:"3,4"`, such that the commas separate nesting. Note that if
-// a nested type that doesn't specify a max size is used, it is encoded as the
-// empty string. For example, vector<vector<vector<int>:3>>:5 would have tag
-// `fidl:"3,,5"`. Note that this makes a maximum length of 0 distinct.
-// Fundamentally, this Tag exists to provide type metadata for nested FIDL2
-// container types to the encoder/decoder in the bindings.
-//
-// Note that arrays are not included because their maximum sizes are encoded in
-// the golang type system. Because of this, FIDL types such as
-// vector<array<int>:10>:10 will have a tag that looks like `fidl:"10"`.
-//
-// Rather than representing handle nullability using a pointer indirection, we
-// include it as part of the struct tag. For example, vector<handle?>:2 will
-// have tag `fidl:"*,2"`.
-//
-// Lastly, when a field is on table, its ordinal is stored in `Ordinal`, and
-// appears in the struct tag as the rightmost element.
 type Tag struct {
-	// MaxElems is the maximum number of elements a type is annotated with.
-	MaxElems []*int
-
-	// Nullable is whether the innermost type is nullable. This only applies
-	// for handle types.
-	Nullable bool
-
-	// Ordinal is the table ordinal of the field this type is annotated with.
-	Ordinal int
+	reverseOfBounds []int
 }
 
 // String generates a string representation for the tag.
-func (t *Tag) String() string {
-	var elemsTag []string
-	anyData := false
-	if t.Nullable {
-		elemsTag = append(elemsTag, "*")
-		anyData = true
-	}
-	for _, elems := range t.MaxElems {
-		if elems == nil {
-			elemsTag = append(elemsTag, "")
-			continue
+func (t Tag) String() string {
+	var (
+		elems    []string
+		allEmpty = true
+	)
+	for i := len(t.reverseOfBounds) - 1; 0 <= i; i-- {
+		bound := t.reverseOfBounds[i]
+		if bound == math.MaxInt32 {
+			elems = append(elems, "")
+		} else {
+			elems = append(elems, strconv.Itoa(bound))
+			allEmpty = false
 		}
-		anyData = true
-		elemsTag = append(elemsTag, strconv.Itoa(*elems))
 	}
-	if 0 < t.Ordinal {
-		anyData = true
-		elemsTag = append(elemsTag, strconv.Itoa(t.Ordinal))
-	}
-	if !anyData {
+	if allEmpty {
 		return ""
 	}
-	return fmt.Sprintf(`fidl:"%s"`, strings.Join(elemsTag, ","))
+	return fmt.Sprintf(`fidl:"%s"`, strings.Join(elems, ","))
 }
 
 func tagsfmt(t Tag, t2 tagNew) string {
@@ -676,10 +644,11 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 		t = et
 		t2 = et2
 	case types.StringType:
-		t.MaxElems = append(t.MaxElems, val.ElementCount)
 		if val.ElementCount == nil {
+			t.reverseOfBounds = append(t.reverseOfBounds, math.MaxInt32)
 			t2.reverseOfBounds = append(t2.reverseOfBounds, math.MaxInt32)
 		} else {
+			t.reverseOfBounds = append(t.reverseOfBounds, *val.ElementCount)
 			t2.reverseOfBounds = append(t2.reverseOfBounds, *val.ElementCount)
 		}
 		if val.Nullable {
@@ -698,26 +667,27 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 		}
 		var nullability int
 		if val.Nullable {
-			t.Nullable = true
 			nullability = 1
 		}
+		t.reverseOfBounds = append(t.reverseOfBounds, nullability)
 		t2.reverseOfBounds = append(t2.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.RequestType:
 		e := c.compileCompoundIdentifier(val.RequestSubtype, true, RequestSuffix)
 		var nullability int
 		if val.Nullable {
-			t.Nullable = true
 			nullability = 1
 		}
+		t.reverseOfBounds = append(t.reverseOfBounds, nullability)
 		t2.reverseOfBounds = append(t2.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.VectorType:
 		e, et, et2 := c.compileType(*val.ElementType)
-		et.MaxElems = append(et.MaxElems, val.ElementCount)
 		if val.ElementCount == nil {
+			et.reverseOfBounds = append(et.reverseOfBounds, math.MaxInt32)
 			et2.reverseOfBounds = append(et2.reverseOfBounds, math.MaxInt32)
 		} else {
+			et.reverseOfBounds = append(et.reverseOfBounds, *val.ElementCount)
 			et2.reverseOfBounds = append(et2.reverseOfBounds, *val.ElementCount)
 		}
 		if val.Nullable {
@@ -741,9 +711,6 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 		case types.EnumDeclType:
 			r = Type(e)
 		case types.InterfaceDeclType:
-			if val.Nullable {
-				t.Nullable = true
-			}
 			r = Type(e + ProxySuffix)
 		case types.StructDeclType:
 			fallthrough
@@ -874,7 +841,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	var members []XUnionMember
 	for _, member := range val.Members {
 		ty, tag, tag2 := c.compileType(member.Type)
-		tag.Ordinal = member.Ordinal
+		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
 		tag2.reverseOfBounds = append(tag2.reverseOfBounds, member.Ordinal)
 		members = append(members, XUnionMember{
 			Attributes:  member.Attributes,
@@ -907,7 +874,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 			name          = c.compileIdentifier(member.Name, true, "")
 			privateName   = c.compileIdentifier(member.Name, false, "")
 		)
-		tag.Ordinal = member.Ordinal
+		tag.reverseOfBounds = append(tag.reverseOfBounds, member.Ordinal)
 		tag2.reverseOfBounds = append(tag2.reverseOfBounds, member.Ordinal)
 		members = append(members, TableMember{
 			Attributes:        member.Attributes,

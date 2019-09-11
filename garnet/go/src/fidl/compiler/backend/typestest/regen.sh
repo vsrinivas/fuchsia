@@ -82,7 +82,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     mv "${GOLDENS_DIR}/${llcpp_header_name}" "${GOLDENS_DIR}/${llcpp_header_name}.golden"
     mv "${GOLDENS_DIR}/${llcpp_source_name}" "${GOLDENS_DIR}/${llcpp_source_name}.golden"
 
-    echo "  libfuzzer: ${json_name} > ${libfuzzer_header_name}"
+    echo "  libfuzzer: ${json_name} > ${libfuzzer_header_name}, and ${libfuzzer_source_name}"
     ${FIDLGEN} \
         -generators libfuzzer \
         -json "${GOLDENS_DIR}/${json_name}" \

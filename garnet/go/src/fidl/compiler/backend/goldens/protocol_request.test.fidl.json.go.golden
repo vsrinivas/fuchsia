@@ -77,7 +77,7 @@ func (msg *parentGetChildResponse) Marshaler() _bindings.Marshaler {
 
 type parentGetChildRequestResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
-	R ChildInterfaceRequest`fidl2:"0"`
+	R ChildInterfaceRequest`fidl:"0" fidl2:"0"`
 }
 
 var _mparentGetChildRequestResponse = _bindings.CreateLazyMarshaler(parentGetChildRequestResponse{})
@@ -99,7 +99,7 @@ func (msg *parentTakeChildRequest) Marshaler() _bindings.Marshaler {
 
 type parentTakeChildRequestRequest struct {
 	_ struct{} `fidl2:"s,8,0"`
-	R ChildInterfaceRequest`fidl2:"0"`
+	R ChildInterfaceRequest`fidl:"0" fidl2:"0"`
 }
 
 var _mparentTakeChildRequestRequest = _bindings.CreateLazyMarshaler(parentTakeChildRequestRequest{})

@@ -504,7 +504,7 @@ func (msg *channelProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
 
 type channelProtocolMutateSocketRequest struct {
 	_ struct{} `fidl2:"s,8,0"`
-	A _zx.Socket`fidl2:"0"`
+	A _zx.Socket`fidl:"0" fidl2:"0"`
 }
 
 var _mchannelProtocolMutateSocketRequest = _bindings.CreateLazyMarshaler(channelProtocolMutateSocketRequest{})
@@ -515,7 +515,7 @@ func (msg *channelProtocolMutateSocketRequest) Marshaler() _bindings.Marshaler {
 
 type channelProtocolMutateSocketResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
-	B _zx.Socket`fidl2:"0"`
+	B _zx.Socket`fidl:"0" fidl2:"0"`
 }
 
 var _mchannelProtocolMutateSocketResponse = _bindings.CreateLazyMarshaler(channelProtocolMutateSocketResponse{})

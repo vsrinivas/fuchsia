@@ -87,8 +87,8 @@ type NewerSimpleUnion struct {
 	I_newerSimpleUnionTag `fidl2:"x,24,8"`
 	I_unknownData []byte
 	I int64 `fidl:"693944286" fidl2:"693944286"`
-	S string `fidl:",473666119" fidl2:"473666119,"`
-	V []string `fidl:",,1815655055" fidl2:"1815655055,,"`
+	S string `fidl:"473666119," fidl2:"473666119,"`
+	V []string `fidl:"1815655055,," fidl2:"1815655055,,"`
 }
 
 func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
@@ -155,7 +155,7 @@ type StrictSimpleXUnion struct {
 	I_unknownData []byte
 	I int32 `fidl:"1851697276" fidl2:"1851697276"`
 	F float32 `fidl:"855207063" fidl2:"855207063"`
-	S string `fidl:",850602487" fidl2:"850602487,"`
+	S string `fidl:"850602487," fidl2:"850602487,"`
 }
 
 func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
@@ -247,7 +247,7 @@ const (
 type StrictBoundedXUnion struct {
 	I_strictBoundedXUnionTag `fidl2:"x!,24,8"`
 	I_unknownData []byte
-	V []uint8 `fidl:"10,2024555624" fidl2:"2024555624,10"`
+	V []uint8 `fidl:"2024555624,10" fidl2:"2024555624,10"`
 }
 
 func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
