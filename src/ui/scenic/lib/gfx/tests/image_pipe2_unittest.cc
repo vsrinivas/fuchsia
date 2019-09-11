@@ -144,7 +144,7 @@ class ImagePipe2ThatCreatesDummyImages : public ImagePipe2 {
 
   fuchsia::sysmem::Allocator_Sync* sysmem_allocator() { return sysmem_allocator_.get(); }
 
-  bool use_protected_memory() override { return false; }
+  void set_next_image_is_protected(bool is_protected) { next_image_is_protected_ = is_protected; }
 
   std::vector<fxl::RefPtr<DummyImage>> dummy_images_;
 
@@ -167,6 +167,10 @@ class ImagePipe2ThatCreatesDummyImages : public ImagePipe2 {
     escher::ImageInfo escher_info;
     escher_info.width = image_format.coded_width;
     escher_info.height = image_format.coded_height;
+    if (next_image_is_protected_) {
+      escher_info.memory_flags |= vk::MemoryPropertyFlagBits::eProtected;
+      next_image_is_protected_ = false;
+    }
     escher::ImagePtr escher_image =
         escher::Image::WrapVkImage(dummy_resource_manager_, escher_info, vk::Image());
     FXL_CHECK(escher_image);
@@ -177,6 +181,7 @@ class ImagePipe2ThatCreatesDummyImages : public ImagePipe2 {
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   escher::ResourceManager* dummy_resource_manager_;
+  bool next_image_is_protected_ = false;
 };
 
 // Creates test environment.
@@ -648,6 +653,38 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
   // The first image should have been released.
   ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
   ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
+  EXPECT_ERROR_COUNT(0);
+}
+
+// Detects protected memory backed image added.
+TEST_F(ImagePipe2Test, DetectsProtectedMemory) {
+  auto image_pipe = CreateImagePipe();
+  auto tokens = CreateSysmemTokens(image_pipe->sysmem_allocator(), true);
+
+  const uint32_t kBufferId = 1;
+  image_pipe->AddBufferCollection(kBufferId, std::move(tokens.local_token));
+
+  const uint32_t kWidth = 32;
+  const uint32_t kHeight = 32;
+  const uint32_t kImageCount = 2;
+  SetConstraints(image_pipe->sysmem_allocator(), std::move(tokens.dup_token), kWidth, kHeight,
+                 kImageCount, true, nullptr);
+
+  fuchsia::sysmem::ImageFormat_2 image_format = {};
+  image_format.coded_width = kWidth;
+  image_format.coded_height = kHeight;
+  const uint32_t kImageId1 = 1;
+  image_pipe->AddImage(kImageId1, kBufferId, 0, image_format);
+  ASSERT_FALSE(image_pipe->use_protected_memory());
+
+  image_pipe->set_next_image_is_protected(true);
+  const uint32_t kImageId2 = 2;
+  image_pipe->AddImage(kImageId2, kBufferId, 1, image_format);
+  ASSERT_TRUE(image_pipe->use_protected_memory());
+
+  image_pipe->RemoveImage(kImageId2);
+  ASSERT_FALSE(image_pipe->use_protected_memory());
+
   EXPECT_ERROR_COUNT(0);
 }
 

@@ -215,6 +215,9 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
   }
 
   FXL_DCHECK(info.images.find(image_id) == info.images.end());
+  if (image->use_protected_memory()) {
+    num_protected_images_++;
+  }
   info.images.insert(image_id);
   images_.insert({image_id, std::move(image)});
 }
@@ -243,10 +246,17 @@ void ImagePipe2::RemoveBufferCollection(uint32_t buffer_collection_id) {
 void ImagePipe2::RemoveImage(uint32_t image_id) {
   TRACE_DURATION("gfx", "ImagePipe2::RemoveImage", "image_id", image_id);
 
-  size_t erased_count = images_.erase(image_id);
-  if (erased_count == 0) {
+  auto image_it = images_.find(image_id);
+  if (image_it == images_.end()) {
     error_reporter_->ERROR() << __func__ << ": Could not find image with id=" << image_id << ".";
   }
+
+  if (image_it->second->use_protected_memory()) {
+    FXL_DCHECK(num_protected_images_ >= 1);
+    num_protected_images_--;
+  }
+
+  images_.erase(image_it);
 
   for (auto& buffer_collection : buffer_collections_) {
     if (buffer_collection.second.images.erase(image_id)) {
@@ -487,9 +497,7 @@ void ImagePipe2::CloseConnectionAndCleanUp() {
   image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>());
 }
 
-void ImagePipe2::OnConnectionError() {
-  CloseConnectionAndCleanUp();
-}
+void ImagePipe2::OnConnectionError() { CloseConnectionAndCleanUp(); }
 
 }  // namespace gfx
 }  // namespace scenic_impl
