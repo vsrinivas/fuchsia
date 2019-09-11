@@ -164,9 +164,12 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     case {{ $type_name }}::{{ .Name }}:
       return os << "{{ toFriendlyCase .Name }}";
         {{- end }}
+    default:
+      return os
+        << "<invalid enum value: "
+        << static_cast<{{ toCType .Type }}>(value)
+        << ">" ;
   }
-
-  return os;
 }
     {{- end }}
 {{- end }}

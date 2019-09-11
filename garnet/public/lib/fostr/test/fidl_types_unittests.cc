@@ -532,6 +532,7 @@ TEST(FidlTypes, EnumFormatting) {
 
   EXPECT_FIDL_TO_FORMAT_AS(ExampleEnum::FOO, "foo");
   EXPECT_FIDL_TO_FORMAT_AS(ExampleEnum::BAR_BAZ, "bar baz");
+  EXPECT_FIDL_TO_FORMAT_AS(static_cast<ExampleEnum>(999), "<invalid enum value: 999>");
 }
 
 TEST(FidlTypes, StructFormatting) {

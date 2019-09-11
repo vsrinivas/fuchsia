@@ -16,6 +16,20 @@ import (
 	"bytes"
 )
 
+var primitiveTypes = map[types.PrimitiveSubtype]string{
+	types.Bool:    "bool",
+	types.Int8:    "int8_t",
+	types.Int16:   "int16_t",
+	types.Int32:   "int32_t",
+	types.Int64:   "int64_t",
+	types.Uint8:   "uint8_t",
+	types.Uint16:  "uint16_t",
+	types.Uint32:  "uint32_t",
+	types.Uint64:  "uint64_t",
+	types.Float32: "float",
+	types.Float64: "double",
+}
+
 func main() {
 	cmdlineflags := GetFlags()
 	options := make(Options)
@@ -327,6 +341,10 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 		"isTransitional": func(m types.Method) bool {
 			_, found := m.LookupAttribute("Transitional")
 			return found
+		},
+		// Converts a primitive subtype to its C equivalent.
+		"toCType": func(p types.PrimitiveSubtype) string {
+			return primitiveTypes[p]
 		},
 	}
 
