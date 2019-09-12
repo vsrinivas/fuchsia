@@ -17,7 +17,7 @@ using namespace inspect_deprecated::testing;
 namespace {
 
 TEST(VmoReader, CreateAndReadObjectHierarchy) {
-  auto inspector = std::make_unique<inspect::Inspector>("objects");
+  auto inspector = std::make_unique<inspect::Inspector>();
   ASSERT_TRUE(inspector);
 
   auto& object = inspector->GetRoot();
@@ -46,7 +46,7 @@ TEST(VmoReader, CreateAndReadObjectHierarchy) {
     EXPECT_THAT(
         root.value(),
         AllOf(NodeMatches(
-                  AllOf(NameMatches("objects"),
+                  AllOf(NameMatches("root"),
                         PropertyList(UnorderedElementsAre(StringPropertyIs("version", "1.0beta2"))),
                         MetricList(UnorderedElementsAre(DoubleMetricIs("volume", 0.75),
                                                         IntMetricIs("assets", -100))))),

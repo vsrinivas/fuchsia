@@ -31,6 +31,25 @@ void main(List<String> args) {
     expect(result, equals(contentsRoot));
   });
 
+  test('inspectComponentRoot is resiliant to old root layouts', () async {
+    const componentName = 'foo';
+    const contentsRoot = {'faz': 'bear'};
+
+    final inspect = Inspect(FakeSsh(
+        findCommandStdOut: 'one\n$componentName\nthree\n',
+        inspectCommandContentsRoot: [
+          {
+            'contents': {'root': {'root': contentsRoot}}
+          },
+        ],
+        expectedInspectSuffix: componentName));
+
+    final result = await inspect.inspectComponentRoot(componentName);
+
+    expect(result, equals(contentsRoot));
+  });
+
+
   test('inspectComponentRoot fails if multiple components with same name',
       () async {
     const componentName = 'foo';

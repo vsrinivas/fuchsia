@@ -657,11 +657,11 @@ class Inspector {
  public:
   Inspector() = default;
 
-  // Construct a new tree with the given name and default settings.
-  Tree CreateTree(std::string name);
+  // Construct a new tree with default settings.
+  Tree CreateTree();
 
-  // Construct a new tree with the given name and settings.
-  Tree CreateTree(std::string name, TreeSettings settings);
+  // Construct a new tree with the given settings.
+  Tree CreateTree(TreeSettings settings);
 };
 
 // Generate a unique name with the given prefix.

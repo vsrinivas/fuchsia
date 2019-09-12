@@ -33,6 +33,12 @@ class Inspect {
       return null;
     }
 
+    // Workaround for bug:36468
+    // TODO(crjohns): Remove after fix rolls.
+    if (jsonResult.single['contents']['root'].containsKey('root')) {
+      return jsonResult.single['contents']['root']['root'];
+    }
+
     return jsonResult.single['contents']['root'];
   }
 

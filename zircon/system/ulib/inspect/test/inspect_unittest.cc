@@ -20,7 +20,7 @@ TEST(Inspect, CreateDeleteActive) {
   Node node;
 
   {
-    auto inspector = std::make_unique<Inspector>("root");
+    auto inspector = std::make_unique<Inspector>();
     EXPECT_TRUE(inspector->DuplicateVmo().get() != ZX_HANDLE_INVALID);
     EXPECT_TRUE(bool(*inspector));
     node = inspector->GetRoot().CreateChild("node");
@@ -34,10 +34,22 @@ TEST(Inspect, CreateDeleteActive) {
   EXPECT_TRUE(bool(child));
 }
 
+TEST(Inspect, CreateChildren) {
+  auto inspector = std::make_unique<Inspector>();
+  Node child = inspector->GetRoot().CreateChild("child");
+  EXPECT_TRUE(bool(child));
+
+  auto result = inspect::ReadFromVmo(inspector->DuplicateVmo());
+  ASSERT_TRUE(result.is_ok());
+  auto hierarchy = result.take_value();
+
+  ASSERT_EQ(1u, hierarchy.children().size());
+  EXPECT_EQ("child", hierarchy.children()[0].name());
+}
+
 TEST(Inspect, CreateCopyVmo) {
   // Make a 16MB heap.
-  auto inspector = std::make_unique<Inspector>(
-      "root");
+  auto inspector = std::make_unique<Inspector>();
 
   // Store a string.
   std::string s = "abcd";
@@ -51,8 +63,7 @@ TEST(Inspect, CreateCopyVmo) {
 
 TEST(Inspect, CreateCopyBytes) {
   // Make a 16MB heap.
-  auto inspector = std::make_unique<Inspector>(
-      "root");
+  auto inspector = std::make_unique<Inspector>();
 
   // Store a string.
   std::string s = "abcd";
@@ -68,8 +79,8 @@ TEST(Inspect, CreateCopyBytes) {
 
 TEST(Inspect, CreateLargeHeap) {
   // Make a 16MB heap.
-  auto inspector = std::make_unique<Inspector>(
-      "root", inspect::InspectSettings{.maximum_size = 16 * 1024 * 1024});
+  auto inspector =
+      std::make_unique<Inspector>(inspect::InspectSettings{.maximum_size = 16 * 1024 * 1024});
 
   // Store a 4MB string.
   std::string s(4 * 1024 * 1024, 'a');
@@ -82,7 +93,7 @@ TEST(Inspect, CreateLargeHeap) {
 }
 
 TEST(Inspect, CreateInvalidSize) {
-  auto inspector = std::make_unique<Inspector>("root", inspect::InspectSettings{.maximum_size = 0});
+  auto inspector = std::make_unique<Inspector>(inspect::InspectSettings{.maximum_size = 0});
   EXPECT_TRUE(inspector->DuplicateVmo().get() == ZX_HANDLE_INVALID);
   EXPECT_FALSE(bool(inspector->GetRoot()));
   EXPECT_FALSE(bool(*inspector));
@@ -91,7 +102,7 @@ TEST(Inspect, CreateInvalidSize) {
 TEST(Inspect, CreateWithVmoInvalidSize) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0 /* size */, 0, &vmo));
-  Inspector inspector("root", std::move(vmo));
+  Inspector inspector(std::move(vmo));
   EXPECT_FALSE(bool(inspector));
 }
 
@@ -101,7 +112,7 @@ TEST(Inspect, CreateWithVmoReadOnly) {
 
   zx::vmo duplicate;
   ASSERT_OK(vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ, &duplicate));
-  Inspector inspector("root", std::move(duplicate));
+  Inspector inspector(std::move(duplicate));
   EXPECT_FALSE(bool(inspector));
 }
 
@@ -112,7 +123,7 @@ TEST(Inspect, CreateWithVmoDuplicateVmo) {
   zx::vmo duplicate;
   ASSERT_OK(
       vmo.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &duplicate));
-  Inspector inspector("root", std::move(duplicate));
+  Inspector inspector(std::move(duplicate));
   EXPECT_TRUE(bool(inspector));
 }
 
@@ -125,7 +136,7 @@ TEST(Inspect, CreateWithDirtyVmo) {
   std::vector<uint8_t> bytes(4096, 'a');
   ASSERT_OK(vmo.write(bytes.data(), 0, bytes.size()));
 
-  Inspector inspector("root", std::move(vmo));
+  Inspector inspector(std::move(vmo));
   ASSERT_TRUE(bool(inspector));
   auto val = inspector.GetRoot().CreateUint("test", 100);
 

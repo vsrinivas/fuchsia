@@ -198,7 +198,7 @@ void Monitor::PrintHelp() {
 }
 
 zx_status_t Monitor::Inspect(std::vector<uint8_t>* output, size_t max_bytes) {
-  inspect::Inspector inspector("root", inspect::InspectSettings{.maximum_size = 1024 * 1024});
+  inspect::Inspector inspector(inspect::InspectSettings{.maximum_size = 1024 * 1024});
   auto& root = inspector.GetRoot();
   Capture c;
   Capture::GetCapture(&c, capture_state_, VMO);

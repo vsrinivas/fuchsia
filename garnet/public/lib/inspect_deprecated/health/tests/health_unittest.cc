@@ -17,7 +17,7 @@ using testing::UnorderedElementsAre;
 namespace {
 
 TEST(InspectHealth, Default) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("test");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
 
   auto hierarchy = inspect_deprecated::ReadFromVmo(tree.DuplicateVmo()).take_value();
@@ -29,7 +29,7 @@ TEST(InspectHealth, Default) {
 }
 
 TEST(InspectHealth, Ok) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("test");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.Ok();
 
@@ -42,7 +42,7 @@ TEST(InspectHealth, Ok) {
 }
 
 TEST(InspectHealth, UnhealthyToStartingUp) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("test");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.Unhealthy("test");
   health.StartingUp();
@@ -56,7 +56,7 @@ TEST(InspectHealth, UnhealthyToStartingUp) {
 }
 
 TEST(InspectHealth, Unhealthy) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("test");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.Unhealthy("test");
 
@@ -71,7 +71,7 @@ TEST(InspectHealth, Unhealthy) {
 }
 
 TEST(InspectHealth, StartingUpReason) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("test");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.StartingUp("test");
 
@@ -86,7 +86,7 @@ TEST(InspectHealth, StartingUpReason) {
 }
 
 TEST(InspectHealth, CustomMessage) {
-  auto tree = inspect_deprecated::Inspector().CreateTree("test");
+  auto tree = inspect_deprecated::Inspector().CreateTree();
   auto health = inspect_deprecated::NodeHealth(&tree.GetRoot());
   health.SetStatus("BAD CONFIG", "test");
 

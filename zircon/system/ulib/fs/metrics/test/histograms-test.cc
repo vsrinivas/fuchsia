@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
 #include <unistd.h>
 
 #include <limits>
@@ -9,8 +11,6 @@
 #include <vector>
 
 #include <fs/metrics/histograms.h>
-#include <lib/inspect/cpp/inspect.h>
-#include <lib/zx/time.h>
 #include <zxtest/zxtest.h>
 
 namespace fs_metrics {
@@ -18,7 +18,7 @@ namespace {
 
 class HistogramsTest : public zxtest::Test {
  public:
-  HistogramsTest() : inspector_("root") {}
+  HistogramsTest() : inspector_() {}
 
  protected:
   inspect::Inspector inspector_;

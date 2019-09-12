@@ -19,10 +19,9 @@ namespace {
 const InspectSettings kDefaultInspectSettings = {.maximum_size = 256 * 1024};
 }  // namespace
 
-Inspector::Inspector(const std::string& name) : Inspector(name, kDefaultInspectSettings) {}
+Inspector::Inspector() : Inspector(kDefaultInspectSettings) {}
 
-Inspector::Inspector(const std::string& name, const InspectSettings& settings)
-    : root_(std::make_unique<Node>()) {
+Inspector::Inspector(const InspectSettings& settings) : root_(std::make_unique<Node>()) {
   if (settings.maximum_size == 0) {
     return;
   }
@@ -32,10 +31,10 @@ Inspector::Inspector(const std::string& name, const InspectSettings& settings)
     return;
   }
 
-  *root_ = state_->CreateNode(name, 0 /* parent */);
+  *root_ = state_->CreateRootNode();
 }
 
-Inspector::Inspector(const std::string& name, zx::vmo vmo) : root_(std::make_unique<Node>()) {
+Inspector::Inspector(zx::vmo vmo) : root_(std::make_unique<Node>()) {
   size_t size;
 
   zx_status_t status;
@@ -58,7 +57,7 @@ Inspector::Inspector(const std::string& name, zx::vmo vmo) : root_(std::make_uni
     return;
   }
 
-  *root_ = state_->CreateNode(name, 0 /* parent */);
+  *root_ = state_->CreateRootNode();
 }
 
 zx::vmo Inspector::DuplicateVmo() const {
