@@ -56,6 +56,9 @@ test_package("crashpad_agent_tests") {
       dest = "crashpad_agent_integration_test_invalid_override_config"
       environments = basic_envs
     },
+    {
+      name = "privacy_settings_ptr_unittest"
+    },
   ]
 
   resources = [
@@ -100,6 +103,7 @@ test_package("crashpad_agent_tests") {
     ":config_unittest",
     ":crashpad_agent_integration_test",
     ":crashpad_agent_unittest",
+    ":privacy_settings_ptr_unittest",
   ]
 }
 
@@ -169,6 +173,30 @@ executable("crashpad_agent_integration_test") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-crash",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("privacy_settings_ptr_unittest") {
+  testonly = true
+
+  sources = [
+    "fake_privacy_settings.cc",
+    "fake_privacy_settings.h",
+    "privacy_settings_ptr_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback/crashpad_agent:src",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/crashpad/client",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 

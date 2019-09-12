@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/privacy_settings_ptr_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
