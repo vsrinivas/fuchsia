@@ -5,14 +5,13 @@
 #![feature(async_await)]
 
 use {
-    fidl_fuchsia_wlan_device_service::{
-        DeviceServiceMarker, DeviceWatcherEvent, DeviceWatcherEventStream,
-    },
+    fidl_fuchsia_wlan_device::MacRole::Ap,
+    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_sme::{ApConfig, StartApResultCode},
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
-    futures::{channel::oneshot, StreamExt},
+    futures::channel::oneshot,
     hex,
     std::panic,
     wlan_common::{
@@ -45,17 +44,13 @@ async fn open_ap_connect() {
     // Connect to WLAN device service and start watching for new device
     let wlan_service =
         connect_to_service::<DeviceServiceMarker>().expect("Failed to connect to wlan service");
-    let (watcher_proxy, watcher_server_end) =
-        fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
-    wlan_service.watch_devices(watcher_server_end).expect("wlan watch_devices call fails");
 
     // Create wlantap PHY
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_ap()).await;
 
     // Wait until iface is created from wlantap PHY
-    let mut watcher_event_stream = watcher_proxy.take_event_stream();
-    let iface_id = get_new_added_iface(&mut watcher_event_stream)
-        .expect_within(10.seconds(), "no iface added")
+    let iface_id = get_first_matching_iface_id(&wlan_service, |iface| iface.role == Ap)
+        .expect_within(5.seconds(), "No AP iface found in time")
         .await;
 
     let sme = get_ap_sme(&wlan_service, iface_id)
@@ -156,18 +151,4 @@ async fn verify_assoc_resp(helper: &mut test_utils::TestHelper) {
         )
         .await
         .unwrap_or_else(|oneshot::Canceled| panic!());
-}
-
-async fn get_new_added_iface(device_watch_stream: &mut DeviceWatcherEventStream) -> u16 {
-    loop {
-        assert_variant!(
-            device_watch_stream.next().await,
-            Some(Ok(event)) => match event {
-                DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
-                    return iface_id;
-                }
-                _ => (),
-            }
-        );
-    }
 }
