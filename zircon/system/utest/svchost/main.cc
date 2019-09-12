@@ -22,10 +22,11 @@ namespace {
 
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
-constexpr char kLogPath[] = "/svc/" fuchsia_boot_Log_Name;
 constexpr char kProfileProviderPath[] = "/svc/" fuchsia_scheduler_ProfileProvider_Name;
+constexpr char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
 constexpr char kRootJobPath[] = "/svc/" fuchsia_boot_RootJob_Name;
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
+constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
 
 TEST(SvchostTest, FuchsiaBootFactoryItemsPresent) {
   zx::channel client, server;
@@ -55,17 +56,30 @@ TEST(SvchostTest, FuchsiaBootItemsPresent) {
   ASSERT_EQ(ZX_OK, status, "fuchsia_boot_ItemsGet failed");
 }
 
-TEST(SvchostTest, FuchsiaBootLogPresent) {
+TEST(SvchostTest, FuchsiaReadOnlyBootLogPresent) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
 
-  status = fdio_service_connect(kLogPath, server.release());
+  status = fdio_service_connect(kReadOnlyLogPath, server.release());
   ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
 
   zx::debuglog log;
-  status = fuchsia_boot_LogGet(client.get(), log.reset_and_get_address());
-  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_LogGet failed");
+  status = fuchsia_boot_ReadOnlyLogGet(client.get(), log.reset_and_get_address());
+  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_ReadOnlyLogGet failed");
+}
+
+TEST(SvchostTest, FuchsiaWriteOnlyBootLogPresent) {
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  ASSERT_EQ(ZX_OK, status, "zx::channel::create failed");
+
+  status = fdio_service_connect(kWriteOnlyLogPath, server.release());
+  ASSERT_EQ(ZX_OK, status, "fdio_service_connect failed");
+
+  zx::debuglog log;
+  status = fuchsia_boot_WriteOnlyLogGet(client.get(), log.reset_and_get_address());
+  ASSERT_EQ(ZX_OK, status, "fuchsia_boot_WriteOnlyLogGet failed");
 }
 
 TEST(SvchostTest, FuchsiaSchedulerProfileProviderPresent) {

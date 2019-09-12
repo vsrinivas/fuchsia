@@ -23,29 +23,28 @@ namespace llcpp {
 namespace fuchsia {
 namespace boot {
 
-class RootJob;
-class Log;
+class WriteOnlyLog;
+class ReadOnlyLog;
 class Items;
 class FactoryItems;
 class RootResource;
+class RootJob;
 class Arguments;
 
-extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
+extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetResponseTable;
 
-// Protocol for providing the root job.
-//
-// TODO(ZX-4072): Do not use this without first consulting the Zircon team.
-class RootJob final {
-  RootJob() = delete;
+// Protocol for providing the kernel log, writable.
+class WriteOnlyLog final {
+  WriteOnlyLog() = delete;
  public:
-  static constexpr char Name[] = "fuchsia.boot.RootJob";
+  static constexpr char Name[] = "fuchsia.boot.WriteOnlyLog";
 
   struct GetResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::job job;
+    ::zx::debuglog log;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_RootJobGetResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_boot_WriteOnlyLogGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -118,11 +117,11 @@ class RootJob final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Get the root `job`.
+    // Get write-only handle to the kernel `log`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Get Get();
 
-    // Get the root `job`.
+    // Get write-only handle to the kernel `log`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
 
@@ -135,11 +134,11 @@ class RootJob final {
     Call() = delete;
    public:
 
-    // Get the root `job`.
+    // Get write-only handle to the kernel `log`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Get Get(zx::unowned_channel _client_end);
 
-    // Get the root `job`.
+    // Get write-only handle to the kernel `log`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
@@ -151,7 +150,7 @@ class RootJob final {
     InPlace() = delete;
    public:
 
-    // Get the root `job`.
+    // Get write-only handle to the kernel `log`.
     static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
@@ -161,13 +160,13 @@ class RootJob final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = RootJob;
+    using _Outer = WriteOnlyLog;
     using _Base = ::fidl::CompleterBase;
 
     class GetCompleterBase : public _Base {
      public:
-      void Reply(::zx::job job);
-      void Reply(::fidl::BytePart _buffer, ::zx::job job);
+      void Reply(::zx::debuglog log);
+      void Reply(::fidl::BytePart _buffer, ::zx::debuglog log);
       void Reply(::fidl::DecodedMessage<GetResponse> params);
 
      protected:
@@ -200,20 +199,20 @@ class RootJob final {
 
 };
 
-extern "C" const fidl_type_t fuchsia_boot_LogGetResponseTable;
+extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetResponseTable;
 
-// Protocol for providing the kernel log.
-class Log final {
-  Log() = delete;
+// Protocol for providing the kernel log, readable.
+class ReadOnlyLog final {
+  ReadOnlyLog() = delete;
  public:
-  static constexpr char Name[] = "fuchsia.boot.Log";
+  static constexpr char Name[] = "fuchsia.boot.ReadOnlyLog";
 
   struct GetResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     ::zx::debuglog log;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_LogGetResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_boot_ReadOnlyLogGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -286,11 +285,11 @@ class Log final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Get the kernel `log`.
+    // Get read-only handle to the kernel `log`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Get Get();
 
-    // Get the kernel `log`.
+    // Get read-only handle to the kernel `log`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
 
@@ -303,11 +302,11 @@ class Log final {
     Call() = delete;
    public:
 
-    // Get the kernel `log`.
+    // Get read-only handle to the kernel `log`.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Get Get(zx::unowned_channel _client_end);
 
-    // Get the kernel `log`.
+    // Get read-only handle to the kernel `log`.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
@@ -319,7 +318,7 @@ class Log final {
     InPlace() = delete;
    public:
 
-    // Get the kernel `log`.
+    // Get read-only handle to the kernel `log`.
     static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
@@ -329,7 +328,7 @@ class Log final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Log;
+    using _Outer = ReadOnlyLog;
     using _Base = ::fidl::CompleterBase;
 
     class GetCompleterBase : public _Base {
@@ -937,6 +936,176 @@ class RootResource final {
 
 };
 
+extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
+
+// Protocol for providing the root job.
+//
+// TODO(ZX-4072): Do not use this without first consulting the Zircon team.
+class RootJob final {
+  RootJob() = delete;
+ public:
+  static constexpr char Name[] = "fuchsia.boot.RootJob";
+
+  struct GetResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::job job;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_boot_RootJobGetResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class Get_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Get_Impl(zx::unowned_channel _client_end);
+      ~Get_Impl() = default;
+      Get_Impl(Get_Impl&& other) = default;
+      Get_Impl& operator=(Get_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using Get = Get_Impl<GetResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class Get_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Get_Impl() = default;
+      Get_Impl(Get_Impl&& other) = default;
+      Get_Impl& operator=(Get_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using Get = Get_Impl<GetResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Get the root `job`.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Get Get();
+
+    // Get the root `job`.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Get Get(::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Get the root `job`.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Get Get(zx::unowned_channel _client_end);
+
+    // Get the root `job`.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Get Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Get the root `job`.
+    static ::fidl::DecodeResult<GetResponse> Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = RootJob;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetCompleterBase : public _Base {
+     public:
+      void Reply(::zx::job job);
+      void Reply(::fidl::BytePart _buffer, ::zx::job job);
+      void Reply(::fidl::DecodedMessage<GetResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetCompleter = ::fidl::Completer<GetCompleterBase>;
+
+    virtual void Get(GetCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
 extern "C" const fidl_type_t fuchsia_boot_ArgumentsGetResponseTable;
 
 // Protocol for retrieving boot arguments.
@@ -1118,20 +1287,20 @@ class Arguments final {
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::boot::RootJob::GetResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::boot::WriteOnlyLog::GetResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::boot::RootJob::GetResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::boot::RootJob::GetResponse)
-    == ::llcpp::fuchsia::boot::RootJob::GetResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::boot::RootJob::GetResponse, job) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::boot::WriteOnlyLog::GetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::boot::WriteOnlyLog::GetResponse)
+    == ::llcpp::fuchsia::boot::WriteOnlyLog::GetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::boot::WriteOnlyLog::GetResponse, log) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::boot::Log::GetResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::boot::ReadOnlyLog::GetResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::boot::Log::GetResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::boot::Log::GetResponse)
-    == ::llcpp::fuchsia::boot::Log::GetResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::boot::Log::GetResponse, log) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::boot::ReadOnlyLog::GetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::boot::ReadOnlyLog::GetResponse)
+    == ::llcpp::fuchsia::boot::ReadOnlyLog::GetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::boot::ReadOnlyLog::GetResponse, log) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::boot::Items::GetRequest> : public std::true_type {};
@@ -1175,6 +1344,14 @@ struct IsFidlMessage<::llcpp::fuchsia::boot::RootResource::GetResponse> : public
 static_assert(sizeof(::llcpp::fuchsia::boot::RootResource::GetResponse)
     == ::llcpp::fuchsia::boot::RootResource::GetResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::boot::RootResource::GetResponse, resource) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::boot::RootJob::GetResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::boot::RootJob::GetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::boot::RootJob::GetResponse)
+    == ::llcpp::fuchsia::boot::RootJob::GetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::boot::RootJob::GetResponse, job) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::boot::Arguments::GetResponse> : public std::true_type {};

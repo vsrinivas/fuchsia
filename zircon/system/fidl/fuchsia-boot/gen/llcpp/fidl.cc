@@ -11,12 +11,12 @@ namespace boot {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kRootJob_Get_Ordinal = 0x7e473a2400000000lu;
-extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
+constexpr uint64_t kWriteOnlyLog_Get_Ordinal = 0x6bf285c200000000lu;
+extern "C" const fidl_type_t fuchsia_boot_WriteOnlyLogGetResponseTable;
 
 }  // namespace
 template <>
-RootJob::ResultOf::Get_Impl<RootJob::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
+WriteOnlyLog::ResultOf::Get_Impl<WriteOnlyLog::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -25,60 +25,60 @@ RootJob::ResultOf::Get_Impl<RootJob::GetResponse>::Get_Impl(zx::unowned_channel 
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      RootJob::InPlace::Get(std::move(_client_end), Super::response_buffer()));
+      WriteOnlyLog::InPlace::Get(std::move(_client_end), Super::response_buffer()));
 }
 
-RootJob::ResultOf::Get RootJob::SyncClient::Get() {
+WriteOnlyLog::ResultOf::Get WriteOnlyLog::SyncClient::Get() {
   return ResultOf::Get(zx::unowned_channel(this->channel_));
 }
 
-RootJob::ResultOf::Get RootJob::Call::Get(zx::unowned_channel _client_end) {
+WriteOnlyLog::ResultOf::Get WriteOnlyLog::Call::Get(zx::unowned_channel _client_end) {
   return ResultOf::Get(std::move(_client_end));
 }
 
 template <>
-RootJob::UnownedResultOf::Get_Impl<RootJob::GetResponse>::Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+WriteOnlyLog::UnownedResultOf::Get_Impl<WriteOnlyLog::GetResponse>::Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetRequest::PrimarySize);
   _request_buffer.set_actual(sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      RootJob::InPlace::Get(std::move(_client_end), std::move(_response_buffer)));
+      WriteOnlyLog::InPlace::Get(std::move(_client_end), std::move(_response_buffer)));
 }
 
-RootJob::UnownedResultOf::Get RootJob::SyncClient::Get(::fidl::BytePart _response_buffer) {
+WriteOnlyLog::UnownedResultOf::Get WriteOnlyLog::SyncClient::Get(::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Get(zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-RootJob::UnownedResultOf::Get RootJob::Call::Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+WriteOnlyLog::UnownedResultOf::Get WriteOnlyLog::Call::Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Get(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<RootJob::GetResponse> RootJob::InPlace::Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<WriteOnlyLog::GetResponse> WriteOnlyLog::InPlace::Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
+  params.message()->_hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<RootJob::GetResponse>::FromFailure(
+    return ::fidl::DecodeResult<WriteOnlyLog::GetResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<RootJob::GetResponse>::FromFailure(
+    return ::fidl::DecodeResult<WriteOnlyLog::GetResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 
-bool RootJob::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+bool WriteOnlyLog::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->Close(ZX_ERR_INVALID_ARGS);
@@ -86,7 +86,7 @@ bool RootJob::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kRootJob_Get_Ordinal:
+    case kWriteOnlyLog_Get_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -103,7 +103,7 @@ bool RootJob::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
   }
 }
 
-bool RootJob::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+bool WriteOnlyLog::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -113,31 +113,31 @@ bool RootJob::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* tx
 }
 
 
-void RootJob::Interface::GetCompleterBase::Reply(::zx::job job) {
+void WriteOnlyLog::Interface::GetCompleterBase::Reply(::zx::debuglog log) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kRootJob_Get_Ordinal;
-  _response.job = std::move(job);
+  _response._hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
+  _response.log = std::move(log);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_response_bytes)));
 }
 
-void RootJob::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::job job) {
+void WriteOnlyLog::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::debuglog log) {
   if (_buffer.capacity() < GetResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kRootJob_Get_Ordinal;
-  _response.job = std::move(job);
+  _response._hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
+  _response.log = std::move(log);
   _buffer.set_actual(sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_buffer)));
 }
 
-void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
+void WriteOnlyLog::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
+  params.message()->_hdr.ordinal = kWriteOnlyLog_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -145,12 +145,12 @@ void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetRespo
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kLog_Get_Ordinal = 0x404eb33700000000lu;
-extern "C" const fidl_type_t fuchsia_boot_LogGetResponseTable;
+constexpr uint64_t kReadOnlyLog_Get_Ordinal = 0x6ef326c600000000lu;
+extern "C" const fidl_type_t fuchsia_boot_ReadOnlyLogGetResponseTable;
 
 }  // namespace
 template <>
-Log::ResultOf::Get_Impl<Log::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
+ReadOnlyLog::ResultOf::Get_Impl<ReadOnlyLog::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -159,60 +159,60 @@ Log::ResultOf::Get_Impl<Log::GetResponse>::Get_Impl(zx::unowned_channel _client_
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Log::InPlace::Get(std::move(_client_end), Super::response_buffer()));
+      ReadOnlyLog::InPlace::Get(std::move(_client_end), Super::response_buffer()));
 }
 
-Log::ResultOf::Get Log::SyncClient::Get() {
+ReadOnlyLog::ResultOf::Get ReadOnlyLog::SyncClient::Get() {
   return ResultOf::Get(zx::unowned_channel(this->channel_));
 }
 
-Log::ResultOf::Get Log::Call::Get(zx::unowned_channel _client_end) {
+ReadOnlyLog::ResultOf::Get ReadOnlyLog::Call::Get(zx::unowned_channel _client_end) {
   return ResultOf::Get(std::move(_client_end));
 }
 
 template <>
-Log::UnownedResultOf::Get_Impl<Log::GetResponse>::Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ReadOnlyLog::UnownedResultOf::Get_Impl<ReadOnlyLog::GetResponse>::Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, GetRequest::PrimarySize);
   _request_buffer.set_actual(sizeof(GetRequest));
   ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Log::InPlace::Get(std::move(_client_end), std::move(_response_buffer)));
+      ReadOnlyLog::InPlace::Get(std::move(_client_end), std::move(_response_buffer)));
 }
 
-Log::UnownedResultOf::Get Log::SyncClient::Get(::fidl::BytePart _response_buffer) {
+ReadOnlyLog::UnownedResultOf::Get ReadOnlyLog::SyncClient::Get(::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Get(zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Log::UnownedResultOf::Get Log::Call::Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+ReadOnlyLog::UnownedResultOf::Get ReadOnlyLog::Call::Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::Get(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Log::GetResponse> Log::InPlace::Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<ReadOnlyLog::GetResponse> ReadOnlyLog::InPlace::Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(GetRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLog_Get_Ordinal;
+  params.message()->_hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Log::GetResponse>::FromFailure(
+    return ::fidl::DecodeResult<ReadOnlyLog::GetResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Log::GetResponse>::FromFailure(
+    return ::fidl::DecodeResult<ReadOnlyLog::GetResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 
-bool Log::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+bool ReadOnlyLog::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->Close(ZX_ERR_INVALID_ARGS);
@@ -220,7 +220,7 @@ bool Log::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
   }
   fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
   switch (hdr->ordinal) {
-    case kLog_Get_Ordinal:
+    case kReadOnlyLog_Get_Ordinal:
     {
       auto result = ::fidl::DecodeAs<GetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -237,7 +237,7 @@ bool Log::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
   }
 }
 
-bool Log::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+bool ReadOnlyLog::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -247,31 +247,31 @@ bool Log::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
 }
 
 
-void Log::Interface::GetCompleterBase::Reply(::zx::debuglog log) {
+void ReadOnlyLog::Interface::GetCompleterBase::Reply(::zx::debuglog log) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
-  _response._hdr.ordinal = kLog_Get_Ordinal;
+  _response._hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   _response.log = std::move(log);
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_response_bytes)));
 }
 
-void Log::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::debuglog log) {
+void ReadOnlyLog::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::debuglog log) {
   if (_buffer.capacity() < GetResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
-  _response._hdr.ordinal = kLog_Get_Ordinal;
+  _response._hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   _response.log = std::move(log);
   _buffer.set_actual(sizeof(GetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_buffer)));
 }
 
-void Log::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
+void ReadOnlyLog::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
-  params.message()->_hdr.ordinal = kLog_Get_Ordinal;
+  params.message()->_hdr.ordinal = kReadOnlyLog_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -685,6 +685,140 @@ void RootResource::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, 
 void RootResource::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kRootResource_Get_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kRootJob_Get_Ordinal = 0x7e473a2400000000lu;
+extern "C" const fidl_type_t fuchsia_boot_RootJobGetResponseTable;
+
+}  // namespace
+template <>
+RootJob::ResultOf::Get_Impl<RootJob::GetResponse>::Get_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetRequest));
+  ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      RootJob::InPlace::Get(std::move(_client_end), Super::response_buffer()));
+}
+
+RootJob::ResultOf::Get RootJob::SyncClient::Get() {
+  return ResultOf::Get(zx::unowned_channel(this->channel_));
+}
+
+RootJob::ResultOf::Get RootJob::Call::Get(zx::unowned_channel _client_end) {
+  return ResultOf::Get(std::move(_client_end));
+}
+
+template <>
+RootJob::UnownedResultOf::Get_Impl<RootJob::GetResponse>::Get_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetRequest));
+  ::fidl::DecodedMessage<GetRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      RootJob::InPlace::Get(std::move(_client_end), std::move(_response_buffer)));
+}
+
+RootJob::UnownedResultOf::Get RootJob::SyncClient::Get(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Get(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+RootJob::UnownedResultOf::Get RootJob::Call::Get(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Get(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<RootJob::GetResponse> RootJob::InPlace::Get(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RootJob::GetResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetRequest, GetResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<RootJob::GetResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool RootJob::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kRootJob_Get_Ordinal:
+    {
+      auto result = ::fidl::DecodeAs<GetRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->Get(
+        Interface::GetCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool RootJob::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void RootJob::Interface::GetCompleterBase::Reply(::zx::job job) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetResponse*>(_write_bytes);
+  _response._hdr.ordinal = kRootJob_Get_Ordinal;
+  _response.job = std::move(job);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_response_bytes)));
+}
+
+void RootJob::Interface::GetCompleterBase::Reply(::fidl::BytePart _buffer, ::zx::job job) {
+  if (_buffer.capacity() < GetResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetResponse*>(_buffer.data());
+  _response._hdr.ordinal = kRootJob_Get_Ordinal;
+  _response.job = std::move(job);
+  _buffer.set_actual(sizeof(GetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetResponse>(std::move(_buffer)));
+}
+
+void RootJob::Interface::GetCompleterBase::Reply(::fidl::DecodedMessage<GetResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kRootJob_Get_Ordinal;
   CompleterBase::SendReply(std::move(params));
 }
 

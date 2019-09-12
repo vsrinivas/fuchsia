@@ -160,9 +160,10 @@ static constexpr const char* miscsvc_services[] = {
 static constexpr const char* devcoodinator_services[] = {
     fuchsia_boot_FactoryItems_Name,
     fuchsia_boot_Items_Name,
-    fuchsia_boot_Log_Name,
+    fuchsia_boot_ReadOnlyLog_Name,
     fuchsia_boot_RootJob_Name,
     fuchsia_boot_RootResource_Name,
+    fuchsia_boot_WriteOnlyLog_Name,
     fuchsia_process_Launcher_Name,
     nullptr,
 };

@@ -570,7 +570,7 @@ mod tests {
                             "source": {
                                 "realm": {},
                             },
-                            "source_path": "/svc/fuchsia.boot.Log",
+                            "source_path": "/svc/fuchsia.boot.WriteOnlyLog",
                             "target_path": "/svc/fuchsia.logger.Log"
                         }
                     },
@@ -588,7 +588,7 @@ mod tests {
                             "source": {
                                 "realm": {},
                             },
-                            "source_path": "/svc/fuchsia.boot.Log",
+                            "source_path": "/svc/fuchsia.boot.WriteOnlyLog",
                             "target_path": "/svc/fuchsia.logger.Log"
                         }
                     },

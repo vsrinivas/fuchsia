@@ -5,14 +5,16 @@
 #ifndef ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
 #define ZIRCON_SYSTEM_CORE_BOOTSVC_SVCFS_SERVICE_H_
 
+#include <lib/zx/channel.h>
+#include <lib/zx/debuglog.h>
+#include <lib/zx/resource.h>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/debuglog.h>
 
 #include "util.h"
 
@@ -55,8 +57,18 @@ fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatche
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                             ItemMap map);
 
-// Create a service to provide the kernel log.
-fbl::RefPtr<fs::Service> CreateLogService(async_dispatcher_t* dispatcher, const zx::debuglog& log);
+// Create a service to provide a read-only version of the kernel log.
+// Note that the root resource is passed in here, rather than a read-only log handle to be
+// duplicated, because a fresh debuglog (LogDispatcher) object needs to be returned for each call.
+// This is because LogDispatcher holds the implicit read location for reading from the log, so if a
+// handle to the same object was duplicated, this would mistakenly share read location amongst all
+// retrievals.
+fbl::RefPtr<fs::Service> CreateReadOnlyLogService(async_dispatcher_t* dispatcher,
+                                                  const zx::resource& root_resource);
+
+// Create a service to provide a write-only version of the kernel log.
+fbl::RefPtr<fs::Service> CreateWriteOnlyLogService(async_dispatcher_t* dispatcher,
+                                                   const zx::debuglog& log);
 
 // Create a service to provide the root job.
 fbl::RefPtr<fs::Service> CreateRootJobService(async_dispatcher_t* dispatcher);

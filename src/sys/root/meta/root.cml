@@ -44,7 +44,12 @@
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
-      "legacy_service": "/svc/fuchsia.boot.Log",
+      "legacy_service": "/svc/fuchsia.boot.ReadOnlyLog",
+      "from": "realm",
+      "to": [ { "dest": "#devcoordinator" } ],
+    },
+    {
+      "legacy_service": "/svc/fuchsia.boot.WriteOnlyLog",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
     },

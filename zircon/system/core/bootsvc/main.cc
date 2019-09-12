@@ -150,7 +150,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 //   - A /svc directory, containing other services hosted by bootsvc, including:
 //     - fuchsia.boot.Arguments, which provides boot cmdline arguments
 //     - fuchsia.boot.Items, which allows querying for certain ZBI items
-//     - fuchsia.boot.Log, which provides debuglog handles
+//     - fuchsia.boot.{ReadOnly|WriteOnly}Log, which provides debuglog handles
 //     - fuchsia.boot.RootJob, which provides root job handles
 //     - fuchsia.boot.RootResource, which provides root resource handles
 // - A loader that can load libraries from /boot, hosted by bootsvc
@@ -305,7 +305,14 @@ int main(int argc, char** argv) {
   svcfs_svc->AddService(
       fuchsia_boot_FactoryItems_Name,
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
-  svcfs_svc->AddService(fuchsia_boot_Log_Name, bootsvc::CreateLogService(loop.dispatcher(), log));
+
+  zx::resource dup_root;
+  status = root_resource_handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_root);
+  ZX_ASSERT_MSG(status == ZX_OK && dup_root.is_valid(), "Failed to duplicate root resource");
+  svcfs_svc->AddService(fuchsia_boot_ReadOnlyLog_Name,
+                        bootsvc::CreateReadOnlyLogService(loop.dispatcher(), dup_root));
+  svcfs_svc->AddService(fuchsia_boot_WriteOnlyLog_Name,
+                        bootsvc::CreateWriteOnlyLogService(loop.dispatcher(), log));
   zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
   svcfs_svc->AddService(fuchsia_boot_RootJob_Name,
                         bootsvc::CreateRootJobService(loop.dispatcher()));

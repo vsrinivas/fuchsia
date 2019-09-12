@@ -29,6 +29,7 @@ zx_status_t LogDispatcher::Create(uint32_t flags, KernelHandle<LogDispatcher>* h
                      new_handle.dispatcher().get());
   }
 
+  // Note: ZX_RIGHT_READ is added by sys_debuglog_create when ZX_LOG_FLAG_READABLE.
   *rights = default_rights();
   *handle = ktl::move(new_handle);
   return ZX_OK;
