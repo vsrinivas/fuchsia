@@ -4,6 +4,12 @@
 
 library fuchsia.media.audio;
 
+/// The volume value representing the maximum loudness.
+const float32 MAX_VOLUME = 1.0;
+
+/// The volume value representing silence.
+const float32 MIN_VOLUME = 0.0;
+
 /// A protocol for controlling volume.
 protocol VolumeControl {
     /// Sets the volume of the audio element to the given value in
