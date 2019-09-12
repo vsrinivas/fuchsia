@@ -28,7 +28,7 @@ extern "C" const fidl_type_t test_name_SimpleTableTable;
 struct SimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
  public:
-  // Returns if any table field is set.
+  // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
   const int64_t& x() const {
@@ -97,7 +97,7 @@ extern "C" const fidl_type_t test_name_OlderSimpleTableTable;
 struct OlderSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
  public:
-  // Returns if any table field is set.
+  // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
   const int64_t& x() const {
@@ -152,7 +152,7 @@ extern "C" const fidl_type_t test_name_NewerSimpleTableTable;
 struct NewerSimpleTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
  public:
-  // Returns if any table field is set.
+  // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
   const int64_t& x() const {
@@ -235,7 +235,7 @@ extern "C" const fidl_type_t test_name_EmptyTableTable;
 struct EmptyTable final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
  public:
-  // Returns if any table field is set.
+  // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
   EmptyTable() = default;

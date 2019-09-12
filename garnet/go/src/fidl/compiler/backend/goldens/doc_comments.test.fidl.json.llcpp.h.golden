@@ -32,7 +32,7 @@ extern "C" const fidl_type_t test_name_TableTable;
 struct Table final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
  public:
-  // Returns if any table field is set.
+  // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
 
   // table field comment #1

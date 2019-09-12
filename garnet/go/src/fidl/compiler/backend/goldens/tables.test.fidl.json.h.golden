@@ -16,7 +16,7 @@ class EmptyTable;
 class SimpleTable final {
  public:
   static const fidl_type_t* FidlType;
-  // Returns if any table field is set;
+  // Returns whether no field is set.
   bool IsEmpty() const;
   
   const int64_t& x() const {
@@ -127,7 +127,7 @@ using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
 class OlderSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
-  // Returns if any table field is set;
+  // Returns whether no field is set.
   bool IsEmpty() const;
   
   const int64_t& x() const {
@@ -198,7 +198,7 @@ using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
 class NewerSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
-  // Returns if any table field is set;
+  // Returns whether no field is set.
   bool IsEmpty() const;
   
   const int64_t& x() const {
@@ -349,7 +349,7 @@ using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 class EmptyTable final {
  public:
   static const fidl_type_t* FidlType;
-  // Returns if any table field is set;
+  // Returns whether no field is set.
   bool IsEmpty() const;
 
   EmptyTable();

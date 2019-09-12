@@ -18,7 +18,7 @@ extern "C" const fidl_type_t {{ .TableType }};
 struct {{ .Name }} final : private ::fidl::VectorView<fidl_envelope_t> {
   using EnvelopesView = ::fidl::VectorView<fidl_envelope_t>;
  public:
-  // Returns if any table field is set.
+  // Returns whether no field is set.
   bool IsEmpty() const { return EnvelopesView::empty(); }
   {{- range .Members }}
 {{ "" }}
