@@ -6,8 +6,8 @@ source_set("input") {
   sources = [
     "input_system.cc",
     "input_system.h",
-    "view_id.cc",
-    "view_id.h",
+    "view_stack.cc",
+    "view_stack.h",
   ]
 
   deps = [

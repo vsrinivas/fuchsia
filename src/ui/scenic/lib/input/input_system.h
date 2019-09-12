@@ -16,7 +16,7 @@
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
-#include "src/ui/scenic/lib/input/view_id.h"
+#include "src/ui/scenic/lib/input/view_stack.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 
 namespace scenic_impl {

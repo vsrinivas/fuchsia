@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/input/view_id.h"
+#include "src/ui/scenic/lib/input/view_stack.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 using escher::operator<<;
 
@@ -29,5 +28,4 @@ std::ostream& operator<<(std::ostream& os, const ViewStack& value) {
   return os << "]";
 }
 
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input
