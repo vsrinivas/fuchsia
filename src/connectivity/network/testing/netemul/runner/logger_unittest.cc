@@ -33,7 +33,7 @@ class LoggerTest : public sys::testing::TestWithEnvironment {
     services->AddServiceWithLaunchInfo(MakeLoggerLaunchInfo(), fuchsia::logger::Log::Name_);
     env = CreateNewEnclosingEnvironment(
         "some_logger", std::move(services),
-        fuchsia::sys::EnvironmentOptions{.allow_parent_runners = false,
+        fuchsia::sys::EnvironmentOptions{.use_parent_runners = false,
                                          .inherit_parent_services = false,
                                          .kill_on_oom = true,
                                          .delete_storage_on_death = true});

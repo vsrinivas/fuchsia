@@ -36,6 +36,7 @@ const char kComponentForRunner[] =
     "fuchsia-pkg://fuchsia.com/fake_component_for_runner#meta/"
     "fake_component_for_runner.cmx";
 const char kComponentForRunnerProcessName[] = "fake_component_for_runner.cmx";
+const char kNestedEnvLabel[] = "nested-environment";
 
 class RealmRunnerTest : public TestWithEnvironment {
  protected:
@@ -48,15 +49,19 @@ class RealmRunnerTest : public TestWithEnvironment {
   }
 
   std::pair<std::unique_ptr<EnclosingEnvironment>, std::unique_ptr<MockRunnerRegistry>>
-  MakeNestedEnvironment(const fuchsia::sys::EnvironmentOptions& options) {
+  MakeNestedEnvironment(const fuchsia::sys::EnvironmentOptions& options,
+                        EnclosingEnvironment* parent_env = nullptr,
+                        std::string env_label = kNestedEnvLabel) {
     fuchsia::sys::EnvironmentPtr env;
-    enclosing_environment_->ConnectToService(fuchsia::sys::Environment::Name_,
-                                             env.NewRequest().TakeChannel());
+    if (!parent_env) {
+      parent_env = enclosing_environment_.get();
+    }
+    parent_env->ConnectToService(fuchsia::sys::Environment::Name_, env.NewRequest().TakeChannel());
     auto registry = std::make_unique<MockRunnerRegistry>();
     auto services = sys::testing::EnvironmentServices::Create(env);
     EXPECT_EQ(ZX_OK, services->AddService(registry->GetHandler()));
-    auto nested_environment = EnclosingEnvironment::Create("nested-environment", env,
-                                                           std::move(services), std::move(options));
+    auto nested_environment =
+        EnclosingEnvironment::Create(env_label, env, std::move(services), std::move(options));
     WaitForEnclosingEnvToStart(nested_environment.get());
     return std::make_pair(std::move(nested_environment), std::move(registry));
   }
@@ -171,7 +176,7 @@ TEST_F(RealmRunnerTest, RunnerSharedFromParent) {
   std::unique_ptr<MockRunnerRegistry> nested_registry;
   {
     std::tie(nested_environment, nested_registry) =
-        MakeNestedEnvironment({.allow_parent_runners = true});
+        MakeNestedEnvironment({.use_parent_runners = true});
   }
 
   // launch again and check that the runner from the parent environment was
@@ -181,6 +186,65 @@ TEST_F(RealmRunnerTest, RunnerSharedFromParent) {
   WaitForComponentCount(&runner_registry_, 2);
   EXPECT_EQ(1, runner_registry_.connect_count());
   EXPECT_EQ(0, nested_registry->connect_count());
+}
+
+TEST_F(RealmRunnerTest, RunnerStartedInParent) {
+  std::unique_ptr<EnclosingEnvironment> nested_environment1;
+  std::unique_ptr<MockRunnerRegistry> nested_registry1;
+  {
+    std::tie(nested_environment1, nested_registry1) =
+        MakeNestedEnvironment({.use_parent_runners = true});
+  }
+
+  // Create a component and check that the runner was started in the parent env
+  auto component1 = nested_environment1->CreateComponentFromUrl(kComponentForRunner);
+  WaitForRunnerToRegister();
+
+  WaitForComponentCount(&runner_registry_, 1);
+  EXPECT_EQ(1, runner_registry_.connect_count());
+  EXPECT_EQ(0, nested_registry1->connect_count());
+
+  std::unique_ptr<EnclosingEnvironment> nested_environment2;
+  std::unique_ptr<MockRunnerRegistry> nested_registry2;
+  {
+    std::tie(nested_environment2, nested_registry2) = MakeNestedEnvironment(
+        {.use_parent_runners = true}, enclosing_environment_.get(), "nested-environment2");
+  }
+
+  // Create a second component and check that the runner was shared
+  auto component2 = nested_environment2->CreateComponentFromUrl(kComponentForRunner);
+  WaitForComponentCount(&runner_registry_, 2);
+  EXPECT_EQ(1, runner_registry_.connect_count());
+  EXPECT_EQ(0, nested_registry1->connect_count());
+  EXPECT_EQ(0, nested_registry2->connect_count());
+}
+
+TEST_F(RealmRunnerTest, UseParentRunnerRecursive) {
+  // Create first nested environment
+  std::unique_ptr<EnclosingEnvironment> nested_environment;
+  std::unique_ptr<MockRunnerRegistry> nested_registry;
+  {
+    std::tie(nested_environment, nested_registry) =
+        MakeNestedEnvironment({.use_parent_runners = true});
+  }
+
+  // Create a nested environment within the nested environment
+  std::unique_ptr<EnclosingEnvironment> double_nested_env;
+  std::unique_ptr<MockRunnerRegistry> double_nested_registry;
+  {
+    std::tie(double_nested_env, double_nested_registry) = MakeNestedEnvironment(
+        {.use_parent_runners = true}, nested_environment.get(), "double-nested-environment");
+  }
+
+  // Create a component in double-nested-environment
+  auto component1 = double_nested_env->CreateComponentFromUrl(kComponentForRunner);
+  WaitForRunnerToRegister();
+  WaitForComponentCount(&runner_registry_, 1);
+
+  // Check that the runner was started in enclosing_environment
+  EXPECT_EQ(1, runner_registry_.connect_count());
+  EXPECT_EQ(0, nested_registry->connect_count());
+  EXPECT_EQ(0, double_nested_registry->connect_count());
 }
 
 TEST_F(RealmRunnerTest, ComponentBridgeReturnsRightReturnCode) {

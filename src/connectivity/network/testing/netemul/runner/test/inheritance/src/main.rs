@@ -56,7 +56,9 @@ async fn wait_for_component(component: &ComponentControllerProxy) -> Result<(), 
     let mut component_events = component.take_event_stream();
     // wait for child to exit and mimic the result code
     let result = loop {
-        let event = component_events.try_next().await
+        let event = component_events
+            .try_next()
+            .await
             .context("wait for child component to exit")?
             .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
 
@@ -129,7 +131,7 @@ async fn run_root() -> Result<(), Error> {
 
     let mut options = EnvironmentOptions {
         inherit_parent_services: true,
-        allow_parent_runners: true,
+        use_parent_runners: true,
         kill_on_oom: true,
         delete_storage_on_death: false,
     };
@@ -146,7 +148,8 @@ async fn run_root() -> Result<(), Error> {
 }
 
 async fn run_no_inherit() -> Result<(), Error> {
-    simple_increment(1).await
+    simple_increment(1)
+        .await
         .expect_err("Shouldn't be able to use service due to inheritance setup");
     Ok(())
 }

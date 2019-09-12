@@ -262,7 +262,7 @@ Realm::Realm(RealmArgs args, zx::job job)
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
       environment_services_(args.environment_services),
-      allow_parent_runners_(args.options.allow_parent_runners),
+      use_parent_runners_(args.options.use_parent_runners),
       delete_storage_on_death_(args.options.delete_storage_on_death) {
   // Only need to create this channel for the root realm.
   if (parent_ == nullptr) {
@@ -909,13 +909,10 @@ void Realm::CreateRunnerComponentFromPackage(
 }
 
 RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
-  // We create the entry in |runners_| before calling ourselves
-  // recursively to detect cycles.
-  auto found = GetRunnerRecursive(runner);
-  if (found) {
-    return found;
-  }
-  auto result = runners_.emplace(runner, nullptr);
+  // Determine the realm whose runner should be used.
+  auto realm_runner = GetRunnerRealm();
+
+  auto result = realm_runner->runners_.emplace(runner, nullptr);
   if (result.second) {
     zx::channel request;
     auto runner_services = sys::ServiceDirectory::CreateWithRequest(&request);
@@ -925,7 +922,7 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
     runner_launch_info.directory_request = std::move(request);
     result.first->second = std::make_unique<RunnerHolder>(
         std::move(runner_services), std::move(runner_controller), std::move(runner_launch_info),
-        this, [this, runner] { runners_.erase(runner); });
+        realm_runner, [realm_runner, runner] { realm_runner->runners_.erase(runner); });
 
   } else if (!result.first->second) {
     // There was a cycle in the runner graph.
@@ -936,15 +933,14 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
   return result.first->second.get();
 }
 
-RunnerHolder* Realm::GetRunnerRecursive(const std::string& runner) const {
-  auto it = runners_.find(runner);
-  if (it != runners_.end()) {
-    return it->second.get();
-  } else if (parent_ && allow_parent_runners_) {
-    return parent_->GetRunnerRecursive(runner);
+Realm* Realm::GetRunnerRealm() {
+  auto realm = this;
+
+  while (realm->use_parent_runners_ && realm->parent_) {
+    realm = realm->parent_;
   }
 
-  return nullptr;
+  return realm;
 }
 
 zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {

@@ -143,7 +143,7 @@ fidl::InterfaceRequestHandler<fuchsia::netemul::sandbox::Sandbox> SandboxService
             .delete_storage_on_death = false,
             .kill_on_oom = true,
             .inherit_parent_services = true,
-            .allow_parent_runners = true,
+            .use_parent_runners = true,
         });
 
     bindings_.push_back(std::make_unique<SandboxBinding>(std::move(req), std::move(env_ctlr),

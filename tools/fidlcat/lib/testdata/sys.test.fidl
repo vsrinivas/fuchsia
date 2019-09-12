@@ -119,7 +119,7 @@ struct EnvironmentOptions {
     // True if components in this environment can share a runner provided
     // by the parent environment. If false, a new runner will be started
     // in this environment for components.
-    bool allow_parent_runners;
+    bool use_parent_runners;
     // True if this environment should be killed first in out of memory
     // situations by setting the ZX_PROP_JOB_KILL_ON_OOM property on this
     // environment's job.

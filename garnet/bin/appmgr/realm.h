@@ -128,8 +128,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
  private:
   static uint32_t next_numbered_label_;
 
+  // Returns |runner| if it exists in |runners_|, otherwise creates a runner in
+  // |runners_|. If |use_parent_runners_| is true, creates |runner| in
+  // |parent_->runners_|.
   RunnerHolder* GetOrCreateRunner(const std::string& runner);
-  RunnerHolder* GetRunnerRecursive(const std::string& runner) const;
+  Realm* GetRunnerRealm();
 
   void CreateComponentWithRunnerForScheme(std::string runner_url,
                                           fuchsia::sys::LaunchInfo launch_info,
@@ -194,7 +197,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   const std::shared_ptr<sys::ServiceDirectory> environment_services_;
 
-  bool allow_parent_runners_ = false;
+  bool use_parent_runners_ = false;
   bool delete_storage_on_death_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Realm);

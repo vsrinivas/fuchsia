@@ -575,7 +575,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             Some(fidl::encoding::OutOfLine(&mut service_list)),
             &mut EnvironmentOptions {
                 inherit_parent_services: false,
-                allow_parent_runners: false,
+                use_parent_runners: false,
                 kill_on_oom: false,
                 delete_storage_on_death: false,
             },
