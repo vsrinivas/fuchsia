@@ -44,7 +44,6 @@ mod indexing;
 mod local_action_provider;
 mod mod_manager;
 mod models;
-mod module_output;
 mod session_context;
 mod story_context_store;
 mod story_graph;

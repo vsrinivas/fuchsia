@@ -33,13 +33,6 @@ ModuleContextImpl::ModuleContextImpl(
       [this](fidl::InterfaceRequest<fuchsia::modular::ModuleContext> request) {
         bindings_.AddBinding(this, std::move(request));
       });
-  service_provider_impl_.AddService<fuchsia::app::discover::ModuleOutputWriter>(
-      [this](auto request) {
-        fuchsia::app::discover::ModuleIdentifier module_scope;
-        module_scope.set_story_id(story_controller_impl_->GetStoryId().value_or(""));
-        module_scope.set_module_path(module_data_->module_path());
-        discover_registry_->RegisterModuleOutputWriter(std::move(module_scope), std::move(request));
-      });
   service_provider_impl_.AddService<fuchsia::app::discover::StoryModule>([this](auto request) {
     fuchsia::app::discover::ModuleIdentifier module_scope;
     module_scope.set_story_id(story_controller_impl_->GetStoryId().value_or(""));

@@ -22,9 +22,6 @@ using ModulePath = vector<ModulePathPart>:MODULE_PATH_MAX_LENGTH;
 /// requests that require module scoping.
 [Discoverable]
 protocol DiscoverRegistry {
-    /// Retrieves a module output writer for the module identified by `module`.
-    RegisterModuleOutputWriter(ModuleIdentifier module, request<ModuleOutputWriter> request);
-
     /// Retrieves a story module controller for the module identified by `module`.
     RegisterStoryModule(ModuleIdentifier module, request<StoryModule> request);
 };

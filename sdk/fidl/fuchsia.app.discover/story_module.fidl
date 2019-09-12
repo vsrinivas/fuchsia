@@ -7,10 +7,13 @@ library fuchsia.app.discover;
 using fuchsia.modular;
 using fuchsia.mem;
 
+const uint32 ENTITY_REFERENCE_MAX_LENGTH = 1024;
 const uint32 MODULE_NAME_MAX_LENGTH = 512;
 const uint32 STATE_KEY_MAX_LENGTH = 128;
+const uint32 OUTPUT_NAME_MAX_LENGTH = 128;
 
 using ModuleName = string:MODULE_NAME_MAX_LENGTH;
+using OutputName = string:OUTPUT_NAME_MAX_LENGTH;
 using StateKey = string:STATE_KEY_MAX_LENGTH;
 
 [Discoverable]
