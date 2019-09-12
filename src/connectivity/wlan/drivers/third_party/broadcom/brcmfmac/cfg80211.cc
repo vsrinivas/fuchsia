@@ -1574,7 +1574,12 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
   bss_info_le = &escan_result_le->bss_info_le;
 
   if (e->datalen < sizeof(*escan_result_le)) {
-    BRCMF_ERR("invalid event data length\n");
+    // Print the error only if the scan result is partial (as end of scan may not
+    // contain a scan result)
+    if (status == BRCMF_E_STATUS_PARTIAL) {
+      BRCMF_ERR("Insufficient escan result data exp: %d got: %d\n", sizeof(*escan_result_le),
+          e->datalen);
+    }
     goto chk_scan_end;
   }
 
