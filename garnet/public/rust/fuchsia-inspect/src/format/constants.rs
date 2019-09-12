@@ -8,8 +8,8 @@ pub const PAGE_SIZE_BYTES: usize = 4096;
 /// Size of the a VMO block header.
 pub const HEADER_SIZE_BYTES: usize = 8;
 
-/// Index of the root NODE block.
-pub const ROOT_PARENT_INDEX: u32 = 0;
+/// Index of the virtual root NODE block (this block is *not* in the VMO).
+pub const ROOT_INDEX: u32 = 0;
 
 /// Index of the HEADER block.
 pub const HEADER_INDEX: u32 = 0;
@@ -34,9 +34,6 @@ pub const MAX_ORDER_SHIFT: usize = MIN_ORDER_SHIFT + NUM_ORDERS - 1;
 
 /// The size for order NUM_ORDERS-1 (the maximum order)
 pub const MAX_ORDER_SIZE: usize = 1 << MAX_ORDER_SHIFT;
-
-/// Name of the root node
-pub const ROOT_NAME: &str = "root";
 
 /// Default number of bytes for the VMO: 256K
 pub const DEFAULT_VMO_SIZE_BYTES: usize = 256 * 1024;

@@ -125,12 +125,7 @@ impl Inspector {
             .map_err(|e| format_err!("failed to allocate vmo zx status={}", e))?;
         let heap = Heap::new(Arc::new(mapping))?;
         let state = State::create(heap)?;
-        let root_node = Node::allocate(
-            Arc::new(Mutex::new(state)),
-            constants::ROOT_NAME,
-            constants::ROOT_PARENT_INDEX,
-        );
-        Ok((vmo, root_node))
+        Ok((vmo, Node::new_root(Arc::new(Mutex::new(state)))))
     }
 }
 
@@ -346,13 +341,8 @@ inspect_type_impl!(
 );
 
 impl Node {
-    /// Allocate a new NODE object. Called through Inspector.
-    pub(in crate) fn allocate(state: Arc<Mutex<State>>, name: &str, parent_index: u32) -> Node {
-        state
-            .lock()
-            .create_node(name, parent_index)
-            .map(|block| Node::new(state.clone(), block.index()))
-            .unwrap_or(Node::new_no_op())
+    pub(in crate) fn new_root(state: Arc<Mutex<State>>) -> Node {
+        Node::new(state, 0)
     }
 
     /// Add a child to this node.
@@ -438,6 +428,10 @@ impl Node {
 impl Drop for Node {
     fn drop(&mut self) {
         self.inner.as_ref().map(|inner| {
+            // This is the special "root" node. Do not delete.
+            if inner.block_index == 0 {
+                return;
+            }
             inner
                 .state
                 .lock()
@@ -774,20 +768,15 @@ mod tests {
             test_object.vmo.as_ref().unwrap().get_size().unwrap(),
             constants::DEFAULT_VMO_SIZE_BYTES as u64
         );
-        let root_name_block =
-            test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
-        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
     }
 
     #[test]
     fn no_op() {
         let inspector = Inspector::new_with_size(4096);
         // Make the VMO full.
-        let nodes = (0..126).map(|_| inspector.root().create_child("test")).collect::<Vec<Node>>();
-        let root_block = inspector.root().get_block().unwrap();
+        let nodes = (0..127).map(|_| inspector.root().create_child("test")).collect::<Vec<Node>>();
 
         assert!(nodes.iter().all(|node| node.is_valid()));
-        assert_eq!(root_block.child_count().unwrap(), 126);
         let no_op_node = inspector.root().create_child("no-op-child");
         assert!(!no_op_node.is_valid());
     }
@@ -812,9 +801,6 @@ mod tests {
     fn inspector_new_with_size() {
         let test_object = Inspector::new_with_size(8192);
         assert_eq!(test_object.vmo.as_ref().unwrap().get_size().unwrap(), 8192);
-        let root_name_block =
-            test_object.root().unwrap_ref().state.lock().heap.get_block(2).unwrap();
-        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
 
         // If size is not a multiple of 4096, it'll be rounded up.
         let test_object = Inspector::new_with_size(10000);
@@ -830,15 +816,16 @@ mod tests {
         // Note, the small size we request should be rounded up to a full 4kB page.
         let (vmo, root_node) = Inspector::new_root(100).unwrap();
         assert_eq!(vmo.get_size().unwrap(), 4096);
-        let root_name_block = root_node.unwrap_ref().state.lock().heap.get_block(2).unwrap();
-        assert_eq!(root_name_block.name_contents().unwrap(), constants::ROOT_NAME);
+        let inner = root_node.inner.as_ref().unwrap();
+        assert_eq!(inner.block_index, 0);
     }
 
     #[test]
     fn node() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
         let node_block = node.get_block().unwrap();
         assert_eq!(node_block.block_type(), BlockType::NodeValue);
         assert_eq!(node_block.child_count().unwrap(), 0);
@@ -856,7 +843,8 @@ mod tests {
     fn double_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
         let node_block = node.get_block().unwrap();
         {
             let property = node.create_double("property", 1.0);
@@ -882,7 +870,8 @@ mod tests {
     fn int_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
         let node_block = node.get_block().unwrap();
         {
             let property = node.create_int("property", 1);
@@ -908,7 +897,8 @@ mod tests {
     fn uint_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
         let node_block = node.get_block().unwrap();
         {
             let property = node.create_uint("property", 1);
@@ -934,7 +924,8 @@ mod tests {
     fn string_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
         let node_block = node.get_block().unwrap();
         {
             let property = node.create_string("property", "test");
@@ -954,7 +945,8 @@ mod tests {
     fn bytes_property() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
         let node_block = node.get_block().unwrap();
         {
             let property = node.create_bytes("property", b"test");
@@ -974,9 +966,10 @@ mod tests {
     fn test_array() {
         let inspector = Inspector::new();
         let root = inspector.root();
-        let root_block = root.get_block().unwrap();
+        let node = root.create_child("node");
+        let node_block = node.get_block().unwrap();
         {
-            let array = root.create_double_array("array_property", 5);
+            let array = node.create_double_array("array_property", 5);
             let array_block = array.get_block().unwrap();
 
             array.set(0, 5.0);
@@ -995,18 +988,19 @@ mod tests {
                 assert_eq!(array_block.array_get_double_slot(i).unwrap(), *value);
             }
 
-            assert_eq!(root_block.child_count().unwrap(), 1);
+            assert_eq!(node_block.child_count().unwrap(), 1);
         }
-        assert_eq!(root_block.child_count().unwrap(), 0);
+        assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
     #[test]
     fn linear_histograms() {
         let inspector = Inspector::new();
         let root = inspector.root();
-        let root_block = root.get_block().unwrap();
+        let node = root.create_child("node");
+        let node_block = node.get_block().unwrap();
         {
-            let int_histogram = root.create_int_linear_histogram(
+            let int_histogram = node.create_int_linear_histogram(
                 "int-histogram",
                 LinearHistogramParams { floor: 10, step_size: 5, buckets: 5 },
             );
@@ -1018,7 +1012,7 @@ mod tests {
                 assert_eq!(block.array_get_int_slot(i).unwrap(), *value);
             }
 
-            let uint_histogram = root.create_uint_linear_histogram(
+            let uint_histogram = node.create_uint_linear_histogram(
                 "uint-histogram",
                 LinearHistogramParams { floor: 10, step_size: 5, buckets: 5 },
             );
@@ -1030,7 +1024,7 @@ mod tests {
                 assert_eq!(block.array_get_uint_slot(i).unwrap(), *value);
             }
 
-            let double_histogram = root.create_double_linear_histogram(
+            let double_histogram = node.create_double_linear_histogram(
                 "double-histogram",
                 LinearHistogramParams { floor: 10.0, step_size: 5.0, buckets: 5 },
             );
@@ -1042,18 +1036,19 @@ mod tests {
                 assert_eq!(block.array_get_double_slot(i).unwrap(), *value);
             }
 
-            assert_eq!(root_block.child_count().unwrap(), 3);
+            assert_eq!(node_block.child_count().unwrap(), 3);
         }
-        assert_eq!(root_block.child_count().unwrap(), 0);
+        assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
     #[test]
     fn exponential_histograms() {
         let inspector = Inspector::new();
         let root = inspector.root();
-        let root_block = root.get_block().unwrap();
+        let node = root.create_child("node");
+        let node_block = node.get_block().unwrap();
         {
-            let int_histogram = root.create_int_exponential_histogram(
+            let int_histogram = node.create_int_exponential_histogram(
                 "int-histogram",
                 ExponentialHistogramParams {
                     floor: 1,
@@ -1070,7 +1065,7 @@ mod tests {
                 assert_eq!(block.array_get_int_slot(i).unwrap(), *value);
             }
 
-            let uint_histogram = root.create_uint_exponential_histogram(
+            let uint_histogram = node.create_uint_exponential_histogram(
                 "uint-histogram",
                 ExponentialHistogramParams {
                     floor: 1,
@@ -1087,7 +1082,7 @@ mod tests {
                 assert_eq!(block.array_get_uint_slot(i).unwrap(), *value);
             }
 
-            let double_histogram = root.create_double_exponential_histogram(
+            let double_histogram = node.create_double_exponential_histogram(
                 "double-histogram",
                 ExponentialHistogramParams {
                     floor: 1.0,
@@ -1104,18 +1099,18 @@ mod tests {
                 assert_eq!(block.array_get_double_slot(i).unwrap(), *value);
             }
 
-            assert_eq!(root_block.child_count().unwrap(), 3);
+            assert_eq!(node_block.child_count().unwrap(), 3);
         }
-        assert_eq!(root_block.child_count().unwrap(), 0);
+        assert_eq!(node_block.child_count().unwrap(), 0);
     }
 
     #[test]
     fn owned_method_argument_properties() {
         let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
         let state = get_state(mapping.clone());
-        let node = Node::allocate(state, "root", constants::HEADER_INDEX);
-        let node_block =
-            node.unwrap_ref().state.lock().heap.get_block(node.unwrap_ref().block_index).unwrap();
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
+        let node_block = node.get_block().unwrap();
         {
             let _string_property =
                 node.create_string(String::from("string_property"), String::from("test"));

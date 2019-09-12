@@ -10,6 +10,7 @@ use {
     },
     failure::{bail, format_err, Error},
     fuchsia_zircon::Vmo,
+    maplit::btreemap,
     std::{
         cmp::min,
         collections::BTreeMap,
@@ -304,7 +305,12 @@ macro_rules! get_or_create_scanned_node {
 
 impl<'a> ScanResult<'a> {
     fn new(snapshot: &'a Snapshot) -> Self {
-        ScanResult { snapshot, parsed_nodes: BTreeMap::new() }
+        let mut root_node = ScannedNode::new();
+        root_node.hierarchy.name = "root".to_string();
+        let parsed_nodes = btreemap!(
+            0 => root_node,
+        );
+        ScanResult { snapshot, parsed_nodes }
     }
 
     fn reduce(self) -> Result<NodeHierarchy, Error> {
@@ -318,6 +324,9 @@ impl<'a> ScanResult<'a> {
         // Split the parsed_nodes into complete nodes and pending nodes.
         for (index, scanned_node) in self.parsed_nodes.into_iter() {
             if scanned_node.is_complete() {
+                if index == 0 {
+                    return Ok(scanned_node.hierarchy);
+                }
                 complete_nodes.push(scanned_node);
             } else {
                 pending_nodes.insert(index, scanned_node);
@@ -329,9 +338,6 @@ impl<'a> ScanResult<'a> {
         // until the root is found (parent index = 0).
         while complete_nodes.len() > 0 {
             let scanned_node = complete_nodes.pop().unwrap();
-            if scanned_node.parent_index == 0 {
-                return Ok(scanned_node.hierarchy);
-            }
             {
                 // Add the current node to the parent hierarchy.
                 let parent_node = pending_nodes
@@ -339,13 +345,15 @@ impl<'a> ScanResult<'a> {
                     .ok_or(format_err!("Cannot find index {}", scanned_node.parent_index))?;
                 parent_node.hierarchy.children.push(scanned_node.hierarchy);
             }
-            // If the parent node is complete now, then push it to the stack.
             if pending_nodes
                 .get(&scanned_node.parent_index)
                 .ok_or(format_err!("Cannot find index {}", scanned_node.parent_index))?
                 .is_complete()
             {
                 let parent_node = pending_nodes.remove(&scanned_node.parent_index).unwrap();
+                if scanned_node.parent_index == 0 {
+                    return Ok(parent_node.hierarchy);
+                }
                 complete_nodes.push(parent_node);
             }
         }
@@ -362,7 +370,7 @@ impl<'a> ScanResult<'a> {
         let parent_index = block.parent_index()?;
         get_or_create_scanned_node!(self.parsed_nodes, block.index())
             .initialize(name, parent_index);
-        if parent_index != 0 && parent_index != block.index() {
+        if parent_index != block.index() {
             get_or_create_scanned_node!(self.parsed_nodes, parent_index).child_nodes_count += 1;
         }
         Ok(())

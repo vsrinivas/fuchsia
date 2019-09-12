@@ -18,10 +18,10 @@ the `fuchsia_inspect` crate in a Rust project.
 ## Testing
 
 Unit tests for `fuchsia_inspect` are available in the
-`fuchsia_inspect_lib_test` package:
+`fuchsia_inspect_tests` package:
 
 ```
-$ fx run-tests fuchsia_inspect_lib_test
+$ fx run-test fuchsia_inspect_tests
 ```
 
 You'll need to include `//garnet/public/rust/fuchsia-inspect:tests` in your
