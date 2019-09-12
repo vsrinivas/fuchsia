@@ -224,6 +224,7 @@ macro_rules! inspect_type_impl {
 macro_rules! create_numeric_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
+            #[must_use]
             pub fn [<create_ $name >](&self, name: impl AsRef<str>, value: $type)
                 -> [<$name_cap Property>] {
                     self.inner.as_ref().and_then(|inner| {
@@ -248,6 +249,7 @@ macro_rules! create_numeric_property_fn {
 macro_rules! create_array_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
+            #[must_use]
             pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: u8)
                 -> [<$name_cap ArrayProperty>] {
                     self.[<create_ $name _array_internal>](name, slots, ArrayFormat::Default)
@@ -283,6 +285,7 @@ pub struct LinearHistogramParams<T> {
 macro_rules! create_linear_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
+            #[must_use]
             pub fn [<create_ $name _linear_histogram>](
                 &self, name: impl AsRef<str>, params: LinearHistogramParams<$type>)
                 -> [<$name_cap LinearHistogramProperty>] {
@@ -315,6 +318,7 @@ pub struct ExponentialHistogramParams<T> {
 macro_rules! create_exponential_histogram_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
         paste::item! {
+            #[must_use]
             pub fn [<create_ $name _exponential_histogram>](
               &self, name: impl AsRef<str>, params: ExponentialHistogramParams<$type>)
               -> [<$name_cap ExponentialHistogramProperty>] {
@@ -346,6 +350,7 @@ impl Node {
     }
 
     /// Add a child to this node.
+    #[must_use]
     pub fn create_child(&self, name: impl AsRef<str>) -> Node {
         self.inner
             .as_ref()
@@ -385,6 +390,7 @@ impl Node {
     create_exponential_histogram_property_fn!(double, Double, f64);
 
     /// Add a string property to this node.
+    #[must_use]
     pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
         self.inner
             .as_ref()
@@ -405,6 +411,7 @@ impl Node {
     }
 
     /// Add a byte vector property to this node.
+    #[must_use]
     pub fn create_bytes(&self, name: impl AsRef<str>, value: impl AsRef<[u8]>) -> BytesProperty {
         self.inner
             .as_ref()
