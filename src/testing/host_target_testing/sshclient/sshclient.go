@@ -27,28 +27,28 @@ type Client struct {
 	mu                     sync.Mutex
 	client                 *ssh.Client
 	conn                   net.Conn
+	connectionListeners    []*sync.WaitGroup
 	disconnectionListeners []*sync.WaitGroup
 }
 
 // NewClient creates a new ssh client to the address.
-func NewClient(addr string, config *ssh.ClientConfig) (*Client, error) {
-	client, conn, err := connect(addr, config)
-	if err != nil {
-		return nil, err
-	}
-
+func NewClient(addr string, config *ssh.ClientConfig) *Client {
 	c := &Client{
 		addr:              addr,
 		config:            config,
-		client:            client,
-		conn:              conn,
+		client:            nil,
+		conn:              nil,
 		shuttingDown:      false,
 		done:              make(chan struct{}),
 		keepaliveDuration: 10 * time.Second,
 	}
 	go c.keepalive()
 
-	return c, nil
+	// Wait for the initial connection, so we don't return a client that's
+	// in a "just created but not connected" state.
+	c.WaitToBeConnected()
+
+	return c
 }
 
 // Helper to create an ssh client and connection to the address.
@@ -101,13 +101,42 @@ func (c *Client) Close() {
 	c.disconnect()
 }
 
+// WaitToBeConnected blocks until the ssh connection is available for use.
+func (c *Client) WaitToBeConnected() {
+	log.Printf("waiting for %s to to connect", c.addr)
+
+	var wg sync.WaitGroup
+	c.RegisterConnectListener(&wg)
+	wg.Wait()
+
+	log.Printf("connected to %s", c.addr)
+}
+
+// RegisterConnectListener adds a waiter that gets notified when the ssh
+// client is connected.
+func (c *Client) RegisterConnectListener(wg *sync.WaitGroup) {
+	wg.Add(1)
+
+	c.mu.Lock()
+	if c.client == nil {
+		c.connectionListeners = append(c.connectionListeners, wg)
+	} else {
+		wg.Done()
+	}
+	c.mu.Unlock()
+}
+
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh
 // client is disconnected.
 func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
 	wg.Add(1)
 
 	c.mu.Lock()
-	c.disconnectionListeners = append(c.disconnectionListeners, wg)
+	if c.client == nil {
+		wg.Done()
+	} else {
+		c.disconnectionListeners = append(c.disconnectionListeners, wg)
+	}
 	c.mu.Unlock()
 }
 
@@ -128,6 +157,8 @@ func (c *Client) disconnect() {
 }
 
 func (c *Client) disconnectLocked() {
+	log.Printf("disconnected from %s", c.addr)
+
 	if c.client != nil {
 		c.client.Close()
 		c.client = nil
@@ -152,6 +183,12 @@ func (c *Client) reconnectLocked() {
 	if err == nil {
 		c.client = client
 		c.conn = conn
+
+		for _, listener := range c.connectionListeners {
+			listener.Done()
+		}
+		c.connectionListeners = []*sync.WaitGroup{}
+
 		log.Printf("reconnected to %s", c.addr)
 	} else {
 		log.Printf("reconnection failed: %s", err)
@@ -161,6 +198,8 @@ func (c *Client) reconnectLocked() {
 // Send periodic keep-alives. If we don't do this, then we might not observe
 // the server side disconnecting from us.
 func (c *Client) keepalive() {
+	c.emitKeepalive()
+
 	for {
 		select {
 		case <-time.After(c.keepaliveDuration):
@@ -171,6 +210,7 @@ func (c *Client) keepalive() {
 	}
 }
 
+// Emit a heartbeat to the ssh server.
 func (c *Client) emitKeepalive() {
 	// If the client is disconnected from the server, attempt to reconnect.
 	// Otherwise, emit a heartbeat.

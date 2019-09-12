@@ -12,7 +12,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -35,10 +34,7 @@ func NewClient(deviceHostname string, privateKey ssh.Signer) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	sshClient, err := sshclient.NewClient(net.JoinHostPort(deviceHostname, "22"), sshConfig)
-	if err != nil {
-		return nil, err
-	}
+	sshClient := sshclient.NewClient(net.JoinHostPort(deviceHostname, "22"), sshConfig)
 
 	return &Client{
 		deviceHostname: deviceHostname,
@@ -72,32 +68,9 @@ func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
 	return c.sshClient.Run(command, stdout, stderr)
 }
 
-// WaitForDeviceToBeUp blocks until a device is available for access.
-func (c *Client) WaitForDeviceToBeUp() error {
-	log.Printf("waiting for device %q to ping", c.deviceHostname)
-	path, err := exec.LookPath("/bin/ping")
-	if err != nil {
-		return err
-	}
-
-	for {
-		out, err := exec.Command(path, "-c", "1", "-W", "1", c.deviceHostname).Output()
-		if err == nil {
-			break
-		}
-		log.Printf("%s - %s", err, out)
-
-		time.Sleep(1 * time.Second)
-	}
-
-	log.Printf("wait for ssh to be connect")
-	for !c.sshClient.IsConnected() {
-		time.Sleep(1 * time.Second)
-	}
-
-	log.Printf("device up")
-
-	return nil
+// WaitForDeviceToBeConnected blocks until a device is available for access.
+func (c *Client) WaitForDeviceToBeConnected() {
+	c.sshClient.WaitToBeConnected()
 }
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh
@@ -173,9 +146,8 @@ func (c *Client) TriggerSystemOTA() error {
 	// Wait until we get a signal that we have disconnected
 	wg.Wait()
 
-	if err := c.WaitForDeviceToBeUp(); err != nil {
-		return err
-	}
+	c.WaitForDeviceToBeConnected()
+
 	log.Printf("device rebooted")
 
 	return nil

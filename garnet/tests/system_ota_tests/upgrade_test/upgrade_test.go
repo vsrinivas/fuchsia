@@ -62,11 +62,6 @@ func TestOTA(t *testing.T) {
 	}
 	defer device.Close()
 
-	// Wait for the device to come online.
-	if err = device.WaitForDeviceToBeUp(); err != nil {
-		t.Fatalf("device failed to start: %s", err)
-	}
-
 	t.Run("PaveThenUpgrade", func(t *testing.T) {
 		log.Printf("starting downgrade pave")
 		doPave(t, device, downgradePaver, downgradeRepo)
@@ -100,9 +95,7 @@ func doPave(t *testing.T, device *device.Client, paver *paver.Paver, repo *packa
 	}
 
 	// Wait for the device to come online.
-	if err = device.WaitForDeviceToBeUp(); err != nil {
-		t.Fatal(err)
-	}
+	device.WaitForDeviceToBeConnected()
 
 	validateDevice(t, device, repo, expectedSystemImageMerkle)
 
@@ -156,9 +149,7 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, repo *packages.Reposi
 	// Wait until we get a signal that we have disconnected
 	wg.Wait()
 
-	if err = device.WaitForDeviceToBeUp(); err != nil {
-		t.Fatalf("device failed to start: %s", err)
-	}
+	device.WaitForDeviceToBeConnected()
 
 	log.Printf("OTA complete, validating device")
 	validateDevice(t, device, repo, expectedSystemImageMerkle)
