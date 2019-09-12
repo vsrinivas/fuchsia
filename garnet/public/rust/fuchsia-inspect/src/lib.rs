@@ -271,9 +271,9 @@ macro_rules! create_array_property_fn {
 }
 
 pub struct LinearHistogramParams<T> {
-    floor: T,
-    step_size: T,
-    buckets: u8,
+    pub floor: T,
+    pub step_size: T,
+    pub buckets: u8,
 }
 
 /// Utility for generating functions to create a linear histogram property.
@@ -302,10 +302,10 @@ macro_rules! create_linear_histogram_property_fn {
 }
 
 pub struct ExponentialHistogramParams<T> {
-    floor: T,
-    initial_step: T,
-    step_multiplier: T,
-    buckets: u8,
+    pub floor: T,
+    pub initial_step: T,
+    pub step_multiplier: T,
+    pub buckets: u8,
 }
 
 /// Utility for generating functions to create an exponential histogram property.
