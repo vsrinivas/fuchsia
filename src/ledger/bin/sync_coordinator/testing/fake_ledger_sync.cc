@@ -70,11 +70,12 @@ int FakeLedgerSync::GetSyncCallsCount(const storage::PageId& page_id) {
   return sync_page_start_calls_[page_id];
 }
 
-std::unique_ptr<sync_coordinator::PageSync> FakeLedgerSync::CreatePageSync(
-    storage::PageStorage* page_storage, storage::PageSyncClient* /*page_sync_client*/) {
+void FakeLedgerSync::CreatePageSync(
+    storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client,
+    fit::function<void(storage::Status, std::unique_ptr<PageSync>)> callback) {
   called_ = true;
-  return std::make_unique<FakeLedgerSync::FakePageSync>(page_storage->GetId(),
-                                                        &sync_page_start_calls_);
+  callback(storage::Status::OK, std::make_unique<FakeLedgerSync::FakePageSync>(
+                                    page_storage->GetId(), &sync_page_start_calls_));
 }
 
 }  // namespace sync_coordinator

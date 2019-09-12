@@ -4,10 +4,12 @@
 
 #include "src/ledger/bin/app/page_impl.h"
 
+#include <lib/callback/scoped_task_runner.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
+
 #include <trace/event.h>
 
 #include "src/ledger/bin/app/page_delegate.h"
@@ -32,7 +34,8 @@ auto ToCreateReferenceCallback(fit::function<void(Status, C)> callback) {
 }
 }  // namespace
 
-PageImpl::PageImpl(storage::PageIdView page_id, fidl::InterfaceRequest<Page> request)
+PageImpl::PageImpl(async_dispatcher_t* dispatcher, storage::PageIdView page_id,
+                   fidl::InterfaceRequest<Page> request)
     : binding_(this) {
   convert::ToArray(page_id, &page_id_.id);
   binding_.set_on_empty([this] {
@@ -47,7 +50,7 @@ PageImpl::PageImpl(storage::PageIdView page_id, fidl::InterfaceRequest<Page> req
 PageImpl::~PageImpl() = default;
 
 void PageImpl::SetPageDelegate(PageDelegate* page_delegate) {
-  delaying_facade_.SetTargetObject(page_delegate);
+  task_runner_.PostTask([this, page_delegate] { delaying_facade_.SetTargetObject(page_delegate); });
 }
 
 bool PageImpl::IsEmpty() { return binding_.empty(); }

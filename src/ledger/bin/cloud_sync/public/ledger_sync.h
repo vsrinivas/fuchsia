@@ -14,6 +14,7 @@
 #include "src/ledger/bin/cloud_sync/public/page_sync.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
@@ -26,11 +27,9 @@ class LedgerSync {
 
   // Creates a new page sync for the given page. The page could already have
   // data synced to the cloud or not.
-  //
-  // The provided |error_callback| is called when sync is stopped due to an
-  // unrecoverable error.
-  virtual std::unique_ptr<PageSync> CreatePageSync(storage::PageStorage* page_storage,
-                                                   storage::PageSyncClient* page_sync_client) = 0;
+  virtual void CreatePageSync(
+      storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client,
+      fit::function<void(storage::Status, std::unique_ptr<PageSync>)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);

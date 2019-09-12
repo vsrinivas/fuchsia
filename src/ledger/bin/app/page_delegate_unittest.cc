@@ -35,7 +35,8 @@ TEST_F(PageDelegateTest, OnEmptyInInit) {
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
 
   PagePtr page;
-  auto page_impl = std::make_unique<PageImpl>(page_id, page.NewRequest());
+  auto page_impl =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id, page.NewRequest());
 
   SyncWatcherSet watchers;
 

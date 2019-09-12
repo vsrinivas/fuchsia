@@ -25,7 +25,8 @@ namespace ledger {
 // available.
 class ActivePageManagerContainer {
  public:
-  ActivePageManagerContainer(std::string ledger_name, storage::PageId page_id,
+  ActivePageManagerContainer(Environment* environment, std::string ledger_name,
+                             storage::PageId page_id,
                              std::vector<PageUsageListener*> page_usage_listeners);
   ~ActivePageManagerContainer();
 
@@ -65,6 +66,8 @@ class ActivePageManagerContainer {
   // Checks whether this container is empty, and calls the |on_empty_callback_|
   // if it is.
   void CheckEmpty();
+
+  Environment* const environment_;
 
   const std::string ledger_name_;
   const storage::PageId page_id_;

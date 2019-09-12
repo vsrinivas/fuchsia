@@ -20,9 +20,10 @@
 namespace ledger {
 
 ActivePageManagerContainer::ActivePageManagerContainer(
-    std::string ledger_name, storage::PageId page_id,
+    Environment* environment, std::string ledger_name, storage::PageId page_id,
     std::vector<PageUsageListener*> page_usage_listeners)
-    : ledger_name_(std::move(ledger_name)),
+    : environment_(environment),
+      ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),
       page_usage_listeners_(std::move(page_usage_listeners)),
       weak_factory_(this) {
@@ -48,7 +49,8 @@ void ActivePageManagerContainer::BindPage(fidl::InterfaceRequest<Page> page_requ
     callback(status_);
     return;
   }
-  auto page_impl = std::make_unique<PageImpl>(page_id_, std::move(page_request));
+  auto page_impl =
+      std::make_unique<PageImpl>(environment_->dispatcher(), page_id_, std::move(page_request));
   if (active_page_manager_) {
     active_page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
     return;

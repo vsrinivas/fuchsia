@@ -370,14 +370,16 @@ TEST_F(ActivePageManagerTest, OnEmptyCallback) {
   PagePtr page1;
   PagePtr page2;
 
-  auto page_impl1 = std::make_unique<PageImpl>(page_id_, page1.NewRequest());
+  auto page_impl1 =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page1.NewRequest());
   active_page_manager.AddPageImpl(std::move(page_impl1),
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
 
-  auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
+  auto page_impl2 =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page2.NewRequest());
   active_page_manager.AddPageImpl(std::move(page_impl2),
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -392,7 +394,8 @@ TEST_F(ActivePageManagerTest, OnEmptyCallback) {
 
   on_empty_called = false;
   PagePtr page3;
-  auto page_impl3 = std::make_unique<PageImpl>(page_id_, page3.NewRequest());
+  auto page_impl3 =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page3.NewRequest());
   active_page_manager.AddPageImpl(std::move(page_impl3),
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -426,7 +429,8 @@ TEST_F(ActivePageManagerTest, DeletingPageManagerClosesConnections) {
   bool called;
   Status status;
   PagePtr page;
-  auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
+  auto page_impl =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
   active_page_manager->AddPageImpl(std::move(page_impl),
                                    callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -458,14 +462,16 @@ TEST_F(ActivePageManagerTest, OnEmptyCallbackWithWatcher) {
   Status internal_status;
   PagePtr page1;
   PagePtr page2;
-  auto page_impl1 = std::make_unique<PageImpl>(page_id_, page1.NewRequest());
+  auto page_impl1 =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page1.NewRequest());
   active_page_manager.AddPageImpl(
       std::move(page_impl1), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(internal_status, Status::OK);
 
-  auto page_impl2 = std::make_unique<PageImpl>(page_id_, page2.NewRequest());
+  auto page_impl2 =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page2.NewRequest());
   active_page_manager.AddPageImpl(
       std::move(page_impl2), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
@@ -513,7 +519,8 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   bool called;
   Status internal_status;
   PagePtr page;
-  auto page_impl1 = std::make_unique<PageImpl>(page_id_, page.NewRequest());
+  auto page_impl1 =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
   active_page_manager.AddPageImpl(
       std::move(page_impl1), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   // The page should be bound, but except from GetId, no other method should
@@ -540,7 +547,8 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
 
   // Check that a second call on the same manager is not delayed.
   page.Unbind();
-  auto page_impl2 = std::make_unique<PageImpl>(page_id_, page.NewRequest());
+  auto page_impl2 =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
   active_page_manager.AddPageImpl(
       std::move(page_impl2), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
   DrainLoop();
@@ -573,7 +581,8 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncTimeout) {
   bool called;
   Status status;
   PagePtr page;
-  auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
+  auto page_impl =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
   active_page_manager.AddPageImpl(std::move(page_impl),
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   DrainLoop();
@@ -634,7 +643,8 @@ TEST_F(ActivePageManagerTest, DontDelayBindingWithLocalPageStorage) {
   bool called;
   Status status;
   PagePtr page;
-  auto page_impl = std::make_unique<PageImpl>(page_id_, page.NewRequest());
+  auto page_impl =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
   active_page_manager.AddPageImpl(std::move(page_impl),
                                   callback::Capture(callback::SetWhenCalled(&called), &status));
   // The page should be bound immediately.

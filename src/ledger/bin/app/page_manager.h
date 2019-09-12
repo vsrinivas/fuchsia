@@ -23,6 +23,7 @@
 #include "src/ledger/bin/app/page_impl.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
+#include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -104,9 +105,9 @@ class PageManager : InspectablePage {
   ActivePageManagerContainer* CreateActivePageManagerContainer();
 
   // Creates a new |ActivePageManager| for the given storage.
-  std::unique_ptr<ActivePageManager> NewActivePageManager(
-      std::unique_ptr<storage::PageStorage> page_storage,
-      ActivePageManager::PageStorageState state);
+  void NewActivePageManager(
+      std::unique_ptr<storage::PageStorage> page_storage, ActivePageManager::PageStorageState state,
+      fit::function<void(storage::Status, std::unique_ptr<ActivePageManager>)> callback);
 
   // Checks whether the page is closed and satisfies the given |predicate|. The
   // |PagePredicateResult| passed to the given callback will be |PAGE_OPENED| if

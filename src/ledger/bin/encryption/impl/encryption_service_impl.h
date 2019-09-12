@@ -40,6 +40,7 @@ class EncryptionServiceImpl : public EncryptionService {
                      fit::function<void(Status, std::string)> callback) override;
   void GetChunkingPermutation(
       fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) override;
+  void GetPageId(std::string page_name, fit::function<void(Status, std::string)> callback) override;
 
   std::string GetEntryId() override;
 
@@ -72,6 +73,8 @@ class EncryptionServiceImpl : public EncryptionService {
 
   // A key used for hash permutation in chunking.
   cache::LazyValue<std::string, Status> chunking_key_;
+  // A key used for page id generation.
+  cache::LazyValue<std::string, Status> page_id_key_;
 };
 
 }  // namespace encryption

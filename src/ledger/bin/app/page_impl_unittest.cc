@@ -78,7 +78,8 @@ class PageImplTest : public TestWithEnvironment {
                                                    ActivePageManager::PageStorageState::NEEDS_SYNC);
     bool called;
     Status status;
-    auto page_impl = std::make_unique<PageImpl>(page_id1_, page_ptr_.NewRequest());
+    auto page_impl =
+        std::make_unique<PageImpl>(environment_.dispatcher(), page_id1_, page_ptr_.NewRequest());
     manager_->AddPageImpl(std::move(page_impl),
                           callback::Capture(callback::SetWhenCalled(&called), &status));
     EXPECT_TRUE(called);
@@ -1243,7 +1244,8 @@ TEST_F(PageImplTest, ParallelPut) {
   bool called;
   Status storage_status;
   PagePtr page_ptr2;
-  auto page_impl = std::make_unique<PageImpl>(page_id1_, page_ptr2.NewRequest());
+  auto page_impl =
+      std::make_unique<PageImpl>(environment_.dispatcher(), page_id1_, page_ptr2.NewRequest());
   manager_->AddPageImpl(std::move(page_impl),
                         callback::Capture(callback::SetWhenCalled(&called), &storage_status));
   DrainLoop();

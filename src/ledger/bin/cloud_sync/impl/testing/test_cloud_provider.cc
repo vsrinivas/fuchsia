@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 
+#include <peridot/lib/convert/convert.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {
@@ -19,11 +21,13 @@ void TestCloudProvider::GetDeviceSet(fidl::InterfaceRequest<cloud_provider::Devi
   callback(cloud_provider::Status::OK);
 }
 
-void TestCloudProvider::GetPageCloud(
-    std::vector<uint8_t> /*app_id*/, std::vector<uint8_t> /*page_id*/,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> /*page_cloud*/,
-    GetPageCloudCallback /*callback*/) {
-  FXL_NOTIMPLEMENTED();
+void TestCloudProvider::GetPageCloud(std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
+                                     fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+                                     GetPageCloudCallback callback) {
+  page_cloud_[std::make_pair(convert::ToString(app_id), convert::ToString(page_id))] =
+      std::make_unique<TestPageCloud>(std::move(page_cloud));
+  page_ids_requested.push_back(convert::ToString(page_id));
+  callback(cloud_provider::Status::OK);
 }
 
 }  // namespace cloud_sync

@@ -67,7 +67,7 @@ void KeyService::GetChunkingKey(fit::function<void(Status, std::string)> callbac
   });
 }
 
-void KeyService::GetPageNameKey(fit::function<void(Status, std::string)> callback) {
+void KeyService::GetPageIdKey(fit::function<void(Status, std::string)> callback) {
   master_keys_.Get(kDefaultKeyIndex, [this, callback = std::move(callback)](
                                          Status status, const std::string& master_key) {
     if (status != Status::OK) {
@@ -75,7 +75,7 @@ void KeyService::GetPageNameKey(fit::function<void(Status, std::string)> callbac
       return;
     }
     std::string derived_key =
-        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_, "page_name"}), kDerivedKeySize);
+        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_, "page_id"}), kDerivedKeySize);
     callback(Status::OK, derived_key);
   });
 }

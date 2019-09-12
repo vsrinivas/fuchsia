@@ -61,7 +61,8 @@ EncryptionServiceImpl::EncryptionServiceImpl(ledger::Environment* environment,
                       [this](auto k, auto c) {
                         key_service_->GetRemoteObjectIdKey(std::move(k), std::move(c));
                       }),
-      chunking_key_(Status::OK, [this](auto c) { key_service_->GetChunkingKey(std::move(c)); }) {}
+      chunking_key_(Status::OK, [this](auto c) { key_service_->GetChunkingKey(std::move(c)); }),
+      page_id_key_(Status::OK, [this](auto c) { key_service_->GetPageIdKey(std::move(c)); }) {}
 
 EncryptionServiceImpl::~EncryptionServiceImpl() = default;
 
@@ -100,6 +101,18 @@ std::string EncryptionServiceImpl::EncodeCommitId(std::string commit_id) {
                            convert::ToFlatBufferVector(&builder, SHA256WithLengthHash(commit_id)));
   builder.Finish(storage);
   return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
+}
+
+void EncryptionServiceImpl::GetPageId(std::string page_name,
+                                      fit::function<void(Status, std::string)> callback) {
+  page_id_key_.Get([page_name = std::move(page_name), callback = std::move(callback)](
+                       Status status, std::string page_id_key) {
+    if (status != Status::OK) {
+      callback(status, "");
+      return;
+    }
+    callback(Status::OK, SHA256HMAC(page_id_key, page_name));
+  });
 }
 
 void EncryptionServiceImpl::DecryptCommit(convert::ExtendedStringView storage_bytes,

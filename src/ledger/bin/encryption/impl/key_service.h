@@ -52,8 +52,8 @@ class KeyService {
   // TODO(35273): Should depend on the page name.
   void GetChunkingKey(fit::function<void(Status, std::string)> callback);
 
-  // Retrieves a static key for a page name encryption.
-  void GetPageNameKey(fit::function<void(Status, std::string)> callback);
+  // Retrieves a static key for generating a page id.
+  void GetPageIdKey(fit::function<void(Status, std::string)> callback);
 
   // Retrieves a wrapping key. This key is used to encrypt and decrypt the shredding keys while
   // exchanging them via the Shredding Key Service.

@@ -5,6 +5,7 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_IMPL_H_
 #define SRC_LEDGER_BIN_APP_PAGE_IMPL_H_
 
+#include <lib/callback/scoped_task_runner.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
@@ -22,7 +23,8 @@ class PageDelegate;
 // An implementation of the |Page| FIDL interface.
 class PageImpl : public fuchsia::ledger::PageSyncableDelegate {
  public:
-  explicit PageImpl(storage::PageIdView page_id, fidl::InterfaceRequest<Page> request);
+  explicit PageImpl(async_dispatcher_t* dispatcher, storage::PageIdView page_id,
+                    fidl::InterfaceRequest<Page> request);
   ~PageImpl() override;
 
   void SetPageDelegate(PageDelegate* page_delegate);
@@ -67,6 +69,9 @@ class PageImpl : public fuchsia::ledger::PageSyncableDelegate {
   fit::closure on_binding_unbound_callback_;
 
   SyncableBinding<fuchsia::ledger::PageSyncableDelegate> binding_;
+
+  // Must be the last member field.
+  callback::ScopedTaskRunner task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageImpl);
 };

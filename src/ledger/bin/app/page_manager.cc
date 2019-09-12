@@ -184,16 +184,20 @@ void PageManager::InitActivePageManagerContainer(ActivePageManagerContainer* con
             callback(status);
             return;
           }
+          if (status == storage::Status::PAGE_NOT_FOUND) {
+            callback(status);
+            return;
+          }
 
           // If the page was found locally, just use it and return.
-          if (status == storage::Status::OK) {
-            FXL_DCHECK(page_storage);
-            container->SetActivePageManager(
-                storage::Status::OK,
-                NewActivePageManager(std::move(page_storage),
-                                     ActivePageManager::PageStorageState::AVAILABLE));
-          }
-          callback(status);
+          FXL_DCHECK(page_storage);
+          NewActivePageManager(
+              std::move(page_storage), ActivePageManager::PageStorageState::AVAILABLE,
+              [container, callback = std::move(callback)](
+                  storage::Status status, std::unique_ptr<ActivePageManager> active_page_manager) {
+                container->SetActivePageManager(status, std::move(active_page_manager));
+                callback(status);
+              });
         });
   });
 }
@@ -208,20 +212,24 @@ void PageManager::CreatePageStorage(LedgerImpl::Delegate::PageState page_state,
             container->SetActivePageManager(status, nullptr);
             return;
           }
-          container->SetActivePageManager(
-              storage::Status::OK,
-              NewActivePageManager(std::move(page_storage),
-                                   page_state == LedgerImpl::Delegate::PageState::NEW
-                                       ? ActivePageManager::PageStorageState::AVAILABLE
-                                       : ActivePageManager::PageStorageState::NEEDS_SYNC));
+
+          NewActivePageManager(std::move(page_storage),
+                               page_state == LedgerImpl::Delegate::PageState::NEW
+                                   ? ActivePageManager::PageStorageState::AVAILABLE
+                                   : ActivePageManager::PageStorageState::NEEDS_SYNC,
+                               [container](storage::Status status,
+                                           std::unique_ptr<ActivePageManager> active_page_manager) {
+                                 container->SetActivePageManager(status,
+                                                                 std::move(active_page_manager));
+                               });
         });
   });
 }
 
 ActivePageManagerContainer* PageManager::CreateActivePageManagerContainer() {
   FXL_DCHECK(!active_page_manager_container_);
-  auto& active_page_manager_container =
-      active_page_manager_container_.emplace(ledger_name_, page_id_, page_usage_listeners_);
+  auto& active_page_manager_container = active_page_manager_container_.emplace(
+      environment_, ledger_name_, page_id_, page_usage_listeners_);
   active_page_manager_container_->set_on_empty([this]() {
     active_page_manager_container_.reset();
     CheckEmpty();
@@ -229,15 +237,30 @@ ActivePageManagerContainer* PageManager::CreateActivePageManagerContainer() {
   return &active_page_manager_container;
 }
 
-std::unique_ptr<ActivePageManager> PageManager::NewActivePageManager(
-    std::unique_ptr<storage::PageStorage> page_storage, ActivePageManager::PageStorageState state) {
-  std::unique_ptr<sync_coordinator::PageSync> page_sync;
-  if (ledger_sync_) {
-    page_sync = ledger_sync_->CreatePageSync(page_storage.get(), page_storage.get());
+void PageManager::NewActivePageManager(
+    std::unique_ptr<storage::PageStorage> page_storage, ActivePageManager::PageStorageState state,
+    fit::function<void(storage::Status, std::unique_ptr<ActivePageManager>)> callback) {
+  if (!ledger_sync_) {
+    auto result = std::make_unique<ActivePageManager>(
+        environment_, std::move(page_storage), nullptr,
+        ledger_merge_manager_->GetMergeResolver(page_storage.get()), state);
+    callback(storage::Status::OK, std::move(result));
+    return;
   }
-  return std::make_unique<ActivePageManager>(
-      environment_, std::move(page_storage), std::move(page_sync),
-      ledger_merge_manager_->GetMergeResolver(page_storage.get()), state);
+
+  ledger_sync_->CreatePageSync(
+      page_storage.get(), page_storage.get(),
+      [this, page_storage = std::move(page_storage), state, callback = std::move(callback)](
+          storage::Status status, std::unique_ptr<sync_coordinator::PageSync> page_sync) mutable {
+        if (status != storage::Status::OK) {
+          callback(status, nullptr);
+          return;
+        }
+        auto result = std::make_unique<ActivePageManager>(
+            environment_, std::move(page_storage), std::move(page_sync),
+            ledger_merge_manager_->GetMergeResolver(page_storage.get()), state);
+        callback(storage::Status::OK, std::move(result));
+      });
 }
 
 void PageManager::PageIsClosedAndSatisfiesPredicate(

@@ -55,7 +55,7 @@ TEST_F(ActivePageManagerContainerTest, OneEarlyBindingNoPageManager) {
   bool on_empty_called;
 
   ActivePageManagerContainer active_page_manager_container(
-      kLedgerName.ToString(), page_id,
+      &environment_, kLedgerName.ToString(), page_id,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   active_page_manager_container.BindPage(
@@ -86,7 +86,7 @@ TEST_F(ActivePageManagerContainerTest, BindBeforePageManager) {
   bool on_empty_called;
 
   ActivePageManagerContainer active_page_manager_container(
-      kLedgerName.ToString(), page_id_,
+      &environment_, kLedgerName.ToString(), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   active_page_manager_container.BindPage(
@@ -115,7 +115,7 @@ TEST_F(ActivePageManagerContainerTest, SingleExternalRequest) {
   bool on_empty_called;
 
   ActivePageManagerContainer active_page_manager_container(
-      kLedgerName.ToString(), page_id_,
+      &environment_, kLedgerName.ToString(), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   active_page_manager_container.BindPage(
@@ -136,7 +136,7 @@ TEST_F(ActivePageManagerContainerTest, MultipleExternalRequests) {
   bool on_empty_called;
 
   ActivePageManagerContainer active_page_manager_container(
-      kLedgerName.ToString(), page_id_,
+      &environment_, kLedgerName.ToString(), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
@@ -185,7 +185,7 @@ TEST_F(ActivePageManagerContainerTest, UnregisteredExternalRequests) {
   bool on_empty_called;
 
   ActivePageManagerContainer active_page_manager_container(
-      kLedgerName.ToString(), page_id_,
+      &environment_, kLedgerName.ToString(), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
@@ -252,7 +252,7 @@ TEST_F(ActivePageManagerContainerTest, MultipleExternalRequestsAndMultipleIntern
   bool on_empty_called;
 
   ActivePageManagerContainer active_page_manager_container(
-      kLedgerName.ToString(), page_id_,
+      &environment_, kLedgerName.ToString(), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
@@ -357,7 +357,7 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileExternalRequestsOutstanding
 
   std::unique_ptr<ActivePageManagerContainer> active_page_manager_container =
       std::make_unique<ActivePageManagerContainer>(
-          kLedgerName.ToString(), page_id_,
+          &environment_, kLedgerName.ToString(), page_id_,
           std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container->set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
@@ -408,7 +408,7 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileRequestsAndTokensOutstandin
 
   std::unique_ptr<ActivePageManagerContainer> active_page_manager_container =
       std::make_unique<ActivePageManagerContainer>(
-          kLedgerName.ToString(), page_id_,
+          &environment_, kLedgerName.ToString(), page_id_,
           std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container->set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
@@ -457,7 +457,7 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileCallingPageUsageListener) {
 
   std::unique_ptr<ActivePageManagerContainer> active_page_manager_container =
       std::make_unique<ActivePageManagerContainer>(
-          kLedgerName.ToString(), page_id_,
+          &environment_, kLedgerName.ToString(), page_id_,
           std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   fake_disk_cleanup_manager_.set_on_OnExternallyUnused(
@@ -530,7 +530,7 @@ TEST_F(ActivePageManagerContainerTest, OnlyInternalRequestCallbacks) {
   std::vector<bool> on_empty_called_during_internal_request_callbacks;
 
   ActivePageManagerContainer active_page_manager_container =
-      ActivePageManagerContainer(kLedgerName.ToString(), page_id_,
+      ActivePageManagerContainer(&environment_, kLedgerName.ToString(), page_id_,
                                  std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
@@ -574,9 +574,8 @@ TEST_F(ActivePageManagerContainerTest, MultiplePageUsageListeners) {
   std::vector<PagePtr> external_requests;
   std::vector<std::unique_ptr<ExpiringToken>> internal_request_expiring_tokens;
   bool on_empty_called;
-
-  ActivePageManagerContainer active_page_manager_container(kLedgerName.ToString(), page_id_,
-                                                           page_usage_listener_pointers);
+  ActivePageManagerContainer active_page_manager_container(&environment_, kLedgerName.ToString(),
+                                                           page_id_, page_usage_listener_pointers);
   active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
   size_t requested_internal_requests = 0;
@@ -654,7 +653,7 @@ TEST_F(ActivePageManagerContainerTest, DeletedDuringPageUsageListenerOnExternall
 
   std::unique_ptr<ActivePageManagerContainer> active_page_manager_container =
       std::make_unique<ActivePageManagerContainer>(
-          kLedgerName.ToString(), page_id_,
+          &environment_, kLedgerName.ToString(), page_id_,
           std::vector<PageUsageListener*>{&first_page_usage_listener, &second_page_usage_listener});
   active_page_manager_container->set_on_empty(callback::SetWhenCalled(&on_empty_called));
 
@@ -691,7 +690,7 @@ TEST_F(ActivePageManagerContainerTest, DeletedDuringPageUsageListenerOnInternall
 
   std::unique_ptr<ActivePageManagerContainer> active_page_manager_container =
       std::make_unique<ActivePageManagerContainer>(
-          kLedgerName.ToString(), page_id_,
+          &environment_, kLedgerName.ToString(), page_id_,
           std::vector<PageUsageListener*>{&first_page_usage_listener, &second_page_usage_listener});
   active_page_manager_container->set_on_empty(callback::SetWhenCalled(&on_empty_called));
 

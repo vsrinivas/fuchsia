@@ -79,6 +79,15 @@ void FakeEncryptionService::GetObjectName(storage::ObjectIdentifier object_ident
                   });
 }
 
+void FakeEncryptionService::GetPageId(std::string page_name,
+                                      fit::function<void(Status, std::string)> callback) {
+  std::string result = GetPageIdSynchronous(page_name);
+  async::PostTask(dispatcher_,
+                  [callback = std::move(callback), result = std::move(result)]() mutable {
+                    callback(Status::OK, std::move(result));
+                  });
+}
+
 void FakeEncryptionService::EncryptObject(storage::ObjectIdentifier /*object_identifier*/,
                                           fxl::StringView content,
                                           fit::function<void(Status, std::string)> callback) {
@@ -136,6 +145,10 @@ std::string FakeEncryptionService::DecryptCommitSynchronous(
 std::string FakeEncryptionService::GetObjectNameSynchronous(
     storage::ObjectIdentifier object_identifier) {
   return Encode(object_identifier.object_digest().Serialize());
+}
+
+std::string FakeEncryptionService::GetPageIdSynchronous(convert::ExtendedStringView page_name) {
+  return Encode(page_name);
 }
 
 std::string FakeEncryptionService::EncryptObjectSynchronous(

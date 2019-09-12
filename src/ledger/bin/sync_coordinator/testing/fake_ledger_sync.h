@@ -37,8 +37,9 @@ class FakeLedgerSync : public sync_coordinator::LedgerSync {
   int GetSyncCallsCount(const storage::PageId& page_id);
 
   // LedgerSync:
-  std::unique_ptr<sync_coordinator::PageSync> CreatePageSync(
-      storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client) override;
+  void CreatePageSync(
+      storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client,
+      fit::function<void(storage::Status, std::unique_ptr<PageSync>)> callback) override;
 
  private:
   // True, if CreatePageSync was called.

@@ -62,6 +62,10 @@ class EncryptionService {
   virtual void GetObjectName(storage::ObjectIdentifier object_identifier,
                              fit::function<void(Status, std::string)> callback) = 0;
 
+  // Returns an obfuscated page id to be used instead of page name in cloud sync.
+  virtual void GetPageId(std::string page_name,
+                         fit::function<void(Status, std::string)> callback) = 0;
+
   // Encrypts the given object.
   virtual void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
                              fit::function<void(Status, std::string)> callback) = 0;

@@ -59,6 +59,7 @@ source_set("unittests") {
     "batch_download_unittest.cc",
     "batch_upload_unittest.cc",
     "entry_payload_encoding_unittest.cc",
+    "ledger_sync_impl_unittest.cc",
     "page_download_unittest.cc",
     "page_sync_impl_unittest.cc",
     "page_upload_unittest.cc",

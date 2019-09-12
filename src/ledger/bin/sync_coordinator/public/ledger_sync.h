@@ -25,8 +25,12 @@ class LedgerSync {
   virtual ~LedgerSync() {}
 
   // Creates a new page sync for the given page.
-  virtual std::unique_ptr<PageSync> CreatePageSync(storage::PageStorage* page_storage,
-                                                   storage::PageSyncClient* page_sync_client) = 0;
+  //
+  // |page_storage| and |page_sync_client| must be valid until the callback returns and outlive the
+  // PageSync.
+  virtual void CreatePageSync(
+      storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client,
+      fit::function<void(storage::Status, std::unique_ptr<PageSync>)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);

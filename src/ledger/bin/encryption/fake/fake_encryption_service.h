@@ -49,6 +49,7 @@ class FakeEncryptionService : public EncryptionService {
                      fit::function<void(Status, std::string)> callback) override;
   void GetChunkingPermutation(
       fit::function<void(Status, fit::function<uint64_t(uint64_t)>)> callback) override;
+  void GetPageId(std::string page_name, fit::function<void(Status, std::string)> callback) override;
 
   std::string GetEntryId() override;
 
@@ -68,6 +69,9 @@ class FakeEncryptionService : public EncryptionService {
 
   // Synchronously gets the object name.
   std::string GetObjectNameSynchronous(storage::ObjectIdentifier object_identifier);
+
+  // Synchronously gets the page id.
+  std::string GetPageIdSynchronous(convert::ExtendedStringView page_name);
 
   // Synchronously encrypts the object.
   std::string EncryptObjectSynchronous(convert::ExtendedStringView object_content);

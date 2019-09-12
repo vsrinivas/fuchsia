@@ -32,12 +32,11 @@ TEST_F(KeyServiceTest, GetChunkingKey) {
   EXPECT_FALSE(result.empty());
 }
 
-TEST_F(KeyServiceTest, GetPageNameKey) {
+TEST_F(KeyServiceTest, GetPageIdKey) {
   Status status;
   std::string result;
   bool called;
-  key_service_.GetPageNameKey(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+  key_service_.GetPageIdKey(callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);

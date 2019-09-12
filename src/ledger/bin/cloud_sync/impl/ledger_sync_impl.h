@@ -27,8 +27,9 @@ class LedgerSyncImpl : public LedgerSync {
                  std::unique_ptr<SyncStateWatcher> watcher);
   ~LedgerSyncImpl() override;
 
-  std::unique_ptr<PageSync> CreatePageSync(storage::PageStorage* page_storage,
-                                           storage::PageSyncClient* page_sync_client) override;
+  void CreatePageSync(
+      storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client,
+      fit::function<void(storage::Status, std::unique_ptr<PageSync>)> callback) override;
 
   // Enables upload. Has no effect if this method has already been called.
   void EnableUpload();

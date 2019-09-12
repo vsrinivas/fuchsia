@@ -8,9 +8,12 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 
+#include <map>
 #include <memory>
+#include <vector>
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_device_set.h"
+#include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {
@@ -20,6 +23,7 @@ class TestCloudProvider : public cloud_provider::CloudProvider {
   ~TestCloudProvider() override;
 
   TestDeviceSet device_set;
+  std::vector<std::string> page_ids_requested;
 
  private:
   // cloud_provider::CloudProvider:
@@ -32,6 +36,7 @@ class TestCloudProvider : public cloud_provider::CloudProvider {
 
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fidl::Binding<cloud_provider::DeviceSet> device_set_binding_;
+  std::map<std::pair<std::string, std::string>, std::unique_ptr<TestPageCloud>> page_cloud_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestCloudProvider);
 };

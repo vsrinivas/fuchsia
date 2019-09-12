@@ -35,37 +35,50 @@ LedgerSyncImpl::~LedgerSyncImpl() {
   }
 }
 
-std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
-    storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client) {
+void LedgerSyncImpl::CreatePageSync(
+    storage::PageStorage* page_storage, storage::PageSyncClient* page_sync_client,
+    fit::function<void(storage::Status, std::unique_ptr<PageSync>)> callback) {
   FXL_DCHECK(page_storage);
   if (!user_config_->cloud_provider) {
     // TODO(LE-567): handle recovery from cloud provider disconnection.
     FXL_LOG(WARNING) << "Skipped initializing the cloud sync. "
                      << "Cloud provider is disconnected.";
-    return nullptr;
+    callback(storage::Status::INTERNAL_ERROR, nullptr);
+    return;
   }
 
-  cloud_provider::PageCloudPtr page_cloud;
-  user_config_->cloud_provider->GetPageCloud(
-      convert::ToArray(app_id_), convert::ToArray(page_storage->GetId()), page_cloud.NewRequest(),
-      [](auto status) {
-        if (status != cloud_provider::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to retrieve page cloud, status: " << fidl::ToUnderlying(status);
-          // Only log. This should be handled by page cloud connection error
-          // handler.
-        }
-      });
-  auto page_sync = std::make_unique<PageSyncImpl>(
-      environment_->dispatcher(), page_storage, page_sync_client, encryption_service_,
-      std::move(page_cloud), environment_->MakeBackoff(), environment_->MakeBackoff(),
-      aggregator_.GetNewStateWatcher());
-  if (upload_enabled_) {
-    page_sync->EnableUpload();
-  }
-  active_page_syncs_.insert(page_sync.get());
-  page_sync->set_on_delete(
-      [this, page_sync = page_sync.get()]() { active_page_syncs_.erase(page_sync); });
-  return page_sync;
+  encryption_service_->GetPageId(page_storage->GetId(), [this, page_storage, page_sync_client,
+                                                         callback = std::move(callback)](
+                                                            encryption::Status status,
+                                                            std::string page_id) {
+    if (status != encryption::Status::OK) {
+      FXL_LOG(ERROR) << "Failed to get the encoded version of page_id from the encryption service.";
+      callback(storage::Status::INTERNAL_ERROR, nullptr);
+      return;
+    }
+    cloud_provider::PageCloudPtr page_cloud;
+    user_config_->cloud_provider->GetPageCloud(convert::ToArray(app_id_), convert::ToArray(page_id),
+                                               page_cloud.NewRequest(), [](auto status) {
+                                                 if (status != cloud_provider::Status::OK) {
+                                                   FXL_LOG(ERROR)
+                                                       << "Failed to retrieve page cloud, status: "
+                                                       << fidl::ToUnderlying(status);
+                                                   // Only log. This should be handled by page cloud
+                                                   // connection error handler.
+                                                 }
+                                               });
+    auto page_sync = std::make_unique<PageSyncImpl>(
+        environment_->dispatcher(), page_storage, page_sync_client, encryption_service_,
+        std::move(page_cloud), environment_->MakeBackoff(), environment_->MakeBackoff(),
+        aggregator_.GetNewStateWatcher());
+    if (upload_enabled_) {
+      page_sync->EnableUpload();
+    }
+    active_page_syncs_.insert(page_sync.get());
+    page_sync->set_on_delete(
+        [this, page_sync = page_sync.get()]() { active_page_syncs_.erase(page_sync); });
+    callback(storage::Status::OK, std::move(page_sync));
+  });
 }
 
 void LedgerSyncImpl::EnableUpload() {

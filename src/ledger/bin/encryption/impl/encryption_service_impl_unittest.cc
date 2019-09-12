@@ -50,6 +50,14 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
   }
 
+  void GetPageId(std::string page_name, Status* status, std::string* result) {
+    bool called;
+    encryption_service_.GetPageId(
+        std::move(page_name), callback::Capture(callback::SetWhenCalled(&called), status, result));
+    RunLoopUntilIdle();
+    EXPECT_TRUE(called);
+  }
+
   void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
                      Status* status, std::string* result) {
     bool called;
@@ -125,6 +133,16 @@ TEST_F(EncryptionServiceTest, GetName) {
   GetObjectName(identifier, &status, &name);
   EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(name.empty());
+}
+
+TEST_F(EncryptionServiceTest, GetPageId) {
+  std::string page_name = "Jimmy";
+  Status status;
+  std::string id;
+  GetPageId(page_name, &status, &id);
+  EXPECT_EQ(status, Status::OK);
+  EXPECT_FALSE(id.empty());
+  EXPECT_NE(id, page_name);
 }
 
 TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
