@@ -16,9 +16,12 @@ using namespace escher;
 
 std::unique_ptr<Escher> GetEscherWithProtectedMemoryEnabled() {
   VulkanInstance::Params instance_params(
-      {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+      {{"VK_LAYER_KHRONOS_validation"},
+       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
+       false});
   VulkanDeviceQueues::Params device_params(
-      {{VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME}, {}, vk::SurfaceKHR()});
+      {{VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME}, {}, vk::SurfaceKHR()});
+
 #ifdef OS_FUCHSIA
   device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   device_params.flags = VulkanDeviceQueues::Params::kAllowProtectedMemory;

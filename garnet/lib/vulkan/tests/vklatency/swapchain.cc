@@ -167,7 +167,7 @@ bool Swapchain::GetPhysicalDevice() {
   layer_names.push_back("VK_LAYER_FUCHSIA_imagepipe_swapchain");
 #endif  // VKLATENCY_USE_FB
 #ifndef NDEBUG
-  layer_names.push_back("VK_LAYER_LUNARG_standard_validation");
+  layer_names.push_back("VK_LAYER_KHRONOS_validation");
 #endif  // NDEBUG
 
   std::vector<const char*> extension_names;

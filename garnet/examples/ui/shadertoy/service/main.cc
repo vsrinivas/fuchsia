@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/shadertoy/service/app.h"
@@ -27,7 +28,7 @@ int main(int argc, const char** argv) {
           VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
          false});
 #if !defined(NDEBUG)
-    instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
+    instance_params.layer_names.insert("VK_LAYER_KHRONOS_validation");
 #endif
     auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
 

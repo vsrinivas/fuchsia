@@ -361,7 +361,7 @@ main(int argc, char const * argv[])
                                        .engineVersion      = 0,
                                        .apiVersion         = VK_API_VERSION_1_1 };
 
-  char const * const instance_enabled_layers[] = { "VK_LAYER_LUNARG_standard_validation" };
+  char const * const instance_enabled_layers[] = { "VK_LAYER_KHRONOS_validation" };
 
   char const * const instance_enabled_extensions[] = { VK_EXT_DEBUG_REPORT_EXTENSION_NAME };
 

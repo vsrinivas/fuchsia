@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <glm/gtc/type_ptr.hpp>
-
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
@@ -15,6 +13,8 @@
 #include "src/ui/lib/escher/util/epsilon_compare.h"
 #include "src/ui/lib/escher/vk/buffer.h"
 #include "src/ui/lib/escher/vk/gpu_allocator.h"
+
+#include <glm/gtc/type_ptr.hpp>
 
 namespace escher {
 namespace test {
@@ -54,8 +54,8 @@ glm::mat4 MatrixFromPose(const hmd::Pose& pose) {
 
 VK_TEST(PoseBuffer, ComputeShaderLatching) {
   // Initialize Vulkan.
-  escher::VulkanInstance::Params instance_params(
-      {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+  VulkanInstance::Params instance_params(
+      {{"VK_LAYER_KHRONOS_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
   auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
   auto vulkan_device = escher::VulkanDeviceQueues::New(vulkan_instance, {});

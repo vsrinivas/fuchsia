@@ -90,7 +90,7 @@ bool VulkanTest::InitVulkan() {
 
   std::vector<const char*> layers;
   // Vulkan loader is needed for loading layers.
-  layers.push_back("VK_LAYER_LUNARG_standard_validation");
+  layers.push_back("VK_LAYER_KHRONOS_validation");
   VkInstanceCreateInfo create_info{
       VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // VkStructureType             sType;
       nullptr,                                 // const void*                 pNext;

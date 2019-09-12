@@ -7,9 +7,10 @@
 
 #include <set>
 #include <string>
-#include <vulkan/vulkan.hpp>
 
 #include "src/lib/fxl/memory/ref_counted.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
@@ -22,7 +23,7 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
  public:
   // Parameters used to construct a new Vulkan Instance.
   struct Params {
-    std::set<std::string> layer_names{"VK_LAYER_LUNARG_standard_validation"};
+    std::set<std::string> layer_names{"VK_LAYER_KHRONOS_validation"};
     std::set<std::string> extension_names;
     bool requires_surface = true;
   };

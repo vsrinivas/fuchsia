@@ -13,7 +13,7 @@ using namespace escher::test;
 
 VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
   VulkanInstance::Params instance_params(
-      {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+      {{"VK_LAYER_KHRONOS_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
   auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
   VulkanDeviceQueues::Params::Flags flags =

@@ -96,7 +96,7 @@ TEST(GpuMem, ErroneousSuballocations) {
 // This test should be updated to include all hashed types used by Escher.
 VK_TEST(GpuMem, AdoptVkMemory) {
   VulkanInstance::Params instance_params(
-      {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
+      {{"VK_LAYER_KHRONOS_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
   auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
   auto vulkan_queues = VulkanDeviceQueues::New(vulkan_instance, {});

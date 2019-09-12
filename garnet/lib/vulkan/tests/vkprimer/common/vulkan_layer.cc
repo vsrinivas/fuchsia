@@ -16,7 +16,7 @@ static const std::vector<const char *> s_instance_layer_names = {
 #ifdef __Fuchsia__
     "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb",
 #endif
-    "VK_LAYER_LUNARG_standard_validation",
+    "VK_LAYER_KHRONOS_validation",
 };
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
