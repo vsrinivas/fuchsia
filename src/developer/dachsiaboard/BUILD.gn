@@ -36,6 +36,7 @@ group("bundle") {
     "//garnet/bin/ui:root_presenter",
     "//garnet/bin/ui:scenic",
     "//garnet/bin/vulkan_loader",
+    "//src/connectivity/wlan:tools",
     "//src/flutter",
     "//src/fonts",
     "//src/ui/a11y",
