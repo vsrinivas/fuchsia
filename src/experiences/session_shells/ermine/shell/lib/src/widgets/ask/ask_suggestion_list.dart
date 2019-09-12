@@ -12,7 +12,8 @@ final _kTextBackground = Colors.grey[800];
 /// Defines a widget that builds the list of suggestions under the [Ask] widget.
 class AskSuggestionList extends StatelessWidget {
   static const double _kListItemHeight = 56.0;
-  static const double _kListViewHeight = _kListItemHeight * 5;
+  static const int _kListItemCount = 5;
+  static const double _kListViewHeight = _kListItemHeight * _kListItemCount;
 
   /// The model that holds the state for this widget.
   final AskModel model;
@@ -21,6 +22,24 @@ class AskSuggestionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = ScrollController();
+    model.selection.addListener(() {
+      int index = model.selection.value;
+      if (controller.hasClients) {
+        final itemOffset = index * _kListItemHeight;
+        final scrollOffset = controller.position.pixels;
+        final viewport = controller.position.viewportDimension;
+        bool above = itemOffset < scrollOffset;
+        bool below = itemOffset > scrollOffset + viewport;
+        bool visible = !above && !below;
+        if (!visible) {
+          final newOffset = above
+              ? itemOffset
+              : itemOffset - _kListItemHeight * (_kListItemCount - 1);
+          controller.jumpTo(newOffset);
+        }
+      }
+    });
     return RawKeyboardListener(
       onKey: model.handleKey,
       focusNode: model.focusNode,
@@ -40,6 +59,7 @@ class AskSuggestionList extends StatelessWidget {
                   : null,
               constraints: BoxConstraints(maxHeight: _kListViewHeight),
               child: AnimatedList(
+                controller: controller,
                 key: model.suggestionsListKey,
                 shrinkWrap: true,
                 itemBuilder: _buildItem,
