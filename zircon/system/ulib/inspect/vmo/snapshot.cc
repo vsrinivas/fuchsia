@@ -83,11 +83,22 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
       return status;
     }
     if (read_observer) {
-      read_observer(buffer.data(), sizeof(size));
+      read_observer(buffer.data(), size);
+    }
+
+    // Read the header out of the buffer again,
+    std::vector<uint8_t> new_header;
+    new_header.resize(sizeof(Block));
+    status = Snapshot::Read(vmo, new_header.size(), new_header.data());
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (read_observer) {
+      read_observer(new_header.data(), new_header.size());
     }
 
     uint64_t new_generation;
-    status = Snapshot::ParseHeader(buffer.data(), &new_generation);
+    status = Snapshot::ParseHeader(new_header.data(), &new_generation);
     if (status != ZX_OK) {
       return status;
     }

@@ -91,6 +91,31 @@ TEST(Snapshot, InvalidGenerationChange) {
   EXPECT_EQ(ZX_ERR_INTERNAL, status);
 }
 
+TEST(Snapshot, InvalidGenerationChangeFinalStep) {
+  fzl::OwnedVmoMapper vmo;
+  ASSERT_OK(vmo.CreateAndMap(4096, "test"));
+  Block* header = reinterpret_cast<Block*>(vmo.start());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+
+  int times_called = 0;
+  Snapshot snapshot;
+  zx_status_t status = Snapshot::Create(
+      vmo.vmo(), Snapshot::Options{.read_attempts = 1, .skip_consistency_check = false},
+      [&](uint8_t* buffer, size_t buffer_size) {
+        // Only change the generation count after the second read obtaining the whole buffer.
+        if (++times_called == 2) {
+          header->payload.u64 += 2;
+        }
+      },
+      &snapshot);
+
+  EXPECT_EQ(ZX_ERR_INTERNAL, status);
+}
+
 TEST(Snapshot, ValidGenerationChangeSkipCheck) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
