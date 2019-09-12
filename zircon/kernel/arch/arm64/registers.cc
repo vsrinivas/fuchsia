@@ -61,7 +61,7 @@ static bool arm64_validate_hw_breakpoints(arm64_debug_state_t* state,
 
     // If the address is valid and the breakpoint is activated, we mask in
     // the other necessary value and count it for bookkeepping.
-    if (dbgbcr & ARM64_DBGBCR_E) {
+    if (dbgbcr & ARM64_DBGBCR_E_MASK) {
       state->hw_bps[i].dbgbcr = ARM64_DBGBCR_ACTIVE_MASK;
       breakpoint_count++;
     }
@@ -97,7 +97,7 @@ static bool arm64_validate_hw_watchpoints(arm64_debug_state_t* state,
 
     // If the address is valid and the watchpoint is active, we mask in
     // the other necessary bits.
-    if (dbgwcr & ARM64_DBGWCR_E) {
+    if (dbgwcr & ARM64_DBGWCR_E_MASK) {
       state->hw_wps[i].dbgwcr = ARM64_DBGWCR_ACTIVE_MASK;
       watchpoint_count++;
     }
@@ -288,6 +288,8 @@ void arm64_clear_hw_debug_regs() {
   }
 }
 
+#ifndef NDEBUG
+
 // Debug only.
 void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
   printf("HW breakpoints:\n");
@@ -299,12 +301,12 @@ void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
         "%02u. DBGBVR: 0x%lx, "
         "DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d\n",
         i, dbgbvr, (int)(dbgbcr & ARM64_DBGBCR_E),
-        (int)((dbgbcr & ARM64_DBGBCR_PMC) >> ARM64_DBGBCR_PMC_SHIFT),
-        (int)((dbgbcr & ARM64_DBGBCR_BAS) >> ARM64_DBGGCR_BAS_SHIFT),
-        (int)((dbgbcr & ARM64_DBGBCR_HMC) >> ARM64_DBGBCR_HMC_SHIFT),
-        (int)((dbgbcr & ARM64_DBGBCR_SSC) >> ARM64_DBGBCR_SSC_SHIFT),
-        (int)((dbgbcr & ARM64_DBGBCR_LBN) >> ARM64_DBGBCR_LBN_SHIFT),
-        (int)((dbgbcr & ARM64_DBGBCR_BT) >> ARM64_DBGBCR_BY_SHIFT));
+        (int)((dbgbcr & ARM64_DBGBCR_PMC_MASK) >> ARM64_DBGBCR_PMC_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_BAS_MASK) >> ARM64_DBGBCR_BAS_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_HMC_MASK) >> ARM64_DBGBCR_HMC_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_SSC_MASK) >> ARM64_DBGBCR_SSC_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_LBN_MASK) >> ARM64_DBGBCR_LBN_SHIFT),
+        (int)((dbgbcr & ARM64_DBGBCR_BT_MASK) >> ARM64_DBGBCR_BT_SHIFT));
   }
 
   printf("HW watchpoints:\n");
@@ -315,15 +317,15 @@ void arm64_print_debug_registers(const arm64_debug_state_t* debug_state) {
     printf(
         "%02u. DBGWVR: 0x%lx, DBGWCR: "
         "E=%d, PAC=%d, LSC=%d, BAS=0x%x, HMC=%d, SSC=%d, LBN=%d, WT=%d, MASK=0x%x\n",
-        i, dbgwvr, (int)(dbgwcr & ARM64_DBGWCR_E),
-        (int)((dbgwcr & ARM64_DBGWCR_PAC) >> ARM64_DBGWCR_PAC_SHIFT),
-        (int)((dbgwcr & ARM64_DBGWCR_LSC) >> ARM64_DBGWCR_LSC_SHIFT),
-        (unsigned int)((dbgwcr & ARM64_DBGWCR_BAS) >> ARM64_DBGWCR_BAS_SHIFT),
-        (int)((dbgwcr & ARM64_DBGWCR_HMC) >> ARM64_DBGWCR_HMC_SHIFT),
-        (int)((dbgwcr & ARM64_DBGWCR_SSC) >> ARM64_DBGWCR_SSC_SHIFT),
-        (int)((dbgwcr & ARM64_DBGWCR_LBN) >> ARM64_DBGWCR_LBN_SHIFT),
-        (int)((dbgwcr & ARM64_DBGWCR_WT) >> ARM64_DBGWCR_WT_SHIFT),
-        (unsigned int)((dbgwcr & ARM64_DBGWCR_MASK) >> ARM64_DBGWCR_MASK_SHIFT));
+        i, dbgwvr, (int)(dbgwcr & ARM64_DBGWCR_E_MASK),
+        (int)((dbgwcr & ARM64_DBGWCR_PAC_MASK) >> ARM64_DBGWCR_PAC_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_LSC_MASK) >> ARM64_DBGWCR_LSC_SHIFT),
+        (unsigned int)((dbgwcr & ARM64_DBGWCR_BAS_MASK) >> ARM64_DBGWCR_BAS_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_HMC_MASK) >> ARM64_DBGWCR_HMC_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_SSC_MASK) >> ARM64_DBGWCR_SSC_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_LBN_MASK) >> ARM64_DBGWCR_LBN_SHIFT),
+        (int)((dbgwcr & ARM64_DBGWCR_WT_MASK) >> ARM64_DBGWCR_WT_SHIFT),
+        (unsigned int)((dbgwcr & ARM64_DBGWCR_MSK_MASK) >> ARM64_DBGWCR_MSK_SHIFT));
   }
 }
 
@@ -347,3 +349,5 @@ void print_mdscr() {
       (int)((mdscr & ARM64_MDSCR_EL1_TXfull) >> ARM64_MDSCR_EL1_TXfull_SHIFT),
       (int)((mdscr & ARM64_MDSCR_EL1_RXfull) >> ARM64_MDSCR_EL1_RXfull_SHIFT));
 }
+
+#endif
