@@ -5,6 +5,7 @@
 #include "block_device.h"
 
 #include <ddk/debug.h>
+#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -114,7 +115,7 @@ void BlockDevice::DdkUnbind() {
 zx_status_t BlockDevice::Init() {
   ZX_DEBUG_ASSERT(!thread_created_);
   list_initialize(&txn_list_);
-  if (thrd_create(&worker_, WorkerThreadStub, this) != thrd_success) {
+  if (thrd_create_with_name(&worker_, WorkerThreadStub, this, "ftl_worker") != thrd_success) {
     return ZX_ERR_NO_RESOURCES;
   }
   thread_created_ = true;
@@ -281,6 +282,9 @@ bool BlockDevice::RemoveFromList(FtlOp** operation) {
   return !dead_;
 }
 
+// Number of operations issued to the nand driver by each block device operation.
+thread_local int g_nand_op_count = 0;
+
 int BlockDevice::WorkerThread() {
   for (;;) {
     FtlOp* operation;
@@ -306,25 +310,33 @@ int BlockDevice::WorkerThread() {
 
     zx_status_t status = ZX_OK;
 
-    switch (operation->op.command) {
-      case BLOCK_OP_WRITE:
-      case BLOCK_OP_READ:
-        pending_flush_ = true;
-        status = ReadWriteData(&operation->op);
-        break;
+    {
+      TRACE_DURATION_BEGIN("block:ftl", "Operation", "opcode", operation->op.command, "offset_dev",
+                           operation->op.rw.offset_dev, "length", operation->op.rw.length);
 
-      case BLOCK_OP_TRIM:
-        pending_flush_ = true;
-        status = TrimData(&operation->op);
-        break;
+      g_nand_op_count = 0;
+      switch (operation->op.command) {
+        case BLOCK_OP_WRITE:
+        case BLOCK_OP_READ:
+          pending_flush_ = true;
+          status = ReadWriteData(&operation->op);
+          break;
 
-      case BLOCK_OP_FLUSH: {
-        status = Flush();
-        pending_flush_ = false;
-        break;
+        case BLOCK_OP_TRIM:
+          pending_flush_ = true;
+          status = TrimData(&operation->op);
+          break;
+
+        case BLOCK_OP_FLUSH: {
+          status = Flush();
+          pending_flush_ = false;
+          break;
+        }
+        default:
+          ZX_DEBUG_ASSERT(false);  // Unexpected.
       }
-      default:
-        ZX_DEBUG_ASSERT(false);  // Unexpected.
+
+      TRACE_DURATION_END("block:ftl", "Operation", "nand_ops", g_nand_op_count);
     }
 
     operation->completion_cb(operation->cookie, status, &operation->op);

@@ -40,6 +40,8 @@ source_set("common") {
     "$zx/system/ulib/ftl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/trace:headers",
+    "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",

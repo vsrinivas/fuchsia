@@ -12,6 +12,10 @@
 #include <ddktl/protocol/badblock.h>
 #include <zxtest/zxtest.h>
 
+namespace ftl {
+extern thread_local int g_nand_op_count;
+}
+
 namespace {
 
 constexpr uint32_t kRealPageSize = 1024;
@@ -283,6 +287,21 @@ TEST_F(NandDriverTest, IsBadBlock) {
   ASSERT_FALSE(driver->IsBadBlock(0));
   ASSERT_TRUE(driver->IsBadBlock(1 * kBlockSize));
   ASSERT_FALSE(driver->IsBadBlock(2 * kBlockSize));
+}
+
+TEST_F(NandDriverTest, OperationCounter) {
+  auto driver = ftl::NandDriver::Create(nand_proto(), bad_block_proto());
+  ASSERT_EQ(nullptr, driver->Init());
+  ftl::g_nand_op_count = 0;
+
+  EXPECT_EQ(ftl::kNdmOk, driver->NandErase(5 * kBlockSize));
+  EXPECT_EQ(1, ftl::g_nand_op_count);
+
+  EXPECT_EQ(ftl::kNdmError, driver->NandWrite(5, 0, nullptr, nullptr));
+  EXPECT_EQ(2, ftl::g_nand_op_count);
+
+  EXPECT_EQ(ftl::kNdmFatalError, driver->NandRead(5, 0, nullptr, nullptr));
+  EXPECT_EQ(3, ftl::g_nand_op_count);
 }
 
 }  // namespace
